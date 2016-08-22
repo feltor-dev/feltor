@@ -204,6 +204,18 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<dou
 
     return retval;
 }
+
+int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::Grid2d<double>& g)
+{
+    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    int retval;
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
+    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
+    if( (retval = define_limited_time( ncid, "time", size, &dimsIDs[0], tvarID)) ){ return retval;}
+
+    return retval;
+}
 /**
  * @brief Define 3d dimensions and associate values in NetCDF-file
  *

@@ -38,6 +38,18 @@ toefl_hpc
 toeflI
 toeflR
 toefl_mpi
+toeflRdiag
+imp2vis
+impRdiag
 
 # astyle
 *.orig
+
+# performance analyse
+*.data
+*.out
+*.*[0-9]
+*.prof
+
+# temporary
+*.old

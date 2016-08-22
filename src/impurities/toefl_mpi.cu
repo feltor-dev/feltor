@@ -222,7 +222,7 @@ int main( int argc, char* argv[])
         unsigned step = 0;
 #endif //DG_BENCHMARK
 
-        for( unsigned i=1; i<p.maxout; i++)
+        for( unsigned i=1; i<=p.maxout; i++)
         {
 
 #ifdef DG_BENCHMARK

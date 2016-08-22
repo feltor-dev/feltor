@@ -10,332 +10,329 @@
 #include "file/nc_utilities.h"
 #include "impurities/parameters.h"
 
+#include <boost/timer.hpp>
+// boost::timer t;
+// double duration;
+//
+// t.restart();
+// duration = t.elapsed();
 
 struct Heaviside2d
-{   Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0) {}
-    void set_origin( double x0, double y0)
-    {   x_=x0, y_=y0;
-    }
-    double operator()(double x, double y)
-    {   double r2 = (x-x_)*(x-x_)+(y-y_)*(y-y_);
-        if( r2 >= sigma2_)
-            return 0.;
-        return 1.;
-    }
+{ Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0) {}
+  void set_origin( double x0, double y0)
+  { x_ = x0, y_ = y0;
+  }
+  double operator()(double x, double y)
+  { double r2 = (x-x_)*(x-x_)+(y-y_)*(y-y_);
+    if( r2 >= sigma2_)
+      return 0.;
+    return 1.;
+  }
 private:
-    const double sigma2_;
-    double x_,y_;
+  const double sigma2_;
+  double x_,y_;
 };
 
-
-/*! Diagnostics program for the toefl code.
- *
- * It reads in the produced netcdf file and outputs a new netcdf file with timeseries of
- * posX: COM x-position
- * posY: COM y-position
- * velX: COM x-velocity
- * velY: COM y-velocity
- * accX: COM x-acceleration
- * accY: COM y-acceleration
- * velCOM: absolute value of the COM velocity
- * posXmax: maximum amplitude x-position
- * posYmax: maximum amplitude y-position
- * velXmax: maximum amplitude x-velocity
- * velYmax: maximum amplitude y-velocity
- * maxamp: value of the maximum amplitude
- * compactness_ne: compactness of the density field
- * Ue: entropy electrons
- * Ui: entropy ions
- * Uphi: exb energy
- * mass: mass of the blob without background
- */
-
-
 int main( int argc, char* argv[])
-{   if( argc != 4)   // lazy check: command line parameters
-    {   std::cerr << "Usage: "<<argv[0]<<" [input.nc] [output.nc] [densities.nc]\n";
-        return -1;
+{ if( argc != 3)   // lazy check: command line parameters
+  { std::cerr << "Usage: "<< argv[0] <<" [input.nc] [output.nc]\n";
+    return -1;
+  }
+  std::cout << argv[1] << " -> " << argv[2]<<std::endl;
+  ////////process parameter from .nc datafile////////
+  file::NC_Error_Handle err_in;
+  int ncid_in;
+  err_in = nc_open(argv[1], NC_NOWRITE, &ncid_in);
+  //read & print parameter string
+  size_t length;
+  err_in = nc_inq_attlen(ncid_in, NC_GLOBAL, "inputfile", &length);
+  std::string input(length, 'x');
+  err_in = nc_get_att_text(ncid_in, NC_GLOBAL, "inputfile", &input[0]);
+  std::cout << "input "<< input << std::endl;
+  //parse: parameter string--json-->p.xxx
+  Json::Reader reader;
+  Json::Value js;
+  reader.parse(input, js, false);
+  const imp::Parameters p(js);
+  p.display(std::cout);
+  //.nc parameter: etime not found in .json file
+  int dim_et_id;
+  size_t num_etime;
+  err_in = nc_inq_dimid(ncid_in, "energy_time", &dim_et_id);
+  err_in = nc_inq_dimlen(ncid_in, dim_et_id, &num_etime);
+  ////////compose data////////
+  const size_t num_species = 3, num_fields = 2;
+  const size_t num_spatial = 14;
+  const size_t num_err_time = 6, num_err_etime = 5;
+  int species_rgyro_id[num_species], field_rphys_id[num_species];
+  int species_wgrp_id[num_species],  field_wgrp_id[num_fields];
+  int species_wphys_id[num_species], field_wphys_id[num_fields];
+  int species_wspatial_id[num_species*num_spatial];
+  int err_time_wgrp_id, err_etime_wgrp_id;
+  int err_time_wval_id[num_err_time];
+  int err_etime_rval_id[num_err_etime], err_etime_wval_id[num_err_etime];
+  //groups
+  std::string species_name[num_species] =
+  { "electrons", "ions", "impurities"
+  };
+  std::string field_name[num_fields] =
+  { "potential", "vorticity"
+  };
+  std::string spatial[num_spatial] =
+  { "posX" , "posY" , "velX" , "velY" ,
+    "accX" , "accY", "posXmax", "posYmax", "velXmax", "velYmax",
+    "compactness", "velCOM", "maxamp", "mass"
+  };
+  std::string err_time[num_err_time] =
+  { "Se", "Si", "Sz",
+    "Uphii", "Uphiz", "cn"
+  };
+  std::string err_etime[num_err_etime] =
+  { "energy", "mass", "dissipation",
+    "dEdt", "accuracy"
+  };
+  ////////grid////////
+  dg::Grid2d<double > g2d(0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+  const double hx = g2d.hx()/(double)g2d.n();
+  const double hy = g2d.hy()/(double)g2d.n();
+  unsigned Nx = p.Nx_out*p.n_out;
+  dg::DVec xvec = dg::evaluate( dg::coo1, g2d);
+  dg::DVec yvec = dg::evaluate( dg::coo2, g2d);
+  dg::DVec one = dg::evaluate( dg::one, g2d);
+  dg::DVec w2d = dg::create::weights( g2d);
+  dg::DVec helper(dg::evaluate( dg::zero, g2d));
+  dg::IDMatrix equi = dg::create::backscatter( g2d);
+  //.nc structures
+  size_t count2d[3] = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
+  size_t start2d[3] = {0, 0, 0};
+  size_t count0d[1] = {1};
+  size_t start0d[1] = {0};
+  ////////input data: 2d time series////////
+  double deltaT = p.dt*p.itstp;
+  std::vector<dg::DVec> npe(num_species, dg::evaluate(dg::zero, g2d));
+  std::vector<dg::DVec> ntilde(num_species, dg::evaluate(dg::zero, g2d));
+  std::vector<dg::DVec> lnn(num_species, dg::evaluate(dg::zero, g2d));
+  std::vector<dg::DVec> field(num_fields, dg::evaluate(dg::zero, g2d));
+  std::vector<dg::HVec> field_host(num_fields, dg::evaluate(dg::zero, g2d));
+  std::vector<dg::HVec> npe_h(3, dg::evaluate(dg::zero, g2d));
+  //eval field
+  dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa(g2d);
+  //eval particle densities
+  const dg::DVec binv( dg::evaluate(dg::LinearX(p.kappa, 1.), g2d));
+  dg::DVec chi = dg::evaluate(dg::zero, g2d);
+  dg::DVec gamma_n = dg::evaluate(dg::zero, g2d);
+  dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gamma_s(g2d, 1.0, dg::centered);
+  dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol(g2d, dg::normed, dg::centered);
+  dg::Invert< dg::DVec > invert_invgamma(chi, chi.size(), p.eps_gamma);
+  //calculation variables per species
+  double mass_[num_species] = {}, cn[num_species] = {};
+  double posX = 0, posY = 0;
+  double posX_init = 0, posY_init = 0;
+  double posX_old = 0 ,posY_old = 0;
+  double posX_max = 0, posY_max = 0;
+  double posX_max_old = 0, posY_max_old = 0;
+  double posX_max_hs = 0, posY_max_hs = 0;
+  double velX = 0, velY = 0;
+  double velX_old = 0, velY_old = 0;
+  double velX_max = 0, velY_max = 0;
+  double velCOM = 0;
+  double accX = 0, accY = 0;
+  double compactness = 0;
+  unsigned position = 0;
+  double maxamp = 0;
+  Heaviside2d heavi(2.0* p.sigma);
+  double normalize = 1.;
+  dg::DVec heavy;
+  dg::HVec transfer2d(dg::evaluate(dg::zero,g2d));
+  double time = 0.;
+  ////////compose .nc structures////////
+  // --- cache and compress switches --- //
+  int shuffle_flag = 0, compress_flag = 0, compress_level = 5;
+  int nelems = 100;
+  // --- --- //
+  int cache_size = (transfer2d.capacity()*sizeof(transfer2d[0])+sizeof(transfer2d))*nelems;
+  int cache_nelems = nelems;
+  double cache_preemption = 0.9;
+  file::NC_Error_Handle err_out;
+  int ncid_out, dim_t_x_y_id[3], tvar_id, etvar_id;
+  err_out = nc_create(argv[2], NC_NETCDF4|NC_CLOBBER, &ncid_out);
+  err_out = nc_put_att_text(ncid_out, NC_GLOBAL, "inputfile",
+                            input.size(), input.data());
+  err_out = file::define_limtime_xy(ncid_out, dim_t_x_y_id, p.maxout,
+                                    &tvar_id, g2d);
+  err_out = file::define_limited_time(ncid_out, "etime", num_etime,
+                                      &dim_et_id, &etvar_id);
+
+  int k = 0;
+  for (unsigned i = 0; i < num_species; i++)
+  { err_in = nc_inq_varid(ncid_in, species_name[i].data(), &species_rgyro_id[i]);;
+    err_out = nc_def_grp(ncid_out, species_name[i].data(), &species_wgrp_id[i]);
+    err_out = nc_def_var(species_wgrp_id[i], "physfield", NC_DOUBLE, 3, dim_t_x_y_id, &species_wphys_id[i]);
+    err_out = nc_def_var_deflate(species_wgrp_id[i], species_wphys_id[i], shuffle_flag, compress_flag, compress_level);
+    err_out = nc_set_var_chunk_cache(species_wgrp_id[i], species_wphys_id[i], cache_size, cache_nelems, cache_preemption);
+    for (unsigned j = 0; j < num_spatial; j++)
+    { err_out = nc_def_var(species_wgrp_id[i], spatial[j].data(), NC_DOUBLE, 1, &dim_t_x_y_id[0], &species_wspatial_id[k]);
+      err_out = nc_def_var_deflate(species_wgrp_id[i], species_wspatial_id[k], shuffle_flag, compress_flag, compress_level);
+      k++;
     }
-    std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
+  }
+  for (unsigned i = 0; i < num_fields; i++)
+  { err_in = nc_inq_varid(ncid_in, field_name[i].data(), &field_rphys_id[i]);
+    err_out = nc_def_grp(ncid_out, field_name[i].data(), &field_wgrp_id[i]);
+    err_out = nc_def_var(field_wgrp_id[i], "physfield", NC_DOUBLE, 3, dim_t_x_y_id, &field_wphys_id[i]);
+    err_out = nc_def_var_deflate(field_wgrp_id[i], field_wphys_id[i], shuffle_flag, compress_flag, compress_level);
+    err_out = nc_set_var_chunk_cache(field_wgrp_id[i], field_wphys_id[i], cache_size, cache_nelems, cache_preemption);
+  }
+  err_out = nc_def_grp( ncid_out, "err_time", &err_time_wgrp_id);
+  for (unsigned i = 0; i < num_err_time; i++)
+  { err_out = nc_def_var(err_time_wgrp_id, err_time[i].data(), NC_DOUBLE, 1, &dim_t_x_y_id[0], &err_time_wval_id[i]);
+    err_out = nc_def_var_deflate( err_time_wgrp_id, err_time_wval_id[i], shuffle_flag, compress_flag, compress_level);
+  }
+  err_out = nc_def_grp( ncid_out, "err_etime", &err_etime_wgrp_id);
+  for (unsigned i = 0 ; i < num_err_etime; i++)
+  { err_in = nc_inq_varid(ncid_in, err_etime[i].data(), &err_etime_rval_id[i]);
+    err_out = nc_def_var( err_etime_wgrp_id, err_etime[i].data(), NC_DOUBLE, 1, &dim_et_id, &err_etime_wval_id[i]);
+    err_out = nc_def_var_deflate( err_etime_wgrp_id, err_etime_wval_id[i], shuffle_flag, compress_flag, compress_level);
+  }
+  err_out = nc_enddef(ncid_out);
+  ////////remap data////////
+  double transfer_etime[num_etime];
+  static size_t count_etime[] = {num_etime};
+  static size_t start_etime[] = {0};
+  for (unsigned i = 0; i < num_err_etime; i++)
+  { err_in = nc_get_vara_double(ncid_in, err_etime_rval_id[i], start_etime, count_etime, transfer_etime);
+    err_out = nc_put_vara_double(err_etime_wgrp_id, err_etime_wval_id[i], start_etime, count_etime, transfer_etime);
+  }
+  //v tbr v
+  boost::timer t_loop, t_inv, t_write;
+  int add_to_spatial_idx = 0;
+  //^ tbr ^
 
-    ////////process input parameter from .nc datafile////////
-    file::NC_Error_Handle err_in;
-    int ncid_in;
-    err_in = nc_open( argv[1], NC_NOWRITE, &ncid_in);
-    //read & print parameter string
-    size_t length;
-    err_in = nc_inq_attlen( ncid_in, NC_GLOBAL, "inputfile", &length);
-    std::string input( length, 'x');
-    err_in = nc_get_att_text( ncid_in, NC_GLOBAL, "inputfile", &input[0]);
-    std::cout << "input "<<input<<std::endl;
-    //parse: parameter string--json-->p.xxx
-    Json::Reader reader;
-    Json::Value js;
-    reader.parse( input, js, false);
-    const imp::Parameters p( js);
-    p.display( std::cout);
-    err_in = nc_close( ncid_in);
-
-    ////////grid////////
-    dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
-    const double hx = g2d.hx()/(double)g2d.n();
-    const double hy = g2d.hy()/(double)g2d.n();
-    unsigned Nx = p.Nx_out*p.n_out;
-    unsigned Ny = p.Ny_out*p.n_out;
-    dg::DVec xvec = dg::evaluate( dg::coo1, g2d);
-    dg::DVec yvec = dg::evaluate( dg::coo2, g2d);
-    dg::DVec one = dg::evaluate( dg::one, g2d);
-    dg::DVec w2d = dg::create::weights( g2d);
-    dg::DVec helper(dg::evaluate( dg::zero,g2d));
-    dg::IDMatrix equi = dg::create::backscatter( g2d);
-    //.nc structures
-    size_t count2d[3] = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
-    size_t start2d[3] = {0, 0, 0};
-    size_t count0d[1] = {1};
-    size_t start0d[1] = {0};
-
-    ////////input data: 2d time series////////
-    double deltaT = p.dt*p.itstp;
-    std::vector<dg::DVec> npe( 3, dg::evaluate(dg::zero, g2d));
-    std::vector<dg::DVec> ntilde( 3, dg::evaluate(dg::zero, g2d));
-    std::vector<dg::DVec> lnn( 3, dg::evaluate(dg::zero, g2d));
-    dg::DVec phi(dg::evaluate( dg::zero, g2d));
-    std::vector<dg::HVec> npe_h( 3, dg::evaluate(dg::zero, g2d));
-    dg::HVec phi_h( dg::evaluate(dg::zero, g2d));
-    //eval field
-    dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( g2d);
-    //eval particle densities
-    const dg::DVec binv( dg::evaluate( dg::LinearX( p.kappa, 1.), g2d));
-    dg::DVec chi = dg::evaluate( dg::zero, g2d);
-    dg::DVec gamma_n = dg::evaluate( dg::zero, g2d);
-    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gamma_s( g2d, 1.0, dg::centered);
-    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol( g2d, dg::normed, dg::centered);
-    dg::Invert< dg::DVec > invert_invgamma( chi, chi.size(), p.eps_gamma);
-    //.nc structures
-    std::string names[4] = {"electrons", "ions", "impurities", "potential"};
-    int dataIDs[4];
-
-    ////////analyse data////////
-    const size_t nos = 3, no_evar = 5, no_povar = 14;
-    int speciesID[nos], evarID[no_evar], povarID[no_povar];
-    std::string species[nos] = {"electrons", "ions", "impurities"};
-    std::string evar[no_evar] = {"Se", "Si", "Sz", "Uphii", "Uphiz"};
-    std::string povar[no_povar] =
-    {   "posX" , "posY" , "velX" , "velY" , "accX" ,
-        "accY","posXmax","posYmax","velXmax" , "velYmax",
-        "compactness_ne", "velCOM", "maxamp", "mass"
-    };
-    //calculation variables per species
-    double mass_[nos]= {}, cn[nos]= {};
-    double posX[nos]= {}, posY[nos]= {};
-    double posX_init[nos]= {}, posY_init[nos]= {};
-    double posX_old[nos]= {} ,posY_old[nos]= {};
-    double posX_max[nos]= {}, posY_max[nos]= {};
-    double posX_max_old[nos]= {}, posY_max_old[nos]= {};
-    double posX_max_hs[nos]= {}, posY_max_hs[nos]= {};
-    double velX[nos]= {}, velY[nos]= {};
-    double velX_old[nos]= {}, velY_old[nos]= {};
-    double velX_max[nos]= {}, velY_max[nos]= {};
-    double velCOM[nos]= {};
-    double accX[nos]= {}, accY[nos]= {};
-    double compactness[nos] = {};
-    unsigned position[nos] = {};
-    double maxamp[nos];
-    Heaviside2d heavi(2.0* p.sigma);
-    double normalize = 1.;
-    dg::DVec heavy;
-    dg::HVec transfer2d(dg::evaluate(dg::zero,g2d));
-
-    //////construct .nc: 0d time series
-    file::NC_Error_Handle err_ts0d;
-    int ncid_ts0d, tvarID1d, dim_ids1d;
-    err_ts0d = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid_ts0d);
-    err_ts0d = nc_put_att_text( ncid_ts0d, NC_GLOBAL, "inputfile", input.size(), input.data());
-    err_ts0d = file::define_limited_time( ncid_ts0d, "time", p.maxout+1, &dim_ids1d, &tvarID1d);
-    ////energy bits
-    for( unsigned i=0; i<no_evar; i++)
-        err_ts0d = nc_def_var( ncid_ts0d, evar[i].data(), NC_DOUBLE, 1, &dim_ids1d, &evarID[i]);
-    ////positions of particles
-    for ( unsigned i=0; i<nos; i++)
-    {   err_ts0d = nc_def_grp( ncid_ts0d, species[i].data(), &speciesID[i]);
-        for ( unsigned j=0; j<no_povar; j++)
-            err_ts0d = nc_def_var( speciesID[i], povar[j].data(), NC_DOUBLE, 1, &dim_ids1d, &povarID[j]);
+  for (unsigned i = 0; i < p.maxout; i++)
+  { std::cout << i << "\n";   // tbr!
+    start2d[0] = i;
+    start0d[0] = i;
+    if (i>0)
+    { time += p.itstp*p.dt;
     }
-    err_ts0d = nc_close(ncid_ts0d);
-
-    ////// construct .nc: 2d time series
-    file::NC_Error_Handle err_ts2d;
-    int ncid_ts2d, tvarID2d, dim_ids2d[3];
-    err_ts2d = nc_create( argv[3], NC_NETCDF4|NC_CLOBBER, &ncid_ts2d);
-    err_ts2d = file::define_dimensions( ncid_ts2d, dim_ids2d, &tvarID2d, g2d);
-    std::string ions[3] = {"ions", "impurities", "dcn"};
-    int ionsIDs[3];
-    for( unsigned i=0; i<3; i++)
-        err_ts2d = nc_def_var( ncid_ts2d, ions[i].data(), NC_DOUBLE, 3, dim_ids2d, &ionsIDs[i]);
-    err_ts2d = nc_close(ncid_ts2d);
-
-
-    ////////timestepping////////
-    double time = 0.;
-    err_in = nc_open( argv[1], NC_NOWRITE, &ncid_in);
-    err_ts0d = nc_open( argv[2], NC_WRITE, &ncid_ts0d);
-    err_ts2d = nc_open( argv[3], NC_WRITE, &ncid_ts2d);
-
-    for( unsigned i=0; i<=p.maxout-1; i++)
-    {   start2d[0] = i;
-        start0d[0] = i;
-        if (i>0)
-            time += p.itstp*p.dt;
-
-        err_in = nc_inq_varid( ncid_in, names[3].data(), &dataIDs[3]);
-        err_in = nc_get_vara_double( ncid_in, dataIDs[3], start2d, count2d, phi_h.data());
-        phi = phi_h;
-
-        for (unsigned j=0; j<3; j++)
-        {   err_in = nc_inq_varid( ncid_in, names[j].data(), &dataIDs[j]);
-            err_in = nc_get_vara_double( ncid_in, dataIDs[j], start2d, count2d, npe_h[j].data());
-            npe[j] = npe_h[j];
-            dg::blas1::plus( npe[j], 1);
-            dg::blas1::transform( npe[j], ntilde[j], dg::PLUS<double>(-1));
-
-            // get particle positions for ion species
-            if( j>1 && j<nos-1)
-            {   gamma_s.alpha() = -0.5*p.tau[j]*p.mu[j];
-                invert_invgamma( gamma_s, gamma_n, ntilde[j]);
-
-                dg::blas1::axpby( -p.a[j]*p.mu[j], ntilde[j], 0., chi);
-                dg::blas1::pointwiseDot( chi, binv, chi);
-                dg::blas1::pointwiseDot( chi, binv, chi);
-                pol.set_chi( chi);
-                pol.symv( phi, ntilde[j]);
-                dg::blas1::axpby( 1., gamma_n, 1., ntilde[j]);
-            }
-
-            err_ts0d = nc_inq_grp_ncid( ncid_ts0d, species[j].data(), &speciesID[j]);
-            err_ts0d = nc_inq_varids(speciesID[j], 0, povarID);
-
-            //mass
-            mass_[j] = dg::blas2::dot( one, w2d, ntilde[j]);
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[13], start0d, count0d, &mass_[j]);
-
-            //charge number
-            dg::blas1::axpby(p.a[j], one, 0., helper);
-            cn[j] = dg::blas2::dot( helper, w2d, ntilde[j]);
-
-
-            //position, velocity, acceleration
-            if (i==0)
-            {   posX_init[j] = dg::blas2::dot( xvec, w2d, ntilde[0])/mass_[j];
-                posY_init[j] = dg::blas2::dot( yvec, w2d, ntilde[0])/mass_[j];
-            }
-            if (i>0)
-            {   posX[j] = dg::blas2::dot( xvec, w2d, ntilde[0])/mass_[j]-posX_init[j];
-                posY[j] = dg::blas2::dot( yvec, w2d, ntilde[0])/mass_[j]-posY_init[j];
-            }
-            if (i==0)
-            {   velX_old[j] = -posX[j]/deltaT;
-                velY_old[j] = -posY[j]/deltaT;
-                posX_old[j] = posX[j];
-                posY_old[j] = posY[j];
-            }
-
-            velX[j] = (posX[j] - posX_old[j])/deltaT;
-            velY[j] = (posY[j] - posY_old[j])/deltaT;
-            velCOM[j]=sqrt(velX[j]*velX[j]+velY[j]*velY[j]);
-            accX[j] = (velX[j] - velX_old[j])/deltaT;
-            accY[j] = (velY[j] - velY_old[j])/deltaT;
-            if (i>0)
-            {   posX_old[j] = posX[j];
-                posY_old[j] = posY[j];
-                velX_old[j] = velX[j];
-                velY_old[j] = velY[j];
-            }
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[0],  start0d, count0d, &posX[j]);
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[1],  start0d, count0d, &posY[j]);
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[2],  start0d, count0d, &velX[j]);
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[3],  start0d, count0d, &velY[j]);
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[4],  start0d, count0d, &accX[j]);
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[5],  start0d, count0d, &accY[j]);
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[11], start0d, count0d, &velCOM[j]);
-
-            // maximal amplitude
-            if ( p.amp > 0)
-                maxamp[j] = *thrust::max_element( npe[j].begin(), npe[j].end());
-            else
-                maxamp[j] = *thrust::min_element( npe[j].begin(), npe[j].end());
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[12], start0d, count0d, &maxamp[j]);
-
-            //get max position and value(x,y_max)
-            dg::blas2::gemv( equi, npe[j], helper);
-            position[j] = thrust::distance( helper.begin(), thrust::max_element( helper.begin(), helper.end()) );
-            posX_max[j] = hx*(1./2. + (double)(position[j]%Nx))-posX_init[j];
-            posY_max[j] = hy*(1./2. + (double)(position[j]/Nx))-posY_init[j];
-            posX_max_hs[j] = hx*(1./2. + (double)(position[j]%Nx));
-            posY_max_hs[j] = hy*(1./2. + (double)(position[j]/Nx));
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[6], start0d, count0d, &posX_max[j]);
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[7], start0d, count0d, &posY_max[j]);
-
-            velX_max[j] = (posX_max[j] - posX_max_old[j])/deltaT;
-            velY_max[j] = (posY_max[j] - posY_max_old[j])/deltaT;
-            if (i>0)
-                posX_max_old[j] = posX_max[j];
-            posY_max_old[j] = posY_max[j];
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[8], start0d, count0d, &velX_max[j]);
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[9], start0d, count0d, &velY_max[j]);
-
-            if( i==0) std::cout << ":   COM: t = " << time << " amp :" << maxamp[j] \
-                                    << " X_init :" << posX_init[j] \
-                                    << " Y_init :" << posY_init[j] << "\n";
-
-            std::cout << "COM: t = "<< time << " amp :" << maxamp[j] << " mass :" << mass_[j] \
-                      << " velX :" << velX[j] << " velY :" << velY[j] \
-                      << " X :" << posX[j] << " Y :" << posY[j] << "\n";
-
-            //compactness
-            if (i==0)
-            {   heavi.set_origin( posX_max_hs[j], posY_max_hs[j] );
-                heavy = dg::evaluate( heavi, g2d);
-                normalize = dg::blas2::dot( heavy, w2d, ntilde[j]);
-            }
-            heavi.set_origin( posX_max_hs[j], posY_max_hs[j]);
-            heavy = dg::evaluate( heavi, g2d);
-            compactness[j] =  dg::blas2::dot( heavy, w2d, ntilde[j])/normalize ;
-            err_ts0d = nc_put_vara_double( speciesID[j], povarID[10], start0d, count0d, &compactness[j]);
-
-            //energy
-            dg::blas1::transform( npe[j], lnn[j], dg::LN<double>());
-        }
-
-        //field
-        arakawa.variation(phi, helper);
-        double Se = dg::blas2::dot( npe[0], w2d, lnn[0]);
-        double Si = p.a[1]*p.tau[1]*dg::blas2::dot( npe[1], w2d, lnn[1]);
-        double Sz = p.a[2]*p.tau[2]*dg::blas2::dot( npe[2], w2d, lnn[2]);
-        double Uphii = 0.5*p.a[1]*p.mu[1]*dg::blas2::dot( npe[1], w2d, helper);
-        double Uphiz = 0.5*p.a[2]*p.mu[2]*dg::blas2::dot( npe[2], w2d, helper);
-
-        err_ts0d = nc_put_vara_double( ncid_ts0d, evarID[0], start0d, count0d, &Se);
-        err_ts0d = nc_put_vara_double( ncid_ts0d, evarID[1], start0d, count0d, &Si);
-        err_ts0d = nc_put_vara_double( ncid_ts0d, evarID[2], start0d, count0d, &Sz);
-        err_ts0d = nc_put_vara_double( ncid_ts0d, evarID[3], start0d, count0d, &Uphii);
-        err_ts0d = nc_put_vara_double( ncid_ts0d, evarID[4], start0d, count0d, &Uphiz);
-
-        //particle densities
-        dg::blas1::transfer(ntilde[1], transfer2d);
-        err_ts2d = nc_put_vara_double( ncid_ts2d, ionsIDs[0], start2d, count2d, transfer2d.data());
-        dg::blas1::transfer(ntilde[2], transfer2d);
-        err_ts2d = nc_put_vara_double( ncid_ts2d, ionsIDs[1], start2d, count2d, transfer2d.data());
-
-        //time
-        err_ts0d = nc_put_vara_double( ncid_ts0d, tvarID1d, start0d, count0d, &time);
-        err_ts2d = nc_put_vara_double( ncid_ts2d, tvarID2d, start2d, count2d, &time);
-
-        std::cout << "correct? n_e - n_i*a_i - n_z*a_z*: "<< cn[0]+cn[1]+cn[2] << "\n";
-
+    for (unsigned j = 0; j < num_fields; j++)
+    { err_in = nc_get_vara_double(ncid_in, field_rphys_id[j], start2d, count2d, field_host[j].data());
+      field[j] = field_host[j];
+      dg::blas1::transfer(field[j], transfer2d);
+      err_out = nc_put_vara_double(field_wgrp_id[j], field_wphys_id[j], start2d, count2d, transfer2d.data());
     }
-    err_ts2d = nc_close(ncid_ts2d);
-    err_ts0d = nc_close(ncid_ts0d);
-    err_in = nc_close(ncid_in);
-    return 0;
+    for (unsigned j = 0; j < num_species; j++)
+    { err_in = nc_get_vara_double(ncid_in, species_rgyro_id[j], start2d, count2d, npe_h[j].data());
+      npe[j] = npe_h[j];
+      dg::blas1::plus(npe[j], 1);
+      dg::blas1::transform(npe[j], ntilde[j], dg::PLUS<double>(-1));
+      if( j == 0)
+      { err_out = nc_put_vara_double(species_wgrp_id[j], species_wphys_id[j], start2d, count2d, npe_h[j].data());
+      }
+      else
+      { gamma_s.alpha() = -0.5*p.tau[j]*p.mu[j];
+        invert_invgamma(gamma_s, gamma_n, ntilde[j]);
+        dg::blas1::axpby(-p.a[j]*p.mu[j], ntilde[j], 0., chi);
+        dg::blas1::pointwiseDot(chi, binv, chi);
+        dg::blas1::pointwiseDot(chi, binv, chi);
+        pol.set_chi(chi);
+        pol.symv(field[0], ntilde[j]);
+        dg::blas1::axpby( 1., gamma_n, 1., ntilde[j]);
+        dg::blas1::transfer(ntilde[j], transfer2d);
+        err_out = nc_put_vara_double(species_wgrp_id[j], species_wphys_id[j], start2d, count2d, transfer2d.data());
+      }
+      add_to_spatial_idx = j*num_spatial;
+      //mass
+      mass_[j] = dg::blas2::dot(one, w2d, ntilde[j]);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[13+add_to_spatial_idx], start0d, count0d, &mass_[j]);
+      //charge number
+      dg::blas1::axpby(p.a[j], one, 0., helper);
+      cn[j] = dg::blas2::dot(helper, w2d, ntilde[j]);
+      //position, velocity, acceleration
+      if (i==0)
+      { posX_init = dg::blas2::dot( xvec, w2d, ntilde[j])/mass_[j];
+        posY_init = dg::blas2::dot( yvec, w2d, ntilde[j])/mass_[j];
+      }
+      if (i>0)
+      { posX = dg::blas2::dot( xvec, w2d, ntilde[j])/mass_[j]-posX_init;
+        posY = dg::blas2::dot( yvec, w2d, ntilde[j])/mass_[j]-posY_init;
+      }
+      if (i==0)
+      { velX_old = -posX/deltaT;
+        velY_old = -posY/deltaT;
+        posX_old = posX;
+        posY_old = posY;
+      }
+      velX = (posX - posX_old)/deltaT;
+      velY = (posY - posY_old)/deltaT;
+      velCOM=sqrt(velX*velX+velY*velY);
+      accX = (velX - velX_old)/deltaT;
+      accY = (velY - velY_old)/deltaT;
+      if (i>0)
+      { posX_old = posX;
+        posY_old = posY;
+        velX_old = velX;
+        velY_old = velY;
+      }
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[0  + add_to_spatial_idx], start0d, count0d, &posX);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[1  + add_to_spatial_idx], start0d, count0d, &posY);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[2  + add_to_spatial_idx], start0d, count0d, &velX);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[3  + add_to_spatial_idx], start0d, count0d, &velY);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[4  + add_to_spatial_idx], start0d, count0d, &accX);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[5  + add_to_spatial_idx], start0d, count0d, &accY);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[11 + add_to_spatial_idx], start0d, count0d, &velCOM);
+      // maximal amplitude
+      if ( p.amp > 0)
+        maxamp = *thrust::max_element( npe[j].begin(), npe[j].end());
+      else
+        maxamp = *thrust::min_element( npe[j].begin(), npe[j].end());
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[12 + add_to_spatial_idx], start0d, count0d, &maxamp);
+      //get max position and value(x,y_max)
+      dg::blas2::gemv(equi, npe[j], helper);
+      position = thrust::distance( helper.begin(), thrust::max_element( helper.begin(), helper.end()) );
+      posX_max = hx*(1./2. + (double)(position%Nx))-posX_init;
+      posY_max = hy*(1./2. + (double)(position/Nx))-posY_init;   // Nx->Ny?
+      posX_max_hs = hx*(1./2. + (double)(position%Nx));
+      posY_max_hs = hy*(1./2. + (double)(position/Nx));   // Nx->Ny?
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[6 + add_to_spatial_idx], start0d, count0d, &posX_max);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[7 + add_to_spatial_idx], start0d, count0d, &posY_max);
+      velX_max = (posX_max - posX_max_old) /deltaT;
+      velY_max = (posY_max - posY_max_old) /deltaT;
+      if (i>0)
+      { posX_max_old = posX_max;
+        posY_max_old = posY_max;
+      }
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[8 + add_to_spatial_idx], start0d, count0d, &velX_max);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[9 + add_to_spatial_idx], start0d, count0d, &velY_max);
+      //compactness
+      if (i==0)
+      { heavi.set_origin( posX_max_hs, posY_max_hs );
+        heavy = dg::evaluate( heavi, g2d);
+        normalize = dg::blas2::dot( heavy, w2d, ntilde[j]);
+      }
+      heavi.set_origin( posX_max_hs, posY_max_hs);
+      heavy = dg::evaluate( heavi, g2d);
+      compactness =  dg::blas2::dot( heavy, w2d, ntilde[j])/normalize;
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[10 + add_to_spatial_idx], start0d, count0d, &compactness);
+      //energy
+      dg::blas1::transform(npe[j], lnn[j], dg::LN<double>());
+    }
+    //field
+    arakawa.variation(field[0], helper);
+    double energy[5] = {};
+    energy[0] = dg::blas2::dot(npe[0], w2d, lnn[0]);
+    energy[1] = p.a[1]*p.tau[1]*dg::blas2::dot(npe[1], w2d, lnn[1]);
+    energy[2] = p.a[2]*p.tau[2]*dg::blas2::dot(npe[2], w2d, lnn[2]);
+    energy[3] = 0.5*p.a[1]*p.mu[1]*dg::blas2::dot(npe[1], w2d, helper);
+    energy[4] = 0.5*p.a[2]*p.mu[2]*dg::blas2::dot(npe[2], w2d, helper);
+
+    for (unsigned j = 0; j < 5; j++)
+    { err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[j], start0d, count0d, &energy[j]);
+    }
+    double dcn = cn[0]+cn[1]+cn[2];
+    err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[5], start0d, count0d, &dcn);
+  }
+  err_out = nc_close(ncid_out);
+  err_in = nc_close(ncid_in);
+  return 0;
 }
-
