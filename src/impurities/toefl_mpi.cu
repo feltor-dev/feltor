@@ -67,13 +67,13 @@ int main( int argc, char* argv[])
     if(rank==0)p.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
     dg::CartesianMPIGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y, comm);
-    dg::CartesianMPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);
+    dg::CartesianMPIGrid2d grid_out( 0, p.lx, 0,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);
     //create RHS
     dg::Diffusion< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > diffusion( grid, p);
     dg::ToeflI< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > toeflI( grid, p);
     /////////////////////The initial field///////////////////////////////////////////
     dg::Gaussian gaussian( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::vector<dg::MDVec> y0(3, dg::evaluate(dg::one, grid)), y1( y0);
+    std::vector<dg::MDVec> y0(3, dg::evaluate(dg::zero, grid));
     dg::Helmholtz<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> & gamma = toeflI.gamma();
     if( p.mode == 1)
     {   if( p.vorticity == 0)
@@ -116,7 +116,6 @@ int main( int argc, char* argv[])
         //sum up
         if( p.a[2] != 0)
             dg::blas1::axpby( 1., wallv, 1., y0[0]); //add wall to blob in n_e
-
     }
     if( p.mode == 3)
     {   gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
@@ -131,13 +130,12 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( 1./p.a[2], y0[2], 0., y0[2]); //n_z ~1./a_z n_e
         y0[1] = dg::evaluate( dg::zero, grid);
     }
-
+    std::vector<dg::MDVec> y1( y0);
     //////////////////initialisation of timestepper and first step///////////////////
     if(rank==0)std::cout << "init timestepper...\n";
     double time = 0;
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, y0, p.dt);
-    y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -190,14 +188,13 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //Potential
-    transfer = toeflI.potential()[0];
+    transfer = toeflI.polarization( y0);
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     //Vorticity
-    transfer = toeflI.potential()[0];
-    dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);
-    dg::blas2::gemv( interpolate, y1[1].data(), transferD);
+    dg::blas2::gemv( diffusion.laplacianM(), transfer, y0[1]);
+    dg::blas2::gemv( interpolate, y0[1].data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     err = nc_put_vara_double( ncid, tvarID,     start, count, &time);
@@ -228,7 +225,7 @@ int main( int argc, char* argv[])
             dg::Timer ti;
             ti.tic();
 #endif//DG_BENCHMARK
-            for( unsigned j=1; j<p.itstp; j++)
+            for( unsigned j=0; j<p.itstp; j++)
             {   karniadakis( toeflI, diffusion, y0);
                 y0.swap( y1);
                 step++;

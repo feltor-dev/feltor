@@ -40,7 +40,7 @@ int main( int argc, char* argv[])
     dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > toeflI( grid, p);
     /////////////////////The initial field///////////////////////////////////////////
     dg::Gaussian gaussian( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::vector<dg::DVec> y0(3, dg::evaluate(dg::zero, grid));//, y1( y0);
+    std::vector<dg::DVec> y0(3, dg::evaluate(dg::zero, grid));
     dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
     if( p.mode == 1)
     {   if( p.vorticity == 0)
@@ -97,13 +97,12 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( 1./p.a[2], y0[2], 0., y0[2]); //n_z ~1./a_z n_e
         y0[1] = dg::evaluate( dg::zero, grid);
     }
+    std::vector<dg::DVec> y1( y0);
     //////////////////initialisation of timestepper and first step///////////////////
     std::cout << "init timestepper...\n";
-    double time = 0;
-    std::vector<dg::DVec> y1( y0);
+    double time = 0.0;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, y0, p.dt);
-    y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -144,14 +143,13 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //Potential
-    transfer = toeflI.potential()[0];
+    transfer = toeflI.polarization( y0);
     dg::blas2::symv( interpolate, transfer, transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     //Vorticity
-    transfer = toeflI.potential()[0];
-    dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);
-    dg::blas2::symv( interpolate, y1[1], transferD);
+    dg::blas2::gemv( diffusion.laplacianM(), transfer, y0[1]);
+    dg::blas2::symv( interpolate, y0[1], transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -222,7 +220,7 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
             transfer = toeflI.potential()[0];
             dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        //correct?
-            dg::blas2::symv( interpolate,y1[1], transferD);
+            dg::blas2::symv( interpolate, y1[1], transferD);
             dg::blas1::transfer( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
             err = nc_put_vara_double( ncid, tvarID, start, count, &time);

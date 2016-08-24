@@ -111,11 +111,12 @@ struct ToeflI
      * @return integrated total energy diffusion
      */
     double energy_diffusion( ){ return ediff_;}
+    const container& polarization( const std::vector<container>& y);
 
-  private:
+private:
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     const container& compute_psi( const container& potential, int idx);
-    const container& polarization( const std::vector<container>& y);
+//    const container& polarization( const std::vector<container>& y);
 
     container chi, omega;
     const container binv; //magnetic field
