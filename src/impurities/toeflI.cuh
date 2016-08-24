@@ -8,7 +8,7 @@
 #endif
 
 
-//TODO es wäre besser, wenn ToeflI auch einen Zeitschritt berechnen würde 
+// TODO es wäre besser, wenn ToeflI auch einen Zeitschritt berechnen würde
 // dann wäre die Rückgabe der Felder (Potential vs. Masse vs. exp( y)) konsistenter
 // (nur das Objekt weiß welches Feld zu welchem Zeitschritt gehört)
 
@@ -184,7 +184,7 @@ const container& ToeflI<G, Matrix, container>::polarization( const std::vector<c
 
     gamma1.alpha() = -0.5*p.tau[1]*p.mu[1];
     invert_invgamma( gamma1, gamma_n[0], y[1]);
-    gamma1.alpha() = -0.5*p.tau[  2]*p.mu[2];
+    gamma1.alpha() = -0.5*p.tau[2]*p.mu[2];
     invert_invgamma( gamma1, gamma_n[1], y[2]);
 
     dg::blas1::axpby( -1., y[0], 0., chi);

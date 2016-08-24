@@ -82,7 +82,6 @@ int main( int argc, char* argv[])
             dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
             dg::MDVec v2d=dg::create::inv_weights(grid);
             dg::blas2::symv( v2d, y0[1], y0[1]);
-
             dg::blas1::scal( y0[1], 1./p.a[1]); //n_i ~1./a_i n_e
             y0[2] = dg::evaluate( dg::zero, grid);
         }

@@ -65,13 +65,16 @@ int main( int argc, char* argv[])
   const size_t num_spatial = 14;
   const size_t num_err_time = 6, num_err_etime = 5;
   int species_rgyro_id[num_species], field_rphys_id[num_species];
-  int species_wgrp_id[num_species],  field_wgrp_id[num_fields];
+  int species_wgrp_id[num_species];
   int species_wphys_id[num_species], field_wphys_id[num_fields];
   int species_wspatial_id[num_species*num_spatial];
   int err_time_wgrp_id, err_etime_wgrp_id;
   int err_time_wval_id[num_err_time];
   int err_etime_rval_id[num_err_etime], err_etime_wval_id[num_err_etime];
   //groups
+ std::string species_grp_name[num_species] =
+  { "electrons_analysed", "ions_analysed", "impurities_analysed"
+  };
   std::string species_name[num_species] =
   { "electrons", "ions", "impurities"
   };
@@ -111,6 +114,7 @@ int main( int argc, char* argv[])
   double deltaT = p.dt*p.itstp;
   std::vector<dg::DVec> npe(num_species, dg::evaluate(dg::zero, g2d));
   std::vector<dg::DVec> ntilde(num_species, dg::evaluate(dg::zero, g2d));
+  std::vector<dg::DVec> nphys(num_species-1, dg::evaluate(dg::zero, g2d));
   std::vector<dg::DVec> lnn(num_species, dg::evaluate(dg::zero, g2d));
   std::vector<dg::DVec> field(num_fields, dg::evaluate(dg::zero, g2d));
   std::vector<dg::HVec> field_host(num_fields, dg::evaluate(dg::zero, g2d));
@@ -158,18 +162,17 @@ int main( int argc, char* argv[])
   err_out = nc_create(argv[2], NC_NETCDF4|NC_CLOBBER, &ncid_out);
   err_out = nc_put_att_text(ncid_out, NC_GLOBAL, "inputfile",
                             input.size(), input.data());
-  err_out = file::define_limtime_xy(ncid_out, dim_t_x_y_id, p.maxout,
+  err_out = file::define_limtime_xy(ncid_out, dim_t_x_y_id, p.maxout+1,
                                     &tvar_id, g2d);
   err_out = file::define_limited_time(ncid_out, "etime", num_etime,
                                       &dim_et_id, &etvar_id);
-
   int k = 0;
   for (unsigned i = 0; i < num_species; i++)
   { err_in = nc_inq_varid(ncid_in, species_name[i].data(), &species_rgyro_id[i]);;
-    err_out = nc_def_grp(ncid_out, species_name[i].data(), &species_wgrp_id[i]);
-    err_out = nc_def_var(species_wgrp_id[i], "physfield", NC_DOUBLE, 3, dim_t_x_y_id, &species_wphys_id[i]);
-    err_out = nc_def_var_deflate(species_wgrp_id[i], species_wphys_id[i], shuffle_flag, compress_flag, compress_level);
-    err_out = nc_set_var_chunk_cache(species_wgrp_id[i], species_wphys_id[i], cache_size, cache_nelems, cache_preemption);
+    err_out = nc_def_var(ncid_out, species_name[i].data(), NC_DOUBLE, 3, dim_t_x_y_id, &species_wphys_id[i]);
+    err_out = nc_def_var_deflate(ncid_out, species_wphys_id[i], shuffle_flag, compress_flag, compress_level);
+    err_out = nc_set_var_chunk_cache(ncid_out, species_wphys_id[i], cache_size, cache_nelems, cache_preemption);
+    err_out = nc_def_grp(ncid_out, species_grp_name[i].data(), &species_wgrp_id[i]);
     for (unsigned j = 0; j < num_spatial; j++)
     { err_out = nc_def_var(species_wgrp_id[i], spatial[j].data(), NC_DOUBLE, 1, &dim_t_x_y_id[0], &species_wspatial_id[k]);
       err_out = nc_def_var_deflate(species_wgrp_id[i], species_wspatial_id[k], shuffle_flag, compress_flag, compress_level);
@@ -178,10 +181,9 @@ int main( int argc, char* argv[])
   }
   for (unsigned i = 0; i < num_fields; i++)
   { err_in = nc_inq_varid(ncid_in, field_name[i].data(), &field_rphys_id[i]);
-    err_out = nc_def_grp(ncid_out, field_name[i].data(), &field_wgrp_id[i]);
-    err_out = nc_def_var(field_wgrp_id[i], "physfield", NC_DOUBLE, 3, dim_t_x_y_id, &field_wphys_id[i]);
-    err_out = nc_def_var_deflate(field_wgrp_id[i], field_wphys_id[i], shuffle_flag, compress_flag, compress_level);
-    err_out = nc_set_var_chunk_cache(field_wgrp_id[i], field_wphys_id[i], cache_size, cache_nelems, cache_preemption);
+    err_out = nc_def_var(ncid_out, field_name[i].data(), NC_DOUBLE, 3, dim_t_x_y_id, &field_wphys_id[i]);
+    err_out = nc_def_var_deflate(ncid_out, field_wphys_id[i], shuffle_flag, compress_flag, compress_level);
+    err_out = nc_set_var_chunk_cache(ncid_out, field_wphys_id[i], cache_size, cache_nelems, cache_preemption);
   }
   err_out = nc_def_grp( ncid_out, "err_time", &err_time_wgrp_id);
   for (unsigned i = 0; i < num_err_time; i++)
@@ -208,7 +210,7 @@ int main( int argc, char* argv[])
   int add_to_spatial_idx = 0;
   //^ tbr ^
 
-  for (unsigned i = 0; i < p.maxout; i++)
+  for (unsigned i = 0; i <= p.maxout; i++)
   { std::cout << i << "\n";   // tbr!
     start2d[0] = i;
     start0d[0] = i;
@@ -219,7 +221,7 @@ int main( int argc, char* argv[])
     { err_in = nc_get_vara_double(ncid_in, field_rphys_id[j], start2d, count2d, field_host[j].data());
       field[j] = field_host[j];
       dg::blas1::transfer(field[j], transfer2d);
-      err_out = nc_put_vara_double(field_wgrp_id[j], field_wphys_id[j], start2d, count2d, transfer2d.data());
+      err_out = nc_put_vara_double(ncid_out, field_wphys_id[j], start2d, count2d, transfer2d.data());
     }
     for (unsigned j = 0; j < num_species; j++)
     { err_in = nc_get_vara_double(ncid_in, species_rgyro_id[j], start2d, count2d, npe_h[j].data());
@@ -227,7 +229,7 @@ int main( int argc, char* argv[])
       dg::blas1::plus(npe[j], 1);
       dg::blas1::transform(npe[j], ntilde[j], dg::PLUS<double>(-1));
       if( j == 0)
-      { err_out = nc_put_vara_double(species_wgrp_id[j], species_wphys_id[j], start2d, count2d, npe_h[j].data());
+      { err_out = nc_put_vara_double(ncid_out, species_wphys_id[j], start2d, count2d, npe_h[j].data());
       }
       else
       { gamma_s.alpha() = -0.5*p.tau[j]*p.mu[j];
@@ -236,10 +238,10 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot(chi, binv, chi);
         dg::blas1::pointwiseDot(chi, binv, chi);
         pol.set_chi(chi);
-        pol.symv(field[0], ntilde[j]);
-        dg::blas1::axpby( 1., gamma_n, 1., ntilde[j]);
-        dg::blas1::transfer(ntilde[j], transfer2d);
-        err_out = nc_put_vara_double(species_wgrp_id[j], species_wphys_id[j], start2d, count2d, transfer2d.data());
+        pol.symv(field[0], nphys[j-1]);
+        dg::blas1::axpby( 1., gamma_n, 1., nphys[j-1]);
+        dg::blas1::transfer(nphys[j-1], transfer2d);
+        err_out = nc_put_vara_double(ncid_out, species_wphys_id[j], start2d, count2d, transfer2d.data());
       }
       add_to_spatial_idx = j*num_spatial;
       //mass

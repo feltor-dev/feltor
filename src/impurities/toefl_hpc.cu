@@ -40,7 +40,7 @@ int main( int argc, char* argv[])
     dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > toeflI( grid, p);
     /////////////////////The initial field///////////////////////////////////////////
     dg::Gaussian gaussian( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::vector<dg::DVec> y0(3, dg::evaluate(dg::one, grid)), y1( y0);
+    std::vector<dg::DVec> y0(3, dg::evaluate(dg::zero, grid));//, y1( y0);
     dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
     if( p.mode == 1)
     {   if( p.vorticity == 0)
@@ -49,7 +49,6 @@ int main( int argc, char* argv[])
             dg::blas2::symv( gamma, y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
             dg::DVec v2d=dg::create::inv_weights(grid);
             dg::blas2::symv( v2d, y0[1], y0[1]);
-
             dg::blas1::scal( y0[1], 1./p.a[1]); //n_i ~1./a_i n_e
             y0[2] = dg::evaluate( dg::zero, grid);
         }
@@ -84,7 +83,6 @@ int main( int argc, char* argv[])
         //sum up
         if( p.a[2] != 0)
             dg::blas1::axpby( 1., wallv, 1., y0[0]); //add wall to blob in n_e
-
     }
     if( p.mode == 3)
     {   gamma.alpha() = -0.5*p.tau[2]*p.mu[2];
@@ -99,10 +97,10 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( 1./p.a[2], y0[2], 0., y0[2]); //n_z ~1./a_z n_e
         y0[1] = dg::evaluate( dg::zero, grid);
     }
-
     //////////////////initialisation of timestepper and first step///////////////////
     std::cout << "init timestepper...\n";
     double time = 0;
+    std::vector<dg::DVec> y1( y0);
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( toeflI, diffusion, y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
@@ -141,7 +139,7 @@ int main( int argc, char* argv[])
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid);
     for( unsigned i=0; i<3; i++)
-    {   dg::blas2::symv( interpolate, y0[i], transferD);
+    {   dg::blas2::gemv( interpolate, y0[i], transferD);
         dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
@@ -176,7 +174,7 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         unsigned step = 0;
 #endif //DG_BENCHMARK
-        for( unsigned i=1; i<p.maxout; i++)
+        for( unsigned i=1; i<=p.maxout; i++)
         {
 
 #ifdef DG_BENCHMARK

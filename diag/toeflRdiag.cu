@@ -175,7 +175,8 @@ int main( int argc, char* argv[])
     //-----------------Start timestepping
     err = nc_open( argv[1], NC_NOWRITE, &ncid);   
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
-    for( unsigned i=0; i<=p.maxout; i++)
+    for( unsigned i=0
+             ; i<=p.maxout; i++)
     {
         start2d[0] = i;
         //start1d[0] = i;
@@ -257,8 +258,8 @@ int main( int argc, char* argv[])
         velX_max = (posX_max - posX_max_old)/deltaT;
         velY_max = (posY_max - posY_max_old)/deltaT;
         if( i==0) std::cout << "COM: t = "<< time << " amp :" << maxamp << " X_init :" << posX_init << " Y_init :" << posY_init << "\n";
-        //std::cout << "COM: t = "<< time << " amp :" << maxamp << " velX :" << velX << " velY :" << velY << " X :" << posX << " Y :" << posY << "\n";
-        std::cout << "MAX: time = "<< time << " mass :" << mass_ << " velX :" << velX_max << " velY :" << velY_max << " posX :" << posX_max << " posY :" << posY_max << std::endl;
+        std::cout << "COM: t = "<< time << " amp :" << maxamp << " velX :" << velX << " velY :" << velY << " X :" << posX << " Y :" << posY << "\n";
+        //std::cout << "MAX: time = "<< time << " mass :" << mass_ << " velX :" << velX_max << " velY :" << velY_max << " posX :" << posX_max << " posY :" << posY_max << std::endl;
         if (i>0){
             posX_max_old = posX_max; posY_max_old = posY_max;
         }  
