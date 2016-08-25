@@ -88,7 +88,7 @@ int main( int argc, char* argv[])
   };
   std::string err_time[num_err_time] =
   { "Se", "Si", "Sz",
-    "Uphii", "Uphiz", "cn"
+    "Uphii", "Uphiz", "dcn"
   };
   std::string err_etime[num_err_etime] =
   { "energy", "mass", "dissipation",
@@ -114,7 +114,7 @@ int main( int argc, char* argv[])
   double deltaT = p.dt*p.itstp;
   std::vector<dg::DVec> npe(num_species, dg::evaluate(dg::zero, g2d));
   std::vector<dg::DVec> ntilde(num_species, dg::evaluate(dg::zero, g2d));
-  std::vector<dg::DVec> nphys(num_species-1, dg::evaluate(dg::zero, g2d));
+  std::vector<dg::DVec> nphys(num_species, dg::evaluate(dg::zero, g2d));
   std::vector<dg::DVec> lnn(num_species, dg::evaluate(dg::zero, g2d));
   std::vector<dg::DVec> field(num_fields, dg::evaluate(dg::zero, g2d));
   std::vector<dg::HVec> field_host(num_fields, dg::evaluate(dg::zero, g2d));
@@ -198,6 +198,7 @@ int main( int argc, char* argv[])
   }
   err_out = nc_enddef(ncid_out);
   ////////remap data////////
+  //err_etime
   double transfer_etime[num_etime];
   static size_t count_etime[] = {num_etime};
   static size_t start_etime[] = {0};
@@ -205,11 +206,8 @@ int main( int argc, char* argv[])
   { err_in = nc_get_vara_double(ncid_in, err_etime_rval_id[i], start_etime, count_etime, transfer_etime);
     err_out = nc_put_vara_double(err_etime_wgrp_id, err_etime_wval_id[i], start_etime, count_etime, transfer_etime);
   }
-  //v tbr v
-  boost::timer t_loop, t_inv, t_write;
+  //timestepping
   int add_to_spatial_idx = 0;
-  //^ tbr ^
-
   for (unsigned i = 0; i <= p.maxout; i++)
   { std::cout << i << "\n";   // tbr!
     start2d[0] = i;
@@ -219,9 +217,8 @@ int main( int argc, char* argv[])
     }
     for (unsigned j = 0; j < num_fields; j++)
     { err_in = nc_get_vara_double(ncid_in, field_rphys_id[j], start2d, count2d, field_host[j].data());
+      err_out = nc_put_vara_double(ncid_out, field_wphys_id[j], start2d, count2d, field_host[j].data());
       field[j] = field_host[j];
-      dg::blas1::transfer(field[j], transfer2d);
-      err_out = nc_put_vara_double(ncid_out, field_wphys_id[j], start2d, count2d, transfer2d.data());
     }
     for (unsigned j = 0; j < num_species; j++)
     { err_in = nc_get_vara_double(ncid_in, species_rgyro_id[j], start2d, count2d, npe_h[j].data());
@@ -230,6 +227,7 @@ int main( int argc, char* argv[])
       dg::blas1::transform(npe[j], ntilde[j], dg::PLUS<double>(-1));
       if( j == 0)
       { err_out = nc_put_vara_double(ncid_out, species_wphys_id[j], start2d, count2d, npe_h[j].data());
+        nphys[j] = ntilde[j];
       }
       else
       { gamma_s.alpha() = -0.5*p.tau[j]*p.mu[j];
@@ -238,18 +236,19 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot(chi, binv, chi);
         dg::blas1::pointwiseDot(chi, binv, chi);
         pol.set_chi(chi);
-        pol.symv(field[0], nphys[j-1]);
-        dg::blas1::axpby( 1., gamma_n, 1., nphys[j-1]);
-        dg::blas1::transfer(nphys[j-1], transfer2d);
+        pol.symv(field[0], nphys[j]);
+        dg::blas1::axpby( 1., gamma_n, 1., nphys[j]);
+        dg::blas1::transfer(nphys[j], transfer2d);
         err_out = nc_put_vara_double(ncid_out, species_wphys_id[j], start2d, count2d, transfer2d.data());
       }
+      //charge number
+      dg::blas1::axpby(p.a[j], one, 0., helper);
+      cn[j] = dg::blas2::dot(helper, w2d, nphys[j]);
+
       add_to_spatial_idx = j*num_spatial;
       //mass
       mass_[j] = dg::blas2::dot(one, w2d, ntilde[j]);
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[13+add_to_spatial_idx], start0d, count0d, &mass_[j]);
-      //charge number
-      dg::blas1::axpby(p.a[j], one, 0., helper);
-      cn[j] = dg::blas2::dot(helper, w2d, ntilde[j]);
       //position, velocity, acceleration
       if (i==0)
       { posX_init = dg::blas2::dot( xvec, w2d, ntilde[j])/mass_[j];
@@ -332,6 +331,8 @@ int main( int argc, char* argv[])
     { err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[j], start0d, count0d, &energy[j]);
     }
     double dcn = cn[0]+cn[1]+cn[2];
+    std::cout << cn[0] << " | " << cn[0] + cn[1] << " | " << cn[2] << " | " << dcn << "\n";
+
     err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[5], start0d, count0d, &dcn);
   }
   err_out = nc_close(ncid_out);
