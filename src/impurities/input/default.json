@@ -9,15 +9,15 @@
     "itstp"  : 5,       // # steps between outputs (5)
     "maxout" : 100,     // # outputs excluding first
     "eps_time"  : 1e-9, // # accuracy of implicit time-stepper (1e-8)
-    "eps_pol"   : 1e-4, // # accuracy of polarisation solver
+    "eps_pol"   : 1e-6, // # accuracy of polarisation solver
     "eps_gamma" : 1e-8, // # accuracy of Gamma (1e-6)
-    "kappa" : 0.0005,   // # magnetic curvature
-    "nu"  : 1e-3,       // # pependicular viscosity
+    "curvature" : 0.0005, // # magnetic curvature
+    "nu_perp"  : 1e-3,  // # pependicular viscosity
     "lx"  : 400,        // # lx in units of rho_s
     "ly"  : 400,        // # ly in units of rho_s
-    "bc_x"  : "DIR",    // # boundary condition in x (1: Dirichlet, 0: periodich)
+    "bc_x"  : "DIR",    // # boundary condition in x (1: Dirichlet, 0: periodic)
     "bc_y"  : "PER",    // # boundary condition in y
-    "amp"   : 2.0,      // # perturbation (blob) amplitude
+    "amplitude" : 2.0,  // # perturbation (blob) amplitude
     "sigma" : 10.,      // # blob variance in units of rho_s
     "posX"  : 0.25,     // # blob x-position in units of lx (0.4)
     "posY"  : 0.5,      // # blob y-position in units of ly

@@ -10,7 +10,10 @@
 #include "file/nc_utilities.h"
 #include "impurities/parameters.h"
 
-#include <boost/timer.hpp>
+#include "dg/backend/timer.cuh"
+//dg::Timer t;
+//t.tic();
+//t.toc();
 // boost::timer t;
 // double duration;
 //
@@ -130,14 +133,14 @@ int main( int argc, char* argv[])
   dg::Invert< dg::DVec > invert_invgamma(chi, chi.size(), p.eps_gamma);
   //calculation variables per species
   double mass_[num_species] = {}, cn[num_species] = {};
-  double posX = 0, posY = 0;
-  double posX_init = 0, posY_init = 0;
-  double posX_old = 0 ,posY_old = 0;
+  double posX = 0, posY =0 ;
+  double posX_init[num_species] = {}, posY_init[num_species] = {};
+  double posX_old[num_species] ={} ,posY_old[num_species] = {};
   double posX_max = 0, posY_max = 0;
-  double posX_max_old = 0, posY_max_old = 0;
+  double posX_max_old[num_species] = {}, posY_max_old[num_species] = {};
   double posX_max_hs = 0, posY_max_hs = 0;
-  double velX = 0, velY = 0;
-  double velX_old = 0, velY_old = 0;
+  double velX[num_species] = {}, velY[num_species] = {};
+  double velX_old[num_species] = {}, velY_old[num_species] = {};
   double velX_max = 0, velY_max = 0;
   double velCOM = 0;
   double accX = 0, accY = 0;
@@ -232,12 +235,13 @@ int main( int argc, char* argv[])
       else
       { gamma_s.alpha() = -0.5*p.tau[j]*p.mu[j];
         invert_invgamma(gamma_s, gamma_n, ntilde[j]);
-        dg::blas1::axpby(-p.a[j]*p.mu[j], ntilde[j], 0., chi);
+        dg::blas1::axpby(p.a[j]*p.mu[j], ntilde[j], 0., chi);
+        dg::blas1::plus( chi, p.a[j]*p.mu[j]); 
         dg::blas1::pointwiseDot(chi, binv, chi);
         dg::blas1::pointwiseDot(chi, binv, chi);
         pol.set_chi(chi);
         pol.symv(field[0], nphys[j]);
-        dg::blas1::axpby( 1., gamma_n, 1., nphys[j]);
+        dg::blas1::axpby( 1., gamma_n, -1., nphys[j]);
         dg::blas1::transfer(nphys[j], transfer2d);
         err_out = nc_put_vara_double(ncid_out, species_wphys_id[j], start2d, count2d, transfer2d.data());
       }
@@ -251,34 +255,34 @@ int main( int argc, char* argv[])
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[13+add_to_spatial_idx], start0d, count0d, &mass_[j]);
       //position, velocity, acceleration
       if (i==0)
-      { posX_init = dg::blas2::dot( xvec, w2d, ntilde[j])/mass_[j];
-        posY_init = dg::blas2::dot( yvec, w2d, ntilde[j])/mass_[j];
+      { posX_init[j] = dg::blas2::dot( xvec, w2d, ntilde[j])/mass_[j];
+        posY_init[j] = dg::blas2::dot( yvec, w2d, ntilde[j])/mass_[j];
       }
       if (i>0)
-      { posX = dg::blas2::dot( xvec, w2d, ntilde[j])/mass_[j]-posX_init;
-        posY = dg::blas2::dot( yvec, w2d, ntilde[j])/mass_[j]-posY_init;
+      { posX = dg::blas2::dot( xvec, w2d, ntilde[j])/mass_[j]-posX_init[j];
+        posY = dg::blas2::dot( yvec, w2d, ntilde[j])/mass_[j]-posY_init[j];
       }
       if (i==0)
-      { velX_old = -posX/deltaT;
-        velY_old = -posY/deltaT;
-        posX_old = posX;
-        posY_old = posY;
+      { velX_old[j] = -posX/deltaT;
+        velY_old[j] = -posY/deltaT;
+        posX_old[j] = posX;
+        posY_old[j] = posY;
       }
-      velX = (posX - posX_old)/deltaT;
-      velY = (posY - posY_old)/deltaT;
-      velCOM=sqrt(velX*velX+velY*velY);
-      accX = (velX - velX_old)/deltaT;
-      accY = (velY - velY_old)/deltaT;
+      velX[j] = (posX - posX_old[j])/deltaT;
+      velY[j] = (posY - posY_old[j])/deltaT;
+      velCOM=sqrt(velX[j]*velX[j]+velY[j]*velY[j]);
+      accX = (velX[j] - velX_old[j])/deltaT;
+      accY = (velY[j] - velY_old[j])/deltaT;
       if (i>0)
-      { posX_old = posX;
-        posY_old = posY;
-        velX_old = velX;
-        velY_old = velY;
+      { posX_old[j] = posX;
+        posY_old[j] = posY;
+        velX_old[j] = velX[j];
+        velY_old[j] = velY[j];
       }
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[0  + add_to_spatial_idx], start0d, count0d, &posX);
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[1  + add_to_spatial_idx], start0d, count0d, &posY);
-      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[2  + add_to_spatial_idx], start0d, count0d, &velX);
-      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[3  + add_to_spatial_idx], start0d, count0d, &velY);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[2  + add_to_spatial_idx], start0d, count0d, &velX[j]);
+      err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[3  + add_to_spatial_idx], start0d, count0d, &velY[j]);
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[4  + add_to_spatial_idx], start0d, count0d, &accX);
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[5  + add_to_spatial_idx], start0d, count0d, &accY);
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[11 + add_to_spatial_idx], start0d, count0d, &velCOM);
@@ -291,17 +295,17 @@ int main( int argc, char* argv[])
       //get max position and value(x,y_max)
       dg::blas2::gemv(equi, npe[j], helper);
       position = thrust::distance( helper.begin(), thrust::max_element( helper.begin(), helper.end()) );
-      posX_max = hx*(1./2. + (double)(position%Nx))-posX_init;
-      posY_max = hy*(1./2. + (double)(position/Nx))-posY_init;   // Nx->Ny?
+      posX_max = hx*(1./2. + (double)(position%Nx))-posX_init[j];
+      posY_max = hy*(1./2. + (double)(position/Nx))-posY_init[j];   // Nx->Ny?
       posX_max_hs = hx*(1./2. + (double)(position%Nx));
       posY_max_hs = hy*(1./2. + (double)(position/Nx));   // Nx->Ny?
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[6 + add_to_spatial_idx], start0d, count0d, &posX_max);
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[7 + add_to_spatial_idx], start0d, count0d, &posY_max);
-      velX_max = (posX_max - posX_max_old) /deltaT;
-      velY_max = (posY_max - posY_max_old) /deltaT;
+      velX_max = (posX_max - posX_max_old[j]) /deltaT;
+      velY_max = (posY_max - posY_max_old[j]) /deltaT;
       if (i>0)
-      { posX_max_old = posX_max;
-        posY_max_old = posY_max;
+      { posX_max_old[j] = posX_max;
+        posY_max_old[j] = posY_max;
       }
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[8 + add_to_spatial_idx], start0d, count0d, &velX_max);
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[9 + add_to_spatial_idx], start0d, count0d, &velY_max);
@@ -331,7 +335,9 @@ int main( int argc, char* argv[])
     { err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[j], start0d, count0d, &energy[j]);
     }
     double dcn = cn[0]+cn[1]+cn[2];
-    std::cout << cn[0] << " | " << cn[0] + cn[1] << " | " << cn[2] << " | " << dcn << "\n";
+    std::cout << "Rel. error charge conservation " << fabs(dcn/cn[0]) << "\n";
+    double dvn = +p.a[0]*mass_[0]*velX[0]+p.a[1]*mass_[1]*velX[1]+p.a[2]*mass_[2]*velX[2];
+    std::cout << "Abs. error flux   conservation " << velX[0]<< " "<<velX[1]<<" "<<velX[2]<<" "<<fabs(dvn) << "\n";
 
     err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[5], start0d, count0d, &dcn);
   }
