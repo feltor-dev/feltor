@@ -519,7 +519,7 @@ void construct_rz( XFieldFinv fpsiMinv,
     double psi0, psi1;
     double eps = 1e10;
     unsigned N=1; 
-    while( eps >  1e-13 && N < 1e6 )
+    while( eps >  1e-9 && N < 1e6 )
     {
         g_old = g;
         psi0 = psi_0, psi1 = psi_x[0];
