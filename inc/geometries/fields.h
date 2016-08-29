@@ -1920,6 +1920,7 @@ struct BmodTheta
     Bmodule bmod_;
 
 };
+
 struct EllipticDirNeuM
 {
     EllipticDirNeuM( GeomParameters gp, double psi_0, double psi_1): R_0_(gp.R_0), func_(gp, psi_0, psi_1), bmod_(gp), br_(gp), bz_(gp) {}
@@ -1955,6 +1956,18 @@ struct EllipticDirNeuM
     Bmodule bmod_;
     BR br_;
     BZ bz_;
+};
+
+struct EllipticDirSimpleM
+{
+    EllipticDirSimpleM( GeomParameters gp, double psi_0, double psi_1): R_0_(gp.R_0), func_(gp, psi_0, psi_1) {}
+    double operator()(double R, double Z, double phi) const {
+        return -(( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
+
+    }
+    private:
+    double R_0_;
+    FuncDirNeu func_;
 };
 
 
