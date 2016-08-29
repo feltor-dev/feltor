@@ -383,7 +383,7 @@ template< class container>
 struct RingGrid2d; 
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A three-dimensional grid based on orthogonal coordinates
  */
 template< class container>
 struct RingGrid3d : public dg::Grid3d<double>
@@ -530,7 +530,7 @@ struct RingGrid3d : public dg::Grid3d<double>
 };
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A three-dimensional grid based on orthogonal coordinates
  */
 template< class container>
 struct RingGrid2d : public dg::Grid2d<double>
@@ -655,7 +655,7 @@ struct Field
 }//namespace orthogonal
 namespace dg{
 /**
- * @brief This function pulls back a function defined in cartesian coordinates R,Z to the conformal coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cartesian coordinates R,Z to the orthogonal coordinates x,y,\phi
  *
  * i.e. F(x,y) = f(R(x,y), Z(x,y))
  * @tparam BinaryOp The function object 
@@ -680,7 +680,7 @@ thrust::host_vector<double> pullback( double(f)(double,double), const orthogonal
 }
 ///@endcond
 /**
- * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the conformal coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the orthogonal coordinates x,y,\phi
  *
  * i.e. F(x,y,\phi) = f(R(x,y), Z(x,y), \phi)
  * @tparam TernaryOp The function object 

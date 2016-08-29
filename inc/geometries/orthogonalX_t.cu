@@ -11,6 +11,7 @@
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
+//#include "guenther.h"
 #include "orthogonalX.h"
 #include "refined_orthogonalX.h"
 #include "dg/ds.h"

@@ -11,6 +11,7 @@
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
+//#include "guenther.h"
 #include "conformalX.h"
 #include "dg/ds.h"
 #include "init.h"
