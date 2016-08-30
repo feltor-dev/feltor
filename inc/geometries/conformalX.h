@@ -29,54 +29,6 @@ struct FpsiX
          *
          * @return the value for R
          */
-        /*
-        solovev::Psip  psip(gp_);
-        solovev::PsipR psipR(gp_);
-        solovev::PsipZ psipZ(gp_);
-        double R_init = gp.R_0-1.1*gp.triangularity*gp.a;
-        double Z_init = -1.1*gp.elongation*gp.a;
-        thrust::host_vector<double> X(2,0), XN(X);
-        X[0] = R_init, X[1] = Z_init;
-        for( unsigned i=0; i<3; i++)
-        {
-            hessianRZtau_.newton_iteration( X, XN);
-            XN.swap(X);
-        }
-        R_init = X[0], Z_init = X[1];
-        std::cout << "X-point set at "<<R_init<<" "<<Z_init<<"\n";
-        //std::cout << "psi at X-point is "<<psip(R_init, Z_init)<<"\n";
-        //std::cout << "gradient at X-point is "<<psipR(R_init, Z_init)<<" "<<psipZ(R_init, Z_init)<<"\n";
-        //find four points; one in each quadrant
-        hessianRZtau_.set_norm( false);
-        minimalCurve_.set_norm( false);
-        for( int i=0; i<4; i++)
-        {
-            hessianRZtau_.set_quadrant( i);
-            unsigned N = 50;
-            //thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
-            thrust::host_vector<double> begin2d( 4, 0), end2d( begin2d), end2d_old(begin2d); 
-            begin2d[0] = end2d[0] = end2d_old[0] = R_init;
-            begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
-            hessianRZtau_(begin2d, end2d); //find eigenvector
-            begin2d[2] = end2d[0], begin2d[3] = end2d[1];
-            double eps = 1e10, eps_old = 2e10;
-            while( eps < eps_old && N<1e6 && eps > 1e-15)
-            {
-                //remember old values
-                eps_old = eps; end2d_old = end2d;
-                //compute new values
-                N*=2;
-                dg::stepperRK17( hessianRZtau_, begin2d, end2d, 0., 5., N);
-                //dg::stepperRK17( minimalCurve_, begin2d, end2d, 0., 2., N);
-                eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
-            }
-            R_i_[i] = end2d_old[0], Z_i_[i] = end2d_old[1]; 
-            vR_i[i] = end2d_old[2], vZ_i[i] = end2d_old[3];
-            //std::cout << "Found the point "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip(R_i_[i], Z_i_[i])<<"\n";
-        }
-        hessianRZtau_.set_norm( true);
-        minimalCurve_.set_norm( true);
-        */
         dg::detail::XPointer xpointer_(gp, 1e-4);
         solovev::Psip psip_(gp);
         solovev::FieldRZtau fieldRZtau_(gp);
