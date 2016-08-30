@@ -184,8 +184,8 @@ struct SeparatriX
                 dg::stepperRK17( fieldRZYZ_, begin2d, end2d, Z_i[i], Z_X, N);
                 y=end2d[2];
                 eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X));
-                eps = fabs(y-y_old);
-                std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)<<"\n";
+                //eps = fabs(y-y_old);
+                //std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)<<"\n";
             }
             //remember last call
             y_i[i] = end2d[2]; 
@@ -281,12 +281,14 @@ struct SeparatriX
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
             double psip2 = psipR*psipR+psipZ*psipZ;
-            //yr[i] = psipZ*f_psi/psip2;
-            //yz[i] = -psipR*f_psi/psip2;
-            yr[i] = psipZ*f_psi/sqrt(psip2);//equalarc
-            yz[i] = -psipR*f_psi/sqrt(psip2);//equalarc
-            //yr[i] = psipZ*f_psi; //conformal
-            //yz[i] = -psipR*f_psi;//conformal
+            //yr[i] =  psipZ/f_psi/psip2; //volume
+            //yz[i] = -psipR/f_psi/psip2; //volume
+            //yr[i] =  psipZ*f_psi/sqrt(psip2);//equalarc
+            //yz[i] = -psipR*f_psi/sqrt(psip2);//equalarc
+            //yr[i] =  psipZ*f_psi; //conformal
+            //yz[i] = -psipR*f_psi; //conformal
+            yr[i] =  psipZ*f_psi*sqrt(psip2); //separatrix
+            yz[i] = -psipR*f_psi*sqrt(psip2); //separatrix
         }
 
     }
@@ -312,6 +314,7 @@ struct SeparatriX
             eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
         }
         N_steps_=N;
+        std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
         std::cout << "Found f = "<< 2.*M_PI/(y_i[0]+end_old[2]+y_i[1])<<" with eps = "<<eps<<"\n";
         return 2.*M_PI/(y_i[0]+end_old[2]+y_i[1]);
     }

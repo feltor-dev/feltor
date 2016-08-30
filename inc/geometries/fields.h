@@ -1283,12 +1283,13 @@ struct FieldRZYT
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psip2 = psipR*psipR+psipZ*psipZ;
         yp[0] =  R_0_/y[0]*psipZ;//fieldR
         yp[1] = -R_0_/y[0]*psipR;//fieldZ
-        //yp[2] = R_0_/y[0]; 
-        yp[2] = sqrt(psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //equalarc
-        //yp[2] =(psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //fieldYbar
-        //yp[2] =1.0*R_0_/y[0]/y[0]; //fieldYbar
+        //yp[2] = R_0_/y[0]; //volume
+        //yp[2] = sqrt(psip2)*R_0_/y[0]; //equalarc
+        //yp[2] = psip2*R_0_/y[0]; //conformal
+        yp[2] = psip2*sqrt(psip2)*R_0_/y[0]; //separatrix
         double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
         double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
         yp[0] /=  fieldT;
@@ -1307,11 +1308,13 @@ struct FieldRZYZ
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psip2 = psipR*psipR+psipZ*psipZ;
         yp[0] =  psipZ;//fieldR
         yp[1] = -psipR;//fieldZ
-        //yp[2] = 1.0; //fieldYbar
-        yp[2] = sqrt(psipR*psipR+psipZ*psipZ); //equalarc
-        //yp[2] = (psipR*psipR+psipZ*psipZ); //fieldYbar
+        //yp[2] = 1.0; //volume
+        //yp[2] = sqrt(psip2); //equalarc
+        //yp[2] = psip2; //conformal
+        yp[2] = psip2*sqrt(psip2); //separatrix
         yp[0] /=  yp[1];
         yp[2] /=  yp[1];
         yp[1] =  1.;
@@ -1329,14 +1332,15 @@ struct FieldRZY
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        //yp[0] = +psipZ/f_;//fieldR
-        //yp[1] = -psipR/f_;//fieldZ
-        yp[0] = +psipZ/sqrt(psipR*psipR+psipZ*psipZ)/f_;//equalarc
-        yp[1] = -psipR/sqrt(psipR*psipR+psipZ*psipZ)/f_;//equalarc
-        //yp[0] = +psipZ/(psipR*psipR+psipZ*psipZ)/f_;//fieldR
-        //yp[1] = -psipR/(psipR*psipR+psipZ*psipZ)/f_;//fieldZ
-        //yp[0] = +psipZ*y[0]/f_;//fieldR
-        //yp[1] = -psipR*y[0]/f_;//fieldZ
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        //yp[0] = +psipZ/f_;//volume 
+        //yp[1] = -psipR/f_;//volume 
+        //yp[0] = +psipZ/sqrt(psip2)/f_;//equalarc
+        //yp[1] = -psipR/sqrt(psip2)/f_;//equalarc
+        //yp[0] = +psipZ/psip2/f_;//conformal
+        //yp[1] = -psipR/psip2/f_;//conformal
+        yp[0] = +psipZ/psip2/sqrt(psip2)/f_;//separatrix
+        yp[1] = -psipR/psip2/sqrt(psip2)/f_;//separatrix
     }
   private:
     double f_;
