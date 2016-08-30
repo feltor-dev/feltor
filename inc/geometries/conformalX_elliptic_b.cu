@@ -96,20 +96,20 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =         dg::pullback( dg::zero, g3d.associated());
     dg::DVec x_fine =    dg::pullback( dg::zero, g3d);
-    //const dg::DVec b =        dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d.associated());
-    //const dg::DVec bFINE =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d);
-    //dg::DVec bmod(b);
-    //const dg::DVec chi =      dg::pullback( solovev::BmodTheta(gp), g3d.associated());
-    //const dg::DVec chiFINE =  dg::pullback( solovev::BmodTheta(gp), g3d);
-    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d.associated());
-    //const dg::DVec solutionFINE = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d);
-    const dg::DVec b =        dg::pullback( solovev::EllipticDirSimpleM(gp, psi_0, psi_1), g3d.associated());
-    const dg::DVec bFINE =    dg::pullback( solovev::EllipticDirSimpleM(gp, psi_0, psi_1), g3d);
+    const dg::DVec b =        dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d.associated());
+    const dg::DVec bFINE =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g3d);
     dg::DVec bmod(b);
-    const dg::DVec chi =      dg::pullback( dg::one, g3d.associated());
-    const dg::DVec chiFINE =  dg::pullback( dg::one, g3d);
+    const dg::DVec chi =      dg::pullback( solovev::BmodTheta(gp), g3d.associated());
+    const dg::DVec chiFINE =  dg::pullback( solovev::BmodTheta(gp), g3d);
     const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d.associated());
     const dg::DVec solutionFINE = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d);
+    //const dg::DVec b =        dg::pullback( solovev::EllipticDirSimpleM(gp, psi_0, psi_1), g3d.associated());
+    //const dg::DVec bFINE =    dg::pullback( solovev::EllipticDirSimpleM(gp, psi_0, psi_1), g3d);
+    //dg::DVec bmod(b);
+    //const dg::DVec chi =      dg::pullback( dg::one, g3d.associated());
+    //const dg::DVec chiFINE =  dg::pullback( dg::one, g3d);
+    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d.associated());
+    //const dg::DVec solutionFINE = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g3d);
 
     const dg::DVec vol3dFINE = dg::create::volume( g3d);
     dg::HVec inv_vol3dFINE = dg::create::inv_weights( g3d);

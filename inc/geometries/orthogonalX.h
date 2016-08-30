@@ -294,7 +294,7 @@ struct FpsiX
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
-            std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
+            //std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
 
         }
     }
@@ -381,15 +381,16 @@ struct FpsiX
             //std::cout << "error "<<eps<<" with "<<N<<" steps| psip "<<psip(end[0], end[1])<<"\n";
             //std::cout <<"error in y is "<<y_eps<<"\n";
         }
-        std::cout << "\t error "<<eps<<" with "<<N<<" steps| err psip "<<fabs( psip(end[0], end[1]) - psi )/psi<<"\n";
+        //std::cout << "\t error "<<eps<<" with "<<N<<" steps| err psip "<<fabs( psip(end[0], end[1]) - psi )/psi<<"\n";
         double f_psi = 2.*M_PI/end_old[2];
         return f_psi;
         //return 1./f_psi;
     }
     double operator()( double psi)
     {
-        double R_0[2], Z_0[2]; 
-        return construct_f( psi, R_0, Z_0);
+        return -1.;
+        //double R_0[2], Z_0[2]; 
+        //return construct_f( psi, R_0, Z_0);
     }
 
     /**
@@ -623,7 +624,8 @@ struct XFieldFinv
             dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
         }
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-        fpsiM[0] = - end[2]/2./M_PI;
+        //fpsiM[0] = - end[2]/2./M_PI;
+        fpsiM[0] = 1.;
         //fpsiM[0] = - 2.*M_PI/end[2];
         t.toc();
         //std::cout << "Finding f took "<<t.diff()<<"s\n";

@@ -116,6 +116,7 @@ try{
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     dg::Grid1d<double> g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
+    g1d.display( std::cout);
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
     dg::HVec y_left = dg::evaluate( cosine, g1d);
     int ncid;
@@ -167,8 +168,8 @@ try{
     //err = nc_put_var_double( ncid, coord1D[1], g3d.zx0().data());
     //err = nc_put_var_double( ncid, coord1D[2], g3d.rx1().data());
     //err = nc_put_var_double( ncid, coord1D[3], g3d.zx1().data());
-    err = nc_put_var_double( ncid, coord1D[4], periodify(g3d.f_x(), g3d_periodic).data());
-    //err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
+    //err = nc_put_var_double( ncid, coord1D[4], periodify(g3d.f_x(), g3d_periodic).data());
+    err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
@@ -289,6 +290,8 @@ try{
    // std::cout << "rel. error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))/norm<<"\n";
    // err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
    // //err = nc_put_var_double( ncid, divBID, X.data());
+    dg::blas1::transfer( g2d.g(), X);
+    err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
     err = nc_close( ncid);
 
 
