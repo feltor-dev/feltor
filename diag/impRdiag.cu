@@ -58,11 +58,18 @@ int main( int argc, char* argv[])
   reader.parse(input, js, false);
   const imp::Parameters p(js);
   p.display(std::cout);
+  // dimensions
   //.nc parameter: etime not found in .json file
-  int dim_et_id;
-  size_t num_etime;
-  err_in = nc_inq_dimid(ncid_in, "energy_time", &dim_et_id);
-  err_in = nc_inq_dimlen(ncid_in, dim_et_id, &num_etime);
+  int etdim_r_id, xdim_r_id, ydim_r_id, tdim_r_id;
+  size_t num_etime, num_x, num_y, num_time;
+  err_in = nc_inq_dimid(ncid_in, "energy_time", &etdim_r_id);
+  err_in = nc_inq_dimlen(ncid_in, etdim_r_id, &num_etime);
+  err_in = nc_inq_dimid(ncid_in, "x", &xdim_r_id);
+  err_in = nc_inq_dimlen(ncid_in, xdim_r_id, &num_x);
+  err_in = nc_inq_dimid(ncid_in, "y", &ydim_r_id);
+  err_in = nc_inq_dimlen(ncid_in, ydim_r_id, &num_y);
+  err_in = nc_inq_dimid(ncid_in, "time", &tdim_r_id);
+  err_in = nc_inq_dimlen(ncid_in, tdim_r_id, &num_time);
   ////////compose data////////
   const size_t num_species = 3, num_fields = 2;
   const size_t num_spatial = 14;
@@ -161,17 +168,17 @@ int main( int argc, char* argv[])
   int cache_nelems = nelems;
   double cache_preemption = 0.9;
   file::NC_Error_Handle err_out;
-  int ncid_out, dim_t_x_y_id[3], tvar_id, etvar_id;
+  int ncid_out, dim_t_x_y_id[3], tvar_id, etvar_w_id, etdim_w_id;
   err_out = nc_create(argv[2], NC_NETCDF4|NC_CLOBBER, &ncid_out);
   err_out = nc_put_att_text(ncid_out, NC_GLOBAL, "inputfile",
                             input.size(), input.data());
   err_out = file::define_limtime_xy(ncid_out, dim_t_x_y_id, p.maxout+1,
                                     &tvar_id, g2d);
   err_out = file::define_limited_time(ncid_out, "etime", num_etime,
-                                      &dim_et_id, &etvar_id);
+                                      &etdim_w_id, &etvar_w_id);
   int k = 0;
   for (unsigned i = 0; i < num_species; i++)
-  { err_in = nc_inq_varid(ncid_in, species_name[i].data(), &species_rgyro_id[i]);;
+  { err_in = nc_inq_varid(ncid_in, species_name[i].data(), &species_rgyro_id[i]);
     err_out = nc_def_var(ncid_out, species_name[i].data(), NC_DOUBLE, 3, dim_t_x_y_id, &species_wphys_id[i]);
     err_out = nc_def_var_deflate(ncid_out, species_wphys_id[i], shuffle_flag, compress_flag, compress_level);
     err_out = nc_set_var_chunk_cache(ncid_out, species_wphys_id[i], cache_size, cache_nelems, cache_preemption);
@@ -196,19 +203,35 @@ int main( int argc, char* argv[])
   err_out = nc_def_grp( ncid_out, "err_etime", &err_etime_wgrp_id);
   for (unsigned i = 0 ; i < num_err_etime; i++)
   { err_in = nc_inq_varid(ncid_in, err_etime[i].data(), &err_etime_rval_id[i]);
-    err_out = nc_def_var( err_etime_wgrp_id, err_etime[i].data(), NC_DOUBLE, 1, &dim_et_id, &err_etime_wval_id[i]);
+    err_out = nc_def_var( err_etime_wgrp_id, err_etime[i].data(), NC_DOUBLE, 1, &etdim_r_id, &err_etime_wval_id[i]);
     err_out = nc_def_var_deflate( err_etime_wgrp_id, err_etime_wval_id[i], shuffle_flag, compress_flag, compress_level);
   }
   err_out = nc_enddef(ncid_out);
+
+
   ////////remap data////////
+  // dimensions
   //err_etime
-  double transfer_etime[num_etime];
-  static size_t count_etime[] = {num_etime};
-  static size_t start_etime[] = {0};
+  double transfer_etime[num_etime], transfer_time[num_time], transfer_x[num_x], transfer_y[num_y];
+  int etvar_r_id, var_id;
+  err_in = nc_inq_varid(ncid_in, "energy_time", &etvar_r_id);
+  err_in = nc_get_var_double(ncid_in, etvar_r_id, transfer_etime);
+  err_out = nc_put_var_double(ncid_out, etvar_w_id, transfer_etime);
   for (unsigned i = 0; i < num_err_etime; i++)
-  { err_in = nc_get_vara_double(ncid_in, err_etime_rval_id[i], start_etime, count_etime, transfer_etime);
-    err_out = nc_put_vara_double(err_etime_wgrp_id, err_etime_wval_id[i], start_etime, count_etime, transfer_etime);
+  { err_in = nc_get_var_double(ncid_in, err_etime_rval_id[i], transfer_etime);
+    err_out = nc_put_var_double(err_etime_wgrp_id, err_etime_wval_id[i], transfer_etime);
   }
+  err_in = nc_inq_varid(ncid_in, "time", &var_id);
+  err_in = nc_get_var_double(ncid_in, var_id, transfer_time);
+  err_out = nc_put_var_double(ncid_out, tvar_id, transfer_time);
+  err_in = nc_inq_varid(ncid_in, "x", &var_id);
+  err_in = nc_get_var_double(ncid_in, var_id, transfer_x);
+  err_out = nc_inq_varid(ncid_out, "x", &var_id);
+  err_out = nc_put_var_double(ncid_out, var_id, transfer_x);
+  err_in = nc_inq_varid(ncid_in, "y", &var_id);
+  err_in = nc_get_var_double(ncid_in, var_id, transfer_y);
+  err_out = nc_inq_varid(ncid_out, "y", &var_id);
+  err_out = nc_put_var_double(ncid_out, var_id, transfer_y);
   //timestepping
   int add_to_spatial_idx = 0;
   for (unsigned i = 0; i <= p.maxout; i++)
@@ -236,7 +259,7 @@ int main( int argc, char* argv[])
       { gamma_s.alpha() = -0.5*p.tau[j]*p.mu[j];
         invert_invgamma(gamma_s, gamma_n, ntilde[j]);
         dg::blas1::axpby(p.a[j]*p.mu[j], ntilde[j], 0., chi);
-        dg::blas1::plus( chi, p.a[j]*p.mu[j]); 
+        dg::blas1::plus( chi, p.a[j]*p.mu[j]);
         dg::blas1::pointwiseDot(chi, binv, chi);
         dg::blas1::pointwiseDot(chi, binv, chi);
         pol.set_chi(chi);
