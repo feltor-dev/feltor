@@ -14,11 +14,6 @@
 //dg::Timer t;
 //t.tic();
 //t.toc();
-// boost::timer t;
-// double duration;
-//
-// t.restart();
-// duration = t.elapsed();
 
 struct Heaviside2d
 { Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0) {}
@@ -73,7 +68,7 @@ int main( int argc, char* argv[])
   ////////compose data////////
   const size_t num_species = 3, num_fields = 2;
   const size_t num_spatial = 14;
-  const size_t num_err_time = 6, num_err_etime = 5;
+  const size_t num_err_time = 7, num_err_etime = 5;
   int species_rgyro_id[num_species], field_rphys_id[num_species];
   int species_wgrp_id[num_species];
   int species_wphys_id[num_species], field_wphys_id[num_fields];
@@ -98,7 +93,7 @@ int main( int argc, char* argv[])
   };
   std::string err_time[num_err_time] =
   { "Se", "Si", "Sz",
-    "Uphii", "Uphiz", "dcn"
+    "Uphii", "Uphiz", "dcn", "dvn"
   };
   std::string err_etime[num_err_etime] =
   { "energy", "mass", "dissipation",
@@ -141,13 +136,18 @@ int main( int argc, char* argv[])
   //calculation variables per species
   double mass_[num_species] = {}, cn[num_species] = {};
   double posX = 0, posY =0 ;
+  double NposX = 0, NposY =0 ; //
   double posX_init[num_species] = {}, posY_init[num_species] = {};
-  double posX_old[num_species] ={} ,posY_old[num_species] = {};
+  double NposX_init[num_species] = {}, NposY_init[num_species] = {}; //
+  double posX_old[num_species] ={}, posY_old[num_species] = {};
+  double NposX_old[num_species] ={}, NposY_old[num_species] = {};
   double posX_max = 0, posY_max = 0;
   double posX_max_old[num_species] = {}, posY_max_old[num_species] = {};
   double posX_max_hs = 0, posY_max_hs = 0;
   double velX[num_species] = {}, velY[num_species] = {};
+  double NvelX[num_species] = {}, NvelY[num_species] = {};
   double velX_old[num_species] = {}, velY_old[num_species] = {};
+  double NvelX_old[num_species] = {}, NvelY_old[num_species] = {};
   double velX_max = 0, velY_max = 0;
   double velCOM = 0;
   double accX = 0, accY = 0;
@@ -233,6 +233,8 @@ int main( int argc, char* argv[])
   err_out = nc_inq_varid(ncid_out, "y", &var_id);
   err_out = nc_put_var_double(ncid_out, var_id, transfer_y);
   //timestepping
+  bool reset_flag[3] = {true, true, true};
+  int m[3] = {};
   int add_to_spatial_idx = 0;
   for (unsigned i = 0; i <= p.maxout; i++)
   { std::cout << i << "\n";   // tbr!
@@ -276,16 +278,44 @@ int main( int argc, char* argv[])
       //mass
       mass_[j] = dg::blas2::dot(one, w2d, ntilde[j]);
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[13+add_to_spatial_idx], start0d, count0d, &mass_[j]);
-      //position, velocity, acceleration
+
+      // N*posX/Y, N*velX/Y
       if (i==0)
+      { NposX_init[j] = dg::blas2::dot( xvec, w2d, ntilde[j]);
+        NposY_init[j] = dg::blas2::dot( yvec, w2d, ntilde[j]);
+      }
+      if (i>0)
+      { NposX = dg::blas2::dot( xvec, w2d, ntilde[j])-NposX_init[j];
+        NposY = dg::blas2::dot( yvec, w2d, ntilde[j])-NposY_init[j];
+      }
+      if (i==0)
+      { NvelX_old[j] = -NposX/deltaT;
+        NvelY_old[j] = -NposY/deltaT;
+        NposX_old[j] = NposX;
+        NposY_old[j] = NposY;
+      }
+      NvelX[j] = (NposX - NposX_old[j])/deltaT;
+      NvelY[j] = (NposY - NposY_old[j])/deltaT;
+
+      // init pos/vel calculations as soon as mass > 1.E-15, otherwise NAN
+      if ( mass_[j]>1.E-15 && (reset_flag[j]))
+      { m[j] = 0;
+        reset_flag[j] = false;
+      }
+      if (reset_flag[j])
+      { mass_[j] = NAN;
+      }
+
+      //position, velocity, acceleration
+      if (m[j]==0)
       { posX_init[j] = dg::blas2::dot( xvec, w2d, ntilde[j])/mass_[j];
         posY_init[j] = dg::blas2::dot( yvec, w2d, ntilde[j])/mass_[j];
       }
-      if (i>0)
+      if (m[j]>0)
       { posX = dg::blas2::dot( xvec, w2d, ntilde[j])/mass_[j]-posX_init[j];
         posY = dg::blas2::dot( yvec, w2d, ntilde[j])/mass_[j]-posY_init[j];
       }
-      if (i==0)
+      if (m[j]==0)
       { velX_old[j] = -posX/deltaT;
         velY_old[j] = -posY/deltaT;
         posX_old[j] = posX;
@@ -326,14 +356,14 @@ int main( int argc, char* argv[])
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[7 + add_to_spatial_idx], start0d, count0d, &posY_max);
       velX_max = (posX_max - posX_max_old[j]) /deltaT;
       velY_max = (posY_max - posY_max_old[j]) /deltaT;
-      if (i>0)
+      if (m[j]>0)
       { posX_max_old[j] = posX_max;
         posY_max_old[j] = posY_max;
       }
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[8 + add_to_spatial_idx], start0d, count0d, &velX_max);
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[9 + add_to_spatial_idx], start0d, count0d, &velY_max);
       //compactness
-      if (i==0)
+      if (m[j]==0)
       { heavi.set_origin( posX_max_hs, posY_max_hs );
         heavy = dg::evaluate( heavi, g2d);
         normalize = dg::blas2::dot( heavy, w2d, ntilde[j]);
@@ -344,11 +374,12 @@ int main( int argc, char* argv[])
       err_out = nc_put_vara_double(species_wgrp_id[j], species_wspatial_id[10 + add_to_spatial_idx], start0d, count0d, &compactness);
       //energy
       dg::blas1::transform(npe[j], lnn[j], dg::LN<double>());
+      m[j]++;
     }
     //field
     arakawa.variation(field[0], helper);
     double energy[5] = {};
-    energy[0] = dg::blas2::dot(npe[0], w2d, lnn[0]);
+    energy[0] = dg::blas2::dot(lnn[0], w2d, npe[0]);
     energy[1] = p.a[1]*p.tau[1]*dg::blas2::dot(npe[1], w2d, lnn[1]);
     energy[2] = p.a[2]*p.tau[2]*dg::blas2::dot(npe[2], w2d, lnn[2]);
     energy[3] = 0.5*p.a[1]*p.mu[1]*dg::blas2::dot(npe[1], w2d, helper);
@@ -358,11 +389,15 @@ int main( int argc, char* argv[])
     { err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[j], start0d, count0d, &energy[j]);
     }
     double dcn = cn[0]+cn[1]+cn[2];
-    std::cout << "Rel. error charge conservation " << fabs(dcn/cn[0]) << "\n";
-    double dvn = +p.a[0]*mass_[0]*velX[0]+p.a[1]*mass_[1]*velX[1]+p.a[2]*mass_[2]*velX[2];
-    std::cout << "Abs. error flux   conservation " << velX[0]<< " "<<velX[1]<<" "<<velX[2]<<" "<<fabs(dvn) << "\n";
-
+    dcn = fabs(dcn/cn[0]);
+    std::cout << "Rel. error charge conservation " << dcn << "\n";
+    //double dvn = +p.a[0]*mass_[0]*velX[0]+p.a[1]*mass_[1]*velX[1]+p.a[2]*mass_[2]*velX[2];
+    //std::cout << "Abs. error flux   conservation " << velX[0]<< " "<<velX[1]<<" "<<velX[2]<<" "<<fabs(dvn) << "\n";
+    double dvn = +p.a[0]*NvelX[0]+p.a[1]*NvelX[1]+p.a[2]*NvelX[2];
+    dvn = fabs(dvn/(p.a[0]*NvelX[0]));
+    std::cout << "Rel. error flux   conservation " << dvn << "\n";
     err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[5], start0d, count0d, &dcn);
+    err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[5], start0d, count0d, &dvn);
   }
   err_out = nc_close(ncid_out);
   err_in = nc_close(ncid_in);
