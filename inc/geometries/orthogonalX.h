@@ -338,11 +338,15 @@ struct FpsiX
         }
     }
 
-    //compute f for a given psi between psi0 and psi1
-    double construct_f( double psi, double* R_i, double* Z_i) 
+    double operator()( double psi)
     {
+        return -1.;
+        double R_i[2], Z_i[2]; 
+        return construct_f( psi, R_i, Z_i);
         find_initial( psi, R_i, Z_i);
         solovev::Psip psip( gp_);
+        solovev::conformal::FieldRZYT fieldRZYT(gp_);
+        solovev::conformal::FieldRZYZ fieldRZYZ(gp_);
         
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
         //std::cout << "In Stepper function:\n";
@@ -361,17 +365,17 @@ struct FpsiX
             N*=2;
             if( psi < 0)
             {
-                dg::stepperRK17( fieldRZYT_, begin, end, 0., 2.*M_PI, N);
+                dg::stepperRK17( fieldRZYT, begin, end, 0., 2.*M_PI, N);
                 //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<"\n";
                 eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
             }
             else
             {
-                dg::stepperRK17( fieldRZYZ_, begin, end, begin[1], 0., N);
+                dg::stepperRK17( fieldRZYZ, begin, end, begin[1], 0., N);
                 thrust::host_vector<double> temp(end);
-                dg::stepperRK17( fieldRZYT_, temp, end, 0., M_PI, N);
+                dg::stepperRK17( fieldRZYT, temp, end, 0., M_PI, N);
                 temp = end; //temp[1] should be 0 now
-                dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
+                dg::stepperRK17( fieldRZYZ, temp, end, temp[1], Z_i[1], N);
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
             if( isnan(eps)) { eps = eps_old/2.; end = end_old; 
@@ -385,12 +389,6 @@ struct FpsiX
         double f_psi = 2.*M_PI/end_old[2];
         return f_psi;
         //return 1./f_psi;
-    }
-    double operator()( double psi)
-    {
-        return -1.;
-        //double R_0[2], Z_0[2]; 
-        //return construct_f( psi, R_0, Z_0);
     }
 
     /**
@@ -560,6 +558,54 @@ struct FpsiX
 
     }
     private:
+    //compute f for a given psi between psi0 and psi1
+    double construct_f( double psi, double* R_i, double* Z_i) 
+    {
+        find_initial( psi, R_i, Z_i);
+        solovev::Psip psip( gp_);
+        
+        //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
+        //std::cout << "In Stepper function:\n";
+        //double y_old=0;
+        thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
+        begin[0] = R_i[0], begin[1] = Z_i[0];
+        //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
+        double eps = 1e10, eps_old = 2e10;
+        unsigned N = 32; 
+        //double y_eps;
+        while( (eps < eps_old || eps > 1e-7) && N < 1e6)
+        {
+            //remember old values
+            eps_old = eps, end_old = end; //y_old = end[2];
+            //compute new values
+            N*=2;
+            if( psi < 0)
+            {
+                dg::stepperRK17( fieldRZYT_, begin, end, 0., 2.*M_PI, N);
+                //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<"\n";
+                eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+            }
+            else
+            {
+                dg::stepperRK17( fieldRZYZ_, begin, end, begin[1], 0., N);
+                thrust::host_vector<double> temp(end);
+                dg::stepperRK17( fieldRZYT_, temp, end, 0., M_PI, N);
+                temp = end; //temp[1] should be 0 now
+                dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
+                eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
+            }
+            if( isnan(eps)) { eps = eps_old/2.; end = end_old; 
+                //std::cerr << "\t nan! error "<<eps<<"\n";
+            } //near X-point integration can go wrong
+            //y_eps = sqrt( (y_old - end[2])*(y_old-end[2]));
+            //std::cout << "error "<<eps<<" with "<<N<<" steps| psip "<<psip(end[0], end[1])<<"\n";
+            //std::cout <<"error in y is "<<y_eps<<"\n";
+        }
+        //std::cout << "\t error "<<eps<<" with "<<N<<" steps| err psip "<<fabs( psip(end[0], end[1]) - psi )/psi<<"\n";
+        double f_psi = 2.*M_PI/end_old[2];
+        return f_psi;
+        //return 1./f_psi;
+    }
     const solovev::GeomParameters gp_;
     const solovev::orthogonal::FieldRZYT fieldRZYT_;
     const solovev::orthogonal::FieldRZYZ fieldRZYZ_;
@@ -683,13 +729,13 @@ void construct_rz( XFieldFinv fpsiMinv,
     //////////////////////compute fpsiMinv initial values
     thrust::host_vector<double> rvec( y_vec.size()), zvec(rvec), yrvec(rvec), yzvec(rvec);
     std::vector<thrust::host_vector<double> > begin(5);
-    ////compute innermost flux surface 
-    //double R0[2], Z0[2], f0;
-    //detail::FpsiX fpsi(gp);
-    //fpsi.compute_rzy( psi_0, y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
-    double f0;
-    dg::detail::SeparatriX sep(gp);
-    sep.compute_rzy(y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, f0);
+    //compute innermost flux surface 
+    double R0[2], Z0[2], f0;
+    detail::FpsiX fpsi(gp);
+    fpsi.compute_rzy( psi_0, y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
+    //double f0;
+    //dg::detail::SeparatriX sep(gp);
+    //sep.compute_rzy(y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, f0);
     //////compute gvec/////////////////////
     thrust::host_vector<double> gvec(y_vec.size(), f0); 
     solovev::PsipR psipR_(gp);
@@ -697,9 +743,9 @@ void construct_rz( XFieldFinv fpsiMinv,
     for( unsigned i=0; i<rvec.size(); i++)
     {
          double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
-         gvec[i] *= sqrt(psipR*psipR + psipZ*psipZ); //separatrix
-         //gvec[i] *= 1;//conformal
-         //gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ); //equalarc
+         //gvec[i] *= sqrt(psipR*psipR + psipZ*psipZ); //separatrix
+         //gvec[i] *= 1.;//conformal
+         gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ); //equalarc
          //gvec[i] = 1./gvec[i]/(psipR*psipR + psipZ*psipZ);  //volume = g
     }
     begin[0] = rvec, begin[1] = zvec;
@@ -715,7 +761,6 @@ void construct_rz( XFieldFinv fpsiMinv,
     double psi0, psi1;
     double eps = 1e10;
     unsigned N=1; 
-    /*
     while( eps >  1e-9 && N < 1e6 )
     {
         g_old = g;
@@ -748,7 +793,7 @@ void construct_rz( XFieldFinv fpsiMinv,
         std::cout << "Effective g error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
-    */
+    /*
     while( eps >  1e-9 && N < 1e6 )
     {
         g_old = g;
@@ -784,6 +829,7 @@ void construct_rz( XFieldFinv fpsiMinv,
         std::cout << "Effective g error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
+    */
 }
 } //namespace detail
 
