@@ -1869,36 +1869,49 @@ struct EllipticDirPerM
 struct FuncDirNeu
 {
     FuncDirNeu( GeomParameters gp, double psi_0, double psi_1):
-        psi0_(psi_0), psi1_(psi_1), psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp){}
+        psi0_(psi_0), psi1_(psi_1), Z0_(-1.2*gp.elongation*gp.a), psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp) {}
     double operator()(double R, double Z, double phi) const {
         double psip = psip_(R,Z);
+        if( Z > Z0_)
+            return (psip-psi0_)*(psip-psi1_)*cos((Z-Z0_)/0.3/fabs(Z0_));
         return (psip-psi0_)*(psip-psi1_);
     }
     double dR( double R, double Z)const
     {
         double psip = psip_(R,Z), psipR = psipR_(R,Z);
+        if( Z > Z0_)
+            return (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos((Z-Z0_)/0.3/fabs(Z0_));
         return (2.*psip*psipR - (psi0_+psi1_)*psipR);
     }
     double dRR( double R, double Z)const
     {
         double psip = psip_(R,Z), psipR = psipR_(R,Z);
         double psipRR = psipRR_(R,Z);
+        if( Z > Z0_)
+            return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)*cos((Z-Z0_)/0.3/fabs(Z0_));
         return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
             
     }
     double dZ( double R, double Z)const
     {
         double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
+        if( Z > Z0_)
+            return (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos((Z-Z0_)/0.3/fabs(Z0_)) 
+                - (psip-psi0_)*(psip-psi1_)/0.3/fabs(Z0_)*sin((Z-Z0_)/0.3/fabs(Z0_));
         return (2*psip*psipZ - (psi0_+psi1_)*psipZ);
     }
     double dZZ( double R, double Z)const
     {
         double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
         double psipZZ = psipZZ_(R,Z);
+        if( Z > Z0_)
+            return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)*cos((Z-Z0_)/0.3/fabs(Z0_))
+                -2.*(2*psip*psipZ - (psi0_+psi1_)*psipZ)/0.3/fabs(Z0_)*sin((Z-Z0_)/0.3/fabs(Z0_)) 
+                -(psip-psi0_)*(psip-psi1_)/0.09/fabs(Z0_)/fabs(Z0_)*cos(Z-Z0_)/0.3/fabs(Z0_);
         return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
     }
     private:
-    double psi0_, psi1_;
+    double psi0_, psi1_, Z0_;
     Psip psip_;
     PsipR psipR_;
     PsipRR psipRR_;
