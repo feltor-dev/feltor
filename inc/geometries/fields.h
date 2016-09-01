@@ -1866,52 +1866,81 @@ struct EllipticDirPerM
     BZ bz_;
 };
 
+struct Cauchy
+{
+    //infinitely differentiable at x = x0_ \pm sigma_
+    Cauchy( double x0, double sigma): x0_(x0), sigma_(sigma){}
+    double operator()(double x)const{ 
+        double xbar = (x-x0_)/sigma_;
+        return exp(1)*exp( 1./( xbar*xbar -1.) );}
+
+    double dx( double x)const{ 
+        double temp = sigma_*((x-x0_)*(x-x0_)/sigma_/sigma_ - 1.);
+        return -2.*exp(1)*(x-x0_)*this->operator()(x)/temp/temp;
+    }
+    double dxx( double x)const{ 
+        double temp = (x-x0_)*(x-x0_) - sigma_*sigma_;
+        double bracket = sigma_*sigma_*sigma_*sigma_-3.*(x-x0_)*(x-x0_)*(x-x0_)*(x-x0_);
+        return -2.*exp(1)*sigma_*sigma_*this->operator()(x)*bracket/temp/temp/temp/temp;
+    }
+    private:
+    double x0_, sigma_;
+};
+
 struct FuncDirNeu
 {
     FuncDirNeu( GeomParameters gp, double psi_0, double psi_1):
-        psi0_(psi_0), psi1_(psi_1), Z0_(-1.2*gp.elongation*gp.a), psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp) {}
+        psi0_(psi_0), psi1_(psi_1), 
+        R0_( gp.R_0-0.6*gp.elongation*gp.a), R1_(gp.R_0+0.4*gp.elongation*gp.a), 
+        Z0_(-1.2*gp.elongation*gp.a), Z1_(-0.6*gp.elongation*gp.a),
+        cauchyR_((R0_+R1_)/2., (R1_-R0_)/2.), cauchyZ_((Z0_+Z1_)/2., (Z1_-Z0_)/2.), 
+        psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp) {}
     double operator()(double R, double Z, double phi) const {
         double psip = psip_(R,Z);
-        if( Z > Z0_)
-            return (psip-psi0_)*(psip-psi1_)*cos((Z-Z0_)/0.3/fabs(Z0_));
+        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
+            return (psip-psi0_)*(psip-psi1_)*(1.+cauchyZ_(Z)*cauchyR_(R));
         return (psip-psi0_)*(psip-psi1_);
     }
     double dR( double R, double Z)const
     {
         double psip = psip_(R,Z), psipR = psipR_(R,Z);
-        if( Z > Z0_)
-            return (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos((Z-Z0_)/0.3/fabs(Z0_));
-        return (2.*psip*psipR - (psi0_+psi1_)*psipR);
+        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
+            return (2.*psip-psi0_-psi1_)*psipR*(1.+cauchyZ_(Z)*cauchyR_(R))
+                + (psip-psi0_)*(psip-psi1_)*cauchyR_.dx(R)*cauchyZ_(Z);
+        return (2.*psip-psi0_-psi1_)*psipR;
     }
     double dRR( double R, double Z)const
     {
         double psip = psip_(R,Z), psipR = psipR_(R,Z);
         double psipRR = psipRR_(R,Z);
-        if( Z > Z0_)
-            return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)*cos((Z-Z0_)/0.3/fabs(Z0_));
+        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
+            return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)*(1.+cauchyZ_(Z)*cauchyR_(R))
+                +2.*(2.*psip-psi0_-psi1_)*psipR*cauchyR_.dx(R)*cauchyZ_(Z)
+                +(psip-psi0_)*(psip-psi1_)*cauchyR_.dxx(R)*cauchyZ_(Z);
         return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
             
     }
     double dZ( double R, double Z)const
     {
         double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
-        if( Z > Z0_)
-            return (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos((Z-Z0_)/0.3/fabs(Z0_)) 
-                - (psip-psi0_)*(psip-psi1_)/0.3/fabs(Z0_)*sin((Z-Z0_)/0.3/fabs(Z0_));
-        return (2*psip*psipZ - (psi0_+psi1_)*psipZ);
+        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
+            return (2*psip-psi0_-psi1_)*psipZ*(1.+cauchyZ_(Z)*cauchyR_(R))
+                + (psip-psi0_)*(psip-psi1_)*cauchyZ_.dx(Z)*cauchyR_(R);
+        return (2*psip-psi0_-psi1_)*psipZ;
     }
     double dZZ( double R, double Z)const
     {
         double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
         double psipZZ = psipZZ_(R,Z);
-        if( Z > Z0_)
-            return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)*cos((Z-Z0_)/0.3/fabs(Z0_))
-                -2.*(2*psip*psipZ - (psi0_+psi1_)*psipZ)/0.3/fabs(Z0_)*sin((Z-Z0_)/0.3/fabs(Z0_)) 
-                -(psip-psi0_)*(psip-psi1_)/0.09/fabs(Z0_)/fabs(Z0_)*cos(Z-Z0_)/0.3/fabs(Z0_);
+        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
+            return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)*(1.+cauchyZ_(Z)*cauchyR_(R))  
+                +2.*(2.*psip-psi0_-psi1_)*psipZ*cauchyZ_.dx(Z)*cauchyR_(R)
+                +(psip-psi0_)*(psip-psi1_)*cauchyZ_.dxx(Z)*cauchyR_(R);
         return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
     }
     private:
-    double psi0_, psi1_, Z0_;
+    double psi0_, psi1_, R0_, R1_, Z0_, Z1_;
+    Cauchy cauchyR_, cauchyZ_;
     Psip psip_;
     PsipR psipR_;
     PsipRR psipRR_;

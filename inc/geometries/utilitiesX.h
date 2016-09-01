@@ -12,7 +12,8 @@ namespace detail
  */
 struct XPointer
 {
-    XPointer( const solovev::GeomParameters& gp, double distance=1): fieldRZtau_(gp), psip_(gp), dist_(distance){
+    XPointer( const solovev::GeomParameters& gp, double distance=1): fieldRZtau_(gp), psip_(gp), dist_(distance)
+    {
         solovev::HessianRZtau hessianRZtau(gp);
         R_X = gp.R_0-1.1*gp.triangularity*gp.a;
         Z_X = -1.1*gp.elongation*gp.a;

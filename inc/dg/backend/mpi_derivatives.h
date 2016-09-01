@@ -27,7 +27,7 @@ namespace detail{
 CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& m)
 {
     //search outer values in m
-    CooSparseBlockMat<double> mat( m.num_rows, 2, m.n, m.left, m.right);
+    CooSparseBlockMat<double> mat( m.num_rows, 2, m.n, m.left_size, m.right_size);
     int index = m.data.size()/ m.n/m.n;
     thrust::host_vector<double> data_element(m.n*m.n, 0), zero(data_element);
     bool found=false;
@@ -72,7 +72,7 @@ EllSparseBlockMat<double> distribute_rows( const EllSparseBlockMat<double>& src,
     if( howmany[1] == 1)
     {
         EllSparseBlockMat<double> temp(src);
-        temp.left = temp.left/howmany[0];
+        temp.left_size = temp.left_size/howmany[0];
         temp.right = temp.right/howmany[2];
         return temp;
     }
