@@ -1868,79 +1868,88 @@ struct EllipticDirPerM
 
 struct Cauchy
 {
-    //infinitely differentiable at x = x0_ \pm sigma_
-    Cauchy( double x0, double sigma): x0_(x0), sigma_(sigma){}
-    double operator()(double x)const{ 
-        double xbar = (x-x0_)/sigma_;
-        return exp(1)*exp( 1./( xbar*xbar -1.) );}
-
-    double dx( double x)const{ 
-        double temp = sigma_*((x-x0_)*(x-x0_)/sigma_/sigma_ - 1.);
-        return -2.*exp(1)*(x-x0_)*this->operator()(x)/temp/temp;
+    //blob that is infinitely differentiable at x = x0_ \pm sigma_
+    Cauchy( double x0, double y0, double sigma_x, double sigma_y, double amp): x0_(x0), y0_(y0), sigmaX_(sigma_x), sigmaY_(sigma_y), amp_(amp){}
+    double operator()(double x, double y )const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        if( xbar*xbar + ybar*ybar < 1.)
+            return amp_*exp(1.)*exp( 1./( xbar*xbar + ybar*ybar -1.) );
+        return 0.;
     }
-    double dxx( double x)const{ 
-        double temp = (x-x0_)*(x-x0_) - sigma_*sigma_;
-        double bracket = sigma_*sigma_*sigma_*sigma_-3.*(x-x0_)*(x-x0_)*(x-x0_)*(x-x0_);
-        return -2.*exp(1)*sigma_*sigma_*this->operator()(x)*bracket/temp/temp/temp/temp;
+
+    double dx( double x, double y )const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        double temp = sigmaX_*(xbar*xbar + ybar*ybar  - 1.);
+        return -2.*xbar*this->operator()(x,y)/temp/temp;
+    }
+    double dxx( double x, double y)const{ 
+        double temp = sigmaY_*sigmaY_*(x-x0_)*(x-x0_) + sigmaX_*sigmaX_*((y-y0_)*(y-y0_) - sigmaY_*sigmaY_);
+        double bracket = sigmaX_*sigmaX_*((y-y0_)*(y-y0_)-sigmaY_*sigmaY_)*sigmaX_*sigmaX_*((y-y0_)*(y-y0_)-sigmaY_*sigmaY_)
+            -3.*sigmaY_*sigmaY_*sigmaY_*sigmaY_*(x-x0_)*(x-x0_)*(x-x0_)*(x-x0_)
+            -2.*sigmaY_*sigmaY_*sigmaX_*sigmaX_*(x-x0_)*(x-x0_)*(y-y0_)*(y-y0_);
+        return -2.*sigmaX_*sigmaX_*sigmaY_*sigmaY_*sigmaY_*sigmaY_*this->operator()(x,y)*bracket/temp/temp/temp/temp;
+    }
+    double dy( double x, double y)const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        double temp = sigmaY_*(xbar*xbar + ybar*ybar  - 1.);
+        return -2.*ybar*this->operator()(x,y)/temp/temp;
+    }
+    double dyy( double x, double y)const{ 
+        double temp = sigmaX_*sigmaX_*(y-y0_)*(y-y0_) + sigmaY_*sigmaY_*((x-x0_)*(x-x0_) - sigmaX_*sigmaX_);
+        double bracket = sigmaY_*sigmaY_*((x-x0_)*(x-x0_)-sigmaX_*sigmaX_)*sigmaY_*sigmaY_*((x-x0_)*(x-x0_)-sigmaX_*sigmaX_)
+            -3.*sigmaX_*sigmaX_*sigmaX_*sigmaX_*(y-y0_)*(y-y0_)*(y-y0_)*(y-y0_)
+            -2.*sigmaX_*sigmaX_*sigmaY_*sigmaY_*(y-y0_)*(y-y0_)*(x-x0_)*(x-x0_);
+        return -2.*sigmaY_*sigmaY_*sigmaX_*sigmaX_*sigmaX_*sigmaX_*this->operator()(x,y)*bracket/temp/temp/temp/temp;
     }
     private:
-    double x0_, sigma_;
+    double x0_, y0_, sigmaX_, sigmaY_, amp_;
 };
 
 struct FuncDirNeu
 {
     FuncDirNeu( GeomParameters gp, double psi_0, double psi_1):
         psi0_(psi_0), psi1_(psi_1), 
-        R0_( gp.R_0-0.6*gp.elongation*gp.a), R1_(gp.R_0+0.4*gp.elongation*gp.a), 
-        Z0_(-1.2*gp.elongation*gp.a), Z1_(-0.6*gp.elongation*gp.a),
-        cauchyR_((R0_+R1_)/2., (R1_-R0_)/2.), cauchyZ_((Z0_+Z1_)/2., (Z1_-Z0_)/2.), 
+        cauchy_(gp.R_0-1.1*gp.triangularity*gp.a, -0.8*gp.elongation*gp.a, 0.1*gp.elongation*gp.a, 0.1*gp.elongation*gp.a, 10), 
         psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp) {}
+
     double operator()(double R, double Z, double phi) const {
         double psip = psip_(R,Z);
-        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
-            return (psip-psi0_)*(psip-psi1_)*(1.+cauchyZ_(Z)*cauchyR_(R));
-        return (psip-psi0_)*(psip-psi1_);
+        return (psip-psi0_)*(psip-psi1_)+cauchy_(R,Z);
+        //return (psip-psi0_)*(psip-psi1_);
     }
     double dR( double R, double Z)const
     {
         double psip = psip_(R,Z), psipR = psipR_(R,Z);
-        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
-            return (2.*psip-psi0_-psi1_)*psipR*(1.+cauchyZ_(Z)*cauchyR_(R))
-                + (psip-psi0_)*(psip-psi1_)*cauchyR_.dx(R)*cauchyZ_(Z);
-        return (2.*psip-psi0_-psi1_)*psipR;
+        return (2.*psip-psi0_-psi1_)*psipR + cauchy_.dx(R,Z);
+        //return (2.*psip-psi0_-psi1_)*psipR;
     }
     double dRR( double R, double Z)const
     {
         double psip = psip_(R,Z), psipR = psipR_(R,Z);
         double psipRR = psipRR_(R,Z);
-        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
-            return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)*(1.+cauchyZ_(Z)*cauchyR_(R))
-                +2.*(2.*psip-psi0_-psi1_)*psipR*cauchyR_.dx(R)*cauchyZ_(Z)
-                +(psip-psi0_)*(psip-psi1_)*cauchyR_.dxx(R)*cauchyZ_(Z);
-        return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
+        return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)+cauchy_.dxx(R,Z);
+        //return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
             
     }
     double dZ( double R, double Z)const
     {
         double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
-        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
-            return (2*psip-psi0_-psi1_)*psipZ*(1.+cauchyZ_(Z)*cauchyR_(R))
-                + (psip-psi0_)*(psip-psi1_)*cauchyZ_.dx(Z)*cauchyR_(R);
-        return (2*psip-psi0_-psi1_)*psipZ;
+        return (2*psip-psi0_-psi1_)*psipZ+cauchy_.dy(R,Z);
+        //return (2*psip-psi0_-psi1_)*psipZ;
     }
     double dZZ( double R, double Z)const
     {
         double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
         double psipZZ = psipZZ_(R,Z);
-        if( Z > Z0_ && Z < Z1_ && R > R0_ && R < R1_)
-            return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)*(1.+cauchyZ_(Z)*cauchyR_(R))  
-                +2.*(2.*psip-psi0_-psi1_)*psipZ*cauchyZ_.dx(Z)*cauchyR_(R)
-                +(psip-psi0_)*(psip-psi1_)*cauchyZ_.dxx(Z)*cauchyR_(R);
-        return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
+        return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)+cauchy_.dyy(R,Z);
+        //return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
     }
     private:
-    double psi0_, psi1_, R0_, R1_, Z0_, Z1_;
-    Cauchy cauchyR_, cauchyZ_;
+    double psi0_, psi1_;
+    Cauchy cauchy_;
     Psip psip_;
     PsipR psipR_;
     PsipRR psipRR_;
@@ -1970,7 +1979,7 @@ struct BmodTheta
 struct EllipticDirNeuM
 {
     EllipticDirNeuM( GeomParameters gp, double psi_0, double psi_1): R_0_(gp.R_0), func_(gp, psi_0, psi_1), bmod_(gp), br_(gp), bz_(gp) {}
-    double operator()(double R, double Z, double phi) const {
+    double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z), theta_ = theta(R,Z);
         double chi = bmod*(1.+0.5*sin(theta_));
         double chiR = br*(1.+0.5*sin(theta_)) + bmod*0.5*cos(theta_)*thetaR(R,Z);
@@ -1980,6 +1989,9 @@ struct EllipticDirNeuM
         //double chiZ = bz;
         return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
+    }
+    double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);
     }
     private:
     double theta( double R, double Z) const {
