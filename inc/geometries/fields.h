@@ -1912,10 +1912,12 @@ struct FuncDirNeu
 {
     FuncDirNeu( GeomParameters gp, double psi_0, double psi_1):
         psi0_(psi_0), psi1_(psi_1), 
-        cauchy_(gp.R_0-1.1*gp.triangularity*gp.a, -0.8*gp.elongation*gp.a, 0.1*gp.elongation*gp.a, 0.1*gp.elongation*gp.a, 10), 
+        cauchy_(gp.R_0-0.95*gp.triangularity*gp.a, -0.8*gp.elongation*gp.a, 0.1*gp.elongation*gp.a, 0.1*gp.elongation*gp.a, 10), 
         psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp) {}
 
     double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);}
+    double operator()(double R, double Z) const {
         double psip = psip_(R,Z);
         return (psip-psi0_)*(psip-psi1_)+cauchy_(R,Z);
         //return (psip-psi0_)*(psip-psi1_);
