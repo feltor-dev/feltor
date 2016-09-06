@@ -90,11 +90,11 @@ struct Psip
   private:
     double psi_alt(double R, double Z) const
     {
-       double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,Zn6,lgRn;
-       Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2;
-       Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; Zn6 = Zn3*Zn3;
-       lgRn= log(Rn);
-       return   R_0_*( c_[12]*Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.)  //c_[12] is to make fieldlines straight
+        double Rn,Rn2,Rn4,Zn,Zn2,Zn3,Zn4,Zn5,Zn6,lgRn;
+        Rn = R/R_0_; Rn2 = Rn*Rn; Rn4 = Rn2*Rn2;
+        Zn = Z/R_0_; Zn2 = Zn*Zn; Zn3 = Zn2*Zn; Zn4 = Zn2*Zn2; Zn5 = Zn3*Zn2; Zn6 = Zn3*Zn3;
+        lgRn= log(Rn);
+        return   R_0_*( c_[12]*Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.)  //c_[12] is to make fieldlines straight
                       + c_[0]  //c_[0] entspricht c_1
               + c_[1]  *Rn2
               + c_[2]  *(Zn2 - Rn2 * lgRn ) 
@@ -140,6 +140,24 @@ struct Psip
     double psi_0;
     double alpha_;
 };
+
+struct PsipHom
+{
+    PsipHom( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), psip_(gp){}
+    double operator()(double R, double Z) const
+    {    
+        double Rn = R/R_0_, Rn2 = Rn*Rn, Rn4 = Rn2*Rn2, lgRn= log(Rn);
+        return psip_(R,Z) - R_0_*( Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.));  //c_[12] is to make fieldlines straight
+    }
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()(R,Z);
+    }
+    private:
+    double R_0_, A_;
+    Psip psip_;
+};
+
 /**
  * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} \f]
  *

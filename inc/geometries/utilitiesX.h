@@ -284,10 +284,10 @@ struct SeparatriX
             double psip2 = psipR*psipR+psipZ*psipZ;
             //yr[i] =  psipZ/f_psi/psip2; //volume
             //yz[i] = -psipR/f_psi/psip2; //volume
-            yr[i] =  psipZ*f_psi/sqrt(psip2);//equalarc
-            yz[i] = -psipR*f_psi/sqrt(psip2);//equalarc
-            //yr[i] =  psipZ*f_psi; //conformal
-            //yz[i] = -psipR*f_psi; //conformal
+            //yr[i] =  psipZ*f_psi/sqrt(psip2);//equalarc
+            //yz[i] = -psipR*f_psi/sqrt(psip2);//equalarc
+            yr[i] =  psipZ*f_psi; //conformal
+            yz[i] = -psipR*f_psi; //conformal
             //yr[i] =  psipZ*f_psi*sqrt(psip2); //separatrix
             //yz[i] = -psipR*f_psi*sqrt(psip2); //separatrix
         }

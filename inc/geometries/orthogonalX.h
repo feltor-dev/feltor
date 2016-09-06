@@ -730,12 +730,12 @@ void construct_rz( XFieldFinv fpsiMinv,
     thrust::host_vector<double> rvec( y_vec.size()), zvec(rvec), yrvec(rvec), yzvec(rvec);
     std::vector<thrust::host_vector<double> > begin(5);
     //compute innermost flux surface 
-    double R0[2], Z0[2], f0;
-    detail::FpsiX fpsi(gp);
-    fpsi.compute_rzy( psi_0, y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
-    //double f0;
-    //dg::detail::SeparatriX sep(gp);
-    //sep.compute_rzy(y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, f0);
+    //double R0[2], Z0[2], f0;
+    //detail::FpsiX fpsi(gp);
+    //fpsi.compute_rzy( psi_0, y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
+    double f0;
+    dg::detail::SeparatriX sep(gp);
+    sep.compute_rzy(y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, f0);
     //////compute gvec/////////////////////
     thrust::host_vector<double> gvec(y_vec.size(), f0); 
     solovev::PsipR psipR_(gp);
@@ -744,8 +744,8 @@ void construct_rz( XFieldFinv fpsiMinv,
     {
          double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
          //gvec[i] *= sqrt(psipR*psipR + psipZ*psipZ); //separatrix
-         //gvec[i] *= 1.;//conformal
-         gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ); //equalarc
+         gvec[i] *= 1.;//conformal
+         //gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ); //equalarc
          //gvec[i] = 1./gvec[i]/(psipR*psipR + psipZ*psipZ);  //volume = g
     }
     begin[0] = rvec, begin[1] = zvec;
@@ -761,6 +761,7 @@ void construct_rz( XFieldFinv fpsiMinv,
     double psi0, psi1;
     double eps = 1e10;
     unsigned N=1; 
+    /*
     while( eps >  1e-9 && N < 1e6 )
     {
         g_old = g;
@@ -793,7 +794,7 @@ void construct_rz( XFieldFinv fpsiMinv,
         std::cout << "Effective g error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
-    /*
+    */
     while( eps >  1e-9 && N < 1e6 )
     {
         g_old = g;
@@ -829,7 +830,6 @@ void construct_rz( XFieldFinv fpsiMinv,
         std::cout << "Effective g error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
-    */
 }
 } //namespace detail
 
