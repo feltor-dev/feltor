@@ -1855,8 +1855,10 @@ struct EllipticDirPerM
 {
     EllipticDirPerM( GeomParameters gp, double psi_0, double psi_1): func_(gp, psi_0, psi_1), bmod_(gp), br_(gp), bz_(gp) {}
     double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);}
+    double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
-        return -(br*func_.dR(R,Z) + bz*func_.dZ(R,Z) + bmod*( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
+        return -(br*func_.dR(R,Z) + bz*func_.dZ(R,Z) + bmod*(func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
     }
     private:
@@ -1963,6 +1965,8 @@ struct BmodTheta
 {
     BmodTheta( GeomParameters gp): R_0_(gp.R_0), bmod_(gp){}
     double operator()(double R,double Z, double phi) const{
+        return this->operator()(R,Z);}
+    double operator()(double R,double Z) const{
         return bmod_(R,Z)*(1.+0.5*sin(theta(R,Z)));
     }
     private:
@@ -1989,7 +1993,7 @@ struct EllipticDirNeuM
         //double chi = bmod;
         //double chiR = br;
         //double chiZ = bz;
-        return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
+        return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
     }
     double operator()(double R, double Z, double phi) const {
@@ -2030,6 +2034,15 @@ struct EllipticDirSimpleM
     FuncDirNeu func_;
 };
 
+struct LaplacePsi
+{
+    LaplacePsi( GeomParameters gp): psipRR_(gp), psipZZ_(gp) {}
+    double operator()(double R, double Z){return psipRR_(R,Z) + psipZZ_(R,Z);}
+    private:
+    PsipRR psipRR_;
+    PsipZZ psipZZ_;
+
+};
 
 ///@} 
 } //namespace solovev

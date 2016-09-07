@@ -816,7 +816,7 @@ void construct_rz( XFieldFinv fpsiMinv,
             temp = end;
             psi0 = psi_x[i-1], psi1 = psi_x[i];
             //////////////////////////////////////////////////
-            dg::stepperRK17( fpsiMinv, temp, end, psi0, psi1, N);
+            dg::stepperRK6( fpsiMinv, temp, end, psi0, psi1, N);
             for( unsigned j=0; j<y_vec.size(); j++)
             {
                  r[j*Nx+i] = end[0][j],  z[j*Nx+i] = end[1][j];

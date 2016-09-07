@@ -208,12 +208,12 @@ struct Fpsi
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
             double psip2 = psipR*psipR+psipZ*psipZ;
-            //yr[i] = psipZ*f/psip2;
-            //yz[i] = -psipR*f/psip2;
-            yr[i] = psipZ*f/sqrt(psip2);
-            yz[i] = -psipR*f/sqrt(psip2);
-            //yr[i] = psipZ*f;
-            //yz[i] = -psipR*f;
+            //yr[i] = psipZ*f/psip2;  //separatrix
+            //yz[i] = -psipR*f/psip2; //separatrix 
+            //yr[i] = psipZ*f/sqrt(psip2); //equalarc
+            //yz[i] = -psipR*f/sqrt(psip2); //equalarc
+            yr[i] = psipZ*f; //conformal
+            yz[i] = -psipR*f; //conformal
             //yr[i] = psipZ*f/r[i]/psip2;
             //yz[i] = -psipR*f/r[i]/psip2;
         }
@@ -319,7 +319,8 @@ void construct_rz( Fpsi fpsi,
     for( unsigned i=0; i<rvec.size(); i++)
     {
        double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
-       gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ);
+       gvec[i] /= 1.; //conformal
+       //gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ); //equalarc
     }
     begin[0] = rvec, begin[1] = zvec, begin[2] = psivec; 
     begin[3] = gvec; begin[4] = yrvec, begin[5] = yzvec;

@@ -58,10 +58,10 @@ int main(int argc, char**argv)
 //     conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
 //     conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
 //     dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    conformal::refined::RingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
-    conformal::refined::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<conformal::refined::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::RefinedElliptic<conformal::refined::RingGrid3d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g3d, dg::not_normed, dg::centered);
+    orthogonal::refined::RingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    orthogonal::refined::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<orthogonal::refined::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+    dg::RefinedElliptic<orthogonal::refined::RingGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -86,19 +86,26 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     ///////////////////////////////////////////////////////////////////////////
-    dg::DVec x =    dg::pullback( dg::zero, g3d.associated());
-    dg::DVec x_fine =    dg::pullback( dg::zero, g3d);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g3d.associated());
+    dg::DVec x =    dg::pullback( dg::zero, g2d.associated());
+    dg::DVec x_fine =    dg::pullback( dg::zero, g2d);
+    //const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g2d.associated());
+    //dg::DVec bmod(b);
+    //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d.associated());
+    //const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1 ), g2d.associated());
+    const dg::DVec b =        dg::pullback( solovev::LaplacePsi(gp), g2d.associated());
+    const dg::DVec bFINE =    dg::pullback( solovev::LaplacePsi(gp), g2d);
     dg::DVec bmod(b);
-    const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g3d.associated());
-    const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1 ), g3d.associated());
-    const dg::DVec vol3dFINE = dg::create::volume( g3d);
-    dg::HVec inv_vol3dFINE = dg::create::inv_weights( g3d);
-    const dg::DVec vol3d = dg::create::volume( g3d.associated());
+    const dg::DVec chi =      dg::pullback( dg::one, g2d.associated());
+    const dg::DVec chiFINE =  dg::pullback( dg::one, g2d);
+    const dg::DVec solution =     dg::pullback( psip, g2d.associated());
+    const dg::DVec solutionFINE = dg::pullback( psip, g2d);
+    const dg::DVec vol3dFINE = dg::create::volume( g2d);
+    dg::HVec inv_vol3dFINE = dg::create::inv_weights( g2d);
+    const dg::DVec vol3d = dg::create::volume( g2d.associated());
     const dg::DVec v3dFINE( inv_vol3dFINE);
-    const dg::IDMatrix Q = dg::create::interpolation( g3d);
-    const dg::IDMatrix P = dg::create::projection( g3d);
-    dg::DVec chi_fine = dg::pullback( dg::zero, g3d), b_fine(chi_fine);
+    const dg::IDMatrix Q = dg::create::interpolation( g2d);
+    const dg::IDMatrix P = dg::create::projection( g2d);
+    dg::DVec chi_fine = dg::pullback( dg::zero, g2d), b_fine(chi_fine);
     dg::blas2::gemv( Q, chi, chi_fine);
     dg::blas2::gemv( Q, b, b_fine);
     //pol.set_chi( chi);
@@ -137,8 +144,9 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, psiID, X.data());
     dg::blas1::transfer( x, X );
     ncerr = nc_put_var_double( ncid, functionID, X.data());
-    dg::blas1::transfer( solution, X );
-    ncerr = nc_put_var_double( ncid, function2ID, X.data());
+    dg::blas1::transfer( solution, Y );
+    //dg::blas1::axpby( 1., X., -1, Y);
+    ncerr = nc_put_var_double( ncid, function2ID, Y.data());
     ncerr = nc_close( ncid);
 
 
