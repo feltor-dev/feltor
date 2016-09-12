@@ -1280,34 +1280,36 @@ struct FieldRZYRYZY
 } //namespace hamada
 namespace orthogonal{
 
+template< class PsiR, class PsiZ>
 struct FieldRZYT
 {
-    FieldRZYT( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
+    FieldRZYT( PsiR psiR, PsiZ psiZ, double R0, double Z0): R_0_(R0), Z_0_(Z0), psipR_(psiR), psipZ_(psiZ){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
-        yp[0] =  R_0_/y[0]*psipZ;//fieldR
-        yp[1] = -R_0_/y[0]*psipR;//fieldZ
-        //yp[2] = R_0_/y[0]; //volume
-        //yp[2] = sqrt(psip2)*R_0_/y[0]; //equalarc
-        yp[2] = psip2*R_0_/y[0]; //conformal
-        //yp[2] = psip2*sqrt(psip2)*R_0_/y[0]; //separatrix
-        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
-        double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
+        yp[0] =  psipZ;//fieldR
+        yp[1] = -psipR;//fieldZ
+        //yp[2] = 1; //volume
+        //yp[2] = sqrt(psip2); //equalarc
+        yp[2] = psip2; //conformal
+        //yp[2] = psip2*sqrt(psip2); //separatrix
+        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
+        double fieldT = -psipZ*(y[1]-Z_0_)/r2 - psipR*(y[0]-R_0_)/r2; //fieldT
         yp[0] /=  fieldT;
         yp[1] /=  fieldT;
         yp[2] /=  fieldT;
     }
   private:
-    double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    double R_0_, Z_0_;
+    PsiR psipR_;
+    PsiZ psipZ_;
 };
 
+template <class PsiR, class PsiZ>
 struct FieldRZYZ
 {
-    FieldRZYZ( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
+    FieldRZYZ( PsiR psiR, PsiZ psiZ): psipR_(psiR), psipZ_(psiZ){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
@@ -1323,14 +1325,14 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
 };
 
+template <class PsiR, class PsiZ>
 struct FieldRZY
 {
-    FieldRZY( GeomParameters gp): f_(1.), R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
+    FieldRZY( PsiR psiR, PsiZ psiZ): f_(1.), psipR_(psiR), psipZ_(psiZ){}
     void set_f(double f){ f_ = f;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
@@ -1347,9 +1349,8 @@ struct FieldRZY
     }
   private:
     double f_;
-    double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
 };
 
 }//namespace orthogonal
@@ -1381,9 +1382,10 @@ struct FieldZR
     mod::PsipZ psipZ_;
 };
 
+template < class PsiR, class PsiZ>
 struct FieldRZtau
 {
-    FieldRZtau( GeomParameters gp): psipR_(gp), psipZ_(gp){}
+    FieldRZtau( PsiR psiR, PsiZ psiZ): psipR_(psiR), psipZ_(psiZ){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
@@ -1392,8 +1394,8 @@ struct FieldRZtau
         yp[1] =  psipZ/psi2;
     }
   private:
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
 };
 
 struct HessianRZtau

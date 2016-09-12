@@ -21,33 +21,35 @@ namespace detail
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
+template< class Psi, class PsiX, class PsiY>
 struct Fpsi
 {
-    Fpsi( const solovev::GeomParameters& gp): 
-        gp_(gp), fieldRZYT_(gp), fieldRZtau_(gp)
+    
+    Fpsi( Psi psi, PsiX psiX, PsiY psiY, double x0, double y0): 
+        psip_(psi), fieldRZYT_(psiX, psiY, x0, y0), fieldRZtau_(psiX, psiY), fieldRZY_(psiX, psiY)
     {
-        R_init = gp.R_0 + 0.5*gp.a; Z_init = 0;
-        solovev::Psip psip(gp);
+        X_init = x0; Y_init = y0;
+        while( fabs( psiX(X_init, Y_init)) <= 1e-10 && fabs( psiY( X_init, Y_init)) <= 1e-10)
+            X_init = x0 + 1.; Y_init = y0;
     }
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0) 
     {
         unsigned N = 50;
         thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
-        begin2d[0] = end2d[0] = end2d_old[0] = R_init;
-        begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
-        solovev::Psip psip(gp_);
+        begin2d[0] = end2d[0] = end2d_old[0] = X_init;
+        begin2d[1] = end2d[1] = end2d_old[1] = Y_init;
         //std::cout << "In init function\n";
         double eps = 1e10, eps_old = 2e10;
-        while( eps < eps_old && N<1e6 && eps > 1e-15)
+        while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             //remember old values
             eps_old = eps; end2d_old = end2d;
             //compute new values
-            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip(R_init, Z_init), psi, N);
+            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_(X_init, Y_init), psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
-        R_init = R_0 = end2d_old[0], Z_init = Z_0 = end2d_old[1];
+        X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
     }
 
     //compute f for a given psi between psi0 and psi1
@@ -63,7 +65,7 @@ struct Fpsi
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
         //double y_eps = 1;
-        while( (eps < eps_old || eps > 1e-7)&& N < 1e6)
+        while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
         {
             //remember old values
             eps_old = eps, end_old = end;
@@ -84,83 +86,15 @@ struct Fpsi
         return construct_f( psi, R_0, Z_0);
     }
 
-    /**
-     * @brief This function computes the integral x_1 = -\int_{\psi_0}^{\psi_1} f(\psi) d\psi to machine precision
-     *
-     * @param psi_0 lower boundary 
-     * @param psi_1 upper boundary 
-     *
-     * @return x1
-     */
-    double find_x1( double psi_0, double psi_1 ) 
-    {
-        unsigned P=8;
-        double x1 = 0, x1_old = 0;
-        double eps=1e10, eps_old=2e10;
-        //std::cout << "In x1 function\n";
-        while(eps < eps_old && P < 20 && eps > 1e-15)
-        {
-            eps_old = eps; 
-            x1_old = x1;
-
-            P+=1;
-            dg::Grid1d<double> grid( psi_0, psi_1, P, 1);
-            thrust::host_vector<double> psi_vec = dg::evaluate( dg::coo1, grid);
-            thrust::host_vector<double> f_vec(grid.size(), 0);
-            thrust::host_vector<double> w1d = dg::create::weights(grid);
-            for( unsigned i=0; i<psi_vec.size(); i++)
-            {
-                f_vec[i] = this->operator()( psi_vec[i]);
-            }
-            x1 = dg::blas1::dot( f_vec, w1d);
-
-            eps = fabs((x1 - x1_old)/x1);
-            //std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
-        }
-        return -x1_old;
-
-    }
-
-    double f_prime( double psi) 
-    {
-        //compute fprime
-        double deltaPsi = fabs(psi)/100.;
-        double fofpsi[4];
-        fofpsi[1] = operator()(psi-deltaPsi);
-        fofpsi[2] = operator()(psi+deltaPsi);
-        double fprime = (-0.5*fofpsi[1]+0.5*fofpsi[2])/deltaPsi, fprime_old;
-        double eps = 1e10, eps_old=2e10;
-        while( eps < eps_old)
-        {
-            deltaPsi /=2.;
-            fprime_old = fprime;
-            eps_old = eps;
-            fofpsi[0] = fofpsi[1], fofpsi[3] = fofpsi[2];
-            fofpsi[1] = operator()(psi-deltaPsi);
-            fofpsi[2] = operator()(psi+deltaPsi);
-            //reuse previously computed fpsi for current fprime
-            fprime  = (+ 1./12.*fofpsi[0] 
-                       - 2./3. *fofpsi[1]
-                       + 2./3. *fofpsi[2]
-                       - 1./12.*fofpsi[3]
-                     )/deltaPsi;
-            eps = fabs((fprime - fprime_old)/fprime);
-            //std::cout << "fprime "<<fprime<<" rel error fprime is "<<eps<<" delta psi "<<deltaPsi<<"\n";
-        }
-        return fprime_old;
-    }
-
     //compute the vector of r and z - values that form one psi surface
     void compute_rzy( double psi, const thrust::host_vector<double>& y_vec,
             thrust::host_vector<double>& r, 
             thrust::host_vector<double>& z, 
-            thrust::host_vector<double>& yr, 
-            thrust::host_vector<double>& yz, 
             double& R_0, double& Z_0, double& f ) 
     {
         thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
         thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
-        r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size());
+        r.resize( y_vec.size()), z.resize(y_vec.size());
 
         //now compute f and starting values 
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
@@ -168,26 +102,24 @@ struct Fpsi
 
         begin[0] = R_0, begin[1] = Z_0;
         //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-        solovev::orthogonal::FieldRZY fieldRZY(gp_);
-        //fieldRZY.set_f(1./f_psi);
-        fieldRZY.set_f(f_psi);
+        fieldRZY_.set_f(f_psi);
         unsigned steps = 1;
         double eps = 1e10, eps_old=2e10;
-        while( eps < eps_old)
+        while( (eps < eps_old||eps > 1e-7) && eps > 1e-14)
         {
             //begin is left const
             eps_old = eps, r_old = r, z_old = z;
-            dg::stepperRK17( fieldRZY, begin, end, 0, y_vec[0], steps);
+            dg::stepperRK17( fieldRZY_, begin, end, 0, y_vec[0], steps);
             r[0] = end[0], z[0] = end[1];
             //std::cout <<end[0]<<" "<< end[1] <<"\n";
             for( unsigned i=1; i<y_vec.size(); i++)
             {
                 temp = end;
-                dg::stepperRK17( fieldRZY, temp, end, y_vec[i-1], y_vec[i], steps);
+                dg::stepperRK17( fieldRZY_, temp, end, y_vec[i-1], y_vec[i], steps);
                 r[i] = end[0], z[i] = end[1];
             }
             temp = end;
-            dg::stepperRK17( fieldRZY, temp, end, y_vec[y_vec.size()-1], 2.*M_PI, steps);
+            dg::stepperRK17( fieldRZY_, temp, end, y_vec[y_vec.size()-1], 2.*M_PI, steps);
             //compute error in R,Z only
             dg::blas1::axpby( 1., r, -1., r_old, r_diff);
             dg::blas1::axpby( 1., z, -1., z_old, z_diff);
@@ -202,177 +134,133 @@ struct Fpsi
         }
         r = r_old, z = z_old;
         f = f_psi;
-        solovev::PsipR psipR_(gp_);
-        solovev::PsipZ psipZ_(gp_);
-        for( unsigned i=0; i<r.size(); i++)
-        {
-            double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
-            double psip2 = psipR*psipR+psipZ*psipZ;
-            //yr[i] = psipZ*f/psip2;  //separatrix
-            //yz[i] = -psipR*f/psip2; //separatrix 
-            //yr[i] = psipZ*f/sqrt(psip2); //equalarc
-            //yz[i] = -psipR*f/sqrt(psip2); //equalarc
-            yr[i] = psipZ*f; //conformal
-            yz[i] = -psipR*f; //conformal
-            //yr[i] = psipZ*f/r[i]/psip2;
-            //yz[i] = -psipR*f/r[i]/psip2;
-        }
 
     }
     private:
-    const solovev::GeomParameters gp_;
-    const solovev::orthogonal::FieldRZYT fieldRZYT_;
-    const solovev::FieldRZtau fieldRZtau_;
-    double R_init, Z_init;
+    double X_init, Y_init;
+    Psi psip_;
+    solovev::orthogonal::FieldRZYT<PsiX, PsiY> fieldRZYT_;
+    solovev::orthogonal::FieldRZY<PsiX, PsiY> fieldRZY_;
+    solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_;
 
 };
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
 //and provides the Nemov algorithm for orthogonal grid
-struct FieldFinv
+
+template< class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class LaplacePsiX, class LaplacePsiY>
+struct Nemov
 {
-    FieldFinv( const solovev::GeomParameters& gp, unsigned N_steps = 500): 
-        fpsi_(gp), fieldRZYT_(gp), N_steps(N_steps),
-        R_0_(gp.R_0), psipR_(gp), psipZ_(gp),
-        psipRR_(gp), psipZZ_(gp), psipRZ_(gp)
+    Nemov( PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, LaplacePsiX laplacePsiX, LaplacePsiY laplacePsiY, double f0):
+        f0_(f0),
+        psipR_(psiX), psipZ_(psiY),
+        psipRR_(psiXX), psipZZ_(psiYY), psipRZ_(psiXY), 
+        laplacePsipR_( laplacePsiX), laplacePsipZ_(laplacePsiY)
             { }
+    void initialize( 
+        const thrust::host_vector<double>& r_init, //1d intial values
+        const thrust::host_vector<double>& z_init, //1d intial values
+        thrust::host_vector<double>& h_init,
+        thrust::host_vector<double>& hr_init,
+        thrust::host_vector<double>& hz_init)
+    {
+        unsigned size = r_init.size(); 
+        h_init.resize( size), hr_init.resize( size), hz_init.resize( size);
+        for( unsigned i=0; i<size; i++)
+        {
+            double psipR = psipR_(r_init[i], z_init[i]), 
+                   psipZ = psipZ_(r_init[i], z_init[i]);
+            double laplace = psipRR_(r_init[i], z_init[i]) + 
+                             psipZZ_(r_init[i], z_init[i]);
+            double psip2 = (psipR*psipR+psipZ*psipZ);
+            h_init[i]  = f0_;
+            hr_init[i] = -f0_*laplace/psip2*psipR;
+            hz_init[i] = -f0_*laplace/psip2*psipZ;
+        }
+    }
+
     void operator()(const std::vector<thrust::host_vector<double> >& y, std::vector<thrust::host_vector<double> >& yp) 
     { 
-        //y[0] = R, y[1] = Z , y[2] = psi, y[3] = g, y[4] = yr, y[5] = yz
-        this->operator()( y[2], yp[2]);
-
+        //y[0] = R, y[1] = Z, y[2] = h, y[3] = hr, y[4] = hz
         unsigned size = y[0].size();
         double psipR, psipZ, psipRR, psipRZ, psipZZ, psip2;
         for( unsigned i=0; i<size; i++)
         {
             psipR = psipR_(y[0][i], y[1][i]), psipZ = psipZ_(y[0][i], y[1][i]);
             psipRR = psipRR_(y[0][i], y[1][i]), psipRZ = psipRZ_(y[0][i], y[1][i]), psipZZ = psipZZ_(y[0][i], y[1][i]);
-            psip2 = psipR*psipR+psipZ*psipZ;
-            yp[0][i] = yp[2][0]/psip2 *psipR;
-            yp[1][i] = yp[2][0]/psip2 *psipZ;
-            //yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^2
-            //yp[3][i] = yp[2][0]/psip2 *y[3][i]*( 1./psip2/sqrt(psip2)*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ )  -(psipRR+psipZZ) );//g/gradpsi^1/2
-            yp[3][i] = yp[2][0]/psip2 *y[3][i]*( -(psipRR+psipZZ) );//g
-            //yp[3][i] = yp[2][0]/psip2 *y[3][i]*(2./psip2*( psipR*psipR*psipRR +psipZ*psipZ*psipZZ+2.*psipZ*psipR*psipRZ ) + psipR/y[0][i] -(psipRR+psipZZ) );//g
-            yp[4][i] = yp[2][0]/psip2 *( -psipRR*y[4][i] - psipRZ*y[5][i]);
-            yp[5][i] = yp[2][0]/psip2 *( -psipRZ*y[4][i] - psipZZ*y[5][i]);
+            psip2 = f0_*(psipR*psipR+psipZ*psipZ);
+            yp[0][i] = psipR/psip2;
+            yp[1][i] = psipZ/psip2;
+            yp[2][i] = y[2][i]*( -(psipRR+psipZZ) )/psip2;//g
+            yp[3][i] = ( -(2.*psipRR+psipZZ)*y[3][i] - psipRZ*y[4][i] - laplacePsipR_(y[0][i], y[1][i])*y[2][i])/psip2;
+            yp[4][i] = ( -psipRZ*y[3][i] - (2.*psipZZ+psipRR)*y[4][i] - laplacePsipZ_(y[0][i], y[1][i])*y[2][i])/psip2;
         }
-    }
-    void operator()(const thrust::host_vector<double> & y, thrust::host_vector<double> & yp) 
-    { 
-
-        thrust::host_vector<double> begin( 3, 0), end(begin);//, end_old(begin);
-        fpsi_.find_initial( y[0], begin[0], begin[1]);
-        //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
-        dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N_steps);
-        //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-        //yp[0] =  - 2.*M_PI/end[2];
-        yp[0] = - end[2]/2./M_PI;
-
-        //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     private:
-    Fpsi fpsi_;
-    solovev::orthogonal::FieldRZYT fieldRZYT_;
-    thrust::host_vector<double> fpsi_neg_inv;
-    unsigned N_steps;
-    double R_0_;
-    solovev::PsipR psipR_;
-    solovev::PsipZ psipZ_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipZZ psipZZ_;
-    solovev::PsipRZ psipRZ_;
+    double f0_;
+    PsiX psipR_;
+    PsiY psipZ_;
+    PsiXX psipRR_;
+    PsiYY psipZZ_;
+    PsiXY psipRZ_;
+    LaplacePsiX laplacePsipR_;
+    LaplacePsiY laplacePsipZ_;
 };
 
-//assume x0 = 0
-template<class Fpsi, class FieldFinv>
-void construct_rz( Fpsi fpsi,
-        FieldFinv fpsiMinv, 
-        const solovev::GeomParameters& gp, 
-        const double psi_0,  const double psi_1, const double x_0, const double x_1,//innermost flux surface
-        const thrust::host_vector<double>& x_vec,  //x discretization
-        const thrust::host_vector<double>& y_vec,  //y discretization
+template<class Nemov>
+void construct_rz( Nemov nemov, 
+        double f0, 
+        const thrust::host_vector<double>& x_vec,  //1d x values
+        const thrust::host_vector<double>& r_init, //1d intial values
+        const thrust::host_vector<double>& z_init, //1d intial values
         thrust::host_vector<double>& r, 
         thrust::host_vector<double>& z, 
-        thrust::host_vector<double>& yr, 
-        thrust::host_vector<double>& yz,  
-        thrust::host_vector<double>& xr, 
-        thrust::host_vector<double>& xz,  
-        thrust::host_vector<double>& f_x,
-        thrust::host_vector<double>& g
+        thrust::host_vector<double>& h,
+        thrust::host_vector<double>& hr,
+        thrust::host_vector<double>& hz
     )
 {
-
-    thrust::host_vector<double> psi_x(x_vec.size(), 0), psi_old(psi_x), psi_diff( psi_old);
-    f_x.resize( psi_x.size());
     unsigned N = 1;
     double eps = 1e10, eps_old=2e10;
-    //fpsiMinv utilities
-    thrust::host_vector<double> rvec( y_vec.size()), zvec(y_vec.size()), yrvec(y_vec.size()), yzvec(y_vec.size());
-    thrust::host_vector<double> psivec(1, psi_0);
-    std::vector<thrust::host_vector<double> > begin(6);
-    double R0, Z0, f0;
-    fpsi.compute_rzy( psi_0, y_vec, rvec, zvec, yrvec, yzvec, R0, Z0, f0);
-    thrust::host_vector<double> gvec(y_vec.size(), f0);
-    solovev::PsipR psipR_(gp);
-    solovev::PsipZ psipZ_(gp);
-    for( unsigned i=0; i<rvec.size(); i++)
-    {
-       double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
-       gvec[i] /= 1.; //conformal
-       //gvec[i] /= sqrt(psipR*psipR + psipZ*psipZ); //equalarc
-    }
-    begin[0] = rvec, begin[1] = zvec, begin[2] = psivec; 
-    begin[3] = gvec; begin[4] = yrvec, begin[5] = yzvec;
-    //now we have the starting values of r, z, psi
+    std::vector<thrust::host_vector<double> > begin(5);
+    thrust::host_vector<double> h_init, hr_init, hz_init;
+    nemov.initialize( r_init, z_init, h_init, hr_init, hz_init);
+    begin[0] = r_init, begin[1] = z_init, 
+    begin[2] = h_init; begin[3] = hr_init, begin[4] = hz_init;
+    //now we have the starting values 
     std::vector<thrust::host_vector<double> > end(begin), temp(begin);
-
-    r.resize(x_vec.size()*y_vec.size()), z.resize(x_vec.size()*y_vec.size()), g.resize(x_vec.size()*y_vec.size());
-    yr = r, yz = z, xr = r, xz = r;
+    unsigned sizeX = x_vec.size(), sizeY = r_init.size();
+    unsigned size2d = x_vec.size()*r_init.size();
+    r.resize(size2d), z.resize(size2d), h.resize(size2d), hr.resize(size2d), hz.resize(size2d);
     //std::cout << "In psi function:\n";
-    double x0=x_0, x1 = x_vec[0];
-    //while( eps <  eps_old && N < 1e6)
-    while( fabs(eps - eps_old) >  1e-10 && N < 1e6)
+    double x0=0, x1 = x_vec[0];
+    thrust::host_vector<double> r_old(r), r_diff( r), z_old(z), z_diff(z);
+    while( (eps < eps_old || eps > 1e-6) && eps > 1e-13)
     {
-        eps_old = eps; //psi_old = psi_x; 
-        x0 = x_0, x1 = x_vec[0];
+        r_old = r, z_old = z; eps_old = eps; 
+        temp = begin;
         //////////////////////////////////////////////////
-        dg::stepperRK6( fpsiMinv, begin, end, x0, x1, N);
-        psi_x[0] = end[2][0]; fpsiMinv(end[2],temp[2]); f_x[0] = temp[2][0];
-        for( unsigned j=0; j<y_vec.size(); j++)
+        for( unsigned i=0; i<sizeX; i++)
         {
-             r[j*x_vec.size()+0] = end[0][j],  z[j*x_vec.size()+0] = end[1][j];
-            yr[j*x_vec.size()+0] = end[4][j], yz[j*x_vec.size()+0] = end[5][j];
-            xr[j*x_vec.size()+0] = psipR_(end[0][j], end[1][j])/f_x[0]; 
-            xz[j*x_vec.size()+0] = psipZ_(end[0][j], end[1][j])/f_x[0]; 
-             g[j*x_vec.size()+0] = end[3][j];
-        }
-
-        //////////////////////////////////////////////////
-        for( unsigned i=1; i<x_vec.size(); i++)
-        {
-            temp = end;
-            x0 = x_vec[i-1], x1 = x_vec[i];
+            x0 = i==0?0:x_vec[i-1], x1 = x_vec[i];
             //////////////////////////////////////////////////
-            dg::stepperRK6( fpsiMinv, temp, end, x0, x1, N);
-            psi_x[i] = end[2][0]; fpsiMinv(end[2],temp[2]); f_x[i] = temp[2][0];
-            for( unsigned j=0; j<y_vec.size(); j++)
+            dg::stepperRK17( nemov, temp, end, x0, x1, N);
+            for( unsigned j=0; j<sizeY; j++)
             {
-                 r[j*x_vec.size()+i] = end[0][j],  z[j*x_vec.size()+i] = end[1][j];
-                yr[j*x_vec.size()+i] = end[4][j], yz[j*x_vec.size()+i] = end[5][j];
-                xr[j*x_vec.size()+i] = psipR_(end[0][j], end[1][j])/f_x[i]; 
-                xz[j*x_vec.size()+i] = psipZ_(end[0][j], end[1][j])/f_x[i]; 
-                 g[j*x_vec.size()+i] = end[3][j];
+                unsigned idx = j*sizeX+i;
+                 r[idx] = end[0][j],  z[idx] = end[1][j];
+                hr[idx] = end[3][j], hz[idx] = end[4][j];
+                 h[idx] = end[2][j]; 
             }
             //////////////////////////////////////////////////
+            temp = end;
         }
-        temp = end;
-        dg::stepperRK6(fpsiMinv, temp, end, x1, x_1,N);
-        //double psi_1_numerical = psi_0 + dg::blas1::dot( f_x_, w1d);
-        double psi_1_numerical = psi_0 + end[2][0];
-        eps = fabs( psi_1_numerical-psi_1); 
-        //std::cout << "Effective absolute Psi error is "<<psi_1_numerical-psi_1<<" with "<<N<<" steps\n"; //error domainated by integration error?
-        //std::cout << "Effective relative Psi error is "<<fabs(eps-eps_old)<<" with "<<N<<" steps\n"; 
+        dg::blas1::axpby( 1., r, -1., r_old, r_diff);
+        dg::blas1::axpby( 1., z, -1., z_old, z_diff);
+        dg::blas1::pointwiseDot( r_diff, r_diff, r_diff);
+        dg::blas1::pointwiseDot( 1., z_diff, z_diff, 1., r_diff);
+        eps = sqrt( dg::blas1::dot( r_diff, r_diff)/sizeX/sizeY); //should be relative to the interpoint distances
+        std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
 
@@ -391,7 +279,6 @@ struct RingGrid3d : public dg::Grid3d<double>
 {
     typedef dg::OrthogonalCylindricalTag metric_category;
     typedef RingGrid2d<container> perpendicular_grid;
-
     /**
      * @brief Construct 
      *
@@ -407,8 +294,38 @@ struct RingGrid3d : public dg::Grid3d<double>
     RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
-        orthogonal::detail::Fpsi fpsi( gp);
-        double x_1 = fpsi.find_x1( psi_0, psi_1);
+        solovev::Psip psip(gp); 
+        solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
+        solovev::PsipRR psipRR(gp); solovev::PsipZZ psipZZ(gp); solovev::PsipRZ psipRZ(gp);
+        solovev::LaplacePsipR lapPsipR(gp); solovev::LaplacePsipZ lapPsipZ(gp); 
+        construct( psip, psipR, psipZ, psipRR, psipRZ, psipZZ, lapPsipR, lapPsipZ, psi_0, psi_1, gp.R_0, 0, n, Nx, Ny);
+    }
+    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class LaplacePsiX, class LaplacePsiY>
+    RingGrid3d( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, LaplacePsiX laplacePsiX, LaplacePsiY laplacePsiY, 
+            double psi_0, double psi_1, double x0, double y0, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx):
+        dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+    { 
+        construct( psi, psiX, psiY, psiXX, psiXY, psiYY, laplacePsiX, laplacePsiY, psi_0, psi_1, x0, y0, n, Nx, Ny);
+    }
+
+    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class LaplacePsiX, class LaplacePsiY>
+    void construct( Psi psi, PsiX psiX, PsiY psiY, 
+            PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, 
+            LaplacePsiX laplacePsiX, LaplacePsiY laplacePsiY, 
+            double psi_0, double psi_1, 
+            double x0, double y0, unsigned n, unsigned Nx, unsigned Ny)
+    {
+        //compute innermost flux surface
+        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0);
+        dg::Grid1d<double> gY1d( 0, 2*M_PI, n, Ny, dg::PER);
+        unsigned sizeY = gY1d.size();
+        thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, gY1d);
+        thrust::host_vector<double> rvec(sizeY), zvec(sizeY);
+        double R0, Z0, f0;
+        fpsi.compute_rzy( psi_0, y_vec, rvec, zvec, R0, Z0, f0);
+
+        //now construct grid in x
+        double x_1 = f0*(psi_1-psi_0);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
         else
@@ -416,50 +333,41 @@ struct RingGrid3d : public dg::Grid3d<double>
             init_X_boundaries( x_1, 0.);
             std::swap( psi_0, psi_1);
         }
-        //simultaneously compute one flux surface after the other
-        dg::Grid1d<double> gX1d( this->x0(), this->x1(), n, Nx, bcx);
-        dg::Grid1d<double> gY1d( 0, 2*M_PI, n, Ny, dg::PER);
-        thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, gY1d);
+        dg::Grid1d<double> gX1d( this->x0(), this->x1(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, gX1d);
-        detail::FieldFinv fpsiMinv_(gp, 500);
-        detail::construct_rz( fpsi, fpsiMinv_, gp, psi_0, psi_1, this->x0(), this->x1(), 
-                x_vec, y_vec, r_, z_, yr_, yz_, xr_, xz_, f_x_, g_);
-        construct_rz( ); //lift to 3D grid
-        construct_metric(gp);
+        detail::Nemov<PsiX, PsiY, PsiXX, PsiXY, PsiYY, LaplacePsiX, LaplacePsiY> 
+            nemov(psiX, psiY, psiXX, psiXY, psiYY, laplacePsiX, laplacePsiY, f0);
+        thrust::host_vector<double> h, hr, hz;
+        detail::construct_rz(nemov, f0, x_vec, rvec, zvec, 
+                r_, z_, h, hr, hz);
+        r_.resize(size()), z_.resize(size());
+        xr_.resize(size()), xz_.resize(size()), 
+        yr_.resize(size()), yz_.resize(size());
+        lapx_.resize(size()), lapy_.resize(size());
+        for( unsigned idx=0; idx<r_.size(); idx++)
+        {
+            double psipR = psiX(r_[idx], z_[idx]);
+            double psipZ = psiY(r_[idx], z_[idx]);
+            xr_[idx] = f0*psipR;
+            xz_[idx] = f0*psipZ;
+            yr_[idx] = h[idx]*psipZ;
+            yz_[idx] = -h[idx]*psipR;
+            lapx_[idx] = f0*(psiXX( r_[idx], z_[idx]) + psiYY(r_[idx], z_[idx]));
+            lapy_[idx] = hr[idx]*psipZ - hz[idx]*psipR;
+        }
+        lift3d( ); //lift to 3D grid
+        construct_metric();
     }
 
-    /**
-     * @brief 1D version of the f_1 vector
-     *
-     * @return 
-     */
-    const thrust::host_vector<double>& f1_x()const{return f_x_;}
-    /**
-     * @brief 2D version of the f_2 vector
-     *
-     * @return 
-     */
-    const thrust::host_vector<double>& f2_xy()const{return f2_xy_;}
-    /**
-     * @brief Get the whole f_1 vector
-     *
-     * @return 
-     */
-    const thrust::host_vector<double>& f1()const{return f_;}
-    /**
-     * @brief Get the whole f_2 vector
-     *
-     * @return 
-     */
-    const thrust::host_vector<double>& f2()const{return g_;}
     perpendicular_grid perp_grid() const { return orthogonal::RingGrid2d<container>(*this);}
-
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
+    const thrust::host_vector<double>& lapx()const{return lapx_;}
+    const thrust::host_vector<double>& lapy()const{return lapy_;}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
@@ -467,50 +375,33 @@ struct RingGrid3d : public dg::Grid3d<double>
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    void construct_rz( )
+    void lift3d( )
     {
-        f_.resize( size());
-        r_.resize(size()), z_.resize(size()), g_.resize(size());
-        xr_.resize(size()), xz_.resize(size()), yr_.resize(size());
-        yz_.resize(size());
         //lift to 3D grid
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
-        for( unsigned i=0; i<Nx; i++)
-            f_x_[i] = -1./f_x_[i];
-        for( unsigned j=0; j<Ny; j++)
-            for( unsigned i=0; i<Nx; i++)
-                f_[j*Nx+i] = f_x_[i];
-        f2_xy_.resize(Nx*Ny);
-        for( unsigned i=0; i<Nx*Ny; i++)
-            f2_xy_[i] = g_[i];
         for( unsigned k=1; k<this->Nz(); k++)
             for( unsigned i=0; i<Nx*Ny; i++)
             {
-                f_[k*Nx*Ny+i] = f_[(k-1)*Nx*Ny+i];
-                g_[k*Nx*Ny+i] = g_[(k-1)*Nx*Ny+i];
                 r_[k*Nx*Ny+i] = r_[(k-1)*Nx*Ny+i];
                 z_[k*Nx*Ny+i] = z_[(k-1)*Nx*Ny+i];
-                yr_[k*Nx*Ny+i] = yr_[(k-1)*Nx*Ny+i];
-                yz_[k*Nx*Ny+i] = yz_[(k-1)*Nx*Ny+i];
                 xr_[k*Nx*Ny+i] = xr_[(k-1)*Nx*Ny+i];
                 xz_[k*Nx*Ny+i] = xz_[(k-1)*Nx*Ny+i];
+                yr_[k*Nx*Ny+i] = yr_[(k-1)*Nx*Ny+i];
+                yz_[k*Nx*Ny+i] = yz_[(k-1)*Nx*Ny+i];
+                lapx_[k*Nx*Ny+i] = lapx_[(k-1)*Nx*Ny+i];
+                lapy_[k*Nx*Ny+i] = lapy_[(k-1)*Nx*Ny+i];
             }
     }
     //compute metric elements from xr, xz, yr, yz, r and z
-    void construct_metric( const solovev::GeomParameters& gp)
+    void construct_metric( )
     {
-        solovev::PsipR psipR_(gp); solovev::PsipZ psipZ_(gp);
         thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
         for( unsigned i = 0; i<this->size(); i++)
         {
-            double psipR = psipR_(r_[i], z_[i]), psipZ = psipZ_( r_[i], z_[i]);
             tempxx[i] = (xr_[i]*xr_[i]+xz_[i]*xz_[i]);
             tempxy[i] = (yr_[i]*xr_[i]+yz_[i]*xz_[i]);
             tempyy[i] = (yr_[i]*yr_[i]+yz_[i]*yz_[i]);
-            //tempvol[i] = r_[i]/(f_[i]*f_[i] + tempxx[i]);
-            //tempvol[i] = r_[i]/sqrt( tempxx[i]*tempyy[i] - tempxy[i]*tempxy[i] );
             tempvol[i] = r_[i]/sqrt( tempxx[i]*tempyy[i] );
-            //tempvol[i] = r_[i]/fabs(f_[i]*g_[i])/(psipR*psipR + psipZ*psipZ);
         }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
@@ -520,14 +411,8 @@ struct RingGrid3d : public dg::Grid3d<double>
         dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
         g_pp_=tempxx;
     }
-    thrust::host_vector<double> f_x_, f2_xy_, f_, g_; 
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; 
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_, lapx_, lapy_; 
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    
-    //The following points might also be useful for external grid generation
-    //thrust::host_vector<double> r_0y, r_1y, z_0y, z_1y; //boundary points in x
-    //thrust::host_vector<double> r_x0, r_x1, z_x0, z_x1; //boundary points in y
-
 };
 
 /**
@@ -537,35 +422,40 @@ template< class container>
 struct RingGrid2d : public dg::Grid2d<double>
 {
     typedef dg::OrthogonalCylindricalTag metric_category;
+    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class LaplacePsiX, class LaplacePsiY>
+    RingGrid2d( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, LaplacePsiX laplacePsiX, LaplacePsiY laplacePsiY, 
+            double psi_0, double psi_1, double x0, double y0, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx):
+        dg::Grid2d<double>( 0, 1, 0., 2.*M_PI, n, Nx, Ny, bcx, dg::PER)
+    {
+        orthogonal::RingGrid3d<container> g( psi, psiX, psiY, psiXX, psiXY, psiYY, laplacePsiX, laplacePsiY, psi_0, psi_1, x0, y0, n,Nx,Ny,1,bcx);
+        init_X_boundaries( g.x0(), g.x1());
+        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz(), lapx_=g.lapx(), lapy_=g.lapy();
+        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
+        vol2d_=g.perpVol();
+
+    }
     RingGrid2d( const solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
         orthogonal::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
-        f_x_ = g.f1_x(), f_ = g.f1(), g_ = g.f2();
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
+        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz(), lapx_=g.lapx(), lapy_=g.lapy();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
     RingGrid2d( const RingGrid3d<container>& g):
         dg::Grid2d<double>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
-        f_x_ = g.f1_x();
         unsigned s = this->size();
-        f_.resize(s), g_.resize(s), r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
+        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s), lapx_.resize(s), lapy_.resize(s);
         g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
         for( unsigned i=0; i<s; i++)
-        {f_[i] = g.f1()[i], g_[i] = g.f2()[i], r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
+        { r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i]; lapx_[i] = g.lapx()[i]; lapy_[i] = g.lapy()[i];}
         thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
         thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
-
-    const thrust::host_vector<double>& f1_x()const{return f_x_;}
-    const thrust::host_vector<double>& f2_xy()const{return g_;}
-    const thrust::host_vector<double>& f1()const{return f_;}
-    const thrust::host_vector<double>& f2()const{return g_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -573,14 +463,15 @@ struct RingGrid2d : public dg::Grid2d<double>
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
+    const thrust::host_vector<double>& lapx()const{return lapx_;}
+    const thrust::host_vector<double>& lapy()const{return lapy_;}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    thrust::host_vector<double> f_x_, f_, g_; //1d & 2d vector
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //2d vector
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_, lapx_, lapy_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 

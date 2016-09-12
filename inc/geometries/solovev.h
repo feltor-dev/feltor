@@ -55,7 +55,7 @@ struct Psip
      *
      * @param gp useful geometric parameters
      */
-    Psip( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psi_0(gp.psipmaxcut), alpha_( gp.alpha) {}
+    Psip( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
 /**
  * @brief \f$ \hat \psi_p(R,Z) \f$
 
@@ -138,26 +138,7 @@ struct Psip
     }
     double R_0_, A_;
     std::vector<double> c_;
-    double psi_0;
-    double alpha_;
 };
-
-//struct PsipHom
-//{
-//    PsipHom( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), psip_(gp){}
-//    double operator()(double R, double Z) const
-//    {    
-//        double Rn = R/R_0_, Rn2 = Rn*Rn, Rn4 = Rn2*Rn2, lgRn= log(Rn);
-//        return psip_(R,Z) - R_0_*( Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.));  //c_[12] is to make fieldlines straight
-//    }
-//    double operator()(double R, double Z, double phi) const
-//    {    
-//        return operator()(R,Z);
-//    }
-//    private:
-//    double R_0_, A_;
-//    Psip psip_;
-//};
 
 /**
  * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} \f]
@@ -184,7 +165,7 @@ struct PsipR
      *
      * @param gp useful geometric parameters
      */
-    PsipR( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp) {}
+    PsipR( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
 /**
  * @brief \f$ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)  \f$
 
@@ -236,7 +217,6 @@ struct PsipR
     }
     double R_0_, A_;
     std::vector<double> c_;
-    Psip psip_;
 };
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
@@ -248,7 +228,7 @@ struct PsipRR
     *
     * @param gp geometric parameters
     */
-    PsipRR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp), psipR_(gp) {}
+    PsipRR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}=
      \hat{R}_0^{-1} \Bigg\{ 2 c_2 +(3 \hat{\bar{R}}^2 )/2+2 c_9  \bar{Z}+c_4 (12 \bar{R}^2 -8  \bar{Z}^2)+c_{11} 
@@ -269,8 +249,6 @@ struct PsipRR
  */ 
     double operator()(double R, double Z) const
     {    
-        //double psipR = psipR_.psipR_alt( R,Z);
-        //return psip_.diff_psi_neu( R, Z)* psipRR_alt( R,Z) + psip_.diffdiff_psi_neu( R, Z) *psipR;
         return psipRR_alt( R, Z);
     }
     /**
@@ -311,15 +289,13 @@ struct PsipRR
     }
     double R_0_, A_;
     std::vector<double> c_;
-    Psip psip_;
-    PsipR psipR_;
 };
 /**
  * @brief \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\f]
  */ 
 struct PsipZ
 {
-    PsipZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp) { }
+    PsipZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
 /**
  * @brief \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}= 
       \Bigg\{c_8 +c_9 \bar{R}^2 +2 c_3  \bar{Z}-8 c_4 \bar{R}^2  \bar{Z}+c_{11} 
@@ -353,7 +329,6 @@ struct PsipZ
     }
     double operator()(double R, double Z) const
     {    
-        //return psip_.diff_psi_neu( R, Z)* psipZ_alt( R,Z);
         return psipZ_alt(R, Z);
     }
     /**
@@ -371,14 +346,13 @@ struct PsipZ
   private:
     double R_0_, A_;
     std::vector<double> c_;
-    Psip psip_;
 };
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}\f]
  */ 
 struct PsipZZ
 {
-  PsipZZ( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp), psipZ_(gp) { }
+  PsipZZ( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}=
       \hat{R}_0^{-1} \Bigg\{2 c_3 -8 c_4 \bar{R}^2 +6 c_{10}  \bar{Z}-24 c_{11}
@@ -390,9 +364,6 @@ struct PsipZZ
  */ 
     double operator()(double R, double Z) const
     {    
-        //double psipZ = psipZ_.psipZ_alt(R,Z);
-        //return psip_.diff_psi_neu( R, Z)* psipZZ_alt( R,Z) + 
-        //       psip_.diffdiff_psi_neu( R, Z) *psipZ*psipZ;
         return psipZZ_alt( R, Z);
     }
     /**
@@ -419,15 +390,13 @@ struct PsipZZ
     }
     double R_0_, A_;
     std::vector<double> c_;
-    Psip psip_; 
-    PsipZ psipZ_;
 };
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\f] 
  */ 
 struct PsipRZ
 {
-    PsipRZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psip_(gp), psipZ_(gp), psipR_(gp) {  }
+    PsipRZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}= 
         \hat{R}_0^{-1} \Bigg\{2 c_9 \bar{R} -16 c_4 \bar{R}  \bar{Z}+c_{11} 
@@ -441,8 +410,6 @@ struct PsipRZ
  */ 
     double operator()(double R, double Z) const
     {    
-        //return psip_.diff_psi_neu( R, Z)* psipRZ_alt( R,Z) + 
-        //       psip_.diffdiff_psi_neu( R, Z) *psipR_.psipR_alt(R,Z)*psipZ_.psipZ_alt(R,Z);
         return psipRZ_alt( R, Z);
     }
     /**
@@ -472,10 +439,101 @@ struct PsipRZ
     }
     double R_0_, A_;
     std::vector<double> c_;
-    Psip psip_; 
-    PsipZ psipZ_;
-    PsipR psipR_;
 };
+/**
+ * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
+ */ 
+struct LaplacePsipR
+{
+    /**
+    * @brief Constructor
+    *
+    * @param gp geometric parameters
+    */
+    LaplacePsipR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    double operator()(double R, double Z) const
+    {    
+        return lapPsiR_alt( R, Z);
+    }
+    /**
+    * @brief return operator()(R,Z)
+    *
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+      @param phi angle (cylindrical coordinates)
+    *
+    * @return value
+    */
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()(R,Z);
+    }
+    /**
+    * @brief Display the internal parameters to std::cout
+    */
+    void display()
+    {
+      std::cout << R_0_ <<"  " <<A_ <<"\n";
+      std::cout << c_[0] <<"\n";
+    }
+  private:
+    double lapPsiR_alt(double R, double Z) const
+    {    
+        return 0.;
+    }
+    double R_0_, A_;
+    std::vector<double> c_;
+};
+/**
+ * @brief \f[\hat{I}\f] 
+ */ 
+/**
+ * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
+ */ 
+struct LaplacePsipZ
+{
+    /**
+    * @brief Constructor
+    *
+    * @param gp geometric parameters
+    */
+    LaplacePsipZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    double operator()(double R, double Z) const
+    {    
+        return lapPsiZ_alt( R, Z);
+    }
+    /**
+    * @brief return operator()(R,Z)
+    *
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
+      @param phi angle (cylindrical coordinates)
+    *
+    * @return value
+    */
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()(R,Z);
+    }
+    /**
+    * @brief Display the internal parameters to std::cout
+    */
+    void display()
+    {
+      std::cout << R_0_ <<"  " <<A_ <<"\n";
+      std::cout << c_[0] <<"\n";
+    }
+  private:
+    double lapPsiZ_alt(double R, double Z) const
+    {    
+        return 0.;
+    }
+    double R_0_, A_;
+    std::vector<double> c_;
+};
+
+
+
 /**
  * @brief \f[\hat{I}\f] 
  */ 
