@@ -8,6 +8,7 @@
 #include "dg/blas.h"
 
 #include "dg/backend/functions.h"
+#include "dg/functors.h"
 
 
 /*!@file
@@ -366,6 +367,8 @@ struct Field
    
 };
 
+
+//////////////////////////////////////////////////////////////////////////////
 /**
  * @brief Phi component of magnetic field \f$ B_\Phi\f$
 */
@@ -401,7 +404,7 @@ struct FieldR
         return  this->operator()(R,Z);
     }
     private:
-    PsipZ  psipZ_;
+    mod::PsipZ  psipZ_;
     double R_0;
    
 };
@@ -423,7 +426,7 @@ struct FieldZ
         return  this->operator()(R,Z);
     }
     private:
-    PsipR  psipR_;
+    mod::PsipR  psipR_;
     double R_0;
    
 };
@@ -513,8 +516,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     Ipol ipol_;
 };
 
@@ -535,8 +538,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -561,8 +564,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -605,11 +608,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
+    mod::PsipRR psipRR_;
+    mod::PsipRZ psipRZ_;
+    mod::PsipZZ psipZZ_;
     Ipol ipol_;
     IpolR ipolR_;
     IpolZ ipolZ_;
@@ -672,8 +675,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     Ipol ipol_;
 };
 
@@ -694,8 +697,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -718,8 +721,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -757,11 +760,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
+    mod::PsipRR psipRR_;
+    mod::PsipRZ psipRZ_;
+    mod::PsipZZ psipZZ_;
     Ipol ipol_;
     IpolR ipolR_;
     IpolZ ipolZ_;
@@ -797,8 +800,8 @@ struct FieldY
     }
     private:
     double f_psi_, R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZYT
@@ -821,8 +824,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZYZ
@@ -845,8 +848,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZY
@@ -868,8 +871,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZYRYZY
@@ -900,11 +903,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
+    mod::PsipRR psipRR_;
+    mod::PsipRZ psipRZ_;
+    mod::PsipZZ psipZZ_;
 };
 }//namespace conformal
 
@@ -937,8 +940,8 @@ struct FieldY
     }
     private:
     double f_psi_, R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZYT
@@ -961,8 +964,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZYZ
@@ -985,8 +988,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZY
@@ -1008,8 +1011,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZYRYZY
@@ -1030,11 +1033,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
+    mod::PsipRR psipRR_;
+    mod::PsipRZ psipRZ_;
+    mod::PsipZZ psipZZ_;
 };
 }//namespace equalarc
 namespace boozer{
@@ -1064,8 +1067,8 @@ struct FieldY
     }
     private:
     double f_psi_, R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     InvB invB_;
 };
 
@@ -1087,8 +1090,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     InvB invB_;
 };
 
@@ -1107,8 +1110,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZY
@@ -1124,8 +1127,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZYRYZY
@@ -1147,11 +1150,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
+    mod::PsipRR psipRR_;
+    mod::PsipRZ psipRZ_;
+    mod::PsipZZ psipZZ_;
     InvB invB_;
     BR BR_;
     BZ BZ_;
@@ -1186,8 +1189,8 @@ struct FieldY
     }
     private:
     double f_psi_, R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     InvB invB_;
 };
 
@@ -1208,8 +1211,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
     InvB invB_;
 };
 
@@ -1228,8 +1231,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZY
@@ -1245,8 +1248,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZYRYZY
@@ -1266,11 +1269,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
+    mod::PsipRR psipRR_;
+    mod::PsipRZ psipRZ_;
+    mod::PsipZZ psipZZ_;
     InvB invB_;
     double R_0_;
 };
@@ -1298,8 +1301,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZYZ
@@ -1321,8 +1324,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZY
@@ -1345,8 +1348,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 }//namespace orthogonal
@@ -1361,8 +1364,8 @@ struct FieldRZ
         yp[1] = 1.;
     }
   private:
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 struct FieldZR
 {
@@ -1374,8 +1377,8 @@ struct FieldZR
         yp[1] =  psipZ/psipR;
     }
   private:
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct FieldRZtau
@@ -1389,8 +1392,8 @@ struct FieldRZtau
         yp[1] =  psipZ/psi2;
     }
   private:
-    PsipR psipR_;
-    PsipZ psipZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
 };
 
 struct HessianRZtau
@@ -1445,11 +1448,11 @@ struct HessianRZtau
   private:
     bool norm_;
     int quad_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
+    mod::PsipRR psipRR_;
+    mod::PsipRZ psipRZ_;
+    mod::PsipZZ psipZZ_;
 };
 
 struct MinimalCurve
@@ -1485,14 +1488,15 @@ struct MinimalCurve
     }
   private:
     bool norm_;
-    Psip psip_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    mod::Psip psip_;
+    mod::PsipR psipR_;
+    mod::PsipZ psipZ_;
+    mod::PsipRR psipRR_;
+    mod::PsipRZ psipRZ_;
+    mod::PsipZZ psipZZ_;
 };
 
+//////////////////////////////////////////////////////////////////////////////
 /**
  * @brief R component of magnetic field\f$ b_R\f$
  */
@@ -1868,48 +1872,6 @@ struct EllipticDirPerM
     BZ bz_;
 };
 
-struct Cauchy
-{
-    //blob that is infinitely differentiable at x = x0_ \pm sigma_
-    Cauchy( double x0, double y0, double sigma_x, double sigma_y, double amp): x0_(x0), y0_(y0), sigmaX_(sigma_x), sigmaY_(sigma_y), amp_(amp){}
-    double operator()(double x, double y )const{ 
-        double xbar = (x-x0_)/sigmaX_;
-        double ybar = (y-y0_)/sigmaY_;
-        if( xbar*xbar + ybar*ybar < 1.)
-            return amp_*exp(1.)*exp( 1./( xbar*xbar + ybar*ybar -1.) );
-        return 0.;
-    }
-
-    double dx( double x, double y )const{ 
-        double xbar = (x-x0_)/sigmaX_;
-        double ybar = (y-y0_)/sigmaY_;
-        double temp = sigmaX_*(xbar*xbar + ybar*ybar  - 1.);
-        return -2.*xbar*this->operator()(x,y)/temp/temp;
-    }
-    double dxx( double x, double y)const{ 
-        double temp = sigmaY_*sigmaY_*(x-x0_)*(x-x0_) + sigmaX_*sigmaX_*((y-y0_)*(y-y0_) - sigmaY_*sigmaY_);
-        double bracket = sigmaX_*sigmaX_*((y-y0_)*(y-y0_)-sigmaY_*sigmaY_)*sigmaX_*sigmaX_*((y-y0_)*(y-y0_)-sigmaY_*sigmaY_)
-            -3.*sigmaY_*sigmaY_*sigmaY_*sigmaY_*(x-x0_)*(x-x0_)*(x-x0_)*(x-x0_)
-            -2.*sigmaY_*sigmaY_*sigmaX_*sigmaX_*(x-x0_)*(x-x0_)*(y-y0_)*(y-y0_);
-        return -2.*sigmaX_*sigmaX_*sigmaY_*sigmaY_*sigmaY_*sigmaY_*this->operator()(x,y)*bracket/temp/temp/temp/temp;
-    }
-    double dy( double x, double y)const{ 
-        double xbar = (x-x0_)/sigmaX_;
-        double ybar = (y-y0_)/sigmaY_;
-        double temp = sigmaY_*(xbar*xbar + ybar*ybar  - 1.);
-        return -2.*ybar*this->operator()(x,y)/temp/temp;
-    }
-    double dyy( double x, double y)const{ 
-        double temp = sigmaX_*sigmaX_*(y-y0_)*(y-y0_) + sigmaY_*sigmaY_*((x-x0_)*(x-x0_) - sigmaX_*sigmaX_);
-        double bracket = sigmaY_*sigmaY_*((x-x0_)*(x-x0_)-sigmaX_*sigmaX_)*sigmaY_*sigmaY_*((x-x0_)*(x-x0_)-sigmaX_*sigmaX_)
-            -3.*sigmaX_*sigmaX_*sigmaX_*sigmaX_*(y-y0_)*(y-y0_)*(y-y0_)*(y-y0_)
-            -2.*sigmaX_*sigmaX_*sigmaY_*sigmaY_*(y-y0_)*(y-y0_)*(x-x0_)*(x-x0_);
-        return -2.*sigmaY_*sigmaY_*sigmaX_*sigmaX_*sigmaX_*sigmaX_*this->operator()(x,y)*bracket/temp/temp/temp/temp;
-    }
-    private:
-    double x0_, y0_, sigmaX_, sigmaY_, amp_;
-};
-
 struct FuncDirNeu
 {
     FuncDirNeu( GeomParameters gp, double psi_0, double psi_1):
@@ -1953,7 +1915,7 @@ struct FuncDirNeu
     }
     private:
     double psi0_, psi1_;
-    Cauchy cauchy_;
+    dg::Cauchy cauchy_;
     Psip psip_;
     PsipR psipR_;
     PsipRR psipRR_;

@@ -401,7 +401,7 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
 * The coefficients are chosen in a form that require a minimum of 
 * axpby function calls (check for alpha==0, beta==1) and else 
 * assumes that most of the work is done in the computation of the rhs.
-* @tparam k Order of the method (1, 2, 3 or 4)
+* @tparam s Order of the method (1, 2, 3 or 4)
 * @tparam Vector The argument type used in the Functor class
 */
 template< size_t s, class Vector>
@@ -501,6 +501,23 @@ void stepperRK(RHS& rhs, const Vector& begin, Vector& end, double T_min, double 
         rk( rhs, end, temp, dt); 
         end.swap( temp); //end is one step further 
     }
+}
+
+template< class RHS, class Vector>
+void stepperRK1(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+{
+    stepperRK<RHS, Vector, 1>( rhs, begin, end, T_min, T_max, N);
+}
+template< class RHS, class Vector>
+void stepperRK2(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+{
+    stepperRK<RHS, Vector, 2>( rhs, begin, end, T_min, T_max, N);
+}
+
+template< class RHS, class Vector>
+void stepperRK3(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+{
+    stepperRK<RHS, Vector, 3>( rhs, begin, end, T_min, T_max, N);
 }
 
 /**

@@ -24,9 +24,9 @@ struct XPointer
             hessianRZtau.newton_iteration( X, XN);
             XN.swap(X);
         }
-        //std::cout << "X-point error  "<<R_X-X[0]<<" "<<Z_X-X[1]<<"\n";
+        std::cout << "X-point error  "<<R_X-X[0]<<" "<<Z_X-X[1]<<"\n";
         R_X = X[0], Z_X = X[1];
-        //std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
+        std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
         R_i[0] = R_X + dist_, Z_i[0] = Z_X;
         R_i[1] = R_X    , Z_i[1] = Z_X + dist_;
         R_i[2] = R_X - dist_, Z_i[2] = Z_X;
@@ -64,7 +64,7 @@ struct XPointer
     private:
     int quad_;
     solovev::FieldRZtau fieldRZtau_;
-    solovev::Psip psip_;
+    solovev::mod::Psip psip_;
     double R_X, Z_X;
     double R_i[4], Z_i[4];
     double dist_;
@@ -139,7 +139,7 @@ struct PsipSep
     double operator()(double R) { return psip_(R, Z_);}
     private:
     double Z_;
-    solovev::Psip psip_;
+    solovev::mod::Psip psip_;
 };
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
@@ -182,15 +182,15 @@ struct SeparatriX
             while( (eps < eps_old || eps > 5e-5))
             {
                 eps_old = eps; N*=2; y_old=y;
-                dg::stepperRK17( fieldRZYZ_, begin2d, end2d, Z_i[i], Z_X, N);
+                dg::stepperRK4( fieldRZYZ_, begin2d, end2d, Z_i[i], Z_X, N);
                 y=end2d[2];
-                eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X));
-                //eps = fabs(y-y_old);
-                //std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)<<"\n";
+                eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X))/R_X;
+                eps = fabs((y-y_old)/y_old);
+                std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
             }
             //remember last call
             y_i[i] = end2d[2]; 
-            std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)<<"\n";
+            std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
         }
         y_i[0]*=-1; y_i[2]*=-1; //these were integrated against y direction
 
@@ -276,8 +276,8 @@ struct SeparatriX
             steps*=2;
         }
         r = r_old, z = z_old;
-        solovev::PsipR psipR_(gp_);
-        solovev::PsipZ psipZ_(gp_);
+        solovev::mod::PsipR psipR_(gp_);
+        solovev::mod::PsipZ psipZ_(gp_);
         for( unsigned i=0; i<r.size(); i++)
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
@@ -298,7 +298,7 @@ struct SeparatriX
     double construct_f( ) 
     {
         std::cout << "In construct f function!\n";
-        solovev::Psip psip( gp_);
+        solovev::mod::Psip psip( gp_);
         
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         begin[0] = R_i[0], begin[1] = Z_i[0];
@@ -313,6 +313,8 @@ struct SeparatriX
             temp = end; 
             dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
             eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
+            std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
+            if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
         }
         N_steps_=N;
         std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";

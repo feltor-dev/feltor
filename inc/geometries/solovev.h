@@ -8,6 +8,7 @@
 #include "dg/blas.h"
 
 #include "dg/backend/functions.h"
+#include "dg/functors.h"
 #include "solovev_parameters.h"
 
 
@@ -141,22 +142,22 @@ struct Psip
     double alpha_;
 };
 
-struct PsipHom
-{
-    PsipHom( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), psip_(gp){}
-    double operator()(double R, double Z) const
-    {    
-        double Rn = R/R_0_, Rn2 = Rn*Rn, Rn4 = Rn2*Rn2, lgRn= log(Rn);
-        return psip_(R,Z) - R_0_*( Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.));  //c_[12] is to make fieldlines straight
-    }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
-    }
-    private:
-    double R_0_, A_;
-    Psip psip_;
-};
+//struct PsipHom
+//{
+//    PsipHom( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), psip_(gp){}
+//    double operator()(double R, double Z) const
+//    {    
+//        double Rn = R/R_0_, Rn2 = Rn*Rn, Rn4 = Rn2*Rn2, lgRn= log(Rn);
+//        return psip_(R,Z) - R_0_*( Rn4/8.+ A_ * ( 1./2.* Rn2* lgRn-(Rn4)/8.));  //c_[12] is to make fieldlines straight
+//    }
+//    double operator()(double R, double Z, double phi) const
+//    {    
+//        return operator()(R,Z);
+//    }
+//    private:
+//    double R_0_, A_;
+//    Psip psip_;
+//};
 
 /**
  * @brief \f[ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}} \f]
@@ -538,8 +539,168 @@ struct IpolZ
     Psip psip_;
     PsipZ psipZ_;
 };
+namespace mod
+{
 
-} //namespace dg
+struct Psip
+{
+    Psip( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+        psip_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
+    {}
+    double operator()(double R, double Z) const
+    {    
+        double Rbar = R - R_X, Zbar = Z - Z_X;
+        double psip_2 =  0.5*(- psipZZ_(R_X, Z_X)*Rbar*Rbar + 2.*psipRZ_(R_X, Z_X)*Rbar*Zbar - psipRR_(R_X, Z_X)*Zbar*Zbar) - psip_(R,Z) ; 
+        return  psip_(R,Z) + 0.5*psip_2*cauchy_(R,Z);
+    }
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()( R,Z);
+    }
+    private:
+    double R_X, Z_X; 
+    solovev::Psip psip_;
+    solovev::PsipRR psipRR_;
+    solovev::PsipRZ psipRZ_;
+    solovev::PsipZZ psipZZ_;
+    dg::Cauchy cauchy_;
+};
+struct PsipR
+{
+    PsipR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+        psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
+    {}
+    double operator()(double R, double Z) const
+    {    
+        double Rbar = R - R_X, Zbar = Z - Z_X;
+        double psip_2 =  0.5*(- psipZZ_(R_X, Z_X)*Rbar*Rbar + 2.*psipRZ_(R_X, Z_X)*Rbar*Zbar - psipRR_(R_X, Z_X)*Zbar*Zbar) - psip_(R,Z); //Taylor expansion of psip around R_X, Z_X
+        double psip_2R =  - psipZZ_(R_X, Z_X)*Rbar + psipRZ_(R_X, Z_X)*Zbar - psipR_(R,Z);
+        return psipR_(R,Z) + 0.5*(psip_2R*cauchy_(R,Z) + psip_2*cauchy_.dx(R,Z)  );
+    }
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()( R,Z);
+    }
+    private:
+    double R_X, Z_X; 
+    solovev::Psip psip_;
+    solovev::PsipR psipR_;
+    solovev::PsipRR psipRR_;
+    solovev::PsipRZ psipRZ_;
+    solovev::PsipZZ psipZZ_;
+    dg::Cauchy cauchy_;
+};
+struct PsipZ
+{
+    PsipZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+        psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
+    {}
+    double operator()(double R, double Z) const
+    {    
+        double Rbar = R - R_X, Zbar = Z - Z_X;
+        double psip_2 =  0.5*(- psipZZ_(R_X, Z_X)*Rbar*Rbar + 2.*psipRZ_(R_X, Z_X)*Rbar*Zbar - psipRR_(R_X, Z_X)*Zbar*Zbar) - psip_(R,Z); 
+        double psip_2Z =  - psipRR_(R_X, Z_X)*Zbar + psipRZ_(R_X, Z_X)*Rbar - psipZ_(R,Z);
+        return psipZ_(R,Z) + 0.5*(psip_2Z*cauchy_(R,Z) + psip_2*cauchy_.dy(R,Z));
+    }
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()( R,Z);
+    }
+    private:
+    double R_X, Z_X; 
+    solovev::Psip psip_;
+    solovev::PsipZ psipZ_;
+    solovev::PsipRR psipRR_;
+    solovev::PsipRZ psipRZ_;
+    solovev::PsipZZ psipZZ_;
+    dg::Cauchy cauchy_;
+};
+
+struct PsipZZ
+{
+    PsipZZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+        psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
+    {}
+    double operator()(double R, double Z) const
+    {    
+        double Rbar = R - R_X, Zbar = Z - Z_X;
+        double psip_2 =  0.5*(- psipZZ_(R_X, Z_X)*Rbar*Rbar + 2.*psipRZ_(R_X, Z_X)*Rbar*Zbar - psipRR_(R_X, Z_X)*Zbar*Zbar) - psip_(R,Z); 
+        double psip_2Z =  - psipRR_(R_X, Z_X)*Zbar + psipRZ_(R_X, Z_X)*Rbar - psipZ_(R,Z);
+        double psip_2ZZ =  - psipRR_(R_X, Z_X) - psipZZ_(R,Z);
+        return psipZZ_(R,Z) + 0.5*(psip_2ZZ*cauchy_(R,Z) + 2.*cauchy_.dy(R,Z)*psip_2Z +  psip_2*cauchy_.dyy(R,Z));
+    }
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()( R,Z);
+    }
+    private:
+    double R_X, Z_X; 
+    solovev::Psip psip_;
+    solovev::PsipZ psipZ_;
+    solovev::PsipRR psipRR_;
+    solovev::PsipRZ psipRZ_;
+    solovev::PsipZZ psipZZ_;
+    dg::Cauchy cauchy_;
+};
+struct PsipRR
+{
+    PsipRR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+        psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
+    {}
+    double operator()(double R, double Z) const
+    {    
+        double Rbar = R - R_X, Zbar = Z - Z_X;
+        double psip_2 =  0.5*(- psipZZ_(R_X, Z_X)*Rbar*Rbar + 2.*psipRZ_(R_X, Z_X)*Rbar*Zbar - psipRR_(R_X, Z_X)*Zbar*Zbar) - psip_(R,Z); //Taylor expansion of psip around R_X, Z_X
+        double psip_2R =  - psipZZ_(R_X, Z_X)*Rbar + psipRZ_(R_X, Z_X)*Zbar - psipR_(R,Z);
+        double psip_2RR =  - psipZZ_(R_X, Z_X) - psipRR_(R,Z);
+        return psipRR_(R,Z) + 0.5*(psip_2RR*cauchy_(R,Z) + 2.*cauchy_.dx(R,Z)*psip_2R +  psip_2*cauchy_.dxx(R,Z));
+    }
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()( R,Z);
+    }
+    private:
+    double R_X, Z_X; 
+    solovev::Psip psip_;
+    solovev::PsipR psipR_;
+    solovev::PsipRR psipRR_;
+    solovev::PsipRZ psipRZ_;
+    solovev::PsipZZ psipZZ_;
+    dg::Cauchy cauchy_;
+};
+struct PsipRZ
+{
+    PsipRZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+        psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
+    {}
+    double operator()(double R, double Z) const
+    {    
+        double Rbar = R - R_X, Zbar = Z - Z_X;
+        double psip_2 =  0.5*(- psipZZ_(R_X, Z_X)*Rbar*Rbar + 2.*psipRZ_(R_X, Z_X)*Rbar*Zbar - psipRR_(R_X, Z_X)*Zbar*Zbar) - psip_(R,Z); 
+        double psip_2R =  - psipZZ_(R_X, Z_X)*Rbar + psipRZ_(R_X, Z_X)*Zbar - psipR_(R,Z);
+        double psip_2Z =  - psipRR_(R_X, Z_X)*Zbar + psipRZ_(R_X, Z_X)*Rbar - psipZ_(R,Z);
+        double psip_2RZ =  - psipRZ_(R_X, Z_X) - psipRZ_(R,Z);
+        return psipRZ_(R,Z) + 0.5*(psip_2RZ*cauchy_(R,Z) + cauchy_.dx(R,Z)*psip_2Z + cauchy_.dy(R,Z)*psip_2R  +  psip_2*cauchy_.dxy(R,Z));
+    }
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()( R,Z);
+    }
+    private:
+    double R_X, Z_X; 
+    solovev::Psip psip_;
+    solovev::PsipR psipR_;
+    solovev::PsipZ psipZ_;
+    solovev::PsipRR psipRR_;
+    solovev::PsipRZ psipRZ_;
+    solovev::PsipZZ psipZZ_;
+    dg::Cauchy cauchy_;
+};
+
+
+} //namespace mod
+
+} //namespace solovev
 
 
 #include "fields.h"

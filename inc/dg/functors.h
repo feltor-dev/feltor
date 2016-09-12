@@ -1,5 +1,4 @@
-#ifndef _DG_FUNCTORS_CUH_
-#define _DG_FUNCTORS_CUH_
+#pragma once
 
 #include <cmath>
 #include <vector>
@@ -131,6 +130,70 @@ struct Gaussian
   private:
     double  x00, y00, sigma_x, sigma_y, amplitude, kz_;
 
+};
+
+/**
+ * @brief A blob that drops to zero 
+ * \f[
+   f(x,y) = Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - \right)^{-1}} 
+   \f]
+ */
+struct Cauchy
+{
+    /**
+     * @brief A blob that drops to zero 
+     *
+     * @param x0 x-center-coordinate
+     * @param y0 y-center-coordinate
+     * @param sigma_x radius in x 
+     * @param sigma_y radius in y  
+     * @param amp Amplitude
+     */
+    Cauchy( double x0, double y0, double sigma_x, double sigma_y, double amp): x0_(x0), y0_(y0), sigmaX_(sigma_x), sigmaY_(sigma_y), amp_(amp){}
+    double operator()(double x, double y )const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        if( xbar*xbar + ybar*ybar < 1.)
+            return amp_*exp( 1. +  1./( xbar*xbar + ybar*ybar -1.) );
+        return 0.;
+    }
+
+    double dx( double x, double y )const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        double temp = sigmaX_*(xbar*xbar + ybar*ybar  - 1.);
+        return -2.*xbar*this->operator()(x,y)/temp/temp;
+    }
+    double dxx( double x, double y)const{ 
+        double temp = sigmaY_*sigmaY_*(x-x0_)*(x-x0_) + sigmaX_*sigmaX_*((y-y0_)*(y-y0_) - sigmaY_*sigmaY_);
+        double bracket = sigmaX_*sigmaX_*((y-y0_)*(y-y0_)-sigmaY_*sigmaY_)*sigmaX_*sigmaX_*((y-y0_)*(y-y0_)-sigmaY_*sigmaY_)
+            -3.*sigmaY_*sigmaY_*sigmaY_*sigmaY_*(x-x0_)*(x-x0_)*(x-x0_)*(x-x0_)
+            -2.*sigmaY_*sigmaY_*sigmaX_*sigmaX_*(x-x0_)*(x-x0_)*(y-y0_)*(y-y0_);
+        return -2.*sigmaX_*sigmaX_*sigmaY_*sigmaY_*sigmaY_*sigmaY_*this->operator()(x,y)*bracket/temp/temp/temp/temp;
+    }
+    double dy( double x, double y)const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        double temp = sigmaY_*(xbar*xbar + ybar*ybar  - 1.);
+        return -2.*ybar*this->operator()(x,y)/temp/temp;
+    }
+    double dyy( double x, double y)const{ 
+        double temp = sigmaX_*sigmaX_*(y-y0_)*(y-y0_) + sigmaY_*sigmaY_*((x-x0_)*(x-x0_) - sigmaX_*sigmaX_);
+        double bracket = sigmaY_*sigmaY_*((x-x0_)*(x-x0_)-sigmaX_*sigmaX_)*sigmaY_*sigmaY_*((x-x0_)*(x-x0_)-sigmaX_*sigmaX_)
+            -3.*sigmaX_*sigmaX_*sigmaX_*sigmaX_*(y-y0_)*(y-y0_)*(y-y0_)*(y-y0_)
+            -2.*sigmaX_*sigmaX_*sigmaY_*sigmaY_*(y-y0_)*(y-y0_)*(x-x0_)*(x-x0_);
+        return -2.*sigmaY_*sigmaY_*sigmaX_*sigmaX_*sigmaX_*sigmaX_*this->operator()(x,y)*bracket/temp/temp/temp/temp;
+    }
+    double dxy( double x, double y )const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        double temp = (xbar*xbar + ybar*ybar  - 1.);
+        return 8.*xbar*ybar*this->operator()(x,y)/temp/temp/temp/sigmaX_/sigmaY_
+            + 4.*xbar*ybar*this->operator()(x,y)/temp/temp/temp/temp/sigmaX_/sigmaY_
+;
+    }
+    private:
+    double x0_, y0_, sigmaX_, sigmaY_, amp_;
 };
 
 /**
@@ -1352,4 +1415,3 @@ struct Histogram2D
 ///@}
 } //namespace dg
 
-#endif //_DG_FUNCTORS_CUH

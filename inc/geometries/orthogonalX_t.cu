@@ -290,10 +290,10 @@ try{
    // std::cout << "rel. error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))/norm<<"\n";
    // err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
    // //err = nc_put_var_double( ncid, divBID, X.data());
-    dg::DVec psiphom = dg::pullback( solovev::FuncDirNeu(gp, psi_0, g3d.psi1()), g2d);
-    //dg::DVec psiphom = dg::pullback( solovev::PsipHom(gp), g2d);
-    //dg::blas1::transfer( g2d.g(), X);
-    dg::blas1::transfer( psiphom, X);
+    //dg::DVec psiphom = dg::pullback( solovev::FuncDirNeu(gp, psi_0, g3d.psi1()), g2d);
+    //dg::DVec psiphom = dg::pullback( solovev::mod::Psip(gp), g2d);
+    dg::blas1::transfer( g2d.g(), X);
+    //dg::blas1::transfer( psiphom, X);
     err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
     err = nc_close( ncid);
 

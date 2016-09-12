@@ -27,9 +27,9 @@ struct FpsiX
         xpointer_(gp), hessianRZtau_(gp), minimalCurve_(gp)
     {
         //////////////////////////////////////////////
-        solovev::Psip psip(gp_);
-        solovev::PsipR psipR(gp_);
-        solovev::PsipZ psipZ(gp_);
+        solovev::mod::Psip psip(gp_);
+        solovev::mod::PsipR psipR(gp_);
+        solovev::mod::PsipZ psipZ(gp_);
         double R_ini = gp.R_0-1.1*gp.triangularity*gp.a;
         double Z_ini = -1.1*gp.elongation*gp.a;
         thrust::host_vector<double> X(2,0), XN(X);
@@ -77,7 +77,7 @@ struct FpsiX
     //finds the two starting points for the integration in y direction
     void find_initial( double psi, double* R_0, double* Z_0) 
     {
-        solovev::Psip psip(gp_);
+        solovev::mod::Psip psip(gp_);
         thrust::host_vector<double> begin2d( 4, 0), end2d( begin2d), end2d_old(begin2d); 
         //std::cout << "In init function\n";
         //std::cout << "psi is "<<psi<<"\n";
@@ -146,7 +146,7 @@ struct FpsiX
         t.tic();
         find_initial( psi, R_i, Z_i);
         t.toc();
-        solovev::Psip psip( gp_);
+        solovev::mod::Psip psip( gp_);
         
         //std::cout << "find_initial took "<<t.diff()<< "s\n";
         //t.tic();
@@ -256,7 +256,7 @@ struct FpsiX
          * @return the value for R
          */
         dg::detail::XPointer xpointer_(gp, 1e-4);
-        solovev::Psip psip_(gp);
+        solovev::mod::Psip psip_(gp);
         solovev::FieldRZtau fieldRZtau_(gp);
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin), end_old(end);
         double eps[] = {1e-11, 1e-12, 1e-11, 1e-12};
@@ -272,36 +272,38 @@ struct FpsiX
             double eps = 1e10, eps_old = 2e10;
             unsigned N=10;
             double psi0 = psip_(begin[0], begin[1]), psi1 = 1e3*psi0; 
-            while( (eps < eps_old || eps > 1e-4 ) && eps > 1e-11)
+            while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-7)
             {
                 eps_old = eps; end_old = end;
-                N*=2; dg::stepperRK17( fieldRZtau_, begin, end, psi0, psi1, N);
+                N*=2; dg::stepperRK4( fieldRZtau_, begin, end, psi0, psi1, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
+                //std::cout << " for N "<< N<<"eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             eps = 1e10, eps_old = 2e10; N=10;
             psi0 = psip_(begin[0], begin[1]), psi1 = -0.01; 
             if( i==0||i==2)psi1*=-1.;
-            while( (eps < eps_old || eps > 1e-4 ) && eps > 1e-11)
+            while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-7)
             {
                 eps_old = eps; end_old = end;
-                N*=2; dg::stepperRK17( fieldRZtau_, begin, end, psi0, psi1, N);
+                N*=2; dg::stepperRK4( fieldRZtau_, begin, end, psi0, psi1, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
+                //std::cout << " for N "<< N<<"eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
-            //std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
+            std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
 
         }
     }
     //for a given psi finds the four starting points for the integration in y direction on the perpendicular lines through the X-point
     void find_initial( double psi, double* R_0, double* Z_0) 
     {
-        solovev::Psip psip(gp_);
+        solovev::mod::Psip psip(gp_);
         solovev::FieldRZtau fieldRZtau_(gp_);
         thrust::host_vector<double> begin( 2, 0), end( begin), end_old(begin); 
         for( unsigned i=0; i<2; i++)
@@ -319,13 +321,13 @@ struct FpsiX
             while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
             {
                 eps_old = eps; end_old = end;
-                dg::stepperRK17( fieldRZtau_, begin, end, solovev::Psip(gp_)(begin[0], begin[1]), psi, steps);
+                dg::stepperRK17( fieldRZtau_, begin, end, solovev::mod::Psip(gp_)(begin[0], begin[1]), psi, steps);
                 eps = sqrt( (end[0]-end_old[0])*(end[0]- end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
                 steps*=2;
             }
-            //std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
+            std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
             if( psi<0)
             {
                 R_0[i] = R_i_[2*i+1] = begin[0] = end_old[0], Z_i_[2*i+1] = Z_0[i] = begin[1] = end_old[1];
@@ -341,54 +343,54 @@ struct FpsiX
     double operator()( double psi)
     {
         return -1.;
-        double R_i[2], Z_i[2]; 
-        return construct_f( psi, R_i, Z_i);
-        find_initial( psi, R_i, Z_i);
-        solovev::Psip psip( gp_);
-        solovev::conformal::FieldRZYT fieldRZYT(gp_);
-        solovev::conformal::FieldRZYZ fieldRZYZ(gp_);
-        
-        //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
-        //std::cout << "In Stepper function:\n";
-        //double y_old=0;
-        thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
-        begin[0] = R_i[0], begin[1] = Z_i[0];
-        //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
-        double eps = 1e10, eps_old = 2e10;
-        unsigned N = 32; 
-        //double y_eps;
-        while( (eps < eps_old || eps > 1e-7) && N < 1e6)
-        {
-            //remember old values
-            eps_old = eps, end_old = end; //y_old = end[2];
-            //compute new values
-            N*=2;
-            if( psi < 0)
-            {
-                dg::stepperRK17( fieldRZYT, begin, end, 0., 2.*M_PI, N);
-                //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<"\n";
-                eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-            }
-            else
-            {
-                dg::stepperRK17( fieldRZYZ, begin, end, begin[1], 0., N);
-                thrust::host_vector<double> temp(end);
-                dg::stepperRK17( fieldRZYT, temp, end, 0., M_PI, N);
-                temp = end; //temp[1] should be 0 now
-                dg::stepperRK17( fieldRZYZ, temp, end, temp[1], Z_i[1], N);
-                eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
-            }
-            if( isnan(eps)) { eps = eps_old/2.; end = end_old; 
-                //std::cerr << "\t nan! error "<<eps<<"\n";
-            } //near X-point integration can go wrong
-            //y_eps = sqrt( (y_old - end[2])*(y_old-end[2]));
-            //std::cout << "error "<<eps<<" with "<<N<<" steps| psip "<<psip(end[0], end[1])<<"\n";
-            //std::cout <<"error in y is "<<y_eps<<"\n";
-        }
-        //std::cout << "\t error "<<eps<<" with "<<N<<" steps| err psip "<<fabs( psip(end[0], end[1]) - psi )/psi<<"\n";
-        double f_psi = 2.*M_PI/end_old[2];
-        return f_psi;
-        //return 1./f_psi;
+        //double R_i[2], Z_i[2]; 
+        //return construct_f( psi, R_i, Z_i);
+        //find_initial( psi, R_i, Z_i);
+        //solovev::mod::Psip psip( gp_);
+        //solovev::conformal::FieldRZYT fieldRZYT(gp_);
+        //solovev::conformal::FieldRZYZ fieldRZYZ(gp_);
+        //
+        ////std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
+        ////std::cout << "In Stepper function:\n";
+        ////double y_old=0;
+        //thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
+        //begin[0] = R_i[0], begin[1] = Z_i[0];
+        ////std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
+        //double eps = 1e10, eps_old = 2e10;
+        //unsigned N = 32; 
+        ////double y_eps;
+        //while( (eps < eps_old || eps > 1e-7) && N < 1e6)
+        //{
+        //    //remember old values
+        //    eps_old = eps, end_old = end; //y_old = end[2];
+        //    //compute new values
+        //    N*=2;
+        //    if( psi < 0)
+        //    {
+        //        dg::stepperRK17( fieldRZYT, begin, end, 0., 2.*M_PI, N);
+        //        //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<"\n";
+        //        eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+        //    }
+        //    else
+        //    {
+        //        dg::stepperRK17( fieldRZYZ, begin, end, begin[1], 0., N);
+        //        thrust::host_vector<double> temp(end);
+        //        dg::stepperRK17( fieldRZYT, temp, end, 0., M_PI, N);
+        //        temp = end; //temp[1] should be 0 now
+        //        dg::stepperRK17( fieldRZYZ, temp, end, temp[1], Z_i[1], N);
+        //        eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
+        //    }
+        //    if( isnan(eps)) { eps = eps_old/2.; end = end_old; 
+        //        //std::cerr << "\t nan! error "<<eps<<"\n";
+        //    } //near X-point integration can go wrong
+        //    //y_eps = sqrt( (y_old - end[2])*(y_old-end[2]));
+        //    //std::cout << "error "<<eps<<" with "<<N<<" steps| psip "<<psip(end[0], end[1])<<"\n";
+        //    //std::cout <<"error in y is "<<y_eps<<"\n";
+        //}
+        ////std::cout << "\t error "<<eps<<" with "<<N<<" steps| err psip "<<fabs( psip(end[0], end[1]) - psi )/psi<<"\n";
+        //double f_psi = 2.*M_PI/end_old[2];
+        //return f_psi;
+        ////return 1./f_psi;
     }
 
     /**
@@ -466,7 +468,7 @@ struct FpsiX
             while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
             {
                 eps_old = eps; end_old = end;
-                dg::stepperRK17( fieldRZtau_, begin, end, solovev::Psip(gp_)(R_init[i], Z_init[i]), psi, steps);
+                dg::stepperRK17( fieldRZtau_, begin, end, solovev::mod::Psip(gp_)(R_init[i], Z_init[i]), psi, steps);
                 eps = sqrt( (end[0]-end_old[0])*(end[0]- end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
@@ -540,8 +542,8 @@ struct FpsiX
             steps*=2;
         }
         r = r_old, z = z_old;
-        solovev::PsipR psipR_(gp_);
-        solovev::PsipZ psipZ_(gp_);
+        solovev::mod::PsipR psipR_(gp_);
+        solovev::mod::PsipZ psipZ_(gp_);
         for( unsigned i=0; i<r.size(); i++)
         {
             double psipR = psipR_( r[i], z[i]), psipZ = psipZ_( r[i], z[i]);
@@ -562,7 +564,7 @@ struct FpsiX
     double construct_f( double psi, double* R_i, double* Z_i) 
     {
         find_initial( psi, R_i, Z_i);
-        solovev::Psip psip( gp_);
+        solovev::mod::Psip psip( gp_);
         
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
         //std::cout << "In Stepper function:\n";
@@ -648,35 +650,35 @@ struct XFieldFinv
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
         fpsiM[0] = 1.;return;
-        thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
-        double R_i[2], Z_i[2];
-        dg::Timer t;
-        t.tic();
-        fpsi_.find_initial( psi[0], R_i, Z_i);
-        t.toc();
-        //std::cout << "find_initial took "<<t.diff()<< "s\n";
-        t.tic();
-        begin[0] = R_i[0], begin[1] = Z_i[0];
-        unsigned N = N_steps;
-        if( psi[0] < -1. && psi[0] > -2.) N*=2;
-        if( psi[0] < 0 && psi[0] > -1.) N*=10;
-        if( psi[0] <0  )
-            dg::stepperRK17( fieldRZYT_, begin, end, 0., 2.*M_PI, N);
-        else
-        {
-            dg::stepperRK17( fieldRZYZ_, begin, end, begin[1], 0., N);
-            thrust::host_vector<double> temp(end);
-            dg::stepperRK17( fieldRZYT_, temp, end, 0., M_PI, N/2);
-            temp = end; //temp[1] should be 0 now
-            dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
-        }
-        //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-        fpsiM[0] = - end[2]/2./M_PI;
-        //fpsiM[0] = 1.;
-        //fpsiM[0] = - 2.*M_PI/end[2];
-        t.toc();
-        //std::cout << "Finding f took "<<t.diff()<<"s\n";
-        //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
+        //thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
+        //double R_i[2], Z_i[2];
+        //dg::Timer t;
+        //t.tic();
+        //fpsi_.find_initial( psi[0], R_i, Z_i);
+        //t.toc();
+        ////std::cout << "find_initial took "<<t.diff()<< "s\n";
+        //t.tic();
+        //begin[0] = R_i[0], begin[1] = Z_i[0];
+        //unsigned N = N_steps;
+        //if( psi[0] < -1. && psi[0] > -2.) N*=2;
+        //if( psi[0] < 0 && psi[0] > -1.) N*=10;
+        //if( psi[0] <0  )
+        //    dg::stepperRK17( fieldRZYT_, begin, end, 0., 2.*M_PI, N);
+        //else
+        //{
+        //    dg::stepperRK17( fieldRZYZ_, begin, end, begin[1], 0., N);
+        //    thrust::host_vector<double> temp(end);
+        //    dg::stepperRK17( fieldRZYT_, temp, end, 0., M_PI, N/2);
+        //    temp = end; //temp[1] should be 0 now
+        //    dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
+        //}
+        ////eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+        //fpsiM[0] = - end[2]/2./M_PI;
+        ////fpsiM[0] = 1.;
+        ////fpsiM[0] = - 2.*M_PI/end[2];
+        //t.toc();
+        ////std::cout << "Finding f took "<<t.diff()<<"s\n";
+        ////std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     double find_psi( double x)
     {
@@ -704,11 +706,11 @@ struct XFieldFinv
     unsigned N_steps;
     double xAtOne_;
     double R_0_;
-    solovev::PsipR psipR_;
-    solovev::PsipZ psipZ_;
-    solovev::PsipRR psipRR_;
-    solovev::PsipZZ psipZZ_;
-    solovev::PsipRZ psipRZ_;
+    solovev::mod::PsipR psipR_;
+    solovev::mod::PsipZ psipZ_;
+    solovev::mod::PsipRR psipRR_;
+    solovev::mod::PsipZZ psipZZ_;
+    solovev::mod::PsipRZ psipRZ_;
 };
 
 //this function 
@@ -738,8 +740,8 @@ void construct_rz( XFieldFinv fpsiMinv,
     sep.compute_rzy(y_vec, nodeX0, nodeX1, rvec, zvec, yrvec, yzvec, f0);
     //////compute gvec/////////////////////
     thrust::host_vector<double> gvec(y_vec.size(), f0); 
-    solovev::PsipR psipR_(gp);
-    solovev::PsipZ psipZ_(gp);
+    solovev::mod::PsipR psipR_(gp);
+    solovev::mod::PsipZ psipZ_(gp);
     for( unsigned i=0; i<rvec.size(); i++)
     {
          double psipR = psipR_(rvec[i], zvec[i]), psipZ = psipZ_(rvec[i], zvec[i]);
@@ -887,8 +889,8 @@ struct GridX3d : public dg::GridX3d
                 gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), 
                 rvec, zvec, yrvec, yzvec, gvec);
         unsigned Mx = this->n()*this->Nx(), My = this->n()*this->Ny();
-        solovev::PsipR psipR_(gp);
-        solovev::PsipZ psipZ_(gp);
+        solovev::mod::PsipR psipR_(gp);
+        solovev::mod::PsipZ psipZ_(gp);
         for( unsigned i=0; i<psi_x.size(); i++)
             for( unsigned j=0; j<y_vec.size(); j++)
             {
@@ -1078,8 +1080,8 @@ struct XField
         yp[0] =  0;
         yp[1] =  y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
         yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
-        yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
-        yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
+        yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I mod::Psip_Z
+        yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I mod::Psip_R
 
     }
     /**
@@ -1095,8 +1097,8 @@ struct XField
     
     private:
     solovev::GeomParameters gp_;
-    solovev::PsipR  psipR_;
-    solovev::PsipZ  psipZ_;
+    solovev::mod::PsipR  psipR_;
+    solovev::mod::PsipZ  psipZ_;
     solovev::Ipol   ipol_;
     solovev::InvB   invB_;
     const dg::GridX2d gXY_;
