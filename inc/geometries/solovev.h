@@ -450,10 +450,10 @@ struct LaplacePsipR
     *
     * @param gp geometric parameters
     */
-    LaplacePsipR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    LaplacePsipR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), psipR_(gp), psipRR_(gp) {}
     double operator()(double R, double Z) const
     {    
-        return lapPsiR_alt( R, Z);
+        return 2.*(1-A_)/R_0_/R_0_/R_0_*R - psipR_(R,Z)/R/R + psipRR_(R,Z)/R;
     }
     /**
     * @brief return operator()(R,Z)
@@ -477,10 +477,8 @@ struct LaplacePsipR
       std::cout << c_[0] <<"\n";
     }
   private:
-    double lapPsiR_alt(double R, double Z) const
-    {    
-        return 0.;
-    }
+    PsipR psipR_;
+    PsipRR psipRR_;
     double R_0_, A_;
     std::vector<double> c_;
 };
@@ -497,10 +495,10 @@ struct LaplacePsipZ
     *
     * @param gp geometric parameters
     */
-    LaplacePsipZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    LaplacePsipZ( GeomParameters gp ): R_0_(gp.R_0), psipRZ_(gp) {}
     double operator()(double R, double Z) const
     {    
-        return lapPsiZ_alt( R, Z);
+        return psipRZ_(R,Z)/R;
     }
     /**
     * @brief return operator()(R,Z)
@@ -515,21 +513,9 @@ struct LaplacePsipZ
     {    
         return operator()(R,Z);
     }
-    /**
-    * @brief Display the internal parameters to std::cout
-    */
-    void display()
-    {
-      std::cout << R_0_ <<"  " <<A_ <<"\n";
-      std::cout << c_[0] <<"\n";
-    }
   private:
-    double lapPsiZ_alt(double R, double Z) const
-    {    
-        return 0.;
-    }
-    double R_0_, A_;
-    std::vector<double> c_;
+    double R_0_;
+    PsipRZ psipRZ_;
 };
 
 

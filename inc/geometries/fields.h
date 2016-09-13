@@ -1288,14 +1288,14 @@ struct FieldRZYT
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
-        yp[0] =  psipZ;//fieldR
-        yp[1] = -psipR;//fieldZ
+        yp[0] = -psipZ;//fieldR
+        yp[1] = +psipR;//fieldZ
         //yp[2] = 1; //volume
         //yp[2] = sqrt(psip2); //equalarc
         yp[2] = psip2; //conformal
         //yp[2] = psip2*sqrt(psip2); //separatrix
         double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
-        double fieldT = -psipZ*(y[1]-Z_0_)/r2 - psipR*(y[0]-R_0_)/r2; //fieldT
+        double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; //fieldT
         yp[0] /=  fieldT;
         yp[1] /=  fieldT;
         yp[2] /=  fieldT;
@@ -1314,8 +1314,8 @@ struct FieldRZYZ
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
-        yp[0] =  psipZ;//fieldR
-        yp[1] = -psipR;//fieldZ
+        yp[0] = -psipZ;//fieldR
+        yp[1] = +psipR;//fieldZ
         //yp[2] = 1.0; //volume
         //yp[2] = sqrt(psip2); //equalarc
         yp[2] = psip2; //conformal
@@ -1342,8 +1342,8 @@ struct FieldRZY
         //yp[1] = -psipR/f_;//volume 
         //yp[0] = +psipZ/sqrt(psip2)/f_;//equalarc
         //yp[1] = -psipR/sqrt(psip2)/f_;//equalarc
-        yp[0] = +psipZ/psip2/f_;//conformal
-        yp[1] = -psipR/psip2/f_;//conformal
+        yp[0] = -psipZ/psip2/f_;//conformal
+        yp[1] = +psipR/psip2/f_;//conformal
         //yp[0] = +psipZ/psip2/sqrt(psip2)/f_;//separatrix
         //yp[1] = -psipR/psip2/sqrt(psip2)/f_;//separatrix
     }
