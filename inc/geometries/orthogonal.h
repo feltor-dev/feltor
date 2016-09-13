@@ -187,7 +187,7 @@ struct Nemov
             psip2 = f0_*(psipR*psipR+psipZ*psipZ);
             yp[0][i] = psipR/psip2;
             yp[1][i] = psipZ/psip2;
-            yp[2][i] = y[2][i]*( -(psipRR+psipZZ) )/psip2;//g
+            yp[2][i] = y[2][i]*( -(psipRR+psipZZ) )/psip2;
             yp[3][i] = ( -(2.*psipRR+psipZZ)*y[3][i] - psipRZ*y[4][i] - laplacePsipR_(y[0][i], y[1][i])*y[2][i])/psip2;
             yp[4][i] = ( -psipRZ*y[3][i] - (2.*psipZZ+psipRR)*y[4][i] - laplacePsipZ_(y[0][i], y[1][i])*y[2][i])/psip2;
         }
@@ -349,7 +349,7 @@ struct RingGrid3d : public dg::Grid3d<double>
             yr_[idx] = h[idx]*psipZ;
             yz_[idx] = -h[idx]*psipR;
             lapx_[idx] = f0*(psiXX( r_[idx], z_[idx]) + psiYY(r_[idx], z_[idx]));
-            lapy_[idx] = hr[idx]*psipZ - hz[idx]*psipR;
+            lapy_[idx] = -hr[idx]*psipZ + hz[idx]*psipR;
         }
         lift3d( ); //lift to 3D grid
         construct_metric();

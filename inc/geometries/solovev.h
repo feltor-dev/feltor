@@ -450,7 +450,7 @@ struct LaplacePsipR
     *
     * @param gp geometric parameters
     */
-    LaplacePsipR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), psipR_(gp), psipRR_(gp) {}
+    LaplacePsipR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psipR_(gp), psipRR_(gp) {}
     double operator()(double R, double Z) const
     {    
         return 2.*(1-A_)/R_0_/R_0_/R_0_*R - psipR_(R,Z)/R/R + psipRR_(R,Z)/R;
@@ -477,10 +477,10 @@ struct LaplacePsipR
       std::cout << c_[0] <<"\n";
     }
   private:
-    PsipR psipR_;
-    PsipRR psipRR_;
     double R_0_, A_;
     std::vector<double> c_;
+    PsipR psipR_;
+    PsipRR psipRR_;
 };
 /**
  * @brief \f[\hat{I}\f] 
