@@ -346,8 +346,8 @@ struct RingGrid3d : public dg::Grid3d<double>
             double psipZ = psiY(r_[idx], z_[idx]);
             xr_[idx] = f0*psipR;
             xz_[idx] = f0*psipZ;
-            yr_[idx] = h[idx]*psipZ;
-            yz_[idx] = -h[idx]*psipR;
+            yr_[idx] = -h[idx]*psipZ;
+            yz_[idx] = +h[idx]*psipR;
             lapx_[idx] = f0*(psiXX( r_[idx], z_[idx]) + psiYY(r_[idx], z_[idx]));
             lapy_[idx] = -hr[idx]*psipZ + hz[idx]*psipR;
         }
