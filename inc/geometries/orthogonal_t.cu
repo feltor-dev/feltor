@@ -222,7 +222,7 @@ int main( int argc, char* argv[])
 //     norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
 //     std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
 //     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-     X = g2d.lapy();
+     X = g2d.lapx();
      err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
 //     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
 //     std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";

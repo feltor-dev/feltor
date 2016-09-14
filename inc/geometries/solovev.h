@@ -440,41 +440,33 @@ struct PsipRZ
     double R_0_, A_;
     std::vector<double> c_;
 };
-/**
- * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
- */ 
+
+struct LaplacePsip
+{
+    LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
+    double operator()(double R, double Z) const
+    {    
+        return psipRR_(R,Z) + psipZZ_(R,Z);
+    }
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()(R,Z);
+    }
+  private:
+    PsipRR psipRR_;
+    PsipZZ psipZZ_;
+};
+/*
 struct LaplacePsipR
 {
-    /**
-    * @brief Constructor
-    *
-    * @param gp geometric parameters
-    */
     LaplacePsipR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psipR_(gp), psipRR_(gp) {}
     double operator()(double R, double Z) const
     {    
         return 2.*(1-A_)/R_0_/R_0_/R_0_*R - psipR_(R,Z)/R/R + psipRR_(R,Z)/R;
     }
-    /**
-    * @brief return operator()(R,Z)
-    *
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
-      @param phi angle (cylindrical coordinates)
-    *
-    * @return value
-    */
     double operator()(double R, double Z, double phi) const
     {    
         return operator()(R,Z);
-    }
-    /**
-    * @brief Display the internal parameters to std::cout
-    */
-    void display()
-    {
-      std::cout << R_0_ <<"  " <<A_ <<"\n";
-      std::cout << c_[0] <<"\n";
     }
   private:
     double R_0_, A_;
@@ -482,33 +474,13 @@ struct LaplacePsipR
     PsipR psipR_;
     PsipRR psipRR_;
 };
-/**
- * @brief \f[\hat{I}\f] 
- */ 
-/**
- * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
- */ 
 struct LaplacePsipZ
 {
-    /**
-    * @brief Constructor
-    *
-    * @param gp geometric parameters
-    */
     LaplacePsipZ( GeomParameters gp ): R_0_(gp.R_0), psipRZ_(gp) {}
     double operator()(double R, double Z) const
     {    
         return psipRZ_(R,Z)/R;
     }
-    /**
-    * @brief return operator()(R,Z)
-    *
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
-      @param phi angle (cylindrical coordinates)
-    *
-    * @return value
-    */
     double operator()(double R, double Z, double phi) const
     {    
         return operator()(R,Z);
@@ -517,6 +489,7 @@ struct LaplacePsipZ
     double R_0_;
     PsipRZ psipRZ_;
 };
+*/
 
 
 
