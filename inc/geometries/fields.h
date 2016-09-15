@@ -771,7 +771,7 @@ struct FieldRZYRYZY
 
 };
 }//namespace flux
-namespace conformal{
+namespace ribeiro{
 
 /**
  * @brief y-component of magnetic field 
@@ -909,7 +909,7 @@ struct FieldRZYRYZY
     mod::PsipRZ psipRZ_;
     mod::PsipZZ psipZZ_;
 };
-}//namespace conformal
+}//namespace ribeiro
 
 namespace equalarc{
 
@@ -1292,7 +1292,7 @@ struct FieldRZYT
         yp[1] = +psipR;//fieldZ
         //yp[2] = 1; //volume
         //yp[2] = sqrt(psip2); //equalarc
-        yp[2] = psip2; //conformal
+        yp[2] = psip2; //ribeiro
         //yp[2] = psip2*sqrt(psip2); //separatrix
         double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
         double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; //fieldT
@@ -1318,7 +1318,7 @@ struct FieldRZYZ
         yp[1] = +psipR;//fieldZ
         //yp[2] = 1.0; //volume
         //yp[2] = sqrt(psip2); //equalarc
-        yp[2] = psip2; //conformal
+        yp[2] = psip2; //ribeiro
         //yp[2] = psip2*sqrt(psip2); //separatrix
         yp[0] /=  yp[1];
         yp[2] /=  yp[1];
@@ -1342,8 +1342,8 @@ struct FieldRZY
         //yp[1] = -psipR/f_;//volume 
         //yp[0] = +psipZ/sqrt(psip2)/f_;//equalarc
         //yp[1] = -psipR/sqrt(psip2)/f_;//equalarc
-        yp[0] = -psipZ/psip2/f_;//conformal
-        yp[1] = +psipR/psip2/f_;//conformal
+        yp[0] = -psipZ/psip2/f_;//ribeiro
+        yp[1] = +psipR/psip2/f_;//ribeiro
         //yp[0] = +psipZ/psip2/sqrt(psip2)/f_;//separatrix
         //yp[1] = -psipR/psip2/sqrt(psip2)/f_;//separatrix
     }

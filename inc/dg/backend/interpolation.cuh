@@ -516,7 +516,6 @@ double interpolate( double x, double y,  const thrust::host_vector<double>& v, c
 {
     assert( v.size() == g.size());
 
-    dg::Operator<double> forward( g.dlt().forward());
     if (!(x >= g.x0() && x <= g.x1())) {
         std::cerr << g.x0()<<"< xi = " << x <<" < "<<g.x1()<<std::endl;
     }
@@ -550,6 +549,7 @@ double interpolate( double x, double y,  const thrust::host_vector<double>& v, c
     //evaluate 2d Legendre polynomials at (xn, yn)...
     std::vector<double> px = create::detail::coefficients( xn, g.n()), 
                         py = create::detail::coefficients( yn, g.n());
+    //dg::Operator<double> forward( g.dlt().forward());
     //std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
     //for( unsigned l=0; l<g.n(); l++)
     //    for( unsigned k=0; k<g.n(); k++)

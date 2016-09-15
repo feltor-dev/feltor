@@ -52,14 +52,8 @@ int main(int argc, char**argv)
     solovev::PsipR psipR( gp); 
     solovev::PsipZ psipZ( gp); 
     solovev::LaplacePsip lap( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
 
     hector::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
-    dg::Grid2d<double> guv( 0., hector.lu(), 0., hector.lv(), n, Nx, Ny );
-    dg::Grid1d<double> gu( 0., hector.lu(), n, Nx);
-    dg::Grid1d<double> gv( 0., hector.lv(), n, Ny);
-    dg::HVec u1d = dg::evaluate( dg::coo1, gu);
-    dg::HVec v1d = dg::evaluate( dg::coo1, gv);
 
     ///////////////////////////////FILE OUTPUT/////////////////////////////
     /*

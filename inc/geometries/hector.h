@@ -4,6 +4,7 @@
 #include "dg/backend/grid.h"
 #include "dg/backend/interpolation.cuh"
 #include "dg/elliptic.h"
+#include "dg/cg.h"
 #include "orthogonal.h"
 
 
@@ -21,27 +22,28 @@ struct Interpolate
                  const dg::Grid2d<double>& g2d ): 
         iter0_( dg::create::forward_transform( fZeta, g2d) ), 
         iter1_( dg::create::forward_transform(  fEta, g2d) ), 
-        g_(g2d){}
+        g_(g2d), zeta1_(g2d.x1()), eta1_(g2d.y1()){}
     void operator()(const thrust::host_vector<double>& zeta, thrust::host_vector<double>& fZeta)
     {
-
-        fZeta[0] = interpolate( zeta[0], zeta[1], iter0_, g_);
-        fZeta[1] = interpolate( zeta[0], zeta[1], iter1_, g_);
+        //fZeta[0] = interpolate( fmod( zeta[0], zeta1_), fmod( zeta[1], eta1_), iter0_, g_);
+        //fZeta[1] = interpolate( fmod( zeta[0], zeta1_), fmod( zeta[1], eta1_), iter1_, g_);
+        fZeta[0] = interpolate(  zeta[0], zeta[1], iter0_, g_);
+        fZeta[1] = interpolate(  zeta[0], zeta[1], iter1_, g_);
     }
     void operator()(const std::vector<thrust::host_vector<double> >& zeta, std::vector< thrust::host_vector<double> >& fZeta)
     {
         for( unsigned i=0; i<zeta[0].size(); i++)
         {
-            fZeta[0][i] = interpolate( zeta[0][i], zeta[1][i], iter0_, g_);
-            fZeta[1][i] = interpolate( zeta[0][i], zeta[1][i], iter1_, g_);
+            fZeta[0][i] = interpolate( fmod( zeta[0][i], zeta1_), fmod( zeta[1][i], eta1_), iter0_, g_);
+            fZeta[1][i] = interpolate( fmod( zeta[0][i], zeta1_), fmod( zeta[1][i], eta1_), iter1_, g_);
         }
     }
     private:
-    dg::Grid2d<double> g_;
     thrust::host_vector<double> iter0_;
     thrust::host_vector<double> iter1_;
+    dg::Grid2d<double> g_;
+    double zeta1_, eta1_;
 };
-
 
 //compute c_0 
 double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::Grid2d<double>& g2d) 
@@ -50,11 +52,11 @@ double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::Grid2
     thrust::host_vector<double> begin( 2, 0), end(begin), end_old(begin);
     begin[0] = 0, begin[1] = 0;
     double eps = 1e10, eps_old = 2e10;
-    unsigned N = 50;
-    while( (eps < eps_old || eps > 1e-7)&& eps > 1e-14)
+    unsigned N = 5;
+    while( (eps < eps_old || eps > 1e-7)&& eps > 1e-12)
     {
         eps_old = eps, end_old = end;
-        N*=2; dg::stepperRK17( inter, begin, end, 0., 2*M_PI, N);
+        N*=2; dg::stepperRK4( inter, begin, end, 0., 2*M_PI, N);
         eps = fabs( end[1]-end_old[1]);
     }
     std::cout << "\t error "<<eps<<" with "<<N<<" steps\n";
@@ -72,14 +74,14 @@ void compute_zev(
         const dg::Grid2d<double>& g2d
         ) 
 {
-    Interpolate iter( thrust::host_vector<double>( etaV.size(), 0), etaV, g2d);
+    Interpolate iter( thrust::host_vector<double>( etaV.size(), 0.), etaV, g2d);
     eta.resize( v_vec.size());
     thrust::host_vector<double> eta_old(v_vec.size(), 0), eta_diff( eta_old);
     thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
-    begin[0] = 0, begin[1] = 0;
+    begin[0] = 0., begin[1] = 0.;
     unsigned steps = 1;
     double eps = 1e10, eps_old=2e10;
-    while( (eps < eps_old||eps > 1e-7) && eps > 1e-14)
+    while( (eps < eps_old||eps > 1e-7) && eps > 1e-12)
     {
         //begin is left const
         eps_old = eps, eta_old = eta;
@@ -88,25 +90,25 @@ void compute_zev(
         for( unsigned i=1; i<v_vec.size(); i++)
         {
             temp = end;
-            dg::stepperRK17( iter, temp, end, v_vec[i-1], v_vec[i], steps);
+            dg::stepperRK4( iter, temp, end, v_vec[i-1], v_vec[i], steps);
             eta[i] = end[1];
         }
         temp = end;
-        //dg::stepperRK17( iter, temp, end, v_vec[v_vec.size()-1], 2.*M_PI, steps);
+        dg::stepperRK17( iter, temp, end, v_vec[v_vec.size()-1], 2.*M_PI, steps);
         //compute error in R,Z only
         dg::blas1::axpby( 1., eta, -1., eta_old, eta_diff);
         double er = dg::blas1::dot( eta_diff, eta_diff);
         double ar = dg::blas1::dot( eta, eta);
         eps =  sqrt( er / ar);
         std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
-        //std::cout << "abs. error is "<<sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]))<<"\n";
+        std::cout << "abs. error is "<<( 2.*M_PI-end[1])<<"\n";
         steps*=2;
     }
 }
 
 void construct_grid( 
-        const thrust::host_vector<double>& uZeta, //2d Zeta component
-        const thrust::host_vector<double>& uEta,  //2d Eta component
+        const thrust::host_vector<double>& zetaU, //2d Zeta component
+        const thrust::host_vector<double>& etaU,  //2d Eta component
         const thrust::host_vector<double>& u_vec,  //1d u values
         const thrust::host_vector<double>& zeta_init, //1d intial values
         const thrust::host_vector<double>& eta_init, //1d intial values
@@ -115,8 +117,8 @@ void construct_grid(
         const dg::Grid2d<double>& g2d
     )
 {
-    Interpolate inter( uZeta, uEta, g2d);
-    unsigned N = 1;
+    Interpolate inter( zetaU, etaU, g2d);
+    unsigned N = 4;
     double eps = 1e10, eps_old=2e10;
     std::vector<thrust::host_vector<double> > begin(2); 
     begin[0] = zeta_init, begin[1] = eta_init;
@@ -127,7 +129,7 @@ void construct_grid(
     zeta.resize(size2d), eta.resize(size2d);
     double u0=0, u1 = u_vec[0];
     thrust::host_vector<double> zeta_old(zeta), zeta_diff( zeta), eta_old(eta), eta_diff(eta);
-    while( (eps < eps_old || eps > 1e-6) && eps > 1e-13)
+    while( (eps < eps_old || eps > 1e-6) && eps > 1e-7)
     {
         zeta_old = zeta, eta_old = eta; eps_old = eps; 
         temp = begin;
@@ -136,7 +138,7 @@ void construct_grid(
         {
             u0 = i==0?0:u_vec[i-1], u1 = u_vec[i];
             //////////////////////////////////////////////////
-            dg::stepperRK17( inter, temp, end, u0, u1, N);
+            dg::stepperRK6( inter, temp, end, u0, u1, N);
             for( unsigned j=0; j<sizeV; j++)
             {
                  unsigned idx = j*sizeU+i;
@@ -158,10 +160,10 @@ void construct_grid(
 
 template< class Geometry, class container>
 void transform( 
-        const container u_zeta, 
-        const container u_eta,
-        thrust::host_vector<double> u_x, 
-        thrust::host_vector<double> u_y, 
+        const container& u_zeta, 
+        const container& u_eta,
+        thrust::host_vector<double>& u_x, 
+        thrust::host_vector<double>& u_y, 
         const Geometry& g2d)
 {
     u_x.resize( u_zeta.size()), u_y.resize( u_zeta.size());
@@ -181,7 +183,7 @@ template <class IMatrix, class Matrix, class container>
 struct Hector
 {
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-    Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double X0, double Y0, unsigned n = 11, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
+    Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
         g2d_(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR)
     {
         //first construct u_
@@ -200,24 +202,22 @@ struct Hector
         dg::blas1::axpby( +1., zeta, 1.,  u); //u = \tilde u + \zeta
 
         //now compute the components of the vector fields
-        container a;
-        dg::blas1::transfer( g2d_.g_yy(), a);
-        dg::blas1::pointwiseDivide( a, g2d_.g_xx(), a); // a^2=g^ee/g^zz
+        container a2;
+        dg::blas1::transfer( g2d_.g_yy(), a2);
+        dg::blas1::pointwiseDivide( a2, g2d_.g_xx(), a2); // a^2=g^ee/g^zz
         container zetaU=u_zeta, etaU=u_eta;
         dg::blas1::pointwiseDot( zetaU, zetaU, zetaU); //u_z*u_z
         dg::blas1::pointwiseDot(  etaU,  etaU,  etaU); //u_e*u_e
-        dg::blas1::pointwiseDot( 1., etaU, a, 1., zetaU); //u_z*u_z+a^2u_e*u_e
+        dg::blas1::pointwiseDot( 1., etaU, a2, 1., zetaU); //u_z*u_z+a^2u_e*u_e
         container den( zetaU); //denominator
         dg::blas1::pointwiseDivide( u_zeta, den, zetaU); //u_z / denominator
         dg::blas1::pointwiseDivide(  u_eta, den,  etaU); 
-        dg::blas1::pointwiseDot( a, etaU, etaU); //a^2*u_e / denominator
+        dg::blas1::pointwiseDot( a2, etaU, etaU); //a^2*u_e / denominator
 
-        container etaV(etaU), etaVinv(etaV);
-        dg::blas1::transform( a, a, dg::SQRT<double>());
-        dg::blas1::pointwiseDivide( a, u_zeta, etaV);
-        dg::blas1::pointwiseDivide( u_zeta, a, etaVinv);
+        container etaV(etaU), ones(etaU.size(), 1.);
+        dg::blas1::pointwiseDivide( ones, u_zeta, etaV);
         thrust::host_vector<double> etaVinv_h;
-        dg::blas1::transfer( etaVinv, etaVinv_h);
+        dg::blas1::transfer( u_zeta, etaVinv_h);
         //construct c0 and scale all vector components with it
         c0_ = detail::construct_c0( etaVinv_h, g2d_);
         dg::blas1::scal(  etaV, 1./c0_);
@@ -228,8 +228,6 @@ struct Hector
         dg::blas1::scal(  u, c0_);
         //transfer to host
         dg::blas1::transfer( u, u_);
-        dg::blas1::transfer( u_zeta, u_zeta_);
-        dg::blas1::transfer( u_eta, u_eta_);
         detail::transform( u_zeta, u_eta, ux_, uy_, g2d_);
         dg::blas1::transfer( etaV, etaV_);
         dg::blas1::transfer( etaU, etaU_);
@@ -245,12 +243,14 @@ struct Hector
                      thrust::host_vector<double>& ux, 
                      thrust::host_vector<double>& uy, 
                      thrust::host_vector<double>& vx, 
-                     thrust::host_vector<double>& vy)
+                     thrust::host_vector<double>& vy) const
     {
         thrust::host_vector<double> eta_init, zeta, eta; 
-        compute_zev( etaV_, v1d, eta_init, g2d_);
+        detail::compute_zev( etaV_, v1d, eta_init, g2d_);
         thrust::host_vector<double> zeta_init( eta_init.size(), 0.); 
-        construct_grid( u_zeta_, u_eta_, zeta_init, eta_init, zeta, eta, g2d_);
+        detail::construct_grid( zetaU_, etaU_, u1d, zeta_init, eta_init, zeta, eta, g2d_);
+        for( unsigned i=0; i<zeta.size(); i++)
+            zeta[i] = fmod(zeta[i], g2d_.x1()); //!
         dg::IHMatrix Q = dg::create::interpolation( zeta, eta, g2d_);
 
         thrust::host_vector<double> u(u1d.size()*v1d.size());
@@ -270,7 +270,7 @@ struct Hector
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        orthogonal::RingGrid2d<dg::DVec> g2d_old(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
+        orthogonal::RingGrid2d<container> g2d_old(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
         dg::Elliptic<orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -281,7 +281,7 @@ struct Hector
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            orthogonal::RingGrid2d<dg::DVec> g2d(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
+            orthogonal::RingGrid2d<container> g2d(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
             dg::Elliptic<orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             lapu = g2d.lapx();
             const container vol2d = dg::create::weights( g2d);
@@ -304,7 +304,7 @@ struct Hector
     }
 
     double c0_;
-    thrust::host_vector<double> u_, u_zeta_, u_eta_, ux_, uy_;
+    thrust::host_vector<double> u_, ux_, uy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
     orthogonal::RingGrid2d<container> g2d_;
 
