@@ -25,8 +25,8 @@ struct Interpolate
         g_(g2d), zeta1_(g2d.x1()), eta1_(g2d.y1()){}
     void operator()(const thrust::host_vector<double>& zeta, thrust::host_vector<double>& fZeta)
     {
-        fZeta[0] = interpolate( fmod( zeta[0], zeta1_), fmod( zeta[1], eta1_), iter0_, g_);
-        fZeta[1] = interpolate( fmod( zeta[0], zeta1_), fmod( zeta[1], eta1_), iter1_, g_);
+        fZeta[0] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter0_, g_);
+        fZeta[1] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter1_, g_);
         //fZeta[0] = interpolate(  zeta[0], zeta[1], iter0_, g_);
         //fZeta[1] = interpolate(  zeta[0], zeta[1], iter1_, g_);
     }
@@ -34,8 +34,8 @@ struct Interpolate
     {
         for( unsigned i=0; i<zeta[0].size(); i++)
         {
-            fZeta[0][i] = interpolate( fmod( zeta[0][i], zeta1_), fmod( zeta[1][i], eta1_), iter0_, g_);
-            fZeta[1][i] = interpolate( fmod( zeta[0][i], zeta1_), fmod( zeta[1][i], eta1_), iter1_, g_);
+            fZeta[0][i] = interpolate( fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), iter0_, g_);
+            fZeta[1][i] = interpolate( fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), iter1_, g_);
         }
     }
     private:
