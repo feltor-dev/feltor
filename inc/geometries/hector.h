@@ -25,10 +25,10 @@ struct Interpolate
         g_(g2d), zeta1_(g2d.x1()), eta1_(g2d.y1()){}
     void operator()(const thrust::host_vector<double>& zeta, thrust::host_vector<double>& fZeta)
     {
-        //fZeta[0] = interpolate( fmod( zeta[0], zeta1_), fmod( zeta[1], eta1_), iter0_, g_);
-        //fZeta[1] = interpolate( fmod( zeta[0], zeta1_), fmod( zeta[1], eta1_), iter1_, g_);
-        fZeta[0] = interpolate(  zeta[0], zeta[1], iter0_, g_);
-        fZeta[1] = interpolate(  zeta[0], zeta[1], iter1_, g_);
+        fZeta[0] = interpolate( fmod( zeta[0], zeta1_), fmod( zeta[1], eta1_), iter0_, g_);
+        fZeta[1] = interpolate( fmod( zeta[0], zeta1_), fmod( zeta[1], eta1_), iter1_, g_);
+        //fZeta[0] = interpolate(  zeta[0], zeta[1], iter0_, g_);
+        //fZeta[1] = interpolate(  zeta[0], zeta[1], iter1_, g_);
     }
     void operator()(const std::vector<thrust::host_vector<double> >& zeta, std::vector< thrust::host_vector<double> >& fZeta)
     {
@@ -48,21 +48,35 @@ struct Interpolate
 //compute c_0 
 double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::Grid2d<double>& g2d) 
 {
-    Interpolate inter( thrust::host_vector<double>( etaVinv.size(), 0), etaVinv, g2d);
-    thrust::host_vector<double> begin( 2, 0), end(begin), end_old(begin);
-    begin[0] = 0, begin[1] = 0;
-    double eps = 1e10, eps_old = 2e10;
-    unsigned N = 5;
-    while( (eps < eps_old || eps > 1e-7)&& eps > 1e-12)
-    {
-        eps_old = eps, end_old = end;
-        N*=2; dg::stepperRK4( inter, begin, end, 0., 2*M_PI, N);
-        eps = fabs( end[1]-end_old[1]);
-    }
-    std::cout << "\t error "<<eps<<" with "<<N<<" steps\n";
-    //std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
-    double f_psi = 2.*M_PI/end_old[1];
-    return f_psi;
+    //this is a normal integration:
+    thrust::host_vector<double> etaVinvL( dg::create::forward_transform(  etaVinv, g2d) );
+    dg::Grid1d<double> g1d( 0., 2.*M_PI, g2d.n(), g2d.Ny());
+    dg::HVec eta = dg::evaluate(dg::coo1, g1d);
+    dg::HVec w1d = dg::create::weights( g1d);
+    dg::HVec int_etaVinv(eta);
+    for( unsigned i=0; i<eta.size(); i++) 
+        int_etaVinv[i] = interpolate( 0., eta[i], etaVinvL, g2d);
+    double c0 = 2.*M_PI/dg::blas1::dot( w1d, int_etaVinv );
+    return c0;
+
+    //for some reason this is a bad idea (gives a slightly wrong result):
+    //Interpolate inter( thrust::host_vector<double>( etaVinv.size(), 0), etaVinv, g2d);
+    //thrust::host_vector<double> begin( 2, 0), end(begin), end_old(begin);
+    //begin[0] = 0, begin[1] = 0;
+    //double eps = 1e10, eps_old = 2e10;
+    //unsigned N = 5;
+    //while( (eps < eps_old || eps > 1e-7)&& eps > 1e-12)
+    //{
+    //    eps_old = eps, end_old = end;
+    //    N*=2; dg::stepperRK4( inter, begin, end, 0., 2*M_PI, N);
+    //    eps = fabs( end[1]-end_old[1]);
+    //    std::cout << "\t error eps "<<eps<<" with "<<N<<" steps: " << 2*M_PI/end[1]<<"\n";
+    //    std::cout << "\t error c0  "<<fabs(c0-2.*M_PI/end[1])<<" with "<<N<<" steps: " << 2*M_PI/end[1]<<"\n";
+    //}
+    ////std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
+    //double f_psi = 2.*M_PI/end_old[1];
+
+    //return f_psi;
 }
 
 
@@ -74,7 +88,7 @@ void compute_zev(
         const dg::Grid2d<double>& g2d
         ) 
 {
-    Interpolate iter( thrust::host_vector<double>( etaV.size(), 0.), etaV, g2d);
+    Interpolate iter( thrust::host_vector<double>( etaV.size(), 0), etaV, g2d);
     eta.resize( v_vec.size());
     thrust::host_vector<double> eta_old(v_vec.size(), 0), eta_diff( eta_old);
     thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
