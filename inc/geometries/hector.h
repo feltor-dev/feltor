@@ -59,7 +59,7 @@ double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::Grid2
     double c0 = 2.*M_PI/dg::blas1::dot( w1d, int_etaVinv );
     return c0;
 
-    //for some reason this is a bad idea (gives a slightly wrong result):
+    //for some reason the following is a bad idea (gives a slightly wrong result):
     //Interpolate inter( thrust::host_vector<double>( etaVinv.size(), 0), etaVinv, g2d);
     //thrust::host_vector<double> begin( 2, 0), end(begin), end_old(begin);
     //begin[0] = 0, begin[1] = 0;
@@ -104,18 +104,15 @@ void compute_zev(
         for( unsigned i=1; i<v_vec.size(); i++)
         {
             temp = end;
-            dg::stepperRK4( iter, temp, end, v_vec[i-1], v_vec[i], steps);
+            dg::stepperRK17( iter, temp, end, v_vec[i-1], v_vec[i], steps);
             eta[i] = end[1];
         }
         temp = end;
         dg::stepperRK17( iter, temp, end, v_vec[v_vec.size()-1], 2.*M_PI, steps);
-        //compute error in R,Z only
         dg::blas1::axpby( 1., eta, -1., eta_old, eta_diff);
-        double er = dg::blas1::dot( eta_diff, eta_diff);
-        double ar = dg::blas1::dot( eta, eta);
-        eps =  sqrt( er / ar);
-        std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
-        std::cout << "abs. error is "<<( 2.*M_PI-end[1])<<"\n";
+        eps =  sqrt( dg::blas1::dot( eta_diff, eta_diff) / dg::blas1::dot( eta, eta));
+        //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+        //std::cout << "abs. error is "<<( 2.*M_PI-end[1])<<"\n";
         steps*=2;
     }
 }
@@ -132,7 +129,7 @@ void construct_grid(
     )
 {
     Interpolate inter( zetaU, etaU, g2d);
-    unsigned N = 4;
+    unsigned N = 1;
     double eps = 1e10, eps_old=2e10;
     std::vector<thrust::host_vector<double> > begin(2); 
     begin[0] = zeta_init, begin[1] = eta_init;
@@ -151,14 +148,12 @@ void construct_grid(
         for( unsigned i=0; i<sizeU; i++)
         {
             u0 = i==0?0:u_vec[i-1], u1 = u_vec[i];
-            //////////////////////////////////////////////////
-            dg::stepperRK6( inter, temp, end, u0, u1, N);
+            dg::stepperRK17( inter, temp, end, u0, u1, N);
             for( unsigned j=0; j<sizeV; j++)
             {
                  unsigned idx = j*sizeU+i;
                  zeta[idx] = end[0][j], eta[idx] = end[1][j];
             }
-            //////////////////////////////////////////////////
             temp = end;
         }
         dg::blas1::axpby( 1., zeta, -1., zeta_old, zeta_diff);
@@ -202,7 +197,7 @@ struct Hector
     {
         //first construct u_
         container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
-        //now compute u_zeta and u_eta and transform to ux_ and uy_
+        //now compute u_zeta and u_eta 
         Matrix dzeta = dg::create::dx( g2d_, dg::DIR);
         Matrix deta = dg::create::dy( g2d_, dg::PER);
         container u_zeta(u), u_eta(u);
@@ -215,7 +210,7 @@ struct Hector
         dg::blas1::transfer(dg::evaluate( dg::coo1, g2d_), zeta);
         dg::blas1::axpby( +1., zeta, 1.,  u); //u = \tilde u + \zeta
 
-        //now compute the components of the vector fields
+        //now compute ZetaU and EtaU
         container a2;
         dg::blas1::transfer( g2d_.g_yy(), a2);
         dg::blas1::pointwiseDivide( a2, g2d_.g_xx(), a2); // a^2=g^ee/g^zz
@@ -227,11 +222,12 @@ struct Hector
         dg::blas1::pointwiseDivide( u_zeta, den, zetaU); //u_z / denominator
         dg::blas1::pointwiseDivide(  u_eta, den,  etaU); 
         dg::blas1::pointwiseDot( a2, etaU, etaU); //a^2*u_e / denominator
-
+        //now compute etaV and its inverse
         container etaV(etaU), ones(etaU.size(), 1.);
         dg::blas1::pointwiseDivide( ones, u_zeta, etaV);
         thrust::host_vector<double> etaVinv_h;
         dg::blas1::transfer( u_zeta, etaVinv_h);
+
         //construct c0 and scale all vector components with it
         c0_ = detail::construct_c0( etaVinv_h, g2d_);
         dg::blas1::scal(  etaV, 1./c0_);
@@ -246,7 +242,7 @@ struct Hector
         dg::blas1::transfer( etaV, etaV_);
         dg::blas1::transfer( etaU, etaU_);
         dg::blas1::transfer( zetaU, zetaU_);
-        std::cout << "c0 is "<<c0_<<"\n";
+        //std::cout << "c0 is "<<c0_<<"\n";
     }
     double lu() const {return c0_*g2d_.lx();}
     double lv() const {return 2.*M_PI;}
@@ -263,8 +259,9 @@ struct Hector
         detail::compute_zev( etaV_, v1d, eta_init, g2d_);
         thrust::host_vector<double> zeta_init( eta_init.size(), 0.); 
         detail::construct_grid( zetaU_, etaU_, u1d, zeta_init, eta_init, zeta, eta, g2d_);
-        for( unsigned i=0; i<zeta.size(); i++)
-            zeta[i] = fmod(zeta[i], g2d_.x1()); //!
+        //the box is periodic in eta and the y=0 line needs not to coincide with the eta=0 line
+        for( unsigned i=0; i<eta.size(); i++)
+            eta[i] = fmod(eta[i]+2.*M_PI, 2.*M_PI); 
         dg::IHMatrix Q = dg::create::interpolation( zeta, eta, g2d_);
 
         thrust::host_vector<double> u(u1d.size()*v1d.size());
@@ -278,6 +275,8 @@ struct Hector
 
 
     }
+
+    const orthogonal::RingGrid2d<container>& orthogonal_grid() const {return g2d_;}
     private:
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>
     container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u ) 

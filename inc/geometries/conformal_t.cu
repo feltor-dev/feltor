@@ -77,8 +77,12 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
+    solovev::PsipR psipR( gp); 
+    solovev::PsipZ psipZ( gp); 
+    solovev::LaplacePsip lap( gp); 
+    hector::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
 
-    conformal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    conformal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
     conformal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
@@ -145,29 +149,16 @@ int main( int argc, char* argv[])
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
-    const dg::HVec vol = dg::create::volume( g3d);
-    dg::HVec ones3d = dg::evaluate( dg::one, g3d);
-    double volume = dg::blas1::dot( vol, ones3d);
-    if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
-    else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    solovev::Iris iris( gp);
-    dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
+    dg::HVec vol = dg::create::volume( g2d);
+    dg::HVec ones2d = dg::evaluate( dg::one, g2d);
+    double volumeUV = dg::blas1::dot( vol, ones2d);
 
-    dg::HVec vec  = dg::evaluate( iris, g2dC);
-    dg::HVec R  = dg::evaluate( dg::coo1, g2dC);
-    dg::HVec g2d_weights = dg::create::volume( g2dC);
-    double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);
-    std::cout << "volumeXYP is "<< volume<<std::endl;
-    std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
-    std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
-    std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
-     //X = g2d.lapx();
-     //err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
-//     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
-//     std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
+    vol = dg::create::volume( hector.orthogonal_grid());
+    ones2d = dg::evaluate( dg::one, hector.orthogonal_grid());
+    double volumeZE = dg::blas1::dot( vol, ones2d);
+    std::cout << "volumeUV is "<< volumeUV<<std::endl;
+    std::cout << "volumeZE is "<< volumeZE<<std::endl;
+    std::cout << "relative difference in volume is "<<fabs(volumeUV - volumeZE)/volumeZE<<std::endl;
     err = nc_close( ncid);
-
-
-
     return 0;
 }

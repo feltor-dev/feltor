@@ -14,7 +14,7 @@
 //#include "guenther.h"
 #include "conformal.h"
 #include "orthogonal.h"
-#include "refined_conformal.h"
+#include "refined_ribeiro.h"
 #include "refined_orthogonal.h"
 
 
@@ -88,16 +88,16 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =    dg::pullback( dg::zero, g2d.associated());
     dg::DVec x_fine =    dg::pullback( dg::zero, g2d);
-    //const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g2d.associated());
-    //dg::DVec bmod(b);
-    //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d.associated());
-    //const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1 ), g2d.associated());
-    const dg::DVec b =        dg::pullback( solovev::LaplacePsi(gp), g2d.associated());
-    const dg::DVec bFINE =    dg::pullback( solovev::LaplacePsi(gp), g2d);
+    const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g2d.associated());
     dg::DVec bmod(b);
-    const dg::DVec chi =      dg::pullback( dg::one, g2d.associated());
-    const dg::DVec chiFINE =  dg::pullback( dg::one, g2d);
-    const dg::DVec solution =     dg::pullback( psip, g2d.associated());
+    const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d.associated());
+    const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1 ), g2d.associated());
+    //const dg::DVec b =        dg::pullback( solovev::LaplacePsi(gp), g2d.associated());
+    //const dg::DVec bFINE =    dg::pullback( solovev::LaplacePsi(gp), g2d);
+    //dg::DVec bmod(b);
+    //const dg::DVec chi =      dg::pullback( dg::one, g2d.associated());
+    //const dg::DVec chiFINE =  dg::pullback( dg::one, g2d);
+    //const dg::DVec solution =     dg::pullback( psip, g2d.associated());
     const dg::DVec solutionFINE = dg::pullback( psip, g2d);
     const dg::DVec vol3dFINE = dg::create::volume( g2d);
     dg::HVec inv_vol3dFINE = dg::create::inv_weights( g2d);

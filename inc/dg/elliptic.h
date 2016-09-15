@@ -53,6 +53,7 @@ class Elliptic
      * @param g The Grid, boundary conditions are taken from here
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
+     * @note chi is assumed 1 per default
      */
     Elliptic( Geometry g, norm no = not_normed, direction dir = forward): 
         no_(no), g_(g)
@@ -88,6 +89,7 @@ class Elliptic
     {
         xchi = chi;
         dg::geo::multiplyVolume( xchi, g_); 
+        dg::geo::dividePerpVolume( xchi, g_); 
     }
 
     /**
@@ -117,7 +119,7 @@ class Elliptic
         dg::blas2::gemv( rightx, x, tempx); //R_x*f 
         dg::blas2::gemv( righty, x, tempy); //R_y*f
 
-        dg::geo::raisePerpIndex( tempx, tempy, gradx, y, g_);
+        dg::geo::volRaisePerpIndex( tempx, tempy, gradx, y, g_);
 
         //multiply with chi 
         dg::blas1::pointwiseDot( xchi, gradx, gradx); //Chi*R_x*x 
@@ -154,6 +156,7 @@ class Elliptic
         dg::blas1::transfer( dg::evaluate( dg::one, g),    xchi);
         tempx = tempy = gradx = xchi;
         dg::geo::multiplyVolume( xchi, g_); 
+        dg::geo::dividePerpVolume( xchi, g_);
         dg::geo::divideVolume( weights_wo_vol, g_);
     }
     bc inverse( bc bound)

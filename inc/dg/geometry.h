@@ -86,6 +86,29 @@ void raisePerpIndex( container& covX, container& covY, container& contraX, conta
     dg::geo::detail::doRaisePerpIndex( covX, covY, contraX, contraY, g, typename dg::GeometryTraits<Geometry>::metric_category());
 
 }
+/**
+ * @brief Raises the index of a covariant vector in 2d and multiplies the perpendicular volume
+ *
+ * Computes \f$ v^i = \sqrt{g/g_{zz}} g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the two dimensions of a 2x1 product space. This special 
+ * form occurs in the discretization of elliptic operators which is why it get's a special function.
+ * @tparam container the container class
+ * @tparam Geometry the geometry class
+ * @param covX (input) covariant first component (may get destroyed!!)
+ * @param covY (input) covariant second component (may get destroyed!!)
+ * @param contraX (output) contravariant first component
+ * @param contraY (output) contravariant second component
+ * @param g The geometry object
+ * @note covX, covY, contraX and contraY may not be the same
+ */
+template<class container, class Geometry>
+void volRaisePerpIndex( container& covX, container& covY, container& contraX, container& contraY, const Geometry& g)
+{
+    assert( &covX != &contraX);
+    assert( &covY != &contraY);
+    assert( &covY != &covX);
+    dg::geo::detail::doVolRaisePerpIndex( covX, covY, contraX, contraY, g, typename dg::GeometryTraits<Geometry>::metric_category());
+
+}
 
 /**
  * @brief Multiplies the two-dimensional volume element

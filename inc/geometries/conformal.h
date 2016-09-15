@@ -20,7 +20,7 @@ struct RingGrid2d;
 template< class container>
 struct RingGrid3d : public dg::Grid3d<double>
 {
-    typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
+    typedef dg::ConformalCylindricalTag metric_category; //!< metric tag
     typedef RingGrid2d<container> perpendicular_grid; //!< the two-dimensional grid type
 
     /**
@@ -131,7 +131,7 @@ struct RingGrid3d : public dg::Grid3d<double>
 template< class container>
 struct RingGrid2d : public dg::Grid2d<double>
 {
-    typedef dg::CurvilinearCylindricalTag metric_category;
+    typedef dg::ConformalCylindricalTag metric_category;
     template< class Generator>
     RingGrid2d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx):
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
