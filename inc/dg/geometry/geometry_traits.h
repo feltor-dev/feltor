@@ -9,8 +9,8 @@ namespace dg
 struct CurvilinearTag{}; 
 struct CurvilinearCylindricalTag: public CurvilinearTag{}; //perpVol, vol(), g_xx, g_xy, g_yy
 struct OrthogonalCylindricalTag:public CurvilinearCylindricalTag{}; //perpVol, vol(), g_xx, g_yy
-struct OrthonormalCylindricalTag:public OrthogonalCylindricalTag{}; //vol()
 struct ConformalCylindricalTag:public OrthogonalCylindricalTag{}; //perpVol, vol(), g_xx, g_yy
+struct OrthonormalCylindricalTag:public ConformalCylindricalTag{}; //vol()
 struct OrthonormalTag: public OrthonormalCylindricalTag{};
 
 
@@ -96,7 +96,6 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
     dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
     dg::blas1::pointwiseDot( g.g_yy(), in2, out2); //gyy*v_y
 };
-
 template <class container, class Geometry>
 void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearCylindricalTag)
 {
@@ -105,19 +104,13 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
     dg::blas1::pointwiseDot( 1., g.g_xy(), in2, 1., out1);//gxy*v_y
     dg::blas1::pointwiseDot( 1., g.g_yy(), in2, 1., out2); //gyy*v_y
 };
-template <class container, class Geometry>
-void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthonormalCylindricalTag)
-{
-    in1.swap( out1);
-    in2.swap( out2);
-};
+
 template <class container, class Geometry>
 void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, ConformalCylindricalTag)
 {
     in1.swap( out1);
     in2.swap( out2);
 };
-
 template <class container, class Geometry>
 void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthogonalCylindricalTag)
 {
@@ -126,7 +119,6 @@ void doVolRaisePerpIndex( container& in1, container& in2, container& out1, conta
     dg::blas1::pointwiseDot( out1, g.perpVol(), out1);
     dg::blas1::pointwiseDot( out2, g.perpVol(), out2);
 };
-
 template <class container, class Geometry>
 void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearCylindricalTag)
 {
