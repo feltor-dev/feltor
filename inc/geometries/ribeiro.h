@@ -23,13 +23,15 @@ namespace detail
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
+template< class Psi, class PsiX, class PsiY>
 struct Fpsi
 {
-    Fpsi( const solovev::GeomParameters& gp): 
-        gp_(gp), fieldRZYT_(gp), fieldRZtau_(gp) 
+    Fpsi( Psi psi, PsiX psiX, PsiY psiY, double x0, double y0): 
+        psip_(psi), fieldRZYT_(psiX, psiY, x0, y0), fieldRZtau_(psiX, psiY)
     {
-        R_init = gp.R_0 + 0.5*gp.a; Z_init = 0;
-        solovev::Psip psip(gp);
+        R_init = x0; Z_init = y0;
+        while( fabs( psiX(R_init, Z_init)) <= 1e-10 && fabs( psiY( R_init, Z_init)) <= 1e-10)
+            R_init = x0 + 1.; Z_init = y0;
     }
     //finds the starting points for the integration in y direction
     void find_initial( double psi, double& R_0, double& Z_0) 
@@ -38,15 +40,12 @@ struct Fpsi
         thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
         begin2d[0] = end2d[0] = end2d_old[0] = R_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
-        solovev::Psip psip(gp_);
         //std::cout << "In init function\n";
         double eps = 1e10, eps_old = 2e10;
-        while( eps < eps_old && N<1e6 && eps > 1e-15)
+        while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
-            //remember old values
             eps_old = eps; end2d_old = end2d;
-            //compute new values
-            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip(R_init, Z_init), psi, N);
+            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_(R_init, Z_init), psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         R_init = R_0 = end2d_old[0], Z_init = Z_0 = end2d_old[1];
@@ -56,9 +55,6 @@ struct Fpsi
     double construct_f( double psi, double& R_0, double& Z_0) 
     {
         find_initial( psi, R_0, Z_0);
-        //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
-        //std::cout << "In Stepper function:\n";
-        //double y_old=0;
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         begin[0] = R_0, begin[1] = Z_0;
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
@@ -67,16 +63,12 @@ struct Fpsi
         //double y_eps = 1;
         while( (eps < eps_old || eps > 1e-7)&& N < 1e6)
         {
-            //remember old values
             eps_old = eps, end_old = end;
-            //compute new values
-            N*=2;
-            dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N);
+            N*=2; dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
-            //y_eps = sqrt( (end_old[2] - end[2])*(end_old[2]-end[2]))/sqrt(end[2]*end[2]);
-            //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
-            //std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
         }
+        //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
+        //std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
         double f_psi = 2.*M_PI/end_old[2];
         return f_psi;
     }
@@ -120,7 +112,6 @@ struct Fpsi
             //std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return -x1_old;
-
     }
 
     double f_prime( double psi) 
@@ -153,18 +144,18 @@ struct Fpsi
     }
 
     private:
-    const solovev::GeomParameters gp_;
-    const solovev::ribeiro::FieldRZYT fieldRZYT_;
-    const solovev::FieldRZtau fieldRZtau_;
     double R_init, Z_init;
+    Psi psip_;
+    solovev::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYT_;
+    solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_;
 };
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
+template<class Psi, class PsiR, class PsiZ>
 struct FieldFinv
 {
-    FieldFinv( const solovev::GeomParameters& gp, unsigned N_steps = 500): 
-        fpsi_(gp), fieldRZYT_(gp), N_steps(N_steps)
-            { }
+    FieldFinv( Psi psi, PsiR psiR, PsiZ psiZ, double x0, double y0, unsigned N_steps = 500):
+        fpsi_(psi, psiR, psiZ, x0, y0), fieldRZYT_(psiR, psiZ, x0, y0), N_steps(N_steps) { }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
@@ -176,9 +167,8 @@ struct FieldFinv
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     private:
-    Fpsi fpsi_;
-    solovev::ribeiro::FieldRZYT fieldRZYT_;
-    thrust::host_vector<double> fpsi_neg_inv;
+    Fpsi<Psi, PsiR, PsiZ> fpsi_;
+    solovev::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYT_;
     unsigned N_steps;
 };
 } //namespace detail
@@ -213,8 +203,29 @@ struct RingGrid3d : public dg::Grid3d<double>
     RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
-        assert( bcx == dg::PER|| bcx == dg::DIR);
-        ribeiro::detail::Fpsi fpsi( gp);
+        solovev::Psip psip(gp); 
+        solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
+        solovev::PsipRR psipRR(gp); solovev::PsipZZ psipZZ(gp); solovev::PsipRZ psipRZ(gp);
+        solovev::LaplacePsip lapPsip(gp); 
+        construct( psip, psipR, psipZ, psipRR, psipRZ, psipZZ, psi_0, psi_1, gp.R_0, 0, n, Nx, Ny);
+    }
+    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
+    RingGrid3d( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY,
+            double psi_0, double psi_1, double x0, double y0, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx):
+        dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+    { 
+        construct( psi, psiX, psiY, psiXX, psiXY, psiYY, psi_0, psi_1, x0, y0, n, Nx, Ny);
+    }
+
+    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
+    void construct( Psi psi, PsiX psiX, PsiY psiY, 
+            PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, 
+            double psi_0, double psi_1, 
+            double x0, double y0, unsigned n, unsigned Nx, unsigned Ny)
+    {
+        assert( psi_1 != psi_0);
+        assert( this->bcx() == dg::PER|| this->bcx() == dg::DIR);
+        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0);
         double x_1 = fpsi.find_x1( psi_0, psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
@@ -224,13 +235,13 @@ struct RingGrid3d : public dg::Grid3d<double>
             std::swap( psi_0, psi_1);
         }
         //compute psi(x) for a grid on x and call construct_rzy for all psi
-        detail::FieldFinv fpsiMinv_(gp, 500);
-        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
+        detail::FieldFinv<Psi, PsiX, PsiY> fpsiMinv_(psi, psiX, psiY, x0,y0, 500);
+        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, this->bcx());
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_);
         thrust::host_vector<double> psi_x;
-        dg::detail::construct_psi_values( fpsiMinv_, gp, psi_0, psi_1, this->x0(), x_vec, this->x1(), psi_x, f_x_);
+        dg::detail::construct_psi_values( fpsiMinv_, psi_0, psi_1, this->x0(), x_vec, this->x1(), psi_x, f_x_);
 
-        construct_rz( gp, psi_x);
+        construct_rz( psi, psiX, psiY, psiXX, psiXY, psiYY, x0, y0, psi_x);
         construct_metric();
     }
     const thrust::host_vector<double>& f_x()const{return f_x_;}
@@ -256,11 +267,13 @@ struct RingGrid3d : public dg::Grid3d<double>
     private:
     //call the construct_rzy function for all psi_x and lift to 3d grid
     //construct r,z,xr,xz,yr,yz,f_x
-    void construct_rz( const solovev::GeomParameters& gp, thrust::host_vector<double>& psi_x)
+    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
+    void construct_rz( Psi psi, PsiX psiX, PsiY psiY, 
+            PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double x0, double y0, thrust::host_vector<double>& psi_x)
     {
         //std::cout << "In grid function:\n";
-        detail::Fpsi fpsi( gp);
-        solovev::ribeiro::FieldRZYRYZY fieldRZYRYZY(gp);
+        detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0);
+        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZY(psiX, psiY, psiXX, psiXY, psiYY);
         r_.resize(size()), z_.resize(size()), f_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
@@ -273,7 +286,7 @@ struct RingGrid3d : public dg::Grid3d<double>
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            dg::detail::compute_rzy( fpsi, fieldRZYRYZY, gp, psi_x[i], y_vec, ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
+            dg::detail::compute_rzy( fpsi, fieldRZYRYZY, psi_x[i], y_vec, ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j], f_[j*Nx+i] = f_x_[i]; 

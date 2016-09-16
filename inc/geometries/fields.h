@@ -773,64 +773,36 @@ struct FieldRZYRYZY
 }//namespace flux
 namespace ribeiro{
 
-/**
- * @brief y-component of magnetic field 
- */ 
-struct FieldY
-{
-    FieldY( GeomParameters gp): f_psi_(1.), R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
-    void set_f( double f_new){f_psi_=f_new;}
-  /**
- * @brief \f[  B^y= 
- * f(\psi) \frac{(\nabla\psi)^2}{R} \f]
- */ 
-    double operator()(double R, double Z) const
-    { 
-        double psipR = psipR_(R, Z), psipZ = psipZ_(R,Z);
-        double psi2 = 0.0+1.0*(psipR*psipR+ psipZ*psipZ);
-        return f_psi_*(psi2)*R_0_/R;
-        
-    }
-      /**
-       * @brief == operator()(R,Z)
-       */ 
-    double operator()(double R, double Z, double phi) const
-    { 
-        return this->operator()(R,Z);
-    }
-    private:
-    double f_psi_, R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-};
-
+template< class PsiR, class PsiZ>
 struct FieldRZYT
 {
-    FieldRZYT( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
+    FieldRZYT( PsiR psiR, PsiZ psiZ, double R0, double Z0): R_0_(R0), Z_0_(Z0), psipR_(psiR), psipZ_(psiZ){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        yp[0] =  R_0_/y[0]*psipZ;//fieldR
-        yp[1] = -R_0_/y[0]*psipR;//fieldZ
-        //yp[2] = (1.0))*R_0_/y[0]; //fieldYbar
-        //yp[2] = sqrt(psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //fieldYbar
-        yp[2] =(psipR*psipR+psipZ*psipZ)*R_0_/y[0]; //fieldYbar
-        //yp[2] =1.0*R_0_/y[0]/y[0]; //fieldYbar
-        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
-        double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        yp[0] = -psipZ;//fieldR
+        yp[1] = +psipR;//fieldZ
+        //yp[2] = 1; //volume
+        //yp[2] = sqrt(psip2); //equalarc
+        yp[2] = psip2; //ribeiro
+        //yp[2] = psip2*sqrt(psip2); //separatrix
+        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
+        double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; //fieldT
         yp[0] /=  fieldT;
         yp[1] /=  fieldT;
         yp[2] /=  fieldT;
     }
   private:
-    double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    double R_0_, Z_0_;
+    PsiR psipR_;
+    PsiZ psipZ_;
 };
 
+template< class PsiR, class PsiZ>
 struct FieldRZYZ
 {
-    FieldRZYZ( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
+    FieldRZYZ( PsiR psiR, PsiZ psiZ): psipR_(psiR), psipZ_(psiZ){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
@@ -847,67 +819,74 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    double R_0_;
     mod::PsipR psipR_;
     mod::PsipZ psipZ_;
 };
 
+template <class PsiR, class PsiZ>
 struct FieldRZY
 {
-    FieldRZY( GeomParameters gp): f_(1.), R_0_(gp.R_0), psipR_(gp), psipZ_(gp){}
+    FieldRZY( PsiR psiR, PsiZ psiZ): f_(1.), psipR_(psiR), psipZ_(psiZ){}
     void set_f(double f){ f_ = f;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        //yp[0] = +psipZ/f_;//fieldR
-        //yp[1] = -psipR/f_;//fieldZ
-        //yp[0] = +psipZ/sqrt(psipR*psipR+psipZ*psipZ)/f_;//fieldR
-        //yp[1] = -psipR/sqrt(psipR*psipR+psipZ*psipZ)/f_;//fieldZ
-        yp[0] = +psipZ/(psipR*psipR+psipZ*psipZ)/f_;//fieldR
-        yp[1] = -psipR/(psipR*psipR+psipZ*psipZ)/f_;//fieldZ
-        //yp[0] = +psipZ*y[0]/f_;//fieldR
-        //yp[1] = -psipR*y[0]/f_;//fieldZ
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        //yp[0] = +psipZ/f_;//volume 
+        //yp[1] = -psipR/f_;//volume 
+        //yp[0] = +psipZ/sqrt(psip2)/f_;//equalarc
+        //yp[1] = -psipR/sqrt(psip2)/f_;//equalarc
+        yp[0] = -psipZ/psip2/f_;//ribeiro
+        yp[1] = +psipR/psip2/f_;//ribeiro
+        //yp[0] = +psipZ/psip2/sqrt(psip2)/f_;//separatrix
+        //yp[1] = -psipR/psip2/sqrt(psip2)/f_;//separatrix
     }
   private:
     double f_;
-    double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
 };
 
+
+template<class PsiR, class PsiZ, class PsiRR, class PsiRZ, class PsiZZ>
 struct FieldRZYRYZY
 {
-    FieldRZYRYZY( const GeomParameters& gp): psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){ f_ = f_prime_ = 1.;}
+    FieldRZYRYZY( PsiR psiR, PsiZ psiZ, PsiRR psiRR, PsiRZ psiRZ, PsiZZ psiZZ): 
+        psipR_(psiR), psipZ_(psiZ), psipRR_(psiRR), psipRZ_(psiRZ), psipZZ_(psiZZ){ f_ = f_prime_ = 1.;}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
+    void initialize( double R0, double Z0, double& yR, double& yZ)
+    {
+        yR =  f_*psipZ_(R0, Z0);
+        yZ = -f_*psipR_(R0, Z0);
+    }
+    void derive( double R0, double Z0, double& xR, double& xZ)
+    {
+        xR = -f_*psipR_(R0, Z0);
+        xZ = -f_*psipZ_(R0, Z0);
+    }
+
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
-        double psip2 = 0.0+1.0*(psipR*psipR+ psipZ*psipZ);
+        double psip2 = (psipR*psipR+ psipZ*psipZ);
 
         yp[0] =  psipZ/f_/psip2;
         yp[1] =  -psipR/f_/psip2;
         yp[2] =  (( - psipRZ )*y[2] 
                    +( psipRR )*y[3] )/f_/psip2 
-            + f_prime_/f_* psipR + 2.*1.0*(psipR*psipRR + psipZ*psipRZ)/psip2 ;
+            + f_prime_/f_* psipR + 2.*(psipR*psipRR + psipZ*psipRZ)/psip2 ;
         yp[3] =  (psipRZ*y[3] - psipZZ*y[2])/f_/psip2 
-            + f_prime_/f_* psipZ + 2.*1.0*(psipR*psipRZ + psipZ*psipZZ)/psip2;
-        //yp[0] =  psipZ*f_;//psip2;
-        //yp[1] =  -psipR*f_;//psip2;
-        //yp[2] =  ( (psipZ/y[0] - psipRZ )*y[2] 
-        //           +( psipRR - psipR/y[0])*y[3] )*f_/psip2 
-        //    - f_prime_/f_* psipR + 2.*0.0*(psipR*psipRR + psipZ*psipRZ)/psip2 -1./y[0];
-        //yp[3] =  (psipRZ*y[3] - psipZZ*y[2])*f_/psip2 
-        //    - f_prime_/f_* psipZ + 2.*0.0*(psipR*psipRZ + psipZ*psipZZ)/psip2;
+            + f_prime_/f_* psipZ + 2.*(psipR*psipRZ + psipZ*psipZZ)/psip2;
     }
   private:
     double f_, f_prime_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-    mod::PsipRR psipRR_;
-    mod::PsipRZ psipRZ_;
-    mod::PsipZZ psipZZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    PsipRR psipRR_;
+    PsipRZ psipRZ_;
+    PsipZZ psipZZ_;
 };
 }//namespace ribeiro
 

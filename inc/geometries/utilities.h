@@ -10,7 +10,7 @@ namespace detail
 //doesn't integrate over the x-point
 //returns psi_1
 template <class FieldFinv>
-void construct_psi_values( FieldFinv fpsiMinv, const solovev::GeomParameters& gp, 
+void construct_psi_values( FieldFinv fpsiMinv, 
         const double psi_0, const double psi_1, const double x_0, const thrust::host_vector<double>& x_vec, const double x_1,
         thrust::host_vector<double>& psi_x, 
         thrust::host_vector<double>& f_x_)
@@ -54,7 +54,6 @@ void construct_psi_values( FieldFinv fpsiMinv, const solovev::GeomParameters& gp
 //assumes that the initial line is perpendicular 
 template <class Fpsi, class FieldRZYRYZY>
 void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY, 
-        const solovev::GeomParameters& gp,
         double psi, const thrust::host_vector<double>& y_vec, 
         thrust::host_vector<double>& r, 
         thrust::host_vector<double>& z, 
@@ -69,21 +68,15 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size()), xr.resize(y_vec.size()), xz.resize(y_vec.size());
 
     //const thrust::host_vector<double> w1d = dg::create::weights( g1d);
-    double fprime = fpsi.f_prime( psi);
-
     //now compute f and starting values 
     thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
     const double f_psi = fpsi.construct_f( psi, begin[0], begin[1]);
-    solovev::PsipR psipR(gp);
-    solovev::PsipZ psipZ(gp);
-    double psipR_ = psipR( begin[0], begin[1]), psipZ_ = psipZ( begin[0], begin[1]);
-    begin[2] = f_psi* psipZ_;
-    begin[3] = -f_psi*psipR_;
-
+    fieldRZYRYZY.set_f(f_psi);
+    double fprime = fpsi.f_prime( psi);
+    fieldRZYRYZY.set_fp(fprime);
+    fieldRZYRYZY.initialize( begin[0], begin[1], begin[2], begin[3]);
     R_0 = begin[0], Z_0 = begin[1];
     //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-    fieldRZYRYZY.set_f(f_psi);
-    fieldRZYRYZY.set_fp(fprime);
     unsigned steps = 1;
     double eps = 1e10, eps_old=2e10;
     while( eps < eps_old)
@@ -92,14 +85,14 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
         eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
         dg::stepperRK17( fieldRZYRYZY, begin, end, 0, y_vec[0], steps);
         r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
-        xr[0] = -f_psi*psipR(r[0],z[0]), xz[0] = -f_psi*psipZ(r[0],z[0]);
+        fieldRZYRYZY.derive( r[0], z[0], xr[0], xz[0]);
         //std::cout <<end[0]<<" "<< end[1] <<"\n";
         for( unsigned i=1; i<y_vec.size(); i++)
         {
             temp = end;
             dg::stepperRK17( fieldRZYRYZY, temp, end, y_vec[i-1], y_vec[i], steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
-            xr[i] = -f_psi*psipR(r[i],z[i]), xz[i] = -f_psi*psipZ(r[i],z[i]);
+            fieldRZYRYZY.derive( r[i], z[i], xr[i], xz[i]);
         }
         //compute error in R,Z only
         dg::blas1::axpby( 1., r, -1., r_old, r_diff);

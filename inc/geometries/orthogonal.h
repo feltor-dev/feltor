@@ -43,9 +43,7 @@ struct Fpsi
         double eps = 1e10, eps_old = 2e10;
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
-            //remember old values
             eps_old = eps; end2d_old = end2d;
-            //compute new values
             N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_(X_init, Y_init), psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }

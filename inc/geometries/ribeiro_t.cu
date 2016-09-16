@@ -13,7 +13,7 @@
 //#include "guenther.h"
 #include "solovev.h"
 #include "ribeiro.h"
-#include "refined_ribeiro.h"
+//#include "refined_ribeiro.h"
 #include "dg/ds.h"
 #include "init.h"
 
@@ -41,8 +41,8 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-//typedef dg::FieldAligned< ribeiro::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
-typedef dg::FieldAligned< ribeiro::refined::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
+typedef dg::FieldAligned< ribeiro::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
+//typedef dg::FieldAligned< ribeiro::refined::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -81,10 +81,10 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing ribeiro grid ... \n";
     t.tic();
-    //ribeiro::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //ribeiro::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    ribeiro::refined::RingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
-    ribeiro::refined::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    ribeiro::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    ribeiro::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    //ribeiro::refined::RingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    //ribeiro::refined::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -160,19 +160,6 @@ int main( int argc, char* argv[])
     error=sqrt(dg::blas2::dot( temp0, w2d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w2d, g2d.vol()));
     std::cout << "Rel Error of volume form is "<<error<<"\n";
 
-    //alternative method for computing g_xx
-    const dg::HVec f_ = g2d.f();
-    solovev::ribeiro::FieldY fieldY(gp);
-    dg::HVec fby = dg::pullback( fieldY, g2d);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    dg::blas1::scal( fby, 1./gp.R_0);
-    temp0=g2d.r();
-    dg::blas1::pointwiseDot( temp0, fby, fby); // B^y*f^2*R/R_0 != |nabla psi^2| f^3
-    dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0); 
-    dg::blas1::axpby( 1., temp0, -1., fby, temp1);
-    error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(fby,w2d,fby);
-    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error)<<"\n";
     const dg::HVec vol = dg::create::volume( g3d);
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
     double volume = dg::blas1::dot( vol, ones3d);
