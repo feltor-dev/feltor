@@ -17,6 +17,7 @@
 namespace ribeiro
 {
 
+///@cond
 namespace detail
 {
 
@@ -182,7 +183,6 @@ struct FieldFinv
 };
 } //namespace detail
 
-///@cond
 template< class container>
 struct RingGrid2d; 
 ///@endcond

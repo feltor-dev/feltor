@@ -16,6 +16,7 @@
 namespace orthogonal
 {
 
+///@cond
 namespace detail
 {
 
@@ -252,6 +253,7 @@ void construct_rz( Nemov nemov,
 
 template< class container>
 struct RingGrid2d; 
+///@endcond
 
 /**
  * @brief A three-dimensional grid based on orthogonal coordinates

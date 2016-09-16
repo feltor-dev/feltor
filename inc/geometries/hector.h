@@ -11,6 +11,8 @@
 
 namespace hector
 {
+
+///@cond
 namespace detail
 {
 
@@ -59,7 +61,8 @@ double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::Grid2
     double c0 = 2.*M_PI/dg::blas1::dot( w1d, int_etaVinv );
     return c0;
 
-    //for some reason the following is a bad idea (gives a slightly wrong result):
+    //the following is too naiv (gives a slightly wrong result):
+    //the right way to do it is to integrate de/de=1, dv/de = f(e) because in only dv/de = f(e) our integrator assumes dv/de=f(v)
     //Interpolate inter( thrust::host_vector<double>( etaVinv.size(), 0), etaVinv, g2d);
     //thrust::host_vector<double> begin( 2, 0), end(begin), end_old(begin);
     //begin[0] = 0, begin[1] = 0;
@@ -186,11 +189,38 @@ void transform(
 }
 
 }//namespace detail
+///@endcond
 
-//container must be compliant in blas1::transfer function
-template <class IMatrix, class Matrix, class container>
+/**
+ * @brief The High PrEcision Conformal grid generaTOR
+ *
+ * @tparam IMatrix The interpolation matrix type
+ * @tparam Matrix  The matrix type in the elliptic equation
+ * @tparam container The container type for internal computations (must be compatible to a thrust::host_vector<double> in the blas1::transfer function)
+ */
+template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>
 struct Hector
 {
+    /**
+     * @brief Construct from functors
+     *
+     * @tparam Psi A binary functor
+     * @tparam PsiX The first derivative in x
+     * @tparam PsiY The first derivative in y
+     * @tparam LaplacePsi The Laplacian function 
+     * @param psi The function 
+     * @param psiX The first derivative in x 
+     * @param psiY The first derivative in y
+     * @param laplacePsi The Laplacian 
+     * @param psi0 first boundary 
+     * @param psi1 second boundary
+     * @param X0 a point in the inside of the ring bounded by psi0
+     * @param Y0 a point in the inside of the ring bounded by psi0
+     * @param n number of polynomials used for the orthogonal grid
+     * @param Nx initial number of points in zeta
+     * @param Ny initial number of points in eta
+     * @param eps_u the accuracy of u
+     */
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>
     Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
         g2d_(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR)
@@ -244,8 +274,33 @@ struct Hector
         dg::blas1::transfer( zetaU, zetaU_);
         //std::cout << "c0 is "<<c0_<<"\n";
     }
+    /**
+     * @brief The length of the u domain
+     *
+     * Call before discreizing the u domain
+     * @return  
+     */
     double lu() const {return c0_*g2d_.lx();}
+    /**
+     * @brief The length of the v domain
+     *
+     * Always returns 2pi
+     * @return 2pi 
+     */
     double lv() const {return 2.*M_PI;}
+    /**
+     * @brief Generate the points and the elements of the Jacobian
+     *
+     * @param u1d one-dimensional list of points inside the u-domain
+     * @param v1d one-dimensional list of points inside the v-domain
+     * @param x 
+     * @param y
+     * @param ux
+     * @param uy
+     * @param vx
+     * @param vy
+     * @note All the resulting vectors are write-only and get properly resized
+     */
     void operator()( const thrust::host_vector<double>& u1d, 
                      const thrust::host_vector<double>& v1d, 
                      thrust::host_vector<double>& x, 
@@ -276,6 +331,11 @@ struct Hector
 
     }
 
+    /**
+     * @brief Return the internally used orthogonal grid
+     *
+     * @return  orthogonal zeta, eta grid
+     */
     const orthogonal::RingGrid2d<container>& orthogonal_grid() const {return g2d_;}
     private:
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>

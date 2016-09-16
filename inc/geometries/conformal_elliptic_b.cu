@@ -14,9 +14,12 @@
 
 int main(int argc, char**argv)
 {
-    std::cout << "Type n, Nx, Ny, Nz\n";
-    unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
+    std::cout << "Type nGrid, NxGrid, NyGrid (for hector)\n";
+    unsigned nGrid, NxGrid, NyGrid;
+    std::cin >> nGrid>> NxGrid>>NyGrid;   
+    std::cout << "Type n, Nx, Ny (for conformal grid)\n";
+    unsigned n, Nx, Ny;
+    std::cin >> n>> Nx>>Ny;   
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
@@ -47,13 +50,13 @@ int main(int argc, char**argv)
     solovev::PsipR psipR( gp); 
     solovev::PsipZ psipZ( gp); 
     solovev::LaplacePsip lap( gp); 
-    hector::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
+    hector::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, 1e-13);
+    t.toc();
+    std::cout << "Construction took "<<t.diff()<<"s\n";
     for( unsigned i=0; i<5; i++)
     {
         conformal::RingGrid2d<dg::DVec> g2d(hector, n, Nx, Ny, dg::DIR);
         dg::Elliptic<conformal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
-        t.toc();
-        std::cout << "Construction took "<<t.diff()<<"s\n";
         ///////////////////////////////////////////////////////////////////////////
         dg::DVec x =    dg::pullback( dg::zero, g2d);
         const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g2d);
@@ -67,7 +70,7 @@ int main(int argc, char**argv)
         std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
         std::cout << eps<<"\t";
         t.tic();
-        dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
+        dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
         unsigned number = invert(pol, x,b);
         std::cout <<number<<"\t";
         t.toc();

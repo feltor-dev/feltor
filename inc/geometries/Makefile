@@ -18,6 +18,9 @@ solovev_t: solovev_t.cu solovev.h
 
 conformal_t: conformal_t.cu conformal.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
+
+ribeiro_t: ribeiro_t.cu ribeiro.h 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 	
 boozer_t: boozer_t.cu boozer.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
