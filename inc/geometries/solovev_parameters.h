@@ -1,5 +1,7 @@
 #pragma once
 #include <vector>
+#include "json/json.h"
+
 /*!@file
  *
  * Geometry parameters
@@ -51,6 +53,26 @@ struct GeomParameters
         psipmaxcut = v[22];
         psipmaxlim = v[23];
         qampl = v[24];
+    }
+    GeomParameters( const Json::Value& js) {
+        A  = js["A"].asDouble();
+        c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
+        for (unsigned i=0;i<12;i++) c[i] = js["c"][i].asDouble();
+        c[12] = 0;
+        if( A!=0) c[12] = 1;
+        for( unsigned i=0; i<12; i++)
+            if(c[i]!=0) c[12] = 1.;
+        R_0  = js["R_0"].asDouble();
+        a  = R_0*js["inverseaspectratio"].asDouble();
+        elongation=js["elongation"].asDouble();
+        triangularity=js["triangularity"].asDouble();
+        alpha=js["alpha"].asDouble();
+        rk4eps=js["rk4eps"].asDouble();
+        psipmin= js["psip_min"].asDouble();
+        psipmax= js["psip_max"].asDouble();
+        psipmaxcut= js["psip_max_cut"].asDouble();
+        psipmaxlim= js["psip_max_lim"].asDouble();
+        qampl = js.get("qampl", 1.).asDouble();
     }
     /**
      * @brief Display parameters

@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "dg/geometry/refined_grid.h"
@@ -27,25 +26,19 @@ int main(int argc, char**argv)
     std::cout << "Type eps_uv \n";
     double eps_uv;
     std::cin >> eps_uv;
-    std::vector<double> vin;
-    try{ 
-        if( argc==1)
-        {
-            vin = file::read_input( "geometry_params_Xpoint.txt"); 
-        }
-        else
-        {
-            vin = file::read_input( argv[1]); 
-        }
+    Json::Reader reader;
+    Json::Value js;
+    if( argc==1)
+    {
+        std::ifstream is("geometry_params_Xpoint.js");
+        reader.parse(is,js,false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<vin.size(); i++)
-            std::cout << vin[i] << " ";
-            std::cout << std::endl;
-        return -1;}
-    //write parameters from file into variables
-    solovev::GeomParameters gp(vin);
+    else
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
+    solovev::GeomParameters gp(js);
     gp.display( std::cout);
     dg::Timer t;
     solovev::Psip psip( gp); 

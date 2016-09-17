@@ -7,7 +7,6 @@
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
-#include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
 //#include "guenther.h"
@@ -48,25 +47,20 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
-    std::vector<double> v, v2;
-    try{ 
-        if( argc==1)
-        {
-            v = file::read_input( "geometry_params_Xpoint.txt"); 
-        }
-        else
-        {
-            v = file::read_input( argv[1]); 
-        }
+    Json::Reader reader;
+    Json::Value js;
+    if( argc==1)
+    {
+        std::ifstream is("geometry_params_Xpoint.js");
+        reader.parse(is,js,false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-            std::cout << v[i] << " ";
-            std::cout << std::endl;
-        return -1;}
+    else
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
     //write parameters from file into variables
-    solovev::GeomParameters gp(v);
+    solovev::GeomParameters gp(js);
     solovev::Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";
