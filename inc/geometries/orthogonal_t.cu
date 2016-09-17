@@ -74,7 +74,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
 
-    orthogonal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    orthogonal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, 0);
     orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //orthogonal::refined::RingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
     //orthogonal::refined::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
