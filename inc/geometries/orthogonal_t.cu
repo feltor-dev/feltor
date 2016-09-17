@@ -12,7 +12,7 @@
 //#include "guenther.h"
 #include "solovev.h"
 #include "orthogonal.h"
-//#include "refined_orthogonal.h"
+#include "refined_orthogonal.h"
 #include "dg/ds.h"
 #include "init.h"
 
@@ -74,10 +74,10 @@ int main( int argc, char* argv[])
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
 
-    orthogonal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, 0);
-    orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    //orthogonal::refined::RingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
-    //orthogonal::refined::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    //orthogonal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, 0);
+    //orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    orthogonal::refined::RingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR, 0);
+    orthogonal::refined::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;

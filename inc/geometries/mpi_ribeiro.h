@@ -2,13 +2,13 @@
 
 #include <mpi.h>
 
-#include "conformal.h"
+#include "ribeiro.h"
 #include "dg/backend/mpi_grid.h"
 #include "dg/backend/mpi_vector.h"
 
 
 
-namespace conformal
+namespace ribeiro
 {
 
 ///@cond
@@ -17,7 +17,7 @@ struct MPIRingGrid2d;
 ///@endcond
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010 (MPI Version)
+ * @brief A three-dimensional grid based on "almost-ribeiro" coordinates by Ribeiro and Scott 2010 (MPI Version)
  *
  * @tparam container Vector class that holds metric coefficients
  */
@@ -103,7 +103,7 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
 };
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A two-dimensional grid based on "almost-ribeiro" coordinates by Ribeiro and Scott 2010
  */
 template<class LocalContainer>
 struct MPIRingGrid2d : public dg::MPI_Grid2d
@@ -207,11 +207,11 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
     dg::MPI_Vector<LocalContainer> g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
-}//namespace conformal
+}//namespace ribeiro
 
 namespace dg{
 /**
- * @brief This function pulls back a function defined in cartesian coordinates R,Z to the conformal coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cartesian coordinates R,Z to the ribeiro coordinates x,y,\phi
  *
  * i.e. F(x,y) = f(R(x,y), Z(x,y))
  * @tparam BinaryOp The function object 
@@ -221,7 +221,7 @@ namespace dg{
  * @return A set of points representing F(x,y)
  */
 template< class BinaryOp, class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const conformal::MPIRingGrid2d<LocalContainer>& g)
+MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const ribeiro::MPIRingGrid2d<LocalContainer>& g)
 {
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
@@ -231,13 +231,13 @@ MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const conformal::
 }
 ///@cond
 template<class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), const conformal::MPIRingGrid2d<LocalContainer>& g)
+MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), const ribeiro::MPIRingGrid2d<LocalContainer>& g)
 {
     return pullback<double(double,double),LocalContainer>( f, g);
 }
 ///@endcond
 /**
- * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the conformal coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the ribeiro coordinates x,y,\phi
  *
  * i.e. F(x,y,\phi) = f(R(x,y), Z(x,y), \phi)
  * @tparam TernaryOp The function object 
@@ -247,7 +247,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), con
  * @return A set of points representing F(x,y,\phi)
  */
 template< class TernaryOp, class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( TernaryOp f, const conformal::MPIRingGrid3d<LocalContainer>& g)
+MPI_Vector<thrust::host_vector<double> > pullback( TernaryOp f, const ribeiro::MPIRingGrid3d<LocalContainer>& g)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
@@ -261,7 +261,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( TernaryOp f, const conformal:
 }
 ///@cond
 template<class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double,double), const conformal::MPIRingGrid3d<LocalContainer>& g)
+MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double,double), const ribeiro::MPIRingGrid3d<LocalContainer>& g)
 {
     return pullback<double(double,double,double),LocalContainer>( f, g);
 }

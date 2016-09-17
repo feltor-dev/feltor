@@ -42,12 +42,10 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
      */
     MPIRingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
         dg::MPI_Grid3d( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
-        f_( dg::evaluate( dg::one, *this)), g_(f_), r_(f_), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
+        r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
     {
         RingGrid3d<LocalContainer> g( gp, psi_0, psi_1, n,Nx, Ny, local().Nz(), bcx);
-        f_x_ = g.f1_x();
-        f2_xy_ = g.f2_xy();
 
         //divide and conquer
         int dims[3], periods[3], coords[3];
@@ -61,14 +59,13 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
                         {
                             unsigned idx1 = (s*this->n()*this->Ny()+i)*this->n()*this->Nx() + j;
                             unsigned idx2 = (((s*dims[1]+coords[1])*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            f_.data()[idx1] = g.f1()[idx2];
-                            g_.data()[idx1] = g.f2()[idx2];
                             r_.data()[idx1] = g.r()[idx2];
                             z_.data()[idx1] = g.z()[idx2];
                             xr_.data()[idx1] = g.xr()[idx2];
                             xz_.data()[idx1] = g.xz()[idx2];
                             yr_.data()[idx1] = g.yr()[idx2];
                             yz_.data()[idx1] = g.yz()[idx2];
+                            lapx_.data()[idx1] = g.lapx()[idx2];
                             g_xx_.data()[idx1] = g.g_xx()[idx2];
                             g_xy_.data()[idx1] = g.g_xy()[idx2];
                             g_yy_.data()[idx1] = g.g_yy()[idx2];
@@ -80,30 +77,6 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
 
     //these are for the Field class
 
-    /**
-     * @brief The f_1 vector over the global grid
-     *
-     * @return 
-     */
-    const thrust::host_vector<double>& f1_x()const{return f_x_;}
-    /**
-     * @brief The f_2 vector over the global grid
-     *
-     * @return 
-     */
-    const thrust::host_vector<double>& f2_xy()const{return f2_xy_;}
-    /**
-     * @brief The f_1 vector over the local grid
-     *
-     * @return 
-     */
-    const dg::MPI_Vector<thrust::host_vector<double> >& f1()const{return f_;}
-    /**
-     * @brief The f_2 vector over the local grid
-     *
-     * @return 
-     */
-    const dg::MPI_Vector<thrust::host_vector<double> >& f2()const{return g_;}
     perpendicular_grid perp_grid() const { return MPIRingGrid2d<LocalContainer>(*this);}
 
     const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
@@ -112,6 +85,7 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
     const dg::MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& yz()const{return yz_;}
+    const dg::MPI_Vector<thrust::host_vector<double> >& lapx()const{return lapx_;}
     const dg::MPI_Vector<LocalContainer>& g_xx()const{return g_xx_;}
     const dg::MPI_Vector<LocalContainer>& g_yy()const{return g_yy_;}
     const dg::MPI_Vector<LocalContainer>& g_xy()const{return g_xy_;}
@@ -119,9 +93,7 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
     const dg::MPI_Vector<LocalContainer>& vol()const{return vol_;}
     const dg::MPI_Vector<LocalContainer>& perpVol()const{return vol2d_;}
     private:
-    thrust::host_vector<double> f_x_; //1d vector
-    thrust::host_vector<double> f2_xy_; //2d vector
-    dg::MPI_Vector<thrust::host_vector<double> > f_, g_, r_, z_, xr_, xz_, yr_, yz_; //3d vector
+    dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_, lapx_; //3d vector
     dg::MPI_Vector<LocalContainer> g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
 };
 
@@ -147,12 +119,10 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
      */
     MPIRingGrid2d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
         dg::MPI_Grid2d( 0, 1, 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
-        f_( dg::evaluate( dg::one, *this)), g_(f_), r_(f_), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
+        r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
     {
         RingGrid2d<LocalContainer> g( gp, psi_0, psi_1, n,Nx, Ny, bcx);
-        f_x_ = g.f1_x();
-        f2_xy_ = g.f2_xy();
         //divide and conquer
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( communicator(), 2, dims, periods, coords);
@@ -164,14 +134,13 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
                         {
                             unsigned idx1 = i*this->n()*this->Nx() + j;
                             unsigned idx2 = ((coords[1]*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            f_.data()[idx1] = g.f1()[idx2];
-                            g_.data()[idx1] = g.f2()[idx2];
                             r_.data()[idx1] = g.r()[idx2];
                             z_.data()[idx1] = g.z()[idx2];
                             xr_.data()[idx1] = g.xr()[idx2];
                             xz_.data()[idx1] = g.xz()[idx2];
                             yr_.data()[idx1] = g.yr()[idx2];
                             yz_.data()[idx1] = g.yz()[idx2];
+                            lapx_.data()[idx1] = g.lapx()[idx2];
                             g_xx_.data()[idx1] = g.g_xx()[idx2];
                             g_xy_.data()[idx1] = g.g_xy()[idx2];
                             g_yy_.data()[idx1] = g.g_yy()[idx2];
@@ -180,22 +149,19 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
     }
     MPIRingGrid2d( const MPIRingGrid3d<LocalContainer>& g):
         dg::MPI_Grid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
-        f_( dg::evaluate( dg::one, *this)), g_(f_), r_(f_), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
+        r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
     {
-        f_x_ = g.f1_x();
-        f2_xy_ = g.f2_xy();
         unsigned s = this->size();
         for( unsigned i=0; i<s; i++)
         {
             r_.data()[i]=g.r().data()[i]; 
-            f_.data()[i]=g.f1().data()[i]; 
-            g_.data()[i]=g.f2().data()[i]; 
             z_.data()[i]=g.z().data()[i]; 
             xr_.data()[i]=g.xr().data()[i]; 
             xz_.data()[i]=g.xz().data()[i]; 
             yr_.data()[i]=g.yr().data()[i]; 
             yz_.data()[i]=g.yz().data()[i];
+            lapx_.data()[i]=g.lapx().data()[i];
         }
         thrust::copy( g.g_xx().data().begin(), g.g_xx().data().begin()+s, g_xx_.data().begin());
         thrust::copy( g.g_xy().data().begin(), g.g_xy().data().begin()+s, g_xy_.data().begin());
@@ -204,37 +170,13 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
         
     }
 
-    /**
-     * @brief 1D version of the f_1 vector over the global 2d grid
-     *
-     * @return 
-     */
-    const thrust::host_vector<double>& f1_x()const{return f_x_;}
-    /**
-     * @brief 2D version of the f_2 vector over the global 2D grid
-     *
-     * @return 
-     */
-    const thrust::host_vector<double>& f2_xy()const{return f2_xy_;}
-    /**
-     * @brief Get the whole f_1 vector
-     *
-     * @return 
-     */
-    const dg::MPI_Vector<thrust::host_vector<double> >& f1()const{return f_;}
-    /**
-     * @brief Get the whole f_2 vector
-     *
-     * @return 
-     */
-    const dg::MPI_Vector<thrust::host_vector<double> >& f2()const{return g_;}
-
     const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& z()const{return z_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& xr()const{return xr_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& yz()const{return yz_;}
+    const dg::MPI_Vector<thrust::host_vector<double> >& lapx()const{return lapx_;}
     const dg::MPI_Vector<LocalContainer>& g_xx()const{return g_xx_;}
     const dg::MPI_Vector<LocalContainer>& g_yy()const{return g_yy_;}
     const dg::MPI_Vector<LocalContainer>& g_xy()const{return g_xy_;}
@@ -248,8 +190,6 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
         MPI_Cart_sub( src, remain_dims, &planeComm);
         return planeComm;
     }
-    thrust::host_vector<double> f_x_, f2_xy_; 
-    dg::MPI_Vector<thrust::host_vector<double> > f_, g_; 
 
     dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_; //2d vector
     dg::MPI_Vector<LocalContainer> g_xx_, g_xy_, g_yy_, vol2d_;

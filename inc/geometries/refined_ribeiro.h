@@ -2,10 +2,10 @@
 
 
 #include "dg/geometry/refined_grid.h"
-#include "conformal.h"
+#include "ribeiro.h"
 
 
-namespace conformal
+namespace ribeiro
 {
 namespace refined 
 {
@@ -16,7 +16,7 @@ struct RingGrid2d;
 ///@endcond
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A three-dimensional grid based on "almost-ribeiro" coordinates by Ribeiro and Scott 2010
  *
  * @tparam container Vector class that holds metric coefficients
  */
@@ -43,7 +43,7 @@ struct RingGrid3d : public dg::refined::Grid3d
         g_assoc_( gp, psi_0, psi_1, n_old, Nx, Ny, Nz, bcx)
     { 
         assert( bcx == dg::PER|| bcx == dg::DIR);
-        conformal::detail::Fpsi fpsi( gp);
+        ribeiro::detail::Fpsi fpsi( gp);
         double x_1 = fpsi.find_x1( psi_0, psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
@@ -68,8 +68,8 @@ struct RingGrid3d : public dg::refined::Grid3d
         return dg::create::abscissas(gx);}
 
     const thrust::host_vector<double>& f()const{return f_;}
-    perpendicular_grid perp_grid() const { return conformal::refined::RingGrid2d<container>(*this);}
-    const conformal::RingGrid3d<container>& associated() const{ return g_assoc_;}
+    perpendicular_grid perp_grid() const { return ribeiro::refined::RingGrid2d<container>(*this);}
+    const ribeiro::RingGrid3d<container>& associated() const{ return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -90,7 +90,7 @@ struct RingGrid3d : public dg::refined::Grid3d
     {
         //std::cout << "In grid function:\n";
         detail::Fpsi fpsi( gp);
-        solovev::conformal::FieldRZYRYZY fieldRZYRYZY(gp);
+        solovev::ribeiro::FieldRZYRYZY fieldRZYRYZY(gp);
         r_.resize(size()), z_.resize(size()), f_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
@@ -150,7 +150,7 @@ struct RingGrid3d : public dg::refined::Grid3d
     thrust::host_vector<double> f_x_; //1d vector
     thrust::host_vector<double> f_, r_, z_, xr_, xz_, yr_, yz_; //3d vector
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    conformal::RingGrid3d<container> g_assoc_;
+    ribeiro::RingGrid3d<container> g_assoc_;
     
     //The following points might also be useful for external grid generation
     //thrust::host_vector<double> r_0y, r_1y, z_0y, z_1y; //boundary points in x
@@ -159,7 +159,7 @@ struct RingGrid3d : public dg::refined::Grid3d
 };
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A two-dimensional grid based on "almost-ribeiro" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
 struct RingGrid2d : public dg::refined::Grid2d
@@ -169,7 +169,7 @@ struct RingGrid2d : public dg::refined::Grid2d
         dg::refined::Grid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
         g_assoc_( gp, psi_0, psi_1, n_old, Nx, Ny, bcx) 
     {
-        conformal::refined::RingGrid3d<container> g( multiple_x, multiple_y, gp, psi_0, psi_1, n,n_old,Nx,Ny,1,bcx);
+        ribeiro::refined::RingGrid3d<container> g( multiple_x, multiple_y, gp, psi_0, psi_1, n,n_old,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         f_x_ = g.f_x();
         f_ = g.f(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
@@ -191,7 +191,7 @@ struct RingGrid2d : public dg::refined::Grid2d
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
 
-    const conformal::RingGrid2d<container>& associated()const{return g_assoc_;}
+    const ribeiro::RingGrid2d<container>& associated()const{return g_assoc_;}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     thrust::host_vector<double> x()const{
         dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
@@ -214,15 +214,15 @@ struct RingGrid2d : public dg::refined::Grid2d
     thrust::host_vector<double> f_x_; //1d vector
     thrust::host_vector<double> f_, r_, z_, xr_, xz_, yr_, yz_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    conformal::RingGrid2d<container> g_assoc_;
+    ribeiro::RingGrid2d<container> g_assoc_;
 };
 
 }//namespace refined
-}//namespace conformal
+}//namespace ribeiro
 
 namespace dg{
 /**
- * @brief This function pulls back a function defined in cartesian coordinates R,Z to the conformal coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cartesian coordinates R,Z to the ribeiro coordinates x,y,\phi
  *
  * i.e. F(x,y) = f(R(x,y), Z(x,y))
  * @tparam BinaryOp The function object 
@@ -232,7 +232,7 @@ namespace dg{
  * @return A set of points representing F(x,y)
  */
 template< class BinaryOp, class container>
-thrust::host_vector<double> pullback( BinaryOp f, const conformal::refined::RingGrid2d<container>& g)
+thrust::host_vector<double> pullback( BinaryOp f, const ribeiro::refined::RingGrid2d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
@@ -241,13 +241,13 @@ thrust::host_vector<double> pullback( BinaryOp f, const conformal::refined::Ring
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double), const conformal::refined::RingGrid2d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double), const ribeiro::refined::RingGrid2d<container>& g)
 {
     return pullback<double(double,double),container>( f, g);
 }
 ///@endcond
 /**
- * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the conformal coordinates x,y,\phi
+ * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the ribeiro coordinates x,y,\phi
  *
  * i.e. F(x,y,\phi) = f(R(x,y), Z(x,y), \phi)
  * @tparam TernaryOp The function object 
@@ -257,7 +257,7 @@ thrust::host_vector<double> pullback( double(f)(double,double), const conformal:
  * @return A set of points representing F(x,y,\phi)
  */
 template< class TernaryOp, class container>
-thrust::host_vector<double> pullback( TernaryOp f, const conformal::refined::RingGrid3d<container>& g)
+thrust::host_vector<double> pullback( TernaryOp f, const ribeiro::refined::RingGrid3d<container>& g)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
@@ -271,7 +271,7 @@ thrust::host_vector<double> pullback( TernaryOp f, const conformal::refined::Rin
 }
 ///@cond
 template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double,double), const conformal::refined::RingGrid3d<container>& g)
+thrust::host_vector<double> pullback( double(f)(double,double,double), const ribeiro::refined::RingGrid3d<container>& g)
 {
     return pullback<double(double,double,double),container>( f, g);
 }
