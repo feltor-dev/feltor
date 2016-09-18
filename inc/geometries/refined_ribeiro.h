@@ -43,7 +43,10 @@ struct RingGrid3d : public dg::refined::Grid3d
         g_assoc_( gp, psi_0, psi_1, n_old, Nx, Ny, Nz, bcx)
     { 
         assert( bcx == dg::PER|| bcx == dg::DIR);
-        ribeiro::detail::Fpsi fpsi( gp);
+        solovev::Psip psip(gp);
+        solovev::PsipR psipR(gp);
+        solovev::PsipZ psipZ(gp);
+        ribeiro::detail::Fpsi<solovev::Psip, solovev::PsipR, solovev::PsipZ> fpsi( psip, psipR, psipZ, gp.R_0, 0);
         double x_1 = fpsi.find_x1( psi_0, psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
@@ -53,7 +56,7 @@ struct RingGrid3d : public dg::refined::Grid3d
             std::swap( psi_0, psi_1);
         }
         //compute psi(x) for a grid on x and call construct_rzy for all psi
-        detail::FieldFinv fpsiMinv_(gp, 500);
+        ribeiro::detail::FieldFinv<solovev::Psip, solovev::PsipR, solovev::PsipZ> fpsiMinv_( psip, psipR, psipZ, gp.R_0, 0, 500);
         thrust::host_vector<double> x_vec(this->n()*this->Nx()); 
         for(unsigned i=0; i<x_vec.size(); i++) x_vec[i] = this->abscissasX()[i];
         thrust::host_vector<double> psi_x;
@@ -89,8 +92,14 @@ struct RingGrid3d : public dg::refined::Grid3d
     void construct_rz( const solovev::GeomParameters& gp, thrust::host_vector<double>& psi_x)
     {
         //std::cout << "In grid function:\n";
-        detail::Fpsi fpsi( gp);
-        solovev::ribeiro::FieldRZYRYZY fieldRZYRYZY(gp);
+        solovev::Psip psip(gp);
+        solovev::PsipR psipR(gp);
+        solovev::PsipZ psipZ(gp);
+        solovev::PsipRR psipRR(gp);
+        solovev::PsipRZ psipRZ(gp);
+        solovev::PsipZZ psipZZ(gp);
+        ribeiro::detail::Fpsi<solovev::Psip, solovev::PsipR, solovev::PsipZ> fpsi( psip, psipR, psipZ, gp.R_0, 0);
+        solovev::ribeiro::FieldRZYRYZY<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> fieldRZYRYZY(psipR, psipZ, psipRR, psipRZ, psipZZ);
         r_.resize(size()), z_.resize(size()), f_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
         //r_x0.resize( psi_x.size()), z_x0.resize( psi_x.size());
@@ -103,7 +112,7 @@ struct RingGrid3d : public dg::refined::Grid3d
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            dg::detail::compute_rzy( fpsi, fieldRZYRYZY, gp, psi_x[i], y_vec, ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
+            dg::detail::compute_rzy( fpsi, fieldRZYRYZY, psi_x[i], y_vec, ry, zy, yr, yz, xr, xz, R0, Z0, f_x_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 r_[j*Nx+i]  = ry[j], z_[j*Nx+i]  = zy[j], f_[j*Nx+i] = f_x_[i]; 
