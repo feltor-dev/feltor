@@ -10,15 +10,17 @@ struct CurvilinearTag{};
 struct CurvilinearCylindricalTag: public CurvilinearTag{}; //perpVol, vol(), g_xx, g_xy, g_yy
 struct OrthogonalCylindricalTag:public CurvilinearCylindricalTag{}; //perpVol, vol(), g_xx, g_yy
 struct ConformalCylindricalTag:public OrthogonalCylindricalTag{}; //perpVol, vol(), g_xx, g_yy
-struct OrthonormalCylindricalTag:public ConformalCylindricalTag{}; //vol()
-struct OrthonormalTag: public OrthonormalCylindricalTag{};
+struct OrthonormalCylindricalTag:public ConformalCylindricalTag{}; //vol(), cylindrical grid
+struct OrthonormalTag: public OrthonormalCylindricalTag{}; //cartesian grids
 
+//memory_category and dimensionality Tags are already defined in grid.h
 
 ///@cond
 template <class Geometry>
 struct GeometryTraits{
     typedef typename Geometry::metric_category metric_category;
     typedef typename Geometry::memory_category memory_category; //either shared or distributed
+    typedef typename Geometry::dimensionality dimensionality; //either shared or distributed
 };
 
 template<class MemoryTag>
@@ -199,6 +201,54 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
 
 }//namespace detail
 }//namespace create
+
+namespace detail
+{
+//pullbacks
+template< class Geometry>
+thrust::host_vector<double> doPullback( double(f)(double,double), const Geometry& g, CurvilinearTag, TwoDimensionalTag, SharedTag)
+{
+    return doPullback<double(double,double), Geometry>( f, g);
+}
+template< class Geometry>
+thrust::host_vector<double> pullback( double(f)(double,double,double), const Geometry& g, CurvilinearTag, ThreeDimensionalTag, SharedTag)
+{
+    return doPullback<double(double,double,double), Geometry>( f, g);
+}
+
+template< class BinaryOp, class Geometry>
+thrust::host_vector<double> doPullback( BinaryOp f, const Geometry& g, CurvilinearTag, TwoDimensionalTag, SharedTag)
+{
+    thrust::host_vector<double> vec( g.size());
+    for( unsigned i=0; i<g.size(); i++)
+        vec[i] = f( g.r()[i], g.z()[i]);
+    return vec;
+}
+
+template< class TernaryOp, class Geometry>
+thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, CurvilinearTag, ThreeDimensionalTag, SharedTag)
+{
+    thrust::host_vector<double> vec( g.size());
+    unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
+    Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
+    thrust::host_vector<double> absz = create::abscissas( gz);
+    for( unsigned k=0; k<g.Nz(); k++)
+        for( unsigned i=0; i<size2d; i++)
+            vec[k*size2d+i] = f( g.r()[k*size2d+i], g.z()[k*size2d+i], absz[k]);
+    return vec;
+}
+template< class BinaryOp, class Geometry>
+thrust::host_vector<double> doPullback( BinaryOp f, const Geometry& g, OrthonormalCylindricalTag, TwoDimensionalTag, SharedTag)
+{
+    return evaluate( f, g);
+}
+template< class TernaryOp, class Geometry>
+thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, OrthonormalCylindricalTag, ThreeDimensionalTag, SharedTag)
+{
+    return evaluate( f,g);
+}
+
+}//namespace detail
 ///@endcond
 
 } //namespace dg

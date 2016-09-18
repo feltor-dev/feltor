@@ -42,7 +42,7 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
      */
     MPIRingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
         dg::MPI_Grid3d( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
-        r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx(r_),
+        r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
     {
         RingGrid3d<LocalContainer> g( gp, psi_0, psi_1, n,Nx, Ny, local().Nz(), bcx);
@@ -191,69 +191,9 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
         return planeComm;
     }
 
-    dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_; //2d vector
+    dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_, lapx_; //2d vector
     dg::MPI_Vector<LocalContainer> g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
 }//namespace orthogonal
 
-namespace dg{
-/**
- * @brief This function pulls back a function defined in cartesian coordinates R,Z to the orthogonal coordinates x,y,\phi
- *
- * i.e. F(x,y) = f(R(x,y), Z(x,y))
- * @tparam BinaryOp The function object 
- * @param f The function defined on R,Z
- * @param g The grid
- *
- * @return A set of points representing F(x,y)
- */
-template< class BinaryOp, class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( BinaryOp f, const orthogonal::MPIRingGrid2d<LocalContainer>& g)
-{
-    thrust::host_vector<double> vec( g.size());
-    for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( g.r().data()[i], g.z().data()[i]);
-    MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
-    return v;
-}
-///@cond
-template<class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double), const orthogonal::MPIRingGrid2d<LocalContainer>& g)
-{
-    return pullback<double(double,double),LocalContainer>( f, g);
-}
-///@endcond
-/**
- * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the orthogonal coordinates x,y,\phi
- *
- * i.e. F(x,y,\phi) = f(R(x,y), Z(x,y), \phi)
- * @tparam TernaryOp The function object 
- * @param f The function defined on R,Z,\phi
- * @param g The grid
- *
- * @return A set of points representing F(x,y,\phi)
- */
-template< class TernaryOp, class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( TernaryOp f, const orthogonal::MPIRingGrid3d<LocalContainer>& g)
-{
-    thrust::host_vector<double> vec( g.size());
-    unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
-    Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
-    thrust::host_vector<double> absz = create::abscissas( gz);
-    for( unsigned k=0; k<g.Nz(); k++)
-        for( unsigned i=0; i<size2d; i++)
-            vec[k*size2d+i] = f( g.r().data()[k*size2d+i], g.z().data()[k*size2d+i], absz[k]);
-    MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
-    return v;
-}
-///@cond
-template<class LocalContainer>
-MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double,double), const orthogonal::MPIRingGrid3d<LocalContainer>& g)
-{
-    return pullback<double(double,double,double),LocalContainer>( f, g);
-}
-///@endcond
-//
-
-}//namespace dg

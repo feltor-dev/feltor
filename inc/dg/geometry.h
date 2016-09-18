@@ -212,4 +212,20 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
 
 }//namespace create
 
+/**
+ * @brief This function pulls back a function defined in cartesian coordinates to the curvilinear coordinate system
+ *
+ * i.e. F(x,y) = f(R(x,y), Z(x,y)) in 2d 
+ * @tparam Functor The (binary or ternary) function object 
+ * @param f The function defined in cartesian coordinates
+ * @param g The grid
+ *
+ * @return A set of points representing F
+ */
+template< class Functor, class Geometry>
+typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector 
+    pullback( Functor f, const Geometry& g)
+{
+    return dg::detail::doPullback( f, g, typename GeometryTraits<Geometry>::metric_category(), typename GeometryTraits<Geometry>::dimensionality(), typename GeometryTraits<Geometry>::memory_category() );
+}
 }//namespace dg

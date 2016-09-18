@@ -15,7 +15,7 @@
 #include "dg/backend/mpi_init.h"
 //#include "guenther.h"
 #include "solovev.h"
-#include "mpi_conformal.h"
+#include "mpi_ribeiro.h"
 #include "mpi_orthogonal.h"
 #include "dg/ds.h"
 #include "init.h"
@@ -39,26 +39,19 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-
-    std::vector<double> v, v2;
-    try{ 
-        if( argc==1)
-        {
-            v = file::read_input( "geometry_params_Xpoint.txt"); 
-        }
-        else
-        {
-            v = file::read_input( argv[1]); 
-        }
+    Json::Reader reader;
+    Json::Value js;
+    if( argc==1)
+    {
+        std::ifstream is("geometry_params_Xpoint.js");
+        reader.parse(is,js,false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-            if(rank==0)std::cout << v[i] << " ";
-            if(rank==0)std::cout << std::endl;
-        return -1;}
-    //write parameters from file into variables
-    solovev::GeomParameters gp(v);
+    else
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
+    solovev::GeomParameters gp(js);
     solovev::Psip psip( gp); 
     if(rank==0)std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
@@ -129,7 +122,6 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Construction successful!\n";
 
     //compute error in volume element
-    const dg::MHVec f_ = g2d.f1();
     dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
     dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
@@ -154,7 +146,7 @@ int main( int argc, char* argv[])
 
     //temp0=g.r();
     //dg::blas1::pointwiseDivide( temp0, g.g_xx(), temp0);
-    dg::blas1::pointwiseDot( f_, f_, temp0);
+    //dg::blas1::pointwiseDot( f_, f_, temp0);
     dg::blas1::axpby( 0.0,temp0 , 1.0, g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     //dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
@@ -162,24 +154,6 @@ int main( int argc, char* argv[])
     error=sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()));
     if(rank==0)std::cout << "Rel Error of volume form is "<<error<<"\n";
 
-    solovev::conformal::FieldY fieldY(gp);
-    //solovev::ConformalField fieldY(gp);
-    dg::MHVec fby = dg::pullback( fieldY, g2d);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    //for( unsigned k=0; k<Nz; k++)
-        //for( unsigned i=0; i<n*Ny; i++)
-        //    for( unsigned j=0; j<n*Nx; j++)
-        //        //by[k*n*n*Nx*Ny + i*n*Nx + j] *= g.f_x()[j]*g.f_x()[j];
-        //        fby[i*n*Nx + j] *= g.f_x()[j]*g.f_x()[j];
-    //dg::HVec fby_device = fby;
-    dg::blas1::scal( fby, 1./gp.R_0);
-    temp0=g2d.r();
-    dg::blas1::pointwiseDot( temp0, fby, fby);
-    dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0);
-    dg::blas1::axpby( 1., temp0, -1., fby, temp1);
-    error= dg::blas2::dot( temp1, w3d, temp1)/dg::blas2::dot(fby,w3d,fby);
-    if(rank==0)std::cout << "Rel Error of g.g_xx() is "<<sqrt(error)<<"\n";
     const dg::MHVec vol = dg::create::volume( g3d);
     dg::MHVec ones3d = dg::evaluate( dg::one, g3d);
     double volume = dg::blas1::dot( vol, ones3d);
@@ -200,37 +174,37 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
 
     /////////////////////////TEST 3d grid//////////////////////////////////////
-    if(rank==0)std::cout << "Start DS test!"<<std::endl;
-    const dg::MHVec vol3d = dg::create::volume( g3d);
-    t.tic();
-    //DFA fieldaligned( conformal::Field( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
-    DFA fieldaligned( orthogonal::Field( gp, g2d.global(), g2d.f2_xy()), g3d, gp.rk4eps, dg::NoLimiter()); 
+    //if(rank==0)std::cout << "Start DS test!"<<std::endl;
+    //const dg::MHVec vol3d = dg::create::volume( g3d);
+    //t.tic();
+    ////DFA fieldaligned( conformal::Field( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
+    //DFA fieldaligned( orthogonal::Field( gp, g2d.global(), g2d.f2_xy()), g3d, gp.rk4eps, dg::NoLimiter()); 
 
-    //dg::DS<DFA, dg::MHMatrix, dg::MHVec> ds( fieldaligned, conformal::Field(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
-    dg::DS<DFA, dg::MHMatrix, dg::MHVec> ds( fieldaligned, orthogonal::Field(gp, g2d.global(), g2d.f2_xy()), dg::normed, dg::centered);
-    t.toc();
-    if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
-    dg::MHVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
-    dg::MHVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
-    dg::MHVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
-    dg::blas1::pointwiseDivide( ones3d, B, B);
-    dg::MHVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
-    ds( function, derivative);
+    ////dg::DS<DFA, dg::MHMatrix, dg::MHVec> ds( fieldaligned, conformal::Field(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
+    //dg::DS<DFA, dg::MHMatrix, dg::MHVec> ds( fieldaligned, orthogonal::Field(gp, g2d.global(), g2d.f2_xy()), dg::normed, dg::centered);
+    //t.toc();
+    //if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
+    //dg::MHVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
+    //dg::MHVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
+    //dg::MHVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
+    //dg::blas1::pointwiseDivide( ones3d, B, B);
+    //dg::MHVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
+    //ds( function, derivative);
 
-    ds.centeredT( B, divB);
-    double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    if(rank==0)std::cout << "Divergence of B is "<<norm<<"\n";
+    //ds.centeredT( B, divB);
+    //double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
+    //if(rank==0)std::cout << "Divergence of B is "<<norm<<"\n";
 
-    ds.centered( lnB, gradB);
-    norm = sqrt(dg::blas2::dot(gradB,vol3d,gradB) );
-    if(rank==0)std::cout << "num. norm of gradLnB is "<<norm<<"\n";
-    norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-    if(rank==0)std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
-    dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-    X = divB.data();
-    err = nc_put_vara_double( ncid, divBID, start,count, X.data());
-    double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
-    if(rank==0)std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
+    //ds.centered( lnB, gradB);
+    //norm = sqrt(dg::blas2::dot(gradB,vol3d,gradB) );
+    //if(rank==0)std::cout << "num. norm of gradLnB is "<<norm<<"\n";
+    //norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
+    //if(rank==0)std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
+    //dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
+    //X = divB.data();
+    //err = nc_put_vara_double( ncid, divBID, start,count, X.data());
+    //double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
+    //if(rank==0)std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
     err = nc_close( ncid);
     MPI_Finalize();
 

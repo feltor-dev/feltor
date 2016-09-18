@@ -10,7 +10,6 @@
 
 namespace dg
 {
-struct MPITag;
 ///@addtogroup grid
 ///@{
 
@@ -28,6 +27,7 @@ struct MPITag;
 struct MPI_Grid2d
 {
     typedef MPITag memory_category;
+    typedef TwoDimensionalTag dimensionality;
     /**
      * @brief Construct mpi grid
      *
@@ -298,6 +298,7 @@ struct MPI_Grid2d
 struct MPI_Grid3d
 {
     typedef MPITag memory_category;
+    typedef ThreeDimensionalTag dimensionality;
     /**
      * @brief Construct a 3D grid
      *

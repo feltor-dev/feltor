@@ -93,30 +93,53 @@ struct CylindricalMPIGrid : public MPI_Grid3d
 };
 ///@}
 
-/**
- * @brief evaluates a cylindrical function 
- *
- * same as evaluate, i.e. assumes that the function is given in cylindrical coordinates
- * @ingroup pullbacks
- * @tparam TernaryOp Ternary function object
- * @tparam container The container class of the Cylindrical Grid
- * @param f functor
- * @param g geometry
- *
- * @return new instance of thrust vector
- */
-template<class TernaryOp, class container>
-MPI_Vector<thrust::host_vector<double> > pullback( TernaryOp f, const CylindricalMPIGrid<container>& g)
+/////////////////////////////////////////////////////MPI/////////////////////////////////////////////////
+namespace detail{
+template< class Geometry>
+MPI_Vector< thrust::host_vector<double> > doPullback( double(f)(double,double), const Geometry& g, CurvilinearTag, TwoDimensionalTag, MPITag)
+{
+    return doPullback<double(double,double), Geometry>( f, g);
+}
+template< class Geometry>
+MPI_Vector< thrust::host_vector<double> > pullback( double(f)(double,double,double), const Geometry& g, CurvilinearTag, ThreeDimensionalTag, MPITag)
+{
+    return doPullback<double(double,double,double), Geometry>( f, g);
+}
+
+template< class BinaryOp, class Geometry>
+MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry& g, CurvilinearTag, TwoDimensionalTag, MPITag)
+{
+    thrust::host_vector<double> vec( g.size());
+    for( unsigned i=0; i<g.size(); i++)
+        vec[i] = f( g.r().data()[i], g.z().data()[i]);
+    MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
+    return v;
+}
+
+template< class TernaryOp, class Geometry>
+MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, CurvilinearTag, ThreeDimensionalTag, MPITag)
+{
+    thrust::host_vector<double> vec( g.size());
+    unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
+    Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
+    thrust::host_vector<double> absz = create::abscissas( gz);
+    for( unsigned k=0; k<g.Nz(); k++)
+        for( unsigned i=0; i<size2d; i++)
+            vec[k*size2d+i] = f( g.r().data()[k*size2d+i], g.z().data()[k*size2d+i], absz[k]);
+    MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
+    return v;
+}
+template< class BinaryOp, class Geometry>
+MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry& g, OrthonormalCylindricalTag, TwoDimensionalTag, MPITag)
 {
     return evaluate( f, g);
 }
-///@cond
-template<class container>
-MPI_Vector<thrust::host_vector<double> > pullback( double(f)(double,double,double), const CylindricalMPIGrid<container>& g)
+template< class TernaryOp, class Geometry>
+MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, OrthonormalCylindricalTag, ThreeDimensionalTag, MPITag)
 {
-    return pullback<double(double,double,double),container>( f, g);
+    return evaluate( f,g);
 }
-///@endcond
 
+} //namespace detail
 
 }//namespace dg

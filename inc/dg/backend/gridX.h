@@ -13,8 +13,6 @@
 
 namespace dg{
 
-struct SharedTag;
-
 ///@addtogroup grid
 ///@{
 /**

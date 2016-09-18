@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cmath>
+#include "topological_traits.h"
 #include "dlt.h"
 #include "../enums.h"
 
@@ -13,9 +14,9 @@
 
 namespace dg{
 
-struct SharedTag;
 class MPI_Grid2d;
 class MPI_Grid3d;
+
 
 ///@addtogroup grid
 ///@{
@@ -28,6 +29,7 @@ template <class T>
 struct Grid1d
 {
     typedef SharedTag memory_category;
+    typedef OneDimensionalTag dimensionality;
     /**
      * @brief 1D grid
      * 
@@ -168,6 +170,7 @@ template< class T>
 struct Grid2d
 {
     typedef SharedTag memory_category;
+    typedef TwoDimensionalTag dimensionality;
     /**
      * @brief Construct a 2D grid
      *
@@ -397,6 +400,7 @@ template< class T>
 struct Grid3d
 {
     typedef SharedTag memory_category;
+    typedef ThreeDimensionalTag dimensionality;
     /**
      * @brief Construct a 3D grid
      *
