@@ -7,6 +7,8 @@
 
 namespace dg
 {
+namespace cylindrical
+{
 ///@addtogroup basicgrids
 ///@{
 
@@ -16,10 +18,10 @@ namespace dg
  * @tparam container The container class for the volume element
  */
 template<class container>
-struct CylindricalGrid : public Grid3d<double>
+struct Grid3d : public dg::Grid3d<double>
 {
     typedef OrthonormalCylindricalTag metric_category; 
-    typedef CartesianGrid2d perpendicular_grid;
+    typedef dg::cartesian::Grid2d perpendicular_grid;
     /**
      * @brief Construct a 3D grid
      *
@@ -38,8 +40,8 @@ struct CylindricalGrid : public Grid3d<double>
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): 
-        Grid3d<double>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz),
+    Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): 
+        dg::Grid3d<double>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz),
         R_(dg::evaluate( dg::coo1, *this)){}
     /**
      * @brief Construct from existing topology
@@ -47,8 +49,8 @@ struct CylindricalGrid : public Grid3d<double>
      * @param grid existing grid class
      */
     //is this constructor a good idea?? You could construct a Cylindrical Grid from any other Grid Type that derives from Grid3d<double>
-    CylindricalGrid( const Grid3d<double>& grid):
-        Grid3d<double>(grid),
+    Grid3d( const dg::Grid3d<double>& grid):
+        dg::Grid3d<double>(grid),
         R_(dg::evaluate( dg::coo1, *this)){}
     /**
      * @brief The volume element
@@ -56,36 +58,14 @@ struct CylindricalGrid : public Grid3d<double>
      * @return the volume element
      */
 
-    perpendicular_grid perp_grid() const { return CartesianGrid2d( x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
+    perpendicular_grid perp_grid() const { return dg::cartesian::Grid2d( x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
     const container& vol()const {return R_;}
     private:
     container R_;
 };
 
 ///@}
-/**
- * @brief evaluates a cylindrical function 
- *
- * same as evaluate, i.e. assumes that function is given in cylindrical coordinates
- * @ingroup pullbacks
- * @tparam TernaryOp Ternary function object
- * @tparam container The container class of the Cylindrical Grid
- * @param f functor
- * @param g geometry
- *
- * @return new instance of thrust vector
- */
-template<class TernaryOp, class container>
-thrust::host_vector<double> pullback( TernaryOp f, const CylindricalGrid<container>& g)
-{
-    return evaluate( f, g);
-}
-///@cond
-template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double,double), const CylindricalGrid<container>& g)
-{
-    return pullback<double(double,double,double),container>( f, g);
-}
-///@endcond
 
+} //namespace cylindrical
 } //namespace dg
+

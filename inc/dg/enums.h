@@ -68,13 +68,4 @@ enum direction{
     backward, //!< backward derivative
     centered //!< centered derivative
 };
-/**
- * @brief Coordinate system
- *
- * @ingroup creation
- */
-enum system{
-    cartesian, //!< cartesian coordinate system
-    cylindrical //!< cylindrical coordinate system
-};
 }//namespace dg

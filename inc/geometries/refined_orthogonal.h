@@ -5,9 +5,11 @@
 
 
 
-namespace orthogonal
+namespace dg
 {
 namespace refined
+{
+namespace orthogonal
 {
 
 template< class container>
@@ -228,5 +230,6 @@ struct RingGrid2d : public dg::refined::Grid2d
 /**
  * @brief Integrates the equations for a field line and 1/B
  */ 
-}//namespace refined
 }//namespace orthogonal
+}//namespace refined
+}//namespace dg
