@@ -9,7 +9,7 @@
 
 
 
-namespace hector
+namespace conformal
 {
 
 ///@cond

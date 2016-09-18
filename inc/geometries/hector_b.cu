@@ -46,7 +46,7 @@ int main(int argc, char**argv)
     solovev::PsipZ psipZ( gp); 
     solovev::LaplacePsip lap( gp); 
 
-    hector::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
+    conformal::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
 
     ///////////////////////////////FILE OUTPUT/////////////////////////////
     /*

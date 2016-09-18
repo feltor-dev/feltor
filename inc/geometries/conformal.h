@@ -43,7 +43,7 @@ struct RingGrid3d : public dg::Grid3d<double>
         solovev::PsipR psipR( gp); 
         solovev::PsipZ psipZ( gp); 
         solovev::LaplacePsip lap( gp); 
-        hector::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
+        conformal::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
 
         dg::Grid2d<double> guv( 0., hector.lu(), 0., 2.*M_PI, n, Nx, Ny );
         dg::Grid1d<double> gu( 0., hector.lu(), n, Nx);
@@ -184,61 +184,3 @@ struct RingGrid2d : public dg::Grid2d<double>
 
 
 }//namespace conformal
-namespace dg{
-/**
- * @brief This function pulls back a function defined in cartesian coordinates R,Z to the conformal coordinates x,y,\phi
- *
- * i.e. F(x,y) = f(R(x,y), Z(x,y))
- * @tparam BinaryOp The function object 
- * @param f The function defined on R,Z
- * @param g The grid
- *
- * @return A set of points representing F(x,y)
- */
-template< class BinaryOp, class container>
-thrust::host_vector<double> pullback( BinaryOp f, const conformal::RingGrid2d<container>& g)
-{
-    thrust::host_vector<double> vec( g.size());
-    for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( g.r()[i], g.z()[i]);
-    return vec;
-}
-///@cond
-template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double), const conformal::RingGrid2d<container>& g)
-{
-    return pullback<double(double,double),container>( f, g);
-}
-///@endcond
-/**
- * @brief This function pulls back a function defined in cylindrical coordinates R,Z,\phi to the conformal coordinates x,y,\phi
- *
- * i.e. F(x,y,\phi) = f(R(x,y), Z(x,y), \phi)
- * @tparam TernaryOp The function object 
- * @param f The function defined on R,Z,\phi
- * @param g The grid
- *
- * @return A set of points representing F(x,y,\phi)
- */
-template< class TernaryOp, class container>
-thrust::host_vector<double> pullback( TernaryOp f, const conformal::RingGrid3d<container>& g)
-{
-    thrust::host_vector<double> vec( g.size());
-    unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
-    Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
-    thrust::host_vector<double> absz = create::abscissas( gz);
-    for( unsigned k=0; k<g.Nz(); k++)
-        for( unsigned i=0; i<size2d; i++)
-            vec[k*size2d+i] = f( g.r()[k*size2d+i], g.z()[k*size2d+i], absz[k]);
-    return vec;
-}
-///@cond
-template<class container>
-thrust::host_vector<double> pullback( double(f)(double,double,double), const conformal::RingGrid3d<container>& g)
-{
-    return pullback<double(double,double,double),container>( f, g);
-}
-///@endcond
-//
-
-}//namespace dg
