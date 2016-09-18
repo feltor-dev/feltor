@@ -5,9 +5,11 @@
 #include "ribeiro.h"
 
 
-namespace ribeiro
+namespace dg
 {
 namespace refined 
+{
+namespace ribeiro
 {
 
 ///@cond
@@ -161,10 +163,6 @@ struct RingGrid3d : public dg::refined::Grid3d
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
     ribeiro::RingGrid3d<container> g_assoc_;
     
-    //The following points might also be useful for external grid generation
-    //thrust::host_vector<double> r_0y, r_1y, z_0y, z_1y; //boundary points in x
-    //thrust::host_vector<double> r_x0, r_x1, z_x0, z_x1; //boundary points in y
-
 };
 
 /**
@@ -226,6 +224,7 @@ struct RingGrid2d : public dg::refined::Grid2d
     ribeiro::RingGrid2d<container> g_assoc_;
 };
 
-}//namespace refined
 }//namespace ribeiro
+}//namespace refined
+}//namespace dg
 

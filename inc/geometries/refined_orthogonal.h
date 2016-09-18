@@ -56,8 +56,8 @@ struct RingGrid3d : public dg::refined::Grid3d
     }
 
 
-    perpendicular_grid perp_grid() const { return orthogonal::refined::RingGrid2d<container>(*this);}
-    const orthogonal::RingGrid3d<container>& associated() const{ return g_assoc_;}
+    perpendicular_grid perp_grid() const { return dg::refined::orthogonal::RingGrid2d<container>(*this);}
+    const dg::orthogonal::RingGrid3d<container>& associated() const{ return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -78,50 +78,27 @@ struct RingGrid3d : public dg::refined::Grid3d
             double psi_0, double psi_1, 
             double x0, double y0, unsigned multiple_x, unsigned multipl_y, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, int firstline)
     {
-        assert( psi_1 != psi_0);
-
-        //compute innermost flux surface
-        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
         unsigned sizeY = this->n()*this->Ny();
         unsigned sizeX = this->n()*this->Nx();
         thrust::host_vector<double> y_vec(sizeY);
         for(unsigned i=0; i<sizeY; i++) y_vec[i] = this->abscissasY()[i*sizeX];
-        thrust::host_vector<double> r_init(sizeY), z_init(sizeY);
-        double R0, Z0, f0;
-        thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
-        f0 = fpsi.construct_f( psi_0, R0, Z0);
-        if( psi_1 < psi_0) f0*=-1;
-        detail::compute_rzy( psiX, psiY, psi_0, y_vec, r_init, z_init, R0, Z0, f0, firstline);
-
-        //now construct grid in x
-        double x_1 = fabs( f0*(psi_1-psi_0));
+        dg::orthogonal::Generator generator( psi, psiX, psiY, psi_0, psi_1, x0, y0, firstline);
+        double x_1 = generator.lzeta();
         init_X_boundaries( 0., x_1);
-
         thrust::host_vector<double> x_vec(sizeX); 
         for(unsigned i=0; i<sizeX; i++) x_vec[i] = this->abscissasX()[i];
-        detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX, psiY, laplacePsi, f0, firstline);
-        thrust::host_vector<double> h;
-        detail::construct_rz(nemov, x_vec, r_init, z_init, r_, z_, h);
-        r_.resize(size()), z_.resize(size());
-        xr_.resize(size()), xz_.resize(size()), 
-        yr_.resize(size()), yz_.resize(size());
-        lapx_.resize(size());
+        generator( psi, psiX, psiY, laplacePsi, x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
+        lapx_.resize(this->size());
         for( unsigned idx=0; idx<r_.size(); idx++)
-        {
-            double psipR = psiX(r_[idx], z_[idx]);
-            double psipZ = psiY(r_[idx], z_[idx]);
-            xr_[idx] = f0*psipR;
-            xz_[idx] = f0*psipZ;
-            yr_[idx] = -h[idx]*psipZ;
-            yz_[idx] = +h[idx]*psipR;
-            lapx_[idx] = f0*(laplacePsi( r_[idx], z_[idx]));
-        }
+            lapx_[idx] = generator.f0()*(laplacePsi( r_[idx], z_[idx]));
         lift3d( ); //lift to 3D grid
         construct_metric();
     }
     void lift3d( )
     {
         //lift to 3D grid
+        unsigned size = this->size();
+        r_.resize( size), z_.resize(size), xr_.resize(size), yr_.resize( size), xz_.resize( size), yz_.resize(size);
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
         thrust::host_vector<double> wx = this->weightsX();
         thrust::host_vector<double> wy = this->weightsY();
@@ -158,7 +135,7 @@ struct RingGrid3d : public dg::refined::Grid3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_, lapx_; 
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    orthogonal::RingGrid3d<container> g_assoc_;
+    dg::orthogonal::RingGrid3d<container> g_assoc_;
 
 };
 
@@ -176,7 +153,7 @@ struct RingGrid2d : public dg::refined::Grid2d
         dg::refined::Grid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
         g_assoc_( psi, psiX, psiY, laplacePsi, psi_0, psi_1, x0, y0, n_old, Nx, Ny, bcx, firstline) 
     {
-        orthogonal::refined::RingGrid3d<container> g( psi, psiX, psiY, laplacePsi, psi_0, psi_1, x0, y0, multiple_x, multiple_y, n,n_old,Nx,Ny,1,bcx, firstline);
+        dg::refined::orthogonal::RingGrid3d<container> g( psi, psiX, psiY, laplacePsi, psi_0, psi_1, x0, y0, multiple_x, multiple_y, n,n_old,Nx,Ny,1,bcx, firstline);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
@@ -187,7 +164,7 @@ struct RingGrid2d : public dg::refined::Grid2d
         dg::refined::Grid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
         g_assoc_( gp, psi_0, psi_1, n_old, Nx, Ny, bcx, firstline) 
     {
-        orthogonal::refined::RingGrid3d<container> g( multiple_x, multiple_y, gp, psi_0, psi_1, n,n_old,Nx,Ny,1,bcx, firstline);
+        dg::refined::orthogonal::RingGrid3d<container> g( multiple_x, multiple_y, gp, psi_0, psi_1, n,n_old,Nx,Ny,1,bcx, firstline);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
@@ -207,7 +184,7 @@ struct RingGrid2d : public dg::refined::Grid2d
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
 
-    const orthogonal::RingGrid2d<container>& associated()const{return g_assoc_;}
+    const dg::orthogonal::RingGrid2d<container>& associated()const{return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -224,7 +201,7 @@ struct RingGrid2d : public dg::refined::Grid2d
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_, lapx_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    orthogonal::RingGrid2d<container> g_assoc_;
+    dg::orthogonal::RingGrid2d<container> g_assoc_;
 };
 
 /**

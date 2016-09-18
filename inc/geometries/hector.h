@@ -9,7 +9,7 @@
 
 
 
-namespace conformal
+namespace dg
 {
 
 ///@cond
@@ -336,15 +336,15 @@ struct Hector
      *
      * @return  orthogonal zeta, eta grid
      */
-    const orthogonal::RingGrid2d<container>& orthogonal_grid() const {return g2d_;}
+    const dg::orthogonal::RingGrid2d<container>& orthogonal_grid() const {return g2d_;}
     private:
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>
     container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u ) 
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        orthogonal::RingGrid2d<container> g2d_old(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
-        dg::Elliptic<orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::orthogonal::RingGrid2d<container> g2d_old(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
+        dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
         container lapu = g2d_old.lapx();
@@ -354,8 +354,8 @@ struct Hector
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            orthogonal::RingGrid2d<container> g2d(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
-            dg::Elliptic<orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::orthogonal::RingGrid2d<container> g2d(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
+            dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             lapu = g2d.lapx();
             const container vol2d = dg::create::weights( g2d);
             const IMatrix Q = dg::create::interpolation( g2d, g2d_old);
@@ -379,8 +379,8 @@ struct Hector
     double c0_;
     thrust::host_vector<double> u_, ux_, uy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
-    orthogonal::RingGrid2d<container> g2d_;
+    dg::orthogonal::RingGrid2d<container> g2d_;
 
 };
 
-}//namespace hector
+}//namespace dg

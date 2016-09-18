@@ -4,8 +4,11 @@
 
 
 
+namespace dg{
 namespace conformal
 {
+
+typedef dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> Generator;
 
 ///@cond
 template< class container>
@@ -184,3 +187,4 @@ struct RingGrid2d : public dg::Grid2d<double>
 
 
 }//namespace conformal
+}//namespace

@@ -14,6 +14,8 @@
 
 
 
+namespace dg
+{
 namespace ribeiro
 {
 
@@ -476,3 +478,4 @@ struct Field
 };
 
 }//namespace ribeiro
+} //namespace dg

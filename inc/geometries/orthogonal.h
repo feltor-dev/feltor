@@ -13,6 +13,8 @@
 
 
 
+namespace dg
+{
 namespace orthogonal
 {
 
@@ -92,7 +94,7 @@ struct Fpsi
 
 //compute the vector of r and z - values that form one psi surface
 template <class PsiX, class PsiY>
-void compute_rzy( PsiX psiX, PsiY psiY, double psi, const thrust::host_vector<double>& y_vec,
+void compute_rzy( PsiX psiX, PsiY psiY, const thrust::host_vector<double>& y_vec,
         thrust::host_vector<double>& r, 
         thrust::host_vector<double>& z, 
         double R_0, double Z_0, double f_psi, int firstline ) 
@@ -275,6 +277,56 @@ void construct_rz( Nemov nemov,
 
 } //namespace detail
 
+struct Generator
+{
+    Generator(): f0_(1), lz_(1), R0_(0), Z0_(0), firstline_(0){}
+    template< class Psi, class PsiX, class PsiY>
+    Generator( Psi psi, PsiX psiX, PsiY psiY, double psi_0, double psi_1, double x0, double y0, int firstline =0)
+    {
+        assert( psi_1 != psi_0);
+        firstline_ = firstline;
+        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
+        thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
+        f0_ = fpsi.construct_f( psi_0, R0_, Z0_);
+        if( psi_1 < psi_0) f0_*=-1;
+        lz_ = fabs( f0_*(psi_1-psi_0));
+    }
+    double f0() const{return f0_;}
+    double lzeta() const{return lz_;}
+    template< class Psi, class PsiX, class PsiY, class LaplacePsi>
+    void operator()( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi,
+         const thrust::host_vector<double>& zeta1d, 
+         const thrust::host_vector<double>& eta1d, 
+         thrust::host_vector<double>& x, 
+         thrust::host_vector<double>& y, 
+         thrust::host_vector<double>& zetaX, 
+         thrust::host_vector<double>& zetaY, 
+         thrust::host_vector<double>& etaX, 
+         thrust::host_vector<double>& etaY) 
+    {
+        thrust::host_vector<double> r_init, z_init;
+        detail::compute_rzy( psiX, psiY, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX, psiY, laplacePsi, f0_, firstline_);
+        thrust::host_vector<double> h;
+        detail::construct_rz(nemov, zeta1d, r_init, z_init, x, y, h);
+        unsigned size = x.size();
+        zetaX.resize(size), zetaY.resize(size), 
+        etaX.resize(size), etaY.resize(size);
+        for( unsigned idx=0; idx<size; idx++)
+        {
+            double psipR = psiX(x[idx], y[idx]);
+            double psipZ = psiY(x[idx], y[idx]);
+            zetaX[idx] = f0_*psipR;
+            zetaY[idx] = f0_*psipZ;
+            etaX[idx] = -h[idx]*psipZ;
+            etaY[idx] = +h[idx]*psipR;
+        }
+    }
+    private:
+    double f0_, lz_, R0_, Z0_;
+    int firstline_;
+};
+
 template< class container>
 struct RingGrid2d; 
 ///@endcond
@@ -346,53 +398,26 @@ struct RingGrid3d : public dg::Grid3d<double>
             double psi_0, double psi_1, 
             double x0, double y0, unsigned n, unsigned Nx, unsigned Ny, int firstline)
     {
-        assert( psi_1 != psi_0);
-
-        //compute innermost flux surface
-        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
+        Generator generator( psi, psiX, psiY, psi_0, psi_1, x0, y0, firstline);
         dg::Grid1d<double> gY1d( 0, 2*M_PI, n, Ny, dg::PER);
-        unsigned sizeY = gY1d.size();
         thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, gY1d);
-        thrust::host_vector<double> r_init(sizeY), z_init(sizeY);
-        double R0, Z0, f0;
-        thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
-        f0 = fpsi.construct_f( psi_0, R0, Z0);
-        if( psi_1 < psi_0) f0*=-1;
-        detail::compute_rzy( psiX, psiY, psi_0, y_vec, r_init, z_init, R0, Z0, f0, firstline);
-
-        //now construct grid in x
-        double x_1 = fabs( f0*(psi_1-psi_0));
-        //std::cout << "f0 is "<<f0<<" and x_1 is "<<x_1<<"\n";
+        double x_1 = generator.lzeta();
         init_X_boundaries( 0., x_1);
-
         dg::Grid1d<double> gX1d( this->x0(), this->x1(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, gX1d);
-        //detail::Nemov<PsiX, PsiY, PsiXX, PsiXY, PsiYY, LaplacePsiX, LaplacePsiY> 
-        //    nemov(psiX, psiY, psiXX, psiXY, psiYY, laplacePsiX, laplacePsiY, f0);
-        detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX, psiY, laplacePsi, f0, firstline);
-        thrust::host_vector<double> h;// hr, hz;
-        detail::construct_rz(nemov, x_vec, r_init, z_init, r_, z_, h);//, hr, hz);
-        r_.resize(size()), z_.resize(size());
-        xr_.resize(size()), xz_.resize(size()), 
-        yr_.resize(size()), yz_.resize(size());
-        lapx_.resize(size());// lapy_.resize(size());
+        generator( psi, psiX, psiY, laplacePsi, x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
+        lapx_.resize(this->size());
         for( unsigned idx=0; idx<r_.size(); idx++)
-        {
-            double psipR = psiX(r_[idx], z_[idx]);
-            double psipZ = psiY(r_[idx], z_[idx]);
-            xr_[idx] = f0*psipR;
-            xz_[idx] = f0*psipZ;
-            yr_[idx] = -h[idx]*psipZ;
-            yz_[idx] = +h[idx]*psipR;
-            lapx_[idx] = f0*(laplacePsi( r_[idx], z_[idx]));
-            //lapy_[idx] = -hr[idx]*psipZ + hz[idx]*psipR;
-        }
+            lapx_[idx] = generator.f0()*(laplacePsi( r_[idx], z_[idx]));
         lift3d( ); //lift to 3D grid
         construct_metric();
     }
     void lift3d( )
     {
+
         //lift to 3D grid
+        unsigned size = this->size();
+        r_.resize( size), z_.resize(size), xr_.resize(size), yr_.resize( size), xz_.resize( size), yz_.resize(size);
         unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
         for( unsigned k=1; k<this->Nz(); k++)
             for( unsigned i=0; i<Nx*Ny; i++)
@@ -563,3 +588,4 @@ struct Field
 };
 
 }//namespace orthogonal
+}//namespace dg
