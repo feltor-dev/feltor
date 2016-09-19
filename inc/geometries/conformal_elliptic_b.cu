@@ -45,7 +45,7 @@ int main(int argc, char**argv)
     solovev::PsipR psipR( gp); 
     solovev::PsipZ psipZ( gp); 
     solovev::LaplacePsip lap( gp); 
-    dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, 1e-13);
+    dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, 1e-11);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     for( unsigned i=0; i<5; i++)

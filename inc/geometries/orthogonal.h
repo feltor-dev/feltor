@@ -277,11 +277,12 @@ void construct_rz( Nemov nemov,
 
 } //namespace detail
 
-struct Generator
+}//namespace orthogonal
+struct Orthogonal
 {
-    Generator(): f0_(1), lz_(1), R0_(0), Z0_(0), firstline_(0){}
+    Orthogonal(): f0_(1), lz_(1), R0_(0), Z0_(0), firstline_(0){}
     template< class Psi, class PsiX, class PsiY>
-    Generator( Psi psi, PsiX psiX, PsiY psiY, double psi_0, double psi_1, double x0, double y0, int firstline =0)
+    Orthogonal( Psi psi, PsiX psiX, PsiY psiY, double psi_0, double psi_1, double x0, double y0, int firstline =0)
     {
         assert( psi_1 != psi_0);
         firstline_ = firstline;
@@ -292,7 +293,7 @@ struct Generator
         lz_ = fabs( f0_*(psi_1-psi_0));
     }
     double f0() const{return f0_;}
-    double lzeta() const{return lz_;}
+    double lx() const{return lz_;}
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>
     void operator()( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi,
          const thrust::host_vector<double>& zeta1d, 
@@ -305,10 +306,10 @@ struct Generator
          thrust::host_vector<double>& etaY) 
     {
         thrust::host_vector<double> r_init, z_init;
-        detail::compute_rzy( psiX, psiY, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX, psiY, laplacePsi, f0_, firstline_);
+        orthogonal::detail::compute_rzy( psiX, psiY, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX, psiY, laplacePsi, f0_, firstline_);
         thrust::host_vector<double> h;
-        detail::construct_rz(nemov, zeta1d, r_init, z_init, x, y, h);
+        orthogonal::detail::construct_rz(nemov, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
         zetaX.resize(size), zetaY.resize(size), 
         etaX.resize(size), etaY.resize(size);
@@ -326,6 +327,9 @@ struct Generator
     double f0_, lz_, R0_, Z0_;
     int firstline_;
 };
+
+namespace orthogonal
+{
 
 template< class container>
 struct RingGrid2d; 
@@ -398,10 +402,10 @@ struct RingGrid3d : public dg::Grid3d<double>
             double psi_0, double psi_1, 
             double x0, double y0, unsigned n, unsigned Nx, unsigned Ny, int firstline)
     {
-        Generator generator( psi, psiX, psiY, psi_0, psi_1, x0, y0, firstline);
+        dg::Orthogonal generator( psi, psiX, psiY, psi_0, psi_1, x0, y0, firstline);
         dg::Grid1d<double> gY1d( 0, 2*M_PI, n, Ny, dg::PER);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::coo1, gY1d);
-        double x_1 = generator.lzeta();
+        double x_1 = generator.lx();
         init_X_boundaries( 0., x_1);
         dg::Grid1d<double> gX1d( this->x0(), this->x1(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, gX1d);
