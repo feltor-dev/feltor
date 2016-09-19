@@ -46,7 +46,7 @@ struct RingGrid3d : public dg::Grid3d<double>
         solovev::PsipR psipR( gp); 
         solovev::PsipZ psipZ( gp); 
         solovev::LaplacePsip lap( gp); 
-        conformal::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
+        dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
 
         dg::Grid2d<double> guv( 0., hector.lu(), 0., 2.*M_PI, n, Nx, Ny );
         dg::Grid1d<double> gu( 0., hector.lu(), n, Nx);
@@ -81,9 +81,8 @@ struct RingGrid3d : public dg::Grid3d<double>
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    const container& g_xx()const{return g_xx_;}
-    const container& g_yy()const{return g_yy_;}
-    const container& g_xy()const{return g_xy_;}
+    const container& g_xx()const{return gradU2_;}
+    const container& g_yy()const{return gradU2_;}
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
@@ -106,17 +105,16 @@ struct RingGrid3d : public dg::Grid3d<double>
     //compute metric elements from xr, xz, yr, yz, r and z
     void construct_metric( )
     {
-        thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
+        thrust::host_vector<double> tempxx( r_), tempvol(r_);
         for( unsigned i = 0; i<this->size(); i++)
         {
             tempxx[i] = (xr_[i]*xr_[i]+xz_[i]*xz_[i]);
-            tempxy[i] = (yr_[i]*xr_[i]+yz_[i]*xz_[i]);
-            tempyy[i] = (yr_[i]*yr_[i]+yz_[i]*yz_[i]);
-            tempvol[i] = r_[i]/sqrt( tempxx[i]*tempyy[i] );
+            tempvol[i] = r_[i]/ tempxx[i];
         }
-        g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
+        dg::blas1::transfer( tempxx, gradU2_);
+        dg::blas1::transfer( tempvol, vol_);
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
-        vol2d_ = tempvol;
+        dg::blas1::transfer( tempvol, vol2d_);
         thrust::host_vector<double> ones = dg::evaluate( dg::one, *this);
         dg::blas1::pointwiseDivide( ones, r_, tempxx);
         dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
@@ -124,7 +122,7 @@ struct RingGrid3d : public dg::Grid3d<double>
     }
     
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
-    container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
+    container gradU2_, g_pp_, vol_, vol2d_;
 
 };
 
@@ -142,7 +140,7 @@ struct RingGrid2d : public dg::Grid2d<double>
         conformal::RingGrid3d<container> g( hector, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
-        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
+        gradU2_=g.g_xx();
         vol2d_=g.perpVol();
     }
     RingGrid2d( const solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
@@ -151,7 +149,7 @@ struct RingGrid2d : public dg::Grid2d<double>
         conformal::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
-        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
+        gradU2_=g.g_xx();
         vol2d_=g.perpVol();
     }
     RingGrid2d( const RingGrid3d<container>& g):
@@ -159,12 +157,10 @@ struct RingGrid2d : public dg::Grid2d<double>
     {
         unsigned s = this->size();
         r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
-        g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
+        gradU2_.resize( s), vol2d_.resize(s);
         for( unsigned i=0; i<s; i++)
         { r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
-        thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
-        thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
-        thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
+        thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, gradU2_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
 
@@ -175,14 +171,13 @@ struct RingGrid2d : public dg::Grid2d<double>
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    const container& g_xx()const{return g_xx_;}
-    const container& g_yy()const{return g_yy_;}
-    const container& g_xy()const{return g_xy_;}
+    const container& g_xx()const{return gradU2_;}
+    const container& g_yy()const{return gradU2_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
-    container g_xx_, g_xy_, g_yy_, vol2d_;
+    container gradU2_, vol2d_;
 };
 
 

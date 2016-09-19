@@ -228,4 +228,5 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
 {
     return dg::detail::doPullback( f, g, typename GeometryTraits<Geometry>::metric_category(), typename GeometryTraits<Geometry>::dimensionality(), typename GeometryTraits<Geometry>::memory_category() );
 }
+
 }//namespace dg

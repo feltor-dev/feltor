@@ -40,7 +40,7 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-typedef dg::FieldAligned< conformal::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
+typedef dg::FieldAligned< dg::conformal::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -74,10 +74,10 @@ int main( int argc, char* argv[])
     solovev::PsipR psipR( gp); 
     solovev::PsipZ psipZ( gp); 
     solovev::LaplacePsip lap( gp); 
-    hector::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
+    dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
 
-    conformal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
-    conformal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::conformal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
+    dg::conformal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -114,7 +114,7 @@ int main( int argc, char* argv[])
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     //compute and write deformation into netcdf
-    dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
+    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
     const dg::HVec ones = dg::evaluate( dg::one, g2d);
     X=temp0;
     err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
@@ -125,21 +125,15 @@ int main( int argc, char* argv[])
 
     std::cout << "Construction successful!\n";
 
-    //compute error in volume element
-    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
-    double error = sqrt( dg::blas2::dot( temp1, w2d, temp1));
-    std::cout<< "    Error in Off-diagonal is "<<error<<"\n";
-
     //compare determinant vs volume form
     dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
-    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::transfer( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
     dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
-    error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( g2d.vol(), w2d, g2d.vol()));
+    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( g2d.vol(), w2d, g2d.vol()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";

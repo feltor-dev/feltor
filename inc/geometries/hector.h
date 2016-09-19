@@ -293,12 +293,12 @@ struct Hector
      *
      * @param u1d one-dimensional list of points inside the u-domain
      * @param v1d one-dimensional list of points inside the v-domain
-     * @param x 
-     * @param y
-     * @param ux
-     * @param uy
-     * @param vx
-     * @param vy
+     * @param x  = x(u,v)
+     * @param y  = y(u,v)
+     * @param ux = u_x(u,v)
+     * @param uy = u_y(u,v)
+     * @param vx = -u_y(u,v)
+     * @param vy = u_x(u,v)
      * @note All the resulting vectors are write-only and get properly resized
      */
     void operator()( const thrust::host_vector<double>& u1d, 

@@ -23,25 +23,20 @@ int main(int argc, char**argv)
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
-    std::vector<double> v, v2;
-    try{ 
-        if( argc==1)
-        {
-            v = file::read_input( "geometry_params_Xpoint.txt"); 
-        }
-        else
-        {
-            v = file::read_input( argv[1]); 
-        }
+    Json::Reader reader;
+    Json::Value js;
+    if( argc==1)
+    {
+        std::ifstream is("geometry_params_Xpoint.js");
+        reader.parse(is,js,false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-            std::cout << v[i] << " ";
-            std::cout << std::endl;
-        return -1;}
+    else
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
     //write parameters from file into variables
-    solovev::GeomParameters gp(v);
+    solovev::GeomParameters gp(js);
     gp.display( std::cout);
     dg::Timer t;
     std::cout << "Constructing grid ... \n";
@@ -50,15 +45,15 @@ int main(int argc, char**argv)
     solovev::PsipR psipR( gp); 
     solovev::PsipZ psipZ( gp); 
     solovev::LaplacePsip lap( gp); 
-    hector::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, 1e-13);
+    dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, 1e-13);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     for( unsigned i=0; i<5; i++)
     {
-        conformal::RingGrid2d<dg::DVec> g2d(hector, n, Nx, Ny, dg::DIR);
-        dg::Elliptic<conformal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+        dg::conformal::RingGrid2d<dg::DVec> g2d(hector, n, Nx, Ny, dg::DIR);
+        dg::Elliptic<dg::conformal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
         ///////////////////////////////////////////////////////////////////////////
-        dg::DVec x =    dg::pullback( dg::zero, g2d);
+        dg::DVec x =    dg::evaluate( dg::zero, g2d);
         const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g2d);
         const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d);
         const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1 ), g2d);
