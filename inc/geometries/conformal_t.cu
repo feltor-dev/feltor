@@ -81,6 +81,7 @@ int main( int argc, char* argv[])
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
+    std::cout << "Length in u is    "<<hector.lu()<<std::endl;
     int ncid;
     file::NC_Error_Handle err;
     err = nc_create( "conformal.nc", NC_NETCDF4|NC_CLOBBER, &ncid);

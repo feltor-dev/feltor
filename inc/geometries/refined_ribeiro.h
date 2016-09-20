@@ -48,7 +48,7 @@ struct RingGrid3d : public dg::refined::Grid3d
         solovev::Psip psip(gp);
         solovev::PsipR psipR(gp);
         solovev::PsipZ psipZ(gp);
-        ribeiro::detail::Fpsi<solovev::Psip, solovev::PsipR, solovev::PsipZ> fpsi( psip, psipR, psipZ, gp.R_0, 0);
+        dg::ribeiro::detail::Fpsi<solovev::Psip, solovev::PsipR, solovev::PsipZ> fpsi( psip, psipR, psipZ, gp.R_0, 0);
         double x_1 = fpsi.find_x1( psi_0, psi_1);
         if( x_1 > 0)
             init_X_boundaries( 0., x_1);
@@ -58,7 +58,7 @@ struct RingGrid3d : public dg::refined::Grid3d
             std::swap( psi_0, psi_1);
         }
         //compute psi(x) for a grid on x and call construct_rzy for all psi
-        ribeiro::detail::FieldFinv<solovev::Psip, solovev::PsipR, solovev::PsipZ> fpsiMinv_( psip, psipR, psipZ, gp.R_0, 0, 500);
+        dg::ribeiro::detail::FieldFinv<solovev::Psip, solovev::PsipR, solovev::PsipZ> fpsiMinv_( psip, psipR, psipZ, gp.R_0, 0, 500);
         thrust::host_vector<double> x_vec(this->n()*this->Nx()); 
         for(unsigned i=0; i<x_vec.size(); i++) x_vec[i] = this->abscissasX()[i];
         thrust::host_vector<double> psi_x;
@@ -73,7 +73,7 @@ struct RingGrid3d : public dg::refined::Grid3d
         return dg::create::abscissas(gx);}
 
     const thrust::host_vector<double>& f()const{return f_;}
-    perpendicular_grid perp_grid() const { return ribeiro::refined::RingGrid2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return dg::refined::ribeiro::RingGrid2d<container>(*this);}
     const ribeiro::RingGrid3d<container>& associated() const{ return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
@@ -100,7 +100,7 @@ struct RingGrid3d : public dg::refined::Grid3d
         solovev::PsipRR psipRR(gp);
         solovev::PsipRZ psipRZ(gp);
         solovev::PsipZZ psipZZ(gp);
-        ribeiro::detail::Fpsi<solovev::Psip, solovev::PsipR, solovev::PsipZ> fpsi( psip, psipR, psipZ, gp.R_0, 0);
+        dg::ribeiro::detail::Fpsi<solovev::Psip, solovev::PsipR, solovev::PsipZ> fpsi( psip, psipR, psipZ, gp.R_0, 0);
         solovev::ribeiro::FieldRZYRYZY<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> fieldRZYRYZY(psipR, psipZ, psipRR, psipRZ, psipZZ);
         r_.resize(size()), z_.resize(size()), f_.resize(size());
         yr_ = r_, yz_ = z_, xr_ = r_, xz_ = r_ ;
@@ -176,7 +176,7 @@ struct RingGrid2d : public dg::refined::Grid2d
         dg::refined::Grid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
         g_assoc_( gp, psi_0, psi_1, n_old, Nx, Ny, bcx) 
     {
-        ribeiro::refined::RingGrid3d<container> g( multiple_x, multiple_y, gp, psi_0, psi_1, n,n_old,Nx,Ny,1,bcx);
+        dg::refined::ribeiro::RingGrid3d<container> g( multiple_x, multiple_y, gp, psi_0, psi_1, n,n_old,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         f_x_ = g.f_x();
         f_ = g.f(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();

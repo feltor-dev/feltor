@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
 
     //dg::orthogonal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, 0);
     //dg::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::refined::orthogonal::RingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR, 1);
+    dg::refined::orthogonal::RingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR, 0);
     dg::refined::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
@@ -126,8 +126,7 @@ int main( int argc, char* argv[])
     std::cout << "Construction successful!\n";
 
     //compute error in volume element
-    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
-    double error = sqrt( dg::blas2::dot( temp1, w2d, temp1));
+    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1); double error = sqrt( dg::blas2::dot( temp1, w2d, temp1));
     std::cout<< "    Error in Off-diagonal is "<<error<<"\n";
 
     //compare determinant vs volume form
@@ -215,7 +214,8 @@ int main( int argc, char* argv[])
 //     norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
 //     std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
 //     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-     X = g2d.lapx();
+     //X = g2d.lapx();
+     X = dg::pullback(solovev::FuncDirNeu(gp, psi_0, psi_1, 550, -150, 30.), g2d);
      err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
 //     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
 //     std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";

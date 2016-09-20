@@ -162,7 +162,7 @@ struct Cauchy
         double xbar = (x-x0_)/sigmaX_;
         double ybar = (y-y0_)/sigmaY_;
         double temp = sigmaX_*(xbar*xbar + ybar*ybar  - 1.);
-        return -2.*xbar*this->operator()(x,y)/temp/temp;
+        return -2.*(x-x0_)*this->operator()(x,y)/temp/temp;
     }
     double dxx( double x, double y)const{ 
         double temp = sigmaY_*sigmaY_*(x-x0_)*(x-x0_) + sigmaX_*sigmaX_*((y-y0_)*(y-y0_) - sigmaY_*sigmaY_);
@@ -175,7 +175,7 @@ struct Cauchy
         double xbar = (x-x0_)/sigmaX_;
         double ybar = (y-y0_)/sigmaY_;
         double temp = sigmaY_*(xbar*xbar + ybar*ybar  - 1.);
-        return -2.*ybar*this->operator()(x,y)/temp/temp;
+        return -2.*(y-y0_)*this->operator()(x,y)/temp/temp;
     }
     double dyy( double x, double y)const{ 
         double temp = sigmaX_*sigmaX_*(y-y0_)*(y-y0_) + sigmaY_*sigmaY_*((x-x0_)*(x-x0_) - sigmaX_*sigmaX_);

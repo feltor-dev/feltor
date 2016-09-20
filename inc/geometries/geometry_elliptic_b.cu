@@ -30,25 +30,20 @@ int main(int argc, char**argv)
     std::cout << "Type new_n, multiple_x and multiple_y \n";
     double n_ref, multiple_x, multiple_y;
     std::cin >> n_ref>>multiple_x >> multiple_y;
-    std::vector<double> v, v2;
-    try{ 
-        if( argc==1)
-        {
-            v = file::read_input( "geometry_params_Xpoint.txt"); 
-        }
-        else
-        {
-            v = file::read_input( argv[1]); 
-        }
+    Json::Reader reader;
+    Json::Value js;
+    if( argc==1)
+    {
+        std::ifstream is("geometry_params_Xpoint.js");
+        reader.parse(is,js,false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-            std::cout << v[i] << " ";
-            std::cout << std::endl;
-        return -1;}
+    else
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
     //write parameters from file into variables
-    solovev::GeomParameters gp(v);
+    solovev::GeomParameters gp(js);
     gp.display( std::cout);
     dg::Timer t;
     solovev::Psip psip( gp); 
@@ -58,10 +53,10 @@ int main(int argc, char**argv)
 //     conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
 //     conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
 //     dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    orthogonal::refined::RingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
-    orthogonal::refined::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<orthogonal::refined::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
-    dg::RefinedElliptic<orthogonal::refined::RingGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
+    dg::refined::orthogonal::RingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    dg::refined::orthogonal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<dg::refined::orthogonal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+    dg::RefinedElliptic<dg::refined::orthogonal::RingGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -86,31 +81,31 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     ///////////////////////////////////////////////////////////////////////////
-    dg::DVec x =    dg::pullback( dg::zero, g2d.associated());
-    dg::DVec x_fine =    dg::pullback( dg::zero, g2d);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g2d.associated());
+    dg::DVec x =    dg::evaluate( dg::zero, g2d.associated());
+    dg::DVec x_fine =    dg::evaluate( dg::zero, g2d);
+    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 550, -150, 30.), g2d.associated());
     dg::DVec bmod(b);
-    const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d.associated());
-    const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1 ), g2d.associated());
+    const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g2d.associated());
+    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 550, -150, 30. ), g2d.associated());
     //const dg::DVec b =        dg::pullback( solovev::LaplacePsi(gp), g2d.associated());
     //const dg::DVec bFINE =    dg::pullback( solovev::LaplacePsi(gp), g2d);
     //dg::DVec bmod(b);
     //const dg::DVec chi =      dg::pullback( dg::one, g2d.associated());
     //const dg::DVec chiFINE =  dg::pullback( dg::one, g2d);
     //const dg::DVec solution =     dg::pullback( psip, g2d.associated());
-    const dg::DVec solutionFINE = dg::pullback( psip, g2d);
+    //const dg::DVec solutionFINE = dg::pullback( psip, g2d);
     const dg::DVec vol3dFINE = dg::create::volume( g2d);
     dg::HVec inv_vol3dFINE = dg::create::inv_weights( g2d);
     const dg::DVec vol3d = dg::create::volume( g2d.associated());
     const dg::DVec v3dFINE( inv_vol3dFINE);
     const dg::IDMatrix Q = dg::create::interpolation( g2d);
     const dg::IDMatrix P = dg::create::projection( g2d);
-    dg::DVec chi_fine = dg::pullback( dg::zero, g2d), b_fine(chi_fine);
+    dg::DVec chi_fine = dg::evaluate( dg::zero, g2d), b_fine(chi_fine);
     dg::blas2::gemv( Q, chi, chi_fine);
     dg::blas2::gemv( Q, b, b_fine);
     //pol.set_chi( chi);
     pol.set_chi( chi_fine);
-    pol_refined.set_chi( chi);
+    pol_refined.set_chi( chi_fine);
     //compute error
     dg::DVec error( solution);
     const double eps = 1e-10;
@@ -118,7 +113,7 @@ int main(int argc, char**argv)
     std::cout << eps<<"\t";
     t.tic();
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
-    pol_refined.compute_rhs( b, bmod);
+    pol_refined.compute_rhs( b_fine, bmod);
     unsigned number = invert(pol_refined, x,bmod);// vol3d, v3d );
     //dg::Invert<dg::DVec > invert( x_fine, x_fine.size(), eps);
     //unsigned number = invert(pol, x_fine ,b_fine, vol3dFINE, v3dFINE );

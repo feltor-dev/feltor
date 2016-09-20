@@ -164,7 +164,7 @@ void construct_grid(
         dg::blas1::pointwiseDot( zeta_diff, zeta_diff, zeta_diff);
         dg::blas1::pointwiseDot( 1., eta_diff, eta_diff, 1., zeta_diff);
         eps = sqrt( dg::blas1::dot( zeta_diff, zeta_diff)/sizeU/sizeV); 
-        std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n"; 
+        //std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
 

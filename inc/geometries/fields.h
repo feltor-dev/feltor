@@ -1846,9 +1846,9 @@ struct EllipticDirPerM
 
 struct FuncDirNeu
 {
-    FuncDirNeu( GeomParameters gp, double psi_0, double psi_1):
+    FuncDirNeu( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob):
         psi0_(psi_0), psi1_(psi_1), 
-        cauchy_(gp.R_0-0.95*gp.triangularity*gp.a, -0.8*gp.elongation*gp.a, 0.1*gp.elongation*gp.a, 0.1*gp.elongation*gp.a, 10), 
+        cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, 10), 
         psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp) {}
 
     double operator()(double R, double Z, double phi) const {
@@ -1918,15 +1918,12 @@ struct BmodTheta
 
 struct EllipticDirNeuM
 {
-    EllipticDirNeuM( GeomParameters gp, double psi_0, double psi_1): R_0_(gp.R_0), func_(gp, psi_0, psi_1), bmod_(gp), br_(gp), bz_(gp) {}
+    EllipticDirNeuM( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob): R_0_(gp.R_0), func_(gp, psi_0, psi_1, R_blob, Z_blob, sigma_blob), bmod_(gp), br_(gp), bz_(gp) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z), theta_ = theta(R,Z);
         double chi = bmod*(1.+0.5*sin(theta_));
         double chiR = br*(1.+0.5*sin(theta_)) + bmod*0.5*cos(theta_)*thetaR(R,Z);
         double chiZ = bz*(1.+0.5*sin(theta_)) + bmod*0.5*cos(theta_)*thetaZ(R,Z);
-        //double chi = bmod;
-        //double chiR = br;
-        //double chiZ = bz;
         return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
     }
@@ -1958,7 +1955,7 @@ struct EllipticDirNeuM
 
 struct EllipticDirSimpleM
 {
-    EllipticDirSimpleM( GeomParameters gp, double psi_0, double psi_1): R_0_(gp.R_0), func_(gp, psi_0, psi_1) {}
+    EllipticDirSimpleM( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob): R_0_(gp.R_0), func_(gp, psi_0, psi_1, R_blob, Z_blob, sigma_blob) {}
     double operator()(double R, double Z, double phi) const {
         return -(( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
