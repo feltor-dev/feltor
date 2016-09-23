@@ -216,7 +216,7 @@ inline double zero( double x, double y, double z) {return 0.;}
  *
  * @return 
  */
-double coo1( double x) {return x;}
+double cooX1d( double x) {return x;}
 /**
  * @brief
  * \f[ f(x,y) = x\f]
@@ -226,7 +226,7 @@ double coo1( double x) {return x;}
  *
  * @return 
  */
-double coo1( double x, double y) {return x;}
+double cooX2d( double x, double y) {return x;}
 /**
  * @brief
  * \f[ f(x,y,z) = x\f]
@@ -237,7 +237,7 @@ double coo1( double x, double y) {return x;}
  *
  * @return 
  */
-double coo1( double x, double y, double z) {return x;}
+double cooX3d( double x, double y, double z) {return x;}
 
 /**
  * @brief 
@@ -248,7 +248,7 @@ double coo1( double x, double y, double z) {return x;}
  *
  * @return 
  */
-double coo2( double x, double y) {return y;}
+double cooY2d( double x, double y) {return y;}
 /**
  * @brief
  * \f[ f(x,y,z) = y\f]
@@ -259,7 +259,7 @@ double coo2( double x, double y) {return y;}
  *
  * @return 
  */
-double coo2( double x, double y, double z) {return y;}
+double cooY3d( double x, double y, double z) {return y;}
 /**
  * @brief
  * \f[ f(x,y,z) = z\f]
@@ -270,7 +270,7 @@ double coo2( double x, double y, double z) {return y;}
  *
  * @return 
  */
-double coo3( double x, double y, double z) {return z;}
+double cooZ3d( double x, double y, double z) {return z;}
 } //namespace dg
 
 ///@}

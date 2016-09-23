@@ -219,6 +219,8 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
  * @tparam Functor The (binary or ternary) function object 
  * @param f The function defined in cartesian coordinates
  * @param g The grid
+ * @note Template deduction will fail if you overload functions with different dimensionality (e.g. double sine( double x) and double sine(double x, double y) )
+ * You will want to rename those uniquely
  *
  * @return A set of points representing F
  */

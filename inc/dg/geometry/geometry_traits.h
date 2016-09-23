@@ -204,17 +204,17 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
 
 namespace detail
 {
-//pullbacks
-template< class Geometry>
-thrust::host_vector<double> doPullback( double(f)(double,double), const Geometry& g, CurvilinearTag, TwoDimensionalTag, SharedTag)
-{
-    return doPullback<double(double,double), Geometry>( f, g);
-}
-template< class Geometry>
-thrust::host_vector<double> pullback( double(f)(double,double,double), const Geometry& g, CurvilinearTag, ThreeDimensionalTag, SharedTag)
-{
-    return doPullback<double(double,double,double), Geometry>( f, g);
-}
+////pullbacks
+//template< class Geometry>
+//thrust::host_vector<double> doPullback( double(f)(double,double), const Geometry& g, CurvilinearTag, TwoDimensionalTag, SharedTag)
+//{
+//    return doPullback<double(double,double), Geometry>( f, g);
+//}
+//template< class Geometry>
+//thrust::host_vector<double> pullback( double(f)(double,double,double), const Geometry& g, CurvilinearTag, ThreeDimensionalTag, SharedTag)
+//{
+//    return doPullback<double(double,double,double), Geometry>( f, g);
+//}
 
 template< class BinaryOp, class Geometry>
 thrust::host_vector<double> doPullback( BinaryOp f, const Geometry& g, CurvilinearTag, TwoDimensionalTag, SharedTag)
