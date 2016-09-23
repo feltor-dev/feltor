@@ -397,7 +397,7 @@ int main( int argc, char* argv[])
     dvn = fabs(dvn/(p.a[0]*NvelX[0]));
     std::cout << "Rel. error flux   conservation " << dvn << "\n";
     err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[5], start0d, count0d, &dcn);
-    err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[5], start0d, count0d, &dvn);
+    err_out = nc_put_vara_double(err_time_wgrp_id, err_time_wval_id[6], start0d, count0d, &dvn);
   }
   err_out = nc_close(ncid_out);
   err_in = nc_close(ncid_in);
