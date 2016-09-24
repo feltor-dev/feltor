@@ -48,30 +48,14 @@ struct RingGrid3d : public dg::Grid3d<double>
         solovev::LaplacePsip lap( gp); 
         dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
 
-        dg::Grid2d<double> guv( 0., hector.lu(), 0., 2.*M_PI, n, Nx, Ny );
-        dg::Grid1d<double> gu( 0., hector.lu(), n, Nx);
-        dg::Grid1d<double> gv( 0., 2.*M_PI, n, Ny);
-        const dg::HVec u1d = dg::evaluate( dg::coo1, gu);
-        const dg::HVec v1d = dg::evaluate( dg::coo1, gv);
-        hector( u1d, v1d, r_, z_, xr_, xz_, yr_, yz_);
-        init_X_boundaries( 0., hector.lu());
-        lift3d( ); //lift to 3D grid
-        construct_metric();
+        construct( hector, n, Nx, Ny, Nz, bcx, dg::ConformalTag());
     }
 
     template< class Generator>
     RingGrid3d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx) :
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     {
-        dg::Grid2d<double> guv( 0., hector.lu(), 0., 2.*M_PI, n, Nx, Ny );
-        dg::Grid1d<double> gu( 0., hector.lu(), n, Nx);
-        dg::Grid1d<double> gv( 0., 2.*M_PI, n, Ny);
-        const dg::HVec u1d = dg::evaluate( dg::coo1, gu);
-        const dg::HVec v1d = dg::evaluate( dg::coo1, gv);
-        hector( u1d, v1d, r_, z_, xr_, xz_, yr_, yz_);
-        init_X_boundaries( 0., hector.lu());
-        lift3d( ); //lift to 3D grid
-        construct_metric();
+        construct( hector, n,Nx, Ny, Nz, bcx, typename dg::GeometryTraits<Generator>::metric_category());
     }
     perpendicular_grid perp_grid() const { return conformal::RingGrid2d<container>(*this);}
 
@@ -87,6 +71,19 @@ struct RingGrid3d : public dg::Grid3d<double>
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
     private:
+    template< class Generator>
+    void construct( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::ConformalTag ) 
+    {
+        dg::Grid2d<double> guv( 0., hector.lu(), 0., 2.*M_PI, n, Nx, Ny );
+        dg::Grid1d<double> gu( 0., hector.lu(), n, Nx);
+        dg::Grid1d<double> gv( 0., 2.*M_PI, n, Ny);
+        const dg::HVec u1d = dg::evaluate( dg::coo1, gu);
+        const dg::HVec v1d = dg::evaluate( dg::coo1, gv);
+        hector( u1d, v1d, r_, z_, xr_, xz_, yr_, yz_);
+        init_X_boundaries( 0., hector.lu());
+        lift3d( ); //lift to 3D grid
+        construct_metric();
+    }
     void lift3d( )
     {
         //lift to 3D grid
@@ -132,7 +129,7 @@ struct RingGrid3d : public dg::Grid3d<double>
 template< class container>
 struct RingGrid2d : public dg::Grid2d<double>
 {
-    typedef dg::ConformalCylindricalTag metric_category;
+    typedef dg::ConformalTag metric_category;
     template< class Generator>
     RingGrid2d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx):
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)

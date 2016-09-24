@@ -404,7 +404,7 @@ struct FieldR
         return  this->operator()(R,Z);
     }
     private:
-    mod::PsipZ  psipZ_;
+    PsipZ  psipZ_;
     double R_0;
    
 };
@@ -426,7 +426,7 @@ struct FieldZ
         return  this->operator()(R,Z);
     }
     private:
-    mod::PsipR  psipR_;
+    PsipR  psipR_;
     double R_0;
    
 };
@@ -516,8 +516,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     Ipol ipol_;
 };
 
@@ -538,8 +538,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -564,8 +564,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -608,11 +608,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-    mod::PsipRR psipRR_;
-    mod::PsipRZ psipRZ_;
-    mod::PsipZZ psipZZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    PsipRR psipRR_;
+    PsipRZ psipRZ_;
+    PsipZZ psipZZ_;
     Ipol ipol_;
     IpolR ipolR_;
     IpolZ ipolZ_;
@@ -675,8 +675,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     Ipol ipol_;
 };
 
@@ -697,8 +697,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -721,8 +721,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -760,11 +760,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-    mod::PsipRR psipRR_;
-    mod::PsipRZ psipRZ_;
-    mod::PsipZZ psipZZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    PsipRR psipRR_;
+    PsipRZ psipRZ_;
+    PsipZZ psipZZ_;
     Ipol ipol_;
     IpolR ipolR_;
     IpolZ ipolZ_;
@@ -806,21 +806,20 @@ struct FieldRZYZ
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psip2 = psipR*psipR+psipZ*psipZ;
         yp[0] =  psipZ;//fieldR
         yp[1] = -psipR;//fieldZ
-        //yp[2] = (1.0+0.0*(psipR*psipR+psipZ*psipZ)); //fieldYbar
-        //yp[2] = sqrt(psipR*psipR+psipZ*psipZ); //fieldYbar
-        yp[2] = (psipR*psipR+psipZ*psipZ); //fieldYbar
-        //yp[2] = (1.0)/y[0]; //fieldYbar
-        //double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
-        //double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
+        //yp[2] = 1.0; //volume
+        //yp[2] = sqrt(psip2); //equalarc
+        yp[2] = psip2; //ribeiro
+        //yp[2] = psip2*sqrt(psip2); //separatrix
         yp[0] /=  yp[1];
         yp[2] /=  yp[1];
         yp[1] =  1.;
     }
   private:
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
 };
 
 template <class PsiR, class PsiZ>
@@ -1037,8 +1036,8 @@ struct FieldY
     }
     private:
     double f_psi_, R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     InvB invB_;
 };
 
@@ -1060,8 +1059,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     InvB invB_;
 };
 
@@ -1080,8 +1079,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
 };
 
 struct FieldRZY
@@ -1097,8 +1096,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
 };
 
 struct FieldRZYRYZY
@@ -1120,11 +1119,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-    mod::PsipRR psipRR_;
-    mod::PsipRZ psipRZ_;
-    mod::PsipZZ psipZZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    PsipRR psipRR_;
+    PsipRZ psipRZ_;
+    PsipZZ psipZZ_;
     InvB invB_;
     BR BR_;
     BZ BZ_;
@@ -1159,8 +1158,8 @@ struct FieldY
     }
     private:
     double f_psi_, R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     InvB invB_;
 };
 
@@ -1181,8 +1180,8 @@ struct FieldRZYT
     }
   private:
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
     InvB invB_;
 };
 
@@ -1201,8 +1200,8 @@ struct FieldRZYZ
     }
   private:
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
 };
 
 struct FieldRZY
@@ -1218,8 +1217,8 @@ struct FieldRZY
   private:
     double f_;
     double R_0_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
 };
 
 struct FieldRZYRYZY
@@ -1239,118 +1238,16 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-    mod::PsipRR psipRR_;
-    mod::PsipRZ psipRZ_;
-    mod::PsipZZ psipZZ_;
+    PsipR psipR_;
+    PsipZ psipZ_;
+    PsipRR psipRR_;
+    PsipRZ psipRZ_;
+    PsipZZ psipZZ_;
     InvB invB_;
     double R_0_;
 };
 } //namespace hamada
-namespace orthogonal{
 
-template< class PsiR, class PsiZ>
-struct FieldRZYT
-{
-    FieldRZYT( PsiR psiR, PsiZ psiZ, double R0, double Z0): R_0_(R0), Z_0_(Z0), psipR_(psiR), psipZ_(psiZ){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
-    {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double psip2 = psipR*psipR+psipZ*psipZ;
-        yp[0] = -psipZ;//fieldR
-        yp[1] = +psipR;//fieldZ
-        //yp[2] = 1; //volume
-        //yp[2] = sqrt(psip2); //equalarc
-        yp[2] = psip2; //ribeiro
-        //yp[2] = psip2*sqrt(psip2); //separatrix
-        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
-        double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; //fieldT
-        yp[0] /=  fieldT;
-        yp[1] /=  fieldT;
-        yp[2] /=  fieldT;
-    }
-  private:
-    double R_0_, Z_0_;
-    PsiR psipR_;
-    PsiZ psipZ_;
-};
-
-template <class PsiR, class PsiZ>
-struct FieldRZYZ
-{
-    FieldRZYZ( PsiR psiR, PsiZ psiZ): psipR_(psiR), psipZ_(psiZ){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
-    {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double psip2 = psipR*psipR+psipZ*psipZ;
-        yp[0] = -psipZ;//fieldR
-        yp[1] = +psipR;//fieldZ
-        //yp[2] = 1.0; //volume
-        //yp[2] = sqrt(psip2); //equalarc
-        yp[2] = psip2; //ribeiro
-        //yp[2] = psip2*sqrt(psip2); //separatrix
-        yp[0] /=  yp[1];
-        yp[2] /=  yp[1];
-        yp[1] =  1.;
-    }
-  private:
-    PsiR psipR_;
-    PsiZ psipZ_;
-};
-
-template <class PsiR, class PsiZ>
-struct FieldRZY
-{
-    FieldRZY( PsiR psiR, PsiZ psiZ): f_(1.), psipR_(psiR), psipZ_(psiZ){}
-    void set_f(double f){ f_ = f;}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
-    {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double psip2 = psipR*psipR+psipZ*psipZ;
-        //yp[0] = +psipZ/f_;//volume 
-        //yp[1] = -psipR/f_;//volume 
-        //yp[0] = +psipZ/sqrt(psip2)/f_;//equalarc
-        //yp[1] = -psipR/sqrt(psip2)/f_;//equalarc
-        yp[0] = -psipZ/psip2/f_;//ribeiro
-        yp[1] = +psipR/psip2/f_;//ribeiro
-        //yp[0] = +psipZ/psip2/sqrt(psip2)/f_;//separatrix
-        //yp[1] = -psipR/psip2/sqrt(psip2)/f_;//separatrix
-    }
-  private:
-    double f_;
-    PsiR psipR_;
-    PsiZ psipZ_;
-};
-
-}//namespace orthogonal
-
-struct FieldRZ
-{
-    FieldRZ( GeomParameters gp): psipR_(gp), psipZ_(gp){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
-    {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        yp[0] =  psipR/psipZ;
-        yp[1] = 1.;
-    }
-  private:
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-};
-struct FieldZR
-{
-    FieldZR( GeomParameters gp): psipR_(gp), psipZ_(gp){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
-    {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        yp[0] = 1.;
-        yp[1] =  psipZ/psipR;
-    }
-  private:
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-};
 
 template < class PsiR, class PsiZ>
 struct FieldRZtau
@@ -1368,9 +1265,10 @@ struct FieldRZtau
     PsiZ psipZ_;
 };
 
+template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct HessianRZtau
 {
-    HessianRZtau( GeomParameters gp): norm_(false), quad_(1), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){}
+    HessianRZtau( PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY): norm_(false), quad_(1), psipR_(psiX), psipZ_(psiY), psipRR_(psiXX), psipRZ_(psiXY), psipZZ_(psiYY){}
     // if true goes into positive Z - direction and X else
     void set_quadrant( int quadrant) {quad_ = quadrant;}
     void set_norm( bool normed) {norm_ = normed;}
@@ -1420,23 +1318,25 @@ struct HessianRZtau
   private:
     bool norm_;
     int quad_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-    mod::PsipRR psipRR_;
-    mod::PsipRZ psipRZ_;
-    mod::PsipZZ psipZZ_;
+    PsiX  psipR_;
+    PsiY  psipZ_;
+    PsiXX psipRR_;
+    PsiXY psipRZ_;
+    PsiYY psipZZ_;
 };
 
+template<class Psi, class PsiX, class PsiY>
 struct MinimalCurve
 {
-    MinimalCurve( GeomParameters gp): norm_(false), psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp){}
+    MinimalCurve(Psi psi, PsiX psiX, PsiY psiY): norm_(false), 
+        psip_(psi), psipR_(psiX), psipZ_(psiY){}
     void set_norm( bool normed) {norm_ = normed;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        //double psipRZ = psipRZ_(y[0], y[1]), psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]), psipRR=psipRR_(y[0], y[1]), psipZZ=psipZZ_(y[0], y[1]); 
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]);
         yp[0] = y[2];
         yp[1] = y[3];
+        //double psipRZ = psipRZ_(y[0], y[1]), psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]), psipRR=psipRR_(y[0], y[1]), psipZZ=psipZZ_(y[0], y[1]); 
         //double D2 = psipRR*y[2]*y[2] + 2.*psipRZ*y[2]*y[3] + psipZZ*y[3]*y[3];
         //double grad2 = psipR*psipR+psipZ*psipZ;
         //yp[2] = D2/(1.+grad2) * psipR ;
@@ -1460,12 +1360,9 @@ struct MinimalCurve
     }
   private:
     bool norm_;
-    mod::Psip psip_;
-    mod::PsipR psipR_;
-    mod::PsipZ psipZ_;
-    mod::PsipRR psipRR_;
-    mod::PsipRZ psipRZ_;
-    mod::PsipZZ psipZZ_;
+    Psi  psip_;
+    PsiX psipR_;
+    PsiY psipZ_;
 };
 
 //////////////////////////////////////////////////////////////////////////////

@@ -21,7 +21,7 @@
 
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< orthogonal::GridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
+typedef dg::FieldAligned< dg::orthogonal::GridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
@@ -110,8 +110,8 @@ try{
     t.tic();
     //orthogonal::GridX3d<dg::HVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
-    orthogonal::refined::GridX3d<dg::HVec> g3d(add_x, add_y, 1,1, gp, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    orthogonal::refined::GridX2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::refined::orthogonal::GridX3d<dg::HVec> g3d(add_x, add_y, 1,1, gp, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU, 0);
+    dg::refined::orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -169,7 +169,7 @@ try{
     //err = nc_put_var_double( ncid, coord1D[2], g3d.rx1().data());
     //err = nc_put_var_double( ncid, coord1D[3], g3d.zx1().data());
     //err = nc_put_var_double( ncid, coord1D[4], periodify(g3d.f_x(), g3d_periodic).data());
-    err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
+    //err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
@@ -204,45 +204,45 @@ try{
     //error = sqrt(dg::blas1::dot( temp0, temp0)/dg::blas1::dot( g2d.vol(), g2d.vol()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
-    //alternative method to compute volume
-    solovev::PsipR psipR( gp);
-    solovev::PsipZ psipZ( gp);
-    dg::HVec psipR_ = dg::pullback(psipR, g2d);
-    dg::HVec psipZ_ = dg::pullback(psipZ, g2d);
-    dg::HVec psip2_(psipR_);
-    dg::blas1::pointwiseDot( psipR_, psipR_, psipR_);
-    dg::blas1::pointwiseDot( psipZ_, psipZ_, psipZ_);
-    dg::blas1::axpby( 1., psipR_, 1., psipZ_, psip2_);
-    const dg::HVec f_ = g2d.f();
-    const dg::HVec g_ = g2d.g();
-    dg::blas1::pointwiseDot( f_, f_, temp1);
-    dg::blas1::pointwiseDot( psip2_, temp1, temp1);
-    dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
-    dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
-    dg::blas1::axpby( 1., g2d.g_xx(), -1., temp1, temp1);
-    error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_xx(),w2d,g2d.g_xx());
-    //error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(g2d.g_xx(),g2d.g_xx());
-    std::cout << "Rel Error of g_xx is "<<sqrt(error)<<"\n";
-    dg::blas1::pointwiseDot( g_, g_, temp1);
-    dg::blas1::pointwiseDot( psip2_,  temp1, temp1);
-    dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
-    dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
-    dg::blas1::axpby( 1., g2d.g_yy(), -1., temp1, temp1);
-    error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_yy(),w2d,g2d.g_yy());
-    //error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(g2d.g_yy(),g2d.g_yy());
-    std::cout << "Rel Error of g_yy is "<<sqrt(error)<<"\n";
-    dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0);
-    dg::blas1::pointwiseDot( f_, psip2_, temp1);
-    dg::blas1::pointwiseDot( g_, temp1 , temp1);
-    dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
-    dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
-    dg::blas1::axpby( 1., temp0, -1., temp1, temp1);
-    error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(temp0,w2d,temp0);
-    //error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(temp0,temp0);
-    std::cout << "Rel Error of volume is "<<sqrt(error)<<"\n";
+    ////alternative method to compute volume
+    //solovev::PsipR psipR( gp);
+    //solovev::PsipZ psipZ( gp);
+    //dg::HVec psipR_ = dg::pullback(psipR, g2d);
+    //dg::HVec psipZ_ = dg::pullback(psipZ, g2d);
+    //dg::HVec psip2_(psipR_);
+    //dg::blas1::pointwiseDot( psipR_, psipR_, psipR_);
+    //dg::blas1::pointwiseDot( psipZ_, psipZ_, psipZ_);
+    //dg::blas1::axpby( 1., psipR_, 1., psipZ_, psip2_);
+    //const dg::HVec f_ = g2d.f();
+    //const dg::HVec g_ = g2d.g();
+    //dg::blas1::pointwiseDot( f_, f_, temp1);
+    //dg::blas1::pointwiseDot( psip2_, temp1, temp1);
+    //dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
+    //dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
+    //dg::blas1::axpby( 1., g2d.g_xx(), -1., temp1, temp1);
+    //error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_xx(),w2d,g2d.g_xx());
+    ////error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(g2d.g_xx(),g2d.g_xx());
+    //std::cout << "Rel Error of g_xx is "<<sqrt(error)<<"\n";
+    //dg::blas1::pointwiseDot( g_, g_, temp1);
+    //dg::blas1::pointwiseDot( psip2_,  temp1, temp1);
+    //dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
+    //dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
+    //dg::blas1::axpby( 1., g2d.g_yy(), -1., temp1, temp1);
+    //error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_yy(),w2d,g2d.g_yy());
+    ////error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(g2d.g_yy(),g2d.g_yy());
+    //std::cout << "Rel Error of g_yy is "<<sqrt(error)<<"\n";
+    //dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0);
+    //dg::blas1::pointwiseDot( f_, psip2_, temp1);
+    //dg::blas1::pointwiseDot( g_, temp1 , temp1);
+    //dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
+    //dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
+    //dg::blas1::axpby( 1., temp0, -1., temp1, temp1);
+    //error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(temp0,w2d,temp0);
+    ////error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(temp0,temp0);
+    //std::cout << "Rel Error of volume is "<<sqrt(error)<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
+    dg::cartesian::Grid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
@@ -292,9 +292,9 @@ try{
    // //err = nc_put_var_double( ncid, divBID, X.data());
     //dg::DVec psiphom = dg::pullback( solovev::FuncDirNeu(gp, psi_0, g3d.psi1()), g2d);
     //dg::DVec psiphom = dg::pullback( solovev::mod::Psip(gp), g2d);
-    dg::blas1::transfer( g2d.g(), X);
+    //dg::blas1::transfer( g2d.g(), X);
     //dg::blas1::transfer( psiphom, X);
-    err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
+    //err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
     err = nc_close( ncid);
 
 

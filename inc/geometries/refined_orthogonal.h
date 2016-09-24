@@ -21,7 +21,7 @@ struct RingGrid2d;
 template< class container>
 struct RingGrid3d : public dg::refined::Grid3d
 {
-    typedef dg::OrthogonalCylindricalTag metric_category;
+    typedef dg::OrthogonalTag metric_category;
     typedef RingGrid2d<container> perpendicular_grid;
 
     /**
@@ -82,15 +82,15 @@ struct RingGrid3d : public dg::refined::Grid3d
         unsigned sizeX = this->n()*this->Nx();
         thrust::host_vector<double> y_vec(sizeY);
         for(unsigned i=0; i<sizeY; i++) y_vec[i] = this->abscissasY()[i*sizeX];
-        dg::Orthogonal generator( psi, psiX, psiY, psi_0, psi_1, x0, y0, firstline);
+        dg::SimpleOrthogonal<Psi, PsiX, PsiY, LaplacePsi> generator( psi, psiX, psiY, laplacePsi, psi_0, psi_1, x0, y0, firstline);
         double x_1 = generator.lx();
         init_X_boundaries( 0., x_1);
         thrust::host_vector<double> x_vec(sizeX); 
         for(unsigned i=0; i<sizeX; i++) x_vec[i] = this->abscissasX()[i];
-        generator( psi, psiX, psiY, laplacePsi, x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
+        generator( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
         lapx_.resize(this->size());
         for( unsigned idx=0; idx<r_.size(); idx++)
-            lapx_[idx] = generator.f0()*(laplacePsi( r_[idx], z_[idx]));
+            lapx_[idx] = generator.laplaceX( r_[idx], z_[idx]);
         lift3d( ); //lift to 3D grid
         construct_metric();
     }
@@ -145,7 +145,7 @@ struct RingGrid3d : public dg::refined::Grid3d
 template< class container>
 struct RingGrid2d : public dg::refined::Grid2d
 {
-    typedef dg::OrthogonalCylindricalTag metric_category;
+    typedef dg::OrthogonalTag metric_category;
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>
     RingGrid2d( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, 
             double psi_0, double psi_1, double x0, double y0, 

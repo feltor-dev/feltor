@@ -159,7 +159,7 @@ int main( int argc, char* argv[])
     dg::Grid1d<double> grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
     solovev::SafetyFactor<dg::DVec>     qprof(grid2d, gp, alphaog2d );
     dg::HVec sf         = dg::evaluate( qprof,    grid1d);
-    dg::HVec abs        = dg::evaluate( dg::coo1, grid1d);
+    dg::HVec abs        = dg::evaluate( dg::cooX1d, grid1d);
 
     
     std::string names[] = { "", "psip", "ipol", "invB","invbf", "KR", 

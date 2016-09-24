@@ -201,6 +201,8 @@ void transform(
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>
 struct Hector
 {
+    typedef dg::ConformalTag metric_category; //!This typedef is for the construction of a dg::conformal::Grid
+
     /**
      * @brief Construct from functors
      *

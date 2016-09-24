@@ -378,11 +378,11 @@ FieldAligned<Geometry, M,container>::FieldAligned(Field field, Geometry grid, do
     right_ = left_ = dg::evaluate( zero, g2d);
     ghostM.resize( size); ghostP.resize( size);
     //Set starting points
-    std::vector<thrust::host_vector<double> > y( 5, dg::evaluate( dg::coo1, g2d)); // x
-    y[1] = dg::evaluate( dg::coo2, g2d); //y
+    std::vector<thrust::host_vector<double> > y( 5, dg::evaluate( dg::cooX2d, g2d)); // x
+    y[1] = dg::evaluate( dg::cooY2d, g2d); //y
     y[2] = dg::evaluate( dg::zero, g2d);
-    y[3] = dg::pullback( dg::coo1, g2d); //R
-    y[4] = dg::pullback( dg::coo2, g2d); //Z
+    y[3] = dg::pullback( dg::cooX2d, g2d); //R
+    y[4] = dg::pullback( dg::cooY2d, g2d); //Z
     //integrate field lines for all points
     std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2d)), ym(yp); 
     if( deltaPhi <=0) deltaPhi = grid.hz();

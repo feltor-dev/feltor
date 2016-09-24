@@ -573,7 +573,7 @@ namespace cartesian
 template<class container>
 struct Grid2d : public dg::refined::Grid2d
 {
-    typedef OrthogonalCylindricalTag metric_category; 
+    typedef OrthogonalTag metric_category; 
     Grid2d( unsigned multiple_x, unsigned multiple_y, double x0, double x1, double y0, double y1, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::refined::Grid2d(multiple_x, multiple_y,x0,x1,y0,y1,n,n_old,Nx,Ny,bcx,bcy), g_assoc_(x0,x1,y0,y1,n_old,Nx,Ny,bcx,bcy){ 
         dg::blas1::transfer( weightsX(), g_xx_);
         dg::blas1::transfer( weightsY(), g_yy_);
@@ -657,7 +657,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refine
     dg::Grid3d<double> g = g_fine.associated();
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
-    thrust::host_vector<double> z = dg::evaluate( dg::coo3, g_fine);
+    thrust::host_vector<double> z = dg::evaluate( dg::cooZ3d, g_fine);
     return dg::create::interpolation( x,y,z, g);
 }
 

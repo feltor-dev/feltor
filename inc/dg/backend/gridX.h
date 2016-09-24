@@ -28,6 +28,7 @@ namespace dg{
 struct GridX1d
 {
     typedef SharedTag memory_category;
+    typedef OneDimensionalTag dimensionality;
     /**
      * @brief 1D grid
      * 
@@ -214,6 +215,7 @@ struct GridX3d; //forward declare 3d version
 struct GridX2d
 {
     typedef SharedTag memory_category;
+    typedef TwoDimensionalTag dimensionality;
     /**
      * @brief Construct a 2D grid
      *
@@ -504,6 +506,7 @@ struct GridX2d
 struct GridX3d
 {
     typedef SharedTag memory_category;
+    typedef ThreeDimensionalTag dimensionality;
     /**
      * @brief Construct a 3D grid
      *

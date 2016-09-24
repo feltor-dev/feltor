@@ -8,6 +8,8 @@
 #include "utilitiesX.h"
 #include "conformal.h"
 
+//! ATTENTION: algorithm might be flawed since f(psi) might make a jump at
+//! ATTENTION: separatrix
 
 
 namespace conformal

@@ -459,7 +459,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refine
     dg::GridX3d g = g_fine.associated();
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
-    thrust::host_vector<double> z = dg::evaluate( dg::coo3, g_fine.grid());
+    thrust::host_vector<double> z = dg::evaluate( dg::cooZ3d, g_fine.grid());
     return dg::create::interpolation( x,y,z, g.grid());
 }
 

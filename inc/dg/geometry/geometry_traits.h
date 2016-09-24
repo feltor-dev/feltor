@@ -6,10 +6,11 @@ namespace dg
 {
 //categories
 //
-struct CurvilinearTag{}; 
+struct CurvilinearTag{};  //3d curvilinear
 struct CurvilinearCylindricalTag: public CurvilinearTag{}; //perpVol, vol(), g_xx, g_xy, g_yy
-struct OrthogonalCylindricalTag:public CurvilinearCylindricalTag{}; //perpVol, vol(), g_xx, g_yy
-struct ConformalCylindricalTag:public OrthogonalCylindricalTag{}; //perpVol, vol(), g_xx, g_yy
+struct OrthogonalTag:public CurvilinearCylindricalTag{}; //perpVol, vol(), g_xx, g_yy
+struct ConformalCylindricalTag:public OrthogonalTag{}; //perpVol, vol(), g_xx, g_yy
+struct ConformalTag:public ConformalCylindricalTag{}; //A 2d conformal 
 struct OrthonormalCylindricalTag:public ConformalCylindricalTag{}; //vol(), cylindrical grid
 struct OrthonormalTag: public OrthonormalCylindricalTag{}; //cartesian grids
 
@@ -93,7 +94,7 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
     in2.swap( out2);
 };
 template <class container, class Geometry>
-void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthogonalCylindricalTag)
+void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthogonalTag)
 {
     dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
     dg::blas1::pointwiseDot( g.g_yy(), in2, out2); //gyy*v_y
@@ -114,7 +115,7 @@ void doVolRaisePerpIndex( container& in1, container& in2, container& out1, conta
     in2.swap( out2);
 };
 template <class container, class Geometry>
-void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthogonalCylindricalTag)
+void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthogonalTag)
 {
     dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
     dg::blas1::pointwiseDot( g.g_yy(), in2, out2); //gyy*v_y

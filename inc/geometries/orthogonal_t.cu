@@ -181,7 +181,7 @@ int main( int argc, char* argv[])
     dg::cartesian::Grid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
 
     dg::HVec vec  = dg::evaluate( iris, g2dC);
-    dg::HVec R  = dg::evaluate( dg::coo1, g2dC);
+    dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);
     std::cout << "volumeXYP is "<< volume<<std::endl;
