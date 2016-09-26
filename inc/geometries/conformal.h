@@ -55,7 +55,7 @@ struct RingGrid3d : public dg::Grid3d<double>
     RingGrid3d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx) :
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     {
-        construct( hector, n,Nx, Ny, Nz, bcx, typename dg::GeometryTraits<Generator>::metric_category());
+        construct( hector, n,Nx, Ny, Nz, bcx, typename Generator::metric_category());
     }
     perpendicular_grid perp_grid() const { return conformal::RingGrid2d<container>(*this);}
 
@@ -77,8 +77,8 @@ struct RingGrid3d : public dg::Grid3d<double>
         dg::Grid2d<double> guv( 0., hector.lu(), 0., 2.*M_PI, n, Nx, Ny );
         dg::Grid1d<double> gu( 0., hector.lu(), n, Nx);
         dg::Grid1d<double> gv( 0., 2.*M_PI, n, Ny);
-        const dg::HVec u1d = dg::evaluate( dg::coo1, gu);
-        const dg::HVec v1d = dg::evaluate( dg::coo1, gv);
+        const dg::HVec u1d = dg::evaluate( dg::cooX1d, gu);
+        const dg::HVec v1d = dg::evaluate( dg::cooX1d, gv);
         hector( u1d, v1d, r_, z_, xr_, xz_, yr_, yz_);
         init_X_boundaries( 0., hector.lu());
         lift3d( ); //lift to 3D grid

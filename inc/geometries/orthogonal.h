@@ -276,6 +276,7 @@ void construct_rz( Nemov nemov,
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SimpleOrthogonal
 {
+    typedef dg::OrthogonalTag metric_category;
     SimpleOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
         psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi)
     {
@@ -370,7 +371,7 @@ struct RingGrid3d : public dg::Grid3d<double>
     RingGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx):
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
-        construct( generator, n, Nx, Ny, typename dg::GeometryTraits<Generator>::metric_category());
+        construct( generator, n, Nx, Ny, typename Generator::metric_category());
     }
 
 

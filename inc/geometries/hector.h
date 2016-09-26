@@ -53,7 +53,7 @@ double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::Grid2
     //this is a normal integration:
     thrust::host_vector<double> etaVinvL( dg::create::forward_transform(  etaVinv, g2d) );
     dg::Grid1d<double> g1d( 0., 2.*M_PI, g2d.n(), g2d.Ny());
-    dg::HVec eta = dg::evaluate(dg::coo1, g1d);
+    dg::HVec eta = dg::evaluate(dg::cooX1d, g1d);
     dg::HVec w1d = dg::create::weights( g1d);
     dg::HVec int_etaVinv(eta);
     for( unsigned i=0; i<eta.size(); i++) 
@@ -225,7 +225,7 @@ struct Hector
      */
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>
     Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
-        g2d_(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR)
+        g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0), n, Nx, Ny, dg::DIR)
     {
         //first construct u_
         container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
@@ -239,7 +239,7 @@ struct Hector
 
         //we actually don't need u but it makes a good testcase 
         container zeta;
-        dg::blas1::transfer(dg::evaluate( dg::coo1, g2d_), zeta);
+        dg::blas1::transfer(dg::evaluate( dg::cooX2d, g2d_), zeta);
         dg::blas1::axpby( +1., zeta, 1.,  u); //u = \tilde u + \zeta
 
         //now compute ZetaU and EtaU
@@ -345,7 +345,8 @@ struct Hector
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::orthogonal::RingGrid2d<container> g2d_old(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
+        dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0);
+        dg::orthogonal::RingGrid2d<container> g2d_old(generator, n, Nx, Ny, dg::DIR);
         dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -356,7 +357,7 @@ struct Hector
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            dg::orthogonal::RingGrid2d<container> g2d(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, dg::DIR);
+            dg::orthogonal::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
             dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             lapu = g2d.lapx();
             const container vol2d = dg::create::weights( g2d);
