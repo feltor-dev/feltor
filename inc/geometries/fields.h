@@ -807,8 +807,8 @@ struct FieldRZYZ
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
-        yp[0] =  psipZ;//fieldR
-        yp[1] = -psipR;//fieldZ
+        yp[0] = -psipZ;//fieldR
+        yp[1] =  psipR;//fieldZ
         //yp[2] = 1.0; //volume
         //yp[2] = sqrt(psip2); //equalarc
         yp[2] = psip2; //ribeiro
@@ -856,13 +856,13 @@ struct FieldRZYRYZY
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void initialize( double R0, double Z0, double& yR, double& yZ)
     {
-        yR =  f_*psipZ_(R0, Z0);
-        yZ = -f_*psipR_(R0, Z0);
+        yR = -f_*psipZ_(R0, Z0);
+        yZ = +f_*psipR_(R0, Z0);
     }
     void derive( double R0, double Z0, double& xR, double& xZ)
     {
-        xR = -f_*psipR_(R0, Z0);
-        xZ = -f_*psipZ_(R0, Z0);
+        xR = +f_*psipR_(R0, Z0);
+        xZ = +f_*psipZ_(R0, Z0);
     }
 
     void operator()( const dg::HVec& y, dg::HVec& yp) const
@@ -871,12 +871,11 @@ struct FieldRZYRYZY
         double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
         double psip2 = (psipR*psipR+ psipZ*psipZ);
 
-        yp[0] =  psipZ/f_/psip2;
-        yp[1] =  -psipR/f_/psip2;
-        yp[2] =  (( - psipRZ )*y[2] 
-                   +( psipRR )*y[3] )/f_/psip2 
+        yp[0] =  -psipZ/f_/psip2;
+        yp[1] =  +psipR/f_/psip2;
+        yp[2] =  ( + psipRZ*y[2] - psipRR*y[3] )/f_/psip2 
             + f_prime_/f_* psipR + 2.*(psipR*psipRR + psipZ*psipRZ)/psip2 ;
-        yp[3] =  (psipRZ*y[3] - psipZZ*y[2])/f_/psip2 
+        yp[3] =  (-psipRZ*y[3] + psipZZ*y[2])/f_/psip2 
             + f_prime_/f_* psipZ + 2.*(psipR*psipRZ + psipZ*psipZZ)/psip2;
     }
   private:
@@ -925,14 +924,13 @@ struct FieldRZYZ
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        yp[0] =  psipZ;//fieldR
-        yp[1] = -psipR;//fieldZ
-        //yp[2] = (1.0+0.0*(psipR*psipR+psipZ*psipZ)); //fieldYbar
-        yp[2] = sqrt(psipR*psipR+psipZ*psipZ); //fieldYbar
-        //yp[2] = (psipR*psipR+psipZ*psipZ); //fieldYbar
-        //yp[2] = (1.0)/y[0]; //fieldYbar
-        //double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
-        //double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        yp[0] = -psipZ;//fieldR
+        yp[1] = +psipR;//fieldZ
+        //yp[2] = 1.0; //volume
+        yp[2] = sqrt(psip2); //equalarc
+        //yp[2] = psip2; //ribeiro
+        //yp[2] = psip2*sqrt(psip2); //separatrix
         yp[0] /=  yp[1];
         yp[2] /=  yp[1];
         yp[1] =  1.;
@@ -953,8 +951,8 @@ struct FieldRZY
         double psip2 = psipR*psipR+psipZ*psipZ;
         //yp[0] = +psipZ/f_;//volume 
         //yp[1] = -psipR/f_;//volume 
-        yp[0] = +psipZ/sqrt(psip2)/f_;//equalarc
-        yp[1] = -psipR/sqrt(psip2)/f_;//equalarc
+        yp[0] = -psipZ/sqrt(psip2)/f_;//equalarc
+        yp[1] = +psipR/sqrt(psip2)/f_;//equalarc
         //yp[0] = -psipZ/psip2/f_;//ribeiro
         //yp[1] = +psipR/psip2/f_;//ribeiro
         //yp[0] = +psipZ/psip2/sqrt(psip2)/f_;//separatrix
@@ -976,13 +974,13 @@ struct FieldRZYRYZY
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void initialize( double R0, double Z0, double& yR, double& yZ)
     {
-        yR =  f_*psipZ_(R0, Z0);
-        yZ = -f_*psipR_(R0, Z0);
+        yR = -f_*psipZ_(R0, Z0);
+        yZ = +f_*psipR_(R0, Z0);
     }
     void derive( double R0, double Z0, double& xR, double& xZ)
     {
-        xR = -f_*psipR_(R0, Z0);
-        xZ = -f_*psipZ_(R0, Z0);
+        xR = +f_*psipR_(R0, Z0);
+        xZ = +f_*psipZ_(R0, Z0);
     }
 
     void operator()( const dg::HVec& y, dg::HVec& yp) const
@@ -991,11 +989,11 @@ struct FieldRZYRYZY
         double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
         double psip2 = (psipR*psipR+ psipZ*psipZ);
 
-        yp[0] =  psipZ/f_/sqrt(psip2);
-        yp[1] =  -psipR/f_/sqrt(psip2);
-        yp[2] =  (( - psipRZ )*y[2] +( psipRR )*y[3] )/f_/sqrt(psip2) 
+        yp[0] =  -psipZ/f_/sqrt(psip2);
+        yp[1] =  +psipR/f_/sqrt(psip2);
+        yp[2] =  ( +psipRZ*y[2] - psipRR *y[3])/f_/sqrt(psip2) 
             + f_prime_/f_* psipR + (psipR*psipRR + psipZ*psipRZ)/psip2 ;
-        yp[3] =  (psipRZ*y[3] - psipZZ*y[2])/f_/sqrt(psip2)
+        yp[3] =  ( -psipRZ*y[3] + psipZZ*y[2])/f_/sqrt(psip2)
             + f_prime_/f_* psipZ + (psipR*psipRZ + psipZ*psipZZ)/psip2;
     }
   private:

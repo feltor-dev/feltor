@@ -38,7 +38,7 @@ struct InitialX
             double x_min = -1e-4, x_max = 1e-4;
             dg::bisection1d( xpointer_, x_min, x_max, eps[i]);
             xpointer_.point( R_i_[i], Z_i_[i], (x_min+x_max)/2.);
-            //std::cout << "Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
+            std::cout << "Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
             thrust::host_vector<double> begin(2), end(2), end_old(2);
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             double eps = 1e10, eps_old = 2e10;
@@ -51,7 +51,7 @@ struct InitialX
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
-                //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
+                std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
@@ -65,10 +65,10 @@ struct InitialX
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
-                //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
+                std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
-            //std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
+            std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
 
         }
     }
@@ -220,7 +220,7 @@ template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SimpleOrthogonalX
 {
     dg::OrthogonalTag metric_category;
-    SimpleOrthogonalX(): f0_(1), lx_(1), firstline_(0){}
+    SimpleOrthogonalX(): f0_(1), firstline_(0){}
     SimpleOrthogonalX( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline =0):
         psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi)
@@ -270,7 +270,7 @@ struct SimpleOrthogonalX
     PsiY psiY_;
     LaplacePsi laplacePsi_;
     double R0_[2], Z0_[2];
-    double zeta0_, f0_, lx_;
+    double zeta0_, f0_;
     int firstline_;
 };
 
@@ -284,6 +284,7 @@ struct SeparatrixOrthogonal
         sep_( psi, psiX, psiY, xX, yX, x0, y0, firstline)
     {
         firstline_ = firstline;
+        f0_ = sep_.get_f();
     }
     double f0() const{return sep_.get_f();}
     void operator()(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
@@ -301,6 +302,7 @@ struct SeparatrixOrthogonal
         thrust::host_vector<double> r_init, z_init;
         sep_.compute_rzy( eta1d, nodeX0, nodeX1, r_init, z_init);
         orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+
         thrust::host_vector<double> x1, y1, h1, x2,y2,h2,h;
         unsigned inside=0;
         for(unsigned i=0; i<zeta1d.size(); i++)
@@ -315,41 +317,39 @@ struct SeparatrixOrthogonal
         orthogonal::detail::construct_rz(nemov, 0., zeta1d1, r_init, z_init, x1, y1, h1);
         orthogonal::detail::construct_rz(nemov, 0., zeta1d2, r_init, z_init, x2, y2, h2);
         //now copy into right order
-        x.resize( zeta1d.size()*eta1d.size());
-        y.resize( zeta1d.size()*eta1d.size());
-        h.resize( zeta1d.size()*eta1d.size());
-        for( unsigned i=0; i<inside; i++)
-            for( unsigned j=0; j<eta1d.size(); j++)
+        unsigned size = zeta1d.size()*eta1d.size();
+        x.resize( size); y.resize( size); h.resize( size);
+        for( unsigned i=0; i<eta1d.size(); i++)
+            for( unsigned j=0; j<inside; j++)
             {
-                x[i*eta1d.size()+j] = x1[(inside - 1 - i)*eta1d.size() + j];
-                y[i*eta1d.size()+j] = y1[(inside - 1 - i)*eta1d.size() + j];
-                h[i*eta1d.size()+j] = h1[(inside - 1 - i)*eta1d.size() + j];
+                x[i*zeta1d.size()+j] = x1[i*zeta1d1.size() + inside-1-j];
+                y[i*zeta1d.size()+j] = y1[i*zeta1d1.size() + inside-1-j];
+                h[i*zeta1d.size()+j] = h1[i*zeta1d1.size() + inside-1-j];
             }
-        for( unsigned i=inside; i<zeta1d.size(); i++)
-            for( unsigned j=0; j<eta1d.size(); j++)
+        for( unsigned i=0; i<eta1d.size(); i++)
+            for( unsigned j=inside; j<zeta1d.size(); j++)
             {
-                x[i*eta1d.size()+j] = x2[(i-inside)*eta1d.size() + j];
-                y[i*eta1d.size()+j] = y2[(i-inside)*eta1d.size() + j];
-                h[i*eta1d.size()+j] = h2[(i-inside)*eta1d.size() + j];
+                x[i*zeta1d.size()+j] = x2[i*zeta1d2.size() + j-inside];
+                y[i*zeta1d.size()+j] = y2[i*zeta1d2.size() + j-inside];
+                h[i*zeta1d.size()+j] = h2[i*zeta1d2.size() + j-inside];
             }
 
-        unsigned size = x.size();
         zetaX.resize(size), zetaY.resize(size), 
         etaX.resize(size), etaY.resize(size);
         for( unsigned idx=0; idx<size; idx++)
         {
-            double psipR = psiX_(x[idx], y[idx]);
-            double psipZ = psiY_(x[idx], y[idx]);
-            zetaX[idx] = f0_*psipR;
-            zetaY[idx] = f0_*psipZ;
-            etaX[idx] = -h[idx]*psipZ;
-            etaY[idx] = +h[idx]*psipR;
+            double psipX = psiX_(x[idx], y[idx]);
+            double psipY = psiY_(x[idx], y[idx]);
+            zetaX[idx] = f0_*psipX;
+            zetaY[idx] = f0_*psipY;
+            etaX[idx] = -h[idx]*psipY;
+            etaY[idx] = +h[idx]*psipX;
         }
     }
     double laplace(double x, double y) {return f0_*laplacePsi_(x,y);}
     private:
     double R0_[2], Z0_[2];
-    double f0_, lx_;
+    double f0_;
     int firstline_;
     PsiX psiX_;
     PsiY psiY_;
@@ -378,12 +378,13 @@ struct GridX3d : public dg::GridX3d
     { 
         assert( psi_0 < 0 );
         assert( gp.c[10] != 0);
-        solovev::Psip psip(gp); 
-        solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
-        solovev::LaplacePsip lapPsip(gp); 
+        solovev::mod::Psip psip(gp); 
+        solovev::mod::PsipR psipR(gp); solovev::mod::PsipZ psipZ(gp);
+        solovev::mod::LaplacePsip lapPsip(gp); 
         double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
         double Z_X = -1.1*gp.elongation*gp.a;
-        dg::SeparatrixOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        dg::SeparatrixOrthogonal<solovev::mod::Psip, solovev::mod::PsipR, solovev::mod::PsipZ, solovev::mod::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        //dg::SimpleOrthogonalX<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
         std::cout << "FIND X FOR PSI_0\n";
         const double x_0 = ortho.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;

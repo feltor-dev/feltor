@@ -714,6 +714,22 @@ struct PsipRZ
     dg::Cauchy cauchy_;
 };
 
+struct LaplacePsip
+{
+    LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
+    double operator()(double R, double Z) const
+    {    
+        return psipRR_(R,Z) + psipZZ_(R,Z);
+    }
+    double operator()(double R, double Z, double phi) const
+    {    
+        return operator()(R,Z);
+    }
+  private:
+    solovev::mod::PsipRR psipRR_;
+    solovev::mod::PsipZZ psipZZ_;
+};
+
 
 } //namespace mod
 

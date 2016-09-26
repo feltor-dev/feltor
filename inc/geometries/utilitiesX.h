@@ -206,8 +206,8 @@ struct SeparatriX
                 if(mode_==0)dg::stepperRK6( fieldRZYZconf_, begin2d, end2d, Z_i[i], Z_X, N);
                 if(mode_==1)dg::stepperRK6( fieldRZYZequi_, begin2d, end2d, Z_i[i], Z_X, N);
                 y=end2d[2];
-                eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X))/R_X;
                 eps = fabs((y-y_old)/y_old);
+                eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X))/R_X;
                 //std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
             }
             //remember last call

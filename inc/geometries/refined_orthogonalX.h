@@ -53,12 +53,13 @@ struct GridX3d : public dg::refined::GridX3d
     { 
         assert( psi_0 < 0 );
         assert( gp.c[10] != 0);
-        solovev::Psip psip(gp); 
-        solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
-        solovev::LaplacePsip lapPsip(gp); 
+        solovev::mod::Psip psip(gp); 
+        solovev::mod::PsipR psipR(gp); solovev::mod::PsipZ psipZ(gp);
+        solovev::mod::LaplacePsip lapPsip(gp); 
         double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
         double Z_X = -1.1*gp.elongation*gp.a;
-        dg::SeparatrixOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        dg::SeparatrixOrthogonal<solovev::mod::Psip, solovev::mod::PsipR, solovev::mod::PsipZ, solovev::mod::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        //dg::SimpleOrthogonalX<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
         std::cout << "FIND X FOR PSI_0\n";
         const double x_0 = ortho.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;
