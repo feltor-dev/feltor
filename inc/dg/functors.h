@@ -157,6 +157,14 @@ struct Cauchy
             return amp_*exp( 1. +  1./( xbar*xbar + ybar*ybar -1.) );
         return 0.;
     }
+    bool inside( double x, double y)const
+    {
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        if( xbar*xbar + ybar*ybar < 1.)
+            return true;
+        return false;
+    }
 
     double dx( double x, double y )const{ 
         double xbar = (x-x0_)/sigmaX_;
