@@ -28,8 +28,8 @@ struct XPointer
         //}
         //std::cout << "X-point error  "<<R_X_-X[0]<<" "<<Z_X_-X[1]<<"\n";
         //R_X_ = X[0], Z_X_ = X[1];
-        //std::cout << "X-point set at "<<R_X_<<" "<<Z_X_<<"\n";
         R_X_ = R_X, Z_X_ = Z_X;
+        //std::cout << "X-point set at "<<R_X_<<" "<<Z_X_<<"\n";
         R_i[0] = R_X_ + dist_, Z_i[0] = Z_X_;
         R_i[1] = R_X_    , Z_i[1] = Z_X_ + dist_;
         R_i[2] = R_X_ - dist_, Z_i[2] = Z_X_;
@@ -167,8 +167,8 @@ struct SeparatriX
 {
     SeparatriX( Psi psi, PsiX psiX, PsiY psiY, double xX, double yX, double x0, double y0, int firstline): 
         mode_(firstline),
-        fieldRZYequi_(psiX, psiY), fieldRZYTequi_(psi, psiX, psiY, x0, y0), fieldRZYZequi_(psiX, psiY),
-        fieldRZYconf_(psiX, psiY), fieldRZYTconf_(psi, psiX, psiY, x0, y0), fieldRZYZconf_(psiX, psiY)
+        fieldRZYequi_(psiX, psiY), fieldRZYTequi_(psiX, psiY, x0, y0), fieldRZYZequi_(psiX, psiY),
+        fieldRZYconf_(psiX, psiY), fieldRZYTconf_(psiX, psiY, x0, y0), fieldRZYZconf_(psiX, psiY)
     {
         //find four points on the separatrix and construct y coordinate at those points and at last construct f 
         //////////////////////////////////////////////
@@ -208,7 +208,7 @@ struct SeparatriX
                 y=end2d[2];
                 eps = sqrt( (end2d[0]-R_X)*(end2d[0]-R_X))/R_X;
                 eps = fabs((y-y_old)/y_old);
-                std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
+                //std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
             }
             //remember last call
             y_i[i] = end2d[2]; 
@@ -331,7 +331,7 @@ struct SeparatriX
                 dg::stepperRK17( fieldRZYZequi_, temp, end, temp[1], Z_i[1], N);
             }
             eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
-            std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
+            //std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
             if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
         }
         N_steps_=N;
@@ -341,13 +341,12 @@ struct SeparatriX
         return f_psi_;
     }
     int mode_;
-    Psi psip_;
-    const solovev::equalarc::FieldRZY<PsiX, PsiY>   fieldRZYequi_;
-    const solovev::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequi_;
-    const solovev::equalarc::FieldRZYZ<PsiX, PsiY> fieldRZYZequi_;
-    const solovev::ribeiro::FieldRZY<PsiX, PsiY>    fieldRZYconf_;
-    const solovev::ribeiro::FieldRZYT<PsiX, PsiY>  fieldRZYTconf_;
-    const solovev::ribeiro::FieldRZYZ<PsiX, PsiY>  fieldRZYZconf_;
+    solovev::equalarc::FieldRZY<PsiX, PsiY>   fieldRZYequi_;
+    solovev::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequi_;
+    solovev::equalarc::FieldRZYZ<PsiX, PsiY> fieldRZYZequi_;
+    solovev::ribeiro::FieldRZY<PsiX, PsiY>    fieldRZYconf_;
+    solovev::ribeiro::FieldRZYT<PsiX, PsiY>  fieldRZYTconf_;
+    solovev::ribeiro::FieldRZYZ<PsiX, PsiY>  fieldRZYZconf_;
     unsigned N_steps_;
     double R_i[4], Z_i[4], y_i[4];
     double f_psi_;

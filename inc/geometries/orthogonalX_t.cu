@@ -74,34 +74,28 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny, Nz \n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
-    std::vector<double> v, v2;
-try{ 
-        if( argc==1)
-        {
-            v = file::read_input( "geometry_params_Xpoint.txt"); 
-        }
-        else
-        {
-            v = file::read_input( argv[1]); 
-        }
+    Json::Reader reader;
+    Json::Value js;
+    if( argc==1)
+    {
+        std::ifstream is("geometry_params_Xpoint.js");
+        reader.parse(is,js,false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-            std::cout << v[i] << " ";
-            std::cout << std::endl;
-        return -1;}
-    //write parameters from file into variables
-    solovev::GeomParameters gp(v);
+    else
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
+    solovev::GeomParameters gp(js);
     dg::Timer t;
     solovev::Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
-    std::cout << "Type psi_0 \n";
-    double psi_0;
-    std::cin >> psi_0;
-    std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
-    double fx_0, fy_0;
-    std::cin >> fx_0>> fy_0;
+    //std::cout << "Type psi_0 \n";
+    double psi_0 = -16;
+    //std::cin >> psi_0;
+    //std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
+    double fx_0=1./4., fy_0=1./22.;
+    //std::cin >> fx_0>> fy_0;
     std::cout << "Type add_x and add_y \n";
     double add_x, add_y;
     std::cin >> add_x >> add_y;
@@ -110,7 +104,7 @@ try{
     t.tic();
     //orthogonal::GridX3d<dg::HVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::refined::orthogonal::GridX3d<dg::HVec> g3d(add_x, add_y, 1,1, gp, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU, 0);
+    dg::refined::orthogonal::GridX3d<dg::HVec> g3d(add_x, add_y, 1,1, gp, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU, 1);
     dg::refined::orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 

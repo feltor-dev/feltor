@@ -26,7 +26,7 @@ struct InitialX
 
     InitialX( Psi psi, PsiX psiX, PsiY psiY, double xX, double yX): 
         psip_(psi), fieldRZtau_(psiX, psiY), 
-        xpointer_(psi, psiX, psiY, xX, yX)
+        xpointer_(psi, psiX, psiY, xX, yX, 1e-4)
     {
         //constructor finds four points around X-point and integrates them a bit away from it
         solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_(psiX, psiY);
@@ -44,31 +44,31 @@ struct InitialX
             double eps = 1e10, eps_old = 2e10;
             unsigned N=10;
             double psi0 = psip_(begin[0], begin[1]), psi1 = 1e3*psi0; 
-            while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-7)
+            while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
                 eps_old = eps; end_old = end;
                 N*=2; dg::stepperRK6( fieldRZtau_, begin, end, psi0, psi1, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
-                //std::cout << " for N "<< N<<"eps is "<<eps<<"\n";
+                //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             eps = 1e10, eps_old = 2e10; N=10;
             psi0 = psip_(begin[0], begin[1]), psi1 = -0.01; 
             if( i==0||i==2)psi1*=-1.;
-            while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-7)
+            while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
                 eps_old = eps; end_old = end;
                 N*=2; dg::stepperRK6( fieldRZtau_, begin, end, psi0, psi1, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
-                //std::cout << " for N "<< N<<"eps is "<<eps<<"\n";
+                //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
-            std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
+            //std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
 
         }
     }
@@ -133,7 +133,7 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
         const unsigned nodeX0, const unsigned nodeX1,
         thrust::host_vector<double>& r, //output r - values
         thrust::host_vector<double>& z, //output z - values
-        double* R_init, double* Z_init,  //input coords on perp line
+        double* R_init, double* Z_init,  //2 input coords on perp line
         double f_psi,  //input f
         int mode ) 
 {
@@ -177,11 +177,11 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
             if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[i-1], y_vec[i], steps);
             r[i] = end[0], z[i] = end[1];
         }
-        //temp = end;
-        //if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
-        //if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
-        //eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
-        //std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
+        temp = end;
+        if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
+        if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
+        eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
+        std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
         ////////////////////bottom right region
         if( nodeX0!= 0)
         {
@@ -227,8 +227,9 @@ struct SimpleOrthogonalX
     {
         firstline_ = firstline;
         orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
-        double R0, Z0; //these are the wrong initial values for y integ
+        double R0, Z0; 
         f0_ = fpsi.construct_f( psi_0, R0, Z0);
+        zeta0_=f0_*psi_0;
         dg::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX(psi, psiX, psiY, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
@@ -249,7 +250,7 @@ struct SimpleOrthogonalX
         orthogonal::detail::computeX_rzy( psiX_, psiY_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
         orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
         thrust::host_vector<double> h;
-        orthogonal::detail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
+        orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
         zetaX.resize(size), zetaY.resize(size), 
         etaX.resize(size), etaY.resize(size);
@@ -269,15 +270,15 @@ struct SimpleOrthogonalX
     PsiY psiY_;
     LaplacePsi laplacePsi_;
     double R0_[2], Z0_[2];
-    double f0_, lx_;
+    double zeta0_, f0_, lx_;
     int firstline_;
 };
 
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-struct SeparatriXOrthogonal
+struct SeparatrixOrthogonal
 {
     dg::OrthogonalTag metric_category;
-    SeparatriXOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
+    SeparatrixOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline ):
         psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi),
         sep_( psi, psiX, psiY, xX, yX, x0, y0, firstline)
@@ -382,7 +383,7 @@ struct GridX3d : public dg::GridX3d
         solovev::LaplacePsip lapPsip(gp); 
         double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
         double Z_X = -1.1*gp.elongation*gp.a;
-        dg::SimpleOrthogonalX<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        dg::SeparatrixOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
         std::cout << "FIND X FOR PSI_0\n";
         const double x_0 = ortho.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;
