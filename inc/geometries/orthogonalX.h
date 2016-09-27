@@ -383,16 +383,22 @@ struct GridX3d : public dg::GridX3d
         solovev::mod::LaplacePsip lapPsip(gp); 
         double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
         double Z_X = -1.1*gp.elongation*gp.a;
-        dg::SeparatrixOrthogonal<solovev::mod::Psip, solovev::mod::PsipR, solovev::mod::PsipZ, solovev::mod::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
-        //dg::SimpleOrthogonalX<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
-        std::cout << "FIND X FOR PSI_0\n";
-        const double x_0 = ortho.f0()*psi_0;
+        dg::SeparatrixOrthogonal<solovev::mod::Psip, solovev::mod::PsipR, solovev::mod::PsipZ, solovev::mod::LaplacePsip> generator( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        //dg::SimpleOrthogonalX<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        const double x_0 = generator.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;
-        std::cout << "X0 is "<<x_0<<" and X1 is "<<x_1<<"\n";
         init_X_boundaries( x_0, x_1);
-        construct( ortho, n, Nx, Ny, dg::OrthogonalTag());
+        construct( generator, n, Nx, Ny, dg::OrthogonalTag());
     }
-
+    template< class Generator>
+    GridX3d( Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy):
+        dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
+    {
+        const double x_0 = generator.f0()*psi_0;
+        const double x_1 = -fx/(1.-fx)*x_0;
+        init_X_boundaries( x_0, x_1);
+        construct( generator, n, Nx, Ny, typename Generator::metric_category());
+    }
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -468,6 +474,17 @@ template< class container>
 struct GridX2d : public dg::GridX2d
 {
     typedef dg::OrthogonalTag metric_category;
+    template<class Generator>
+    GridX2d(Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy):
+        dg::GridX2d( 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)
+    {
+        orthogonal::GridX3d<container> g( generator, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
+        init_X_boundaries( g.x0(),g.x1());
+        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz(), lapx_=g.lapx();
+        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
+        vol2d_=g.perpVol();
+
+    }
     GridX2d( const solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, int firstline): 
         dg::GridX2d( 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)
     {
