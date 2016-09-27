@@ -38,7 +38,7 @@ struct InitialX
             double x_min = -1e-4, x_max = 1e-4;
             dg::bisection1d( xpointer_, x_min, x_max, eps[i]);
             xpointer_.point( R_i_[i], Z_i_[i], (x_min+x_max)/2.);
-            std::cout << "Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
+            //std::cout << "Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
             thrust::host_vector<double> begin(2), end(2), end_old(2);
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             double eps = 1e10, eps_old = 2e10;
@@ -51,7 +51,7 @@ struct InitialX
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
-                std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
+                //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
@@ -65,10 +65,10 @@ struct InitialX
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
-                std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
+                //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
-            std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
+            //std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
 
         }
     }
@@ -103,7 +103,7 @@ struct InitialX
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
                 steps*=2;
             }
-            std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
+            //std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
             if( psi<0)
             {
                 R_0[i] = R_i_[2*i+1] = begin[0] = end_old[0], Z_i_[2*i+1] = Z_0[i] = begin[1] = end_old[1];
@@ -181,7 +181,7 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
         if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
         if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
         eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
-        std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
+        //std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
         ////////////////////bottom right region
         if( nodeX0!= 0)
         {
@@ -205,7 +205,7 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
         double ar = dg::blas1::dot( r, r);
         double az = dg::blas1::dot( z, z);
         eps =  sqrt( er + ez)/sqrt(ar+az);
-        std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+        //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
         steps*=2;
     }
     r = r_old, z = z_old;
@@ -219,7 +219,7 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SimpleOrthogonalX
 {
-    dg::OrthogonalTag metric_category;
+    typedef dg::OrthogonalTag metric_category;
     SimpleOrthogonalX(): f0_(1), firstline_(0){}
     SimpleOrthogonalX( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline =0):
@@ -277,7 +277,7 @@ struct SimpleOrthogonalX
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SeparatrixOrthogonal
 {
-    dg::OrthogonalTag metric_category;
+    typedef dg::OrthogonalTag metric_category;
     SeparatrixOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline ):
         psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi),
@@ -378,12 +378,16 @@ struct GridX3d : public dg::GridX3d
     { 
         assert( psi_0 < 0 );
         assert( gp.c[10] != 0);
-        solovev::mod::Psip psip(gp); 
-        solovev::mod::PsipR psipR(gp); solovev::mod::PsipZ psipZ(gp);
-        solovev::mod::LaplacePsip lapPsip(gp); 
         double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
         double Z_X = -1.1*gp.elongation*gp.a;
-        dg::SeparatrixOrthogonal<solovev::mod::Psip, solovev::mod::PsipR, solovev::mod::PsipZ, solovev::mod::LaplacePsip> generator( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        //solovev::mod::Psip psip(gp); 
+        //solovev::mod::PsipR psipR(gp); solovev::mod::PsipZ psipZ(gp);
+        //solovev::mod::LaplacePsip lapPsip(gp); 
+        //dg::SeparatrixOrthogonal<solovev::mod::Psip, solovev::mod::PsipR, solovev::mod::PsipZ, solovev::mod::LaplacePsip> generator( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        solovev::Psip psip(gp); 
+        solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
+        solovev::LaplacePsip lapPsip(gp); 
+        dg::SeparatrixOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
         //dg::SimpleOrthogonalX<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
         const double x_0 = generator.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;
@@ -393,6 +397,7 @@ struct GridX3d : public dg::GridX3d
     template< class Generator>
     GridX3d( Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy):
         dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
+        r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_)
     {
         const double x_0 = generator.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;
@@ -446,7 +451,7 @@ struct GridX3d : public dg::GridX3d
     //compute metric elements from xr, xz, yr, yz, r and z
     void construct_metric()
     {
-        std::cout << "CONSTRUCTING METRIC\n";
+        //std::cout << "CONSTRUCTING METRIC\n";
         thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
         for( unsigned idx=0; idx<this->size(); idx++)
         {

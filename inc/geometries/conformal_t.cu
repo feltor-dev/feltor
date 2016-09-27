@@ -36,12 +36,6 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     return out;
 }
 
-double sineX( double x, double y) {return sin(x)*sin(y);}
-double cosineX( double x, double y) {return cos(x)*sin(y);}
-double sineY( double x, double y) {return sin(x)*sin(y);}
-double cosineY( double x, double y) {return sin(x)*cos(y);}
-typedef dg::FieldAligned< dg::conformal::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
-
 int main( int argc, char* argv[])
 {
     std::cout << "Type n, Nx, Ny, Nz\n";

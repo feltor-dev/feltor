@@ -1,8 +1,9 @@
 #pragma once
 
-#include "hector.h"
-#include "interpolationX.cuh"
+#include "dg/backend/derivativesX.h"
+#include "dg/backend/interpolationX.cuh"
 #include "orthogonalX.h"
+#include "hector.h"
 
 
 
@@ -43,7 +44,7 @@ struct HectorX
      */
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>
     HectorX( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double XX, double YX, double X0, double Y0, double fx, double fy, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 20, double eps_u = 1e-10) : 
-        g2d_(dg::SeparatrixOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0), psi_0, fx, fy, n, Nx, Ny, dg::DIR)
+        g2d_(dg::SeparatrixOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, XX,YX, X0, Y0,0), psi0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU)
     {
         //first construct u_
         container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, psi0, psi1, XX, YX, X0, Y0, fx, fy, n, Nx, Ny, eps_u );
@@ -147,8 +148,6 @@ struct HectorX
         dg::blas2::symv( Q, uy_, uy);
         dg::blas1::transfer( ux, vy);
         dg::blas1::axpby( -1., uy, 0., vx);
-
-
     }
 
     /**
@@ -163,19 +162,28 @@ struct HectorX
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::SeparatrixOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, XX,YX, X0, Y0,1);
-        dg::orthogonal::GridX2d<container> g2d_old(generator, psi_0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU);
+        dg::SeparatrixOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, XX,YX, X0, Y0,0);
+        //dg::orthogonal::GridX2d<container> g2d_old(generator, psi0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU);
+        dg::orthogonal::GridX2d<container> g2d_old=g2d_;
+        std::cout << "Grid ready!\n";
         dg::Elliptic<dg::orthogonal::GridX2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::NEU, dg::not_normed, dg::centered);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
         container lapu = g2d_old.lapx();
         dg::Invert<container > invert_old( u_old, n*n*Nx*Ny, eps_u);
+        dg::Timer t;
+        t.tic();
         unsigned number = invert_old( ellipticD_old, u_old, lapu);
+        t.toc();
+        std::cout << "Solution ready in "<<t.diff()<<"s and "<<number<<" iterations\n";
         while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            dg::orthogonal::GridX2d<container> g2d(generator, psi_0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU);
+            t.tic();
+            dg::orthogonal::GridX2d<container> g2d(generator, psi0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU);
+            t.toc();
+            std::cout << "Grid ready in "<<t.diff()<<"\n";
             dg::Elliptic<dg::orthogonal::GridX2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::NEU, dg::not_normed, dg::centered);
             lapu = g2d.lapx();
             const container vol2d = dg::create::weights( g2d);
@@ -185,7 +193,10 @@ struct HectorX
             dg::blas2::gemv( Q, u_old, u_diff);
 
             dg::Invert<container > invert( u_diff, n*n*Nx*Ny, 0.1*eps_u);
+            t.tic();
             number = invert( ellipticD, u, lapu);
+            t.toc();
+            std::cout << "Solution ready  in "<<t.diff()<<"s and "<<number<<" iterations\n";
             dg::blas1::axpby( 1. ,u, -1., u_diff);
             eps = sqrt( dg::blas2::dot( u_diff, vol2d, u_diff) / dg::blas2::dot( u, vol2d, u) );
             std::cout << "Nx "<<Nx<<" Ny "<<Ny<<" error "<<eps<<"\n";

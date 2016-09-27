@@ -55,7 +55,7 @@ int main(int argc, char**argv)
     std::cin >> add_x >> add_y;
     double howmanyX, howmanyY;
     std::cin >> howmanyX >> howmanyY;
-    dg::refined::orthogonal::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU,1);
+    dg::refined::orthogonal::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU,0);
     //orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     dg::refined::orthogonal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     dg::Elliptic<dg::refined::orthogonal::GridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
