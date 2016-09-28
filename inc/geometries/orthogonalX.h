@@ -303,35 +303,90 @@ struct SeparatrixOrthogonal
         sep_.compute_rzy( eta1d, nodeX0, nodeX1, r_init, z_init);
         orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
 
-        thrust::host_vector<double> x1, y1, h1, x2,y2,h2,h;
+        //separate integration of inside and outside
         unsigned inside=0;
         for(unsigned i=0; i<zeta1d.size(); i++)
             if( zeta1d[i]< 0) inside++;//how many points are inside
-
-        thrust::host_vector<double> zeta1d1( inside, 0), zeta1d2( zeta1d.size() - inside, 0);
-        //separate integration of inside and outside
+        thrust::host_vector<double> zeta1dI( inside, 0), zeta1dO( zeta1d.size() - inside, 0);
         for( unsigned i=0; i<inside; i++)
-            zeta1d1[i] = zeta1d[ inside-1-i];
+            zeta1dI[i] = zeta1d[ inside-1-i];
         for( unsigned i=inside; i<zeta1d.size(); i++)
-            zeta1d2[i-inside] = zeta1d[ i];
-        orthogonal::detail::construct_rz(nemov, 0., zeta1d1, r_init, z_init, x1, y1, h1);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1d2, r_init, z_init, x2, y2, h2);
-        //now copy into right order
+            zeta1dO[i-inside] = zeta1d[ i];
+        //separate integration close and far from separatrix
+        //this is done due to performance reasons (it takes more steps to integrate close to the X-point)
+        thrust::host_vector<int> idxC, idxF;
+        thrust::host_vector<double> r_initC, r_initF, z_initC, z_initF;
+        for( unsigned i=0; i<eta1d.size(); i++)
+        {
+            if( fabs(eta1d[i]) < 0.05 || fabs( eta1d[i] - 2.*M_PI) < 0.05)
+            {
+                idxC.push_back( i);
+                r_initC.push_back( r_init[i]);
+                z_initC.push_back( z_init[i]);
+            }
+            else
+            {
+                idxF.push_back( i);
+                r_initF.push_back( r_init[i]);
+                z_initF.push_back( z_init[i]);
+            }
+        }
+
+        thrust::host_vector<double> xIC, yIC, hIC, xOC,yOC,hOC;
+        thrust::host_vector<double> xIF, yIF, hIF, xOF,yOF,hOF;
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC, xIC, yIC, hIC);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC, xOC, yOC, hOC);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF, xIF, yIF, hIF);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF, xOF, yOF, hOF);
+        //now glue far and close back together
+        thrust::host_vector<double> xI(inside*eta1d.size()), xO( (zeta1d.size()-inside)*eta1d.size()); 
+        thrust::host_vector<double> yI(xI), hI(xI), yO(xO),hO(xO);
+        for( unsigned i=0; i<idxC.size(); i++)
+            for(unsigned j=0; j<zeta1dI.size(); j++)
+            {
+                xI[idxC[i]*zeta1dI.size() + j] = xIC[i*zeta1dI.size() + j];
+                yI[idxC[i]*zeta1dI.size() + j] = yIC[i*zeta1dI.size() + j];
+                hI[idxC[i]*zeta1dI.size() + j] = hIC[i*zeta1dI.size() + j];
+            }
+        for( unsigned i=0; i<idxF.size(); i++)
+            for(unsigned j=0; j<zeta1dI.size(); j++)
+            {
+                xI[idxF[i]*zeta1dI.size() + j] = xIF[i*zeta1dI.size() + j];
+                yI[idxF[i]*zeta1dI.size() + j] = yIF[i*zeta1dI.size() + j];
+                hI[idxF[i]*zeta1dI.size() + j] = hIF[i*zeta1dI.size() + j];
+            }
+        for( unsigned i=0; i<idxC.size(); i++)
+            for(unsigned j=0; j<zeta1dO.size(); j++)
+            {
+                xO[idxC[i]*zeta1dO.size() + j] = xOC[i*zeta1dO.size() + j];
+                yO[idxC[i]*zeta1dO.size() + j] = yOC[i*zeta1dO.size() + j];
+                hO[idxC[i]*zeta1dO.size() + j] = hOC[i*zeta1dO.size() + j];
+            }
+        for( unsigned i=0; i<idxF.size(); i++)
+            for(unsigned j=0; j<zeta1dO.size(); j++)
+            {
+                xO[idxF[i]*zeta1dO.size() + j] = xOF[i*zeta1dO.size() + j];
+                yO[idxF[i]*zeta1dO.size() + j] = yOF[i*zeta1dO.size() + j];
+                hO[idxF[i]*zeta1dO.size() + j] = hOF[i*zeta1dO.size() + j];
+            }
+
+        //now glue inside and outside together
         unsigned size = zeta1d.size()*eta1d.size();
-        x.resize( size); y.resize( size); h.resize( size);
+        x.resize( size); y.resize( size); 
+        thrust::host_vector<double> h(size);
         for( unsigned i=0; i<eta1d.size(); i++)
             for( unsigned j=0; j<inside; j++)
             {
-                x[i*zeta1d.size()+j] = x1[i*zeta1d1.size() + inside-1-j];
-                y[i*zeta1d.size()+j] = y1[i*zeta1d1.size() + inside-1-j];
-                h[i*zeta1d.size()+j] = h1[i*zeta1d1.size() + inside-1-j];
+                x[i*zeta1d.size()+j] = xI[i*zeta1dI.size() + inside-1-j];
+                y[i*zeta1d.size()+j] = yI[i*zeta1dI.size() + inside-1-j];
+                h[i*zeta1d.size()+j] = hI[i*zeta1dI.size() + inside-1-j];
             }
         for( unsigned i=0; i<eta1d.size(); i++)
             for( unsigned j=inside; j<zeta1d.size(); j++)
             {
-                x[i*zeta1d.size()+j] = x2[i*zeta1d2.size() + j-inside];
-                y[i*zeta1d.size()+j] = y2[i*zeta1d2.size() + j-inside];
-                h[i*zeta1d.size()+j] = h2[i*zeta1d2.size() + j-inside];
+                x[i*zeta1d.size()+j] = xO[i*zeta1dO.size() + j-inside];
+                y[i*zeta1d.size()+j] = yO[i*zeta1dO.size() + j-inside];
+                h[i*zeta1d.size()+j] = hO[i*zeta1dO.size() + j-inside];
             }
 
         zetaX.resize(size), zetaY.resize(size), 

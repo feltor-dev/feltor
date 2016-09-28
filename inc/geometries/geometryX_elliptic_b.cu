@@ -62,6 +62,8 @@ int main(int argc, char**argv)
     double R0 = gp.R_0, Z0 = 0;
     double R_X = gp.R_0-1.4*gp.triangularity*gp.a;
     double Z_X = -1.0*gp.elongation*gp.a;
+    //double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
+    //double Z_X = -1.1*gp.elongation*gp.a;
     dg::SeparatrixOrthogonal<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,1);
     dg::refined::orthogonal::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, generator, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);

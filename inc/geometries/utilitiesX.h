@@ -227,7 +227,7 @@ struct SeparatriX
     //compute the vector of r and z - values that form the separatrix
     void compute_rzy( const thrust::host_vector<double>& y_vec, 
             const unsigned nodeX0, const unsigned nodeX1,
-            thrust::host_vector<double>& r, 
+            thrust::host_vector<double>& r, //same size as y_vec on output
             thrust::host_vector<double>& z ) 
     {
         ///////////////////////////find y coordinate line//////////////
