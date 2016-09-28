@@ -33,7 +33,7 @@ int main(int argc, char**argv)
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint.js");
+        std::ifstream is("geometry_params_Xpoint_harmonic.js");
         reader.parse(is,js,false);
     }
     else
@@ -44,8 +44,6 @@ int main(int argc, char**argv)
     solovev::GeomParameters gp(js);
     gp.display( std::cout);
     dg::Timer t;
-    solovev::Psip psip( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing grid ... \n";
     t.tic();
 
@@ -55,7 +53,17 @@ int main(int argc, char**argv)
     std::cin >> add_x >> add_y;
     double howmanyX, howmanyY;
     std::cin >> howmanyX >> howmanyY;
-    dg::refined::orthogonal::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU,0);
+
+    ////////////////construct Generator////////////////////////////////////
+    solovev::Psip psip( gp); 
+    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
+    solovev::LaplacePsip laplacePsip(gp); 
+    double R0 = gp.R_0, Z0 = 0;
+    double R_X = gp.R_0-1.4*gp.triangularity*gp.a;
+    double Z_X = -1.0*gp.elongation*gp.a;
+    dg::SeparatrixOrthogonal<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,1);
+    dg::refined::orthogonal::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, generator, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     dg::refined::orthogonal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
     dg::Elliptic<dg::refined::orthogonal::GridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
@@ -90,20 +98,20 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =         dg::evaluate( dg::zero, g2d.associated());
     dg::DVec x_fine =    dg::evaluate( dg::zero, g2d);
-    //const dg::DVec b =        dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g2d.associated());
-    //const dg::DVec bFINE =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1), g2d);
-    //dg::DVec bmod(b);
-    //const dg::DVec chi =      dg::pullback( solovev::BmodTheta(gp), g2d.associated());
-    //const dg::DVec chiFINE =  dg::pullback( solovev::BmodTheta(gp), g2d);
-    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g2d.associated());
-    //const dg::DVec solutionFINE = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1 ), g2d);
-    const dg::DVec b =        dg::pullback( solovev::LaplacePsi(gp), g2d.associated());
-    const dg::DVec bFINE =    dg::pullback( solovev::LaplacePsi(gp), g2d);
+    const dg::DVec b =        dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1,0,0,1), g2d.associated());
+    const dg::DVec bFINE =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 0,0,1), g2d);
     dg::DVec bmod(b);
-    const dg::DVec chi =      dg::evaluate( dg::one, g2d.associated());
-    const dg::DVec chiFINE =  dg::evaluate( dg::one, g2d);
-    const dg::DVec solution =     dg::pullback( psip, g2d.associated());
-    const dg::DVec solutionFINE = dg::pullback( psip, g2d);
+    const dg::DVec chi =      dg::pullback( solovev::BmodTheta(gp), g2d.associated());
+    const dg::DVec chiFINE =  dg::pullback( solovev::BmodTheta(gp), g2d);
+    const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 0,0,1 ), g2d.associated());
+    const dg::DVec solutionFINE = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1,0,0,1 ), g2d);
+    //const dg::DVec b =        dg::pullback( solovev::LaplacePsi(gp), g2d.associated());
+    //const dg::DVec bFINE =    dg::pullback( solovev::LaplacePsi(gp), g2d);
+    //dg::DVec bmod(b);
+    //const dg::DVec chi =      dg::evaluate( dg::one, g2d.associated());
+    //const dg::DVec chiFINE =  dg::evaluate( dg::one, g2d);
+    //const dg::DVec solution =     dg::pullback( psip, g2d.associated());
+    //const dg::DVec solutionFINE = dg::pullback( psip, g2d);
 
     const dg::DVec vol3dFINE = dg::create::volume( g2d);
     dg::HVec inv_vol3dFINE = dg::create::inv_weights( g2d);

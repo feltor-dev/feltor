@@ -53,23 +53,33 @@ struct GridX3d : public dg::refined::GridX3d
     { 
         assert( psi_0 < 0 );
         assert( gp.c[10] != 0);
-        solovev::mod::Psip psip(gp); 
-        solovev::mod::PsipR psipR(gp); solovev::mod::PsipZ psipZ(gp);
-        solovev::mod::LaplacePsip lapPsip(gp); 
+        solovev::Psip psip(gp); 
+        solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
+        solovev::LaplacePsip lapPsip(gp); 
         double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
         double Z_X = -1.1*gp.elongation*gp.a;
-        dg::SeparatrixOrthogonal<solovev::mod::Psip, solovev::mod::PsipR, solovev::mod::PsipZ, solovev::mod::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        dg::SeparatrixOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
         //dg::SimpleOrthogonalX<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
+        construct( ortho, psi_0, fx, dg::OrthogonalTag());
+    }
+
+    template <class Generator>
+    GridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
+        dg::refined::GridX3d( add_x, add_y, howmanyX, howmanyY, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, n_old, Nx, Ny, Nz, bcx, bcy, dg::PER),
+        r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
+        g_assoc_( generator, psi_0, fx, fy, n_old, Nx, Ny, Nz, bcx, bcy)
+    {
+        construct( generator, psi_0, fx, typename Generator::metric_category());
+    }
+
+    template<class Generator>
+    void construct( Generator generator, double psi_0, double fx, dg::OrthogonalTag)
+    { 
         std::cout << "FIND X FOR PSI_0\n";
-        const double x_0 = ortho.f0()*psi_0;
+        const double x_0 = generator.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;
         std::cout << "X0 is "<<x_0<<" and X1 is "<<x_1<<"\n";
         init_X_boundaries( x_0, x_1);
-        construct( ortho, n, Nx, Ny, dg::OrthogonalTag());
-    }
-    template<class Generator>
-    void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::OrthogonalTag)
-    { 
         ////////////compute psi(x) for a grid on x 
         thrust::host_vector<double> x_vec(this->n()*this->Nx()); 
         for(unsigned i=0; i<x_vec.size(); i++) {
@@ -78,10 +88,12 @@ struct GridX3d : public dg::refined::GridX3d
         thrust::host_vector<double> rvec, zvec, xrvec, xzvec, yrvec, yzvec;
         thrust::host_vector<double> y_vec(this->n()*this->Ny());
         for(unsigned i=0; i<y_vec.size(); i++) y_vec[i] = this->abscissasY()[i*x_vec.size()];
+        std::cout << "In construct function \n";
         generator( x_vec, y_vec, 
                 this->n()*this->outer_Ny(), 
                 this->n()*(this->inner_Ny()+this->outer_Ny()), 
                 rvec, zvec, xrvec, xzvec, yrvec, yzvec);
+        std::cout << "In construct function \n";
         unsigned Mx = this->n()*this->Nx(), My = this->n()*this->Ny();
         //now lift to 3D grid and multiply with refined weights
         thrust::host_vector<double> wx = this->weightsX();

@@ -55,10 +55,10 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    solovev::Psip psip( gp); 
-    solovev::PsipR psipR( gp); 
-    solovev::PsipZ psipZ( gp); 
-    solovev::LaplacePsip lap( gp); 
+    solovev::mod::Psip psip( gp); 
+    solovev::mod::PsipR psipR( gp); 
+    solovev::mod::PsipZ psipZ( gp); 
+    solovev::mod::LaplacePsip lap( gp); 
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     dg::HectorX<dg::IHMatrix, dg::Composite<dg::HMatrix>, dg::HVec> hector( psip, psipR, psipZ, lap,  psi_0, psi_1, R_X, Z_X, gp.R_0, 0.,fx_0, fy_0,  nGrid, NxGrid, NyGrid);

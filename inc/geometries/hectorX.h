@@ -165,7 +165,7 @@ struct HectorX
         dg::SeparatrixOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, XX,YX, X0, Y0,0);
         //dg::orthogonal::GridX2d<container> g2d_old(generator, psi0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU);
         dg::orthogonal::GridX2d<container> g2d_old=g2d_;
-        std::cout << "Grid ready!\n";
+        std::cout << "Grid ready!"<<std::endl;
         dg::Elliptic<dg::orthogonal::GridX2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::NEU, dg::not_normed, dg::centered);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -175,7 +175,7 @@ struct HectorX
         t.tic();
         unsigned number = invert_old( ellipticD_old, u_old, lapu);
         t.toc();
-        std::cout << "Solution ready in "<<t.diff()<<"s and "<<number<<" iterations\n";
+        std::cout << "Solution ready in "<<t.diff()<<"s and "<<number<<" iterations"<<std::endl;
         while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
         {
             eps = eps_old;
@@ -199,7 +199,7 @@ struct HectorX
             std::cout << "Solution ready  in "<<t.diff()<<"s and "<<number<<" iterations\n";
             dg::blas1::axpby( 1. ,u, -1., u_diff);
             eps = sqrt( dg::blas2::dot( u_diff, vol2d, u_diff) / dg::blas2::dot( u, vol2d, u) );
-            std::cout << "Nx "<<Nx<<" Ny "<<Ny<<" error "<<eps<<"\n";
+            std::cout << "Nx "<<Nx<<" Ny "<<Ny<<" error "<<eps<<std::endl;
             g2d_old = g2d;
             u_old = u;
             g2d_ = g2d;

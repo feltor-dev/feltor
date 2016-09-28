@@ -68,7 +68,7 @@ struct InitialX
                 //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
-            //std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
+            std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
 
         }
     }
@@ -103,7 +103,7 @@ struct InitialX
                 if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
                 steps*=2;
             }
-            //std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
+            std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
             if( psi<0)
             {
                 R_0[i] = R_i_[2*i+1] = begin[0] = end_old[0], Z_i_[2*i+1] = Z_0[i] = begin[1] = end_old[1];
@@ -181,7 +181,7 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
         if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
         if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
         eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
-        //std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
+        std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
         ////////////////////bottom right region
         if( nodeX0!= 0)
         {
@@ -205,7 +205,7 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
         double ar = dg::blas1::dot( r, r);
         double az = dg::blas1::dot( z, z);
         eps =  sqrt( er + ez)/sqrt(ar+az);
-        //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+        std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
         steps*=2;
     }
     r = r_old, z = z_old;

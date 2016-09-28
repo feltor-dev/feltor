@@ -77,7 +77,7 @@ int main( int argc, char* argv[])
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint.js");
+        std::ifstream is("geometry_params_Xpoint_harmonic.js");
         reader.parse(is,js,false);
     }
     else
@@ -87,11 +87,9 @@ int main( int argc, char* argv[])
     }
     solovev::GeomParameters gp(js);
     dg::Timer t;
-    solovev::Psip psip( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
-    //std::cout << "Type psi_0 \n";
+    std::cout << "Type psi_0 \n";
     double psi_0 = -16;
-    //std::cin >> psi_0;
+    std::cin >> psi_0;
     //std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
     double fx_0=1./4., fy_0=1./22.;
     //std::cin >> fx_0>> fy_0;
@@ -101,9 +99,18 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    //orthogonal::GridX3d<dg::HVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    //orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::refined::orthogonal::GridX3d<dg::HVec> g3d(add_x, add_y, 1,1, gp, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU, 1);
+    solovev::Psip psip( gp); 
+    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
+    solovev::LaplacePsip laplacePsip(gp); 
+    double R0 = gp.R_0, Z0 = 0;
+    double R_X = gp.R_0-1.4*gp.triangularity*gp.a;
+    double Z_X = -1.0*gp.elongation*gp.a;
+    dg::SeparatrixOrthogonal<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,1);
+    //dg::SimpleOrthogonalX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::orthogonal::GridX3d<dg::HVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    //dg::orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::refined::orthogonal::GridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     dg::refined::orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 

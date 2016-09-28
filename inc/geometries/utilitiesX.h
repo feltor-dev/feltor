@@ -212,7 +212,7 @@ struct SeparatriX
             }
             //remember last call
             y_i[i] = end2d[2]; 
-            //std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
+            std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
         }
         y_i[0]*=-1; y_i[2]*=-1; //these were integrated against y direction
 
@@ -295,7 +295,7 @@ struct SeparatriX
             double ar = dg::blas1::dot( r, r);
             double az = dg::blas1::dot( z, z);
             eps =  sqrt( er + ez)/sqrt(ar+az);
-            //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+            std::cout << "rel. Separatrix error is "<<eps<<" with "<<steps<<" steps\n";
             steps*=2;
         }
         r = r_old, z = z_old;
@@ -304,7 +304,7 @@ struct SeparatriX
     //compute f for psi=0
     double construct_f( ) 
     {
-        //std::cout << "In construct f function!\n";
+        std::cout << "In construct f function!\n";
         
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         begin[0] = R_i[0], begin[1] = Z_i[0];
@@ -335,8 +335,8 @@ struct SeparatriX
             if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
         }
         N_steps_=N;
-        //std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
-        //std::cout << "Found f = "<< 2.*M_PI/(y_i[0]+end_old[2]+y_i[1])<<" with eps = "<<eps<<"\n";
+        std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
+        std::cout << "Found f = "<< 2.*M_PI/(y_i[0]+end_old[2]+y_i[1])<<" with eps = "<<eps<<"\n";
         f_psi_ = 2.*M_PI/(y_i[0]+end_old[2]+y_i[1]);
         return f_psi_;
     }

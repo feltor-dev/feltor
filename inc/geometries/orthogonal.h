@@ -263,7 +263,7 @@ void construct_rz( Nemov nemov,
         dg::blas1::pointwiseDot( r_diff, r_diff, r_diff);
         dg::blas1::pointwiseDot( 1., z_diff, z_diff, 1., r_diff);
         eps = sqrt( dg::blas1::dot( r_diff, r_diff)/sizeX/sizeY); //should be relative to the interpoint distances
-        //std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n"; 
+        std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
 
