@@ -315,14 +315,14 @@ struct LaplacePsip
  */ 
 struct Ipol
 {
-    Ipol(  GeomParameters gp ):  R0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp) { }
+    Ipol(  GeomParameters gp ): c12_(gp.c[11]), psip_(gp) { }
     /**
     * @brief \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f] 
     */ 
     double operator()(double R, double Z) const
     {    
-        //sign before A changed to -
-        return qampl_*sqrt(-2.*A_* psip_(R,Z) /R0_ + 1.);
+        return c12_*psip_(R,Z);
+        
     }
     /**
      * @brief == operator()(R,Z)
@@ -332,15 +332,15 @@ struct Ipol
         return operator()( R,Z);
     }
   private:
-    double R0_, A_,qampl_;
+    double c12_;
     Psip psip_;
 };
 struct IpolR
 {
-    IpolR(  GeomParameters gp ):  R0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipR_(gp) { }
+    IpolR(  GeomParameters gp ): c12_(gp.c[11]), psipR_(gp) { }
     double operator()(double R, double Z) const
     {    
-        return -qampl_/sqrt(-2.*A_* psip_(R,Z) /R0_ + 1.)*(A_*psipR_(R,Z)/R0_);
+        return c12_*psipR_(R,Z);
     }
     /**
      * @brief == operator()(R,Z)
@@ -350,16 +350,15 @@ struct IpolR
         return operator()( R,Z);
     }
   private:
-    double R0_, A_,qampl_;
-    Psip psip_;
+    double c12_;
     PsipR psipR_;
 };
 struct IpolZ
 {
-    IpolZ(  GeomParameters gp ):  R0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipZ_(gp) { }
+    IpolZ(  GeomParameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
     double operator()(double R, double Z) const
     {    
-        return -qampl_/sqrt(-2.*A_* psip_(R,Z) /R0_ + 1.)*(A_*psipZ_(R,Z)/R0_);
+        return c12_*psipZ_(R,Z);
     }
     /**
      * @brief == operator()(R,Z)
@@ -369,8 +368,7 @@ struct IpolZ
         return operator()( R,Z);
     }
   private:
-    double R0_, A_,qampl_;
-    Psip psip_;
+    double c12_;
     PsipZ psipZ_;
 };
 
