@@ -120,7 +120,7 @@ struct InitialX
     private:
     Psi psip_;
     const solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_;
-    dg::detail::XPointer<Psi, PsiX, PsiY> xpointer_;
+    dg::detail::XCross<Psi, PsiX, PsiY> xpointer_;
     double R_i_[4], Z_i_[4];
 
 };

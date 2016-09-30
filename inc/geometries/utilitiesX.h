@@ -3,31 +3,43 @@
 
 namespace dg
 {
+/**
+ * @brief This function finds the X-point via Newton iteration applied to the gradient of psi, 
+ *
+ * The inverse of the Hessian matrix is computed analytically
+ * @param R_X start value on input, X-point on output
+ * @param Z_X start value on input, X-point on output
+ */
+template<class PsiR, class PsiZ, class PsiRR, class PsiRZ, class PsiZZ>
+void findXpoint( const PsiR& psiR, const PsiZ& psiZ, const PsiRR& psiRR, const PsiRZ& psiRZ, const PsiZZ& psiZZ, double& R_X, double& Z_X)
+{
+    solovev::HessianRZtau<PsiR, PsiZ, PsiRR, PsiRZ, PsiZZ> hessianRZtau(  psiR, psiZ, psiRR, psiRZ, psiZZ);
+    thrust::host_vector<double> X(2,0), XN(X), X_OLD(X);
+    X[0] = R_X, X[1] = Z_X;
+    double eps = 1e10, eps_old= 2e10;
+    while( (eps < eps_old || eps > 1e-7) && eps > 1e-13)
+    {
+        X_OLD = X; eps= eps_old;
+        hessianRZtau.newton_iteration( X, XN);
+        XN.swap(X);
+        eps = sqrt( (X[0]-X_OLD[0])*(X[0]-X_OLD[0]) + (X[1]-X_OLD[1])*(X[1]-X_OLD[1]));
+    }
+    R_X = X[0], Z_X = X[1];
+}
 
 namespace detail
 {
+
 
 /**
  * @brief This struct finds and stores the X-point and can act in a root finding routine to find points on the perpendicular line through the X-point 
  */
 template<class Psi, class PsiR, class PsiZ>
-struct XPointer
+struct XCross
 {
     
-    XPointer( Psi psi, PsiR psiR, PsiZ psiZ, double R_X, double Z_X, double distance=1): fieldRZtau_(psiR, psiZ), psip_(psi), dist_(distance)
+    XCross( Psi psi, PsiR psiR, PsiZ psiZ, double R_X, double Z_X, double distance=1): fieldRZtau_(psiR, psiZ), psip_(psi), dist_(distance)
     {
-        //solovev::HessianRZtau hessianRZtau(gp);
-        //R_X_ = gp.R_0-1.1*gp.triangularity*gp.a;
-        //Z_X_ = -1.1*gp.elongation*gp.a;
-        //thrust::host_vector<double> X(2,0), XN(X);
-        //X[0] = R_X_, X[1] = Z_X_;
-        //for( unsigned i=0; i<2; i++)
-        //{
-        //    hessianRZtau.newton_iteration( X, XN);
-        //    XN.swap(X);
-        //}
-        //std::cout << "X-point error  "<<R_X_-X[0]<<" "<<Z_X_-X[1]<<"\n";
-        //R_X_ = X[0], Z_X_ = X[1];
         R_X_ = R_X, Z_X_ = Z_X;
         //std::cout << "X-point set at "<<R_X_<<" "<<Z_X_<<"\n";
         R_i[0] = R_X_ + dist_, Z_i[0] = Z_X_;

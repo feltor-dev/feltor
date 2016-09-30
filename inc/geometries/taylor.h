@@ -4,7 +4,7 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
-#include <boost/math/bessel.hpp>
+#include <boost/math/special_functions.hpp>
 
 #include "dg/blas.h"
 
@@ -29,26 +29,26 @@ struct Psip
      *
      * @param gp useful geometric parameters
      */
-    Psip( GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
+    Psip( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
 /**
  * @brief \f$ \hat \psi_p(R,Z) \f$
 
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
+      @param R radius (boost::math::cylindrical coordinates)
+      @param Z height (boost::math::cylindrical coordinates)
       @return \f$ \hat \psi_p(R,Z) \f$
  */
     double operator()(double R, double Z) const
     {    
-        double Rn = R/R0_, Zn = Z/Z_0_;
-        double j1_c12 = cyl_bessel_j( 1, c_[11]*Rn);
-        double y1_c12 = cyl_neumann( 1, c_[11]*Rn);
-        double j1_cs = cyl_bessel_j( 1, cs_*Rn);
-        double y1_cs = cyl_neumann( 1, cs_*Rn);
+        double Rn = R/R0_, Zn = Z/R0_;
+        double j1_c12 = boost::math::cyl_bessel_j( 1, c_[11]*Rn);
+        double y1_c12 = boost::math::cyl_neumann(  1, c_[11]*Rn);
+        double j1_cs = boost::math::cyl_bessel_j( 1, cs_*Rn);
+        double y1_cs = boost::math::cyl_neumann(  1, cs_*Rn);
         return R0_*(    
                    1.0*Rn*j1_c12 
-               + c_[0]*Rn*yn_c12 
+               + c_[0]*Rn*y1_c12 
                + c_[1]*Rn*j1_cs*cos(c_[10]*Zn)  
                + c_[2]*Rn*y1_cs*cos(c_[10]*Zn)  
                + c_[3]*cos(c_[11]*sqrt(Rn*Rn+Zn*Zn))  
@@ -63,9 +63,9 @@ struct Psip
     /**
      * @brief \f$ \psi_p(R,Z,\phi) \equiv \psi_p(R,Z)\f$
      *
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
-      @param phi angle (cylindrical coordinates)
+      @param R radius (boost::math::cylindrical coordinates)
+      @param Z height (boost::math::cylindrical coordinates)
+      @param phi angle (boost::math::cylindrical coordinates)
      *
      * @return \f$ \hat \psi_p(R,Z,\phi) \f$
      */
@@ -85,30 +85,36 @@ struct PsipR
      *
      * @param gp useful geometric parameters
      */
-    PsipR( GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
+    PsipR( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_=sqrt(c_[11]*c_[11]-c_[10]*c_[10]);
     
     }
 /**
  * @brief \f$ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)  \f$
 
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
+      @param R radius (boost::math::cylindrical coordinates)
+      @param Z height (boost::math::cylindrical coordinates)
     * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z)  \f$
  */ 
     double operator()(double R, double Z) const
     {    
-        double Rn=R/R0_, Zn=Z/Z_0_;
-        double j1_c12R = cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(cyl_bessel_j(0, c_[11]*Rn) - cyl_bessel_j(2,c_[11]*Rn));
-        double y1_c12R = cyl_neumann(1, c_[11]*Rn) + c_[11]/2.*Rn*(cyl_neumann(0, c_[11]*Rn) - cyl_neumann(2,c_[11]*Rn));
-        double j1_csR = cyl_bessel_j(1, cs_*Rn) + cs_/2.*Rn*(cyl_bessel_j(0, cs_*Rn) - cyl_bessel_j(2, cs_*Rn));
-        double y1_csR = cyl_neumann(1, cs_*Rn) + cs_/2.*Rn*(cyl_neumann(0, cs_*Rn) - cyl_neumann(2, cs_*Rn));
-        return  R0_*(   
+        double Rn=R/R0_, Zn=Z/R0_;
+        double j1_c12R = boost::math::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
+                boost::math::cyl_bessel_j(0, c_[11]*Rn) - boost::math::cyl_bessel_j(2,c_[11]*Rn));
+        double y1_c12R = boost::math::cyl_neumann(1, c_[11]*Rn) + c_[11]/2.*Rn*(
+                boost::math::cyl_neumann(0, c_[11]*Rn) - boost::math::cyl_neumann(2,c_[11]*Rn));
+        double j1_csR = boost::math::cyl_bessel_j(1, cs_*Rn) + cs_/2.*Rn*(
+                boost::math::cyl_bessel_j(0, cs_*Rn) - boost::math::cyl_bessel_j(2, cs_*Rn));
+        double y1_csR = boost::math::cyl_neumann(1, cs_*Rn) + cs_/2.*Rn*(
+                boost::math::cyl_neumann(0, cs_*Rn) - boost::math::cyl_neumann(2, cs_*Rn));
+        double RZbar = sqrt( Rn*Rn+Zn*Zn);
+        double cosR = -c_[11]*Rn/RZbar*sin(c_[11]*RZbar);
+        return  (   
                    1.0*j1_c12R 
-               + c_[0]*yn_c12R 
+               + c_[0]*y1_c12R 
                + c_[1]*j1_csR*cos(c_[10]*Zn)  
                + c_[2]*y1_csR*cos(c_[10]*Zn)  
-               - c_[3]*c_[11]*Rn/sqrt(Rn*Rn+Zn*Zn)*sin(c_[11]*sqrt(Rn*Rn+Zn*Zn))  
+               + c_[3]*cosR
                + c_[5]*j1_c12R*Zn
                + c_[6]*y1_c12R*Zn
                + c_[7]*j1_csR*sin(c_[10]*Zn)
@@ -116,9 +122,9 @@ struct PsipR
     }
     /**
      * @brief \f$ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z,\phi) \equiv \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)\f$
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
-      @param phi angle (cylindrical coordinates)
+      @param R radius (boost::math::cylindrical coordinates)
+      @param Z height (boost::math::cylindrical coordinates)
+      @param phi angle (boost::math::cylindrical coordinates)
     * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z,\phi)  \f$
  */ 
     double operator()(double R, double Z, double phi) const
@@ -141,24 +147,24 @@ struct PsipRR
     *
     * @param gp geometric parameters
     */
-    PsipRR( GeomParameters gp ): R0_(gp.R_0), c_(gp.c) {
+    PsipRR( solovev::GeomParameters gp ): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
     double operator()(double R, double Z) const
     {    
-        double Rn=R/R0_, Zn=Z/Z_0_;
-        double j1_c12R = (1./Rn-c_[11]*c_[11]*Rn)*cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2./Rn*(cyl_bessel_j(0, c_[11]*Rn) - cyl_bessel_j(2,c_[11]*Rn));
-        double y1_c12R = (1./Rn-c_[11]*c_[11]*Rn)*cyl_neumann( 1, c_[11]*Rn) + c_[11]/2./Rn*(cyl_neumann( 0, c_[11]*Rn) - cyl_neumann( 2,c_[11]*Rn));
-        double j1_csR = (1./Rn-cs_*cs_*Rn)*cyl_bessel_j(1, cs_*Rn) + cs_/2./Rn*(cyl_bessel_j(0, cs_*Rn) - cyl_bessel_j(2,cs_*Rn));
-        double y1_csR = (1./Rn-cs_*cs_*Rn)*cyl_neumann( 1, cs_*Rn) + cs_/2./Rn*(cyl_neumann( 0, cs_*Rn) - cyl_neumann( 2,cs_*Rn));
+        double Rn=R/R0_, Zn=Z/R0_;
+        double j1_c12R = c_[11]*(boost::math::cyl_bessel_j(0, c_[11]*Rn) - Rn*c_[11]*boost::math::cyl_bessel_j(1, c_[11]*Rn));
+        double y1_c12R = c_[11]*(boost::math::cyl_neumann( 0, c_[11]*Rn) - Rn*c_[11]*boost::math::cyl_neumann(1, c_[11]*Rn));
+        double j1_csR = cs_*(boost::math::cyl_bessel_j(0, cs_*Rn) - Rn*cs_*boost::math::cyl_bessel_j(1, cs_*Rn));
+        double y1_csR = cs_*(boost::math::cyl_neumann( 0, cs_*Rn) - Rn*cs_*boost::math::cyl_neumann( 1, cs_*Rn));
         double RZbar = sqrt(Rn*Rn+Zn*Zn);
         double cosR = -c_[11]/(RZbar*RZbar)*(c_[11]*Rn*Rn*cos(c_[11]*RZbar) +Zn*Zn*sin(c_[11]*RZbar)/RZbar);
-        return  R0_*(   
+        return  1./R0_*(   
                    1.0*j1_c12R 
-               + c_[0]*yn_c12R 
+               + c_[0]*y1_c12R 
                + c_[1]*j1_csR*cos(c_[10]*Zn)  
                + c_[2]*y1_csR*cos(c_[10]*Zn)  
-               + c_[3]*cosR;
+               + c_[3]*cosR
                + c_[5]*j1_c12R*Zn
                + c_[6]*y1_c12R*Zn
                + c_[7]*j1_csR*sin(c_[10]*Zn)
@@ -167,9 +173,9 @@ struct PsipRR
     /**
     * @brief return operator()(R,Z)
     *
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
-      @param phi angle (cylindrical coordinates)
+      @param R radius (boost::math::cylindrical coordinates)
+      @param Z height (boost::math::cylindrical coordinates)
+      @param phi angle (boost::math::cylindrical coordinates)
     *
     * @return value
     */
@@ -186,17 +192,17 @@ struct PsipRR
  */ 
 struct PsipZ
 {
-    PsipZ( GeomParameters gp ): R0_(gp.R_0), c_(gp.c) { 
+    PsipZ( solovev::GeomParameters gp ): R0_(gp.R_0), c_(gp.c) { 
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
     double operator()(double R, double Z) const
     {    
-        double Rn = R/R0_, Zn = Z/Z_0_;
-        double j1_c12 = cyl_bessel_j( 1, c_[11]*Rn);
-        double y1_c12 = cyl_neumann( 1, c_[11]*Rn);
-        double j1_cs = cyl_bessel_j( 1, cs_*Rn);
-        double y1_cs = cyl_neumann( 1, cs_*Rn);
-        return R0_*(    
+        double Rn = R/R0_, Zn = Z/R0_;
+        double j1_c12 = boost::math::cyl_bessel_j( 1, c_[11]*Rn);
+        double y1_c12 = boost::math::cyl_neumann(  1, c_[11]*Rn);
+        double j1_cs = boost::math::cyl_bessel_j( 1, cs_*Rn);
+        double y1_cs = boost::math::cyl_neumann(  1, cs_*Rn);
+        return (    
                - c_[1]*Rn*j1_cs*c_[10]*sin(c_[10]*Zn)  
                - c_[2]*Rn*y1_cs*c_[10]*sin(c_[10]*Zn)  
                - c_[3]*c_[11]*Zn/sqrt(Rn*Rn+Zn*Zn)*sin(c_[11]*sqrt(Rn*Rn+Zn*Zn))  
@@ -223,19 +229,17 @@ struct PsipZ
  */ 
 struct PsipZZ
 {
-  PsipZZ( GeomParameters gp): R0_(gp.R_0), c_(gp.c) { 
+  PsipZZ( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) { 
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
     double operator()(double R, double Z) const
     {    
-        double Rn = R/R0_, Zn = Z/Z_0_;
-        double j1_c12 = cyl_bessel_j( 1, c_[11]*Rn);
-        double y1_c12 = cyl_neumann( 1, c_[11]*Rn);
-        double j1_cs = cyl_bessel_j( 1, cs_*Rn);
-        double y1_cs = cyl_neumann( 1, cs_*Rn);
+        double Rn = R/R0_, Zn = Z/R0_;
+        double j1_cs = boost::math::cyl_bessel_j( 1, cs_*Rn);
+        double y1_cs = boost::math::cyl_neumann(  1, cs_*Rn);
         double RZbar = sqrt(Rn*Rn+Zn*Zn);
         double cosZ = -c_[11]/(RZbar*RZbar)*(c_[11]*Zn*Zn*cos(c_[11]*RZbar) +Rn*Rn*sin(c_[11]*RZbar)/RZbar);
-        return R0_*(    
+        return 1./R0_*(    
                - c_[1]*Rn*j1_cs*c_[10]*c_[10]*cos(c_[10]*Zn)  
                - c_[2]*Rn*y1_cs*c_[10]*c_[10]*cos(c_[10]*Zn)  
                + c_[3]*cosZ
@@ -260,19 +264,23 @@ struct PsipZZ
  */ 
 struct PsipRZ
 {
-    PsipRZ( GeomParameters gp ): R0_(gp.R_0), c_(gp.c) { 
+    PsipRZ( solovev::GeomParameters gp ): R0_(gp.R_0), c_(gp.c) { 
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
     double operator()(double R, double Z) const
     {    
-        double Rn=R/R0_, Zn=Z/Z_0_;
-        double j1_c12R = cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(cyl_bessel_j(0, c_[11]*Rn) - cyl_bessel_j(2,c_[11]*Rn));
-        double y1_c12R = cyl_neumann(1, c_[11]*Rn) + c_[11]/2.*Rn*(cyl_neumann(0, c_[11]*Rn) - cyl_neumann(2,c_[11]*Rn));
-        double j1_csR = cyl_bessel_j(1, cs_*Rn) + cs_/2.*Rn*(cyl_bessel_j(0, cs_*Rn) - cyl_bessel_j(2, cs_*Rn));
-        double y1_csR = cyl_neumann(1, cs_*Rn) + cs_/2.*Rn*(cyl_neumann(0, cs_*Rn) - cyl_neumann(2, cs_*Rn));
+        double Rn=R/R0_, Zn=Z/R0_;
+        double j1_c12R = boost::math::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
+                boost::math::cyl_bessel_j(0, c_[11]*Rn) - boost::math::cyl_bessel_j(2,c_[11]*Rn));
+        double y1_c12R = boost::math::cyl_neumann( 1, c_[11]*Rn) + c_[11]/2.*Rn*(
+                boost::math::cyl_neumann( 0, c_[11]*Rn) - boost::math::cyl_neumann( 2,c_[11]*Rn));
+        double j1_csR = boost::math::cyl_bessel_j(1, cs_*Rn) + cs_/2.*Rn*(
+                boost::math::cyl_bessel_j(0, cs_*Rn) - boost::math::cyl_bessel_j(2, cs_*Rn));
+        double y1_csR = boost::math::cyl_neumann( 1, cs_*Rn) + cs_/2.*Rn*(
+                boost::math::cyl_neumann( 0, cs_*Rn) - boost::math::cyl_neumann(2, cs_*Rn));
         double RZbar = sqrt(Rn*Rn+Zn*Zn);
-        double cosRZ = -c_[11]*Rn*Zn/(RZbar*RZbar*RZbar)*(c_[11]*RZbar*cos(c_[11]*RZbar) -sin(c_[11]*RZbar));
-        return  R0_*(   
+        double cosRZ = -c_[11]*Rn*Zn/(RZbar*RZbar*RZbar)*( c_[11]*RZbar*cos(c_[11]*RZbar) -sin(c_[11]*RZbar) );
+        return  1./R0_*(   
                - c_[1]*j1_csR*c_[10]*sin(c_[10]*Zn)  
                - c_[2]*y1_csR*c_[10]*sin(c_[10]*Zn)  
                + c_[3]*cosRZ
@@ -295,7 +303,7 @@ struct PsipRZ
 
 struct LaplacePsip
 {
-    LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
+    LaplacePsip( solovev::GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
     double operator()(double R, double Z) const
     {    
         return psipRR_(R,Z) + psipZZ_(R,Z);
@@ -315,7 +323,7 @@ struct LaplacePsip
  */ 
 struct Ipol
 {
-    Ipol(  GeomParameters gp ): c12_(gp.c[11]), psip_(gp) { }
+    Ipol(  solovev::GeomParameters gp ): c12_(gp.c[11]), psip_(gp) { }
     /**
     * @brief \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f] 
     */ 
@@ -337,7 +345,7 @@ struct Ipol
 };
 struct IpolR
 {
-    IpolR(  GeomParameters gp ): c12_(gp.c[11]), psipR_(gp) { }
+    IpolR(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipR_(gp) { }
     double operator()(double R, double Z) const
     {    
         return c12_*psipR_(R,Z);
@@ -355,7 +363,7 @@ struct IpolR
 };
 struct IpolZ
 {
-    IpolZ(  GeomParameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
+    IpolZ(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
     double operator()(double R, double Z) const
     {    
         return c12_*psipZ_(R,Z);

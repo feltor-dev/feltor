@@ -31,7 +31,7 @@ struct FpsiX
          *
          * @return the value for R
          */
-        dg::detail::XPointer xpointer_(gp, 1e-4);
+        dg::detail::XCross xpointer_(gp, 1e-4);
         solovev::Psip psip_(gp);
         solovev::FieldRZtau fieldRZtau_(gp);
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin), end_old(end);

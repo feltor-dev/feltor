@@ -55,7 +55,7 @@ struct GeomParameters
         qampl = v[24];
     }
     GeomParameters( const Json::Value& js) {
-        A  = js["A"].asDouble();
+        A  = js.get("A", 0).asDouble();
         c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
         for (unsigned i=0;i<12;i++) c[i] = js["c"][i].asDouble();
         c[12] = 0;
