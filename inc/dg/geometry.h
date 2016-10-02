@@ -141,7 +141,7 @@ void dividePerpVolume( container& inout, const Geometry& g)
 }
 
 /**
- * @brief Push forward a vector from cylindrical to a new coordinate system
+ * @brief Push forward a vector from cylindrical or Cartesian to a new coordinate system
  *
  * Computes \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
                v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
@@ -153,8 +153,8 @@ void dividePerpVolume( container& inout, const Geometry& g)
  * @param vy y-component of vector (gets properly resized)
  * @param g The geometry object
  */
-template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void pushForwardPerp( TernaryOp1 vR, TernaryOp2 vZ, 
+template<class Functor1, class Functor2, class Geometry> 
+void pushForwardPerp( Functor1 vR, Functor2 vZ, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vx, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vy,
         const Geometry& g)
@@ -173,6 +173,34 @@ void pushForwardPerp(
     pushForwardPerp<double(double, double, double), double(double, double, double), Geometry>( fR, fZ, out1, out2, g); 
 }
 ///@endcond
+
+/**
+ * @brief Push forward a symmetric 2d tensor from cylindrical or Cartesian to a new coordinate system
+ *
+ * Computes \f[ 
+ \chi^{xx}(x,y) = x_R x_R \chi^{RR} + 2x_Rx_Z \chi^{RZ} + x_Zx_Z\chi^{ZZ} \\
+ \chi^{xy}(x,y) = x_R x_R \chi^{RR} + (x_Ry_Z+y_Rx_Z) \chi^{RZ} + x_Zx_Z\chi^{ZZ} \\
+ \chi^{yy}(x,y) = y_R y_R \chi^{RR} + 2y_Ry_Z \chi^{RZ} + y_Zy_Z\chi^{ZZ} \\
+               \f]
+   where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
+ * @tparam Geometry The Geometry class
+ * @param chiRR input RR-component in cylindrical coordinates
+ * @param chiRZ input RZ-component in cylindrical coordinates
+ * @param chiZZ input ZZ-component in cylindrical coordinates
+ * @param chixx xx-component of tensor (gets properly resized)
+ * @param chixy xy-component of tensor (gets properly resized)
+ * @param chiyy yy-component of tensor (gets properly resized)
+ * @param g The geometry object
+ */
+template<class FunctorRR, class FunctorRZ, class FunctorZZ, class Geometry> 
+void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixy,
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chiyy, 
+        const Geometry& g)
+{
+    dg::geo::detail::doPushForwardPerp( chiRR, chiRZ, chiZZ, chixx, chixy, chiyy, g, typename GeometryTraits<Geometry>::metric_category() ); 
+}
 
 }//namespace geo
 

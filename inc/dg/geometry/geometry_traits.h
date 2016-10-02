@@ -160,6 +160,59 @@ void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2,
     dg::blas1::pointwiseDot( 1., g.yz(), temp2, 1., out2);
 }
 
+template<class FunctorRR, class FunctorRZ, class FunctorZZ, class Geometry> 
+void doPushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixy,
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chiyy, 
+        const Geometry& g, OrthonormalCylindricalTag)
+{
+    chixx = evaluate( chiRR, g);
+    chixy = evaluate( chiRZ, g);
+    chiyy = evaluate( chiZZ, g);
+}
+
+template<class FunctorRR, class FunctorRZ, class FunctorZZ, class Geometry> 
+void doPushForwardPerp( FunctorRR chiRR_, FunctorRZ chiRZ_, FunctorZZ chiZZ_,
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixy,
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chiyy, 
+        const Geometry& g, CurvilinearCylindricalTag)
+{
+    //compute the rhs
+    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector chiRR, chiRZ, chiZZ;
+    chixx = chiRR = evaluate( chiRR_, g);
+    chixy = chiRZ = evaluate( chiRZ_, g);
+    chiyy = chiZZ = evaluate( chiZZ_, g);
+    //compute the transformation matrix
+    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector t00(chixx), t01(t00), t02(t00), t10(t00), t11(t00), t12(t00), t20(t00), t21(t00, t22(t00);
+    dg::blas1::pointwiseDot( g.xr(), g.xr(), t00);
+    dg::blas1::pointwiseDot( g.xr(), g.xz(), t01);
+    dg::blas1::scal( t01, 2.);
+    dg::blas1::pointwiseDot( g.xz(), g.xz(), t02);
+
+    dg::blas1::pointwiseDot( g.xr(), g.yr(), t10);
+    dg::blas1::pointwiseDot( g.xr(), g.yz(), t11);
+    dg::blas1::pointwiseDot( 1., g.yr(), g.xz(), 1., t11);
+    dg::blas1::pointwiseDot( g.xz(), g.yz(), t12);
+
+    dg::blas1::pointwiseDot( g.yr(), g.yr(), t20);
+    dg::blas1::pointwiseDot( g.yr(), g.yz(), t21);
+    dg::blas1::scal( t21, 2.);
+    dg::blas1::pointwiseDot( g.yz(), g.yz(), t22);
+    //now multiply
+    dg::blas1::pointwiseDot( t00, chiRR, chixx);
+    dg::blas1::pointwiseDot( 1., t01, chiRZ, 1., chixx);
+    dg::blas1::pointwiseDot( 1., t02, chiZZ, 1., chixx);
+    dg::blas1::pointwiseDot( t10, chiRR, chixy);
+    dg::blas1::pointwiseDot( 1., t11, chiRZ, 1., chixy);
+    dg::blas1::pointwiseDot( 1., t12, chiZZ, 1., chixy);
+    dg::blas1::pointwiseDot( t20, chiRR, chiyy);
+    dg::blas1::pointwiseDot( 1., t21, chiRZ, 1., chiyy);
+    dg::blas1::pointwiseDot( 1., t22, chiZZ, 1., chiyy);
+
+}
+
 
 }//namespace detail 
 }//namespace geo
