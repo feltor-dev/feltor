@@ -6,6 +6,7 @@
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 #include "orthogonal.h"
+#include "adaption.h"
 
 
 
@@ -201,8 +202,6 @@ void transform(
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>
 struct Hector
 {
-    typedef dg::ConformalTag metric_category; //!This typedef is for the construction of a dg::conformal::Grid
-
     /**
      * @brief Construct from functors
      *
@@ -229,59 +228,86 @@ struct Hector
     {
         //first construct u_
         container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, dg::ONE(), laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
-        //now compute u_zeta and u_eta 
-        Matrix dzeta = dg::create::dx( g2d_, dg::DIR);
-        Matrix deta = dg::create::dy( g2d_, dg::PER);
-        container u_zeta(u), u_eta(u);
-        dg::blas2::symv( dzeta, u, u_zeta);
-        dg::blas1::plus( u_zeta, (psi1-psi0)/g2d_.lx());
-        dg::blas2::symv( deta, u, u_eta);
+        construct( u, psi0, psi1, dg::ONE(), dg::ZERO(), dg::ONE() );
+        conformal_=orthogonal_=true;
+    }
+    /**
+     * @brief Construct from functors
+     *
+     * @tparam Psi A binary functor
+     * @tparam PsiX The first derivative in x
+     * @tparam PsiY The first derivative in y
+     * @tparam LaplacePsi The Laplacian function 
+     * @param psi The function 
+     * @param psiX The first derivative in x 
+     * @param psiY The first derivative in y
+     * @param laplacePsi The Laplacian 
+     * @param psi0 first boundary 
+     * @param psi1 second boundary
+     * @param X0 a point in the inside of the ring bounded by psi0
+     * @param Y0 a point in the inside of the ring bounded by psi0
+     * @param n number of polynomials used for the orthogonal grid
+     * @param Nx initial number of points in zeta
+     * @param Ny initial number of points in eta
+     * @param eps_u the accuracy of u
+     */
+    template< class Psi, class PsiX, class PsiY, class LaplacePsi, class Chi, class ChiX, class ChiY>
+    Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, Chi chi, ChiX chiX, ChiY chiY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
+        g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0), n, Nx, Ny, dg::DIR)
+    {
+        dg::detail::LaplaceAdaptPsi<PsiX, PsiY, LaplacePsi, Chi, ChiX, ChiY> lapAdaPsi( psiX, psiY, laplacePsi, chi, chiX, chiY);
+        //first construct u_
+        container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, chi, lapAdaPsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
+        construct( u, psi0, psi1, chi, dg::ZERO(), chi );
+        orthogonal_=true;
+        conformal_=false;
+    }
 
-        //we actually don't need u but it makes a good testcase 
-        container zeta;
-        dg::blas1::transfer(dg::pullback( psi, g2d_), zeta);
-        dg::blas1::axpby( +1., zeta, 1.,  u); //u = \tilde u + \psi
-
-        //now compute ZetaU and EtaU
-        container a2;
-        dg::blas1::transfer( g2d_.g_yy(), a2);
-        dg::blas1::pointwiseDivide( a2, g2d_.g_xx(), a2); // a^2=g^ee/g^zz
-        container zetaU=u_zeta, etaU=u_eta;
-        dg::blas1::pointwiseDot( zetaU, zetaU, zetaU); //u_z*u_z
-        dg::blas1::pointwiseDot(  etaU,  etaU,  etaU); //u_e*u_e
-        dg::blas1::pointwiseDot( 1., etaU, a2, 1., zetaU); //u_z*u_z+a^2u_e*u_e
-        container den( zetaU); //denominator
-        dg::blas1::pointwiseDivide( u_zeta, den, zetaU); //u_z / denominator
-        dg::blas1::pointwiseDivide(  u_eta, den,  etaU); 
-        dg::blas1::pointwiseDot( a2, etaU, etaU); //a^2*u_e / denominator
-        //now compute etaV and its inverse
-        container etaV(etaU), ones(etaU.size(), 1.);
-        dg::blas1::pointwiseDivide( ones, u_zeta, etaV);
-        thrust::host_vector<double> etaVinv_h;
-        dg::blas1::transfer( u_zeta, etaVinv_h);
-
-        //construct c0 and scale all vector components with it
-        c0_ = fabs( detail::construct_c0( etaVinv_h, g2d_));
-        if( psi1 < psi0) c0_*=-1;
-        lu_ = c0_*(psi1-psi0);
-        dg::blas1::scal(  etaV, 1./c0_);
-        dg::blas1::scal( zetaU, 1./c0_);
-        dg::blas1::scal(  etaU, 1./c0_);
-        dg::blas1::scal( u_zeta, c0_);
-        dg::blas1::scal(  u_eta, c0_);
-        dg::blas1::scal(  u, c0_);
-        //transfer to host
-        dg::blas1::transfer( u, u_);
-        detail::transform( u_zeta, u_eta, ux_, uy_, g2d_);
-        dg::blas1::transfer( etaV, etaV_);
-        dg::blas1::transfer( etaU, etaU_);
-        dg::blas1::transfer( zetaU, zetaU_);
-        //std::cout << "c0 is "<<c0_<<"\n";
+    /**
+     * @brief Construct from functors
+     *
+     * @tparam Psi A binary functor
+     * @tparam PsiX The first derivative in x
+     * @tparam PsiY The first derivative in y
+     * @tparam LaplacePsi The Laplacian function 
+     * @param psi The function 
+     * @param psiX The first derivative in x 
+     * @param psiY The first derivative in y
+     * @param laplacePsi The Laplacian 
+     * @param psi0 first boundary 
+     * @param psi1 second boundary
+     * @param X0 a point in the inside of the ring bounded by psi0
+     * @param Y0 a point in the inside of the ring bounded by psi0
+     * @param n number of polynomials used for the orthogonal grid
+     * @param Nx initial number of points in zeta
+     * @param Ny initial number of points in eta
+     * @param eps_u the accuracy of u
+     */
+    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi_XX, class Chi_XY, class Chi_YY, class DivChiX, class DivChiY>
+    Hector( Psi psi, PsiX psiX, PsiY psiY, 
+            PsiXX psiXX, PsiXY psiXY, PsiYY psiYY,  
+            Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY, 
+            DivChiX divChiX, DivChiY divChiY,
+            double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
+        g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,dg::detail::LaplacePsi<PsiXX, PsiYY> >(
+                    psi, psiX, psiY, dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0,0), n, Nx, Ny, dg::DIR)
+    {
+        dg::detail::LaplaceChiPsi<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Chi_XX, Chi_XY, Chi_YY, DivChiX, DivChiY>
+            lapChiPsi( psiX, psiY, psiXX, psiXY, psiYY, 
+                chi_XX, chi_XY, chi_YY, divChiX, divChiY);
+        //first construct u_
+        container u = construct_grid_and_u( 
+                psi, psiX, psiY, 
+                dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), 
+                chi_XX, chi_XY, chi_YY, lapChiPsi, 
+                psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
+        construct( u, psi0, psi1, chi_XX, chi_XY, chi_YY);
+        orthogonal_=conformal_=false;
     }
     /**
      * @brief The length of the u domain
      *
-     * Call before discreizing the u domain
+     * Call before discretizing the u domain
      * @return  
      */
     double lu() const {return lu_;}
@@ -292,6 +318,9 @@ struct Hector
      * @return 2pi 
      */
     double lv() const {return 2.*M_PI;}
+    bool isConformal() const {return conformal_;}
+    bool isOrthogonal() const {return orthogonal_;}
+
     /**
      * @brief Generate the points and the elements of the Jacobian
      *
@@ -329,10 +358,8 @@ struct Hector
         dg::blas2::symv( Q, g2d_.z(), y);
         dg::blas2::symv( Q, ux_, ux);
         dg::blas2::symv( Q, uy_, uy);
-        dg::blas1::transfer( ux, vy);
-        dg::blas1::axpby( -1., uy, 0., vx);
-
-
+        dg::blas2::symv( Q, vx_, vx);
+        dg::blas2::symv( Q, vy_, vy);
     }
 
     /**
@@ -350,7 +377,6 @@ struct Hector
         dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0);
         dg::orthogonal::RingGrid2d<container> g2d_old = g2d_;
         container adapt = dg::pullback(weights, g2d_old);
-        dg::blas1::transform(adapt, adapt, dg::INVERT<double>());
         dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set_chi( adapt);
 
@@ -388,8 +414,125 @@ struct Hector
         return u;
     }
 
+    template< class Psi, class PsiX, class PsiY, class LaplacePsi, class Chi_XX, class Chi_XY, class Chi_YY, class LaplaceChiPsi>
+    container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, 
+            Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY, LaplaceChiPsi lapCP, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u ) 
+    {
+        //first find u( \zeta, \eta)
+        double eps = 1e10, eps_old = 2e10;
+        dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0);
+        dg::orthogonal::RingGrid2d<container> g2d_old = g2d_;
+        dg::TensorElliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        ellipticD_old.set( chi_XX, chi_XY, chi_YY);
+
+        container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
+        //container lapu = g2d_old.lapx();
+        container lapu = dg::pullback( lapCP, g2d_old);
+        dg::Invert<container > invert_old( u_old, n*n*Nx*Ny, eps_u);
+        unsigned number = invert_old( ellipticD_old, u_old, lapu);
+        while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
+        {
+            eps = eps_old;
+            Nx*=2, Ny*=2;
+            dg::orthogonal::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            dg::TensorElliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            ellipticD.set( chi_XX, chi_XY, chi_YY );
+            //lapu = g2d.lapx();
+            lapu = dg::pullback( lapCP, g2d);
+            const container vol2d = dg::create::weights( g2d);
+            const IMatrix Q = dg::create::interpolation( g2d, g2d_old);
+            u = dg::evaluate( dg::zero, g2d);
+            container u_diff( u);
+            dg::blas2::gemv( Q, u_old, u_diff);
+
+            dg::Invert<container > invert( u_diff, n*n*Nx*Ny, 0.1*eps_u);
+            number = invert( ellipticD, u, lapu);
+            dg::blas1::axpby( 1. ,u, -1., u_diff);
+            eps = sqrt( dg::blas2::dot( u_diff, vol2d, u_diff) / dg::blas2::dot( u, vol2d, u) );
+            std::cout << "Nx "<<Nx<<" Ny "<<Ny<<" error "<<eps<<"\n";
+            g2d_old = g2d;
+            u_old = u;
+            g2d_ = g2d;
+            number++;//get rid of warning
+        }
+        return u;
+    }
+
+    template< class Chi_XX, class Chi_XY, class Chi_YY>
+    void construct(const container& u, double psi0, double psi1, Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY)
+    {
+        //now compute u_zeta and u_eta 
+        Matrix dzeta = dg::create::dx( g2d_, dg::DIR);
+        Matrix deta = dg::create::dy( g2d_, dg::PER);
+        container u_zeta(u), u_eta(u);
+        dg::blas2::symv( dzeta, u, u_zeta);
+        dg::blas1::plus( u_zeta, (psi1-psi0)/g2d_.lx());
+        dg::blas2::symv( deta, u, u_eta);
+
+        ////we actually don't need u but it makes a good testcase 
+        //container psi__;
+        //dg::blas1::transfer(dg::pullback( psi, g2d_), psi__);
+        //dg::blas1::axpby( +1., psi__, 1.,  u); //u = \tilde u + \psi
+
+        thrust::host_vector<double> chi_ZZ, chi_ZE, chi_EE;
+        dg::geo::pushForwardPerp( chi_XX, chi_XY, chi_YY, chi_ZZ, chi_ZE, chi_EE, g2d_);
+        container chiZZ, chiZE, chiEE;
+        dg::blas1::transfer( chi_ZZ, chiZZ);
+        dg::blas1::transfer( chi_ZE, chiZE);
+        dg::blas1::transfer( chi_EE, chiEE);
+
+        //now compute ZetaU and EtaU
+        container temp_zeta(u), temp_eta(u);
+        dg::blas1::pointwiseDot( chiZZ, u_zeta, temp_zeta);
+        dg::blas1::pointwiseDot( 1. ,chiZE, u_eta, 1., temp_zeta);
+        dg::blas1::pointwiseDot( chiZE, u_zeta, temp_eta);
+        dg::blas1::pointwiseDot( 1. ,chiEE, u_eta, 1., temp_eta);
+        container temp_scalar(u),temp_zeta2(u),temp_eta2(u),temp_ze(u);
+        dg::blas1::pointwiseDot( u_zeta, u_zeta, temp_zeta2);
+        dg::blas1::pointwiseDot( u_eta, u_eta, temp_eta2);
+        dg::blas1::pointwiseDot( u_zeta, u_eta, temp_ze);
+        dg::blas1::pointwiseDot( chiZZ, temp_zeta2, temp_scalar);
+        dg::blas1::pointwiseDot( 2., chiZE, temp_ze, 1., temp_scalar);
+        dg::blas1::pointwiseDot( 1., chiEE, temp_eta2, 1., temp_scalar);
+        container zetaU=temp_zeta, etaU=temp_eta;
+        dg::blas1::pointwiseDivide( zetaU, temp_scalar, zetaU); 
+        dg::blas1::pointwiseDivide(  etaU, temp_scalar,  etaU); 
+        //now compute etaV and its inverse
+        container etaVinv(u_zeta), etaV(etaVinv);
+        dg::blas1::pointwiseDot( etaVinv, chiZZ, etaVinv);
+        dg::geo::multiplyPerpVolume( etaVinv, g2d_);
+        dg::blas1::transform( etaVinv, etaV, dg::INVERT<double>());
+        thrust::host_vector<double> etaVinv_h;
+        dg::blas1::transfer( etaVinv, etaVinv_h);
+        //now compute v_zeta and v_eta
+        container v_zeta(u), v_eta(u);
+        dg::blas1::axpby( -1., temp_eta, 0.,v_zeta);
+        dg::blas1::axpby( +1., temp_zeta, 0.,v_eta);
+        dg::geo::multiplyPerpVolume( v_zeta, g2d_);
+        dg::geo::multiplyPerpVolume(  v_eta, g2d_);
+
+        //construct c0 and scale all vector components with it
+        c0_ = fabs( detail::construct_c0( etaVinv_h, g2d_));
+        if( psi1 < psi0) c0_*=-1;
+        lu_ = c0_*(psi1-psi0);
+        //std::cout << "c0 is "<<c0_<<"\n";
+        dg::blas1::scal(  etaV, 1./c0_);
+        dg::blas1::scal( zetaU, 1./c0_);
+        dg::blas1::scal(  etaU, 1./c0_);
+        dg::blas1::scal( u_zeta, c0_);
+        dg::blas1::scal( v_zeta, c0_);
+        dg::blas1::scal(  u_eta, c0_);
+        dg::blas1::scal(  v_eta, c0_);
+        //transfer to host
+        detail::transform( u_zeta, u_eta, ux_, uy_, g2d_);
+        detail::transform( v_zeta, v_eta, vx_, vy_, g2d_);
+        dg::blas1::transfer( etaV, etaV_);
+        dg::blas1::transfer( etaU, etaU_);
+        dg::blas1::transfer( zetaU, zetaU_);
+    }
+    bool conformal_, orthogonal_;
     double c0_, lu_;
-    thrust::host_vector<double> u_, ux_, uy_;
+    thrust::host_vector<double> ux_, uy_, vx_, vy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
     dg::orthogonal::RingGrid2d<container> g2d_;
 

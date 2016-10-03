@@ -48,14 +48,14 @@ struct RingGrid3d : public dg::Grid3d<double>
         solovev::LaplacePsip lap( gp); 
         dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
 
-        construct( hector, n, Nx, Ny, Nz, bcx, dg::ConformalTag());
+        construct( hector, n, Nx, Ny, Nz, bcx);
     }
 
     template< class Generator>
     RingGrid3d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx) :
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     {
-        construct( hector, n,Nx, Ny, Nz, bcx, typename Generator::metric_category());
+        construct( hector, n,Nx, Ny, Nz, bcx);
     }
     perpendicular_grid perp_grid() const { return conformal::RingGrid2d<container>(*this);}
 
@@ -72,8 +72,9 @@ struct RingGrid3d : public dg::Grid3d<double>
     const container& perpVol()const{return vol2d_;}
     private:
     template< class Generator>
-    void construct( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::ConformalTag ) 
+    void construct( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx) 
     {
+        assert( hector.isConformal());
         dg::Grid2d<double> guv( 0., hector.lu(), 0., 2.*M_PI, n, Nx, Ny );
         dg::Grid1d<double> gu( 0., hector.lu(), n, Nx);
         dg::Grid1d<double> gv( 0., 2.*M_PI, n, Ny);
@@ -129,7 +130,7 @@ struct RingGrid3d : public dg::Grid3d<double>
 template< class container>
 struct RingGrid2d : public dg::Grid2d<double>
 {
-    typedef dg::ConformalTag metric_category;
+    typedef dg::ConformalCylindricalTag metric_category;
     template< class Generator>
     RingGrid2d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx):
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)

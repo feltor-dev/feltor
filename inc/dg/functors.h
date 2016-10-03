@@ -1243,6 +1243,26 @@ struct ONE
 #endif
     double operator()(double x, double y, double z){return 1.;}
 };
+/**
+ * @brief Return zero
+ * \f[ f(x) = 0\f]
+ *
+ */
+struct ZERO
+{
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x){return 0.;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x, double y){return 0.;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x, double y, double z){return 0.;}
+};
 
 /**
  * @brief Compute a histogram on a 1D grid
