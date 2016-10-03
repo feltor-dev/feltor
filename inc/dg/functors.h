@@ -1068,6 +1068,28 @@ struct PLUS
 };
 
 /**
+ * @brief Invert the given value
+ * \f[ f(x) = 1/x \f]
+ *
+ * @tparam T value type
+ */
+template <class T = double>
+struct INVERT
+{
+    /**
+     * @brief Invert the given value
+     *
+     * @param x  the input
+     *
+     * @return  1/x
+     */
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+        T operator()(const T& x){ return 1./x;}
+};
+
+/**
  * @brief returns (positive) modulo 
  * \f[ f(x) = x\mod m\f]
  *
@@ -1199,6 +1221,27 @@ struct CONSTANT
     double operator()(double x, double y, double z){return value_;}
     private:
     double value_;
+};
+
+/**
+ * @brief Return one
+ * \f[ f(x) = 1\f]
+ *
+ */
+struct ONE
+{
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x){return 1.;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x, double y){return 1.;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x, double y, double z){return 1.;}
 };
 
 /**

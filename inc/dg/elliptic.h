@@ -524,7 +524,7 @@ struct GeneralEllipticSym
         if( dir == backward) return forward;
         return centered;
     }
-    dg::GeneralElliptic<Geometry, Matrix, Vector> ellipticFoward_, ellipticBackward_;
+    dg::GeneralElliptic<Geometry, Matrix, Vector> ellipticForward_, ellipticBackward_;
     Vector weights_, precond_; //contain coeffs for chi multiplication
     Vector temp_;
 };
@@ -587,7 +587,7 @@ struct TensorElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralElliptic( Geometry g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward): 
+    TensorElliptic( Geometry g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward): 
         no_(no), g_(g)
     { 
         construct( g, bcx, bcy, dir);
@@ -648,27 +648,27 @@ struct TensorElliptic
     void symv( Vector& x, Vector& y) 
     {
         //compute gradient
-        dg::blas2::gemv( rightx, x, tempx); //R_x*f 
-        dg::blas2::gemv( righty, x, tempy); //R_y*f
+        dg::blas2::gemv( rightx, x, tempx_); //R_x*f 
+        dg::blas2::gemv( righty, x, tempy_); //R_y*f
 
         //multiply with chi 
-        dg::blas1::pointwiseDot( chixx_, tempx, gradx); //gxx*v_x
-        dg::blas1::pointwiseDot( chixy_, tempx, y); //gyx*v_x
-        dg::blas1::pointwiseDot( 1., chixy, tempy, 1., gradx);//gxy*v_y
-        dg::blas1::pointwiseDot( 1., chiyy, tempy, 1., y); //gyy*v_y
+        dg::blas1::pointwiseDot( chixx_, tempx_, gradx_); //gxx*v_x
+        dg::blas1::pointwiseDot( chixy_, tempx_, y); //gyx*v_x
+        dg::blas1::pointwiseDot( 1., chixy_, tempy_, 1., gradx_);//gxy*v_y
+        dg::blas1::pointwiseDot( 1., chiyy_, tempy_, 1., y); //gyy*v_y
 
         //now take divergence
-        dg::blas2::gemv( leftx, gradx, tempx);  
-        dg::blas2::gemv( lefty, y, tempy);  
-        dg::blas1::axpby( -1., tempx, -1., tempy, y); //-D_xx - D_yy 
+        dg::blas2::gemv( leftx, gradx_, tempx_);  
+        dg::blas2::gemv( lefty, y, tempy_);  
+        dg::blas1::axpby( -1., tempx_, -1., tempy_, y); //-D_xx - D_yy 
         if( no_ == normed)
             dg::geo::divideVolume( y, g_);
 
         //add jump terms
-        dg::blas2::symv( jumpX, x, tempx);
-        dg::blas1::axpby( +1., tempx, 1., y, y); 
-        dg::blas2::symv( jumpY, x, tempy);
-        dg::blas1::axpby( +1., tempy, 1., y, y); 
+        dg::blas2::symv( jumpX, x, tempx_);
+        dg::blas1::axpby( +1., tempx_, 1., y, y); 
+        dg::blas2::symv( jumpY, x, tempy_);
+        dg::blas1::axpby( +1., tempy_, 1., y, y); 
         if( no_ == not_normed)//multiply weights without volume
             dg::blas2::symv( weights_wo_vol, y, y);
     }
@@ -683,13 +683,13 @@ struct TensorElliptic
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
         dg::blas1::transfer( dg::create::volume(g),        weights_);
         dg::blas1::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
-        dg::blas1::transfer( dg::evaluate( dg::one, g),    chixx);
-        dg::blas1::transfer( dg::evaluate( dg::zero,g),    chixy);
-        dg::blas1::transfer( dg::evaluate( dg::one, g),    chiyy);
-        tempx = tempy = gradx = chixx;
-        dg::geo::multiplyVolume( chixx, g_); 
-        dg::geo::multiplyVolume( chixy, g_); 
-        dg::geo::multiplyVolume( chiyy, g_); 
+        dg::blas1::transfer( dg::evaluate( dg::one, g),    chixx_);
+        dg::blas1::transfer( dg::evaluate( dg::zero,g),    chixy_);
+        dg::blas1::transfer( dg::evaluate( dg::one, g),    chiyy_);
+        tempx_ = tempy_ = gradx_ = chixx_;
+        dg::geo::multiplyVolume( chixx_, g_); 
+        dg::geo::multiplyVolume( chixy_, g_); 
+        dg::geo::multiplyVolume( chiyy_, g_); 
         dg::blas1::transfer( dg::create::volume(g), weights_wo_vol);
         dg::geo::divideVolume( weights_wo_vol, g_);
     }
@@ -709,7 +709,7 @@ struct TensorElliptic
     }
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
     Vector weights_, weights_wo_vol, precond_; //contain coeffs for chi multiplication
-    Vector chixx_, chixy_, chiyy_, xx, yy, zz, temp0, temp1;
+    Vector chixx_, chixy_, chiyy_, tempx_, tempy_, gradx_;
     norm no_;
     Geometry g_;
 };

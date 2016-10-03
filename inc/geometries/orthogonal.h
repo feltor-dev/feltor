@@ -283,9 +283,9 @@ struct SimpleOrthogonal
         assert( psi_1 != psi_0);
         firstline_ = firstline;
         orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
-        f0_ = fpsi.construct_f( psi_0, R0_, Z0_);
+        f0_ = fabs( fpsi.construct_f( psi_0, R0_, Z0_));
         if( psi_1 < psi_0) f0_*=-1;
-        lz_ = fabs( f0_*(psi_1-psi_0));
+        lz_ =  f0_*(psi_1-psi_0);
     }
     double f0() const{return f0_;}
     double lx() const{return lz_;}

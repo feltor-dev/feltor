@@ -223,24 +223,24 @@ struct Hector
      * @param Ny initial number of points in eta
      * @param eps_u the accuracy of u
      */
-    template< class Psi, class PsiX, class PsiY, class LaplacePsi>
+    template< class Psi, class PsiX, class PsiY, class LaplacePsi >
     Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
         g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0), n, Nx, Ny, dg::DIR)
     {
         //first construct u_
-        container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
+        container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, dg::ONE(), laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
         //now compute u_zeta and u_eta 
         Matrix dzeta = dg::create::dx( g2d_, dg::DIR);
         Matrix deta = dg::create::dy( g2d_, dg::PER);
         container u_zeta(u), u_eta(u);
         dg::blas2::symv( dzeta, u, u_zeta);
-        dg::blas1::plus( u_zeta, 1.);
+        dg::blas1::plus( u_zeta, (psi1-psi0)/g2d_.lx());
         dg::blas2::symv( deta, u, u_eta);
 
         //we actually don't need u but it makes a good testcase 
         container zeta;
-        dg::blas1::transfer(dg::evaluate( dg::cooX2d, g2d_), zeta);
-        dg::blas1::axpby( +1., zeta, 1.,  u); //u = \tilde u + \zeta
+        dg::blas1::transfer(dg::pullback( psi, g2d_), zeta);
+        dg::blas1::axpby( +1., zeta, 1.,  u); //u = \tilde u + \psi
 
         //now compute ZetaU and EtaU
         container a2;
@@ -261,7 +261,9 @@ struct Hector
         dg::blas1::transfer( u_zeta, etaVinv_h);
 
         //construct c0 and scale all vector components with it
-        c0_ = detail::construct_c0( etaVinv_h, g2d_);
+        c0_ = fabs( detail::construct_c0( etaVinv_h, g2d_));
+        if( psi1 < psi0) c0_*=-1;
+        lu_ = c0_*(psi1-psi0);
         dg::blas1::scal(  etaV, 1./c0_);
         dg::blas1::scal( zetaU, 1./c0_);
         dg::blas1::scal(  etaU, 1./c0_);
@@ -282,7 +284,7 @@ struct Hector
      * Call before discreizing the u domain
      * @return  
      */
-    double lu() const {return c0_*g2d_.lx();}
+    double lu() const {return lu_;}
     /**
      * @brief The length of the v domain
      *
@@ -340,17 +342,21 @@ struct Hector
      */
     const dg::orthogonal::RingGrid2d<container>& orthogonal_grid() const {return g2d_;}
     private:
-    template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-    container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u ) 
+    template< class Psi, class PsiX, class PsiY, class LaplacePsi, class Adaption, class LaplaceAdaptionPsi>
+    container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, Adaption weights, LaplaceAdaptionPsi lapAP, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u ) 
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
         dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0);
-        dg::orthogonal::RingGrid2d<container> g2d_old(generator, n, Nx, Ny, dg::DIR);
+        dg::orthogonal::RingGrid2d<container> g2d_old = g2d_;
+        container adapt = dg::pullback(weights, g2d_old);
+        dg::blas1::transform(adapt, adapt, dg::INVERT<double>());
         dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        ellipticD_old.set_chi( adapt);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
-        container lapu = g2d_old.lapx();
+        //container lapu = g2d_old.lapx();
+        container lapu = dg::pullback( lapAP, g2d_old);
         dg::Invert<container > invert_old( u_old, n*n*Nx*Ny, eps_u);
         unsigned number = invert_old( ellipticD_old, u_old, lapu);
         while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
@@ -359,7 +365,10 @@ struct Hector
             Nx*=2, Ny*=2;
             dg::orthogonal::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
             dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
-            lapu = g2d.lapx();
+            container adapt = dg::pullback(weights, g2d);
+            ellipticD.set_chi( adapt);
+            //lapu = g2d.lapx();
+            lapu = dg::pullback( lapAP, g2d);
             const container vol2d = dg::create::weights( g2d);
             const IMatrix Q = dg::create::interpolation( g2d, g2d_old);
             u = dg::evaluate( dg::zero, g2d);
@@ -379,7 +388,7 @@ struct Hector
         return u;
     }
 
-    double c0_;
+    double c0_, lu_;
     thrust::host_vector<double> u_, ux_, uy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
     dg::orthogonal::RingGrid2d<container> g2d_;

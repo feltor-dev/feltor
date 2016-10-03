@@ -185,7 +185,7 @@ void doPushForwardPerp( FunctorRR chiRR_, FunctorRZ chiRZ_, FunctorZZ chiZZ_,
     chixy = chiRZ = evaluate( chiRZ_, g);
     chiyy = chiZZ = evaluate( chiZZ_, g);
     //compute the transformation matrix
-    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector t00(chixx), t01(t00), t02(t00), t10(t00), t11(t00), t12(t00), t20(t00), t21(t00, t22(t00);
+    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector t00(chixx), t01(t00), t02(t00), t10(t00), t11(t00), t12(t00), t20(t00), t21(t00), t22(t00);
     dg::blas1::pointwiseDot( g.xr(), g.xr(), t00);
     dg::blas1::pointwiseDot( g.xr(), g.xz(), t01);
     dg::blas1::scal( t01, 2.);
