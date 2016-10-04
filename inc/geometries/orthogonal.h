@@ -276,7 +276,6 @@ void construct_rz( Nemov nemov,
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SimpleOrthogonal
 {
-    typedef dg::OrthogonalTag metric_category;
     SimpleOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
         psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi)
     {
@@ -288,7 +287,10 @@ struct SimpleOrthogonal
         lz_ =  f0_*(psi_1-psi_0);
     }
     double f0() const{return f0_;}
-    double lx() const{return lz_;}
+    double width() const{return lz_;}
+    double height() const{return 2.*M_PI;}
+    bool isOrthogonal() const{return true;}
+    bool isConformal()  const{return false;}
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
@@ -317,7 +319,6 @@ struct SimpleOrthogonal
             etaY[idx] = +h[idx]*psipR;
         }
     }
-    double laplaceX(double x, double y) {return f0_*laplacePsi_(x,y);}
     private:
     PsiX psiX_;
     PsiY psiY_;
@@ -341,39 +342,13 @@ struct RingGrid3d : public dg::Grid3d<double>
 {
     typedef dg::OrthogonalTag metric_category;
     typedef RingGrid2d<container> perpendicular_grid;
-    /**
-     * @brief Construct 
-     *
-     * @param gp The geometric parameters define the magnetic field
-     * @param psi_0 lower boundary for psi
-     * @param psi_1 upper boundary for psi
-     * @param n The dG number of polynomials
-     * @param Nx The number of points in x-direction
-     * @param Ny The number of points in y-direction
-     * @param Nz The number of points in z-direction
-     * @param bcx The boundary condition in x (y,z are periodic)
-     */
-    RingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, int firstline = 0): 
-        dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
-    { 
-        solovev::Psip psip(gp); 
-        solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
-        //solovev::PsipRR psipRR(gp); solovev::PsipZZ psipZZ(gp); solovev::PsipRZ psipRZ(gp);
-        //solovev::LaplacePsipR lapPsipR(gp); solovev::LaplacePsipZ lapPsipZ(gp); 
-        solovev::LaplacePsip lapPsip(gp); 
-        //construct( psip, psipR, psipZ, psipRR, psipRZ, psipZZ, lapPsipR, lapPsipZ, psi_0, psi_1, gp.R_0, 0, n, Nx, Ny);
-        dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> ortho( psip, psipR, psipZ, lapPsip, psi_0, psi_1, gp.R_0, 0, firstline);
-        construct( ortho, n, Nx, Ny, dg::OrthogonalTag());
-    }
-    //template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class LaplacePsiX, class LaplacePsiY>
-    //RingGrid3d( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, LaplacePsiX laplacePsiX, LaplacePsiY laplacePsiY, 
+
     template< class Generator>
     RingGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx):
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
-        construct( generator, n, Nx, Ny, typename Generator::metric_category());
+        construct( generator, n, Nx, Ny);
     }
-
 
     perpendicular_grid perp_grid() const { return orthogonal::RingGrid2d<container>(*this);}
     const thrust::host_vector<double>& r()const{return r_;}
@@ -382,8 +357,6 @@ struct RingGrid3d : public dg::Grid3d<double>
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    const thrust::host_vector<double>& lapx()const{return lapx_;}
-    //const thrust::host_vector<double>& lapy()const{return lapy_;}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
@@ -391,29 +364,21 @@ struct RingGrid3d : public dg::Grid3d<double>
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    //template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class LaplacePsiX, class LaplacePsiY>
-    //void construct( Psi psi, PsiX psiX, PsiY psiY, 
-    //        PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, 
-    //        LaplacePsiX laplacePsiX, LaplacePsiY laplacePsiY, 
     template< class Generator>
-    void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::OrthogonalTag)
+    void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny)
     {
+        assert( generator.isOrthogonal());
         dg::Grid1d<double> gY1d( 0, 2*M_PI, n, Ny, dg::PER);
-        thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
-        double x_1 = generator.lx();
-        init_X_boundaries( 0., x_1);
-        dg::Grid1d<double> gX1d( this->x0(), this->x1(), n, Nx);
+        dg::Grid1d<double> gX1d( 0., generator.width(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
+        thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
         generator( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
-        lapx_.resize(this->size());
-        for( unsigned idx=0; idx<r_.size(); idx++)
-            lapx_[idx] = generator.laplaceX( r_[idx], z_[idx]);
+        init_X_boundaries( 0., generator.width());
         lift3d( ); //lift to 3D grid
         construct_metric();
     }
     void lift3d( )
     {
-
         //lift to 3D grid
         unsigned size = this->size();
         r_.resize( size), z_.resize(size), xr_.resize(size), yr_.resize( size), xz_.resize( size), yz_.resize(size);
@@ -427,8 +392,6 @@ struct RingGrid3d : public dg::Grid3d<double>
                 xz_[k*Nx*Ny+i] = xz_[(k-1)*Nx*Ny+i];
                 yr_[k*Nx*Ny+i] = yr_[(k-1)*Nx*Ny+i];
                 yz_[k*Nx*Ny+i] = yz_[(k-1)*Nx*Ny+i];
-                lapx_[k*Nx*Ny+i] = lapx_[(k-1)*Nx*Ny+i];
-                //lapy_[k*Nx*Ny+i] = lapy_[(k-1)*Nx*Ny+i];
             }
     }
     //compute metric elements from xr, xz, yr, yz, r and z
@@ -450,7 +413,7 @@ struct RingGrid3d : public dg::Grid3d<double>
         dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
         g_pp_=tempxx;
     }
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_, lapx_; //lapy_; 
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
 };
 
@@ -467,28 +430,19 @@ struct RingGrid2d : public dg::Grid2d<double>
     {
         orthogonal::RingGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz(), lapx_=g.lapx(); //lapy_=g.lapy();
+        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
 
-    }
-    RingGrid2d( const solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, int firstline = 0): 
-        dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
-    {
-        orthogonal::RingGrid3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx, firstline);
-        init_X_boundaries( g.x0(), g.x1());
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz(), lapx_=g.lapx(); //lapy_=g.lapy();
-        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
-        vol2d_=g.perpVol();
     }
     RingGrid2d( const RingGrid3d<container>& g):
         dg::Grid2d<double>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         unsigned s = this->size();
-        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s), lapx_.resize(s);// lapy_.resize(s);
+        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
         g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
         for( unsigned i=0; i<s; i++)
-        { r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i], lapx_[i] = g.lapx()[i]; }// lapy_[i] = g.lapy()[i];}
+        { r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
         thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
         thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
@@ -501,15 +455,13 @@ struct RingGrid2d : public dg::Grid2d<double>
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    const thrust::host_vector<double>& lapx()const{return lapx_;}
-    //const thrust::host_vector<double>& lapy()const{return lapy_;}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_, lapx_;// lapy_; //2d vector
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 

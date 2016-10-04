@@ -308,16 +308,16 @@ struct Hector
      * @brief The length of the u domain
      *
      * Call before discretizing the u domain
-     * @return  
+     * @return  c0*(psi1-psi0)
      */
-    double lu() const {return lu_;}
+    double width() const {return lu_;}
     /**
      * @brief The length of the v domain
      *
      * Always returns 2pi
      * @return 2pi 
      */
-    double lv() const {return 2.*M_PI;}
+    double height() const {return 2.*M_PI;}
     bool isConformal() const {return conformal_;}
     bool isOrthogonal() const {return orthogonal_;}
 
