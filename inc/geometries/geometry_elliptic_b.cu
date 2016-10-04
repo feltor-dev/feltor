@@ -14,7 +14,7 @@
 //#include "guenther.h"
 #include "conformal.h"
 #include "orthogonal.h"
-#include "refined_ribeiro.h"
+#include "refined_curvilinear.h"
 #include "refined_orthogonal.h"
 
 
@@ -50,10 +50,11 @@ int main(int argc, char**argv)
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing grid ... \n";
     t.tic();
+    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsi> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsi(gp), psi_0, psi_1, gp.R_0, 0., 0);
 //     conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
 //     conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
 //     dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::refined::orthogonal::RingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, gp, psi_0, psi_1, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    dg::refined::orthogonal::RingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
     dg::refined::orthogonal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
     dg::Elliptic<dg::refined::orthogonal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
     dg::RefinedElliptic<dg::refined::orthogonal::RingGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);

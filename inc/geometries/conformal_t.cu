@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
     //dg::conformal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::NablaPsiInv<solovev::PsipR, solovev::PsipZ> nablaInv( psipR, psipZ);
     dg::NablaPsiInvX<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nablaInvX( psipR, psipZ, psipRR, psipRZ, psipZZ);
-    dg::NablaPsiInvX<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nablaInvY( psipR, psipZ, psipRR, psipRZ, psipZZ);
+    dg::NablaPsiInvY<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nablaInvY( psipR, psipZ, psipRR, psipRZ, psipZZ);
     dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, nablaInv, nablaInvX, nablaInvY, psi_0, psi_1, gp.R_0, 0.);
     dg::orthogonal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
     dg::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();

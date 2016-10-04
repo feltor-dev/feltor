@@ -2,7 +2,7 @@
 
 
 #include "dg/geometry/refined_grid.h"
-#include "ribeiro.h"
+#include "curvilinear.h"
 
 
 namespace dg
@@ -49,12 +49,12 @@ struct RingGrid3d : public dg::refined::Grid3d
     template< class Generator>
     void construct( Generator generator)
     {
+        init_X_boundaries( 0., generator.width());
         unsigned sizeY = this->n()*this->Ny();
         unsigned sizeX = this->n()*this->Nx();
         thrust::host_vector<double> y_vec(sizeY), x_vec(sizeX);
         for(unsigned i=0; i<sizeY; i++) y_vec[i] = this->abscissasY()[i*sizeX];
         for(unsigned i=0; i<sizeX; i++) x_vec[i] = this->abscissasX()[i];
-        init_X_boundaries( 0., generator.width());
         generator( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
         lift3d( ); //lift to 3D grid
         construct_metric();
