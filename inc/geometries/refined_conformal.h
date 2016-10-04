@@ -15,48 +15,23 @@ namespace conformal
 template< class container>
 struct RingGrid2d; 
 
-/**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
- */
 template< class container>
 struct RingGrid3d : public dg::refined::Grid3d
 {
     typedef dg::ConformalCylindricalTag metric_category;
     typedef RingGrid2d<container> perpendicular_grid;
 
-    /**
-     * @brief Construct 
-     *
-     * @param gp The geometric parameters define the magnetic field
-     * @param psi_0 lower boundary for psi
-     * @param psi_1 upper boundary for psi
-     * @param n The dG number of polynomials
-     * @param Nx The number of points in x-direction
-     * @param Ny The number of points in y-direction
-     * @param Nz The number of points in z-direction
-     * @param bcx The boundary condition in x (y,z are periodic)
-     */
-    RingGrid3d( unsigned multiple_x, unsigned multiple_y, solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
+    template<class Generator>
+    RingGrid3d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
         dg::refined::Grid3d( multiple_x, multiple_y, 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, n_old, Nx, Ny, Nz, bcx, dg::PER, dg::PER),
-        g_assoc_( gp, psi_0, psi_1, n_old, Nx, Ny, Nz, bcx)
+        g_assoc_( generator, n_old, Nx, Ny, Nz, bcx)
     { 
-        solovev::Psip psip(gp); 
-        solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
-        solovev::LaplacePsip lapPsip(gp); 
-        construct( psip, psipR, psipZ, lapPsip, psi_0, psi_1, gp.R_0, 0);
-
-    }
-    template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-    RingGrid3d( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, 
-            double psi_0, double psi_1, double x0, double y0, unsigned multiple_x, unsigned multiple_y, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx):
-        dg::refined::Grid3d( multiple_x, multiple_y, 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, n_old, Nx, Ny, Nz, bcx, dg::PER, dg::PER),
-        g_assoc_( psi, psiX, psiY, laplacePsi, psi_0, psi_1, x0, y0, n_old, Nx, Ny, Nz, bcx)
-    { 
-        construct( psi, psiX, psiY, laplacePsi, psi_0, psi_1, x0, y0);
+        assert( generator.isConformal());
+        construct( generator);
     }
 
 
-    perpendicular_grid perp_grid() const { return dg::refined::conformal::RingGrid2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
     const dg::conformal::RingGrid3d<container>& associated() const{ return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
@@ -71,21 +46,16 @@ struct RingGrid3d : public dg::refined::Grid3d
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-    void construct( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi,
-            double psi_0, double psi_1, 
-            double x0, double y0)
+    template< class Generator>
+    void construct( Generator generator)
     {
         unsigned sizeY = this->n()*this->Ny();
         unsigned sizeX = this->n()*this->Nx();
-        thrust::host_vector<double> y_vec(sizeY);
+        thrust::host_vector<double> y_vec(sizeY), x_vec(sizeX);
         for(unsigned i=0; i<sizeY; i++) y_vec[i] = this->abscissasY()[i*sizeX];
-        dg::Hector generator( psi, psiX, psiY, laplacePsi, psi_0, psi_1, x0, y0);
-        double x_1 = generator.lu();
-        init_X_boundaries( 0., x_1);
-        thrust::host_vector<double> x_vec(sizeX); 
         for(unsigned i=0; i<sizeX; i++) x_vec[i] = this->abscissasX()[i];
-        generator( psi, psiX, psiY, laplacePsi, x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
+        init_X_boundaries( 0., generator.width());
+        generator( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
         lift3d( ); //lift to 3D grid
         construct_metric();
     }
@@ -139,30 +109,18 @@ template< class container>
 struct RingGrid2d : public dg::refined::Grid2d
 {
     typedef dg::ConformalCylindricalTag metric_category;
-    template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-    RingGrid2d( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, 
-            double psi_0, double psi_1, double x0, double y0, 
-            unsigned multiple_x, unsigned multiple_y, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx):
+    template< class Generator>
+    RingGrid2d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx):
         dg::refined::Grid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
-        g_assoc_( psi, psiX, psiY, laplacePsi, psi_0, psi_1, x0, y0, n_old, Nx, Ny, bcx) 
+        g_assoc_( generator, n_old, Nx, Ny, bcx) 
     {
-        dg::refined::conformal::RingGrid3d<container> g( psi, psiX, psiY, laplacePsi, psi_0, psi_1, x0, y0, multiple_x, multiple_y, n,n_old,Nx,Ny,1,bcx);
+        dg::refined::orthogonal::RingGrid3d<container> g( multiple_x, multiple_y, generator, n,n_old,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
-        g_xx_=g.g_xx();
+        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
 
-    RingGrid2d( unsigned multiple_x, unsigned multiple_y, const solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx): 
-        dg::refined::Grid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
-        g_assoc_( gp, psi_0, psi_1, n_old, Nx, Ny, bcx) 
-    {
-        dg::refined::conformal::RingGrid3d<container> g( multiple_x, multiple_y, gp, psi_0, psi_1, n,n_old,Nx,Ny,1,bcx);
-        init_X_boundaries( g.x0(), g.x1());
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
-        g_xx_=g.g_xx();
-        vol2d_=g.perpVol();
-    }
     RingGrid2d( const RingGrid3d<container>& g):
         dg::refined::Grid2d( g ), g_assoc_(g.associated())
     {

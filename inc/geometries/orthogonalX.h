@@ -219,7 +219,6 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SimpleOrthogonalX
 {
-    typedef dg::OrthogonalTag metric_category;
     SimpleOrthogonalX(): f0_(1), firstline_(0){}
     SimpleOrthogonalX( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline =0):
@@ -233,6 +232,8 @@ struct SimpleOrthogonalX
         dg::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX(psi, psiX, psiY, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
+    bool isConformal()const{return false;}
+    bool isOrthogonal()const{return true;}
     double f0() const{return f0_;}
     void operator()( //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d, 
@@ -286,6 +287,8 @@ struct SeparatrixOrthogonal
         firstline_ = firstline;
         f0_ = sep_.get_f();
     }
+    bool isConformal()const{return false;}
+    bool isOrthogonal()const{return true;}
     double f0() const{return sep_.get_f();}
     void operator()(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d, 
@@ -427,37 +430,13 @@ struct GridX3d : public dg::GridX3d
     typedef dg::OrthogonalTag metric_category;
     typedef GridX2d<container> perpendicular_grid;
 
-    GridX3d( solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy, int firstline  ): 
-        dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
-        r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_)
-    { 
-        assert( psi_0 < 0 );
-        assert( gp.c[10] != 0);
-        double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-        double Z_X = -1.1*gp.elongation*gp.a;
-        //solovev::mod::Psip psip(gp); 
-        //solovev::mod::PsipR psipR(gp); solovev::mod::PsipZ psipZ(gp);
-        //solovev::mod::LaplacePsip lapPsip(gp); 
-        //dg::SeparatrixOrthogonal<solovev::mod::Psip, solovev::mod::PsipR, solovev::mod::PsipZ, solovev::mod::LaplacePsip> generator( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
-        solovev::Psip psip(gp); 
-        solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
-        solovev::LaplacePsip lapPsip(gp); 
-        dg::SeparatrixOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
-        //dg::SimpleOrthogonalX<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( psip, psipR, psipZ, lapPsip, psi_0, R_X, Z_X, gp.R_0, 0, firstline);
-        const double x_0 = generator.f0()*psi_0;
-        const double x_1 = -fx/(1.-fx)*x_0;
-        init_X_boundaries( x_0, x_1);
-        construct( generator, n, Nx, Ny, dg::OrthogonalTag());
-    }
     template< class Generator>
     GridX3d( Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy):
         dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
-        r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_)
+        r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_)
     {
-        const double x_0 = generator.f0()*psi_0;
-        const double x_1 = -fx/(1.-fx)*x_0;
-        init_X_boundaries( x_0, x_1);
-        construct( generator, n, Nx, Ny, typename Generator::metric_category());
+        assert( generator.isOrthogonal());
+        construct( generator, psi_0, fx, n, Nx, Ny);
     }
 
     const thrust::host_vector<double>& r()const{return r_;}
@@ -466,10 +445,6 @@ struct GridX3d : public dg::GridX3d
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    const thrust::host_vector<double>& lapx()const{return lapx_;}
-    thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
-        return dg::create::abscissas(gx);}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
@@ -479,8 +454,11 @@ struct GridX3d : public dg::GridX3d
     perpendicular_grid perp_grid() const { return orthogonal::GridX2d<container>(*this);}
     private:
     template<class Generator>
-    void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::OrthogonalTag )
+    void construct( Generator generator, double psi_0, double fx, unsigned n, unsigned Nx, unsigned Ny )
     {
+        const double x_0 = generator.f0()*psi_0;
+        const double x_1 = -fx/(1.-fx)*x_0;
+        init_X_boundaries( x_0, x_1);
         dg::Grid1d<double> gX1d( this->x0(), this->x1(), n, Nx, dg::DIR);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         dg::GridX1d gY1d( -this->fy()*2.*M_PI/(1.-2.*this->fy()), 2*M_PI+this->fy()*2.*M_PI/(1.-2.*this->fy()), this->fy(), this->n(), this->Ny(), dg::DIR);
@@ -499,7 +477,6 @@ struct GridX3d : public dg::GridX3d
                 yz_[k*Mx*My+i] = yzvec[i];
                 xr_[k*Mx*My+i] = xrvec[i];
                 xz_[k*Mx*My+i] = xzvec[i];
-                lapx_[k*Mx*My+i] = generator.laplace(rvec[i], zvec[i]);
             }
         construct_metric();
     }
@@ -523,7 +500,7 @@ struct GridX3d : public dg::GridX3d
         dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
         g_pp_=tempxx;
     }
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_, lapx_; //3d vector
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
 };
 
@@ -540,17 +517,7 @@ struct GridX2d : public dg::GridX2d
     {
         orthogonal::GridX3d<container> g( generator, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
         init_X_boundaries( g.x0(),g.x1());
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz(), lapx_=g.lapx();
-        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
-        vol2d_=g.perpVol();
-
-    }
-    GridX2d( const solovev::GeomParameters gp, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, int firstline): 
-        dg::GridX2d( 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)
-    {
-        orthogonal::GridX3d<container> g( gp, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy, firstline);
-        init_X_boundaries( g.x0(),g.x1());
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz(), lapx_=g.lapx();
+        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
@@ -558,10 +525,10 @@ struct GridX2d : public dg::GridX2d
         dg::GridX2d( g.x0(), g.x1(), g.y0(), g.y1(), g.fx(), g.fy(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         unsigned s = this->size();
-        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s), lapx_.resize(s);
+        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
         g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
         for( unsigned i=0; i<s; i++)
-        { r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i], lapx_[i] = g.lapx()[i];}
+        { r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
         thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
         thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
@@ -573,17 +540,14 @@ struct GridX2d : public dg::GridX2d
     const thrust::host_vector<double>& yr()const{return yr_;}
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
-    const thrust::host_vector<double>& lapx()const{return lapx_;}
-    thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
-        return dg::create::abscissas(gx);}
+
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_, lapx_; //2d vector
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 

@@ -344,9 +344,10 @@ struct RingGrid3d : public dg::Grid3d<double>
     typedef RingGrid2d<container> perpendicular_grid;
 
     template< class Generator>
-    RingGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx):
+    RingGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx):
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
+        assert( generator.isOrthogonal());
         construct( generator, n, Nx, Ny);
     }
 
@@ -367,7 +368,6 @@ struct RingGrid3d : public dg::Grid3d<double>
     template< class Generator>
     void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny)
     {
-        assert( generator.isOrthogonal());
         dg::Grid1d<double> gY1d( 0, 2*M_PI, n, Ny, dg::PER);
         dg::Grid1d<double> gX1d( 0., generator.width(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
@@ -425,7 +425,7 @@ struct RingGrid2d : public dg::Grid2d<double>
 {
     typedef dg::OrthogonalTag metric_category;
     template< class Generator>
-    RingGrid2d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx):
+    RingGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx):
         dg::Grid2d<double>( 0, 1, 0., 2.*M_PI, n, Nx, Ny, bcx, dg::PER)
     {
         orthogonal::RingGrid3d<container> g( generator, n,Nx,Ny,1,bcx);

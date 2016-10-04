@@ -1,40 +1,37 @@
 #pragma once
 
-#include "dg/geometry/refined_grid.h"
-#include "orthogonal.h"
 
+#include "dg/geometry/refined_grid.h"
+#include "ribeiro.h"
 
 
 namespace dg
 {
-namespace refined
+namespace refined 
 {
-namespace orthogonal
+namespace curvilinear
 {
 
+///@cond
 template< class container>
 struct RingGrid2d; 
+///@endcond
 
-/**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
- */
 template< class container>
 struct RingGrid3d : public dg::refined::Grid3d
 {
-    typedef dg::OrthogonalTag metric_category;
-    typedef RingGrid2d<container> perpendicular_grid;
+    typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
+    typedef RingGrid2d<container> perpendicular_grid; //!< the two-dimensional grid type
 
     template<class Generator>
     RingGrid3d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
         dg::refined::Grid3d( multiple_x, multiple_y, 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, n_old, Nx, Ny, Nz, bcx, dg::PER, dg::PER),
         g_assoc_( generator, n_old, Nx, Ny, Nz, bcx)
     { 
-        assert( generator.isOrthogonal());
         construct( generator);
     }
-
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
-    const dg::orthogonal::RingGrid3d<container>& associated() const{ return g_assoc_;}
+    const dg::curvilinear::RingGrid3d<container>& associated() const{ return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -81,16 +78,15 @@ struct RingGrid3d : public dg::refined::Grid3d
                 xz_[k*Nx*Ny+i] = xz_[(k-1)*Nx*Ny+i]*wx[k*Nx*Ny+i];
             }
     }
-    //compute metric elements from xr, xz, yr, yz, r and z
-    void construct_metric( )
+    void construct_metric()
     {
         thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
-        for( unsigned i = 0; i<this->size(); i++)
+        for( unsigned idx=0; idx<this->size(); idx++)
         {
-            tempxx[i] = (xr_[i]*xr_[i]+xz_[i]*xz_[i]);
-            tempxy[i] = (yr_[i]*xr_[i]+yz_[i]*xz_[i]);
-            tempyy[i] = (yr_[i]*yr_[i]+yz_[i]*yz_[i]);
-            tempvol[i] = r_[i]/sqrt( tempxx[i]*tempyy[i] );
+            tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
+            tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
+            tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
+            tempvol[idx] = r_[idx]/sqrt( tempxx[idx]*tempyy[idx] - tempxy[idx]*tempxy[idx] );
         }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
@@ -100,32 +96,31 @@ struct RingGrid3d : public dg::refined::Grid3d
         dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
         g_pp_=tempxx;
     }
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; 
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    dg::orthogonal::RingGrid3d<container> g_assoc_;
-
+    dg::curvilinear::RingGrid3d<container> g_assoc_;
+    
 };
 
-/**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
- */
 template< class container>
 struct RingGrid2d : public dg::refined::Grid2d
 {
-    typedef dg::OrthogonalTag metric_category;
+    typedef dg::CurvilinearCylindricalTag metric_category;
+
     template< class Generator>
     RingGrid2d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx):
         dg::refined::Grid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
         g_assoc_( generator, n_old, Nx, Ny, bcx) 
     {
-        dg::refined::orthogonal::RingGrid3d<container> g( multiple_x, multiple_y, generator, n,n_old,Nx,Ny,1,bcx);
+        dg::refined::curvilinear::RingGrid3d<container> g( multiple_x, multiple_y, generator, n,n_old,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
+
     RingGrid2d( const RingGrid3d<container>& g):
-        dg::refined::Grid2d( g ), g_assoc_(g.associated())
+        dg::refined::Grid2d( g), g_assoc_( g.associated())
     {
         unsigned s = this->size();
         r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
@@ -138,7 +133,7 @@ struct RingGrid2d : public dg::refined::Grid2d
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
 
-    const dg::orthogonal::RingGrid2d<container>& associated()const{return g_assoc_;}
+    const dg::curvilinear::RingGrid2d<container>& associated()const{return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -152,11 +147,11 @@ struct RingGrid2d : public dg::refined::Grid2d
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
+    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; 
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    dg::orthogonal::RingGrid2d<container> g_assoc_;
+    dg::curvilinear::RingGrid2d<container> g_assoc_;
 };
 
-}//namespace orthogonal
+}//namespace curvilinear
 }//namespace refined
 }//namespace dg
