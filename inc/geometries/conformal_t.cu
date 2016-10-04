@@ -12,6 +12,8 @@
 //#include "guenther.h"
 #include "solovev.h"
 #include "conformal.h"
+#include "orthogonal.h"
+#include "curvilinear.h"
 //#include "refined_conformal.h"
 #include "dg/ds.h"
 #include "init.h"
@@ -67,15 +69,24 @@ int main( int argc, char* argv[])
     t.tic();
     solovev::PsipR psipR( gp); 
     solovev::PsipZ psipZ( gp); 
+    solovev::PsipRR psipRR( gp); 
+    solovev::PsipRZ psipRZ( gp); 
+    solovev::PsipZZ psipZZ( gp); 
     solovev::LaplacePsip lap( gp); 
-    dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
+    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
+    //dg::conformal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
+    //dg::conformal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::NablaPsiInv<solovev::PsipR, solovev::PsipZ> nablaInv( psipR, psipZ);
+    dg::NablaPsiInvX<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nablaInvX( psipR, psipZ, psipRR, psipRZ, psipZZ);
+    dg::NablaPsiInvX<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nablaInvY( psipR, psipZ, psipRR, psipRZ, psipZZ);
+    dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, nablaInv, nablaInvX, nablaInvY, psi_0, psi_1, gp.R_0, 0.);
+    dg::orthogonal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
+    dg::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
 
-    dg::conformal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
-    dg::conformal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
-    std::cout << "Length in u is    "<<hector.lu()<<std::endl;
+    std::cout << "Length in u is    "<<hector.width()<<std::endl;
     int ncid;
     file::NC_Error_Handle err;
     err = nc_create( "conformal.nc", NC_NETCDF4|NC_CLOBBER, &ncid);

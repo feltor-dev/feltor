@@ -1080,7 +1080,6 @@ struct INVERT
      * @brief Invert the given value
      *
      * @param x  the input
-     *
      * @return  1/x
      */
 #ifdef __CUDACC__

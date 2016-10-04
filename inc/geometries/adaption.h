@@ -84,8 +84,7 @@ template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvX
 {
     NablaPsiInvX( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX, const PsiXY& psiXY, const PsiYY& psiYY):
-    psiX_(psiX), psiY_(psiY), psiXX_(psiX), psiXY_(psiXY),
-    psiYY_(psiYY)
+    psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY)
     {}
     double operator()(double x, double y)
     {
@@ -107,8 +106,7 @@ template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvY
 {
     NablaPsiInvY( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX, const PsiXY& psiXY, const PsiYY& psiYY):
-    psiX_(psiX), psiY_(psiY), psiXX_(psiX), psiXY_(psiXY),
-    psiYY_(psiYY)
+    psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY)
     {}
     double operator()(double x, double y)
     {
@@ -212,8 +210,8 @@ struct DivLiseikinY
     {
         double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
         double psiXX = psiXX_(x,y), psiXY = psiXY_(x,y), psiYY=psiYY_(x,y);
-        double psiY2 = psiY*psiY, psiY3=psiY*psiY2, psiY4=psiY2*psiY2, psiY5=psiY4*psiY;
-        double psiX2 = psiX*psiX;
+        double psiX2 = psiX*psiX, psiX3=psiX*psiX2, psiX4=psiX2*psiX2, psiX5=psiX4*psiX;
+        double psiY2 = psiY*psiY, psiY4 = psiY2*psiY2;
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
         return (k2-1.)*(psiX2*psiY*(eps_+2.*eps_*k2+2.*k2*psiY2)*psiYY + 

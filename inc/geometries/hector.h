@@ -115,8 +115,8 @@ void compute_zev(
         dg::stepperRK17( iter, temp, end, v_vec[v_vec.size()-1], 2.*M_PI, steps);
         dg::blas1::axpby( 1., eta, -1., eta_old, eta_diff);
         eps =  sqrt( dg::blas1::dot( eta_diff, eta_diff) / dg::blas1::dot( eta, eta));
-        //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
-        //std::cout << "abs. error is "<<( 2.*M_PI-end[1])<<"\n";
+        std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+        std::cout << "abs. error is "<<( 2.*M_PI-end[1])<<"\n";
         steps*=2;
     }
 }
@@ -165,7 +165,7 @@ void construct_grid(
         dg::blas1::pointwiseDot( zeta_diff, zeta_diff, zeta_diff);
         dg::blas1::pointwiseDot( 1., eta_diff, eta_diff, 1., zeta_diff);
         eps = sqrt( dg::blas1::dot( zeta_diff, zeta_diff)/sizeU/sizeV); 
-        //std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n"; 
+        std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
 
@@ -230,6 +230,13 @@ struct Hector
         container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, dg::ONE(), laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
         construct( u, psi0, psi1, dg::ONE(), dg::ZERO(), dg::ONE() );
         conformal_=orthogonal_=true;
+        //we actually don't need u_ but it makes a good testcase 
+        container psi__;
+        dg::blas1::transfer(dg::pullback( psi, g2d_), psi__);
+        dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
+        dg::blas1::plus( u,-psi0);
+        dg::blas1::scal( u, c0_);
+        dg::blas1::transfer( u, u_);
     }
     /**
      * @brief Construct from functors
@@ -261,6 +268,23 @@ struct Hector
         construct( u, psi0, psi1, chi, dg::ZERO(), chi );
         orthogonal_=true;
         conformal_=false;
+        //we actually don't need u_ but it makes a good testcase 
+        container psi__;
+        dg::blas1::transfer(dg::pullback( psi, g2d_), psi__);
+        dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
+        dg::blas1::plus( u,-psi0);
+        dg::blas1::scal( u, c0_);
+        dg::blas1::transfer( u, u_);
+        //Test orthogonality
+        thrust::host_vector<double> adapt = dg::pullback( chi, g2d_), test1(adapt), test2(adapt);
+        dg::HVec w2d = dg::create::weights( g2d_);
+        dg::blas1::pointwiseDot( ux_, adapt, test1);
+        dg::blas1::axpby( 1., vy_, -1., test1);
+        double eps1 = sqrt(dg::blas2::dot( test1, w2d, test1 ));
+        dg::blas1::pointwiseDot( uy_, adapt, test2);
+        dg::blas1::axpby( 1., vx_, +1., test2);
+        double eps2 = sqrt(dg::blas2::dot( test2, w2d, test2 ));
+        std::cout << "eps 1 is "<<eps1 << " eps 2 is "<<eps2<<std::endl;
     }
 
     /**
@@ -360,6 +384,15 @@ struct Hector
         dg::blas2::symv( Q, uy_, uy);
         dg::blas2::symv( Q, vx_, vx);
         dg::blas2::symv( Q, vy_, vy);
+        //Test if u1d is u
+        dg::blas2::symv( Q, u_, u);
+        dg::HVec u2d(u1d.size()*v1d.size());
+        for( unsigned i=0; i<v1d.size(); i++)
+            for( unsigned j=0; j<u1d.size(); j++)
+                u2d[i*u1d.size()+j] = u1d[j];
+        dg::blas1::axpby( 1., u2d, -1., u);
+        double eps = dg::blas1::dot( u,u);
+        std::cout << "Error in u is "<<eps<<std::endl;
     }
 
     /**
@@ -381,7 +414,6 @@ struct Hector
         ellipticD_old.set_chi( adapt);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
-        //container lapu = g2d_old.lapx();
         container lapu = dg::pullback( lapAP, g2d_old);
         dg::Invert<container > invert_old( u_old, n*n*Nx*Ny, eps_u);
         unsigned number = invert_old( ellipticD_old, u_old, lapu);
@@ -391,9 +423,8 @@ struct Hector
             Nx*=2, Ny*=2;
             dg::orthogonal::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
             dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
-            container adapt = dg::pullback(weights, g2d);
+            adapt = dg::pullback(weights, g2d);
             ellipticD.set_chi( adapt);
-            //lapu = g2d.lapx();
             lapu = dg::pullback( lapAP, g2d);
             const container vol2d = dg::create::weights( g2d);
             const IMatrix Q = dg::create::interpolation( g2d, g2d_old);
@@ -469,10 +500,6 @@ struct Hector
         dg::blas1::plus( u_zeta, (psi1-psi0)/g2d_.lx());
         dg::blas2::symv( deta, u, u_eta);
 
-        ////we actually don't need u but it makes a good testcase 
-        //container psi__;
-        //dg::blas1::transfer(dg::pullback( psi, g2d_), psi__);
-        //dg::blas1::axpby( +1., psi__, 1.,  u); //u = \tilde u + \psi
 
         thrust::host_vector<double> chi_ZZ, chi_ZE, chi_EE;
         dg::geo::pushForwardPerp( chi_XX, chi_XY, chi_YY, chi_ZZ, chi_ZE, chi_EE, g2d_);
@@ -487,13 +514,9 @@ struct Hector
         dg::blas1::pointwiseDot( 1. ,chiZE, u_eta, 1., temp_zeta);
         dg::blas1::pointwiseDot( chiZE, u_zeta, temp_eta);
         dg::blas1::pointwiseDot( 1. ,chiEE, u_eta, 1., temp_eta);
-        container temp_scalar(u),temp_zeta2(u),temp_eta2(u),temp_ze(u);
-        dg::blas1::pointwiseDot( u_zeta, u_zeta, temp_zeta2);
-        dg::blas1::pointwiseDot( u_eta, u_eta, temp_eta2);
-        dg::blas1::pointwiseDot( u_zeta, u_eta, temp_ze);
-        dg::blas1::pointwiseDot( chiZZ, temp_zeta2, temp_scalar);
-        dg::blas1::pointwiseDot( 2., chiZE, temp_ze, 1., temp_scalar);
-        dg::blas1::pointwiseDot( 1., chiEE, temp_eta2, 1., temp_scalar);
+        container temp_scalar(u);
+        dg::blas1::pointwiseDot( u_zeta, temp_zeta, temp_scalar);
+        dg::blas1::pointwiseDot( 1., u_eta, temp_eta, 1., temp_scalar);
         container zetaU=temp_zeta, etaU=temp_eta;
         dg::blas1::pointwiseDivide( zetaU, temp_scalar, zetaU); 
         dg::blas1::pointwiseDivide(  etaU, temp_scalar,  etaU); 
@@ -532,7 +555,7 @@ struct Hector
     }
     bool conformal_, orthogonal_;
     double c0_, lu_;
-    thrust::host_vector<double> ux_, uy_, vx_, vy_;
+    thrust::host_vector<double> u_, ux_, uy_, vx_, vy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
     dg::orthogonal::RingGrid2d<container> g2d_;
 
