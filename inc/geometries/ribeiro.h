@@ -100,9 +100,9 @@ struct Fpsi
             x1_old = x1;
 
             P+=1;
+            if( psi_1 < psi_0) std::swap(psi_0, psi_1);
             dg::Grid1d<double> grid( psi_0, psi_1, P, 1);
-            dg::Grid1d<double> grid_inv( psi_1, psi_0, P, 1);
-            thrust::host_vector<double> psi_vec = psi_1>psi_0 ? dg::evaluate( dg::cooX1d, grid): dg::evaluate(dg::cooX1d, grid_inv);
+            thrust::host_vector<double> psi_vec = dg::evaluate( dg::cooX1d, grid);
             thrust::host_vector<double> f_vec(grid.size(), 0);
             thrust::host_vector<double> w1d = dg::create::weights(grid);
             for( unsigned i=0; i<psi_vec.size(); i++)

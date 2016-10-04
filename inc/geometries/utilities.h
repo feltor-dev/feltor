@@ -20,22 +20,24 @@ void construct_psi_values( FieldFinv fpsiMinv,
     unsigned N = 1;
     double eps = 1e10, eps_old=2e10;
     //std::cout << "In psi function:\n";
-    double x0=x_0, x1 = x_vec[0];
+    double x0=x_0, x1 = psi_1>psi_0? x_vec[0]:-x_vec[0];
     while( (eps <  eps_old || eps > 1e-8) && eps > 1e-14) //1e-8 < eps < 1e-14
     {
         eps_old = eps;
         x0 = x_0, x1 = x_vec[0];
+        if( psi_1<psi_0) x1*=-1;
         dg::stepperRK17( fpsiMinv, begin, end, x0, x1, N);
         psi_x[0] = end[0]; fpsiMinv(end,temp); f_x_[0] = temp[0];
         for( unsigned i=1; i<x_vec.size(); i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
+            if( psi_1<psi_0) x0*=-1, x1*=-1;
             dg::stepperRK17( fpsiMinv, temp, end, x0, x1, N);
             psi_x[i] = end[0]; fpsiMinv(end,temp); f_x_[i] = temp[0];
         }
         temp = end;
-        dg::stepperRK17(fpsiMinv, temp, end, x1, x_1,N);
+        dg::stepperRK17(fpsiMinv, temp, end, x1, psi_1>psi_0?x_1:-x_1,N);
         double psi_1_numerical = end[0];
         eps = fabs( psi_1_numerical-psi_1); 
         std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
