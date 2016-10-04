@@ -76,12 +76,21 @@ int main( int argc, char* argv[])
     //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0.);
     //dg::conformal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
     //dg::conformal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::NablaPsiInv<solovev::PsipR, solovev::PsipZ> nablaInv( psipR, psipZ);
-    dg::NablaPsiInvX<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nablaInvX( psipR, psipZ, psipRR, psipRZ, psipZZ);
-    dg::NablaPsiInvY<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nablaInvY( psipR, psipZ, psipRR, psipRZ, psipZZ);
-    dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, nablaInv, nablaInvX, nablaInvY, psi_0, psi_1, gp.R_0, 0.);
-    dg::orthogonal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
-    dg::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+
+    //dg::NablaPsiInv<solovev::PsipR, solovev::PsipZ> nablaInv( psipR, psipZ);
+    //dg::NablaPsiInvX<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nablaInvX( psipR, psipZ, psipRR, psipRZ, psipZZ);
+    //dg::NablaPsiInvY<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nablaInvY( psipR, psipZ, psipRR, psipRZ, psipZZ);
+    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, lap, nablaInv, nablaInvX, nablaInvY, psi_0, psi_1, gp.R_0, 0.);
+    //dg::orthogonal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
+    //dg::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::Liseikin_XX<solovev::PsipR, solovev::PsipZ> chi_XX( psipR, psipZ, 0.1, 0.00);
+    dg::Liseikin_XY<solovev::PsipR, solovev::PsipZ> chi_XY( psipR, psipZ, 0.1, 0.00);
+    dg::Liseikin_YY<solovev::PsipR, solovev::PsipZ> chi_YY( psipR, psipZ, 0.1, 0.00);
+    dg::DivLiseikinX<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> divChiX( psipR, psipZ, psipRR, psipRZ, psipZZ, 0.1, 0.00);
+    dg::DivLiseikinY<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> divChiY( psipR, psipZ, psipRR, psipRZ, psipZZ, 0.1, 0.00);
+    dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( psip, psipR, psipZ, psipRR, psipRZ, psipZZ, chi_XX, chi_XY, chi_YY, divChiX, divChiY, psi_0, psi_1, gp.R_0, 0.);
+    dg::curvilinear::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
+    dg::curvilinear::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
 
     dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();

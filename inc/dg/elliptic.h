@@ -587,7 +587,7 @@ struct TensorElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    TensorElliptic( Geometry g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward): 
+    TensorElliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
         no_(no), g_(g)
     { 
         construct( g, bcx, bcy, dir);
@@ -620,8 +620,7 @@ struct TensorElliptic
     void set( ChiRR chiRR, ChiRZ chiRZ, ChiZZ chiZZ)
     {
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector chiXX, chiXY, chiYY;
-
-        dg::geo::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiZZ, g_);
+        dg::geo::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_);
         set( chiXX, chiXY, chiYY);
     }
 
@@ -730,6 +729,12 @@ struct MatrixTraits< GeneralElliptic<G, M, V> >
 };
 template< class G, class M, class V>
 struct MatrixTraits< GeneralEllipticSym<G, M, V> >
+{
+    typedef typename VectorTraits<V>::value_type  value_type;
+    typedef SelfMadeMatrixTag matrix_category;
+};
+template< class G, class M, class V>
+struct MatrixTraits< TensorElliptic<G, M, V> >
 {
     typedef typename VectorTraits<V>::value_type  value_type;
     typedef SelfMadeMatrixTag matrix_category;
