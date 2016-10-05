@@ -84,10 +84,14 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =    dg::evaluate( dg::zero, g2d.associated());
     dg::DVec x_fine =    dg::evaluate( dg::zero, g2d);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 550, -150, 30.), g2d.associated());
+    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 510, -140, 40., 1), g2d.associated());
     dg::DVec bmod(b);
     const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g2d.associated());
-    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 550, -150, 30. ), g2d.associated());
+    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 510, -140, 40.,1 ), g2d.associated());
+    //const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1, 4), g2d.associated());
+    //dg::DVec bmod(b);
+    //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d.associated());
+    //const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1, 4), g2d.associated());
     //const dg::DVec b =        dg::pullback( solovev::LaplacePsi(gp), g2d.associated());
     //const dg::DVec bFINE =    dg::pullback( solovev::LaplacePsi(gp), g2d);
     //dg::DVec bmod(b);

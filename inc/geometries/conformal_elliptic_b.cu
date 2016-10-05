@@ -10,7 +10,7 @@
 //#include "guenther.h"
 #include "conformal.h"
 #include "orthogonal.h"
-#include "ribeiro.h"
+#include "curvilinear.h"
 
 
 
@@ -43,27 +43,45 @@ int main(int argc, char**argv)
     dg::Timer t;
     std::cout << "Constructing grid ... \n";
     t.tic();
-    solovev::Psip psip( gp); 
-    solovev::PsipR psipR( gp); 
-    solovev::PsipZ psipZ( gp); 
-    solovev::LaplacePsip lap( gp); 
-    dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( psip, psipR, psipZ, lap, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, 1e-11);
+    solovev::Collective c( gp); 
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    //dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hector( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, 1e-11);
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    //dg::NablaPsiInvCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ);
+    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.laplacePsip, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0.);
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    //dg::LiseikinCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> lc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, 0.1, 0.001);
+    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid ,NyGrid,1e-10);
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    //dg::Ribeiro<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ>
+    //    ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0.);
+
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     std::cout << "eps\t Nx\t Ny \t # iterations \t error \t hx_max\t hy_max \t time/iteration (s) \n";
     for( unsigned i=0; i<6; i++)
     {
-        dg::conformal::RingGrid2d<dg::DVec> g2d(hector, n, Nx, Ny, dg::DIR);
-        dg::Elliptic<dg::conformal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
-        //dg::orthogonal::RingGrid2d<dg::DVec> g2d(gp, psi_0, psi_1, n, Nx, Ny, dg::DIR, 1);
-        //dg::Elliptic<dg::orthogonal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
-        //dg::ribeiro::RingGrid2d<dg::DVec> g2d(gp, psi_0, psi_1, n, Nx, Ny, dg::DIR);
-        //dg::Elliptic<dg::ribeiro::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+        //dg::conformal::RingGrid2d<dg::DVec> g2d(hector, n, Nx, Ny, dg::DIR);
+        //dg::Elliptic<dg::conformal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+        //dg::orthogonal::RingGrid2d<dg::DVec> g2d(hector, n, Nx, Ny, dg::DIR);
+        //dg::Elliptic<dg::orthogonal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+        //dg::curvilinear::RingGrid2d<dg::DVec> g2d(hector, n, Nx, Ny, dg::DIR);
+        //dg::Elliptic<dg::curvilinear::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+        dg::orthogonal::RingGrid2d<dg::DVec> g2d(generator, n, Nx, Ny, dg::DIR);
+        dg::Elliptic<dg::orthogonal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+        //dg::curvilinear::RingGrid2d<dg::DVec> g2d(ribeiro, n, Nx, Ny, dg::DIR);
+        //dg::Elliptic<dg::curvilinear::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
         ///////////////////////////////////////////////////////////////////////////
         dg::DVec x =    dg::evaluate( dg::zero, g2d);
-        const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g2d);
-        const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d);
-        const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1 ), g2d);
+        //const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1, 0), g2d);
+        //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d);
+        //const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1, 0 ), g2d);
+        const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 510, -140, 40.,1.), g2d);
+        dg::DVec bmod(b);
+        const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g2d);
+        const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 510, -140, 40.,1.), g2d);
         const dg::DVec vol2d = dg::create::volume( g2d);
         pol.set_chi( chi);
         //compute error

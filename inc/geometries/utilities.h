@@ -40,7 +40,7 @@ void construct_psi_values( FieldFinv fpsiMinv,
         dg::stepperRK17(fpsiMinv, temp, end, x1, psi_1>psi_0?x_1:-x_1,N);
         double psi_1_numerical = end[0];
         eps = fabs( psi_1_numerical-psi_1); 
-        std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
+        //std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
 

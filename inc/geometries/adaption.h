@@ -124,6 +124,15 @@ struct NablaPsiInvY
     PsiYY psiYY_;
 };
 
+template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
+struct NablaPsiInvCollective
+{
+    NablaPsiInvCollective( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX, const PsiXY& psiXY, const PsiYY& psiYY):nablaPsiInv(psiX, psiY), nablaPsiInvX(psiX, psiY, psiXX, psiXY, psiYY), nablaPsiInvY( psiX, psiY, psiXX, psiXY, psiYY){}
+    NablaPsiInv<PsiX, PsiY> nablaPsiInv;
+    NablaPsiInvX<PsiX, PsiY, PsiXX, PsiXY, PsiYY> nablaPsiInvX;
+    NablaPsiInvY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> nablaPsiInvY;
+};
+
 
 template<class PsiX, class PsiY>
 struct Liseikin_XX
@@ -229,6 +238,22 @@ struct DivLiseikinY
     PsiXX psiXX_;
     PsiXY psiXY_;
     PsiYY psiYY_;
+};
+
+template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
+struct LiseikinCollective
+{
+    LiseikinCollective( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX, const PsiXY& psiXY, const PsiYY& psiYY, double k, double eps):
+        chi_XX(psiX, psiY, k, eps), 
+        chi_XY(psiX, psiY, k, eps), 
+        chi_YY(psiX, psiY, k, eps), 
+        divChiX(psiX, psiY, psiXX, psiXY, psiYY, k, eps), 
+        divChiY(psiX, psiY, psiXX, psiXY, psiYY, k, eps){}
+    Liseikin_XX<PsiX, PsiY> chi_XX;
+    Liseikin_XY<PsiX, PsiY> chi_XY;
+    Liseikin_YY<PsiX, PsiY> chi_YY;
+    DivLiseikinX<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiX;
+    DivLiseikinY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiY;
 };
 
 

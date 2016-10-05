@@ -1651,45 +1651,48 @@ struct DeriNeu
 
 struct FuncDirPer
 {
-    FuncDirPer( GeomParameters gp, double psi_0, double psi_1):
-        R_0_(gp.R_0), psi0_(psi_0), psi1_(psi_1), psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp){}
+    FuncDirPer( GeomParameters gp, double psi_0, double psi_1, double k):
+        R_0_(gp.R_0), psi0_(psi_0), psi1_(psi_1), k_(k), psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp){}
     double operator()(double R, double Z) const {
         double psip = psip_(R,Z);
-        return (psip-psi0_)*(psip-psi1_)*sin(theta(R,Z));
+        double result = (psip-psi0_)*(psip-psi1_)*cos(k_*theta(R,Z));
+        return 0.1*result;
     }
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
     }
     double dR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_ = theta(R,Z);
-        return (2.*psip*psipR - (psi0_+psi1_)*psipR)*sin(theta_) 
-            + (psip-psi0_)*(psip-psi1_)*cos(theta_)*thetaR(R,Z);
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_ = k_*theta(R,Z);
+        double result = (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos(theta_) 
+            - (psip-psi0_)*(psip-psi1_)*sin(theta_)*k_*thetaR(R,Z);
+        return 0.1*result;
     }
     double dRR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_=theta(R,Z), thetaR_=thetaR(R,Z);
+        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_=k_*theta(R,Z), thetaR_=k_*thetaR(R,Z);
         double psipRR = psipRR_(R,Z);
-        return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)*sin(theta_)
-            + (2.*psip*psipR-(psi0_+psi1_)*psipR)*cos(theta_)*thetaR_
-            + (2.*psip*psipR-(psi0_+psi1_)*psipR)*cos(theta_)*thetaR_
-            + (psip-psi0_)*(psip-psi1_)*(thetaRR(R,Z)*cos(theta_)-sin(theta_)*thetaR_*thetaR_);
+        double result = (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)*cos(theta_)
+            - 2.*(2.*psip*psipR-(psi0_+psi1_)*psipR)*sin(theta_)*thetaR_
+            - (psip-psi0_)*(psip-psi1_)*(k_*thetaRR(R,Z)*sin(theta_)+cos(theta_)*thetaR_*thetaR_);
+        return 0.1*result;
             
     }
     double dZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z);
-        return (2*psip*psipZ - (psi0_+psi1_)*psipZ)*sin(theta_) 
-            + (psip-psi0_)*(psip-psi1_)*cos(theta_)*thetaZ(R,Z);
+        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=k_*theta(R,Z);
+        double result = (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos(theta_) 
+            - (psip-psi0_)*(psip-psi1_)*sin(theta_)*k_*thetaZ(R,Z);
+        return 0.1*result;
     }
     double dZZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z), thetaZ_=thetaZ(R,Z);
+        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=k_*theta(R,Z), thetaZ_=k_*thetaZ(R,Z);
         double psipZZ = psipZZ_(R,Z);
-        return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)*sin(theta_)
-            + (2.*psip*psipZ-(psi0_+psi1_)*psipZ)*cos(theta_)*thetaZ_
-            + (2.*psip*psipZ-(psi0_+psi1_)*psipZ)*cos(theta_)*thetaZ_
-            + (psip-psi0_)*(psip-psi1_)*(-sin(theta_)*thetaZ_*thetaZ_ + cos(theta_)*thetaZZ(R,Z));
+        double result = (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)*cos(theta_)
+            - 2.*(2.*psip*psipZ-(psi0_+psi1_)*psipZ)*sin(theta_)*thetaZ_
+            - (psip-psi0_)*(psip-psi1_)*(k_*thetaZZ(R,Z)*sin(theta_) + cos(theta_)*thetaZ_*thetaZ_ );
+        return 0.1*result;
     }
     private:
     double theta( double R, double Z) const {
@@ -1713,18 +1716,18 @@ struct FuncDirPer
     }
     double thetaZZ( double R, double Z) const { return -thetaRR(R,Z);}
     double R_0_;
-    double psi0_, psi1_;
+    double psi0_, psi1_, k_;
     Psip psip_;
     PsipR psipR_;
-    PsipRR psipRR_;
     PsipZ psipZ_;
+    PsipRR psipRR_;
     PsipZZ psipZZ_;
 };
 
 //takes the magnetic field as chi
 struct EllipticDirPerM
 {
-    EllipticDirPerM( GeomParameters gp, double psi_0, double psi_1): func_(gp, psi_0, psi_1), bmod_(gp), br_(gp), bz_(gp) {}
+    EllipticDirPerM( GeomParameters gp, double psi_0, double psi_1, double k): func_(gp, psi_0, psi_1, k), bmod_(gp), br_(gp), bz_(gp) {}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
@@ -1741,43 +1744,48 @@ struct EllipticDirPerM
 
 struct FuncDirNeu
 {
-    FuncDirNeu( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob):
+    FuncDirNeu( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
         psi0_(psi_0), psi1_(psi_1), 
-        cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, 10), 
+        cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, amp_blob), 
         psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp) {}
 
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
-        double psip = psip_(R,Z);
-        return (psip-psi0_)*(psip-psi1_)+cauchy_(R,Z);
+        return cauchy_(R,Z);
+        //double psip = psip_(R,Z);
+        //return (psip-psi0_)*(psip-psi1_)+cauchy_(R,Z);
         //return (psip-psi0_)*(psip-psi1_);
     }
     double dR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z);
-        return (2.*psip-psi0_-psi1_)*psipR + cauchy_.dx(R,Z);
+        return cauchy_.dx(R,Z);
+        //double psip = psip_(R,Z), psipR = psipR_(R,Z);
+        //return (2.*psip-psi0_-psi1_)*psipR + cauchy_.dx(R,Z);
         //return (2.*psip-psi0_-psi1_)*psipR;
     }
     double dRR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z);
-        double psipRR = psipRR_(R,Z);
-        return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)+cauchy_.dxx(R,Z);
+        return cauchy_.dxx(R,Z);
+        //double psip = psip_(R,Z), psipR = psipR_(R,Z);
+        //double psipRR = psipRR_(R,Z);
+        //return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)+cauchy_.dxx(R,Z);
         //return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
             
     }
     double dZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
-        return (2*psip-psi0_-psi1_)*psipZ+cauchy_.dy(R,Z);
+        return cauchy_.dy(R,Z);
+        //double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
+        //return (2*psip-psi0_-psi1_)*psipZ+cauchy_.dy(R,Z);
         //return (2*psip-psi0_-psi1_)*psipZ;
     }
     double dZZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
-        double psipZZ = psipZZ_(R,Z);
-        return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)+cauchy_.dyy(R,Z);
+        return cauchy_.dyy(R,Z);
+        //double psip = psip_(R,Z), psipZ = psipZ_(R,Z);
+        //double psipZZ = psipZZ_(R,Z);
+        //return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)+cauchy_.dyy(R,Z);
         //return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
     }
     private:
@@ -1813,7 +1821,7 @@ struct BmodTheta
 
 struct EllipticDirNeuM
 {
-    EllipticDirNeuM( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob): R_0_(gp.R_0), func_(gp, psi_0, psi_1, R_blob, Z_blob, sigma_blob), bmod_(gp), br_(gp), bz_(gp) {}
+    EllipticDirNeuM( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(gp.R_0), func_(gp, psi_0, psi_1, R_blob, Z_blob, sigma_blob,amp_blob), bmod_(gp), br_(gp), bz_(gp) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z), theta_ = theta(R,Z);
         double chi = bmod*(1.+0.5*sin(theta_));
@@ -1850,7 +1858,7 @@ struct EllipticDirNeuM
 
 struct EllipticDirSimpleM
 {
-    EllipticDirSimpleM( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob): R_0_(gp.R_0), func_(gp, psi_0, psi_1, R_blob, Z_blob, sigma_blob) {}
+    EllipticDirSimpleM( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(gp.R_0), func_(gp, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob) {}
     double operator()(double R, double Z, double phi) const {
         return -(( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 

@@ -74,7 +74,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
 
-    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsi> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsi(gp), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsi> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsi(gp), psi_0, psi_1, gp.R_0, 0., 0);
     //dg::orthogonal::RingGrid3d<dg::HVec> g3d(generator, n, Nx, Ny,Nz, dg::DIR);
     //dg::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::refined::orthogonal::RingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
@@ -216,7 +216,7 @@ int main( int argc, char* argv[])
 //     std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
 //     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
      //X = g2d.lapx();
-     X = dg::pullback(solovev::FuncDirNeu(gp, psi_0, psi_1, 550, -150, 30.), g2d);
+     X = dg::pullback(solovev::FuncDirNeu(gp, psi_0, psi_1, 550, -150, 30., 1), g2d);
      err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
 //     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
 //     std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";

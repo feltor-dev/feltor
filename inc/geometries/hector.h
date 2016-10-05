@@ -115,8 +115,8 @@ void compute_zev(
         dg::stepperRK17( iter, temp, end, v_vec[v_vec.size()-1], 2.*M_PI, steps);
         dg::blas1::axpby( 1., eta, -1., eta_old, eta_diff);
         eps =  sqrt( dg::blas1::dot( eta_diff, eta_diff) / dg::blas1::dot( eta, eta));
-        std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
-        std::cout << "abs. error is "<<( 2.*M_PI-end[1])<<"\n";
+        //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+        //std::cout << "abs. error is "<<( 2.*M_PI-end[1])<<"\n";
         steps*=2;
     }
 }
@@ -165,7 +165,7 @@ void construct_grid(
         dg::blas1::pointwiseDot( zeta_diff, zeta_diff, zeta_diff);
         dg::blas1::pointwiseDot( 1., eta_diff, eta_diff, 1., zeta_diff);
         eps = sqrt( dg::blas1::dot( zeta_diff, zeta_diff)/sizeU/sizeV); 
-        std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n"; 
+        //std::cout << "Effective Absolute diff error is "<<eps<<" with "<<N<<" steps\n"; 
         N*=2;
     }
 
@@ -352,15 +352,15 @@ struct Hector
         dg::blas2::symv( Q, uy_, uy);
         dg::blas2::symv( Q, vx_, vx);
         dg::blas2::symv( Q, vy_, vy);
-        //Test if u1d is u
-        dg::blas2::symv( Q, u_, u);
-        dg::HVec u2d(u1d.size()*v1d.size());
-        for( unsigned i=0; i<v1d.size(); i++)
-            for( unsigned j=0; j<u1d.size(); j++)
-                u2d[i*u1d.size()+j] = u1d[j];
-        dg::blas1::axpby( 1., u2d, -1., u);
-        double eps = dg::blas1::dot( u,u);
-        std::cout << "Error in u is "<<eps<<std::endl;
+        ////Test if u1d is u
+        //dg::blas2::symv( Q, u_, u);
+        //dg::HVec u2d(u1d.size()*v1d.size());
+        //for( unsigned i=0; i<v1d.size(); i++)
+        //    for( unsigned j=0; j<u1d.size(); j++)
+        //        u2d[i*u1d.size()+j] = u1d[j];
+        //dg::blas1::axpby( 1., u2d, -1., u);
+        //double eps = dg::blas1::dot( u,u);
+        //std::cout << "Error in u is "<<eps<<std::endl;
     }
 
     /**

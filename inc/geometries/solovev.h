@@ -456,41 +456,18 @@ struct LaplacePsip
     PsipRR psipRR_;
     PsipZZ psipZZ_;
 };
-/*
-struct LaplacePsipR
-{
-    LaplacePsipR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c), psipR_(gp), psipRR_(gp) {}
-    double operator()(double R, double Z) const
-    {    
-        return 2.*(1-A_)/R_0_/R_0_/R_0_*R - psipR_(R,Z)/R/R + psipRR_(R,Z)/R;
-    }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
-    }
-  private:
-    double R_0_, A_;
-    std::vector<double> c_;
-    PsipR psipR_;
-    PsipRR psipRR_;
-};
-struct LaplacePsipZ
-{
-    LaplacePsipZ( GeomParameters gp ): R_0_(gp.R_0), psipRZ_(gp) {}
-    double operator()(double R, double Z) const
-    {    
-        return psipRZ_(R,Z)/R;
-    }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
-    }
-  private:
-    double R_0_;
-    PsipRZ psipRZ_;
-};
-*/
 
+struct Collective
+{
+    Collective( GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp){}
+    Psip psip;
+    PsipR psipR;
+    PsipZ psipZ;
+    PsipRR psipRR;
+    PsipRZ psipRZ;
+    PsipZZ psipZZ;
+    LaplacePsip laplacePsip;
+};
 
 
 /**

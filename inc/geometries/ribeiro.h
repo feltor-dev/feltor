@@ -93,7 +93,7 @@ struct Fpsi
         unsigned P=8;
         double x1 = 0, x1_old = 0;
         double eps=1e10, eps_old=2e10;
-        std::cout << "In x1 function\n";
+        //std::cout << "In x1 function\n";
         while(eps < eps_old && P < 20 && eps > 1e-15)
         {
             eps_old = eps; 
@@ -112,7 +112,7 @@ struct Fpsi
             x1 = dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x1 - x1_old)/x1);
-            std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
+            //std::cout << "X1 = "<<-x1<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return -x1_old;
     }
@@ -210,7 +210,7 @@ struct Ribeiro
         thrust::host_vector<double> psi_x;
         dg::detail::construct_psi_values( fpsiMinv_, psi0_, psi1_, 0., zeta1d, lx_, psi_x, fx_);
 
-        std::cout << "In grid function:\n";
+        //std::cout << "In grid function:\n";
         ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_);
         solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZY(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         unsigned size = zeta1d.size()*eta1d.size();
