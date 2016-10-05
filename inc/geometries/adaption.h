@@ -134,7 +134,7 @@ struct Liseikin_XX
         double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
-        return sqrtG*(psiY*psiY+k2*psiX*psiX + eps_);
+        return (psiY*psiY+k2*psiX*psiX + eps_)/sqrtG;
     }
 
     private:
@@ -151,7 +151,7 @@ struct Liseikin_XY
         double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
-        return sqrtG*(-psiX*psiY+k2*psiX*psiY);
+        return (-psiX*psiY+k2*psiX*psiY)/sqrtG;
     }
 
     private:
@@ -168,7 +168,7 @@ struct Liseikin_YY
         double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
-        return sqrtG*(+psiX*psiX+k2*psiY*psiY);
+        return (eps_+psiX*psiX+k2*psiY*psiY)/sqrtG;
     }
 
     private:
@@ -185,12 +185,13 @@ struct DivLiseikinX
         double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
         double psiXX = psiXX_(x,y), psiXY = psiXY_(x,y), psiYY=psiYY_(x,y);
         double psiY2 = psiY*psiY, psiY3=psiY*psiY2, psiY4=psiY2*psiY2, psiY5=psiY4*psiY;
-        double psiX2 = psiX*psiX;
+        double psiX2 = psiX*psiX, psiX4=psiX2*psiX2;
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
-        return (k2-1.)*(k2*psiY5*psiXY-k2*psiX*psiY4*(psiYY-2*psiXX) +
-                    psiX*(eps_+2*eps_*k2+2.*k2*psiX2)*psiY2*psiXX + 
-                    psiX*(eps_+k2*psiX2)*((eps_+2*psiX2)*(eps_+k2*psiX2)*psiXY) + 
+        return (k2-1.)*(k2*psiY5*psiXY-k2*psiX*psiY4*(psiYY-2.*psiXX) +
+                    psiX*(eps_+2.*eps_*k2+2.*k2*psiX2)*psiY2*psiXX + 
+                    psiX*(eps_+k2*psiX2)*((eps_+psiX2)*psiYY+eps_*psiXX)+
+                    psiY*((eps_*eps_-k2*psiX4)*psiXY-(eps_+2*psiX2)*(eps_+k2*psiX2)*psiXY) + 
                     psiY3*(eps_*(1.+k2)*psiXY-(eps_+2.*k2*psiX2)*psiXY))/sqrtG/sqrtG/sqrtG;
     }
 
