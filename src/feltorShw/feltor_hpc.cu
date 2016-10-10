@@ -106,7 +106,9 @@ int main( int argc, char* argv[])
       std::cout << "input "<<inputIN<<std::endl;    
       const eule::Parameters pIN(file::read_input( inputIN));
       pIN.display( std::cout);
-      size_t count2dIN[3]  = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+      dg::Grid2d<double> grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
+      dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
+      size_t count2dIN[3]  = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};
       size_t start2dIN[3]  = {0, 0, 0};
       std::string namesIN[2] = {"electrons", "ions"}; 
       
@@ -126,11 +128,14 @@ int main( int argc, char* argv[])
       errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
       std::cout << "timein= "<< timeIN <<  std::endl;
       time=timeIN;
-      errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, temp.data());
-      y0[0]=temp;
+      dg::IHMatrix interpolateIN = dg::create::interpolation( grid,grid_IN); 
+      errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, transferINH.data());
+      dg::blas2::gemv( interpolateIN, transferINH,temp);
+      dg::blas1::transfer(temp,y0[0]);
       errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
-      errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, temp.data());
-      y0[1]=temp;
+      errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferINH.data());
+      dg::blas2::gemv( interpolateIN, transferINH,temp);
+      dg::blas1::transfer(temp,y0[1]);      
       errIN = nc_close(ncidIN);
 
     }
