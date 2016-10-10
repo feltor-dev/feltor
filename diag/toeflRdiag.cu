@@ -91,7 +91,7 @@ int main( int argc, char* argv[])
     //Grids
     dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     dg::Grid1d<double > g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
-    dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( g2d); 
+    dg::ArakawaX< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> arakawa( g2d); 
     double time = 0.;
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -107,9 +107,9 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> npe_h(2,dg::evaluate(dg::zero,g2d));
     dg::HVec phi_h(dg::evaluate(dg::zero,g2d));
     //dg::HVec vor_h(dg::evaluate(dg::zero,g2d));
-    dg::DVec xvec = dg::evaluate( dg::coo1, g2d);
-    dg::DVec yvec = dg::evaluate( dg::coo2, g2d);
-    dg::HVec xcoo = dg::evaluate(dg::coo1,g1d);
+    dg::DVec xvec = dg::evaluate( dg::cooX2d, g2d);
+    dg::DVec yvec = dg::evaluate( dg::cooY2d, g2d);
+    dg::HVec xcoo = dg::evaluate(dg::cooX1d,g1d);
     dg::DVec one = dg::evaluate( dg::one, g2d);
     dg::DVec w2d = dg::create::weights( g2d);
     dg::DVec helper(dg::evaluate(dg::zero,g2d));

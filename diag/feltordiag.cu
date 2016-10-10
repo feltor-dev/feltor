@@ -61,7 +61,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Grids
-    dg::CylindricalGrid<dg::DVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER); 
+    dg::cylindrical::Grid<dg::DVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER); 
     dg::Grid2d<double >  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out,  p.bc, p.bc); 
     //1d grid
     solovev::Psip psip(gp);
@@ -135,22 +135,22 @@ int main( int argc, char* argv[])
 //         std::cout << "Compute safety factor   "<< "\n";
 //         solovev::Alpha alpha(gp); 
 //         dg::DVec alphaog2d   = dg::evaluate( alpha, g2d_out);      
-//         dg::DVec abs = dg::evaluate( dg::coo1, g1d_out);
+//         dg::DVec abs = dg::evaluate( dg::cooX1d, g1d_out);
 //         solovev::SafetyFactor<dg::DVec> qprofile(g2d_out, gp, alphaog2d );
 //         dg::DVec sf = dg::evaluate(qprofile, g1d_out);
 
     //perp laplacian for computation of vorticity
 
     dg::DVec vor3d    = dg::evaluate( dg::zero, g3d_out);
-    dg::Elliptic<dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    dg::Elliptic<dg::cylindrical::Grid<dg::DVec>, dg::DMatrix, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
     dg::IDMatrix fsaonrzmatrix,fsaonrzphimatrix;     
     fsaonrzmatrix    =  dg::create::interpolation(psipupilog2d ,g1d_out);    
     fsaonrzphimatrix =  dg::create::interpolation(psipupilog3d ,g1d_out);    
     
     //Vectors and Matrices for Diffusion coefficient
-    const dg::DVec curvR = dg::evaluate( solovev::CurvatureR(gp), g3d_out);
-    const dg::DVec curvZ = dg::evaluate( solovev::CurvatureZ(gp), g3d_out);
-    dg::Poisson<dg::CylindricalGrid<dg::DVec>,dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
+    const dg::DVec curvR = dg::evaluate( solovev::CurvatureNablaBR(gp), g3d_out);
+    const dg::DVec curvZ = dg::evaluate( solovev::CurvatureNablaBZ(gp), g3d_out);
+    dg::Poisson<dg::cylindrical::Grid<dg::DVec>,dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
     const dg::DVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
     dg::DVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
     dg::DVec temp2 = dg::evaluate(dg::zero , g3d_out) ;

@@ -82,9 +82,9 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> tpe_h(2,dg::evaluate(dg::zero,g2d));
     dg::HVec phi_h(dg::evaluate(dg::zero,g2d));
     dg::HVec vor_h(dg::evaluate(dg::zero,g2d));
-    dg::DVec xvec = dg::evaluate( dg::coo1, g2d);
-    dg::DVec yvec = dg::evaluate( dg::coo2, g2d);
-    dg::DVec xcoo(dg::evaluate(dg::coo1,g1d));
+    dg::DVec xvec = dg::evaluate( dg::cooX2d, g2d);
+    dg::DVec yvec = dg::evaluate( dg::cooY2d, g2d);
+    dg::DVec xcoo(dg::evaluate(dg::cooX1d,g1d));
     dg::DVec one = dg::evaluate( dg::one, g2d);
     dg::DVec w2d = dg::create::weights( g2d);
     dg::DVec nemamp(dg::evaluate(dg::zero,g2d));

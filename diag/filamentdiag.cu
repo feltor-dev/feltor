@@ -15,9 +15,10 @@
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
-#include "solovev/geometry.h"
+#include "dg/geometry.h"
+#include "geometries/solovev.h"
 #include "feltor/parameters.h"
-#include "solovev/init.h"
+#include "geometries/init.h"
 
 int main( int argc, char* argv[])
 {
@@ -55,8 +56,8 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Grids
-    dg::Grid3d<double > g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
-    dg::Grid2d<double>  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
+    dg::cylindrical::Grid<dg::DVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER);  
+    dg::cartesian::Grid2d  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
     //--------generate nc file and define dimensions----------------
     int ncidout; 
     err = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncidout);

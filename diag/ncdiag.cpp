@@ -142,7 +142,7 @@ int main( int argc, char* argv[])
 //         std::cout << "Compute safety factor   "<< "\n";
 //         solovev::Alpha alpha(gp); 
 //         dg::HVec alphaog2d   = dg::evaluate( alpha, g2d_out);      
-//         dg::HVec abs = dg::evaluate( dg::coo1, g1d_out);
+//         dg::HVec abs = dg::evaluate( dg::cooX1d, g1d_out);
 //         solovev::SafetyFactor<dg::HVec> qprofile(g2d_out, gp, alphaog2d );
 //         dg::HVec sf = dg::evaluate(qprofile, g1d_out);
 

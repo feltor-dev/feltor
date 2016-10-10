@@ -55,8 +55,8 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> tpe(2,dg::evaluate(dg::zero,g2d));
     dg::HVec phi(dg::evaluate(dg::zero,g2d));
     dg::HVec vor(dg::evaluate(dg::zero,g2d));
-    dg::HVec xvec = dg::evaluate( dg::coo1, g2d);
-    dg::HVec yvec = dg::evaluate( dg::coo2, g2d);
+    dg::HVec xvec = dg::evaluate( dg::cooX2d, g2d);
+    dg::HVec yvec = dg::evaluate( dg::cooY2d, g2d);
     dg::HVec one = dg::evaluate( dg::one, g2d);
     dg::HVec w2d = dg::create::weights( g2d);
     

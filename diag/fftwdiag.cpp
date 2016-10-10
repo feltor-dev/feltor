@@ -85,7 +85,7 @@ int main( int argc, char* argv[])
     }   
     err2d_f = nc_close(ncid2d_f); 
     //1d file
-    dg::HVec kn= dg::evaluate(dg::coo1,g1d_f);
+    dg::HVec kn= dg::evaluate(dg::cooX1d,g1d_f);
     file::NC_Error_Handle err1d_f;
     int ncid1d_f,dim_ids1d_f[2],dataIDs1d_f[4], tvarID1d_f;
     std::string names1d_f[4] = {"Sk(Ue)","Sk(Ui)","Sk(UE)","k"}; //may  goto ln(n/<n>)

@@ -117,9 +117,9 @@ int main( int argc, char* argv[])
     dg::Histogram<dg::HVec> hist2(g1d2,phipvec);    
     dg::Histogram2D<dg::HVec> hist12(g2d,Nepvec,phipvec);    
     dg::HVec PA1 = dg::evaluate(hist1,g1d1);
-    dg::HVec A1 = dg::evaluate(dg::coo1,g1d1);
+    dg::HVec A1 = dg::evaluate(dg::cooX1d,g1d1);
     dg::HVec PA2= dg::evaluate(hist2,g1d2);
-    dg::HVec A2 = dg::evaluate(dg::coo1,g1d2);
+    dg::HVec A2 = dg::evaluate(dg::cooX1d,g1d2);
     dg::HVec PA1A2= dg::evaluate(hist12,g2d);
     
     //-----------------NC output start

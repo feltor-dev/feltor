@@ -62,13 +62,13 @@ int main( int argc, char* argv[])
     dg::HVec temp_in(dg::evaluate(dg::zero,g2d_in));
     dg::HVec one(dg::evaluate(dg::one,g2d));
     dg::HVec temp1d(dg::evaluate(dg::zero,g1d));
-    dg::HVec xcoo(dg::evaluate(dg::coo1,g1d));
+    dg::HVec xcoo(dg::evaluate(dg::cooX1d,g1d));
 //     dg::HVec y0coo(dg::evaluate(1,0.0));
     dg::HVec y0coo(dg::evaluate(dg::CONSTANT(0.0),g1d));
     dg::PoloidalAverage<dg::HVec,dg::HVec > polavg(g2d);
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
-    dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
+    dg::Poisson<dg::cartesian::Grid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
 
 
     //2d field
