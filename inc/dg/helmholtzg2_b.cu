@@ -45,9 +45,9 @@ int main()
 
     const dg::DVec chi = dg::evaluate( dg::LinearX(1.0,1.0), grid2d);
     
-    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
-    dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2barinv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered);
-    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2tilde(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered);
+    dg::Helmholtz< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > gamma1inv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
+    dg::Helmholtz2< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > gamma2barinv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered);
+    dg::Elliptic< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > gamma2tilde(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered);
     gamma2barinv.set_chi(chi); 
 //     gamma2barinv.set_chi(one); 
 

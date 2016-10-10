@@ -4,6 +4,7 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <cusp/array1d.h>
 
 #include "timer.cuh"
 #include "sparseblockmat.h"
@@ -33,7 +34,7 @@ dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::DIR;
 
 typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice<double>, dg::CooSparseBlockMatDevice<double>, dg::NNCD> Matrix;
-typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
+typedef dg::MPI_Vector<dg::DVec > Vector;
 
 int main(int argc, char* argv[])
 {

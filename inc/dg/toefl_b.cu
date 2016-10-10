@@ -96,7 +96,7 @@ int main()
     y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
     //create RHS and AB
-    dg::Toefl< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> test( grid, Ra, Pr, eps); 
+    dg::Toefl< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> test( grid, Ra, Pr, eps); 
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
 
     //create visualisation vectors

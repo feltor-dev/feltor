@@ -42,8 +42,8 @@ int main()
     std::cout << "Create Laplacian...\n";
     t.tic();
     dg::DMatrix DX = dg::create::dx( grid);
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> lap(grid, dg::not_normed, dg::forward );
-    dg::Elliptic<dg::CartesianGrid2d, dg::fDMatrix, dg::fDVec> flap(grid, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> lap(grid, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::cartesian::Grid2d, dg::fDMatrix, dg::fDVec> flap(grid, dg::not_normed, dg::forward );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -60,7 +60,7 @@ int main()
 
     dg::fDVec xf;
     dg::blas1::transfer(x,xf);
-    dg::Inverse<dg::Elliptic<dg::CartesianGrid2d, dg::fDMatrix, dg::fDVec>, dg::fDVec> inverse( flap, xf, 10, 1e-15, 0);
+    dg::Inverse<dg::Elliptic<dg::cartesian::Grid2d, dg::fDMatrix, dg::fDVec>, dg::fDVec> inverse( flap, xf, 10, 1e-15, 0);
 
 
     

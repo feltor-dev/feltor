@@ -39,8 +39,8 @@ int main(int argc, char **argv)
     mpi_init3d( dg::DIR, dg::DIR, dg::NEU, n, Nx, Ny, Nz, comm);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    dg::CartesianMPIGrid3d g3d( -1, 1, -1, 1, 0.1, M_PI+0.1, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::NEU, comm);
-    dg::CartesianMPIGrid2d perp_grid( -1, 1, -1, 1, n, Nx, Ny, dg::DIR, dg::DIR, comm);
+    dg::cartesian::MPIGrid3d g3d( -1, 1, -1, 1, 0.1, M_PI+0.1, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::NEU, comm);
+    dg::cartesian::MPIGrid2d perp_grid( -1, 1, -1, 1, n, Nx, Ny, dg::DIR, dg::DIR, comm);
     const dg::MDVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();

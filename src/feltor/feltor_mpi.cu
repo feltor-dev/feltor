@@ -25,7 +25,7 @@
         output dimensions must be divisible by the mpi process numbers
 */
 
-typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
+typedef dg::MPI_FieldAligned< dg::cylindrical::MPIGrid<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
@@ -90,14 +90,14 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-     dg::CylindricalMPIGrid<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, comm);  
-     dg::CylindricalMPIGrid<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
+     dg::cylindrical::MPIGrid<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, comm);  
+     dg::cylindrical::MPIGrid<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
      
     //create RHS 
     if(rank==0)std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::cylindrical::MPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
     if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    eule::Rolkar< dg::cylindrical::MPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field/////////////////////////////////////////

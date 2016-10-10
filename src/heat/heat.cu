@@ -30,7 +30,7 @@
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
-typedef dg::FieldAligned< dg::CylindricalGrid<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< dg::cylindrical::Grid<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -79,7 +79,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
-     dg::CylindricalGrid<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+     dg::cylindrical::Grid<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
 
 //     dg::DVec w3d_ = dg::create::volume( grid);
 //     dg::DVec v3d_ = dg::create::inv_volume( grid);
@@ -131,7 +131,7 @@ int main( int argc, char* argv[])
     std::cout << "initialize feltor" << std::endl;
     eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     std::cout << "initialize rolkar" << std::endl;
-    eule::Rolkar<dg::CylindricalGrid<dg::DVec> , dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
+    eule::Rolkar<dg::cylindrical::Grid<dg::DVec> , dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation

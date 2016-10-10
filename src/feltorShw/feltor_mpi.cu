@@ -81,9 +81,9 @@ int main( int argc, char* argv[])
     dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
     if(rank==0) std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > feltor( grid, p); //initialize before rolkar!
+    eule::Feltor<dg::cartesian::MPIGrid2d, dg::MDMatrix, dg::MDVec > feltor( grid, p); //initialize before rolkar!
     if(rank==0) std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > rolkar( grid, p);
+    eule::Rolkar<dg::cartesian::MPIGrid2d, dg::MDMatrix, dg::MDVec > rolkar( grid, p);
     if(rank==0) std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////

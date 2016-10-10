@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
     MPI_Bcast( &Nz,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     ////////////////////////////////////////////////////////////////
 
-    dg::CartesianMPIGrid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
+    dg::cartesian::MPIGrid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
     dg::Timer t;
     Vector w3d = dg::create::weights( grid);
     Vector lhs = dg::evaluate ( left, grid), jac(lhs);
@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
     }
 
     //The Arakawa scheme
-    dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
+    dg::ArakawaX<dg::cartesian::MPIGrid3d, Matrix, Vector> arakawa( grid);
     t.tic(); 
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
@@ -156,10 +156,10 @@ int main(int argc, char* argv[])
     periods[0] = false, periods[1] = false;
     MPI_Comm commEll;
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &commEll);
-    dg::CylindricalMPIGrid<Vector> gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
+    dg::cylindrical::MPIGrid<Vector> gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
     const Vector ellw3d = dg::create::volume(gridEll);
     const Vector ellv3d = dg::create::inv_volume(gridEll);
-    dg::Elliptic<dg::CylindricalMPIGrid<Vector>, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::cylindrical::MPIGrid<Vector>, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
     const Vector solution = dg::evaluate ( fct, gridEll);
     const Vector deriv = dg::evaluate( derivative, gridEll);
     Vector x = dg::evaluate( initial, gridEll);
@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
         double Zmin=-1.0*gpa*1.00;
         double Rmax=gpR0+1.0*gpa; 
         double Zmax=1.0*gpa*1.00;
-        dg::CylindricalMPIGrid<Vector> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
+        dg::cylindrical::MPIGrid<Vector> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
         guenther::Field field(gpR0, gpI0);
         dg::MDDS::FieldAligned dsFA( field, g3d, 1e-4, dg::DefaultLimiter(), dg::DIR);
         dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered);

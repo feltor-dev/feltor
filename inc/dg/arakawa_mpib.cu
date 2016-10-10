@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
     dg::MDVec eins = dg::evaluate( dg::one, grid );
     std::cout<< std::setprecision(3);
 
-    dg::ArakawaX<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> arakawa( grid);
+    dg::ArakawaX<dg::cartesian::MPIGrid2d, dg::MDMatrix, dg::MDVec> arakawa( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)

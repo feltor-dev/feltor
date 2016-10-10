@@ -68,7 +68,7 @@ int main()
                 z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
                         g.z0() + (k+0.5)*g.hz();
             }
-    dg::DVec xd(x), yd(y), zd(z);
+    thrust::device_vector<double> xd(x), yd(y), zd(z);
     dg::Timer t;
     t.tic();
     cusp::ell_matrix<int,double, cusp::device_memory> A = dg::create::interpolation( x, y, z, g);

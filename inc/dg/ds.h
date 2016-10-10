@@ -465,11 +465,11 @@ struct MatrixTraits< DS<F,M, V> >
 
 ///@addtogroup typedefs
 ///@{
-typedef dg::DS<dg::FieldAligned<dg::cylindrical::Grid3d<dg::DVec>, dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> DDS;//!< device DS type
-typedef dg::DS<dg::FieldAligned<dg::cylindrical::Grid3d<dg::HVec>, dg::IHMatrix, dg::HVec>, dg::HMatrix, dg::HVec> HDS; //!< host DS type
+typedef dg::DS<dg::FieldAligned<dg::cylindrical::Grid<dg::DVec>, dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> DDS;//!< device DS type
+typedef dg::DS<dg::FieldAligned<dg::cylindrical::Grid<dg::HVec>, dg::IHMatrix, dg::HVec>, dg::HMatrix, dg::HVec> HDS; //!< host DS type
 #ifdef MPI_VERSION
-typedef dg::DS< dg::MPI_FieldAligned<dg::cylindrical::MPIGrid3d<dg::MDVec>, dg::IDMatrix, dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec>, dg::MDMatrix, dg::MDVec > MDDS; //!< MPI device DS type
-typedef dg::DS< dg::MPI_FieldAligned<dg::cylindrical::MPIGrid3d<dg::MHVec>, dg::IHMatrix, dg::BijectiveComm< dg::iHVec, dg::HVec >, dg::HVec>, dg::MHMatrix, dg::MHVec > MHDS; //!< MPI host DS type
+typedef dg::DS< dg::MPI_FieldAligned<dg::cylindrical::MPIGrid<dg::MDVec>, dg::IDMatrix, dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec>, dg::MDMatrix, dg::MDVec > MDDS; //!< MPI device DS type
+typedef dg::DS< dg::MPI_FieldAligned<dg::cylindrical::MPIGrid<dg::MHVec>, dg::IHMatrix, dg::BijectiveComm< dg::iHVec, dg::HVec >, dg::HVec>, dg::MHMatrix, dg::MHVec > MHDS; //!< MPI host DS type
 #endif //MPI_VERSION
 ///@}
 

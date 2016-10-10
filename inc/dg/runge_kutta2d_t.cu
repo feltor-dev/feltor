@@ -44,7 +44,7 @@ struct RHS
         //}
     }
   private:
-    dg::ArakawaX<dg::CartesianGrid2d, dg::DMatrix, Vector_Type> arakawa;
+    dg::ArakawaX<dg::cartesian::Grid2d, dg::DMatrix, Vector_Type> arakawa;
     Vector_Type phi, temp;
 };
 

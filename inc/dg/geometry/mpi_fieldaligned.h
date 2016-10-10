@@ -294,11 +294,11 @@ MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_
     ghostM.resize( localsize); ghostP.resize( localsize);
     //set up grid points as start for fieldline integrations 
     std::vector<MPI_Vector<thrust::host_vector<double> > > y( 5, dg::evaluate(dg::zero, g2d));
-    y[0] = dg::evaluate( dg::coo1, g2d);
-    y[1] = dg::evaluate( dg::coo2, g2d);
+    y[0] = dg::evaluate( dg::cooX2d, g2d);
+    y[1] = dg::evaluate( dg::cooY2d, g2d);
     y[2] = dg::evaluate( dg::zero, g2d);//distance (not angle)
-    y[3] = dg::pullback( dg::coo1, g2d);
-    y[4] = dg::pullback( dg::coo2, g2d);
+    y[3] = dg::pullback( dg::cooX2d, g2d);
+    y[4] = dg::pullback( dg::cooY2d, g2d);
     //integrate to next z-planes
     std::vector<thrust::host_vector<double> > yp(3, y[0].data()), ym(yp); 
     if(deltaPhi<=0) deltaPhi = grid.hz();

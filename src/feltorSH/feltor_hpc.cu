@@ -54,9 +54,9 @@ int main( int argc, char* argv[])
      dg::Grid2d<double > grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> feltor( grid, p); //initialize before rolkar!
+    eule::Feltor<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> feltor( grid, p); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> rolkar( grid, p);
+    eule::Rolkar<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> rolkar( grid, p);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////

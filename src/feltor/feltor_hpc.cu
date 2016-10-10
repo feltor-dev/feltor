@@ -25,7 +25,7 @@
 
 */
 
-typedef dg::FieldAligned< dg::CylindricalGrid<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< dg::cylindrical::Grid<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 int main( int argc, char* argv[])
 {
 
@@ -77,14 +77,14 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-    dg::CylindricalGrid<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
-    dg::CylindricalGrid<dg::DVec > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER);  
+    dg::cylindrical::Grid<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+    dg::cylindrical::Grid<dg::DVec > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER);  
      
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::cylindrical::Grid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    eule::Rolkar< dg::cylindrical::Grid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field//////////////////////////////////////////

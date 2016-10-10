@@ -46,7 +46,7 @@ int main()
     y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
     //create RHS and RK
-    dg::Toefl<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> test( grid, Ra, Pr, 1e-6); 
+    dg::Toefl<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> test( grid, Ra, Pr, 1e-6); 
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
 
 
@@ -67,7 +67,7 @@ int main()
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( dvisual.begin(), dvisual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
-        hvisual = dvisual;
+        dg::blas1::transfer( dvisual, hvisual);
         render.renderQuad( hvisual, n*grid.Nx(), n*grid.Ny(), colors);
         glfwSwapBuffers(w);
         glfwPollEvents();

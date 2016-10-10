@@ -360,9 +360,9 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid
     assert( g_new.y1() <= g_old.y1());
     assert( g_new.z0() >= g_old.z0());
     assert( g_new.z1() <= g_old.z1());
-    thrust::device_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
-    thrust::device_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
-    thrust::device_vector<double> pointsZ = dg::evaluate( dg::coo3, g_new);
+    thrust::device_vector<double> pointsX = dg::evaluate( dg::cooX3d, g_new);
+    thrust::device_vector<double> pointsY = dg::evaluate( dg::cooY3d, g_new);
+    thrust::device_vector<double> pointsZ = dg::evaluate( dg::cooZ3d, g_new);
     return ell_interpolation( pointsX, pointsY, pointsZ, g_old);
 }
 /**
@@ -384,8 +384,8 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid
     assert( g_new.x1() <= g_old.x1());
     assert( g_new.y0() >= g_old.y0());
     assert( g_new.y1() <= g_old.y1());
-    thrust::device_vector<double> pointsX = dg::evaluate( dg::coo1, g_new);
-    thrust::device_vector<double> pointsY = dg::evaluate( dg::coo2, g_new);
+    thrust::device_vector<double> pointsX = dg::evaluate( dg::cooX2d, g_new);
+    thrust::device_vector<double> pointsY = dg::evaluate( dg::cooY2d, g_new);
     return ell_interpolation( pointsX, pointsY, g_old);
 
 }

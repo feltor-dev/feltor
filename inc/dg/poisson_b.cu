@@ -60,7 +60,7 @@ int main()
     std::cout<< std::setprecision(2);
 
 
-    dg::Poisson<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> poiss( grid);
+    dg::Poisson<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> poiss( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)

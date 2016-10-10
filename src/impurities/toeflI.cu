@@ -45,15 +45,15 @@ int main( int argc, char* argv[])
     const imp::Parameters p( v);
     p.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
-    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::cartesian::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::Diffusion< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > diffusion( grid, p); 
-    dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > toeflI( grid, p); 
+    dg::Diffusion< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > diffusion( grid, p); 
+    dg::ToeflI< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > toeflI( grid, p); 
 
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(3, dg::DVec( grid.size()) );
-    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
+    dg::Helmholtz<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
     if( p.mode == 1)
     {
         if( p.vorticity == 0)
@@ -136,7 +136,7 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM( grid, dg::normed, dg::centered);
+    dg::Elliptic<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> laplacianM( grid, dg::normed, dg::centered);
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid

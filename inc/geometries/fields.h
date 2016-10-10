@@ -1705,7 +1705,7 @@ struct DeriNeu
 struct FuncDirPer
 {
     FuncDirPer( GeomParameters gp, double psi_0, double psi_1, double k):
-        R_0_(gp.R_0), psi0_(psi_0), psi1_(psi_1), k_(k), psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp){}
+        R_0_(gp.R_0), psi0_(psi_0), psi1_(psi_1), k_(k), psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipZZ_(gp){}
     double operator()(double R, double Z) const {
         double psip = psip_(R,Z);
         double result = (psip-psi0_)*(psip-psi1_)*cos(k_*theta(R,Z));

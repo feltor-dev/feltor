@@ -57,7 +57,7 @@ int main()
     const dg::DVec variation = dg::evaluate ( variationRHS, grid);
     dg::DVec eins = dg::evaluate( dg::one, grid);
 
-    dg::Poisson<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> poisson( grid, bcxlhs, bcylhs,bcxrhs, bcyrhs );
+    dg::Poisson<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> poisson( grid, bcxlhs, bcylhs,bcxrhs, bcyrhs );
     poisson( lhs, rhs, jac);
 
     std::cout << std::scientific;

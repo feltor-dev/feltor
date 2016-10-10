@@ -91,8 +91,8 @@ int main( int argc, char* argv[])
     solovev::BZ bZ(gp);
 
     //Feltor quantities
-    solovev::CurvatureR curvatureR(gp);
-    solovev::CurvatureZ curvatureZ(gp);
+    solovev::CurvatureNablaBR curvatureR(gp);
+    solovev::CurvatureNablaBZ curvatureZ(gp);
     solovev::GradLnB gradLnB(gp);
     solovev::Field field(gp);
     solovev::FieldR fieldR(gp);

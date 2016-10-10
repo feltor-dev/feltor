@@ -78,7 +78,7 @@ int main()
     const dg::DVec variation = dg::evaluate ( variationRHS, grid);
     dg::DVec eins = dg::evaluate( dg::one, grid);
 
-    dg::ArakawaX<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( grid);
+    dg::ArakawaX<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     std::cout << std::scientific;

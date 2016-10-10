@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     Vector eins = dg::evaluate( dg::one, grid );
     std::cout<< std::setprecision(3);
 
-    dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
+    dg::ArakawaX<dg::cartesian::MPIGrid3d, Matrix, Vector> arakawa( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)

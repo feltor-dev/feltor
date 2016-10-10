@@ -63,8 +63,8 @@ int main()
 
 
     bool passed = true;
-    thrust::host_vector<double> xs = dg::evaluate( dg::coo1, g); 
-    thrust::host_vector<double> ys = dg::evaluate( dg::coo2, g); 
+    thrust::host_vector<double> xs = dg::evaluate( dg::cooX2d, g); 
+    thrust::host_vector<double> ys = dg::evaluate( dg::cooY2d, g); 
     thrust::host_vector<double> xF = dg::create::forward_transform( xs, g);
     thrust::host_vector<double> yF = dg::create::forward_transform( ys, g);
     for( unsigned i=0; i<x.size(); i++)

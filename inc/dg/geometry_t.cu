@@ -20,8 +20,8 @@ int main()
     //std::cout << "Type n, Nx, Ny, Nz\n";
     //unsigned n, Nx, Ny, Nz;
     //std::cin >> n>> Nx>>Ny>>Nz;
-    //dg::CylindricalGrid<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
-    dg::CylindricalGrid<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::DIR, dg::DIR, dg::PER);
+    //dg::cylindrical::Grid<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
+    dg::cylindrical::Grid<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::DIR, dg::DIR, dg::PER);
 
     dg::DVec b = dg::evaluate( sine, grid);
     dg::DVec vol3d = dg::create::volume( grid);

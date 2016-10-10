@@ -57,9 +57,9 @@ int main( int argc, char* argv[])
     dg::Grid1d<double> grid_probe(0, p.lx, 1, 8, p.bc_x);
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
+    eule::Feltor<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
+    eule::Rolkar<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
     std::cout << "Done!\n";
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation

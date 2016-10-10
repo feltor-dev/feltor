@@ -38,7 +38,7 @@ int main()
     dg::DVec b3 = dg::evaluate ( laplace_fct, g3d);
     dg::blas2::symv( w3d, b3, b3);
 
-    dg::Elliptic<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> lap(g3d, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::cartesian::Grid3d, dg::DMatrix, dg::DVec> lap(g3d, dg::not_normed, dg::forward );
     dg::CG<dg::DVec > pcg( x3, g3d.size());
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg( lap, x3, b3, v3d, eps, sqrt(lz))<<std::endl;
