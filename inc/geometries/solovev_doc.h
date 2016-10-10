@@ -8,11 +8,14 @@
  * Objects that are used to define and integrate the magnetic field lines. 
  * All objects can be used in the evaluation() function.
  * @defgroup profiles Profiles based on the magnetic field geometry
- * @defgroup grid Grid generators
+ * @defgroup grid Grids and grid generators
+ * @{
+ *     @defgroup generators Grid generators
+ * @}
  * 
  */
 /*! @mainpage
- * Welcome to the Geometry library. 
+ * Welcome to the Geometry extension of FELTOR.
  *
  * This library implements generic equilibrium magnetic fields that solves
  * the Grad Shafranov equation as functors. Furthermore, it provides several derived quantities

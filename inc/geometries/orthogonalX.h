@@ -16,6 +16,7 @@ namespace dg
 namespace orthogonal
 {
 
+///@cond
 namespace detail
 {
 
@@ -213,9 +214,18 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
 
 
 } //namespace detail
-
+///@endcond
 }//namespace orthogonal
 
+/**
+ * @brief Choose points on inside or outside line
+ *
+ * @ingroup generators
+ * @tparam Psi
+ * @tparam PsiX
+ * @tparam PsiY
+ * @tparam LaplacePsi
+ */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SimpleOrthogonalX
 {
@@ -275,6 +285,15 @@ struct SimpleOrthogonalX
     int firstline_;
 };
 
+/**
+ * @brief Choose points on separatrix
+ *
+ * @ingroup generators
+ * @tparam Psi
+ * @tparam PsiX
+ * @tparam PsiY
+ * @tparam LaplacePsi
+ */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SeparatrixOrthogonal
 {
@@ -417,12 +436,14 @@ struct SeparatrixOrthogonal
 
 namespace orthogonal
 {
-
+///@cond
 template< class container>
 struct GridX2d; 
+///@endcond
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @ingroup grid
  */
 template< class container>
 struct GridX3d : public dg::GridX3d
@@ -506,6 +527,7 @@ struct GridX3d : public dg::GridX3d
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @ingroup grid
  */
 template< class container>
 struct GridX2d : public dg::GridX2d
@@ -551,9 +573,9 @@ struct GridX2d : public dg::GridX2d
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
-/**
- * @brief Integrates the equations for a field line and 1/B
- */ 
+// /**
+//* @brief Integrates the equations for a field line and 1/B
+// */ 
 //struct XField
 //{
 //    XField( solovev::GeomParameters gp,const dg::GridX2d& gXY, const thrust::host_vector<double>& g):

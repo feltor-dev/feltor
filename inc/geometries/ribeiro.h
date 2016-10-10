@@ -180,7 +180,7 @@ struct FieldFinv
 
 /**
  * @brief A two-dimensional grid based on "almost-ribeiro" coordinates by Ribeiro and Scott 2010
- * @ingroup grid
+ * @ingroup generators
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct Ribeiro

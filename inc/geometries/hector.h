@@ -12,8 +12,6 @@
 
 namespace dg
 {
-///@addtogroup grid
-///@{
 
 ///@cond
 namespace detail
@@ -197,6 +195,7 @@ void transform(
 /**
  * @brief The High PrEcision Conformal grid generaTOR
  *
+ * @ingroup generators
  * @tparam IMatrix The interpolation matrix type
  * @tparam Matrix  The matrix type in the elliptic equation
  * @tparam container The container type for internal computations (must be compatible to a thrust::host_vector<double> in the blas1::transfer function)
@@ -205,7 +204,7 @@ template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class contai
 struct Hector
 {
     /**
-     * @brief Construct from functors
+     * @brief Construct a conformal grid from functors
      *
      * @tparam Psi A binary functor
      * @tparam PsiX The first derivative in x
@@ -241,6 +240,18 @@ struct Hector
         dg::blas1::transfer( u, u_);
     }
 
+    /**
+     * @brief Construct an orthogonal grid with adaption
+     *
+     * @param psi0 first boundary 
+     * @param psi1 second boundary
+     * @param X0 a point in the inside of the ring bounded by psi0
+     * @param Y0 a point in the inside of the ring bounded by psi0
+     * @param n number of polynomials used for the orthogonal grid
+     * @param Nx initial number of points in zeta
+     * @param Ny initial number of points in eta
+     * @param eps_u the accuracy of u
+     */
     template< class Psi, class PsiX, class PsiY, class LaplacePsi, class Chi, class ChiX, class ChiY>
     Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, Chi chi, ChiX chiX, ChiY chiY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
         g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0), n, Nx, Ny, dg::DIR)
@@ -270,6 +281,18 @@ struct Hector
         std::cout << "eps 1 is "<<eps1 << " eps 2 is "<<eps2<<std::endl;
     }
 
+    /**
+     * @brief Construct a curvilinear grid with monitor metric
+     *
+     * @param psi0 first boundary 
+     * @param psi1 second boundary
+     * @param X0 a point in the inside of the ring bounded by psi0
+     * @param Y0 a point in the inside of the ring bounded by psi0
+     * @param n number of polynomials used for the orthogonal grid
+     * @param Nx initial number of points in zeta
+     * @param Ny initial number of points in eta
+     * @param eps_u the accuracy of u 
+     */
     template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi_XX, class Chi_XY, class Chi_YY, class DivChiX, class DivChiY>
     Hector( Psi psi, PsiX psiX, PsiY psiY, 
             PsiXX psiXX, PsiXY psiXY, PsiYY psiYY,  
@@ -306,13 +329,23 @@ struct Hector
      */
     double width() const {return lu_;}
     /**
-     * @brief The length of the v domain
+     * @brief 2pi
      *
      * Always returns 2pi
      * @return 2pi 
      */
     double height() const {return 2.*M_PI;}
+    /**
+     * @brief Check if conformal constructor was used
+     *
+     * @return true if conformal constructor was used
+     */
     bool isConformal() const {return conformal_;}
+    /**
+     * @brief Check if orthogonal constructor was used
+     *
+     * @return true if orthogonal constructor was used
+     */
     bool isOrthogonal() const {return orthogonal_;}
 
     /**
@@ -324,8 +357,8 @@ struct Hector
      * @param y  = y(u,v)
      * @param ux = u_x(u,v)
      * @param uy = u_y(u,v)
-     * @param vx = -u_y(u,v)
-     * @param vy = u_x(u,v)
+     * @param vx = v_x(u,v)
+     * @param vy = v_y(u,v)
      * @note All the resulting vectors are write-only and get properly resized
      */
     void operator()( const thrust::host_vector<double>& u1d, 
@@ -531,5 +564,4 @@ struct Hector
 
 };
 
-///@}
 }//namespace dg

@@ -278,7 +278,7 @@ void construct_rz( Nemov nemov,
 /**
  * @brief 
  *
- * @ingroup grid
+ * @ingroup generators
  * @tparam Psi
  * @tparam PsiX
  * @tparam PsiY

@@ -668,72 +668,43 @@ struct FieldRZYRYZY
 namespace flux{
 
 /**
- * @brief y-component of magnetic field 
- */ 
-struct FieldY
-{
-    FieldY( GeomParameters gp): f_psi_(1.), R_0_(gp.R_0),ipol_(gp){}
-    void set_f( double f_new){f_psi_=f_new;}
-  /**
- * @brief \f[  B^y= 
- * I(\psi) \frac{(\nabla\psi)^2}{ q R^2} \f]
- */ 
-    double operator()(double R, double Z) const
-    { 
-        double ipol=ipol_(R, Z);
-        double fnorm=f_psi_*ipol/R;
-        return fnorm*R_0_/R;
-        
-    }
-      /**
-       * @brief == operator()(R,Z)
-       */ 
-    double operator()(double R, double Z, double phi) const
-    { 
-        return this->operator()(R,Z);
-    }
-    private:
-    double f_psi_, R_0_;
-    Ipol ipol_;
-};
-/**
  * @brief 
  * \f[  d R/d \theta =   B^R/B^\theta \f], 
  * \f[  d Z/d \theta =   B^Z/B^\theta \f],
  * \f[  d y/d \theta =   B^y/B^\theta\f]
  */ 
+template< class PsiR, class PsiZ, class Ipol>
 struct FieldRZYT
 {
-    FieldRZYT( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp),ipol_(gp){}
+    FieldRZYT( PsiR psiR, PsiZ psiZ, Ipol ipol, double R0, double Z0): R_0_(R0), psipR_(psiR), psipZ_(psiZ),ipol_(ipol){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double ipol=ipol_(y[0], y[1]);
-        double fac=ipol/y[0];
-        yp[0] =  R_0_/y[0]*psipZ;//fieldR
-        yp[1] = -R_0_/y[0]*psipR;//fieldZ
-        yp[2] =fac*R_0_/y[0]; //fieldYbar
-        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + y[1]*y[1];
-        double fieldT = yp[0]*(-y[1]/r2) + yp[1]*(y[0]-R_0_)/r2; //fieldT
+        yp[0] =  psipZ;//fieldR
+        yp[1] = -psipR;//fieldZ
+        yp[2] =ipol/y[0];
+        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
+        double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; 
         yp[0] /=  fieldT;
         yp[1] /=  fieldT;
         yp[2] /=  fieldT;
     }
   private:
-    double R_0_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    double R_0_, Z_0_;
+    PsiR psipR_;
+    PsiZ psipZ_;
     Ipol ipol_;
 };
 
+template< class PsiR, class PsiZ, class Ipol>
 struct FieldRZYZ
 {
-    FieldRZYZ( GeomParameters gp): R_0_(gp.R_0), psipR_(gp), psipZ_(gp),ipol_(gp){}
+    FieldRZYZ( PsiR psiR, PsiZ psiZ, Ipol ipol): psipR_(psiR), psipZ_(psiZ), ipol_(ipol){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
         double ipol=ipol_(y[0], y[1]);
-
         yp[0] =  psipZ;//fieldR
         yp[1] = -psipR;//fieldZ
         yp[2] =   ipol; //fieldYbar
@@ -742,7 +713,6 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    double R_0_;
     PsipR psipR_;
     PsipZ psipZ_;
     Ipol ipol_;
@@ -752,9 +722,10 @@ struct FieldRZYZ
  * \f[  d R/d y =   B^R/B^y \f], 
  * \f[  d Z/d y =   B^Z/B^y \f],
  */ 
+template< class PsiR, class PsiZ, class Ipol>
 struct FieldRZY
 {
-    FieldRZY( GeomParameters gp): f_(1.), R_0_(gp.R_0), psipR_(gp), psipZ_(gp),ipol_(gp){}
+    FieldRZY( PsiR psiR, PsiZ psiZ, Ipol ipol): f_(1.), psipR_(psiR), psipZ_(psiZ),ipol_(ipol){}
     void set_f(double f){ f_ = f;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
@@ -782,6 +753,11 @@ struct FieldRZY
     -\frac{\partial^2 \psi_p}{\partial R \partial Z} y_Z\right]+ 
     \frac{\partial \psi_p}{\partial Z} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)\f],
  */ 
+template<class PsiR, class PsiZ, class PsiRR, class PsiRZ, class PsiZZ, class Ipol ipol, class IpolR ipolR, class IpolZ ipolZ>
+struct FieldRZYRYZY
+{
+    FieldRZYRYZY( PsiR psiR, PsiZ psiZ, PsiRR psiRR, PsiRZ psiRZ, PsiZZ psiZZ, Ipol ipol): 
+        psipR_(psiR), psipZ_(psiZ), psipRR_(psiRR), psipRZ_(psiRZ), psipZZ_(psiZZ), ipol_(ipol), ipolR_(ipolR), ipolZ_(ipolZ){ f_ = f_prime_ = 1.;}
 struct FieldRZYRYZY
 {
     FieldRZYRYZY( const GeomParameters& gp): psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), ipol_(gp), ipolR_(gp), ipolZ_(gp)
@@ -814,8 +790,8 @@ struct FieldRZYRYZY
     Ipol ipol_;
     IpolR ipolR_;
     IpolZ ipolZ_;
-
 };
+
 }//namespace flux
 namespace ribeiro{
 
@@ -834,7 +810,7 @@ struct FieldRZYT
         yp[2] = psip2; //ribeiro
         //yp[2] = psip2*sqrt(psip2); //separatrix
         double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
-        double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; //fieldT
+        double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; 
         yp[0] /=  fieldT;
         yp[1] /=  fieldT;
         yp[2] /=  fieldT;

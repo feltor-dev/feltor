@@ -27,6 +27,7 @@ void findXpoint( const PsiR& psiR, const PsiZ& psiZ, const PsiRR& psiRR, const P
     R_X = X[0], Z_X = X[1];
 }
 
+///@cond
 namespace detail
 {
 
@@ -365,5 +366,6 @@ struct SeparatriX
 
 };
 } //namespace detail
+///@endcond
 } //namespace dg
 

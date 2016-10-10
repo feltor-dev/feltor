@@ -1,5 +1,6 @@
 #pragma once
 
+///@cond
 namespace dg
 {
 
@@ -107,5 +108,8 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
 }
 
 } //namespace detail
+
+
 } //namespace dg
+///@endcond
 
