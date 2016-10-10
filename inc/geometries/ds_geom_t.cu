@@ -92,8 +92,8 @@ int main( int argc, char* argv[])
     solovev::LnB lnB(gp);
     solovev::BR bR(gp);
     solovev::BZ bZ(gp);
-    solovev::CurvatureR curvatureR(gp);
-    solovev::CurvatureZ curvatureZ(gp);
+    solovev::CurvatureNablaBR curvatureR(gp);
+    solovev::CurvatureNablaBZ curvatureZ(gp);
     solovev::GradLnB gradLnB(gp);
     solovev::Pupil pupil(gp);
     InvNormR invnormr(gp);
@@ -152,7 +152,7 @@ int main( int argc, char* argv[])
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
                 //Similar to feltor grid
-                dg::CylindricalGrid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER);
+                dg::cylindrical::Grid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER);
                 const dg::DVec w3d = dg::create::volume( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
@@ -287,8 +287,8 @@ int main( int argc, char* argv[])
                 std::cout << "Rel Diff = "<<reldiff2b <<"\n";
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(3) test with gradlnb and with (a) Arakawa and (b) Poisson discretization" << "\n";    
-                dg::ArakawaX< dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec>    arakawa(g3d); 
-                dg::Poisson< dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec>     poiss(g3d);
+                dg::ArakawaX< dg::cylindrical::Grid<dg::DVec>, dg::DMatrix, dg::DVec>    arakawa(g3d); 
+                dg::Poisson< dg::cylindrical::Grid<dg::DVec>, dg::DMatrix, dg::DVec>     poiss(g3d);
                 dg::DVec invBongrid = dg::evaluate( invB, g3d);
                 dg::DVec psipongrid = dg::evaluate( psip, g3d);
                 dg::DVec invnormrongrid = dg::evaluate( invnormr, g3d);
