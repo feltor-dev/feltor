@@ -27,6 +27,7 @@ enum direction
 
 namespace detail
 {
+    ///@cond
 
 /**
  * @brief Divide cells in an equally distributed number of new cells
@@ -258,11 +259,13 @@ int linear_ref( unsigned multiple_x, const Grid1d<double>& g, thrust::host_vecto
     return Nx_new;
 }
 
+///@endcond
 }//namespace detail
 
 struct Grid3d;
 /**
  * @brief Refined grid 
+ * @ingroup grid
  */
 struct Grid2d : public dg::Grid2d<double>
 {
@@ -407,6 +410,10 @@ struct Grid2d : public dg::Grid2d<double>
     dg::Grid2d<double> g_assoc_;
 };
 
+/**
+ * @brief Refined grid 
+ * @ingroup grid
+ */
 struct Grid3d : public dg::Grid3d<double>
 {
     /**
@@ -570,6 +577,14 @@ Grid2d::Grid2d( const dg::refined::Grid3d& g) :
 
 namespace cartesian
 {
+
+
+/**
+ * @brief A refined cartesian grid
+ *
+ * @ingroup basicgrids
+ * @tparam container
+ */
 template<class container>
 struct Grid2d : public dg::refined::Grid2d
 {

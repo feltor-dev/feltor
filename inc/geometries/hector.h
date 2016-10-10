@@ -12,6 +12,8 @@
 
 namespace dg
 {
+///@addtogroup grid
+///@{
 
 ///@cond
 namespace detail
@@ -529,4 +531,5 @@ struct Hector
 
 };
 
+///@}
 }//namespace dg

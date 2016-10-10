@@ -6,11 +6,16 @@
 
 namespace dg
 {
-///@addtogroup basicgrids
-///@{
 
 namespace cartesian
 {
+
+///@addtogroup basicgrids
+///@{
+
+/**
+ * @brief The mpi version of a cartesian grid
+ */
 struct MPIGrid2d : public dg::MPI_Grid2d
 {
     typedef OrthonormalTag metric_category; 
@@ -21,6 +26,9 @@ struct MPIGrid2d : public dg::MPI_Grid2d
     MPIGrid2d( const dg::MPI_Grid2d& grid ):MPI_Grid2d( grid){}
 };
 
+/**
+ * @brief The mpi version of a cartesian grid
+ */
 struct MPIGrid3d : public dg::MPI_Grid3d
 {
     typedef OrthonormalTag metric_category; 
@@ -31,6 +39,7 @@ struct MPIGrid3d : public dg::MPI_Grid3d
     MPIGrid3d( const dg::MPI_Grid3d& grid ): dg::MPI_Grid3d( grid){}
 };
 
+///@}
 } //namespace cartesian
 
 namespace cylindrical
@@ -38,6 +47,7 @@ namespace cylindrical
 /**
  * @brief MPI version of Cylindrical grid
  *
+ * @ingroup basicgrids
  * @tparam container The MPI Vector container
  */
 template<class container>
@@ -73,6 +83,7 @@ struct MPIGrid : public MPI_Grid3d
 }//namespace cylindrical
 ///@}
 
+///@cond
 /////////////////////////////////////////////////////MPI pullbacks/////////////////////////////////////////////////
 namespace detail{
 template< class Geometry>
@@ -121,5 +132,6 @@ MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometr
 }
 
 } //namespace detail
+///@endcond
 
 }//namespace dg

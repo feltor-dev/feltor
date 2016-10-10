@@ -11,9 +11,13 @@ namespace refined
 {
 namespace conformal
 {
+///@addtogroup grid
+///@{
 
+///@cond
 template< class container>
 struct RingGrid2d; 
+///@endcond
 
 template< class container>
 struct RingGrid3d : public dg::refined::Grid3d
@@ -102,9 +106,6 @@ struct RingGrid3d : public dg::refined::Grid3d
 
 };
 
-/**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
- */
 template< class container>
 struct RingGrid2d : public dg::refined::Grid2d
 {
@@ -151,9 +152,7 @@ struct RingGrid2d : public dg::refined::Grid2d
     dg::conformal::RingGrid2d<container> g_assoc_;
 };
 
-/**
- * @brief Integrates the equations for a field line and 1/B
- */ 
+///@}
 }//namespace conformal
 }//namespace refined
 }//namespace dg

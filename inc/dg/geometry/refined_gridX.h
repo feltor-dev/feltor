@@ -90,6 +90,7 @@ int exponential_Xref( unsigned add_x, const GridX1d& g, thrust::host_vector<doub
 struct GridX3d;
 /**
  * @brief Refined grid 
+ * @ingroup grid
  */
 struct GridX2d : public dg::GridX2d
 {
@@ -242,6 +243,10 @@ struct GridX2d : public dg::GridX2d
     dg::GridX2d g_assoc_;
 };
 
+/**
+ * @brief Refined grid 
+ * @ingroup grid
+ */
 struct GridX3d : public dg::GridX3d
 {
     /**

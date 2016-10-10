@@ -17,6 +17,8 @@ template< class container>
 struct RingGrid2d; 
 ///@endcond
 
+///@addtogroup grid
+///@{
 template< class container>
 struct RingGrid3d : public dg::refined::Grid3d
 {
@@ -152,6 +154,7 @@ struct RingGrid2d : public dg::refined::Grid2d
     dg::curvilinear::RingGrid2d<container> g_assoc_;
 };
 
+///@}
 }//namespace curvilinear
 }//namespace refined
 }//namespace dg

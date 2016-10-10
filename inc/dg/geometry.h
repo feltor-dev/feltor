@@ -31,9 +31,9 @@ namespace dg{
  * Don't forget to specialize in the dg namespace.
  */
 namespace geo{
-
 ///@addtogroup geometry
 ///@{
+
 /**
  * @brief Multiply the input with the volume element without the dG weights!
  *
@@ -202,11 +202,13 @@ void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
     dg::geo::detail::doPushForwardPerp( chiRR, chiRZ, chiZZ, chixx, chixy, chiyy, g, typename GeometryTraits<Geometry>::metric_category() ); 
 }
 
+///@}
 }//namespace geo
 
-///@}
 
 namespace create{
+///@addtogroup geometry
+///@{
 
 /**
  * @brief Create the volume element on the grid (including weights!!)
@@ -238,11 +240,13 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
     return detail::doCreateInvVolume( g, typename GeometryTraits<Geometry>::metric_category());
 }
 
+///@}
 }//namespace create
 
 /**
  * @brief This function pulls back a function defined in cartesian coordinates to the curvilinear coordinate system
  *
+ * @ingroup geometry
  * i.e. F(x,y) = f(R(x,y), Z(x,y)) in 2d 
  * @tparam Functor The (binary or ternary) function object 
  * @param f The function defined in cartesian coordinates
@@ -258,5 +262,6 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
 {
     return dg::detail::doPullback( f, g, typename GeometryTraits<Geometry>::metric_category(), typename GeometryTraits<Geometry>::dimensionality(), typename GeometryTraits<Geometry>::memory_category() );
 }
+
 
 }//namespace dg

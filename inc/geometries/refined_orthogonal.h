@@ -14,6 +14,8 @@ namespace orthogonal
 
 template< class container>
 struct RingGrid2d; 
+///@addtogroup grid
+///@{
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
@@ -157,6 +159,7 @@ struct RingGrid2d : public dg::refined::Grid2d
     dg::orthogonal::RingGrid2d<container> g_assoc_;
 };
 
+///@}
 }//namespace orthogonal
 }//namespace refined
 }//namespace dg

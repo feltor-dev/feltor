@@ -9,9 +9,13 @@ namespace dg
 namespace curvilinear
 {
 
+///@cond
 template< class container>
 struct RingGrid2d; 
 ///@endcond
+
+///@addtogroup grid
+///@{
 
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
@@ -143,5 +147,6 @@ struct RingGrid2d : public dg::Grid2d<double>
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
+///@}
 }//namespace curvilinear
 }//namespace dg

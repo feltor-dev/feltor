@@ -7,6 +7,8 @@
 namespace dg{
 namespace conformal
 {
+///@addtogroup grid
+///@{
 
 typedef dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> Generator;
 
@@ -144,6 +146,7 @@ struct RingGrid2d : public dg::Grid2d<double>
     container gradU2_, vol2d_;
 };
 
+///@}
 
 }//namespace conformal
 }//namespace
