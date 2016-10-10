@@ -457,9 +457,9 @@ struct LaplacePsip
     PsipZZ psipZZ_;
 };
 
-struct Collective
+struct CollectivePsip
 {
-    Collective( GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp){}
+    CollectivePsip( GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp){}
     Psip psip;
     PsipR psipR;
     PsipZ psipZ;
