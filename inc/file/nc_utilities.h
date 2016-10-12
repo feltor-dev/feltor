@@ -205,6 +205,18 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<dou
     return retval;
 }
 
+/**
+ * @brief Define 2d time-dependent (limited) dimensions and associate values in NetCDF-file
+ *
+ * Dimensions are named x, y, and time (limited)
+ * @param ncid file ID
+ * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x)
+ * @param tvarID (write - only) The ID of the time variable
+ * @param g The 2d grid from which to derive the dimensions
+ *
+ * @return if anything goes wrong it returns the netcdf code, else SUCCESS
+ * @note File stays in define mode
+ */
 int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::Grid2d<double>& g)
 {
     dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());

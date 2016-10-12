@@ -175,8 +175,7 @@ int main( int argc, char* argv[])
     //-----------------Start timestepping
     err = nc_open( argv[1], NC_NOWRITE, &ncid);   
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
-    for( unsigned i=0
-             ; i<=p.maxout; i++)
+    for( unsigned i=0; i<=p.maxout; i++)
     {
         start2d[0] = i;
         //start1d[0] = i;
