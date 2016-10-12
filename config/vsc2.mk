@@ -10,7 +10,6 @@ MPICC=mpiicc
 OPT=-O3
 MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
 OMPFLAG=-openmp
-JSONLIB=-L$(HOME)/include/json/../../src/lib_json -ljsoncpp # json library for input parameters
 LIBS     = -L/opt/hdf5/1.8.9/intel/lib -lhdf5 -lhdf5_hl
 LIBS    += -L/opt/sw/netcdf/4.3.2/lib -lnetcdf -lcurl
 endif
