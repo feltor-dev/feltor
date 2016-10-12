@@ -125,7 +125,6 @@ int define_dimension( int ncid, const char* name, int* dimID, const double * poi
     if( (retval = nc_redef(ncid))) {return retval;} //not necessary for NetCDF4 files
     return retval;
 }
-
 /**
  * @brief Define a 1d dimension variable together with its data points
  *
@@ -202,6 +201,30 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<dou
     if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
     if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
     if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
+
+    return retval;
+}
+
+/**
+ * @brief Define 2d time-dependent (limited) dimensions and associate values in NetCDF-file
+ *
+ * Dimensions are named x, y, and time (limited)
+ * @param ncid file ID
+ * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x)
+ * @param tvarID (write - only) The ID of the time variable
+ * @param g The 2d grid from which to derive the dimensions
+ *
+ * @return if anything goes wrong it returns the netcdf code, else SUCCESS
+ * @note File stays in define mode
+ */
+int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::Grid2d<double>& g)
+{
+    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    int retval;
+    if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
+    if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
+    if( (retval = define_limited_time( ncid, "time", size, &dimsIDs[0], tvarID)) ){ return retval;}
 
     return retval;
 }

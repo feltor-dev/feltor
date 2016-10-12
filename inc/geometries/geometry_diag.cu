@@ -120,6 +120,8 @@ int main( int argc, char* argv[])
     hvisual[2] = dg::evaluate( ipol, grid2d);
     hvisual[3] = dg::evaluate( invB, grid2d);
     hvisual[4] = dg::evaluate( field, grid2d);
+    hvisual[5] = hvisual[4];
+    hvisual[6] = hvisual[4];
     hvisual[5] = dg::evaluate( curvatureR, grid2d);
     hvisual[6] = dg::evaluate( curvatureZ, grid2d);
     hvisual[7] = dg::evaluate( gradLnB, grid2d);
