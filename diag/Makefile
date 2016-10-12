@@ -8,7 +8,7 @@ include ../config/devices/devices.mk
 INCLUDE+= -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
 
-TARGETS =  toefl_video toefl_analytics toefl_compare show com figure17 vmax toefl_radial ncdiag filamentdiag fftwdiag crosscoherencdiag feltorSesoldiag feltorShwdiag feltorSHdiag feltordiag vmaxnc feltorSHvmaxdiag feltorSHvmaxisodiag feltorSHcompdiag feltorSHcompalldiag feltorSHvCOMdiag feltorSHvCOMisodiag feltorSHcompallvmaxdiag feltorSHcompallisovmaxdiag toeflRdiag
+TARGETS =  toefl_video toefl_analytics toefl_compare show com figure17 vmax toefl_radial ncdiag filamentdiag fftwdiag crosscoherencdiag feltorSesoldiag feltorShwdiag feltorSHdiag feltordiag vmaxnc feltorSHvmaxdiag feltorSHvmaxisodiag feltorSHcompdiag feltorSHcompalldiag feltorSHvCOMdiag feltorSHvCOMisodiag feltorSHcompallvmaxdiag feltorSHcompallisovmaxdiag toeflRdiag feltorShwinntodiag
 
 all: $(TARGETS)
 
@@ -34,7 +34,7 @@ ncdiag: ncdiag.cpp
 filamentdiag: filamentdiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 feltordiag: feltordiag.cu
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g
 feltorSHdiag: feltorSHdiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
 toeflRdiag: toeflRdiag.cu
@@ -68,6 +68,8 @@ crosscoherencdiag: crosscoherencdiag.cpp
 feltorSesoldiag: feltorSesoldiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 feltorShwdiag: feltorShwdiag.cpp
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
+feltorShwinntodiag: feltorShwinntodiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 # feltorSHdiag: feltorSHdiag.cpp
 # 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g

@@ -29,11 +29,11 @@ int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
-    std::string input, geom;
+    std::string input;
     if( argc != 3 && argc != 4)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [input.txt] [output.nc]\n";
-	std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
+     	std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
     else 
