@@ -24,13 +24,18 @@ int main( int argc, char* argv[])
     //Parameter initialisation
     std::vector<double> v, v2;
     std::stringstream title;
+    Json::Reader reader;
+    Json::Value js;
     if( argc == 1)
     {
         v = file::read_input("input.txt");
+        std::ifstream is("input.txt");
+        reader.parse(is,js,false);
     }
     else if( argc == 2)
     {
-        v = file::read_input( argv[1]);
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
     }
     else
     {
@@ -42,7 +47,7 @@ int main( int argc, char* argv[])
     GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
     draw::RenderHostData render(v2[1], v2[2]);
     /////////////////////////////////////////////////////////////////////////
-    const imp::Parameters p( v);
+    const imp::Parameters p( js);
     p.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
     dg::cartesian::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);

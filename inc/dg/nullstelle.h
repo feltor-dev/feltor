@@ -11,7 +11,7 @@
 #include "exceptions.h"
 namespace dg{
 
-/*! @brief Exception class, that stores boundaries for 1D root finding 
+/*! @brief Exception class, that stores boundaries for 1D root finding
  *
  * @ingroup numerical0
  */

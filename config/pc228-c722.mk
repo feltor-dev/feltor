@@ -1,6 +1,3 @@
-
-
-
 ifeq ($(strip $(shell hostname)),pc228-c722)#    # uniquely identify system
 INCLUDE = -I$(HOME)/include#                    # cusp and thrust libraries
 GLFLAGS =$$(pkg-config --static --libs glfw3)#  # flags for glfw3

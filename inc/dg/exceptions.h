@@ -58,7 +58,7 @@ struct Ooops : public std::exception
     /**
      * @brief What string
      *
-     * @return error string 
+     * @return error string
      */
     char const* what() const throw(){ return c_;}
   private:
