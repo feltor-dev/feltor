@@ -40,12 +40,15 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
 
 int main( int argc, char* argv[])
 {
-    std::cout << "Type n, Nx, Ny, Nz ( 3 4 40 1)\n";
-    unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
     std::cout << "Type nHector, NxHector, NyHector ( 13 2 10)\n";
     unsigned nGrid, NxGrid, NyGrid;
     std::cin >> nGrid>> NxGrid>>NyGrid;   
+    std::cout << "Type epsHector (1e-10)\n";
+    double epsHector;
+    std::cin >> epsHector;
+    std::cout << "Type n, Nx, Ny, Nz ( 3 4 40 1)\n";
+    unsigned n, Nx, Ny, Nz;
+    std::cin >> n>> Nx>>Ny>>Nz;   
     Json::Reader reader;
     Json::Value js;
     if( argc==1)
@@ -72,18 +75,17 @@ int main( int argc, char* argv[])
     t.tic();
     solovev::CollectivePsip c( gp); 
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid);
-    dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid);
+    dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     dg::conformal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
     dg::conformal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //dg::NablaPsiInvCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ);
-    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.laplacePsip, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid);
+    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     //dg::orthogonal::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
     //dg::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //dg::LiseikinCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> lc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, 0.1, 0.001);
-    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, 1e-10);
+    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     //dg::curvilinear::RingGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
     //dg::curvilinear::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -152,8 +154,8 @@ int main( int argc, char* argv[])
     dg::HVec ones2d = dg::evaluate( dg::one, g2d);
     double volumeUV = dg::blas1::dot( vol, ones2d);
 
-    vol = dg::create::volume( hector.orthogonal_grid());
-    ones2d = dg::evaluate( dg::one, hector.orthogonal_grid());
+    vol = dg::create::volume( hector.internal_grid());
+    ones2d = dg::evaluate( dg::one, hector.internal_grid());
     double volumeZE = dg::blas1::dot( vol, ones2d);
     std::cout << "volumeUV is "<< volumeUV<<std::endl;
     std::cout << "volumeZE is "<< volumeZE<<std::endl;

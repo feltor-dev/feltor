@@ -29,7 +29,7 @@ struct RingGrid3d : public dg::Grid3d<double>
     typedef RingGrid2d<container> perpendicular_grid; //!< the two-dimensional grid type
 
     template< class Generator>
-    RingGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx) :
+    RingGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR) :
         dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     {
         construct( generator, n,Nx, Ny, Nz, bcx);
@@ -109,7 +109,7 @@ struct RingGrid2d : public dg::Grid2d<double>
 {
     typedef dg::ConformalCylindricalTag metric_category;
     template< class Generator>
-    RingGrid2d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx):
+    RingGrid2d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d<double>( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
         conformal::RingGrid3d<container> g( hector, n,Nx,Ny,1,bcx);
