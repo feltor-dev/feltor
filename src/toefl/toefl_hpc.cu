@@ -34,7 +34,7 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        input = file::read_file( argv[1]);
+        input = file::read_file( argv[1]); //deprecated, better use json reader directly, instead!
     }
     Json::Reader reader;
     Json::Value js;

@@ -5,7 +5,6 @@ include ../../config/default.mk
 include ../../config/*.mk 
 include ../../config/devices/devices.mk
 
-INCLUDE+= -I../../src   # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
 
 all: guenther_ds_b geometry_diag
@@ -22,19 +21,7 @@ conformal_t: conformal_t.cu conformal.h
 ribeiro_t: ribeiro_t.cu ribeiro.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 	
-boozer_t: boozer_t.cu boozer.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-	
-hamada_t: hamada_t.cu hamada.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-	
-equalarc_t: equalarc_t.cu equalarc.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-	
 flux_t: flux_t.cu flux.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-	
-flux2_t: flux2_t.cu flux2.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
 	
 orthogonal_t: orthogonal_t.cu orthogonal.h 

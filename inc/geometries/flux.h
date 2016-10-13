@@ -205,4 +205,75 @@ struct FluxGenerator
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
 };
+
+/**
+ * @ingroup generators
+ */
+template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
+struct RibeiroFluxGenerator
+{
+    RibeiroFluxGenerator( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi_0, double psi_1, double x0, double y0, int mode=0):
+        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), mode_(mode)
+    {
+        psi0_ = psi_0, psi1_ = psi_1;
+        assert( psi_1 != psi_0);
+        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, mode);
+        f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
+        if( psi_1 < psi_0) f0_*=-1;
+        lx_ =  f0_*(psi_1-psi_0);
+        x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
+        //std::cout << "lx_ = "<<lx_<<"\n";
+    }
+    double width() const{return lx_;}
+    double height() const{return 2.*M_PI;}
+    void operator()( 
+         const thrust::host_vector<double>& zeta1d, 
+         const thrust::host_vector<double>& eta1d, 
+         thrust::host_vector<double>& x, 
+         thrust::host_vector<double>& y, 
+         thrust::host_vector<double>& zetaX, 
+         thrust::host_vector<double>& zetaY, 
+         thrust::host_vector<double>& etaX, 
+         thrust::host_vector<double>& etaY) 
+    {
+        //compute psi(x) for a grid on x and call construct_rzy for all psi
+        thrust::host_vector<double> psi_x(zeta1d);
+        for( unsigned i=0; i<psi_x.size(); i++)
+            psi_x[i] = zeta1d[i]/f0_ +psi0_;
+
+        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
+        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        solovev::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        unsigned size = zeta1d.size()*eta1d.size();
+        x.resize(size), y.resize(size);
+        zetaX = zetaY = etaX = etaY =x ;
+        fx_.resize( zeta1d.size());
+        thrust::host_vector<double> f_p(fx_);
+        unsigned Nx = zeta1d.size(), Ny = eta1d.size();
+        for( unsigned i=0; i<zeta1d.size(); i++)
+        {
+            thrust::host_vector<double> ry, zy;
+            thrust::host_vector<double> yr, yz, xr, xz;
+            double R0, Z0;
+            if(mode_==0)dg::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==1)dg::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            for( unsigned j=0; j<Ny; j++)
+            {
+                x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
+                etaX[j*Nx+i] = yr[j], etaY[j*Nx+i] = yz[j];
+                zetaX[j*Nx+i] = xr[j]/fx_[i]*f0_, zetaY[j*Nx+i] = xz[j]/fx_[i]*f0_;
+            }
+        }
+    }
+    private:
+    Psi psi_;
+    PsiX psiX_;
+    PsiY psiY_;
+    PsiXX psiXX_;
+    PsiXY psiXY_;
+    PsiYY psiYY_;
+    thrust::host_vector<double> fx_;
+    double f0_, lx_, x0_, y0_, psi0_, psi1_;
+    int mode_;
+};
 }//namespace dg

@@ -6,6 +6,8 @@
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 #include "orthogonal.h"
+#include "flux.h"
+#include "curvilinear.h"
 #include "adaption.h"
 
 
@@ -223,12 +225,13 @@ struct Hector
      * @param Ny initial number of points in eta
      * @param eps_u the accuracy of u
      */
-    template< class Psi, class PsiX, class PsiY, class LaplacePsi >
-    Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
-        g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0), n, Nx, Ny, dg::DIR)
+    template< class Psi, class PsiX, class PsiY, class PsiXX ,class PsiXY, class PsiYY >
+    Hector( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
+//        g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        g2d_(dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         //first construct u_
-        container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, dg::ONE(), laplacePsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
+        container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, dg::ONE(), dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
         construct( u, psi0, psi1, dg::ONE(), dg::ZERO(), dg::ONE() );
         conformal_=orthogonal_=true;
         //we actually don't need u_ but it makes a good testcase 
@@ -240,47 +243,47 @@ struct Hector
         dg::blas1::transfer( u, u_);
     }
 
-    /**
-     * @brief Construct an orthogonal grid with adaption
-     *
-     * @param psi0 first boundary 
-     * @param psi1 second boundary
-     * @param X0 a point in the inside of the ring bounded by psi0
-     * @param Y0 a point in the inside of the ring bounded by psi0
-     * @param n number of polynomials used for the orthogonal grid
-     * @param Nx initial number of points in zeta
-     * @param Ny initial number of points in eta
-     * @param eps_u the accuracy of u
-     */
-    template< class Psi, class PsiX, class PsiY, class LaplacePsi, class Chi, class ChiX, class ChiY>
-    Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, Chi chi, ChiX chiX, ChiY chiY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
-        g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0), n, Nx, Ny, dg::DIR)
-    {
-        dg::detail::LaplaceAdaptPsi<PsiX, PsiY, LaplacePsi, Chi, ChiX, ChiY> lapAdaPsi( psiX, psiY, laplacePsi, chi, chiX, chiY);
-        //first construct u_
-        container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, chi, lapAdaPsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
-        construct( u, psi0, psi1, chi, dg::ZERO(), chi );
-        orthogonal_=true;
-        conformal_=false;
-        //we actually don't need u_ but it makes a good testcase 
-        container psi__;
-        dg::blas1::transfer(dg::pullback( psi, g2d_), psi__);
-        dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
-        dg::blas1::plus( u,-psi0);
-        dg::blas1::scal( u, c0_);
-        dg::blas1::transfer( u, u_);
-        //Test orthogonality
-        thrust::host_vector<double> adapt = dg::pullback( chi, g2d_), test1(adapt), test2(adapt);
-        dg::HVec w2d = dg::create::weights( g2d_);
-        dg::blas1::pointwiseDot( ux_, adapt, test1);
-        dg::blas1::axpby( 1., vy_, -1., test1);
-        double eps1 = sqrt(dg::blas2::dot( test1, w2d, test1 ));
-        dg::blas1::pointwiseDot( uy_, adapt, test2);
-        dg::blas1::axpby( 1., vx_, +1., test2);
-        double eps2 = sqrt(dg::blas2::dot( test2, w2d, test2 ));
-        std::cout << "eps 1 is "<<eps1 << " eps 2 is "<<eps2<<std::endl;
-    }
-
+//    /**
+//     * @brief Construct an orthogonal grid with adaption
+//     *
+//     * @param psi0 first boundary 
+//     * @param psi1 second boundary
+//     * @param X0 a point in the inside of the ring bounded by psi0
+//     * @param Y0 a point in the inside of the ring bounded by psi0
+//     * @param n number of polynomials used for the orthogonal grid
+//     * @param Nx initial number of points in zeta
+//     * @param Ny initial number of points in eta
+//     * @param eps_u the accuracy of u
+//     */
+//    template< class Psi, class PsiX, class PsiY, class LaplacePsi, class Chi, class ChiX, class ChiY>
+//    Hector( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, Chi chi, ChiX chiX, ChiY chiY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
+//        g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi>(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+//    {
+//        dg::detail::LaplaceAdaptPsi<PsiX, PsiY, LaplacePsi, Chi, ChiX, ChiY> lapAdaPsi( psiX, psiY, laplacePsi, chi, chiX, chiY);
+//        //first construct u_
+//        container u = construct_grid_and_u( psi, psiX, psiY, laplacePsi, chi, lapAdaPsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
+//        construct( u, psi0, psi1, chi, dg::ZERO(), chi );
+//        orthogonal_=true;
+//        conformal_=false;
+//        //we actually don't need u_ but it makes a good testcase 
+//        container psi__;
+//        dg::blas1::transfer(dg::pullback( psi, g2d_), psi__);
+//        dg::blas1::axpby( +1., psi__, 1.,  u); //u = c0(\tilde u + \psi-\psi_0)
+//        dg::blas1::plus( u,-psi0);
+//        dg::blas1::scal( u, c0_);
+//        dg::blas1::transfer( u, u_);
+//        //Test orthogonality
+//        thrust::host_vector<double> adapt = dg::pullback( chi, g2d_), test1(adapt), test2(adapt);
+//        dg::HVec w2d = dg::create::weights( g2d_);
+//        dg::blas1::pointwiseDot( ux_, adapt, test1);
+//        dg::blas1::axpby( 1., vy_, -1., test1);
+//        double eps1 = sqrt(dg::blas2::dot( test1, w2d, test1 ));
+//        dg::blas1::pointwiseDot( uy_, adapt, test2);
+//        dg::blas1::axpby( 1., vx_, +1., test2);
+//        double eps2 = sqrt(dg::blas2::dot( test2, w2d, test2 ));
+//        std::cout << "eps 1 is "<<eps1 << " eps 2 is "<<eps2<<std::endl;
+//    }
+//
     /**
      * @brief Construct a curvilinear grid with monitor metric
      *
@@ -299,8 +302,10 @@ struct Hector
             Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY, 
             DivChiX divChiX, DivChiY divChiY,
             double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10) : 
-        g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,dg::detail::LaplacePsi<PsiXX, PsiYY> >(
-                    psi, psiX, psiY, dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0,0), n, Nx, Ny, dg::DIR)
+        //g2d_(dg::SimpleOrthogonal<Psi,PsiX,PsiY,dg::detail::LaplacePsi<PsiXX, PsiYY> >(
+                    //psi, psiX, psiY, dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        g2d_(dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY> (
+                    psi, psiX, psiY, psiXX,psiXY,psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         dg::detail::LaplaceChiPsi<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Chi_XX, Chi_XY, Chi_YY, DivChiX, DivChiY>
             lapChiPsi( psiX, psiY, psiXX, psiXY, psiYY, 
@@ -308,7 +313,8 @@ struct Hector
         //first construct u_
         container u = construct_grid_and_u( 
                 psi, psiX, psiY, 
-                dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), 
+                //dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), 
+                psiXX, psiXY, psiYY,
                 chi_XX, chi_XY, chi_YY, lapChiPsi, 
                 psi0, psi1, X0, Y0, n, Nx, Ny, eps_u );
         construct( u, psi0, psi1, chi_XX, chi_XY, chi_YY);
@@ -321,6 +327,7 @@ struct Hector
         dg::blas1::scal( u, c0_);
         dg::blas1::transfer( u, u_);
     }
+
     /**
      * @brief The length of the u domain
      *
@@ -403,17 +410,21 @@ struct Hector
      *
      * @return  orthogonal zeta, eta grid
      */
-    const dg::orthogonal::RingGrid2d<container>& orthogonal_grid() const {return g2d_;}
+    //const dg::orthogonal::RingGrid2d<container>& orthogonal_grid() const {return g2d_;}
+    const dg::curvilinear::RingGrid2d<container>& orthogonal_grid() const {return g2d_;}
     private:
-    template< class Psi, class PsiX, class PsiY, class LaplacePsi, class Chi, class LaplaceChiPsi>
-    container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, Chi chi, LaplaceChiPsi lapCP, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u ) 
+    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi, class LaplaceChiPsi>
+    container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Chi chi, LaplaceChiPsi lapCP, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u ) 
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0);
-        dg::orthogonal::RingGrid2d<container> g2d_old = g2d_;
+        //dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,1);
+        //dg::orthogonal::RingGrid2d<container> g2d_old = g2d_;
+        dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
+        dg::curvilinear::RingGrid2d<container> g2d_old = g2d_;
         container adapt = dg::pullback(chi, g2d_old);
-        dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        //dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::Elliptic<dg::curvilinear::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set_chi( adapt);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -424,8 +435,10 @@ struct Hector
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            dg::orthogonal::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
-            dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            //dg::orthogonal::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            //dg::Elliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::curvilinear::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            dg::Elliptic<dg::curvilinear::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             adapt = dg::pullback(chi, g2d);
             ellipticD.set_chi( adapt);
             lapu = dg::pullback( lapCP, g2d);
@@ -448,15 +461,18 @@ struct Hector
         return u;
     }
 
-    template< class Psi, class PsiX, class PsiY, class LaplacePsi, class Chi_XX, class Chi_XY, class Chi_YY, class LaplaceChiPsi>
-    container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, 
+    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi_XX, class Chi_XY, class Chi_YY, class LaplaceChiPsi>
+    container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, 
             Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY, LaplaceChiPsi lapCP, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u ) 
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,0);
-        dg::orthogonal::RingGrid2d<container> g2d_old = g2d_;
-        dg::TensorElliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        //dg::SimpleOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, psi1, X0, Y0,1);
+        dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
+        //dg::orthogonal::RingGrid2d<container> g2d_old = g2d_;
+        dg::curvilinear::RingGrid2d<container> g2d_old = g2d_;
+        //dg::TensorElliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::TensorElliptic<dg::curvilinear::RingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set( chi_XX, chi_XY, chi_YY);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -468,8 +484,10 @@ struct Hector
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            dg::orthogonal::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
-            dg::TensorElliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            //dg::orthogonal::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            //dg::TensorElliptic<dg::orthogonal::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::curvilinear::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            dg::TensorElliptic<dg::curvilinear::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             ellipticD.set( chi_XX, chi_XY, chi_YY );
             //lapu = g2d.lapx();
             lapu = dg::pullback( lapCP, g2d);
@@ -560,7 +578,8 @@ struct Hector
     double c0_, lu_;
     thrust::host_vector<double> u_, ux_, uy_, vx_, vy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
-    dg::orthogonal::RingGrid2d<container> g2d_;
+    //dg::orthogonal::RingGrid2d<container> g2d_;
+    dg::curvilinear::RingGrid2d<container> g2d_;
 
 };
 
