@@ -549,7 +549,7 @@ struct FieldRZYZ
         double ipol=ipol_(y[0], y[1]);
         yp[0] =  psipZ;//fieldR
         yp[1] = -psipR;//fieldZ
-        yp[2] =   ipol; //fieldYbar
+        yp[2] =   ipol/y[0]; //fieldYbar
         yp[0] /=  yp[1];
         yp[2] /=  yp[1];
         yp[1] =  1.;
@@ -579,7 +579,6 @@ struct FieldRZY
     }
   private:
     double f_;
-    double R_0_;
     PsipR psipR_;
     PsipZ psipZ_;
     Ipol ipol_;
@@ -602,6 +601,19 @@ struct FieldRZYRYZY
         psipR_(psiR), psipZ_(psiZ), psipRR_(psiRR), psipRZ_(psiRZ), psipZZ_(psiZZ), ipol_(ipol), ipolR_(ipolR), ipolZ_(ipolZ){ f_ = f_prime_ = 1.;}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
+    void initialize( double R0, double Z0, double& yR, double& yZ)
+    {
+        double psipR = psipR_(R0, Z0), psipZ = psipZ_(R0,Z0);
+        double psip2 = (psipR*psipR+ psipZ*psipZ);
+        double fnorm =R0/ipol_(R0,Z0)/f_; //=Rq/I
+        yR = -psipZ_(R0, Z0)/psip2/fnorm;
+        yZ = +psipR_(R0, Z0)/psip2/fnorm;
+    }
+    void derive( double R0, double Z0, double& xR, double& xZ)
+    {
+        xR = +f_*psipR_(R0, Z0);
+        xZ = +f_*psipZ_(R0, Z0);
+    }
     
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
@@ -612,10 +624,10 @@ struct FieldRZYRYZY
         double ipolZ=ipolZ_(y[0], y[1]);
         double fnorm =y[0]/ipol/f_; //=R/(I/q)
 
-        yp[0] =  (psipZ)*fnorm;
-        yp[1] = -(psipR)*fnorm;
-        yp[2] = (-psipRZ*y[2]+ psipRR*y[3])*fnorm + f_prime_/f_*psipR + ipolR/ipol - 1./y[0];
-        yp[3] = ( psipRZ*y[3]- psipZZ*y[2])*fnorm + f_prime_/f_*psipZ + ipolZ/ipol;
+        yp[0] = -(psipZ)*fnorm;
+        yp[1] = +(psipR)*fnorm;
+        yp[2] = (+psipRZ*y[2]- psipRR*y[3])*fnorm + f_prime_/f_*psipR + ipolR/ipol - 1./y[0];
+        yp[3] = (-psipRZ*y[3]+ psipZZ*y[2])*fnorm + f_prime_/f_*psipZ + ipolZ/ipol;
 
     }
   private:
