@@ -28,8 +28,8 @@ namespace detail
 template< class Psi, class PsiX, class PsiY>
 struct Fpsi
 {
-    Fpsi( Psi psi, PsiX psiX, PsiY psiY, double x0, double y0): 
-        psip_(psi), fieldRZYT_(psiX, psiY, x0, y0), fieldRZtau_(psiX, psiY)
+    Fpsi( Psi psi, PsiX psiX, PsiY psiY, double x0, double y0, int mode): 
+        psip_(psi), fieldRZYTribeiro_(psiX, psiY, x0, y0),fieldRZYTequalarc_(psiX, psiY, x0, y0), fieldRZtau_(psiX, psiY), mode_(mode)
     {
         R_init = x0; Z_init = y0;
         while( fabs( psiX(R_init, Z_init)) <= 1e-10 && fabs( psiY( R_init, Z_init)) <= 1e-10)
@@ -65,8 +65,9 @@ struct Fpsi
         //double y_eps = 1;
         while( (eps < eps_old || eps > 1e-7)&& N < 1e6)
         {
-            eps_old = eps, end_old = end;
-            N*=2; dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N);
+            eps_old = eps, end_old = end; N*=2; 
+            if(mode_==0)dg::stepperRK17( fieldRZYTribeiro_,  begin, end, 0., 2*M_PI, N);
+            if(mode_==1)dg::stepperRK17( fieldRZYTequalarc_, begin, end, 0., 2*M_PI, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
         //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
@@ -149,30 +150,33 @@ struct Fpsi
     private:
     double R_init, Z_init;
     Psi psip_;
-    solovev::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYT_;
+    solovev::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTribeiro_;
+    solovev::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequalarc_;
     solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    int mode_;
 };
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
 template<class Psi, class PsiR, class PsiZ>
 struct FieldFinv
 {
-    FieldFinv( Psi psi, PsiR psiR, PsiZ psiZ, double x0, double y0, unsigned N_steps = 500):
-        fpsi_(psi, psiR, psiZ, x0, y0), fieldRZYT_(psiR, psiZ, x0, y0), N_steps(N_steps) { }
+    FieldFinv( Psi psi, PsiR psiR, PsiZ psiZ, double x0, double y0, unsigned N_steps, int mode):
+        fpsi_(psi, psiR, psiZ, x0, y0, mode), fieldRZYTribeiro_(psiR, psiZ, x0, y0), fieldRZYTequalarc_(psiR, psiZ, x0, y0), N_steps(N_steps), mode_(mode) { }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         fpsi_.find_initial( psi[0], begin[0], begin[1]);
-        //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
-        dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N_steps);
-        //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
+        if(mode_==0)dg::stepperRK17( fieldRZYTribeiro_, begin, end, 0., 2*M_PI, N_steps);
+        if(mode_==1)dg::stepperRK17( fieldRZYTequalarc_, begin, end, 0., 2*M_PI, N_steps);
         fpsiM[0] = end[2]/2./M_PI;
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     private:
     Fpsi<Psi, PsiR, PsiZ> fpsi_;
-    solovev::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYT_;
+    solovev::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYTribeiro_;
+    solovev::equalarc::FieldRZYT<PsiR, PsiZ> fieldRZYTequalarc_;
     unsigned N_steps;
+    int mode_;
 };
 } //namespace detail
 ///@endcond
@@ -185,14 +189,14 @@ struct FieldFinv
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct Ribeiro
 {
-    Ribeiro( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi_0, double psi_1, double x0, double y0):
-        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY)
+    Ribeiro( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi_0, double psi_1, double x0, double y0, int mode = 0):
+        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), mode_(mode)
     {
         assert( psi_1 != psi_0);
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0);
+        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, mode);
         lx_ = fabs(fpsi.find_x1( psi_0, psi_1));
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
-        std::cout << "lx_ = "<<lx_<<"\n";
+        //std::cout << "lx_ = "<<lx_<<"\n";
     }
     double width() const{return lx_;}
     double height() const{return 2.*M_PI;}
@@ -208,13 +212,14 @@ struct Ribeiro
          thrust::host_vector<double>& etaY) 
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
-        ribeiro::detail::FieldFinv<Psi, PsiX, PsiY> fpsiMinv_(psi_, psiX_, psiY_, x0_,y0_, 500);
+        ribeiro::detail::FieldFinv<Psi, PsiX, PsiY> fpsiMinv_(psi_, psiX_, psiY_, x0_,y0_, 500, mode_);
         thrust::host_vector<double> psi_x;
         dg::detail::construct_psi_values( fpsiMinv_, psi0_, psi1_, 0., zeta1d, lx_, psi_x, fx_);
 
         //std::cout << "In grid function:\n";
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_);
-        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZY(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
+        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        solovev::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
@@ -225,7 +230,8 @@ struct Ribeiro
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            dg::detail::compute_rzy( fpsi, fieldRZYRYZY, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==0)dg::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==1)dg::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
@@ -243,6 +249,7 @@ struct Ribeiro
     PsiYY psiYY_;
     thrust::host_vector<double> fx_;
     double lx_, x0_, y0_, psi0_, psi1_;
+    int mode_; //0 = ribeiro, 1 = equalarc
 };
 
 ///**
