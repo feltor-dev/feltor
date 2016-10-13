@@ -759,7 +759,6 @@ struct FieldRZYRYZY
     PsipZZ psipZZ_;
 };
 }//namespace ribeiro
-
 namespace equalarc{
 
 
@@ -1500,16 +1499,6 @@ struct EllipticDirSimpleM
     private:
     double R_0_;
     FuncDirNeu func_;
-};
-
-struct LaplacePsi
-{
-    LaplacePsi( GeomParameters gp): psipRR_(gp), psipZZ_(gp) {}
-    double operator()(double R, double Z){return psipRR_(R,Z) + psipZZ_(R,Z);}
-    private:
-    PsipRR psipRR_;
-    PsipZZ psipZZ_;
-
 };
 
 ///@} 

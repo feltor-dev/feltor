@@ -276,8 +276,9 @@ void construct_rz( Nemov nemov,
 
 
 /**
- * @brief 
+ * @brief generate a simple orthogonal grid 
  *
+ * Psi is the radial coordinate and you can choose various discretizations of the first line
  * @ingroup generators
  * @tparam Psi
  * @tparam PsiX
