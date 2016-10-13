@@ -163,10 +163,7 @@ struct FluxGenerator
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         thrust::host_vector<double> psi_x(zeta1d);
         for( unsigned i=0; i<psi_x.size(); i++)
-        {
             psi_x[i] = zeta1d[i]/f0_ +psi0_;
-            std::cout << zeta1d[i]<< " "<<f0_<<" "<<psi0_<<" "<< psi_x[i]<<"\n";
-        }
 
         //std::cout << "In grid function:\n";
         flux::detail::Fpsi<Psi, PsiX, PsiY, Ipol> fpsi(psi_, psiX_, psiY_, ipol_, x0_, y0_);

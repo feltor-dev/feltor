@@ -76,7 +76,7 @@ int main( int argc, char* argv[])
     t.tic();
     solovev::CollectivePsip c( gp);
     dg::FluxGenerator<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ, solovev::Ipol, solovev::IpolR, solovev::IpolZ>
-        flux( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, c.ipol, c.ipolR, c.ipolZ, psi_0, psi_1, gp.R_0, 0.);
+        flux( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, c.ipol, c.ipolR, c.ipolZ, psi_0, psi_1, gp.R_0, 0., 1);
     dg::curvilinear::RingGrid3d<dg::HVec> g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     dg::curvilinear::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //orthogonal::RingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
