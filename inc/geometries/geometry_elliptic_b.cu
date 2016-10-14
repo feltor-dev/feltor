@@ -50,7 +50,7 @@ int main(int argc, char**argv)
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing grid ... \n";
     t.tic();
-    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsi> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsi(gp), psi_0, psi_1, gp.R_0, 0., 0);
+    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 0);
 //     conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
 //     conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
 //     dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
@@ -84,10 +84,10 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =    dg::evaluate( dg::zero, g2d.associated());
     dg::DVec x_fine =    dg::evaluate( dg::zero, g2d);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 510, -140, 40., 1), g2d.associated());
+    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 440, -220, 40., 1), g2d.associated());
     dg::DVec bmod(b);
     const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g2d.associated());
-    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 510, -140, 40.,1 ), g2d.associated());
+    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 440, -220, 40.,1 ), g2d.associated());
     //const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1, 4), g2d.associated());
     //dg::DVec bmod(b);
     //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d.associated());

@@ -12,26 +12,27 @@
 #include "orthogonal.h"
 #include "curvilinear.h"
 
-const unsigned nIter=4;
+const unsigned nIter=6;
 template<class Geometry>
 void compute_error_elliptic( const solovev::GeomParameters& gp, const Geometry& g2d, double psi_0, double psi_1, double eps)
 {
     dg::DVec x =    dg::evaluate( dg::zero, g2d);
     /////////////////////////////DirNeu/////FLUXALIGNED//////////////////////
-    dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR_NEU, dg::PER, dg::not_normed, dg::forward);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, 2.*psi_1-psi_0, 0), g2d);
-    const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d);
-    const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, 2.*psi_1-psi_0, 0 ), g2d);
+    //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR_NEU, dg::PER, dg::not_normed, dg::forward);
+    //const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, 2.*psi_1-psi_0, 0), g2d);
+    //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d);
+    //const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, 2.*psi_1-psi_0, 0 ), g2d);
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
     //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::not_normed, dg::forward);
     //const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1, 4), g2d);
     //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d);
     //const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1, 4 ), g2d);
     /////////////////////////////Dir//////BLOB/////////////////////////////
-    //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::not_normed, dg::forward);
-    //const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 510, -140, 40.,1.), g2d);
-    //const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g2d);
-    //const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 510, -140, 40.,1.), g2d);
+    dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::not_normed, dg::forward);
+    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 440, -220, 40.,1.), g2d);
+    const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g2d);
+    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 440, -220, 40.,1.), g2d);
+    ///////////////////////////////////////////////////////////////////////
     const dg::DVec vol2d = dg::create::volume( g2d);
     pol.set_chi( chi);
     //compute error
@@ -135,7 +136,7 @@ int main(int argc, char**argv)
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "ConformalMonitor:\n";
     dg::LiseikinCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> lc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, 0.1, 0.001);
-    dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hectorMonitor( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
+    dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorMonitor( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::curvilinear::RingGrid2d<dg::DVec> g2d(hectorMonitor, n, Nx, Ny);
@@ -148,7 +149,7 @@ int main(int argc, char**argv)
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "ConformalAdaption:\n";
     dg::NablaPsiInvCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ);
-    dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hectorAdapt( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
+    dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorAdapt( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::orthogonal::RingGrid2d<dg::DVec> g2d(hectorAdapt, n, Nx, Ny);

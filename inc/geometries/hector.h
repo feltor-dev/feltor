@@ -413,7 +413,7 @@ struct Hector
             eps = eps_old;
             Nx*=2, Ny*=2;
             dg::curvilinear::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
-            if(verbose) std::cout << "Nx "<<Nx<<" Ny ";
+            if(verbose) std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
             dg::Elliptic<dg::curvilinear::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             adapt = dg::pullback(chi, g2d);
             ellipticD.set_chi( adapt);
@@ -457,7 +457,7 @@ struct Hector
             eps = eps_old;
             Nx*=2, Ny*=2;
             dg::curvilinear::RingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
-            if(verbose)std::cout << "Nx "<<Nx<<" Ny ";
+            if(verbose)std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
             dg::TensorElliptic<dg::curvilinear::RingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             ellipticD.set( chi_XX, chi_XY, chi_YY );
             lapu = dg::pullback( lapCP, g2d);
