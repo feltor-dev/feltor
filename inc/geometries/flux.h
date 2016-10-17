@@ -123,11 +123,24 @@ struct Fpsi
 }//namespace flux
 
 /**
+ * @brief A symmetry flux generator
  * @ingroup generators
+ * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Ipol, class IpolR, class IpolZ>
 struct FluxGenerator
 {
+    /**
+     * @brief Construct a symmetry flux grid generator
+     *
+     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param psi_0 first boundary 
+     * @param psi_1 second boundary
+     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
+     * @note If mode == 1 then this class does the same as the RibeiroFluxGenerator
+     */
     FluxGenerator( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Ipol ipol, IpolR ipolR, IpolZ ipolZ, double psi_0, double psi_1, double x0, double y0, int mode=0):
         psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), ipol_(ipol), ipolR_(ipolR), ipolZ_(ipolZ), mode_(mode)
     {
@@ -148,8 +161,35 @@ struct FluxGenerator
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
+    /**
+     * @brief The length of the zeta-domain
+     *
+     * Call before discretizing the zeta domain
+     * @return length of zeta-domain (f0*(psi_1-psi_0))
+     * @note the length is always positive
+     */
     double width() const{return lx_;}
+    /**
+     * @brief 2pi (length of the eta domain)
+     *
+     * Always returns 2pi
+     * @return 2pi 
+     */
     double height() const{return 2.*M_PI;}
+    /**
+     * @brief Generate the points and the elements of the Jacobian
+     *
+     * Call the width() and height() function before calling this function!
+     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
+     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
+     * @param x  = x(zeta,eta)
+     * @param y  = y(zeta,eta)
+     * @param zetaX = zeta_x(zeta,eta)
+     * @param zetaY = zeta_y(zeta,eta)
+     * @param etaX = eta_x(zeta,eta)
+     * @param etaY = eta_y(zeta,eta)
+     * @note All the resulting vectors are write-only and get properly resized
+     */
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
@@ -207,11 +247,24 @@ struct FluxGenerator
 };
 
 /**
+ * @brief Same as the Ribeiro class just but uses psi as a flux label directly
  * @ingroup generators
+ * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct RibeiroFluxGenerator
 {
+    /**
+     * @brief Construct a flux aligned grid generator
+     *
+     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param psi_0 first boundary 
+     * @param psi_1 second boundary
+     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
+     */
     RibeiroFluxGenerator( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi_0, double psi_1, double x0, double y0, int mode=0):
         psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), mode_(mode)
     {
@@ -224,8 +277,35 @@ struct RibeiroFluxGenerator
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
+    /**
+     * @brief The length of the zeta-domain
+     *
+     * Call before discretizing the zeta domain
+     * @return length of zeta-domain (f0*(psi_1-psi_0))
+     * @note the length is always positive
+     */
     double width() const{return lx_;}
+    /**
+     * @brief 2pi (length of the eta domain)
+     *
+     * Always returns 2pi
+     * @return 2pi 
+     */
     double height() const{return 2.*M_PI;}
+    /**
+     * @brief Generate the points and the elements of the Jacobian
+     *
+     * Call the width() and height() function before calling this function!
+     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
+     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
+     * @param x  = x(zeta,eta)
+     * @param y  = y(zeta,eta)
+     * @param zetaX = zeta_x(zeta,eta)
+     * @param zetaY = zeta_y(zeta,eta)
+     * @param etaX = eta_x(zeta,eta)
+     * @param etaY = eta_y(zeta,eta)
+     * @note All the resulting vectors are write-only and get properly resized
+     */
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 

@@ -14,7 +14,7 @@ template< class container>
 struct RingGrid2d; 
 ///@endcond
 
-///@addtogroup grid
+///@addtogroup grids
 ///@{
 
 /**

@@ -200,21 +200,23 @@ void transform(
  * @ingroup generators
  * @tparam IMatrix The interpolation matrix type
  * @tparam Matrix  The matrix type in the elliptic equation
- * @tparam container The container type for internal computations (must be compatible to a thrust::host_vector<double> in the blas1::transfer function)
+ * @tparam container The container type for the elliptic equation (must be compatible to a thrust::host_vector<double> in the blas1::transfer function)
  */
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>
 struct Hector
 {
     /**
-     * @brief Construct a conformal grid from functors
+     * @brief Construct a conformal grid 
      *
+     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
      * @param psi0 first boundary 
      * @param psi1 second boundary
-     * @param X0 a point in the inside of the ring bounded by psi0
-     * @param Y0 a point in the inside of the ring bounded by psi0
-     * @param n number of polynomials used for the orthogonal grid
-     * @param Nx initial number of points in zeta
-     * @param Ny initial number of points in eta
+     * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param Y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param n number of polynomials used for the internal grid
+     * @param Nx initial number of points in zeta for the internal grid
+     * @param Ny initial number of points in eta for the internal grid
      * @param eps_u the accuracy of u
      * @param verbose If true convergence details are printed to std::cout
      */
@@ -238,13 +240,16 @@ struct Hector
     /**
      * @brief Construct an orthogonal grid with adaption
      *
+     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param chi chi is the adaption function in Cartesian coordinates (x,y), chiX is its derivative in x, chiY the derivative in y
      * @param psi0 first boundary 
      * @param psi1 second boundary
-     * @param X0 a point in the inside of the ring bounded by psi0
-     * @param Y0 a point in the inside of the ring bounded by psi0
-     * @param n number of polynomials used for the orthogonal grid
-     * @param Nx initial number of points in zeta
-     * @param Ny initial number of points in eta
+     * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param Y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param n number of polynomials used for the internal grid
+     * @param Nx initial number of points in zeta for the internal grid
+     * @param Ny initial number of points in eta for the internal grid
      * @param eps_u the accuracy of u
      * @param verbose If true convergence details are printed to std::cout
      */
@@ -270,14 +275,18 @@ struct Hector
     /**
      * @brief Construct a curvilinear grid with monitor metric
      *
+     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param chi_XX chi_XX is the xx-component of the adaption tensor in Cartesian coordinates (x,y), chi_XY is its xy-component, chi_YY the yy-component
+     * @param divChiX divChiX is the x-component of the divergence of the tensor chi, divChiY is the y-component
      * @param psi0 first boundary 
      * @param psi1 second boundary
-     * @param X0 a point in the inside of the ring bounded by psi0
-     * @param Y0 a point in the inside of the ring bounded by psi0
-     * @param n number of polynomials used for the orthogonal grid
-     * @param Nx initial number of points in zeta
-     * @param Ny initial number of points in eta
-     * @param eps_u the accuracy of u 
+     * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param Y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param n number of polynomials used for the internal grid
+     * @param Nx initial number of points in zeta for the internal grid
+     * @param Ny initial number of points in eta for the internal grid
+     * @param eps_u the accuracy of u
      * @param verbose If true convergence details are printed to std::cout
      */
     template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi_XX, class Chi_XY, class Chi_YY, class DivChiX, class DivChiY>
@@ -310,10 +319,11 @@ struct Hector
     }
 
     /**
-     * @brief The length of the u domain
+     * @brief The length of the u-domain
      *
      * Call before discretizing the u domain
-     * @return  c0*(psi1-psi0)
+     * @return length of u-domain
+     * @note the length is always positive
      */
     double width() const {return lu_;}
     /**
@@ -339,8 +349,9 @@ struct Hector
     /**
      * @brief Generate the points and the elements of the Jacobian
      *
-     * @param u1d one-dimensional list of points inside the u-domain
-     * @param v1d one-dimensional list of points inside the v-domain
+     * Call the width() and height() function before calling this function!
+     * @param u1d one-dimensional list of points inside the u-domain (0<u<width())
+     * @param v1d one-dimensional list of points inside the v-domain (0<v<height())
      * @param x  = x(u,v)
      * @param y  = y(u,v)
      * @param ux = u_x(u,v)

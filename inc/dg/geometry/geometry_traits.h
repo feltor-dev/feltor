@@ -6,13 +6,13 @@ namespace dg
 {
 //categories
 //
-struct CurvilinearTag{};  //3d curvilinear
-struct CurvilinearCylindricalTag: public CurvilinearTag{}; //perpVol, vol(), g_xx, g_xy, g_yy
-struct OrthogonalTag:public CurvilinearCylindricalTag{}; //perpVol, vol(), g_xx, g_yy
-struct ConformalCylindricalTag:public OrthogonalTag{}; //perpVol, vol(), g_xx, g_yy
-struct ConformalTag:public ConformalCylindricalTag{}; //A 2d conformal 
-struct OrthonormalCylindricalTag:public ConformalCylindricalTag{}; //vol(), cylindrical grid
-struct OrthonormalTag: public OrthonormalCylindricalTag{}; //cartesian grids
+struct CurvilinearTag{};  //! 3d curvilinear
+struct CurvilinearCylindricalTag: public CurvilinearTag{}; //! perpVol, vol(), g_xx, g_xy, g_yy
+struct OrthogonalTag:public CurvilinearCylindricalTag{}; //! perpVol, vol(), g_xx, g_yy
+struct ConformalCylindricalTag:public OrthogonalTag{}; //! perpVol, vol(), g_xx, g_yy
+struct ConformalTag:public ConformalCylindricalTag{}; //! A 2d conformal 
+struct OrthonormalCylindricalTag:public ConformalCylindricalTag{}; //! vol(), cylindrical grid
+struct OrthonormalTag: public OrthonormalCylindricalTag{}; //! Cartesian grids
 
 //memory_category and dimensionality Tags are already defined in grid.h
 

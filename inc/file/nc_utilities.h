@@ -93,6 +93,17 @@ int define_time( int ncid, const char* name, int* dimID, int* tvarID)
     return retval;
 }
 
+/**
+ * @brief Define a limited time variable
+ *
+ * @param ncid file ID
+ * @param name Name of the time variable (usually "time")
+ * @param size The number of timesteps 
+ * @param dimID time-dimension ID
+ * @param tvarID time-variable ID
+ *
+ * @return netcdf error code if any
+ */
 int define_limited_time( int ncid, const char* name, int size, int* dimID, int* tvarID)
 {
     int retval;
@@ -211,6 +222,7 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<dou
  * Dimensions are named x, y, and time (limited)
  * @param ncid file ID
  * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x)
+ * @param size The size of the time variable
  * @param tvarID (write - only) The ID of the time variable
  * @param g The 2d grid from which to derive the dimensions
  *

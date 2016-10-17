@@ -8,7 +8,7 @@
  * Objects that are used to define and integrate the magnetic field lines. 
  * All objects can be used in the evaluation() function.
  * @defgroup profiles Profiles based on the magnetic field geometry
- * @defgroup grid Grids and grid generators
+ * @defgroup grids Grids and grid generators
  * @{
  *     @defgroup generators Grid generators
  * @}

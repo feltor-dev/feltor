@@ -276,18 +276,25 @@ void construct_rz( Nemov nemov,
 
 
 /**
- * @brief generate a simple orthogonal grid 
+ * @brief Generate a simple orthogonal grid 
  *
  * Psi is the radial coordinate and you can choose various discretizations of the first line
  * @ingroup generators
- * @tparam Psi
- * @tparam PsiX
- * @tparam PsiY
- * @tparam LaplacePsi
+ * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SimpleOrthogonal
 {
+    /**
+     * @brief Construct a simple orthogonal grid 
+     *
+     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, LaplacePsi its Laplacian
+     * @param psi_0 first boundary 
+     * @param psi_1 second boundary
+     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
+     */
     SimpleOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
         psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi)
     {
@@ -298,11 +305,54 @@ struct SimpleOrthogonal
         if( psi_1 < psi_0) f0_*=-1;
         lz_ =  f0_*(psi_1-psi_0);
     }
+
+    /**
+     * @brief The grid constant
+     *
+     * @return f_0 is the grid constant  s.a. width() )
+     */
     double f0() const{return f0_;}
+    /**
+     * @brief The length of the zeta-domain
+     *
+     * Call before discretizing the zeta domain
+     * @return length of zeta-domain (f0*(psi_1-psi_0))
+     * @note the length is always positive
+     */
     double width() const{return lz_;}
+    /**
+     * @brief 2pi (length of the eta domain)
+     *
+     * Always returns 2pi
+     * @return 2pi 
+     */
     double height() const{return 2.*M_PI;}
+    /**
+     * @brief Indicate orthogonality
+     *
+     * @return true
+     */
     bool isOrthogonal() const{return true;}
+    /**
+     * @brief Indicate conformity
+     *
+     * @return false
+     */
     bool isConformal()  const{return false;}
+    /**
+     * @brief Generate the points and the elements of the Jacobian
+     *
+     * Call the width() and height() function before calling this function!
+     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
+     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
+     * @param x  = x(zeta,eta)
+     * @param y  = y(zeta,eta)
+     * @param zetaX = zeta_x(zeta,eta)
+     * @param zetaY = zeta_y(zeta,eta)
+     * @param etaX = eta_x(zeta,eta)
+     * @param etaY = eta_y(zeta,eta)
+     * @note All the resulting vectors are write-only and get properly resized
+     */
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
@@ -342,7 +392,7 @@ struct SimpleOrthogonal
 namespace orthogonal
 {
 
-///@addtogroup grid
+///@addtogroup grids
 ///@{
 
 ///@cond

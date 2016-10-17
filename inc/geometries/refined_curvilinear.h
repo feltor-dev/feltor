@@ -17,7 +17,7 @@ template< class container>
 struct RingGrid2d; 
 ///@endcond
 
-///@addtogroup grid
+///@addtogroup grids
 ///@{
 template< class container>
 struct RingGrid3d : public dg::refined::Grid3d

@@ -14,7 +14,7 @@ namespace orthogonal
 
 template< class container>
 struct RingGrid2d; 
-///@addtogroup grid
+///@addtogroup grids
 ///@{
 
 /**

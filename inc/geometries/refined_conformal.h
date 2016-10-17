@@ -11,7 +11,7 @@ namespace refined
 {
 namespace conformal
 {
-///@addtogroup grid
+///@addtogroup grids
 ///@{
 
 ///@cond

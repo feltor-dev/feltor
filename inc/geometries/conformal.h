@@ -7,7 +7,7 @@
 namespace dg{
 namespace conformal
 {
-///@addtogroup grid
+///@addtogroup grids
 ///@{
 
 typedef dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> Generator;
