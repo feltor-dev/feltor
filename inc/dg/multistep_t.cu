@@ -7,7 +7,7 @@ template < class Matrix, class container = thrust::device_vector<double> >
 struct RHS
 {
     typedef container Vector;
-    RHS( const dg::Grid2d<double>& g, double D): D_(D), laplaceM(g, dg::normed)
+    RHS( const dg::Grid2d& g, double D): D_(D), laplaceM(g, dg::normed)
     { }
     void operator()( const std::vector<container>& y, std::vector<container>& yp)
     {
@@ -15,13 +15,13 @@ struct RHS
     }
   private:
     double D_;
-    dg::Elliptic<dg::cartesian::Grid2d, Matrix, container> laplaceM;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container> laplaceM;
 };
 
 template< class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
+    Diffusion( const dg::Grid2d& g, double nu): nu_(nu),
         w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)),
         LaplacianM( g, dg::normed) 
         { }
@@ -39,7 +39,7 @@ struct Diffusion
   private:
     double nu_;
     const container w2d, v2d;
-    dg::Elliptic<dg::cartesian::Grid2d, Matrix, container> LaplacianM;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM;
 };
 
 
@@ -69,7 +69,7 @@ int main()
     std::cout << "Number of gridpoints:     "<<Nx*Ny<<std::endl;
     std::cout << "# of timesteps:           "<<NT<<std::endl;
 
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     dg::DVec w2d = dg::create::weights( grid);
 
     std::vector<dg::DVec> y0(2, dg::evaluate( sine, grid)), y1(y0);

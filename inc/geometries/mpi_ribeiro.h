@@ -77,7 +77,7 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
 
     //these are for the Field class
     thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( global().x0(), global().x1(), global().n(), global().Nx());
+        dg::Grid1d gx( global().x0(), global().x1(), global().n(), global().Nx());
         return dg::create::abscissas(gx);}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
 
@@ -180,7 +180,7 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
     const dg::MPI_Vector<thrust::host_vector<double> >& f()const{return f_;}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( global().x0(), global().x1(), global().n(), global().Nx());
+        dg::Grid1d gx( global().x0(), global().x1(), global().n(), global().Nx());
         return dg::create::abscissas(gx);}
 
     const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}

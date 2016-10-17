@@ -20,8 +20,8 @@
 #include "orthogonal.h"
 #include "dg/ds.h"
 
-//typedef dg::FieldAligned< conformal::RingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
-typedef dg::FieldAligned< orthogonal::RingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+//typedef dg::FieldAligned< ConformalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< OrthogonalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 int main( )
 {
@@ -70,10 +70,10 @@ int main( )
         //Nzn = unsigned(Nz*pow(2,i));
         //Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
         //Nyn = (unsigned)ceil(Ny*pow(2,(double)(i*2./n)));
-        //conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
-        //conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-        orthogonal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
-        orthogonal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+        //ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
+        //ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+        OrthogonalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
+        OrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
         g3d.display();
         //g2d.display();
         std::cout << "NR = " << Nxn << std::endl;
@@ -84,10 +84,10 @@ int main( )
         const dg::DVec v3d = dg::create::inv_volume( g3d);
 
         std::cout << "Computing ds..." << std::endl;
-        //DFA dsFA( conformal::Field( gp, g3d.x(), g3d.f_x()), g3d, rk4eps, dg::NoLimiter(), dg::DIR); 
-        //dg::DS<DFA, dg::DMatrix, dg::DVec> ds( dsFA, conformal::Field(gp, g3d.x(), g3d.f_x()), dg::not_normed, dg::centered, false);
-        DFA dsFA( orthogonal::Field( gp, g2d, g2d.f2_xy()), g3d, rk4eps, dg::NoLimiter(), dg::DIR); 
-        dg::DS<DFA, dg::DMatrix, dg::DVec> ds( dsFA, orthogonal::Field(gp, g2d, g2d.f2_xy()), dg::not_normed, dg::centered, false);
+        //DFA dsFA( ConformalField( gp, g3d.x(), g3d.f_x()), g3d, rk4eps, dg::NoLimiter(), dg::DIR); 
+        //dg::DS<DFA, dg::DMatrix, dg::DVec> ds( dsFA, ConformalField(gp, g3d.x(), g3d.f_x()), dg::not_normed, dg::centered, false);
+        DFA dsFA( OrthogonalField( gp, g2d, g2d.f2_xy()), g3d, rk4eps, dg::NoLimiter(), dg::DIR); 
+        dg::DS<DFA, dg::DMatrix, dg::DVec> ds( dsFA, OrthogonalField(gp, g2d, g2d.f2_xy()), dg::not_normed, dg::centered, false);
 
         std::cout << "ds constructed!" << std::endl;
         dg::DVec function = dg::pullback( funcNEU, g3d), derivative(function), temp(function),

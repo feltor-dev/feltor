@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
-     dg::Grid3d<double > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, dg::cylindrical);  
+     dg::Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, dg::cylindrical);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Asela<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > asela( grid, p, gp); //initialize before rolkar!
@@ -89,7 +89,7 @@ int main( int argc, char* argv[])
     
     //averaged field aligned initializer
 //     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-//     dg::Grid3d<double > gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
+//     dg::Grid3d gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
 //     dg::DZ<dg::DMatrix, dg::DVec> dz( solovev::Field(gp), gridfordz, gridfordz.hz(), gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR);
 //     y1[1] = dz.evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
     

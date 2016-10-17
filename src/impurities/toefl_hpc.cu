@@ -33,15 +33,15 @@ int main( int argc, char* argv[])
     const imp::Parameters p( js);
     p.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
-    dg::cartesian::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::cartesian::Grid2d grid_out( 0, p.lx, 0, p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::CartesianGrid2d grid_out( 0, p.lx, 0, p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     //create RHS
-    dg::Diffusion< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > diffusion( grid, p);
-    dg::ToeflI< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > toeflI( grid, p);
+    dg::Diffusion< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > diffusion( grid, p);
+    dg::ToeflI< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > toeflI( grid, p);
     /////////////////////The initial field///////////////////////////////////////////
     dg::Gaussian gaussian( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(3, dg::evaluate(dg::zero, grid));
-    dg::Helmholtz<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
+    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> & gamma = toeflI.gamma();
     if( p.mode == 1)
     {   if( p.vorticity == 0)
         {   gamma.alpha() = -0.5*p.tau[1];

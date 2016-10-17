@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     Field field( R_0, I_0);
-    dg::cylindrical::MPIGrid<dg::MDVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
+    dg::CylindricalMPIGrid<dg::MDVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
     const dg::MDVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();

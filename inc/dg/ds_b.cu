@@ -66,7 +66,7 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
-    dg::cylindrical::Grid<dg::DVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
+    dg::CylindricalGrid<dg::DVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
     const dg::DVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();

@@ -51,13 +51,13 @@ int main(int argc, char**argv)
     std::cout << "Constructing grid ... \n";
     t.tic();
     dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 0);
-//     conformal::RingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-//     conformal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-//     dg::Elliptic<conformal::RingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::refined::orthogonal::RingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
-    dg::refined::orthogonal::RingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<dg::refined::orthogonal::RingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
-    dg::RefinedElliptic<dg::refined::orthogonal::RingGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
+//     ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+//     ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+//     dg::Elliptic<ConformalRingGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::RefinedOrthogonalRingGrid3d<dg::DVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    dg::RefinedOrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<dg::RefinedOrthogonalRingGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+    dg::RefinedElliptic<dg::RefinedOrthogonalRingGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////

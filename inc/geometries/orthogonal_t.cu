@@ -18,7 +18,7 @@
 
 #include "file/nc_utilities.h"
 
-thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d<double>& g)
+thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
     thrust::host_vector<double> out(g.size());
     for( unsigned i=0; i<g.Ny()-1; i++)
@@ -40,7 +40,7 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-typedef dg::FieldAligned< dg::orthogonal::RingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
+typedef dg::FieldAligned< dg::OrthogonalRingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -75,11 +75,11 @@ int main( int argc, char* argv[])
     t.tic();
 
     dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 0);
-    //dg::orthogonal::RingGrid3d<dg::HVec> g3d(generator, n, Nx, Ny,Nz, dg::DIR);
-    //dg::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::refined::orthogonal::RingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
-    dg::refined::orthogonal::RingGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
+    //dg::OrthogonalRingGrid3d<dg::HVec> g3d(generator, n, Nx, Ny,Nz, dg::DIR);
+    //dg::OrthogonalRingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::RefinedOrthogonalRingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    dg::RefinedOrthogonalRingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
@@ -194,9 +194,9 @@ int main( int argc, char* argv[])
 //     std::cout << "Start DS test!"<<std::endl;
 //     const dg::HVec vol3d = dg::create::volume( g3d);
 //     t.tic();
-//     DFA fieldaligned( orthogonal::Field( gp, g2d, g2d.f2_xy()), g3d, gp.rk4eps, dg::NoLimiter()); 
+//     DFA fieldaligned( OrthogonalField( gp, g2d, g2d.f2_xy()), g3d, gp.rk4eps, dg::NoLimiter()); 
 // 
-//     dg::DS<DFA, dg::DMatrix, dg::HVec> ds( fieldaligned, orthogonal::Field(gp, g2d, g2d.f2_xy()), dg::normed, dg::centered);
+//     dg::DS<DFA, dg::DMatrix, dg::HVec> ds( fieldaligned, OrthogonalField(gp, g2d, g2d.f2_xy()), dg::normed, dg::centered);
 //     t.toc();
 //     std::cout << "Construction took "<<t.diff()<<"s\n";
 //     dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);

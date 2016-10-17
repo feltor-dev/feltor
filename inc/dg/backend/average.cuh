@@ -33,15 +33,15 @@ struct PoloidalAverage
      *
      * @param g 2d Grid
      */
-    PoloidalAverage( const Grid2d<double>& g):
+    PoloidalAverage( const Grid2d& g):
         dummy( g.n()*g.Nx()), 
         helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
     {
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
         lines = create::contiguousLineNumbers( g.n()*g.Nx(), g.n()*g.Ny());
-        Grid2d<double> gTr( g.y0(), g.y1(), g.x0(), g.x1(), g.n(), g.Ny(), g.Nx());
+        Grid2d gTr( g.y0(), g.y1(), g.x0(), g.x1(), g.n(), g.Ny(), g.Nx());
         w2d = dg::create::weights( gTr);
-        Grid1d<double> g1x( 0, g.lx(), g.n(), g.Nx());
+        Grid1d g1x( 0, g.lx(), g.n(), g.Nx());
         v1d = dg::create::inv_weights( g1x);
 
     }
@@ -95,7 +95,7 @@ struct ToroidalAverage
      *
      * @param g3d 3d Grid
      */
-    ToroidalAverage(const dg::Grid3d<double>& g3d):
+    ToroidalAverage(const dg::Grid3d& g3d):
         g3d_(g3d),
         sizeg2d_(g3d_.size()/g3d_.Nz())
     {        
@@ -116,7 +116,7 @@ struct ToroidalAverage
         dg::blas1::scal(res,1./g3d_.Nz()); //scale avg
     }
     private:
-    const dg::Grid3d<double>& g3d_;
+    const dg::Grid3d& g3d_;
     unsigned sizeg2d_;
 };
 }//namespace dg

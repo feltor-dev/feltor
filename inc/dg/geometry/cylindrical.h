@@ -7,8 +7,6 @@
 
 namespace dg
 {
-namespace cylindrical
-{
 ///@addtogroup basicgrids
 ///@{
 
@@ -18,10 +16,10 @@ namespace cylindrical
  * @tparam container The container class for the volume element
  */
 template<class container>
-struct Grid : public dg::Grid3d<double>
+struct CylindricalGrid : public dg::Grid3d
 {
     typedef OrthonormalCylindricalTag metric_category; 
-    typedef dg::cartesian::Grid2d perpendicular_grid;
+    typedef dg::CartesianGrid2d perpendicular_grid;
     /**
      * @brief Construct a 3D grid
      *
@@ -40,17 +38,17 @@ struct Grid : public dg::Grid3d<double>
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    Grid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): 
-        dg::Grid3d<double>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz),
+    CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): 
+        dg::Grid3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz),
         R_(dg::evaluate( dg::cooX3d, *this)){}
     /**
      * @brief Construct from existing topology
      *
      * @param grid existing grid class
      */
-    //is this constructor a good idea?? You could construct a Cylindrical Grid from any other Grid Type that derives from Grid3d<double>
-    Grid( const dg::Grid3d<double>& grid):
-        dg::Grid3d<double>(grid),
+    //is this constructor a good idea?? You could construct a Cylindrical Grid from any other Grid Type that derives from Grid3d
+    CylindricalGrid( const dg::Grid3d& grid):
+        dg::Grid3d(grid),
         R_(dg::evaluate( dg::cooX3d, *this)){}
     /**
      * @brief The volume element
@@ -58,7 +56,7 @@ struct Grid : public dg::Grid3d<double>
      * @return the volume element
      */
 
-    perpendicular_grid perp_grid() const { return dg::cartesian::Grid2d( x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
+    perpendicular_grid perp_grid() const { return dg::CartesianGrid2d( x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
     const container& vol()const {return R_;}
     private:
     container R_;
@@ -66,6 +64,5 @@ struct Grid : public dg::Grid3d<double>
 
 ///@}
 
-} //namespace cylindrical
 } //namespace dg
 

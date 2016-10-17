@@ -31,7 +31,7 @@ int main()
     unsigned n, Nx, Ny, Nz; 
     std::cout << "Type n, Nx Ny and Nz\n";
     std::cin >> n>> Nx >> Ny >> Nz;
-    dg::Grid2d<double> grid2d( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny,dg::DIR,dg::PER);
+    dg::Grid2d grid2d( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny,dg::DIR,dg::PER);
     const dg::DVec w2d = dg::create::weights( grid2d);
     const dg::DVec v2d = dg::create::inv_weights( grid2d);
     const dg::DVec one = dg::evaluate( dg::one, grid2d);
@@ -44,9 +44,9 @@ int main()
 
     const dg::DVec chi = dg::evaluate( dg::LinearX(1.0,1.0), grid2d);
     
-    dg::Helmholtz< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > gamma1inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
-    dg::Helmholtz2< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > gamma2inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered);
-    dg::Elliptic< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > lapperp(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered);
+    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
+    dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2inv(  grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered);
+    dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > lapperp(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered);
     gamma2inv.set_chi(chi); 
     
 
@@ -82,7 +82,7 @@ int main()
     
 /*    
     std::cout << "Test 3d cylincdrical norm:\n";
-    dg::Grid3d<double> g3d( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical);
+    dg::Grid3d g3d( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical);
     dg::DVec fct_ = dg::evaluate(fct, g3d );
     dg::DVec laplace_fct_ = dg::evaluate( laplace_fct, g3d);
     dg::DVec helmholtz_fct_ = dg::evaluate( helmholtz_fct, g3d);

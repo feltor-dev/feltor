@@ -20,7 +20,7 @@ int main()
 {
 
     {
-    dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
+    dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
     Matrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 
@@ -87,7 +87,7 @@ int main()
     }
     ////////////////////////////////////////////////////////////////////////////
     {
-    dg::Grid3d<double> g( -10, 10, -5, 5, -7, -3, n, Nx, Ny, Nz);
+    dg::Grid3d g( -10, 10, -5, 5, -7, -3, n, Nx, Ny, Nz);
     Matrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 

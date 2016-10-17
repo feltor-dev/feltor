@@ -33,8 +33,8 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
-    dg::cartesian::Grid3d g3d( -1, 1, -1, 1, 0.1, M_PI+0.1, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::NEU);
-    dg::cartesian::Grid2d perp_grid( -1, 1, -1, 1, n, Nx, Ny, dg::DIR, dg::DIR);
+    dg::CartesianGrid3d g3d( -1, 1, -1, 1, 0.1, M_PI+0.1, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::NEU);
+    dg::CartesianGrid2d perp_grid( -1, 1, -1, 1, n, Nx, Ny, dg::DIR, dg::DIR);
     const dg::DVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();

@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
     const dg::MHVec sol = dg::evaluate ( jacobian, grid);
     dg::MHVec eins = dg::evaluate( dg::one, grid);
 
-    dg::ArakawaX<dg::cartesian::MPIGrid2d, dg::MHMatrix, dg::MHVec> arakawa( grid);
+    dg::ArakawaX<dg::CartesianMPIGrid2d, dg::MHMatrix, dg::MHVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
     //if(rank==0) std::cout << lhs<<"\n";
     //if(rank==0) std::cout << rhs<<"\n";

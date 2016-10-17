@@ -45,10 +45,10 @@ int main( int argc, char* argv[])
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
-    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > test( grid, p); 
-    dg::Diffusion<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
+    dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
+    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
     //create initial vector
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian

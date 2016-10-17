@@ -42,7 +42,7 @@ int main()
         std::cerr << "Time stepper needs recompilation!\n";
         return -1;
     }
-    Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     DVec w2d( create::weights(grid));
     /////////////////////////////////////////////////////////////////
     //create CUDA context that uses OpenGL textures in Glfw window

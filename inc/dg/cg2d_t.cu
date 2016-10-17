@@ -22,21 +22,21 @@ int main()
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
-    dg::Grid2d<double> grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::PER);
+    dg::Grid2d grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::PER);
     dg::HVec w2d = dg::create::weights( grid);
     dg::HVec v2d = dg::create::inv_weights( grid);
     std::cout<<"Evaluate initial condition\n";
     dg::HVec x = dg::evaluate( initial, grid);
 
     std::cout << "Create Laplacian\n";
-    dg::Elliptic<dg::cartesian::Grid2d, dg::HMatrix, dg::HVec> A( grid);
+    dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> A( grid);
     dg::CG<dg::HVec > pcg( x, n*n*Nx*Ny);
     std::cout<<"Evaluate right hand side\n";
     dg::HVec b = dg::evaluate ( laplace_fct, grid);
     const dg::HVec solution = dg::evaluate ( fct, grid);
     //////////////////////////////////////////////////////////////////////
     //compute S b
-    dg::Inverse<dg::Elliptic<dg::cartesian::Grid2d, dg::HMatrix, dg::HVec>, dg::HVec> inverse( A, x, 10, 1e-15, 0);
+    dg::Inverse<dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec>, dg::HVec> inverse( A, x, 10, 1e-15, 0);
     dg::blas2::symv( w2d, b, b);
     //std::cout << "Number of pcg iterations "<< pcg( A, x, b, v2d, eps_)<<std::endl;
     //std::cout << "Number of cg iterations "<< pcg( A, x, b, dg::Identity<double>(), eps)<<std::endl;

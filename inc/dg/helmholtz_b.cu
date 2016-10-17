@@ -25,7 +25,7 @@ int main()
     unsigned n, Nx, Ny; 
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n>> Nx >> Ny;
-    dg::Grid2d<double> grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
+    dg::Grid2d grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
     const dg::DVec w2d = dg::create::weights( grid);
     const dg::DVec v2d = dg::create::inv_weights( grid);
     const dg::DVec one(grid.size(), 1.);
@@ -34,7 +34,7 @@ int main()
     dg::DVec x(rho.size(), 0.);
     //dg::DVec x(rho);
 
-    dg::Helmholtz< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > gamma1( grid, alpha, dg::centered);
+    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1( grid, alpha, dg::centered);
 
     dg::CG< dg::DVec > cg(x, x.size());
     dg::blas2::symv( w2d, rho, rho);

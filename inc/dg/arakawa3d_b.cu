@@ -32,7 +32,7 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cout << "Type n, Nx, Ny and Nz! \n";
     std::cin >> n >> Nx >> Ny >> Nz;
-    dg::Grid3d<double> grid( 0, lx, 0, ly,0,lz, n, Nx, Ny,Nz, dg::PER, dg::PER);
+    dg::Grid3d grid( 0, lx, 0, ly,0,lz, n, Nx, Ny,Nz, dg::PER, dg::PER);
     dg::DVec w3d = dg::create::weights( grid);
     std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
     std::cout << "# of z  planes                    " << Nz <<std::endl;
@@ -43,7 +43,7 @@ int main()
     dg::DVec eins( grid.size(), 1.);
     dg::Timer t;
 
-    dg::ArakawaX<dg::cartesian::Grid3d, dg::DMatrix, dg::DVec> arakawa( grid);
+    dg::ArakawaX<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> arakawa( grid);
     t.tic(); 
     for( unsigned i=0; i<20; i++)
         arakawa( lhs, rhs, jac);

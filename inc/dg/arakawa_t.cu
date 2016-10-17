@@ -68,7 +68,7 @@ int main()
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
     std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
@@ -78,7 +78,7 @@ int main()
     const dg::DVec variation = dg::evaluate ( variationRHS, grid);
     dg::DVec eins = dg::evaluate( dg::one, grid);
 
-    dg::ArakawaX<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> arakawa( grid);
+    dg::ArakawaX<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
     std::cout << std::scientific;

@@ -107,8 +107,8 @@ int main( int argc, char* argv[])
 //            Nxn = (unsigned)ceil(Nxn*pow(2,(double)(2./n)));
 //     Nyn = (unsigned)ceil( Nyn*pow(2,(double)(2./n)));
 
-//        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
-//     dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
+//        dg::Grid3d g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
+//     dg::Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
     const dg::MDVec w3d = dg::create::volume( g3d);
     const dg::MDVec w2d = dg::create::weights( g2d);
     const dg::MDVec v3d = dg::create::inv_volume( g3d);
@@ -124,7 +124,7 @@ int main( int argc, char* argv[])
 
 //     dg::DS<dg::DMatrix, dg::MDVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
-//     dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
+//     dg::Grid3d g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
     
 //     dg::DS<dg::DMatrix, dg::MDVec> ds2d( field, g3dp, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     dg::MDVec boundary=dg::evaluate( dg::zero, g3d);

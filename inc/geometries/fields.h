@@ -1125,7 +1125,7 @@ struct FluxSurfaceAverage
      * @param gp  geometry parameters
      * @param f container for global safety factor
      */
-    FluxSurfaceAverage(const dg::Grid2d<double>& g2d, GeomParameters gp,   const container& f) :
+    FluxSurfaceAverage(const dg::Grid2d& g2d, GeomParameters gp,   const container& f) :
     g2d_(g2d),
     gp_(gp),
     f_(f),
@@ -1161,7 +1161,7 @@ struct FluxSurfaceAverage
         return fsa;
     }
     private:
-    dg::Grid2d<double> g2d_;
+    dg::Grid2d g2d_;
     GeomParameters gp_;    
     container f_;
     Psip   psip_;    
@@ -1186,7 +1186,7 @@ struct SafetyFactor
      * @param gp  geometry parameters
      * @param f container for global safety factor
      */
-    SafetyFactor(const dg::Grid2d<double>& g2d, GeomParameters gp,   const container& f) :
+    SafetyFactor(const dg::Grid2d& g2d, GeomParameters gp,   const container& f) :
     g2d_(g2d),
     gp_(gp),
     f_(f), //why not directly use Alpha??
@@ -1221,7 +1221,7 @@ struct SafetyFactor
         return q;
     }
     private:
-    dg::Grid2d<double> g2d_;
+    dg::Grid2d g2d_;
     GeomParameters gp_;    
     container f_;
     Psip   psip_;    

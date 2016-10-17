@@ -63,9 +63,9 @@ int main( int argc, char* argv[])
     double Z_X = -1.1*gp.elongation*gp.a;
     dg::HectorX<dg::IHMatrix, dg::Composite<dg::HMatrix>, dg::HVec> hector( psip, psipR, psipZ, lap,  psi_0, psi_1, R_X, Z_X, gp.R_0, 0.,fx_0, fy_0,  nGrid, NxGrid, NyGrid);
 
-    //dg::conformal::GridX3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
-    //dg::conformal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
-    //dg::Grid2d<double> g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
+    //dg::ConformalGridX3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
+    //dg::ConformalGridX2d<dg::HVec> g2d = g3d.perp_grid();
+    //dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     //t.toc();
     //std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     //std::cout << "Length in u is    "<<hector.lu()<<std::endl;

@@ -100,7 +100,7 @@ int main( int argc, char* argv[])
     "dEdt", "accuracy"
   };
   ////////grid////////
-  dg::Grid2d<double > g2d(0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+  dg::Grid2d g2d(0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
   const double hx = g2d.hx()/(double)g2d.n();
   const double hy = g2d.hy()/(double)g2d.n();
   unsigned Nx = p.Nx_out*p.n_out;
@@ -125,13 +125,13 @@ int main( int argc, char* argv[])
   std::vector<dg::HVec> field_host(num_fields, dg::evaluate(dg::zero, g2d));
   std::vector<dg::HVec> npe_h(3, dg::evaluate(dg::zero, g2d));
   //eval field
-  dg::ArakawaX< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> arakawa(g2d);
+  dg::ArakawaX< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa(g2d);
   //eval particle densities
   const dg::DVec binv( dg::evaluate(dg::LinearX(p.kappa, 1.), g2d));
   dg::DVec chi = dg::evaluate(dg::zero, g2d);
   dg::DVec gamma_n = dg::evaluate(dg::zero, g2d);
-  dg::Helmholtz< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> gamma_s(g2d, 1.0, dg::centered);
-  dg::Elliptic< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> pol(g2d, dg::normed, dg::centered);
+  dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gamma_s(g2d, 1.0, dg::centered);
+  dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol(g2d, dg::normed, dg::centered);
   dg::Invert< dg::DVec > invert_invgamma(chi, chi.size(), p.eps_gamma);
   //calculation variables per species
   double mass_[num_species] = {}, cn[num_species] = {};

@@ -143,7 +143,7 @@ struct GridX1d
         display_bc( bcx_, os);
     }
     const DLT<double>& dlt() const {return dlt_;}
-    Grid1d<double> grid() const{return Grid1d<double>( x0_, x1_, n_, Nx_, bcx_);}
+    Grid1d grid() const{return Grid1d( x0_, x1_, n_, Nx_, bcx_);}
 
     /**
      * @brief Shifts a point coordinate due to topology
@@ -381,7 +381,7 @@ struct GridX2d
      *
      * @return 
      */
-    Grid2d<double> grid() const {return Grid2d<double>( x0_,x1_,y0_,y1_,n_,Nx_,Ny_,bcx_,bcy_);}
+    Grid2d grid() const {return Grid2d( x0_,x1_,y0_,y1_,n_,Nx_,Ny_,bcx_,bcy_);}
     /**
      * @brief discrete legendre trafo
      *
@@ -700,7 +700,7 @@ struct GridX3d
      *
      * @return 
      */
-    Grid3d<double> grid() const {return Grid3d<double>( x0_,x1_,y0_,y1_,z0_,z1_,n_,Nx_,Ny_,Nz_,bcx_,bcy_,bcz_);}
+    Grid3d grid() const {return Grid3d( x0_,x1_,y0_,y1_,z0_,z1_,n_,Nx_,Ny_,Nz_,bcx_,bcy_,bcz_);}
     /**
      * @brief discrete legendre transformation
      *

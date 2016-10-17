@@ -21,7 +21,7 @@
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< conformal::GridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< ConformalGridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
@@ -105,12 +105,12 @@ try{
     gp.display( std::cout);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    conformal::GridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    conformal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
+    ConformalGridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    ConformalGridX2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
-    dg::Grid1d<double> g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
+    dg::Grid1d g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
     dg::HVec y_left = dg::evaluate( cosine, g1d);
     int ncid;
@@ -208,7 +208,7 @@ try{
 
     //alternative method for computing g_xx
     const dg::DVec f_ = g2d.f();
-    solovev::conformal::FieldY fieldY(gp);
+    solovev::ConformalFieldY fieldY(gp);
     dg::DVec fby = dg::pullback( fieldY, g2d);
     dg::blas1::pointwiseDot( fby, f_, fby);
     dg::blas1::pointwiseDot( fby, f_, fby);
@@ -238,11 +238,11 @@ try{
    // ///////////////////////////TEST 3d grid//////////////////////////////////////
    // std::cout << "Start DS test!"<<std::endl;
    // const dg::DVec vol3d = dg::create::volume( g3d);
-   // //DFA fieldaligned(orthogonal::XField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
-   // DFA fieldaligned( conformal::Field( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+   // //DFA fieldaligned(OrthogonalXField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+   // DFA fieldaligned( ConformalField( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
-   // //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, orthogonal::XField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
-   // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, conformal::Field(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
+   // //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, OrthogonalXField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
+   // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, ConformalField(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
    // dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
    // dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
    // const dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);

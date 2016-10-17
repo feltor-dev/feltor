@@ -7,33 +7,29 @@
 
 namespace dg
 {
-namespace refined 
-{
-namespace curvilinear
-{
 
 ///@cond
 template< class container>
-struct RingGrid2d; 
+struct RefinedCurvilinearRingGrid2d; 
 ///@endcond
 
 ///@addtogroup grids
 ///@{
 template< class container>
-struct RingGrid3d : public dg::refined::Grid3d
+struct RefinedCurvilinearRingGrid3d : public dg::RefinedGrid3d
 {
     typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
-    typedef RingGrid2d<container> perpendicular_grid; //!< the two-dimensional grid type
+    typedef RefinedCurvilinearRingGrid2d<container> perpendicular_grid; //!< the two-dimensional grid type
 
     template<class Generator>
-    RingGrid3d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-        dg::refined::Grid3d( multiple_x, multiple_y, 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, n_old, Nx, Ny, Nz, bcx, dg::PER, dg::PER),
+    RefinedCurvilinearRingGrid3d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
+        dg::RefinedGrid3d( multiple_x, multiple_y, 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, n_old, Nx, Ny, Nz, bcx, dg::PER, dg::PER),
         g_assoc_( generator, n_old, Nx, Ny, Nz, bcx)
     { 
         construct( generator);
     }
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
-    const dg::curvilinear::RingGrid3d<container>& associated() const{ return g_assoc_;}
+    const dg::CurvilinearRingGrid3d<container>& associated() const{ return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -100,29 +96,29 @@ struct RingGrid3d : public dg::refined::Grid3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; 
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    dg::curvilinear::RingGrid3d<container> g_assoc_;
+    dg::CurvilinearRingGrid3d<container> g_assoc_;
     
 };
 
 template< class container>
-struct RingGrid2d : public dg::refined::Grid2d
+struct RefinedCurvilinearRingGrid2d : public dg::RefinedGrid2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
 
     template< class Generator>
-    RingGrid2d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx):
-        dg::refined::Grid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
+    RefinedCurvilinearRingGrid2d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx):
+        dg::RefinedGrid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
         g_assoc_( generator, n_old, Nx, Ny, bcx) 
     {
-        dg::refined::curvilinear::RingGrid3d<container> g( multiple_x, multiple_y, generator, n,n_old,Nx,Ny,1,bcx);
+        dg::RefinedCurvilinearRingGrid3d<container> g( multiple_x, multiple_y, generator, n,n_old,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
 
-    RingGrid2d( const RingGrid3d<container>& g):
-        dg::refined::Grid2d( g), g_assoc_( g.associated())
+    RefinedCurvilinearRingGrid2d( const RefinedCurvilinearRingGrid3d<container>& g):
+        dg::RefinedGrid2d( g), g_assoc_( g.associated())
     {
         unsigned s = this->size();
         r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
@@ -135,7 +131,7 @@ struct RingGrid2d : public dg::refined::Grid2d
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
 
-    const dg::curvilinear::RingGrid2d<container>& associated()const{return g_assoc_;}
+    const dg::CurvilinearRingGrid2d<container>& associated()const{return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -151,10 +147,8 @@ struct RingGrid2d : public dg::refined::Grid2d
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; 
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    dg::curvilinear::RingGrid2d<container> g_assoc_;
+    dg::CurvilinearRingGrid2d<container> g_assoc_;
 };
 
 ///@}
-}//namespace curvilinear
-}//namespace refined
 }//namespace dg

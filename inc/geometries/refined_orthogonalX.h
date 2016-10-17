@@ -21,14 +21,14 @@ struct GridX2d;
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
-struct GridX3d : public dg::refined::GridX3d
+struct GridX3d : public dg::RefinedGridX3d
 {
     typedef dg::OrthogonalTag metric_category;
-    typedef dg::refined::orthogonal::GridX2d<container> perpendicular_grid;
+    typedef dg::RefinedOrthogonalGridX2d<container> perpendicular_grid;
 
     template <class Generator>
     GridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
-        dg::refined::GridX3d( add_x, add_y, howmanyX, howmanyY, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, n_old, Nx, Ny, Nz, bcx, bcy, dg::PER),
+        dg::RefinedGridX3d( add_x, add_y, howmanyX, howmanyY, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, n_old, Nx, Ny, Nz, bcx, bcy, dg::PER),
         r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_assoc_( generator, psi_0, fx, fy, n_old, Nx, Ny, Nz, bcx, bcy)
     {
@@ -37,7 +37,7 @@ struct GridX3d : public dg::refined::GridX3d
     }
 
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
-    const dg::orthogonal::GridX3d<container>& associated() const{ return g_assoc_;}
+    const dg::OrthogonalGridX3d<container>& associated() const{ return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -117,30 +117,30 @@ struct GridX3d : public dg::refined::GridX3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    dg::orthogonal::GridX3d<container> g_assoc_;
+    dg::OrthogonalGridX3d<container> g_assoc_;
 };
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
-struct GridX2d : public dg::refined::GridX2d
+struct GridX2d : public dg::RefinedGridX2d
 {
     typedef dg::OrthogonalTag metric_category;
 
     template<class Generator>
     GridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, int firstline): 
-        dg::refined::GridX2d( add_x, add_y, howmanyX, howmanyY, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, n_old, Nx, Ny, bcx, bcy),
+        dg::RefinedGridX2d( add_x, add_y, howmanyX, howmanyY, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, n_old, Nx, Ny, bcx, bcy),
         g_assoc_( generator, fx, fy, n_old, Nx, Ny, bcx, bcy) 
     {
-        dg::refined::orthogonal::GridX3d<container> g(add_x, add_y, howmanyX, howmanyY, generator, psi_0, fx,fy, n,n_old,Nx,Ny,1,bcx,bcy);
+        dg::RefinedOrthogonalGridX3d<container> g(add_x, add_y, howmanyX, howmanyY, generator, psi_0, fx,fy, n,n_old,Nx,Ny,1,bcx,bcy);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
     GridX2d( const GridX3d<container>& g):
-        dg::refined::GridX2d(g), g_assoc_(g.associated())
+        dg::RefinedGridX2d(g), g_assoc_(g.associated())
     {
         unsigned s = this->size();
         r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
@@ -152,7 +152,7 @@ struct GridX2d : public dg::refined::GridX2d
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
-    const dg::orthogonal::GridX2d<container>& associated()const{return g_assoc_;}
+    const dg::OrthogonalGridX2d<container>& associated()const{return g_assoc_;}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -160,7 +160,7 @@ struct GridX2d : public dg::refined::GridX2d
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
     thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
+        dg::Grid1d gx( x0(), x1(), n(), Nx());
         return dg::create::abscissas(gx);}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
@@ -170,7 +170,7 @@ struct GridX2d : public dg::refined::GridX2d
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    dg::orthogonal::GridX2d<container> g_assoc_;
+    dg::OrthogonalGridX2d<container> g_assoc_;
 };
 
 }//namespace orthogonal

@@ -1275,7 +1275,7 @@ struct Histogram
      * @param g1d grid on which to compute the histogram ( grid.h() is the binwidth)
      * @param in input vector (if grid.x0() < in[i] <grid.x1() it falls in a bin)
      */
-    Histogram(const dg::Grid1d<double>& g1d, const std::vector<double>& in) :
+    Histogram(const dg::Grid1d& g1d, const std::vector<double>& in) :
     g1d_(g1d),
     in_(in),
     binwidth_(g1d_.h()),
@@ -1316,7 +1316,7 @@ struct Histogram
     }
 
     private:
-    dg::Grid1d<double> g1d_;
+    dg::Grid1d g1d_;
     const std::vector<double> in_;
     double binwidth_;
     container  count_;
@@ -1335,7 +1335,7 @@ struct Histogram2D
      * @param inx input vector in x - direction (if grid.x0() < in[i] <grid.x1() it falls in a bin)
      * @param iny input vector in y - direction (if grid.y0() < in[i] <grid.y1() it falls in a bin)
      */
-    Histogram2D(const dg::Grid2d<double>& g2d, const std::vector<double>& inx,const std::vector<double>& iny) :
+    Histogram2D(const dg::Grid2d& g2d, const std::vector<double>& inx,const std::vector<double>& iny) :
     g2d_(g2d),
     inx_(inx),
     iny_(iny),
@@ -1382,7 +1382,7 @@ struct Histogram2D
 
     }
     private:
-    dg::Grid2d<double> g2d_;
+    dg::Grid2d g2d_;
     const std::vector<double> inx_,iny_;
     double binwidthx_,binwidthy_;
     container count_;

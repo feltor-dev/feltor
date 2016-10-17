@@ -146,7 +146,7 @@ int define_dimension( int ncid, const char* name, int* dimID, const double * poi
  *
  * @return netcdf error code if any
  */
-int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d<double>& g)
+int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d& g)
 {
     thrust::host_vector<double> points = dg::create::abscissas( g);
     return define_dimension( ncid, name, dimID, points.data(), points.size());
@@ -163,7 +163,7 @@ int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d<d
  *
  * @return netcdf error code if any
  */
-int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d<double>& g)
+int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g)
 {
     int retval;    
     if( (retval = define_dimension( ncid, "x", &dimsIDs[1], g))){ return retval;}
@@ -182,10 +182,10 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d<dou
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, const dg::Grid2d<double>& g)
+int define_dimensions( int ncid, int* dimsIDs, const dg::Grid2d& g)
 {
-    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
     if( (retval = define_dimension( ncid, "x", &dimsIDs[1], gx))){ return retval;}
     if( (retval = define_dimension( ncid, "y", &dimsIDs[0], gy))){ return retval;}
@@ -204,10 +204,10 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::Grid2d<double>& g)
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<double>& g)
+int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d& g)
 {
-    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
     if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
     if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
@@ -229,10 +229,10 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d<dou
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::Grid2d<double>& g)
+int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::Grid2d& g)
 {
-    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
+    dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
     int retval;
     if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx))){ return retval;}
     if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy))){ return retval;}
@@ -251,11 +251,11 @@ int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, const dg::Grid3d<double>& g)
+int define_dimensions( int ncid, int* dimsIDs, const dg::Grid3d& g)
 {
-    dg::Grid1d<double> gx( g.x0(), g.x1(), g.n(), g.Nx());
-    dg::Grid1d<double> gy( g.y0(), g.y1(), g.n(), g.Ny());
-    dg::Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
+    dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
+    dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
+    dg::Grid1d gz( g.z0(), g.z1(), 1, g.Nz());
     int retval;
     if( (retval = define_dimension( ncid, "x", &dimsIDs[2], gx)));
     if( (retval = define_dimension( ncid, "y", &dimsIDs[1], gy)));
@@ -275,7 +275,7 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::Grid3d<double>& g)
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid3d<double>& g)
+int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid3d& g)
 {
     int retval;
     if( (retval = define_dimensions( ncid, &dimsIDs[1], g)) ){ return retval;}

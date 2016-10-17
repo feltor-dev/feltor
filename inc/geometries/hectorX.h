@@ -20,7 +20,7 @@ namespace dg
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::Composite<dg::HMatrix>, class container = dg::HVec>
 struct HectorX
 {
-    typedef dg::ConformalTag metric_category; //!This typedef is for the construction of a dg::conformal::Grid
+    typedef dg::ConformalTag metric_category; //!This typedef is for the construction of a dg::ConformalGrid
 
     /**
      * @brief Construct from functors
@@ -155,7 +155,7 @@ struct HectorX
      *
      * @return  orthogonal zeta, eta grid
      */
-    const dg::orthogonal::GridX2d<container>& orthogonal_grid() const {return g2d_;}
+    const dg::OrthogonalGridX2d<container>& orthogonal_grid() const {return g2d_;}
     private:
     template< class Psi, class PsiX, class PsiY, class LaplacePsi>
     container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi0, double psi1, double XX, double YX, double X0, double Y0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, double eps_u ) 
@@ -163,10 +163,10 @@ struct HectorX
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
         dg::SeparatrixOrthogonal<Psi,PsiX,PsiY,LaplacePsi> generator(psi, psiX, psiY, laplacePsi, psi0, XX,YX, X0, Y0,0);
-        //dg::orthogonal::GridX2d<container> g2d_old(generator, psi0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU);
-        dg::orthogonal::GridX2d<container> g2d_old=g2d_;
+        //dg::OrthogonalGridX2d<container> g2d_old(generator, psi0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU);
+        dg::OrthogonalGridX2d<container> g2d_old=g2d_;
         std::cout << "Grid ready!"<<std::endl;
-        dg::Elliptic<dg::orthogonal::GridX2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::NEU, dg::not_normed, dg::centered);
+        dg::Elliptic<dg::OrthogonalGridX2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::NEU, dg::not_normed, dg::centered);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
         container lapu = g2d_old.lapx();
@@ -181,10 +181,10 @@ struct HectorX
             eps = eps_old;
             Nx*=2, Ny*=2;
             t.tic();
-            dg::orthogonal::GridX2d<container> g2d(generator, psi0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU);
+            dg::OrthogonalGridX2d<container> g2d(generator, psi0, fx, fy, n, Nx, Ny, dg::DIR, dg::NEU);
             t.toc();
             std::cout << "Grid ready in "<<t.diff()<<"\n";
-            dg::Elliptic<dg::orthogonal::GridX2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::NEU, dg::not_normed, dg::centered);
+            dg::Elliptic<dg::OrthogonalGridX2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::NEU, dg::not_normed, dg::centered);
             lapu = g2d.lapx();
             const container vol2d = dg::create::weights( g2d);
             const IMatrix Q = dg::create::interpolation( g2d, g2d_old);
@@ -211,7 +211,7 @@ struct HectorX
     double c0_;
     thrust::host_vector<double> u_, ux_, uy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
-    dg::orthogonal::GridX2d<container> g2d_;
+    dg::OrthogonalGridX2d<container> g2d_;
 
 };
 

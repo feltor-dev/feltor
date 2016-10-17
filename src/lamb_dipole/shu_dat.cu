@@ -25,7 +25,7 @@ int main( int argc, char* argv[])
     file::T5rdonly t5file( argv[1], in);
     unsigned nlinks = t5file.get_size();
     const Parameters p( file::read_input(in));
-    dg::Grid2d<double> g( 0, p.lx, 0., p.ly, p.n, p.Nx, p.Ny);
+    dg::Grid2d g( 0, p.lx, 0., p.ly, p.n, p.Nx, p.Ny);
     const dg::HVec w2d( dg::create::weights(g));
     const dg::HVec one( g.size(), 1.);
 

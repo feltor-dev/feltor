@@ -198,7 +198,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
  * @note n must be smaller than 5
  * @attention no range check is performed on the input vectors
  */
-cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const Grid1d<double>& g  )
+cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const Grid1d& g  )
 {
     assert( g.n()<=4);
     //allocate ell matrix storage
@@ -247,7 +247,7 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
  * @note n must be smaller than 5
  * @attention no range check is performed on the input vectors
  */
-cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const thrust::device_vector<double>& y, const Grid2d<double>& g  )
+cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const thrust::device_vector<double>& y, const Grid2d& g  )
 {
     assert( x.size() == y.size());
     //allocate ell matrix storage
@@ -298,7 +298,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
  * @note n must be smaller than or equal to 4
  * @attention no range check is performed on the input vectors
  */
-cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const thrust::device_vector<double>& y, const thrust::device_vector<double>& z, const Grid3d<double>& g )
+cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const thrust::device_vector<double>& y, const thrust::device_vector<double>& z, const Grid3d& g )
 {
     assert( x.size() == y.size());
     assert( x.size() == z.size());
@@ -352,7 +352,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
  * @return Interpolation matrix
  * @note The boundaries of the old brid must lie within the boundaries of the new grid
  */
-cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid3d<double>& g_new, const Grid3d<double>& g_old)
+cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid3d& g_new, const Grid3d& g_old)
 {
     assert( g_new.x0() >= g_old.x0());
     assert( g_new.x1() <= g_old.x1());
@@ -377,7 +377,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid2d<double>& g_new, const Grid2d<double>& g_old)
+cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const Grid2d& g_new, const Grid2d& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());

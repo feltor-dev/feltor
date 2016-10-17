@@ -231,7 +231,7 @@ struct FieldAligned
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         bcz_ = bcz;
-        const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        const dg::Grid2d g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
         left_ = dg::evaluate( dg::CONSTANT(left), g2d);
         right_ = dg::evaluate( dg::CONSTANT(right),g2d);
     }

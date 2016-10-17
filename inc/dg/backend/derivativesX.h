@@ -113,7 +113,7 @@ Composite<EllSparseBlockMat<double> > dy( const GridX2d& g, bc bcy, direction di
 {
     EllSparseBlockMat<double>  dy_inner, dy_outer;
     GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    Grid1d g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     dy_inner = dx( g1d_inner, bcy, dir);
     dy_outer = dx( g1d_outer, bcy, dir);
     dy_inner.right_size = g.n()*g.Nx();
@@ -166,7 +166,7 @@ Composite<EllSparseBlockMat<double> > jumpY( const GridX2d& g, bc bcy)
 {
     EllSparseBlockMat<double>  jy_inner, jy_outer;
     GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    Grid1d g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     jy_inner = jump( g1d_inner, bcy);
     jy_outer = jump( g1d_outer, bcy);
     jy_inner.right_size = g.n()*g.Nx();
@@ -235,7 +235,7 @@ Composite<EllSparseBlockMat<double> > jumpY( const GridX3d& g, bc bcy)
 {
     EllSparseBlockMat<double>  jy_inner, jy_outer;
     GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    Grid1d g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     jy_inner = jump( g1d_inner, bcy);
     jy_outer = jump( g1d_outer, bcy);
     jy_inner.right_size = g.n()*g.Nx();
@@ -346,7 +346,7 @@ Composite<EllSparseBlockMat<double> > dy( const GridX3d& g, bc bcy, direction di
 {
     EllSparseBlockMat<double>  dy_inner, dy_outer;
     GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    Grid1d<double> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    Grid1d g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     dy_inner = dx( g1d_inner, bcy, dir);
     dy_outer = dx( g1d_outer, bcy, dir);
     dy_inner.right_size = g.n()*g.Nx();

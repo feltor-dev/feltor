@@ -39,14 +39,14 @@ int main()
     std::cout << "Timestep                    " << dt << std::endl;
 
     //create initial vector
-    const dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::DIR);
+    const dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::DIR);
     dg::Gaussian gaussian( lx/2., ly/2., .1, .1, 1);
     dg::DVec theta = dg::evaluate ( gaussian, grid);
     std::vector<dg::DVec> y0(2, theta);
     y0[1] = dg::DVec( grid.size(), 0.); //omega is zero
 
     //create RHS and RK
-    dg::Toefl<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> test( grid, Ra, Pr, 1e-6); 
+    dg::Toefl<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> test( grid, Ra, Pr, 1e-6); 
     dg::AB< k, std::vector<dg::DVec> > ab( y0);
 
 

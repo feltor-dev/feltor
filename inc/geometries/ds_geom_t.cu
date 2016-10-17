@@ -103,7 +103,7 @@ int main( int argc, char* argv[])
     solovev::BHatR bhatR(gp);
     solovev::BHatZ bhatZ(gp);
     solovev::BHatP bhatP(gp);
-    dg::Grid3d<double> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,n, Nx, Ny,Nz);
+    dg::Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,n, Nx, Ny,Nz);
     dg::HVec vecR = dg::evaluate( fieldR, grid);
     dg::HVec vecZ = dg::evaluate( fieldZ, grid);
     dg::HVec vecP = dg::evaluate( fieldP, grid);

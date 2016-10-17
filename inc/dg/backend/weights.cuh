@@ -18,16 +18,14 @@ namespace create{
 * @brief create host_vector containing 1d X-space abscissas 
 *
 * same as evaluation of f(x) = x on the grid
-* @tparam T value type
 * @param g The grid 
 *
 * @return Host Vector
 */
-template <class T>
-thrust::host_vector<T> abscissas( const Grid1d<T>& g)
+thrust::host_vector<double> abscissas( const Grid1d& g)
 {
-    thrust::host_vector<T> v(g.size()); 
-    T xp=1.;
+    thrust::host_vector<double> v(g.size()); 
+    double xp=1.;
     for( unsigned i=0; i<g.N(); i++)
     {
         for( unsigned j=0; j<g.n(); j++)
@@ -46,15 +44,13 @@ thrust::host_vector<T> abscissas( const Grid1d<T>& g)
 /**
 * @brief create host_vector containing 1d X-space weight coefficients
 *
-* @tparam T value type
 * @param g The grid 
 *
 * @return Host Vector
 */
-template <class T>
-thrust::host_vector<T> weights( const Grid1d<T>& g)
+thrust::host_vector<double> weights( const Grid1d& g)
 {
-    thrust::host_vector<T> v( g.size());
+    thrust::host_vector<double> v( g.size());
     for( unsigned i=0; i<g.N(); i++)
         for( unsigned j=0; j<g.n(); j++)
             v[i*g.n() + j] = g.h()/2.*g.dlt().weights()[j];
@@ -63,15 +59,13 @@ thrust::host_vector<T> weights( const Grid1d<T>& g)
 /**
 * @brief create host_vector containing 1d X-space inverse weight coefficients
 *
-* @tparam T value type
 * @param g The grid 
 *
 * @return Host Vector
 */
-template <class T>
-thrust::host_vector<T> inv_weights( const Grid1d<T>& g)
+thrust::host_vector<double> inv_weights( const Grid1d& g)
 {
-    thrust::host_vector<T> v = weights( g);
+    thrust::host_vector<double> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;
@@ -90,16 +84,14 @@ int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
 /**
 * @brief create host_vector containing 2d X-space integration weight coefficients
 *
-* @tparam T value type
 * @param g The grid 
 *
 * @return Host Vector
 */
-template <class T>
-thrust::host_vector<T> weights( const Grid2d<T>& g)
+thrust::host_vector<double> weights( const Grid2d& g)
 {
     //choose layout
-    thrust::host_vector<T> v( g.size());
+    thrust::host_vector<double> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
         //v[i] = g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
         v[i] = g.hx()*g.hy()/4.*
@@ -110,15 +102,13 @@ thrust::host_vector<T> weights( const Grid2d<T>& g)
 /**
 * @brief create host_vector containing 2d X-space inverse weight coefficients
 *
-* @tparam T value type
 * @param g The grid 
 *
 * @return Host Vector
 */
-template <class T>
-thrust::host_vector<T> inv_weights( const Grid2d<T>& g)
+thrust::host_vector<double> inv_weights( const Grid2d& g)
 {
-    thrust::host_vector<T> v = weights( g);
+    thrust::host_vector<double> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;
@@ -127,15 +117,13 @@ thrust::host_vector<T> inv_weights( const Grid2d<T>& g)
 /**
 * @brief create host_vector containing 3d X-space weight coefficients for integration
 *
-* @tparam T value type
 * @param g The grid 
 *
 * @return Host Vector
 */
-template <class T>
-thrust::host_vector<T> weights( const Grid3d<T>& g)
+thrust::host_vector<double> weights( const Grid3d& g)
 {
-    thrust::host_vector<T> v( g.size());
+    thrust::host_vector<double> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
         //v[i] = g.hz()*g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
         v[i] = g.hz()*g.hx()*g.hy()/4.*
@@ -147,15 +135,13 @@ thrust::host_vector<T> weights( const Grid3d<T>& g)
 /**
 * @brief create host_vector containing 3d X-space inverse weight coefficients
 *
-* @tparam T value type
 * @param g The grid 
 *
 * @return Host Vector
 */
-template <class T>
-thrust::host_vector<T> inv_weights( const Grid3d<T>& g)
+thrust::host_vector<double> inv_weights( const Grid3d& g)
 {
-    thrust::host_vector<T> v = weights( g);
+    thrust::host_vector<double> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;

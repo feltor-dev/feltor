@@ -153,7 +153,7 @@ int main( int argc, char* argv[])
     dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Gaussian3d blob(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    dg::Grid2d<double> grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
+    dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
 
     std::vector<dg::HVec> hvisual(21);
         //allocate mem for visual
@@ -200,7 +200,7 @@ int main( int argc, char* argv[])
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned npsi = 3, Npsi = 50;//set number of psivalues
     psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
-    dg::Grid1d<double> grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
+    dg::Grid1d grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
     solovev::SafetyFactor<dg::DVec>     qprof(grid2d, gp, alphaog2d );
     dg::HVec sf         = dg::evaluate( qprof,    grid1d);
     dg::HVec abs        = dg::evaluate( dg::cooX1d, grid1d);
@@ -219,7 +219,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
     err = file::define_dimension( ncid,"psi", &dim1d_ids[0], grid1d);
-    dg::Grid3d<double> grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
+    dg::Grid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
     err = file::define_dimensions( ncid, &dim3d_ids[0], grid3d);
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2]; 
 

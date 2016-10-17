@@ -20,7 +20,7 @@ namespace dg
 template< class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
+    Diffusion( const dg::Grid2d& g, double nu): nu_(nu),
         w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()), LaplacianM( g, dg::normed, dg::centered) {
         }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
@@ -64,7 +64,7 @@ struct HW
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    HW( const Grid2d<value_type>& g, double , double , double , double , bool);
+    HW( const Grid2d& g, double , double , double , double , bool);
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -142,7 +142,7 @@ struct HW
 };
 
 template< class Matrix, class container>
-HW<Matrix, container>::HW( const Grid2d<value_type>& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
+HW<Matrix, container>::HW( const Grid2d& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
     chi( grid.size(), 0.), omega(chi), phi( chi), phi_old( chi), dyphi( chi),
     lapphiM(chi), lapy( 2, chi),  laplapy( lapy),
     A( grid, not_normed, centered), laplaceM( grid, normed, centered),

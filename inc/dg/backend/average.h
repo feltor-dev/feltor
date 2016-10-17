@@ -38,9 +38,9 @@ struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
 
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
         lines = create::contiguousLineNumbers( g.n()*g.Nx(), g.n()*g.Ny());
-        Grid2d<double> gTr( g.y0(), g.y1(), g.x0(), g.x1(), g.n(), g.Ny(), g.Nx());
+        Grid2d gTr( g.y0(), g.y1(), g.x0(), g.x1(), g.n(), g.Ny(), g.Nx());
         w2d = dg::create::weights( gTr);
-        Grid1d<double> g1x( 0, g.lx(), g.n(), g.Nx());
+        Grid1d g1x( 0, g.lx(), g.n(), g.Nx());
         v1d = dg::create::inv_weights( g1x);
     }
     /**

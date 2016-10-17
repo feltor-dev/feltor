@@ -29,7 +29,7 @@ namespace dg
  * @return  A DG Host Vector with values
  */
 template< class UnaryOp>
-thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d<double>& g)
+thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d& g)
 {
     thrust::host_vector<double> abs = create::abscissas( g);
     for( unsigned i=0; i<g.size(); i++)
@@ -37,7 +37,7 @@ thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d<double>& g)
     return abs;
 };
 ///@cond
-thrust::host_vector<double> evaluate( double (f)(double), const Grid1d<double>& g)
+thrust::host_vector<double> evaluate( double (f)(double), const Grid1d& g)
 {
     thrust::host_vector<double> v = evaluate<double (double)>( f, g);
     return v;
@@ -58,12 +58,12 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d<double>& 
             may be constructed during function call.
  */
 template< class BinaryOp>
-thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d<double>& g)
+thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d& g)
 {
     unsigned n= g.n();
     //TODO: opens dlt.dat twice...!!
-    Grid1d<double> gx( g.x0(), g.x1(), n, g.Nx()); 
-    Grid1d<double> gy( g.y0(), g.y1(), n, g.Ny());
+    Grid1d gx( g.x0(), g.x1(), n, g.Nx()); 
+    Grid1d gy( g.y0(), g.y1(), n, g.Ny());
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
 
@@ -78,7 +78,7 @@ thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d<double>& g)
     return v;
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d<double>& g)
+thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
     return evaluate<double(double, double)>( f, g);
@@ -98,13 +98,13 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d<do
             may be constructed during function call.
  */
 template< class TernaryOp>
-thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d<double>& g)
+thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d& g)
 {
     unsigned n= g.n();
     //TODO: opens dlt.dat three times...!!
-    Grid1d<double> gx( g.x0(), g.x1(), n, g.Nx()); 
-    Grid1d<double> gy( g.y0(), g.y1(), n, g.Ny());
-    Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
+    Grid1d gx( g.x0(), g.x1(), n, g.Nx()); 
+    Grid1d gy( g.y0(), g.y1(), n, g.Ny());
+    Grid1d gz( g.z0(), g.z1(), 1, g.Nz());
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
     thrust::host_vector<double> absz = create::abscissas( gz);
@@ -120,7 +120,7 @@ thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d<double>& g)
     return v;
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double, double), const Grid3d<double>& g)
+thrust::host_vector<double> evaluate( double(f)(double, double, double), const Grid3d& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
     return evaluate<double(double, double, double)>( f, g);

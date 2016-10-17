@@ -21,7 +21,7 @@
 
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< dg::orthogonal::GridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
+typedef dg::FieldAligned< dg::OrthogonalGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
@@ -116,14 +116,14 @@ int main( int argc, char* argv[])
     double R0 = gp.R_0, Z0 = 0;
     dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::SimpleOrthogonalX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::orthogonal::GridX3d<dg::HVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    //dg::orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::refined::orthogonal::GridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    dg::refined::orthogonal::GridX2d<dg::HVec> g2d = g3d.perp_grid();
+    //dg::OrthogonalGridX3d<dg::HVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    //dg::OrthogonalGridX2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::RefinedOrthogonalGridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    dg::RefinedOrthogonalGridX2d<dg::HVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
-    dg::Grid1d<double> g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
+    dg::Grid1d g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
     g1d.display( std::cout);
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
     dg::HVec y_left = dg::evaluate( cosine, g1d);
@@ -269,11 +269,11 @@ int main( int argc, char* argv[])
    // ///////////////////////////TEST 3d grid//////////////////////////////////////
    // std::cout << "Start DS test!"<<std::endl;
    // const dg::HVec vol3d = dg::create::volume( g3d);
-   // //DFA fieldaligned(orthogonal::XField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
-   // DFA fieldaligned( conformal::Field( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+   // //DFA fieldaligned(OrthogonalXField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+   // DFA fieldaligned( ConformalField( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
-   // //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, orthogonal::XField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
-   // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, conformal::Field(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
+   // //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, OrthogonalXField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
+   // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, ConformalField(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
    // dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
    // dg::HVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
    // const dg::HVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);

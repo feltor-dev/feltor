@@ -12,18 +12,16 @@
 
 namespace dg
 {
-namespace refined
-{
 
-/**
- * @brief Constant refinement in one direction 
- */
-enum direction
-{
-    XDIR, //!< x-direction
-    YDIR, //!< y-direction
-    XYDIR //!< both directions
-};
+///**
+// * @brief Constant refinement in one direction 
+// */
+//enum direction
+//{
+//    XDIR, //!< x-direction
+//    YDIR, //!< y-direction
+//    XYDIR //!< both directions
+//};
 
 namespace detail
 {
@@ -158,7 +156,7 @@ thrust::host_vector<double> linear_ref( unsigned multiple_x, unsigned n, unsigne
  *
  * @return The abscissas of the new grid
  */
-thrust::host_vector<double> normalize_weights_and_compute_abscissas( const Grid1d<double>& g, thrust::host_vector<double>& weights)
+thrust::host_vector<double> normalize_weights_and_compute_abscissas( const Grid1d& g, thrust::host_vector<double>& weights)
 {
     //normalize weights
     unsigned Nx_new = weights.size()/g.n();
@@ -193,7 +191,7 @@ thrust::host_vector<double> normalize_weights_and_compute_abscissas( const Grid1
  * @param abscissas A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
  * @return the new number of cells
  */
-int exponential_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
+int exponential_ref( unsigned add_x, unsigned node, const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
 {
     if( add_x == 0)
     {
@@ -223,7 +221,7 @@ int exponential_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thr
  * @param howmany  number of cells around a node to refine
  * @return the new number of cells
  */
-int equidist_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas, unsigned howmany)
+int equidist_ref( unsigned add_x, unsigned node, const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas, unsigned howmany)
 {
     if( add_x == 0 || howmany == 0)
     {
@@ -237,7 +235,7 @@ int equidist_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust
     abscissas = normalize_weights_and_compute_abscissas( g, weights);
     return Nx_new;
 }
-int equidist_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
+int equidist_ref( unsigned add_x, unsigned node, const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
 {
     return equidist_ref( add_x, node, g, weights, abscissas, 1);
 }
@@ -251,7 +249,7 @@ int equidist_ref( unsigned add_x, unsigned node, const Grid1d<double>& g, thrust
  * @param abscissas A 1d vector of size n*(Nx+add_x) for one-sided refinement and n*(Nx+2*add_x)) for two-sided refinement
  * @return the new number of cells
  */
-int linear_ref( unsigned multiple_x, const Grid1d<double>& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
+int linear_ref( unsigned multiple_x, const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas)
 {
     weights = linear_ref( multiple_x, g.n(), g.N(), g.bcx());
     unsigned Nx_new = weights.size()/g.n();
@@ -262,12 +260,12 @@ int linear_ref( unsigned multiple_x, const Grid1d<double>& g, thrust::host_vecto
 ///@endcond
 }//namespace detail
 
-struct Grid3d;
+struct RefinedGrid3d;
 /**
  * @brief Refined grid 
  * @ingroup grid
  */
-struct Grid2d : public dg::Grid2d<double>
+struct RefinedGrid2d : public dg::Grid2d
 {
     /**
      * @brief Refine a corner of a grid
@@ -285,17 +283,17 @@ struct Grid2d : public dg::Grid2d<double>
      * @param bcx
      * @param bcy
      */
-    Grid2d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
+    RefinedGrid2d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
             unsigned howmanyX, unsigned howmanyY,
             double x0, double x1, double y0, double y1, 
-            unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d<double>( x0, x1, y0, y1, n, n_new(Nx, add_x*howmanyX, bcx), n_new(Ny, add_y*howmanyY, bcy), bcx, bcy), 
+            unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d( x0, x1, y0, y1, n, n_new(Nx, add_x*howmanyX, bcx), n_new(Ny, add_y*howmanyY, bcy), bcx, bcy), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy)
     {
         //assert( howmanyX <= node_x && howmanyX <= Nx - node_x);
         //assert( howmanyY <= node_y && howmanyY <= Ny - node_y);
-        Grid1d<double> gx( x0, x1, n, Nx, bcx);
-        Grid1d<double> gy( y0, y1, n, Ny, bcy);
+        Grid1d gx( x0, x1, n, Nx, bcx);
+        Grid1d gy( y0, y1, n, Ny, bcy);
         thrust::host_vector<double> wx, ax, wy, ay;
         detail::equidist_ref( add_x, node_x, gx, wx, ax, howmanyX);
         detail::equidist_ref( add_y, node_y, gy, wy, ay, howmanyY);
@@ -326,14 +324,14 @@ struct Grid2d : public dg::Grid2d<double>
      * @param bcx
      * @param bcy
      */
-    Grid2d( unsigned multiple_x, unsigned multiple_y,
+    RefinedGrid2d( unsigned multiple_x, unsigned multiple_y,
             double x0, double x1, double y0, double y1, unsigned n,
-            unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d<double>( x0, x1, y0, y1, n, multiple_x*Nx, multiple_y*Ny, bcx, bcy), 
+            unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d( x0, x1, y0, y1, n, multiple_x*Nx, multiple_y*Ny, bcx, bcy), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, n_old, Nx, Ny, bcx, bcy)
     {
-        Grid1d<double> gx( x0, x1, n, Nx, bcx);
-        Grid1d<double> gy( y0, y1, n, Ny, bcy);
+        Grid1d gx( x0, x1, n, Nx, bcx);
+        Grid1d gy( y0, y1, n, Ny, bcy);
         thrust::host_vector<double> wx, ax, wy, ay;
         detail::linear_ref( multiple_x, gx, wx, ax);
         detail::linear_ref( multiple_y, gy, wy, ay);
@@ -355,14 +353,14 @@ struct Grid2d : public dg::Grid2d<double>
      *
      * @param g The 3d grid
      */
-    Grid2d( const dg::refined::Grid3d& g);
+    RefinedGrid2d( const dg::RefinedGrid3d& g);
     /**
      * @brief The grid that this object refines
      *
      * This function is vitual so that derived classes can also construct the associated grid 
      * @return  2d grid
      */
-    virtual const dg::Grid2d<double>& associated()const {return g_assoc_;}
+    virtual const dg::Grid2d& associated()const {return g_assoc_;}
     /**
      * @brief Return the abscissas in X-direction 
      *
@@ -396,7 +394,7 @@ struct Grid2d : public dg::Grid2d<double>
         //weights are invariant
         for( unsigned i=0; i<absX_.size(); i++)
             absX_[i]=alpha*absX_[i]+beta;
-        dg::Grid2d<double>::init_X_boundaries( x0, x1);
+        dg::Grid2d::init_X_boundaries( x0, x1);
     }
 
     private:
@@ -407,14 +405,14 @@ struct Grid2d : public dg::Grid2d<double>
     }
     thrust::host_vector<double> wx_, wy_; //weights
     thrust::host_vector<double> absX_, absY_; //abscissas 
-    dg::Grid2d<double> g_assoc_;
+    dg::Grid2d g_assoc_;
 };
 
 /**
  * @brief Refined grid 
  * @ingroup grid
  */
-struct Grid3d : public dg::Grid3d<double>
+struct RefinedGrid3d : public dg::Grid3d
 {
     /**
      * @brief Refine a corner of a grid
@@ -435,17 +433,17 @@ struct Grid3d : public dg::Grid3d<double>
      * @param bcy
      * @param bcz
      */
-    Grid3d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
+    RefinedGrid3d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
             unsigned howmanyX, unsigned howmanyY,
             double x0, double x1, double y0, double y1, double z0, double z1, 
-            unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : dg::Grid3d<double>( x0, x1, y0, y1, z0, z1, n, n_new(Nx, add_x*howmanyX, bcx), n_new(Ny, add_y*howmanyY, bcy), Nz, bcx, bcy, bcz), 
+            unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : dg::Grid3d( x0, x1, y0, y1, z0, z1, n, n_new(Nx, add_x*howmanyX, bcx), n_new(Ny, add_y*howmanyY, bcy), Nz, bcx, bcy, bcz), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz)
     {
         //assert( howmanyX <= node_x && howmanyX <= Nx - node_x);
         //assert( howmanyY <= node_y && howmanyY <= Ny - node_y);
-        Grid1d<double> gx( x0, x1, n, Nx, bcx);
-        Grid1d<double> gy( y0, y1, n, Ny, bcy);
+        Grid1d gx( x0, x1, n, Nx, bcx);
+        Grid1d gy( y0, y1, n, Ny, bcy);
         thrust::host_vector<double> wx, ax, wy, ay;
         detail::equidist_ref( add_x, node_x, gx, wx, ax, howmanyX);
         detail::equidist_ref( add_y, node_y, gy, wy, ay, howmanyY);
@@ -481,17 +479,17 @@ struct Grid3d : public dg::Grid3d<double>
      * @param bcy
      * @param bcz
      */
-    Grid3d( unsigned multiple_x, unsigned multiple_y,
+    RefinedGrid3d( unsigned multiple_x, unsigned multiple_y,
             double x0, double x1, double y0, double y1, double z0, double z1, 
             unsigned n,
             unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, 
             bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : 
-        dg::Grid3d<double>( x0, x1, y0, y1, z0, z1, n, multiple_x*Nx, multiple_y*Ny, Nz, bcx, bcy, bcz), 
+        dg::Grid3d( x0, x1, y0, y1, z0, z1, n, multiple_x*Nx, multiple_y*Ny, Nz, bcx, bcy, bcz), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, z0, z1, n_old, Nx, Ny, Nz, bcx, bcy, bcz)
     {
-        Grid1d<double> gx( x0, x1, n, Nx, bcx);
-        Grid1d<double> gy( y0, y1, n, Ny, bcy);
+        Grid1d gx( x0, x1, n, Nx, bcx);
+        Grid1d gy( y0, y1, n, Ny, bcy);
         thrust::host_vector<double> wx, ax, wy, ay;
         detail::linear_ref( multiple_x, gx, wx, ax);
         detail::linear_ref( multiple_y, gy, wy, ay);
@@ -512,7 +510,7 @@ struct Grid3d : public dg::Grid3d<double>
      * This function is vitual so that derived classes can also construct the associated grid 
      * @return  2d grid
      */
-    virtual const dg::Grid3d<double>& associated()const {return g_assoc_;}
+    virtual const dg::Grid3d& associated()const {return g_assoc_;}
     /**
      * @brief Return the abscissas in X-direction 
      *
@@ -545,7 +543,7 @@ struct Grid3d : public dg::Grid3d<double>
         //weights are invariant under linear transformation
         for( unsigned i=0; i<absX_.size(); i++)
             absX_[i]=alpha*absX_[i]+beta;
-        dg::Grid3d<double>::init_X_boundaries( x0, x1);
+        dg::Grid3d::init_X_boundaries( x0, x1);
     }
 
     private:
@@ -556,12 +554,12 @@ struct Grid3d : public dg::Grid3d<double>
     }
     thrust::host_vector<double> wx_, wy_; //weights
     thrust::host_vector<double> absX_, absY_; //abscissas 
-    dg::Grid3d<double> g_assoc_;
+    dg::Grid3d g_assoc_;
 
 };
 
-Grid2d::Grid2d( const dg::refined::Grid3d& g) : 
-    dg::Grid2d<double>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy()),
+RefinedGrid2d::RefinedGrid2d( const dg::RefinedGrid3d& g) : 
+    dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy()),
     wx_( this->size()), wy_(this->size()), absX_(this->size()), absY_(this->size()),
     g_assoc_( g.associated())
 {
@@ -575,8 +573,6 @@ Grid2d::Grid2d( const dg::refined::Grid3d& g) :
 }
 
 
-namespace cartesian
-{
 
 
 /**
@@ -586,10 +582,10 @@ namespace cartesian
  * @tparam container
  */
 template<class container>
-struct Grid2d : public dg::refined::Grid2d
+struct CartesianRefinedGrid2d : public dg::RefinedGrid2d
 {
     typedef OrthogonalTag metric_category; 
-    Grid2d( unsigned multiple_x, unsigned multiple_y, double x0, double x1, double y0, double y1, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::refined::Grid2d(multiple_x, multiple_y,x0,x1,y0,y1,n,n_old,Nx,Ny,bcx,bcy), g_assoc_(x0,x1,y0,y1,n_old,Nx,Ny,bcx,bcy){ 
+    CartesianRefinedGrid2d( unsigned multiple_x, unsigned multiple_y, double x0, double x1, double y0, double y1, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::RefinedGrid2d(multiple_x, multiple_y,x0,x1,y0,y1,n,n_old,Nx,Ny,bcx,bcy), g_assoc_(x0,x1,y0,y1,n_old,Nx,Ny,bcx,bcy){ 
         dg::blas1::transfer( weightsX(), g_xx_);
         dg::blas1::transfer( weightsY(), g_yy_);
         dg::blas1::transfer( weightsX(), vol2d_);
@@ -601,38 +597,34 @@ struct Grid2d : public dg::refined::Grid2d
     }
     const thrust::host_vector<double>& r()const{return this->abscissasX();}
     const thrust::host_vector<double>& z()const{return this->abscissasY();}
-    const dg::cartesian::Grid2d& associated() const {return g_assoc_;}
+    const dg::CartesianGrid2d& associated() const {return g_assoc_;}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
     private:
     container g_xx_, g_yy_, vol2d_;
-    dg::cartesian::Grid2d g_assoc_;
+    dg::CartesianGrid2d g_assoc_;
 };
-
-}//namespace cartesian
-
-}//namespace refined
 
 namespace create{
 
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid2d& g_fine)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::RefinedGrid2d& g_fine)
 {
-    dg::Grid2d<double> g = g_fine.associated();
+    dg::Grid2d g = g_fine.associated();
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
     return dg::create::interpolation( x,y, g);
 
 }
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::refined::Grid2d& g_fine)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::RefinedGrid2d& g_fine)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
     cusp::transpose( temp, A);
     return A;
 }
 
-cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::Grid2d& g_fine)
+cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::RefinedGrid2d& g_fine)
 {
     //form the adjoint
     thrust::host_vector<double> w_f = dg::create::weights( g_fine);
@@ -657,7 +649,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::
     return A;
 }
 
-cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::refined::Grid2d& g)
+cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::RefinedGrid2d& g)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> A = interpolation(g);
     cusp::coo_matrix<int, double, cusp::host_memory> B = projection(g);
@@ -667,23 +659,23 @@ cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::refined::G
     return C; 
 }
 
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::refined::Grid3d& g_fine)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::RefinedGrid3d& g_fine)
 {
-    dg::Grid3d<double> g = g_fine.associated();
+    dg::Grid3d g = g_fine.associated();
     thrust::host_vector<double> x = g_fine.abscissasX();
     thrust::host_vector<double> y = g_fine.abscissasY();
     thrust::host_vector<double> z = dg::evaluate( dg::cooZ3d, g_fine);
     return dg::create::interpolation( x,y,z, g);
 }
 
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::refined::Grid3d& g_fine)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::RefinedGrid3d& g_fine)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
     cusp::transpose( temp, A);
     return A;
 }
 
-cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::Grid3d& g_fine)
+cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::RefinedGrid3d& g_fine)
 {
     //form the adjoint
     thrust::host_vector<double> w_f = dg::create::weights( g_fine);
@@ -708,7 +700,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::refined::
     return A;
 }
 
-cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::refined::Grid3d& g)
+cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::RefinedGrid3d& g)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> A = interpolation(g);
     cusp::coo_matrix<int, double, cusp::host_memory> B = projection(g);

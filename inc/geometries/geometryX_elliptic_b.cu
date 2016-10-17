@@ -65,11 +65,11 @@ int main(int argc, char**argv)
     //double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     //double Z_X = -1.1*gp.elongation*gp.a;
     dg::SeparatrixOrthogonal<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,1);
-    dg::refined::orthogonal::GridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, generator, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    //orthogonal::refined::GridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    dg::refined::orthogonal::GridX2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<dg::refined::orthogonal::GridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
-    dg::RefinedElliptic<dg::refined::orthogonal::GridX2d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
+    dg::RefinedOrthogonalGridX3d<dg::DVec> g3d(add_x, add_y, howmanyX, howmanyY, generator, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    //OrthogonalRefinedGridX3d<dg::DVec> g3d(add_x, add_y, gp, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    dg::RefinedOrthogonalGridX2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<dg::RefinedOrthogonalGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+    dg::RefinedElliptic<dg::RefinedOrthogonalGridX2d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
     double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi 1 is          "<<psi_1<<"\n";

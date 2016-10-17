@@ -235,11 +235,11 @@ struct SimpleOrthogonalX
         psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi)
     {
         firstline_ = firstline;
-        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
+        Orthogonaldetail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
         double R0, Z0; 
         f0_ = fpsi.construct_f( psi_0, R0, Z0);
         zeta0_=f0_*psi_0;
-        dg::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX(psi, psiX, psiY, xX, yX);
+        dg::Orthogonaldetail::InitialX<Psi, PsiX, PsiY> initX(psi, psiX, psiY, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
     bool isConformal()const{return false;}
@@ -258,10 +258,10 @@ struct SimpleOrthogonalX
     {
 
         thrust::host_vector<double> r_init, z_init;
-        orthogonal::detail::computeX_rzy( psiX_, psiY_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        Orthogonaldetail::computeX_rzy( psiX_, psiY_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        Orthogonaldetail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
         thrust::host_vector<double> h;
-        orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
+        Orthogonaldetail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
         zetaX.resize(size), zetaY.resize(size), 
         etaX.resize(size), etaY.resize(size);
@@ -323,7 +323,7 @@ struct SeparatrixOrthogonal
 
         thrust::host_vector<double> r_init, z_init;
         sep_.compute_rzy( eta1d, nodeX0, nodeX1, r_init, z_init);
-        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        Orthogonaldetail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
 
         //separate integration of inside and outside
         unsigned inside=0;
@@ -356,10 +356,10 @@ struct SeparatrixOrthogonal
 
         thrust::host_vector<double> xIC, yIC, hIC, xOC,yOC,hOC;
         thrust::host_vector<double> xIF, yIF, hIF, xOF,yOF,hOF;
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC, xIC, yIC, hIC);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC, xOC, yOC, hOC);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF, xIF, yIF, hIF);
-        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF, xOF, yOF, hOF);
+        Orthogonaldetail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC, xIC, yIC, hIC);
+        Orthogonaldetail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC, xOC, yOC, hOC);
+        Orthogonaldetail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF, xIF, yIF, hIF);
+        Orthogonaldetail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF, xOF, yOF, hOF);
         //now glue far and close back together
         thrust::host_vector<double> xI(inside*eta1d.size()), xO( (zeta1d.size()-inside)*eta1d.size()); 
         thrust::host_vector<double> yI(xI), hI(xI), yO(xO),hO(xO);
@@ -434,11 +434,9 @@ struct SeparatrixOrthogonal
     dg::detail::SeparatriX<Psi, PsiX, PsiY> sep_;
 };
 
-namespace orthogonal
-{
 ///@cond
 template< class container>
-struct GridX2d; 
+struct OrthogonalGridX2d; 
 ///@endcond
 
 /**
@@ -446,13 +444,13 @@ struct GridX2d;
  * @ingroup grid
  */
 template< class container>
-struct GridX3d : public dg::GridX3d
+struct OrthogonalGridX3d : public dg::GridX3d
 {
     typedef dg::OrthogonalTag metric_category;
-    typedef GridX2d<container> perpendicular_grid;
+    typedef OrthogonalGridX2d<container> perpendicular_grid;
 
     template< class Generator>
-    GridX3d( Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy):
+    OrthogonalGridX3d( Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy):
         dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
         r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_)
     {
@@ -472,7 +470,7 @@ struct GridX3d : public dg::GridX3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    perpendicular_grid perp_grid() const { return orthogonal::GridX2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return OrthogonalGridX2d<container>(*this);}
     private:
     template<class Generator>
     void construct( Generator generator, double psi_0, double fx, unsigned n, unsigned Nx, unsigned Ny )
@@ -480,7 +478,7 @@ struct GridX3d : public dg::GridX3d
         const double x_0 = generator.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;
         init_X_boundaries( x_0, x_1);
-        dg::Grid1d<double> gX1d( this->x0(), this->x1(), n, Nx, dg::DIR);
+        dg::Grid1d gX1d( this->x0(), this->x1(), n, Nx, dg::DIR);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         dg::GridX1d gY1d( -this->fy()*2.*M_PI/(1.-2.*this->fy()), 2*M_PI+this->fy()*2.*M_PI/(1.-2.*this->fy()), this->fy(), this->n(), this->Ny(), dg::DIR);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
@@ -530,20 +528,20 @@ struct GridX3d : public dg::GridX3d
  * @ingroup grid
  */
 template< class container>
-struct GridX2d : public dg::GridX2d
+struct OrthogonalGridX2d : public dg::GridX2d
 {
     typedef dg::OrthogonalTag metric_category;
     template<class Generator>
-    GridX2d(Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy):
+    OrthogonalGridX2d(Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy):
         dg::GridX2d( 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)
     {
-        orthogonal::GridX3d<container> g( generator, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
+        OrthogonalGridX3d<container> g( generator, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
         init_X_boundaries( g.x0(),g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
-    GridX2d( const GridX3d<container>& g):
+    OrthogonalGridX2d( const OrthogonalGridX3d<container>& g):
         dg::GridX2d( g.x0(), g.x1(), g.y0(), g.y1(), g.fx(), g.fy(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         unsigned s = this->size();
@@ -652,7 +650,6 @@ struct GridX2d : public dg::GridX2d
 //   
 //};
 //
-}//namespace solovev
 
 }//namespace dg
 

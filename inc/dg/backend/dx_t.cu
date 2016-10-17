@@ -23,12 +23,12 @@ int main ()
     std::cin >> n>> N;
     std::cout << "# of Legendre nodes " << n <<"\n";
     std::cout << "# of cells          " << N <<"\n";
-    dg::Grid1d<double> gPER( 0.1, 2*M_PI+0.1, n, N, dg::PER);
-    dg::Grid1d<double> gDIR( 0, M_PI, n, N, dg::DIR);
-    dg::Grid1d<double> gNEU( M_PI/2., 3*M_PI/2., n, N, dg::NEU);
-    dg::Grid1d<double> gDIR_NEU( 0, M_PI/2., n, N, dg::DIR_NEU);
-    dg::Grid1d<double> gNEU_DIR( M_PI/2., M_PI, n, N, dg::NEU_DIR);
-    dg::Grid1d<double> g[] = {gPER, gDIR, gNEU, gDIR_NEU,gNEU_DIR};
+    dg::Grid1d gPER( 0.1, 2*M_PI+0.1, n, N, dg::PER);
+    dg::Grid1d gDIR( 0, M_PI, n, N, dg::DIR);
+    dg::Grid1d gNEU( M_PI/2., 3*M_PI/2., n, N, dg::NEU);
+    dg::Grid1d gDIR_NEU( 0, M_PI/2., n, N, dg::DIR_NEU);
+    dg::Grid1d gNEU_DIR( M_PI/2., M_PI, n, N, dg::NEU_DIR);
+    dg::Grid1d g[] = {gPER, gDIR, gNEU, gDIR_NEU,gNEU_DIR};
 
     std::cout << "TEST NORMAL TOPOLOGY: YOU SHOULD SEE CONVERGENCE FOR ALL OUTPUTS!!!\n";
     for( unsigned i=0; i<5; i++)

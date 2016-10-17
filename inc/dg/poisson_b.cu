@@ -48,7 +48,7 @@ int main()
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     //S2D<double > s2d( grid);
     dg::DVec w2d = dg::create::weights( grid);
     std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
@@ -60,7 +60,7 @@ int main()
     std::cout<< std::setprecision(2);
 
 
-    dg::Poisson<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> poiss( grid);
+    dg::Poisson<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> poiss( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)

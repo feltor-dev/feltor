@@ -103,7 +103,7 @@ int main( int argc, char* argv[])
     dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Gaussian3d blob(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    dg::Grid2d<double> grid(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
+    dg::Grid2d grid(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
 
     std::vector<dg::HVec> hvisual(21);
         //allocate mem for visual
@@ -159,7 +159,7 @@ int main( int argc, char* argv[])
         unsigned Npsi = 100;//set number of psivalues
             std::cout << "psipmin =" << psipmin << " Npsi =" << Npsi  <<std::endl;
 
-        dg::Grid1d<double> g1d(psipmin ,0.0, 1,Npsi,dg::DIR);
+        dg::Grid1d g1d(psipmin ,0.0, 1,Npsi,dg::DIR);
         
         solovev::FluxSurfaceAverage<dg::DVec> fsa1(grid,gp,psipog2d );
         solovev::SafetyFactor<dg::DVec> qprof(grid,gp,alphaog2d );

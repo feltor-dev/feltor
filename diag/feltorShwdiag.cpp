@@ -45,9 +45,9 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////////////////////////////////////////
     
     //Grids
-    dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::Grid2d<double > g2d_in( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
-    dg::Grid1d<double > g1d( 0., p.lx,p.n, p.Nx, p.bc_x);
+    dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d g2d_in( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+    dg::Grid1d g1d( 0., p.lx,p.n, p.Nx, p.bc_x);
     
     double time = 0.;
     
@@ -68,7 +68,7 @@ int main( int argc, char* argv[])
     dg::PoloidalAverage<dg::HVec,dg::HVec > polavg(g2d);
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
-    dg::Poisson<dg::cartesian::Grid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
+    dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
 
 
     //2d field

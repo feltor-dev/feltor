@@ -80,9 +80,9 @@ int main( int argc, char* argv[])
     //normalize grid and compute sigma
     NormalizeToFluc(input1);
     NormalizeToFluc(input2);
-    dg::Grid1d<double>  g1d1(-Nsigma,Nsigma, nhist, Nhist,dg::DIR);
-    dg::Grid1d<double>  g1d2(-Nsigma,Nsigma, nhist, Nhist,dg::DIR); 
-    dg::Grid2d<double>  g2d( -Nsigma,Nsigma,-Nsigma,Nsigma, nhist, Nhist,Nhist,dg::DIR,dg::DIR); 
+    dg::Grid1d  g1d1(-Nsigma,Nsigma, nhist, Nhist,dg::DIR);
+    dg::Grid1d  g1d2(-Nsigma,Nsigma, nhist, Nhist,dg::DIR); 
+    dg::Grid2d  g2d( -Nsigma,Nsigma,-Nsigma,Nsigma, nhist, Nhist,Nhist,dg::DIR,dg::DIR); 
     dg::Histogram<dg::HVec> hist1(g1d1,input1);  
     dg::Histogram<dg::HVec> hist2(g1d2,input2);    
     dg::Histogram2D<dg::HVec> hist12(g2d,input1,input2);    

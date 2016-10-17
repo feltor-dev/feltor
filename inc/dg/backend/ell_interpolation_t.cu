@@ -17,7 +17,7 @@ int main()
 
 
     {
-    dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
+    dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
     thrust::host_vector<double> vector = dg::evaluate( sinus, g);
     dg::IHMatrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
@@ -62,7 +62,7 @@ int main()
     std::cout << "2D Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
     }
     {
-    dg::Grid3d<double> g( -10, 10, -5, 5, -M_PI, M_PI, n, Nx, Ny, Nz);
+    dg::Grid3d g( -10, 10, -5, 5, -M_PI, M_PI, n, Nx, Ny, Nz);
     dg::IHMatrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 

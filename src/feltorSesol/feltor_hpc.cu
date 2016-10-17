@@ -51,15 +51,15 @@ int main( int argc, char* argv[])
     p.display( std::cout);
 
     //Make grid
-    dg::Grid2d<double> grid( 0., p.lx, 0., p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::Grid2d<double> grid_out( 0., p.lx, 0., p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
+    dg::Grid2d grid( 0., p.lx, 0., p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d grid_out( 0., p.lx, 0., p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
     // Grid for radial probe location. This is used only in netcdf output, probe positioning is still hard-coded
-    dg::Grid1d<double> grid_probe(0, p.lx, 1, 8, p.bc_x);
+    dg::Grid1d grid_probe(0, p.lx, 1, 8, p.bc_x);
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
+    eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
+    eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -109,7 +109,7 @@ int main( int argc, char* argv[])
       std::cout << "input "<<inputIN<<std::endl;    
       const eule::Parameters pIN(file::read_input( inputIN));
       pIN.display( std::cout);
-      dg::Grid2d<double> grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
+      dg::Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
       dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
       size_t count2dIN[3]  = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};
       size_t start2dIN[3]  = {0, 0, 0};

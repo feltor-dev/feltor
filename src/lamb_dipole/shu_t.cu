@@ -39,7 +39,7 @@ int main()
     cin >> n >> Nx >> Ny>>eps;
     const unsigned NT = (unsigned)(T*n*Nx/0.1/lx);
     
-    Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     DVec w2d( create::weights( grid));
     const double dt = T/(double)NT;
     /////////////////////////////////////////////////////////////////

@@ -244,7 +244,7 @@ struct MPI_Grid2d
         g.display();
         os << "LOCAL GRID \n";
 
-        Grid2d<double> grid = local();
+        Grid2d grid = local();
         grid.display();
 
     }
@@ -256,7 +256,7 @@ struct MPI_Grid2d
      * class itself
      * @return Grid object
      */
-    Grid2d<double> local() const {return Grid2d<double>(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
+    Grid2d local() const {return Grid2d(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
 
     /**
      * @brief Return a grid global for the calling process
@@ -264,7 +264,7 @@ struct MPI_Grid2d
      * The global grid contains the global boundaries
      * @return Grid object
      */
-    Grid2d<double> global() const {return g;}
+    Grid2d global() const {return g;}
     /**
      * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
@@ -280,7 +280,7 @@ struct MPI_Grid2d
         g.init_X_boundaries(global_x0, global_x1);
     }
     private:
-    Grid2d<double> g; //global grid
+    Grid2d g; //global grid
     MPI_Comm comm; //just an integer...
 
 };
@@ -572,7 +572,7 @@ struct MPI_Grid3d
         g.display();
         os << "LOCAL GRID \n";
 
-        Grid3d<double> grid = local();
+        Grid3d grid = local();
         grid.display();
 
     }
@@ -583,14 +583,14 @@ struct MPI_Grid3d
      * class itself
      * @return Grid object
      */
-    Grid3d<double> local() const {return Grid3d<double>(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
+    Grid3d local() const {return Grid3d(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
     /**
      * @brief Return a grid global for the calling process
      *
      * The global grid contains the global boundaries
      * @return Grid object
      */
-    Grid3d<double> global() const {return g;}
+    Grid3d global() const {return g;}
     /**
      * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
@@ -607,7 +607,7 @@ struct MPI_Grid3d
         g.init_X_boundaries(global_x0, global_x1);
     }
     private:
-    Grid3d<double> g; //global grid
+    Grid3d g; //global grid
     MPI_Comm comm; //just an integer...
 };
 ///@cond

@@ -6,12 +6,10 @@
 
 namespace dg
 {
-namespace curvilinear
-{
 
 ///@cond
 template< class container>
-struct RingGrid2d; 
+struct CurvilinearRingGrid2d; 
 ///@endcond
 
 ///@addtogroup grids
@@ -21,14 +19,14 @@ struct RingGrid2d;
  * @brief A three-dimensional grid based on curvilinear coordinates
  */
 template< class container>
-struct RingGrid3d : public dg::Grid3d<double>
+struct CurvilinearRingGrid3d : public dg::Grid3d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
-    typedef RingGrid2d<container> perpendicular_grid;
+    typedef CurvilinearRingGrid2d<container> perpendicular_grid;
 
     template< class Generator>
-    RingGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
-        dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+    CurvilinearRingGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+        dg::Grid3d( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         construct( generator, n, Nx, Ny);
     }
@@ -50,8 +48,8 @@ struct RingGrid3d : public dg::Grid3d<double>
     template< class Generator>
     void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny)
     {
-        dg::Grid1d<double> gY1d( 0, 2*M_PI, n, Ny, dg::PER);
-        dg::Grid1d<double> gX1d( 0., generator.width(), n, Nx);
+        dg::Grid1d gY1d( 0, 2*M_PI, n, Ny, dg::PER);
+        dg::Grid1d gX1d( 0., generator.width(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
         generator( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
@@ -103,22 +101,22 @@ struct RingGrid3d : public dg::Grid3d<double>
  * @brief A three-dimensional grid based on curvilinear coordinates
  */
 template< class container>
-struct RingGrid2d : public dg::Grid2d<double>
+struct CurvilinearRingGrid2d : public dg::Grid2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
     template< class Generator>
-    RingGrid2d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
-        dg::Grid2d<double>( 0, 1, 0., 2.*M_PI, n, Nx, Ny, bcx, dg::PER)
+    CurvilinearRingGrid2d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+        dg::Grid2d( 0, 1, 0., 2.*M_PI, n, Nx, Ny, bcx, dg::PER)
     {
-        curvilinear::RingGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
+        CurvilinearRingGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
 
     }
-    RingGrid2d( const RingGrid3d<container>& g):
-        dg::Grid2d<double>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
+    CurvilinearRingGrid2d( const CurvilinearRingGrid3d<container>& g):
+        dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         unsigned s = this->size();
         r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
@@ -148,5 +146,4 @@ struct RingGrid2d : public dg::Grid2d<double>
 };
 
 ///@}
-}//namespace curvilinear
 }//namespace dg

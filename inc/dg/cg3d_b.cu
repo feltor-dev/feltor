@@ -31,14 +31,14 @@ int main()
     std::cin >> eps;
 
     std::cout << "TEST 3D VERSION\n";
-    dg::Grid3d<double> g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, bcx, dg::PER);
+    dg::Grid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, bcx, dg::PER);
     const dg::DVec w3d = dg::create::weights( g3d);
     const dg::DVec v3d = dg::create::inv_weights( g3d);
     dg::DVec x3 = dg::evaluate( initial, g3d);
     dg::DVec b3 = dg::evaluate ( laplace_fct, g3d);
     dg::blas2::symv( w3d, b3, b3);
 
-    dg::Elliptic<dg::cartesian::Grid3d, dg::DMatrix, dg::DVec> lap(g3d, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> lap(g3d, dg::not_normed, dg::forward );
     dg::CG<dg::DVec > pcg( x3, g3d.size());
     t.tic();
     std::cout << "Number of pcg iterations "<< pcg( lap, x3, b3, v3d, eps, sqrt(lz))<<std::endl;

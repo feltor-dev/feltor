@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
     
     ///////////////////////////////////////////////////////////////////////////
     //Grids
-    dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+    dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     double time = 0.;
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -65,7 +65,7 @@ int main( int argc, char* argv[])
     double velX,velY,velX_old=0 , velY_old=0.;    
     double accX,accY=0.;
     double deltaT = p.dt*p.itstp;
-    dg::Grid1d<double > g1d( 0., p.lx,p.n_out, p.Nx_out, p.bc_x);
+    dg::Grid1d g1d( 0., p.lx,p.n_out, p.Nx_out, p.bc_x);
     size_t count1d[2]  = {1, g2d.n()*g2d.Nx()};
     size_t start1d[2]  = {0, 0};    
     //1d netcdf output file    

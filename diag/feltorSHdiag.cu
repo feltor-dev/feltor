@@ -65,8 +65,8 @@ int main( int argc, char* argv[])
     
     ///////////////////////////////////////////////////////////////////////////
     //Grids
-    dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
-    dg::Grid1d<double > g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
+    dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+    dg::Grid1d g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
     double time = 0.;
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -144,12 +144,12 @@ int main( int argc, char* argv[])
     unsigned Nx = p.Nx*p.n; 
     //routiens to compute ti
     dg::Invert<dg::DVec> invert_invgamma2( helper, helper.size(), 1e-3);
-    dg::Helmholtz2< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > invgamma2( g2d,g2d.bcx(), g2d.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered);
+    dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > invgamma2( g2d,g2d.bcx(), g2d.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered);
     dg::DVec binv(dg::evaluate( dg::LinearX( p.mcv, 1.), g2d) );
     dg::DVec B2(dg::evaluate( dg::one, g2d));
     dg::blas1::pointwiseDivide(B2,binv,B2);
     dg::blas1::pointwiseDivide(B2,binv,B2);
-    dg::Elliptic<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> polti(g2d, g2d.bcx(), g2d.bcy(), dg::normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> polti(g2d, g2d.bcx(), g2d.bcy(), dg::normed, dg::centered);
     
     //weiss field
     //dg::Weiss<dg::DMatrix,dg::DVec,dg::DVec> weissfield(g2d,dg::normed, dg::centered);  

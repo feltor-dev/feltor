@@ -57,7 +57,7 @@ struct GridX3d : public dg::GridX3d
     {
         construct( hector, n,Nx, Ny, Nz, bcx, typename Generator::metric_category());
     }
-    perpendicular_grid perp_grid() const { return conformal::GridX2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return ConformalGridX2d<container>(*this);}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -74,9 +74,9 @@ struct GridX3d : public dg::GridX3d
     template< class Generator>
     void construct( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::ConformalTag ) 
     {
-        dg::Grid2d<double> guv( 0., hector.lu(), 0., 2.*M_PI, n, Nx, Ny );
-        dg::Grid1d<double> gu( 0., hector.lu(), n, Nx);
-        dg::Grid1d<double> gv( 0., 2.*M_PI, n, Ny);
+        dg::Grid2d guv( 0., hector.lu(), 0., 2.*M_PI, n, Nx, Ny );
+        dg::Grid1d gu( 0., hector.lu(), n, Nx);
+        dg::Grid1d gv( 0., 2.*M_PI, n, Ny);
         const dg::HVec u1d = dg::evaluate( dg::cooX1d, gu);
         const dg::HVec v1d = dg::evaluate( dg::cooX1d, gv);
         hector( u1d, v1d, r_, z_, xr_, xz_, yr_, yz_);
@@ -134,7 +134,7 @@ struct GridX2d : public dg::GridX2d
     GridX2d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx):
         dg::Grid2d( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
-        conformal::GridX3d<container> g( hector, n,Nx,Ny,1,bcx);
+        ConformalGridX3d<container> g( hector, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         gradU2_=g.g_xx();
@@ -143,7 +143,7 @@ struct GridX2d : public dg::GridX2d
     GridX2d( const solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx): 
         dg::Grid2d( 0, 1., 0., 2*M_PI, n,Nx,Ny, bcx, dg::PER)
     {
-        conformal::GridX3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
+        ConformalGridX3d<container> g( gp, psi_0, psi_1, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         gradU2_=g.g_xx();

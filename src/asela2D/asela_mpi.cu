@@ -124,7 +124,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile",  geom.size(), geom.data());
     int dimids[4], tvarID;
     {
-        dg::Grid3d<double> global_grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out);  
+        dg::Grid3d global_grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out);  
         err = file::define_dimensions( ncid, dimids, &tvarID, global_grid_out);
 
 

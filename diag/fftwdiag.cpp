@@ -46,16 +46,16 @@ int main( int argc, char* argv[])
     
     ///////////////////////////////////////////////////////////////////////////
     //Grids
-    dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+    dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     const double kxmin = 1./p.lx;
     const double kxmax = ((p.n_out*p.Nx_out)/2+1)/p.lx;
     const unsigned Nkx = (p.n_out*p.Nx_out)/2+1;
     const unsigned Nky =  (p.n_out*p.Ny_out)/2+1;
     const double kymin = 1./p.ly;
     const double kymax = ((p.n_out*p.Ny_out)/2+1)/p.ly;
-    dg::Grid2d<double > g2d_f( kxmin,kxmax,kymin,kymax,1.,Nkx ,Nky , p.bc_x, p.bc_y);
-    dg::Grid1d<double > g1d_f( kxmin,kxmax,1., Nkx,  p.bc_y);
-    dg::Poisson<dg::cartesian::Grid2d, dg::HMatrix, dg::HVec> poisson(g2d,  g2d.bcx(), g2d.bcy(),  g2d.bcx(), g2d.bcy());
+    dg::Grid2d g2d_f( kxmin,kxmax,kymin,kymax,1.,Nkx ,Nky , p.bc_x, p.bc_y);
+    dg::Grid1d g1d_f( kxmin,kxmax,1., Nkx,  p.bc_y);
+    dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  g2d.bcx(), g2d.bcy(),  g2d.bcx(), g2d.bcy());
     //2d field netcdf vars read
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
     size_t start2d[3]  = {0, 0, 0};

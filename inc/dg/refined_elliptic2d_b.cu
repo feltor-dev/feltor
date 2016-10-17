@@ -46,7 +46,7 @@ int main()
     std::cin >> n_ref >> multiple_x >> multiple_y; //more N means less iterations for same error
     std::cout << "Computation on: "<< n <<" x "<<Nx<<" x "<<Ny<<std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
-    dg::refined::cartesian::Grid2d<dg::DVec> grid( multiple_x, multiple_y, 0, lx, 0, ly, n_ref, n, Nx, Ny, bcx, bcy);
+    dg::CartesianRefinedGrid2d<dg::DVec> grid( multiple_x, multiple_y, 0, lx, 0, ly, n_ref, n, Nx, Ny, bcx, bcy);
     //evaluate on fine grid
     dg::DVec w2dFINE = dg::create::volume( grid);
     dg::DVec v2dFINE = dg::create::inv_weights( grid);
@@ -71,7 +71,7 @@ int main()
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     {
-    dg::RefinedElliptic<dg::refined::cartesian::Grid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol( grid, dg::not_normed, dg::centered);
+    dg::RefinedElliptic<dg::CartesianRefinedGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol( grid, dg::not_normed, dg::centered);
     pol.set_chi( chiFINE);
     t.toc();
     std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
@@ -102,7 +102,7 @@ int main()
     const double norm = dg::blas2::dot( w2dFINE, solutionFINE);
     std::cout << " "<<sqrt( err/norm) << " " <<sqrt(errFINE/norm);
     {
-    dg::RefinedElliptic<dg::refined::cartesian::Grid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward);
+    dg::RefinedElliptic<dg::CartesianRefinedGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward);
     pol_forward.set_chi( chiFINE);
     x = temp;
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
@@ -116,7 +116,7 @@ int main()
     }
 
     {
-    dg::RefinedElliptic<dg::refined::cartesian::Grid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward);
+    dg::RefinedElliptic<dg::CartesianRefinedGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward);
     pol_backward.set_chi( chiFINE);
     x = temp;
     dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);

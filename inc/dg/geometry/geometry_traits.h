@@ -284,7 +284,7 @@ thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, Curvilin
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
-    Grid1d<double> gz( g.z0(), g.z1(), 1, g.Nz());
+    Grid1d gz( g.z0(), g.z1(), 1, g.Nz());
     thrust::host_vector<double> absz = create::abscissas( gz);
     for( unsigned k=0; k<g.Nz(); k++)
         for( unsigned i=0; i<size2d; i++)

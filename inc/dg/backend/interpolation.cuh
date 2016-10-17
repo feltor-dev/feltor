@@ -76,7 +76,7 @@ std::vector<double> coefficients( double xn, unsigned n)
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const Grid1d<double>& g)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const Grid1d& g)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n());
 
@@ -123,7 +123,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d<double>& g , dg::bc globalbcz = dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d& g , dg::bc globalbcz = dg::NEU)
 {
     assert( x.size() == y.size());
     std::vector<double> gauss_nodes = g.dlt().abscissas(); 
@@ -267,7 +267,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @return interpolation matrix
  * @note The values of x, y and z must lie within the boundaries of g
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const Grid3d<double>& g, dg::bc globalbcz= dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const Grid3d& g, dg::bc globalbcz= dg::NEU)
 {
     assert( x.size() == y.size());
     assert( y.size() == z.size());
@@ -413,7 +413,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d<double>& g_new, const Grid1d<double>& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d& g_new, const Grid1d& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -434,7 +434,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d<dou
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d<double>& g_new, const Grid2d<double>& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d& g_new, const Grid2d& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -460,7 +460,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d<dou
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<double>& g_new, const Grid3d<double>& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d& g_new, const Grid3d& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -486,7 +486,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d<dou
  *
  * @return the vector in LSPACE
  */
-thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const Grid2d<double>& g)
+thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const Grid2d& g)
 {
     thrust::host_vector<double> out(in.size(), 0);
     dg::Operator<double> forward( g.dlt().forward());
@@ -512,7 +512,7 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
  *
  * @return interpolated point
  */
-double interpolate( double x, double y,  const thrust::host_vector<double>& v, const Grid2d<double>& g )
+double interpolate( double x, double y,  const thrust::host_vector<double>& v, const Grid2d& g )
 {
     assert( v.size() == g.size());
 

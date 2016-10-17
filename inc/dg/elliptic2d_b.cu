@@ -45,7 +45,7 @@ int main()
     std::cin >> eps;
     std::cout << "Computation on: "<< n <<" x "<<Nx<<" x "<<Ny<<std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
     dg::DVec v2d = dg::create::inv_weights( grid);
     //create functions A(chi) x = b
@@ -58,7 +58,7 @@ int main()
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     {
-    dg::Elliptic<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> pol( grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol( grid, dg::not_normed, dg::centered);
     pol.set_chi( chi);
     t.toc();
     std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
@@ -84,7 +84,7 @@ int main()
     const double norm = dg::blas2::dot( w2d, solution);
     std::cout << " "<<sqrt( err/norm);
     {
-    dg::Elliptic<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward);
     pol_forward.set_chi( chi);
     x = temp;
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
@@ -95,7 +95,7 @@ int main()
     }
 
     {
-    dg::Elliptic<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward);
     pol_backward.set_chi( chi);
     x = temp;
     dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);

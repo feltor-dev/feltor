@@ -33,7 +33,7 @@ int main()
     double eps = 1e-6; //# of pcg iterations increases very much if 
     std::cin >> eps;
 
-    dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
+    dg::Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
     const dg::DVec w2d = dg::create::weights( grid);
     const dg::DVec v2d = dg::create::inv_weights( grid);
     std::cout<<"Evaluate initial condition...\n";
@@ -42,8 +42,8 @@ int main()
     std::cout << "Create Laplacian...\n";
     t.tic();
     dg::DMatrix DX = dg::create::dx( grid);
-    dg::Elliptic<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> lap(grid, dg::not_normed, dg::forward );
-    dg::Elliptic<dg::cartesian::Grid2d, dg::fDMatrix, dg::fDVec> flap(grid, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> lap(grid, dg::not_normed, dg::forward );
+    dg::Elliptic<dg::CartesianGrid2d, dg::fDMatrix, dg::fDVec> flap(grid, dg::not_normed, dg::forward );
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -60,7 +60,7 @@ int main()
 
     dg::fDVec xf;
     dg::blas1::transfer(x,xf);
-    dg::Inverse<dg::Elliptic<dg::cartesian::Grid2d, dg::fDMatrix, dg::fDVec>, dg::fDVec> inverse( flap, xf, 10, 1e-15, 0);
+    dg::Inverse<dg::Elliptic<dg::CartesianGrid2d, dg::fDMatrix, dg::fDVec>, dg::fDVec> inverse( flap, xf, 10, 1e-15, 0);
 
 
     

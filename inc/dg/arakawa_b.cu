@@ -49,7 +49,7 @@ int main()
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     Vector w2d = dg::create::weights( grid);
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
     Vector lhs = dg::evaluate ( left, grid), jac(lhs);
@@ -58,7 +58,7 @@ int main()
     Vector eins = dg::evaluate( dg::one, grid );
     //std::cout<< std::setprecision(2);
 
-    dg::ArakawaX<dg::cartesian::Grid2d, Matrix, Vector> arakawa( grid);
+    dg::ArakawaX<dg::CartesianGrid2d, Matrix, Vector> arakawa( grid);
     unsigned multi=20;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)

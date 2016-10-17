@@ -183,15 +183,15 @@ struct FpsiX
         {
             eps_old = eps; x0_old = x0;
             P+=2;
-            dg::Grid1d<double> grid( 0, 1, P, 1);
+            dg::Grid1d grid( 0, 1, P, 1);
             if( psi>0)
             {
-                dg::Grid1d<double> grid1( 0, psi, P, 1);
+                dg::Grid1d grid1( 0, psi, P, 1);
                 grid = grid1;
             }
             else 
             {
-                dg::Grid1d<double> grid2( psi, 0, P, 1);
+                dg::Grid1d grid2( psi, 0, P, 1);
                 grid = grid2;
             }
             thrust::host_vector<double> psi_vec = dg::evaluate( dg::coo1, grid);
@@ -228,7 +228,7 @@ struct FpsiX
             thrust::host_vector<double>& xz,  
             double* R_0, double* Z_0, double& f, double& fp ) 
     {
-        //dg::Grid1d<double> g1d( 0, 2*M_PI, n, N, dg::PER);
+        //dg::Grid1d g1d( 0, 2*M_PI, n, N, dg::PER);
         ///////////////////////////now find y coordinate line//////////////
         dg::GridX1d g1d( -fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fy, n, N, dg::DIR);
 
@@ -258,7 +258,7 @@ struct FpsiX
         //begin[3] = -f_psi * psip2 * temp[0]/(psipR_*temp[0]+psipZ_*temp[1]);
 
         ////////////////////////////set up integration///////////////////////////////
-        solovev::conformal::FieldRZYRYZY fieldRZYRYZY(gp_);
+        solovev::ConformalFieldRZYRYZY fieldRZYRYZY(gp_);
         fieldRZYRYZY.set_f(f_psi);
         fieldRZYRYZY.set_fp(fprime);
         unsigned steps = 1;
@@ -377,8 +377,8 @@ struct FpsiX
         return fprime_old;
     }
     const solovev::GeomParameters gp_;
-    const solovev::conformal::FieldRZYT fieldRZYT_;
-    const solovev::conformal::FieldRZYZ fieldRZYZ_;
+    const solovev::ConformalFieldRZYT fieldRZYT_;
+    const solovev::ConformalFieldRZYZ fieldRZYZ_;
     solovev::HessianRZtau hessianRZtau_;
     solovev::MinimalCurve minimalCurve_;
     double R_i_[4], Z_i_[4], vR_i[4], vZ_i[4];
@@ -442,8 +442,8 @@ struct XFieldFinv
 
     private:
     FpsiX fpsi_;
-    solovev::conformal::FieldRZYT fieldRZYT_;
-    solovev::conformal::FieldRZYZ fieldRZYZ_;
+    solovev::ConformalFieldRZYT fieldRZYT_;
+    solovev::ConformalFieldRZYZ fieldRZYZ_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
     double xAtOne_;
@@ -482,13 +482,13 @@ struct GridX3d : public dg::GridX3d
         assert( psi_0 < 0 );
         assert( gp.c[10] != 0);
         //construct x-grid in two parts
-        conformal::detail::FpsiX fpsi(gp);
+        Conformaldetail::FpsiX fpsi(gp);
         std::cout << "FIND X FOR PSI_0\n";
         const double x_0 = fpsi.find_x(psi_0);
         const double x_1 = -fx/(1.-fx)*x_0;
         init_X_boundaries( x_0, x_1);
         //compute psi(x) for a grid on x 
-        dg::Grid1d<double> g1d_( this->x0(), this->x1(), n, Nx, bcx);
+        dg::Grid1d g1d_( this->x0(), this->x1(), n, Nx, bcx);
         std::cout << "X0 is "<<x_0<<" and X1 is "<<x_1<<"\n";
         //g1d_.display();
         thrust::host_vector<double> x_vec = dg::evaluate( dg::coo1, g1d_), psi_x;
@@ -506,7 +506,7 @@ struct GridX3d : public dg::GridX3d
     const thrust::host_vector<double>& yz()const{return yz_;}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
+        dg::Grid1d gx( x0(), x1(), n(), Nx());
         return dg::create::abscissas(gx);}
     const container& g_xx()const{return g_xx_;}
     const container& g_yy()const{return g_yy_;}
@@ -514,7 +514,7 @@ struct GridX3d : public dg::GridX3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    perpendicular_grid perp_grid() const { return conformal::GridX2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return ConformalGridX2d<container>(*this);}
     const thrust::host_vector<double>& rx0()const{return r_x0;}
     const thrust::host_vector<double>& zx0()const{return z_x0;}
     const thrust::host_vector<double>& rx1()const{return r_x1;}
@@ -606,12 +606,12 @@ struct GridX2d : public dg::GridX2d
     GridX2d( const solovev::GeomParameters gp, double psi_0, double fx, double fy, double y, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
         dg::GridX2d( 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)
     {
-        conformal::detail::FpsiX fpsi(gp);
+        Conformaldetail::FpsiX fpsi(gp);
         const double x0 = fpsi.find_x(psi_0);
         const double x1 = -fx/(1.-fx)*x0;
         //const double psi1 = fpsi.find_x(1);
         init_X_boundaries( x0,x1);
-        conformal::GridX3d<container> g( gp, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
+        ConformalGridX3d<container> g( gp, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
         f_x_ = g.f_x();
         f_ = g.f(), r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
@@ -639,7 +639,7 @@ struct GridX2d : public dg::GridX2d
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
     thrust::host_vector<double> x()const{
-        dg::Grid1d<double> gx( x0(), x1(), n(), Nx());
+        dg::Grid1d gx( x0(), x1(), n(), Nx());
         return dg::create::abscissas(gx);}
     const thrust::host_vector<double>& f_x()const{return f_x_;}
     const container& g_xx()const{return g_xx_;}

@@ -5,15 +5,13 @@
 
 namespace dg
 {
-namespace cartesian
-{
 
 ///@addtogroup basicgrids
 ///@{
 /**
  * @brief one-dimensional Grid with Cartesian metric
  */
-struct Grid1d: public dg::Grid1d<double>
+struct CartesianGrid1d: public dg::Grid1d
 {
     typedef OrthonormalTag metric_category; 
     /**
@@ -25,19 +23,19 @@ struct Grid1d: public dg::Grid1d<double>
      @param N # of cells
      @param bcx boundary conditions
      */
-    Grid1d( double x0, double x1, unsigned n, unsigned N, bc bcx = PER): dg::Grid1d<double>(x0,x1,n,N,bcx){}
+    CartesianGrid1d( double x0, double x1, unsigned n, unsigned N, bc bcx = PER): dg::Grid1d(x0,x1,n,N,bcx){}
     /**
      * @brief Construct from existing topology
      *
      * @param grid existing grid class
      */
-    Grid1d( const dg::Grid1d<double>& grid):dg::Grid1d<double>(grid){}
+    CartesianGrid1d( const dg::Grid1d& grid):dg::Grid1d(grid){}
 };
 
 /**
  * @brief two-dimensional Grid with Cartesian metric
  */
-struct Grid2d: public dg::Grid2d<double>
+struct CartesianGrid2d: public dg::Grid2d
 {
     typedef OrthonormalTag metric_category; 
     /**
@@ -53,19 +51,19 @@ struct Grid2d: public dg::Grid2d<double>
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      */
-    Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::Grid2d<double>(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
+    CartesianGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::Grid2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
     /**
      * @brief Construct from existing topology
      *
      * @param grid existing grid class
      */
-    Grid2d( const dg::Grid2d<double>& grid):dg::Grid2d<double>(grid){}
+    CartesianGrid2d( const dg::Grid2d& grid):dg::Grid2d(grid){}
 };
 
 /**
  * @brief three-dimensional Grid with Cartesian metric
  */
-struct Grid3d: public dg::Grid3d<double>
+struct CartesianGrid3d: public dg::Grid3d
 {
     typedef OrthonormalTag metric_category; 
     /**
@@ -86,16 +84,15 @@ struct Grid3d: public dg::Grid3d<double>
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::Grid3d<double>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::Grid3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     /**
      * @brief Construct from existing topology
      *
      * @param grid existing grid class
      */
-    Grid3d( const dg::Grid3d<double>& grid):dg::Grid3d<double>(grid){}
+    CartesianGrid3d( const dg::Grid3d& grid):dg::Grid3d(grid){}
 };
 
 ///@}
 
-} //namespace cartesian
 } //namespace dg

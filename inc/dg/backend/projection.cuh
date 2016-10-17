@@ -59,7 +59,7 @@ namespace create{
  *
  * @return Projection matrix
  */
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d<double>& g1, const Grid1d<double>& g2)
+cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g1, const Grid1d& g2)
 {
     assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
     assert( g2.N() % g1.N() == 0);
@@ -76,7 +76,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d<doubl
  *
  * @return Projection matrix
  */
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d<double>& g1, const Grid2d<double>& g2)
+cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d& g1, const Grid2d& g2)
 {
     //TODO: projection in y direction needs permutation
     assert( g1.x0() == g2.x0()); assert( g1.x1() == g2.x1());
@@ -106,10 +106,10 @@ struct DifferenceNorm
      * @param g1 first grid
      * @param g2 second grid
      */
-    DifferenceNorm( const Grid2d<double>& g1, const Grid2d<double>& g2)
+    DifferenceNorm( const Grid2d& g1, const Grid2d& g2)
     {
         //find common grid
-        Grid2d<double> gC(    g1.x0(), g1.x1(), g1.y0(), g1.y1(), 
+        Grid2d gC(    g1.x0(), g1.x1(), g1.y0(), g1.y1(), 
                             std::min( g1.n(), g2.n()), 
                             lcm( g1.Nx(), g2.Nx()), 
                             lcm( g1.Ny(), g2.Ny()) );

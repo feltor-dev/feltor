@@ -300,7 +300,7 @@ struct SimpleOrthogonal
     {
         assert( psi_1 != psi_0);
         firstline_ = firstline;
-        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
+        Orthogonaldetail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
         f0_ = fabs( fpsi.construct_f( psi_0, R0_, Z0_));
         if( psi_1 < psi_0) f0_*=-1;
         lz_ =  f0_*(psi_1-psi_0);
@@ -364,10 +364,10 @@ struct SimpleOrthogonal
          thrust::host_vector<double>& etaY) 
     {
         thrust::host_vector<double> r_init, z_init;
-        orthogonal::detail::compute_rzy( psiX_, psiY_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        Orthogonaldetail::compute_rzy( psiX_, psiY_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        Orthogonaldetail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
         thrust::host_vector<double> h;
-        orthogonal::detail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
+        Orthogonaldetail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
         zetaX.resize(size), zetaY.resize(size), 
         etaX.resize(size), etaY.resize(size);
@@ -389,35 +389,32 @@ struct SimpleOrthogonal
     int firstline_;
 };
 
-namespace orthogonal
-{
-
 ///@addtogroup grids
 ///@{
 
 ///@cond
 template< class container>
-struct RingGrid2d; 
+struct OrthogonalRingGrid2d; 
 ///@endcond
 
 /**
  * @brief A three-dimensional grid based on orthogonal coordinates
  */
 template< class container>
-struct RingGrid3d : public dg::Grid3d<double>
+struct OrthogonalRingGrid3d : public dg::Grid3d
 {
     typedef dg::OrthogonalTag metric_category;
-    typedef RingGrid2d<container> perpendicular_grid;
+    typedef OrthogonalRingGrid2d<container> perpendicular_grid;
 
     template< class Generator>
-    RingGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
-        dg::Grid3d<double>( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+    OrthogonalRingGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+        dg::Grid3d( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         assert( generator.isOrthogonal());
         construct( generator, n, Nx, Ny);
     }
 
-    perpendicular_grid perp_grid() const { return orthogonal::RingGrid2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return OrthogonalRingGrid2d<container>(*this);}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -434,8 +431,8 @@ struct RingGrid3d : public dg::Grid3d<double>
     template< class Generator>
     void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny)
     {
-        dg::Grid1d<double> gY1d( 0, 2*M_PI, n, Ny, dg::PER);
-        dg::Grid1d<double> gX1d( 0., generator.width(), n, Nx);
+        dg::Grid1d gY1d( 0, 2*M_PI, n, Ny, dg::PER);
+        dg::Grid1d gX1d( 0., generator.width(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
         generator( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
@@ -487,22 +484,22 @@ struct RingGrid3d : public dg::Grid3d<double>
  * @brief A three-dimensional grid based on orthogonal coordinates
  */
 template< class container>
-struct RingGrid2d : public dg::Grid2d<double>
+struct OrthogonalRingGrid2d : public dg::Grid2d
 {
     typedef dg::OrthogonalTag metric_category;
     template< class Generator>
-    RingGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
-        dg::Grid2d<double>( 0, 1, 0., 2.*M_PI, n, Nx, Ny, bcx, dg::PER)
+    OrthogonalRingGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+        dg::Grid2d( 0, 1, 0., 2.*M_PI, n, Nx, Ny, bcx, dg::PER)
     {
-        orthogonal::RingGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
+        OrthogonalRingGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
 
     }
-    RingGrid2d( const RingGrid3d<container>& g):
-        dg::Grid2d<double>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
+    OrthogonalRingGrid2d( const OrthogonalRingGrid3d<container>& g):
+        dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         unsigned s = this->size();
         r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
@@ -536,7 +533,7 @@ struct RingGrid2d : public dg::Grid2d<double>
  */ 
 struct Field
 {
-    Field( solovev::GeomParameters gp, const dg::Grid2d<double>& gXY, const thrust::host_vector<double>& f2):
+    Field( solovev::GeomParameters gp, const dg::Grid2d& gXY, const thrust::host_vector<double>& f2):
         gp_(gp),
         psipR_(gp), psipZ_(gp),
         ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(f2, gXY)) 
@@ -595,7 +592,7 @@ struct Field
     solovev::PsipZ  psipZ_;
     solovev::Ipol   ipol_;
     solovev::InvB   invB_;
-    const dg::Grid2d<double> gXY_;
+    const dg::Grid2d gXY_;
     thrust::host_vector<double> g_;
    
 };
