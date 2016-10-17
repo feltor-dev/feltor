@@ -20,8 +20,8 @@
 #include "orthogonal.h"
 #include "dg/ds.h"
 
-//typedef dg::FieldAligned< ConformalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
-typedef dg::FieldAligned< OrthogonalRingGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+//typedef dg::FieldAligned< ConformalGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< OrthogonalGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 int main( )
 {
@@ -70,10 +70,10 @@ int main( )
         //Nzn = unsigned(Nz*pow(2,i));
         //Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
         //Nyn = (unsigned)ceil(Ny*pow(2,(double)(i*2./n)));
-        //ConformalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
-        //ConformalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-        OrthogonalRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
-        OrthogonalRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
+        //ConformalGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
+        //ConformalGrid2d<dg::DVec> g2d = g3d.perp_grid();
+        OrthogonalGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nxn, Nyn,Nzn, dg::DIR);
+        OrthogonalGrid2d<dg::DVec> g2d = g3d.perp_grid();
         g3d.display();
         //g2d.display();
         std::cout << "NR = " << Nxn << std::endl;

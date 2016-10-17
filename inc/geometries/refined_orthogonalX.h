@@ -8,26 +8,22 @@
 
 namespace dg
 {
-namespace refined
-{
-namespace orthogonal
-{
 
 
 template< class container>
-struct GridX2d;
+struct OrthogonalRefinedGridX2d;
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
-struct GridX3d : public dg::RefinedGridX3d
+struct OrthogonalRefinedGridX3d : public dg::RefinedGridX3d
 {
     typedef dg::OrthogonalTag metric_category;
-    typedef dg::RefinedOrthogonalGridX2d<container> perpendicular_grid;
+    typedef dg::OrthogonalRefinedGridX2d<container> perpendicular_grid;
 
     template <class Generator>
-    GridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
+    OrthogonalRefinedGridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
         dg::RefinedGridX3d( add_x, add_y, howmanyX, howmanyY, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, n_old, Nx, Ny, Nz, bcx, bcy, dg::PER),
         r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_assoc_( generator, psi_0, fx, fy, n_old, Nx, Ny, Nz, bcx, bcy)
@@ -124,22 +120,22 @@ struct GridX3d : public dg::RefinedGridX3d
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
  */
 template< class container>
-struct GridX2d : public dg::RefinedGridX2d
+struct OrthogonalRefinedGridX2d : public dg::RefinedGridX2d
 {
     typedef dg::OrthogonalTag metric_category;
 
     template<class Generator>
-    GridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, int firstline): 
+    OrthogonalRefinedGridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, int firstline): 
         dg::RefinedGridX2d( add_x, add_y, howmanyX, howmanyY, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, n_old, Nx, Ny, bcx, bcy),
         g_assoc_( generator, fx, fy, n_old, Nx, Ny, bcx, bcy) 
     {
-        dg::RefinedOrthogonalGridX3d<container> g(add_x, add_y, howmanyX, howmanyY, generator, psi_0, fx,fy, n,n_old,Nx,Ny,1,bcx,bcy);
+        dg::OrthogonalRefinedGridX3d<container> g(add_x, add_y, howmanyX, howmanyY, generator, psi_0, fx,fy, n,n_old,Nx,Ny,1,bcx,bcy);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
-    GridX2d( const GridX3d<container>& g):
+    OrthogonalRefinedGridX2d( const OrthogonalRefinedGridX3d<container>& g):
         dg::RefinedGridX2d(g), g_assoc_(g.associated())
     {
         unsigned s = this->size();
@@ -173,7 +169,5 @@ struct GridX2d : public dg::RefinedGridX2d
     dg::OrthogonalGridX2d<container> g_assoc_;
 };
 
-}//namespace orthogonal
-}//namespace refined
 } //namespace dg
 

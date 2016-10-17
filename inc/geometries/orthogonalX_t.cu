@@ -118,8 +118,8 @@ int main( int argc, char* argv[])
     //dg::SimpleOrthogonalX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::OrthogonalGridX3d<dg::HVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //dg::OrthogonalGridX2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::RefinedOrthogonalGridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    dg::RefinedOrthogonalGridX2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::OrthogonalRefinedGridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    dg::OrthogonalRefinedGridX2d<dg::HVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -250,7 +250,7 @@ int main( int argc, char* argv[])
     //std::cout << "Rel Error of volume is "<<sqrt(error)<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::cartesian::Grid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
     solovev::Iris iris( gp);
     dg::HVec vec  = dg::evaluate( iris, g2dC);

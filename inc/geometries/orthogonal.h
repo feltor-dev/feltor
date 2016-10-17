@@ -300,7 +300,7 @@ struct SimpleOrthogonal
     {
         assert( psi_1 != psi_0);
         firstline_ = firstline;
-        Orthogonaldetail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
+        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
         f0_ = fabs( fpsi.construct_f( psi_0, R0_, Z0_));
         if( psi_1 < psi_0) f0_*=-1;
         lz_ =  f0_*(psi_1-psi_0);
@@ -364,10 +364,10 @@ struct SimpleOrthogonal
          thrust::host_vector<double>& etaY) 
     {
         thrust::host_vector<double> r_init, z_init;
-        Orthogonaldetail::compute_rzy( psiX_, psiY_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        Orthogonaldetail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        orthogonal::detail::compute_rzy( psiX_, psiY_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
         thrust::host_vector<double> h;
-        Orthogonaldetail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
         zetaX.resize(size), zetaY.resize(size), 
         etaX.resize(size), etaY.resize(size);
@@ -394,27 +394,27 @@ struct SimpleOrthogonal
 
 ///@cond
 template< class container>
-struct OrthogonalRingGrid2d; 
+struct OrthogonalGrid2d; 
 ///@endcond
 
 /**
  * @brief A three-dimensional grid based on orthogonal coordinates
  */
 template< class container>
-struct OrthogonalRingGrid3d : public dg::Grid3d
+struct OrthogonalGrid3d : public dg::Grid3d
 {
     typedef dg::OrthogonalTag metric_category;
-    typedef OrthogonalRingGrid2d<container> perpendicular_grid;
+    typedef OrthogonalGrid2d<container> perpendicular_grid;
 
     template< class Generator>
-    OrthogonalRingGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+    OrthogonalGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
         dg::Grid3d( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         assert( generator.isOrthogonal());
         construct( generator, n, Nx, Ny);
     }
 
-    perpendicular_grid perp_grid() const { return OrthogonalRingGrid2d<container>(*this);}
+    perpendicular_grid perp_grid() const { return OrthogonalGrid2d<container>(*this);}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -484,21 +484,21 @@ struct OrthogonalRingGrid3d : public dg::Grid3d
  * @brief A three-dimensional grid based on orthogonal coordinates
  */
 template< class container>
-struct OrthogonalRingGrid2d : public dg::Grid2d
+struct OrthogonalGrid2d : public dg::Grid2d
 {
     typedef dg::OrthogonalTag metric_category;
     template< class Generator>
-    OrthogonalRingGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+    OrthogonalGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, 1, 0., 2.*M_PI, n, Nx, Ny, bcx, dg::PER)
     {
-        OrthogonalRingGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
+        OrthogonalGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
 
     }
-    OrthogonalRingGrid2d( const OrthogonalRingGrid3d<container>& g):
+    OrthogonalGrid2d( const OrthogonalGrid3d<container>& g):
         dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         unsigned s = this->size();
@@ -598,6 +598,5 @@ struct Field
 };
 
 ///@}
-}//namespace orthogonal
 
 }//namespace dg

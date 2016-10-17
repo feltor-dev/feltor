@@ -103,10 +103,10 @@ struct CurvatureDirPer
 };
 
 
-//typedef  ConformalMPIRingGrid3d<dg::DVec> Geometry;
-//typedef OrthogonalMPIRingGrid3d<dg::DVec> Geometry;
-typedef  ConformalMPIRingGrid2d<dg::DVec> Geometry;
-//typedef OrthogonalMPIRingGrid2d<dg::DVec> Geometry;
+//typedef  ConformalMPIGrid3d<dg::DVec> Geometry;
+//typedef OrthogonalMPIGrid3d<dg::DVec> Geometry;
+typedef  ConformalMPIGrid2d<dg::DVec> Geometry;
+//typedef OrthogonalMPIGrid2d<dg::DVec> Geometry;
 
 int main(int argc, char** argv)
 {

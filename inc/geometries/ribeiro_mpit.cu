@@ -27,8 +27,8 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-//typedef dg::MPI_FieldAligned< ConformalMPIRingGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
-typedef dg::MPI_FieldAligned< OrthogonalMPIRingGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
+//typedef dg::MPI_FieldAligned< ConformalMPIGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
+typedef dg::MPI_FieldAligned< OrthogonalMPIGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
 
 //should be the same as conformal_t.cu, except for the periodify
 int main( int argc, char* argv[])
@@ -64,10 +64,10 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     if(rank==0)std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    //ConformalMPIRingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR,comm);
-    //ConformalMPIRingGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    OrthogonalMPIRingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
-    OrthogonalMPIRingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    //ConformalMPIGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR,comm);
+    //ConformalMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    OrthogonalMPIGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
+    OrthogonalMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;

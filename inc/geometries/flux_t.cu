@@ -42,8 +42,8 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-typedef dg::FieldAligned< dg::CurvilinearRingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
-//typedef dg::FieldAligned< OrthogonalRingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
+typedef dg::FieldAligned< dg::CurvilinearGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
+//typedef dg::FieldAligned< OrthogonalGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -77,10 +77,10 @@ int main( int argc, char* argv[])
     solovev::CollectivePsip c( gp);
     dg::FluxGenerator<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ, solovev::Ipol, solovev::IpolR, solovev::IpolZ>
         flux( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, c.ipol, c.ipolR, c.ipolZ, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearRingGrid3d<dg::HVec> g3d(flux, n, Nx, Ny,Nz, dg::DIR);
-    dg::CurvilinearRingGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    //OrthogonalRingGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //OrthogonalRingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::CurvilinearGrid3d<dg::HVec> g3d(flux, n, Nx, Ny,Nz, dg::DIR);
+    dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    //OrthogonalGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    //OrthogonalGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -168,7 +168,7 @@ int main( int argc, char* argv[])
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
     solovev::Iris iris( gp);
     //dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
-    dg::cartesian::Grid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);

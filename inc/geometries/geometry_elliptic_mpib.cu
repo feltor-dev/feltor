@@ -57,12 +57,12 @@ int main(int argc, char**argv)
     if(rank==0)std::cout << "Constructing grid ... \n";
     dg::Timer t;
     t.tic();
-    //ConformalMPIRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
-    //ConformalMPIRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    //dg::Elliptic<ConformalMPIRingGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
-    OrthogonalMPIRingGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
-    OrthogonalMPIRingGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<OrthogonalMPIRingGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
+    //ConformalMPIGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
+    //ConformalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    //dg::Elliptic<ConformalMPIGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
+    OrthogonalMPIGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
+    OrthogonalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<OrthogonalMPIGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////

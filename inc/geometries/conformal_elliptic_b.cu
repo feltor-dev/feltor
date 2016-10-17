@@ -102,7 +102,7 @@ int main(int argc, char**argv)
     dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator0(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 0);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::OrthogonalRingGrid2d<dg::DVec> g2d(generator0, n, Nx, Ny);
+        dg::OrthogonalGrid2d<dg::DVec> g2d(generator0, n, Nx, Ny);
         compute_error_elliptic(gp, g2d, psi_0, psi_1, eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -114,7 +114,7 @@ int main(int argc, char**argv)
     dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator1(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::OrthogonalRingGrid2d<dg::DVec> g2d(generator1, n, Nx, Ny);
+        dg::OrthogonalGrid2d<dg::DVec> g2d(generator1, n, Nx, Ny);
         compute_error_elliptic(gp, g2d, psi_0, psi_1, eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -126,7 +126,7 @@ int main(int argc, char**argv)
     dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorConf( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::ConformalRingGrid2d<dg::DVec> g2d(hectorConf, n, Nx, Ny);
+        dg::ConformalGrid2d<dg::DVec> g2d(hectorConf, n, Nx, Ny);
         compute_error_elliptic(gp, g2d, psi_0, psi_1,eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -139,7 +139,7 @@ int main(int argc, char**argv)
     dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorMonitor( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::CurvilinearRingGrid2d<dg::DVec> g2d(hectorMonitor, n, Nx, Ny);
+        dg::CurvilinearGrid2d<dg::DVec> g2d(hectorMonitor, n, Nx, Ny);
         compute_error_elliptic(gp, g2d, psi_0, psi_1,eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -152,7 +152,7 @@ int main(int argc, char**argv)
     dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorAdapt( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::OrthogonalRingGrid2d<dg::DVec> g2d(hectorAdapt, n, Nx, Ny);
+        dg::OrthogonalGrid2d<dg::DVec> g2d(hectorAdapt, n, Nx, Ny);
         compute_error_elliptic(gp, g2d, psi_0, psi_1,eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -165,7 +165,7 @@ int main(int argc, char**argv)
       ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0.);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::CurvilinearRingGrid2d<dg::DVec> g2d(ribeiro, n, Nx, Ny);
+        dg::CurvilinearGrid2d<dg::DVec> g2d(ribeiro, n, Nx, Ny);
         compute_error_elliptic(gp, g2d, psi_0, psi_1,eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;

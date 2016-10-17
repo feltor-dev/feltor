@@ -7,26 +7,22 @@
 
 namespace dg
 {
-namespace refined
-{
-namespace conformal
-{
 ///@addtogroup grids
 ///@{
 
 ///@cond
 template< class container>
-struct RefinedConformalRingGrid2d; 
+struct ConformalRefinedGrid2d; 
 ///@endcond
 
 template< class container>
-struct RefinedConformalRingGrid3d : public dg::RefinedGrid3d
+struct ConformalRefinedGrid3d : public dg::RefinedGrid3d
 {
     typedef dg::ConformalCylindricalTag metric_category;
-    typedef RefinedConformalRingGrid2d<container> perpendicular_grid;
+    typedef ConformalRefinedGrid2d<container> perpendicular_grid;
 
     template<class Generator>
-    RefinedConformalRingGrid3d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
+    ConformalRefinedGrid3d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
         dg::RefinedGrid3d( multiple_x, multiple_y, 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, n_old, Nx, Ny, Nz, bcx, dg::PER, dg::PER),
         g_assoc_( generator, n_old, Nx, Ny, Nz, bcx)
     { 
@@ -36,7 +32,7 @@ struct RefinedConformalRingGrid3d : public dg::RefinedGrid3d
 
 
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
-    const dg::ConformalRingGrid3d<container>& associated() const{ return g_assoc_;}
+    const dg::ConformalGrid3d<container>& associated() const{ return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -102,27 +98,27 @@ struct RefinedConformalRingGrid3d : public dg::RefinedGrid3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; 
     container g_xx_, g_pp_, vol_, vol2d_;
-    dg::ConformalRingGrid3d<container> g_assoc_;
+    dg::ConformalGrid3d<container> g_assoc_;
 
 };
 
 template< class container>
-struct RefinedConformalRingGrid2d : public dg::RefinedGrid2d
+struct ConformalRefinedGrid2d : public dg::RefinedGrid2d
 {
     typedef dg::ConformalCylindricalTag metric_category;
     template< class Generator>
-    RefinedConformalRingGrid2d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx):
+    ConformalRefinedGrid2d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx):
         dg::RefinedGrid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
         g_assoc_( generator, n_old, Nx, Ny, bcx) 
     {
-        dg::RefinedConformalRingGrid3d<container> g( multiple_x, multiple_y, generator, n,n_old,Nx,Ny,1,bcx);
+        dg::ConformalRefinedGrid3d<container> g( multiple_x, multiple_y, generator, n,n_old,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
 
-    RefinedConformalRingGrid2d( const RefinedConformalRingGrid3d<container>& g):
+    ConformalRefinedGrid2d( const ConformalRefinedGrid3d<container>& g):
         dg::RefinedGrid2d( g ), g_assoc_(g.associated())
     {
         unsigned s = this->size();
@@ -134,7 +130,7 @@ struct RefinedConformalRingGrid2d : public dg::RefinedGrid2d
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
 
-    const dg::ConformalRingGrid2d<container>& associated()const{return g_assoc_;}
+    const dg::ConformalGrid2d<container>& associated()const{return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -149,7 +145,7 @@ struct RefinedConformalRingGrid2d : public dg::RefinedGrid2d
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, vol2d_;
-    dg::ConformalRingGrid2d<container> g_assoc_;
+    dg::ConformalGrid2d<container> g_assoc_;
 };
 
 ///@}

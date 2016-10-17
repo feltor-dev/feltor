@@ -235,11 +235,11 @@ struct SimpleOrthogonalX
         psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi)
     {
         firstline_ = firstline;
-        Orthogonaldetail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
+        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
         double R0, Z0; 
         f0_ = fpsi.construct_f( psi_0, R0, Z0);
         zeta0_=f0_*psi_0;
-        dg::Orthogonaldetail::InitialX<Psi, PsiX, PsiY> initX(psi, psiX, psiY, xX, yX);
+        dg::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX(psi, psiX, psiY, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
     bool isConformal()const{return false;}
@@ -258,10 +258,10 @@ struct SimpleOrthogonalX
     {
 
         thrust::host_vector<double> r_init, z_init;
-        Orthogonaldetail::computeX_rzy( psiX_, psiY_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        Orthogonaldetail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        orthogonal::detail::computeX_rzy( psiX_, psiY_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
         thrust::host_vector<double> h;
-        Orthogonaldetail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
+        orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
         zetaX.resize(size), zetaY.resize(size), 
         etaX.resize(size), etaY.resize(size);
@@ -323,7 +323,7 @@ struct SeparatrixOrthogonal
 
         thrust::host_vector<double> r_init, z_init;
         sep_.compute_rzy( eta1d, nodeX0, nodeX1, r_init, z_init);
-        Orthogonaldetail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
 
         //separate integration of inside and outside
         unsigned inside=0;
@@ -356,10 +356,10 @@ struct SeparatrixOrthogonal
 
         thrust::host_vector<double> xIC, yIC, hIC, xOC,yOC,hOC;
         thrust::host_vector<double> xIF, yIF, hIF, xOF,yOF,hOF;
-        Orthogonaldetail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC, xIC, yIC, hIC);
-        Orthogonaldetail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC, xOC, yOC, hOC);
-        Orthogonaldetail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF, xIF, yIF, hIF);
-        Orthogonaldetail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF, xOF, yOF, hOF);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initC, z_initC, xIC, yIC, hIC);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initC, z_initC, xOC, yOC, hOC);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF, xIF, yIF, hIF);
+        orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF, xOF, yOF, hOF);
         //now glue far and close back together
         thrust::host_vector<double> xI(inside*eta1d.size()), xO( (zeta1d.size()-inside)*eta1d.size()); 
         thrust::host_vector<double> yI(xI), hI(xI), yO(xO),hO(xO);

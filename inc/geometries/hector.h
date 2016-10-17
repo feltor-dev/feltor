@@ -402,7 +402,7 @@ struct Hector
      *
      * @return  orthogonal zeta, eta grid
      */
-    const dg::CurvilinearRingGrid2d<container>& internal_grid() const {return g2d_;}
+    const dg::CurvilinearGrid2d<container>& internal_grid() const {return g2d_;}
     private:
     template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi, class LaplaceChiPsi>
     container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Chi chi, LaplaceChiPsi lapCP, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u , bool verbose) 
@@ -410,9 +410,9 @@ struct Hector
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
         dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
-        dg::CurvilinearRingGrid2d<container> g2d_old = g2d_;
+        dg::CurvilinearGrid2d<container> g2d_old = g2d_;
         container adapt = dg::pullback(chi, g2d_old);
-        dg::Elliptic<dg::CurvilinearRingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::Elliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set_chi( adapt);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -423,9 +423,9 @@ struct Hector
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            dg::CurvilinearRingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            dg::CurvilinearGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
             if(verbose) std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
-            dg::Elliptic<dg::CurvilinearRingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::Elliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             adapt = dg::pullback(chi, g2d);
             ellipticD.set_chi( adapt);
             lapu = dg::pullback( lapCP, g2d);
@@ -455,8 +455,8 @@ struct Hector
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
         dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
-        dg::CurvilinearRingGrid2d<container> g2d_old = g2d_;
-        dg::TensorElliptic<dg::CurvilinearRingGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::CurvilinearGrid2d<container> g2d_old = g2d_;
+        dg::TensorElliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set( chi_XX, chi_XY, chi_YY);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -467,9 +467,9 @@ struct Hector
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            dg::CurvilinearRingGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            dg::CurvilinearGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
             if(verbose)std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
-            dg::TensorElliptic<dg::CurvilinearRingGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::TensorElliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             ellipticD.set( chi_XX, chi_XY, chi_YY );
             lapu = dg::pullback( lapCP, g2d);
             const container vol2d = dg::create::weights( g2d);
@@ -559,7 +559,7 @@ struct Hector
     double c0_, lu_;
     thrust::host_vector<double> u_, ux_, uy_, vx_, vy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
-    dg::CurvilinearRingGrid2d<container> g2d_;
+    dg::CurvilinearGrid2d<container> g2d_;
 
 };
 

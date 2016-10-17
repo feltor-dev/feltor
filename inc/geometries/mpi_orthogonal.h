@@ -13,7 +13,7 @@ namespace orthogonal
 
 ///@cond
 template< class container>
-struct MPIRingGrid2d; 
+struct MPIGrid2d; 
 ///@endcond
 
 /**
@@ -22,10 +22,10 @@ struct MPIRingGrid2d;
  * @tparam container Vector class that holds metric coefficients
  */
 template<class LocalContainer>
-struct MPIRingGrid3d : public dg::MPI_Grid3d
+struct MPIGrid3d : public dg::MPI_Grid3d
 {
     typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
-    typedef MPIRingGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
+    typedef MPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
 
     /**
      * @brief Construct 
@@ -40,12 +40,12 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
      * @param bcx The boundary condition in x (y,z are periodic)
      * @param comm The mpi communicator class
      */
-    MPIRingGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
+    MPIGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
         dg::MPI_Grid3d( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
     {
-        RingGrid3d<LocalContainer> g( gp, psi_0, psi_1, n,Nx, Ny, local().Nz(), bcx);
+        Grid3d<LocalContainer> g( gp, psi_0, psi_1, n,Nx, Ny, local().Nz(), bcx);
 
         //divide and conquer
         int dims[3], periods[3], coords[3];
@@ -77,7 +77,7 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
 
     //these are for the Field class
 
-    perpendicular_grid perp_grid() const { return MPIRingGrid2d<LocalContainer>(*this);}
+    perpendicular_grid perp_grid() const { return MPIGrid2d<LocalContainer>(*this);}
 
     const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& z()const{return z_;}
@@ -101,7 +101,7 @@ struct MPIRingGrid3d : public dg::MPI_Grid3d
  * @brief A two-dimensional grid based on "almost-orthogonal" coordinates by Ribeiro and Scott 2010
  */
 template<class LocalContainer>
-struct MPIRingGrid2d : public dg::MPI_Grid2d
+struct MPIGrid2d : public dg::MPI_Grid2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category; 
 
@@ -117,12 +117,12 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
      * @param bcx The boundary condition in x (y,z are periodic)
      * @param comm2d The 2d mpi communicator class
      */
-    MPIRingGrid2d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
+    MPIGrid2d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
         dg::MPI_Grid2d( 0, 1, 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
     {
-        RingGrid2d<LocalContainer> g( gp, psi_0, psi_1, n,Nx, Ny, bcx);
+        Grid2d<LocalContainer> g( gp, psi_0, psi_1, n,Nx, Ny, bcx);
         //divide and conquer
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( communicator(), 2, dims, periods, coords);
@@ -147,7 +147,7 @@ struct MPIRingGrid2d : public dg::MPI_Grid2d
                             vol2d_.data()[idx1] = g.perpVol()[idx2];
                         }
     }
-    MPIRingGrid2d( const MPIRingGrid3d<LocalContainer>& g):
+    MPIGrid2d( const MPIGrid3d<LocalContainer>& g):
         dg::MPI_Grid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)

@@ -9,7 +9,7 @@ namespace dg
 
 ///@cond
 template< class container>
-struct CurvilinearRingGrid2d; 
+struct CurvilinearGrid2d; 
 ///@endcond
 
 ///@addtogroup grids
@@ -19,13 +19,13 @@ struct CurvilinearRingGrid2d;
  * @brief A three-dimensional grid based on curvilinear coordinates
  */
 template< class container>
-struct CurvilinearRingGrid3d : public dg::Grid3d
+struct CurvilinearGrid3d : public dg::Grid3d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
-    typedef CurvilinearRingGrid2d<container> perpendicular_grid;
+    typedef CurvilinearGrid2d<container> perpendicular_grid;
 
     template< class Generator>
-    CurvilinearRingGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+    CurvilinearGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
         dg::Grid3d( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         construct( generator, n, Nx, Ny);
@@ -101,21 +101,21 @@ struct CurvilinearRingGrid3d : public dg::Grid3d
  * @brief A three-dimensional grid based on curvilinear coordinates
  */
 template< class container>
-struct CurvilinearRingGrid2d : public dg::Grid2d
+struct CurvilinearGrid2d : public dg::Grid2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
     template< class Generator>
-    CurvilinearRingGrid2d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+    CurvilinearGrid2d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, 1, 0., 2.*M_PI, n, Nx, Ny, bcx, dg::PER)
     {
-        CurvilinearRingGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
+        CurvilinearGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
 
     }
-    CurvilinearRingGrid2d( const CurvilinearRingGrid3d<container>& g):
+    CurvilinearGrid2d( const CurvilinearGrid3d<container>& g):
         dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         unsigned s = this->size();

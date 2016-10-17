@@ -40,7 +40,7 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-typedef dg::FieldAligned< dg::OrthogonalRingGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
+typedef dg::FieldAligned< dg::OrthogonalGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -75,10 +75,10 @@ int main( int argc, char* argv[])
     t.tic();
 
     dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 0);
-    //dg::OrthogonalRingGrid3d<dg::HVec> g3d(generator, n, Nx, Ny,Nz, dg::DIR);
-    //dg::OrthogonalRingGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::RefinedOrthogonalRingGrid3d<dg::HVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
-    dg::RefinedOrthogonalRingGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    //dg::OrthogonalGrid3d<dg::HVec> g3d(generator, n, Nx, Ny,Nz, dg::DIR);
+    //dg::OrthogonalGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::OrthogonalRefinedGrid3d<dg::HVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    dg::OrthogonalRefinedGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -179,7 +179,7 @@ int main( int argc, char* argv[])
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
     solovev::Iris iris( gp);
-    dg::cartesian::Grid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
 
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);

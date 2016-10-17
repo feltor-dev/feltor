@@ -100,10 +100,10 @@ struct CurvatureDirPer
 };
 
 
-//typedef ConformalRingGrid3d<dg::DVec> Geometry;
-//typedef OrthogonalRingGrid3d<dg::DVec> Geometry;
-typedef ConformalRingGrid2d<dg::DVec> Geometry;
-//typedef OrthogonalRingGrid2d<dg::DVec> Geometry;
+//typedef ConformalGrid3d<dg::DVec> Geometry;
+//typedef OrthogonalGrid3d<dg::DVec> Geometry;
+typedef ConformalGrid2d<dg::DVec> Geometry;
+//typedef OrthogonalGrid2d<dg::DVec> Geometry;
 
 int main(int argc, char** argv)
 {
