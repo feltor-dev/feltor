@@ -18,7 +18,7 @@
 
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "feltorS/parameters.h"
+#include "feltorSH/parameters.h"
 int main( int argc, char* argv[])
 {
     if( argc != 4)
@@ -55,7 +55,7 @@ int main( int argc, char* argv[])
     const double kymax = ((p.n_out*p.Ny_out)/2+1)/p.ly;
     dg::Grid2d<double > g2d_f( kxmin,kxmax,kymin,kymax,1.,Nkx ,Nky , p.bc_x, p.bc_y);
     dg::Grid1d<double > g1d_f( kxmin,kxmax,1., Nkx,  p.bc_y);
-    dg::Poisson<dg::HMatrix, dg::HVec> poisson(g2d,  g2d.bcx(), g2d.bcy(),  g2d.bcx(), g2d.bcy());
+    dg::Poisson<dg::cartesian::Grid2d, dg::HMatrix, dg::HVec> poisson(g2d,  g2d.bcx(), g2d.bcy(),  g2d.bcx(), g2d.bcy());
     //2d field netcdf vars read
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
     size_t start2d[3]  = {0, 0, 0};

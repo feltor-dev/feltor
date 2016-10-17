@@ -7,7 +7,7 @@
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
-#include "dg/weiss.h"
+//#include "dg/weiss.h" //MW: not commited?
 #include "dg/backend/interpolation.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
@@ -84,7 +84,7 @@ int main( int argc, char* argv[])
     dg::HVec vor_h(dg::evaluate(dg::zero,g2d));
     dg::DVec xvec = dg::evaluate( dg::cooX2d, g2d);
     dg::DVec yvec = dg::evaluate( dg::cooY2d, g2d);
-    dg::DVec xcoo(dg::evaluate(dg::cooX1d,g1d));
+    dg::HVec xcoo(dg::evaluate(dg::cooX1d,g1d));
     dg::DVec one = dg::evaluate( dg::one, g2d);
     dg::DVec w2d = dg::create::weights( g2d);
     dg::DVec nemamp(dg::evaluate(dg::zero,g2d));
@@ -144,15 +144,15 @@ int main( int argc, char* argv[])
     unsigned Nx = p.Nx*p.n; 
     //routiens to compute ti
     dg::Invert<dg::DVec> invert_invgamma2( helper, helper.size(), 1e-3);
-    dg::Helmholtz2< dg::DMatrix, dg::DVec, dg::DVec > invgamma2( g2d,g2d.bcx(), g2d.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered);
+    dg::Helmholtz2< dg::cartesian::Grid2d, dg::DMatrix, dg::DVec > invgamma2( g2d,g2d.bcx(), g2d.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered);
     dg::DVec binv(dg::evaluate( dg::LinearX( p.mcv, 1.), g2d) );
     dg::DVec B2(dg::evaluate( dg::one, g2d));
     dg::blas1::pointwiseDivide(B2,binv,B2);
     dg::blas1::pointwiseDivide(B2,binv,B2);
-    dg::Elliptic< dg::DMatrix,dg::DVec,dg::DVec> polti(g2d, g2d.bcx(), g2d.bcy(), dg::normed, dg::centered);
+    dg::Elliptic<dg::cartesian::Grid2d, dg::DMatrix, dg::DVec> polti(g2d, g2d.bcx(), g2d.bcy(), dg::normed, dg::centered);
     
     //weiss field
-    dg::Weiss<dg::DMatrix,dg::DVec,dg::DVec> weissfield(g2d,dg::normed, dg::centered);  
+    //dg::Weiss<dg::DMatrix,dg::DVec,dg::DVec> weissfield(g2d,dg::normed, dg::centered);  
     //BLOB COMPACTNESS Heaviside function
     Heaviside2d heavi(2.0* p.sigma);
     double normalize = 1.;
@@ -257,11 +257,11 @@ int main( int argc, char* argv[])
         err_out = nc_put_vara_double( ncid_out, namescomID[9], start1d, count1d, &velY_max);      
 //         std::cout << "maxval "<<*thrust::max_element( helper.begin(), helper.end())<< std::endl;        
         //Compute interpolation matrix for 1d field    
-        dg::DVec y0coone(dg::evaluate(dg::CONSTANT(posY_max_hs ),g1d));
+        dg::HVec y0coone(dg::evaluate(dg::CONSTANT(posY_max_hs ),g1d));
         dg::IDMatrix interpne(dg::create::interpolation(xcoo,y0coone, g2d)) ;
         
         dg::blas2::gemv(interpne,npe[0],helper1d); 
-        transfer1d=helper1d;
+        dg::blas1::transfer( helper1d, transfer1d);
         err_out = nc_put_vara_double( ncid_out, names1dID[0], start1d, count1d, transfer1d.data());    
         
        //get max position and value(x,y_max) of electron temperature
@@ -272,11 +272,11 @@ int main( int argc, char* argv[])
 //         std::cout << "posXmax "<<posX_max<<"posYmax "<<posY_max << std::endl;
 //         std::cout << "maxval "<<*thrust::max_element( helper.begin(), helper.end())<< std::endl;        
         //Compute interpolation matrix for 1d field    
-        dg::DVec y0coote(dg::evaluate(dg::CONSTANT(posY_max_hs ),g1d));
+        dg::HVec y0coote(dg::evaluate(dg::CONSTANT(posY_max_hs ),g1d));
         dg::IDMatrix interpte(dg::create::interpolation(xcoo,y0coote, g2d)) ;
         
         dg::blas2::gemv(interpte,tpe[0],helper1d); 
-        transfer1d=helper1d;
+        dg::blas1::transfer( helper1d, transfer1d);
         err_out = nc_put_vara_double( ncid_out, names1dID[1], start1d, count1d, transfer1d.data());    
         
         
@@ -350,7 +350,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv(polti,phi,helper); 
         dg::blas1::pointwiseDot(helper,helper2,helper);
         dg::blas1::axpby(1.0,helper3,p.mu[1],helper,helper3);
-        transfer2d = helper3;
+        dg::blas1::transfer( helper3, transfer2d);
         err_out = nc_put_vara_double( ncid_out, names2dID[3], start2d, count2d, transfer2d.data());
 
   /*
@@ -369,7 +369,7 @@ int main( int argc, char* argv[])
         dg::blas2::gemv(interpti, helper2,helper1d); 
         transfer1d=helper1d;
         err_out = nc_put_vara_double( ncid_out, names1dID[2], start1d, count1d, transfer1d.data());      */
-        transfer1d=xcoo;
+        dg::blas1::transfer( xcoo, transfer1d);
         err_out = nc_put_vara_double( ncid_out, names1dID[3],   start1d, count1d,transfer1d.data());       
         
         dg::blas1::transform(npe[0], npe[0], dg::PLUS<double>(-p.bgprofamp - p.nprofileamp));

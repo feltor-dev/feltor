@@ -28,6 +28,8 @@ unsigned max_out;
 double amp, imp_amp; //
 double blob_width, posX, posY;
 
+//MW: DEPRECATED! Uses old file format! Change before USING//
+
 void write_probe( const Mat& field, std::vector<double>* total, std::vector<double>* fluct)
 {
     unsigned nx = field.cols();

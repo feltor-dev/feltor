@@ -11,7 +11,7 @@
 #include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "feltorS/parameters.h"
+#include "feltorSH/parameters.h"
 
 /**
  * @brief normalizes input vector 
