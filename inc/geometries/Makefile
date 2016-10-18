@@ -7,34 +7,18 @@ include ../../config/devices/devices.mk
 
 INCLUDE+= -I../../inc   # other project libraries
 
-all: guenther_ds_b geometry_diag
+CUFILES=$(wildcard *.cu)
+
+all: $(CUFILES:%.cu=%)
 
 ds_geom_t: ds_geom_t.cu solovev.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS) $(JSONLIB)  -DDG_BENCHMARK 
 
-solovev_t: solovev_t.cu solovev.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS) $(JSONLIB)  -DDG_BENCHMARK 
-
-conformal_t: conformal_t.cu conformal.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-
-ribeiro_t: ribeiro_t.cu ribeiro.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-	
-flux_t: flux_t.cu flux.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-	
-orthogonal_t: orthogonal_t.cu orthogonal.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-
-conformalX_t: conformalX_t.cu conformalX.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-
-orthogonalX_t: orthogonalX_t.cu orthogonalX.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g
-	
 geometry_diag: geometry_diag.cu solovev.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) $(JSONLIB) 
+
+%_t: %_t.cu %.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g 
 
 %_mpit: %_mpit.cu 
 	$(MPICC) $(INCLUDE) $(MPICFLAGS)  $< -o $@ -g $(LIBS) $(JSONLIB)
@@ -43,7 +27,8 @@ geometry_diag: geometry_diag.cu solovev.h
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ -g $(INCLUDE) $(LIBS) $(JSONLIB)
 
 %_b: %_b.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)  $(LIBS) $(JSONLIB) -g 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g 
+
 
 .PHONY: clean doc
 

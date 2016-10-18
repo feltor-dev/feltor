@@ -528,6 +528,8 @@ struct OrthogonalGrid2d : public dg::Grid2d
     container g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
+///@}
+
 /**
  * @brief Integrates the equations for a field line and 1/B
  */ 
@@ -596,7 +598,5 @@ struct Field
     thrust::host_vector<double> g_;
    
 };
-
-///@}
 
 }//namespace dg

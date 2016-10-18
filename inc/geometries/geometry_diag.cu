@@ -116,11 +116,6 @@ int main( int argc, char* argv[])
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
-    //old boxscale
-//     double Rmin=gp.R_0-p.boxscaleRp*gp.a;
-//     double Zmin=-p.boxscaleRp*gp.a*gp.elongation;
-//     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
-//     double Zmax=p.boxscaleRp*gp.a*gp.elongation;
  
     //construct all geometry quantities
     solovev::Psip psip(gp);
@@ -133,6 +128,27 @@ int main( int argc, char* argv[])
     solovev::InvB invB(gp);
     solovev::BR bR(gp);
     solovev::BZ bZ(gp);
+    const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
+    const double Z_X = -1.1*gp.elongation*gp.a;
+    const double R_H = gp.R_0-gp.triangularity*gp.a;
+    const double Z_H = gp.elongation*gp.a;
+    const double alpha_ = asin(gp.triangularity);
+    const double N1 = -(1.+alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.+alpha_);
+    const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
+    const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
+    std::cout << "TEST ACCURACY OF PSI\n";
+    std::cout << "psip( 1+e,0)           "<<psip(gp.R_0 + gp.a, 0.)<<"\n";
+    std::cout << "psip( 1-e,0)           "<<psip(gp.R_0 - gp.a, 0.)<<"\n";
+    std::cout << "psip( 1-de,ke)         "<<psip(R_H, Z_H)<<"\n";
+    std::cout << "psip( 1-1.1de,-1.1ke)  "<<psip(R_X, Z_X)<<"\n";
+    std::cout << "psipZ( 1+e,0)          "<<psipZ(gp.R_0 + gp.a, 0.)<<"\n";
+    std::cout << "psipZ( 1-e,0)          "<<psipZ(gp.R_0 - gp.a, 0.)<<"\n";
+    std::cout << "psipR( 1-de,ke)        "<<psipR(R_H,Z_H)<<"\n";
+    std::cout << "psipR( 1-1.1de,-1.1ke) "<<psipR(R_X,Z_X)<<"\n";
+    std::cout << "psipZ( 1-1.1de,-1.1ke) "<<psipZ(R_X,Z_X)<<"\n";
+    std::cout << "psipZZ( 1+e,0)         "<<psipZZ(gp.R_0+gp.a,0.)+N1*psipR(gp.R_0+gp.a,0)<<"\n";
+    std::cout << "psipZZ( 1-e,0)         "<<psipZZ(gp.R_0-gp.a,0.)+N2*psipR(gp.R_0-gp.a,0)<<"\n";
+    std::cout << "psipRR( 1-de,ke)       "<<psipRR(R_H,Z_H)+N3*psipZ(R_H,Z_H)<<"\n";
 
     //Feltor quantities
     solovev::CurvatureNablaBR curvatureR(gp);

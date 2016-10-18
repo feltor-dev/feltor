@@ -54,10 +54,10 @@ int main(int argc, char**argv)
 //     ConformalGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
 //     ConformalGrid2d<dg::DVec> g2d = g3d.perp_grid();
 //     dg::Elliptic<ConformalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::RefinedOrthogonalGrid3d<dg::DVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
-    dg::RefinedOrthogonalGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<dg::RefinedOrthogonalGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
-    dg::RefinedElliptic<dg::RefinedOrthogonalGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
+    dg::OrthogonalRefinedGrid3d<dg::DVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    dg::OrthogonalRefinedGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<dg::OrthogonalRefinedGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+    dg::RefinedElliptic<dg::OrthogonalRefinedGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////

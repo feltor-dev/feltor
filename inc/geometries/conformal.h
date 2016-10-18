@@ -8,8 +8,6 @@ namespace dg{
 ///@addtogroup grids
 ///@{
 
-typedef dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> Generator;
-
 ///@cond
 template< class container>
 struct ConformalGrid2d; 
