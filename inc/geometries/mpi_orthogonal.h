@@ -8,40 +8,26 @@
 
 
 
-namespace orthogonal
+namespace dg
 {
 
 ///@cond
 template< class container>
-struct MPIGrid2d; 
+struct OrthogonalMPIGrid2d; 
 ///@endcond
 
 /**
- * @brief A three-dimensional grid based on "almost-orthogonal" coordinates by Ribeiro and Scott 2010 (MPI Version)
- *
- * @tparam container Vector class that holds metric coefficients
+ * @tparam LocalContainer Vector class that holds metric coefficients
  */
 template<class LocalContainer>
-struct MPIGrid3d : public dg::MPI_Grid3d
+struct OrthogonalMPIGrid3d : public dg::MPIGrid3d
 {
     typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
     typedef MPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
 
-    /**
-     * @brief Construct 
-     *
-     * @param gp The geometric parameters define the magnetic field
-     * @param psi_0 lower boundary for psi
-     * @param psi_1 upper boundary for psi
-     * @param n The dG number of polynomials
-     * @param Nx The number of points in x-direction
-     * @param Ny The number of points in y-direction
-     * @param Nz The number of points in z-direction
-     * @param bcx The boundary condition in x (y,z are periodic)
-     * @param comm The mpi communicator class
-     */
-    MPIGrid3d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
-        dg::MPI_Grid3d( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
+    template< class Generator>
+    MPIGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
+        dg::MPIGrid3d( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
     {
@@ -101,7 +87,7 @@ struct MPIGrid3d : public dg::MPI_Grid3d
  * @brief A two-dimensional grid based on "almost-orthogonal" coordinates by Ribeiro and Scott 2010
  */
 template<class LocalContainer>
-struct MPIGrid2d : public dg::MPI_Grid2d
+struct OrthogonalMPIGrid2d : public dg::MPI_Grid2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category; 
 
@@ -195,5 +181,5 @@ struct MPIGrid2d : public dg::MPI_Grid2d
     dg::MPI_Vector<LocalContainer> g_xx_, g_xy_, g_yy_, vol2d_;
 };
 
-}//namespace orthogonal
+}//namespace dg
 

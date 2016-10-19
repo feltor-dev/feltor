@@ -61,7 +61,7 @@ struct FuncDirPer2
 
 struct ArakawaDirPer
 {
-    ArakawaDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1), g_(gp, psi_0, psi_1){}
+    ArakawaDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1, 1), g_(gp, psi_0, psi_1){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
     }
@@ -74,7 +74,7 @@ struct ArakawaDirPer
 };
 struct VariationDirPer
 {
-    VariationDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1){}
+    VariationDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1,1. ){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
 
@@ -87,7 +87,7 @@ struct VariationDirPer
 
 struct CurvatureDirPer
 {
-    CurvatureDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1), curvR(gp), curvZ(gp){}
+    CurvatureDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1,1.), curvR(gp), curvZ(gp){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
@@ -95,14 +95,14 @@ struct CurvatureDirPer
     }
     private:
     solovev::FuncDirPer f_;
-    solovev::CurvatureR curvR;
-    solovev::CurvatureZ curvZ;
+    solovev::CurvatureNablaBR curvR;
+    solovev::CurvatureNablaBZ curvZ;
 };
 
 
 //typedef ConformalGrid3d<dg::DVec> Geometry;
 //typedef OrthogonalGrid3d<dg::DVec> Geometry;
-typedef ConformalGrid2d<dg::DVec> Geometry;
+typedef dg::CurvilinearGrid2d<dg::DVec> Geometry;
 //typedef OrthogonalGrid2d<dg::DVec> Geometry;
 
 int main(int argc, char** argv)
@@ -139,15 +139,17 @@ int main(int argc, char** argv)
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    //Geometry grid(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);//3d
-    Geometry grid(gp, psi_0, psi_1, n, Nx, Ny, dg::DIR); //2d
+    solovev::CollectivePsip c( gp);
+    dg::Ribeiro<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ>
+        ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
+    Geometry grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
 
     dg::DVec vol = dg::create::volume( grid);
     std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
 
-    solovev::FuncDirPer left( gp, psi_0, psi_1);
+    solovev::FuncDirPer left( gp, psi_0, psi_1, 1);
     FuncDirPer2 right( gp, psi_0, psi_1);
     ArakawaDirPer jacobian( gp, psi_0, psi_1);
     VariationDirPer variationLHS( gp, psi_0, psi_1);
@@ -203,7 +205,7 @@ int main(int argc, char** argv)
     std::cout << "TESTING CURVATURE 3D\n";
     dg::DVec curvX, curvY;
     dg::HVec tempX, tempY;
-    dg::geo::pushForwardPerp(solovev::CurvatureR(gp), solovev::CurvatureZ(gp), tempX, tempY, grid);
+    dg::geo::pushForwardPerp(solovev::CurvatureNablaBR(gp), solovev::CurvatureNablaBZ(gp), tempX, tempY, grid);
     dg::blas1::transfer(  tempX, curvX);
     dg::blas1::transfer(  tempY, curvY);
     dg::DMatrix dx, dy;

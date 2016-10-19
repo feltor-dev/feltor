@@ -64,7 +64,7 @@ struct FuncDirPer2
 
 struct ArakawaDirPer
 {
-    ArakawaDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1), g_(gp, psi_0, psi_1){}
+    ArakawaDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1,1.), g_(gp, psi_0, psi_1){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
     }
@@ -77,7 +77,7 @@ struct ArakawaDirPer
 };
 struct VariationDirPer
 {
-    VariationDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1){}
+    VariationDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1,1.){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
 
@@ -90,7 +90,7 @@ struct VariationDirPer
 
 struct CurvatureDirPer
 {
-    CurvatureDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1), curvR(gp), curvZ(gp){}
+    CurvatureDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1, 1.), curvR(gp), curvZ(gp){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
@@ -105,7 +105,7 @@ struct CurvatureDirPer
 
 //typedef  ConformalMPIGrid3d<dg::DVec> Geometry;
 //typedef OrthogonalMPIGrid3d<dg::DVec> Geometry;
-typedef  ConformalMPIGrid2d<dg::DVec> Geometry;
+typedef  CurvilinearMPIGrid2d<dg::DVec> Geometry;
 //typedef OrthogonalMPIGrid2d<dg::DVec> Geometry;
 
 int main(int argc, char** argv)

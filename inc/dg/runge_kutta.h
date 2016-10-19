@@ -322,9 +322,17 @@ const double rk_classic<17>::b[17] = {
 * @ingroup time
 *
 * Uses only dg::blas1::axpby() routines to integrate one step.
-* The coefficients are chosen in a form that require a minimum of 
-* axpby function calls (check for alpha==0, beta==1) and else 
-* assumes that most of the work is done in the computation of the rhs.
+ * The coefficients are in the form Cockburn proposed in his paper.
+ * It's just a reformulation in that you don't store the sequence of
+ * k_j but rather the abscissas u_j with k_j = f(u_j)
+ *  Note that if you knew all k_j you can compute this
+ *  sequence u_j via u=Bk. To derive these coefficients from the butcher tableau
+ * consider.
+ * \f[ u = Bhk = (B-D)hk + Dhk = (B-D)B^{-1}y + Dhk 
+ *       = ( 1- DB^{-1})u + Dhk = \alpha u + \beta h k\f]
+ *  where \f$ B\f$ is the butcher tableau without the c's and extended
+ *  by ones on the left and \f$ D\f$ its
+ *  diagonal part. 
 * @tparam k Order of the method (1, 2, 3 or 4)
 * @tparam Vector The argument type used in the Functor class
 */
@@ -398,10 +406,9 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
 * @ingroup time 
 *
 * Uses only dg::blas1::axpby() routines to integrate one step.
-* The coefficients are chosen in a form that require a minimum of 
-* axpby function calls (check for alpha==0, beta==1) and else 
-* assumes that most of the work is done in the computation of the rhs.
-* @tparam s Order of the method (1, 2, 3 or 4)
+* The coefficients are chosen in the classic form given by Runge and Kutta. 
+* Needs more calls for axpby than our RK class but we implemented higher orders
+* @tparam s Order of the method (1, 2, 3, 4, 6, 17)
 * @tparam Vector The argument type used in the Functor class
 */
 template< size_t s, class Vector>
@@ -480,7 +487,7 @@ struct NotANumber : public std::exception
  * @ingroup time 
  * @tparam RHS The right-hand side class
  * @tparam Vector Vector-class (needs to be copyable)
- * @tparam s # of stages
+ * @tparam s # of stages (1, 2, 3, 4, 6, 17)
  * @param rhs The right-hand-side
  * @param begin initial condition (size 3)
  * @param end (write-only) contains solution on output
