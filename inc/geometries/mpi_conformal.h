@@ -2,7 +2,7 @@
 
 #include <mpi.h>
 
-#include "orthogonal.h"
+#include "conformal.h"
 #include "dg/backend/mpi_grid.h"
 #include "dg/backend/mpi_vector.h"
 
@@ -13,7 +13,7 @@ namespace dg
 
 ///@cond
 template< class container>
-struct OrthogonalMPIGrid2d; 
+struct ConformalMPIGrid2d; 
 ///@endcond
 //
 ///@addtogroup grids
@@ -23,9 +23,9 @@ struct OrthogonalMPIGrid2d;
  * @tparam LocalContainer Vector class that holds metric coefficients
  */
 template<class LocalContainer>
-struct OrthogonalMPIGrid3d : public dg::MPIGrid3d
+struct ConformalMPIGrid3d : public dg::MPIGrid3d
 {
-    typedef dg::OrthogonalTag metric_category; //!< metric tag
+    typedef dg::ConformalCylindricalTag metric_category; //!< metric tag
     typedef MPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
 
     template< class Generator>
@@ -34,7 +34,7 @@ struct OrthogonalMPIGrid3d : public dg::MPIGrid3d
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
     {
-        dg::OrthogonalGrid3d<LocalContainer> g( generator, n,Nx, Ny, local().Nz(), bcx);
+        dg::ConformalGrid3d<LocalContainer> g( generator, n,Nx, Ny, local().Nz(), bcx);
 
         //divide and conquer
         int dims[3], periods[3], coords[3];
@@ -88,9 +88,9 @@ struct OrthogonalMPIGrid3d : public dg::MPIGrid3d
  * @brief A two-dimensional grid based on "almost-orthogonal" coordinates by Ribeiro and Scott 2010
  */
 template<class LocalContainer>
-struct OrthogonalMPIGrid2d : public dg::MPIGrid2d
+struct ConformalMPIGrid2d : public dg::MPIGrid2d
 {
-    typedef dg::OrthogonalTag metric_category; 
+    typedef dg::ConformalCylindricalTag metric_category; 
 
     template< class Generator>
     MPIGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
@@ -98,7 +98,7 @@ struct OrthogonalMPIGrid2d : public dg::MPIGrid2d
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), 
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
     {
-        dg::OrthogonalGrid2d<LocalContainer> g( generator, n,Nx, Ny, bcx);
+        dg::ConformalGrid2d<LocalContainer> g( generator, n,Nx, Ny, bcx);
         //divide and conquer
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( communicator(), 2, dims, periods, coords);
