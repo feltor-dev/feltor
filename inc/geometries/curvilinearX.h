@@ -19,10 +19,12 @@ namespace detail
 {
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
+template< class Psi, class PsiX, class PsiY>
 struct FpsiX
 {
-    FpsiX( const solovev::GeomParameters& gp): 
+    FpsiX( Psi psi, PsiX psiX, PsiY psiY, double x0, double y0, int mode): 
         gp_(gp), fieldRZYT_(gp), fieldRZYZ_(gp), hessianRZtau_(gp), minimalCurve_(gp)
+        psip_(psi), fieldRZYTribeiro_(psiX, psiY, x0, y0),fieldRZYTequalarc_(psiX, psiY, x0, y0), fieldRZtau_(psiX, psiY), mode_(mode)
     {
         /**
          * @brief Find R,Z of the X-point
@@ -32,7 +34,6 @@ struct FpsiX
          * @return the value for R
          */
         dg::detail::XCross xpointer_(gp, 1e-4);
-        solovev::Psip psip_(gp);
         solovev::FieldRZtau fieldRZtau_(gp);
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin), end_old(end);
         double eps[] = {1e-11, 1e-12, 1e-11, 1e-12};
@@ -449,6 +450,120 @@ struct XFieldFinv
     double xAtOne_;
 };
 } //namespace detail
+
+/**
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @ingroup generators
+ * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ */
+template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
+struct Ribeiro
+{
+    /**
+     * @brief Construct a near-conformal grid generator
+     *
+     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param psi_0 first boundary 
+     * @param psi_1 second boundary
+     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
+     */
+    Ribeiro( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi_0, double psi_1, 
+            double xX, double yX, double x0, double y0, int firstline ):
+        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), mode_(mode)
+    {
+        assert( psi_1 != psi_0);
+        ribeiro::detail::FpsiX<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, mode);
+        lx_ = fabs(fpsi.find_x1( psi_0, psi_1));
+        x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
+        //std::cout << "lx_ = "<<lx_<<"\n";
+    }
+    /**
+     * @brief The length of the zeta-domain
+     *
+     * Call before discretizing the zeta domain
+     * @return length of zeta-domain (f0*(psi_1-psi_0))
+     * @note the length is always positive
+     */
+    double width() const{return lx_;}
+    /**
+     * @brief 2pi (length of the eta domain)
+     *
+     * Always returns 2pi
+     * @return 2pi 
+     */
+    double height() const{return 2.*M_PI;}
+    /**
+     * @brief The vector f(x)
+     *
+     * @return f(x)
+     */
+    thrust::host_vector<double> fx() const{ return fx_;}
+    /**
+     * @brief Generate the points and the elements of the Jacobian
+     *
+     * Call the width() and height() function before calling this function!
+     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
+     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
+     * @param x  = x(zeta,eta)
+     * @param y  = y(zeta,eta)
+     * @param zetaX = zeta_x(zeta,eta)
+     * @param zetaY = zeta_y(zeta,eta)
+     * @param etaX = eta_x(zeta,eta)
+     * @param etaY = eta_y(zeta,eta)
+     * @note All the resulting vectors are write-only and get properly resized
+     */
+    void operator()( 
+         const thrust::host_vector<double>& zeta1d, 
+         const thrust::host_vector<double>& eta1d, 
+         thrust::host_vector<double>& x, 
+         thrust::host_vector<double>& y, 
+         thrust::host_vector<double>& zetaX, 
+         thrust::host_vector<double>& zetaY, 
+         thrust::host_vector<double>& etaX, 
+         thrust::host_vector<double>& etaY) 
+    {
+        //compute psi(x) for a grid on x and call construct_rzy for all psi
+        ribeiro::detail::FieldFinv<Psi, PsiX, PsiY> fpsiMinv_(psi_, psiX_, psiY_, x0_,y0_, 500, mode_);
+        thrust::host_vector<double> psi_x;
+        dg::detail::construct_psi_values( fpsiMinv_, psi0_, psi1_, 0., zeta1d, lx_, psi_x, fx_);
+
+        //std::cout << "In grid function:\n";
+        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
+        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        solovev::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        unsigned size = zeta1d.size()*eta1d.size();
+        x.resize(size), y.resize(size);
+        zetaX = zetaY = etaX = etaY =x ;
+        thrust::host_vector<double> f_p(fx_);
+        unsigned Nx = zeta1d.size(), Ny = eta1d.size();
+        for( unsigned i=0; i<zeta1d.size(); i++)
+        {
+            thrust::host_vector<double> ry, zy;
+            thrust::host_vector<double> yr, yz, xr, xz;
+            double R0, Z0;
+            if(mode_==0)dg::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==1)dg::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            for( unsigned j=0; j<Ny; j++)
+            {
+                x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
+                etaX[j*Nx+i] = yr[j], etaY[j*Nx+i] = yz[j];
+                zetaX[j*Nx+i] = xr[j], zetaY[j*Nx+i] = xz[j];
+            }
+        }
+    }
+    private:
+    Psi psi_;
+    PsiX psiX_;
+    PsiY psiY_;
+    PsiXX psiXX_;
+    PsiXY psiXY_;
+    PsiYY psiYY_;
+    thrust::host_vector<double> fx_;
+    double lx_, x0_, y0_, psi0_, psi1_;
+    int mode_; //0 = ribeiro, 1 = equalarc
+};
 
 template< class container>
 struct GridX2d; 

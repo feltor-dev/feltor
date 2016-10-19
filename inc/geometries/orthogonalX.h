@@ -289,10 +289,7 @@ struct SimpleOrthogonalX
  * @brief Choose points on separatrix
  *
  * @ingroup generators
- * @tparam Psi
- * @tparam PsiX
- * @tparam PsiY
- * @tparam LaplacePsi
+ * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SeparatrixOrthogonal
