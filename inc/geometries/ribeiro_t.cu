@@ -168,9 +168,7 @@ int main( int argc, char* argv[])
     //dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
 //     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e3, 1e3, dg::PER, dg::PER);
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
-
     dg::HVec vec  = dg::evaluate( iris, g2dC);
-
     dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);

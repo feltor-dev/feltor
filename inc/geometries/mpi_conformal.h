@@ -26,10 +26,10 @@ template<class LocalContainer>
 struct ConformalMPIGrid3d : public dg::MPIGrid3d
 {
     typedef dg::ConformalCylindricalTag metric_category; //!< metric tag
-    typedef MPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
+    typedef dg::ConformalMPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
 
     template< class Generator>
-    MPIGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
+    ConformalMPIGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
         dg::MPIGrid3d( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
@@ -65,7 +65,7 @@ struct ConformalMPIGrid3d : public dg::MPIGrid3d
 
     //these are for the Field class
 
-    perpendicular_grid perp_grid() const { return MPIGrid2d<LocalContainer>(*this);}
+    perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
 
     const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& z()const{return z_;}
@@ -93,7 +93,7 @@ struct ConformalMPIGrid2d : public dg::MPIGrid2d
     typedef dg::ConformalCylindricalTag metric_category; 
 
     template< class Generator>
-    MPIGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
+    ConformalMPIGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
         dg::MPIGrid2d( 0, 1, 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), 
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
@@ -122,7 +122,7 @@ struct ConformalMPIGrid2d : public dg::MPIGrid2d
                             vol2d_.data()[idx1] = g.perpVol()[idx2];
                         }
     }
-    MPIGrid2d( const MPIGrid3d<LocalContainer>& g):
+    ConformalMPIGrid2d( const ConformalMPIGrid3d<LocalContainer>& g):
         dg::MPIGrid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), 
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
@@ -169,4 +169,5 @@ struct ConformalMPIGrid2d : public dg::MPIGrid2d
 };
 ///@}
 }//namespace dg
+
 

@@ -15,8 +15,9 @@
 #include "dg/backend/mpi_init.h"
 //#include "guenther.h"
 #include "solovev.h"
-#include "mpi_ribeiro.h"
+#include "mpi_curvilinear.h"
 #include "mpi_orthogonal.h"
+#include "mpi_conformal.h"
 #include "dg/ds.h"
 #include "init.h"
 
@@ -27,8 +28,8 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-//typedef dg::MPI_FieldAligned< ConformalMPIGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
-typedef dg::MPI_FieldAligned< OrthogonalMPIGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
+//typedef dg::MPI_FieldAligned< dg::CurvilinearMPIGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
+typedef dg::MPI_FieldAligned< dg::OrthogonalMPIGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
 
 //should be the same as conformal_t.cu, except for the periodify
 int main( int argc, char* argv[])
@@ -62,12 +63,17 @@ int main( int argc, char* argv[])
     if(rank==0)gp.display( std::cout);
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
-    if(rank==0)std::cout << "Constructing conformal grid ... \n";
+    if(rank==0)std::cout << "Constructing grid ... \n";
     t.tic();
-    //ConformalMPIGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR,comm);
-    //ConformalMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    OrthogonalMPIGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
-    OrthogonalMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    solovev::CollectivePsip c( gp);
+    //dg::Ribeiro<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ>
+    //    ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
+    //CurvilinearMPIGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR,comm);
+    //CurvilinearMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> 
+        orthogonal( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
+    dg::OrthogonalMPIGrid3d<dg::HVec> g3d(orthogonal, n, Nx, Ny,Nz, dg::DIR, comm);
+    dg::OrthogonalMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -77,12 +83,14 @@ int main( int argc, char* argv[])
     err = nc_create_par( "test_mpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, g2d.communicator(), info, &ncid); //MPI ON
     int dim3d[2];
     err = file::define_dimensions(  ncid, dim3d, g2d.global());
-    int coordsID[2], onesID, defID, divBID;
+    int coordsID[2], onesID, defID,confID, volID, divBID;
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim3d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim3d, &coordsID[1]);
     //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim3d, &onesID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim3d, &defID);
+    err = nc_def_var( ncid, "conformal", NC_DOUBLE, 2, dim3d, &confID);
+    err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
     int dims[2], periods[2],  coords[2];
@@ -106,7 +114,7 @@ int main( int argc, char* argv[])
     }
 
     dg::MHVec temp0( dg::evaluate(dg::zero, g2d)), temp1(temp0);
-    dg::MHVec w3d = dg::create::weights( g2d);
+    dg::MHVec w2d = dg::create::weights( g2d);
 
     err = nc_put_vara_double( ncid, coordsID[0], start,count, X.data());
     err = nc_put_vara_double( ncid, coordsID[1], start,count, Y.data());
@@ -116,7 +124,7 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
     const dg::MHVec ones = dg::evaluate( dg::one, g2d);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
-    X=temp0.data();
+    dg::blas1::transfer( temp0.data(), X);
     err = nc_put_vara_double( ncid, defID, start,count, X.data());
 
     if(rank==0)std::cout << "Construction successful!\n";
@@ -125,33 +133,29 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
     dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
-    //dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
-    //dg::blas1::pointwiseDot( f_, f_, temp1);
-    temp1 = ones;
-    dg::blas1::axpby( 0.0, temp1, 1.0, g2d.g_xx(),  temp1);
+    dg::blas1::transfer( g2d.g_xx(),  temp1);
     dg::blas1::pointwiseDot( temp1, temp1, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
-    double error = sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1));
+    double error = sqrt( dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( temp1, w2d, temp1));
     if(rank==0)std::cout<< "Rel Error in Determinant is "<<error<<"\n";
 
+    //compute error in determinant vs volume form
     dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
     dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
-    //dg::blas1::pointwiseDot( temp0, g.g_pp(), temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
+    dg::blas1::transfer( temp0.data(), X);
+    err = nc_put_var_double( ncid, volID, X.data());
     dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
-    error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g2d.vol(), w3d, g2d.vol()));
+    error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( g2d.vol(), w2d, g2d.vol()));
     if(rank==0)std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
-    //temp0=g.r();
-    //dg::blas1::pointwiseDivide( temp0, g.g_xx(), temp0);
-    //dg::blas1::pointwiseDot( f_, f_, temp0);
-    dg::blas1::axpby( 0.0,temp0 , 1.0, g2d.g_xx(), temp0);
+    //compare g^xx to volume form
+    dg::blas1::transfer( g2d.g_xx(), temp0);
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    //dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
-    dg::blas1::axpby( 1., ones, -1., g2d.vol(), temp0);
-    error=sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()));
+    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
+    error=sqrt(dg::blas2::dot( temp0, w2d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w2d, g2d.vol()));
     if(rank==0)std::cout << "Rel Error of volume form is "<<error<<"\n";
 
     const dg::MHVec vol = dg::create::volume( g3d);
@@ -163,9 +167,9 @@ int main( int argc, char* argv[])
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
     solovev::Iris iris( gp);
     //dg::CylindricalGrid<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
-    dg::CartesianMPIGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e3, 1e3, dg::DIR, dg::PER, g2d.communicator());
+    dg::CartesianMPIGrid2d g2dC( gp.R_0 -2.*gp.a, gp.R_0 + 2.*gp.a, -2.*gp.a, 2.*gp.a, 1, 2e3, 2e3, dg::DIR, dg::PER, g2d.communicator());
     dg::MHVec vec  = dg::evaluate( iris, g2dC);
-    dg::MHVec R  = dg::evaluate( dg::coo1, g2dC);
+    dg::MHVec R  = dg::evaluate( dg::cooX2d, g2dC);
     dg::MHVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);
     if(rank==0)std::cout << "volumeXYP is "<< volume<<std::endl;
@@ -177,10 +181,10 @@ int main( int argc, char* argv[])
     //if(rank==0)std::cout << "Start DS test!"<<std::endl;
     //const dg::MHVec vol3d = dg::create::volume( g3d);
     //t.tic();
-    ////DFA fieldaligned( ConformalField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
+    ////DFA fieldaligned( CurvilinearField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
     //DFA fieldaligned( OrthogonalField( gp, g2d.global(), g2d.f2_xy()), g3d, gp.rk4eps, dg::NoLimiter()); 
 
-    ////dg::DS<DFA, dg::MHMatrix, dg::MHVec> ds( fieldaligned, ConformalField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
+    ////dg::DS<DFA, dg::MHMatrix, dg::MHVec> ds( fieldaligned, CurvilinearField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
     //dg::DS<DFA, dg::MHMatrix, dg::MHVec> ds( fieldaligned, OrthogonalField(gp, g2d.global(), g2d.f2_xy()), dg::normed, dg::centered);
     //t.toc();
     //if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";

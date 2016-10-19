@@ -13,7 +13,7 @@
 
 #include "solovev.h"
 #include "fields.h"
-#include "mpi_conformal.h"
+#include "mpi_curvilinear.h"
 #include "mpi_orthogonal.h"
 
 struct FuncDirPer2
@@ -98,15 +98,15 @@ struct CurvatureDirPer
     }
     private:
     solovev::FuncDirPer f_;
-    solovev::CurvatureR curvR;
-    solovev::CurvatureZ curvZ;
+    solovev::CurvatureNablaBR curvR;
+    solovev::CurvatureNablaBZ curvZ;
 };
 
 
-//typedef  ConformalMPIGrid3d<dg::DVec> Geometry;
-//typedef OrthogonalMPIGrid3d<dg::DVec> Geometry;
-typedef  CurvilinearMPIGrid2d<dg::DVec> Geometry;
-//typedef OrthogonalMPIGrid2d<dg::DVec> Geometry;
+//typedef  dg::ConformalMPIGrid3d<dg::DVec> Geometry;
+//typedef dg::OrthogonalMPIGrid3d<dg::DVec> Geometry;
+//typedef  dg::CurvilinearMPIGrid2d<dg::DVec> Geometry;
+typedef dg::OrthogonalMPIGrid2d<dg::DVec> Geometry;
 
 int main(int argc, char** argv)
 {
@@ -116,25 +116,19 @@ int main(int argc, char** argv)
     MPI_Comm comm;
     mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    std::vector<double> v, v2;
-    try{ 
-        if( argc==1)
-        {
-            v = file::read_input( "geometry_params_Xpoint.txt"); 
-        }
-        else
-        {
-            v = file::read_input( argv[1]); 
-        }
+    Json::Reader reader;
+    Json::Value js;
+    if( argc==1)
+    {
+        std::ifstream is("geometry_params_Xpoint.js");
+        reader.parse(is,js,false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-            if(rank==0)std::cout << v[i] << " ";
-            if(rank==0)std::cout << std::endl;
-        return -1;}
-    //write parameters from file into variables
-    solovev::GeomParameters gp(v);
+    else
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
+    solovev::GeomParameters gp(js);
     solovev::Psip psip( gp); 
     if(rank==0)std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
@@ -150,14 +144,19 @@ int main(int argc, char** argv)
         MPI_Comm planeComm;
         int remain_dims[] = {true,true,false}; //true true false
         MPI_Cart_sub( comm, remain_dims, &planeComm);
-    Geometry grid(gp, psi_0, psi_1, n, Nx, Ny,dg::DIR, planeComm); //2d
+    solovev::CollectivePsip c( gp);
+    //dg::Ribeiro<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ>
+    //    generator( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
+    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> 
+        generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
+    Geometry grid(generator, n, Nx, Ny,dg::DIR, planeComm); //2d
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
 
     dg::MDVec vol = dg::create::volume( grid);
     if(rank==0)std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
 
-    solovev::FuncDirPer left( gp, psi_0, psi_1);
+    solovev::FuncDirPer left( gp, psi_0, psi_1,1.);
     FuncDirPer2 right( gp, psi_0, psi_1);
     ArakawaDirPer jacobian( gp, psi_0, psi_1);
     VariationDirPer variationLHS( gp, psi_0, psi_1);
@@ -213,7 +212,7 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "TESTING CURVATURE 3D\n";
     dg::MDVec curvX, curvY;
     dg::MHVec tempX, tempY;
-    dg::geo::pushForwardPerp(solovev::CurvatureR(gp), solovev::CurvatureZ(gp), tempX, tempY, grid);
+    dg::geo::pushForwardPerp(solovev::CurvatureNablaBR(gp), solovev::CurvatureNablaBZ(gp), tempX, tempY, grid);
     dg::blas1::transfer(  tempX, curvX);
     dg::blas1::transfer(  tempY, curvY);
     dg::MDMatrix dx, dy;
