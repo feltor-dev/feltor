@@ -14,27 +14,27 @@ namespace dg
 /**
  * @brief The mpi version of a cartesian grid
  */
-struct CartesianMPIGrid2d : public dg::MPI_Grid2d
+struct CartesianMPIGrid2d : public dg::MPIGrid2d
 {
     typedef OrthonormalTag metric_category; 
 
-    CartesianMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): dg::MPI_Grid2d( x0, x1, y0, y1, n, Nx, Ny, comm){}
+    CartesianMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): dg::MPIGrid2d( x0, x1, y0, y1, n, Nx, Ny, comm){}
 
-    CartesianMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):dg::MPI_Grid2d( x0, x1, y0, y1, n, Nx, Ny,bcx, bcy, comm){}
-    CartesianMPIGrid2d( const dg::MPI_Grid2d& grid ):MPI_Grid2d( grid){}
+    CartesianMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):dg::MPIGrid2d( x0, x1, y0, y1, n, Nx, Ny,bcx, bcy, comm){}
+    CartesianMPIGrid2d( const dg::MPIGrid2d& grid ):MPIGrid2d( grid){}
 };
 
 /**
  * @brief The mpi version of a cartesian grid
  */
-struct CartesianMPIGrid3d : public dg::MPI_Grid3d
+struct CartesianMPIGrid3d : public dg::MPIGrid3d
 {
     typedef OrthonormalTag metric_category; 
 
-    CartesianMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): dg::MPI_Grid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, comm){}
+    CartesianMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, comm){}
 
-    CartesianMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):dg::MPI_Grid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm){}
-    CartesianMPIGrid3d( const dg::MPI_Grid3d& grid ): dg::MPI_Grid3d( grid){}
+    CartesianMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm){}
+    CartesianMPIGrid3d( const dg::MPIGrid3d& grid ): dg::MPIGrid3d( grid){}
 };
 
 ///@}
@@ -46,22 +46,22 @@ struct CartesianMPIGrid3d : public dg::MPI_Grid3d
  * @tparam container The MPI Vector container
  */
 template<class container>
-struct CylindricalMPIGrid : public MPI_Grid3d
+struct CylindricalMPIGrid : public MPIGrid3d
 {
     typedef OrthonormalCylindricalTag metric_category; 
     typedef dg::CartesianMPIGrid2d perpendicular_grid;
 
     CylindricalMPIGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
-        dg::MPI_Grid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, comm), 
+        dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, comm), 
         R_( dg::evaluate( dg::cooX3d, *this)) { }
 
     CylindricalMPIGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        dg::MPI_Grid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
+        dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
         R_( dg::evaluate( dg::cooX3d, *this))
         {}
 
-    CylindricalMPIGrid( const MPI_Grid3d& grid ):
-        MPI_Grid3d( grid),
+    CylindricalMPIGrid( const MPIGrid3d& grid ):
+        MPIGrid3d( grid),
         R_( dg::evaluate( dg::cooX3d, *this))
     {}
 

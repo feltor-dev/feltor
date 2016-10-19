@@ -87,7 +87,7 @@ struct OrthogonalMPIGrid3d : public dg::MPIGrid3d
  * @brief A two-dimensional grid based on "almost-orthogonal" coordinates by Ribeiro and Scott 2010
  */
 template<class LocalContainer>
-struct OrthogonalMPIGrid2d : public dg::MPI_Grid2d
+struct OrthogonalMPIGrid2d : public dg::MPIGrid2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category; 
 
@@ -104,7 +104,7 @@ struct OrthogonalMPIGrid2d : public dg::MPI_Grid2d
      * @param comm2d The 2d mpi communicator class
      */
     MPIGrid2d( solovev::GeomParameters gp, double psi_0, double psi_1, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
-        dg::MPI_Grid2d( 0, 1, 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
+        dg::MPIGrid2d( 0, 1, 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
     {
@@ -134,7 +134,7 @@ struct OrthogonalMPIGrid2d : public dg::MPI_Grid2d
                         }
     }
     MPIGrid2d( const MPIGrid3d<LocalContainer>& g):
-        dg::MPI_Grid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
+        dg::MPIGrid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), lapx_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
     {

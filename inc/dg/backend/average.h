@@ -27,7 +27,7 @@ struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
      *
      * @param g 2d MPIGrid
      */
-    PoloidalAverage( const MPI_Grid2d& g): 
+    PoloidalAverage( const MPIGrid2d& g): 
         helper1d_( g.n()*g.Nx()), hhelper1d_(g.n()*g.Nx()),
         recv_(hhelper1d_), ly_(g.global().ly()),
         dummy( g.n()*g.Nx()), 

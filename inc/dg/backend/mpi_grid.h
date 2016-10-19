@@ -24,7 +24,7 @@ namespace dg
  *
  * @note Note that a single cell is never divided across processes.
  */
-struct MPI_Grid2d
+struct MPIGrid2d
 {
     typedef MPITag memory_category;
     typedef TwoDimensionalTag dimensionality;
@@ -40,7 +40,7 @@ struct MPI_Grid2d
      * @param Ny
      * @param comm
      */
-    MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
+    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny), comm( comm)
     {
         int rank, dims[2], periods[2], coords[2];
@@ -75,7 +75,7 @@ struct MPI_Grid2d
      * @param bcy
      * @param comm
      */
-    MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
+    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), comm( comm)
     {
         int rank, dims[2], periods[2], coords[2];
@@ -295,7 +295,7 @@ struct MPI_Grid2d
  *
  * @note Note that a single cell is never divided across processes.
  */
-struct MPI_Grid3d
+struct MPIGrid3d
 {
     typedef MPITag memory_category;
     typedef ThreeDimensionalTag dimensionality;
@@ -315,7 +315,7 @@ struct MPI_Grid3d
      * @param comm mpi communicator
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
+    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz), comm( comm)
     {
         int rank, dims[3], periods[3], coords[3];
@@ -361,7 +361,7 @@ struct MPI_Grid3d
      * @param comm mpi communicator
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), comm( comm)
     {
         int rank, dims[3], periods[3], coords[3];
@@ -611,7 +611,7 @@ struct MPI_Grid3d
     MPI_Comm comm; //just an integer...
 };
 ///@cond
-int MPI_Grid2d::pidOf( double x, double y) const
+int MPIGrid2d::pidOf( double x, double y) const
 {
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
@@ -626,7 +626,7 @@ int MPI_Grid2d::pidOf( double x, double y) const
     else
         return -1;
 }
-int MPI_Grid3d::pidOf( double x, double y, double z) const
+int MPIGrid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);

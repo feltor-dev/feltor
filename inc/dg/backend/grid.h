@@ -14,8 +14,8 @@
 
 namespace dg{
 
-class MPI_Grid2d;
-class MPI_Grid3d;
+class MPIGrid2d;
+class MPIGrid3d;
 
 
 ///@addtogroup grid
@@ -375,7 +375,7 @@ struct Grid2d
         hx_ = lx_/(double)Nx_;
     }
   private:
-    friend class MPI_Grid2d;
+    friend class MPIGrid2d;
     double x0_, x1_, y0_, y1_;
     double lx_, ly_;
     unsigned n_, Nx_, Ny_;
@@ -664,7 +664,7 @@ struct Grid3d
         hx_ = lx_/(double)Nx_;
     }
   private:
-    friend class MPI_Grid3d;
+    friend class MPIGrid3d;
     double x0_, x1_, y0_, y1_, z0_, z1_;
     double lx_, ly_, lz_;
     unsigned n_, Nx_, Ny_, Nz_;
