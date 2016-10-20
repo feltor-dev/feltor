@@ -27,25 +27,19 @@ int main(int argc, char**argv)
     MPI_Comm comm;
     mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    std::vector<double> v, v2;
-    try{ 
-        if( argc==1)
-        {
-            v = file::read_input( "geometry_params_Xpoint.txt"); 
-        }
-        else
-        {
-            v = file::read_input( argv[1]); 
-        }
+    Json::Reader reader;
+    Json::Value js;
+    if( argc==1)
+    {
+        std::ifstream is("geometry_params_Xpoint.js");
+        reader.parse(is,js,false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-            if(rank==0)std::cout << v[i] << " ";
-            if(rank==0)std::cout << std::endl;
-        return -1;}
-    //write parameters from file into variables
-    solovev::GeomParameters gp(v);
+    else
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
+    solovev::GeomParameters gp(js);
     solovev::Psip psip( gp); 
     if(rank==0)std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
@@ -57,12 +51,15 @@ int main(int argc, char**argv)
     if(rank==0)std::cout << "Constructing grid ... \n";
     dg::Timer t;
     t.tic();
+    solovev::CollectivePsip c( gp);
     //ConformalMPIGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
     //ConformalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
     //dg::Elliptic<ConformalMPIGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
-    OrthogonalMPIGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
-    OrthogonalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<OrthogonalMPIGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> 
+        generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
+    dg::OrthogonalMPIGrid3d<dg::DVec> g3d(generator, n, Nx, Ny,Nz,dg::DIR, MPI_COMM_WORLD); 
+    dg::OrthogonalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::Elliptic<dg::OrthogonalMPIGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -99,10 +96,10 @@ int main(int argc, char**argv)
     ncerr = nc_put_vara_double( ncid, coordsID[0], start, count, X.data());
     ncerr = nc_put_vara_double( ncid, coordsID[1], start, count, Y.data());
     ///////////////////////////////////////////////////////////////////////////
-    dg::MDVec x =    dg::pullback( dg::zero, g3d);
-    const dg::MDVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1), g3d);
+    dg::MDVec x =    dg::evaluate( dg::zero, g3d);
+    const dg::MDVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1, 1), g3d);
     const dg::MDVec chi =  dg::pullback( solovev::Bmodule(gp), g3d);
-    const dg::MDVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1 ), g3d);
+    const dg::MDVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1,1 ), g3d);
     const dg::MDVec vol3d = dg::create::volume( g3d);
     pol.set_chi( chi);
     //compute error
