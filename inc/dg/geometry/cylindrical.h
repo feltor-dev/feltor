@@ -16,7 +16,7 @@ namespace dg
  * @tparam container The container class for the volume element
  */
 template<class container>
-struct CylindricalGrid : public dg::Grid3d
+struct CylindricalGrid3d : public dg::Grid3d
 {
     typedef OrthonormalCylindricalTag metric_category; 
     typedef dg::CartesianGrid2d perpendicular_grid;
@@ -38,7 +38,7 @@ struct CylindricalGrid : public dg::Grid3d
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    CylindricalGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): 
+    CylindricalGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): 
         dg::Grid3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz),
         R_(dg::evaluate( dg::cooX3d, *this)){}
     /**
@@ -47,7 +47,7 @@ struct CylindricalGrid : public dg::Grid3d
      * @param grid existing grid class
      */
     //is this constructor a good idea?? You could construct a Cylindrical Grid from any other Grid Type that derives from Grid3d
-    CylindricalGrid( const dg::Grid3d& grid):
+    CylindricalGrid3d( const dg::Grid3d& grid):
         dg::Grid3d(grid),
         R_(dg::evaluate( dg::cooX3d, *this)){}
     /**

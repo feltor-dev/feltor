@@ -1,6 +1,7 @@
 #pragma once
 
 #include "weights.cuh"
+#include "gridX.h"
 
 /*! @file
 

@@ -98,7 +98,7 @@ int main( int argc, char* argv[])
 
 
 
-        dg::CylindricalMPIGrid<dg::MDVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER, comm);
+        dg::CylindricalMPIGrid3d<dg::MDVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER, comm);
         dg::MPIGrid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn, dg::DIR, dg::DIR, comm);
 
         if(rank==0)std::cout << "NR = " << Nxn << std::endl;

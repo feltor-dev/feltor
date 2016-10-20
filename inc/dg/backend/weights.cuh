@@ -2,7 +2,6 @@
 
 #include <thrust/host_vector.h>
 #include "grid.h"
-#include "gridX.h"
 
 /*! @file
 

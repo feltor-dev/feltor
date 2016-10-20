@@ -61,7 +61,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Grids
-    dg::CylindricalGrid<dg::DVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER); 
+    dg::CylindricalGrid3d<dg::DVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER); 
     dg::Grid2d  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out,  p.bc, p.bc); 
     //1d grid
     solovev::Psip psip(gp);
@@ -142,7 +142,7 @@ int main( int argc, char* argv[])
     //perp laplacian for computation of vorticity
 
     dg::DVec vor3d    = dg::evaluate( dg::zero, g3d_out);
-    dg::Elliptic<dg::CylindricalGrid<dg::DVec>, dg::DMatrix, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    dg::Elliptic<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
     dg::IDMatrix fsaonrzmatrix,fsaonrzphimatrix;     
     fsaonrzmatrix    =  dg::create::interpolation(psipupilog2d ,g1d_out);    
     fsaonrzphimatrix =  dg::create::interpolation(psipupilog3d ,g1d_out);    
@@ -150,7 +150,7 @@ int main( int argc, char* argv[])
     //Vectors and Matrices for Diffusion coefficient
     const dg::DVec curvR = dg::evaluate( solovev::CurvatureNablaBR(gp), g3d_out);
     const dg::DVec curvZ = dg::evaluate( solovev::CurvatureNablaBZ(gp), g3d_out);
-    dg::Poisson<dg::CylindricalGrid<dg::DVec>,dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
+    dg::Poisson<dg::CylindricalGrid3d<dg::DVec>,dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
     const dg::DVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
     dg::DVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
     dg::DVec temp2 = dg::evaluate(dg::zero , g3d_out) ;

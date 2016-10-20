@@ -46,21 +46,21 @@ struct CartesianMPIGrid3d : public dg::MPIGrid3d
  * @tparam container The MPI Vector container
  */
 template<class container>
-struct CylindricalMPIGrid : public MPIGrid3d
+struct CylindricalMPIGrid3d : public MPIGrid3d
 {
     typedef OrthonormalCylindricalTag metric_category; 
     typedef dg::CartesianMPIGrid2d perpendicular_grid;
 
-    CylindricalMPIGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
+    CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
         dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, comm), 
         R_( dg::evaluate( dg::cooX3d, *this)) { }
 
-    CylindricalMPIGrid( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+    CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
         R_( dg::evaluate( dg::cooX3d, *this))
         {}
 
-    CylindricalMPIGrid( const MPIGrid3d& grid ):
+    CylindricalMPIGrid3d( const MPIGrid3d& grid ):
         MPIGrid3d( grid),
         R_( dg::evaluate( dg::cooX3d, *this))
     {}

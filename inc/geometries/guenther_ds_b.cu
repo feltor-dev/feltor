@@ -79,7 +79,7 @@ int main( )
 
 
 
-        dg::CylindricalGrid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
+        dg::CylindricalGrid3d<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
         dg::Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
 
         std::cout << "NR = " << Nxn << std::endl;
