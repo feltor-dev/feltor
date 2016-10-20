@@ -353,7 +353,7 @@ struct CurvilinearGridX2d;
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
- * @ingroup grid
+ * @ingroup grids
  */
 template< class container>
 struct CurvilinearGridX3d : public dg::GridX3d
@@ -436,7 +436,7 @@ struct CurvilinearGridX3d : public dg::GridX3d
 
 /**
  * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
- * @ingroup grid
+ * @ingroup grids
  */
 template< class container>
 struct CurvilinearGridX2d : public dg::GridX2d
