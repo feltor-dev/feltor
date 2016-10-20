@@ -64,7 +64,6 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old), yz_old(r_old), xz_old(z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size()), xr.resize(y_vec.size()), xz.resize(y_vec.size());
 
-    //const thrust::host_vector<double> w1d = dg::create::weights( g1d);
     //now compute f and starting values 
     thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
     const double f_psi = fpsi.construct_f( psi, begin[0], begin[1]);

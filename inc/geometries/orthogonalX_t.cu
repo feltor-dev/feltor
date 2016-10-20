@@ -156,8 +156,6 @@ int main( int argc, char* argv[])
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        //X[i] = g.r()[i]*cos(P[i]);
-        //Y[i] = g.r()[i]*sin(P[i]);
         X[i] = g2d.r()[i];
         Y[i] = g2d.z()[i];
     }
@@ -165,8 +163,6 @@ int main( int argc, char* argv[])
     dg::HVec ones = dg::evaluate( dg::one, g2d);
     dg::HVec temp0( g2d.size()), temp1(temp0);
     dg::HVec w2d = dg::create::weights( g2d);
-    //dg::blas1::pointwiseDot( g2d.weightsX(), w2d, w2d);
-    //dg::blas1::pointwiseDot( g2d.weightsY(), w2d, w2d);
 
     err = nc_put_var_double( ncid, coordsID[0], periodify(X, g3d_periodic).data());
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g3d_periodic).data());

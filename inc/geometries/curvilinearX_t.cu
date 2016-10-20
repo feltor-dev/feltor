@@ -11,8 +11,9 @@
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
+#include "taylor.h"
 //#include "guenther.h"
-#include "conformalX.h"
+#include "curvilinearX.h"
 #include "dg/ds.h"
 #include "init.h"
 
@@ -21,7 +22,7 @@
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< ConformalGridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< dg::CurvilinearGridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
@@ -74,39 +75,42 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny, Nz (Nx must be divided by 4 and Ny by 10) \n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
-    std::vector<double> v, v2;
-try{ 
-        if( argc==1)
-        {
-            v = file::read_input( "geometry_params_Xpoint.txt"); 
-        }
-        else
-        {
-            v = file::read_input( argv[1]); 
-        }
+    Json::Reader reader;
+    Json::Value js;
+    if( argc==1)
+    {
+        //std::ifstream is("geometry_params_Xpoint_taylor.js");
+        std::ifstream is("geometry_params_Xpoint.js");
+        reader.parse(is,js,false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-            std::cout << v[i] << " ";
-            std::cout << std::endl;
-        return -1;}
-    //write parameters from file into variables
-    solovev::GeomParameters gp(v);
+    else
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
+    solovev::GeomParameters gp(js);
     dg::Timer t;
-    solovev::Psip psip( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 \n";
-    double psi_0;
+    double psi_0 = -16;
     std::cin >> psi_0;
-    std::cout << "Type fx and fy \n";
-    double fx_0, fy_0;
+    std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
+    double fx_0=1./4., fy_0=1./22.;
     std::cin >> fx_0>> fy_0;
     gp.display( std::cout);
-    std::cout << "Constructing conformal grid ... \n";
+    std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    ConformalGridX3d<dg::DVec> g3d(gp, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    ConformalGridX2d<dg::DVec> g2d = g3d.perp_grid();
+    solovev::Psip psip( gp); 
+    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
+    solovev::PsipRR psipRR(gp); solovev::PsipRZ psipRZ(gp); solovev::PsipZZ psipZZ(gp);
+    double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
+    double Z_X = -1.1*gp.elongation*gp.a;
+    dg::findXpoint( psipR, psipZ, psipRR, psipRZ, psipZZ, R_X, Z_X);
+
+    double R0 = gp.R_0, Z0 = 0;
+    dg::RibeiroX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> generator(psip, psipR, psipZ, psipRR, psipRZ, psipZZ, psi_0, fx_0, R_X,Z_X, R0, Z0);
+    dg::CurvilinearGridX3d<dg::DVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    dg::CurvilinearGridX2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -115,7 +119,7 @@ try{
     dg::HVec y_left = dg::evaluate( cosine, g1d);
     int ncid;
     file::NC_Error_Handle err;
-    err = nc_create( "conformalX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_create( "ribeiroX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[3], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
     //err = file::define_dimensions(  ncid, dim3d, g2d.grid());
@@ -142,8 +146,6 @@ try{
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        //X[i] = g.r()[i]*cos(P[i]);
-        //Y[i] = g.r()[i]*sin(P[i]);
         X[i] = g2d.r()[i];
         Y[i] = g2d.z()[i];
     }
@@ -160,7 +162,7 @@ try{
     //err = nc_put_var_double( ncid, coord1D[1], g3d.zx0().data());
     //err = nc_put_var_double( ncid, coord1D[2], g3d.rx1().data());
     //err = nc_put_var_double( ncid, coord1D[3], g3d.zx1().data());
-    err = nc_put_var_double( ncid, coord1D[4], periodify(g3d.f_x(), g3d_periodic).data());
+    //err = nc_put_var_double( ncid, coord1D[4], periodify(g3d.f_x(), g3d_periodic).data());
     //err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
@@ -206,20 +208,6 @@ try{
     error=sqrt(dg::blas2::dot( temp0, w2d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w2d, g2d.vol()));
     std::cout << "Rel Error of volume form is "<<error<<"\n";
 
-    //alternative method for computing g_xx
-    const dg::DVec f_ = g2d.f();
-    solovev::ConformalFieldY fieldY(gp);
-    dg::DVec fby = dg::pullback( fieldY, g2d);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    dg::blas1::pointwiseDot( fby, f_, fby);
-    dg::blas1::scal( fby, 1./gp.R_0);
-    temp0=g2d.r();
-    dg::blas1::pointwiseDot( temp0, fby, fby); // B^y*f^2*R/R_0 != |nabla psi^2| f^3
-    dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0); 
-    dg::blas1::axpby( 1., temp0, -1., fby, temp1);
-    error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(fby,w2d,fby);
-    std::cout << "Rel Error of g.g_xx() is "<<sqrt(error)<<"\n";
-
     std::cout << "TEST VOLUME IS:\n";
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2.0*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
@@ -239,10 +227,10 @@ try{
    // std::cout << "Start DS test!"<<std::endl;
    // const dg::DVec vol3d = dg::create::volume( g3d);
    // //DFA fieldaligned(OrthogonalXField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
-   // DFA fieldaligned( ConformalField( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+   // DFA fieldaligned( CurvilinearField( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
 
    // //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, OrthogonalXField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
-   // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, ConformalField(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
+   // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::DVec> ds( fieldaligned, CurvilinearField(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
    // dg::DVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
    // dg::DVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
    // const dg::DVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);

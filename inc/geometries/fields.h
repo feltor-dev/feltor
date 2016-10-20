@@ -632,11 +632,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
+    PsiRR psipRR_;
+    PsiRZ psipRZ_;
+    PsiZZ psipZZ_;
     Ipol ipol_;
     IpolR ipolR_;
     IpolZ ipolZ_;
@@ -752,11 +752,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
+    PsiRR psipRR_;
+    PsiRZ psipRZ_;
+    PsiZZ psipZZ_;
 };
 }//namespace ribeiro
 namespace equalarc{
@@ -871,11 +871,11 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipRZ psipRZ_;
-    PsipZZ psipZZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
+    PsiRR psipRR_;
+    PsiRZ psipRZ_;
+    PsiZZ psipZZ_;
 };
 
 }//namespace equalarc
