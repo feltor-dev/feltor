@@ -27,3 +27,9 @@ links to the aforementioned libraries. Or you can
 create your own file. 
 <h4> 4. Documentation </h4>
 The documentation can be generated with Doxygen in each subfolder or you can access the whole documentation [online](http://feltor-dev.github.io/feltor/).
+<h4> 5. Official releases </h4>
+Our latest code release v3.1 now has a shiny new DOI badge from zenodo
+
+[![DOI](https://zenodo.org/badge/14143578.svg)](https://zenodo.org/badge/latestdoi/14143578)
+
+which makes us officially citable.
