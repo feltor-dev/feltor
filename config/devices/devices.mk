@@ -16,14 +16,16 @@ MPICFLAGS+= -DCUSP_DEVICE_BLAS_SYSTEM=CUSP_DEVICE_BLAS_CUBLAS -lcublas
 MPICFLAGS+= -DCUSP_USE_TEXTURE_MEMORY
 MPICFLAGS+= --compiler-options -Wall $(NVCCARCH)
 MPICFLAGS+= --compiler-options $(OPT)
-else # if device = cpu
+endif #device=gpu
+ifeq ($(strip $(device)),omp)
 CFLAGS+=-Wall -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-MPICFLAGS+=$(CFLAGS) #includes values in CFLAGS defined later
-endif
-ifeq ($(strip $(device)),omp)
 CFLAGS+= $(OMPFLAG) 
-endif
+MPICFLAGS+=$(CFLAGS) #includes values in CFLAGS defined later
+endif #device=omp
 ifeq ($(strip $(device)),mic)
+CFLAGS+=-Wall -x c++
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 CFLAGS+= $(OMPFLAG) -mmic 
-endif
+MPICFLAGS+=$(CFLAGS) #includes values in CFLAGS defined later
+endif #device=mic
