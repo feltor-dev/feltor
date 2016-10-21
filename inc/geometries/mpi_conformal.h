@@ -85,7 +85,7 @@ struct ConformalMPIGrid3d : public dg::MPIGrid3d
 };
 
 /**
- * @brief A two-dimensional grid based on "almost-orthogonal" coordinates by Ribeiro and Scott 2010
+ * @tparam LocalContainer Vector class that holds metric coefficients
  */
 template<class LocalContainer>
 struct ConformalMPIGrid2d : public dg::MPIGrid2d

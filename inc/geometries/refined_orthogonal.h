@@ -14,7 +14,7 @@ struct OrthogonalRefinedGrid2d;
 ///@{
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief An orthogonal refined grid
  */
 template< class container>
 struct OrthogonalRefinedGrid3d : public dg::RefinedGrid3d
@@ -105,7 +105,7 @@ struct OrthogonalRefinedGrid3d : public dg::RefinedGrid3d
 };
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief An orthogonal refined grid
  */
 template< class container>
 struct OrthogonalRefinedGrid2d : public dg::RefinedGrid2d
