@@ -14,7 +14,7 @@
 //DEPRECATED: use draw library instead
 
 namespace toefl{
-/*! @addtogroup utilities
+/*! @addtogroup utilitiesX
  * @{
  */
 /*! @brief POD that contains RGB values for 256 colors*/

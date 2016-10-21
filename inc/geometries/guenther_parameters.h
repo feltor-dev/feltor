@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "json/json.h"
 /*!@file
  *
  * Geometry parameters
@@ -44,6 +45,19 @@ struct GeomParameters
         psipmaxcut = v[10];
         psipmaxlim = v[11];
     }
+    GeomParameters( const Json::Value& js) {
+        I_0  = js["I_0"].asDouble();
+        R_0  = js["R_0"].asDouble();
+        a  = R_0*js["inverseaspectratio"].asDouble();
+        elongation=js["elongation"].asDouble();
+        triangularity=js["triangularity"].asDouble();
+        alpha=js["alpha"].asDouble();
+        rk4eps=js["rk4eps"].asDouble();
+        psipmin= js["psip_min"].asDouble();
+        psipmax= js["psip_max"].asDouble();
+        psipmaxcut= js["psip_max_cut"].asDouble();
+        psipmaxlim= js["psip_max_lim"].asDouble();
+    }
     /**
      * @brief Display parameters
      *
@@ -52,7 +66,7 @@ struct GeomParameters
     void display( std::ostream& os = std::cout ) const
     {
         os << "Geometrical parameters are: \n"
-            <<" I0             = "<<I_0<<"\n"
+            <<" I0            = "<<I_0<<"\n"
             <<" R0            = "<<R_0<<"\n"
             <<" epsilon_a     = "<<a/R_0<<"\n"
             <<" elongation    = "<<elongation<<"\n"

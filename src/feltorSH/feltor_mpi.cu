@@ -79,8 +79,8 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////
 
      //Make grid
-    dg::MPI_Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
-    dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
+    dg::MPIGrid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
+    dg::MPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
     if(rank==0) std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > feltor( grid, p); //initialize before rolkar!
@@ -152,7 +152,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
-    dg::Grid2d<double> global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
+    dg::Grid2d global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
     err = file::define_dimensions( ncid, dim_ids, &tvarID, global_grid_out);
     err = nc_enddef( ncid);
     err = nc_redef(ncid);

@@ -19,7 +19,7 @@ namespace eule
 template<class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu, double mue_hat, double mui_hat):
+    Diffusion( const dg::Grid2d& g, double nu, double mue_hat, double mui_hat):
         nu_(nu), mue_hat(mue_hat), mui_hat(mui_hat), 
         w2d_( dg::create::weights(g)), v2d_( dg::create::inv_weights(g)), 
         temp( g.size()), LaplacianM_perp( g, dg::normed)
@@ -58,7 +58,7 @@ struct Asela
      * @param g The grid on which to operate
      * @param p The parameters
      */
-    Asela( const dg::Grid2d<value_type>& g, Parameters p);
+    Asela( const dg::Grid2d& g, Parameters p);
 
     /**
      * @brief Exponentiate pointwise every Vector in src 
@@ -114,7 +114,7 @@ struct Asela
 };
 
 template< class M, class container>
-Asela< M, container>::Asela( const dg::Grid2d<value_type>& grid, Parameters p ): 
+Asela< M, container>::Asela( const dg::Grid2d& grid, Parameters p ): 
     w2d( dg::create::weights(grid)),
     v2d( dg::create::inv_weights(grid)),
     one( dg::evaluate( dg::one, grid)),

@@ -11,13 +11,15 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/average.cuh"
 #include "dg/functors.h"
+#include "dg/geometry.h"
 
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
-#include "solovev/geometry.h"
+#include "geometries/solovev.h"
+#include "geometries/init.h"
+
 #include "feltor/parameters.h"
-#include "solovev/init.h"
 
 #define RADIALELECTRONDENSITYFLUX
 #define GRADIENTLENGTH
@@ -67,8 +69,8 @@ int main( int argc, char* argv[])
 //     double Zmax=p.boxscaleRp*gp.a*gp.elongation;
 
     //Grids
-    dg::Grid3d<double > g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
-    dg::Grid2d<double>  g2d_out( Rmin,Rmax, Zmin,Zmax,p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
+    dg::CylindricalGrid3d<dg::HVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER);  
+    dg::Grid2d  g2d_out( Rmin,Rmax, Zmin,Zmax,p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
     //1d grid
     solovev::Psip psip(gp);
     dg::HVec w3d = dg::create::weights( g3d_out);   
@@ -83,7 +85,7 @@ int main( int argc, char* argv[])
 
     unsigned Npsi = 2;//set number of psivalues
     std::cout << "psipmin =" << psipmin << " psipmax =" << psipmax << " Npsi =" << Npsi  <<std::endl;
-    dg::Grid1d<double>  g1d_out(psipmin  ,psipmax ,3, Npsi,dg::NEU); //one dimensional sipgrid
+    dg::Grid1d  g1d_out(psipmin  ,psipmax ,3, Npsi,dg::NEU); //one dimensional sipgrid
     dg::HVec w1d = dg::create::weights( g1d_out);   
     //read in midplane of electrons, ions Ue, Ui, and potential, and energy
     std::string names[5] = {"electrons", "ions", "Ue", "Ui", "potential"}; 
@@ -142,22 +144,22 @@ int main( int argc, char* argv[])
 //         std::cout << "Compute safety factor   "<< "\n";
 //         solovev::Alpha alpha(gp); 
 //         dg::HVec alphaog2d   = dg::evaluate( alpha, g2d_out);      
-//         dg::HVec abs = dg::evaluate( dg::coo1, g1d_out);
+//         dg::HVec abs = dg::evaluate( dg::cooX1d, g1d_out);
 //         solovev::SafetyFactor<dg::HVec> qprofile(g2d_out, gp, alphaog2d );
 //         dg::HVec sf = dg::evaluate(qprofile, g1d_out);
 
     //perp laplacian for computation of vorticity
 
     dg::HVec vor3d    = dg::evaluate( dg::zero, g3d_out);
-    dg::Elliptic<dg::HMatrix, dg::HVec, dg::HVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    dg::Elliptic<dg::CylindricalGrid3d<dg::HVec>, dg::HMatrix, dg::HVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
     dg::IHMatrix fsaonrzmatrix,fsaonrzphimatrix;     
     fsaonrzmatrix    =  dg::create::interpolation(psipupilog2d ,g1d_out);    
     fsaonrzphimatrix =  dg::create::interpolation(psipupilog3d ,g1d_out);    
     
     //Vectors and Matrices for Diffusion coefficient
-    const dg::HVec curvR = dg::evaluate( solovev::CurvatureR(gp), g3d_out);
-    const dg::HVec curvZ = dg::evaluate( solovev::CurvatureZ(gp), g3d_out);
-    dg::Poisson<dg::HMatrix, dg::HVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
+    const dg::HVec curvR = dg::evaluate( solovev::CurvatureNablaBR(gp), g3d_out);
+    const dg::HVec curvZ = dg::evaluate( solovev::CurvatureNablaBZ(gp), g3d_out);
+    dg::Poisson<dg::CylindricalGrid3d<dg::HVec>, dg::HMatrix, dg::HVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
     const dg::HVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
     dg::HVec Deperp3d =  dg::evaluate(dg::zero , g3d_out) ; 
     dg::HVec temp1 = dg::evaluate(dg::zero , g3d_out) ;

@@ -69,7 +69,7 @@ struct Convection
 {
     typedef typename container::value_type value_type;
     //typedef dg::Matrix Matrix; 
-    Convection( const dg::Grid2d<value_type>&, Params, double eps_lap);
+    Convection( const dg::Grid2d&, Params, double eps_lap);
 
     void operator()( std::vector<container>& y, std::vector<container>& yp);
     /**
@@ -109,7 +109,7 @@ struct Convection
 };
 
 template <class M, class container, class P>
-Convection<M, container, P>::Convection( const dg::Grid2d<value_type>& g, Params p, double eps_lap ): 
+Convection<M, container, P>::Convection( const dg::Grid2d& g, Params p, double eps_lap ): 
     dx_per ( dg::create::dx( g, dg::PER)),
     dy_dir ( dg::create::dy( g, dg::DIR)),
     dy_neu ( dg::create::dy( g, dg::NEU)),

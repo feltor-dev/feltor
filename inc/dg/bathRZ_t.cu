@@ -25,8 +25,8 @@ int main()
     std::stringstream title;
 
     //make dggrid and interpolation
-    dg::Grid2d<double> grid_old(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
-    dg::Grid2d<double> grid_new(Rmin,Rmax,Zmin,Zmax, n_out,Nx_out,Ny_out,dg::PER,dg::PER);
+    dg::Grid2d grid_old(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny,dg::PER,dg::PER);
+    dg::Grid2d grid_new(Rmin,Rmax,Zmin,Zmax, n_out,Nx_out,Ny_out,dg::PER,dg::PER);
     //dg::HMatrix interpolate = dg::create::interpolation( grid_new, grid_old);
     dg::IHMatrix interpolate = dg::create::projection( grid_old, grid_new);
     //construct bathRZ

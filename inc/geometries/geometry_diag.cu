@@ -5,78 +5,117 @@
 #include <sstream>
 #include <cmath>
 
+#include "json/json.h"
+
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
-#include "feltor/parameters.h"
 #include "solovev.h"
 #include "init.h"
 
+struct Parameters
+{
+    unsigned n, Nx, Ny, Nz;
+    double boxscaleRm, boxscaleRp;
+    double boxscaleZm, boxscaleZp;
+    double amp, k_psi, bgprofamp, nprofileamp;
+    double sigma, posX, posY;
+    Parameters( const Json::Value& js){
+        n = js["n"].asUInt();
+        Nx = js["Nx"].asUInt();
+        Ny = js["Ny"].asUInt();
+        Nz = js.get("Nz", 1).asUInt();
+        boxscaleRm = js.get("boxscaleRm", 1.).asDouble();
+        boxscaleRp = js.get("boxscaleRp", 1.).asDouble();
+        boxscaleZm = js.get("boxscaleZm", 1.3).asDouble();
+        boxscaleZp = js.get("boxscaleZp", 1.).asDouble();
+        amp = js.get("amplitude", 1.).asDouble();
+        k_psi = js.get("k_psi", 1.).asDouble();
+        bgprofamp = js.get("bgprofamp", 1.).asDouble();
+        nprofileamp = js.get("nprofileamp", 1.).asDouble();
+        sigma = js.get("sigma", 10).asDouble();
+        posX = js.get("posX", 0.5).asDouble();
+        posY = js.get("posY", 0.5).asDouble();
+    }
+    void display( std::ostream& os = std::cout ) const
+    {
+        os << "Input parameters are: \n";
+        os  <<" n             = "<<n<<"\n"
+            <<" Nx            = "<<Nx<<"\n"
+            <<" Ny            = "<<Ny<<"\n"
+            <<" Nz            = "<<Nz<<"\n"
+            <<" boxscaleRm    = "<<boxscaleRm<<"\n"
+            <<" boxscaleRp    = "<<boxscaleRp<<"\n"
+            <<" boxscaleZm    = "<<boxscaleZm<<"\n"
+            <<" boxscaleZp    = "<<boxscaleZp<<"\n"
+            <<" amp           = "<<amp<<"\n"
+            <<" k_psi         = "<<k_psi<<"\n"
+            <<" bgprofamp     = "<<bgprofamp<<"\n"
+            <<" nprofileamp   = "<<nprofileamp<<"\n"
+            <<" sigma         = "<<sigma<<"\n"
+            <<" posX          = "<<posX<<"\n"
+            <<" posY          = "<<posY<<"\n";
+        os << std::flush;
+    }
+};
+
 int main( int argc, char* argv[])
 {
-    std::vector<double> v, v2;
-    std::string input, geom, newfilename;
     if( !(argc == 4 || argc == 3))
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
-        std::cerr << "Or \n Usage: "<< argv[0]<<" [file.nc] [outputfile.nc]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\n";
+        std::cerr << " Usage: "<< argv[0]<<" [input.js] [geom.js] [output.nc]\n";
+        std::cerr << " ( Minimum input json file is { \"n\" : 3, \"Nx\": 100, \"Ny\":100 })\n";
+        std::cerr << "Or \n Usage: "<< argv[0]<<" [file.nc] [output.nc]\n";
+        std::cerr << " ( Program searches for string variables 'inputfile' and 'geomfile' in file.nc and tries a json parser)\n";
         return -1;
     }
-    try{ 
-        if( argc == 4) 
-        {
-            newfilename = argv[3];
-            std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-        }
-        else
-        {
-            newfilename = argv[2];
-            std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
-            //////////////////////////open nc file//////////////////////////////////
-            file::NC_Error_Handle err;
-            int ncid;
-            err = nc_open( argv[1], NC_NOWRITE, &ncid);
-            ///////////////read in and show inputfile und geomfile//////////////////
-            size_t length;
-            err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
-            input.resize( length, 'x');
-            err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
-            err = nc_inq_attlen( ncid, NC_GLOBAL, "geomfile", &length);
-            geom.resize( length, 'x');
-            err = nc_get_att_text( ncid, NC_GLOBAL, "geomfile", &geom[0]);
-            nc_close( ncid);
-        }
-
+    std::string newfilename;
+    Json::Reader reader;
+    Json::Value input_js, geom_js;
+    if( argc == 4) 
+    {
+        newfilename = argv[3];
+        std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
+        std::ifstream isI( argv[1]);
+        std::ifstream isG( argv[2]);
+        reader.parse( isI, input_js, false);
+        reader.parse( isG, geom_js, false);
     }
-    catch (toefl::Message& m) {  
-        m.display(); 
-        for( unsigned i = 0; i<v.size(); i++)
-            std::cout << v[i] << " ";
-            std::cout << std::endl;
-        return -1;
+    else
+    {
+        newfilename = argv[2];
+        std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
+        //////////////////////////open nc file//////////////////////////////////
+        file::NC_Error_Handle err;
+        int ncid;
+        err = nc_open( argv[1], NC_NOWRITE, &ncid);
+        ///////////////read in and show inputfile und geomfile//////////////////
+        std::string input, geom;
+        size_t length;
+        err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
+        input.resize( length, 'x');
+        err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
+        err = nc_inq_attlen( ncid, NC_GLOBAL, "geomfile", &length);
+        geom.resize( length, 'x');
+        err = nc_get_att_text( ncid, NC_GLOBAL, "geomfile", &geom[0]);
+        nc_close( ncid);
+        reader.parse( input, input_js, false);
+        reader.parse( geom, geom_js, false);
     }
-    //write parameters from file into variables
-    std::cout << input << std::endl;
-    std::cout << geom << std::endl;
-    const eule::Parameters p(file::read_input( input));
-    const solovev::GeomParameters gp(file::read_input( geom));
+    const Parameters p(input_js);
+    const solovev::GeomParameters gp(geom_js);
     p.display( std::cout);
     gp.display( std::cout);
+    std::string input = input_js.toStyledString();
+    std::string geom = geom_js.toStyledString();
     unsigned n, Nx, Ny, Nz;
     n = p.n, Nx = p.Nx, Ny = p.Ny, Nz = p.Nz;
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
-    //old boxscale
-//     double Rmin=gp.R_0-p.boxscaleRp*gp.a;
-//     double Zmin=-p.boxscaleRp*gp.a*gp.elongation;
-//     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
-//     double Zmax=p.boxscaleRp*gp.a*gp.elongation;
  
     //construct all geometry quantities
     solovev::Psip psip(gp);
@@ -89,6 +128,27 @@ int main( int argc, char* argv[])
     solovev::InvB invB(gp);
     solovev::BR bR(gp);
     solovev::BZ bZ(gp);
+    const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
+    const double Z_X = -1.1*gp.elongation*gp.a;
+    const double R_H = gp.R_0-gp.triangularity*gp.a;
+    const double Z_H = gp.elongation*gp.a;
+    const double alpha_ = asin(gp.triangularity);
+    const double N1 = -(1.+alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.+alpha_);
+    const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
+    const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
+    std::cout << "TEST ACCURACY OF PSI\n";
+    std::cout << "psip( 1+e,0)           "<<psip(gp.R_0 + gp.a, 0.)<<"\n";
+    std::cout << "psip( 1-e,0)           "<<psip(gp.R_0 - gp.a, 0.)<<"\n";
+    std::cout << "psip( 1-de,ke)         "<<psip(R_H, Z_H)<<"\n";
+    std::cout << "psip( 1-1.1de,-1.1ke)  "<<psip(R_X, Z_X)<<"\n";
+    std::cout << "psipZ( 1+e,0)          "<<psipZ(gp.R_0 + gp.a, 0.)<<"\n";
+    std::cout << "psipZ( 1-e,0)          "<<psipZ(gp.R_0 - gp.a, 0.)<<"\n";
+    std::cout << "psipR( 1-de,ke)        "<<psipR(R_H,Z_H)<<"\n";
+    std::cout << "psipR( 1-1.1de,-1.1ke) "<<psipR(R_X,Z_X)<<"\n";
+    std::cout << "psipZ( 1-1.1de,-1.1ke) "<<psipZ(R_X,Z_X)<<"\n";
+    std::cout << "psipZZ( 1+e,0)         "<<psipZZ(gp.R_0+gp.a,0.)+N1*psipR(gp.R_0+gp.a,0)<<"\n";
+    std::cout << "psipZZ( 1-e,0)         "<<psipZZ(gp.R_0-gp.a,0.)+N2*psipR(gp.R_0-gp.a,0)<<"\n";
+    std::cout << "psipRR( 1-de,ke)       "<<psipRR(R_H,Z_H)+N3*psipZ(R_H,Z_H)<<"\n";
 
     //Feltor quantities
     solovev::CurvatureNablaBR curvatureR(gp);
@@ -109,7 +169,7 @@ int main( int argc, char* argv[])
     dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Gaussian3d blob(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    dg::Grid2d<double> grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
+    dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
 
     std::vector<dg::HVec> hvisual(21);
         //allocate mem for visual
@@ -120,8 +180,6 @@ int main( int argc, char* argv[])
     hvisual[2] = dg::evaluate( ipol, grid2d);
     hvisual[3] = dg::evaluate( invB, grid2d);
     hvisual[4] = dg::evaluate( field, grid2d);
-    hvisual[5] = hvisual[4];
-    hvisual[6] = hvisual[4];
     hvisual[5] = dg::evaluate( curvatureR, grid2d);
     hvisual[6] = dg::evaluate( curvatureZ, grid2d);
     hvisual[7] = dg::evaluate( gradLnB, grid2d);
@@ -158,10 +216,10 @@ int main( int argc, char* argv[])
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned npsi = 3, Npsi = 50;//set number of psivalues
     psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
-    dg::Grid1d<double> grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
+    dg::Grid1d grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
     solovev::SafetyFactor<dg::DVec>     qprof(grid2d, gp, alphaog2d );
     dg::HVec sf         = dg::evaluate( qprof,    grid1d);
-    dg::HVec abs        = dg::evaluate( dg::coo1, grid1d);
+    dg::HVec abs        = dg::evaluate( dg::cooX1d, grid1d);
 
     
     std::string names[] = { "", "psip", "ipol", "invB","invbf", "KR", 
@@ -177,7 +235,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim1d_ids[1], dim2d_ids[2], dim3d_ids[3] ;
     err = file::define_dimension( ncid,"psi", &dim1d_ids[0], grid1d);
-    dg::Grid3d<double> grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
+    dg::Grid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
     err = file::define_dimensions( ncid, &dim3d_ids[0], grid3d);
     dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2]; 
 

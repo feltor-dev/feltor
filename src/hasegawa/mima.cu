@@ -51,7 +51,7 @@ int main( int argc, char* argv[])
         return -1;
     }
 
-    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     dg::Mima< dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.eps_pol, p.global); 
     dg::DVec one( grid.size(), 1.);

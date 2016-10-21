@@ -80,7 +80,7 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( comm, &rank);
     ///////////////////////////////////////////////////////////////////////
     //create initial vector
-    const dg::MPI_Grid2d grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::DIR, comm);
+    const dg::MPIGrid2d grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::DIR, comm);
     dg::Gaussian gaussian( 1., ly/2., .1, .1, 1);
     dg::MHVec theta = dg::evaluate ( gaussian, grid);
     std::vector<dg::MHVec> y0(2, theta);

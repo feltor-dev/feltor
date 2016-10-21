@@ -28,7 +28,7 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cout << "Type in n, Nx and Ny and Nz!\n";
     std::cin >> n >> Nx >> Ny >> Nz;
-    dg::Grid3d<double> g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, bcy, bcz);
+    dg::Grid3d g( 0, lx, 0, lx, 0., lx, n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g);
     dg::Timer t;
     std::cout << "TEST DX \n";

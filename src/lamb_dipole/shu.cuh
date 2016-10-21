@@ -14,7 +14,7 @@ namespace dg
 template< class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
+    Diffusion( const dg::Grid2d& g, double nu): nu_(nu),
         w2d( dg::create::weights( g) ), v2d( dg::create::inv_weights(g) ) ,
         LaplacianM( g, dg::normed)
     { 
@@ -38,7 +38,7 @@ struct Shu
     typedef typename container::value_type value_type;
     typedef container Vector;
 
-    Shu( const Grid2d<value_type>& grid, double eps);
+    Shu( const Grid2d& grid, double eps);
 
     const Elliptic<Matrix, container, container>& lap() const { return laplaceM;}
     ArakawaX<CartesianGrid2d, Matrix, container>& arakawa() {return arakawa_;}
@@ -59,7 +59,7 @@ struct Shu
 };
 
 template<class Matrix, class container>
-Shu< Matrix, container>::Shu( const Grid2d<value_type>& g, double eps): 
+Shu< Matrix, container>::Shu( const Grid2d& g, double eps): 
     psi( g.size()),
     w2d( create::weights( g)), v2d( create::inv_weights(g)),  
     laplaceM( g, not_normed),

@@ -62,7 +62,7 @@ EllSparseBlockMat<double> dx_symm(int n, int N, double h, bc bcx)
     Operator<double> b = t*(1./2.*rl);
     Operator<double> bp = t*(-1./2.*lr); //pitfall: T*-m^T is NOT -(T*m)^T
     //transform to XSPACE
-    Grid1d<double> g( 0,1, n, N);
+    Grid1d g( 0,1, n, N);
     Operator<double> backward=g.dlt().backward();
     Operator<double> forward=g.dlt().forward();
     a = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
@@ -154,7 +154,7 @@ EllSparseBlockMat<double> dx_plus( int n, int N, double h, bc bcx )
         a_bound_right = t*(d);
     Operator<double> b = t*rl;
     //transform to XSPACE
-    Grid1d<double> g( 0,1, n, N);
+    Grid1d g( 0,1, n, N);
     Operator<double> backward=g.dlt().backward();
     Operator<double> forward=g.dlt().forward();
     a = backward*a*forward, a_bound_left = backward*a_bound_left*forward;
@@ -238,7 +238,7 @@ EllSparseBlockMat<double> dx_minus( int n, int N, double h, bc bcx )
         a_bound_left = t*d;
     Operator<double> bp = -t*lr;
     //transform to XSPACE
-    Grid1d<double> g( 0,1, n, N);
+    Grid1d g( 0,1, n, N);
     Operator<double> backward=g.dlt().backward();
     Operator<double> forward=g.dlt().forward();
     a  = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
@@ -322,7 +322,7 @@ EllSparseBlockMat<double> jump( int n, int N, double h, bc bcx)
     //transform to XSPACE
     Operator<double> t = create::pipj_inv(n);
     t *= 2./h;
-    Grid1d<double> g( 0,1, n, N);
+    Grid1d g( 0,1, n, N);
     Operator<double> backward=g.dlt().backward();
     Operator<double> forward=g.dlt().forward();
     a = backward*t*a*forward, a_bound_left  = backward*t*a_bound_left*forward;
@@ -416,7 +416,7 @@ EllSparseBlockMat<double> dx_normed( int n, int N, double h, bc bcx, direction d
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat<double> dx( const Grid1d<double>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat<double> dx( const Grid1d& g, bc bcx, direction dir = centered)
 {
     return dx_normed( g.n(), g.N(), g.h(), bcx, dir);
 }
@@ -431,7 +431,7 @@ EllSparseBlockMat<double> dx( const Grid1d<double>& g, bc bcx, direction dir = c
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat<double> dx( const Grid1d<double>& g, direction dir = centered)
+EllSparseBlockMat<double> dx( const Grid1d& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);
 }
@@ -445,7 +445,7 @@ EllSparseBlockMat<double> dx( const Grid1d<double>& g, direction dir = centered)
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat<double> jump( const Grid1d<double>& g, bc bcx)
+EllSparseBlockMat<double> jump( const Grid1d& g, bc bcx)
 {
     return jump( g.n(), g.N(), g.h(), bcx);
 }
@@ -458,7 +458,7 @@ EllSparseBlockMat<double> jump( const Grid1d<double>& g, bc bcx)
 *
 * @return Host Matrix 
 */
-EllSparseBlockMat<double> jump( const Grid1d<double>& g)
+EllSparseBlockMat<double> jump( const Grid1d& g)
 {
     return jump( g, g.bcx());
 }
