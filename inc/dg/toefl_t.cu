@@ -39,7 +39,7 @@ int main()
     std::cout << "Timestep                    " << dt << std::endl;
 
     //create initial vector
-    const dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::DIR);
+    const dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::DIR);
     dg::Gaussian gaussian( lx/2., ly/2., .1, .1, 1);
     dg::DVec theta = dg::evaluate ( gaussian, grid);
     std::vector<dg::DVec> y0(2, theta);
@@ -67,7 +67,7 @@ int main()
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( dvisual.begin(), dvisual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
-        hvisual = dvisual;
+        dg::blas1::transfer( dvisual, hvisual);
         render.renderQuad( hvisual, n*grid.Nx(), n*grid.Ny(), colors);
         glfwSwapBuffers(w);
         glfwPollEvents();

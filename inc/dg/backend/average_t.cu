@@ -14,7 +14,7 @@ int main()
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny!\n";
     std::cin >> n >> Nx >> Ny;
-    const dg::Grid2d<double> g( 0, lx, 0, ly, n, Nx, Ny);
+    const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
     dg::HVec w2d = dg::create::weights( g);
 
     dg::PoloidalAverage<dg::HVec, thrust::host_vector<int> > pol(g);

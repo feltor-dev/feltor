@@ -33,7 +33,7 @@ int main()
     double eps = 1e-6; //# of pcg iterations increases very much if 
     std::cin >> eps;
 
-    dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
+    dg::Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
     const dg::DVec w2d = dg::create::weights( grid);
     const dg::DVec v2d = dg::create::inv_weights( grid);
     std::cout<<"Evaluate initial condition...\n";

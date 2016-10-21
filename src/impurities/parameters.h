@@ -1,6 +1,7 @@
-
 #pragma once
+//#include <string>
 #include "dg/enums.h"
+#include "json/json.h"
 
 namespace imp
 {
@@ -9,7 +10,8 @@ namespace imp
  */
 struct Parameters
 {
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
+    unsigned n_out, Nx_out, Ny_out;
     double dt; 
 
     double eps_time, eps_pol, eps_gamma;
@@ -29,48 +31,52 @@ struct Parameters
     unsigned vorticity;
     unsigned mode;
     double wall_pos, wall_amp, wall_sigma;
-
     /**
      * @brief constructor to make a const object
      *
-     * @param v Vector from read_input function
+     * @param js json object
      */
-    Parameters( const std::vector< double>& v) {
+    Parameters( const Json::Value& js) {
+        n  = js["n"].asUInt();
+        Nx = js["Nx"].asUInt();
+        Ny = js["Ny"].asUInt();
+        dt = js["dt"].asDouble();
+        n_out  = js["n_out"].asUInt();
+        Nx_out = js["Nx_out"].asUInt();
+        Ny_out = js["Ny_out"].asUInt();
+        itstp = js["itstp"].asUInt();
+        maxout = js["maxout"].asUInt();
 
-        n  = (unsigned)v[1]; 
-        Nx = (unsigned)v[2];
-        Ny = (unsigned)v[3];
-        dt = v[4];
-        eps_time = v[5];
-        eps_pol = v[6];
-        eps_gamma = v[7];
-        lx = v[8]; 
-        ly = v[9];
-        bc_x = map((int)v[10]), bc_y = map((int)v[11]);
-        nu = v[12];
-        kappa = v[13];
-        tau[1] = v[14]; 
-        amp = v[15];
-        sigma = v[16];
-        posX = v[17];
-        posY = v[18];
-        itstp = v[19];
-        maxout = v[20];
-
-        a[2] = v[21];
-        mu[2] = v[22];
-        tau[2] = v[23];
+        eps_pol = js["eps_pol"].asDouble();
+        eps_gamma = js["eps_gamma"].asDouble();
+        eps_time = js["eps_time"].asDouble();
+        kappa = js["curvature"].asDouble();
+        nu = js["nu_perp"].asDouble();
+        amp = js["amplitude"].asDouble();
+        sigma = js["sigma"].asDouble();
+        posX = js["posX"].asDouble();
+        posY = js["posY"].asDouble();
+        lx = js["lx"].asDouble();
+        ly = js["ly"].asDouble();
+        bc_x = dg::str2bc(js["bc_x"].asString());
+        bc_y = dg::str2bc(js["bc_y"].asString());
+        tau[1] = js["tau"].asDouble();
+        a[2] = js["a_z"].asDouble();
+        mu[2] =  js["mu_z"].asDouble();
+        tau[2] = js["tau_z"].asDouble();
 
         a[0] = -1, a[1] = 1-a[2];
         mu[0] = 0, mu[1] = 1;
         tau[0] = -1;
-        vorticity = v[24];
-        mode = v[25];
-        wall_pos = v[26];
-        wall_amp = v[27];
-        wall_sigma = v[28];
-
+        vorticity = js["vorticity"].asDouble();
+        mode = js["mode"].asUInt();
+        wall_pos = js["wall_pos"].asDouble();
+        wall_amp = js["wall_amp"].asDouble();
+        wall_sigma = js["wall_sigma"].asDouble();
     }
+
+
+
     /**
      * @brief Display parameters
      *
@@ -163,7 +169,3 @@ struct Parameters
     }
 };
 }//namespace imp
-
-
-    
-

@@ -27,7 +27,7 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     mpi_init2d( bcx, dg::PER, n, Nx, Ny, comm);
 
-    dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER, comm);
+    dg::MPIGrid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER, comm);
     const dg::MDVec w2d = dg::create::weights( grid);
     const dg::MDVec v2d = dg::create::inv_weights( grid);
     int rank;

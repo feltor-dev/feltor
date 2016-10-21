@@ -5,8 +5,8 @@
 
 #include "feltor/parameters.h"
 // #include "geometry_circ.h"
-#include "solovev/geometry.h"
-#include "solovev/init.h"
+#include "geometries/solovev.h"
+#include "geometries/init.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"

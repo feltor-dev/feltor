@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
     params.eps = p.eps, params.P = p.P;
     params.R = p.R, params.L = p.L, params.R_l = p.R_l, params.zeta = p.zeta;
 
-    dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, dg::PER, dg::DIR);
+    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, dg::PER, dg::DIR);
     Convection<dg::DMatrix, dg::DVec, dg::DVec> convect( grid, params, p.eps_lap);
     //initial conditions
     dg::Gaussian g1( 0.2*p.lx, 0.5*p.ly, 0.05, 0.05, p.n0);

@@ -4,6 +4,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/gather.h>
 #include "vector_traits.h"
+#include "thrust_vector_blas.cuh"
 
 namespace dg
 {

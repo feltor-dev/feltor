@@ -8,20 +8,19 @@
 #endif
 
 
-//TODO es wäre besser, wenn ToeflI auch einen Zeitschritt berechnen würde 
+// TODO es wäre besser, wenn ToeflI auch einen Zeitschritt berechnen würde
 // dann wäre die Rückgabe der Felder (Potential vs. Masse vs. exp( y)) konsistenter
 // (nur das Objekt weiß welches Feld zu welchem Zeitschritt gehört)
 
 namespace dg
 {
-
 template<class Geometry, class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const Geometry& g, imp::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g, g.bcx(), g.bcy(), dg::normed, dg::centered)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -49,7 +48,6 @@ struct Diffusion
     const imp::Parameters p;
     container temp;    
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
-
 };
 
 template< class Geometry, class Matrix, class container >
@@ -113,11 +111,12 @@ struct ToeflI
      * @return integrated total energy diffusion
      */
     double energy_diffusion( ){ return ediff_;}
+    const container& polarization( const std::vector<container>& y);
 
-  private:
+private:
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     const container& compute_psi( const container& potential, int idx);
-    const container& polarization( const std::vector<container>& y);
+//    const container& polarization( const std::vector<container>& y);
 
     container chi, omega;
     const container binv; //magnetic field
@@ -137,17 +136,15 @@ struct ToeflI
     double mass_, energy_, diff_, ediff_;
 
     imp::Parameters p;
-
-
 };
 
 template< class Geometry, class Matrix, class container>
 ToeflI< Geometry, Matrix, container>::ToeflI( const Geometry& grid, imp::Parameters p) :
     chi( evaluate( dg::zero, grid )), omega(chi),  
-    binv( evaluate( LinearX( p.kappa, 1.), grid)), 
+    binv( evaluate( LinearX( p.kappa, 1.), grid)),
     phi( 3, chi), dyphi( phi), ype(phi),
-    gamma_n( 2, chi),
     dyy( 3, chi), lny(dyy), lapy( dyy),
+    gamma_n( 2, chi),
     gamma1(  grid, -0.5*p.tau[1]),
     arakawa( grid), 
     pol(     grid, not_normed, centered), 
@@ -177,7 +174,7 @@ const container& ToeflI<G, M, container>::compute_psi( const container& potentia
 
 template<class G, class Matrix, class container>
 const container& ToeflI<G, Matrix, container>::polarization( const std::vector<container>& y)
-{ 
+{
     //\chi = p.ai \p.mui n_i + p.as \p.mus n_s
     blas1::axpby( p.a[1]*p.mu[1], y[1], 0., chi); 
     blas1::axpby( p.a[2]*p.mu[2], y[2], 1., chi);
@@ -185,9 +182,6 @@ const container& ToeflI<G, Matrix, container>::polarization( const std::vector<c
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\p.mui n_i ) /B^2
     pol.set_chi( chi);                              //set chi of polarisation: nablp.aperp (chi nablp.aperp )
-
-
-
 
     gamma1.alpha() = -0.5*p.tau[1]*p.mu[1];
     invert_invgamma( gamma1, gamma_n[0], y[1]);
@@ -217,7 +211,7 @@ void ToeflI< G, M, container>::operator()(std::vector<container>& y, std::vector
     phi[0] = polarization( y);
     phi[1] = compute_psi( phi[0], 1);
     phi[2] = compute_psi( phi[0], 2);
-    for( int i=0; i<y.size(); i++)
+    for( unsigned i=0; i<y.size(); i++)
     {
         dg::blas1::transform( y[i], ype[i], dg::PLUS<>(+1)); 
         dg::blas1::transform( ype[i], lny[i], dg::LN<double>()); 

@@ -54,7 +54,7 @@ int main( int argc, char * argv[])
     }
 
     //initiate solver 
-    dg::Grid2d<double> grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::DVec w2d( dg::create::weights(grid));
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
     //dg::HVec omega = dg::evaluate ( lamb, grid);

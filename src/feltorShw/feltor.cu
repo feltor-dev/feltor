@@ -61,7 +61,7 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////////////////
 
     //Make grid
-     dg::Grid2d<double > grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
+     dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!

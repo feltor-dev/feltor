@@ -17,7 +17,7 @@ int main()
 
 
     {
-    dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
+    dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
     thrust::host_vector<double> vector = dg::evaluate( sinus, g);
     dg::IHMatrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
@@ -62,7 +62,7 @@ int main()
     std::cout << "2D Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
     }
     {
-    dg::Grid3d<double> g( -10, 10, -5, 5, -M_PI, M_PI, n, Nx, Ny, Nz);
+    dg::Grid3d g( -10, 10, -5, 5, -M_PI, M_PI, n, Nx, Ny, Nz);
     dg::IHMatrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 
@@ -78,7 +78,7 @@ int main()
                 z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
                         g.z0() + (k+0.5)*g.hz();
             }
-    dg::DVec xd(x), yd(y), zd(z);
+    thrust::device_vector<double> xd(x), yd(y), zd(z);
     cusp::ell_matrix<int, double, cusp::device_memory> dB = dg::create::ell_interpolation( xd, yd, zd, g);
     dg::HVec vector = dg::evaluate( sinus, g);
     dg::DVec dv( vector), w2( vector);

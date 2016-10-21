@@ -63,7 +63,7 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////////////////
 
     //Make grid
-     dg::Grid2d<double > grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
+     dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
@@ -74,15 +74,22 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+
     dg::CONSTANT prof(p.bgprofamp );
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
    
    //initialization via N_i,T_I ->n_e, t_i=t_e
     y1[1] = dg::evaluate( init0, grid);
     dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde    
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize Ni = <n> + <n>*ntilde
+    //for Ni and ne with blob structure
+//     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize Ni = <n> + <n>*ntilde
+//     dg::blas1::axpby( 0.25/p.amp, y1[1], 1., y0[1]); //initialize Ni = <n> + <n>*ntilde
+//     if (p.iso == 1) dg::blas1::axpby( 1.,y1[2], 0., y0[3]); //initialize Ti = prof
+//     if (p.iso == 0) dg::blas1::axpby( 1.,y0[1], 0., y0[3]); //initialize Ti = N_i
+    //for Ni and ne with scaled blob structure
+    dg::blas1::axpby( 0.1/p.amp, y1[1], 1., y0[1]); //initialize Ni = <n> + <n>*ntilde
     if (p.iso == 1) dg::blas1::axpby( 1.,y1[2], 0., y0[3]); //initialize Ti = prof
-    if (p.iso == 0) dg::blas1::axpby( 1.,y0[1], 0., y0[3]); //initialize Ti = N_i
+    if (p.iso == 0) dg::blas1::axpby( 1.,y1[1], 1., y0[3]); //initialize Ti 
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //= Ni - bg
     std::cout << "intiialize ne" << std::endl;
 
@@ -116,6 +123,9 @@ int main( int argc, char* argv[])
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =ne-bg
         dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg 
+
+    dg::blas1::scal( y0[2], 0.1/p.amp); //initialize Ni = <n> + <n>*ntilde
+
     }
     std::cout << "Done!\n";
 

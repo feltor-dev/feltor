@@ -31,7 +31,7 @@ template< class Vector_Type>
 struct RHS
 {
     typedef std::vector<Vector_Type> Vector;
-    RHS(const dg::Grid2d<double>& grid): arakawa( grid), phi( evaluate( function, grid)),
+    RHS(const dg::Grid2d& grid): arakawa( grid), phi( evaluate( function, grid)),
                                      temp(phi)
     { }
     void operator()(const Vector& y, Vector& yp)
@@ -53,7 +53,7 @@ int main()
     std::cout << "Type NT!\n";
     std::cin >> NT;
     const double dt = T/(double)NT;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     dg::DVec w2d = dg::create::weights( grid);
     //Also test std::vector<DVec> functionality
     std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;

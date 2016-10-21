@@ -74,8 +74,8 @@ int main( int argc, char* argv[])
     if(rank==0)p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
-    dg::MPI_Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y, comm);
-    dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
+    dg::MPIGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y, comm);
+    dg::MPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
     dg::ToeflR< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > test( grid, p); 
     dg::Diffusion<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> diffusion( grid, p.nu);
@@ -137,7 +137,7 @@ int main( int argc, char* argv[])
     int dims[2],  coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
     size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
-    size_t start[3] = {0, coords[1]*count[2], coords[0]*count[2]};
+    size_t start[3] = {0, coords[1]*count[1], coords[0]*count[2]};
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
     dg::MDVec transfer( dg::evaluate(dg::zero, grid));

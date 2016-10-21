@@ -10,7 +10,6 @@
 
 namespace dg
 {
-struct MPITag;
 ///@addtogroup grid
 ///@{
 
@@ -25,9 +24,10 @@ struct MPITag;
  *
  * @note Note that a single cell is never divided across processes.
  */
-struct MPI_Grid2d
+struct MPIGrid2d
 {
     typedef MPITag memory_category;
+    typedef TwoDimensionalTag dimensionality;
     /**
      * @brief Construct mpi grid
      *
@@ -40,7 +40,7 @@ struct MPI_Grid2d
      * @param Ny
      * @param comm
      */
-    MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
+    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny), comm( comm)
     {
         int rank, dims[2], periods[2], coords[2];
@@ -75,7 +75,7 @@ struct MPI_Grid2d
      * @param bcy
      * @param comm
      */
-    MPI_Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
+    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), comm( comm)
     {
         int rank, dims[2], periods[2], coords[2];
@@ -244,7 +244,7 @@ struct MPI_Grid2d
         g.display();
         os << "LOCAL GRID \n";
 
-        Grid2d<double> grid = local();
+        Grid2d grid = local();
         grid.display();
 
     }
@@ -256,7 +256,7 @@ struct MPI_Grid2d
      * class itself
      * @return Grid object
      */
-    Grid2d<double> local() const {return Grid2d<double>(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
+    Grid2d local() const {return Grid2d(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
 
     /**
      * @brief Return a grid global for the calling process
@@ -264,7 +264,7 @@ struct MPI_Grid2d
      * The global grid contains the global boundaries
      * @return Grid object
      */
-    Grid2d<double> global() const {return g;}
+    Grid2d global() const {return g;}
     /**
      * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
@@ -280,7 +280,7 @@ struct MPI_Grid2d
         g.init_X_boundaries(global_x0, global_x1);
     }
     private:
-    Grid2d<double> g; //global grid
+    Grid2d g; //global grid
     MPI_Comm comm; //just an integer...
 
 };
@@ -295,9 +295,10 @@ struct MPI_Grid2d
  *
  * @note Note that a single cell is never divided across processes.
  */
-struct MPI_Grid3d
+struct MPIGrid3d
 {
     typedef MPITag memory_category;
+    typedef ThreeDimensionalTag dimensionality;
     /**
      * @brief Construct a 3D grid
      *
@@ -314,7 +315,7 @@ struct MPI_Grid3d
      * @param comm mpi communicator
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
+    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz), comm( comm)
     {
         int rank, dims[3], periods[3], coords[3];
@@ -360,7 +361,7 @@ struct MPI_Grid3d
      * @param comm mpi communicator
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    MPI_Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), comm( comm)
     {
         int rank, dims[3], periods[3], coords[3];
@@ -571,7 +572,7 @@ struct MPI_Grid3d
         g.display();
         os << "LOCAL GRID \n";
 
-        Grid3d<double> grid = local();
+        Grid3d grid = local();
         grid.display();
 
     }
@@ -582,14 +583,14 @@ struct MPI_Grid3d
      * class itself
      * @return Grid object
      */
-    Grid3d<double> local() const {return Grid3d<double>(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
+    Grid3d local() const {return Grid3d(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
     /**
      * @brief Return a grid global for the calling process
      *
      * The global grid contains the global boundaries
      * @return Grid object
      */
-    Grid3d<double> global() const {return g;}
+    Grid3d global() const {return g;}
     /**
      * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
@@ -606,11 +607,11 @@ struct MPI_Grid3d
         g.init_X_boundaries(global_x0, global_x1);
     }
     private:
-    Grid3d<double> g; //global grid
+    Grid3d g; //global grid
     MPI_Comm comm; //just an integer...
 };
 ///@cond
-int MPI_Grid2d::pidOf( double x, double y) const
+int MPIGrid2d::pidOf( double x, double y) const
 {
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
@@ -625,7 +626,7 @@ int MPI_Grid2d::pidOf( double x, double y) const
     else
         return -1;
 }
-int MPI_Grid3d::pidOf( double x, double y, double z) const
+int MPIGrid3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);

@@ -80,8 +80,7 @@ struct Parameters
             solw = v[33];
             omega_source = v[34];
             sourceb = v[35];
-            sourcew = v[36];
-            
+            sourcew = v[36];            
         }
     }
     /**

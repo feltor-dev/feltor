@@ -319,12 +319,20 @@ const double rk_classic<17>::b[17] = {
  \end{align}
 \f]
 *
-* @ingroup algorithms
+* @ingroup time
 *
 * Uses only dg::blas1::axpby() routines to integrate one step.
-* The coefficients are chosen in a form that require a minimum of 
-* axpby function calls (check for alpha==0, beta==1) and else 
-* assumes that most of the work is done in the computation of the rhs.
+ * The coefficients are in the form Cockburn proposed in his paper.
+ * It's just a reformulation in that you don't store the sequence of
+ * k_j but rather the abscissas u_j with k_j = f(u_j)
+ *  Note that if you knew all k_j you can compute this
+ *  sequence u_j via u=Bk. To derive these coefficients from the butcher tableau
+ * consider.
+ * \f[ u = Bhk = (B-D)hk + Dhk = (B-D)B^{-1}y + Dhk 
+ *       = ( 1- DB^{-1})u + Dhk = \alpha u + \beta h k\f]
+ *  where \f$ B\f$ is the butcher tableau without the c's and extended
+ *  by ones on the left and \f$ D\f$ its
+ *  diagonal part. 
 * @tparam k Order of the method (1, 2, 3 or 4)
 * @tparam Vector The argument type used in the Functor class
 */
@@ -395,13 +403,12 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
  \end{align}
 \f]
 *
-* @ingroup algorithms
+* @ingroup time 
 *
 * Uses only dg::blas1::axpby() routines to integrate one step.
-* The coefficients are chosen in a form that require a minimum of 
-* axpby function calls (check for alpha==0, beta==1) and else 
-* assumes that most of the work is done in the computation of the rhs.
-* @tparam k Order of the method (1, 2, 3 or 4)
+* The coefficients are chosen in the classic form given by Runge and Kutta. 
+* Needs more calls for axpby than our RK class but we implemented higher orders
+* @tparam s Order of the method (1, 2, 3, 4, 6, 17)
 * @tparam Vector The argument type used in the Functor class
 */
 template< size_t s, class Vector>
@@ -477,10 +484,10 @@ struct NotANumber : public std::exception
 /**
  * @brief Integrate differential equation with a s-stage RK scheme and a fixed number of steps
  *
- * @ingroup algorithms
+ * @ingroup time 
  * @tparam RHS The right-hand side class
  * @tparam Vector Vector-class (needs to be copyable)
- * @tparam s # of stages
+ * @tparam s # of stages (1, 2, 3, 4, 6, 17)
  * @param rhs The right-hand-side
  * @param begin initial condition (size 3)
  * @param end (write-only) contains solution on output
@@ -503,10 +510,27 @@ void stepperRK(RHS& rhs, const Vector& begin, Vector& end, double T_min, double 
     }
 }
 
+template< class RHS, class Vector>
+void stepperRK1(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+{
+    stepperRK<RHS, Vector, 1>( rhs, begin, end, T_min, T_max, N);
+}
+template< class RHS, class Vector>
+void stepperRK2(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+{
+    stepperRK<RHS, Vector, 2>( rhs, begin, end, T_min, T_max, N);
+}
+
+template< class RHS, class Vector>
+void stepperRK3(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+{
+    stepperRK<RHS, Vector, 3>( rhs, begin, end, T_min, T_max, N);
+}
+
 /**
  * @brief Integrates the differential equation using RK 4 and a fixed number of steps
  *
- * @ingroup algorithms
+ * @ingroup time 
  * @tparam RHS The right-hand side class
  * @tparam Vector Vector-class (needs to be copyable)
  * @param rhs The right-hand-side
@@ -524,7 +548,7 @@ void stepperRK4(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
 /**
  * @brief Integrates the differential equation using RK 6 and a fixed number of steps
  *
- * @ingroup algorithms
+ * @ingroup time 
  * @tparam RHS The right-hand side class
  * @tparam Vector Vector-class (needs to be copyable)
  * @param rhs The right-hand-side
@@ -542,7 +566,7 @@ void stepperRK6(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
 /**
  * @brief Integrates the differential equation using RK 17 and a fixed number of steps
  *
- * @ingroup algorithms
+ * @ingroup time 
  * @tparam RHS The right-hand side class
  * @tparam Vector Vector-class (needs to be copyable)
  * @param rhs The right-hand-side
@@ -559,10 +583,11 @@ void stepperRK17(RHS& rhs, const Vector& begin, Vector& end, double T_min, doubl
 }
 
 
+///@addtogroup time
+///@{
 /**
  * @brief Integrates the differential equation using a s stage RK scheme and a rudimentary stepsize-control
  *
- * @ingroup algorithms
  * Doubles the number of timesteps until the desired accuracy is reached
  *
  * @tparam RHS The right-hand side class. There must be the function bool monitor( const Vector& end); available which is called after every step. Return true if everything is ok and false if the integrator certainly fails.
@@ -649,6 +674,8 @@ int integrateRK17(RHS& rhs, const Vector& begin, Vector& end, double T_max, doub
     return integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
 }
 
+///@}
+//
 ///@cond
 //Euler specialisation
 template < class Vector>

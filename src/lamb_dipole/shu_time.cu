@@ -30,7 +30,7 @@ int main( int argc, char * argv[])
     std::cout << "type dt0 (1e-3)!\n";
     std::cin >> dt0;
     std::cout << "k n dt Nx eps vort enstr energy\n";
-    Grid2d<double> grid( 0, 1, 0, 1, n, Nx, Ny, dg::PER, dg::PER);
+    Grid2d grid( 0, 1, 0, 1, n, Nx, Ny, dg::PER, dg::PER);
     DVec w2d( create::weights(grid));
     dg::Lamb lamb( 0.5, 0.8, 0.1, 1.);
     const HVec omega = evaluate ( lamb, grid);

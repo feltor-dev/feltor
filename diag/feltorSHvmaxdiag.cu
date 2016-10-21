@@ -47,7 +47,7 @@ int main( int argc, char* argv[])
         
         size_t count1d[2]  = {1, p.n_out* p.Nx_out}; 
         size_t start1d[2] =  {0,0};
-        dg::Grid1d<double > g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
+        dg::Grid1d g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
         dg::HVec nemax(dg::evaluate( dg::one, g1d));
         dg::HVec temax(dg::evaluate( dg::one, g1d));
         err = nc_inq_varid( ncid, "ne_max", &varID2);

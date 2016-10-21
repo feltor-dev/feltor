@@ -187,7 +187,7 @@ void boxintegrator( Field& field, const Grid& grid,
 * This class discretizes the operators \f$ \nabla_\parallel = 
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
 cylindrical coordinates
-* @ingroup algorithms
+* @ingroup utilities
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
@@ -231,7 +231,7 @@ struct FieldAligned
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         bcz_ = bcz;
-        const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        const dg::Grid2d g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
         left_ = dg::evaluate( dg::CONSTANT(left), g2d);
         right_ = dg::evaluate( dg::CONSTANT(right),g2d);
     }
@@ -378,11 +378,11 @@ FieldAligned<Geometry, M,container>::FieldAligned(Field field, Geometry grid, do
     right_ = left_ = dg::evaluate( zero, g2d);
     ghostM.resize( size); ghostP.resize( size);
     //Set starting points
-    std::vector<thrust::host_vector<double> > y( 5, dg::evaluate( dg::coo1, g2d)); // x
-    y[1] = dg::evaluate( dg::coo2, g2d); //y
+    std::vector<thrust::host_vector<double> > y( 5, dg::evaluate( dg::cooX2d, g2d)); // x
+    y[1] = dg::evaluate( dg::cooY2d, g2d); //y
     y[2] = dg::evaluate( dg::zero, g2d);
-    y[3] = dg::pullback( dg::coo1, g2d); //R
-    y[4] = dg::pullback( dg::coo2, g2d); //Z
+    y[3] = dg::pullback( dg::cooX2d, g2d); //R
+    y[4] = dg::pullback( dg::cooY2d, g2d); //Z
     //integrate field lines for all points
     std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2d)), ym(yp); 
     if( deltaPhi <=0) deltaPhi = grid.hz();

@@ -2,7 +2,7 @@ ifndef INCLUDED #include guard
 INCLUDED=1
 
 #default machine values
-INCLUDE = -I$(HOME)/include  # cusp and thrust and the draw libraries
+INCLUDE = -I$(HOME)/include#  # cusp and thrust and the draw libraries
 GLFLAGS =$$(pkg-config --static --libs glfw3) #glfw3 installation
 CC=g++ #C++ compiler
 MPICC=mpic++  #mpi compiler

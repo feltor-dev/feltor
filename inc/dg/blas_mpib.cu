@@ -26,7 +26,7 @@ int main( int argc, char* argv[])
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
-    dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, comm);
+    dg::MPIGrid2d grid( 0., lx, 0, ly, n, Nx, Ny, comm);
     Vector w2d;
     dg::blas1::transfer( dg::create::weights(grid), w2d);
     if(rank==0)std::cout<<"Evaluate a function on the grid\n";

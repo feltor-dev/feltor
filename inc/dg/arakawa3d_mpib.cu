@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
     mpi_init3d( bcx, bcy,dg::PER, n, Nx, Ny,Nz, comm);
-    dg::MPI_Grid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
+    dg::MPIGrid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::Timer t;
     Vector w3d = dg::create::weights( grid);

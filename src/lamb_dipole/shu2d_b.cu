@@ -62,7 +62,7 @@ int main()
         for(unsigned i=1; i<5; i++)
         {
             unsigned Nx = 8*pow(2,i), Ny = Nx;
-            Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+            Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
             DVec w2d( create::weights(grid));
 
             double dx = lx/(double)Nx;

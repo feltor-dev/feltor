@@ -9,7 +9,7 @@
  *      @defgroup containers Containers
  *      @defgroup algorithms Numerical schemes
  *      @defgroup fftw FFTW wrappers
- *      @defgroup utilities Utilities
+ *      @defgroup utilitiesX Utilities
  *      @defgroup exceptions Exceptions
  * @}
  */
