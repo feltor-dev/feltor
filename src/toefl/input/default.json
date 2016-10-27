@@ -14,7 +14,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "eps_gamma" : 1e-7,   //accuracy of Gamma 
     "eps_time"  : 1e-10,  //accuracy of implicit time-stepper
     "curvature"  : 0.00015, //magnetic curvature
-    "tau"  : 1,        //Ti/Te
+    "tau"  : 1,        //Ti/Te (only in gyrofluid models)
     "nu_perp"  : 5e-3, //pependicular viscosity
     "amplitude"  : 1.0,//amplitude of the blob
     "sigma"  : 10,     //blob variance in units of rho_s
@@ -24,8 +24,8 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "ly"  : 200,       //ly in units of rho_s
     "bc_x"  : "DIR",   //boundary condition in x
     "bc_y"  : "PER",   //boundary condition in y
-    "equations": "global", //local or global or ralf or ralf_global
-    "boussinesq": false, //boussinesq approximation true or false
-    "friction": 0  //friction coefficient in ralf model
+    "equations": "global", //local or global or gravity_local or gravity_global
+    "boussinesq": false, //boussinesq approximation in global models true or false
+    "friction": 0  //friction coefficient in gravity model
 
 }

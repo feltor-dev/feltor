@@ -171,7 +171,7 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters&
 template< class G, class M, class container>
 const container& ToeflR<G, M, container>::compute_psi( const container& potential)
 {
-    if(equations == "ralf") return potential;
+    if(equations == "gravity_local") return potential;
     if( equations == "local" || equations == "global")
     {
         unsigned number = invert_invgamma( gamma1, phi[1], potential);
@@ -187,7 +187,7 @@ const container& ToeflR<G, M, container>::compute_psi( const container& potentia
 
         dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
     }
-    if( equations == "ralf_global") 
+    if( equations == "gravity_global") 
         dg::blas1::axpby( 0.5, omega, 0., phi[1]);
     return phi[1];    
 }
@@ -207,7 +207,7 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
         if( !boussinesq) 
             pol.set_chi( chi);
     }
-    if(equations == "ralf_global" )
+    if(equations == "gravity_global" )
     {
         dg::blas1::transfer( y[0], chi);
         dg::blas1::plus( chi, 1.); 
@@ -223,7 +223,7 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
     }
     else 
         blas1::axpby( -1. ,y[1], 0., omega);
-    if( equations == "global" || equations == "ralf_global")
+    if( equations == "global" || equations == "gravity_global")
         if( boussinesq) 
             blas1::pointwiseDivide( omega, chi, omega);
     unsigned number = invert_pol( pol, phi[0], omega);
@@ -267,7 +267,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
-    else if(equations == "ralf_global" || equations == "ralf")
+    else if(equations == "gravity_global" || equations == "gravity_local")
     {
         energy_ = 0.5*blas2::dot( y[0], w2d, y[0]);
         double Ge = - blas2::dot( y[0], w2d, lapy[0]);
@@ -287,7 +287,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
-    if( equations == "ralf_global")
+    if( equations == "gravity_global")
     {
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
@@ -298,7 +298,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         dg::blas1::axpby( -1., omega, 1., yp[1]);
         return;
     }
-    if( equations == "ralf")
+    if( equations == "gravity_local")
     {
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
