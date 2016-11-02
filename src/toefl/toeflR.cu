@@ -61,7 +61,7 @@ int main( int argc, char* argv[])
         dg::DVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
-    if( p.equations == "ralf" || p.equations == "rafl_global"){
+    if( p.equations == "gravity_local" || p.equations == "gravity_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
 
