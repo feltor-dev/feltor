@@ -1,6 +1,6 @@
 <hr>
 <h3> Welcome to the FELTOR project!</h3>
-![alt tag](https://github.com/feltor-dev/feltor/edit/develop/3dpic.pdf)
+![alt text](https://github.com/feltor-dev/feltor/edit/develop/3dpic.pdf)
 <h4> 1. License </h4>
 FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
 
