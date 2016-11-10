@@ -390,23 +390,27 @@ double Feltor<G, DS, M, V>::add_parallel_dynamics( std::vector<V>& y, std::vecto
     {
         if (p.bc==dg::DIR)
         {
-        dg::blas1::pointwiseDot(npe[i], y[i+2],chi);      // NU
-        dsDIR_.centered(chi, omega);                      //ds NU
-        dg::blas1::axpby( -1., omega, 1., yp[i]);         // dtN = dtN - ds U N
-        dg::blas1::pointwiseDot(chi, gradlnB, omega);     // U N ds ln B
-        dg::blas1::axpby( 1., omega, 1., yp[i]);          // dtN = dtN + U N ds ln B
+            dg::blas1::pointwiseDot(npe[i], y[i+2],chi);      // NU
+        //with analytic expression
+//         dsDIR_.centered(chi, omega);                      //ds NU
+//         dg::blas1::axpby( -1., omega, 1., yp[i]);         // dtN = dtN - ds U N
+//         dg::blas1::pointwiseDot(chi, gradlnB, omega);     // U N ds ln B
+//         dg::blas1::axpby( 1., omega, 1., yp[i]);          // dtN = dtN + U N ds ln B
+        //direct with adjoint derivative
+            dsDIR_.centeredTd(chi, omega);                      //ds^dagger NU
+            dg::blas1::axpby( -1., omega, 1., yp[i]);         // dtN = dtN - ds^dagger U N
         }
         if (p.bc==dg::NEU)
         {
-        dsN_.centered(y[i], chi);   
-        dg::blas1::pointwiseDot(y[i+2], chi, omega);        // U ds N
-        dsDIR_.centered(y[i+2], chi);  
-        dg::blas1::pointwiseDot(npe[i], chi,chi);           // N ds U
-        dg::blas1::axpby(1.0,chi,1.0,omega,chi);            //ds U N
-        dg::blas1::axpby( -1., chi, 1., yp[i]);             // dtN = dtN - ds U N
-        dg::blas1::pointwiseDot(npe[i], y[i+2], omega);     // U N
-        dg::blas1::pointwiseDot(omega, gradlnB, omega);     // U N ds ln B
-        dg::blas1::axpby( 1., omega, 1., yp[i]);            // dtN = dtN + U N ds ln B
+            dsN_.centered(y[i], chi);   
+            dg::blas1::pointwiseDot(y[i+2], chi, omega);        // U ds N
+            dsDIR_.centered(y[i+2], chi);  
+            dg::blas1::pointwiseDot(npe[i], chi,chi);           // N ds U
+            dg::blas1::axpby(1.0,chi,1.0,omega,chi);            //ds U N
+            dg::blas1::axpby( -1., chi, 1., yp[i]);             // dtN = dtN - ds U N
+            dg::blas1::pointwiseDot(npe[i], y[i+2], omega);     // U N
+            dg::blas1::pointwiseDot(omega, gradlnB, omega);     // U N ds ln B
+            dg::blas1::axpby( 1., omega, 1., yp[i]);            // dtN = dtN + U N ds ln B
         }
 
 

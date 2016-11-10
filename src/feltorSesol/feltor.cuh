@@ -389,11 +389,6 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(lambda,lhs,omega); //lambda =lhs*(ne0_source - <ne>)
         dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
         dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = - omega_source(ne0_source - <ne>) 
-        //add the FLR term (tanh and postrans before lapl seems to work because of cancelation) (LWL vorticity correction)
-//         dg::blas1::pointwiseDot(lambda,lhs,lambda);
-//         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());   
-//         dg::blas2::gemv( lapperpM, lambda, omega);
-//         dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR
         dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]); 

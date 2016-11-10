@@ -362,11 +362,11 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
     //Density source terms
     if (p.omega_source>1e-14) 
     {
-        dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0_source - <ne>
+        dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0p - <ne>
         //dtN_e
-        dg::blas1::pointwiseDot(lambda,lhs,omega); //lambda =lhs*(ne0_source - <ne>)
-        dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
-        dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = - omega_source(ne0_source - <ne>) 
+        dg::blas1::pointwiseDot(lambda,lhs,omega); //omega =lhs*(ne0p - <ne>)
+        dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //= P [lhs*(n0ep - <ne>) ]
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne+= - omega_s P [lhs*(ne0p - <ne>) ]
         //add the FLR term (tanh and postrans before lapl seems to work because of cancelation) (LWL vorticity correction)
 //         dg::blas1::pointwiseDot(lambda,lhs,lambda);
 //         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());   
@@ -374,12 +374,12 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
 //         dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR
-        dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]); 
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);  //dtNi += omega_s* P [lhs*(ne0p - <ne>)]
         //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
         dg::blas1::pointwiseDot(lambda,lhs,lambda);
         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
         dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
+        dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi +=- omega_s*0.5*tau_i nabla_perp^2 P [lhs*(ne0p - <ne>)]
     }
     t.toc();
 #ifdef MPI_VERSION
