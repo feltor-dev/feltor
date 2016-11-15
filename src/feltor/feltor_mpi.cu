@@ -131,8 +131,10 @@ int main( int argc, char* argv[])
         dg::MDVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
         dg::blas1::pointwiseDot(damping, y0[1], y0[1]); //damp with gaussprofdamp
     }
-    feltor.initializene( y0[1], y0[0]);    
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
+    std::cout << "intiialize ne" << std::endl;
+    if( p.initcond == 0) feltor.initializene( y0[1], y0[0]);
+    if( p.initcond == 1) dg::blas1::axpby( 1., y0[1], 0.,y0[0], y0[0]); //set n_e = N_i
+    std::cout << "Done!\n";    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
