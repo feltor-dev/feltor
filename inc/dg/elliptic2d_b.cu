@@ -45,7 +45,7 @@ int main()
     std::cin >> eps;
     std::cout << "Computation on: "<< n <<" x "<<Nx<<" x "<<Ny<<std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
     dg::DVec v2d = dg::create::inv_weights( grid);
     //create functions A(chi) x = b

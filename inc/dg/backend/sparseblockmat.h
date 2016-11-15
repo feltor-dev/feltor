@@ -10,7 +10,7 @@ namespace dg
 /**
 * @brief Ell Sparse Block Matrix format
 *
-* @ingroup lowlevel
+* @ingroup sparsematrix
 * The basis of this format is the ell sparse matrix format, i.e. a format
 where the numer of entries per line is fixed. 
 * The clue is that instead of a values array we use an index array with 
@@ -43,7 +43,10 @@ struct EllSparseBlockMat
     EllSparseBlockMat( int num_block_rows, int num_block_cols, int num_blocks_per_line, int num_different_blocks, int n):
         data(num_different_blocks*n*n), cols_idx( num_block_rows*num_blocks_per_line), data_idx(cols_idx.size()),
         num_rows(num_block_rows), num_cols(num_block_cols), blocks_per_line(num_blocks_per_line),
-        n(n),left(1), right(1){}
+        n(n),left_size(1), right_size(1), right_range(2){
+            right_range[0]=0;
+            right_range[1]=1;
+        }
 
     template< class OtherValueType>
     EllSparseBlockMat( const EllSparseBlockMat<OtherValueType>& src)
@@ -51,7 +54,8 @@ struct EllSparseBlockMat
         data = src.data;
         cols_idx = src.cols_idx, data_idx = src.data_idx;
         num_rows = src.num_rows, num_cols = src.num_cols, blocks_per_line = src.blocks_per_line;
-        n = src.n, left = src.left, right = src.right;
+        n = src.n, left_size = src.left_size, right_size = src.right_size;
+        right_range = src.right_range;
     }
     
     typedef thrust::host_vector<int> IVec;//!< typedef for easy programming
@@ -62,6 +66,13 @@ struct EllSparseBlockMat
     * @param y output may not equal input
     */
     void symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const;
+    /**
+     * @brief Sets ranges from 0 to left_size and 0 to right_size
+     */
+    void set_default_range(){ 
+        right_range[0]=0; 
+        right_range[1]=right_size;
+    }
     
     thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks
     IVec cols_idx; //!< is of size num_block_rows*num_blocks_per_line and contains the column indices 
@@ -70,8 +81,9 @@ struct EllSparseBlockMat
     int num_cols; //!< number of columns
     int blocks_per_line; //!< number of blocks in each line
     int n;  //!< each block has size n*n
-    int left; //!< size of the left Kronecker delta
-    int right; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
+    int left_size; //!< size of the left Kronecker delta
+    int right_size; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
+    IVec right_range; //!< range 
 
     /**
     * @brief Display internal data to a stream
@@ -85,7 +97,7 @@ struct EllSparseBlockMat
 /**
 * @brief Coo Sparse Block Matrix format
 *
-* @ingroup lowlevel
+* @ingroup sparsematrix
 * The basis of this format is the well-known coordinate sparse matrix format.
 * The clue is that instead of a values array we use an index array with 
 indices into a data array that contains the actual blocks. This safes storage if the number
@@ -112,12 +124,12 @@ struct CooSparseBlockMat
     * @param num_block_rows number of rows. Each row contains blocks.
     * @param num_block_cols number of columns.
     * @param n each block is of size nxn
-    * @param left size of the left Kronecker delta
-    * @param right size of the right Kronecker delta
+    * @param left_size size of the left_size Kronecker delta
+    * @param right_size size of the right_size Kronecker delta
     */
-    CooSparseBlockMat( int num_block_rows, int num_block_cols, int n, int left, int right):
+    CooSparseBlockMat( int num_block_rows, int num_block_cols, int n, int left_size, int right_size):
         num_rows(num_block_rows), num_cols(num_block_cols), num_entries(0),
-        n(n),left(left), right(right){}
+        n(n),left_size(left_size), right_size(right_size){}
 
     /**
     * @brief Convenience function to assemble the matrix
@@ -164,115 +176,29 @@ struct CooSparseBlockMat
     int num_cols; //!< number of columns
     int num_entries; //!< number of entries in the matrix
     int n;  //!< each block has size n*n
-    int left; //!< size of the left Kronecker delta
-    int right; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
+    int left_size; //!< size of the left Kronecker delta
+    int right_size; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
 };
 ///@cond
 
 template<class value_type>
 void EllSparseBlockMat<value_type>::symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left*right);
-    assert( x.size() == (unsigned)num_cols*n*left*right);
+    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
+    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
 
-    /* //THIS IMPLEMENTATION IS NOT VALID SINCE NOT ALL MATRICES ARE TRIVIAL (E.G. X-POINT
-    int offset[blocks_per_line];
-    for( int d=0; d<blocks_per_line; d++)
-        offset[d] = cols_idx[blocks_per_line+d]-1;
-if(right==1) //alle dx Ableitungen
-{
-    for( int s=0; s<left; s++)
-    for( int i=0; i<1; i++)
-    for( int k=0; k<n; k++)
-    {
-        value_type temp=0;
-        for( int d=0; d<blocks_per_line; d++)
-            for( int q=0; q<n; q++) //multiplication-loop
-                temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)];
-        y[(s*num_rows+i)*n+k]=temp;
-    }
-    for( int s=0; s<left; s++)
-    for( int i=1; i<num_rows-1; i++)
-    for( int k=0; k<n; k++)
-    {
-        value_type temp=0;
-        for( int d=0; d<blocks_per_line; d++)
-            for( int q=0; q<n; q++) //multiplication-loop
-                temp+=data[(d*n + k)*n+q]*x[((s*num_cols + i+offset[d])*n+q)];
-        y[(s*num_rows+i)*n+k]=temp;
-    }
-    for( int s=0; s<left; s++)
-    for( int i=num_rows-1; i<num_rows; i++)
-    for( int k=0; k<n; k++)
-    {
-        value_type temp=0;
-        for( int d=0; d<blocks_per_line; d++)
-            for( int q=0; q<n; q++) //multiplication-loop
-                temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                    x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)];
-        y[(s*num_rows+i)*n+k]=temp;
-    }
-    return;
-} //if right==1
-    for( int s=0; s<left; s++)
-    for( int i=0; i<1; i++)
-    for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
-    {
-        int I = ((s*num_rows + i)*n+k)*right+j;
-        y[I] =0;
-        for( int d=0; d<blocks_per_line; d++)
-        for( int q=0; q<n; q++) //multiplication-loop
-            y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
-    }
-    for( int s=0; s<left; s++)
-    for( int i=1; i<num_rows-1; i++)
-    for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
-        y[((s*num_rows + i)*n+k)*right+j] =0;
-
-    for( int d=0; d<blocks_per_line; d++)
-    {
-    for( int s=0; s<left; s++)
-    for( int i=1; i<num_rows-1; i++)
-    {
-        int J = i+offset[d];
-        for( int k=0; k<n; k++)
-        for( int j=0; j<right; j++)
-        {
-            int I = ((s*num_rows + i)*n+k)*right+j;
-            for( int q=0; q<n; q++) //multiplication-loop
-                y[I] += data[ (d*n+k)*n+q]*x[((s*num_cols + J)*n+q)*right+j];
-        }
-    }
-    }
-    for( int s=0; s<left; s++)
-    for( int i=num_rows-1; i<num_rows; i++)
-    for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
-    {
-        int I = ((s*num_rows + i)*n+k)*right+j;
-        y[I] =0;
-        for( int d=0; d<blocks_per_line; d++)
-        for( int q=0; q<n; q++) //multiplication-loop
-            y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
-    }
-*/
     //simplest implementation
-    for( int s=0; s<left; s++)
+    for( int s=0; s<left_size; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=right_range[0]; j<right_range[1]; j++)
     {
-        int I = ((s*num_rows + i)*n+k)*right+j;
+        int I = ((s*num_rows + i)*n+k)*right_size+j;
         y[I] =0;
         for( int d=0; d<blocks_per_line; d++)
         for( int q=0; q<n; q++) //multiplication-loop
             y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
-                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right+j];
+                x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j];
     }
 }
 
@@ -284,8 +210,10 @@ void EllSparseBlockMat<T>::display( std::ostream& os) const
     os << "num_cols         "<<num_cols<<"\n";
     os << "blocks_per_line  "<<blocks_per_line<<"\n";
     os << "n                "<<n<<"\n";
-    os << "left             "<<left<<"\n";
-    os << "right            "<<right<<"\n";
+    os << "left_size             "<<left_size<<"\n";
+    os << "right_size            "<<right_size<<"\n";
+    os << "right_range_0         "<<right_range[0]<<"\n";
+    os << "right_range_1         "<<right_range[1]<<"\n";
     os << "Columns: \n";
     for( int i=0; i<num_rows; i++)
     {
@@ -312,8 +240,8 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os) const
     os << "num_cols         "<<num_cols<<"\n";
     os << "num_entries      "<<num_entries<<"\n";
     os << "n                "<<n<<"\n";
-    os << "left             "<<left<<"\n";
-    os << "right            "<<right<<"\n";
+    os << "left_size             "<<left_size<<"\n";
+    os << "right_size            "<<right_size<<"\n";
     os << " Columns: \n";
     for( int i=0; i<num_entries; i++)
         os << cols_idx[i] <<" ";
@@ -329,20 +257,20 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os) const
 template<class value_type>
 void CooSparseBlockMat<value_type>::symv( value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left*right);
-    assert( x.size() == (unsigned)num_cols*n*left*right);
+    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
+    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
     assert( beta == 1);
 
     //simplest implementation
-    for( int s=0; s<left; s++)
+    for( int s=0; s<left_size; s++)
     for( int i=0; i<num_entries; i++)
     for( int k=0; k<n; k++)
-    for( int j=0; j<right; j++)
+    for( int j=0; j<right_size; j++)
     {
-        int I = ((s*num_rows + rows_idx[i])*n+k)*right+j;
+        int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
         for( int q=0; q<n; q++) //multiplication-loop
             y[I] += alpha*data[ (data_idx[i]*n + k)*n+q]*
-                x[((s*num_cols + cols_idx[i])*n+q)*right+j];
+                x[((s*num_cols + cols_idx[i])*n+q)*right_size+j];
     }
 }
 

@@ -15,7 +15,7 @@ namespace dg{
  */
 namespace create{
 
-///@addtogroup highlevel
+///@addtogroup creation
 ///@{
 
 //dx, dy, jumpX, jumpY
@@ -29,11 +29,12 @@ namespace create{
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> dx( const Grid2d<double>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat<double> dx( const Grid2d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<double> dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left = g.n()*g.Ny();
+    dx.left_size = g.n()*g.Ny();
+    dx.set_default_range();
     return dx;
 }
 
@@ -45,7 +46,7 @@ EllSparseBlockMat<double> dx( const Grid2d<double>& g, bc bcx, direction dir = c
  *
  * @return A host matrix
  */
-EllSparseBlockMat<double> dx( const Grid2d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+EllSparseBlockMat<double> dx( const Grid2d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 2d derivative in y-direction
@@ -56,11 +57,12 @@ EllSparseBlockMat<double> dx( const Grid2d<double>& g, direction dir = centered)
  *
  * @return A host matrix
  */
-EllSparseBlockMat<double> dy( const Grid2d<double>& g, bc bcy, direction dir = centered)
+EllSparseBlockMat<double> dy( const Grid2d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<double> dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    dy.right = g.n()*g.Nx();
+    dy.right_size = g.n()*g.Nx();
+    dy.set_default_range();
     return dy;
 }
 
@@ -72,7 +74,7 @@ EllSparseBlockMat<double> dy( const Grid2d<double>& g, bc bcy, direction dir = c
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> dy( const Grid2d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+EllSparseBlockMat<double> dy( const Grid2d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Matrix that contains 2d jump terms in X direction
@@ -82,11 +84,12 @@ EllSparseBlockMat<double> dy( const Grid2d<double>& g, direction dir = centered)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> jumpX( const Grid2d<double>& g, bc bcx)
+EllSparseBlockMat<double> jumpX( const Grid2d& g, bc bcx)
 {
     EllSparseBlockMat<double> jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left = g.n()*g.Ny();
+    jx.left_size = g.n()*g.Ny();
+    jx.set_default_range();
     return jx;
 }
 
@@ -98,11 +101,12 @@ EllSparseBlockMat<double> jumpX( const Grid2d<double>& g, bc bcx)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> jumpY( const Grid2d<double>& g, bc bcy)
+EllSparseBlockMat<double> jumpY( const Grid2d& g, bc bcy)
 {
     EllSparseBlockMat<double> jy;
     jy = jump( g.n(), g.Ny(), g.hy(), bcy);
-    jy.right = g.n()*g.Nx();
+    jy.right_size = g.n()*g.Nx();
+    jy.set_default_range();
     return jy;
 }
 
@@ -113,7 +117,7 @@ EllSparseBlockMat<double> jumpY( const Grid2d<double>& g, bc bcy)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> jumpX( const Grid2d<double>& g)
+EllSparseBlockMat<double> jumpX( const Grid2d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -125,7 +129,7 @@ EllSparseBlockMat<double> jumpX( const Grid2d<double>& g)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> jumpY( const Grid2d<double>& g)
+EllSparseBlockMat<double> jumpY( const Grid2d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -140,11 +144,12 @@ EllSparseBlockMat<double> jumpY( const Grid2d<double>& g)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> jumpX( const Grid3d<double>& g, bc bcx)
+EllSparseBlockMat<double> jumpX( const Grid3d& g, bc bcx)
 {
     EllSparseBlockMat<double> jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
-    jx.left = g.n()*g.Ny()*g.Nz();
+    jx.left_size = g.n()*g.Ny()*g.Nz();
+    jx.set_default_range();
     return jx;
 }
 
@@ -156,12 +161,13 @@ EllSparseBlockMat<double> jumpX( const Grid3d<double>& g, bc bcx)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> jumpY( const Grid3d<double>& g, bc bcy)
+EllSparseBlockMat<double> jumpY( const Grid3d& g, bc bcy)
 {
     EllSparseBlockMat<double> jy;
     jy = jump( g.n(), g.Ny(), g.hy(), bcy);
-    jy.right = g.n()*g.Nx();
-    jy.left = g.Nz();
+    jy.right_size = g.n()*g.Nx();
+    jy.left_size = g.Nz();
+    jy.set_default_range();
     return jy;
 }
 
@@ -173,11 +179,12 @@ EllSparseBlockMat<double> jumpY( const Grid3d<double>& g, bc bcy)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> jumpZ( const Grid3d<double>& g, bc bcz)
+EllSparseBlockMat<double> jumpZ( const Grid3d& g, bc bcz)
 {
     EllSparseBlockMat<double> jz;
     jz = jump( 1, g.Nz(), g.hz(), bcz);
-    jz.right = g.n()*g.Nx()*g.n()*g.Ny();
+    jz.right_size = g.n()*g.Nx()*g.n()*g.Ny();
+    jz.set_default_range();
     return jz;
 }
 
@@ -188,7 +195,7 @@ EllSparseBlockMat<double> jumpZ( const Grid3d<double>& g, bc bcz)
  *
  * @return A host matrix
  */
-EllSparseBlockMat<double> jumpX( const Grid3d<double>& g)
+EllSparseBlockMat<double> jumpX( const Grid3d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -200,7 +207,7 @@ EllSparseBlockMat<double> jumpX( const Grid3d<double>& g)
  *
  * @return A host matrix
  */
-EllSparseBlockMat<double> jumpY( const Grid3d<double>& g)
+EllSparseBlockMat<double> jumpY( const Grid3d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -212,7 +219,7 @@ EllSparseBlockMat<double> jumpY( const Grid3d<double>& g)
  *
  * @return A host matrix
  */
-EllSparseBlockMat<double> jumpZ( const Grid3d<double>& g)
+EllSparseBlockMat<double> jumpZ( const Grid3d& g)
 {
     return jumpZ( g, g.bcz());
 }
@@ -227,11 +234,12 @@ EllSparseBlockMat<double> jumpZ( const Grid3d<double>& g)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> dx( const Grid3d<double>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat<double> dx( const Grid3d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<double> dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
-    dx.left = g.n()*g.Ny()*g.Nz();
+    dx.left_size = g.n()*g.Ny()*g.Nz();
+    dx.set_default_range();
     return dx;
 }
 
@@ -243,7 +251,7 @@ EllSparseBlockMat<double> dx( const Grid3d<double>& g, bc bcx, direction dir = c
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> dx( const Grid3d<double>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+EllSparseBlockMat<double> dx( const Grid3d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 3d derivative in y-direction
@@ -254,12 +262,13 @@ EllSparseBlockMat<double> dx( const Grid3d<double>& g, direction dir = centered)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> dy( const Grid3d<double>& g, bc bcy, direction dir = centered)
+EllSparseBlockMat<double> dy( const Grid3d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<double> dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
-    dy.right = g.n()*g.Nx();
-    dy.left = g.Nz();
+    dy.right_size = g.n()*g.Nx();
+    dy.left_size = g.Nz();
+    dy.set_default_range();
     return dy;
 }
 
@@ -271,7 +280,7 @@ EllSparseBlockMat<double> dy( const Grid3d<double>& g, bc bcy, direction dir = c
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> dy( const Grid3d<double>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+EllSparseBlockMat<double> dy( const Grid3d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Create 3d derivative in z-direction
@@ -282,11 +291,12 @@ EllSparseBlockMat<double> dy( const Grid3d<double>& g, direction dir = centered)
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> dz( const Grid3d<double>& g, bc bcz, direction dir = centered)
+EllSparseBlockMat<double> dz( const Grid3d& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat<double> dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
-    dz.right = g.n()*g.n()*g.Nx()*g.Ny();
+    dz.right_size = g.n()*g.n()*g.Nx()*g.Ny();
+    dz.set_default_range();
     return dz;
 
 }
@@ -299,7 +309,7 @@ EllSparseBlockMat<double> dz( const Grid3d<double>& g, bc bcz, direction dir = c
  *
  * @return A host matrix 
  */
-EllSparseBlockMat<double> dz( const Grid3d<double>& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
+EllSparseBlockMat<double> dz( const Grid3d& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 
 
 

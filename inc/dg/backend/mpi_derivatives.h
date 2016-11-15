@@ -27,7 +27,7 @@ namespace detail{
 CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& m)
 {
     //search outer values in m
-    CooSparseBlockMat<double> mat( m.num_rows, 2, m.n, m.left, m.right);
+    CooSparseBlockMat<double> mat( m.num_rows, 2, m.n, m.left_size, m.right_size);
     int index = m.data.size()/ m.n/m.n;
     thrust::host_vector<double> data_element(m.n*m.n, 0), zero(data_element);
     bool found=false;
@@ -72,15 +72,16 @@ EllSparseBlockMat<double> distribute_rows( const EllSparseBlockMat<double>& src,
     if( howmany[1] == 1)
     {
         EllSparseBlockMat<double> temp(src);
-        temp.left = temp.left/howmany[0];
-        temp.right = temp.right/howmany[2];
+        temp.left_size = temp.left_size/howmany[0];
+        temp.right_size = temp.right_size/howmany[2];
+        temp.set_default_range();
         return temp;
     }
     assert( src.num_rows == src.num_cols);
     int chunk_size = src.num_rows/howmany[1];
     EllSparseBlockMat<double> temp(chunk_size, chunk_size, src.blocks_per_line, src.data.size()/(src.n*src.n), src.n);
-    temp.left = src.left/howmany[0];
-    temp.right = src.right/howmany[2];
+    temp.left_size = src.left_size/howmany[0];
+    temp.right_size = src.right_size/howmany[2];
     //first copy data elements (even though not all might be needed it doesn't slow down things either)
     for( unsigned  i=0; i<src.data.size(); i++)
         temp.data[i] = src.data[i];
@@ -98,6 +99,7 @@ EllSparseBlockMat<double> distribute_rows( const EllSparseBlockMat<double>& src,
         //now shift this range to chunk range -1,..,chunk_size
         temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size ); 
     }
+    temp.set_default_range();
     return temp;
 }
 
@@ -105,7 +107,7 @@ EllSparseBlockMat<double> distribute_rows( const EllSparseBlockMat<double>& src,
 } //namespace detail
 
 ///@endcond
-///@addtogroup highlevel
+///@addtogroup creation
 ///@{
 
 /**
@@ -117,7 +119,7 @@ EllSparseBlockMat<double> distribute_rows( const EllSparseBlockMat<double>& src,
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPI_Grid2d& g, bc bcx, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPIGrid2d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dx( g.global(), bcx, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
@@ -146,7 +148,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( c
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPI_Grid2d& g, bc bcy, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPIGrid2d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dy( g.global(), bcy, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
@@ -173,7 +175,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( c
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPI_Grid2d& g, bc bcx)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPIGrid2d& g, bc bcx)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpX( g.global(), bcx);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
@@ -199,7 +201,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPI_Grid2d& g, bc bcy)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPIGrid2d& g, bc bcy)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpY( g.global(), bcy);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
@@ -227,7 +229,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPI_Grid3d& g, bc bcx, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPIGrid3d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dx( g.global(), bcx, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
@@ -254,7 +256,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( c
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPI_Grid3d& g, bc bcy, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPIGrid3d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dy( g.global(), bcy, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
@@ -281,7 +283,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( c
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( const MPI_Grid3d& g, bc bcz, direction dir = centered)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( const MPIGrid3d& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dz( g.global(), bcz, dir);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
@@ -308,7 +310,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( c
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPI_Grid3d& g, bc bcx)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPIGrid3d& g, bc bcx)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpX( g.global(), bcx);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
@@ -335,7 +337,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPI_Grid3d& g, bc bcy)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPIGrid3d& g, bc bcy)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpY( g.global(), bcy);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
@@ -361,7 +363,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY
 *
 * @return  A mpi matrix
 */
-RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ( const MPI_Grid3d& g, bc bcz)
+RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ( const MPIGrid3d& g, bc bcz)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpZ( g.global(), bcz);
     int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
@@ -388,7 +390,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPI_Grid2d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPIGrid2d& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);
 }
@@ -401,7 +403,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( co
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPI_Grid3d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const MPIGrid3d& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);
 }
@@ -412,7 +414,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( co
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPI_Grid2d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPIGrid2d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -424,7 +426,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX(
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPI_Grid3d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const MPIGrid3d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -437,7 +439,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX(
  *
  * @return A mpi matrix
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPI_Grid2d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPIGrid2d& g, direction dir = centered)
 {
     return dy( g, g.bcy(), dir);
 }
@@ -450,7 +452,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( co
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPI_Grid3d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const MPIGrid3d& g, direction dir = centered)
 {
     return dy( g, g.bcy(), dir);
 }
@@ -462,7 +464,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( co
  *
  * @return A mpi matrix
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPI_Grid2d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPIGrid2d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -474,7 +476,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY(
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPI_Grid3d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const MPIGrid3d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -487,7 +489,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY(
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( const MPI_Grid3d& g, direction dir = centered)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( const MPIGrid3d& g, direction dir = centered)
 {
     return dz( g, g.bcz(), dir);
 }
@@ -499,7 +501,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( co
  *
  * @return A mpi matrix 
  */
-RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ( const MPI_Grid3d& g)
+RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ( const MPIGrid3d& g)
 {
     return jumpZ( g, g.bcz());
 }

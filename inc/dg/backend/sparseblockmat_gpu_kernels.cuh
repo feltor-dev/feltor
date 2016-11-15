@@ -10,29 +10,31 @@ template<class value_type>
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, const int size,
          const int right, 
+         const int* right_range,
          const value_type* x, value_type *y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
+    const int right_ = right_range[1]-right_range[0];
     //every thread takes num_rows/grid_size rows
     for( int row = thread_id; row<size; row += grid_size)
     {
-        int rr = row/right, rrn = rr/n;
+        int rr = row/right_, rrn = rr/n;
         int s=rrn/num_rows, 
             i = (rrn)%num_rows, 
             k = (rr)%n, 
-            j=row%right;
-        int B, J;
+            j=right_range[0]+row%right_;
         value_type temp=0;
         for( int d=0; d<blocks_per_line; d++)
         {
-            B = (data_idx[i*blocks_per_line+d]*n+k)*n;
-            J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+            int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
+            int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
             for( int q=0; q<n; q++) //multiplication-loop
                 temp +=data[ B+q]* x[(J+q)*right+j];
-            y[row]=temp;
         }
+        int idx = ((s*num_rows+i)*n+k)*right+j;
+        y[idx]=temp;
     }
 
 }
@@ -44,39 +46,41 @@ template<class value_type>
          const int num_rows, const int num_cols,
          const int size,
          const int right, 
+         const int* right_range,
          const value_type* x, value_type *y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
+    const int right_ = right_range[1]-right_range[0];
     //every thread takes num_rows/grid_size rows
     for( int row = thread_id; row<size; row += grid_size)
     {
-        int rr = row/right, rrn = rr/3;
+        int rr = row/right_, rrn = rr/3;
         int s=rrn/num_rows, 
             i = (rrn)%num_rows, 
             k = (rr)%3, 
-            j=row%right;
-        int B, J;
+            j=right_range[0]+row%right_;
         value_type temp=0;
         {
-            B = (data_idx[i*3+0]*3+k)*3;
-            J = (s*num_cols+cols_idx[i*3+0])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            int B = (data_idx[i*3  ]*3+k)*3;
+            int J = (s*num_cols+cols_idx[i*3  ])*3;
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
             B = (data_idx[i*3+1]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+1])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
             B = (data_idx[i*3+2]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+2])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
-            y[row]=temp;
         }
+        int idx = ((s*num_rows+i)*3+k)*right+j;
+        y[idx]=temp;
     }
 }
 
@@ -87,35 +91,36 @@ template<class value_type>
          const int num_rows, const int num_cols, 
          const int size,
          const int right, 
+         const int* right_range,
          const value_type* x, value_type *y
          )
 {
     //int size = left*num_rows*n*right;
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
+    const int right_ = right_range[1]-right_range[0];
     //every thread takes num_rows/grid_size rows
     for( int row = thread_id; row<size; row += grid_size)
     {
-        int rr = row/right, rrn = rr/3;
-        int s=rrn/num_rows, 
-            i = (rrn)%num_rows, 
-            k = (rr)%3, 
-            j=row%right;
-        int B, J;
+        int rr = row/right_; 
+        int rrn = rr/3, k = rr%3;
+        int s=rrn/num_rows, i = (rrn)%num_rows, 
+            j=right_range[0]+row%right_;
+        int idx = ((s*num_rows+i)*3+k)*right+j;
         value_type temp=0;
         {
-            B = (data_idx[i*2+0]*3+k)*3;
-            J = (s*num_cols+cols_idx[i*2+0])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            int B = (data_idx[i*2+0]*3+k)*3;
+            int J = (s*num_cols+cols_idx[i*2+0])*3;
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
             B = (data_idx[i*2+1]*3+k)*3;
             J = (s*num_cols+cols_idx[i*2+1])*3;
-            temp +=data[ B+0]* x[(J+0)*right+j];
+            temp +=data[ B  ]* x[(J  )*right+j];
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
-            y[row]=temp;
         }
+        y[idx]=temp;
     }
 
 }
@@ -134,30 +139,28 @@ template<class value_type>
     //every thread takes num_rows/grid_size rows
     for( int row = thread_id; row<size; row += grid_size)
     {
-        int rr = row/1, rrn = rr/3;
-        int s=rrn/num_rows, 
-            i = (rrn)%num_rows, 
-            k = (rr)%3;
-        int B, J;
+        int rrn = row/3, k = row%3;
+        int s=rrn/num_rows, i = (rrn)%num_rows;
         value_type temp=0;
         {
-            B = (data_idx[i*3+0]*3+k)*3;
-            J = (s*num_cols+cols_idx[i*3+0])*3;
-            temp +=data[ B+0]* x[(J+0)];
+            int B = (data_idx[i*3  ]*3+k)*3;
+            int J = (s*num_cols+cols_idx[i*3+0])*3;
+            temp +=data[ B+0]* x[(J  )];
             temp +=data[ B+1]* x[(J+1)];
             temp +=data[ B+2]* x[(J+2)];
             B = (data_idx[i*3+1]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+1])*3;
-            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B  ]* x[(J  )];
             temp +=data[ B+1]* x[(J+1)];
             temp +=data[ B+2]* x[(J+2)];
             B = (data_idx[i*3+2]*3+k)*3;
             J = (s*num_cols+cols_idx[i*3+2])*3;
-            temp +=data[ B+0]* x[(J+0)];
+            temp +=data[ B  ]* x[(J  )];
             temp +=data[ B+1]* x[(J+1)];
             temp +=data[ B+2]* x[(J+2)];
-            y[row]=temp;
         }
+        int idx = (s*num_rows+i)*3+k;
+        y[idx] = temp;
     }
 }
 
@@ -177,21 +180,22 @@ template<class value_type>
     {
         int rrn = row/3, k = (row%3);
         int s=rrn/num_rows, i = (rrn)%num_rows;
+        int idx=(s*num_rows+i)*3+k;
         int B0,B1, J0, J1;
         value_type temp=0;
         {
-            B0 = (data_idx[i*2+0]*3+k)*3;
+            B0 = (data_idx[i*2  ]*3+k)*3;
             B1 = (data_idx[i*2+1]*3+k)*3;
             J0 = (s*num_cols+cols_idx[i*2+0])*3;
             J1 = (s*num_cols+cols_idx[i*2+1])*3;
-            temp +=data[ B0+0]* x[(J0+0)];
+            temp +=data[ B0  ]* x[(J0  )];
             temp +=data[ B0+1]* x[(J0+1)];
             temp +=data[ B0+2]* x[(J0+2)];
-            temp +=data[ B1+0]* x[(J1+0)];
+            temp +=data[ B1  ]* x[(J1  )];
             temp +=data[ B1+1]* x[(J1+1)];
             temp +=data[ B1+2]* x[(J1+2)];
-            y[row]=temp;
         }
+        y[idx]=temp;
     }
 
 }
@@ -230,11 +234,11 @@ template<class value_type>
 template<class DeviceContainer>
 void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceContainer& x, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left*right);
-    assert( x.size() == (unsigned)num_cols*n*left*right);
+    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
+    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
-    const size_t size = left*right*num_rows*n;
+    const size_t size = (left_size)*(right_range[1]-right_range[0])*num_rows*n; //number of lines
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
     const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
@@ -242,41 +246,42 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceCo
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
     const value_type* x_ptr = thrust::raw_pointer_cast( &x[0]);
     value_type* y_ptr = thrust::raw_pointer_cast( &y[0]);
+    const int* right_range_ptr = thrust::raw_pointer_cast( &right_range[0]);
     if( n == 3)
     {
         if( blocks_per_line == 3)
         {
-            if( right == 1)
+            if( right_size == 1)
                 ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
             else
-                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right, x_ptr,y_ptr);
+                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr, x_ptr,y_ptr);
         }
         else if( blocks_per_line == 2)
         {
-            if( right == 1)
+            if( right_size == 1)
                 ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
             else
-                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right, x_ptr,y_ptr);
+                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr, x_ptr,y_ptr);
         }
         else
             ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right, x_ptr,y_ptr);
+                data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right_size, right_range_ptr, x_ptr,y_ptr);
     }
     else
         ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right, x_ptr,y_ptr);
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right_size, right_range_ptr, x_ptr,y_ptr);
 }
 
 template<class value_type>
 template<class DeviceContainer>
 void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left*right);
-    assert( x.size() == (unsigned)num_cols*n*left*right);
+    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
+    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
     assert( beta == 1);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
-    const size_t size = left*right*n;
+    const size_t size = left_size*right_size*n;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
     const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
@@ -288,7 +293,7 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
     for( int i=0; i<num_entries; i++)
     {
         coo_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, i, n, left, right, alpha, x_ptr,y_ptr);
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, i, n, left_size, right_size, alpha, x_ptr,y_ptr);
     }
 }
 

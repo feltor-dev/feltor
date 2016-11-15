@@ -22,7 +22,7 @@ int main()
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
-    dg::Grid2d<double> grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::PER);
+    dg::Grid2d grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::PER);
     dg::HVec w2d = dg::create::weights( grid);
     dg::HVec v2d = dg::create::inv_weights( grid);
     std::cout<<"Evaluate initial condition\n";

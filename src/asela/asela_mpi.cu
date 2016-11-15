@@ -92,6 +92,7 @@ int main( int argc, char* argv[])
     //Make grids
      dg::CylindricalMPIGrid<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, comm);  
      dg::CylindricalMPIGrid<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
+
      
     //create RHS 
     if(rank==0)std::cout << "Constructing Asela...\n";
@@ -151,6 +152,7 @@ int main( int argc, char* argv[])
     int dimids[4], tvarID;
     {
         err = file::define_dimensions( ncid, dimids, &tvarID, grid_out.global());
+
         solovev::FieldR fieldR(gp);
         solovev::FieldZ fieldZ(gp);
         solovev::FieldP fieldP(gp);

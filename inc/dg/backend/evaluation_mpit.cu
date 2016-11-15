@@ -36,10 +36,10 @@ int main(int argc, char** argv)
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm2d, comm3d;
     mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm2d);
-    dg::MPI_Grid2d g2d( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER, comm2d);
+    dg::MPIGrid2d g2d( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER, comm2d);
 
     mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm3d);
-    dg::MPI_Grid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
+    dg::MPIGrid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
 
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 

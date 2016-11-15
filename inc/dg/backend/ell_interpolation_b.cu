@@ -14,7 +14,7 @@ int main()
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx, Ny:\n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
+    dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
 
     thrust::host_vector<double> x( g.size()), y(x);
     for( unsigned i=0; i<g.Ny()*g.n(); i++)
@@ -54,7 +54,7 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cout << "Type n, Nx, Ny, Nz:\n";
     std::cin >> n >> Nx >> Ny >> Nz;
-    dg::Grid3d<double> g( -10, 10, -5, 5, -M_PI, M_PI, n, Nx, Ny, Nz);
+    dg::Grid3d g( -10, 10, -5, 5, -M_PI, M_PI, n, Nx, Ny, Nz);
 
     thrust::host_vector<double> x( g.size()), y(x), z(x);
     for( unsigned k=0; k<g.Nz(); k++)
@@ -68,7 +68,7 @@ int main()
                 z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
                         g.z0() + (k+0.5)*g.hz();
             }
-    dg::DVec xd(x), yd(y), zd(z);
+    thrust::device_vector<double> xd(x), yd(y), zd(z);
     dg::Timer t;
     t.tic();
     cusp::ell_matrix<int,double, cusp::device_memory> A = dg::create::interpolation( x, y, z, g);

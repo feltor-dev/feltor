@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cassert>
+#include <cmath>
+#include "topological_traits.h"
 #include "dlt.h"
 #include "../enums.h"
 
@@ -12,21 +14,20 @@
 
 namespace dg{
 
-struct SharedTag;
-class MPI_Grid2d;
-class MPI_Grid3d;
+class MPIGrid2d;
+class MPIGrid3d;
+
 
 ///@addtogroup grid
 ///@{
 /**
 * @brief 1D grid
 *
-* @tparam T value type
 */
-template <class T>
 struct Grid1d
 {
     typedef SharedTag memory_category;
+    typedef OneDimensionalTag dimensionality;
     /**
      * @brief 1D grid
      * 
@@ -36,7 +37,7 @@ struct Grid1d
      @param N # of cells
      @param bcx boundary conditions
      */
-    Grid1d( T x0, T x1, unsigned n, unsigned N, bc bcx = PER):
+    Grid1d( double x0, double x1, unsigned n, unsigned N, bc bcx = PER):
         x0_(x0), x1_(x1),
         n_(n), Nx_(N), bcx_(bcx), dlt_(n)
     {
@@ -51,25 +52,25 @@ struct Grid1d
      *
      * @return 
      */
-    T x0() const {return x0_;}
+    double x0() const {return x0_;}
     /**
      * @brief right boundary
      *
      * @return 
      */
-    T x1() const {return x1_;}
+    double x1() const {return x1_;}
     /**
      * @brief total length of interval
      *
      * @return 
      */
-    T lx() const {return lx_;}
+    double lx() const {return lx_;}
     /**
      * @brief cell size
      *
      * @return 
      */
-    T h() const {return hx_;}
+    double h() const {return hx_;}
     /**
      * @brief number of cells
      *
@@ -99,7 +100,7 @@ struct Grid1d
      *
      * @return 
      */
-    const DLT<T>& dlt() const {return dlt_;}
+    const DLT<double>& dlt() const {return dlt_;}
     void display( std::ostream& os = std::cout) const
     {
         os << "Grid parameters are: \n"
@@ -110,12 +111,7 @@ struct Grid1d
             <<"    x1 = "<<x1_<<"\n"
             <<"    lx = "<<lx_<<"\n"
             <<"Boundary conditions in x are: \n";
-        switch(bcx_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcx_, os);
     }
 
     /**
@@ -151,23 +147,25 @@ struct Grid1d
         return false;
     }
   private:
-    T x0_, x1_;
-    T lx_;
+    double x0_, x1_;
+    double lx_;
     unsigned n_, Nx_;
-    T hx_;
+    double hx_;
     bc bcx_;
-    DLT<T> dlt_;
+    DLT<double> dlt_;
 };
+
+struct Grid3d; //forward declare 3d version
+
 
 /**
  * @brief A 2D grid class 
  *
- * @tparam T scalar value type 
  */
-template< class T>
 struct Grid2d
 {
     typedef SharedTag memory_category;
+    typedef TwoDimensionalTag dimensionality;
     /**
      * @brief Construct a 2D grid
      *
@@ -181,7 +179,7 @@ struct Grid2d
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      */
-    Grid2d( T x0, T x1, T y0, T y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+    Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
         n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
@@ -197,7 +195,7 @@ struct Grid2d
      * @param gx Grid in x - direction
      * @param gy Grid in y - direction
      */
-    Grid2d( const Grid1d<T>& gx, const Grid1d<T>& gy): 
+    Grid2d( const Grid1d& gx, const Grid1d& gy): 
         x0_(gx.x0()), x1_(gx.x1()), y0_(gy.x0()), y1_(gy.x1()), 
         n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), bcx_(gx.bcx()), bcy_( gy.bcx()), dlt_(gx.n())
     {
@@ -205,54 +203,56 @@ struct Grid2d
         lx_ = (x1_-x0_), ly_ = (y1_-y0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
     }
+
+    Grid2d( const Grid3d& g);
     /**
      * @brief Left boundary in x
      *
      * @return 
      */
-    T x0() const {return x0_;}
+    double x0() const {return x0_;}
     /**
      * @brief Right boundary in x
      *
      * @return 
      */
-    T x1() const {return x1_;}
+    double x1() const {return x1_;}
     /**
      * @brief left boundary in y
      *
      * @return 
      */
-    T y0() const {return y0_;}
+    double y0() const {return y0_;}
     /**
      * @brief Right boundary in y 
      *
      * @return 
      */
-    T y1() const {return y1_;}
+    double y1() const {return y1_;}
     /**
      * @brief length of x 
      *
      * @return 
      */
-    T lx() const {return lx_;}
+    double lx() const {return lx_;}
     /**
      * @brief length of y
      *
      * @return 
      */
-    T ly() const {return ly_;}
+    double ly() const {return ly_;}
     /**
      * @brief cell size in x 
      *
      * @return 
      */
-    T hx() const {return hx_;}
+    double hx() const {return hx_;}
     /**
      * @brief cell size in y
      *
      * @return 
      */
-    T hy() const {return hy_;}
+    double hy() const {return hy_;}
     /**
      * @brief number of polynomial coefficients in x and y
      *
@@ -288,13 +288,13 @@ struct Grid2d
      *
      * @return 
      */
-    Grid2d<double> local_grid() const {return *this;}
+    Grid2d local_grid() const {return *this;}
     /**
      * @brief discrete legendre trafo
      *
      * @return 
      */
-    const DLT<T>& dlt() const{return dlt_;}
+    const DLT<double>& dlt() const{return dlt_;}
     /**
      * @brief The total number of points
      *
@@ -321,19 +321,9 @@ struct Grid2d
             <<"    lx = "<<lx_<<"\n"
             <<"    ly = "<<ly_<<"\n"
             <<"Boundary conditions in x are: \n";
-        switch(bcx_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcx_, os);
         os <<"Boundary conditions in y are: \n";
-        switch(bcy_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcy_, os);
     }
     /**
      * @brief Shifts a point coordinate due to topology
@@ -377,7 +367,7 @@ struct Grid2d
         return false;
     }
   protected:
-    void init_X_boundaries( double x0, double x1)
+    virtual void init_X_boundaries( double x0, double x1)
     {
         x0_ = x0, x1_ = x1;
         assert( x1 > x0 );
@@ -385,13 +375,13 @@ struct Grid2d
         hx_ = lx_/(double)Nx_;
     }
   private:
-    friend class MPI_Grid2d;
-    T x0_, x1_, y0_, y1_;
-    T lx_, ly_;
+    friend class MPIGrid2d;
+    double x0_, x1_, y0_, y1_;
+    double lx_, ly_;
     unsigned n_, Nx_, Ny_;
-    T hx_, hy_;
+    double hx_, hy_;
     bc bcx_, bcy_;
-    DLT<T> dlt_;
+    DLT<double> dlt_;
 };
 
 /**
@@ -399,12 +389,11 @@ struct Grid2d
  *
  * In the third dimension only 1 polynomial coefficient is used,
  * not n.
- * @tparam T scalar value type 
  */
-template< class T>
 struct Grid3d
 {
     typedef SharedTag memory_category;
+    typedef ThreeDimensionalTag dimensionality;
     /**
      * @brief Construct a 3D grid
      *
@@ -423,7 +412,7 @@ struct Grid3d
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    Grid3d( T x0, T x1, T y0, T y1, T z0, T z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
+    Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1),
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
     {
@@ -441,7 +430,7 @@ struct Grid3d
      * @param gy Grid in y - direction
      * @param gz Grid in z - direction
      */
-    Grid3d( const Grid1d<T>& gx, const Grid1d<T>& gy, const Grid1d<T>& gz): 
+    Grid3d( const Grid1d& gx, const Grid1d& gy, const Grid1d& gz): 
         x0_(gx.x0()), x1_(gx.x1()),  
         y0_(gy.x0()), y1_(gy.x1()),
         z0_(gz.x0()), z1_(gz.x1()),
@@ -458,77 +447,77 @@ struct Grid3d
      *
      * @return 
      */
-    T x0() const {return x0_;}
+    double x0() const {return x0_;}
     /**
      * @brief right boundary in x
      *
      * @return 
      */
-    T x1() const {return x1_;}
+    double x1() const {return x1_;}
 
     /**
      * @brief left boundary in y 
      *
      * @return 
      */
-    T y0() const {return y0_;}
+    double y0() const {return y0_;}
     /**
      * @brief right boundary in y
      *
      * @return 
      */
-    T y1() const {return y1_;}
+    double y1() const {return y1_;}
 
     /**
      * @brief left boundary in z
      *
      * @return 
      */
-    T z0() const {return z0_;}
+    double z0() const {return z0_;}
     /**
      * @brief right boundary in z
      *
      * @return 
      */
-    T z1() const {return z1_;}
+    double z1() const {return z1_;}
 
     /**
      * @brief length in x
      *
      * @return 
      */
-    T lx() const {return lx_;}
+    double lx() const {return lx_;}
     /**
      * @brief length in y
      *
      * @return 
      */
-    T ly() const {return ly_;}
+    double ly() const {return ly_;}
     /**
      * @brief length in z
      *
      * @return 
      */
-    T lz() const {return lz_;}
+    double lz() const {return lz_;}
     
     /**
      * @brief cell size in x
      *
      * @return 
      */
-    T hx() const {return hx_;}
+    double hx() const {return hx_;}
     /**
      * @brief cell size in y
      *
      * @return 
      */
-    T hy() const {return hy_;}
+    double hy() const {return hy_;}
     /**
      * @brief cell size in z
      *
      * @return 
      */
-    T hz() const {return hz_;}
+    double hz() const {return hz_;}
     /**
      * @brief number of polynomial coefficients in x and y
      *
@@ -576,7 +565,7 @@ struct Grid3d
      *
      * @return 
      */
-    const DLT<T>& dlt() const{return dlt_;}
+    const DLT<double>& dlt() const{return dlt_;}
     /**
      * @brief The total number of points
      *
@@ -608,26 +597,11 @@ struct Grid3d
             <<"    ly = "<<ly_<<"\n"
             <<"    lz = "<<lz_<<"\n"
             <<"Boundary conditions in x are: \n";
-        switch(bcx_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcx_, os);
         os <<"Boundary conditions in y are: \n";
-        switch(bcy_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcy_, os);
         os <<"Boundary conditions in z are: \n";
-        switch(bcz_)
-        {
-            case(dg::PER): os << "    PERIODIC \n"; break;
-            case(dg::DIR): os << "    DIRICHLET\n"; break;
-            default: os << "    Not specified!!\n"; 
-        }
+        display_bc( bcz_, os);
     }
 
     /**
@@ -682,7 +656,7 @@ struct Grid3d
         return false;
     }
   protected:
-    void init_X_boundaries( double x0, double x1)
+    virtual void init_X_boundaries( double x0, double x1)
     {
         x0_ = x0, x1_ = x1;
         assert( x1 > x0 );
@@ -690,14 +664,17 @@ struct Grid3d
         hx_ = lx_/(double)Nx_;
     }
   private:
-    friend class MPI_Grid3d;
-    T x0_, x1_, y0_, y1_, z0_, z1_;
-    T lx_, ly_, lz_;
+    friend class MPIGrid3d;
+    double x0_, x1_, y0_, y1_, z0_, z1_;
+    double lx_, ly_, lz_;
     unsigned n_, Nx_, Ny_, Nz_;
-    T hx_, hy_, hz_;
+    double hx_, hy_, hz_;
     bc bcx_, bcy_, bcz_;
-    DLT<T> dlt_;
+    DLT<double> dlt_;
 };
+
+Grid2d::Grid2d( const Grid3d& g) : x0_(g.x0()), x1_(g.x1()), y0_(g.y0()), y1_(g.y1()), n_(g.n()), Nx_(g.Nx()), Ny_(g.Ny()), bcx_(g.bcx()), bcy_(g.bcy()), dlt_(g.n())
+{}
 
 ///@}
 }// namespace dg

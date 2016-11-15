@@ -69,6 +69,7 @@ int main( int argc, char* argv[])
     dg::CylindricalGrid<dg::DVec > grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER);      //create RHS 
     std::cout << "Constructing Asela...\n";
     eule::Asela<dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > asela( grid, p, gp); //initialize before rolkar!
+
     std::cout << "Constructing Rolkar...\n";
     eule::Rolkar<dg::CylindricalGrid<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
     std::cout << "Done!\n";
@@ -94,6 +95,7 @@ int main( int argc, char* argv[])
         solovev::ZonalFlow init0(p.amp, p.k_psi, gp);
         y1[1] = dg::evaluate( init0, grid);
     }
+
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1

@@ -1,5 +1,7 @@
 <hr>
 <h3> Welcome to the FELTOR project!</h3>
+![3dsimulation](3dpic.jpg)
+
 <h4> 1. License </h4>
 FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
 
@@ -26,4 +28,10 @@ if you create an include folder in your home directory and create
 links to the aforementioned libraries. Or you can 
 create your own file. 
 <h4> 4. Documentation </h4>
-The documentation can be generated with Doxygen in each subfolder or you can access the whole documentation [online](http://feltor-dev.github.io/feltor/).
+The documentation can be generated with Doxygen in each subfolder or you can access the whole documentation [online](http://feltor-dev.github.io/feltor/inc/dg/html/index.html).
+<h4> 5. Official releases </h4>
+Our latest code release v3.1 now has a shiny new DOI badge from zenodo
+
+[![DOI](https://zenodo.org/badge/14143578.svg)](https://zenodo.org/badge/latestdoi/14143578)
+
+which makes us officially citable.

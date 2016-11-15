@@ -12,7 +12,7 @@
 namespace toefl
 {
 
-/*! @addtogroup utilities
+/*! @addtogroup utilitiesX
  * @{
  */
 /*! @brief Adds a gaussian to a given matrix

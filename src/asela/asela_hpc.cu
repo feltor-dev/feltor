@@ -63,6 +63,7 @@ int main( int argc, char* argv[])
     //Make grids
     dg::CylindricalGrid<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
     dg::CylindricalGrid<dg::DVec > grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER);  
+
      
     //create RHS 
     std::cout << "Constructing Asela...\n";

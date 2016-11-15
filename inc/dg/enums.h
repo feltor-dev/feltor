@@ -21,6 +21,19 @@ enum bc{
     NEU = 4 //!< Neumann on both boundaries
 };
 
+void display_bc( bc bcx, std::ostream& os = std::cout) 
+{
+    switch(bcx)
+    {
+        case(dg::PER): os << "    PERIODIC \n"; break;
+        case(dg::DIR): os << "    DIRICHLET\n"; break;
+        case(dg::NEU): os << "    NEUMANN  \n"; break;
+        case(dg::DIR_NEU): os << "    DIRICHLET NEUMANN\n"; break;
+        case(dg::NEU_DIR): os << "    NEUMANN DIRICHLET\n"; break;
+        default: os << "    Not specified!!\n"; 
+    }
+}
+
 bc str2bc( std::string s)
 {
     if( s=="PER"||s=="per"||s=="periodic"||s=="Periodic")
@@ -54,14 +67,5 @@ enum direction{
     forward, //!< forward derivative
     backward, //!< backward derivative
     centered //!< centered derivative
-};
-/**
- * @brief Coordinate system
- *
- * @ingroup creation
- */
-enum system{
-    cartesian, //!< cartesian coordinate system
-    cylindrical //!< cylindrical coordinate system
 };
 }//namespace dg

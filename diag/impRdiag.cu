@@ -100,12 +100,12 @@ int main( int argc, char* argv[])
     "dEdt", "accuracy"
   };
   ////////grid////////
-  dg::Grid2d<double > g2d(0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+  dg::Grid2d g2d(0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
   const double hx = g2d.hx()/(double)g2d.n();
   const double hy = g2d.hy()/(double)g2d.n();
   unsigned Nx = p.Nx_out*p.n_out;
-  dg::DVec xvec = dg::evaluate( dg::coo1, g2d);
-  dg::DVec yvec = dg::evaluate( dg::coo2, g2d);
+  dg::DVec xvec = dg::evaluate( dg::cooX2d, g2d);
+  dg::DVec yvec = dg::evaluate( dg::cooY2d, g2d);
   dg::DVec one = dg::evaluate( dg::one, g2d);
   dg::DVec w2d = dg::create::weights( g2d);
   dg::DVec helper(dg::evaluate( dg::zero, g2d));

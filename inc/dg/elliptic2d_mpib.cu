@@ -50,7 +50,7 @@ int main(int argc, char* argv[] )
     MPI_Bcast(  &eps,1 , MPI_DOUBLE, 0, comm);
     //////////////////////begin program///////////////////////
     //create functions A(chi) x = b
-    dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
+    dg::MPIGrid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     const dg::MDVec w2d = dg::create::weights( grid);
     const dg::MDVec v2d = dg::create::inv_weights( grid);
     dg::MDVec x =    dg::evaluate( initial, grid);

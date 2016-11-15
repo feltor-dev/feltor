@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
 
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
-    dg::MPI_Grid2d g( 0,1,0,1, 3,12,12, comm);
+    dg::MPIGrid2d g( 0,1,0,1, 3,12,12, comm);
     if( rank == 0)
         g.display();
     MHVec v1 = dg::evaluate( two, g);

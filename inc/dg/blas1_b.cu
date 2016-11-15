@@ -29,7 +29,7 @@ int main()
     unsigned n, Nx, Ny; 
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d<double> grid( 0., lx, 0, ly, n, Nx, Ny);
+    dg::Grid2d grid( 0., lx, 0, ly, n, Nx, Ny);
     Vector w2d;
     dg::blas1::transfer( dg::create::weights(grid), w2d);
 

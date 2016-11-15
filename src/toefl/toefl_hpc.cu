@@ -34,7 +34,7 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        input = file::read_file( argv[1]);
+        input = file::read_file( argv[1]); //deprecated, better use json reader directly, instead!
     }
     Json::Reader reader;
     Json::Value js;
@@ -45,7 +45,7 @@ int main( int argc, char* argv[])
     p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
-    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
     dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);

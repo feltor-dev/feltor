@@ -31,7 +31,7 @@ int main()
     std::cin >> eps;
 
     std::cout << "TEST 3D VERSION\n";
-    dg::Grid3d<double> g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, bcx, dg::PER);
+    dg::Grid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, bcx, dg::PER);
     const dg::DVec w3d = dg::create::weights( g3d);
     const dg::DVec v3d = dg::create::inv_weights( g3d);
     dg::DVec x3 = dg::evaluate( initial, g3d);

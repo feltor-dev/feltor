@@ -51,7 +51,7 @@ int main( int argc, char* argv[])
     const eule::Parameters p( v);
     p.display( std::cout);
 
-    dg::Grid2d<double > grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bcx, p.bcy);
+    dg::Grid2d grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bcx, p.bcy);
     //create RHS 
     eule::Asela< dg::DMatrix, dg::DVec > asela( grid, p); 
     eule::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu, 1., 1. );

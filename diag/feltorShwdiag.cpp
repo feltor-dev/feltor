@@ -45,9 +45,9 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////////////////////////////////////////
     
     //Grids
-    dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::Grid2d<double > g2d_in( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
-    dg::Grid1d<double > g1d( 0., p.lx,p.n, p.Nx, p.bc_x);
+    dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d g2d_in( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+    dg::Grid1d g1d( 0., p.lx,p.n, p.Nx, p.bc_x);
     
     double time = 0.;
     
@@ -62,7 +62,7 @@ int main( int argc, char* argv[])
     dg::HVec temp_in(dg::evaluate(dg::zero,g2d_in));
     dg::HVec one(dg::evaluate(dg::one,g2d));
     dg::HVec temp1d(dg::evaluate(dg::zero,g1d));
-    dg::HVec xcoo(dg::evaluate(dg::coo1,g1d));
+    dg::HVec xcoo(dg::evaluate(dg::cooX1d,g1d));
 //     dg::HVec y0coo(dg::evaluate(1,0.0));
     dg::HVec y0coo(dg::evaluate(dg::CONSTANT(0.0),g1d));
     dg::PoloidalAverage<dg::HVec,dg::HVec > polavg(g2d);

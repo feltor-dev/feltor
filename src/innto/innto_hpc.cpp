@@ -156,9 +156,9 @@ int main( int argc, char* argv[])
     err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "input", input.size(), input.data());
     int dim_ids[3], tvarID;
-    dg::Grid1d<double> gx( 0, bound.lx, 1, alg.nx/reduction);
-    dg::Grid1d<double> gy( 0, bound.ly, 1, alg.ny/reduction);
-    dg::Grid2d<double> g2d( gx, gy);
+    dg::Grid1d gx( 0, bound.lx, 1, alg.nx/reduction);
+    dg::Grid1d gy( 0, bound.ly, 1, alg.ny/reduction);
+    dg::Grid2d g2d( gx, gy);
     err = file::define_dimensions( ncid, dim_ids, &tvarID, g2d);
     int id_ne, id_ni, id_phi;
     err = nc_def_var( ncid, "n_e", NC_DOUBLE, 3, dim_ids, &id_ne);
