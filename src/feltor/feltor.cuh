@@ -570,19 +570,19 @@ void Feltor<Geometry, DS, Matrix, container>::operator()( std::vector<container>
             vecdotnablaDIR(curvKappaX, curvKappaY,  y[i+2], curvkappay[2+i]);     //K_kappa(U)
             vecdotnablaDIR(curvKappaX, curvKappaY, phi[i], curvkappaphi[i]);      //K_kappa(phi)
             
-            dg::blas1::pointwiseDot( y[i+2], curvkappay[2+i], omega);             //U K_kappa(U)
-            dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //U^2 K_kappa(U)
-            dg::blas1::pointwiseDot( npe[i], omega, omega);                 //N U K_kappa(U)
+            dg::blas1::pointwiseDot( y[i+2], curvkappay[2+i], omega);       //omega = U K_kappa(U)
+            dg::blas1::pointwiseDot( y[i+2], omega, chi);                   //chi = U^2 K_kappa(U)
+            dg::blas1::pointwiseDot( npe[i], omega, omega);                 // omega= N U K_kappa(U)
             if (p.bc==dg::DIR)
             {
-                dg::blas1::pointwiseDot(y[i+2],y[i+2],omega); //U^2
-                dg::blas1::pointwiseDot(omega,npe[i],chi); // N U^2
-                vecdotnablaN(curvKappaX, curvKappaY, chi, lambda);      //K_kappa( N U^2)
-                dg::blas1::pointwiseDot(omega,y[i+2],chi); // U^3
-                vecdotnablaN(curvKappaX, curvKappaY, chi, omega);      //K_kappa( U^3)
+                dg::blas1::pointwiseDot(y[i+2],y[i+2],omega);           //omega  = U^2
+                dg::blas1::pointwiseDot(omega,npe[i],chi);              //chi   = N U^2
+                vecdotnablaN(curvKappaX, curvKappaY, chi, lambda);      //lambda = K_kappa( N U^2)
+                dg::blas1::pointwiseDot(omega,y[i+2],chi);              // chi = U^3
+                vecdotnablaN(curvKappaX, curvKappaY, chi, omega);       //omega = K_kappa( U^3)
 
-                dg::blas1::axpby( -p.mu[i], lambda, 1., yp[i]);               //dtN = dtN - (hat(mu))  K_kappa(N U^2)
-                dg::blas1::axpby( -p.mu[i]/3., omega, 1., yp[2+i]);           //dtU = dtU -  (hat(mu))/3 K_kappa(U^3)
+                dg::blas1::axpby( -p.mu[i],   lambda, 1., yp[i]);       //dtN = dtN - (hat(mu))  K_kappa(N U^2)
+                dg::blas1::axpby( -p.mu[i]/3., omega, 1., yp[2+i]);     //dtU = dtU -  (hat(mu))/3 K_kappa(U^3)
 
             }
             if (p.bc==dg::NEU)
@@ -592,8 +592,7 @@ void Feltor<Geometry, DS, Matrix, container>::operator()( std::vector<container>
                 
                 dg::blas1::pointwiseDot( y[i+2], curvkappay[i], omega);        // U K_kappa( N)
                 dg::blas1::pointwiseDot( y[i+2], omega, chi);                  // U^2 K_kappa( N)
-                dg::blas1::axpby( -p.mu[i], chi, 1., yp[i]);                   // dtN = dtN - mu U^2 K_kappa(N)
-                
+                dg::blas1::axpby( -p.mu[i], chi, 1., yp[i]);                   // dtN = dtN - (hat(mu)) U^2 K_kappa(N)                
             }                
             vecdotnablaN(curvKappaX, curvKappaY, logn[i], omega);         //K_kappa(ln N)
             dg::blas1::pointwiseDot(y[i+2], omega, omega);                //U K_kappa(ln N)
