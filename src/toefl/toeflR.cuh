@@ -153,7 +153,7 @@ struct ToeflR
 template< class Geometry, class M, class container>
 ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters& p ): 
     chi( evaluate( dg::zero, grid)), omega(chi),
-    binv( evaluate( LinearX( p.kappa, 1.), grid)), 
+    binv( evaluate( LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)), 
     phi( 2, chi), dyphi( phi), ype(phi),
     dyy(2,chi), lny( dyy), lapy(dyy),
     gamma_n(chi),
