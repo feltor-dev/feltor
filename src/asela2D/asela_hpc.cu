@@ -7,12 +7,12 @@
 
 
 
-#include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
+#include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "solovev/geometry.h"
+#include "geometries/solovev.h"
 
 #include "asela/asela.cuh"
 #include "asela/parameters.h"
@@ -24,6 +24,7 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
+typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
@@ -60,50 +61,51 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-    dg::Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1,p.bc, p.bc, dg::PER, dg::cylindrical);  
-    dg::Grid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1, p.bc, p.bc, dg::PER, dg::cylindrical);  
+    dg::CylindricalGrid3d<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER);  
+    dg::CylindricalGrid3d<dg::DVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1,p.bc, p.bc, dg::PER);  
     //create RHS 
     std::cout << "Constructing Asela...\n";
-    eule::Asela<dg::DDS, dg::DMatrix, dg::DVec, dg::DVec > asela( grid, p, gp); 
+    eule::Asela<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > asela( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::DMatrix, dg::DVec, dg::DVec > rolkar( grid, p, gp);
+    eule::Rolkar<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p, gp); //initial background profile
+    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
-
     //initial perturbation
-   //     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-//     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(p, gp);
-    dg::CONSTANT init0( 0.);
-
-    //averaged field aligned initializer
-//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-//     dg::Grid3d gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
-//     dg::DZ<dg::DMatrix, dg::DVec> dz( solovev::Field(gp), gridfordz, gridfordz.hz(), gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR);
-//     y1[1] = dz.evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-    
-    //no field aligning
-    y1[1] = dg::evaluate( init0, grid);
+    if (p.mode == 0  || p.mode ==1) 
+    { 
+        dg::Gaussian3d init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+        y1[1] = dg::evaluate( init0, grid);
+    }
+    if (p.mode == 2) 
+    { 
+        dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
+        y1[1] = dg::evaluate( init0, grid);
+    }
+    if (p.mode == 3) 
+    { 
+        solovev::ZonalFlow init0(p.amp, p.k_psi, gp);
+        y1[1] = dg::evaluate( init0, grid);
+    }
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+    dg::blas1::pointwiseDot( damping, y0[1], y0[1]); //damp with gaussprofdamp
     std::cout << "initialize ne" << std::endl;
     asela.initializene( y0[1], y0[0]);    
     std::cout << "Done!\n";
 
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set we = 0
-    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set wi = 0
+    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
+    dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( asela, rolkar, y0, p.dt);
-    asela.energies(y0); //now energies and potential are at time 0
+//     asela.energies(y0); //now energies and potential are at time 0
     std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -130,7 +132,7 @@ int main( int argc, char* argv[])
     err = nc_redef(ncid);
 
     //field IDs
-    std::string names[6] = {"electrons", "ions", "Ue", "Ui", "potential","apar"}; 
+    std::string names[6] = {"electrons", "ions", "Ue", "Ui", "potential","Aparallel"}; 
     int dataIDs[6]; 
     for( unsigned i=0; i<6; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dim_ids, &dataIDs[i]);}
@@ -156,27 +158,27 @@ int main( int argc, char* argv[])
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid); 
-    for( unsigned j=0; j<2; j++)
+    for( unsigned i=0; i<2; i++)
     {
-        dg::blas2::symv( interpolate, y0[j], transferD);
-        transferH = transferD;//transfer to host
-        err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
+        dg::blas2::symv( interpolate, y0[i], transferD);
+        dg::blas1::transfer( transferD, transferH);
+        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     transfer = asela.uparallel()[0];
     dg::blas2::symv( interpolate, transfer, transferD);
-    transferH = transferD;//transfer to host
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     transfer = asela.uparallel()[1];
     dg::blas2::symv( interpolate, transfer, transferD);
-    transferH = transferD;//transfer to host
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     transfer = asela.potential()[0];
     dg::blas2::symv( interpolate, transfer, transferD);
-    transferH = transferD;//transfer to host
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     transfer = asela.aparallel();
     dg::blas2::symv( interpolate, transfer, transferD);
-    transferH = transferD;//transfer to host
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -221,7 +223,7 @@ int main( int argc, char* argv[])
             }
             step++;
             time+=p.dt;
-            asela.energies(y0);//advance potential and energies
+//             asela.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = asela.energy(), mass = asela.mass(), diss = asela.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
@@ -256,24 +258,24 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<2; j++)
         {
             dg::blas2::symv( interpolate, y0[j], transferD);
-            transferH = transferD;//transfer to host
+            dg::blas1::transfer( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
         transfer = asela.uparallel()[0];
         dg::blas2::symv( interpolate, transfer, transferD);
-        transferH = transferD;//transfer to host
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
         transfer = asela.uparallel()[1];
         dg::blas2::symv( interpolate, transfer, transferD);
-        transferH = transferD;//transfer to host
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
         transfer = asela.potential()[0];
         dg::blas2::symv( interpolate, transfer, transferD);
-        transferH = transferD;//transfer to host
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         transfer = asela.aparallel();
         dg::blas2::symv( interpolate, transfer, transferD);
-        transferH = transferD;//transfer to host
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         err = nc_close(ncid);

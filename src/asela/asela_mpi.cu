@@ -11,7 +11,7 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/interpolation.cuh"
 
-#include "netcdf_par.h"
+#include "netcdf_par.h" //exclude if par netcdf=OFF
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
@@ -25,7 +25,7 @@
         output dimensions must be divisible by the mpi process numbers
 */
 
-typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
+typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
@@ -90,15 +90,15 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-     dg::CylindricalMPIGrid<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, comm);  
-     dg::CylindricalMPIGrid<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
+     dg::CylindricalMPIGrid3d<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, comm);  
+     dg::CylindricalMPIGrid3d<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
 
      
     //create RHS 
     if(rank==0)std::cout << "Constructing Asela...\n";
-    eule::Asela<dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> asela( grid, p, gp); //initialize before rolkar!
+    eule::Asela<dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> asela( grid, p, gp); //initialize before rolkar!
     if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
+    eule::Rolkar< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field/////////////////////////////////////////
@@ -144,8 +144,8 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-//     err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
-    err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
+    err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
+//     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
 
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile",  geom.size(), geom.data());
@@ -234,19 +234,19 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     transfer = asela.uparallel()[0];
-    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     transfer = asela.uparallel()[1];
-    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     transfer = asela.potential()[0];
-    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     transfer = asela.aparallel();
-    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
     double time = 0;
@@ -350,19 +350,19 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
     transfer = asela.uparallel()[0];
-    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     transfer = asela.uparallel()[1];
-    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     transfer = asela.potential()[0];
-    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     transfer = asela.aparallel();
-    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -384,5 +384,4 @@ int main( int argc, char* argv[])
     MPI_Finalize();
 
     return 0;
-
 }
