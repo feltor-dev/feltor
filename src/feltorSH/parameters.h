@@ -29,44 +29,6 @@ struct Parameters
     unsigned init, iso, flrmode;
     enum dg::bc bc_x,bc_y; 
 
-//     /**
-//      * @brief constructor to make a const object
-//      *
-//      * @param v Vector from read_input function
-//      */
-//     Parameters( const std::vector< double>& v) {
-//         n  = (unsigned)v[1]; 
-//         Nx = (unsigned)v[2];
-//         Ny = (unsigned)v[3];
-//         dt = v[4];
-//         n_out = v[5];
-//         Nx_out = v[6];
-//         Ny_out = v[7];
-//         itstp = v[8];
-//         maxout = v[9];
-//         eps_pol = v[10];
-//         eps_gamma = v[11];
-//         eps_time = v[12];
-//         mu[0] = -0.000272121;
-//         mu[1] = 1.;
-//         tau[0] = -1.;
-//         tau[1]  = v[13];
-//         mcv     = v[14];
-//         nu_perp = v[15];
-//         amp     = v[16];
-//         sigma   = v[17];
-//         posX    = v[18];
-//         posY    = v[19];
-//         nprofileamp = 0.;
-//         bgprofamp   = 1.;
-//         lx = v[20];
-//         ly = v[21];
-//         bc_x = map((int)v[22]);
-//         bc_y = map((int)v[23]);
-//         init = v[24];
-//         iso =  v[25];
-//         flrmode =  v[26];
-//     }
     /**
      * @brief constructor to make a const object
      *
