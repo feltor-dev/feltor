@@ -28,7 +28,7 @@ int main( int argc, char* argv[])
     Json::Value js;
     if( argc == 1)
     {
-        std::ifstream is("input.txt");
+        std::ifstream is("input.json");
         reader.parse(is,js,false);
     }
     else if( argc == 2)
