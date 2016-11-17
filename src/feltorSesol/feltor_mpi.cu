@@ -45,22 +45,19 @@ int main( int argc, char* argv[])
     std::string input;
     if( argc != 3 && argc != 4)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [input.txt] [output.nc]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
         std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            v = file::read_input( argv[1]);
-        }catch( toefl::Message& m){
-            if(rank==0) m.display();
-            if(rank==0) std::cout << input << std::endl;
-            return -1;
-        }
+        input = file::read_file( argv[1]);
     }
-    const eule::Parameters p( v);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false); //read input without comments
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const eule::Parameters p( js);
     if(rank==0) p.display( std::cout);
      ////////////////////////////////setup MPI///////////////////////////////
     int periods[2] = {false, false}; //non-, non-, periodic
@@ -133,9 +130,9 @@ int main( int argc, char* argv[])
       std::string inputIN( lengthIN, 'x');
       errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
       std::cout << "input "<<inputIN<<std::endl;    
-      const eule::Parameters pIN(file::read_input( inputIN));
+      const eule::Parameters pIN( js);
       pIN.display( std::cout);
-      dg::MPI_Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y,comm);  
+      dg::MPIGrid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y,comm);  
       int dimsIN[2],  coordsIN[2];
       MPI_Cart_get( comm, 2, dimsIN, periods, coordsIN);
       size_t count2dIN[3] = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};  
@@ -175,7 +172,7 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-//         err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
+    //  err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
