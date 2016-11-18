@@ -26,7 +26,8 @@ int main( int argc, char* argv[])
 {
     //Parameter initialisation
     std::vector<double> v;
-    std::string input;
+    Json::Reader reader;
+    Json::Value js;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -34,13 +35,11 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        input = file::read_file( argv[1]); //deprecated, better use json reader directly, instead!
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false); //read input without comments
     }
-    Json::Reader reader;
-    Json::Value js;
-    reader.parse( input, js, false);
     std::cout << js<<std::endl;
-    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
     p.display( std::cout);
 
