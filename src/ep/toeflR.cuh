@@ -241,13 +241,13 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         arakawa.variation(potential_, omega); 
         double UE = debye_*dg::blas2::dot( one, w2d, omega);
         energy_ = Ue + Up + Uphi + UE;
-        std::cout << "Ue "<<Ue<< "Up "<<Up<< "Uphi "<<Uphi<< "UE "<<UE<<"\n";
+        //std::cout << "Ue "<<Ue<< "Up "<<Up<< "Uphi "<<Uphi<< "UE "<<UE<<"\n";
 
         double Ge = - tau[0]*(blas2::dot( one, w2d, lapy[0]) + blas2::dot( lapy[0], w2d, lny[0])); // minus because of laplace
         double Gp = - tau[1]*(blas2::dot( one, w2d, lapy[1]) + blas2::dot( lapy[1], w2d, lny[1])); // minus because of laplace
         double Gpsie = -blas2::dot( psi[0], w2d, lapy[0]);
         double Gpsip = -blas2::dot( psi[1], w2d, lapy[1]);
-        std::cout << "ge "<<Ge<<" gp "<<Gp<<" gpsie "<<Gpsie<<" gpsip "<<Gpsip<<"\n";
+        //std::cout << "ge "<<Ge<<" gp "<<Gp<<" gpsie "<<Gpsie<<" gpsip "<<Gpsip<<"\n";
         ediff_ = nu*( z[0]*Ge + z[1]*Gp + z[0]*Gpsie + z[1]*Gpsip);
     }
 
