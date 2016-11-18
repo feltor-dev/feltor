@@ -115,7 +115,6 @@ int main( int argc, char* argv[])
 
         dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-    //     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
         if(rank==0) std::cout << "intiialize ne" << std::endl;
         feltor.initializene( y0[1], y0[0]);    
         if(rank==0) std::cout << "Done!\n";
