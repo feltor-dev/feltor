@@ -129,7 +129,7 @@ int main( int argc, char* argv[])
         SolDIR drt_solver( bp_mod);
     }catch( Message& m){m.display();}
     Sol solver (bp);
-    SolDIR drt_solver (bp);
+    SolDIR drt_solver (bp_mod);
 
     const Algorithmic& alg = bp.algorithmic();
     Mat ne{ alg.ny, alg.nx, 0.}, phi{ ne};

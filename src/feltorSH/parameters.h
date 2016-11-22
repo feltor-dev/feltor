@@ -1,5 +1,8 @@
-#pragma once
+#ifndef _DG_PARAMETERS_ 
+#define _DG_PARAMETERS_
+#include <string>
 #include "dg/enums.h"
+#include "json/json.h"
 
 namespace eule{
 /**
@@ -23,46 +26,47 @@ struct Parameters
     double amp, sigma, posX, posY;
 
     double  nprofileamp, bgprofamp;
-    unsigned init, iso;
+    unsigned init, iso, flrmode;
     enum dg::bc bc_x,bc_y; 
 
     /**
      * @brief constructor to make a const object
      *
-     * @param v Vector from read_input function
+     * @param js json object
      */
-    Parameters( const std::vector< double>& v) {
-        n  = (unsigned)v[1]; 
-        Nx = (unsigned)v[2];
-        Ny = (unsigned)v[3];
-        dt = v[4];
-        n_out = v[5];
-        Nx_out = v[6];
-        Ny_out = v[7];
-        itstp = v[8];
-        maxout = v[9];
-        eps_pol = v[10];
-        eps_gamma = v[11];
-        eps_time = v[12];
-        mu[0] = -0.000272121;
-        mu[1] = 1.;
-        tau[0] = -1.;
-        tau[1]  = v[13];
-        mcv     = v[14];
-        nu_perp = v[15];
-        amp     = v[16];
-        sigma   = v[17];
-        posX    = v[18];
-        posY    = v[19];
+    Parameters(const Json::Value& js) {
+        n  = js["n"].asUInt();
+        Nx = js["Nx"].asUInt();
+        Ny = js["Ny"].asUInt();
+        dt = js["dt"].asDouble();
+        n_out  = js["n_out"].asUInt();
+        Nx_out = js["Nx_out"].asUInt();
+        Ny_out = js["Ny_out"].asUInt();
+        itstp = js["itstp"].asUInt();
+        maxout = js["maxout"].asUInt();
+        
+        eps_pol = js["eps_pol"].asDouble();
+        eps_gamma = js["eps_gamma"].asDouble();
+        eps_time = js["eps_time"].asDouble();
+        mu[0]   = -0.000272121;
+        mu[1]   = 1.;
+        tau[0]  = -1.;
+        tau[1]  = js["tau"].asDouble();
+        mcv     = js["curvature"].asDouble();
+        nu_perp = js["nu_perp"].asDouble();
+        amp     = js["amplitude"].asDouble();
+        sigma   = js["sigma"].asDouble();
+        posX    = js["posX"].asDouble();
+        posY    = js["posY"].asDouble();
         nprofileamp = 0.;
         bgprofamp   = 1.;
-        lx = v[20];
-        ly = v[21];
-        bc_x = map((int)v[22]);
-        bc_y = map((int)v[23]);
-        init = v[24];
-        iso =  v[25];
-            
+        lx = js["lx"].asDouble();
+        ly =  js["ly"].asDouble();
+        bc_x = dg::str2bc(js["bc_x"].asString());
+        bc_y = dg::str2bc(js["bc_y"].asString());
+        init = js["initmode"].asUInt();
+        iso =  js["tempmode"].asUInt();
+        flrmode =  js["flrmode"].asUInt();            
     }
     /**
      * @brief Display parameters
@@ -79,6 +83,7 @@ struct Parameters
             <<"     Ion-temperature:  = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
             <<"     eff grav./diss f. = "<<(1.+tau[1])*sigma*sigma*sigma*mcv*amp/(nu_perp*nu_perp)<<"\n"
+            <<"     cst/dyn FLR (0/1) = "<<flrmode<<"\n"
             <<"     isothermal (0/1)  = "<<iso<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
@@ -104,9 +109,8 @@ struct Parameters
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Box params: \n"
             <<"     lx  =              "<<lx<<"\n"
-            <<"     ly  =              "<<ly<<"\n"
-            <<"     bcx =              "<<bc_x<<"\n"
-            <<"     bcy =              "<<bc_y<<"\n";
+            <<"     ly  =              "<<ly<<"\n"; 
+            displayBC( os, bc_x, bc_y);
         os << std::flush;//the endl is for the implicit flush 
     }
     private:
@@ -122,11 +126,43 @@ struct Parameters
             default: return dg::PER;
         }
     }
-
+    void displayBC( std::ostream& os, dg::bc bcx, dg::bc bcy) const
+    {
+        os << "Boundary conditions in x are: \n";
+        switch( bcx)
+        {
+            case(0): os << "    PERIODIC";
+                     break;
+            case(1): os << "    DIRICHLET";
+                     break;
+            case(2): os << "    DIR_NEU";
+                     break;
+            case(3): os << "    NEU_DIR";
+                     break;
+            case(4): os << "    NEUMANN";
+                     break;
+        }
+        os << "\nBoundary conditions in y are: \n";
+        switch( bcy)
+        {
+            case(0): os << "    PERIODIC";
+                     break;
+            case(1): os << "    DIRICHLET";
+                     break;
+            case(2): os << "    DIR_NEU";
+                     break;
+            case(3): os << "    NEU_DIR";
+                     break;
+            case(4): os << "    NEUMANN";
+                     break;
+        }
+        os <<"\n";
+    }
 };
 
 }//namespace eule
 
+#endif//_DG_PARAMETERS_
 
     
 

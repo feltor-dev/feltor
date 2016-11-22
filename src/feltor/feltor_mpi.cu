@@ -11,7 +11,7 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/interpolation.cuh"
 
-#include "netcdf_par.h"
+#include "netcdf_par.h" //exclude if par netcdf=OFF
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
@@ -131,8 +131,10 @@ int main( int argc, char* argv[])
         dg::MDVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
         dg::blas1::pointwiseDot(damping, y0[1], y0[1]); //damp with gaussprofdamp
     }
-    feltor.initializene( y0[1], y0[0]);    
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
+    std::cout << "intiialize ne" << std::endl;
+    if( p.initcond == 0) feltor.initializene( y0[1], y0[0]);
+    if( p.initcond == 1) dg::blas1::axpby( 1., y0[1], 0.,y0[0], y0[0]); //set n_e = N_i
+    std::cout << "Done!\n";    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
@@ -141,7 +143,8 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-   err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
+    err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
+    //err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid); //MPI OFF
 
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile",  geom.size(), geom.data());

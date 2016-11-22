@@ -61,13 +61,16 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Grids
+
     dg::CylindricalGrid3d<dg::DVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER); 
     dg::Grid2d  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out,  p.bc, p.bc); 
     //1d grid
+
     solovev::Psip psip(gp);
     dg::HVec transfer2d = dg::evaluate(dg::zero,g2d_out);
     dg::DVec w3d = dg::create::volume( g3d_out);   
-    
+        //Grids
+
     dg::DVec psipog2d   = dg::evaluate( psip, g2d_out);    
     double psipmin = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
     double psipmax = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(), psipmin,thrust::maximum<double>()  );
@@ -76,7 +79,7 @@ int main( int argc, char* argv[])
     dg::HVec psipupilog2d   = dg::evaluate( psipupil, g2d_out);    
     dg::HVec psipupilog3d   = dg::evaluate( psipupil, g3d_out);    
 
-    unsigned Npsi = 2;//set number of psivalues
+    unsigned Npsi = 50;//set number of psivalues
     std::cout << "psipmin =" << psipmin << " psipmax =" << psipmax << " Npsi =" << Npsi  <<std::endl;
     dg::Grid1d  g1d_out(psipmin  ,psipmax ,3, Npsi,dg::NEU); //one dimensional sipgrid
     dg::DVec w1d = dg::create::weights( g1d_out);   
@@ -110,8 +113,8 @@ int main( int argc, char* argv[])
 //     size_t start3dp[4] = {0, 0, 0, 0};
 
      //generate 1d nc file for one time step for the f(psi) quantities
-    std::string names1d[9] = {"Ne_fsa", "Ni_fsa", "Ue_Fsa", "Ui_fsa", "phi_fsa","q","vor_fsa","Depsi_fsa","Lperpinv_fsa"}; 
-    int dataIDs1d[9];
+    std::string names1d[10] = {"Ne_fsa", "Ni_fsa", "Ue_Fsa", "Ui_fsa", "phi_fsa","q","vor_fsa","Depsi_fsa","Lperpinv_fsa","psip1d"}; 
+    int dataIDs1d[10];
     file::NC_Error_Handle err1d; 
     int ncid1d; 
 
@@ -120,7 +123,7 @@ int main( int argc, char* argv[])
     err1d = nc_put_att_text( ncid1d, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids1d[2], tvarID1d;
     err1d = file::define_dimensions( ncid1d, dim_ids1d, &tvarID1d, g1d_out);
-    for( unsigned i=0; i<9; i++){
+    for( unsigned i=0; i<10; i++){
         err1d = nc_def_var( ncid1d, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
 //  midplane 2d fields
@@ -132,12 +135,13 @@ int main( int argc, char* argv[])
 
 //     double energy_0 =0.,U_i_0=0.,U_e_0=0.,U_phi_0=0.,U_pare_0=0.,U_pari_0=0.,mass_0=0.;
 //     os << "#Time(1) mass(2) Ue(3) Ui(4) Uphi(5) Upare(6) Upari(7) Utot(8) EDiff(9)\n";
-//         std::cout << "Compute safety factor   "<< "\n";
-//         solovev::Alpha alpha(gp); 
-//         dg::DVec alphaog2d   = dg::evaluate( alpha, g2d_out);      
-//         dg::DVec abs = dg::evaluate( dg::cooX1d, g1d_out);
-//         solovev::SafetyFactor<dg::DVec> qprofile(g2d_out, gp, alphaog2d );
-//         dg::DVec sf = dg::evaluate(qprofile, g1d_out);
+    std::cout << "Compute safety factor   "<< "\n";
+    solovev::Alpha alpha(gp); 
+    dg::DVec alphaog2d   = dg::evaluate( alpha, g2d_out);      
+    dg::DVec abs = dg::evaluate( dg::coo1, g1d_out);
+    solovev::SafetyFactor<dg::DVec> qprofile(g2d_out, gp, alphaog2d );
+    dg::DVec sf = dg::evaluate(qprofile, g1d_out);
+
 
     //perp laplacian for computation of vorticity
 
@@ -148,6 +152,7 @@ int main( int argc, char* argv[])
     fsaonrzphimatrix =  dg::create::interpolation(psipupilog3d ,g1d_out);    
     
     //Vectors and Matrices for Diffusion coefficient
+
     const dg::DVec curvR = dg::evaluate( solovev::CurvatureNablaBR(gp), g3d_out);
     const dg::DVec curvZ = dg::evaluate( solovev::CurvatureNablaBZ(gp), g3d_out);
     dg::Poisson<dg::CylindricalGrid3d<dg::DVec>,dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
@@ -172,9 +177,13 @@ int main( int argc, char* argv[])
     std::vector<dg::DVec> fields3d(5,dg::evaluate(dg::zero,g3d_out));
     std::vector<dg::DVec> fields2d(5,dg::evaluate(dg::zero,g3d_out));
     dg::ToroidalAverage<dg::DVec> toravg(g3d_out);
-    unsigned outlim = p.maxout;
-    std::cout << "number of outputs ? : " << std::endl;
-    std::cin>>outlim;
+    unsigned outlim = 0.; int timeID;
+    size_t steps;
+    err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
+    err = nc_inq_unlimdim( ncid, &timeID);
+    err = nc_inq_dimlen( ncid, timeID, &steps);
+    steps-=1;
+    outlim = steps/p.itstp;
     for( unsigned i=0; i<outlim; i++)//timestepping
     {
 //      start3dp[0] = i; //set specific time  
@@ -310,7 +319,10 @@ int main( int argc, char* argv[])
         #endif
         
         //put safety factor into file
-//         err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  sf.data());
+        dg::blas1::transfer(sf,transfer1d);
+        err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  transfer1d.data());
+        dg::blas1::transfer(abs,transfer1d);
+        err1d = nc_put_vara_double( ncid1d, dataIDs1d[9], start1d, count1d, transfer1d.data());
         //write time data
         err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);
         err1d = nc_close(ncid1d);  //close 1d netcdf files

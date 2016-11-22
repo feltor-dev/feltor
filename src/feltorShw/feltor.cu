@@ -29,30 +29,24 @@ int main( int argc, char* argv[])
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v2;
     std::stringstream title;
+    Json::Reader reader;
+    Json::Value js;
     if( argc == 1)
     {
-        try{
-            v = file::read_input("input.txt");
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is("input.json");
+        reader.parse(is,js,false);
     }
     else if( argc == 2)
     {
-        try{
-            v = file::read_input(argv[1]);
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
     }
     else
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
+        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const eule::Parameters p( v);
+    const eule::Parameters p(  js);    
     p.display( std::cout);
 
     v2 = file::read_input( "window_params.txt");
@@ -77,10 +71,7 @@ int main( int argc, char* argv[])
 //     solovev::ZonalFlow init0(p, gp);
 //     dg::CONSTANT init0( 0.);
 //      dg::Vortex init0(  p.posX*p.lx, p.posY*p.ly, 0, p.sigma, p.amp);   
-    //background profile
-//     solovev::Nprofile prof(p, gp); //initial background profile
-//     dg::CONSTANT prof(p.bgprofamp );
-    //
+
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
@@ -95,7 +86,6 @@ int main( int argc, char* argv[])
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-//     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
     std::cout << "intiialize ne" << std::endl;
     feltor.initializene( y0[1], y0[0]);    
     std::cout << "Done!\n";

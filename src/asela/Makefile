@@ -11,7 +11,7 @@ INCLUDE+= -I../../inc   # other project libraries
 all: asela asela_hpc
 
 asela: asela.cu asela.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@  -g $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
 
 asela_hpc: asela_hpc.cu asela.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK

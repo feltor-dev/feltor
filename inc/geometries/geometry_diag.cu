@@ -214,7 +214,7 @@ int main( int argc, char* argv[])
     dg::DVec psipog2d   = dg::evaluate( psip, grid2d);
     dg::DVec alphaog2d  = dg::evaluate( alpha, grid2d); 
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
-    unsigned npsi = 3, Npsi = 50;//set number of psivalues
+    unsigned npsi = 3, Npsi = 150;//set number of psivalues
     psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
     solovev::SafetyFactor<dg::DVec>     qprof(grid2d, gp, alphaog2d );

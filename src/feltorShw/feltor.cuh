@@ -122,6 +122,11 @@ struct Feltor
     std::vector<double> evec;
     
     container lhs,profne,profNi;
+    
+    //boundary stuff
+//     dg::Grid1d gy;
+//     const container w1d,oney;
+//     dg::IDMatrix interpx0,interpxlx;
 
 };
 
@@ -150,16 +155,12 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
     profNi(profne)
-//     profne(dg::evaluate(dg::TanhProfX(p.lx*p.solb*0.7,p.solw,-1.0,p.nprofileamp, p.bgprofamp),g)),
-    //boundary integral terms
+    //boundary stuff
 //     gy(g.y0(),g.y1(),g.n(),g.Ny(),dg::PER),
 //     w1d( dg::create::weights(gy)),
 //     oney( dg::evaluate( dg::one, gy)), 
-//     coox0(dg::evaluate(dg::CONSTANT(0.0),gy)),
-//     cooxlx(dg::evaluate(dg::CONSTANT(p.lx),gy)),
-//     cooy(dg::evaluate(dg::coo1,gy)),
-//     interpx0(dg::create::interpolation( coox0,cooy, g )),  
-//     interpxlx(dg::create::interpolation(cooxlx,cooy, g))
+//     interpx0(dg::create::interpolation(  dg::evaluate(dg::CONSTANT(0.0),gy), dg::evaluate(dg::cooX1d,gy), g )),  
+//     interpxlx(dg::create::interpolation( dg::evaluate(dg::CONSTANT(p.lx),gy),dg::evaluate(dg::cooX1d,gy), g ))
 {
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
     initializene(profNi,profne); //ne = Gamma N_i
@@ -216,9 +217,6 @@ void Feltor<Grid, Matrix, container>::initializene( const container& src, contai
     invert_invgammaN(invgammaNU,target,src); //=ne-1 = Gamma (ni-1)    
 }
 
-
-
-
 template<class Grid, class Matrix, class container>
 void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
@@ -246,6 +244,7 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
     double z[2]    = {-1.0,1.0};
     double S[2]    = {0.0, 0.0};
     double Dperp[2] = {0.0, 0.0};
+    double Dsource[2] = {0.0, 0.0};
     double Dperpsurf[2] = {0.0, 0.0};
     //transform compute n and logn and energies
     for(unsigned i=0; i<2; i++)
@@ -269,7 +268,7 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_z(1+lnN)+phi) nabla_RZ^4 N_e
         
-        //----------ExB surface terms 
+        //----------ExB boundary terms 
 //         dg::blas1::axpby(1.,phi[i] , p.tau[i],logn[i],chi);   // chi    = (tau_z(lnN)+phi)
 //         dg::blas2::gemv( poisson.dyrhs(), phi[i], omega);    // omega  = dy psi
 //         dg::blas1::pointwiseDot( omega, binv, omega);        // omega  = dy psi / B
@@ -362,11 +361,15 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
     //Density source terms
     if (p.omega_source>1e-14) 
     {
-        dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0_source - <ne>
+        dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0p - <ne>
         //dtN_e
-        dg::blas1::pointwiseDot(lambda,lhs,omega); //lambda =lhs*(ne0_source - <ne>)
-        dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
-        dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = - omega_source(ne0_source - <ne>) 
+        dg::blas1::pointwiseDot(lambda,lhs,omega); //omega =lhs*(ne0p - <ne>)
+        dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //= P [lhs*(n0ep - <ne>) ]
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne+= - omega_s P [lhs*(ne0p - <ne>) ]
+        
+        dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnNe)
+        dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnNe)+phi)
+        Dsource[0]=z[0]* p.omega_source*dg::blas2::dot(chi, w2d, omega);
         //add the FLR term (tanh and postrans before lapl seems to work because of cancelation) (LWL vorticity correction)
 //         dg::blas1::pointwiseDot(lambda,lhs,lambda);
 //         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());   
@@ -374,13 +377,19 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
 //         dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR
-        dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]); 
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);  //dtNi += omega_s* P [lhs*(ne0p - <ne>)]
+        dg::blas1::axpby(1.,one,1., logn[1] ,chi); //chi = (1+lnNi)
+        dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //chi = (tau_i(1+lnNi)+psi)
+        Dsource[1]=z[1]* p.omega_source*dg::blas2::dot(chi, w2d, omega);
         //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
         dg::blas1::pointwiseDot(lambda,lhs,lambda);
         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
         dg::blas2::gemv( lapperp, lambda, omega);
-        dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
+        dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi +=- omega_s*0.5*tau_i nabla_perp^2 P [lhs*(ne0p - <ne>)]
+        Dsource[1]+=z[1]* p.omega_source*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, omega);
+
     }
+    ediff_+=Dsource[0]+ Dsource[1];
     t.toc();
 #ifdef MPI_VERSION
     int rank;

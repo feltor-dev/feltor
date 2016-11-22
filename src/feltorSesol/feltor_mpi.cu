@@ -42,24 +42,22 @@ int main( int argc, char* argv[])
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
-    std::string input, geom;
-    if( argc != 3)
+    std::string input;
+    if( argc != 3 && argc != 4)
     {
-        if(rank==0) std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
+        std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            v = file::read_input( argv[1]);
-        }catch( toefl::Message& m){
-            if(rank==0) m.display();
-            if(rank==0) std::cout << input << std::endl;
-            return -1;
-        }
+        input = file::read_file( argv[1]);
     }
-    const eule::Parameters p( v);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false); //read input without comments
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const eule::Parameters p( js);
     if(rank==0) p.display( std::cout);
      ////////////////////////////////setup MPI///////////////////////////////
     int periods[2] = {false, false}; //non-, non-, periodic
@@ -108,19 +106,63 @@ int main( int argc, char* argv[])
 
     std::vector<dg::MDVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
     
+    double time = 0;  
 
-    //no field aligning
-    y1[1] = dg::evaluate( init0, grid);
-    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]);
+    if (argc ==3){
+        //no field aligning
+        y1[1] = dg::evaluate( init0, grid);
+        dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]);
 
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-//     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
-    if(rank==0) std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1], y0[0]);    
-    if(rank==0) std::cout << "Done!\n";
-
-    
+        dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
+        dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+        if(rank==0) std::cout << "intiialize ne" << std::endl;
+        feltor.initializene( y0[1], y0[0]);    
+        if(rank==0) std::cout << "Done!\n";
+    }
+    if (argc==4) {
+      file::NC_Error_Handle errIN;
+      int ncidIN;
+      errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
+      ///////////////////read in and show inputfile und geomfile//////////////////
+      size_t lengthIN;
+      errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
+      std::string inputIN( lengthIN, 'x');
+      errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
+      std::cout << "input "<<inputIN<<std::endl;    
+      const eule::Parameters pIN( js);
+      pIN.display( std::cout);
+      dg::MPIGrid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y,comm);  
+      int dimsIN[2],  coordsIN[2];
+      MPI_Cart_get( comm, 2, dimsIN, periods, coordsIN);
+      size_t count2dIN[3] = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};  
+      size_t start2dIN[3] = {0, coordsIN[1]*count2dIN[1], coordsIN[0]*count2dIN[2]}; 
+      dg::HVec transferIN( dg::evaluate(dg::zero, grid_IN.local()));
+      dg::DVec transferIND( dg::evaluate(dg::zero, grid_IN.local()));
+      dg::IDMatrix interpolateIN = dg::create::interpolation( grid.local(),grid_IN.local()); 
+      std::string namesIN[2] = {"electrons", "ions"};       
+      int dataIDsIN[2];     
+      int timeIDIN;
+      double  timeIN;
+      size_t stepsIN;
+      /////////////////////The initial field///////////////////////////////////////////
+      /////////////////////Get time length and initial data///////////////////////////
+      errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
+      errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
+      stepsIN-=1;
+      start2dIN[0] = stepsIN/pIN.itstp;
+      errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
+      errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
+      if(rank==0) std::cout << "timein= "<< timeIN <<  std::endl;
+      time=timeIN;
+      errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN,transferIN.data());
+       dg::blas1::transfer(transferIN,transferIND);
+      dg::blas2::gemv( interpolateIN, transferIND,y0[0].data());
+      errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
+      errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferIN.data());
+      dg::blas1::transfer(transferIN,transferIND);
+      dg::blas2::gemv( interpolateIN, transferIND,y0[1].data());
+      errIN = nc_close(ncidIN);
+    }
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     if(rank==0) std::cout << "intialize Timestepper" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
@@ -129,7 +171,7 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-    //     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
+    //  err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
@@ -207,7 +249,6 @@ int main( int argc, char* argv[])
     dg::blas2::gemv( interpolate,y1[1].data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-    double time = 0;
 
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     err = nc_put_vara_double( ncid, EtimevarID, start, count, &time);

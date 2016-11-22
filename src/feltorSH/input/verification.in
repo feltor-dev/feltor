@@ -1,39 +1,30 @@
-
-                * Input-File for "FELTOR" *
-                ---------------------------
-
-
-@-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =  3(3)
-2)  nx (grid points in x)                =  200(192)
-3)  ny (grid points in y)                =  100(192) 
-4)  dt (time step in units c_s/rho_s)    =  0.5(0.01)
-
-----------------------------------Output parameters--------------------
-5)  n_out (# of x-y polynomials in output)  =  3
-6)  nx_out (# grid points in output field)  =  200
-7)  ny_out (# grid points in output field)  =  100
-8)  itstp  (steps between outputs)          =  2(5)
-9) total # of outputs (excluding first)     =  10
--------------------------Algorithmic parameters------------------------
-10)  eps_pol (stop for polarisation)        =   1e-14 (1e-6)
-11)  eps_gamma (stop for Gamma CG)          =   1e-14 (1e-8)
-12)  eps_time ( stop for time inversion )   =   1e-14
--------------------------Physical parameters----------------------------
-13) tau (Ti/Te)                             =  1.0 (0.0)
-14) mcv (curvature)                         =  0.00015   (0.00015)
-15) nu_perp                                 =  5e-3
-------------------------Initial perturbation parameters---------------------
-16) amp (blob amplitude)                    =  2.0   (1.0)
-17) sigma (blob variance in units of rho_s) =  5.     (10)
-18) x-position ( in units of lx)            =  0.2   (0.4)
-19) y-position ( in units of ly)            =  0.5   (0.5)
----------------------------------box setup----------------
-20) lx (in rho_s)                           =  200
-21) ly (in rho_s)                           =  100
-22) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   1      (1.0)
-23) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0   (1.0)
----------------------------------MISC-------------------------------------------
-24) init condition (0 standard, 1 vorticity) = 0 
-25) thermal(0) isothermal(1)                 = 1
-@ ------------------------------------------------------------
+/* This is a comment: Remember that comments are not conformal 
+with the JSON standard but are allowed only with some specifig JSON parsers. So remove them when you automate the process */
+{
+    "n" :  3,       //# x-y-polynomials
+    "Nx" : 100,     //# grid points in x
+    "Ny" : 100,     //# grid points in y
+    "dt" : 3.0,     //time step in units of c_s/rho_s
+    "n_out"  : 3,   //# x-y polynomials in output
+    "Nx_out" : 100, //# grid points in x in output fields
+    "Ny_out" : 100, //# grid points in y in output fields
+    "itstp"  : 2,   //steps between outputs
+    "maxout" : 100, //# outputs excluding first
+    "eps_pol"   : 1e-6,   //accuracy of polarisation solver
+    "eps_gamma" : 1e-7,   //accuracy of Gamma 
+    "eps_time"  : 1e-10,  //accuracy of implicit time-stepper
+    "curvature"  : 0.00015, //magnetic curvature
+    "tau"  : 1,        //Ti/Te
+    "nu_perp"  : 5e-3, //pependicular viscosity
+    "amplitude"  : 1.0,//amplitude of the blob
+    "sigma"  : 10,     //blob variance in units of rho_s
+    "posX"  : 0.3,     //blob x-position in units of lx
+    "posY"  : 0.5,     //blob y-position in units of ly
+    "lx"  : 200,       //lx in units of rho_s
+    "ly"  : 200,       //ly in units of rho_s
+    "bc_x"  : "DIR",   //boundary condition in x
+    "bc_y"  : "PER",   //boundary condition in y
+    "initmode": 1, //standard (0) or vorticity (1)
+    "tempmode": 0, //thermal(0) or isothermal(1)    
+    "flrmode": 1  //const FLR (0) or dyn FLR (1)  
+}
