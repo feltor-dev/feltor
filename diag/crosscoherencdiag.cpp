@@ -11,11 +11,7 @@
 #include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-<<<<<<< HEAD
 #include "feltorShw/parameters.h"
-=======
-#include "feltorSH/parameters.h"
->>>>>>> de19e28d868789d715ec18f929a800bc31e1bcdc
 
 /**
  * @brief normalizes input vector 
@@ -99,8 +95,6 @@ int main( int argc, char* argv[])
     step = imin;
     for( unsigned i=imin; i<imax; i++)//timestepping
     {
-//         for( unsigned j=0; j<p.itstp; j++)
-//         {
             step++;
             Estart[0] = step;
             time += p.dt;
@@ -112,7 +106,6 @@ int main( int argc, char* argv[])
             err = nc_get_vara_double( ncid, phipID, Estart, Ecount, &phip);
 
             phipvec.push_back (phip);
-//         }
         std::cout << "step = "<< step <<  std::endl;
     }
     err = nc_close(ncid);
