@@ -72,7 +72,9 @@ struct Parameters
         os << "Physical parameters are: \n"
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
-            <<"    Ion-temperature: = "<<tau<<"\n"
+            <<"    temperatures e/p: = "<<tau[0]<<"/"<<tau[1]<<"\n"
+            <<"    masses       e/p: = "<<mu[0]<<"/"<<mu[1]<<"\n"
+            <<"    charges      e/p: = "<<z[0]<<"/"<<z[1]<<"\n"
             <<"    Debye parameter is: = "<<debye<<"\n";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
