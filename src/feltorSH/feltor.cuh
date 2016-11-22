@@ -316,7 +316,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     //transform compute n and logn and energies
     for(unsigned i=0; i<2; i++)
     {
-        if (p.iso == 1) S[i] = z[i]*p.tau[i]*dg::blas2::dot( logype[i], w2d, ype[i]);
+        if (p.iso == 1) S[i] = z[i]*p.tau[i]*dg::blas2::dot( logype[i], w2d, ype[i]); //N LN N
         if (p.iso == 0) S[i] = z[i]*p.tau[i]*dg::blas2::dot( ype[i+2], w2d, ype[i]); // N T
     }
     mass_ = dg::blas2::dot( one, w2d, ype[0] ); //take real ion density which is electron density!!
