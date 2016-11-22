@@ -5,35 +5,48 @@
 #include <cmath>
 
 #include <mpi.h> //activate mpi
-#include <netcdf_par.h>
 
 #include "dg/algorithm.h"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/interpolation.cuh"
+
+#include "netcdf_par.h" //exclude if par netcdf=OFF
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
-#include "solovev/geometry.h"
-
-#include "asela/asela.cuh"
-#include "asela/parameters.h"
+#include "asela.cuh"
 
 /*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the Asela - functor and 
-   - writes outputs to a given outputfile using netcdf
-        density fields are the real densities in XSPACE ( not logarithmic values)
+    - the only difference to the asela_hpc.cu file is that this program 
+        uses the MPI backend and
+        the parallel netcdf output 
+    - pay attention that both the grid dimensions as well as the 
+        output dimensions must be divisible by the mpi process numbers
 */
 
+typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
-    MPI_Init( &argc, &argv);
+    int provided;
+    MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    if( provided != MPI_THREAD_FUNNELED)
+    {
+        std::cerr << "wrong mpi-thread environment provided!\n";
+        return -1;
+    }
     int periods[3] = {false, false, true}; //non-, non-, periodic
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    if(num_devices==0){std::cerr << "No CUDA capable devices found"<<std::endl; return -1;}
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    cudaSetDevice( device);
+#endif//cuda
     int np[3];
     if(rank==0)
     {
@@ -76,67 +89,76 @@ int main( int argc, char* argv[])
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
-   
-    //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
-    dg::MPIGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical, comm);  
-    dg::MPIGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::DIR, dg::DIR, dg::PER, dg::cylindrical, comm);  
+    //Make grids
+     dg::CylindricalMPIGrid3d<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, comm);  
+     dg::CylindricalMPIGrid3d<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
+
      
     //create RHS 
-    std::cout << "Constructing Asela...\n";
-    eule::Asela< dg::MHDS, dg::MHMatrix, dg::MHVec, dg::MHVec > asela( grid, p, gp); 
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::MHMatrix, dg::MHVec, dg::MHVec > rolkar( grid, p, gp);
-    std::cout << "Done!\n";
-    /////////////////////The initial field////////////////////////////////////////////
+    if(rank==0)std::cout << "Constructing Asela...\n";
+    eule::Asela<dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> asela( grid, p, gp); //initialize before rolkar!
+    if(rank==0)std::cout << "Constructing Rolkar...\n";
+    eule::Rolkar< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
+    if(rank==0)std::cout << "Done!\n";
+
+    /////////////////////The initial field/////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p, gp); //initial background profile
-    std::vector<dg::MHVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
-
-    //initial perturbation
-    //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
-//     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
-    //solovev::ZonalFlow init0(p, gp);
-//     dg::CONSTANT init0( 0.);
-
-    //averaged field aligned initializer
-    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-    y1[1] = asela.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->3*2-1
-
-
-    //no field aligning
-//     y1[1] = dg::evaluate( init0, grid);
-
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
-    asela.initializene(y0[1],y0[0]);    
-
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
+    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    std::vector<dg::MDVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
+    //perturbation 
+    dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
+    if( p.mode == 0 || p.mode == 1)
+    {
+        dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
+        if( p.mode == 0)
+            y1[1] = asela.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
+        if( p.mode == 1)
+            y1[1] = asela.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
+    }
+    if( p.mode == 2)
+    {
+        dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+        y1[1] = asela.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
+    }
+    if( p.mode == 3)
+    {
+        solovev::ZonalFlow init0(p.amp, p.k_psi, gp);
+        y1[1] = asela.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
+    }
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //sum up background and perturbation
+    dg::blas1::plus(y0[1], -1); //initialize ni-1
+    if( p.mode == 2 || p.mode == 3)
+    {
+        dg::MDVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+        dg::blas1::pointwiseDot(damping, y0[1], y0[1]); //damp with gaussprofdamp
+    }
+    std::cout << "intiialize ne" << std::endl;
+    if( p.initcond == 0) asela.initializene( y0[1], y0[0]);
+    if( p.initcond == 1) dg::blas1::axpby( 1., y0[1], 0.,y0[0], y0[0]); //set n_e = N_i
+    std::cout << "Done!\n";    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
-    dg::Karniadakis< std::vector<dg::MHVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( asela, rolkar, y0, p.dt);
-    asela.energies(y0); //now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid);
+    err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
+//     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
+
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile",  geom.size(), geom.data());
     int dimids[4], tvarID;
     {
-        dg::Grid3d global_grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out);  
-        err = file::define_dimensions( ncid, dimids, &tvarID, global_grid_out);
-
+        err = file::define_dimensions( ncid, dimids, &tvarID, grid_out.global());
 
         solovev::FieldR fieldR(gp);
         solovev::FieldZ fieldZ(gp);
         solovev::FieldP fieldP(gp);
-        dg::HVec vecR = dg::evaluate( fieldR, global_grid_out);
-        dg::HVec vecZ = dg::evaluate( fieldZ, global_grid_out);
-        dg::HVec vecP = dg::evaluate( fieldP, global_grid_out);
+        dg::HVec vecR = dg::evaluate( fieldR, grid_out.global());
+        dg::HVec vecZ = dg::evaluate( fieldZ, grid_out.global());
+        dg::HVec vecP = dg::evaluate( fieldP, grid_out.global());
         int vecID[3];
         err = nc_def_var( ncid, "BR", NC_DOUBLE, 3, &dimids[1], &vecID[0]);
         err = nc_def_var( ncid, "BZ", NC_DOUBLE, 3, &dimids[1], &vecID[1]);
@@ -149,62 +171,83 @@ int main( int argc, char* argv[])
     }
 
     //field IDs 
-    std::string names[6] = {"electrons", "ions", "Ue", "Ui", "potential","apar"}; 
+    std::string names[6] = {"electrons", "ions", "Ue", "Ui", "potential","Aparallel"}; 
     int dataIDs[6]; //VARIABLE IDS
-    //use global dimensionality
     for( unsigned i=0; i<6; i++)
-    {
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 4, dimids, &dataIDs[i]);
-        err = nc_var_par_access( ncid, dataIDs[i], NC_COLLECTIVE);
-    }
-    err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
     //energy IDs 
     int EtimeID, EtimevarID;
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
-    err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
-    int energyID, massID, energyIDs[6], dissID, dEdtID, accuracyID;
+    int energyID, massID, energyIDs[6], dissID, alignedID, dEdtID, accuracyID;
     err = nc_def_var( ncid, "energy",   NC_DOUBLE, 1, &EtimeID, &energyID);
-    err = nc_var_par_access( ncid, energyID, NC_COLLECTIVE);
     err = nc_def_var( ncid, "mass",   NC_DOUBLE, 1, &EtimeID, &massID);
-    err = nc_var_par_access( ncid, massID, NC_COLLECTIVE);
     std::string energies[6] = {"Se", "Si", "Uperp", "Upare", "Upari","Uapar"}; 
-    for( unsigned i=0; i<6; i++){
+    for( unsigned i=0; i<6; i++)
         err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);
-        err = nc_var_par_access( ncid, energyIDs[i], NC_COLLECTIVE);
-    }
     err = nc_def_var( ncid, "dissipation",   NC_DOUBLE, 1, &EtimeID, &dissID);
-    err = nc_var_par_access( ncid, dissID, NC_COLLECTIVE);
+    err = nc_def_var( ncid, "alignment",   NC_DOUBLE, 1, &EtimeID, &alignedID);
     err = nc_def_var( ncid, "dEdt",     NC_DOUBLE, 1, &EtimeID, &dEdtID);
-    err = nc_var_par_access( ncid, dEdtID, NC_COLLECTIVE);
     err = nc_def_var( ncid, "accuracy", NC_DOUBLE, 1, &EtimeID, &accuracyID);
+    //probe vars definition
+    int NepID,phipID;
+    err = nc_def_var( ncid, "Ne_p",     NC_DOUBLE, 1, &EtimeID, &NepID);
+    err = nc_def_var( ncid, "phi_p",    NC_DOUBLE, 1, &EtimeID, &phipID);  
+    for(unsigned i=0; i<6; i++)
+    {
+        err = nc_var_par_access( ncid, energyIDs[i], NC_COLLECTIVE);
+        err = nc_var_par_access( ncid, dataIDs[i], NC_COLLECTIVE);
+    }
+    err = nc_var_par_access( ncid, tvarID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, EtimevarID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, energyID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, massID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, dissID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, alignedID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, dEdtID, NC_COLLECTIVE);
     err = nc_var_par_access( ncid, accuracyID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, NepID, NC_COLLECTIVE);
+    err = nc_var_par_access( ncid, phipID, NC_COLLECTIVE);
     err = nc_enddef(ncid);
-    ///////////////////////////////////first output/////////////////////////////////
+    ///////////////////////////////////PROBE//////////////////////////////
+    const dg::HVec Xprobe(1,gp.R_0+p.boxscaleRp*gp.a);
+    const dg::HVec Zprobe(1,0.);
+    const dg::HVec Phiprobe(1,M_PI);
+    dg::IDMatrix probeinterp;
+    int probeRANK = grid.pidOf( Xprobe[0], Zprobe[0], Phiprobe[0]);
+    if(rank==probeRANK)
+        probeinterp=dg::create::interpolation( Xprobe,Zprobe,Phiprobe,grid.local(), dg::NEU);
+    dg::DVec probevalue(1,0.);  
+    ///////////////////////////first output/////////////////////////////////
+    if(rank==0)std::cout << "First output ... \n";
     int dims[3],  coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
-    dg::MHVec transferD( dg::evaluate(dg::zero, grid));
+    dg::MDVec transfer( dg::evaluate(dg::zero, grid));
+    dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
-    //create local interpolation matrix
-    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
-    if(rank==0)std::cout << "First output ...\n";
-    for( unsigned j=0; j<2; j++)
+    dg::IDMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); //create local interpolation matrix
+    for( unsigned i=0; i<2; i++)
     {
-        dg::blas2::symv( interpolate, y0[j].data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
+        dg::blas2::gemv( interpolate, y0[i].data(), transferD);
+        dg::blas1::transfer( transferD, transferH);
+        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
-    transferD = asela.uparallel()[0];
-    dg::blas2::symv( interpolate, transferD.data(), transferH);
+    transfer = asela.uparallel()[0];
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
-    transferD = asela.uparallel()[1];
-    dg::blas2::symv( interpolate, transferD.data(), transferH);
+    transfer = asela.uparallel()[1];
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-    transferD = asela.potential()[0];
-    dg::blas2::symv( interpolate, transferD.data(), transferH);
+    transfer = asela.potential()[0];
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-    transferD = asela.aparallel();
-    dg::blas2::symv( interpolate, transferD.data(), transferH);
+    transfer = asela.aparallel();
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -212,7 +255,7 @@ int main( int argc, char* argv[])
 
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
-    double energy0 = asela.energy(), mass0 = asela.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
+    double energy0 = asela.energy(), mass0 = asela.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., aligned=0, accuracy=0.;
     std::vector<double> evec = asela.energy_vector();
     err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &energy0);
     err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass0);
@@ -220,8 +263,21 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
 
     err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+    err = nc_put_vara_double( ncid, alignedID,  Estart, Ecount,&aligned);
     err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+    //probe
+    double Nep=0, phip=0;
+    if(rank==probeRANK) {
+        dg::blas2::gemv(probeinterp,y0[0].data(),probevalue);
+        Nep=probevalue[0] ;
+        dg::blas2::gemv(probeinterp,asela.potential()[0].data(),probevalue);
+        phip=probevalue[0] ;
+    }
+    MPI_Bcast( &Nep,1 , MPI_DOUBLE, probeRANK, grid.communicator());
+    MPI_Bcast( &phip,1 , MPI_DOUBLE, probeRANK, grid.communicator());
+    err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+    err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
     if(rank==0)std::cout << "First write successful!\n";
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
@@ -241,14 +297,13 @@ int main( int argc, char* argv[])
             try{ karniadakis( asela, rolkar, y0);}
             catch( dg::Fail& fail) { 
                 if(rank==0)std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-                if(rank==0)std::cerr << "Does Simulation respect CFL condition?\n";
+                if(rank==0)std::cerr << "Does Simulation respect CFL condition?"<<std::endl;
                 err = nc_close(ncid);
                 MPI_Finalize();
                 return -1;
             }
             step++;
             time+=p.dt;
-            asela.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = asela.energy(), mass = asela.mass(), diss = asela.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
@@ -259,12 +314,22 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
             for( unsigned i=0; i<6; i++)
-            {
                 err = nc_put_vara_double( ncid, energyIDs[i], Estart, Ecount, &evec[i]);
-            }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
+            err = nc_put_vara_double( ncid, alignedID,  Estart, Ecount,&aligned);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
+            if(rank==probeRANK)
+            {
+                dg::blas2::gemv(probeinterp,y0[0].data(),probevalue);
+                Nep= probevalue[0] ;
+                dg::blas2::gemv(probeinterp,asela.potential()[0].data(),probevalue);
+                phip=probevalue[0] ;
+            }
+            MPI_Bcast( &Nep, 1 ,MPI_DOUBLE, probeRANK, grid.communicator());
+            MPI_Bcast( &phip,1 ,MPI_DOUBLE, probeRANK, grid.communicator());
+            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+            err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);
             if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (asela.mass()-mass0)/mass0<<"\t";
             if(rank==0)std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             if(rank==0)std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
@@ -275,26 +340,31 @@ int main( int argc, char* argv[])
         if(rank==0)std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s";
         ti.tic();
 #endif//DG_BENCHMARK
-        //err = nc_open_par( argv[3], NC_WRITE|NC_MPIIO, comm, info, &ncid);
+        //err = nc_open_par( argv[3], NC_WRITE|NC_MPIIO, comm, info, &ncid); //dont do it
         //////////////////////////write fields////////////////////////
         start[0] = i;
         for( unsigned j=0; j<2; j++)
         {
-            dg::blas2::symv( interpolate, y0[j].data(), transferH);
+            dg::blas2::gemv( interpolate, y0[j].data(), transferD);
+            dg::blas1::transfer( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
-        transferD = asela.uparallel()[0];
-        dg::blas2::symv( interpolate, transferD.data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
-        transferD = asela.uparallel()[1];
-        dg::blas2::symv( interpolate, transferD.data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-        transferD = asela.potential()[0];
-        dg::blas2::symv( interpolate, transferD.data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
-        transferD = asela.aparallel();
-        dg::blas2::symv( interpolate, transferD.data(), transferH);
-        err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
+    transfer = asela.uparallel()[0];
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas1::transfer( transferD, transferH);
+    err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
+    transfer = asela.uparallel()[1];
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas1::transfer( transferD, transferH);
+    err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
+    transfer = asela.potential()[0];
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas1::transfer( transferD, transferH);
+    err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+    transfer = asela.aparallel();
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas1::transfer( transferD, transferH);
+    err = nc_put_vara_double( ncid, dataIDs[5], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 
         //err = nc_close(ncid); DONT DO IT!
@@ -314,7 +384,4 @@ int main( int argc, char* argv[])
     MPI_Finalize();
 
     return 0;
-
 }
-
-

@@ -41,26 +41,22 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    std::string input;
     if( argc != 3)
     {
-        if(rank==0) std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            v = file::read_input( argv[1]);
-        }catch( toefl::Message& m){
-            if(rank==0) m.display();
-            if(rank==0) std::cout << input << std::endl;
-            return -1;
-        }
+        input = file::read_file( argv[1]);
     }
-    const eule::Parameters p( v);
-    if(rank==0) p.display( std::cout);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false); //read input without comments
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const eule::Parameters p( js);
+    if(rank==0)p.display( std::cout);
      ////////////////////////////////setup MPI///////////////////////////////
     int periods[2] = {false, false}; //non-, non-, periodic
 

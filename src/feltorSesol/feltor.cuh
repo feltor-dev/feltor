@@ -273,11 +273,9 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
     dg::blas1::scal(omega,0.0);
     if (p.zf==0) {
-
         dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
         dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
-
     }
     
     if (p.zf==1) {
@@ -353,9 +351,6 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     {
         dg::blas1::pointwiseDot(omega,lh,omega); //omega = lh*omega
     }
-    //correction for high amplitudes
-//     dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
-//     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
     //general term
     dg::blas1::pointwiseDot(omega,npe[0],lambda);  //(coupling)*Ne
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
@@ -389,11 +384,6 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot(lambda,lhs,omega); //lambda =lhs*(ne0_source - <ne>)
         dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
         dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = - omega_source(ne0_source - <ne>) 
-        //add the FLR term (tanh and postrans before lapl seems to work because of cancelation) (LWL vorticity correction)
-//         dg::blas1::pointwiseDot(lambda,lhs,lambda);
-//         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());   
-//         dg::blas2::gemv( lapperpM, lambda, omega);
-//         dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
         //dt Ni without FLR
         dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]); 

@@ -1,6 +1,8 @@
-#pragma once
+#ifndef _DG_PARAMETERS_ 
+#define _DG_PARAMETERS_
+#include <string>
 #include "dg/enums.h"
-
+#include "json/json.h"
 namespace eule{
 /**
  * @brief Provide a mapping between input file and named parameters
@@ -31,57 +33,55 @@ struct Parameters
     double solb,solw;
     double omega_source;
     double sourceb,sourcew;
-    enum dg::bc bc_x,bc_y;
+    enum dg::bc bc_x,bc_y; 
+
 
     /**
      * @brief constructor to make a const object
      *
-     * @param v Vector from read_input function
+     * @param js json object
      */
-    Parameters( const std::vector< double>& v):layout_(0) {
-        if( layout_ == 0)
-        {
-            n  = (unsigned)v[1]; 
-            Nx = (unsigned)v[2];
-            Ny = (unsigned)v[3];
-            dt = v[4];
-            n_out = v[5];
-            Nx_out = v[6];
-            Ny_out = v[7];
-            itstp = v[8];
-            maxout = v[9];
-            eps_pol = v[10];
-            eps_gamma = v[11];
-            eps_time = v[12];
-            eps_hat = 1.;
-            mu[0] = v[13];
-            mu[1] = 1.;
-            tau[0] = -1.;
-            tau[1] = v[14];
-            mcv    =v[15];
-            nu_perp = v[16];
-            d = v[17];
-            c = v[18];            
-            l_para=v[19];            
-            amp = v[20];
-            sigma = v[21];
-            posX = v[22];
-            posY = v[23];
-            nprofileamp = v[24];
-            bgprofamp = v[25];
-            lx = v[26];
-            ly = v[27];
-            bc_x = map((int)v[28]);
-            bc_y =map((int)v[29]);
-            zf = (unsigned)v[30];
-            ln = v[31];
-            dlocal = (double)(lx*d/c);
-            solb = v[32];
-            solw = v[33];
-            omega_source = v[34];
-            sourceb = v[35];
-            sourcew = v[36];            
-        }
+    Parameters(const Json::Value& js)        {
+        n  = js["n"].asUInt();
+        Nx = js["Nx"].asUInt();
+        Ny = js["Ny"].asUInt();
+        dt = js["dt"].asDouble();
+        n_out  = js["n_out"].asUInt();
+        Nx_out = js["Nx_out"].asUInt();
+        Ny_out = js["Ny_out"].asUInt();
+        itstp = js["itstp"].asUInt();
+        maxout = js["maxout"].asUInt();
+        eps_pol = js["eps_pol"].asDouble();
+        eps_gamma = js["eps_gamma"].asDouble();
+        eps_time = js["eps_time"].asDouble();
+        eps_hat = 1.;
+        mu[0] = js["mu_e"].asDouble();
+        mu[1] = 1.;
+        tau[0] = -1.;
+        tau[1] = js["tau"].asDouble();
+        mcv    = js["curvature"].asDouble();
+        nu_perp = js["nu_perp"].asDouble();
+        d = js["D"].asDouble();
+        c = js["C"].asDouble();            
+        l_para=js["l_para"].asDouble();            
+        amp     = js["amplitude"].asDouble();
+        sigma   = js["sigma"].asDouble();
+        posX    = js["posX"].asDouble();
+        posY    = js["posY"].asDouble();
+        nprofileamp = js["prof_amp"].asDouble();
+        bgprofamp =   js["bg_prof_amp"].asDouble();
+        lx =  js["lx"].asDouble();
+        ly =  js["ly"].asDouble();
+        bc_x = dg::str2bc(js["bc_x"].asString());
+        bc_y = dg::str2bc(js["bc_y"].asString());
+        zf =  js["hwmode"].asUInt();
+        ln =   js["ln"].asDouble();
+        dlocal = (double)(lx*d/c);
+        solb = js["SOL_b"].asDouble();
+        solw = js["SOL_damping_width"].asDouble();
+        omega_source = js["prof_source_rate"].asDouble();
+        sourceb = js["source_b"].asDouble();
+        sourcew = js["source_damping_width"].asDouble();                    
     }
     /**
      * @brief Display parameters
@@ -125,9 +125,7 @@ struct Parameters
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Box params: \n"
             <<"     lx  =              "<<lx<<"\n"
-            <<"     ly  =              "<<ly<<"\n"
-            <<"     bcx =              "<<bc_x<<"\n"
-            <<"     bcy =              "<<bc_y<<"\n";
+            <<"     ly  =              "<<ly<<"\n";
         os << "modified/ordinary \n"
             <<"     zf =              "<<zf<<"\n"
             <<"     ln =              "<<ln<<"\n";
@@ -137,10 +135,10 @@ struct Parameters
             <<"     source rate  =    "<<omega_source<<"\n"
             <<"     source boundary = "<<sourceb<<"\n"
             <<"     source width =    "<<sourcew<<"\n";
+            displayBC( os, bc_x, bc_y);
         os << std::flush;//the endl is for the implicit flush 
     }
-    private:
-    int layout_;
+   private:
     dg::bc map( int i)
     {
         switch( i)
@@ -153,11 +151,44 @@ struct Parameters
             default: return dg::PER;
         }
     }
-
+    void displayBC( std::ostream& os, dg::bc bcx, dg::bc bcy) const
+    {
+        os << "Boundary conditions in x are: \n";
+        switch( bcx)
+        {
+            case(0): os << "    PERIODIC";
+                     break;
+            case(1): os << "    DIRICHLET";
+                     break;
+            case(2): os << "    DIR_NEU";
+                     break;
+            case(3): os << "    NEU_DIR";
+                     break;
+            case(4): os << "    NEUMANN";
+                     break;
+        }
+        os << "\nBoundary conditions in y are: \n";
+        switch( bcy)
+        {
+            case(0): os << "    PERIODIC";
+                     break;
+            case(1): os << "    DIRICHLET";
+                     break;
+            case(2): os << "    DIR_NEU";
+                     break;
+            case(3): os << "    NEU_DIR";
+                     break;
+            case(4): os << "    NEUMANN";
+                     break;
+        }
+        os <<"\n";
+    }
+        
 };
 
 }//namespace eule
 
+#endif//_DG_PARAMETERS_
 
     
 

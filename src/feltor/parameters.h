@@ -53,6 +53,8 @@ struct Parameters
     unsigned pollim; //!< 0= no poloidal limiter, 1 = poloidal limiter
     unsigned pardiss; //!< 0 = adjoint parallel dissipation, 1 = nonadjoint parallel dissipation
     unsigned mode; //!< 0 = blob simulations (several rounds fieldaligned), 1 = straight blob simulation( 1 round fieldaligned), 2 = turbulence simulations ( 1 round fieldaligned), 
+    unsigned initcond; //!< 0 = zero electric potential, 1 = ExB vorticity equals ion diamagnetic vorticity
+    unsigned curvmode; //!< 0 = low beta, 1 = toroidal field line 
     /**
      * @brief constructor to make a const object
      *
@@ -106,6 +108,8 @@ struct Parameters
                 if( v.size() > 38)
                     mode = (unsigned)v[38];
                 else mode = 0;
+                initcond = (unsigned)v[39];
+                curvmode = (unsigned)v[40];
             }
             else //to be compatible with older versions
             {
@@ -142,7 +146,7 @@ struct Parameters
             << "    posY:         "<<posY<<"\n"
             << "    sigma_z:      "<<sigma_z<<"\n";
         os << "Profile parameters are: \n"
-            <<"     omega_source:              "<<omega_source<<"\n"
+            <<"     omega_source:                 "<<omega_source<<"\n"
             <<"     density profile amplitude:    "<<nprofileamp<<"\n"
             <<"     background profile amplitude: "<<bgprofamp<<"\n"
             <<"     boxscale R+:                  "<<boxscaleRp<<"\n"
@@ -170,7 +174,9 @@ struct Parameters
             <<"     global BC             =              "<<bc<<"\n"
             <<"     Poloidal limiter      =              "<<pollim<<"\n"
             <<"     Parallel dissipation  =              "<<pardiss<<"\n"
-            <<"     Computation mode      =              "<<mode<<"\n";
+            <<"     Computation mode      =              "<<mode<<"\n"
+            <<"     init cond             =              "<<initcond<<"\n"
+            <<"     curvature mode        =              "<<curvmode<<"\n";
         os << std::flush;
     }
     private:

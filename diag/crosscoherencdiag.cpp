@@ -11,7 +11,7 @@
 #include "dg/functors.h"
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "feltorSH/parameters.h"
+#include "feltorShw/parameters.h"
 
 /**
  * @brief normalizes input vector 
@@ -80,29 +80,33 @@ int main( int argc, char* argv[])
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
 
     unsigned imin,imax;
-    std::cout << "tmin = 0 "<< imin << " tmax =" << p.maxout*p.itstp << std::endl;
+    imin=1;
+    int dataIDs;
+    err = nc_inq_varid(ncid, "neavg", &dataIDs);
+    size_t steps;
+
+    err = nc_inq_dimlen(ncid, dataIDs, &steps);
+    steps-=1;
+    imax = steps;
+    std::cout << "tmin = 0 "<< imin << " tmax =" << steps<< std::endl;
     std::cout << "enter new imin(>0) and imax(<maxout):" << std::endl;
     std::cin >> imin >> imax;
     time = imin*p.itstp;
     step = imin;
     for( unsigned i=imin; i<imax; i++)//timestepping
     {
-        for( unsigned j=0; j<p.itstp; j++)
-        {
             step++;
             Estart[0] = step;
             time += p.dt;
-
-            err = nc_inq_varid(ncid, "Ne_p", &NepID);
+            err = nc_inq_varid(ncid, "Ne_p3", &NepID);
             err = nc_get_vara_double( ncid, NepID, Estart, Ecount, &Nep);
+
             Nepvec.push_back (Nep);
-            err = nc_inq_varid(ncid, "phi_p", &phipID);
+            err = nc_inq_varid(ncid, "phi_p3", &phipID);
             err = nc_get_vara_double( ncid, phipID, Estart, Ecount, &phip);
 
-
             phipvec.push_back (phip);
-        }
-        std::cout << "time = "<< time <<  std::endl;
+        std::cout << "step = "<< step <<  std::endl;
     }
     err = nc_close(ncid);
 

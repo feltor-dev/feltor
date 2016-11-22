@@ -71,7 +71,8 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
-     dg::CylindricalGrid3d<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+    dg::CylindricalGrid3d<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
@@ -111,7 +112,8 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     }
     std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1], y0[0]);    
+    if( p.initcond == 0) feltor.initializene( y0[1], y0[0]);
+    if( p.initcond == 1) dg::blas1::axpby( 1., y0[1], 0.,y0[0], y0[0]); //set n_e = N_i
     std::cout << "Done!\n";
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0

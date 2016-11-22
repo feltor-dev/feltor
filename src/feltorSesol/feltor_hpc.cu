@@ -29,25 +29,23 @@ int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
-    std::string input, geom;
+    std::string input;
     if( argc != 3 && argc != 4)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [input.txt] [output.nc]\n";
-	std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
+        std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            v = file::read_input( argv[1]);
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            return -1;
-        }
+        input = file::read_file( argv[1]); //deprecated, better use json reader directly, instead!
     }
-    const eule::Parameters p( v);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    std::cout << js<<std::endl;
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const eule::Parameters p( js);
     p.display( std::cout);
 
     //Make grid
@@ -107,7 +105,8 @@ int main( int argc, char* argv[])
       std::string inputIN( lengthIN, 'x');
       errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
       std::cout << "input "<<inputIN<<std::endl;    
-      const eule::Parameters pIN(file::read_input( inputIN));
+      const eule::Parameters pIN(  js);    
+
       pIN.display( std::cout);
       dg::Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
       dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
@@ -125,11 +124,11 @@ int main( int argc, char* argv[])
       errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
       stepsIN-=1;
       start2dIN[0] = stepsIN/pIN.itstp;
-      std::cout << "stepsin= "<< stepsIN <<  std::endl;
+      std::cout << "stepsIN= "<< stepsIN <<  std::endl;
       std::cout << "start2dIN[0]= "<< start2dIN[0] <<  std::endl;
       errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
       errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
-      std::cout << "timein= "<< timeIN <<  std::endl;
+      std::cout << "timeIN= "<< timeIN <<  std::endl;
       time=timeIN;
       dg::IHMatrix interpolateIN = dg::create::interpolation( grid,grid_IN); 
       errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, transferINH.data());

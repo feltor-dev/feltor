@@ -29,7 +29,7 @@ int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
     std::vector<double> v,v3;
-    std::string input, geom;
+    std::string input;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -37,16 +37,14 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            v = file::read_input( argv[1]);
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            return -1;
-        }
+        input = file::read_file( argv[1]); //deprecated, better use json reader directly, instead!
     }
-    const eule::Parameters p( v);
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    std::cout << js<<std::endl;
+    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const eule::Parameters p( js);
     p.display( std::cout);
 
       //Make grid
