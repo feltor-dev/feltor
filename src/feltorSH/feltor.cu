@@ -223,7 +223,8 @@ int main( int argc, char* argv[])
                          " d E/dt = " << diff <<
                          " Lambda =" << diss <<  std::endl;
  
-            
+                                     std::cout << E1 << std::endl;
+
             E0 = E1;
 
         }
