@@ -55,6 +55,7 @@ struct Parameters
     unsigned mode; //!< 0 = blob simulations (several rounds fieldaligned), 1 = straight blob simulation( 1 round fieldaligned), 2 = turbulence simulations ( 1 round fieldaligned), 
     unsigned initcond; //!< 0 = zero electric potential, 1 = ExB vorticity equals ion diamagnetic vorticity
     unsigned curvmode; //!< 0 = low beta, 1 = toroidal field line 
+    unsigned flrmode;
     /**
      * @brief constructor to make a const object
      *
@@ -110,6 +111,7 @@ struct Parameters
                 else mode = 0;
                 initcond = (unsigned)v[39];
                 curvmode = (unsigned)v[40];
+                flrmode = (unsigned)v[41];
             }
             else //to be compatible with older versions
             {
@@ -176,7 +178,8 @@ struct Parameters
             <<"     Parallel dissipation  =              "<<pardiss<<"\n"
             <<"     Computation mode      =              "<<mode<<"\n"
             <<"     init cond             =              "<<initcond<<"\n"
-            <<"     curvature mode        =              "<<curvmode<<"\n";
+            <<"     curvature mode        =              "<<curvmode<<"\n"
+            <<"     em. FLR mode          =              "<<flrmode<<"\n";
         os << std::flush;
     }
     private:
