@@ -15,31 +15,31 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "eps_time"  : 1e-12,  //accuracy of implicit time-stepper
     "mu_e"      : -0.000272121, // -m_e/m_i zb (-0.000544617,-0.000272121,-0.000181372 )
     "curvature" : 0.00015,  //magnetic curvature
-    "tau"       : 1,        //Ti/Te
-    "nu_perp"   : 5e-3,     //pependicular viscosity
+    "tau"       : 0,        //Ti/Te
+    "nu_perp"   : 1e-3,     //pependicular viscosity
     "D"         : 0.005e-8, //coupling (D ~ curvature^2)
     "C"         : 2.5e-6,   //Parallel Resistivity (~D lx/d)        
     "l_para"    : 1000000 , //parallel Length (~ 2 pi q / mcv)
     "amplitude" : 1.0,      //amplitude of the blob
     "sigma"  : 10,          //blob variance in units of rho_s
-    "posX"  : 0.3,          //blob x-position in units of lx
+    "posX"  : 0.2,          //blob x-position in units of lx
     "posY"  : 0.5,          //blob y-position in units of ly
-    "prof_amp": 4.0,        //Profile amplitude
+    "prof_amp": 0.0,        //Profile amplitude
     "bg_prof_amp" : 1.0,    //Background Prof amplitude 
     "lx"  : 200,            //lx in units of rho_s
     "ly"  : 200,            //ly in units of rho_s
-    "bc_x"    : "DIR_NEU",        //boundary condition in x
+    "bc_x"    : "NEU_DIR",        //boundary condition in x
     "bc_y"    : "PER",        //boundary condition in y
     "bc_x_pot": "DIR_NEU",        //boundary condition in x for phi
     "hwmode": 1,            // ordinary/modified HW (0/1)
     "ln": 100,              //gradient length (in rho_s) 
     "SOL_b" : 0.3,     //SOL boundary in units of lx (>1 no SOL)
-    "prof_source_rate" : 0.1 , //profile source rate in units c_s/rho_s
+    "prof_source_rate" : 0.0001 , //profile source rate in units c_s/rho_s
     "source_b" : 0.1,    //source dampingb in u of lx (<1 no Source) 
-    "source_damping_width" : 0.5,  //sink, sol and edge damping width
-    "prof_sink_rate" : 0.1 , //profile source rate in units c_s/rho_s
-    "sink_b" : 0.8,    //sink dampingb in u of lx (<1 no Source) 
-    "damping_width" : 0.5  //source, sink, sol and edge damping width
-    "fluxmode" : 0     // "gradient" driven (0), flux driven (1)
+    "source_damping_width" : 0.00005,  //sink, sol and edge damping width
+    "prof_sink_rate" : 5 , //profile sink rate in units c_s/rho_s
+    "sink_b" : 0.9,    //sink dampingb in u of lx (<1 no Source) 
+    "damping_width" : 0.5,  //sink, sol and edge damping width
+    "fluxmode" : 1,     // gradient driven (0), flux driven (1)
 }
 

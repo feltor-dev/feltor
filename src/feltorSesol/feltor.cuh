@@ -108,7 +108,7 @@ struct Feltor
     dg::Poisson< Geometry, Matrix, container> poisson; 
 
     dg::Elliptic< Geometry, Matrix, container > pol,lapperpM; 
-    dg::Helmholtz< Geometry, Matrix, container > invgammaDIR,invgammaNU;
+    dg::Helmholtz< Geometry, Matrix, container > invgammaPot,invgammaNU;
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
     
@@ -119,7 +119,7 @@ struct Feltor
     double mass_, energy_, diff_, ediff_,gammanex_,coupling_;
     std::vector<double> evec;
    
-    container lh,rh,lhs,profne,profNi;
+    container lh,rh,lhso,rhsi,profne,profNi;
 
 };
 
@@ -132,10 +132,10 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
-    poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
-    pol(    g, g.bcx(), g.bcy(), dg::not_normed,          dg::centered), 
+    poisson(g, g.bcx(), g.bcy(), p.bc_x_pot, g.bcy()), //first N/U then phi BCC
+    pol(    g, p.bc_x_pot, g.bcy(), dg::not_normed,          dg::centered), 
     lapperpM ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
-    invgammaDIR( g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
+    invgammaPot( g,p.bc_x_pot, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaNU(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(         omega, omega.size(), p.eps_pol),
     invert_invgammaN(   omega, omega.size(), p.eps_gamma),
@@ -143,10 +143,12 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     polavg(g),
     p(p),
     evec(3),
-    //damping and sources
-    lh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,-1.0,0.0,1.0),g)),
-    rh( dg::evaluate(dg::TanhProfX(p.lx*p.solb,p.solw,1.0,0.0,1.0),g)), 
-    lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
+    //damping functions for edge, sol, source and sink
+    lh( dg::evaluate(dg::TanhProfX( p.lx*p.solb,   p.dampw,-1.0,0.0,1.0),g)),
+    rh( dg::evaluate(dg::TanhProfX( p.lx*p.solb,   p.dampw, 1.0,0.0,1.0),g)), 
+    lhso(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.source_dampw,-1.0,0.0,1.0),g)),
+    rhsi(dg::evaluate(dg::TanhProfX(p.lx*p.sinkb,  p.dampw, 1.0,0.0,1.0),g)),
+    //initial profiles
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
     profNi(profne)
 {
@@ -176,7 +178,7 @@ container& Feltor<G, Matrix, container>::polarisation( const std::vector<contain
 template< class G, class Matrix, class container>
 container& Feltor<G, Matrix,container>::compute_psi( container& potential)
 {
-    invert_invgammaPhi(invgammaDIR,chi,potential);                 //chi  = Gamma phi
+    invert_invgammaPhi(invgammaPot,chi,potential);                 //chi  = Gamma phi
     poisson.variationRHS(potential, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
@@ -321,15 +323,17 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         //compute sheath energy for ions (flr correction)
         sheathenergy += - z[1]*sqrt(1.+p.tau[1])*(2./p.l_para)*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, lambda);
     }
-    //Density source terms
+    //Density source and sink  terms
     double sourceenergy = 0.;
-    if (p.omega_source>0.) 
+    double sinkenergy = 0.;
+    if (p.omega_source>0. && p.fluxmode==0) 
     {
-        dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0_source - <ne>
+        //source to fix the profile in a specific domain
         //dtN_e
-        dg::blas1::pointwiseDot(lambda,lhs,omega); //lambda =lhs*(ne0_source - <ne>)
+        dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0_prof - <ne>
+        dg::blas1::pointwiseDot(lambda,lhso,omega); //lambda =lhs*(ne0_prof - <ne>)
         dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
-        dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = - omega_source(ne0_source - <ne>) 
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne =  omega_source(ne0_source - <ne>) 
         //Compute sopurce energy for electrons
         dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
         dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
@@ -341,16 +345,63 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //chi = (tau_e(1+lnN)+phi)   
         sourceenergy += z[1]*p.omega_source*dg::blas2::dot(chi, w2d, omega);      
         //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
-        dg::blas1::pointwiseDot(lambda,lhs,lambda);
+        dg::blas1::pointwiseDot(lambda,lhso,lambda);
         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
         dg::blas2::gemv( lapperpM, lambda, omega);
         dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
         //compute source eneergy for ions (flr correcetion)
         sourceenergy += z[1]*p.omega_source*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, omega);      
     }
+    if (p.omega_source>0. && p.omega_sink>0. && p.fluxmode==1) 
+    {
+      std::cout << "here"<< std::cout;
+        //sources
+        //dt ne
+        dg::blas1::pointwiseDot(neavg,lhso,omega); //lambda =lhs*(ne)
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne = omega_source*(ne) 
+        dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
+        dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
+        sourceenergy =  z[0]*p.omega_source*dg::blas2::dot(chi, w2d, omega); 	
+	
+        //dt Ni
+	dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]); 
+        dg::blas1::axpby(1.,one,1., logn[1] ,chi); //chi = (1+lnN)
+        dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //chi = (tau_e(1+lnN)+phi)   
+        sourceenergy += z[1]*p.omega_source*dg::blas2::dot(chi, w2d, omega);  
+        //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
+        dg::blas2::gemv( lapperpM, omega, lambda);
+        dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],lambda,1.0,yp[1]); 
+        //compute source eneergy for ions (flr correcetion)
+        sourceenergy += z[1]*p.omega_source*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, lambda);   
+	
+	//sinks
+        //dtN_e
+        dg::blas1::axpby(-1.0,profne,1.0,neavg,lambda); //lambda = -ne0_prof + <ne>
+        dg::blas1::pointwiseDot(lambda,rhsi,omega); //lambda =lhs*(-ne0_prof + <ne>)
+        dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
+        dg::blas1::axpby(-p.omega_sink,omega,1.0,yp[0]);// dtne = - omega_sink(ne0_prof - <ne>) 
+        //Compute sopurce energy for electrons
+        dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
+        dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
+        sinkenergy = - z[0]*p.omega_sink*dg::blas2::dot(chi, w2d, omega);       
+        //dt Ni without FLR
+        dg::blas1::axpby(-p.omega_sink,omega,1.0,yp[1]); 
+        //Compute sink energy for ions
+        dg::blas1::axpby(1.,one,1., logn[1] ,chi); //chi = (1+lnN)
+        dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //chi = (tau_e(1+lnN)+phi)   
+        sinkenergy += -z[1]*p.omega_sink*dg::blas2::dot(chi, w2d, omega);      
+        //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
+        dg::blas1::pointwiseDot(lambda,rhsi,lambda);
+        dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
+        dg::blas2::gemv( lapperpM, lambda, omega);
+        dg::blas1::axpby(-p.omega_sink*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
+        //compute sink eneergy for ions (flr correcetion)
+        sinkenergy += -z[1]*p.omega_sink*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, omega);   
+    }
+
     
     //Compute rhs of energy theorem
-    ediff_= Dperp[0]+Dperp[1]+ coupling_ + Dperpsurf[0] + Dperpsurf[1] + sheathenergy + sourceenergy;
+    ediff_= Dperp[0]+Dperp[1]+ coupling_ + Dperpsurf[0] + Dperpsurf[1] + sheathenergy + sourceenergy + sinkenergy;
     
     t.toc();
 #ifdef MPI_VERSION

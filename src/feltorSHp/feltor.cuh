@@ -299,7 +299,6 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDivide(pr[i], n[i], te[i]);
         dg::blas1::transform(te[i], logte[i], dg::LN<value_type>()); //log(ype)
         dg::blas1::transform(te[i],tetilde[i], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)));
-
     }
     //compute phi via polarisation
     phi[0] = polarisation( y);  
@@ -346,12 +345,12 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     }    
     dg::blas2::gemv( lapperpM, y[1], lambda);
     dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 N_i
-    Dperp[1] -= -z[1]*p.nu_perp*dg::blas2::dot(chii, w2d, omega);  //- nu*Z( chii) nabla_RZ^4 N_i 
+    Dperp[1] -= -z[1]*p.nu_perp*dg::blas2::dot(chii, w2d, omega);  //+ nu*Z( chii) nabla_RZ^4 N_i 
     
     dg::blas1::pointwiseDivide(chii,te[1],chi); //chi = chii/Ti
     dg::blas2::gemv( lapperpM, y[3], lambda);
     dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 P_i
-    Dperp[3] += -z[1]*p.nu_perp*dg::blas2::dot(chi, w2d, omega);  // nu*Z( chii/ T) nabla_RZ^4 P_i 
+    Dperp[3] += -p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //- nu*( chii/ T) nabla_RZ^4 P_i 
     ediff_= Dperp[0]+Dperp[1]+ Dperp[2]+Dperp[3];   
     
     for(unsigned i=0; i<2; i++)
