@@ -82,8 +82,8 @@ struct Parameters
         omega_source = js["prof_source_rate"].asDouble();
         sourceb = js["source_b"].asDouble();
 	source_dampw = js["source_damping_width"].asDouble();       
-	omega_sink = js["prof_source_rate"].asDouble();
-        sinkb = js["source_b"].asDouble();
+	omega_sink = js["prof_sink_rate"].asDouble();
+        sinkb = js["sink_b"].asDouble();
         dampw = js["damping_width"].asDouble();       
 	fluxmode =  js["fluxmode"].asUInt();
 
@@ -139,7 +139,7 @@ struct Parameters
             <<"     source rate  =    "<<omega_source<<"\n" 
             <<"     source boundary = "<<sourceb<<"\n"
 	    <<"     source damping width= "<<source_dampw<<"\n"
-	    <<"     sink rate  =    "<<omega_source<<"\n"
+	    <<"     sink rate  =    "<<omega_sink<<"\n"
             <<"     sink boundary = "<<sourceb<<"\n"
 	    <<"     damping width =   "<<dampw<<"\n"
 	    <<"     fluxmode =   "<<fluxmode<<"\n";

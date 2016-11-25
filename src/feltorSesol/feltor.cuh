@@ -326,7 +326,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     //Density source and sink  terms
     double sourceenergy = 0.;
     double sinkenergy = 0.;
-    if (p.omega_source>0. && p.fluxmode==0) 
+    if ( p.fluxmode==0) 
     {
         //source to fix the profile in a specific domain
         //dtN_e
@@ -352,9 +352,8 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         //compute source eneergy for ions (flr correcetion)
         sourceenergy += z[1]*p.omega_source*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, omega);      
     }
-    if (p.omega_source>0. && p.omega_sink>0. && p.fluxmode==1) 
+    if ( p.fluxmode==1) 
     {
-      std::cout << "here"<< std::cout;
         //sources
         //dt ne
         dg::blas1::pointwiseDot(neavg,lhso,omega); //lambda =lhs*(ne)
@@ -376,7 +375,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
 	
 	//sinks
         //dtN_e
-        dg::blas1::axpby(-1.0,profne,1.0,neavg,lambda); //lambda = -ne0_prof + <ne>
+        dg::blas1::axpby(-1.0,profne,1.0,npe[0],lambda); //lambda = -ne0_prof + <ne>
         dg::blas1::pointwiseDot(lambda,rhsi,omega); //lambda =lhs*(-ne0_prof + <ne>)
         dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
         dg::blas1::axpby(-p.omega_sink,omega,1.0,yp[0]);// dtne = - omega_sink(ne0_prof - <ne>) 
