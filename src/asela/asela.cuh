@@ -581,7 +581,6 @@ void Asela<Geometry, DS, Matrix, container>::operator()( std::vector<container>&
     //calculate U from Apar and w
     dg::blas1::axpby( 1., y[2], - p.beta/p.mu[0], apar[0], u[0]); // U_e = w_e -beta/mu_e A_parallel
     dg::blas1::axpby( 1., y[3], - p.beta/p.mu[1], apar[1], u[1]); // U_i = w_i -beta/mu_i A_parallel
-
     
     //Compute U^2  and UN and energies 
     for(unsigned i=0; i<2; i++)
@@ -603,9 +602,6 @@ void Asela<Geometry, DS, Matrix, container>::operator()( std::vector<container>&
     dg::blas1::pointwiseDot( 1., npe[1], y[3], -1., chi);  //N_i U_i - N_e U_e
     dg::blas1::axpby( -1., y[2], 1., y[3], omega); //omega  = - U_e + U_i   
     double Dres = -p.c*dg::blas2::dot(omega, w3d, chi); //- C*(N_i U_i + N_e U_e)(U_i - U_e)
-    
-    
-
 
     for( unsigned i=0; i<2; i++)
     {
@@ -720,18 +716,20 @@ void Asela<Geometry, DS, Matrix, container>::operator()( std::vector<container>&
     }
     //add particle source to dtN
     //dtN_e
-    dg::blas1::axpby(+1.0,profne,-1.0,npe[0],lambda);//lambda = ne0 - ne    
-    dg::blas1::pointwiseDot(source,lambda,omega);//tanhSource on profNe
-    dg::blas1::transform(omega, omega, dg::POSVALUE<double>()); 
-    dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);
-    //dtN_i
-    dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);
-    //add FLR correction
-    dg::blas1::pointwiseDot(source,lambda,lambda);//tanhSource on profNe
-    dg::blas1::transform(lambda, lambda, dg::POSVALUE<double>()); 
-    dg::blas2::gemv( lapperpN, lambda, omega); 
-    dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]);   
-
+    if (p.omegea_source !=0) 
+    {
+        dg::blas1::axpby(+1.0,profne,-1.0,npe[0],lambda);//lambda = ne0 - ne    
+        dg::blas1::pointwiseDot(source,lambda,omega);//tanhSource on profNe
+        dg::blas1::transform(omega, omega, dg::POSVALUE<double>()); 
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);
+        //dtN_i
+        dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);
+        //add FLR correction
+        dg::blas1::pointwiseDot(source,lambda,lambda);//tanhSource on profNe
+        dg::blas1::transform(lambda, lambda, dg::POSVALUE<double>()); 
+        dg::blas2::gemv( lapperpN, lambda, omega); 
+        dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]);   
+    }
     t.toc();
     #ifdef MPI_VERSION
         int rank;
