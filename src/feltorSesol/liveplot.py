@@ -21,16 +21,21 @@ plt.show()
 while(True):
     ax_prof.cla()
     for n in np.arange(num_probes):
-        df_probe = np.loadtxt('probe_%03d.dat' % n, skiprows=1)
-        ax_probe.plot(df_probe[:, 0], df_probe[:, 1]+n*2, 'k')
-        ax_probe.plot(df_probe[:, 0], df_probe[:, 3]+n*2, 'r')
+        try:
+            df_probe = np.loadtxt('probe_%03d.dat' % n, skiprows=1)
+            ax_probe.plot(df_probe[:, 0], df_probe[:, 1]+n*2, 'k')
+            ax_probe.plot(df_probe[:, 0], df_probe[:, 3]+n*2, 'r')
+        except:
+            continue
 
-    prof_ne = np.loadtxt('ne_prof.dat', skiprows=1)
-    prof_phi = np.loadtxt('phi_prof.dat', skiprows=1)
+    try:
+        prof_ne = np.loadtxt('ne_prof.dat', skiprows=1)
+        prof_phi = np.loadtxt('phi_prof.dat', skiprows=1)
 
-    ax_prof.plot(prof_ne[1:])
-    ax_prof.plot(prof_phi[1:])
-
+        ax_prof.plot(prof_ne[1:])
+        ax_prof.plot(prof_phi[1:])
+    except:
+        continue
 
     plt.draw()
 
