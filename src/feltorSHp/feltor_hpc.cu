@@ -88,8 +88,7 @@ int main( int argc, char* argv[])
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //Ni=Nitilde+bg
         dg::blas1::pointwiseDot(y0[1],y1[3],y0[3]); // Pi = Ni Ti
         dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi_tilde = Pi - bg^2
-        if( p.init == 0) feltor.initializepi(y0[3],y1[3], y0[2]); // = pi-bg^2    
-        if( p.init == 1) dg::blas1::axpby( 1., y0[3], 0., y0[2], y0[2]); //pe_tilde = Pi_tilde for Omega*=0
+        feltor.initializepi(y0[3],y1[3], y0[2]); // = pi-bg^2    
     }
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg 
     std::cout << "Done!\n";
