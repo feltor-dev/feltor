@@ -268,14 +268,14 @@ struct CurvatureKappaZ
  */    
     double operator()( double R, double Z) const
     {
-        return invB_(R,Z)/R;
+        return -invB_(R,Z)/R;
     }
     /**
      * @brief == operator()(R,Z)
      */ 
     double operator()( double R, double Z, double phi) const
     {
-        return invB_(R,Z,phi)/R;
+        return -invB_(R,Z,phi)/R;
     }
     private:    
     GeomParameters gp_;
