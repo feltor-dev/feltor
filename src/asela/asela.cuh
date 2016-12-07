@@ -313,12 +313,12 @@ Asela<Grid, DS, Matrix, container>::Asela( const Grid& g, Parameters p, solovev:
     dsy.resize(4); dsy[0] = dsy[1] = dsy[2] = dsy[3] = chi;
     curvy = curvkappay =dsy;
     //////////////////////////init invert objects///////////////////
-    invert_pol.construct(         omega, omega.size(), p.eps_pol  ); 
-    invert_maxwell.construct(     omega, omega.size(), p.eps_maxwell ); 
-    invert_invgammaN.construct(   omega, omega.size(), p.eps_gamma); 
-    invert_invgammaNW.construct(   omega, omega.size(), p.eps_gamma); 
-    invert_invgammaA.construct(   omega, omega.size(), p.eps_gamma); 
-    invert_invgammaPhi.construct( omega, omega.size(), p.eps_gamma); 
+    invert_pol.construct(         omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_pol  ); 
+    invert_maxwell.construct(     omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_maxwell ); 
+    invert_invgammaN.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
+    invert_invgammaNW.construct(  omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
+    invert_invgammaA.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
+    invert_invgammaPhi.construct( omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
     //////////////////////////////init fields /////////////////////
     dg::blas1::transfer(  dg::pullback(solovev::Field(gp),           g), binv);
     dg::blas1::transfer(  dg::pullback(solovev::GradLnB(gp),         g), dslnB);

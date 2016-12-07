@@ -132,10 +132,10 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     lapperpM ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
     invgamma1( g,g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered),
     invgamma2( g,g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered) ,
-    invert_pol(      omega, omega.size(), p.eps_pol),
-    invert_invgammadag( omega, omega.size(), p.eps_gamma),
-    invert_invgamma( omega, omega.size(), p.eps_gamma),
-    invert_invgamma2( omega, omega.size(), p.eps_gamma),
+    invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
+    invert_invgammadag( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    invert_invgamma(    omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    invert_invgamma2(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     p(p),
     evec(3)
 {

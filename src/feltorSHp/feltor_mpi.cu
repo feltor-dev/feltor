@@ -7,7 +7,7 @@
 
 #include <mpi.h> //activate mpi
 
-// #include "netcdf_par.h"
+#include "netcdf_par.h"
 
 #include "dg/algorithm.h"
 #include "dg/backend/xspacelib.cuh"
@@ -129,8 +129,8 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
-//     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
+//     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
+    err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version", NC_INT, 1, &version[0]);
