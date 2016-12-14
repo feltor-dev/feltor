@@ -170,14 +170,16 @@ template< class G, class M, class container>
 const container& ToeflR<G, M, container>::compute_psi( const container& potential)
 {
     if(equations == "gravity_local") return potential;
+    //in gyrofluid invert Gamma operator
     if( equations == "local" || equations == "global")
     {
         unsigned number = invert_invgamma( gamma1, phi[1], potential);
         if(  number == invert_invgamma.get_max())
             throw dg::Fail( eps_gamma);
     }
-
-    arakawa.variation(potential, omega); //needed also in local energy theorem
+    //compute (nabla phi)^2
+    arakawa.variation(potential, omega); 
+    //compute psi
     if(equations == "global")
     {
         dg::blas1::pointwiseDot( binv, omega, omega);
@@ -185,7 +187,13 @@ const container& ToeflR<G, M, container>::compute_psi( const container& potentia
 
         dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
     }
-    if( equations == "gravity_global" || equations == "drift_global") 
+    else if ( equations == "drift_global")
+    {
+        dg::blas1::pointwiseDot( binv, omega, omega);
+        dg::blas1::pointwiseDot( binv, omega, omega);
+        dg::blas1::axpby( 0.5, omega, 0., phi[1]);
+    }
+    else if( equations == "gravity_global" ) 
         dg::blas1::axpby( 0.5, omega, 0., phi[1]);
     return phi[1];    
 }
@@ -283,8 +291,8 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         energy_ = Se + Ephi;
 
         double Ge = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, lny[0]); // minus 
-        double GeE = - blas2::dot( omega, w2d, lapy[0]); 
-        double Gpsi = -blas2::dot( phi[1], w2d, lapy[1]);
+        double GeE = - blas2::dot( phi[1], w2d, lapy[0]); 
+        double Gpsi = -blas2::dot( phi[0], w2d, lapy[1]);
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge - GeE - Gpsi);
     }
