@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
     //create RHS 
     dg::ToeflR< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > test( grid, p); 
     dg::Diffusion<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> diffusion( grid, p.nu);
-    //create initial vector
+    //////////////////create initial vector///////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
     std::vector<dg::MDVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
@@ -86,9 +86,10 @@ int main( int argc, char* argv[])
         dg::MDVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
-    if( p.equations == "gravity_local" || p.equations == "gravity_global"){
+    if( p.equations == "gravity_local" || p.equations == "gravity_global", || p.equations == "drift_global" ){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
+    //////////////////////////////////////////////////////////////////////
 
     //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
