@@ -227,8 +227,9 @@ struct MPIGrid2d
     const DLT<double>& dlt() const{return g.dlt();}
 
     /**
-     * @brief The total number of points
+     * @brief The total local number of points
      *
+     * @note for the total global number of points call grid.global().size()
      * @return n*n*Nx*Ny
      */
     unsigned size() const { return n()*n()*Nx()*Ny();}

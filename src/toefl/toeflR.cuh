@@ -161,8 +161,8 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters&
     laplaceM( grid, normed, centered),
     gamma1(  grid, -0.5*p.tau, dg::centered),
     arakawa( grid), 
-    invert_pol(      omega, omega.size(), p.eps_pol),
-    invert_invgamma( omega, omega.size(), p.eps_gamma),
+    invert_pol(      omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
+    invert_invgamma( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
 {
