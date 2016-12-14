@@ -1,6 +1,4 @@
-#ifndef _DG_TOEFLR_CUH
-#define _DG_TOEFLR_CUH
-
+#pragma once 
 #include <exception>
 
 #include "dg/algorithm.h"
@@ -153,7 +151,7 @@ struct ToeflR
 template< class Geometry, class M, class container>
 ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters& p ): 
     chi( evaluate( dg::zero, grid)), omega(chi),
-    binv( evaluate( LinearX( p.kappa, 1.), grid)), 
+    binv( evaluate( LinearX( p.kappa, 1.-p.kappa*p.posX*p.lx), grid)), 
     phi( 2, chi), dyphi( phi), ype(phi),
     dyy(2,chi), lny( dyy), lapy(dyy),
     gamma_n(chi),
@@ -161,8 +159,8 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters&
     laplaceM( grid, normed, centered),
     gamma1(  grid, -0.5*p.tau, dg::centered),
     arakawa( grid), 
-    invert_pol(      omega, omega.size(), p.eps_pol),
-    invert_invgamma( omega, omega.size(), p.eps_gamma),
+    invert_pol(      omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
+    invert_invgamma( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     w2d( create::volume(grid)), v2d( create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
 {
@@ -171,15 +169,17 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters&
 template< class G, class M, class container>
 const container& ToeflR<G, M, container>::compute_psi( const container& potential)
 {
-    if(equations == "ralf") return potential;
+    if(equations == "gravity_local") return potential;
+    //in gyrofluid invert Gamma operator
     if( equations == "local" || equations == "global")
     {
         unsigned number = invert_invgamma( gamma1, phi[1], potential);
         if(  number == invert_invgamma.get_max())
             throw dg::Fail( eps_gamma);
     }
-
-    arakawa.variation(potential, omega); //needed also in local energy theorem
+    //compute (nabla phi)^2
+    arakawa.variation(potential, omega); 
+    //compute psi
     if(equations == "global")
     {
         dg::blas1::pointwiseDot( binv, omega, omega);
@@ -187,7 +187,13 @@ const container& ToeflR<G, M, container>::compute_psi( const container& potentia
 
         dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
     }
-    if( equations == "ralf_global") 
+    else if ( equations == "drift_global")
+    {
+        dg::blas1::pointwiseDot( binv, omega, omega);
+        dg::blas1::pointwiseDot( binv, omega, omega);
+        dg::blas1::axpby( 0.5, omega, 0., phi[1]);
+    }
+    else if( equations == "gravity_global" ) 
         dg::blas1::axpby( 0.5, omega, 0., phi[1]);
     return phi[1];    
 }
@@ -197,7 +203,7 @@ const container& ToeflR<G, M, container>::compute_psi( const container& potentia
 template<class G, class M, class container>
 const container& ToeflR<G, M, container>::polarisation( const std::vector<container>& y)
 {
-    //compute chi and polarisation
+    //compute chi 
     if(equations == "global" )
     {
         dg::blas1::transfer( y[1], chi);
@@ -207,13 +213,23 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
         if( !boussinesq) 
             pol.set_chi( chi);
     }
-    if(equations == "ralf_global" )
+    else if(equations == "gravity_global" )
     {
         dg::blas1::transfer( y[0], chi);
         dg::blas1::plus( chi, 1.); 
         if( !boussinesq) 
             pol.set_chi( chi);
     }
+    else if( equations == "drift_global" )
+    {
+        dg::blas1::transfer( y[0], chi);
+        dg::blas1::plus( chi, 1.); 
+        blas1::pointwiseDot( binv, chi, chi); //\chi = n_e
+        blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
+        if( !boussinesq) 
+            pol.set_chi( chi);
+    }
+    //compute polarisation
     if( equations == "local" || equations == "global")
     {
         unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
@@ -223,9 +239,10 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
     }
     else 
         blas1::axpby( -1. ,y[1], 0., omega);
-    if( equations == "global" || equations == "ralf_global")
+    if( equations == "global" || equations == "gravity_global" || equations == "drift_global")
         if( boussinesq) 
             blas1::pointwiseDivide( omega, chi, omega);
+    //invert 
     unsigned number = invert_pol( pol, phi[0], omega);
     if(  number == invert_pol.get_max())
         throw dg::Fail( eps_pol);
@@ -250,7 +267,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         dg::blas2::symv( laplaceM, y[i], lapy[i]);
     }
 
-    //update energetics, 2% of total time
+    /////////////////////////update energetics, 2% of total time///////////////
     mass_ = blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
     diff_ = nu*blas2::dot( one, w2d, lapy[0]);
     if(equations == "global")
@@ -267,7 +284,19 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
-    else if(equations == "ralf_global" || equations == "ralf")
+    else if ( equations == "drift_global") 
+    {
+        double Se = blas2::dot( lny[0], w2d, ype[0]);
+        double Ephi = 0.5*blas2::dot( ype[0], w2d, omega); 
+        energy_ = Se + Ephi;
+
+        double Ge = - blas2::dot( one, w2d, lapy[0]) - blas2::dot( lapy[0], w2d, lny[0]); // minus 
+        double GeE = - blas2::dot( phi[1], w2d, lapy[0]); 
+        double Gpsi = -blas2::dot( phi[0], w2d, lapy[1]);
+        //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
+        ediff_ = nu*( Ge - GeE - Gpsi);
+    }
+    else if(equations == "gravity_global" || equations == "gravity_local")
     {
         energy_ = 0.5*blas2::dot( y[0], w2d, y[0]);
         double Ge = - blas2::dot( y[0], w2d, lapy[0]);
@@ -287,7 +316,8 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         //std::cout << "ge "<<Ge<<" gi "<<Gi<<" gphi "<<Gphi<<" gpsi "<<Gpsi<<"\n";
         ediff_ = nu*( Ge + Gi - Gphi + Gpsi);
     }
-    if( equations == "ralf_global")
+    ///////////////////////////////////////////////////////////////////////
+    if( equations == "gravity_global")
     {
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
@@ -298,7 +328,7 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         dg::blas1::axpby( -1., omega, 1., yp[1]);
         return;
     }
-    if( equations == "ralf")
+    else if( equations == "gravity_local")
     {
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
@@ -307,29 +337,51 @@ void ToeflR<G, M, container>::operator()( std::vector<container>& y, std::vector
         dg::blas1::axpby( -1., dyy[0], 1., yp[1]);
         return;
     }
-
-
-    for( unsigned i=0; i<y.size(); i++)
+    else if( equations == "drift_global")
     {
-        arakawa( y[i], phi[i], yp[i]);
-        if(equations == "global") blas1::pointwiseDot( binv, yp[i], yp[i]);
-    }
+        arakawa(y[0], phi[0], yp[0]);
+        arakawa(y[1], phi[0], yp[1]);
+        arakawa(y[0], phi[1], omega);
+        blas1::pointwiseDot( binv, yp[0], yp[0]);
+        blas1::pointwiseDot( binv, yp[1], yp[1]);
+        blas1::pointwiseDot( binv, omega, omega);
+        dg::blas1::axpby( 1., omega, 1., yp[1]);
 
-    //compute derivatives and exb compression
-    for( unsigned i=0; i<y.size(); i++)
-    {
-        blas2::gemv( arakawa.dy(), y[i], dyy[i]);
-        blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
-        if(equations == "global") blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
-        blas1::axpby( kappa, dyphi[i], 1., yp[i]);
+        blas2::gemv( arakawa.dy(), phi[0], dyphi[0]);
+        blas2::gemv( arakawa.dy(), phi[1], dyphi[1]);
+        //ExB compression
+        blas1::pointwiseDot( dyphi[0], ype[0], omega);
+        blas1::axpby( kappa, omega, 1., yp[0]); 
+        blas1::pointwiseDot( dyphi[0], y[1], omega);
+        blas1::axpby( kappa, omega, 1., yp[1]); 
+        blas1::pointwiseDot( dyphi[1], ype[0], omega);
+        blas1::axpby( kappa, omega, 1., yp[1]); 
+        // diamagnetic compression
+        dg::blas2::gemv( arakawa.dy(), y[0], omega);
+        dg::blas1::axpby( -kappa, omega, 1., yp[1]);
+        return;
     }
-    // diamagnetic compression
-    blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
-    blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
+    else
+    {
+        for( unsigned i=0; i<y.size(); i++)
+        {
+            arakawa( y[i], phi[i], yp[i]);
+            if(equations == "global") blas1::pointwiseDot( binv, yp[i], yp[i]);
+        }
+        //compute derivatives and exb compression
+        for( unsigned i=0; i<y.size(); i++)
+        {
+            blas2::gemv( arakawa.dy(), y[i], dyy[i]);
+            blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
+            if(equations == "global") blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
+            blas1::axpby( kappa, dyphi[i], 1., yp[i]);
+        }
+        // diamagnetic compression
+        blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
+        blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
+    }
 
     return;
 }
 
 }//namespace dg
-
-#endif //_DG_TOEFLR_CUH

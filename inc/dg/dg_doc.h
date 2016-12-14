@@ -4,9 +4,9 @@
  * classes defined and used by the discontinuous Galerkin solvers.
  */
 /*! 
- * @defgroup backend Vectors, Matrices and basic operations
+ * @defgroup backend Level 1: Vectors, Matrices and basic operations
  * @{
- *     @defgroup blas Basic Linear Algebra and Geometric Subprograms
+ *     @defgroup blas Basic Linear Algebra Subroutines
  *
  *         These routines form the heart of our container free numerical algorithms. 
  *         They are called by all our numerical algorithms like conjugate gradient or 
@@ -28,14 +28,14 @@
  *     @defgroup typedefs Typedefs
        Useful type definitions for easy programming
  * @}
- * @defgroup numerical0 Basic numerical algorithms
+ * @defgroup numerical0 Level 2: Basic numerical algorithms
  * These algorithms make use only of blas level 1 and 2 functions
  * @{
  *     @defgroup time Time integrators
  *     @defgroup invert Matrix inversion
  *     @defgroup root Root finding
  * @}
- * @defgroup geo Topology and Geometry
+ * @defgroup geo Level 3: Topology and Geometry
  * @{
  *     @defgroup grid Topological grids and operations
  *
@@ -75,7 +75,7 @@
  *            Utilities that might come in handy at some place or the other.
       @}
  * @}
- * @defgroup numerical1 Advanced numerical schemes
+ * @defgroup numerical1 Level 4: Advanced numerical schemes
  *
  * These routines make use of both the basic operations as well as the interfaces defined in the Geometry section.
  * @{
@@ -99,19 +99,6 @@
  * The DG library uses a design pattern also employed in the cusp library and other modern C++ codes. 
  * It might be referred to as <a href="http://dx.doi.org/10.1063/1.168674">container-free numerical algorithms</a>. 
  *
- * @par Typical usage
- *
- * The typical usage of the library is as follows:
- * First you generate a grid object, which so far can only be a grid of equisized rectangles. 
- * It also contains information about the number of Legendre coefficients you want to use
- * per cell per grid dimension. 
- * Then you evaluate self-written functions on that grid to get a discretization of your 
- * initial conditions.
- * In the create namespace there are utility functions to create matrices which, when multiplied
- * with your previously generated vector, compute derivatives, etc. 
- * Multiplication, addition, etc. can be done with blas routines. 
- * There are several explicit Runge-Kutta and Adams-Bashforth methods implemented for time-integration. Moreover there is a conjugate - gradient method for the iterative solution of symmetric matrix 
- * equations.
  *
  *
  */

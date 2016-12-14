@@ -4,7 +4,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "n" :  3,       //# x-y-polynomials
     "Nx" : 100,     //# grid points in x
     "Ny" : 100,     //# grid points in y
-    "dt" : 3.0,     //time step in units of c_s/rho_s
+    "dt" : 3,     //time step in units of c_s/rho_s
     "n_out"  : 3,   //# x-y polynomials in output
     "Nx_out" : 100, //# grid points in x in output fields
     "Ny_out" : 100, //# grid points in y in output fields
@@ -13,10 +13,12 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "eps_pol"   : 1e-6,   //accuracy of polarisation solver
     "eps_gamma" : 1e-7,   //accuracy of Gamma 
     "eps_time"  : 1e-10,  //accuracy of implicit time-stepper
-    "curvature"  : 0.00015, //magnetic curvature
-    "tau"  : 1,        //Ti/Te (only in gyrofluid models)
+    "curvature"  : 0.0001, //magnetic curvature
+    "tau"  : [-1.0, 1.0], //T_s/(Z_s Te)
+    "mu"   : [-1.0, 1.0], // m_s/(Z_s m_e)
+    "z"    : [-1, 1],
     "nu_perp"  : 5e-3, //pependicular viscosity
-    "amplitude"  : 1.0,//amplitude of the blob
+    "amplitude"  : 0.5,//amplitude of the blob
     "sigma"  : 10,     //blob variance in units of rho_s
     "posX"  : 0.3,     //blob x-position in units of lx
     "posY"  : 0.5,     //blob y-position in units of ly
@@ -24,8 +26,6 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "ly"  : 200,       //ly in units of rho_s
     "bc_x"  : "DIR",   //boundary condition in x
     "bc_y"  : "PER",   //boundary condition in y
-    "equations": "global", //local or global or gravity_local or gravity_global
-    "boussinesq": false, //boussinesq approximation in global models true or false
-    "friction": 0  //friction coefficient in gravity model
+    "debye":  0.0   //debye length parameter
 
 }
