@@ -134,9 +134,9 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_pot, g.bcy()), //first N/U then phi BCC
     pol(    g, p.bc_x_pot, g.bcy(), dg::not_normed,          dg::centered), 
-    lapperpM ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
+    lapperpM ( g,g.bcx(), g.bcy(),       dg::normed,         dg::centered),
     invgammaPot( g,p.bc_x_pot, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invgammaNU(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
+    invgammaNU(  g,g.bcx(),    g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     invert_invgammaN(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     invert_invgammaPhi( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
@@ -287,8 +287,8 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     {
         dg::blas1::pointwiseDot(omega,lh,omega); //omega = lh*omega
     }
-    //general term
-    dg::blas1::pointwiseDot(omega,npe[0],lambda);  //(coupling)*Ne
+    //     dg::blas1::pointwiseDot(omega,npe[0],lambda);  //(coupling)*Ne for constant resi
+    dg::blas1::pointwiseDot(omega,one ,lambda);  //(coupling) for dynamic resi
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
     
     //compute coupling energy
@@ -372,7 +372,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],lambda,1.0,yp[1]); 
         //compute source eneergy for ions (flr correcetion)
         sourceenergy += z[1]*p.omega_source*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, lambda);   
-	
+	   }
 	//sinks
         //dtN_e
         dg::blas1::axpby(-1.0,profne,1.0,npe[0],lambda); //lambda = -ne0_prof + <ne>
@@ -396,7 +396,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas1::axpby(-p.omega_sink*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
         //compute sink eneergy for ions (flr correcetion)
         sinkenergy += -z[1]*p.omega_sink*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, omega);   
-    }
+ 
 
     
     //Compute rhs of energy theorem

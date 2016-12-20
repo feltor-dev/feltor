@@ -72,9 +72,9 @@ struct Parameters
         bgprofamp =   js["bg_prof_amp"].asDouble();
         lx =  js["lx"].asDouble();
         ly =  js["ly"].asDouble();
-        bc_x = dg::str2bc(js["bc_x"].asString());
-	bc_x_pot = dg::str2bc(js["bc_x_pot"].asString());
-        bc_y = dg::str2bc(js["bc_y"].asString());
+        bc_x     = dg::str2bc(js["bc_x"].asString());
+	    bc_x_pot = dg::str2bc(js["bc_x_pot"].asString());
+        bc_y     = dg::str2bc(js["bc_y"].asString());
         zf =  js["hwmode"].asUInt();
         ln =   js["ln"].asDouble();
         dlocal = (double)(lx*d/c);
@@ -143,7 +143,7 @@ struct Parameters
             <<"     sink boundary = "<<sourceb<<"\n"
 	    <<"     damping width =   "<<dampw<<"\n"
 	    <<"     fluxmode =   "<<fluxmode<<"\n";
-            displayBC( os, bc_x, bc_y);
+        displayBC( os, bc_x, bc_y);
 	    displayBC( os, bc_x_pot, bc_y);
         os << std::flush;//the endl is for the implicit flush 
     }

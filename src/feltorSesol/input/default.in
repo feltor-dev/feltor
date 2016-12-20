@@ -4,7 +4,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "n" :  1,       //# x-y-polynomials
     "Nx" : 200,     //# grid points in x
     "Ny" : 200,     //# grid points in y
-    "dt" : 1.1,     //time step in units of c_s/rho_s
+    "dt" : 0.5,     //time step in units of c_s/rho_s
     "n_out"  : 1,   //# x-y polynomials in output
     "Nx_out" : 200, //# grid points in x in output fields
     "Ny_out" : 200, //# grid points in y in output fields
@@ -38,7 +38,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "source_b" : 0.1,    //source dampingb in u of lx (<1 no Source) 
     "source_damping_width" : 0.5,  //sink, sol and edge damping width
     "prof_sink_rate" : 0.1 , //profile source rate in units c_s/rho_s
-    "sink_b" : 0.8,    //sink dampingb in u of lx (<1 no Source) 
+    "sink_b" : 0.9,    //sink dampingb in u of lx (<1 no Source) 
     "damping_width" : 0.5  //source, sink, sol and edge damping width
     "fluxmode" : 0     // "gradient" driven (0), flux driven (1)
 }
