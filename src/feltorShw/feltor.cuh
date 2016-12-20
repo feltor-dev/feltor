@@ -301,11 +301,8 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)> 
         dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - <phi>  - lnNe
     }
-    //correction for high amplitudes
-//     dg::blas1::pointwiseDot(omega,nedelta,lambda); // lambda = (coupling)* <ne>tilde(ne)
-    //general term
-    dg::blas1::pointwiseDot(omega,npe[0],omega);  // omega   = (coupling)*Ne
-//     dg::blas1::axpby(1.0,lambda,1.0,omega,omega); // omega   = (coupling)*(Ne + <ne>tilde(ne))
+//     dg::blas1::pointwiseDot(omega,npe[0],omega);  // omega   = (coupling)*Ne  for constant resi
+     dg::blas1::pointwiseDot(omega,one,omega);  // omega   = (coupling) for n dependent resi
 
     coupling_ =  z[0]*p.d/p.c* dg::blas2::dot(chi, w2d, omega);
     //Compute rhs of energy theorem
@@ -351,11 +348,8 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
         dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
     }
-    //correction for high amplitudes
-//     dg::blas1::pointwiseDot(omega,nedelta,lambda); //(coupling)* <ne>tilde(ne)
-//     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
-    //general term
-    dg::blas1::pointwiseDot(omega,npe[0],lambda);  //(coupling)*Ne
+//     dg::blas1::pointwiseDot(omega,npe[0],lambda);  //(coupling)*Ne for constant resi
+    dg::blas1::pointwiseDot(omega,one,lambda);  //(coupling)*Ne for n dependent resi
     dg::blas1::axpby(p.d/p.c,lambda,1.0,yp[0]);
 
     //Density source terms
