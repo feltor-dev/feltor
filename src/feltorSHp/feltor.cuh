@@ -50,8 +50,7 @@ struct Rolkar
         for( unsigned i=0; i<4; i++)
         {
             //not linear any more (cannot be written as y = Ax)
-            dg::blas2::gemv( LaplacianM_perp, x[i], temp);
-            dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            dg::blas2::gemv( LaplacianM_perp, x[i], y[i]);
             dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
         }
 
@@ -144,7 +143,7 @@ struct Feltor
 template<class Grid, class Matrix, class container>
 Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p): 
     chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), iota(chi), 
-    binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
+    binv( dg::evaluate( dg::LinearX( p.mcv, 1.-p.mcv*p.posX*p.lx), g) ),
     one( dg::evaluate( dg::one, g)),    
     B2( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
@@ -469,22 +468,18 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
             dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
         }
         if (p.iso == 0) dg::blas1::axpby(1., phi[i],0., chi,chi); //chi = (psi)
-        dg::blas2::gemv( lapperpM, y[i], lambda);//-nabla_RZ^4 N
-        dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 N
-        Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  // ( psi) nabla_RZ^4 N    
+        dg::blas2::gemv( lapperpM, y[i], omega);//-nabla_RZ^2 N
+        Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  // ( psi) nabla_RZ^2 N    
         
-        dg::blas2::gemv( lapperpM, y[i+2], lambda);//-nabla_RZ^2 P
-        dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 P
-        Dperp[i+2] = -z[i]*p.tau[i]*p.nu_perp*dg::blas2::dot(one, w2d, omega);  // nabla_RZ^4 P
+        dg::blas2::gemv( lapperpM, y[i+2], omega);//-nabla_RZ^2 P
+        Dperp[i+2] = -z[i]*p.tau[i]*p.nu_perp*dg::blas2::dot(one, w2d, omega);  // nabla_RZ^2 P
     }    
-    dg::blas2::gemv( lapperpM, y[1], lambda);
-    dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 N_i
-    Dperp[1] -= -z[1]*p.nu_perp*dg::blas2::dot(chii, w2d, omega);  //+ nu*Z( chii) nabla_RZ^4 N_i 
+    dg::blas2::gemv( lapperpM, y[1], omega);
+    Dperp[1] -= -z[1]*p.nu_perp*dg::blas2::dot(chii, w2d, omega);  //+ nu*Z( chii) nabla_RZ^2 N_i 
     
     dg::blas1::pointwiseDivide(chii,te[1],chi); //chi = chii/Ti
-    dg::blas2::gemv( lapperpM, y[3], lambda);
-    dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 P_i
-    Dperp[3] += -p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //- nu*( chii/ T) nabla_RZ^4 P_i 
+    dg::blas2::gemv( lapperpM, y[3], omega);
+    Dperp[3] += -p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //- nu*( chii/ T) nabla_RZ^2 P_i 
     ediff_= Dperp[0]+Dperp[1]+ Dperp[2]+Dperp[3];   
     
     for(unsigned i=0; i<2; i++)
@@ -552,7 +547,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
 //     dg::blas1::axpby(2.,omega,1.0,yp[3]); //dt(P_i) += chii/B [ln(Ti),Pi]_xy
 //     dg::blas1::pointwiseDot(pr[1],chii,chi);
     dg::blas1::pointwiseDot(n[1],chii,chi);
-    poisson( te[1], chi, omega);  //omega = [ln(Ti),Pi chii]_xy
+    poisson( te[1], chi, omega);  //omega = [ln(Ti),Pi chii]_xy = [Ti, Ni chii]_xy
     dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),Pi chii]_xy
     dg::blas1::axpby(2.,omega,1.0,yp[3]); //dt (P_i) += 1/B [ln(Ti),chii Pi]_xy
 
