@@ -20,8 +20,8 @@ feltor_mpi: feltor_mpi.cu feltor.cuh
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK 
 	
 generator: generator.cpp 
-	g++ generator.cpp -o generator -std=c++0x -Wall
-
+	 $(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) -std=c++0x -Wall
+	 
 .PHONY: clean doc
 
 doc: 

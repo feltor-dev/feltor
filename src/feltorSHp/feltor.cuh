@@ -256,6 +256,7 @@ void Feltor<G, Matrix, container>::initializene( const container& src, const con
     {
         invgamma1.set_chi(one);
         invert_invgammadag(invgamma1,target,src); //=ne-1 = bar(Gamma)_dagger (ni-1)    
+//         dg::blas1::axpby(2.,src,-1.,target,target);
     }
 }
 
@@ -491,7 +492,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         dg::blas1::pointwiseDot( yp[i+2], binv, yp[i+2]);  //dt (P-a^2) = 1/B [P-a^2,psi]_xy
         
         //curvature dynamics
-        //N*K(psi) and T*K(psi)  terms
+        //N*K(psi) and 2 P*K(psi)  terms
         dg::blas2::gemv( poisson.dyrhs(), phi[i], lambda); //lambda = dy psi
         dg::blas1::pointwiseDot(lambda,n[i],omega); //omega =  n dy psi
         dg::blas1::axpby(p.mcv,omega,1.0,yp[i]);   // dtN +=  mcv* N dy psi
@@ -552,7 +553,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     dg::blas1::axpby(2.,omega,1.0,yp[3]); //dt (P_i) += 1/B [ln(Ti),chii Pi]_xy
 
     //add FLR correction to curvature dynamics
-    //Ni K(chii) and Ti K(3 chii) term
+    //Ni K(chii) and Pi K(4 chii) term
     dg::blas2::gemv( poisson.dyrhs(), chii, lambda); //lambda = dy chii
     dg::blas1::pointwiseDot(lambda,n[1],omega); //omega = Ni dy chii
     dg::blas1::axpby(p.mcv,omega,1.0,yp[1]);   // dtNi +=  mcv* Ni dy chii
