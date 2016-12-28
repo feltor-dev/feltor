@@ -343,9 +343,9 @@ int main( int argc, char* argv[])
 //         err = nc_open(argv[2], NC_WRITE, &ncid);
         for( unsigned j=0; j<2; j++)
         {
-        dg::blas2::gemv( interpolate, y0[i].data(), transferD);
-        dg::blas1::transfer( transferD, transferH);
-        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
+           dg::blas2::gemv( interpolate, y0[j].data(), transferD);
+           dg::blas1::transfer( transferD, transferH);
+           err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data() );
         }
         transfer = feltor.potential()[0];
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
