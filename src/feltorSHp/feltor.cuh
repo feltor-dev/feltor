@@ -256,7 +256,7 @@ void Feltor<G, Matrix, container>::initializene( const container& src, const con
     {
         invgamma1.set_chi(one);
         invert_invgammadag(invgamma1,target,src); //=ne-1 = bar(Gamma)_dagger (ni-1)    
-//         dg::blas1::axpby(2.,src,-1.,target,target);
+        dg::blas1::axpby(2.,src,-1.,target,target); //=ne-1 = 2 (Ni - 1 ) - bar(Gamma)_dagger (ni-1)  
     }
 }
 

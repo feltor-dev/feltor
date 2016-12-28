@@ -92,6 +92,8 @@ int main( int argc, char* argv[])
         dg::blas1::transform(y1[3], y1[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi = Pi - bg^2
 
         feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
+//         dg::blas1::axpby( 1.,y1[3], 0., y0[2]); //initialize pi = P_i
+
         //compute ti-bg = ((pi-bg^2) +bg^2)/ne -bg
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //=ne    

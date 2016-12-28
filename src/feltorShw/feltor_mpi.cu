@@ -75,7 +75,7 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     //////////////////////////////////////////////////////////////
       //Make grid
-    dg::MPIGrid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
+    dg::MPIGrid2d grid(     0., p.lx, 0.,p.ly, p.n,     p.Nx,     p.Ny,     p.bc_x, p.bc_y, comm);
     dg::MPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
     if(rank==0) std::cout << "Constructing Feltor...\n";
@@ -322,7 +322,7 @@ int main( int argc, char* argv[])
             }
             err = nc_put_vara_double( ncid, dissID,     Estart, Ecount,&diss);
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
-           err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
+            err = nc_put_vara_double( ncid, NepID,      Estart, Ecount,&Nep);
             err = nc_put_vara_double( ncid, phipID,     Estart, Ecount,&phip);         
             err = nc_put_vara_double( ncid, radtransID, Estart, Ecount,&radtrans);
             err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
@@ -343,9 +343,9 @@ int main( int argc, char* argv[])
 //         err = nc_open(argv[2], NC_WRITE, &ncid);
         for( unsigned j=0; j<2; j++)
         {
-        dg::blas2::gemv( interpolate, y0[i].data(), transferD);
-        dg::blas1::transfer( transferD, transferH);
-        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
+            dg::blas2::gemv( interpolate, y0[j].data(), transferD);
+            dg::blas1::transfer( transferD, transferH);
+            err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data() );
         }
         transfer = feltor.potential()[0];
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
