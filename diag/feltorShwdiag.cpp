@@ -40,8 +40,11 @@ int main( int argc, char* argv[])
     
     std::cout << "input "<<input<<std::endl;
     
-    const eule::Parameters p(file::read_input( input));
-   
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    //const Parameters p(file::read_input( input));
+    const eule::Parameters p(js);   
     ///////////////////////////////////////////////////////////////////////////
     
     //Grids
@@ -69,7 +72,7 @@ int main( int argc, char* argv[])
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
-
+    dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> pol(g2d,   p.bc_x, p.bc_y, dg::normed, dg::centered);
 
     //2d field
     size_t count2d[3]  = {1, g2d_in.n()*g2d_in.Ny(), g2d_in.n()*g2d_in.Nx()};
@@ -124,7 +127,7 @@ int main( int argc, char* argv[])
     //probe netcdf file
     err_out = nc_redef(ncid_out);
     int npe_probesID[num_probes],phi_probesID[num_probes],gamma_probesID[num_probes];
-    int T_perp_zonalID, T_perpID, T_perpratioID, Gamma_neID;
+    int OmegaID, OmegazID, OmegaratioID, T_perp_zonalID, T_perpID, T_perpratioID, Gamma_neID;
     std::string npe_probes_names[num_probes] ;
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
@@ -145,6 +148,9 @@ int main( int argc, char* argv[])
     err_out = nc_def_var( ncid_out, "Uperpz",    NC_DOUBLE, 1, &timeID, &T_perp_zonalID);
     err_out = nc_def_var( ncid_out, "Uperp",     NC_DOUBLE, 1, &timeID, &T_perpID);
     err_out = nc_def_var( ncid_out, "Uperpratio",     NC_DOUBLE, 1, &timeID, &T_perpratioID);
+    err_out = nc_def_var( ncid_out, "Omega",    NC_DOUBLE, 1, &timeID, &OmegaID);
+    err_out = nc_def_var( ncid_out, "Omegaz",     NC_DOUBLE, 1, &timeID, &OmegazID);
+    err_out = nc_def_var( ncid_out, "Omegaratio",     NC_DOUBLE, 1, &timeID, &OmegaratioID);
     err_out = nc_def_var( ncid_out, "Gamma",    NC_DOUBLE, 1, &timeID, &Gamma_neID);
 
     err_out = nc_enddef(ncid_out);   
@@ -208,6 +214,18 @@ int main( int argc, char* argv[])
             double Gamma_ne = -1.* dg::blas2::dot(npe[0],w2d,temp2);
             dg::blas2::gemv(interp,temp,temp1d); 
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[4],   start1d, count1d, temp1d.data()); 
+            
+            pol.set_chi(npe[1]);
+//             pol.set_chi(one);
+            dg::blas2::symv(pol,phi,temp);
+            dg::blas1::scal(temp,-1.);
+            double Omega = dg::blas2::dot( temp, w2d, temp);               
+            polavg(phi,temp);
+            dg::blas2::symv(pol,temp,temp2);
+            dg::blas1::scal(temp2,-1.);
+            double Omegaz = dg::blas2::dot( temp2, w2d, temp2);               
+            double Omegaratio = Omegaz/Omega;
+            
             polavg(vor,temp);
             dg::blas2::gemv(interp,temp,temp1d); 
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[5],   start1d, count1d, temp1d.data()); 
@@ -252,6 +270,9 @@ int main( int argc, char* argv[])
             err_out = nc_put_vara_double( ncid_out, T_perp_zonalID, start1d, count1d, &T_perp_zonal);
             err_out = nc_put_vara_double( ncid_out, T_perpID, start1d, count1d, &T_perp);
             err_out = nc_put_vara_double( ncid_out, T_perpratioID, start1d, count1d, &T_perpratio);
+            err_out = nc_put_vara_double( ncid_out, OmegaID, start1d, count1d, &Omega);
+            err_out = nc_put_vara_double( ncid_out, OmegazID, start1d, count1d, &Omegaz);
+            err_out = nc_put_vara_double( ncid_out, OmegaratioID, start1d, count1d, &Omegaratio);
             err_out = nc_put_vara_double( ncid_out, Gamma_neID, start1d, count1d, &Gamma_ne);
             err_out = nc_put_vara_double( ncid_out, tvarIDout, start1d, count1d, &time);        
 	    
