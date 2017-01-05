@@ -363,7 +363,7 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         sourceenergy =  z[0]*p.omega_source*dg::blas2::dot(chi, w2d, omega); 	
 	
         //dt Ni
-	dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]); 
+	    dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]); 
         dg::blas1::axpby(1.,one,1., logn[1] ,chi); //chi = (1+lnN)
         dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //chi = (tau_e(1+lnN)+phi)   
         sourceenergy += z[1]*p.omega_source*dg::blas2::dot(chi, w2d, omega);  
@@ -373,29 +373,30 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
         //compute source eneergy for ions (flr correcetion)
         sourceenergy += z[1]*p.omega_source*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, lambda);   
 	   }
+	   
 	//sinks
-        //dtN_e
-        dg::blas1::axpby(-1.0,profne,1.0,npe[0],lambda); //lambda = -ne0_prof + <ne>
-        dg::blas1::pointwiseDot(lambda,rhsi,omega); //lambda =lhs*(-ne0_prof + <ne>)
-        dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
-        dg::blas1::axpby(-p.omega_sink,omega,1.0,yp[0]);// dtne = - omega_sink(ne0_prof - <ne>) 
-        //Compute sopurce energy for electrons
-        dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
-        dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
-        sinkenergy = - z[0]*p.omega_sink*dg::blas2::dot(chi, w2d, omega);       
-        //dt Ni without FLR
-        dg::blas1::axpby(-p.omega_sink,omega,1.0,yp[1]); 
-        //Compute sink energy for ions
-        dg::blas1::axpby(1.,one,1., logn[1] ,chi); //chi = (1+lnN)
-        dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //chi = (tau_e(1+lnN)+phi)   
-        sinkenergy += -z[1]*p.omega_sink*dg::blas2::dot(chi, w2d, omega);      
-        //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
-        dg::blas1::pointwiseDot(lambda,rhsi,lambda);
-        dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
-        dg::blas2::gemv( lapperpM, lambda, omega);
-        dg::blas1::axpby(-p.omega_sink*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
-        //compute sink eneergy for ions (flr correcetion)
-        sinkenergy += -z[1]*p.omega_sink*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, omega);   
+    //dtN_e
+    dg::blas1::axpby(-1.0,profne,1.0,npe[0],lambda); //lambda = -ne0_prof + <ne>
+    dg::blas1::pointwiseDot(lambda,rhsi,omega); //lambda =lhs*(-ne0_prof + <ne>)
+    dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //>=0
+    dg::blas1::axpby(-p.omega_sink,omega,1.0,yp[0]);// dtne = - omega_sink(ne0_prof - <ne>) 
+    //Compute sopurce energy for electrons
+    dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
+    dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
+    sinkenergy = - z[0]*p.omega_sink*dg::blas2::dot(chi, w2d, omega);       
+    //dt Ni without FLR
+    dg::blas1::axpby(-p.omega_sink,omega,1.0,yp[1]); 
+    //Compute sink energy for ions
+    dg::blas1::axpby(1.,one,1., logn[1] ,chi); //chi = (1+lnN)
+    dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //chi = (tau_e(1+lnN)+phi)   
+    sinkenergy += -z[1]*p.omega_sink*dg::blas2::dot(chi, w2d, omega);      
+    //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
+    dg::blas1::pointwiseDot(lambda,rhsi,lambda);
+    dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
+    dg::blas2::gemv( lapperpM, lambda, omega);
+    dg::blas1::axpby(-p.omega_sink*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); 
+    //compute sink eneergy for ions (flr correcetion)
+    sinkenergy += -z[1]*p.omega_sink*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, omega);   
  
 
     

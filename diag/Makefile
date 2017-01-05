@@ -40,7 +40,7 @@ crosscoherencdiag: crosscoherencdiag.cpp
 feltorSesoldiag: feltorSesoldiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 feltorShwdiag: feltorShwdiag.cpp
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
 
 .PHONY: clean
 
