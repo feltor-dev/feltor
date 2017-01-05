@@ -17,7 +17,8 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "tau"       : 0,        //Ti/Te
     "nu_perp"   : 5e-4,     //pependicular viscosity
     "D"         : 1e-7  , //coupling 
-    "C"         : 64e-6,   //Parallel Resistivity (~D lx/d)        
+    "C"         : 64e-6,   //Parallel Resistivity (~D lx/d)      
+    "boussinesq": 0, // (0 non bousi/ 1 bousi)
     "amplitude" :0.01,      //amplitude of the blob
     "sigma"  : 2.5,          //blob variance in units of rho_s
     "posX"  : 0.5,          //blob x-position in units of lx
