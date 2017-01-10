@@ -32,7 +32,8 @@ struct Rolkar
     Rolkar( const Geometry& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
+        LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -49,13 +50,13 @@ struct Rolkar
             dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
         }
     }
-    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
+    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp_phi;}
     const container& weights(){return LaplacianM_perp.weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
     container temp;    
-    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
+    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp,LaplacianM_perp_phi;
 
 };
 
