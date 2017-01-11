@@ -67,7 +67,7 @@ struct MatrixTraits<const Composite<Matrix> >
  */
 namespace create{
 
-///@addtogroup highlevel
+///@addtogroup creation
 ///@{
 
 //dx, dy, jumpX, jumpY

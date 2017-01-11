@@ -78,19 +78,19 @@ int main( int argc, char* argv[])
     //create RHS 
     dg::ToeflR< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > test( grid, p); 
     dg::Diffusion<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> diffusion( grid, p.nu);
-    //////////////////create initial vector///////////////////////////////////////
+    //create initial vector
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
-    std::vector<dg::MDVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-    dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
+    dg::MDVec gauss = dg::evaluate( g, grid);
+    std::vector<dg::MDVec> y0(2, gauss), y1(y0); // n_e' = gaussian
+    dg::Helmholtz<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> gamma(  grid, -0.5*p.tau[0]*p.mu[0], dg::centered);
+    dg::blas2::symv( gamma, gauss, y0[0]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
+    gamma.alpha() = -0.5*p.tau[1]*p.mu[1];
+    dg::blas2::symv( gamma, gauss, y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     {
         dg::MDVec v2d = dg::create::inv_weights(grid);
+        dg::blas2::symv( v2d, y0[0], y0[0]);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
-    if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global" ){
-        y0[1] = dg::evaluate( dg::zero, grid);
-    }
-    //////////////////////////////////////////////////////////////////////
-
     //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
     //dg::AB< k, std::vector<dg::MDVec> > ab( y0);
@@ -110,7 +110,7 @@ int main( int argc, char* argv[])
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
     //field IDs
-    std::string names[4] = {"electrons", "ions", "potential", "vorticity"}; 
+    std::string names[4] = {"electrons", "positrons", "potential", "vorticity"}; 
     int dataIDs[4]; 
     for( unsigned i=0; i<4; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
@@ -151,12 +151,12 @@ int main( int argc, char* argv[])
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
     //pot
-    transfer = test.potential()[0];
+    transfer = test.potential();
     dg::blas2::gemv( interpolate, transfer.data(), transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
     //Vor
-    transfer = test.potential()[0];
+    transfer = test.potential();
     dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        
     dg::blas2::gemv( interpolate,y1[1].data(), transferD);
     dg::blas1::transfer( transferD, transferH);
@@ -215,11 +215,11 @@ int main( int argc, char* argv[])
             dg::blas1::transfer( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
-        transfer = test.potential()[0];
+        transfer = test.potential();
         dg::blas2::gemv( interpolate, transfer.data(), transferD);
         dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
-        transfer = test.potential()[0];
+        transfer = test.potential();
         dg::blas2::gemv( diffusion.laplacianM(), transfer, y1[1]);        //correct?    
         dg::blas2::gemv( interpolate,y1[1].data(), transferD);
         dg::blas1::transfer( transferD, transferH);

@@ -53,22 +53,23 @@ int main( int argc, char* argv[])
     //create RHS 
     dg::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
     dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
-    //////////////////create initial vector///////////////////////////////////////
+    //create initial vector
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
-    std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
-    dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
+    dg::DVec gauss = dg::evaluate( g, grid);
+    std::vector<dg::DVec> y0(2, gauss), y1(y0); // n_e' = gaussian
+    dg::Helmholtz<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> gamma(  grid, -0.5*p.tau[0]*p.mu[0], dg::centered);
+    dg::blas2::symv( gamma, gauss, y0[0]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
+    gamma.alpha() = -0.5*p.tau[1]*p.mu[1];
+    dg::blas2::symv( gamma, gauss, y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     {
         dg::DVec v2d = dg::create::inv_weights(grid);
+        dg::blas2::symv( v2d, y0[0], y0[0]);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
-    if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
-        y0[1] = dg::evaluate( dg::zero, grid);
-    }
-    //////////////////////////////////////////////////////////////////////
 
 
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -98,7 +99,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //transform phi
-        dvisual = test.potential()[0];
+        dvisual = test.potential();
         dg::blas2::gemv( test.laplacianM(), dvisual, y1[1]);
         dg::blas1::transfer( y1[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);

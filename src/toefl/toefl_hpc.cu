@@ -26,7 +26,8 @@ int main( int argc, char* argv[])
 {
     //Parameter initialisation
     std::vector<double> v;
-    std::string input;
+    Json::Reader reader;
+    Json::Value js;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -34,13 +35,11 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        input = file::read_file( argv[1]); //deprecated, better use json reader directly, instead!
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false); //read input without comments
     }
-    Json::Reader reader;
-    Json::Value js;
-    reader.parse( input, js, false);
     std::cout << js<<std::endl;
-    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
     p.display( std::cout);
 
@@ -49,7 +48,7 @@ int main( int argc, char* argv[])
     //create RHS 
     dg::ToeflR< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
     dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
-    //create initial vector
+    /////////////////////create initial vector////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
@@ -57,7 +56,7 @@ int main( int argc, char* argv[])
         dg::DVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
-    if( p.equations == "ralf" || p.equations == "ralf_global"){
+    if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
 
