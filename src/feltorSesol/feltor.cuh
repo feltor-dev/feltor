@@ -31,7 +31,8 @@ struct Rolkar
     Rolkar( const Geometry& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
+        LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -48,13 +49,13 @@ struct Rolkar
             dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
         }
     }
-    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
+    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp_phi;}
     const container& weights(){return LaplacianM_perp.weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
     container temp;    
-    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
+    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp,LaplacianM_perp_phi;
 
 };
 
@@ -132,10 +133,10 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
-    poisson(g, g.bcx(), g.bcy(), p.bc_x_pot, g.bcy()), //first N/U then phi BCC
-    pol(    g, p.bc_x_pot, g.bcy(), dg::not_normed,          dg::centered), 
+    poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N/U then phi BCC
+    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered), 
     lapperpM ( g,g.bcx(), g.bcy(),       dg::normed,         dg::centered),
-    invgammaPot( g,p.bc_x_pot, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
+    invgammaPot( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaNU(  g,g.bcx(),    g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     invert_invgammaN(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),

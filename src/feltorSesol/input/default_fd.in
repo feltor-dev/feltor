@@ -30,7 +30,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "ly"  : 200,            //ly in units of rho_s
     "bc_x"    : "NEU_DIR",        //boundary condition in x
     "bc_y"    : "PER",        //boundary condition in y
-    "bc_x_pot": "DIR_NEU",        //boundary condition in x for phi
+    "bc_x_phi": "DIR_NEU",        //boundary condition in x for phi
     "hwmode": 1,            // ordinary/modified HW (0/1)
     "ln": 100,              //gradient length (in rho_s) 
     "SOL_b" : 0.3,     //SOL boundary in units of lx (>1 no SOL)
