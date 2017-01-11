@@ -92,13 +92,13 @@ int main( int argc, char* argv[])
     err_out = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err_out= nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
     err_out= file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
- int dim_ids1d[2] = {dim_ids2d[0],dim_ids2d[2]};
+     int dim_ids1d[2] = {dim_ids2d[0],dim_ids2d[2]};
     for( unsigned i=0; i<8; i++){
         err_out = nc_def_var( ncid_out, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
-    // NEW for( unsigned i=0; i<4; i++){
-    // NEW    err_out  = nc_def_var(ncid_out, names2d[i].data(),  NC_DOUBLE, 3, dim_ids2d, &dataIDs2d[i]);
-    //NEW }   
+    for( unsigned i=0; i<4; i++){
+        err_out  = nc_def_var(ncid_out, names2d[i].data(),  NC_DOUBLE, 3, dim_ids2d, &dataIDs2d[i]);
+    }   
     err_out = nc_close(ncid_out); 
     //2d field netcdf vars read
 
@@ -188,9 +188,9 @@ int main( int argc, char* argv[])
             dg::blas1::transform( npe[1], logn[1], dg::LN<double>());
 
             //write 2d fields (ne,phi,vor)
-     //NEW       err_out = nc_put_vara_double( ncid_out, dataIDs2d[0], start2d_out, count2d_out, npe[0].data());
-     //NEW       err_out = nc_put_vara_double( ncid_out, dataIDs2d[1], start2d_out, count2d_out, phi.data());
-     //NEW       err_out = nc_put_vara_double( ncid_out, dataIDs2d[2], start2d_out, count2d_out, vor.data());
+            err_out = nc_put_vara_double( ncid_out, dataIDs2d[0], start2d_out, count2d_out, npe[0].data());
+            err_out = nc_put_vara_double( ncid_out, dataIDs2d[1], start2d_out, count2d_out, phi.data());
+            err_out = nc_put_vara_double( ncid_out, dataIDs2d[2], start2d_out, count2d_out, vor.data());
             //Compute avg 2d fields and convert them into 1d field
             polavg(npe[0],temp);
             dg::blas2::gemv(interp,temp,temp1d); 
@@ -272,7 +272,7 @@ int main( int argc, char* argv[])
                 polavg(npe[0],temp);
                 dg::blas1::pointwiseDivide(npe[0],temp,temp);
                 dg::blas1::axpby(1.0,temp,-1.0,one,temp);
-//NEW            err_out = nc_put_vara_double( ncid_out, dataIDs2d[3], start2d_out, count2d_out, temp.data());
+                err_out = nc_put_vara_double( ncid_out, dataIDs2d[3], start2d_out, count2d_out, temp.data());
           
             dg::blas2::gemv(probe_interp, temp, npe_probes);
 
