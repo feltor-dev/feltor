@@ -3,7 +3,6 @@
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
 #include "parameters.h"
-// #include "geometry_circ.h"
 #include "dg/average.h"
 
 #ifdef DG_BENCHMARK
@@ -431,8 +430,7 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
     if(rank==0)
 #endif 
     std::cout << "One rhs took "<<t.diff()<<"s\n";
-
-
+    
 }
 
 ///@}
