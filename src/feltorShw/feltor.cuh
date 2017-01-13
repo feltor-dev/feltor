@@ -32,7 +32,8 @@ struct Rolkar
     Rolkar( const Geometry& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
+        LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
+        LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
     {
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -49,13 +50,13 @@ struct Rolkar
             dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
         }
     }
-    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
+    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp_phi;}
     const container& weights(){return LaplacianM_perp.weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
     container temp;    
-    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
+    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp,LaplacianM_perp_phi;
 
 };
 
@@ -303,6 +304,11 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
             polavg(logn[0],lambda);       //<ln(ne)> 
             polavg(phi[0],phiavg);        //<phi>
             dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
+	    
+/*	    dg::blas1::pointwiseDivide(nedelta,neavg,lambda); // delta(phi) = phi - <phi>
+	    polavg(lambda,omega);       //<ln(ne)> 
+	    dg::blas1::axpby(1.,lambda,-1.,omega,nedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>   */      
+	    
             dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
             dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
         }
@@ -398,7 +404,6 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
             Dgrad[i] = - z[i]*p.tau[i]/p.ln*dg::blas2::dot(y[i], w2d, omega);
             dg::blas1::pointwiseDot(omega,binv,omega); //1/B dy phi
             gammanex_ =-1.* dg::blas2::dot(one,w2d,omega);//int(1/B  dy phi)
-
         }
         
         //Coupling term for the electrons

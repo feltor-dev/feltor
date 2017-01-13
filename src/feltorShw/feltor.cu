@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
-    
+//     dg::LinearX prof(-p.nprofileamp/((double)p.ln), p.bgprofamp + p.nprofileamp);    
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
     y1[1] = dg::evaluate( init0, grid);
         
