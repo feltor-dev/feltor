@@ -91,13 +91,13 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot(y0[1],y0[3],y1[3]); // = Ni Ti
         dg::blas1::transform(y1[3], y1[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi = Pi - bg^2
 
-        if( p.init == 0) feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
+        feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
+//         dg::blas1::axpby( 1.,y1[3], 0., y0[2]); //initialize pi = P_i
+
         //compute ti-bg = ((pi-bg^2) +bg^2)/ne -bg
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //=ne    
         dg::blas1::pointwiseDivide(y0[2],y0[0],y0[2]);
-
-        if( p.init == 1) dg::blas1::axpby( 1., y0[3], 0., y0[2], y0[2]); //for Omega*=0
 
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =ne-bg
@@ -223,7 +223,8 @@ int main( int argc, char* argv[])
                          " d E/dt = " << diff <<
                          " Lambda =" << diss <<  std::endl;
  
-            
+                                     std::cout << E1 << std::endl;
+
             E0 = E1;
 
         }

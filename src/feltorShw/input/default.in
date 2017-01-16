@@ -1,36 +1,38 @@
 /* This is a comment: Remember that comments are not conformal 
 with the JSON standard but are allowed only with some specifig JSON parsers. So remove them when you automate the process */
 {
-    "n" :  1,       //# x-y-polynomials
-    "Nx" : 150,     //# grid points in x
-    "Ny" : 150,     //# grid points in y
-    "dt" : 0.2,     //time step in units of c_s/rho_s
-    "n_out"  : 1,   //# x-y polynomials in output
-    "Nx_out" : 150, //# grid points in x in output fields
-    "Ny_out" : 150, //# grid points in y in output fields
-    "itstp"  : 100,   //steps between outputs
+    "n" :  1,        //# x-y-polynomials
+    "Nx" : 100,      //# grid points in x
+    "Ny" : 100,      //# grid points in y
+    "dt" : 1.,       //time step in units of c_s/rho_s
+    "n_out"  : 1,    //# x-y polynomials in output
+    "Nx_out" : 150,  //# grid points in x in output fields
+    "Ny_out" : 150,  //# grid points in y in output fields
+    "itstp"  : 10,   //steps between outputs
     "maxout" : 1000, //# outputs excluding first
-    "eps_pol"   : 1e-5,   //accuracy of polarisation solver
-    "eps_gamma" : 1e-5,   //accuracy of Gamma 
-    "eps_time"  : 1e-12,  //accuracy of implicit time-stepper
+    "eps_pol"   : 1e-6,   //accuracy of polarisation solver
+    "eps_gamma" : 1e-6,   //accuracy of Gamma 
+    "eps_time"  : 1e-14,  //accuracy of implicit time-stepper
     "mu_e"      : -0.000272121, // -m_e/m_i 
-    "tau"       : 0,        //Ti/Te
-    "nu_perp"   : 5e-4,     //pependicular viscosity
-    "D"         : 1e-7  , //coupling 
-    "C"         : 64e-6,   //Parallel Resistivity (~D lx/d)        
-    "amplitude" :0.01,      //amplitude of the blob
+    "tau"       : 0,         //Ti/Te
+    "modelmode" : 2,         //Full-F/Full-F-boussinesq/delta-f (0/1/2)
+    "cmode" : 0,             //dyn/const collisionality (0/1)  
+    "hwmode": 1,             // ordinary/modified HW (0/1)
+    "nu_perp"   : 1e-3,      //pependicular viscosity
+    "alpha"         : 0.01  ,//adiabaticity 
+    "amplitude" :0.1,        //amplitude of the blob
     "sigma"  : 2.5,          //blob variance in units of rho_s
-    "posX"  : 0.5,          //blob x-position in units of lx
-    "posY"  : 0.5,          //blob y-position in units of ly
-    "prof_amp": 1.0,        //Profile amplitude
-    "bg_prof_amp" : 0.0,    //Background Prof amplitude 
-    "lx"  : 64,            //lx in units of rho_s
-    "ly"  : 64,            //ly in units of rho_s
-    "bc_x"  : "DIR_NEU",    //boundary condition in x
-    "bc_y"  : "PER",        //boundary condition in y
-    "hwmode": 1,            // ordinary/modified HW (0/1)
-    "ln": 64,              //gradient length (in rho_s) 
-    "prof_source_rate" : 0.1 , //profile source rate in units c_s/rho_s
-    "source_b" : 0.2,    //source dampingb in u of lx (<1 no Source)
+    "posX"  : 0.5,           //blob x-position in units of lx
+    "posY"  : 0.5,           //blob y-position in units of ly
+    "prof_amp": 1.0,         //Profile amplitude
+    "bg_prof_amp" : 1.0,     //Background Prof amplitude 
+    "invkappa": 64,          //gradient length Ln (in rho_s) 
+    "lx"  : 64,              //lx=L_perp in units of rho_s
+    "ly"  : 64,              //ly in units of rho_s
+    "bc_x"  : "DIR_NEU",     //boundary condition in x
+    "bc_x_phi"  : "DIR",     //boundary condition in x for phi
+    "bc_y"  : "PER",         //boundary condition in y
+    "prof_source_rate" : 0.0,     //profile source rate in units c_s/rho_s
+    "source_b" : 0.2,             //source dampingb in u of lx (<1 no Source)
     "source_damping_width" : 0.5  //source damping width
 }

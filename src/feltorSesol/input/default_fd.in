@@ -1,0 +1,45 @@
+/* This is a comment: Remember that comments are not conformal 
+with the JSON standard but are allowed only with some specifig JSON parsers. So remove them when you automate the process */
+{
+    "n" :  1,       //# x-y-polynomials
+    "Nx" : 200,     //# grid points in x
+    "Ny" : 200,     //# grid points in y
+    "dt" : 0.5,     //time step in units of c_s/rho_s
+    "n_out"  : 1,   //# x-y polynomials in output
+    "Nx_out" : 200, //# grid points in x in output fields
+    "Ny_out" : 200, //# grid points in y in output fields
+    "itstp"  : 10,   //steps between outputs
+    "maxout" : 1000, //# outputs excluding first
+    "eps_pol"   : 1e-5,   //accuracy of polarisation solver
+    "eps_gamma" : 1e-5,   //accuracy of Gamma 
+    "eps_time"  : 1e-12,  //accuracy of implicit time-stepper
+    "mu_e"      : -0.000272121, // -m_e/m_i zb (-0.000544617,-0.000272121,-0.000181372 )
+    "curvature" : 0.00015,  //magnetic curvature
+    "tau"       : 0,        //Ti/Te
+    "nu_perp"   : 5e-3,     //pependicular viscosity
+    "D"         : 0.005e-8, //coupling (D ~ curvature^2)
+    "C"         : 2.5e-6,   //Parallel Resistivity (~D lx/d)        
+    "l_para"    : 1000000 , //parallel Length (~ 2 pi q / mcv)
+    "amplitude" : 1.0,      //amplitude of the blob
+    "sigma"  : 10,          //blob variance in units of rho_s
+    "posX"  : 0.3,          //blob x-position in units of lx
+    "posY"  : 0.5,          //blob y-position in units of ly
+    "prof_amp": 0.0,        //Profile amplitude
+    "bg_prof_amp" : 1.0,    //Background Prof amplitude 
+    "lx"  : 200,            //lx in units of rho_s
+    "ly"  : 200,            //ly in units of rho_s
+    "bc_x"    : "NEU_DIR",        //boundary condition in x
+    "bc_y"    : "PER",        //boundary condition in y
+    "bc_x_phi": "DIR_NEU",        //boundary condition in x for phi
+    "hwmode": 1,            // ordinary/modified HW (0/1)
+    "ln": 100,              //gradient length (in rho_s) 
+    "SOL_b" : 0.3,     //SOL boundary in units of lx (>1 no SOL)
+    "prof_source_rate" : 0.005 , //profile source rate in units c_s/rho_s
+    "source_b" : 0.1,    //source dampingb in u of lx (<1 no Source) 
+    "source_damping_width" : 5,  //sink, sol and edge damping width
+    "prof_sink_rate" :0.001, //profile sink rate in units c_s/rho_s
+    "sink_b" : 0.9,    //sink dampingb in u of lx (<1 no Source) 
+    "damping_width" : 0.5,  //sink, sol and edge damping width
+    "fluxmode" : 1,     // gradient driven (0), flux driven (1)
+}
+

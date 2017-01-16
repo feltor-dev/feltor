@@ -63,47 +63,42 @@ int main( int argc, char* argv[])
     dg::CONSTANT prof(p.bgprofamp );
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
    
-   //initialization via N_i,T_I ->n_e, t_i=t_e
+    //initialization via N_i,T_I ->n_e, t_i=t_e
     y1[1] = dg::evaluate( init0, grid);
-    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde    
-    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize Ni = <n> + <n>*ntilde
-    if (p.iso == 1) dg::blas1::axpby( 1.,y1[2], 0., y0[3]); //initialize Ti = prof
-    if (p.iso == 0) dg::blas1::axpby( 1.,y0[1], 0., y0[3]); //initialize Ti = N_i
-    dg::blas1::plus(y0[1], (-(p.bgprofamp + p.nprofileamp))); //= Ni - bg
+    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //N_i = <Ni>*Ni_tilde = prof*Gauss
+    //for Ni and ne with (scaled) blob structure
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); // Ni = <Ni> (1 + *Ni_tilde)
+    if (p.iso == 1) dg::blas1::axpby( 1.,y1[2], 0., y1[3]); //Ti = <Ni> 
+    if (p.iso == 0) dg::blas1::axpby( 1.,y1[1], 1., y1[3]); //Ti = <Ni> (1 + *Ni_tilde)
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //Ni_tilde= Ni - bg
+    
     std::cout << "intiialize ne" << std::endl;
-    if( p.init == 0)
-        feltor.initializene( y0[1],y0[3], y0[0]);    //ne -bg
-    else  
-        dg::blas1::axpby( 1., y0[1], 0., y0[0], y0[0]); // for Omega*=0
+    if( p.init == 0) feltor.initializene( y0[1],y1[3], y0[0]);    //ne_tilde = Gamma_1 (Ni - bg) for OmegaE=0
+    if( p.init == 1) dg::blas1::axpby( 1., y0[1], 0., y0[0], y0[0]); // ne_tilde = Ni_tilde for Omega*=0
     std::cout << "Done!\n";    
     
     std::cout << "intialize ti=te" << std::endl;
     if (p.iso == 1) {
-        dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
-        dg::blas1::axpby( 1.,y0[3], 0., y0[2]); //initialize Ti = N_i
+        dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //Ni=Ni_tilde +bg
+        dg::blas1::pointwiseDot(y0[1],y1[3],y0[3]); // Pi = Ni Ti
+        dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi_tilde = Pi - bg^2   
+        dg::blas1::axpby( 1.,y0[3], 0., y0[2]); //Pi_tilde = pe_tilde = prof
     }
     if (p.iso == 0) {
-        dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //Ni
-        dg::blas1::pointwiseDot(y0[1],y0[3],y1[3]); // = Ni Ti
-        dg::blas1::transform(y1[3], y1[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi = Pi - bg^2
-
-        feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
-        //compute ti-bg = ((pi-bg^2) +bg^2)/ne -bg
-        dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));
-        dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //=ne    
-        dg::blas1::pointwiseDivide(y0[2],y0[0],y0[2]);
-
-
-        dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)));
-        dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =ne-bg
-        dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
-        dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg 
+        dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //Ni=Nitilde+bg
+        dg::blas1::pointwiseDot(y0[1],y1[3],y0[3]); // Pi = Ni Ti
+        dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi_tilde = Pi - bg^2
+        feltor.initializepi(y0[3],y1[3], y0[2]); // = pi-bg^2    
     }
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg 
     std::cout << "Done!\n";
    
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    std::cout << "intiialize karniadakis" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
+    std::cout << "Done!\n";
+    
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -145,17 +140,26 @@ int main( int argc, char* argv[])
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out));
     dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid); 
-    for( unsigned i=0; i<4; i++)
+    for( unsigned i=0; i<2; i++)
     {
         dg::blas2::gemv( interpolate, y0[i], transferD);
         dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
+    //te
+    transfer = feltor.temptilde()[0];
+    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas1::transfer( transferD, transferH);
+    err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
+    //Ti
+    transfer = feltor.temptilde()[1];
+    dg::blas2::symv( interpolate, transfer, transferD);
+    dg::blas1::transfer( transferD, transferH);
+    err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
     //pot
     transfer = feltor.potential()[0];
     dg::blas2::symv( interpolate, transfer, transferD);
     dg::blas1::transfer( transferD, transferH);
-
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
     //Vor
     transfer = feltor.potential()[0];
@@ -247,16 +251,28 @@ int main( int argc, char* argv[])
         //////////////////////////write fields////////////////////////
         start[0] = i;
         err = nc_open(argv[2], NC_WRITE, &ncid);
-        for( unsigned j=0; j<4; j++)
+        for( unsigned j=0; j<2; j++)
         {
             dg::blas2::symv( interpolate, y0[j], transferD);
             dg::blas1::transfer( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
+        //te
+        transfer = feltor.temptilde()[0];
+        dg::blas2::symv( interpolate, transfer, transferD);
+        dg::blas1::transfer( transferD, transferH);
+        err = nc_put_vara_double( ncid, dataIDs[2], start, count, transferH.data() );
+        //Ti
+        transfer = feltor.temptilde()[1];
+        dg::blas2::symv( interpolate, transfer, transferD);
+        dg::blas1::transfer( transferD, transferH);
+        err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
+        //pot
         transfer = feltor.potential()[0];
         dg::blas2::symv( interpolate, transfer, transferD);
         dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
+        //vor
         transfer = feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), transfer, y1[1]);            
         dg::blas2::symv( interpolate,y1[1], transferD);

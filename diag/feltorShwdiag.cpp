@@ -40,8 +40,11 @@ int main( int argc, char* argv[])
     
     std::cout << "input "<<input<<std::endl;
     
-    const eule::Parameters p(file::read_input( input));
-   
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    //const Parameters p(file::read_input( input));
+    const eule::Parameters p(js);   
     ///////////////////////////////////////////////////////////////////////////
     
     //Grids
@@ -68,8 +71,8 @@ int main( int argc, char* argv[])
     dg::PoloidalAverage<dg::HVec,dg::HVec > polavg(g2d);
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
-    dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
-
+    dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x_phi, p.bc_y);
+    dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> pol(g2d,   p.bc_x_phi, p.bc_y, dg::normed, dg::centered);
 
     //2d field
     size_t count2d[3]  = {1, g2d_in.n()*g2d_in.Ny(), g2d_in.n()*g2d_in.Nx()};
@@ -89,7 +92,7 @@ int main( int argc, char* argv[])
     err_out = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid_out);
     err_out= nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
     err_out= file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
- int dim_ids1d[2] = {dim_ids2d[0],dim_ids2d[2]};
+     int dim_ids1d[2] = {dim_ids2d[0],dim_ids2d[2]};
     for( unsigned i=0; i<8; i++){
         err_out = nc_def_var( ncid_out, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
@@ -124,7 +127,7 @@ int main( int argc, char* argv[])
     //probe netcdf file
     err_out = nc_redef(ncid_out);
     int npe_probesID[num_probes],phi_probesID[num_probes],gamma_probesID[num_probes];
-    int T_perp_zonalID, T_perpID, T_perpratioID, Gamma_neID;
+    int OmegaID, OmegazID, OmegaratioID, TperpzID, TperpID, TperpratioID, Gamma_neID;
     std::string npe_probes_names[num_probes] ;
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
@@ -142,9 +145,12 @@ int main( int argc, char* argv[])
         gamma_probes_names[i] =ss3.str();
         err_out = nc_def_var( ncid_out, gamma_probes_names[i].data(),    NC_DOUBLE, 1, &timeID, &gamma_probesID[i]);
     }
-    err_out = nc_def_var( ncid_out, "Uperpz",    NC_DOUBLE, 1, &timeID, &T_perp_zonalID);
-    err_out = nc_def_var( ncid_out, "Uperp",     NC_DOUBLE, 1, &timeID, &T_perpID);
-    err_out = nc_def_var( ncid_out, "Uperpratio",     NC_DOUBLE, 1, &timeID, &T_perpratioID);
+    err_out = nc_def_var( ncid_out, "Uperpz",    NC_DOUBLE, 1, &timeID, &TperpzID);
+    err_out = nc_def_var( ncid_out, "Uperp",     NC_DOUBLE, 1, &timeID, &TperpID);
+    err_out = nc_def_var( ncid_out, "Uperpratio",     NC_DOUBLE, 1, &timeID, &TperpratioID);
+    err_out = nc_def_var( ncid_out, "Omega",    NC_DOUBLE, 1, &timeID, &OmegaID);
+    err_out = nc_def_var( ncid_out, "Omegaz",     NC_DOUBLE, 1, &timeID, &OmegazID);
+    err_out = nc_def_var( ncid_out, "Omegaratio",     NC_DOUBLE, 1, &timeID, &OmegaratioID);
     err_out = nc_def_var( ncid_out, "Gamma",    NC_DOUBLE, 1, &timeID, &Gamma_neID);
 
     err_out = nc_enddef(ncid_out);   
@@ -198,23 +204,104 @@ int main( int argc, char* argv[])
             polavg(logn[1],temp);
             dg::blas2::gemv(interp,temp,temp1d); 
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[3],   start1d, count1d, temp1d.data()); 
-            polavg(phi,temp);      
-            poisson.variationRHS(phi,temp2);
-            double T_perp = 0.5*dg::blas2::dot( npe[1], w2d, temp2);               
-            poisson.variationRHS(temp,temp2);
-            double T_perp_zonal = 0.5*dg::blas2::dot( npe[1], w2d, temp2);   
-            double T_perpratio = T_perp_zonal/T_perp;
-            dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 
-            double Gamma_ne = -1.* dg::blas2::dot(npe[0],w2d,temp2);
+
+
+            double Tperp,Tperpz,Tperpratio,Gamma_ne,Omega,Omegaz,Omegaratio;
+            if (p.modelmode==0 || p.modelmode==1)
+            {
+//                 poisson.variationRHS(phi,temp2);
+//                 dg::blas1::pointwiseDot(npe[1],temp2,temp);  // N u_E^2  
+//                 Tperp = 0.5*dg::blas2::dot( one, w2d, temp);   // 0.5  N u_E^2            
+//                 polavg(temp,temp2);      // <N u_E^2 > 
+//                 Tperpz = 0.5*dg::blas2::dot( one, w2d, temp2);   //0.5 <N u_E^2 > 
+//                 Tperpratio = Tperpz/Tperp;
+//                 dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 
+//                 Gamma_ne = -1.* dg::blas2::dot(npe[0],w2d,temp2);
+// 
+//                
+//                 pol.set_chi(npe[1]);
+//                 dg::blas2::symv(pol,phi,temp); //- nabla (N nabla phi)
+//                 dg::blas1::scal(temp,-1.);     // nabla (N nabla phi)
+//                 Omega = 0.5* dg::blas2::dot( temp, w2d, temp);  // (nabla (N nabla phi) )^2                
+//                 polavg(temp,temp2);  //< nabla (N nabla phi) >
+//                 Omegaz =0.5* dg::blas2::dot( temp2, w2d, temp2);   //< nabla (N nabla phi) >^2 or better < nabla (N nabla phi)^2 >?
+//                 Omegaratio = Omegaz/Omega;
+                
+                poisson.variationRHS(phi,temp2);
+                Tperp = 0.5*dg::blas2::dot( one, w2d, temp2);   // 0.5   u_E^2            
+                polavg(phi,temp);      // <N u_E^2 > 
+                poisson.variationRHS(temp,temp2);
+                Tperpz = 0.5*dg::blas2::dot( one, w2d, temp2);   //0.5 ( D_x <phi> )^2 
+                Tperpratio = Tperpz/Tperp;
+                dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 
+                Gamma_ne = -1.* dg::blas2::dot(npe[0],w2d,temp2);
+
+               
+                pol.set_chi(one);
+                dg::blas2::symv(pol,phi,temp); //- nabla ( nabla phi)
+                dg::blas1::scal(temp,-1.);     // nabla ( nabla phi)
+                Omega = 0.5* dg::blas2::dot( temp, w2d, temp);  // (nabla (N nabla phi) )^2              
+                polavg(phi,temp2);      // <N u_E^2 > 
+                dg::blas2::symv(pol,temp2,temp); //- nabla ( nabla <phi>)
+                dg::blas1::scal(temp,-1.);     // nabla ( nabla <phi>)
+                Omegaz =0.5* dg::blas2::dot( temp, w2d, temp);   //< nabla (N nabla phi) >^2 or better < nabla (N nabla phi)^2 >?
+                Omegaratio = Omegaz/Omega;
+            }
+            if (p.modelmode==2)
+            { 
+                dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
+                std::vector<dg::HVec> netot(2,dg::evaluate(prof,g2d));
+                for (unsigned i=0;i<2;i++) {
+                    dg::blas1::transform(npe[i], npe[i], dg::PLUS<>(-p.bgprofamp -p.nprofileamp));
+                    dg::blas1::pointwiseDot(netot[i],npe[i],temp);
+                    dg::blas1::axpby(1.0,netot[i],1.0,temp,netot[i]);
+                }
+//                 poisson.variationRHS(phi,temp2);
+//                 dg::blas1::pointwiseDot(netot[1],temp2,temp);  // N u_E^2  
+//                 Tperp = 0.5*dg::blas2::dot( one, w2d, temp);   // 0.5  N u_E^2            
+//                 polavg(temp,temp2);      // <N u_E^2 > 
+//                 Tperpz = 0.5*dg::blas2::dot( one, w2d, temp2);   //0.5 <N u_E^2 > 
+//                 Tperpratio = Tperpz/Tperp;
+//                 dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 
+//                 Gamma_ne = -1.* dg::blas2::dot(netot[0],w2d,temp2);
+//                 
+//                 pol.set_chi(netot[1]);
+//                 dg::blas2::symv(pol,phi,temp); //- nabla (N nabla phi)
+//                 dg::blas1::scal(temp,-1.);     // nabla (N nabla phi)
+//                 Omega =0.5* dg::blas2::dot( temp, w2d, temp);  // (nabla (N nabla phi) )^2                
+//                 polavg(temp,temp2);  //< nabla (N nabla phi) >
+//                 Omegaz =0.5* dg::blas2::dot( temp2, w2d, temp2);   //< nabla (N nabla phi) >^2 or better < nabla (N nabla phi)^2 >?
+//                 Omegaratio = Omegaz/Omega;
+                poisson.variationRHS(phi,temp2);
+                Tperp = 0.5*dg::blas2::dot( one, w2d, temp2);   // 0.5   u_E^2            
+                polavg(phi,temp);      // <N u_E^2 > 
+                poisson.variationRHS(temp,temp2);
+                Tperpz = 0.5*dg::blas2::dot( one, w2d, temp2);   //0.5 ( D_x <phi> )^2 
+                Tperpratio = Tperpz/Tperp;
+                dg::blas2::gemv( poisson.dyrhs(), phi, temp2); 
+                Gamma_ne = -1.* dg::blas2::dot(netot[0],w2d,temp2);
+
+               
+                pol.set_chi(one);
+                dg::blas2::symv(pol,phi,temp); //- nabla ( nabla phi)
+                dg::blas1::scal(temp,-1.);     // nabla ( nabla phi)
+                Omega = 0.5* dg::blas2::dot( temp, w2d, temp);  // (nabla (N nabla phi) )^2              
+                polavg(phi,temp2);      // <N u_E^2 > 
+                dg::blas2::symv(pol,temp2,temp); //- nabla ( nabla <phi>)
+                dg::blas1::scal(temp,-1.);     // nabla ( nabla <phi>)
+                Omegaz =0.5* dg::blas2::dot( temp, w2d, temp);   //< nabla (N nabla phi) >^2 or better < nabla (N nabla phi)^2 >?
+                Omegaratio = Omegaz/Omega;
+            }
+            
+            polavg(phi,temp);      //<phi>      
             dg::blas2::gemv(interp,temp,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[4],   start1d, count1d, temp1d.data()); 
-            polavg(vor,temp);
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[4],   start1d, count1d, temp1d.data()); //<phi>      
+            polavg(vor,temp);     //<nabla_perp^2 phi>      
             dg::blas2::gemv(interp,temp,temp1d); 
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[5],   start1d, count1d, temp1d.data()); 
-
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[6],   start1d, count1d, xcoo.data());             
             dg::blas2::gemv(poisson.dxrhs(),phi,temp);
-            polavg(temp,temp2);            
+            polavg(temp,temp2);             //<u_Ey>    
             dg::blas2::gemv(interp,temp2,temp1d); 
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[7],   start1d, count1d, temp1d.data()); 
 
@@ -223,7 +310,7 @@ int main( int argc, char* argv[])
                 polavg(npe[0],temp);
                 dg::blas1::pointwiseDivide(npe[0],temp,temp);
                 dg::blas1::axpby(1.0,temp,-1.0,one,temp);
-            err_out = nc_put_vara_double( ncid_out, dataIDs2d[3], start2d_out, count2d_out, temp.data());
+                err_out = nc_put_vara_double( ncid_out, dataIDs2d[3], start2d_out, count2d_out, temp.data());
           
             dg::blas2::gemv(probe_interp, temp, npe_probes);
 
@@ -249,9 +336,12 @@ int main( int argc, char* argv[])
                 err_out= nc_put_vara_double( ncid_out, phi_probesID[i], start1d, count1d, &phi_probes[i]);
                 err_out= nc_put_vara_double( ncid_out, gamma_probesID[i], start1d, count1d, &gamma_probes[i]);
             }
-            err_out = nc_put_vara_double( ncid_out, T_perp_zonalID, start1d, count1d, &T_perp_zonal);
-            err_out = nc_put_vara_double( ncid_out, T_perpID, start1d, count1d, &T_perp);
-            err_out = nc_put_vara_double( ncid_out, T_perpratioID, start1d, count1d, &T_perpratio);
+            err_out = nc_put_vara_double( ncid_out, TperpzID, start1d, count1d, &Tperpz);
+            err_out = nc_put_vara_double( ncid_out, TperpID, start1d, count1d, &Tperp);
+            err_out = nc_put_vara_double( ncid_out, TperpratioID, start1d, count1d, &Tperpratio);
+            err_out = nc_put_vara_double( ncid_out, OmegaID, start1d, count1d, &Omega);
+            err_out = nc_put_vara_double( ncid_out, OmegazID, start1d, count1d, &Omegaz);
+            err_out = nc_put_vara_double( ncid_out, OmegaratioID, start1d, count1d, &Omegaratio);
             err_out = nc_put_vara_double( ncid_out, Gamma_neID, start1d, count1d, &Gamma_ne);
             err_out = nc_put_vara_double( ncid_out, tvarIDout, start1d, count1d, &time);        
 	    

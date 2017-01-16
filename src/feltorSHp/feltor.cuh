@@ -19,6 +19,12 @@ namespace eule
 /**
  * @brief Diffusive terms for Feltor solver
  *
+\f[
+    \begin{align}
+     -\nu_\perp\Delta_\perp^2 N \\
+     -\nu_\perp\Delta_\perp^2 P   
+    \end{align}
+\f]
  * @tparam Matrix The Matrix class
  * @tparam container The Vector class 
  */
@@ -34,18 +40,17 @@ struct Rolkar
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
-        /* x[0] := N_e - (bgamp+profamp)
+        /* x[0] := n_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
-           x[2] := T_e - (bgamp+profamp)
-           x[3] := T_i - (bgamp+profamp)
+           x[2] := P_e - (bgamp+profamp)^2
+           x[3] := P_i - (bgamp+profamp)^2
 
         */
         dg::blas1::axpby( 0., x, 0, y);
         for( unsigned i=0; i<4; i++)
         {
             //not linear any more (cannot be written as y = Ax)
-            dg::blas2::gemv( LaplacianM_perp, x[i], temp);
-            dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            dg::blas2::gemv( LaplacianM_perp, x[i], y[i]);
             dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
         }
 
@@ -79,7 +84,24 @@ struct Feltor
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
+    const std::vector<container>& temptilde( ) const { return tetilde;}
+    
+
+    /**
+     * @brief Given N_i-1 and Ti initialize n_e -1 such that phi=0
+     *
+     * @param y N_i -1 
+     * @param helper T_i 
+     * @param target N_e -1
+     */
     void initializene( const container& y, const container& helper, container& target);
+    /**
+     * @brief Given P_i-1 and Ti initialize p_i -1 such that phi=0
+     *
+     * @param y P_i -1 
+     * @param helper T_i 
+     * @param target p_i
+     */
     void initializepi( const container& y, const container& helper, container& target);
 
     void operator()( std::vector<container>& y, std::vector<container>& yp);
@@ -96,14 +118,14 @@ struct Feltor
     container& compute_chii(const container& helper, container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
-    container chi, omega, lambda,iota; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
+    container chi, omega, lambda, iota; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
     container chii,uE2; //dont use them as helper
     const container binv;
     const container one;
     container B2;
     const container w2d, v2d;
     std::vector<container> phi; // =(phi,psi_i), (0,chi_i)
-    std::vector<container> ype, logype; 
+    std::vector<container> n, logn,pr, logpr,te, logte,tetilde;  
 
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
@@ -121,13 +143,13 @@ struct Feltor
 template<class Grid, class Matrix, class container>
 Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p): 
     chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), iota(chi), 
-    binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
+    binv( dg::evaluate( dg::LinearX( p.mcv, 1.-p.mcv*p.posX*p.lx), g) ),
     one( dg::evaluate( dg::one, g)),    
     B2( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi),chii(chi),uE2(chi),// (phi,psi), (chi_i), u_ExB
-    ype(4,chi), logype(ype), // y+(bgamp+profamp) , log(ype)
-    poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first N/U then phi BCC
+    n(2,chi), logn(n), pr(n), logpr(n), te(n), logte(n), tetilde(n),
+    poisson(g, g.bcx(), g.bcy(), g.bcx(), g.bcy()), //first  N,P then phi BC
     pol(    g, g.bcx(), g.bcy(), dg::not_normed,          dg::centered), 
     lapperpM ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
     invgamma1( g,g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1],dg::centered),
@@ -152,22 +174,19 @@ container& Feltor<G, Matrix, container>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);                              //set chi of polarisation: nabla_perp (chi nabla_perp )
 
-    if (p.flrmode == 1)
-    {
-        dg::blas1::transform( y[3], chi, dg::PLUS<>( (p.bgprofamp + p.nprofileamp))); //Ti
-        dg::blas1::pointwiseDivide(B2,chi,lambda); //B^2/T_i
+    if (p.flrmode == 1) {
+        dg::blas1::pointwiseDivide(B2,te[1],lambda); //B^2/T_i
         invgamma1.set_chi(lambda);                //(B^2/T - 0.5*tau_i nabla_perp^2)
         
-        dg::blas1::pointwiseDivide(y[3],B2,chi); //chi=t_i_tilde/b^2    
+        dg::blas1::pointwiseDivide(tetilde[1],B2,chi); //chi=t_i_tilde/b^2    
         dg::blas2::gemv(lapperpM,chi,omega);
         dg::blas1::axpby(1.0,y[1],-(p.bgprofamp + p.nprofileamp)*0.5*p.tau[1],omega,omega);    
         dg::blas1::axpby(1.0,omega,(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.mcv*p.mcv*p.tau[1],one,omega);        
         invert_invgammadag(invgamma1,chi,omega); //chi= Gamma (Ni-(bgamp+profamp))    
         dg::blas1::pointwiseDot(chi,lambda,chi);   //chi = B^2/T_i chi Gamma (Ni-(bgamp+profamp))   
     }
-    if (p.flrmode == 0)
-    {
-        invgamma1.set_chi(one); ////(B^2/T - 0.5*tau_i nabla_perp^2)
+    if (p.flrmode == 0) {
+        invgamma1.set_chi(one); ////(1 - 0.5*tau_i nabla_perp^2)
         dg::blas1::axpby(1.0,y[1],0.0,omega,omega);
         invert_invgammadag(invgamma1,chi,omega); //chi= Gamma (Ni-(bgamp+profamp))    
     }  
@@ -195,13 +214,13 @@ container& Feltor<G, Matrix,container>::compute_psi(const container& ti,containe
         invgamma1.set_chi(one);//invgamma1bar = (1 - 0.5*tau_i nabla_perp^2)
         invert_invgamma(invgamma1,chi,potential);    //(B^2/T - 0.5*tau_i nabla_perp^2) chi  =  B^2/T phi
     }
-
     poisson.variationRHS(potential, omega); // (nabla_perp phi)^2
     dg::blas1::pointwiseDot( binv, omega, omega);
     dg::blas1::pointwiseDot( binv, omega, uE2);// (nabla_perp phi)^2/B^2
     dg::blas1::axpby( 1., chi, -0.5, uE2,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }
+
 template< class G, class Matrix, class container>
 container& Feltor<G, Matrix,container>::compute_chii(const container& ti,container& potential)
 {    
@@ -237,15 +256,14 @@ void Feltor<G, Matrix, container>::initializene( const container& src, const con
     {
         invgamma1.set_chi(one);
         invert_invgammadag(invgamma1,target,src); //=ne-1 = bar(Gamma)_dagger (ni-1)    
+//         dg::blas1::axpby(2.,src,-1.,target,target); //=ne-1 = 2 (Ni - 1 ) - bar(Gamma)_dagger (ni-1)  
     }
 }
 
 template<class G, class Matrix, class container>
 void Feltor<G, Matrix, container>::initializepi( const container& src, const container& ti,container& target)
 {   
-    //src =Pi-bg = (N_i-bg)*(T_i-bg) + bg(N_i-bg) + bg(T_i-bg)
-    //target =pi-bg =  (n_i-bg)*(t_i-bg) + bg(n_i-bg) + bg(t_i-bg)
-//src =Pi-bg^2 = (N_i-bg)*(T_i-bg) + bg(N_i-bg) + bg(T_i-bg)
+    //src =Pi-bg^2 = (N_i-bg)*(T_i-bg) + bg(N_i-bg) + bg(T_i-bg)
     //target =pi-bg^2 =  (n_i-bg)*(t_i-bg) + bg(n_i-bg) + bg(t_i-bg)
     if (p.init==0)        
     {
@@ -385,38 +403,44 @@ void Feltor<G, Matrix, container>::initializepi( const container& src, const con
             dg::blas1::axpby(-2.0,iota,1.0,target,target); //target+=  +2 nabla( P/B^2 nabla phi)
         }
     }
+    
 }
 
 template<class G, class Matrix, class container>
 void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
- /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
+   /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
        y[1] := N_i - (p.bgprofamp + p.nprofileamp)
-       y[2] := T_e - (p.bgprofamp + p.nprofileamp)
-       y[3] := T_i - (p.bgprofamp + p.nprofileamp)
+       y[2] := P_e - (p.bgprofamp + p.nprofileamp)^2
+       y[3] := P_i - (p.bgprofamp + p.nprofileamp)^2
     */
     dg::Timer t;
     t.tic();
     assert( y.size() == 4);
     assert( y.size() == yp.size());
-    //transform compute n and logn and energies
+    
     if (p.iso == 1)    {
-        dg::blas1::scal( y[2], 0.0);
-        dg::blas1::scal( y[3], 0.0); 
+        dg::blas1::axpby((p.bgprofamp + p.nprofileamp),y[0],0., y[2],y[2] );
+        dg::blas1::axpby((p.bgprofamp + p.nprofileamp),y[1],0., y[3],y[3] ); 
     }
     
-    for(unsigned i=0; i<4; i++)
+    for(unsigned i=0; i<2; i++)
     {
-        dg::blas1::transform( y[i], ype[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //ype = y +p.bgprofamp + p.nprofileamp
-        dg::blas1::transform( ype[i], logype[i], dg::LN<value_type>()); //log(ype)
+        dg::blas1::transform( y[i], n[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //N = N_tilde +(p.bgprofamp + p.nprofileamp)
+        dg::blas1::transform(n[i], logn[i], dg::LN<value_type>()); //log(ype)
+        dg::blas1::transform(y[i+2], pr[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //P = P_tilde +(p.bgprofamp + p.nprofileamp)^2
+        dg::blas1::transform(pr[i], logpr[i], dg::LN<value_type>()); //log(ype)
+        dg::blas1::pointwiseDivide(pr[i], n[i], te[i]);
+        dg::blas1::transform(te[i], logte[i], dg::LN<value_type>()); //log(ype)
+        dg::blas1::transform(te[i],tetilde[i], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)));
     }
     //compute phi via polarisation
     phi[0] = polarisation( y);  
     //compute psi
-    phi[1] = compute_psi(ype[3], phi[0]); //sets omega for T_perp
+    phi[1] = compute_psi(te[1], phi[0]); 
     //compute chii
     if (p.iso == 0)    {
-    chii   = compute_chii(ype[3], phi[0]);  
+        chii   = compute_chii(te[1], phi[0]);  
     }
     if (p.iso == 1 || p.flrmode==0)    {
         dg::blas1::scal(chii, 0.0);
@@ -430,127 +454,123 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     //transform compute n and logn and energies
     for(unsigned i=0; i<2; i++)
     {
-        if (p.iso == 1) S[i] = z[i]*p.tau[i]*dg::blas2::dot( logype[i], w2d, ype[i]); //N LN N
-        if (p.iso == 0) S[i] = z[i]*p.tau[i]*dg::blas2::dot( ype[i+2], w2d, ype[i]); // N T
+        if (p.iso == 1) S[i] = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w2d, n[i]);
+        if (p.iso == 0) S[i] = z[i]*p.tau[i]*dg::blas2::dot( one, w2d, pr[i]); // N T
     }
-    mass_ = dg::blas2::dot( one, w2d, ype[0] ); //take real ion density which is electron density!!
-    double Tperp = 0.5*p.mu[1]*dg::blas2::dot( ype[1], w2d, uE2);   //= 0.5 mu_i N_i u_E^2
+    mass_ = dg::blas2::dot( one, w2d, n[0] ); //take real ion density which is electron density!!
+    double Tperp = 0.5*p.mu[1]*dg::blas2::dot( n[1], w2d, uE2);   //= 0.5 mu_i N_i u_E^2
+
     energy_ = S[0] + S[1]  + Tperp; 
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp;
     for(unsigned i=0; i<2; i++)
     {
         if (p.iso == 1) {
-            dg::blas1::axpby(1.,one,1., logype[i] ,chi); //chi = (1+lnN_e)
+            dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
             dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
         }
-        if (p.iso == 0) dg::blas1::axpby(1., phi[i], p.tau[i], ype[i+2],chi); //chi = (tau_z T + psi)
-        dg::blas2::gemv( lapperpM, y[i], lambda);
-        dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 N_e
-        Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  // ( tau_z T+psi) nabla_RZ^4 N    
-    }
-    dg::blas2::gemv( lapperpM, y[2], lambda);
-    dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 t_e-1
-    Dperp[2] = -z[0]*p.tau[0]*p.nu_perp*dg::blas2::dot(ype[0], w2d, omega);  // n_e nabla_RZ^4 te-1
+        if (p.iso == 0) dg::blas1::axpby(1., phi[i],0., chi,chi); //chi = (psi)
+        dg::blas2::gemv( lapperpM, y[i], omega);//-nabla_RZ^2 N
+        Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  // ( psi) nabla_RZ^2 N    
+        
+        dg::blas2::gemv( lapperpM, y[i+2], omega);//-nabla_RZ^2 P
+        Dperp[i+2] = -z[i]*p.tau[i]*p.nu_perp*dg::blas2::dot(one, w2d, omega);  // nabla_RZ^2 P
+    }    
+    dg::blas2::gemv( lapperpM, y[1], omega);
+    Dperp[1] -= -z[1]*p.nu_perp*dg::blas2::dot(chii, w2d, omega);  //+ nu*Z( chii) nabla_RZ^2 N_i 
     
-    //(1+ chii/tau)*
-    dg::blas2::gemv( lapperpM, y[3], lambda);
-    dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 Ti-1
-    Dperp[3] = -z[1]*p.tau[1]*p.nu_perp*dg::blas2::dot(ype[1], w2d, omega);  // nu*Z*taui*Ni nabla_RZ^4 T    
-    
-    dg::blas1::pointwiseDot(chii,ype[1],chi); //chi = Ni*chii
-    dg::blas1::pointwiseDivide(chi,ype[3],chi); //chi = Ni*chii/Ti
-    dg::blas2::gemv( lapperpM, y[3], lambda);
-    dg::blas2::gemv( lapperpM, lambda, omega);//nabla_RZ^4 T
-    Dperp[3] += -z[1]*p.nu_perp*dg::blas2::dot(chi, w2d, omega);  // nu*Z(N chii/ T) nabla_RZ^4 T   
+    dg::blas1::pointwiseDivide(chii,te[1],chi); //chi = chii/Ti
+    dg::blas2::gemv( lapperpM, y[3], omega);
+    Dperp[3] += -p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //- nu*( chii/ T) nabla_RZ^2 P_i 
     ediff_= Dperp[0]+Dperp[1]+ Dperp[2]+Dperp[3];   
     
-    //ExB dynamics
     for(unsigned i=0; i<2; i++)
     {
-        poisson( y[i], phi[i], yp[i]);  //[N-1,psi]_xy
-        poisson( y[i+2], phi[i], yp[i+2]);  //[T-1,psi]_xy
-        dg::blas1::pointwiseDot( yp[i], binv, yp[i]);  //dt N = 1/B [N-1,psi]_xy
-        dg::blas1::pointwiseDot( yp[i+2], binv, yp[i+2]);  //dt T = 1/B [T-1,psi]_xy
+        //ExB dynamics
+        poisson( y[i], phi[i], yp[i]);  //[N-a,psi]_xy
+        poisson( y[i+2], phi[i], yp[i+2]);  //[P-a^2,psi]_xy
+        dg::blas1::pointwiseDot( yp[i], binv, yp[i]);  //dt N = 1/B [N-a,psi]_xy
+        dg::blas1::pointwiseDot( yp[i+2], binv, yp[i+2]);  //dt (P-a^2) = 1/B [P-a^2,psi]_xy
+        
+        //curvature dynamics
+        //N*K(psi) and 2 P*K(psi)  terms
+        dg::blas2::gemv( poisson.dyrhs(), phi[i], lambda); //lambda = dy psi
+        dg::blas1::pointwiseDot(lambda,n[i],omega); //omega =  n dy psi
+        dg::blas1::axpby(p.mcv,omega,1.0,yp[i]);   // dtN +=  mcv* N dy psi
+        dg::blas1::pointwiseDot(lambda,pr[i],omega); // P dy psi
+        dg::blas1::axpby(2.*p.mcv,omega,1.0,yp[i+2]);   // dtP += 2* mcv* P dy psi        
+        // K(T N) terms
+/*        dg::blas2::gemv( poisson.dyrhs(), y[i], lambda); //lambda = dy (N-a)
+        dg::blas1::pointwiseDot(lambda,te[i],omega); //omega =  T dy (N-a)
+        dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]); //dt N += tau*mcv*T dy (N-a)
+        dg::blas2::gemv( poisson.dyrhs(), tetilde[i], lambda); //lambda = dy (T-a)
+        dg::blas1::pointwiseDot(lambda,n[i],omega); // omega = N dy (T-a)
+        dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]);  //dt N += tau*mcv*N dy (T-a)     */   
+        // K(T N) terms
+        dg::blas2::gemv( poisson.dyrhs(), y[i+2], omega); //lambda = dy (P-a^2)
+        dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]); //dt N += tau*mcv*dy (P-a^2)
+ 
+        // K(T P) terms
+        dg::blas2::gemv( poisson.dyrhs(), y[i+2], lambda); //lambda = dy (P-a^2)
+        dg::blas1::pointwiseDot(lambda,te[i],omega); //omega =  T dy (P-a^2)
+        dg::blas1::axpby(2.*p.tau[i]*p.mcv,omega,1.0,yp[i+2]); //dt P += 2 tau*mcv*T dy (P-a^2)
+        dg::blas2::gemv( poisson.dyrhs(),tetilde[i], lambda); //lambda = dy (T-a)
+        dg::blas1::pointwiseDot(lambda,pr[i],omega); // omega = P dy (T-a)
+        dg::blas1::axpby(2.*p.tau[i]*p.mcv,omega,1.0,yp[i+2]);  //dt P += 2 tau*mcv*P dy (T-a)    
     }
     //add 2nd order FLR terms to ExB dynamics 
-    //[2 chi,Ti] terms 
-    poisson( y[3], chii, omega);  //omega = [T-1,chi_i]_xy
-    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [T-1,chii]_xy
-    dg::blas1::axpby(2.,omega,1.0,yp[3]); //dt T_i += 1/B [T-1, 2 chii]_xy
+    //[ chi,Pi] terms 
+    poisson( y[3], chii, omega);  //omega = [P_i-a^2,chi_i]_xy
+    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [P_i-a^2,chii]_xy
+    dg::blas1::axpby(1.,omega,1.0,yp[3]); //dt (P_i-a^2) += 1/B [P_i-a^2,  chii]_xy
     
     //Moment mixing terms
     //[lnTi,Ni chii] term 
-    poisson( logype[3], chii, omega);  //omega = [ln(Ti),chii]_xy
-    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),chii]_xy
-    dg::blas1::pointwiseDot(omega, ype[1], omega); //omega = Ni/B [ln(Ti),chii]_xy
-    dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += Ni/B [ln(Ti),chii]_xy
-    poisson( logype[3],  y[1], omega);  //omega = [ln(Ti),Ni]_xy
-    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),Ni]_xy
-    dg::blas1::pointwiseDot(omega, chii, omega); //omega = chii/B [ln(Ti),Ni]_xy
-    dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += chii/B [ln(Ti),Ni]_xy
-    //Ti chii [ln(chii)- ln(Ti),ln(Ni)] term
-    poisson( logype[1],chii, omega);  //omega = [ln(Ni),chii]_xy
-    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ni),chii]_xy
-    dg::blas1::pointwiseDot(omega, ype[3], omega); //omega = Ti/B [ln(Ni),chii]_xy
-    dg::blas1::axpby(1.,omega,1.0,yp[3]);   //dt T_i += Ti/B [ln(Ni),chii]_xy
-    poisson( logype[1],y[3], omega);  //omega = [ln(Ni),Ti-1]_xy
-    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ni),Ti-1]_xy
-    dg::blas1::pointwiseDot(omega, chii, omega); //omega = chii/B [ln(Ni),Ti-1]_xy
-    dg::blas1::axpby(-1.,omega,1.0,yp[3]);   //dt T_i += - chii/B [ln(Ni),Ti-1]_xy
+//     poisson( logte[1], chii, omega);  //omega = [ln(Ti),chii]_xy
+//     dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),chii]_xy
+//     dg::blas1::pointwiseDot(omega, n[1], omega); //omega = Ni/B [ln(Ti),chii]_xy
+//     dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += Ni/B [ln(Ti),chii]_xy
+//     poisson( logte[1],  y[1], omega);  //omega = [ln(Ti),Ni]_xy
+//     dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),Ni]_xy
+//     dg::blas1::pointwiseDot(omega, chii, omega); //omega = chii/B [ln(Ti),Ni]_xy
+//     dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += chii/B [ln(Ti),Ni]_xy
+    dg::blas1::pointwiseDot(n[1],chii,chi);
+    poisson( logte[1], chi, omega);  //omega = [ln(Ti),Ni chii]_xy
+    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),Ni chii]_xy
+    dg::blas1::axpby(1.,omega,1.0,yp[1]); //dt N_i += 1/B [ln(Ti),Ni chii]_xy
+    //[lnTi,Pi chii] term 
+//     poisson( logte[1], chii, omega);  //omega = [ln(Ti),chii]_xy
+//     dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),chii]_xy
+//     dg::blas1::pointwiseDot(omega, pr[1], omega); //omega = Pi/B [ln(Ti),chii]_xy
+//     dg::blas1::axpby(2.,omega,1.0,yp[3]); //dt (P_i) += Pi/B [ln(Ti),chii]_xy
+//     poisson( logte[1],  y[3], omega);  //omega = [ln(Ti),Pi]_xy
+//     dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),Pi]_xy
+//     dg::blas1::pointwiseDot(omega, chii, omega); //omega = chii/B [ln(Ti),Pi]_xy
+//     dg::blas1::axpby(2.,omega,1.0,yp[3]); //dt(P_i) += chii/B [ln(Ti),Pi]_xy
+//     dg::blas1::pointwiseDot(pr[1],chii,chi);
+    dg::blas1::pointwiseDot(n[1],chii,chi);
+    poisson( te[1], chi, omega);  //omega = [ln(Ti),Pi chii]_xy = [Ti, Ni chii]_xy
+    dg::blas1::pointwiseDot(omega, binv, omega); //omega = 1/B [ln(Ti),Pi chii]_xy
+    dg::blas1::axpby(2.,omega,1.0,yp[3]); //dt (P_i) += 1/B [ln(Ti),chii Pi]_xy
 
-    //curvature dynamics
-    for(unsigned i=0; i<2; i++)
-    {
-        //N*K(psi) and T*K(psi)  terms
-        dg::blas2::gemv( poisson.dyrhs(), phi[i], lambda); //lambda = dy psi
-        dg::blas1::pointwiseDot(lambda,ype[i],omega); //omega =  n dy psi
-        dg::blas1::axpby(p.mcv,omega,1.0,yp[i]);   // dtN +=  mcv* N dy psi
-        dg::blas1::pointwiseDot(lambda,ype[i+2],omega); // T dy psi
-        dg::blas1::axpby(p.mcv,omega,1.0,yp[i+2]);   // dtT +=  mcv* T dy psi        
-        // K(T N) terms
-        dg::blas2::gemv( poisson.dyrhs(), y[i], lambda); //lambda = dy (N-1)
-        dg::blas1::pointwiseDot(lambda,ype[i+2],omega); //omega =  T dy (N-1)
-        dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]); //dt N += tau*mcv*T dy (N-1)
-        dg::blas2::gemv( poisson.dyrhs(), y[i+2], lambda); //lambda = dy (T-1)
-        dg::blas1::pointwiseDot(lambda,ype[i],omega); // omega = N dy (T-1)
-        dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]);  //dt N += tau*mcv*N dy (T-1)        
-        //3 T*K(T) terms
-        dg::blas2::gemv( poisson.dyrhs(), y[i+2], lambda); //lambda = dy (T-1)
-        dg::blas1::pointwiseDot(lambda,ype[i+2],omega); // omega = T dy (T-1)
-        dg::blas1::axpby(3.*p.tau[i]*p.mcv,omega,1.0,yp[i+2]); //dt T +=  3 tau*mcv* T dy (T-1)
-        //T^2*K(ln(N)) terms
-        dg::blas2::gemv( poisson.dyrhs(), logype[i], lambda); //lambda = dy (ln(N))
-        dg::blas1::pointwiseDot(lambda,ype[i+2],omega); //omega = T dy (ln(N))
-        dg::blas1::pointwiseDot(omega,ype[i+2],omega); //omega =  T^2 dy (ln(N))
-        dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i+2]); //dt T += tau mcv T^2 dy (ln(N))         
-    }   
     //add FLR correction to curvature dynamics
-    //Ni K(chii) and Ti K(3 chii) term
+    //Ni K(chii) and Pi K(4 chii) term
     dg::blas2::gemv( poisson.dyrhs(), chii, lambda); //lambda = dy chii
-    dg::blas1::pointwiseDot(lambda,ype[1],omega); //omega = Ni dy chii
+    dg::blas1::pointwiseDot(lambda,n[1],omega); //omega = Ni dy chii
     dg::blas1::axpby(p.mcv,omega,1.0,yp[1]);   // dtNi +=  mcv* Ni dy chii
-    dg::blas1::pointwiseDot(lambda,ype[3],omega); // omega = Ti dy chii
-    dg::blas1::axpby(3.*p.mcv,omega,1.0,yp[3]);   // dtTi += 3.* mcv* Ti dy chii    
+    dg::blas1::pointwiseDot(lambda,pr[1],omega); // omega = Pi dy chii
+    dg::blas1::axpby(4.*p.mcv,omega,1.0,yp[3]);   // dtPi += 4.* mcv* Pi dy chii    
     //Ni chii K(lnTi - lnNi) term
-    dg::blas1::axpby(1.,logype[1],-1.0,logype[3],omega); //omega = -ln(Ti)+ln(Ni)
+    dg::blas1::axpby(1.,logn[1],-1.0,logte[1],omega); //omega = -ln(Ti)+ln(Ni)
     dg::blas2::gemv( poisson.dyrhs(), omega, lambda); //lambda = dy(-ln(Ti)+ln(Ni))
-    dg::blas1::pointwiseDot(lambda,ype[1],omega); // omega = Ni dy(-ln(Ti)+ln(Ni))
+    dg::blas1::pointwiseDot(lambda,n[1],omega); // omega = Ni dy(-ln(Ti)+ln(Ni))
     dg::blas1::pointwiseDot(omega,chii,omega); //omega =  Ni  chii dy(-ln(Ti)+ln(Ni))
-    dg::blas1::axpby(p.mcv,omega,1.0,yp[1]);   // dtNi +=  mcv* Ni  chii dy(-ln(Ti)+ln(Ni))    
-    //chii K(Ti) term
-    dg::blas2::gemv( poisson.dyrhs(), y[3], lambda); //lambda = dy (Ti-1)
-    dg::blas1::pointwiseDot(lambda,chii,omega); //omega =  chii dy (Ti-1)
-    dg::blas1::axpby(-p.mcv,omega,1.0,yp[3]);   // dtTi +=-  mcv*  chii dy (Ti-1)
-    //Ti chii K(lnNi)) term
-    dg::blas2::gemv( poisson.dyrhs(), logype[1], lambda); //lambda = dy (ln(Ni))
-    dg::blas1::pointwiseDot(lambda,chii,omega); // omega = chii dy (ln(Ni))
-    dg::blas1::pointwiseDot(omega,ype[3],omega); // omega =Ti chii dy (ln(Ni))
-    dg::blas1::axpby(p.mcv,omega,1.0,yp[3]);   // dtTi +=  mcv*  chii dy (ln(Ni))    
-
-     if (p.iso == 1) {
-        dg::blas1::scal( yp[2], 0.0);
-        dg::blas1::scal( yp[3], 0.0); 
-     }
+    dg::blas1::axpby(p.mcv,omega,1.0,yp[1]);   // dtNi +=  mcv* Ni  chii dy(-ln(Ti)+ln(Ni)) 
+    //Pi chii K(2 lnTi - lnPi) term
+    dg::blas1::axpby(1.,logpr[1],-2.0,logte[1],omega); //omega = -2 ln(Ti)+ln(Pi)
+    dg::blas2::gemv( poisson.dyrhs(), omega, lambda); //lambda = dy(-2 ln(Ti)+ln(Pi))
+    dg::blas1::pointwiseDot(lambda,pr[1],omega); // omega = Pi dy(-2 ln(Ti)+ln(Pi))
+    dg::blas1::pointwiseDot(omega,chii,omega); //omega =  Pi  chii dy(-2 ln(Ti)+ln(Pi))
+    dg::blas1::axpby(2.*p.mcv,omega,1.0,yp[3]);   // dtPi += 2.* mcv* Pi  chii dy(-2 ln(Ti)+ln(Pi))  
     t.toc();
 #ifdef MPI_VERSION
     int rank;

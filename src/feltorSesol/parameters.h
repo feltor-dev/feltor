@@ -29,12 +29,12 @@ struct Parameters
     double amp, sigma, posX, posY;
     
     double  nprofileamp, bgprofamp;
-    unsigned zf;
-    double solb,solw;
-    double omega_source;
-    double sourceb,sourcew;
-    enum dg::bc bc_x,bc_y; 
-
+    unsigned zf,fluxmode;
+    double solb;
+    double omega_source,sourceb,source_dampw;
+    double omega_sink,sinkb;
+    double dampw;
+    enum dg::bc bc_x,bc_y,bc_x_phi; 
 
     /**
      * @brief constructor to make a const object
@@ -72,16 +72,21 @@ struct Parameters
         bgprofamp =   js["bg_prof_amp"].asDouble();
         lx =  js["lx"].asDouble();
         ly =  js["ly"].asDouble();
-        bc_x = dg::str2bc(js["bc_x"].asString());
-        bc_y = dg::str2bc(js["bc_y"].asString());
+        bc_x     = dg::str2bc(js["bc_x"].asString());
+	    bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
+        bc_y     = dg::str2bc(js["bc_y"].asString());
         zf =  js["hwmode"].asUInt();
         ln =   js["ln"].asDouble();
         dlocal = (double)(lx*d/c);
         solb = js["SOL_b"].asDouble();
-        solw = js["SOL_damping_width"].asDouble();
         omega_source = js["prof_source_rate"].asDouble();
         sourceb = js["source_b"].asDouble();
-        sourcew = js["source_damping_width"].asDouble();                    
+	source_dampw = js["source_damping_width"].asDouble();       
+	omega_sink = js["prof_sink_rate"].asDouble();
+        sinkb = js["sink_b"].asDouble();
+        dampw = js["damping_width"].asDouble();       
+	fluxmode =  js["fluxmode"].asUInt();
+
     }
     /**
      * @brief Display parameters
@@ -130,12 +135,16 @@ struct Parameters
             <<"     zf =              "<<zf<<"\n"
             <<"     ln =              "<<ln<<"\n";
         os << "SOL/EDGE/Source params \n"
-            <<"     sol boundary =    "<<solb<<"\n"
-            <<"     damping width =   "<<solw<<"\n"
-            <<"     source rate  =    "<<omega_source<<"\n"
+            <<"     sol boundary =    "<<solb<<"\n"            
+            <<"     source rate  =    "<<omega_source<<"\n" 
             <<"     source boundary = "<<sourceb<<"\n"
-            <<"     source width =    "<<sourcew<<"\n";
-            displayBC( os, bc_x, bc_y);
+	    <<"     source damping width= "<<source_dampw<<"\n"
+	    <<"     sink rate  =    "<<omega_sink<<"\n"
+            <<"     sink boundary = "<<sourceb<<"\n"
+	    <<"     damping width =   "<<dampw<<"\n"
+	    <<"     fluxmode =   "<<fluxmode<<"\n";
+        displayBC( os, bc_x, bc_y);
+	    displayBC( os, bc_x_phi, bc_y);
         os << std::flush;//the endl is for the implicit flush 
     }
    private:

@@ -13,9 +13,6 @@
 
 #include "feltor.cuh"
 #include "parameters.h"
-#include "../diag/probes.h"
-
-
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -46,7 +43,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const eule::Parameters p(  js);    
+    const eule::Parameters p(  js);
     p.display( std::cout);
 
     v2 = file::read_input( "window_params.txt");
@@ -55,7 +52,7 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////////////////
 
     //Make grid
-     dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
+    dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
@@ -64,27 +61,43 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
+    //initial perturbation
     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
-    
-    std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
+
+    dg::CONSTANT prof(p.bgprofamp );
+    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
+   
+   //initialization via N_i,T_I ->n_e, t_i=t_e
     y1[1] = dg::evaluate( init0, grid);
-        
-    if (p.modelmode==0 || p.modelmode==1)
-    {
-        dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde
-        dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
-        dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-    }
-    if (p.modelmode==2)
-    {
-        y0[1] = dg::evaluate( init0, grid);
-    }
+    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //N_i = <Ni>*Ni_tilde = prof*Gauss
+    //for Ni and ne with (scaled) blob structure
+    dg::blas1::axpby( 1., y1[1], 1., y0[1]); // Ni = <Ni> (1 + *Ni_tilde)
+    if (p.iso == 1) dg::blas1::axpby( 1.,y1[2], 0., y1[3]); //Ti = <Ni> 
+    if (p.iso == 0) dg::blas1::axpby( 1.,y1[1], 1., y1[3]); //Ti = <Ni> (1 + *Ni_tilde)
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //Ni_tilde= Ni - bg
+    
     std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1], y0[0]);    
+    if( p.init == 0) feltor.initializene( y0[1],y1[3], y0[0]);    //ne_tilde = Gamma_1 (Ni - bg) for OmegaE=0
+    if( p.init == 1) dg::blas1::axpby( 1., y0[1], 0., y0[0], y0[0]); // ne_tilde = Ni_tilde for Omega*=0
+    std::cout << "Done!\n";    
+    
+    std::cout << "intialize ti=te" << std::endl;
+    if (p.iso == 1) {
+        dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //Ni=Ni_tilde +bg
+        dg::blas1::pointwiseDot(y0[1],y1[3],y0[3]); // Pi = Ni Ti
+        dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi_tilde = Pi - bg^2   
+        dg::blas1::axpby( 1.,y0[3], 0., y0[2]); //Pi_tilde = pe_tilde = prof
+    }
+    if (p.iso == 0) {
+        dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //Ni=Nitilde+bg
+        dg::blas1::pointwiseDot(y0[1],y1[3],y0[3]); // Pi = Ni Ti
+        dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi_tilde = Pi - bg^2
+        feltor.initializepi(y0[3],y1[3], y0[2]); // = pi-bg^2    
+    }
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg 
     std::cout << "Done!\n";
 
-
+    
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
     karniadakis.init( feltor, rolkar, y0, p.dt);
@@ -105,82 +118,71 @@ int main( int argc, char* argv[])
     
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
-    
-    dg::DVec xprobecoords(7,1.);
-    for (unsigned i=0;i<7; i++) {
-        xprobecoords[i] = p.lx/8.*(1+i) ;
-    }
-    const dg::DVec yprobecoords(7,p.ly/2.);
-    probes<dg::IDMatrix,dg::DMatrix, dg::DVec> pro(xprobecoords,yprobecoords,grid);
+
     while ( !glfwWindowShouldClose( w ))
     {
-
-        dg::blas1::transfer(y0[0], hvisual);
-//         if 
-//         dg::blas1::axpby(1.0,hvisual,
+        //draw Ne-1
+        dg::blas1::transfer( y0[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), (double)-1e14, thrust::maximum<double>() );
-//         colors.scalemin() = -colors.scalemax();        
-        //colors.scalemin() = 1.0;
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-
         title << std::setprecision(2) << std::scientific;
-        //title <<"ne / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
-        title <<"ne-1 / " << colors.scalemin()<<"\t";
-
+        title <<"ne-1 / " << colors.scalemax() << " " << colors.scalemin()<<"\t";
+//          colors.scalemin() =  -colors.scalemax();
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
-        //draw ions
-        //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
-        dg::blas1::transfer(y0[1], hvisual);
+        //draw Ni-1
+        dg::blas1::transfer( y0[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
-        //colors.scalemin() = 1.0;        
-//         colors.scalemin() = -colors.scalemax();        
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-
         title << std::setprecision(2) << std::scientific;
-        //title <<"ni / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
-        title <<"ni-1 / " << colors.scalemin()<<"\t";
-
+        title <<"ni-1 / " << colors.scalemax() << " " << colors.scalemin()<<"\t";
+//          colors.scalemin() =  -colors.scalemax();
         render.renderQuad(visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         
         //draw potential
-        //transform to Vor
-//        dvisual=feltor.potential()[0];
-//        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-//        hvisual = y1[1];
-        dg::blas1::transfer(feltor.potential()[0], hvisual);
+        dg::blas1::transfer( feltor.potential()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
-
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax() ,thrust::minimum<double>() );
-
-//         //colors.scalemin() = 1.0;        
-//          colors.scalemin() = -colors.scalemax();        
-//          colors.scalemin() = -colors.scalemax();        
-        //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
-        title <<"Potential / "<< colors.scalemax() << " " << colors.scalemin()<<"\t";
-
+        title <<"Pot / "<< colors.scalemax() << " " << colors.scalemin()<<"\t";
+        colors.scalemin() =  -colors.scalemax();
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-        //draw potential
+        
+        //draw Te-1
+        dg::blas1::transfer( feltor.temptilde()[0], hvisual);
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), (double)-1e14, thrust::maximum<double>() );
+        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        title << std::setprecision(2) << std::scientific;
+        title <<"Te-1 / " << colors.scalemax() << " " << colors.scalemin()<<"\t";
+//          colors.scalemin() =  -colors.scalemax();
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+        //draw Ti-1
+        dg::blas1::transfer( feltor.temptilde()[1], hvisual);
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
+        colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        title << std::setprecision(2) << std::scientific;
+        title <<"Ti-1 / " << colors.scalemax() << " " << colors.scalemin()<<"\t";
+//          colors.scalemin() =  -colors.scalemax();
+        render.renderQuad(visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
+        //draw vor
         //transform to Vor
         dvisual=feltor.potential()[0];
         dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
-        dg::blas1::transfer(y1[1], hvisual);
+        dg::blas1::transfer( y1[1], hvisual);
          //hvisual = feltor.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(),  (double)-1e14, thrust::maximum<double>() );
-        //colors.scalemin() = 1.0;        
-//          colors.scalemin() = -colors.scalemax();        
         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         title <<"Omega / "<< colors.scalemax()<< " "<< colors.scalemin()<<"\t";
-
-        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-
-
-     
+        colors.scalemin() =  -colors.scalemax();
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);     
            
         title << std::fixed; 
         title << " &&   time = "<<time;
@@ -207,20 +209,13 @@ int main( int argc, char* argv[])
             E1 = feltor.energy();
             diff = (E1 - E0)/p.dt; //
             double diss = feltor.energy_diffusion( );
-//             double coupling = feltor.coupling();
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
-            std::cout << 
-                         " Charge= " << feltor.charge() <<
-                         " Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<
+            std::cout << " Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<
                          " d E/dt = " << diff <<
                          " Lambda =" << diss <<  std::endl;
+                         std::cout << E1 << std::endl;
             E0 = E1;
         }
-        dg::blas1::transform( y0[0], dvisual, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
-        dvisual2 = feltor.potential()[0];
-        pro.fluxes(time,  dvisual,dvisual2);
-        pro.profiles(time,dvisual,dvisual2);
-//         p.profiles
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();

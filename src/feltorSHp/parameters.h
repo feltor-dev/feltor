@@ -84,7 +84,8 @@ struct Parameters
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
             <<"     eff grav./diss f. = "<<(1.+tau[1])*sigma*sigma*sigma*mcv*amp*(2.+amp)/(nu_perp*nu_perp)<<"\n"
             <<"     cst/dyn FLR (0/1) = "<<flrmode<<"\n"
-            <<"     isothermal (0/1)  = "<<iso<<"\n";
+            <<"     isothermal (0/1)  = "<<iso<<"\n"
+            <<"     initmode   (0/1)  = "<<init<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
             << "    width:        "<<sigma<<"\n"
