@@ -21,14 +21,14 @@ struct Parameters
     double mu[2];
     double tau[2];
     double lx,ly;
-    double ln;
-    double dlocal;
-    double nu_perp, d, c;
+    double invkappa;
+    double Chat,g;
+    double nu_perp,alpha;
     
     double amp, sigma, posX, posY;
     
     double  nprofileamp, bgprofamp;
-    unsigned zf,modelmode,cmode;
+    unsigned hwmode,modelmode,cmode;
     double omega_source,sourceb,sourcew;
     enum dg::bc bc_x,bc_y,bc_x_phi;
 
@@ -58,8 +58,7 @@ struct Parameters
         modelmode = js["modelmode"].asUInt();
         cmode = js["cmode"].asUInt();
         nu_perp = js["nu_perp"].asDouble();
-        d = js["D"].asDouble();
-        c = js["C"].asDouble();            
+        alpha   = js["alpha"].asDouble();
         amp     = js["amplitude"].asDouble();
         sigma   = js["sigma"].asDouble();
         posX    = js["posX"].asDouble();
@@ -71,9 +70,10 @@ struct Parameters
         bc_x = dg::str2bc(js["bc_x"].asString());
         bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
         bc_y = dg::str2bc(js["bc_y"].asString());
-        zf =  js["hwmode"].asUInt();
-        ln =   js["ln"].asDouble();
-        dlocal = (double)(lx*d/c);
+        hwmode =  js["hwmode"].asUInt();
+        invkappa =   js["invkappa"].asDouble();
+        Chat = (double)(lx*alpha);
+        g = (double) (lx/invkappa);
         omega_source = js["prof_source_rate"].asDouble();
         sourceb = js["source_b"].asDouble();
         sourcew = js["source_damping_width"].asDouble();                    
@@ -92,10 +92,11 @@ struct Parameters
             <<"     El.-temperature:                 = "<<tau[0]<<"\n"
             <<"     Ion-temperature:                 = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:                 = "<<nu_perp<<"\n"
-            <<"     par. Resistivity:                = "<<c<<"\n"
-            <<"     D:                               = "<<d<<"\n"
-            <<"     dlocal:                          = "<<dlocal<<"\n"
+            <<"     alpha:                           = "<<alpha<<"\n"
+            <<"     Chat  :                          = "<<Chat<<"\n"
+            <<"     g     :                          = "<<g<<"\n"
             <<"     modelmode:                       = "<<modelmode<<"\n"
+            <<"     hwmode:                              = "<<hwmode<<"\n"
             <<"     cmode:                           = "<<cmode<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
@@ -103,8 +104,9 @@ struct Parameters
             << "    posX:         "<<posX<<"\n"
             << "    posY:         "<<posY<<"\n";
         os << "Profile parameters are: \n"
-            <<"     density profile amplitude:    "<<nprofileamp<<"\n"
-            <<"     background profile amplitude: "<<bgprofamp<<"\n";
+            <<"     invkappa:                     = "<<invkappa<<"\n"
+            <<"     density profile amplitude:    = "<<nprofileamp<<"\n"
+            <<"     background profile amplitude: = "<<bgprofamp<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"     n  = "<<n<<"\n"
             <<"     Nx = "<<Nx<<"\n"
@@ -123,9 +125,6 @@ struct Parameters
             <<"     lx  =              "<<lx<<"\n"
             <<"     ly  =              "<<ly<<"\n";
             displayBC( os, bc_x, bc_y,bc_x_phi);
-        os << "modified/ordinary \n"
-            <<"     zf =              "<<zf<<"\n"
-            <<"     ln =              "<<ln<<"\n";
         os << "SOL/EDGE/Source params \n"
             <<"     source rate  =    "<<omega_source<<"\n"
             <<"     source boundary = "<<sourceb<<"\n"

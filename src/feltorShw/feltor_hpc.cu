@@ -60,82 +60,72 @@ int main( int argc, char* argv[])
     eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
     std::cout << "Done!\n";
     /////////////////////The initial field///////////////////////////////////////////
-    //initial perturbation
-    //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    dg::Gaussian init0(p.posX * p.lx, p.posY * p.ly, p.sigma, p.sigma, p.amp);
-//     dg::BathRZ init0(16, 16, 1, 2.0, 2.0, 30.0, 5.0, p.amp);
-//     solovev::ZonalFlow init0(p, gp);
-//     dg::CONSTANT init0( 0.);    
-    //background profile
-//     solovev::Nprofile prof(p, gp); //initial background profile
-//     dg::CONSTANT prof(p.bgprofamp );
-    //
-//     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-//     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
-//     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-//     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
-
-//     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
-
-    std::vector<dg::DVec> y0(2, dg::evaluate(prof, grid)), y1(y0); 
+    dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
+    
+    std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
+    y1[1] = dg::evaluate( init0, grid);
     dg::HVec temp(dg::evaluate(dg::zero,grid));
     double time = 0;
 
     if (argc ==3){
-      y1[1] = dg::evaluate( init0, grid);
-      dg::blas1::pointwiseDot(y1[1], y0[1], y1[1]);
-
-      dg::blas1::axpby(1., y1[1], 1., y0[1]); //initialize ni
-      dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-      std::cout << "intiialize ne" << std::endl;
-      feltor.initializene(y0[1], y0[0]);    
-      std::cout << "Done!\n";
+        if (p.modelmode==0 || p.modelmode==1)
+        {
+            dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde
+            dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
+            dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+        }
+        if (p.modelmode==2)
+        {
+            y0[1] = dg::evaluate( init0, grid);
+        }
+        std::cout << "intiialize ne" << std::endl;
+        feltor.initializene(y0[1], y0[0]);    
+        std::cout << "Done!\n";
     }
     if (argc==4) {
-      file::NC_Error_Handle errIN;
-      int ncidIN;
-      errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
-      ///////////////////read in and show inputfile und geomfile//////////////////
-      size_t lengthIN;
-      errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
-      std::string inputIN( lengthIN, 'x');
-      errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
-      std::cout << "input "<<inputIN<<std::endl;    
-      const eule::Parameters pIN(  js);    
-      pIN.display( std::cout);
-      dg::Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
-      dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
-      size_t count2dIN[3]  = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};
-      size_t start2dIN[3]  = {0, 0, 0};
-      std::string namesIN[2] = {"electrons", "ions"}; 
-      
-      int dataIDsIN[2];     
-      int timeIDIN;
-      double  timeIN;
-      size_t stepsIN;
-      /////////////////////The initial field///////////////////////////////////////////
-      /////////////////////Get time length and initial data///////////////////////////
-      errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
-      errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
-      stepsIN-=1;
-      start2dIN[0] = stepsIN/pIN.itstp;
-      std::cout << "stepsin= "<< stepsIN <<  std::endl;
-      std::cout << "start2dIN[0]= "<< start2dIN[0] <<  std::endl;
-      errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
-      errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
-      std::cout << "timein= "<< timeIN <<  std::endl;
-      time=timeIN;
-      dg::IHMatrix interpolateIN = dg::create::interpolation( grid,grid_IN); 
-      errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, transferINH.data());
-      dg::blas2::gemv( interpolateIN, transferINH,temp);
-      dg::blas1::transfer(temp,y0[0]);
-      errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
-      errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferINH.data());
-      dg::blas2::gemv( interpolateIN, transferINH,temp);
-      dg::blas1::transfer(temp,y0[1]);      
-      errIN = nc_close(ncidIN);
-
+        file::NC_Error_Handle errIN;
+        int ncidIN;
+        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
+        ///////////////////read in and show inputfile und geomfile//////////////////
+        size_t lengthIN;
+        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
+        std::string inputIN( lengthIN, 'x');
+        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
+        std::cout << "input "<<inputIN<<std::endl;    
+        const eule::Parameters pIN(  js);    
+        pIN.display( std::cout);
+        dg::Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
+        dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
+        size_t count2dIN[3]  = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};
+        size_t start2dIN[3]  = {0, 0, 0};
+        std::string namesIN[2] = {"electrons", "ions"}; 
+        
+        int dataIDsIN[2];     
+        int timeIDIN;
+        double  timeIN;
+        size_t stepsIN;
+        /////////////////////The initial field///////////////////////////////////////////
+        /////////////////////Get time length and initial data///////////////////////////
+        errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
+        errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
+        stepsIN-=1;
+        start2dIN[0] = stepsIN/pIN.itstp;
+        std::cout << "stepsin= "<< stepsIN <<  std::endl;
+        std::cout << "start2dIN[0]= "<< start2dIN[0] <<  std::endl;
+        errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
+        errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
+        std::cout << "timein= "<< timeIN <<  std::endl;
+        time=timeIN;
+        dg::IHMatrix interpolateIN = dg::create::interpolation( grid,grid_IN); 
+        errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, transferINH.data());
+        dg::blas2::gemv( interpolateIN, transferINH,temp);
+        dg::blas1::transfer(temp,y0[0]);
+        errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
+        errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferINH.data());
+        dg::blas2::gemv( interpolateIN, transferINH,temp);
+        dg::blas1::transfer(temp,y0[1]);      
+        errIN = nc_close(ncidIN);
     }
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);

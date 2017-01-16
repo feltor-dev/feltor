@@ -147,7 +147,7 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     evec(3),
     //damping and sources
     lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
-    profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
+    profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.invkappa),g)),
     profNi(profne)
 {
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
@@ -309,12 +309,12 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         if (p.cmode==1) {
             dg::blas1::pointwiseDot(omega,npe[0],omega);  //(coupling)*Ne for constant resi
         }
-        dg::blas1::axpby(p.d/p.c,omega,1.0,yp[0]);
+        dg::blas1::axpby(p.alpha,omega,1.0,yp[0]);
         
         //---------- coupling energy
         dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
         dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
-        coupling_ =  z[0]*p.d/p.c* dg::blas2::dot(chi, w2d, omega);
+        coupling_ =  z[0]*p.alpha* dg::blas2::dot(chi, w2d, omega);
         //Compute rhs of energy theorem
         ediff_= Dperp[0]+Dperp[1]+ coupling_ ;
 
@@ -393,9 +393,9 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
             
             //density gradient term
             dg::blas2::gemv( poisson.dyrhs(), phi[i], omega); //lambda = dy psi
-            dg::blas1::axpby(-1./p.ln,omega,1.0,yp[i]);   // dt N_tilde += - g dy psi    
+            dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt N_tilde += - kappa dy psi    
             
-            Dgrad[i] = - z[i]*p.tau[i]/p.ln*dg::blas2::dot(y[i], w2d, omega);
+            Dgrad[i] = - z[i]*p.tau[i]/p.invkappa*dg::blas2::dot(y[i], w2d, omega);
             dg::blas1::pointwiseDot(omega,binv,omega); //1/B dy phi
             gammanex_ =-1.* dg::blas2::dot(one,w2d,omega);//int(1/B  dy phi)
 
@@ -413,11 +413,11 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
             dg::blas1::axpby(1.,phi[0], -1.,phiavg,phidelta); // delta(phi) = phi - <phi>
             dg::blas1::axpby(1.,phidelta,p.tau[0],nedelta,omega); //omega = delta(phi) - delta(n_e_tilde)
         }
-        dg::blas1::axpby(p.d/p.c,omega,1.0,yp[0]);
+        dg::blas1::axpby(p.alpha,omega,1.0,yp[0]);
         
         //compute coupling energy
-        dg::blas1::axpby(1.,phi[0],p.tau[0],y[0], chi); //chi = (tau_z(1+lnN)+phi)
-        coupling_ =  z[0]*p.d/p.c* dg::blas2::dot(chi, w2d, omega);
+        dg::blas1::axpby(1.,phi[0],p.tau[0],y[0], chi); //chi = (tau_z(1+invkappaN)+phi)
+        coupling_ =  z[0]*p.alpha* dg::blas2::dot(chi, w2d, omega);
         //Compute rhs of energy theorem
         ediff_= Dperp[0]+Dperp[1]+ Dgrad[0]+Dgrad[1]+coupling_ ;
         
