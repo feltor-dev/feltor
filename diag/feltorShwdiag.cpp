@@ -249,7 +249,8 @@ int main( int argc, char* argv[])
             }
             if (p.modelmode==2)
             { 
-                dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
+//                 dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
+                dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,128.);
                 std::vector<dg::HVec> netot(2,dg::evaluate(prof,g2d));
                 for (unsigned i=0;i<2;i++) {
                     dg::blas1::transform(npe[i], npe[i], dg::PLUS<>(-p.bgprofamp -p.nprofileamp));
