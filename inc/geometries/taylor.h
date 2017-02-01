@@ -380,6 +380,21 @@ struct IpolZ
     PsipZ psipZ_;
 };
 
+struct CollectivePsip
+{
+    CollectivePsip( solovev::GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
+    Psip psip;
+    PsipR psipR;
+    PsipZ psipZ;
+    PsipRR psipRR;
+    PsipRZ psipRZ;
+    PsipZZ psipZZ;
+    LaplacePsip laplacePsip;
+    Ipol ipol;
+    IpolR ipolR;
+    IpolZ ipolZ;
+};
+
 } //namespace taylor
 
 

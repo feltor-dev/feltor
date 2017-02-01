@@ -12,6 +12,7 @@
 #include "file/nc_utilities.h"
 
 #include "solovev.h"
+#include "taylor.h"
 #include "init.h"
 
 struct Parameters

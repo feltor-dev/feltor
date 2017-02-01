@@ -15,7 +15,7 @@ ds_geom_t: ds_geom_t.cu solovev.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) $(LIBS) $(JSONLIB)  -DDG_BENCHMARK 
 
 geometry_diag: geometry_diag.cu solovev.h 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) $(JSONLIB) 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) $(JSONLIB) -g
 
 %_t: %_t.cu %.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g 

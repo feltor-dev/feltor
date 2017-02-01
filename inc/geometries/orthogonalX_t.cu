@@ -244,6 +244,8 @@ int main( int argc, char* argv[])
     //error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(temp0,w2d,temp0);
     ////error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(temp0,temp0);
     //std::cout << "Rel Error of volume is "<<sqrt(error)<<"\n";
+    //
+    err = nc_close( ncid);
 
     std::cout << "TEST VOLUME IS:\n";
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
@@ -299,7 +301,6 @@ int main( int argc, char* argv[])
     //dg::blas1::transfer( g2d.g(), X);
     //dg::blas1::transfer( psiphom, X);
     //err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
-    err = nc_close( ncid);
 
 
     return 0;
