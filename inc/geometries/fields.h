@@ -23,15 +23,16 @@ namespace solovev
 /**
  * @brief \f[   \hat{B}   \f]
  */ 
+template<class Collective>
 struct Bmodule
 {
-    Bmodule(  GeomParameters gp ):  R_0_(gp.R_0), ipol_(gp), psipR_(gp), psipZ_(gp)  { }
+    Bmodule( const Collective& c, double R0 ):  R_0_(R0), c_(c)  { }
     /**
     * @brief \f[   \hat{B} \f]
     */ 
     double operator()(double R, double Z) const
     {    
-        double psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), ipol = ipol_(R,Z);
+        double psipR = c_.psipR(R,Z), psipZ = c_.psipZ(R,Z), ipol = c_.ipol(R,Z);
         return R_0_/R*sqrt(ipol*ipol+psipR*psipR +psipZ*psipZ);
     }
     /**
@@ -43,17 +44,16 @@ struct Bmodule
     }
   private:
     double R_0_;
-    Ipol ipol_;
-    PsipR psipR_;
-    PsipZ psipZ_;  
+    Collective c_;
 };
 
 /**
  * @brief \f[   \frac{1}{\hat{B}}   \f]
  */ 
+template<class Collective>
 struct InvB
 {
-    InvB(  GeomParameters gp ):  R_0_(gp.R_0), ipol_(gp), psipR_(gp), psipZ_(gp)  { }
+    InvB(  const Collective& c, double R0 ):  R_0_(R0), c_(c)  { }
     /**
     * @brief \f[   \frac{1}{\hat{B}} = 
         \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
@@ -61,7 +61,7 @@ struct InvB
     */ 
     double operator()(double R, double Z) const
     {    
-        double psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), ipol = ipol_(R,Z);
+        double psipR = c_.psipR(R,Z), psipZ = c_.psipZ(R,Z), ipol = c_.ipol(R,Z);
         return R/(R_0_*sqrt(ipol*ipol + psipR*psipR +psipZ*psipZ)) ;
     }
     /**
@@ -73,17 +73,16 @@ struct InvB
     }
   private:
     double R_0_;
-    Ipol ipol_;
-    PsipR psipR_;
-    PsipZ psipZ_;  
+    Collective c_;
 };
 
 /**
  * @brief \f[   \ln{(   \hat{B})}  \f]
  */ 
+template<class Collective>
 struct LnB
 {
-    LnB( GeomParameters gp ):  R_0_(gp.R_0), ipol_(gp), psipR_(gp), psipZ_(gp)  { }
+    LnB(  const Collective& c, double R0 ):  R_0_(R0), c_(c)  { }
 /**
  * @brief \f[   \ln{(   \hat{B})} = \ln{\left[
       \frac{\hat{R}_0}{\hat{R}} \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
@@ -91,7 +90,7 @@ struct LnB
  */ 
     double operator()(double R, double Z) const
     {    
-        double psipR = psipR_(R,Z), psipZ = psipZ_(R,Z), ipol = ipol_(R,Z);
+        double psipR = c_.psipR(R,Z), psipZ = c_.psipZ(R,Z), ipol = c_.ipol(R,Z);
         return log(R_0_/R*sqrt(ipol*ipol + psipR*psipR +psipZ*psipZ)) ;
     }
     /**
@@ -103,17 +102,16 @@ struct LnB
     }
   private:
     double R_0_;
-    Ipol ipol_;
-    PsipR psipR_;
-    PsipZ psipZ_;  
+    Collective c_;
 };
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}}  \f]
  */ 
 
+template<class Collective>
 struct BR
 {
-    BR(GeomParameters gp):  R_0_(gp.R_0), ipol_(gp), ipolR_(gp), psipR_(gp), psipRR_(gp),psipZ_(gp) ,psipRZ_(gp), invB_(gp) { }
+    BR(const Collective& c, double R0):  R_0_(R0), invB_(c, R0), c_(c) { }
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} = 
       -\frac{\hat{R}^2\hat{R}_0^{-2} \hat{B}^2+A\hat{R} \hat{R}_0^{-1}   \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)  
@@ -126,7 +124,7 @@ struct BR
         Rn = R/R_0_;
         //sign before A changed to +
         //return -( Rn*Rn/invB_(R,Z)/invB_(R,Z)+ qampl_*qampl_*Rn *A_*psipR_(R,Z) - R  *(psipZ_(R,Z)*psipRZ_(R,Z)+psipR_(R,Z)*psipRR_(R,Z)))/(R*Rn*Rn/invB_(R,Z));
-        return -1./R/invB_(R,Z) + invB_(R,Z)/Rn/Rn*(ipol_(R,Z)*ipolR_(R,Z) + psipR_(R,Z)*psipRR_(R,Z) + psipZ_(R,Z)*psipRZ_(R,Z));
+        return -1./R/invB_(R,Z) + invB_(R,Z)/Rn/Rn*(c_.ipol(R,Z)*c_.ipolR(R,Z) + c_.psipR(R,Z)*c_.psipRR(R,Z) + c_.psipZ(R,Z)*c_.psipRZ(R,Z));
     }
       /**
        * @brief == operator()(R,Z)
@@ -134,21 +132,17 @@ struct BR
     double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0_;
-    Ipol ipol_;
-    IpolR ipolR_;
-    PsipR psipR_;
-    PsipRR psipRR_;
-    PsipZ psipZ_;
-    PsipRZ psipRZ_;  
-    InvB invB_;
+    InvB<Collective> invB_;
+    Collective c_;
 };
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}}  \f]
  */ 
+template<class Collective>
 struct BZ
 {
 
-    BZ( GeomParameters gp):  R_0_(gp.R_0), ipol_(gp), ipolZ_(gp), psipR_(gp),psipZ_(gp), psipZZ_(gp) ,psipRZ_(gp), invB_(gp) { }
+    BZ(const Collective& c, double R0):  R_0_(R0), c_(c), invB_(c, R0) { }
     /**
      * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} = 
      \frac{-A \hat{R}_0^{-1}    \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}   \right)+
@@ -161,7 +155,7 @@ struct BZ
         Rn = R/R_0_;
         //sign before A changed to -
         //return (-qampl_*qampl_*A_/R_0_*psipZ_(R,Z) + psipR_(R,Z)*psipRZ_(R,Z)+psipZ_(R,Z)*psipZZ_(R,Z))/(Rn*Rn/invB_(R,Z));
-        return (invB_(R,Z)/Rn/Rn)*(ipol_(R,Z)*ipolZ_(R,Z) + psipR_(R,Z)*psipRZ_(R,Z) + psipZ_(R,Z)*psipZZ_(R,Z));
+        return (invB_(R,Z)/Rn/Rn)*(c_.ipol(R,Z)*c_.ipolZ(R,Z) + c_.psipR(R,Z)*c_.psipRZ(R,Z) + c_.psipZ(R,Z)*c_.psipZZ(R,Z));
     }
     /**
      * @brief == operator()(R,Z)
@@ -169,23 +163,16 @@ struct BZ
     double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0_;
-    Ipol ipol_;
-    IpolZ ipolZ_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipZZ psipZZ_;
-    PsipRZ psipRZ_;  
-    InvB invB_; 
+    Collective c_;
+    InvB<Collective> invB_; 
 };
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} \f]
  */ 
+template<class Collective>
 struct CurvatureNablaBR
 {
-    CurvatureNablaBR( GeomParameters gp):
-        gp_(gp),
-        invB_(gp),
-        bZ_(gp) { }
+    CurvatureNablaBR(const Collective& c, double R0 ): invB_(c, R0), bZ_(c, R0) { }
     /**
      * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f]
      */ 
@@ -202,19 +189,17 @@ struct CurvatureNablaBR
         return -invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi); 
     }
     private:    
-    GeomParameters gp_;
-    InvB   invB_;
-    BZ bZ_;    
+    InvB<Collective>   invB_;
+    BZ<Collective> bZ_;    
 };
+
 /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B}  \f]
  */ 
+template<class Collective>
 struct CurvatureNablaBZ
 {
-    CurvatureNablaBZ( GeomParameters gp):
-        gp_(gp),
-        invB_(gp),
-        bR_(gp) { }
+    CurvatureNablaBZ( const Collective& c, double R0): invB_(c, R0), bR_(c, R0) { }
  /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f]
  */    
@@ -230,13 +215,13 @@ struct CurvatureNablaBZ
         return invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi);
     }
     private:    
-    GeomParameters gp_;
-    InvB   invB_;
-    BR bR_;   
+    InvB<Collective> invB_;
+    BR<Collective> bR_;   
 };
     /**
      * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} \f]
      */ 
+template<class Collective>
 struct CurvatureKappaR
 {
     /**
@@ -258,11 +243,11 @@ struct CurvatureKappaR
 /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}}  \f]
  */ 
+template<class Collective>
 struct CurvatureKappaZ
 {
-    CurvatureKappaZ( GeomParameters gp):
-        gp_(gp),
-        invB_(gp) { }
+    CurvatureKappaZ( const Collective c, double R0):
+        invB_(c, R0) { }
  /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f]
  */    
@@ -278,18 +263,17 @@ struct CurvatureKappaZ
         return -invB_(R,Z,phi)/R;
     }
     private:    
-    GeomParameters gp_;
-    InvB   invB_;
+    InvB<Collective>   invB_;
 };
 /**
  * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  \f]
  */ 
+template<class Collective>
 struct DivCurvatureKappa
 {
-    DivCurvatureKappa( GeomParameters gp):
-        gp_(gp),
-        invB_(gp),
-        bZ_(gp){ }
+    DivCurvatureKappa( const Collective& c, double R0):
+        invB_(c, R0),
+        bZ_(c, R0){ }
  /**
  * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  = \frac{1}{\hat{R}  \hat{B}^2 } \partial_{\hat{Z}} \hat{B}\f]
  */    
@@ -305,55 +289,42 @@ struct DivCurvatureKappa
         return  bZ_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)/R;
     }
     private:    
-    GeomParameters gp_;
-    InvB   invB_;
-    BZ bZ_;    
+    InvB<Collective>   invB_;
+    BZ<Collective> bZ_;    
 };
 /**
  * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} \f]
  */ 
+template<class Collective>
 struct GradLnB
 {
-    GradLnB( GeomParameters gp):
-        gp_(gp),
-        psipR_(gp),
-        psipZ_(gp),
-        invB_(gp),
-        bR_(gp), 
-        bZ_(gp) {
-    } 
+    GradLnB( const Collective& c, double R0): R_0_(R0), c_(c), invB_(c, R0), bR_(c, R0), bZ_(c, R0) { } 
     /**
  * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} = \frac{1}{\hat{R}\hat{B}^2 } \left[ \hat{B}, \hat{\psi}_p\right]_{\hat{R}\hat{Z}} \f]
  */ 
     double operator()( double R, double Z) const
     {
         double invB = invB_(R,Z);
-        return gp_.R_0*invB*invB*(bR_(R,Z)*psipZ_(R,Z)-bZ_(R,Z)*psipR_(R,Z))/R ;
+        return R_0_*invB*invB*(bR_(R,Z)*c_.psipZ(R,Z)-bZ_(R,Z)*c_.psipR(R,Z))/R ;
     }
     /**
      * @brief == operator()(R,Z)
      */ 
     double operator()( double R, double Z, double phi)const{return operator()(R,Z);}
     private:
-    GeomParameters gp_;
-    PsipR  psipR_;
-    PsipZ  psipZ_;    
-    InvB   invB_;
-    BR bR_;
-    BZ bZ_;   
+    double R_0_;
+    Collective c_;
+    InvB<Collective>   invB_;
+    BR<Collective> bR_;
+    BZ<Collective> bZ_;   
 };
 /**
  * @brief Integrates the equations for a field line and 1/B
  */ 
+template<class Collective>
 struct Field
 {
-    Field( GeomParameters gp):
-        gp_(gp),
-        psipR_(gp),
-        psipZ_(gp),
-        ipol_(gp),
-        invB_(gp) {
-    }
+    Field( const Collective& c, double R0):c_(c), R_0_(R0), invB_(c, R0) { }
     /**
      * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
      \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
@@ -361,10 +332,10 @@ struct Field
      */ 
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double ipol = ipol_(y[0],y[1]);
-        yp[2] =  y[0]*y[0]/invB_(y[0],y[1])/ipol/gp_.R_0;       //ds/dphi =  R^2 B/I/R_0_hat
-        yp[0] =  y[0]*psipZ_(y[0],y[1])/ipol;              //dR/dphi =  R/I Psip_Z
-        yp[1] = -y[0]*psipR_(y[0],y[1])/ipol ;             //dZ/dphi = -R/I Psip_R
+        double ipol = c_.ipol(y[0],y[1]);
+        yp[2] =  y[0]*y[0]/invB_(y[0],y[1])/ipol/R_0_;       //ds/dphi =  R^2 B/I/R_0_hat
+        yp[0] =  y[0]*c_.psipZ(y[0],y[1])/ipol;              //dR/dphi =  R/I Psip_Z
+        yp[1] = -y[0]*c_.psipR(y[0],y[1])/ipol ;             //dZ/dphi = -R/I Psip_R
 
     }
     /**
@@ -405,11 +376,9 @@ struct Field
     }
     
     private:
-    GeomParameters gp_;
-    PsipR  psipR_;
-    PsipZ  psipZ_;
-    Ipol   ipol_;
-    InvB   invB_;
+    Collective c_;
+    double R_0_;
+    InvB<Collective>   invB_;
    
 };
 
@@ -418,29 +387,30 @@ struct Field
 /**
  * @brief Phi component of magnetic field \f$ B_\Phi\f$
 */
+template<class Collective>
 struct FieldP
 {
-    FieldP( GeomParameters gp): R_0(gp.R_0), 
-    ipol_(gp){}
+    FieldP( const Collective& c, double R0): R_0(R0), c_(c){}
     double operator()( double R, double Z, double phi) const
     {
-        return R_0*ipol_(R,Z)/R/R;
+        return R_0*c_.ipol(R,Z)/R/R;
     }
     
     private:
     double R_0;
-    Ipol   ipol_;
-   
+    Collective c_;
 }; 
+
 /**
  * @brief R component of magnetic field\f$ B_R\f$
  */
+template<class Collective>
 struct FieldR
 {
-    FieldR( GeomParameters gp): psipZ_(gp), R_0(gp.R_0){ }
+    FieldR( const Collective& c, double R0): R_0(R0), c_(c){}
     double operator()( double R, double Z) const
     {
-        return  R_0/R*psipZ_(R,Z);
+        return  R_0/R*c_.psipZ(R,Z);
     }
     /**
      * @brief == operator()(R,Z)
@@ -450,19 +420,20 @@ struct FieldR
         return  this->operator()(R,Z);
     }
     private:
-    PsipZ  psipZ_;
     double R_0;
+    Collective c_;
    
 };
 /**
  * @brief Z component of magnetic field \f$ B_Z\f$
  */
+template<class Collective>
 struct FieldZ
 {
-    FieldZ( GeomParameters gp): psipR_(gp), R_0(gp.R_0){ }
+    FieldZ( const Collective& c, double R0): R_0(R0), c_(c){}
     double operator()( double R, double Z) const
     {
-        return  -R_0/R*psipR_(R,Z);
+        return  -R_0/R*c_.psipR(R,Z);
     }
     /**
      * @brief == operator()(R,Z)
@@ -472,17 +443,18 @@ struct FieldZ
         return  this->operator()(R,Z);
     }
     private:
-    PsipR  psipR_;
     double R_0;
+    Collective c_;
    
 };
 
 /**
  * @brief \f$\theta\f$ component of magnetic field 
  */ 
+template<class Collective>
 struct FieldT
 {
-    FieldT( GeomParameters gp):  R_0_(gp.R_0), fieldR_(gp), fieldZ_(gp){}
+    FieldT( const Collective& c, double R0):  R_0_(R0), fieldR_(c, R0), fieldZ_(c, R0){}
   /**
  * @brief \f[  B^{\theta} = 
  * B^R\partial_R\theta + B^Z\partial_Z\theta\f]
@@ -502,8 +474,8 @@ struct FieldT
   }
   private:
     double R_0_;
-    FieldR fieldR_;
-    FieldZ fieldZ_;
+    FieldR<Collective> fieldR_;
+    FieldZ<Collective> fieldZ_;
 
 };
 
@@ -555,8 +527,8 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    PsipR psipR_;
-    PsipZ psipZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -579,8 +551,8 @@ struct FieldRZY
     }
   private:
     double f_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    PsiR psipR_;
+    PsiZ psipZ_;
     Ipol ipol_;
 };
 /**
@@ -1000,58 +972,54 @@ struct MinimalCurve
 /**
  * @brief R component of magnetic field\f$ b_R\f$
  */
+template<class Collective>
 struct BHatR
 {
-    BHatR( GeomParameters gp): 
-        psipZ_(gp), R_0(gp.R_0),
-        invB_(gp){ }
+    BHatR( const Collective& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
     double operator()( double R, double Z, double phi) const
     {
-        return  invB_(R,Z)*R_0/R*psipZ_(R,Z);
+        return  invB_(R,Z)*R_0/R*c_.psipZ(R,Z);
     }
     private:
-    PsipZ  psipZ_;
+    Collective c_;
     double R_0;
-    InvB   invB_;
+    InvB<Collective>   invB_;
 
 };
 /**
  * @brief Z component of magnetic field \f$ b_Z\f$
  */
+template<class Collective>
 struct BHatZ
 {
-    BHatZ( GeomParameters gp): 
-        psipR_(gp), R_0(gp.R_0),
-        invB_(gp){ }
+    BHatZ( const Collective& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
 
     double operator()( double R, double Z, double phi) const
     {
-        return  -invB_(R,Z)*R_0/R*psipR_(R,Z);
+        return  -invB_(R,Z)*R_0/R*c_.psipR(R,Z);
     }
     private:
-    PsipR  psipR_;
+    Collective c_;
     double R_0;
-    InvB   invB_;
+    InvB<Collective>   invB_;
 
 };
 /**
  * @brief Phi component of magnetic field \f$ b_\Phi\f$
  */
+template<class Collective>
 struct BHatP
 {
-    BHatP( GeomParameters gp):
-        R_0(gp.R_0), 
-        ipol_(gp),
-        invB_(gp){}
+    BHatP( const Collective& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
     double operator()( double R, double Z, double phi) const
     {
-        return invB_(R,Z)*R_0*ipol_(R,Z)/R/R;
+        return invB_(R,Z)*R_0*c_.ipol(R,Z)/R/R;
     }
     
     private:
+    Collective c_;
     double R_0;
-    Ipol   ipol_;
-    InvB   invB_;
+    InvB<Collective>   invB_;
   
 }; 
 ///@} 
@@ -1062,12 +1030,11 @@ struct BHatP
  * @brief Delta function for poloidal flux \f$ B_Z\f$
      \f[ |\nabla \psi_p|\delta(\psi_p(R,Z)-\psi_0) = \frac{\sqrt{ (\nabla \psi_p)^2}}{\sqrt{2\pi\varepsilon}} \exp\left(-\frac{(\psi_p(R,Z) - \psi_{0})^2}{2\varepsilon} \right)  \f]
  */
+template<class Collective>
 struct DeltaFunction
 {
-    DeltaFunction(GeomParameters gp, double epsilon,double psivalue) :
-        psip_(gp),
-        psipR_(gp), 
-        psipZ_(gp), 
+    DeltaFunction(const Collective& c, double epsilon,double psivalue) :
+        c_(c),
         epsilon_(epsilon),
         psivalue_(psivalue){
     }
@@ -1089,8 +1056,9 @@ struct DeltaFunction
      */
     double operator()( double R, double Z) const
     {
+        double psip = c_.psip(R,Z), psipR = c_.psipR(R,Z), psipZ = c_.psipZ(R,Z);
         return 1./sqrt(2.*M_PI*epsilon_)*
-               exp(-( (psip_(R,Z)-psivalue_)* (psip_(R,Z)-psivalue_))/2./epsilon_)*sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z));
+               exp(-( (psip-psivalue_)* (psip-psivalue_))/2./epsilon_)*sqrt(psipR*psipR +psipZ*psipZ);
     }
     /**
      * @brief == operator()(R,Z)
@@ -1100,9 +1068,7 @@ struct DeltaFunction
         return (*this)(R,Z);
     }
     private:
-    Psip psip_;
-    PsipR  psipR_;
-    PsipZ  psipZ_;
+    Collective c_;
     double epsilon_;
     double psivalue_;
 };
@@ -1116,7 +1082,7 @@ struct DeltaFunction
  * @tparam container  The container class of the vector to average
 
  */
-template <class container = thrust::host_vector<double> >
+template <class Collective, class container = thrust::host_vector<double> >
 struct FluxSurfaceAverage
 {
      /**
@@ -1125,19 +1091,15 @@ struct FluxSurfaceAverage
      * @param gp  geometry parameters
      * @param f container for global safety factor
      */
-    FluxSurfaceAverage(const dg::Grid2d& g2d, GeomParameters gp,   const container& f) :
+    FluxSurfaceAverage(const dg::Grid2d& g2d, const Collective& c, const container& f) :
     g2d_(g2d),
-    gp_(gp),
     f_(f),
-    psip_(gp),
-    psipR_(gp),
-    psipZ_(gp),
-    deltaf_(DeltaFunction(gp,0.0,0.0)),
+    deltaf_(DeltaFunction<Collective>(c,0.0,0.0)),
     w2d_ ( dg::create::weights( g2d_)),
     oneongrid_(dg::evaluate(dg::one,g2d_))              
     {
-        dg::HVec psipRog2d  = dg::evaluate( psipR_, g2d_);
-        dg::HVec psipZog2d  = dg::evaluate( psipZ_, g2d_);
+        dg::HVec psipRog2d  = dg::evaluate( c.psipR, g2d_);
+        dg::HVec psipZog2d  = dg::evaluate( c.psipZ, g2d_);
         double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  0.,     thrust::maximum<double>()  );    
         //double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
         double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
@@ -1162,12 +1124,8 @@ struct FluxSurfaceAverage
     }
     private:
     dg::Grid2d g2d_;
-    GeomParameters gp_;    
     container f_;
-    Psip   psip_;    
-    PsipR  psipR_;
-    PsipZ  psipZ_;
-    DeltaFunction deltaf_;    
+    DeltaFunction<Collective> deltaf_;    
     const container w2d_;
     const container oneongrid_;
 };
@@ -1177,7 +1135,7 @@ struct FluxSurfaceAverage
  * @tparam container 
  *
  */
-template <class container = thrust::host_vector<double> >
+template <class Collective, class container = thrust::host_vector<double> >
 struct SafetyFactor
 {
      /**
@@ -1186,19 +1144,15 @@ struct SafetyFactor
      * @param gp  geometry parameters
      * @param f container for global safety factor
      */
-    SafetyFactor(const dg::Grid2d& g2d, GeomParameters gp,   const container& f) :
+    SafetyFactor(const dg::Grid2d& g2d, const Collective& c, const container& f) :
     g2d_(g2d),
-    gp_(gp),
     f_(f), //why not directly use Alpha??
-    psip_(gp),
-    psipR_(gp),
-    psipZ_(gp),
-    deltaf_(DeltaFunction(gp,0.0,0.0)),
+    deltaf_(DeltaFunction<Collective>(c,0.0,0.0)),
     w2d_ ( dg::create::weights( g2d_)),
     oneongrid_(dg::evaluate(dg::one,g2d_))              
     {
-      dg::HVec psipRog2d  = dg::evaluate( psipR_, g2d_);
-      dg::HVec psipZog2d  = dg::evaluate( psipZ_, g2d_);
+      dg::HVec psipRog2d  = dg::evaluate( c.psipR, g2d_);
+      dg::HVec psipZog2d  = dg::evaluate( c.psipZ, g2d_);
       double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(), 0.,     thrust::maximum<double>()  );    
       //double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
       double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
@@ -1222,12 +1176,8 @@ struct SafetyFactor
     }
     private:
     dg::Grid2d g2d_;
-    GeomParameters gp_;    
     container f_;
-    Psip   psip_;    
-    PsipR  psipR_;
-    PsipZ  psipZ_;
-    DeltaFunction deltaf_;    
+    DeltaFunction<Collective> deltaf_;    
     const container w2d_;
     const container oneongrid_;
 };
@@ -1235,20 +1185,18 @@ struct SafetyFactor
  * @brief Global safety factor
 \f[ \alpha(R,Z) = \frac{|B^\varphi|}{R|B^\eta|} = \frac{I_{pol}(R,Z)}{R|\nabla\psi_p|} \f]
  */
+template<class Collective>
 struct Alpha
 {
-    Alpha( GeomParameters gp):
-        psipR_(gp), 
-        psipZ_(gp),
-        ipol_(gp),
-        R_0(gp.R_0){ }
+    Alpha( const Collective& c):c_(c){}
 
     /**
     * @brief \f[ \frac{ I_{pol}(R,Z)}{R \sqrt{\nabla\psi_p}} \f]
     */
     double operator()( double R, double Z) const
     {
-        return (1./R)*(ipol_(R,Z)/sqrt(psipR_(R,Z)*psipR_(R,Z) +psipZ_(R,Z)*psipZ_(R,Z))) ;
+        double psipR = c_.psipR(R,Z), psipZ = c_.psipZ(R,Z);
+        return (1./R)*(c_.ipol(R,Z)/sqrt(psipR*psipR + psipZ*psipZ )) ;
     }
     /**
      * @brief == operator()(R,Z)
@@ -1258,36 +1206,36 @@ struct Alpha
         return operator()(R,Z);
     }
     private:
-    PsipR  psipR_;
-    PsipZ  psipZ_;
-    Ipol   ipol_;
-    double R_0;  
+    Collective c_;
 };
 
+template<class Collective>
 struct FuncNeu
 {
-    FuncNeu( GeomParameters gp):psip_(gp){}
-    double operator()(double R, double Z, double phi) const {return -psip_(R,Z)*cos(phi);
+    FuncNeu( const Collective& c):c_(c){}
+    double operator()(double R, double Z, double phi) const {return -c_.psip(R,Z)*cos(phi);
     }
     private:
-    Psip psip_;
+    Collective c_;
 };
+template<class Collective>
 struct DeriNeu
 {
-    DeriNeu( GeomParameters gp):psip_(gp), bhat_(gp){}
-    double operator()(double R, double Z, double phi) const {return psip_(R,Z)*bhat_(R,Z,phi)*sin(phi);
+    DeriNeu( const Collective& c, double R0):c_(c), bhat_(c, R0){}
+    double operator()(double R, double Z, double phi) const {return c_.psip(R,Z)*bhat_(R,Z,phi)*sin(phi);
     }
     private:
-    Psip psip_;
-    BHatP bhat_;
+    Collective c_;
+    BHatP<Collective> bhat_;
 };
 
+template<class Collective>
 struct FuncDirPer
 {
-    FuncDirPer( GeomParameters gp, double psi_0, double psi_1, double k):
-        R_0_(gp.R_0), psi0_(psi_0), psi1_(psi_1), k_(k), psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipZZ_(gp){}
+    FuncDirPer( const Collective& c, double R0, double psi_0, double psi_1, double k):
+        R_0_(R0), psi0_(psi_0), psi1_(psi_1), k_(k), c_(c) {}
     double operator()(double R, double Z) const {
-        double psip = psip_(R,Z);
+        double psip = c_.psip(R,Z);
         double result = (psip-psi0_)*(psip-psi1_)*cos(k_*theta(R,Z));
         return 0.1*result;
     }
@@ -1296,15 +1244,15 @@ struct FuncDirPer
     }
     double dR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_ = k_*theta(R,Z);
+        double psip = c_.psip(R,Z), psipR = c_.psipR(R,Z), theta_ = k_*theta(R,Z);
         double result = (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos(theta_) 
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*k_*thetaR(R,Z);
         return 0.1*result;
     }
     double dRR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_=k_*theta(R,Z), thetaR_=k_*thetaR(R,Z);
-        double psipRR = psipRR_(R,Z);
+        double psip = c_.psip(R,Z), psipR = c_.psipR(R,Z), theta_=k_*theta(R,Z), thetaR_=k_*thetaR(R,Z);
+        double psipRR = c_.psipRR(R,Z);
         double result = (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)*cos(theta_)
             - 2.*(2.*psip*psipR-(psi0_+psi1_)*psipR)*sin(theta_)*thetaR_
             - (psip-psi0_)*(psip-psi1_)*(k_*thetaRR(R,Z)*sin(theta_)+cos(theta_)*thetaR_*thetaR_);
@@ -1313,15 +1261,15 @@ struct FuncDirPer
     }
     double dZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=k_*theta(R,Z);
+        double psip = c_.psip(R,Z), psipZ = c_.psipZ(R,Z), theta_=k_*theta(R,Z);
         double result = (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos(theta_) 
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*k_*thetaZ(R,Z);
         return 0.1*result;
     }
     double dZZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=k_*theta(R,Z), thetaZ_=k_*thetaZ(R,Z);
-        double psipZZ = psipZZ_(R,Z);
+        double psip = c_.psip(R,Z), psipZ = c_.psipZ(R,Z), theta_=k_*theta(R,Z), thetaZ_=k_*thetaZ(R,Z);
+        double psipZZ = c_.psipZZ(R,Z);
         double result = (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ)*cos(theta_)
             - 2.*(2.*psip*psipZ-(psi0_+psi1_)*psipZ)*sin(theta_)*thetaZ_
             - (psip-psi0_)*(psip-psi1_)*(k_*thetaZZ(R,Z)*sin(theta_) + cos(theta_)*thetaZ_*thetaZ_ );
@@ -1350,17 +1298,14 @@ struct FuncDirPer
     double thetaZZ( double R, double Z) const { return -thetaRR(R,Z);}
     double R_0_;
     double psi0_, psi1_, k_;
-    Psip psip_;
-    PsipR psipR_;
-    PsipZ psipZ_;
-    PsipRR psipRR_;
-    PsipZZ psipZZ_;
+    const Collective& c_;
 };
 
 //takes the magnetic field as chi
+template<class Collective>
 struct EllipticDirPerM
 {
-    EllipticDirPerM( GeomParameters gp, double psi_0, double psi_1, double k): func_(gp, psi_0, psi_1, k), bmod_(gp), br_(gp), bz_(gp) {}
+    EllipticDirPerM( const Collective& c, double R0, double psi_0, double psi_1, double k): func_(c, R0, psi_0, psi_1, k), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
@@ -1369,18 +1314,18 @@ struct EllipticDirPerM
 
     }
     private:
-    FuncDirPer func_;
-    Bmodule bmod_;
-    BR br_;
-    BZ bz_;
+    FuncDirPer<Collective> func_;
+    Bmodule<Collective> bmod_;
+    BR<Collective> br_;
+    BZ<Collective> bz_;
 };
 
+template<class Collective>
 struct FuncDirNeu
 {
-    FuncDirNeu( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
+    FuncDirNeu( const Collective& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
         psi0_(psi_0), psi1_(psi_1), 
-        cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, amp_blob), 
-        psip_(gp), psipR_(gp), psipRR_(gp), psipZ_(gp), psipZZ_(gp) {}
+        cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, amp_blob){}
 
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
@@ -1424,16 +1369,12 @@ struct FuncDirNeu
     private:
     double psi0_, psi1_;
     dg::Cauchy cauchy_;
-    Psip psip_;
-    PsipR psipR_;
-    PsipRR psipRR_;
-    PsipZ psipZ_;
-    PsipZZ psipZZ_;
 };
 //takes the magnetic field multiplied by (1+0.5sin(theta)) as chi
+template<class Collective>
 struct BmodTheta
 {
-    BmodTheta( GeomParameters gp): R_0_(gp.R_0), bmod_(gp){}
+    BmodTheta( const Collective& c, double R0): R_0_(R0), bmod_(c, R0){}
     double operator()(double R,double Z, double phi) const{
         return this->operator()(R,Z);}
     double operator()(double R,double Z) const{
@@ -1448,13 +1389,14 @@ struct BmodTheta
             return 2.*M_PI-acos( dR/sqrt( dR*dR + Z*Z));
     }
     double R_0_;
-    Bmodule bmod_;
+    Bmodule<Collective> bmod_;
 
 };
 
+template<class Collective>
 struct EllipticDirNeuM
 {
-    EllipticDirNeuM( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(gp.R_0), func_(gp, psi_0, psi_1, R_blob, Z_blob, sigma_blob,amp_blob), bmod_(gp), br_(gp), bz_(gp) {}
+    EllipticDirNeuM( const Collective& c, double R0, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(R0), func_(c, R0, psi_0, psi_1, R_blob, Z_blob, sigma_blob,amp_blob), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z), theta_ = theta(R,Z);
         double chi = bmod*(1.+0.5*sin(theta_));
@@ -1483,22 +1425,22 @@ struct EllipticDirNeuM
         return dR/(dR*dR+Z*Z);
     }
     double R_0_;
-    FuncDirNeu func_;
-    Bmodule bmod_;
-    BR br_;
-    BZ bz_;
+    FuncDirNeu<Collective> func_;
+    Bmodule<Collective> bmod_;
+    BR<Collective> br_;
+    BZ<Collective> bz_;
 };
 
+template<class Collective>
 struct EllipticDirSimpleM
 {
-    EllipticDirSimpleM( GeomParameters gp, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(gp.R_0), func_(gp, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob) {}
+    EllipticDirSimpleM( const Collective& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob) {}
     double operator()(double R, double Z, double phi) const {
         return -(( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
     }
     private:
-    double R_0_;
-    FuncDirNeu func_;
+    FuncDirNeu<Collective> func_;
 };
 
 ///@} 

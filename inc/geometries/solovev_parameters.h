@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include <vector>
 #include "json/json.h"
 /*!@file
@@ -27,7 +28,7 @@ struct GeomParameters
            psipmaxlim,  //!< for limiter
            qampl; //scales grad-shafranov q factor
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
-    char* equilibrium;
+    std::string equilibrium;
      /**
      * @brief constructor to make an object
      *
@@ -73,7 +74,7 @@ struct GeomParameters
         psipmaxcut= js["psip_max_cut"].asDouble();
         psipmaxlim= js["psip_max_lim"].asDouble();
         qampl = js.get("qampl", 1.).asDouble();
-        equilibrium = js.get( "equilibrium", "solovev");
+        equilibrium = js.get( "equilibrium", "solovev").asString();
     }
     /**
      * @brief Display parameters
