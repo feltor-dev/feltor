@@ -179,11 +179,12 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);
     }
 
-   // Probe IDs
+    //// Probe IDs
     std::vector<std::string> varname_probes;
-    varname_probes.push_back("probe_ne"); varname_probes.push_back("probe_phi"); varname_probes.push_back("probe_Gamma_x");
+    varname_probes.push_back("probe_ne"); 
+    varname_probes.push_back("probe_phi"); 
+    varname_probes.push_back("probe_Gamma_x");
     // Create x-dimension for probe 
-
     int ID_probes[3];
     int dim_ids_probe[2];
     dim_ids_probe[0] = EtimeID;
@@ -240,7 +241,6 @@ int main( int argc, char* argv[])
 
     err = nc_put_vara_double( ncid, dissID, Estart, Ecount, &diss);
     err = nc_put_vara_double( ncid, dEdtID, Estart, Ecount, &dEdt);
-
     err = nc_put_vara_double( ncid, couplingID, Estart, Ecount, &coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount, &accuracy);
 
@@ -291,7 +291,6 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
             err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
-
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
