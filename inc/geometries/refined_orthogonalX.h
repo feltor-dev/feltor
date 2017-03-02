@@ -125,9 +125,9 @@ struct OrthogonalRefinedGridX2d : public dg::RefinedGridX2d
     typedef dg::OrthogonalTag metric_category;
 
     template<class Generator>
-    OrthogonalRefinedGridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, int firstline): 
+    OrthogonalRefinedGridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
         dg::RefinedGridX2d( add_x, add_y, howmanyX, howmanyY, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, n_old, Nx, Ny, bcx, bcy),
-        g_assoc_( generator, fx, fy, n_old, Nx, Ny, bcx, bcy) 
+        g_assoc_( generator, psi_0, fx, fy, n_old, Nx, Ny, bcx, bcy) 
     {
         dg::OrthogonalRefinedGridX3d<container> g(add_x, add_y, howmanyX, howmanyY, generator, psi_0, fx,fy, n,n_old,Nx,Ny,1,bcx,bcy);
         init_X_boundaries( g.x0(), g.x1());

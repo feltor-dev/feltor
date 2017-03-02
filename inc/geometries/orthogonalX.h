@@ -189,6 +189,21 @@ template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SeparatrixOrthogonal
 {
     typedef dg::OrthogonalTag metric_category;
+    /**
+     * @brief Construct 
+     *
+     * @param psi
+     * @param psiX
+     * @param psiY
+     * @param laplacePsi
+     * @param psi_0
+     * @param xX
+     * @param yX
+     * @param x0
+     * @param y0
+     * @param firstline =0 means conformal, =1 means equalarc discretization
+     * 
+     */
     SeparatrixOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline ):
         psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi),

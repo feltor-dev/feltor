@@ -1229,6 +1229,7 @@ struct DeriNeu
     BHatP<Collective> bhat_;
 };
 
+//psi * cos(theta)
 template<class Collective>
 struct FuncDirPer
 {
@@ -1320,6 +1321,7 @@ struct EllipticDirPerM
     BZ<Collective> bz_;
 };
 
+//Blob function
 template<class Collective>
 struct FuncDirNeu
 {
@@ -1370,6 +1372,8 @@ struct FuncDirNeu
     double psi0_, psi1_;
     dg::Cauchy cauchy_;
 };
+
+
 //takes the magnetic field multiplied by (1+0.5sin(theta)) as chi
 template<class Collective>
 struct BmodTheta
@@ -1393,10 +1397,12 @@ struct BmodTheta
 
 };
 
+//take BmodTheta as chi
 template<class Collective>
 struct EllipticDirNeuM
 {
-    EllipticDirNeuM( const Collective& c, double R0, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(R0), func_(c, R0, psi_0, psi_1, R_blob, Z_blob, sigma_blob,amp_blob), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
+    EllipticDirNeuM( const Collective& c, double R0, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(R0), 
+    func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob,amp_blob), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z), theta_ = theta(R,Z);
         double chi = bmod*(1.+0.5*sin(theta_));
@@ -1429,6 +1435,90 @@ struct EllipticDirNeuM
     Bmodule<Collective> bmod_;
     BR<Collective> br_;
     BZ<Collective> bz_;
+};
+
+//the psi surfaces
+template<class Collective>
+struct FuncXDirNeu
+{
+    FuncXDirNeu( const Collective& c, double psi_0, double psi_1):
+        c_(c), psi0_(psi_0), psi1_(psi_1){}
+
+    double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);}
+    double operator()(double R, double Z) const {
+        double psip = c_.psip(R,Z);
+        return (psip-psi0_)*(psip-psi1_);
+    }
+    double dR( double R, double Z)const
+    {
+        double psip = c_.psip(R,Z), psipR = c_.psipR(R,Z);
+        return (2.*psip-psi0_-psi1_)*psipR;
+    }
+    double dRR( double R, double Z)const
+    {
+        double psip = c_.psip(R,Z), psipR = c_.psipR(R,Z);
+        double psipRR = c_.psipRR(R,Z);
+        return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
+            
+    }
+    double dZ( double R, double Z)const
+    {
+        double psip = c_.psip(R,Z), psipZ = c_.psipZ(R,Z);
+        return (2*psip-psi0_-psi1_)*psipZ;
+    }
+    double dZZ( double R, double Z)const
+    {
+        double psip = c_.psip(R,Z), psipZ = c_.psipZ(R,Z);
+        double psipZZ = c_.psipZZ(R,Z);
+        return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
+    }
+    private:
+    Collective c_;
+    double psi0_, psi1_;
+};
+
+//take Bmod as chi
+template<class Collective>
+struct EllipticXDirNeuM
+{
+    EllipticXDirNeuM( const Collective& c, double R0, double psi_0, double psi_1): R_0_(R0), 
+    func_(c, psi_0, psi_1), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
+    double operator()(double R, double Z) const {
+        //double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
+        //double chi = 1e5+bmod; //bmod can be zero for a Taylor state(!)
+        //double chiR = br;
+        //double chiZ = bz;
+        //return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( func_.dRR(R,Z) + func_.dZZ(R,Z) ));
+        return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
+
+    }
+    double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);
+    }
+    private:
+    double R_0_;
+    FuncXDirNeu<Collective> func_;
+    Bmodule<Collective> bmod_;
+    BR<Collective> br_;
+    BZ<Collective> bz_;
+};
+
+//take Blob and chi=1
+template<class Collective>
+struct EllipticBlobDirNeuM
+{
+    EllipticBlobDirNeuM( const Collective& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): 
+    func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob){}
+    double operator()(double R, double Z) const {
+        return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
+    }
+    double operator()(double R, double Z, double phi) const {
+        return this->operator()(R,Z);
+    }
+    private:
+    double R_0_;
+    FuncDirNeu<Collective> func_;
 };
 
 template<class Collective>

@@ -533,12 +533,12 @@ struct OrthogonalGrid2d : public dg::Grid2d
 /**
  * @brief Integrates the equations for a field line and 1/B
  */ 
+template<class Collective>
 struct Field
 {
-    Field( solovev::GeomParameters gp, const dg::Grid2d& gXY, const thrust::host_vector<double>& f2):
-        gp_(gp),
-        psipR_(gp), psipZ_(gp),
-        ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(f2, gXY)) 
+    Field( const Collective& c, double R0, solovev::GeomParameters gp, const dg::Grid2d& gXY, const thrust::host_vector<double>& f2):
+        c_(c), R_0_(R0), invB_(c, R0), gXY_(gXY), 
+        g_(dg::create::forward_transform(f2, gXY)) 
     { }
 
     /**
@@ -549,14 +549,14 @@ struct Field
     void operator()( const dg::HVec& y, dg::HVec& yp)
     {
         //x,y,s,R,Z
-        double psipR = psipR_(y[3],y[4]), psipZ = psipZ_(y[3],y[4]), ipol = ipol_( y[3],y[4]);
+        double psipR = c_.psipR(y[3],y[4]), psipZ = c_.psipZ(y[3],y[4]), ipol = c_.ipol( y[3],y[4]);
         double xs = y[0],ys=y[1];
         gXY_.shift_topologic( y[0], M_PI, xs,ys);
         double g = dg::interpolate( xs,  ys, g_, gXY_);
         yp[0] = 0;
         yp[1] = y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
         //yp[1] = g/ipol;
-        yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/gp_.R_0; //ds/dphi =  R^2 B/I/R_0_hat
+        yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/R_0_; //ds/dphi =  R^2 B/I/R_0_hat
         yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
         yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
 
@@ -589,11 +589,9 @@ struct Field
     }
     
     private:
-    solovev::GeomParameters gp_;
-    solovev::PsipR  psipR_;
-    solovev::PsipZ  psipZ_;
-    solovev::Ipol   ipol_;
-    solovev::InvB   invB_;
+    Collective c_;
+    double R_0_;
+    solovev::InvB<Collective>   invB_;
     const dg::Grid2d gXY_;
     thrust::host_vector<double> g_;
    
