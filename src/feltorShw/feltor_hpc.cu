@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>
 #include <cmath>
+#include <csignal>
 // #define DG_DEBUG
 
 
@@ -24,6 +25,27 @@
    - writes outputs to a given outputfile using hdf5. 
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
+
+
+// Global variable to store the NC file id for the signal handler
+namespace ns_ncid
+{
+    int ncid;
+}
+
+void sigterm_handler(int signal)
+{
+    file :: NC_Error_Handle err;
+    std::cout << "sigterm_handler, got signal " << signal << std::endl;
+    std::cout << "ncid = " << ns_ncid :: ncid << std::endl;
+    if(ns_ncid :: ncid != -1)
+    {
+        err = nc_close(ns_ncid :: ncid); 
+        std::cerr << "SIGTERM caught. Closing NetCDF file with id " << ns_ncid :: ncid << std::endl;
+    }
+    exit(signal);
+}
+
 
 int main( int argc, char* argv[])
 {
@@ -132,6 +154,7 @@ int main( int argc, char* argv[])
     karniadakis.init( feltor, rolkar, y0, p.dt);
 //     feltor.energies( y0);//now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////////
+    ns_ncid :: ncid = -1;
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[2], NC_NETCDF4|NC_CLOBBER, &ncid);
@@ -235,6 +258,8 @@ int main( int argc, char* argv[])
     err = nc_close(ncid);
     std::cout << "First write successful!\n";
 
+    //////////// Register signal handler
+    std::signal(SIGTERM, sigterm_handler);
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
@@ -268,6 +293,7 @@ int main( int argc, char* argv[])
             radtrans = feltor.radial_transport();
             coupling= feltor.coupling();
             err = nc_open(argv[2], NC_WRITE, &ncid);
+            ns_ncid :: ncid = ncid;
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             err = nc_put_vara_double( ncid, energyID, Estart, Ecount, &E1);
             err = nc_put_vara_double( ncid, massID,   Estart, Ecount, &mass);
@@ -286,6 +312,7 @@ int main( int argc, char* argv[])
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << "\n";
             err = nc_close(ncid);
+            ns_ncid :: ncid = -1;
         }
 #ifdef DG_BENCHMARK
         ti.toc();
@@ -295,6 +322,8 @@ int main( int argc, char* argv[])
         //////////////////////////write fields////////////////////////
         start[0] = i;
         err = nc_open(argv[2], NC_WRITE, &ncid);
+        ns_ncid :: ncid = ncid;
+        std::cout << "****************** Opened: ncid = " << ncid << ", ns_ncid::ncid = " << ns_ncid :: ncid << std::endl;
         for(unsigned j = 0; j < 2; j++)
         {
             dg::blas2::symv( interpolate, y0[j], transferD);
@@ -313,6 +342,8 @@ int main( int argc, char* argv[])
 
         err = nc_put_vara_double(ncid, tvarID_field, start, count, &time);
         err = nc_close(ncid);
+        ns_ncid :: ncid = -1;
+        std::cout << "****************** Closed: ncid = " << ncid << ", ns_ncid::ncid = " << ns_ncid :: ncid << std::endl;
     }
     t.toc(); 
     unsigned hour = (unsigned)floor(t.diff()/3600);

@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>
 #include <cmath>
+#include <csignal>
 // #define DG_DEBUG
 
 #include <mpi.h> //activate mpi
@@ -26,6 +27,28 @@
    - writes outputs to a given outputfile using hdf5. 
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
+
+
+namespace ns_ncid
+{
+    int ncid;
+}
+
+
+void sigterm_handler(int signal)
+{
+    file :: NC_Error_Handle err;
+    std::cout << "sigterm_handler, got signal " << signal << std::endl;
+    std::cout << "ncid = " << ns_ncid :: ncid << std::endl;
+    if(ns_ncid :: ncid != -1)
+    {
+        err = nc_close(ns_ncid :: ncid); 
+        std::cerr << "SIGTERM caught. Closing NetCDF file with id " << ns_ncid :: ncid << std::endl;
+    }
+    MPI_Finalize();
+    exit(signal);
+}
+
 
 int main( int argc, char* argv[])
 {
@@ -73,6 +96,9 @@ int main( int argc, char* argv[])
     MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+    ////////////////////////////// Install signal handler ///////////////////
+    std::signal(SIGINT, sigterm_handler);
+    std::signal(SIGTERM, sigterm_handler);
     //////////////////////////////////////////////////////////////
       //Make grid
     dg::MPIGrid2d grid(     0., p.lx, 0.,p.ly, p.n,     p.Nx,     p.Ny,     p.bc_x, p.bc_y, comm);
@@ -162,6 +188,7 @@ int main( int argc, char* argv[])
     MPI_Info info = MPI_INFO_NULL;
 //         err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
+    ns_ncid :: ncid = ncid;
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
     dg::Grid2d global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
@@ -362,6 +389,7 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout <<"which is         \t"<<t.diff()/p.itstp/p.maxout<<"s/step\n";
 #endif//DG_BENCHMARK
     err = nc_close(ncid);
+    ns_ncid :: ncid = -1;
     MPI_Finalize();
 
     return 0;
