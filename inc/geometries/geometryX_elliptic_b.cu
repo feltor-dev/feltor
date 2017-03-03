@@ -51,8 +51,8 @@ int main(int argc, char**argv)
     //double Z_X = -1.0*gp.elongation*gp.a;
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    //dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    dg::SimpleOrthogonalX<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::SimpleOrthogonalX<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.125, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
     dg::Elliptic<dg::OrthogonalGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
     double fx = 0.125;
@@ -93,13 +93,15 @@ int main(int argc, char**argv)
     //const dg::DVec solution =     dg::pullback( c.psip, g2d);
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
     const dg::DVec b =    dg::pullback( solovev::EllipticXDirNeuM<taylor::CollectivePsip>(c, gp.R_0, psi_0, psi_1), g2d);
-    //dg::DVec chi  =  dg::pullback( solovev::Bmodule<taylor::CollectivePsip>(c, gp.R_0), g2d);
-    //dg::blas1::plus( chi, 1e5);
-    const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
+    dg::DVec chi  =  dg::pullback( solovev::Bmodule<taylor::CollectivePsip>(c, gp.R_0), g2d);
+    dg::blas1::plus( chi, 1e5);
+    //const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
     const dg::DVec solution = dg::pullback( solovev::FuncXDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1 ), g2d);
     //////////////////////////////////////////////////////////////////////////
 
-    const dg::DVec vol3d = dg::create::volume( g2d);
+    const dg::DVec vol2d = dg::create::volume( g2d);
+    const dg::DVec inv_vol2d = dg::create::inv_volume( g2d);
+    const dg::DVec v2d = dg::create::inv_weights( g2d);
     pol.set_chi( chi);
     //compute error
     dg::DVec error( solution);
@@ -108,12 +110,13 @@ int main(int argc, char**argv)
     std::cout << eps<<"\t";
     t.tic();
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
-    unsigned number = invert(pol, x,b);// vol3d, v3d );
+    //unsigned number = invert(pol, x,b, vol2d, inv_vol2d );
+    unsigned number = invert(pol, x,b, vol2d, v2d ); //inv weights are better preconditioners
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);
-    double err = dg::blas2::dot( vol3d, error);
-    const double norm = dg::blas2::dot( vol3d, solution);
+    double err = dg::blas2::dot( vol2d, error);
+    const double norm = dg::blas2::dot( vol2d, solution);
     std::cout << sqrt( err/norm) << "\t";
     dg::HVec gyy, gxx, vol; 
     dg::blas1::transfer( g2d.g_xx(), gyy);

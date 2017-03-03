@@ -1485,12 +1485,12 @@ struct EllipticXDirNeuM
     EllipticXDirNeuM( const Collective& c, double R0, double psi_0, double psi_1): R_0_(R0), 
     func_(c, psi_0, psi_1), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
     double operator()(double R, double Z) const {
-        //double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
-        //double chi = 1e5+bmod; //bmod can be zero for a Taylor state(!)
-        //double chiR = br;
-        //double chiZ = bz;
-        //return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( func_.dRR(R,Z) + func_.dZZ(R,Z) ));
-        return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
+        double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
+        double chi = 1e5+bmod; //bmod can be zero for a Taylor state(!)
+        double chiR = br;
+        double chiZ = bz;
+        return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( func_.dRR(R,Z) + func_.dZZ(R,Z) ));
+        //return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
 
     }
     double operator()(double R, double Z, double phi) const {
