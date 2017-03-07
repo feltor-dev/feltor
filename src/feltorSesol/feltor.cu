@@ -13,7 +13,7 @@
 
 #include "feltor.cuh"
 #include "parameters.h"
-//#include "probes.h"
+#include "probes.h"
 
 
 
@@ -116,12 +116,12 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     
-    //dg::DVec xprobecoords(7,1.);
-    //for (unsigned i=0;i<7; i++) {
-    //    xprobecoords[i] = p.lx/8.*(1+i) ;
-    //}
-    //const dg::DVec yprobecoords(7,p.ly/2.);
-    //probes<dg::DMatrix, dg::DVec> pro(xprobecoords,yprobecoords,grid);
+    dg::DVec xprobecoords(7,1.);
+    for (unsigned i=0;i<7; i++) {
+        xprobecoords[i] = p.lx/8.*(1+i) ;
+    }
+    const dg::DVec yprobecoords(7,p.ly/2.);
+    probes<dg::DMatrix, dg::DVec> pro(xprobecoords,yprobecoords,grid);
     while ( !glfwWindowShouldClose( w ))
     {
 
@@ -227,8 +227,8 @@ int main( int argc, char* argv[])
         }
         dg::blas1::transform( y0[0], dvisual, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //npe = N+1
         dvisual2 = feltor.potential()[0];
-        //pro.fluxes(time,  dvisual,dvisual2);
-        //pro.profiles(time,dvisual,dvisual2);
+        pro.fluxes(time,  dvisual,dvisual2);
+        pro.profiles(time,dvisual,dvisual2);
 //         p.profiles
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

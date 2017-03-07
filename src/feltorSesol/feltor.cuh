@@ -5,7 +5,6 @@
 #include "parameters.h"
 // #include "geometry_circ.h"
 #include "dg/average.h"
-#include "dg/backend/linspace.cuh"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
