@@ -66,7 +66,7 @@ int main(int argc, char**argv)
     //dg::SimpleOrthogonalX<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.125, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
     dg::OrthogonalRefinedGridX2d<dg::DVec> g2d( add_x, add_y, howmanyX, howmanyY, generator, psi_0, 0.125, 1./22., n_ref, n, Nx, Ny, dg::DIR, dg::NEU);
-    dg::Elliptic<dg::OrthogonalRefinedGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::OrthogonalRefinedGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
     dg::RefinedElliptic<dg::OrthogonalRefinedGridX2d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g2d, dg::not_normed, dg::forward);
     double fx = 0.125;
     psi_1 = -fx/(1.-fx)*psi_0;
@@ -96,12 +96,19 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     ///////////////////////////////////////////////////////////////////////////
-    const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d.associated());
-    const dg::DVec bFINE =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
+    //const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d.associated());
+    //const dg::DVec bFINE =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
+    //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d.associated());
+    //const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d);
+    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d.associated());
+    //const dg::DVec solutionFINE =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
+    ///////////////////////////////////////////////////////////////////////////
+    const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d.associated());
+    const dg::DVec bFINE =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d);
     const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d.associated());
     const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d);
-    const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d.associated());
-    const dg::DVec solutionFINE =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
+    const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d.associated());
+    const dg::DVec solutionFINE =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d);
     ///////////////////////////////////////////////////////////////////////////
     //const dg::DVec b =        dg::pullback( c.laplacePsip, g2d.associated());
     //const dg::DVec bFINE =    dg::pullback( c.laplacePsip, g2d);
@@ -190,9 +197,9 @@ int main(int argc, char**argv)
     std::cout << hyX << "\t";
     std::cout<<t.diff()/(double)number_sw<<"s"<<std::endl;
 
-    dg::blas1::transfer( error_sandwich, X);
+    dg::blas1::transfer( error_direct, X);
     ncerr = nc_put_var_double( ncid, psiID, X.data());
-    dg::blas1::transfer( x_fine_sw, X);
+    dg::blas1::transfer( x_fine_di, X);
     ncerr = nc_put_var_double( ncid, functionID, X.data());
     dg::blas1::transfer( solutionFINE, Y);
     //dg::blas1::axpby( 1., X., -1, Y);

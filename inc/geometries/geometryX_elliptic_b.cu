@@ -16,6 +16,19 @@
 //#include "ribeiroX.h"
 #include "orthogonalX.h"
 
+typedef taylor::CollectivePsip Collective;
+typedef taylor::Psip Psip;
+typedef taylor::PsipR PsipR;
+typedef taylor::PsipZ PsipZ;
+typedef taylor::LaplacePsip LaplacePsip;
+const char* parameters = "geometry_params_Xpoint_taylor.js";
+
+//typedef solovev::CollectivePsip Collective;
+//typedef solovev::Psip Psip;
+//typedef solovev::PsipR PsipR;
+//typedef solovev::PsipZ PsipZ;
+//typedef solovev::LaplacePsip LaplacePsip;
+//const char* parameters = "geometry_params_Xpoint.js";
 
 int main(int argc, char**argv)
 {
@@ -29,7 +42,7 @@ int main(int argc, char**argv)
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint_taylor.js");
+        std::ifstream is(parameters);
         reader.parse(is,js,false);
     }
     else
@@ -44,17 +57,18 @@ int main(int argc, char**argv)
     t.tic();
 
     ////////////////construct Generator////////////////////////////////////
-    taylor::CollectivePsip c(gp);
+    Collective c(gp);
     std::cout << "Psi min "<<c.psip(gp.R_0, 0)<<"\n";
     double R0 = gp.R_0, Z0 = 0;
     //double R_X = gp.R_0-1.4*gp.triangularity*gp.a;
     //double Z_X = -1.0*gp.elongation*gp.a;
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::SimpleOrthogonalX<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    std::cout << "X-point at "<<R_X <<" "<<Z_X<<"\n";
+    dg::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.125, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
-    dg::Elliptic<dg::OrthogonalGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::OrthogonalGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
     double fx = 0.125;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi 1 is          "<<psi_1<<"\n";
@@ -83,21 +97,25 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     dg::DVec x =    dg::evaluate( dg::zero, g2d);
-    //////////////////////blob solution////////////////////////////////////////
-    //const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
+    ////////////////////////blob solution////////////////////////////////////////
+    //const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<Collective>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
     //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
+    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<Collective>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
+    ////////////////////////blob solution on X-point/////////////////////////////
+    const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<Collective>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d);
+    const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
+    const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<Collective>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d);
     //////////////////////////laplace psi solution/////////////////////////////
     //const dg::DVec b =        dg::pullback( c.laplacePsip);
     //const dg::DVec chi =      dg::evaluate( dg::one, g2d);
     //const dg::DVec solution =     dg::pullback( c.psip, g2d);
-    /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
-    const dg::DVec b =    dg::pullback( solovev::EllipticXDirNeuM<taylor::CollectivePsip>(c, gp.R_0, psi_0, psi_1), g2d);
-    dg::DVec chi  =  dg::pullback( solovev::Bmodule<taylor::CollectivePsip>(c, gp.R_0), g2d);
-    dg::blas1::plus( chi, 1e5);
-    //const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
-    const dg::DVec solution = dg::pullback( solovev::FuncXDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1 ), g2d);
-    //////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////Dir/////FIELALIGNED SIN///////////////////
+    //const dg::DVec b =    dg::pullback( solovev::EllipticXDirNeuM<Collective>(c, gp.R_0, psi_0, psi_1), g2d);
+    //dg::DVec chi  =  dg::pullback( solovev::Bmodule<Collective>(c, gp.R_0), g2d);
+    //dg::blas1::plus( chi, 1e5);
+    ////const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
+    //const dg::DVec solution = dg::pullback( solovev::FuncXDirNeu<Collective>(c, psi_0, psi_1 ), g2d);
+    ////////////////////////////////////////////////////////////////////////////
 
     const dg::DVec vol2d = dg::create::volume( g2d);
     const dg::DVec inv_vol2d = dg::create::inv_volume( g2d);
