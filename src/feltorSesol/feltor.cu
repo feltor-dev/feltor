@@ -13,7 +13,7 @@
 
 #include "feltor.cuh"
 #include "parameters.h"
-#include "probes.h"
+#include "../diag/probes.h"
 
 
 
@@ -121,7 +121,7 @@ int main( int argc, char* argv[])
         xprobecoords[i] = p.lx/8.*(1+i) ;
     }
     const dg::DVec yprobecoords(7,p.ly/2.);
-    probes<dg::DMatrix, dg::DVec> pro(xprobecoords,yprobecoords,grid);
+    probes<dg::IDMatrix,dg::DMatrix, dg::DVec> pro(xprobecoords,yprobecoords,grid);
     while ( !glfwWindowShouldClose( w ))
     {
 

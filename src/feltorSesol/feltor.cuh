@@ -156,11 +156,6 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     initializene(profNi,profne); //ne = Gamma N_i
     dg::blas1::transform(profne,profne, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
-    
-    // Initialize probes with all zeros
-    probevec.push_back(container(8, 0.0));
-    probevec.push_back(container(8, 0.0));
-    probevec.push_back(container(8, 0.0));
 }
 
 template<class G, class Matrix, class container>

@@ -181,10 +181,9 @@ int main( int argc, char* argv[])
 
     //// Probe IDs
     std::vector<std::string> varname_probes;
-    varname_probes.push_back("probe_ne"); 
-    varname_probes.push_back("probe_phi"); 
-    varname_probes.push_back("probe_Gamma_x");
+    varname_probes.push_back("probe_ne"); varname_probes.push_back("probe_phi"); varname_probes.push_back("probe_Gamma_x");
     // Create x-dimension for probe 
+
     int ID_probes[3];
     int dim_ids_probe[2];
     dim_ids_probe[0] = EtimeID;
