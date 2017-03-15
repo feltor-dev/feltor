@@ -101,20 +101,20 @@ int main(int argc, char**argv)
     //const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<Collective>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
     //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
     //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<Collective>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
-    ////////////////////////blob solution on X-point/////////////////////////////
-    const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<Collective>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d);
-    const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
-    const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<Collective>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d);
-    //////////////////////////laplace psi solution/////////////////////////////
+    //////////////////////////blob solution on X-point/////////////////////////////
+    //const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<Collective>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d);
+    //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
+    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<Collective>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d);
+    ////////////////////////////laplace psi solution/////////////////////////////
     //const dg::DVec b =        dg::pullback( c.laplacePsip);
     //const dg::DVec chi =      dg::evaluate( dg::one, g2d);
     //const dg::DVec solution =     dg::pullback( c.psip, g2d);
-    ///////////////////////////////Dir/////FIELALIGNED SIN///////////////////
-    //const dg::DVec b =    dg::pullback( solovev::EllipticXDirNeuM<Collective>(c, gp.R_0, psi_0, psi_1), g2d);
-    //dg::DVec chi  =  dg::pullback( solovev::Bmodule<Collective>(c, gp.R_0), g2d);
-    //dg::blas1::plus( chi, 1e5);
-    ////const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution = dg::pullback( solovev::FuncXDirNeu<Collective>(c, psi_0, psi_1 ), g2d);
+    /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
+    const dg::DVec b =    dg::pullback( solovev::EllipticXDirNeuM<Collective>(c, gp.R_0, psi_0, psi_1), g2d);
+    dg::DVec chi  =  dg::pullback( solovev::Bmodule<Collective>(c, gp.R_0), g2d);
+    dg::blas1::plus( chi, 1e5);
+    //const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
+    const dg::DVec solution = dg::pullback( solovev::FuncXDirNeu<Collective>(c, psi_0, psi_1 ), g2d);
     ////////////////////////////////////////////////////////////////////////////
 
     const dg::DVec vol2d = dg::create::volume( g2d);

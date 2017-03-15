@@ -109,7 +109,7 @@ int main( int argc, char* argv[])
     double psi_0 = -16;
     std::cin >> psi_0;
     std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
-    double fx_0=1./4., fy_0=1./22.;
+    double fx_0=1./8., fy_0=1./22.;
     std::cin >> fx_0>> fy_0;
     std::cout << "Type add_x and add_y \n";
     double add_x, add_y;
@@ -137,6 +137,8 @@ int main( int argc, char* argv[])
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
+    double psi_1 = -fx_0/(1.-fx_0)*psi_0;
+    std::cout << "psi 1 is          "<<psi_1<<"\n";
     dg::Grid1d g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
     g1d.display( std::cout);
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);

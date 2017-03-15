@@ -62,7 +62,7 @@ int main(int argc, char**argv)
     //double Z_X = -1.0*gp.elongation*gp.a;
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,1);
     //dg::SimpleOrthogonalX<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.125, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
     dg::OrthogonalRefinedGridX2d<dg::DVec> g2d( add_x, add_y, howmanyX, howmanyY, generator, psi_0, 0.125, 1./22., n_ref, n, Nx, Ny, dg::DIR, dg::NEU);
@@ -95,14 +95,14 @@ int main(int argc, char**argv)
     }
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
-    ///////////////////////////////////////////////////////////////////////////
+    //////////////////blob solution////////////////////////////////////////////
     //const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d.associated());
     //const dg::DVec bFINE =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
     //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d.associated());
     //const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d);
     //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d.associated());
     //const dg::DVec solutionFINE =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
-    ///////////////////////////////////////////////////////////////////////////
+    /////////////////blob on X-point///////////////////////////////////////////
     const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d.associated());
     const dg::DVec bFINE =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d);
     const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d.associated());
