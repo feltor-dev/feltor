@@ -61,19 +61,12 @@ struct PolarGenerator
         zetaX.resize(size); zetaY.resize(size);
         etaX.resize(size); etaY.resize(size);
 
-        for(int i=0;i<size_r;i++)
-            cout << zeta1d[i] << " ";
-        cout << endl;
-
-        for(int i=0;i<size_phi;i++)
-            cout << eta1d[i] << " ";
-        cout << endl;
-
         // the first coordinate has stride=1 (according to inc/dg/backend/evaluation.cuh:61)
         for(int j=0;j<size_phi;j++)
             for(int i=0;i<size_r;i++) {
                 double r   = zeta1d[i] + r_min;
                 double phi = eta1d[j];
+
                 x[i+size_r*j] = r*cos(phi);
                 y[i+size_r*j] = r*sin(phi);
 
@@ -81,6 +74,15 @@ struct PolarGenerator
                 zetaY[i+size_r*j] = sin(phi);
                 etaX[i+size_r*j] = -sin(phi)/r;
                 etaY[i+size_r*j] = -cos(phi)/r;
+/*
+                x[i+size_r*j] = r;
+                y[i+size_r*j] = phi;
+
+                zetaX[i+size_r*j] = 1.0;
+                zetaY[i+size_r*j] = 0.0;
+                etaX[i+size_r*j] = 0.0;
+                etaY[i+size_r*j] = 1.0;
+*/
             }
 
     }
@@ -91,11 +93,17 @@ struct PolarGenerator
     bool isConformal()  const{return false;}
 };
 
+struct func_r {
+    double r_min;
+    func_r(double _r_min) : r_min(_r_min) {}
+
+    double operator()(double x, double y) {
+        return r_min+x;
+    }
+};
+
 int main()
 {
-    double r_min = 0.2;
-    double r_max = 2.0;
-
     Timer t;
     const Parameters p( file::read_input( "input.txt"));
     p.display();
@@ -104,9 +112,9 @@ int main()
         std::cerr << "Time stepper needs recompilation!\n";
         return -1;
     }
-    //Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
 
-    PolarGenerator generator(r_min, r_max);
+    //Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    PolarGenerator generator(p.r_min, p.r_max);
     Grid grid( generator, p.n, p.Nx, p.Ny, dg::DIR); // second coordiante is periodic by default
 
     DVec w2d( create::weights(grid));
@@ -118,18 +126,12 @@ int main()
     draw::RenderHostData render( 1,1);
 #endif
 
-    //dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
-    dg::Lamb lamb( 0.9, M_PI, 0.5, p.U);
-
+    dg::Lamb lamb( p.posX, p.posY, p.R, p.U);
     HVec omega = evaluate ( lamb, grid);
-    DVec stencil = evaluate( one, grid);
+
+    DVec stencil = evaluate( func_r(p.r_min), grid);
     DVec y0( omega ), y1( y0);
-    //subtract mean mass 
-    if( p.bc_x == dg::PER && p.bc_y == dg::PER)
-    {
-        double meanMass = dg::blas2::dot( y0, w2d, stencil)/(double)(p.lx*p.ly);
-        dg::blas1::axpby( -meanMass, stencil, 1., y0);
-    }
+
     //make solver and stepper
     Shu<Grid, DMatrix, DVec> shu( grid, p.eps);
     Diffusion<Grid, DMatrix, DVec> diffusion( grid, p.D);
@@ -139,13 +141,15 @@ int main()
     shu( y0, y1);
     t.toc();
     cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
+
     double vorticity = blas2::dot( stencil , w2d, y0);
-    double enstrophy = 0.5*blas2::dot( y0, w2d, y0);
-    double energy =    0.5*blas2::dot( y0, w2d, shu.potential()) ;
-    
-    std::cout << "Total energy:     "<<energy<<"\n";
-    std::cout << "Total enstrophy:  "<<enstrophy<<"\n";
-    std::cout << "Total vorticity:  "<<vorticity<<"\n";
+    DVec ry0(stencil);
+    blas1::pointwiseDot( stencil, y0, ry0);
+    double enstrophy = 0.5*blas2::dot( ry0, w2d, y0);
+    double energy =    0.5*blas2::dot( ry0, w2d, shu.potential()) ;
+    cout << "Total vorticity:  "<<vorticity<<"\n";
+    cout << "Total enstrophy:  "<<enstrophy<<"\n";
+    cout << "Total energy:     "<<energy<<"\n";
 
     double time = 0;
 #ifdef OPENGL_WINDOW
@@ -160,6 +164,7 @@ int main()
     ab.init( shu, diffusion, y0, p.dt);
     ab( shu, diffusion, y0); //make potential ready
 
+    t.tic();
     while (time < p.maxout*p.itstp*p.dt)
     {
 #ifdef OPENGL_WINDOW
@@ -179,26 +184,29 @@ int main()
 #endif
 
         //step 
-        t.tic();
         for( unsigned i=0; i<p.itstp; i++)
         {
             ab( shu, diffusion, y0 );
         }
-        t.toc();
-        //cout << "Timer for one step: "<<t.diff()/N<<"s\n";
         time += p.itstp*p.dt;
 
     }
+    t.toc();
 
 #ifdef OPENGL_WINDOW
     glfwTerminate();
 #endif
 
-    cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
-    cout << "Analytic formula energy    "<<lamb.energy()<<endl;
-    cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, ab.last()) << "\n";
-    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( w2d, ab.last()) - enstrophy)/enstrophy<<"\n";
-    cout << "Relative energy error    is: "<<(0.5*blas2::dot( shu.potential(), w2d, ab.last()) - energy)/energy<<"\n";
+
+    double vorticity_end = blas2::dot( stencil , w2d, ab.last());
+    blas1::pointwiseDot( stencil, ab.last(), ry0);
+    double enstrophy_end = 0.5*blas2::dot( ry0, w2d, ab.last());
+    double energy_end    = 0.5*blas2::dot( ry0, w2d, shu.potential()) ;
+    cout << "Vorticity error           :  "<<vorticity_end-vorticity<<"\n";
+    cout << "Enstrophy error (relative):  "<<(enstrophy_end-enstrophy)/enstrophy<<"\n";
+    cout << "Energy error    (relative):  "<<(energy_end-energy)/energy<<"\n";
+
+    cout << "Runtime: " << t.diff() << endl;
 
     return 0;
 }

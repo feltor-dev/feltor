@@ -1,5 +1,5 @@
-#ifndef _SHU_PARAMETERS_
-#define _SHU_PARAMETERS_
+#ifndef _POLAR_PARAMETERS_
+#define _POLAR_PARAMETERS_
 #include "dg/backend/grid.h"
 
 /**
@@ -11,12 +11,12 @@ struct Parameters
     double dt; 
 
     double eps;
-    double lx, ly; 
-    enum dg::bc bc_x, bc_y;
+    double r_min, r_max;
 
     double D;
     int global;
 
+    unsigned iv;
     double U, R, posX, posY;
 
     unsigned itstp; 
@@ -28,24 +28,22 @@ struct Parameters
      * @param v Vector from read_input function
      */
     Parameters( const std::vector< double>& v, int layout=0) {
-        n  = (unsigned)v[1]; 
+        n  = (unsigned)v[1];
         Nx = (unsigned)v[2];
         Ny = (unsigned)v[3];
         k  = (unsigned)v[4];
         dt = v[5];
         eps = v[6];
-        lx = v[7]; 
-        ly = v[8];
-        bc_x = dg::PER, bc_y = dg::PER;
-        if( v[9]) bc_x = dg::DIR;
-        if( v[10]) bc_y = dg::DIR;
-        D = v[11];
-        U = v[12];
-        R = v[13];
-        posX = v[14];
-        posY = v[15];
-        itstp = v[16];
-        maxout = v[17];
+        r_min = v[7];
+        r_max = v[8];
+        D = v[9];
+        iv = (unsigned)v[10];
+        U = v[11];
+        R = v[12];
+        posX = v[13];
+        posY = v[14];
+        itstp = v[15];
+        maxout = v[16];
     }
     /**
      * @brief Display parameters
@@ -56,25 +54,21 @@ struct Parameters
     {
         os << "Physical parameters are: \n"
             <<"    Viscosity:       = "<<D<<"\n";
-        char per[] = "PERIODIC", dir[] = "DIRICHLET";
         os << "Boundary parameters are: \n"
-            <<"    lx = "<<lx<<"\n"
-            <<"    ly = "<<ly<<"\n"
-            <<"Boundary conditions in x are: \n"
-            <<"    "<<(bc_x == dg::DIR ? dir:per)<<"\n"
-            <<"Boundary conditions in y are: \n"
-            <<"    "<<(bc_y == dg::DIR ? dir:per)<<"\n";
+            <<"    r_min = "<<r_min<<"\n"
+            <<"    r_max = "<<r_max<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"
             <<"    Ny = "<<Ny<<"\n"
             <<"    k  = "<<k<<"\n"
             <<"    dt = "<<dt<<"\n";
-        os  <<"Dipole parameters are: \n"
+        os  <<"Initial value parameters are: \n"
+            << "    iv:           "<<iv<<"\n"
             << "    radius:       "<<R<<"\n"
             << "    velocity:     "<<U<<"\n"
-            << "    posX:         "<<posX<<"\n"
-            << "    posY:         "<<posY<<"\n";
+            << "    pos_r:         "<<posX<<"\n"
+            << "    pos_varphi:    "<<posY<<"\n";
         os << "Stopping for CG:         "<<eps<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
             <<"Number of outputs:       "<<maxout<<std::endl;

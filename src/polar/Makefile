@@ -20,4 +20,4 @@ polargl: polar.cu ns.h
 .PHONY: clean
 
 clean:
-	rm -f polar
+	rm -f polar polargl
