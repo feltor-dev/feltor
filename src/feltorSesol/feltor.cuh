@@ -119,7 +119,6 @@ struct Feltor
 
     double mass_, energy_, diff_, ediff_,gammanex_,coupling_;
     std::vector<double> evec;
-   
     container lh,rh,lhso,rhsi,profne,profNi;
 
 };
