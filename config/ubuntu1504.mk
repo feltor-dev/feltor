@@ -9,5 +9,5 @@ OPT=-O3 # optimization flag
 NVCCARCH=-arch sm_20 #nvcc gpu compute capability
 OMPFLAG=-fopenmp #openmp flag for CC and MPICC
 LIBS=-lnetcdf -lhdf5_serial -lhdf5_serial_hl # netcdf library for file output
-JSONLIB=-L$(HOME)/include/json/../../src/lib_json -ljsoncpp # json library for input parameters
+JSONLIB=-I/usr/include/jsoncpp -ljsoncpp # json library for input parameters
 endif # ubuntu1504
