@@ -18,7 +18,9 @@
 #include "geometries/conformal.h"
 #include "geometries/orthogonal.h"
 
+#ifdef OPENGL_WINDOW
 #include "draw/host_window.h"
+#endif
 
 #include "file/read_input.h"
 
@@ -108,12 +110,13 @@ int main()
     Grid grid( generator, p.n, p.Nx, p.Ny, dg::DIR); // second coordiante is periodic by default
 
     DVec w2d( create::weights(grid));
-    /////////////////////////////////////////////////////////////////
+
+#ifdef OPENGL_WINDOW
     //create CUDA context that uses OpenGL textures in Glfw window
     std::stringstream title;
     GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "");
     draw::RenderHostData render( 1,1);
-    ////////////////////////////////////////////////////////////
+#endif
 
     //dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
     dg::Lamb lamb( 0.9, M_PI, 0.5, p.U);
@@ -129,7 +132,7 @@ int main()
     }
     //make solver and stepper
     Shu<Grid, DMatrix, DVec> shu( grid, p.eps);
-    Diffusion<Grid, DMatrix, DVec> diffusion( grid, 0.0 /*p.D*/);
+    Diffusion<Grid, DMatrix, DVec> diffusion( grid, p.D);
     Karniadakis< DVec > ab( y0, y0.size(), 1e-9);
 
     t.tic();
@@ -145,20 +148,24 @@ int main()
     std::cout << "Total vorticity:  "<<vorticity<<"\n";
 
     double time = 0;
-    ////////////////////////////////glfw//////////////////////////////
+#ifdef OPENGL_WINDOW
     //create visualisation vectors
     DVec visual( grid.size());
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
     dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
+#endif
+
     ab.init( shu, diffusion, y0, p.dt);
     ab( shu, diffusion, y0); //make potential ready
-    //cout << "Press any key to start!\n";
-    //double x; 
-    //cin >> x;
-    while (!glfwWindowShouldClose(w) && time < p.maxout*p.itstp*p.dt)
+
+    while (time < p.maxout*p.itstp*p.dt)
     {
+#ifdef OPENGL_WINDOW
+        if(glfwWindowShouldClose(w))
+            break;
+
         dg::blas2::symv( equidistant, ab.last(), visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
@@ -169,6 +176,8 @@ int main()
         title.str("");
         glfwPollEvents();
         glfwSwapBuffers(w);
+#endif
+
         //step 
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
@@ -180,8 +189,11 @@ int main()
         time += p.itstp*p.dt;
 
     }
+
+#ifdef OPENGL_WINDOW
     glfwTerminate();
-    ////////////////////////////////////////////////////////////////////
+#endif
+
     cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
     cout << "Analytic formula energy    "<<lamb.energy()<<endl;
     cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, ab.last()) << "\n";
