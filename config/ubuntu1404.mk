@@ -3,7 +3,6 @@ ifeq ($(OS),ubuntu1404)
 INCLUDE = -I$(HOME)/include#  # cusp and thrust and the draw libraries
 INCLUDE += -I/usr/include/hdf5/serial
 GLFLAGS =$$(pkg-config --static --libs glfw3) #glfw3 installation
-CFLAGS += -fpermissive
 CC=g++ #C++ compiler
 MPICC=mpic++  #mpi compiler
 OPT=-O3 # optimization flag
