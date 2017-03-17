@@ -32,9 +32,9 @@ const char* parameters = "geometry_params_Xpoint_taylor.js";
 
 int main(int argc, char**argv)
 {
-    std::cout << "Type n, Nx (fx = 1./8.), Ny (fy = 1./22.), Nz\n";
-    unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
+    std::cout << "Type n, Nx (fx = 1./4.), Ny (fy = 1./22.)\n";
+    unsigned n, Nx, Ny;
+    std::cin >> n>> Nx>>Ny;   
     std::cout << "Type psi_0! \n";
     double psi_0, psi_1;
     std::cin >> psi_0;
@@ -67,14 +67,15 @@ int main(int argc, char**argv)
     std::cout << "X-point at "<<R_X <<" "<<Z_X<<"\n";
     dg::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.125, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
+    dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
     dg::Elliptic<dg::OrthogonalGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
-    double fx = 0.125;
+    double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi 1 is          "<<psi_1<<"\n";
 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
+    std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<"\n";
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
     file::NC_Error_Handle ncerr;
@@ -112,7 +113,7 @@ int main(int argc, char**argv)
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
     const dg::DVec b =    dg::pullback( solovev::EllipticXDirNeuM<Collective>(c, gp.R_0, psi_0, psi_1), g2d);
     dg::DVec chi  =  dg::pullback( solovev::Bmodule<Collective>(c, gp.R_0), g2d);
-    dg::blas1::plus( chi, 1e5);
+    dg::blas1::plus( chi, 1e4);
     //const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
     const dg::DVec solution = dg::pullback( solovev::FuncXDirNeu<Collective>(c, psi_0, psi_1 ), g2d);
     ////////////////////////////////////////////////////////////////////////////
@@ -127,7 +128,7 @@ int main(int argc, char**argv)
     std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
-    dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
+    dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
     //unsigned number = invert(pol, x,b, vol2d, inv_vol2d );
     unsigned number = invert(pol, x,b, vol2d, v2d ); //inv weights are better preconditioners
     std::cout <<number<<"\t";

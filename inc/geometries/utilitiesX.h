@@ -267,8 +267,8 @@ struct PsipSep
     void set_Z( double z){ Z_=z;}
     double operator()(double R) { return psip_(R, Z_);}
     private:
-    double Z_;
     Psi psip_;
+    double Z_;
 };
 
 //!ATTENTION: choosing h on separatrix is a mistake if LaplacePsi does not vanish at X-point

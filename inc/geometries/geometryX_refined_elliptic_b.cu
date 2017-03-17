@@ -20,9 +20,9 @@
 
 int main(int argc, char**argv)
 {
-    std::cout << "Type n, Nx (fx = 1./8.), Ny (fy = 1./22.), Nz\n";
-    unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
+    std::cout << "Type n, Nx (fx = 1./4.), Ny (fy = 1./22.)\n";
+    unsigned n, Nx, Ny;
+    std::cin >> n>> Nx>>Ny;   
     std::cout << "Type psi_0! \n";
     double psi_0, psi_1;
     std::cin >> psi_0;
@@ -62,18 +62,19 @@ int main(int argc, char**argv)
     //double Z_X = -1.0*gp.elongation*gp.a;
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,1);
+    dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::SimpleOrthogonalX<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.125, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
-    dg::OrthogonalRefinedGridX2d<dg::DVec> g2d( add_x, add_y, howmanyX, howmanyY, generator, psi_0, 0.125, 1./22., n_ref, n, Nx, Ny, dg::DIR, dg::NEU);
+    //dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
+    dg::OrthogonalRefinedGridX2d<dg::DVec> g2d( add_x, add_y, howmanyX, howmanyY, generator, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny, dg::DIR, dg::NEU);
     dg::Elliptic<dg::OrthogonalRefinedGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
     dg::RefinedElliptic<dg::OrthogonalRefinedGridX2d<dg::DVec>, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g2d, dg::not_normed, dg::forward);
-    double fx = 0.125;
+    double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi 1 is          "<<psi_1<<"\n";
 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
+    std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<" + "<<add_x<<" + "<<add_y<<" x "<<howmanyX<<" x "<<howmanyY<<"\n";
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
     file::NC_Error_Handle ncerr;
@@ -152,8 +153,8 @@ int main(int argc, char**argv)
     dg::DVec x_fine_sw     =    dg::evaluate( dg::zero, g2d);
     dg::DVec x_direct      =    dg::evaluate( dg::zero, g2d.associated());
     dg::DVec x_fine_di     =    dg::evaluate( dg::zero, g2d);
-    dg::Invert<dg::DVec > invert1( x_sandwich, n*n*Nx*Ny*Nz, eps);
-    dg::Invert<dg::DVec > invert2( x_fine_di,  n*n*Nx*Ny*Nz, eps);
+    dg::Invert<dg::DVec > invert1( x_sandwich, n*n*Nx*Ny, eps);
+    dg::Invert<dg::DVec > invert2( x_fine_di,  n*n*Nx*Ny, eps);
     dg::DVec bmod(b);
     pol_refined.compute_rhs( bFINE, bmod);
     unsigned number_sw = invert1(pol_refined, x_sandwich, bmod, w3d, v3d );
