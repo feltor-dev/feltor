@@ -1,5 +1,6 @@
 #pragma once
 //#include "solovev.h"
+#include "solovev_parameters.h"
 
 /*!@file
  *
@@ -7,7 +8,7 @@
  */
 namespace dg
 {
-namespace solovev
+namespace functors
 {
 ///@addtogroup profiles
 ///@{
@@ -260,7 +261,7 @@ struct GaussianProfDamping
 template <class Psi>
 struct GaussianProfXDamping
 {
-    GaussianProfXDamping( Psi psi, GeomParameters gp):
+    GaussianProfXDamping( Psi psi, dg::solovev::GeomParameters gp):
         gp_(gp),
         psip_(psi) {
         }
@@ -287,7 +288,7 @@ struct GaussianProfXDamping
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;
+    dg::solovev::GeomParameters gp_;
     Psi psip_;
 };
 
@@ -299,7 +300,7 @@ struct GaussianProfXDamping
 template<class Psi>
 struct TanhSource
 {
-        TanhSource(Psi psi, GeomParameters gp):
+        TanhSource(Psi psi, dg::solovev::GeomParameters gp):
         gp_(gp),
         psip_(psi) {
         }
@@ -319,7 +320,7 @@ struct TanhSource
         return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
-    GeomParameters gp_;
+    dg::solovev::GeomParameters gp_;
     Psi psip_;
 };
 
@@ -358,7 +359,7 @@ struct TanhSource
 template<class Psi>
 struct Nprofile
 {
-     Nprofile( double bgprofamp, double peakamp, GeomParameters gp, Psi psi):
+     Nprofile( double bgprofamp, double peakamp, dg::solovev::GeomParameters gp, Psi psi):
          bgamp(bgprofamp), namp( peakamp),
          gp_(gp),
          psip_(psi) { }
@@ -384,7 +385,7 @@ struct Nprofile
     }
     private:
     double bgamp, namp;
-    GeomParameters gp_;
+    dg::solovev::GeomParameters gp_;
     Psi psip_;
 };
 
@@ -399,7 +400,7 @@ struct Nprofile
 template<class Psi>
 struct ZonalFlow
 {
-    ZonalFlow(  double amplitude, double k_psi, GeomParameters gp, Psi psi):
+    ZonalFlow(  double amplitude, double k_psi, dg::solovev::GeomParameters gp, Psi psi):
         amp_(amplitude), k_(k_psi),
         gp_(gp),
         psip_(psi) { }
@@ -426,12 +427,12 @@ struct ZonalFlow
     }
     private:
     double amp_, k_;
-    GeomParameters gp_;
+    dg::solovev::GeomParameters gp_;
     Psi psip_;
 };
 
 
 ///@}
-}//namespace solovev
+}//namespace functors
 }//namespace dg
 

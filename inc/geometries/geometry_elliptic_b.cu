@@ -16,6 +16,7 @@
 #include "orthogonal.h"
 #include "refined_curvilinear.h"
 #include "refined_orthogonal.h"
+#include "functors.h"
 
 
 
@@ -43,14 +44,15 @@ int main(int argc, char**argv)
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    solovev::GeomParameters gp(js);
+    dg::solovev::GeomParameters gp(js);
+    dg::solovev::CollectivePsip c(gp);
     gp.display( std::cout);
     dg::Timer t;
-    solovev::Psip psip( gp); 
+    dg::solovev::Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing grid ... \n";
     t.tic();
-    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 0);
+    dg::SimpleOrthogonal<dg::solovev::Psip, dg::solovev::PsipR, dg::solovev::PsipZ, dg::solovev::LaplacePsip> generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 0);
 //     ConformalGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
 //     ConformalGrid2d<dg::DVec> g2d = g3d.perp_grid();
 //     dg::Elliptic<ConformalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
@@ -84,16 +86,16 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =    dg::evaluate( dg::zero, g2d.associated());
     dg::DVec x_fine =    dg::evaluate( dg::zero, g2d);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 440, -220, 40., 1), g2d.associated());
+    const dg::DVec b =    dg::pullback( dg::fields::EllipticDirNeuM<dg::solovev::CollectivePsip>(c, gp.R_0, psi_0, psi_1, 440, -220, 40., 1), g2d.associated());
     dg::DVec bmod(b);
-    const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g2d.associated());
-    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 440, -220, 40.,1 ), g2d.associated());
-    //const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1, 4), g2d.associated());
+    const dg::DVec chi =  dg::pullback( dg::fields::BmodTheta<dg::solovev::CollectivePsip>(c, gp.R_0), g2d.associated());
+    const dg::DVec solution = dg::pullback( dg::fields::FuncDirNeu<dg::solovev::CollectivePsip>(c,psi_0, psi_1, 440, -220, 40.,1 ), g2d.associated());
+    //const dg::DVec b =    dg::pullback( dg::solovev::EllipticDirPerM(gp, psi_0, psi_1, 4), g2d.associated());
     //dg::DVec bmod(b);
-    //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d.associated());
-    //const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1, 4), g2d.associated());
-    //const dg::DVec b =        dg::pullback( solovev::LaplacePsi(gp), g2d.associated());
-    //const dg::DVec bFINE =    dg::pullback( solovev::LaplacePsi(gp), g2d);
+    //const dg::DVec chi =  dg::pullback( dg::solovev::Bmodule(gp), g2d.associated());
+    //const dg::DVec solution = dg::pullback( dg::solovev::FuncDirPer(gp, psi_0, psi_1, 4), g2d.associated());
+    //const dg::DVec b =        dg::pullback( dg::solovev::LaplacePsi(gp), g2d.associated());
+    //const dg::DVec bFINE =    dg::pullback( dg::solovev::LaplacePsi(gp), g2d);
     //dg::DVec bmod(b);
     //const dg::DVec chi =      dg::pullback( dg::one, g2d.associated());
     //const dg::DVec chiFINE =  dg::pullback( dg::one, g2d);

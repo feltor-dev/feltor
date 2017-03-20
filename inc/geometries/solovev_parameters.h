@@ -6,6 +6,8 @@
  *
  * Geometry parameters
  */
+namespace dg
+{
 namespace solovev
 {
 ///@addtogroup geom
@@ -104,3 +106,4 @@ struct GeomParameters
     }
 };
 } //namespace solovev
+}//namespace dg

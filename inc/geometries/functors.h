@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dg/functors.h"
+#include "magnetic_field.h"
 
 /*!@file
  *
@@ -8,7 +9,7 @@
  */
 namespace dg
 {
-namespace fields
+namespace functors
 {
 ///@addtogroup profiles
 ///@{
@@ -32,7 +33,7 @@ struct DeriNeu
     }
     private:
     Collective c_;
-    BHatP<Collective> bhat_;
+    dg::magnetic::BHatP<Collective> bhat_;
 };
 
 //psi * cos(theta)
@@ -122,9 +123,9 @@ struct EllipticDirPerM
     }
     private:
     FuncDirPer<Collective> func_;
-    Bmodule<Collective> bmod_;
-    BR<Collective> br_;
-    BZ<Collective> bz_;
+    dg::magnetic::Bmodule<Collective> bmod_;
+    dg::magnetic::BR<Collective> br_;
+    dg::magnetic::BZ<Collective> bz_;
 };
 
 //Blob function
@@ -199,7 +200,7 @@ struct BmodTheta
             return 2.*M_PI-acos( dR/sqrt( dR*dR + Z*Z));
     }
     double R_0_;
-    Bmodule<Collective> bmod_;
+    dg::magnetic::Bmodule<Collective> bmod_;
 
 };
 
@@ -238,9 +239,9 @@ struct EllipticDirNeuM
     }
     double R_0_;
     FuncDirNeu<Collective> func_;
-    Bmodule<Collective> bmod_;
-    BR<Collective> br_;
-    BZ<Collective> bz_;
+    dg::magnetic::Bmodule<Collective> bmod_;
+    dg::magnetic::BR<Collective> br_;
+    dg::magnetic::BZ<Collective> bz_;
 };
 
 //the psi surfaces
@@ -306,9 +307,9 @@ struct EllipticXDirNeuM
     private:
     double R_0_;
     FuncXDirNeu<Collective> func_;
-    Bmodule<Collective> bmod_;
-    BR<Collective> br_;
-    BZ<Collective> bz_;
+    dg::magnetic::Bmodule<Collective> bmod_;
+    dg::magnetic::BR<Collective> br_;
+    dg::magnetic::BZ<Collective> bz_;
 };
 
 //take Blob and chi=1
@@ -372,9 +373,9 @@ struct TestFunction
 
     }
     private:
-    BHatR<Collective> bhatR_;
-    BHatZ<Collective> bhatZ_;
-    BHatP<Collective> bhatP_;
+    dg::magnetic::BHatR<Collective> bhatR_;
+    dg::magnetic::BHatZ<Collective> bhatZ_;
+    dg::magnetic::BHatP<Collective> bhatP_;
 };
 
 /**
@@ -412,11 +413,11 @@ struct DeriTestFunction
 
     }
     private:
-    BHatR<Collective> bhatR_;
-    BHatZ<Collective> bhatZ_;
-    BHatP<Collective> bhatP_;
+    dg::magnetic::BHatR<Collective> bhatR_;
+    dg::magnetic::BHatZ<Collective> bhatZ_;
+    dg::magnetic::BHatP<Collective> bhatP_;
 };
 
 ///@} 
-} //namespace fields
+} //namespace functors
 } //namespace dg

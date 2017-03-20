@@ -10,7 +10,7 @@
 #include "dg/backend/functions.h"
 #include "dg/functors.h"
 #include "solovev_parameters.h"
-#include "fields.h"
+#include "magnetic_field.h"
 
 
 /*!@file

@@ -7,7 +7,7 @@
  */
 namespace dg
 {
-namespace field
+namespace magnetic
 {
 ///@addtogroup geom
 ///@{
@@ -533,74 +533,74 @@ struct Field
    
 };
 
-/**
- * @brief Integrates the equations for a field line and 1/B
- */ 
-template<class Collective>
-struct OrthogonalField
-{
-    OrthogonalField( const Collective& c, double R0, dg::detail::GeomParameters gp, const dg::Grid2d& gXY, const thrust::host_vector<double>& f2):
-        c_(c), R_0_(R0), invB_(c, R0), gXY_(gXY), 
-        g_(dg::create::forward_transform(f2, gXY)) 
-    { }
-
-    /**
-     * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
-     \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
-     \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
-     */ 
-    void operator()( const dg::HVec& y, dg::HVec& yp)
-    {
-        //x,y,s,R,Z
-        double psipR = c_.psipR(y[3],y[4]), psipZ = c_.psipZ(y[3],y[4]), ipol = c_.ipol( y[3],y[4]);
-        double xs = y[0],ys=y[1];
-        gXY_.shift_topologic( y[0], M_PI, xs,ys);
-        double g = dg::interpolate( xs,  ys, g_, gXY_);
-        yp[0] = 0;
-        yp[1] = y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
-        //yp[1] = g/ipol;
-        yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/R_0_; //ds/dphi =  R^2 B/I/R_0_hat
-        yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
-        yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
-
-    }
-    /**
-     * @brief \f[   \frac{1}{\hat{B}} = 
-      \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
-      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
-     */ 
-    double operator()( double R, double Z) const { return invB_(R,Z); }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
-    double error( const dg::HVec& x0, const dg::HVec& x1)
-    {
-        //compute error in x,y,s
-        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
-    }
-    bool monitor( const dg::HVec& end){ 
-        if ( isnan(end[1]) || isnan(end[2]) || isnan(end[3])||isnan( end[4]) ) 
-        {
-            return false;
-        }
-        if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
-        {
-            return false;
-        }
-        return true;
-    }
-    
-    private:
-    Collective c_;
-    double R_0_;
-    dg::detail::InvB<Collective>   invB_;
-    const dg::Grid2d gXY_;
-    thrust::host_vector<double> g_;
-};
+///**
+// * @brief Integrates the equations for a field line and 1/B
+// */ 
+//template<class Collective>
+//struct OrthogonalField
+//{
+//    OrthogonalField( const Collective& c, double R0, dg::solovev::GeomParameters gp, const dg::Grid2d& gXY, const thrust::host_vector<double>& f2):
+//        c_(c), R_0_(R0), invB_(c, R0), gXY_(gXY), 
+//        g_(dg::create::forward_transform(f2, gXY)) 
+//    { }
+//
+//    /**
+//     * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
+//     \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
+//     \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
+//     */ 
+//    void operator()( const dg::HVec& y, dg::HVec& yp)
+//    {
+//        //x,y,s,R,Z
+//        double psipR = c_.psipR(y[3],y[4]), psipZ = c_.psipZ(y[3],y[4]), ipol = c_.ipol( y[3],y[4]);
+//        double xs = y[0],ys=y[1];
+//        gXY_.shift_topologic( y[0], M_PI, xs,ys);
+//        double g = dg::interpolate( xs,  ys, g_, gXY_);
+//        yp[0] = 0;
+//        yp[1] = y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
+//        //yp[1] = g/ipol;
+//        yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/R_0_; //ds/dphi =  R^2 B/I/R_0_hat
+//        yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
+//        yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
+//
+//    }
+//    /**
+//     * @brief \f[   \frac{1}{\hat{B}} = 
+//      \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
+//      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
+//     */ 
+//    double operator()( double R, double Z) const { return invB_(R,Z); }
+//    /**
+//     * @brief == operator()(R,Z)
+//     */ 
+//    double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
+//    double error( const dg::HVec& x0, const dg::HVec& x1)
+//    {
+//        //compute error in x,y,s
+//        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+//    }
+//    bool monitor( const dg::HVec& end){ 
+//        if ( isnan(end[1]) || isnan(end[2]) || isnan(end[3])||isnan( end[4]) ) 
+//        {
+//            return false;
+//        }
+//        if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
+//        {
+//            return false;
+//        }
+//        return true;
+//    }
+//    
+//    private:
+//    Collective c_;
+//    double R_0_;
+//    dg::magnetic::InvB<Collective>   invB_;
+//    const dg::Grid2d gXY_;
+//    thrust::host_vector<double> g_;
+//};
 
 
 ///@} 
-} //namespace fields
+} //namespace magnetic
 } //namespace dg
 

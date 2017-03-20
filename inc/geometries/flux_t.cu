@@ -63,8 +63,8 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    solovev::GeomParameters gp(js);
-    solovev::Psip psip( gp); 
+    dg::solovev::GeomParameters gp(js);
+    dg::solovev::Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
@@ -74,8 +74,8 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing flux grid ... \n";
     t.tic();
-    solovev::CollectivePsip c( gp);
-    dg::FluxGenerator<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ, solovev::Ipol, solovev::IpolR, solovev::IpolZ>
+    dg::solovev::CollectivePsip c( gp);
+    dg::FluxGenerator<dg::solovev::Psip, dg::solovev::PsipR, dg::solovev::PsipZ, dg::solovev::PsipRR, dg::solovev::PsipRZ, dg::solovev::PsipZZ, dg::solovev::Ipol, dg::solovev::IpolR, dg::solovev::IpolZ>
         flux( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, c.ipol, c.ipolR, c.ipolZ, psi_0, psi_1, gp.R_0, 0., 1);
     dg::CurvilinearGrid3d<dg::HVec> g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
@@ -166,7 +166,7 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    solovev::Iris iris( gp);
+    dg::functors::Iris<dg::solovev::Psip> iris( c.psip, gp.psipmin, gp.psipmax);
     //dg::CylindricalGrid3d<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
