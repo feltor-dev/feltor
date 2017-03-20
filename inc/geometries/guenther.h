@@ -15,6 +15,8 @@
  *
  * Geometry objects 
  */
+namespace dg
+{
 namespace guenther
 {
 ///@addtogroup geom
@@ -493,4 +495,5 @@ struct Divb
 ///@} 
 } //namespace guenther
 
+}//namespace dg
 #include "fields.h"

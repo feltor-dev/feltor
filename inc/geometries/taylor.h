@@ -17,6 +17,8 @@
  *
  * Geometry objects 
  */
+namespace dg
+{
 namespace taylor
 {
 ///@addtogroup geom
@@ -397,5 +399,6 @@ struct CollectivePsip
 
 } //namespace taylor
 
+}//namespace dg
 
 #include "fields.h"

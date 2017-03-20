@@ -10,12 +10,15 @@
 #include "dg/backend/functions.h"
 #include "dg/functors.h"
 #include "solovev_parameters.h"
+#include "fields.h"
 
 
 /*!@file
  *
  * Geometry objects 
  */
+namespace dg
+{
 namespace solovev
 {
 ///@addtogroup geom
@@ -757,7 +760,9 @@ struct LaplacePsip
 
 } //namespace mod
 
+///////////////////////////////////////introduce fields into solovev namespace
+
 } //namespace solovev
 
+}//namespace dg
 
-#include "fields.h"
