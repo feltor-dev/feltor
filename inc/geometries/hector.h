@@ -334,13 +334,13 @@ struct Hector
      */
     double height() const {return 2.*M_PI;}
     /**
-     * @brief Check if conformal constructor was used
+     * @brief True if conformal constructor was used
      *
      * @return true if conformal constructor was used
      */
     bool isConformal() const {return conformal_;}
     /**
-     * @brief Check if orthogonal constructor was used
+     * @brief True if orthogonal constructor was used
      *
      * @return true if orthogonal constructor was used
      */

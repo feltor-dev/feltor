@@ -150,9 +150,9 @@ struct Fpsi
     private:
     double R_init, Z_init;
     Psi psip_;
-    solovev::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTribeiro_;
-    solovev::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequalarc_;
-    solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    dg::detail::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTribeiro_;
+    dg::detail::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequalarc_;
+    dg::detail::FieldRZtau<PsiX, PsiY> fieldRZtau_;
     int mode_;
 };
 
@@ -173,8 +173,8 @@ struct FieldFinv
     }
     private:
     Fpsi<Psi, PsiR, PsiZ> fpsi_;
-    solovev::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYTribeiro_;
-    solovev::equalarc::FieldRZYT<PsiR, PsiZ> fieldRZYTequalarc_;
+    dg::detail::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYTribeiro_;
+    dg::detail::equalarc::FieldRZYT<PsiR, PsiZ> fieldRZYTequalarc_;
     unsigned N_steps;
     int mode_;
 };
@@ -261,8 +261,8 @@ struct Ribeiro
 
         //std::cout << "In grid function:\n";
         ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        solovev::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::detail::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::detail::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
@@ -300,7 +300,7 @@ struct Ribeiro
 // */ 
 //struct Field
 //{
-//    Field( solovev::GeomParameters gp,const thrust::host_vector<double>& x, const thrust::host_vector<double>& f_x):
+//    Field( dg::detail::GeomParameters gp,const thrust::host_vector<double>& x, const thrust::host_vector<double>& f_x):
 //        gp_(gp),
 //        psipR_(gp), psipZ_(gp),
 //        ipol_(gp), invB_(gp), last_idx(0), x_(x), fx_(f_x)
@@ -365,11 +365,11 @@ struct Ribeiro
 //        return 0;
 //    }
 //    
-//    solovev::GeomParameters gp_;
-//    solovev::PsipR  psipR_;
-//    solovev::PsipZ  psipZ_;
-//    solovev::Ipol   ipol_;
-//    solovev::InvB   invB_;
+//    dg::detail::GeomParameters gp_;
+//    dg::detail::PsipR  psipR_;
+//    dg::detail::PsipZ  psipZ_;
+//    dg::detail::Ipol   ipol_;
+//    dg::detail::InvB   invB_;
 //    int last_idx;
 //    thrust::host_vector<double> x_;
 //    thrust::host_vector<double> fx_;
