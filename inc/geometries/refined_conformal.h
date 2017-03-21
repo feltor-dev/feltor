@@ -3,18 +3,20 @@
 #include "dg/geometry/refined_grid.h"
 #include "conformal.h"
 
-
-
 namespace dg
 {
-///@addtogroup grids
-///@{
 
 ///@cond
 template< class container>
 struct ConformalRefinedGrid2d; 
 ///@endcond
 
+///@addtogroup grids
+///@{
+
+/**
+ * @brief A conformal refined grid
+ */
 template< class container>
 struct ConformalRefinedGrid3d : public dg::RefinedGrid3d
 {
@@ -102,6 +104,9 @@ struct ConformalRefinedGrid3d : public dg::RefinedGrid3d
 
 };
 
+/**
+ * @brief A conformal refined grid
+ */
 template< class container>
 struct ConformalRefinedGrid2d : public dg::RefinedGrid2d
 {

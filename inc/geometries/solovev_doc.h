@@ -3,23 +3,30 @@
  * @brief This is the namespace for a solvev magnetic flux
  */
 /*! 
- * @defgroup geom The field line geometry 
  * 
+ * @defgroup grids Grids 
+ * @defgroup generators Grid generators
+ * @defgroup fluxfunctions New functors based on the magnetic field geometry
+ * @{
+      @defgroup geom new flux functions and derivatives
+      @defgroup magnetic magnetic field and associated functors
+      @defgroup profiles miscellaneous functors based on flux functions
+ * @}
+ * @defgroup misc Miscellaneous additions
+ *
  * Objects that are used to define and integrate the magnetic field lines. 
  * All objects can be used in the evaluation() function.
- * @defgroup profiles Profiles based on the magnetic field geometry
- * @defgroup grids Grids and grid generators
- * @{
- *     @defgroup generators Grid generators
- * @}
  * 
  */
 /*! @mainpage
  * Welcome to the Geometry extension of FELTOR.
  *
- * This library implements generic equilibrium magnetic fields that solves
- * the Grad Shafranov equation as functors. Furthermore, it provides several derived quantities
- * like the curvature and field strength terms and a set of predefined parameters
- * that model various toroidal geometries.
- * Last but not least we add several new grids to the dG namespace.
+ * This extension adds new features to the FELTOR core dg library. Firstly, 
+ * the conformal, orthogonal and curvilinear grid classes are added to the
+ * dg namespace. 
+ * Secondly, several grid generator classes are added, among them our new Hector class. 
+ * Thirdly, a bunch of new functors implementing various magnetic field geometries
+ * and profiles are added to the dg::geo namespace
+ * Lastly, there are some miscellaneous additions like a flux surface average class
+ * and one used to integrate the field lines for parallel derivatives.
  */

@@ -2,8 +2,10 @@
 
 namespace dg
 {
+namespace geo
+{
 
-
+///@cond
 namespace detail{
 
 template<class PsiX, class PsiY, class LaplacePsi, class Chi, class ChiX, class ChiY>
@@ -65,7 +67,14 @@ struct LaplacePsi
 };
 
 }//namespace detail
+///@endcond
 
+///@addtogroup profiles
+///@{
+
+/**
+ * @brief A weight function for the Hector algorithm
+ */
 template<class PsiX, class PsiY>
 struct NablaPsiInv
 {
@@ -80,6 +89,9 @@ struct NablaPsiInv
     PsiY psiY_;
 };
 
+/**
+ * @brief Derivative of the weight function
+ */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvX
 {
@@ -102,6 +114,9 @@ struct NablaPsiInvX
     PsiYY psiYY_;
 };
 
+/**
+ * @brief Derivative of the weight function
+ */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvY
 {
@@ -124,16 +139,22 @@ struct NablaPsiInvY
     PsiYY psiYY_;
 };
 
+/**
+ * @brief A container class that contains functors
+ */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvCollective
 {
     NablaPsiInvCollective( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX, const PsiXY& psiXY, const PsiYY& psiYY):nablaPsiInv(psiX, psiY), nablaPsiInvX(psiX, psiY, psiXX, psiXY, psiYY), nablaPsiInvY( psiX, psiY, psiXX, psiXY, psiYY){}
-    NablaPsiInv<PsiX, PsiY> nablaPsiInv;
-    NablaPsiInvX<PsiX, PsiY, PsiXX, PsiXY, PsiYY> nablaPsiInvX;
-    NablaPsiInvY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> nablaPsiInvY;
+    NablaPsiInv<PsiX, PsiY> nablaPsiInv; //!< inverse of nabla psi
+    NablaPsiInvX<PsiX, PsiY, PsiXX, PsiXY, PsiYY> nablaPsiInvX; //!< derivative of nabla psi
+    NablaPsiInvY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> nablaPsiInvY; //!< derivative of nabla psi
 };
 
 
+/**
+ * @brief The xx-component of the Liseikin monitor metric
+ */
 template<class PsiX, class PsiY>
 struct Liseikin_XX
 {
@@ -151,6 +172,10 @@ struct Liseikin_XX
     PsiX psiX_;
     PsiY psiY_;
 };
+
+/**
+ * @brief The xy-component of the Liseikin monitor metric
+ */
 template<class PsiX, class PsiY>
 struct Liseikin_XY
 {
@@ -168,6 +193,10 @@ struct Liseikin_XY
     PsiX psiX_;
     PsiY psiY_;
 };
+
+/**
+ * @brief The yy-component of the Liseikin monitor metric
+ */
 template<class PsiX, class PsiY>
 struct Liseikin_YY
 {
@@ -185,6 +214,10 @@ struct Liseikin_YY
     PsiX psiX_;
     PsiY psiY_;
 };
+
+/**
+ * @brief The x-component of the divergence of the Liseikin monitor metric
+ */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct DivLiseikinX
 {
@@ -212,6 +245,10 @@ struct DivLiseikinX
     PsiXY psiXY_;
     PsiYY psiYY_;
 };
+
+/**
+ * @brief The y-component of the divergence of the Liseikin monitor metric
+ */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct DivLiseikinY
 {
@@ -240,6 +277,9 @@ struct DivLiseikinY
     PsiYY psiYY_;
 };
 
+/**
+ * @brief A container class that contains functors
+ */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct LiseikinCollective
 {
@@ -249,12 +289,14 @@ struct LiseikinCollective
         chi_YY(psiX, psiY, k, eps), 
         divChiX(psiX, psiY, psiXX, psiXY, psiYY, k, eps), 
         divChiY(psiX, psiY, psiXX, psiXY, psiYY, k, eps){}
-    Liseikin_XX<PsiX, PsiY> chi_XX;
-    Liseikin_XY<PsiX, PsiY> chi_XY;
-    Liseikin_YY<PsiX, PsiY> chi_YY;
-    DivLiseikinX<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiX;
-    DivLiseikinY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiY;
+    Liseikin_XX<PsiX, PsiY> chi_XX; //!< a metric tensor component
+    Liseikin_XY<PsiX, PsiY> chi_XY; //!< a metric tensor component
+    Liseikin_YY<PsiX, PsiY> chi_YY; //!< a metric tensor component
+    DivLiseikinX<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiX; //!< divergence of metric
+    DivLiseikinY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiY; //!< divergence of metric
 };
+///@}
 
+}//namespace geo
 
 }//namespace dg

@@ -1,10 +1,11 @@
 #pragma once
 
-#include "hector.h"
+#include "dg/backend/grid.h"
+#include "dg/blas1.h"
+#include "dg/geometry/geometry_traits.h"
 
-
-
-namespace dg{
+namespace dg
+{
 ///@addtogroup grids
 ///@{
 
@@ -143,5 +144,4 @@ struct ConformalGrid2d : public dg::Grid2d
 };
 
 ///@}
-
 }//namespace

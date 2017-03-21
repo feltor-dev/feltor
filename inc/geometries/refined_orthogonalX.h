@@ -1,20 +1,21 @@
 #pragma once
 
-
 #include "dg/geometry/refined_gridX.h"
 #include "orthogonalX.h"
-
-
 
 namespace dg
 {
 
-
+///@cond
 template< class container>
 struct OrthogonalRefinedGridX2d;
+///@endcond
+
+///@addtogroup grids
+///@{
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A three-dimensional refined X-Grid
  */
 template< class container>
 struct OrthogonalRefinedGridX3d : public dg::RefinedGridX3d
@@ -117,7 +118,7 @@ struct OrthogonalRefinedGridX3d : public dg::RefinedGridX3d
 };
 
 /**
- * @brief A three-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A two-dimensional refined X-Grid
  */
 template< class container>
 struct OrthogonalRefinedGridX2d : public dg::RefinedGridX2d

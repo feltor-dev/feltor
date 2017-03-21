@@ -1,9 +1,7 @@
 #pragma once
 
-
 #include "dg/geometry/refined_grid.h"
 #include "curvilinear.h"
-
 
 namespace dg
 {
@@ -15,6 +13,10 @@ struct CurvilinearRefinedGrid2d;
 
 ///@addtogroup grids
 ///@{
+
+/**
+ * @brief A curvilinear refined grid
+ */
 template< class container>
 struct CurvilinearRefinedGrid3d : public dg::RefinedGrid3d
 {
@@ -100,6 +102,9 @@ struct CurvilinearRefinedGrid3d : public dg::RefinedGrid3d
     
 };
 
+/**
+ * @brief A curvilinear refined grid
+ */
 template< class container>
 struct CurvilinearRefinedGrid2d : public dg::RefinedGrid2d
 {

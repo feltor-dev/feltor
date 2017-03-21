@@ -1,5 +1,6 @@
 #pragma once
 #include "dg/nullstelle.h"
+#include "utilities.h"
 
 namespace dg
 {
@@ -9,11 +10,12 @@ namespace dg
  * The inverse of the Hessian matrix is computed analytically
  * @param R_X start value on input, X-point on output
  * @param Z_X start value on input, X-point on output
+ * @ingroup misc
  */
 template<class PsiR, class PsiZ, class PsiRR, class PsiRZ, class PsiZZ>
 void findXpoint( const PsiR& psiR, const PsiZ& psiZ, const PsiRR& psiRR, const PsiRZ& psiRZ, const PsiZZ& psiZZ, double& R_X, double& Z_X)
 {
-    solovev::HessianRZtau<PsiR, PsiZ, PsiRR, PsiRZ, PsiZZ> hessianRZtau(  psiR, psiZ, psiRR, psiRZ, psiZZ);
+    dg::detail::HessianRZtau<PsiR, PsiZ, PsiRR, PsiRZ, PsiZZ> hessianRZtau(  psiR, psiZ, psiRR, psiRZ, psiZZ);
     thrust::host_vector<double> X(2,0), XN(X), X_OLD(X);
     X[0] = R_X, X[1] = Z_X;
     double eps = 1e10, eps_old= 2e10;

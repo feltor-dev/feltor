@@ -3,13 +3,14 @@
 #include "dg/geometry/refined_grid.h"
 #include "orthogonal.h"
 
-
-
 namespace dg
 {
 
+///@cond
 template< class container>
 struct OrthogonalRefinedGrid2d; 
+///@endcond
+
 ///@addtogroup grids
 ///@{
 

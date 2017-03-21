@@ -2,18 +2,17 @@
 
 #include "dg/backend/grid.h"
 #include "dg/blas1.h"
-#include "ribeiro.h"
+#include "dg/geometry/geometry_traits.h"
 
 namespace dg
 {
+///@addtogroup grids
+///@{
 
 ///@cond
 template< class container>
 struct CurvilinearGrid2d; 
 ///@endcond
-
-///@addtogroup grids
-///@{
 
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
