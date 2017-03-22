@@ -7,13 +7,13 @@
  */
 namespace dg
 {
-namespace magnetic
+namespace geo
 {
-///@addtogroup geom
+///@addtogroup magnetic
 ///@{
 
 /**
- * @brief \f[   \hat{B}   \f]
+ * @brief \f[   |B| = R_0\sqrt{I^2+(\nabla\psi)^2}/R   \f]
  */ 
 template<class Collective>
 struct Bmodule
@@ -40,7 +40,7 @@ struct Bmodule
 };
 
 /**
- * @brief \f[   \frac{1}{\hat{B}}   \f]
+ * @brief \f[  |B|^{-1} = R/R_0\sqrt{I^2+(\nabla\psi)^2}    \f]
  */ 
 template<class Collective>
 struct InvB
@@ -69,7 +69,7 @@ struct InvB
 };
 
 /**
- * @brief \f[   \ln{(   \hat{B})}  \f]
+ * @brief \f[   \ln{|B|}  \f]
  */ 
 template<class Collective>
 struct LnB
@@ -98,7 +98,7 @@ struct LnB
 };
 
 /**
- * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}}  \f]
+ * @brief \f[  \frac{\partial |\hat{B}| }{ \partial \hat{R}}  \f]
  */ 
 template<class Collective>
 struct BR
@@ -106,9 +106,11 @@ struct BR
     BR(const Collective& c, double R0):  R_0_(R0), invB_(c, R0), c_(c) { }
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} = 
-      -\frac{\hat{R}^2\hat{R}_0^{-2} \hat{B}^2+A\hat{R} \hat{R}_0^{-1}   \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)  
-      - \hat{R} \left[  \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\right)
-      + \left( \frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)\left( \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\right)\right] }{\hat{R}^3 \hat{R}_0^{-2}\hat{B}} \f]
+      -\frac{1}{\hat B \hat R}   
+      +  \frac{\hat I \left(\frac{\partial\hat I}{\partial\hat R} \right) 
+      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\right)
+      + \left( \frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)\left( \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\right)}
+      {\hat{R}^2 \hat{R}_0^{-2}\hat{B}} \f]
  */ 
     double operator()(double R, double Z) const
     { 
@@ -138,7 +140,7 @@ struct BZ
     BZ(const Collective& c, double R0):  R_0_(R0), c_(c), invB_(c, R0) { }
     /**
      * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} = 
-     \frac{-A \hat{R}_0^{-1}    \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}   \right)+
+     \frac{ \hat I \left(\frac{\partial \hat I}{\partial\hat Z}    \right)+
      \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\right)
           + \left( \frac{\partial \hat{\psi}_p }{ \partial \hat{Z}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2} \right)}{\hat{R}^2 \hat{R}_0^{-2}\hat{B}} \f]
      */ 
@@ -318,7 +320,7 @@ struct GradLnB
 };
 
 /**
- * @brief Phi component of magnetic field \f$ B_\Phi\f$
+ * @brief \f[ B_\varphi = R_0I/R^2\f]
 */
 template<class Collective>
 struct FieldP
@@ -335,7 +337,7 @@ struct FieldP
 }; 
 
 /**
- * @brief R component of magnetic field\f$ B_R\f$
+ * @brief \f[ B_R = R_0\psi_Z /R\f]
  */
 template<class Collective>
 struct FieldR
@@ -359,7 +361,7 @@ struct FieldR
 };
 
 /**
- * @brief Z component of magnetic field \f$ B_Z\f$
+ * @brief \f[ B_Z = -R_0\psi_R /R\f]
  */
 template<class Collective>
 struct FieldZ
@@ -383,7 +385,7 @@ struct FieldZ
 };
 
 /**
- * @brief \f$\theta\f$ component of magnetic field 
+ * @brief \f[  B^{\theta} = B^R\partial_R\theta + B^Z\partial_Z\theta\f]
  */ 
 template<class Collective>
 struct FieldT
@@ -414,7 +416,7 @@ struct FieldT
 };
 
 /**
- * @brief R component of magnetic field unit vector \f$ b_R\f$
+ * @brief \f[ b_R = B_R/|B|\f]
  */
 template<class Collective>
 struct BHatR
@@ -432,7 +434,7 @@ struct BHatR
 };
 
 /**
- * @brief Z component of magnetic field unit vector \f$ b_Z\f$
+ * @brief \f[ b_Z = B_Z/|B|\f]
  */
 template<class Collective>
 struct BHatZ
@@ -451,7 +453,7 @@ struct BHatZ
 };
 
 /**
- * @brief Phi component of magnetic field unit vector \f$ b_\Phi\f$
+ * @brief \f[ b_\varphi = B_\varphi/|B|\f]
  */
 template<class Collective>
 struct BHatP
@@ -469,8 +471,11 @@ struct BHatP
   
 }; 
 
+///@} 
+
 /**
  * @brief Integrates the equations for a field line and 1/B
+ * @ingroup misc
  */ 
 template<class Collective>
 struct Field
@@ -600,7 +605,7 @@ struct Field
 //};
 
 
-///@} 
-} //namespace magnetic
+
+} //namespace geo
 } //namespace dg
 

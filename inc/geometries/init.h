@@ -8,7 +8,7 @@
  */
 namespace dg
 {
-namespace functors
+namespace geo
 {
 ///@addtogroup profiles
 ///@{

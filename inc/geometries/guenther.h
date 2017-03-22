@@ -8,6 +8,7 @@
 #include "dg/blas.h"
 
 #include "guenther_parameters.h"
+#include "magnetic_field.h"
 
 //TODO somebody document the functions as in solovev/geometry.h
 
@@ -17,12 +18,17 @@
  */
 namespace dg
 {
+namespace geo
+{
 namespace guenther
 {
 ///@addtogroup geom
 ///@{
 
    
+/**
+ * @brief \f[\cos(\pi(R-R_0)/2)\cos(\pi Z/2)\f]
+ */
 struct Psip
 {
     Psip(double R_0 ):   R_0(R_0) {}
@@ -34,6 +40,9 @@ struct Psip
   private:
     double R_0;
 };
+/**
+ * @brief \f[-\pi\sin(\pi(R-R_0)/2)\cos(\pi Z/2)/2\f]
+ */
 struct PsipR
 {
     PsipR(double R_0 ):   R_0(R_0) {}
@@ -45,6 +54,9 @@ struct PsipR
   private:
     double R_0;
 };
+/**
+ * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
+ */
 struct PsipRR
 {
     PsipRR(double R_0 ):   R_0(R_0) {}
@@ -56,6 +68,9 @@ struct PsipRR
   private:
     double R_0;
 };
+/**
+ * @brief \f[-\pi\cos(\pi(R-R_0)/2)\sin(\pi Z/2)/2\f]
+ */
 struct PsipZ
 {
     PsipZ(double R_0 ):   R_0(R_0) {}
@@ -67,6 +82,9 @@ struct PsipZ
   private:
     double R_0;
 };
+/**
+ * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
+ */
 struct PsipZZ
 {
     PsipZZ(double R_0 ):   R_0(R_0){}
@@ -78,6 +96,9 @@ struct PsipZZ
   private:
     double R_0;
 };
+/**
+ * @brief \f[ \pi^2\sin(\pi(R-R_0)/2)\sin(\pi Z/2)/4\f]
+ */
 struct PsipRZ
 {
     PsipRZ(double R_0 ):   R_0(R_0) {}
@@ -90,6 +111,9 @@ struct PsipRZ
     double R_0;
 };
 
+/**
+ * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/2\f]
+ */
 struct LaplacePsip
 {
     LaplacePsip( double R_0 ): psipRR_(R_0), psipZZ_(R_0){}
@@ -106,6 +130,9 @@ struct LaplacePsip
     PsipZZ psipZZ_;
 };
 
+/**
+ * @brief \f[ I_0\f]
+ */
 struct Ipol
 {
     Ipol( double I_0):   I_0(I_0) {}
@@ -114,12 +141,18 @@ struct Ipol
   private:
     double I_0;
 };
+/**
+ * @brief \f[0\f]
+ */
 struct IpolR
 {
     IpolR(  ) {}
     double operator()(double R, double Z) const { return 0; }
     double operator()(double R, double Z, double phi) const { return 0; }
 };
+/**
+ * @brief \f[0\f]
+ */
 struct IpolZ
 {
     IpolZ(  ) {}
@@ -127,9 +160,12 @@ struct IpolZ
     double operator()(double R, double Z, double phi) const { return 0; }
 };
 
-struct CollectivePsip
+/**
+ * @brief Contains all guenther fields
+ */
+struct Collective
 {
-    CollectivePsip( double R_0, double I_0):psip(R_0), psipR(R_0), psipZ(R_0), psipRR(R_0), psipRZ(R_0), psipZZ(R_0), laplacePsip(R_0), ipol(I_0), ipolR(), ipolZ(){}
+    Collective( double R_0, double I_0):psip(R_0), psipR(R_0), psipZ(R_0), psipRR(R_0), psipRZ(R_0), psipZZ(R_0), laplacePsip(R_0), ipol(I_0), ipolR(), ipolZ(){}
     Psip psip;
     PsipR psipR;
     PsipZ psipZ;
@@ -141,8 +177,10 @@ struct CollectivePsip
     IpolR ipolR;
     IpolZ ipolZ;
 };
+///@}
 
-
+/////////////////////////////////////////These should not be necessary!////////
+///@cond
 struct InvB
 {
     InvB( double R_0, double I_0 ):  R_0(R_0), I_0(I_0){}
@@ -492,8 +530,7 @@ struct Divb
     private:
     double R_0, I_0;
 };
-///@} 
+///@endcond
 } //namespace guenther
-
+} //namespace geo
 }//namespace dg
-#include "fields.h"

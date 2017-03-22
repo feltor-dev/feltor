@@ -9,8 +9,10 @@
  */
 namespace dg
 {
-namespace functors
+namespace geo
 {
+///@cond
+//if you need those functors you're in the thick of it
 ///@addtogroup profiles
 ///@{
 
@@ -419,5 +421,7 @@ struct DeriTestFunction
 };
 
 ///@} 
+///@endcond
+//
 } //namespace functors
 } //namespace dg

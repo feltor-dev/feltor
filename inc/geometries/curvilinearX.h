@@ -12,6 +12,7 @@ struct CurvilinearGridX2d;
 ///@endcond
 
 /**
+ * A curvilinear grid for X-point geometry in three dimensions
  * @ingroup grids
  */
 template< class container>
@@ -94,6 +95,7 @@ struct CurvilinearGridX3d : public dg::GridX3d
 };
 
 /**
+ * A curvilinear grid for X-point geometry in two dimensions
  * @ingroup grids
  */
 template< class container>

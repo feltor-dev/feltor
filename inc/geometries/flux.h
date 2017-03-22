@@ -15,9 +15,9 @@
 namespace dg
 {
 
+///@cond
 namespace flux
 {
-
 namespace detail
 {
 
@@ -116,10 +116,8 @@ struct Fpsi
 };
 
 } //namespace detail
-
-
-
 }//namespace flux
+///@endcond
 
 /**
  * @brief A symmetry flux generator

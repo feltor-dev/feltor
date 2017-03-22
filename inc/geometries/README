@@ -15,14 +15,14 @@
     refined_orthogonalX.h
 
 #generators
-    orthogonal_generators.h
-    orthogonalX_generators.h
+    simple_orthogonal.h
+    separatrix_orthogonal.h
     ribeiro.h
     ribeiroX.h
     flux.h
     hector.h
 
-    # utilities
+    #utilities
         utilities.h
         utilitiesX.h
 
@@ -40,4 +40,3 @@
 
 #miscellaneous
     average.h
-    

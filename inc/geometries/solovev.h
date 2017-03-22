@@ -19,6 +19,8 @@
  */
 namespace dg
 {
+namespace geo
+{
 namespace solovev
 {
 ///@addtogroup geom
@@ -444,13 +446,23 @@ struct PsipRZ
     std::vector<double> c_;
 };
 
+
+/**
+ * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2 } + \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2 } \f] 
+ */
 struct LaplacePsip
 {
     LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
+    /**
+     * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2 } + \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2 } \f] 
+     */
     double operator()(double R, double Z) const
     {    
         return psipRR_(R,Z) + psipZZ_(R,Z);
     }
+    /**
+     * @brief == operator()(R,Z)
+     */ 
     double operator()(double R, double Z, double phi) const
     {    
         return operator()(R,Z);
@@ -487,6 +499,9 @@ struct Ipol
     double R_0_, A_,qampl_;
     Psip psip_;
 };
+/**
+ * @brief \f[\hat I_R\f]
+ */
 struct IpolR
 {
     IpolR(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipR_(gp) { }
@@ -506,6 +521,9 @@ struct IpolR
     Psip psip_;
     PsipR psipR_;
 };
+/**
+ * @brief \f[\hat I_Z\f]
+ */
 struct IpolZ
 {
     IpolZ(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipZ_(gp) { }
@@ -526,9 +544,12 @@ struct IpolZ
     PsipZ psipZ_;
 };
 
-struct CollectivePsip
+/**
+ * @brief Contains all solovev fields
+ */
+struct Collective
 {
-    CollectivePsip( GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
+    Collective( GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
     Psip psip;
     PsipR psipR;
     PsipZ psipZ;
@@ -541,6 +562,7 @@ struct CollectivePsip
     IpolZ ipolZ;
 };
 
+///@cond
 namespace mod
 {
 
@@ -759,10 +781,12 @@ struct LaplacePsip
 
 
 } //namespace mod
+///@endcond
 
 ///////////////////////////////////////introduce fields into solovev namespace
 
-} //namespace solovev
 
-}//namespace dg
+} //namespace solovev
+} //namespace geo
+} //namespace dg
 

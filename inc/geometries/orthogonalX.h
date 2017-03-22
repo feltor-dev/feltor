@@ -13,6 +13,7 @@ struct OrthogonalGridX2d;
 ///@endcond
 
 /**
+ * @brief Orthogonal X-point grid in three dimensions
  * @ingroup grids
  */
 template< class container>
@@ -96,6 +97,7 @@ struct OrthogonalGridX3d : public dg::GridX3d
 };
 
 /**
+ * @brief Orthogonal X-point grid in two dimensions
  * @ingroup grids
  */
 template< class container>

@@ -24,6 +24,11 @@ namespace taylor
 ///@addtogroup geom
 ///@{
 
+/**
+ * @brief \f[ \psi \f]
+ *
+ * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
+ */
 struct Psip
 {
     /**
@@ -34,13 +39,13 @@ struct Psip
     Psip( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-/**
- * @brief \f$ \hat \psi_p(R,Z) \f$
-
-      @param R radius (boost::math::cylindrical coordinates)
-      @param Z height (boost::math::cylindrical coordinates)
+    /**
+     * @brief \f$ \hat \psi_p(R,Z) \f$
+     *
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
       @return \f$ \hat \psi_p(R,Z) \f$
- */
+     */
     double operator()(double R, double Z) const
     {    
         double Rn = R/R0_, Zn = Z/R0_;
@@ -80,6 +85,9 @@ struct Psip
     std::vector<double> c_;
 };
 
+/**
+ * @brief \f[\psi_R\f]
+ */
 struct PsipR
 {
     /**
@@ -321,7 +329,7 @@ struct LaplacePsip
 
 
 /**
- * @brief \f[\hat{I}\f] 
+ * @brief \f[\hat{I} = c_{12}\psi\f] 
  */ 
 struct Ipol
 {
@@ -345,6 +353,9 @@ struct Ipol
     double c12_;
     Psip psip_;
 };
+/**
+ * @brief \f[\hat I_R\f]
+ */
 struct IpolR
 {
     IpolR(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipR_(gp) { }
@@ -363,6 +374,9 @@ struct IpolR
     double c12_;
     PsipR psipR_;
 };
+/**
+ * @brief \f[\hat I_Z\f]
+ */
 struct IpolZ
 {
     IpolZ(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
@@ -382,7 +396,10 @@ struct IpolZ
     PsipZ psipZ_;
 };
 
-struct CollectivePsip
+/**
+ * @brief Contains all taylor fields
+ */
+struct Collective
 {
     CollectivePsip( solovev::GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
     Psip psip;

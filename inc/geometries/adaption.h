@@ -73,7 +73,8 @@ struct LaplacePsi
 ///@{
 
 /**
- * @brief A weight function for the Hector algorithm
+ * @brief  A weight function for the Hector algorithm
+ *\f[|\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
  */
 template<class PsiX, class PsiY>
 struct NablaPsiInv
@@ -91,6 +92,7 @@ struct NablaPsiInv
 
 /**
  * @brief Derivative of the weight function
+ *\f[\partial_x|\nabla\psi|^{-1} \f]
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvX
@@ -116,6 +118,7 @@ struct NablaPsiInvX
 
 /**
  * @brief Derivative of the weight function
+ *\f[\partial_y|\nabla\psi|^{-1} \f]
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvY
@@ -140,7 +143,7 @@ struct NablaPsiInvY
 };
 
 /**
- * @brief A container class that contains functors
+ * @brief A container class that contains all NablaPsiInv functors
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvCollective
@@ -154,6 +157,9 @@ struct NablaPsiInvCollective
 
 /**
  * @brief The xx-component of the Liseikin monitor metric
+ * \f[ \chi^{xx} = (\psi_y^2+k^2\psi_x^2 + \varepsilon)/\sqrt{det \chi} \f] with
+ * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)
+ * @ingroup profiles
  */
 template<class PsiX, class PsiY>
 struct Liseikin_XX
