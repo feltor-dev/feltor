@@ -14,6 +14,7 @@ namespace geo
 
 /**
  * @brief \f[   |B| = R_0\sqrt{I^2+(\nabla\psi)^2}/R   \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct Bmodule
@@ -41,6 +42,7 @@ struct Bmodule
 
 /**
  * @brief \f[  |B|^{-1} = R/R_0\sqrt{I^2+(\nabla\psi)^2}    \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct InvB
@@ -70,6 +72,7 @@ struct InvB
 
 /**
  * @brief \f[   \ln{|B|}  \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct LnB
@@ -99,6 +102,7 @@ struct LnB
 
 /**
  * @brief \f[  \frac{\partial |\hat{B}| }{ \partial \hat{R}}  \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct BR
@@ -132,6 +136,7 @@ struct BR
 
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}}  \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct BZ
@@ -164,6 +169,7 @@ struct BZ
 
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct CurvatureNablaBR
@@ -191,6 +197,7 @@ struct CurvatureNablaBR
 
 /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B}  \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct CurvatureNablaBZ
@@ -217,6 +224,7 @@ struct CurvatureNablaBZ
 
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct CurvatureKappaR
@@ -240,6 +248,7 @@ struct CurvatureKappaR
 
 /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}}  \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct CurvatureKappaZ
@@ -266,6 +275,7 @@ struct CurvatureKappaZ
 
 /**
  * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct DivCurvatureKappa
@@ -294,6 +304,7 @@ struct DivCurvatureKappa
 
 /**
  * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} \f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct GradLnB
@@ -321,6 +332,7 @@ struct GradLnB
 
 /**
  * @brief \f[ B_\varphi = R_0I/R^2\f]
+ @tparam Collective models aCollective
 */
 template<class Collective>
 struct FieldP
@@ -338,6 +350,7 @@ struct FieldP
 
 /**
  * @brief \f[ B_R = R_0\psi_Z /R\f]
+ @tparam Collective models aCollective
  */
 template<class Collective>
 struct FieldR
@@ -362,6 +375,7 @@ struct FieldR
 
 /**
  * @brief \f[ B_Z = -R_0\psi_R /R\f]
+ @tparam Collective models aCollective
  */
 template<class Collective>
 struct FieldZ
@@ -386,6 +400,7 @@ struct FieldZ
 
 /**
  * @brief \f[  B^{\theta} = B^R\partial_R\theta + B^Z\partial_Z\theta\f]
+ @tparam Collective models aCollective
  */ 
 template<class Collective>
 struct FieldT
@@ -417,6 +432,7 @@ struct FieldT
 
 /**
  * @brief \f[ b_R = B_R/|B|\f]
+ @tparam Collective models aCollective
  */
 template<class Collective>
 struct BHatR
@@ -435,6 +451,7 @@ struct BHatR
 
 /**
  * @brief \f[ b_Z = B_Z/|B|\f]
+ @tparam Collective models aCollective
  */
 template<class Collective>
 struct BHatZ
@@ -454,6 +471,7 @@ struct BHatZ
 
 /**
  * @brief \f[ b_\varphi = B_\varphi/|B|\f]
+ @tparam Collective models aCollective
  */
 template<class Collective>
 struct BHatP

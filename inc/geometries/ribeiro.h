@@ -182,9 +182,9 @@ struct FieldFinv
 }//namespace ribeiro
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010 (models aGenerator)
  * @ingroup generators
- * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ * @tparam Psi All the template parameters must model aBinaryOperator
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct Ribeiro

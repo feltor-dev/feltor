@@ -11,6 +11,7 @@
 #include "dg/backend/functions.h"
 #include "dg/functors.h"
 #include "solovev_parameters.h"
+#include "magnetic_field.h"
 
 
 /*!@file
@@ -399,7 +400,7 @@ struct IpolZ
 };
 
 /**
- * @brief Contains all taylor fields
+ * @brief Contains all taylor fields (models aCollective)
  */
 struct Collective
 {
@@ -423,4 +424,3 @@ struct Collective
 
 }//namespace dg
 
-#include "fields.h"

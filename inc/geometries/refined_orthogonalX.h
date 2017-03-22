@@ -169,6 +169,7 @@ struct OrthogonalRefinedGridX2d : public dg::RefinedGridX2d
     container g_xx_, g_xy_, g_yy_, vol2d_;
     dg::OrthogonalGridX2d<container> g_assoc_;
 };
+///@}
 
 } //namespace dg
 

@@ -16,6 +16,7 @@ struct OrthogonalGrid2d;
 
 /**
  * @brief A three-dimensional grid based on orthogonal coordinates
+ * @tparam container models aContainer
  */
 template< class container>
 struct OrthogonalGrid3d : public dg::Grid3d
@@ -23,6 +24,15 @@ struct OrthogonalGrid3d : public dg::Grid3d
     typedef dg::OrthogonalTag metric_category;
     typedef OrthogonalGrid2d<container> perpendicular_grid;
 
+    /*!@brief Constructor
+    
+     * @tparam Generator models aGenerator
+     * @param n 
+     * @param Nx
+     @param Ny
+     @param Nz 
+     @param bcx
+     */
     template< class Generator>
     OrthogonalGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
         dg::Grid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
@@ -99,11 +109,20 @@ struct OrthogonalGrid3d : public dg::Grid3d
 
 /**
  * @brief A three-dimensional grid based on orthogonal coordinates
+ @tparam container models aContainer
  */
 template< class container>
 struct OrthogonalGrid2d : public dg::Grid2d
 {
     typedef dg::OrthogonalTag metric_category;
+    /*!@brief Constructor
+    
+     * @tparam Generator models aGenerator
+     * @param n number of polynomial coefficients
+     * @param Nx number of cells in first coordinate
+     @param Ny number of cells in second coordinate
+     @param bcx boundary condition in first coordinate
+     */
     template< class Generator>
     OrthogonalGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER)

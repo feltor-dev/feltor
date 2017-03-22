@@ -18,6 +18,7 @@ namespace geo
         1  \text{ if } \psi_{p,min} < \psi_p(R,Z) < \psi_{p,max}\\
         0  \text{ else}
      \end{cases}\f]
+     @tparam Psi models aBinaryOperator
  */ 
 template<class Psi>
 struct Iris
@@ -261,7 +262,7 @@ struct GaussianProfDamping
 template <class Psi>
 struct GaussianProfXDamping
 {
-    GaussianProfXDamping( Psi psi, dg::solovev::GeomParameters gp):
+    GaussianProfXDamping( Psi psi, dg::geo::solovev::GeomParameters gp):
         gp_(gp),
         psip_(psi) {
         }
@@ -288,7 +289,7 @@ struct GaussianProfXDamping
         return (*this)(R,Z);
     }
     private:
-    dg::solovev::GeomParameters gp_;
+    dg::geo::solovev::GeomParameters gp_;
     Psi psip_;
 };
 
@@ -300,7 +301,7 @@ struct GaussianProfXDamping
 template<class Psi>
 struct TanhSource
 {
-        TanhSource(Psi psi, dg::solovev::GeomParameters gp):
+        TanhSource(Psi psi, dg::geo::solovev::GeomParameters gp):
         gp_(gp),
         psip_(psi) {
         }
@@ -320,7 +321,7 @@ struct TanhSource
         return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
     }
     private:
-    dg::solovev::GeomParameters gp_;
+    dg::geo::solovev::GeomParameters gp_;
     Psi psip_;
 };
 
@@ -359,7 +360,7 @@ struct TanhSource
 template<class Psi>
 struct Nprofile
 {
-     Nprofile( double bgprofamp, double peakamp, dg::solovev::GeomParameters gp, Psi psi):
+     Nprofile( double bgprofamp, double peakamp, dg::geo::solovev::GeomParameters gp, Psi psi):
          bgamp(bgprofamp), namp( peakamp),
          gp_(gp),
          psip_(psi) { }
@@ -385,7 +386,7 @@ struct Nprofile
     }
     private:
     double bgamp, namp;
-    dg::solovev::GeomParameters gp_;
+    dg::geo::solovev::GeomParameters gp_;
     Psi psip_;
 };
 
@@ -400,7 +401,7 @@ struct Nprofile
 template<class Psi>
 struct ZonalFlow
 {
-    ZonalFlow(  double amplitude, double k_psi, dg::solovev::GeomParameters gp, Psi psi):
+    ZonalFlow(  double amplitude, double k_psi, dg::geo::solovev::GeomParameters gp, Psi psi):
         amp_(amplitude), k_(k_psi),
         gp_(gp),
         psip_(psi) { }
@@ -427,7 +428,7 @@ struct ZonalFlow
     }
     private:
     double amp_, k_;
-    dg::solovev::GeomParameters gp_;
+    dg::geo::solovev::GeomParameters gp_;
     Psi psip_;
 };
 

@@ -161,7 +161,7 @@ struct IpolZ
 };
 
 /**
- * @brief Contains all guenther fields
+ * @brief Contains all guenther fields (models aCollective)
  */
 struct Collective
 {

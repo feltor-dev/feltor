@@ -8,11 +8,16 @@ namespace dg
  * @brief This function finds the X-point via Newton iteration applied to the gradient of psi, 
  *
  * The inverse of the Hessian matrix is computed analytically
- * @param psiR \f$ \psi_R\f$
- * @param psiZ \f$ \psi_Z\f$
- * @param psiRR \f$ \psi_{RR}\f$
- * @param psiRZ \f$ \psi_{RZ}\f$
- * @param psiZZ \f$ \psi_{ZZ}\f$
+ * @tparam PsiR models aBinaryOperator
+ * @tparam PsiZ models aBinaryOperator
+ * @tparam PsiRR models aBinaryOperator
+ * @tparam PsiRZ models aBinaryOperator
+ * @tparam PsiZZ models aBinaryOperator
+    @param psiR \f$ \partial_R \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psiZ \f$ \partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psiRR \f$ \partial_R\partial_R \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psiRZ \f$ \partial_R\partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psiZZ \f$ \partial_Z\partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
  * @param R_X start value on input, X-point on output
  * @param Z_X start value on input, X-point on output
  * @ingroup misc

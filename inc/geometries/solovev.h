@@ -545,7 +545,7 @@ struct IpolZ
 };
 
 /**
- * @brief Contains all solovev fields
+ * @brief Contains all solovev fields (models aCollective)
  */
 struct Collective
 {

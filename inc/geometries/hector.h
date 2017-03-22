@@ -196,12 +196,12 @@ void transform(
 ///@endcond
 
 /**
- * @brief The High PrEcision Conformal grid generaTOR
+ * @brief The High PrEcision Conformal grid generaTOR (models aGenerator)
  *
  * @ingroup generators
  * @tparam IMatrix The interpolation matrix type
  * @tparam Matrix  The matrix type in the elliptic equation
- * @tparam container The container type for the elliptic equation (must be compatible to a thrust::host_vector<double> in the blas1::transfer function)
+ * @tparam container models aContainer 
  */
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>
 struct Hector
@@ -209,8 +209,18 @@ struct Hector
     /**
      * @brief Construct a conformal grid 
      *
-     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @tparam Psi models aBinaryOperator 
+     * @tparam PsiX models aBinaryOperator 
+     * @tparam PsiY models aBinaryOperator 
+     * @tparam PsiXX models aBinaryOperator 
+     * @tparam PsiXY models aBinaryOperator 
+     * @tparam PsiYY models aBinaryOperator 
+     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
+     @param psiX \f$ \psi_x\f$ its derivative in x
+     @param psiY \f$ \psi_y\f$ its derivative in y
+     @param psiXX \f$ \psi_{xx}\f$ second derivative
+     @param psiXY \f$ \psi_{xy}\f$ second derivative
+     @param psiYY \f$ \psi_{yy}\f$ second derivative
      * @param psi0 first boundary 
      * @param psi1 second boundary
      * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -241,9 +251,24 @@ struct Hector
     /**
      * @brief Construct an orthogonal grid with adaption
      *
-     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
-     * @param chi chi is the adaption function in Cartesian coordinates (x,y), chiX is its derivative in x, chiY the derivative in y
+     * @tparam Psi  models aBinaryOperator 
+     * @tparam PsiX models aBinaryOperator 
+     * @tparam PsiY models aBinaryOperator 
+     * @tparam PsiXX models aBinaryOperator 
+     * @tparam PsiXY models aBinaryOperator 
+     * @tparam PsiYY models aBinaryOperator 
+     * @tparam Chi  models aBinaryOperator 
+     * @tparam ChiX models aBinaryOperator 
+     * @tparam ChiY models aBinaryOperator 
+     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
+     @param psiX \f$ \psi_x\f$ its derivative in x
+     @param psiY \f$ \psi_y\f$ its derivative in y
+     @param psiXX \f$ \psi_{xx}\f$ second derivative
+     @param psiXY \f$ \psi_{xy}\f$ second derivative
+     @param psiYY \f$ \psi_{yy}\f$ second derivative
+     * @param chi \f$ \chi(x,y)\f$  is the adaption function in Cartesian coordinates (x,y)
+     @param chiX \f$ \chi_x\f$ its derivative in x 
+     @param chiY \f$ \chi_y\f$ its derivative in y 
      * @param psi0 first boundary 
      * @param psi1 second boundary
      * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -276,10 +301,26 @@ struct Hector
     /**
      * @brief Construct a curvilinear grid with monitor metric
      *
-     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
-     * @param chi_XX chi_XX is the xx-component of the adaption tensor in Cartesian coordinates (x,y), chi_XY is its xy-component, chi_YY the yy-component
-     * @param divChiX divChiX is the x-component of the divergence of the tensor chi, divChiY is the y-component
+     * @tparam Psi   models aBinaryOperator 
+     * @tparam PsiX  models aBinaryOperator 
+     * @tparam PsiY  models aBinaryOperator 
+     * @tparam PsiXX models aBinaryOperator 
+     * @tparam PsiXY models aBinaryOperator 
+     * @tparam PsiYY models aBinaryOperator 
+     * @tparam Chi   models aBinaryOperator 
+     * @tparam ChiX  models aBinaryOperator 
+     * @tparam ChiY  models aBinaryOperator 
+     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
+     @param psiX \f$ \psi_x\f$ its derivative in x
+     @param psiY \f$ \psi_y\f$ its derivative in y
+     @param psiXX \f$ \psi_{xx}\f$ second derivative
+     @param psiXY \f$ \psi_{xy}\f$ second derivative
+     @param psiYY \f$ \psi_{yy}\f$ second derivative
+      @param chi_XX \f$  \chi^{xx}(x,y)\f$  is the contravariant xx-component of the adaption tensor in Cartesian coordinates (x,y)
+      @param chi_XY \f$  \chi^{xy}(x,y)\f$  is the contravariant xy-component of the adaption tensor in Cartesian coordinates (x,y)
+      @param chi_YY \f$  \chi^{yy}(x,y)\f$  is the contravariant yy-component of the adaption tensor in Cartesian coordinates (x,y)
+     * @param divChiX \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
+     * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
      * @param psi0 first boundary 
      * @param psi1 second boundary
      * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
