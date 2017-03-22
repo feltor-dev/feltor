@@ -353,13 +353,14 @@ struct Hector
      * Call the width() and height() function before calling this function!
      * @param u1d one-dimensional list of points inside the u-domain (0<u<width())
      * @param v1d one-dimensional list of points inside the v-domain (0<v<height())
-     * @param x  = x(u,v)
-     * @param y  = y(u,v)
-     * @param ux = u_x(u,v)
-     * @param uy = u_y(u,v)
-     * @param vx = v_x(u,v)
-     * @param vy = v_y(u,v)
+     * @param x  \f$= x(u,v)\f$
+     * @param y  \f$= y(u,v)\f$
+     * @param ux \f$= u_x(u,v)\f$
+     * @param uy \f$= u_y(u,v)\f$
+     * @param vx \f$= v_x(u,v)\f$
+     * @param vy \f$= v_y(u,v)\f$
      * @note All the resulting vectors are write-only and get properly resized
+     * @note The \f$ u\f$ direction is continuous in memory
      */
     void operator()( const thrust::host_vector<double>& u1d, 
                      const thrust::host_vector<double>& v1d, 

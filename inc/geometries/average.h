@@ -88,9 +88,8 @@ struct Alpha
 
 /**
  * @brief Flux surface average over quantity
- *
- * The average is computed using the formula
- \f[ <f>(\psi_0) = \frac{1}{A} \int dV \delta(\psi_p(R,Z)-\psi_0) |\nabla\psi_p|f(R,Z) \f]
+ \f[ \langle f\rangle(\psi_0) = \frac{1}{A} \int dV \delta(\psi_p(R,Z)-\psi_0) |\nabla\psi_p|f(R,Z) \f]
+
  with \f$ A = \int dV \delta(\psi_p(R,Z)-\psi_0)|\nabla\psi_p|\f$
  * @tparam Collective This collective needs to contain at least the 2d functors, 
  * psip and its derivatives psipR and psipZ. 
@@ -147,6 +146,8 @@ struct FluxSurfaceAverage
 /**
  * @brief Class for the evaluation of the safety factor q
  * \f[ q(\psi_0) = \frac{1}{2\pi} \int dV |\nabla\psi_p| \delta(\psi_p-\psi_0) \alpha( R,Z) \f]
+
+where \f$ \alpha\f$ is the dg::geo::Alpha functor.
  * @tparam container  The container class to use
  * @tparam Collective This collective needs to contain at least the 2d functors, 
  * psip and its derivatives psipR and psipZ. 

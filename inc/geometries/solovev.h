@@ -561,6 +561,7 @@ struct Collective
     IpolR ipolR;
     IpolZ ipolZ;
 };
+///@}
 
 ///@cond
 namespace mod

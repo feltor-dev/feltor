@@ -19,6 +19,8 @@
  */
 namespace dg
 {
+namespace geo
+{
 namespace taylor
 {
 ///@addtogroup geom
@@ -401,7 +403,7 @@ struct IpolZ
  */
 struct Collective
 {
-    CollectivePsip( solovev::GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
+    Collective( solovev::GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
     Psip psip;
     PsipR psipR;
     PsipZ psipZ;
@@ -414,7 +416,10 @@ struct Collective
     IpolZ ipolZ;
 };
 
+///@}
+
 } //namespace taylor
+} //namespace geo
 
 }//namespace dg
 

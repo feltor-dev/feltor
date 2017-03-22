@@ -8,12 +8,13 @@
  */
 namespace dg
 {
+namespace geo
+{
 namespace solovev
 {
-///@addtogroup geom
-///@{
 /**
- * @brief Constructs and display geometric parameters
+ * @brief Constructs and display geometric parameters for the solovev and taylor fields
+ * @ingroup geom
  */    
 struct GeomParameters
 {
@@ -106,4 +107,5 @@ struct GeomParameters
     }
 };
 } //namespace solovev
-}//namespace dg
+} //namespace geo
+} //namespace dg

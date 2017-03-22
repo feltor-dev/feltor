@@ -1,5 +1,11 @@
 #pragma once
 
+
+/*!@file 
+ *
+ * contains an adaption function and a monitor metric for the Hector algorithm
+ *
+ */
 namespace dg
 {
 namespace geo
@@ -74,12 +80,22 @@ struct LaplacePsi
 
 /**
  * @brief  A weight function for the Hector algorithm
- *\f[|\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
+ *\f[ |\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
  */
 template<class PsiX, class PsiY>
 struct NablaPsiInv
 {
-    NablaPsiInv( const PsiX& psiX, const PsiY& psiY):psiX_(psiX), psiY_(psiY){}
+    /**
+     * @brief Construct with derivatives
+     *
+     * @param psiX
+     * @param psiX
+     */
+    NablaPsiInv( const PsiX& psiX, const PsiY& psiY): psiX_(psiX), psiY_(psiY){}
+    /**
+     * @brief  A weight function for the Hector algorithm
+     * \f[ |\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
+     */
     double operator()(double x, double y)
     {
         double psiX = psiX_(x,y), psiY = psiY_(x,y);
@@ -118,7 +134,7 @@ struct NablaPsiInvX
 
 /**
  * @brief Derivative of the weight function
- *\f[\partial_y|\nabla\psi|^{-1} \f]
+ *\f[ \partial_y|\nabla\psi|^{-1} \f]
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvY
@@ -157,9 +173,10 @@ struct NablaPsiInvCollective
 
 /**
  * @brief The xx-component of the Liseikin monitor metric
- * \f[ \chi^{xx} = (\psi_y^2+k^2\psi_x^2 + \varepsilon)/\sqrt{det \chi} \f] with
- * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)
- * @ingroup profiles
+ * \f[ \chi^{xx} = (\psi_y^2+k^2\psi_x^2 + \varepsilon)/\sqrt{\det \chi} \f] 
+ *
+ * with
+ * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
 template<class PsiX, class PsiY>
 struct Liseikin_XX
@@ -181,6 +198,10 @@ struct Liseikin_XX
 
 /**
  * @brief The xy-component of the Liseikin monitor metric
+ * \f[ \chi^{xy} = (-\psi_x\psi_y+k^2\psi_x\psi_y )/\sqrt{\det \chi} \f] 
+ *
+ * with
+ * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
 template<class PsiX, class PsiY>
 struct Liseikin_XY
@@ -202,6 +223,10 @@ struct Liseikin_XY
 
 /**
  * @brief The yy-component of the Liseikin monitor metric
+ * \f[ \chi^{yy} = (\varepsilon+\psi_x^2+k^2\psi_y^2 )/\sqrt{\det \chi} \f] 
+ *
+ * with
+ * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
 template<class PsiX, class PsiY>
 struct Liseikin_YY
@@ -223,6 +248,7 @@ struct Liseikin_YY
 
 /**
  * @brief The x-component of the divergence of the Liseikin monitor metric
+ * \f[ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f]
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct DivLiseikinX
@@ -254,6 +280,7 @@ struct DivLiseikinX
 
 /**
  * @brief The y-component of the divergence of the Liseikin monitor metric
+ * \f[ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f]
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct DivLiseikinY
@@ -284,7 +311,7 @@ struct DivLiseikinY
 };
 
 /**
- * @brief A container class that contains functors
+ * @brief A container class that contains all functors of the Liseikin monitor metric
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct LiseikinCollective
@@ -301,6 +328,7 @@ struct LiseikinCollective
     DivLiseikinX<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiX; //!< divergence of metric
     DivLiseikinY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiY; //!< divergence of metric
 };
+
 ///@}
 
 }//namespace geo

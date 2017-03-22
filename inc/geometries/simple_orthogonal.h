@@ -287,7 +287,10 @@ struct SimpleOrthogonal
     /**
      * @brief Construct a simple orthogonal grid 
      *
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, LaplacePsi its Laplacian
+     * @param psi \f$\psi(x,y)\f$ is the flux function in Cartesian coordinates (x,y)
+     * @param psiX \f$ \psi_x\f$ is its derivative in x
+     * @param psiY \f$ \psi_y\f$ ...
+     * @param laplacePsi \f$ \Delta\psi\f$ 
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -344,13 +347,14 @@ struct SimpleOrthogonal
      * Call the width() and height() function before calling this function!
      * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
      * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
-     * @param x  = x(zeta,eta)
-     * @param y  = y(zeta,eta)
-     * @param zetaX = zeta_x(zeta,eta)
-     * @param zetaY = zeta_y(zeta,eta)
-     * @param etaX = eta_x(zeta,eta)
-     * @param etaY = eta_y(zeta,eta)
+     * @param x  \f$= x(\zeta,\eta)\f$
+     * @param y  \f$= y(\zeta,\eta)\f$
+     * @param zetaX \f$= \zeta_x(\zeta,\eta)\f$
+     * @param zetaY \f$= \zeta_y(\zeta,\eta)\f$
+     * @param etaX \f$= \eta_x(\zeta,\eta)\f$
+     * @param etaY \f$= \eta_y(\zeta,\eta)\f$
      * @note All the resulting vectors are write-only and get properly resized
+     * @note The \f$ \zeta\f$ direction is continuous in memory
      */
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 

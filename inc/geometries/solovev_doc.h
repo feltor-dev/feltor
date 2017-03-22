@@ -6,6 +6,28 @@
  * 
  * @defgroup grids Grids 
  * @defgroup generators Grid generators
+ *
+      All the grids introduced by this extension can be constructed with 
+      generator classes. A generator class must provide the following public member functions.
+  @code
+struct SomeGenerator
+{
+    double width() const; //length in zeta
+    double height() const; //length in eta
+    bool isOrthogonal() const; 
+    bool isConformal()  const;
+    void operator()( 
+         const thrust::host_vector<double>& zeta1d, 
+         const thrust::host_vector<double>& eta1d, 
+         thrust::host_vector<double>& x, 
+         thrust::host_vector<double>& y, 
+         thrust::host_vector<double>& zetaX, 
+         thrust::host_vector<double>& zetaY, 
+         thrust::host_vector<double>& etaX, 
+         thrust::host_vector<double>& etaY) ;
+};
+@endcode
+    A generator class for an X-point type topology must have the following
  * @defgroup fluxfunctions New functors based on the magnetic field geometry
  * @{
       @defgroup geom new flux functions and derivatives

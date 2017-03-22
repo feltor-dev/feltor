@@ -25,7 +25,7 @@ struct CurvilinearGrid3d : public dg::Grid3d
 
     template< class Generator>
     CurvilinearGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
-        dg::Grid3d( 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+        dg::Grid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         construct( generator, n, Nx, Ny);
     }
@@ -47,7 +47,7 @@ struct CurvilinearGrid3d : public dg::Grid3d
     template< class Generator>
     void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny)
     {
-        dg::Grid1d gY1d( 0, 2*M_PI, n, Ny, dg::PER);
+        dg::Grid1d gY1d( 0, generator.height(), n, Ny, dg::PER);
         dg::Grid1d gX1d( 0., generator.width(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
@@ -105,7 +105,7 @@ struct CurvilinearGrid2d : public dg::Grid2d
     typedef dg::CurvilinearCylindricalTag metric_category;
     template< class Generator>
     CurvilinearGrid2d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
-        dg::Grid2d( 0, 1, 0., 2.*M_PI, n, Nx, Ny, bcx, dg::PER)
+        dg::Grid2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER)
     {
         CurvilinearGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
