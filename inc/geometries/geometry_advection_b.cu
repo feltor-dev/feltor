@@ -9,9 +9,10 @@
 #include "dg/geometry.h"
 
 #include "solovev.h"
-#include "fields.h"
 #include "conformal.h"
 #include "orthogonal.h"
+#include "magnetic_field.h"
+#include "testfunctors.h"
 
 struct FuncDirPer2
 {
@@ -104,6 +105,7 @@ struct CurvatureDirPer
 //typedef OrthogonalGrid3d<dg::DVec> Geometry;
 typedef dg::CurvilinearGrid2d<dg::DVec> Geometry;
 //typedef OrthogonalGrid2d<dg::DVec> Geometry;
+using namespace dg::geo;
 
 int main(int argc, char** argv)
 {
@@ -133,7 +135,7 @@ int main(int argc, char** argv)
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    solovev::CollectivePsip c( gp);
+    solovev::Geometry c( gp);
     dg::Ribeiro<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ>
         ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
     Geometry grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
@@ -143,7 +145,7 @@ int main(int argc, char** argv)
     dg::DVec vol = dg::create::volume( grid);
     std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
 
-    solovev::FuncDirPer left( gp, psi_0, psi_1, 1);
+    dg::geo::FuncDirPer left( gp, psi_0, psi_1, 1);
     FuncDirPer2 right( gp, psi_0, psi_1);
     ArakawaDirPer jacobian( gp, psi_0, psi_1);
     VariationDirPer variationLHS( gp, psi_0, psi_1);
