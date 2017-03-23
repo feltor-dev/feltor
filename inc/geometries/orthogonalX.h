@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dg/backend/gridX.h"
+#include "dg/backend/evaluationX.cuh"
 #include "dg/blas1.h"
 #include "dg/geometry/geometry_traits.h"
 

@@ -276,7 +276,7 @@ struct GradLnB
 struct Field
 {
      Field( double R0, double I0):  R_0(R0), I_0(I0){}
-     Field( solovev::GeomParameters gp ):  R_0(gp.R_0), I_0(gp.I_0){}
+     Field( GeomParameters gp ):  R_0(gp.R_0), I_0(gp.I_0){}
     void operator()( const std::vector<thrust::host_vector<double> >& y, std::vector<thrust::host_vector<double> >& yp) const
     {
         for( unsigned i=0; i<y[0].size(); i++)

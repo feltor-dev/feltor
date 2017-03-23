@@ -14,6 +14,7 @@
 //#include "guenther.h"
 #include "orthogonalX.h"
 #include "refined_orthogonalX.h"
+#include "separatrix_orthogonal.h"
 #include "dg/ds.h"
 #include "init.h"
 
@@ -35,10 +36,8 @@ double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
 typedef dg::FieldAligned< dg::OrthogonalGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
 
-//typedef solovev::CollectivePsip CollectivePsip;
-//typedef solovev::Psip Psip;
-typedef taylor::CollectivePsip CollectivePsip;
-typedef taylor::Psip Psip;
+//using namespace dg::geo::solovev;
+using namespace dg::geo::taylor;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
@@ -103,7 +102,7 @@ int main( int argc, char* argv[])
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    solovev::GeomParameters gp(js);
+    GeomParameters gp(js);
     dg::Timer t;
     std::cout << "Type psi_0 \n";
     double psi_0 = -16;
@@ -117,7 +116,7 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    CollectivePsip c(gp);
+    MagneticField c(gp);
     std::cout << "Psi min "<<c.psip(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
@@ -128,8 +127,8 @@ int main( int argc, char* argv[])
     //solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
     //solovev::LaplacePsip laplacePsip(gp); 
     double R0 = gp.R_0, Z0 = 0;
-    dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::SimpleOrthogonalX<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    dg::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::OrthogonalGridX3d<dg::HVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //dg::OrthogonalGridX2d<dg::HVec> g2d = g3d.perp_grid();
     dg::OrthogonalRefinedGridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
@@ -266,7 +265,7 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
-    solovev::Iris<taylor::Psip> iris( c.psip, gp.psipmin, gp.psipmax);
+    dg::geo::Iris<Psip> iris( c.psip, gp.psipmin, gp.psipmax);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);

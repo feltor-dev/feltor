@@ -2,9 +2,10 @@
 
 #include <mpi.h>
 
-#include "curvilinear.h"
+#include "dg/backend/mpi_evaluation.h"
 #include "dg/backend/mpi_grid.h"
 #include "dg/backend/mpi_vector.h"
+#include "curvilinear.h"
 
 
 

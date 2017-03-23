@@ -17,6 +17,7 @@
 /*!@file
  *
  * MagneticField objects 
+ * @attention When the taylor field is used we need the boost library for special functions
  */
 namespace dg
 {
@@ -24,6 +25,7 @@ namespace geo
 {
 /**
  * @brief Contains the Cerfon Taylor state type flux functions
+ * @note When the taylor field is used we need the boost library for special functions
  */
 namespace taylor
 {
@@ -35,6 +37,7 @@ typedef dg::geo::solovev::GeomParameters GeomParameters; //!< bring GeomParamete
  * @brief \f[ \psi \f]
  *
  * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
+ * @attention When the taylor field is used we need the boost library for special functions
  */
 struct Psip
 {
@@ -94,6 +97,7 @@ struct Psip
 
 /**
  * @brief \f[\psi_R\f]
+ * @attention When the taylor field is used we need the boost library for special functions
  */
 struct PsipR
 {

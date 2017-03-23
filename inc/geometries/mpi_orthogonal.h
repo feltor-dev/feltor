@@ -2,9 +2,9 @@
 
 #include <mpi.h>
 
-#include "orthogonal.h"
 #include "dg/backend/mpi_grid.h"
 #include "dg/backend/mpi_vector.h"
+#include "orthogonal.h"
 
 
 
