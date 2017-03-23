@@ -16,7 +16,7 @@
 
 /*!@file
  *
- * Geometry objects 
+ * MagneticField objects 
  */
 namespace dg
 {
@@ -404,11 +404,11 @@ struct IpolZ
 };
 
 /**
- * @brief Contains all taylor fields (models aTokamakGeometry)
+ * @brief Contains all taylor fields (models aTokamakMagneticField)
  */
-struct Geometry
+struct MagneticField
 {
-    Geometry( solovev::GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
+    MagneticField( solovev::GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
     Psip psip;
     PsipR psipR;
     PsipZ psipZ;

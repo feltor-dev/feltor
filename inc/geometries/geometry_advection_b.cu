@@ -8,16 +8,21 @@
 #include "dg/poisson.h"
 #include "dg/geometry.h"
 
-#include "solovev.h"
 #include "conformal.h"
 #include "orthogonal.h"
+#include "curvilinear.h"
+#include "flux.h"
+#include "solovev.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 
+using namespace dg::geo::solovev;
+
+template< class MagneticField>
 struct FuncDirPer2
 {
-    FuncDirPer2( solovev::GeomParameters gp, double psi_0, double psi_1):
-        R_0_(gp.R_0), psi0_(psi_0), psi1_(psi_1), psip_(gp), psipR_(gp), psipZ_(gp){}
+    FuncDirPer2( MagneticField c, double R0, double psi_0, double psi_1):
+        R_0_(R0), psi0_(psi_0), psi1_(psi_1), psip_(c.psip), psipR_(c.psipR), psipZ_(c.psipZ){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
     }
@@ -55,14 +60,16 @@ struct FuncDirPer2
     }
     double R_0_;
     double psi0_, psi1_;
-    solovev::Psip psip_;
-    solovev::PsipR psipR_;
-    solovev::PsipZ psipZ_;
+    Psip psip_;
+    PsipR psipR_;
+    PsipZ psipZ_;
 };
 
+template<class MagneticField>
 struct ArakawaDirPer
 {
-    ArakawaDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1, 1), g_(gp, psi_0, psi_1){}
+    ArakawaDirPer( MagneticField c, double R0, double psi_0, double psi_1): 
+        f_(c, R0, psi_0, psi_1, 1), g_(c, R0, psi_0, psi_1){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
     }
@@ -70,12 +77,14 @@ struct ArakawaDirPer
         return f_.dR( R,Z)*g_.dZ(R,Z) - f_.dZ(R,Z)*g_.dR(R,Z);
     }
     private:
-    solovev::FuncDirPer f_;
-    FuncDirPer2 g_;
+    dg::geo::FuncDirPer<MagneticField> f_;
+    FuncDirPer2<MagneticField> g_;
 };
+
+template<class MagneticField>
 struct VariationDirPer
 {
-    VariationDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1,1. ){}
+    VariationDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,1. ){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
 
@@ -83,21 +92,22 @@ struct VariationDirPer
         return f_.dR( R,Z)*f_.dR(R,Z) + f_.dZ(R,Z)*f_.dZ(R,Z);
     }
     private:
-    solovev::FuncDirPer f_;
+    dg::geo::FuncDirPer<MagneticField> f_;
 };
 
+template< class MagneticField>
 struct CurvatureDirPer
 {
-    CurvatureDirPer( solovev::GeomParameters gp, double psi_0, double psi_1): f_(gp, psi_0, psi_1,1.), curvR(gp), curvZ(gp){}
+    CurvatureDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,1.), curvR(c, R0), curvZ(c, R0){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
         return curvR( R,Z)*f_.dR(R,Z) + curvZ(R,Z)*f_.dZ(R,Z);
     }
     private:
-    solovev::FuncDirPer f_;
-    solovev::CurvatureNablaBR curvR;
-    solovev::CurvatureNablaBZ curvZ;
+    dg::geo::FuncDirPer<MagneticField> f_;
+    dg::geo::CurvatureNablaBR<MagneticField> curvR;
+    dg::geo::CurvatureNablaBZ<MagneticField> curvZ;
 };
 
 
@@ -105,7 +115,6 @@ struct CurvatureDirPer
 //typedef OrthogonalGrid3d<dg::DVec> Geometry;
 typedef dg::CurvilinearGrid2d<dg::DVec> Geometry;
 //typedef OrthogonalGrid2d<dg::DVec> Geometry;
-using namespace dg::geo;
 
 int main(int argc, char** argv)
 {
@@ -124,8 +133,8 @@ int main(int argc, char** argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    solovev::GeomParameters gp(js);
-    solovev::Psip psip( gp); 
+    GeomParameters gp(js);
+    Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
@@ -133,10 +142,10 @@ int main(int argc, char** argv)
     //gp.display( std::cout);
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
-    std::cout << "Constructing conformal grid ... \n";
+    std::cout << "Constructing grid ... \n";
     t.tic();
-    solovev::Geometry c( gp);
-    dg::Ribeiro<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ>
+    MagneticField c( gp);
+    dg::RibeiroFluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
         ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
     Geometry grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
     t.toc();
@@ -145,10 +154,11 @@ int main(int argc, char** argv)
     dg::DVec vol = dg::create::volume( grid);
     std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
 
-    dg::geo::FuncDirPer left( gp, psi_0, psi_1, 1);
-    FuncDirPer2 right( gp, psi_0, psi_1);
-    ArakawaDirPer jacobian( gp, psi_0, psi_1);
-    VariationDirPer variationLHS( gp, psi_0, psi_1);
+
+    dg::geo::FuncDirPer<MagneticField> left(c, gp.R_0, psi_0, psi_1, 1);
+    FuncDirPer2<MagneticField> right( c, gp.R_0, psi_0, psi_1);
+    ArakawaDirPer<MagneticField> jacobian( c, gp.R_0, psi_0, psi_1);
+    VariationDirPer<MagneticField> variationLHS(c, gp.R_0, psi_0, psi_1);
 
     const dg::DVec lhs = dg::pullback( left, grid);
     dg::DVec jac(lhs);
@@ -201,7 +211,7 @@ int main(int argc, char** argv)
     std::cout << "TESTING CURVATURE 3D\n";
     dg::DVec curvX, curvY;
     dg::HVec tempX, tempY;
-    dg::geo::pushForwardPerp(solovev::CurvatureNablaBR(gp), solovev::CurvatureNablaBZ(gp), tempX, tempY, grid);
+    dg::geo::pushForwardPerp(dg::geo::CurvatureNablaBR<MagneticField>(c, gp.R_0), dg::geo::CurvatureNablaBZ<MagneticField>(c, gp.R_0), tempX, tempY, grid);
     dg::blas1::transfer(  tempX, curvX);
     dg::blas1::transfer(  tempY, curvY);
     dg::DMatrix dx, dy;
@@ -214,7 +224,7 @@ int main(int argc, char** argv)
     dg::blas1::pointwiseDot( 1., tempy, curvY, 1.,  tempx);
     norm = dg::blas2::dot( tempx, vol, tempx);
 
-    CurvatureDirPer curv(gp, psi_0, psi_1);
+    CurvatureDirPer<MagneticField> curv(c, gp.R_0, psi_0, psi_1);
     dg::DVec curvature;
     dg::blas1::transfer( dg::pullback(curv, grid), curvature);
 

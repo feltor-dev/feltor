@@ -23,7 +23,7 @@
  * 
  */
 /*! @mainpage
- * Welcome to the Geometry extension of FELTOR.
+ * Welcome to the MagneticField extension of FELTOR.
  *
  * This extension adds new features to the FELTOR core dg library. Firstly, 
  * the conformal, orthogonal and curvilinear grid classes are added to the
@@ -165,7 +165,7 @@ which must model aBinaryOperator.
  @attention parameter names cannot be different
  @ingroup temp
 */
-struct aTokamakGeometry
+struct aTokamakMagneticField
 {
     Psip psip; //!< \f$ \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
     PsipR psipR;//!< \f$ \partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates

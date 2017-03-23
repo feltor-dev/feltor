@@ -5,7 +5,7 @@
 
 /*!@file
  *
- * Geometry objects 
+ * MagneticField objects 
  */
 namespace dg
 {
@@ -17,32 +17,32 @@ namespace geo
 ///@{
 
 
-template<class Geometry>
+template<class MagneticField>
 struct FuncNeu
 {
-    FuncNeu( const Geometry& c):c_(c){}
+    FuncNeu( const MagneticField& c):c_(c){}
     double operator()(double R, double Z, double phi) const {return -c_.psip(R,Z)*cos(phi);
     }
     private:
-    Geometry c_;
+    MagneticField c_;
 };
 
-template<class Geometry>
+template<class MagneticField>
 struct DeriNeu
 {
-    DeriNeu( const Geometry& c, double R0):c_(c), bhat_(c, R0){}
+    DeriNeu( const MagneticField& c, double R0):c_(c), bhat_(c, R0){}
     double operator()(double R, double Z, double phi) const {return c_.psip(R,Z)*bhat_(R,Z,phi)*sin(phi);
     }
     private:
-    Geometry c_;
-    dg::geo::BHatP<Geometry> bhat_;
+    MagneticField c_;
+    dg::geo::BHatP<MagneticField> bhat_;
 };
 
 //psi * cos(theta)
-template<class Geometry>
+template<class MagneticField>
 struct FuncDirPer
 {
-    FuncDirPer( const Geometry& c, double R0, double psi_0, double psi_1, double k):
+    FuncDirPer( const MagneticField& c, double R0, double psi_0, double psi_1, double k):
         R_0_(R0), psi0_(psi_0), psi1_(psi_1), k_(k), c_(c) {}
     double operator()(double R, double Z) const {
         double psip = c_.psip(R,Z);
@@ -108,14 +108,14 @@ struct FuncDirPer
     double thetaZZ( double R, double Z) const { return -thetaRR(R,Z);}
     double R_0_;
     double psi0_, psi1_, k_;
-    const Geometry& c_;
+    const MagneticField& c_;
 };
 
 //takes the magnetic field as chi
-template<class Geometry>
+template<class MagneticField>
 struct EllipticDirPerM
 {
-    EllipticDirPerM( const Geometry& c, double R0, double psi_0, double psi_1, double k): func_(c, R0, psi_0, psi_1, k), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
+    EllipticDirPerM( const MagneticField& c, double R0, double psi_0, double psi_1, double k): func_(c, R0, psi_0, psi_1, k), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
@@ -124,17 +124,17 @@ struct EllipticDirPerM
 
     }
     private:
-    FuncDirPer<Geometry> func_;
-    dg::geo::Bmodule<Geometry> bmod_;
-    dg::geo::BR<Geometry> br_;
-    dg::geo::BZ<Geometry> bz_;
+    FuncDirPer<MagneticField> func_;
+    dg::geo::Bmodule<MagneticField> bmod_;
+    dg::geo::BR<MagneticField> br_;
+    dg::geo::BZ<MagneticField> bz_;
 };
 
 //Blob function
-template<class Geometry>
+template<class MagneticField>
 struct FuncDirNeu
 {
-    FuncDirNeu( const Geometry& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
+    FuncDirNeu( const MagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
         psi0_(psi_0), psi1_(psi_1), 
         cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, amp_blob){}
 
@@ -184,10 +184,10 @@ struct FuncDirNeu
 
 
 //takes the magnetic field multiplied by (1+0.5sin(theta)) as chi
-template<class Geometry>
+template<class MagneticField>
 struct BmodTheta
 {
-    BmodTheta( const Geometry& c, double R0): R_0_(R0), bmod_(c, R0){}
+    BmodTheta( const MagneticField& c, double R0): R_0_(R0), bmod_(c, R0){}
     double operator()(double R,double Z, double phi) const{
         return this->operator()(R,Z);}
     double operator()(double R,double Z) const{
@@ -202,15 +202,15 @@ struct BmodTheta
             return 2.*M_PI-acos( dR/sqrt( dR*dR + Z*Z));
     }
     double R_0_;
-    dg::geo::Bmodule<Geometry> bmod_;
+    dg::geo::Bmodule<MagneticField> bmod_;
 
 };
 
 //take BmodTheta as chi
-template<class Geometry>
+template<class MagneticField>
 struct EllipticDirNeuM
 {
-    EllipticDirNeuM( const Geometry& c, double R0, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(R0), 
+    EllipticDirNeuM( const MagneticField& c, double R0, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(R0), 
     func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob,amp_blob), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z), theta_ = theta(R,Z);
@@ -240,17 +240,17 @@ struct EllipticDirNeuM
         return dR/(dR*dR+Z*Z);
     }
     double R_0_;
-    FuncDirNeu<Geometry> func_;
-    dg::geo::Bmodule<Geometry> bmod_;
-    dg::geo::BR<Geometry> br_;
-    dg::geo::BZ<Geometry> bz_;
+    FuncDirNeu<MagneticField> func_;
+    dg::geo::Bmodule<MagneticField> bmod_;
+    dg::geo::BR<MagneticField> br_;
+    dg::geo::BZ<MagneticField> bz_;
 };
 
 //the psi surfaces
-template<class Geometry>
+template<class MagneticField>
 struct FuncXDirNeu
 {
-    FuncXDirNeu( const Geometry& c, double psi_0, double psi_1):
+    FuncXDirNeu( const MagneticField& c, double psi_0, double psi_1):
         c_(c), psi0_(psi_0), psi1_(psi_1){}
 
     double operator()(double R, double Z, double phi) const {
@@ -283,15 +283,15 @@ struct FuncXDirNeu
         return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
     }
     private:
-    Geometry c_;
+    MagneticField c_;
     double psi0_, psi1_;
 };
 
 //take Bmod as chi
-template<class Geometry>
+template<class MagneticField>
 struct EllipticXDirNeuM
 {
-    EllipticXDirNeuM( const Geometry& c, double R0, double psi_0, double psi_1): R_0_(R0), 
+    EllipticXDirNeuM( const MagneticField& c, double R0, double psi_0, double psi_1): R_0_(R0), 
     func_(c, psi_0, psi_1), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
@@ -308,17 +308,17 @@ struct EllipticXDirNeuM
     }
     private:
     double R_0_;
-    FuncXDirNeu<Geometry> func_;
-    dg::geo::Bmodule<Geometry> bmod_;
-    dg::geo::BR<Geometry> br_;
-    dg::geo::BZ<Geometry> bz_;
+    FuncXDirNeu<MagneticField> func_;
+    dg::geo::Bmodule<MagneticField> bmod_;
+    dg::geo::BR<MagneticField> br_;
+    dg::geo::BZ<MagneticField> bz_;
 };
 
 //take Blob and chi=1
-template<class Geometry>
+template<class MagneticField>
 struct EllipticBlobDirNeuM
 {
-    EllipticBlobDirNeuM( const Geometry& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): 
+    EllipticBlobDirNeuM( const MagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): 
     func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob){}
     double operator()(double R, double Z) const {
         return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
@@ -328,29 +328,29 @@ struct EllipticBlobDirNeuM
     }
     private:
     double R_0_;
-    FuncDirNeu<Geometry> func_;
+    FuncDirNeu<MagneticField> func_;
 };
 
-template<class Geometry>
+template<class MagneticField>
 struct EllipticDirSimpleM
 {
-    EllipticDirSimpleM( const Geometry& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob) {}
+    EllipticDirSimpleM( const MagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob) {}
     double operator()(double R, double Z, double phi) const {
         return -(( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
     }
     private:
-    FuncDirNeu<Geometry> func_;
+    FuncDirNeu<MagneticField> func_;
 };
 
 /**
  * @brief testfunction to test the parallel derivative 
       \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
  */ 
-template<class Geometry>
+template<class MagneticField>
 struct TestFunction
 {
-    TestFunction( const Geometry& c, double R0) :  
+    TestFunction( const MagneticField& c, double R0) :  
         bhatR_(c, R0),
         bhatZ_(c, R0),
         bhatP_(c, R0) {}
@@ -375,19 +375,19 @@ struct TestFunction
 
     }
     private:
-    dg::geo::BHatR<Geometry> bhatR_;
-    dg::geo::BHatZ<Geometry> bhatZ_;
-    dg::geo::BHatP<Geometry> bhatP_;
+    dg::geo::BHatR<MagneticField> bhatR_;
+    dg::geo::BHatZ<MagneticField> bhatZ_;
+    dg::geo::BHatP<MagneticField> bhatP_;
 };
 
 /**
  * @brief analyitcal solution of the parallel derivative of the testfunction
  *  \f[ \nabla_\parallel(R,Z,\varphi) f = \frac{\sin(\varphi)}{R}\f]
  */ 
-template<class Geometry>
+template<class MagneticField>
 struct DeriTestFunction
 {
-    DeriTestFunction( const Geometry& c, double R0) :
+    DeriTestFunction( const MagneticField& c, double R0) :
         bhatR_(c, R0),
         bhatZ_(c, R0),
         bhatP_(c, R0) {}
@@ -415,9 +415,9 @@ struct DeriTestFunction
 
     }
     private:
-    dg::geo::BHatR<Geometry> bhatR_;
-    dg::geo::BHatZ<Geometry> bhatZ_;
-    dg::geo::BHatP<Geometry> bhatP_;
+    dg::geo::BHatR<MagneticField> bhatR_;
+    dg::geo::BHatZ<MagneticField> bhatZ_;
+    dg::geo::BHatP<MagneticField> bhatP_;
 };
 
 ///@} 
