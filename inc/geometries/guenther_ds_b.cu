@@ -30,7 +30,7 @@ int main( )
     std::ifstream is("guenther_params.js");
     reader.parse(is,js,false);
     GeomParameters gp(js);
-//     gp.display( std::cout);
+    gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
     
