@@ -22,10 +22,14 @@ namespace dg
 {
 namespace geo
 {
+/**
+ * @brief Contains the Cerfon Taylor state type flux functions
+ */
 namespace taylor
 {
 ///@addtogroup geom
 ///@{
+typedef dg::geo::solovev::GeomParameters GeomParameters; //!< bring GeomParameters into the taylor namespace 
 
 /**
  * @brief \f[ \psi \f]

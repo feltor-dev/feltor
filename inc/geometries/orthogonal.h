@@ -27,6 +27,7 @@ struct OrthogonalGrid3d : public dg::Grid3d
     /*!@brief Constructor
     
      * @tparam Generator models aGenerator
+     * @param generator must generate an orthogonal grid
      * @param n 
      * @param Nx
      @param Ny
@@ -118,6 +119,7 @@ struct OrthogonalGrid2d : public dg::Grid2d
     /*!@brief Constructor
     
      * @tparam Generator models aGenerator
+     * @param generator must generate an orthogonal grid
      * @param n number of polynomial coefficients
      * @param Nx number of cells in first coordinate
      @param Ny number of cells in second coordinate

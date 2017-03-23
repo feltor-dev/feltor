@@ -17,7 +17,7 @@ struct ConformalGrid2d;
 /**
  * @brief A three-dimensional grid based on conformal coordintes 
  *
- * @tparam container Vector class that holds metric coefficients
+ * @tparam container Vector class that holds metric coefficients (models aContainer)
  */
 template< class container>
 struct ConformalGrid3d : public dg::Grid3d
@@ -25,6 +25,17 @@ struct ConformalGrid3d : public dg::Grid3d
     typedef dg::ConformalCylindricalTag metric_category; //!< metric tag
     typedef ConformalGrid2d<container> perpendicular_grid; //!< the two-dimensional grid type
 
+    /**
+     * @brief 
+     *
+     * @tparam Generator models aGenerator
+     * @param generator must generate a conformal grid
+     * @param n
+     * @param Nx
+     * @param Ny
+     * @param Nz
+     * @param bcx
+     */
     template< class Generator>
     ConformalGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR) :
         dg::Grid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
@@ -99,12 +110,22 @@ struct ConformalGrid3d : public dg::Grid3d
 };
 
 /**
- * @brief A two-dimensional grid based on the conformal coordinates 
+ * @brief A two-dimensional grid based on the conformal coordinates  (models aContainer)
  */
 template< class container>
 struct ConformalGrid2d : public dg::Grid2d
 {
     typedef dg::ConformalCylindricalTag metric_category;
+    /**
+     * @brief 
+     *
+     * @tparam Generator models aGenerator
+     * @param generator must generate a conformal grid
+     * @param n
+     * @param Nx
+     * @param Ny
+     * @param bcx
+     */
     template< class Generator>
     ConformalGrid2d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator.width(), 0., generator.height(), n,Nx,Ny, bcx, dg::PER)

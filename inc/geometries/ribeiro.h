@@ -15,10 +15,9 @@
 
 namespace dg
 {
+///@cond
 namespace ribeiro
 {
-
-///@cond
 namespace detail
 {
 
@@ -178,11 +177,11 @@ struct FieldFinv
     int mode_;
 };
 } //namespace detail
-///@endcond
 }//namespace ribeiro
+///@endcond
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010 (models aGenerator)
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 (models aGenerator)
  * @ingroup generators
  * @tparam Psi All the template parameters must model aBinaryOperator
  */

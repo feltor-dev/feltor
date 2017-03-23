@@ -13,9 +13,9 @@
 
 namespace dg
 {
+///@cond
 namespace ribeiro
 {
-///@cond
 namespace detail
 {
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
@@ -231,11 +231,11 @@ struct XFieldFinv
     double xAtOne_;
 };
 } //namespace detail
-///@endcond
 }//namespace ribeiro
+///@endcond
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 (models aGeneratorX)
  * @ingroup generators
  * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */

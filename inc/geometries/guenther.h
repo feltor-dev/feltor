@@ -20,6 +20,9 @@ namespace dg
 {
 namespace geo
 {
+/**
+ * @brief Contains the Guenther type flux functions
+ */
 namespace guenther
 {
 ///@addtogroup geom

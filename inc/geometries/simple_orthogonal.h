@@ -14,12 +14,12 @@
 
 namespace dg
 {
+///@cond
 namespace orthogonal
 {
 
 namespace detail
 {
-///@cond
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
@@ -268,10 +268,10 @@ void construct_rz( Nemov nemov,
 
 }
 
-///@endcond
 } //namespace detail
 
 }//namespace orthogonal
+///@endcond
 
 
 /**

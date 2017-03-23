@@ -21,7 +21,10 @@ namespace dg
 {
 namespace geo
 {
-namespace solovev
+/**
+ * @brief Contains the solovev state type flux function
+ */
+namespace solovev 
 {
 ///@addtogroup geom
 ///@{

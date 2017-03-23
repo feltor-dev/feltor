@@ -22,8 +22,18 @@ struct OrthogonalGridX3d : public dg::GridX3d
     typedef dg::OrthogonalTag metric_category;
     typedef OrthogonalGridX2d<container> perpendicular_grid;
 
-    template< class Generator>
-    OrthogonalGridX3d( Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy):
+    /*!@brief Constructor
+    
+     * @tparam GeneratorX models aGeneratorX
+     * @param generator isOrthogonal() must return true
+     * @param n 
+     * @param Nx
+     @param Ny
+     @param Nz 
+     @param bcx
+     */
+    template< class GeneratorX>
+    OrthogonalGridX3d( GeneratorX generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy):
         dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
         r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_)
     {
@@ -45,8 +55,8 @@ struct OrthogonalGridX3d : public dg::GridX3d
     const container& perpVol()const{return vol2d_;}
     perpendicular_grid perp_grid() const { return OrthogonalGridX2d<container>(*this);}
     private:
-    template<class Generator>
-    void construct( Generator generator, double psi_0, double fx, unsigned n, unsigned Nx, unsigned Ny )
+    template<class GeneratorX>
+    void construct( GeneratorX generator, double psi_0, double fx, unsigned n, unsigned Nx, unsigned Ny )
     {
         const double x_0 = generator.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;

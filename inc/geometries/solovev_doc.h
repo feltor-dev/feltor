@@ -1,7 +1,4 @@
 #error Documentation only
-/*! @namespace solovev
- * @brief This is the namespace for a solvev magnetic flux
- */
 /*! 
  * 
  * @defgroup grids 1. Grids 
@@ -79,6 +76,47 @@ struct aGenerator
          thrust::host_vector<double>& etaY) ;
 };
 
+/**
+* @brief The generatorX  template model
+
+A generator is there to construct coordinates from some coordinates
+\f$ x,y\f$ to the computational domain \f$\zeta, \eta\f$, which
+is a product space and has an X-point topology. 
+ @attention this is not a real class it's there for documentation only
+ @attention parameter names can be different
+ @ingroup temp
+*/
+struct aGeneratorX
+{
+    bool isOrthogonal() const; //!< true if coordinate system is orthogonal
+    bool isConformal() const; //!< true if coordinate system is conformal
+    double f0() const; //!< the normalization constant  of the \f$\zeta\f$ coordinate i.e. \f$ \zeta_0 = f_0\psi_0 \f$ and \f$ \zeta_1 = -f_\zeta\zeta_0/(1-f_\zeta) \f$ 
+    /**
+    * @brief Generate grid points and elements of the Jacobian 
+    *
+    * @param zeta1d (input) a list of \f$ N_\zeta\f$ points \f$ f_0\psi_0<\zeta_i< -f_\zeta\zeta_0/(1-f_\zeta)\f$
+    * @param eta1d (input) a list of \f$ N_\eta\f$ points \f$ 0<\eta_j<\f$height() 
+    * @param x (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ x(\zeta_i, \eta_j)\f$ 
+    * @param y (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ y(\zeta_i, \eta_j)\f$ 
+    * @param nodeX0 is the index of the first point in eta1d  after the first jump in topology in \f$ \eta\f$
+    * @param nodeX1 is the index of the first point in eta1d  after the second jump in topology in \f$ \eta\f$
+    * @param zetaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial x (\zeta_i, \eta_j)\f$ 
+    * @param zetaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial y (\zeta_i, \eta_j)\f$ 
+    * @param etaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial x (\zeta_i, \eta_j)\f$ 
+    * @param etaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial y (\zeta_i, \eta_j)\f$ 
+    @note the \f$ \zeta\f$ coordinate is contiguous in memory
+    */
+    void operator()( 
+         const thrust::host_vector<double>& zeta1d, 
+         const thrust::host_vector<double>& eta1d, 
+         const unsigned nodeX0, const unsigned nodeX1, 
+         thrust::host_vector<double>& x, 
+         thrust::host_vector<double>& y, 
+         thrust::host_vector<double>& zetaX, 
+         thrust::host_vector<double>& zetaY, 
+         thrust::host_vector<double>& etaX, 
+         thrust::host_vector<double>& etaY) ;
+};
 
 
 /**

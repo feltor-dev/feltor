@@ -16,6 +16,7 @@ struct CurvilinearGrid2d;
 
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
+ @tparam container models aContainer
  */
 template< class container>
 struct CurvilinearGrid3d : public dg::Grid3d
@@ -23,6 +24,16 @@ struct CurvilinearGrid3d : public dg::Grid3d
     typedef dg::CurvilinearCylindricalTag metric_category;
     typedef CurvilinearGrid2d<container> perpendicular_grid;
 
+    /*!@brief Constructor
+    
+     * @tparam Generator models aGenerator
+     * @param generator must generate an orthogonal grid
+     * @param n 
+     * @param Nx
+     @param Ny
+     @param Nz 
+     @param bcx
+     */
     template< class Generator>
     CurvilinearGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
         dg::Grid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
@@ -103,6 +114,15 @@ template< class container>
 struct CurvilinearGrid2d : public dg::Grid2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
+    /*!@brief Constructor
+    
+     * @tparam Generator models aGenerator
+     * @param generator must generate an orthogonal grid
+     * @param n number of polynomial coefficients
+     * @param Nx number of cells in first coordinate
+     @param Ny number of cells in second coordinate
+     @param bcx boundary condition in first coordinate
+     */
     template< class Generator>
     CurvilinearGrid2d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER)

@@ -13,10 +13,10 @@
 
 namespace dg
 {
+///@cond
 namespace orthogonal
 {
 
-///@cond
 namespace detail
 {
 
@@ -108,17 +108,17 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
 
 
 } //namespace detail
-///@endcond
 }//namespace orthogonal
+///@endcond
 
 /**
- * @brief Choose points on inside or outside line
+ * @brief Choose points on inside or outside line (models aGeneratorX)
  *
  * @ingroup generators
- * @tparam Psi
- * @tparam PsiX
- * @tparam PsiY
- * @tparam LaplacePsi
+ * @tparam Psi models aBinaryOperator
+ * @tparam PsiX models aBinaryOperator
+ * @tparam PsiY models aBinaryOperator
+ * @tparam LaplacePsi models aBinaryOperator
  */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SimpleOrthogonalX
@@ -180,10 +180,10 @@ struct SimpleOrthogonalX
 };
 
 /**
- * @brief Choose points on separatrix
+ * @brief Choose points on separatrix (models aGeneratorX)
  *
  * @ingroup generators
- * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SeparatrixOrthogonal
@@ -197,12 +197,11 @@ struct SeparatrixOrthogonal
      * @param psiY
      * @param laplacePsi
      * @param psi_0
-     * @param xX
-     * @param yX
+     * @param xX the X-point
+     * @param yX the X-point
      * @param x0
      * @param y0
      * @param firstline =0 means conformal, =1 means equalarc discretization
-     * 
      */
     SeparatrixOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline ):
