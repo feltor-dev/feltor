@@ -101,24 +101,24 @@ int main( int argc, char* argv[])
     std::cout << "The grid parameters" <<"\n";
     std::cout  << Rmin<<" rho_s " << Rmax <<" rho_s " << Zmin <<" rho_s " <<Zmax <<" rho_s " <<"\n";
 
-    Geometry c(gp);
+    MagneticField c(gp);
         
-    dg::geo::Field<Geometry> field(c, gp.R_0);
-    dg::geo::InvB<Geometry> invB(c, gp.R_0);
-    dg::geo::LnB<Geometry> lnB(c, gp.R_0);
-    dg::geo::BR<Geometry> bR(c, gp.R_0);
-    dg::geo::BZ<Geometry> bZ(c, gp.R_0);
-    dg::geo::CurvatureNablaBR<Geometry> curvatureR(c, gp.R_0);
-    dg::geo::CurvatureNablaBZ<Geometry> curvatureZ(c, gp.R_0);
-    dg::geo::GradLnB<Geometry> gradLnB(c, gp.R_0);
+    dg::geo::Field<MagneticField> field(c, gp.R_0);
+    dg::geo::InvB<MagneticField> invB(c, gp.R_0);
+    dg::geo::LnB<MagneticField> lnB(c, gp.R_0);
+    dg::geo::BR<MagneticField> bR(c, gp.R_0);
+    dg::geo::BZ<MagneticField> bZ(c, gp.R_0);
+    dg::geo::CurvatureNablaBR<MagneticField> curvatureR(c, gp.R_0);
+    dg::geo::CurvatureNablaBZ<MagneticField> curvatureZ(c, gp.R_0);
+    dg::geo::GradLnB<MagneticField> gradLnB(c, gp.R_0);
     dg::geo::Pupil<Psip> pupil(c.psip, gp.psipmaxcut);
     InvNormR invnormr(gp);
-    dg::geo::FieldR<Geometry> fieldR(c, gp.R_0);
-    dg::geo::FieldZ<Geometry> fieldZ(c, gp.R_0);
-    dg::geo::FieldP<Geometry> fieldP(c, gp.R_0);
-    dg::geo::BHatR<Geometry> bhatR(c, gp.R_0);
-    dg::geo::BHatZ<Geometry> bhatZ(c, gp.R_0);
-    dg::geo::BHatP<Geometry> bhatP(c, gp.R_0);
+    dg::geo::FieldR<MagneticField> fieldR(c, gp.R_0);
+    dg::geo::FieldZ<MagneticField> fieldZ(c, gp.R_0);
+    dg::geo::FieldP<MagneticField> fieldP(c, gp.R_0);
+    dg::geo::BHatR<MagneticField> bhatR(c, gp.R_0);
+    dg::geo::BHatZ<MagneticField> bhatZ(c, gp.R_0);
+    dg::geo::BHatP<MagneticField> bhatP(c, gp.R_0);
     dg::Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,p.n, p.Nx, p.Ny,p.Nz);
     dg::HVec vecR = dg::evaluate( fieldR, grid);
     dg::HVec vecZ = dg::evaluate( fieldZ, grid);
@@ -175,8 +175,8 @@ int main( int argc, char* argv[])
 
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(1a) test with testfunction  (works for DIR)" << "\n";
-                dg::geo::TestFunction<Geometry> func(c, gp.R_0);
-                dg::geo::DeriTestFunction<Geometry> derifunc(c, gp.R_0);
+                dg::geo::TestFunction<MagneticField> func(c, gp.R_0);
+                dg::geo::DeriTestFunction<MagneticField> derifunc(c, gp.R_0);
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();

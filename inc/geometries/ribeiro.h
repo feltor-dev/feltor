@@ -207,6 +207,8 @@ struct Ribeiro
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
+    bool isOrthogonal()const{return false;}
+    bool isConformal()const{return false;}
     /**
      * @brief The length of the zeta-domain
      *
