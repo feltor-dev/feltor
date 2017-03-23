@@ -108,7 +108,7 @@ struct FuncDirPer
     double thetaZZ( double R, double Z) const { return -thetaRR(R,Z);}
     double R_0_;
     double psi0_, psi1_, k_;
-    const MagneticField& c_;
+    const MagneticField c_;
 };
 
 //takes the magnetic field as chi

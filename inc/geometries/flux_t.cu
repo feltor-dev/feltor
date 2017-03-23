@@ -10,15 +10,17 @@
 #include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
+#include "orthogonal.h"
+#include "curvilinear.h"
 //#include "guenther.h"
 #include "solovev.h"
 #include "flux.h"
-#include "orthogonal.h"
-#include "curvilinear.h"
 #include "dg/ds.h"
 #include "init.h"
 
 #include "file/nc_utilities.h"
+
+using namespace dg::geo::solovev;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
@@ -63,8 +65,8 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    dg::solovev::GeomParameters gp(js);
-    dg::solovev::Psip psip( gp); 
+    GeomParameters gp(js);
+    Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
@@ -74,8 +76,8 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing flux grid ... \n";
     t.tic();
-    dg::solovev::CollectivePsip c( gp);
-    dg::FluxGenerator<dg::solovev::Psip, dg::solovev::PsipR, dg::solovev::PsipZ, dg::solovev::PsipRR, dg::solovev::PsipRZ, dg::solovev::PsipZZ, dg::solovev::Ipol, dg::solovev::IpolR, dg::solovev::IpolZ>
+    MagneticField c( gp);
+    dg::FluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ, Ipol, IpolR, IpolZ>
         flux( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, c.ipol, c.ipolR, c.ipolZ, psi_0, psi_1, gp.R_0, 0., 1);
     dg::CurvilinearGrid3d<dg::HVec> g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
@@ -166,7 +168,7 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    dg::functors::Iris<dg::solovev::Psip> iris( c.psip, gp.psipmin, gp.psipmax);
+    dg::geo::Iris<Psip> iris( c.psip, gp.psipmin, gp.psipmax);
     //dg::CylindricalGrid3d<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
     dg::HVec vec  = dg::evaluate( iris, g2dC);

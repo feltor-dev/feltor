@@ -11,7 +11,10 @@
 #include "conformal.h"
 #include "orthogonal.h"
 #include "curvilinear.h"
+
 #include "flux.h"
+#include "simple_orthogonal.h"
+
 #include "solovev.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
@@ -69,7 +72,7 @@ template<class MagneticField>
 struct ArakawaDirPer
 {
     ArakawaDirPer( MagneticField c, double R0, double psi_0, double psi_1): 
-        f_(c, R0, psi_0, psi_1, 1), g_(c, R0, psi_0, psi_1){}
+        f_(c, R0, psi_0, psi_1, 4), g_(c, R0, psi_0, psi_1){ }
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
     }
@@ -84,7 +87,7 @@ struct ArakawaDirPer
 template<class MagneticField>
 struct VariationDirPer
 {
-    VariationDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,1. ){}
+    VariationDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,4. ){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
 
@@ -98,7 +101,7 @@ struct VariationDirPer
 template< class MagneticField>
 struct CurvatureDirPer
 {
-    CurvatureDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,1.), curvR(c, R0), curvZ(c, R0){}
+    CurvatureDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,4.), curvR(c, R0), curvZ(c, R0){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
@@ -111,10 +114,10 @@ struct CurvatureDirPer
 };
 
 
-//typedef ConformalGrid3d<dg::DVec> Geometry;
-//typedef OrthogonalGrid3d<dg::DVec> Geometry;
-typedef dg::CurvilinearGrid2d<dg::DVec> Geometry;
-//typedef OrthogonalGrid2d<dg::DVec> Geometry;
+//typedef dg::ConformalGrid3d<dg::DVec> Geometry;
+//typedef dg::OrthogonalGrid3d<dg::DVec> Geometry;
+//typedef dg::CurvilinearGrid2d<dg::DVec> Geometry;
+typedef dg::OrthogonalGrid2d<dg::DVec> Geometry;
 
 int main(int argc, char** argv)
 {
@@ -136,26 +139,30 @@ int main(int argc, char** argv)
     GeomParameters gp(js);
     Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
-    std::cout << "Type psi_0 and psi_1\n";
+    std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
+    std::cout << "Psi_0 = "<<psi_0<<" psi_1 = "<<psi_1<<std::endl;
     //gp.display( std::cout);
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing grid ... \n";
     t.tic();
     MagneticField c( gp);
-    dg::RibeiroFluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
-        ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
+    //dg::RibeiroFluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
+    //    ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
+    dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip>
+        ribeiro( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
     Geometry grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
+    grid.display();
 
-    dg::DVec vol = dg::create::volume( grid);
-    std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
+    const dg::DVec vol = dg::create::volume( grid);
+    std::cout <<std::fixed<< std::setprecision(6)<<std::endl;
 
 
-    dg::geo::FuncDirPer<MagneticField> left(c, gp.R_0, psi_0, psi_1, 1);
+    dg::geo::FuncDirPer<MagneticField> left(c, gp.R_0, psi_0, psi_1, 4);
     FuncDirPer2<MagneticField> right( c, gp.R_0, psi_0, psi_1);
     ArakawaDirPer<MagneticField> jacobian( c, gp.R_0, psi_0, psi_1);
     VariationDirPer<MagneticField> variationLHS(c, gp.R_0, psi_0, psi_1);
@@ -168,10 +175,10 @@ int main(int argc, char** argv)
     dg::DVec eins = dg::evaluate( dg::one, grid);
 
     ///////////////////////////////////////////////////////////////////////
-    std::cout << "TESTING ARAKAWA 3D\n";
+    std::cout << "TESTING ARAKAWA\n";
     dg::ArakawaX<Geometry, dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
-    double norm = dg::blas2::dot( vol, jac);
+    const double norm = dg::blas2::dot( sol, vol, sol);
     std::cout << std::scientific;
     double result = dg::blas2::dot( eins, vol, jac);
     std::cout << "Mean     Jacobian is "<<result<<"\n";
@@ -179,33 +186,39 @@ int main(int argc, char** argv)
     std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( lhs, vol, jac);
     std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
+    //std::cout << "norm of solution "<<norm<<"\n";
+    //std::cout << "norm of Jacobian "<<dg::blas2::dot( jac, vol, jac)<<"\n";
+    //std::cout << "norm of lhs      "<<dg::blas2::dot( lhs, vol, lhs)<<"\n";
+    //std::cout << "norm of rhs      "<<dg::blas2::dot( rhs, vol, rhs)<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
     std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
     arakawa.variation( lhs, jac);
-    norm = dg::blas2::dot( vol, jac);
+    const double normVar = dg::blas2::dot( vol, variation);
+    std::cout << "norm of variation "<<normVar<<"\n";
     dg::blas1::axpby( 1., variation, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
-    std::cout << "Variation rel. distance to solution "<<sqrt( dg::blas2::dot( vol, jac)/norm)<<std::endl; //don't forget sqrt when comuting errors
+    std::cout << "Variation rel. distance to solution "<<sqrt( result/normVar)<<std::endl; //don't forget sqrt when comuting errors
     ///////////////////////////////////////////////////////////////////////
-    std::cout << "TESTING POISSON 3D\n";
+    std::cout << "TESTING POISSON\n";
     dg::Poisson<Geometry, dg::DMatrix, dg::DVec> poisson( grid);
     poisson( lhs, rhs, jac);
-    norm = dg::blas2::dot( vol, jac);
     result = dg::blas2::dot( eins, vol, jac);
     std::cout << "Mean     Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( rhs, vol, jac);
     std::cout << "Mean rhs*Jacobian is "<<result<<"\n";
     result = dg::blas2::dot( lhs, vol, jac);
     std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
+    result = dg::blas2::dot( jac, vol, jac);
+    //std::cout << "norm of solution "<<norm<<"\n";
+    //std::cout << "norm of Jacobian "<<result<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
     std::cout << "          Rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
     poisson.variationRHS( lhs, jac);
-    norm = dg::blas2::dot( vol, jac);
     dg::blas1::axpby( 1., variation, -1., jac);
     result = dg::blas2::dot( jac, vol, jac);
-    std::cout << "Variation rel. distance to solution "<<sqrt( dg::blas2::dot( vol, jac)/norm)<<std::endl; //don't forget sqrt when comuting errors
+    std::cout << "Variation rel. distance to solution "<<sqrt( result/normVar)<<std::endl; //don't forget sqrt when comuting errors
 
     ////////////////////////////transform curvature components////////
     std::cout << "TESTING CURVATURE 3D\n";
@@ -222,7 +235,7 @@ int main(int argc, char** argv)
     dg::blas2::symv( dy, lhs, tempy);
     dg::blas1::pointwiseDot( tempx, curvX, tempx);
     dg::blas1::pointwiseDot( 1., tempy, curvY, 1.,  tempx);
-    norm = dg::blas2::dot( tempx, vol, tempx);
+    const double normCurv = dg::blas2::dot( tempx, vol, tempx);
 
     CurvatureDirPer<MagneticField> curv(c, gp.R_0, psi_0, psi_1);
     dg::DVec curvature;
@@ -230,7 +243,7 @@ int main(int argc, char** argv)
 
     dg::blas1::axpby( 1., tempx, -1., curvature, tempx);
     result = dg::blas2::dot( vol, tempx);
-    std::cout << "Curvature rel. distance to solution "<<sqrt( result/norm)<<std::endl; //don't forget sqrt when comuting errors
+    std::cout << "Curvature rel. distance to solution "<<sqrt( result/normCurv)<<std::endl; //don't forget sqrt when comuting errors
 
 
 
