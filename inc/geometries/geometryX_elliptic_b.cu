@@ -15,19 +15,13 @@
 #include "taylor.h"
 //#include "ribeiroX.h"
 #include "orthogonalX.h"
+#include "separatrix_orthogonal.h"
+#include "testfunctors.h"
 
-typedef taylor::CollectivePsip Collective;
-typedef taylor::Psip Psip;
-typedef taylor::PsipR PsipR;
-typedef taylor::PsipZ PsipZ;
-typedef taylor::LaplacePsip LaplacePsip;
+using namespace dg::geo::taylor;
 const char* parameters = "geometry_params_Xpoint_taylor.js";
 
-//typedef solovev::CollectivePsip Collective;
-//typedef solovev::Psip Psip;
-//typedef solovev::PsipR PsipR;
-//typedef solovev::PsipZ PsipZ;
-//typedef solovev::LaplacePsip LaplacePsip;
+//using namespace dg::geo::solovev;
 //const char* parameters = "geometry_params_Xpoint.js";
 
 int main(int argc, char**argv)
@@ -35,7 +29,7 @@ int main(int argc, char**argv)
     std::cout << "Type n, Nx (fx = 1./4.), Ny (fy = 1./22.)\n";
     unsigned n, Nx, Ny;
     std::cin >> n>> Nx>>Ny;   
-    std::cout << "Type psi_0! \n";
+    std::cout << "Type psi_0 (-100)! \n";
     double psi_0, psi_1;
     std::cin >> psi_0;
     Json::Reader reader;
@@ -50,14 +44,14 @@ int main(int argc, char**argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    solovev::GeomParameters gp(js);
+    GeomParameters gp(js);
     gp.display( std::cout);
     dg::Timer t;
     std::cout << "Constructing grid ... \n";
     t.tic();
 
     ////////////////construct Generator////////////////////////////////////
-    Collective c(gp);
+    MagneticField c(gp);
     std::cout << "Psi min "<<c.psip(gp.R_0, 0)<<"\n";
     double R0 = gp.R_0, Z0 = 0;
     //double R_X = gp.R_0-1.4*gp.triangularity*gp.a;
@@ -99,23 +93,23 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     dg::DVec x =    dg::evaluate( dg::zero, g2d);
     ////////////////////////blob solution////////////////////////////////////////
-    //const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<Collective>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
+    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM<MagneticField>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
     //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<Collective>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
+    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu<MagneticField>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
     //////////////////////////blob solution on X-point/////////////////////////////
-    //const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<Collective>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d);
+    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM<MagneticField>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d);
     //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<Collective>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d);
+    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu<MagneticField>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d);
     ////////////////////////////laplace psi solution/////////////////////////////
     //const dg::DVec b =        dg::pullback( c.laplacePsip);
     //const dg::DVec chi =      dg::evaluate( dg::one, g2d);
     //const dg::DVec solution =     dg::pullback( c.psip, g2d);
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
-    const dg::DVec b =    dg::pullback( solovev::EllipticXDirNeuM<Collective>(c, gp.R_0, psi_0, psi_1), g2d);
-    dg::DVec chi  =  dg::pullback( solovev::Bmodule<Collective>(c, gp.R_0), g2d);
+    const dg::DVec b =    dg::pullback( dg::geo::EllipticXDirNeuM<MagneticField>(c, gp.R_0, psi_0, psi_1), g2d);
+    dg::DVec chi  =  dg::pullback( dg::geo::Bmodule<MagneticField>(c, gp.R_0), g2d);
     dg::blas1::plus( chi, 1e4);
     //const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
-    const dg::DVec solution = dg::pullback( solovev::FuncXDirNeu<Collective>(c, psi_0, psi_1 ), g2d);
+    const dg::DVec solution = dg::pullback( dg::geo::FuncXDirNeu<MagneticField>(c, psi_0, psi_1 ), g2d);
     ////////////////////////////////////////////////////////////////////////////
 
     const dg::DVec vol2d = dg::create::volume( g2d);

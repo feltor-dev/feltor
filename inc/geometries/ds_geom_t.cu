@@ -70,6 +70,7 @@ struct InvNormR
     double R_0;
 }; 
 
+//program seems to be flawed somehow at least I don't get it to work properly (MW) 
 int main( int argc, char* argv[])
 {
     if( !(argc == 3 ))

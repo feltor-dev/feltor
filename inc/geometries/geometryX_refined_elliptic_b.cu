@@ -14,16 +14,21 @@
 #include "solovev.h"
 #include "taylor.h"
 //#include "ribeiroX.h"
-#include "orthogonal.h"
 #include "refined_orthogonalX.h"
+#include "separatrix_orthogonal.h"
+#include "testfunctors.h"
 
+using namespace dg::geo::taylor;
+const char* parameters = "geometry_params_Xpoint_taylor.js";
+//using namespace dg::geo::solovev;
+//const char* parameters = "geometry_params_Xpoint.js";
 
 int main(int argc, char**argv)
 {
     std::cout << "Type n, Nx (fx = 1./4.), Ny (fy = 1./22.)\n";
     unsigned n, Nx, Ny;
     std::cin >> n>> Nx>>Ny;   
-    std::cout << "Type psi_0! \n";
+    std::cout << "Type psi_0 (-100)! \n";
     double psi_0, psi_1;
     std::cin >> psi_0;
     std::cout << "Type n_ref! \n";
@@ -41,7 +46,7 @@ int main(int argc, char**argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    solovev::GeomParameters gp(js);
+    GeomParameters gp(js);
     gp.display( std::cout);
     dg::Timer t;
     std::cout << "Constructing grid ... \n";
@@ -55,15 +60,15 @@ int main(int argc, char**argv)
     std::cin >> howmanyX >> howmanyY;
 
     ////////////////construct Generator////////////////////////////////////
-    taylor::CollectivePsip c(gp);
+    MagneticField c(gp);
     std::cout << "Psi min "<<c.psip(gp.R_0, 0)<<"\n";
     double R0 = gp.R_0, Z0 = 0;
     //double R_X = gp.R_0-1.4*gp.triangularity*gp.a;
     //double Z_X = -1.0*gp.elongation*gp.a;
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::SimpleOrthogonalX<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    dg::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
     dg::OrthogonalRefinedGridX2d<dg::DVec> g2d( add_x, add_y, howmanyX, howmanyY, generator, psi_0, 0.25, 1./22., n_ref, n, Nx, Ny, dg::DIR, dg::NEU);
     dg::Elliptic<dg::OrthogonalRefinedGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
@@ -97,19 +102,19 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     //////////////////blob solution////////////////////////////////////////////
-    //const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d.associated());
-    //const dg::DVec bFINE =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
+    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM<MagneticField>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d.associated());
+    //const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM<MagneticField>(c,psi_0, psi_1, 450, -340, 40.,1.), g2d);
     //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d.associated());
     //const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d.associated());
-    //const dg::DVec solutionFINE =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
+    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu<MagneticField>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d.associated());
+    //const dg::DVec solutionFINE =     dg::pullback( dg::geo::FuncDirNeu<MagneticField>(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d);
     /////////////////blob on X-point///////////////////////////////////////////
-    const dg::DVec b =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d.associated());
-    const dg::DVec bFINE =        dg::pullback( solovev::EllipticBlobDirNeuM<taylor::CollectivePsip>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d);
+    const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM<MagneticField>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d.associated());
+    const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM<MagneticField>(c,psi_0, psi_1, 480, -420, 40.,1.), g2d);
     const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d.associated());
     const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d);
-    const dg::DVec solution =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d.associated());
-    const dg::DVec solutionFINE =     dg::pullback( solovev::FuncDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d);
+    const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu<MagneticField>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d.associated());
+    const dg::DVec solutionFINE =     dg::pullback( dg::geo::FuncDirNeu<MagneticField>(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d);
     ///////////////////////////////////////////////////////////////////////////
     //const dg::DVec b =        dg::pullback( c.laplacePsip, g2d.associated());
     //const dg::DVec bFINE =    dg::pullback( c.laplacePsip, g2d);
@@ -118,16 +123,16 @@ int main(int argc, char**argv)
     //const dg::DVec solution =     dg::pullback( c.psip, g2d.associated());
     //const dg::DVec solutionFINE = dg::pullback( c.psip, g2d);
     ///////////////////////////Dir/////FIELALIGNED SIN///////////////////
-    //const dg::DVec b     =    dg::pullback( solovev::EllipticXDirNeuM<taylor::CollectivePsip>(c, gp.R_0, psi_0, psi_1), g2d.associated());
-    //const dg::DVec bFINE =    dg::pullback( solovev::EllipticXDirNeuM<taylor::CollectivePsip>(c, gp.R_0, psi_0, psi_1), g2d);
-    //dg::DVec chi  =  dg::pullback( solovev::Bmodule<taylor::CollectivePsip>(c, gp.R_0), g2d.associated());
-    //dg::DVec chiFINE  =  dg::pullback( solovev::Bmodule<taylor::CollectivePsip>(c, gp.R_0), g2d);
+    //const dg::DVec b     =    dg::pullback( dg::geo::EllipticXDirNeuM<MagneticField>(c, gp.R_0, psi_0, psi_1), g2d.associated());
+    //const dg::DVec bFINE =    dg::pullback( dg::geo::EllipticXDirNeuM<MagneticField>(c, gp.R_0, psi_0, psi_1), g2d);
+    //dg::DVec chi  =  dg::pullback( dg::geo::Bmodule<MagneticField>(c, gp.R_0), g2d.associated());
+    //dg::DVec chiFINE  =  dg::pullback( dg::geo::Bmodule<MagneticField>(c, gp.R_0), g2d);
     //dg::blas1::plus( chi, 1e5);
     //dg::blas1::plus( chiFINE, 1e5);
     ////const dg::DVec chi      =  dg::pullback( dg::ONE(), g2d.associated());
     ////const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution     = dg::pullback( solovev::FuncXDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1 ), g2d.associated());
-    //const dg::DVec solutionFINE = dg::pullback( solovev::FuncXDirNeu<taylor::CollectivePsip>(c, psi_0, psi_1 ), g2d);
+    //const dg::DVec solution     = dg::pullback( dg::geo::FuncXDirNeu<MagneticField>(c, psi_0, psi_1 ), g2d.associated());
+    //const dg::DVec solutionFINE = dg::pullback( dg::geo::FuncXDirNeu<MagneticField>(c, psi_0, psi_1 ), g2d);
     //////////////////////////////////////////////////////////////////////////
 
     const dg::DVec vol3d     = dg::create::volume( g2d.associated());

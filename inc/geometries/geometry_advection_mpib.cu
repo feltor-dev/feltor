@@ -13,6 +13,7 @@
 
 #include "solovev.h"
 #include "testfunctors.h"
+#include "flux.h"
 #include "simple_orthogonal.h"
 #include "mpi_curvilinear.h"
 #include "mpi_orthogonal.h"
@@ -69,7 +70,7 @@ template<class MagneticField>
 struct ArakawaDirPer
 {
     ArakawaDirPer( MagneticField c, double R0, double psi_0, double psi_1): 
-        f_(c, R0, psi_0, psi_1, 1), g_(c, R0, psi_0, psi_1){}
+        f_(c, R0, psi_0, psi_1, 4), g_(c, R0, psi_0, psi_1){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
     }
@@ -84,7 +85,7 @@ struct ArakawaDirPer
 template<class MagneticField>
 struct VariationDirPer
 {
-    VariationDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,1. ){}
+    VariationDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,4. ){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
 
@@ -98,7 +99,7 @@ struct VariationDirPer
 template< class MagneticField>
 struct CurvatureDirPer
 {
-    CurvatureDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,1.), curvR(c, R0), curvZ(c, R0){}
+    CurvatureDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,4.), curvR(c, R0), curvZ(c, R0){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
@@ -111,10 +112,7 @@ struct CurvatureDirPer
 };
 
 
-//typedef  dg::ConformalMPIGrid3d<dg::DVec> Geometry;
-//typedef dg::OrthogonalMPIGrid3d<dg::DVec> Geometry;
-//typedef  dg::CurvilinearMPIGrid2d<dg::DVec> Geometry;
-typedef dg::OrthogonalMPIGrid2d<dg::DVec> Geometry;
+typedef  dg::CurvilinearMPIGrid2d<dg::DVec> Geometry;
 
 int main(int argc, char** argv)
 {
@@ -153,10 +151,10 @@ int main(int argc, char** argv)
         int remain_dims[] = {true,true,false}; //true true false
         MPI_Cart_sub( comm, remain_dims, &planeComm);
     MagneticField c( gp);
-    //dg::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
-    //    generator( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
-        generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
+    dg::RibeiroFluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
+        generator( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
+    //dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
+        //generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
     Geometry grid(generator, n, Nx, Ny,dg::DIR, planeComm); //2d
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
@@ -164,7 +162,7 @@ int main(int argc, char** argv)
     dg::MDVec vol = dg::create::volume( grid);
     if(rank==0)std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
 
-    dg::geo::FuncDirPer<MagneticField> left(c, gp.R_0, psi_0, psi_1, 1);
+    dg::geo::FuncDirPer<MagneticField> left(c, gp.R_0, psi_0, psi_1, 4);
     FuncDirPer2<MagneticField> right( c, gp.R_0, psi_0, psi_1);
     ArakawaDirPer<MagneticField> jacobian( c, gp.R_0, psi_0, psi_1);
     VariationDirPer<MagneticField> variationLHS(c, gp.R_0, psi_0, psi_1);

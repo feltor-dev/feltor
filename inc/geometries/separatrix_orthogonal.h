@@ -7,7 +7,7 @@
 #include "dg/runge_kutta.h"
 #include "utilitiesX.h"
 
-#include "orthogonal.h"
+#include "simple_orthogonal.h"
 
 
 
@@ -37,8 +37,8 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
     r.resize( y_vec.size()), z.resize(y_vec.size());
     thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
     begin[0] = R_init[0], begin[1] = Z_init[0];
-    solovev::ribeiro::FieldRZY<PsiX, PsiY> fieldRZYconf(psiX, psiY);
-    solovev::equalarc::FieldRZY<PsiX, PsiY> fieldRZYequi(psiX, psiY);
+    dg::geo::ribeiro::FieldRZY<PsiX, PsiY> fieldRZYconf(psiX, psiY);
+    dg::geo::equalarc::FieldRZY<PsiX, PsiY> fieldRZYequi(psiX, psiY);
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
     unsigned steps = 1; double eps = 1e10, eps_old=2e10;
@@ -153,7 +153,7 @@ struct SimpleOrthogonalX
 
         thrust::host_vector<double> r_init, z_init;
         orthogonal::detail::computeX_rzy( psiX_, psiY_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        dg::orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
@@ -228,7 +228,7 @@ struct SeparatrixOrthogonal
 
         thrust::host_vector<double> r_init, z_init;
         sep_.compute_rzy( eta1d, nodeX0, nodeX1, r_init, z_init);
-        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        dg::orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
 
         //separate integration of inside and outside
         unsigned inside=0;
@@ -344,7 +344,7 @@ struct SeparatrixOrthogonal
 // */ 
 //struct XField
 //{
-//    XField( solovev::GeomParameters gp,const dg::GridX2d& gXY, const thrust::host_vector<double>& g):
+//    XField( dg::geo::solovev::GeomParameters gp,const dg::GridX2d& gXY, const thrust::host_vector<double>& g):
 //        gp_(gp),
 //        psipR_(gp), psipZ_(gp),
 //        ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(g, gXY)) 
@@ -407,11 +407,11 @@ struct SeparatrixOrthogonal
 //    double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
 //    
 //    private:
-//    solovev::GeomParameters gp_;
-//    solovev::mod::PsipR  psipR_;
-//    solovev::mod::PsipZ  psipZ_;
-//    solovev::Ipol   ipol_;
-//    solovev::InvB   invB_;
+//    dg::geo::solovev::GeomParameters gp_;
+//    dg::geo::solovev::mod::PsipR  psipR_;
+//    dg::geo::solovev::mod::PsipZ  psipZ_;
+//    dg::geo::Ipol   ipol_;
+//    dg::geo::InvB   invB_;
 //    const dg::GridX2d gXY_;
 //    thrust::host_vector<double> g_;
 //    double R_X, Z_X;

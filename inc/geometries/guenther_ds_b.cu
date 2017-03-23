@@ -16,7 +16,7 @@
 #include "dg/cg.h"
 // #include "draw/host_window.h"
 #include "guenther.h"
-#include "fields.h"
+#include "testfunctors.h"
 
 
 int main( )
@@ -32,7 +32,7 @@ int main( )
             return -1;
         }
 
-    const solovev::GeomParameters gp(v);
+    const dg::geo::solovev::GeomParameters gp(v);
 //     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
