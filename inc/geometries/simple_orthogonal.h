@@ -86,9 +86,9 @@ struct Fpsi
     int firstline_;
     double X_init, Y_init;
     Psi psip_;
-    dg::detail::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTconf_;
-    dg::detail::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequl_;
-    dg::detail::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTconf_;
+    dg::geo::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequl_;
+    dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
 
 };
 
@@ -107,8 +107,8 @@ void compute_rzy( PsiX psiX, PsiY psiY, const thrust::host_vector<double>& y_vec
     thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
     begin[0] = R_0, begin[1] = Z_0;
     //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-    dg::detail::ribeiro::FieldRZY<PsiX, PsiY> fieldRZYconf(psiX, psiY);
-    dg::detail::equalarc::FieldRZY<PsiX, PsiY> fieldRZYequi(psiX, psiY);
+    dg::geo::ribeiro::FieldRZY<PsiX, PsiY> fieldRZYconf(psiX, psiY);
+    dg::geo::equalarc::FieldRZY<PsiX, PsiY> fieldRZYequi(psiX, psiY);
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
     unsigned steps = 1;

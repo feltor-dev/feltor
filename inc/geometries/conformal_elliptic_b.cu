@@ -22,24 +22,24 @@ using namespace dg::geo;
 
 const unsigned nIter=6;
 template<class Geometry>
-void compute_error_elliptic( const solovev::Collective& c, double R_0, const Geometry& g2d, double psi_0, double psi_1, double eps)
+void compute_error_elliptic( const solovev::Geometry& c, double R_0, const Geometry& g2d, double psi_0, double psi_1, double eps)
 {
     dg::DVec x =    dg::evaluate( dg::zero, g2d);
     /////////////////////////////DirNeu/////FLUXALIGNED//////////////////////
     //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR_NEU, dg::PER, dg::not_normed, dg::forward);
-    //const dg::DVec b =    dg::pullback( EllipticDirPerM<solovev::Collective>(c, R_0, psi_0, 2.*psi_1-psi_0, 0), g2d);
-    //const dg::DVec chi =  dg::pullback( Bmodule<solovev::Collective>(c, R_0), g2d);
-    //const dg::DVec solution = dg::pullback( FuncDirPer<solovev::Collective>(c, psi_0, 2.*psi_1-psi_0, 0 ), g2d);
+    //const dg::DVec b =    dg::pullback( EllipticDirPerM<solovev::Geometry>(c, R_0, psi_0, 2.*psi_1-psi_0, 0), g2d);
+    //const dg::DVec chi =  dg::pullback( Bmodule<solovev::Geometry>(c, R_0), g2d);
+    //const dg::DVec solution = dg::pullback( FuncDirPer<solovev::Geometry>(c, psi_0, 2.*psi_1-psi_0, 0 ), g2d);
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
     //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::not_normed, dg::forward);
-    //const dg::DVec b =    dg::pullback( EllipticDirPerM<solovev::Collective>(c, R_0, psi_0, psi_1, 4), g2d);
-    //const dg::DVec chi =  dg::pullback( Bmodule<solovev::Collective>(c, R_0), g2d);
-    //const dg::DVec solution = dg::pullback( FuncDirPer<solovev::Collective>(c, psi_0, psi_1, 4 ), g2d);
+    //const dg::DVec b =    dg::pullback( EllipticDirPerM<solovev::Geometry>(c, R_0, psi_0, psi_1, 4), g2d);
+    //const dg::DVec chi =  dg::pullback( Bmodule<solovev::Geometry>(c, R_0), g2d);
+    //const dg::DVec solution = dg::pullback( FuncDirPer<solovev::Geometry>(c, psi_0, psi_1, 4 ), g2d);
     /////////////////////////////Dir//////BLOB/////////////////////////////
     dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::not_normed, dg::forward);
-    const dg::DVec b =    dg::pullback( EllipticDirNeuM<solovev::Collective>(c, R_0, psi_0, psi_1, 440, -220, 40.,1.), g2d);
-    const dg::DVec chi =  dg::pullback( BmodTheta<solovev::Collective>(c, R_0), g2d);
-    const dg::DVec solution = dg::pullback(FuncDirNeu<solovev::Collective>(c, psi_0, psi_1, 440, -220, 40.,1.), g2d);
+    const dg::DVec b =    dg::pullback( EllipticDirNeuM<solovev::Geometry>(c, R_0, psi_0, psi_1, 440, -220, 40.,1.), g2d);
+    const dg::DVec chi =  dg::pullback( BmodTheta<solovev::Geometry>(c, R_0), g2d);
+    const dg::DVec solution = dg::pullback(FuncDirNeu<solovev::Geometry>(c, psi_0, psi_1, 440, -220, 40.,1.), g2d);
     ///////////////////////////////////////////////////////////////////////
     const dg::DVec vol2d = dg::create::volume( g2d);
     pol.set_chi( chi);
@@ -102,7 +102,7 @@ int main(int argc, char**argv)
     //write parameters from file into variables
     solovev::GeomParameters gp(js);
     gp.display( std::cout);
-    solovev::Collective c( gp); 
+    solovev::Geometry c( gp); 
     const double eps = 1e-10;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "eps\tn\t Nx\t Ny \t # iterations \t error  \t time/iteration (s)\t hx_max\t hy_max\t hx_min\t hy_min \n";
