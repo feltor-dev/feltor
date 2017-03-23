@@ -157,15 +157,15 @@ struct aContainer
 };
 
 /**
-* @brief The collective template model
+* @brief The tokamak magnetic geometry template model
 
-A collective must contain the functors named as follows, all of
+A tokamak geometry must contain the functors named as follows, all of
 which must model aBinaryOperator.
  @attention this is not a real class it's there for documentation only
  @attention parameter names cannot be different
  @ingroup temp
 */
-struct aCollective
+struct aTokamakGeometry
 {
     Psip psip; //!< \f$ \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
     PsipR psipR;//!< \f$ \partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates

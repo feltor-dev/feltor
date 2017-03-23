@@ -548,11 +548,11 @@ struct IpolZ
 };
 
 /**
- * @brief Contains all solovev fields (models aCollective)
+ * @brief Contains all solovev fields (models aTokamakGeometry)
  */
-struct Collective
+struct Geometry
 {
-    Collective( GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
+    Geometry( GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
     Psip psip;
     PsipR psipR;
     PsipZ psipZ;

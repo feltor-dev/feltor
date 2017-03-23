@@ -14,12 +14,12 @@ namespace geo
 
 /**
  * @brief \f[   |B| = R_0\sqrt{I^2+(\nabla\psi)^2}/R   \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct Bmodule
 {
-    Bmodule( const Collective& c, double R0 ):  R_0_(R0), c_(c)  { }
+    Bmodule( const Geometry& c, double R0 ):  R_0_(R0), c_(c)  { }
     /**
     * @brief \f[   \hat{B} \f]
     */ 
@@ -37,17 +37,17 @@ struct Bmodule
     }
   private:
     double R_0_;
-    Collective c_;
+    Geometry c_;
 };
 
 /**
  * @brief \f[  |B|^{-1} = R/R_0\sqrt{I^2+(\nabla\psi)^2}    \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct InvB
 {
-    InvB(  const Collective& c, double R0 ):  R_0_(R0), c_(c)  { }
+    InvB(  const Geometry& c, double R0 ):  R_0_(R0), c_(c)  { }
     /**
     * @brief \f[   \frac{1}{\hat{B}} = 
         \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
@@ -67,17 +67,17 @@ struct InvB
     }
   private:
     double R_0_;
-    Collective c_;
+    Geometry c_;
 };
 
 /**
  * @brief \f[   \ln{|B|}  \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct LnB
 {
-    LnB(  const Collective& c, double R0 ):  R_0_(R0), c_(c)  { }
+    LnB(  const Geometry& c, double R0 ):  R_0_(R0), c_(c)  { }
 /**
  * @brief \f[   \ln{(   \hat{B})} = \ln{\left[
       \frac{\hat{R}_0}{\hat{R}} \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
@@ -97,17 +97,17 @@ struct LnB
     }
   private:
     double R_0_;
-    Collective c_;
+    Geometry c_;
 };
 
 /**
  * @brief \f[  \frac{\partial |\hat{B}| }{ \partial \hat{R}}  \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct BR
 {
-    BR(const Collective& c, double R0):  R_0_(R0), invB_(c, R0), c_(c) { }
+    BR(const Geometry& c, double R0):  R_0_(R0), invB_(c, R0), c_(c) { }
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} = 
       -\frac{1}{\hat B \hat R}   
@@ -130,19 +130,19 @@ struct BR
     double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0_;
-    InvB<Collective> invB_;
-    Collective c_;
+    InvB<Geometry> invB_;
+    Geometry c_;
 };
 
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}}  \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct BZ
 {
 
-    BZ(const Collective& c, double R0):  R_0_(R0), c_(c), invB_(c, R0) { }
+    BZ(const Geometry& c, double R0):  R_0_(R0), c_(c), invB_(c, R0) { }
     /**
      * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} = 
      \frac{ \hat I \left(\frac{\partial \hat I}{\partial\hat Z}    \right)+
@@ -163,18 +163,18 @@ struct BZ
     double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0_;
-    Collective c_;
-    InvB<Collective> invB_; 
+    Geometry c_;
+    InvB<Geometry> invB_; 
 };
 
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct CurvatureNablaBR
 {
-    CurvatureNablaBR(const Collective& c, double R0 ): invB_(c, R0), bZ_(c, R0) { }
+    CurvatureNablaBR(const Geometry& c, double R0 ): invB_(c, R0), bZ_(c, R0) { }
     /**
      * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f]
      */ 
@@ -191,18 +191,18 @@ struct CurvatureNablaBR
         return -invB_(R,Z,phi)*invB_(R,Z,phi)*bZ_(R,Z,phi); 
     }
     private:    
-    InvB<Collective>   invB_;
-    BZ<Collective> bZ_;    
+    InvB<Geometry>   invB_;
+    BZ<Geometry> bZ_;    
 };
 
 /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B}  \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct CurvatureNablaBZ
 {
-    CurvatureNablaBZ( const Collective& c, double R0): invB_(c, R0), bR_(c, R0) { }
+    CurvatureNablaBZ( const Geometry& c, double R0): invB_(c, R0), bR_(c, R0) { }
  /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f]
  */    
@@ -218,15 +218,15 @@ struct CurvatureNablaBZ
         return invB_(R,Z,phi)*invB_(R,Z,phi)*bR_(R,Z,phi);
     }
     private:    
-    InvB<Collective> invB_;
-    BR<Collective> bR_;   
+    InvB<Geometry> invB_;
+    BR<Geometry> bR_;   
 };
 
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct CurvatureKappaR
 {
     /**
@@ -248,12 +248,12 @@ struct CurvatureKappaR
 
 /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}}  \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct CurvatureKappaZ
 {
-    CurvatureKappaZ( const Collective c, double R0):
+    CurvatureKappaZ( const Geometry c, double R0):
         invB_(c, R0) { }
  /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f]
@@ -270,17 +270,17 @@ struct CurvatureKappaZ
         return -invB_(R,Z,phi)/R;
     }
     private:    
-    InvB<Collective>   invB_;
+    InvB<Geometry>   invB_;
 };
 
 /**
  * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct DivCurvatureKappa
 {
-    DivCurvatureKappa( const Collective& c, double R0):
+    DivCurvatureKappa( const Geometry& c, double R0):
         invB_(c, R0),
         bZ_(c, R0){ }
  /**
@@ -298,18 +298,18 @@ struct DivCurvatureKappa
         return  bZ_(R,Z,phi)*invB_(R,Z,phi)*invB_(R,Z,phi)/R;
     }
     private:    
-    InvB<Collective>   invB_;
-    BZ<Collective> bZ_;    
+    InvB<Geometry>   invB_;
+    BZ<Geometry> bZ_;    
 };
 
 /**
  * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} \f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct GradLnB
 {
-    GradLnB( const Collective& c, double R0): R_0_(R0), c_(c), invB_(c, R0), bR_(c, R0), bZ_(c, R0) { } 
+    GradLnB( const Geometry& c, double R0): R_0_(R0), c_(c), invB_(c, R0), bR_(c, R0), bZ_(c, R0) { } 
     /**
  * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} = \frac{1}{\hat{R}\hat{B}^2 } \left[ \hat{B}, \hat{\psi}_p\right]_{\hat{R}\hat{Z}} \f]
  */ 
@@ -324,20 +324,20 @@ struct GradLnB
     double operator()( double R, double Z, double phi)const{return operator()(R,Z);}
     private:
     double R_0_;
-    Collective c_;
-    InvB<Collective>   invB_;
-    BR<Collective> bR_;
-    BZ<Collective> bZ_;   
+    Geometry c_;
+    InvB<Geometry>   invB_;
+    BR<Geometry> bR_;
+    BZ<Geometry> bZ_;   
 };
 
 /**
  * @brief \f[ B_\varphi = R_0I/R^2\f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
 */
-template<class Collective>
+template<class Geometry>
 struct FieldP
 {
-    FieldP( const Collective& c, double R0): R_0(R0), c_(c){}
+    FieldP( const Geometry& c, double R0): R_0(R0), c_(c){}
     double operator()( double R, double Z, double phi) const
     {
         return R_0*c_.ipol(R,Z)/R/R;
@@ -345,17 +345,17 @@ struct FieldP
     
     private:
     double R_0;
-    Collective c_;
+    Geometry c_;
 }; 
 
 /**
  * @brief \f[ B_R = R_0\psi_Z /R\f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */
-template<class Collective>
+template<class Geometry>
 struct FieldR
 {
-    FieldR( const Collective& c, double R0): R_0(R0), c_(c){}
+    FieldR( const Geometry& c, double R0): R_0(R0), c_(c){}
     double operator()( double R, double Z) const
     {
         return  R_0/R*c_.psipZ(R,Z);
@@ -369,18 +369,18 @@ struct FieldR
     }
     private:
     double R_0;
-    Collective c_;
+    Geometry c_;
    
 };
 
 /**
  * @brief \f[ B_Z = -R_0\psi_R /R\f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */
-template<class Collective>
+template<class Geometry>
 struct FieldZ
 {
-    FieldZ( const Collective& c, double R0): R_0(R0), c_(c){}
+    FieldZ( const Geometry& c, double R0): R_0(R0), c_(c){}
     double operator()( double R, double Z) const
     {
         return  -R_0/R*c_.psipR(R,Z);
@@ -394,18 +394,18 @@ struct FieldZ
     }
     private:
     double R_0;
-    Collective c_;
+    Geometry c_;
    
 };
 
 /**
  * @brief \f[  B^{\theta} = B^R\partial_R\theta + B^Z\partial_Z\theta\f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */ 
-template<class Collective>
+template<class Geometry>
 struct FieldT
 {
-    FieldT( const Collective& c, double R0):  R_0_(R0), fieldR_(c, R0), fieldZ_(c, R0){}
+    FieldT( const Geometry& c, double R0):  R_0_(R0), fieldR_(c, R0), fieldZ_(c, R0){}
   /**
  * @brief \f[  B^{\theta} = 
  * B^R\partial_R\theta + B^Z\partial_Z\theta\f]
@@ -425,67 +425,67 @@ struct FieldT
   }
   private:
     double R_0_;
-    FieldR<Collective> fieldR_;
-    FieldZ<Collective> fieldZ_;
+    FieldR<Geometry> fieldR_;
+    FieldZ<Geometry> fieldZ_;
 
 };
 
 /**
  * @brief \f[ b_R = B_R/|B|\f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */
-template<class Collective>
+template<class Geometry>
 struct BHatR
 {
-    BHatR( const Collective& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
+    BHatR( const Geometry& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
     double operator()( double R, double Z, double phi) const
     {
         return  invB_(R,Z)*R_0/R*c_.psipZ(R,Z);
     }
     private:
-    Collective c_;
+    Geometry c_;
     double R_0;
-    InvB<Collective>   invB_;
+    InvB<Geometry>   invB_;
 
 };
 
 /**
  * @brief \f[ b_Z = B_Z/|B|\f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */
-template<class Collective>
+template<class Geometry>
 struct BHatZ
 {
-    BHatZ( const Collective& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
+    BHatZ( const Geometry& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
 
     double operator()( double R, double Z, double phi) const
     {
         return  -invB_(R,Z)*R_0/R*c_.psipR(R,Z);
     }
     private:
-    Collective c_;
+    Geometry c_;
     double R_0;
-    InvB<Collective>   invB_;
+    InvB<Geometry>   invB_;
 
 };
 
 /**
  * @brief \f[ b_\varphi = B_\varphi/|B|\f]
- @tparam Collective models aCollective
+ @tparam Geometry models aTokamakGeometry
  */
-template<class Collective>
+template<class Geometry>
 struct BHatP
 {
-    BHatP( const Collective& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
+    BHatP( const Geometry& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
     double operator()( double R, double Z, double phi) const
     {
         return invB_(R,Z)*R_0*c_.ipol(R,Z)/R/R;
     }
     
     private:
-    Collective c_;
+    Geometry c_;
     double R_0;
-    InvB<Collective>   invB_;
+    InvB<Geometry>   invB_;
   
 }; 
 
@@ -493,12 +493,13 @@ struct BHatP
 
 /**
  * @brief Integrates the equations for a field line and 1/B
+ * @tparam Geometry models aTokamakGeometry
  * @ingroup misc
  */ 
-template<class Collective>
+template<class Geometry>
 struct Field
 {
-    Field( const Collective& c, double R0):c_(c), R_0_(R0), invB_(c, R0) { }
+    Field( const Geometry& c, double R0):c_(c), R_0_(R0), invB_(c, R0) { }
     /**
      * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
      \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
@@ -550,19 +551,19 @@ struct Field
     }
     
     private:
-    Collective c_;
+    Geometry c_;
     double R_0_;
-    InvB<Collective>   invB_;
+    InvB<Geometry>   invB_;
    
 };
 
 ///**
 // * @brief Integrates the equations for a field line and 1/B
 // */ 
-//template<class Collective>
+//template<class Geometry>
 //struct OrthogonalField
 //{
-//    OrthogonalField( const Collective& c, double R0, dg::solovev::GeomParameters gp, const dg::Grid2d& gXY, const thrust::host_vector<double>& f2):
+//    OrthogonalField( const Geometry& c, double R0, dg::solovev::GeomParameters gp, const dg::Grid2d& gXY, const thrust::host_vector<double>& f2):
 //        c_(c), R_0_(R0), invB_(c, R0), gXY_(gXY), 
 //        g_(dg::create::forward_transform(f2, gXY)) 
 //    { }
@@ -615,9 +616,9 @@ struct Field
 //    }
 //    
 //    private:
-//    Collective c_;
+//    Geometry c_;
 //    double R_0_;
-//    dg::magnetic::InvB<Collective>   invB_;
+//    dg::magnetic::InvB<Geometry>   invB_;
 //    const dg::Grid2d gXY_;
 //    thrust::host_vector<double> g_;
 //};

@@ -164,11 +164,11 @@ struct IpolZ
 };
 
 /**
- * @brief Contains all guenther fields (models aCollective)
+ * @brief Contains all guenther fields (models aTokamakGeometry)
  */
-struct Collective
+struct Geometry
 {
-    Collective( double R_0, double I_0):psip(R_0), psipR(R_0), psipZ(R_0), psipRR(R_0), psipRZ(R_0), psipZZ(R_0), laplacePsip(R_0), ipol(I_0), ipolR(), ipolZ(){}
+    Geometry( double R_0, double I_0):psip(R_0), psipR(R_0), psipZ(R_0), psipRR(R_0), psipRZ(R_0), psipZZ(R_0), laplacePsip(R_0), ipol(I_0), ipolR(), ipolZ(){}
     Psip psip;
     PsipR psipR;
     PsipZ psipZ;
