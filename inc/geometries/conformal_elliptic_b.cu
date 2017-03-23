@@ -6,33 +6,40 @@
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 
-#include "solovev.h"
-//#include "guenther.h"
+//Grids
 #include "conformal.h"
 #include "orthogonal.h"
 #include "curvilinear.h"
-#include "functors.h"
+//generators
+#include "simple_orthogonal.h"
+#include "hector.h"
+//and some functors
+#include "solovev.h"
+//#include "guenther.h"
+#include "testfunctors.h"
+
+using namespace dg::geo;
 
 const unsigned nIter=6;
 template<class Geometry>
-void compute_error_elliptic( const dg::solovev::CollectivePsip& c, double R_0, const Geometry& g2d, double psi_0, double psi_1, double eps)
+void compute_error_elliptic( const solovev::Collective& c, double R_0, const Geometry& g2d, double psi_0, double psi_1, double eps)
 {
     dg::DVec x =    dg::evaluate( dg::zero, g2d);
     /////////////////////////////DirNeu/////FLUXALIGNED//////////////////////
     //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR_NEU, dg::PER, dg::not_normed, dg::forward);
-    //const dg::DVec b =    dg::pullback( dg::functors::EllipticDirPerM<dg::solovev::CollectivePsip>(c, R_0, psi_0, 2.*psi_1-psi_0, 0), g2d);
-    //const dg::DVec chi =  dg::pullback( dg::functors::Bmodule<dg::solovev::CollectivePsip>(c, R_0), g2d);
-    //const dg::DVec solution = dg::pullback( dg::functors::FuncDirPer<dg::solovev::CollectivePsip>(c, psi_0, 2.*psi_1-psi_0, 0 ), g2d);
+    //const dg::DVec b =    dg::pullback( EllipticDirPerM<solovev::Collective>(c, R_0, psi_0, 2.*psi_1-psi_0, 0), g2d);
+    //const dg::DVec chi =  dg::pullback( Bmodule<solovev::Collective>(c, R_0), g2d);
+    //const dg::DVec solution = dg::pullback( FuncDirPer<solovev::Collective>(c, psi_0, 2.*psi_1-psi_0, 0 ), g2d);
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
     //dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::not_normed, dg::forward);
-    //const dg::DVec b =    dg::pullback( dg::functors::EllipticDirPerM<dg::solovev::CollectivePsip>(c, R_0, psi_0, psi_1, 4), g2d);
-    //const dg::DVec chi =  dg::pullback( dg::functors::Bmodule<dg::solovev::CollectivePsip>(c, R_0), g2d);
-    //const dg::DVec solution = dg::pullback( dg::functors::FuncDirPer<dg::solovev::CollectivePsip>(c, psi_0, psi_1, 4 ), g2d);
+    //const dg::DVec b =    dg::pullback( EllipticDirPerM<solovev::Collective>(c, R_0, psi_0, psi_1, 4), g2d);
+    //const dg::DVec chi =  dg::pullback( Bmodule<solovev::Collective>(c, R_0), g2d);
+    //const dg::DVec solution = dg::pullback( FuncDirPer<solovev::Collective>(c, psi_0, psi_1, 4 ), g2d);
     /////////////////////////////Dir//////BLOB/////////////////////////////
     dg::Elliptic<Geometry, dg::DMatrix, dg::DVec> pol( g2d, dg::DIR, dg::PER, dg::not_normed, dg::forward);
-    const dg::DVec b =    dg::pullback( dg::functors::EllipticDirNeuM<dg::solovev::CollectivePsip>(c, R_0, psi_0, psi_1, 440, -220, 40.,1.), g2d);
-    const dg::DVec chi =  dg::pullback( dg::functors::BmodTheta<dg::solovev::CollectivePsip>(c, R_0), g2d);
-    const dg::DVec solution = dg::pullback( dg::functors::FuncDirNeu<dg::solovev::CollectivePsip>(c, psi_0, psi_1, 440, -220, 40.,1.), g2d);
+    const dg::DVec b =    dg::pullback( EllipticDirNeuM<solovev::Collective>(c, R_0, psi_0, psi_1, 440, -220, 40.,1.), g2d);
+    const dg::DVec chi =  dg::pullback( BmodTheta<solovev::Collective>(c, R_0), g2d);
+    const dg::DVec solution = dg::pullback(FuncDirNeu<solovev::Collective>(c, psi_0, psi_1, 440, -220, 40.,1.), g2d);
     ///////////////////////////////////////////////////////////////////////
     const dg::DVec vol2d = dg::create::volume( g2d);
     pol.set_chi( chi);
@@ -93,14 +100,14 @@ int main(int argc, char**argv)
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    dg::solovev::GeomParameters gp(js);
+    solovev::GeomParameters gp(js);
     gp.display( std::cout);
-    dg::solovev::CollectivePsip c( gp); 
+    solovev::Collective c( gp); 
     const double eps = 1e-10;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "eps\tn\t Nx\t Ny \t # iterations \t error  \t time/iteration (s)\t hx_max\t hy_max\t hx_min\t hy_min \n";
     std::cout << "Orthogonal:\n";
-    dg::SimpleOrthogonal<dg::solovev::Psip, dg::solovev::PsipR, dg::solovev::PsipZ, dg::solovev::LaplacePsip> generator0(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 0);
+    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator0(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 0);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::OrthogonalGrid2d<dg::DVec> g2d(generator0, n, Nx, Ny);
@@ -112,7 +119,7 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "Orthogonal Adapted:\n";
-    dg::SimpleOrthogonal<dg::solovev::Psip, dg::solovev::PsipR, dg::solovev::PsipZ, dg::solovev::LaplacePsip> generator1(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
+    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator1(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::OrthogonalGrid2d<dg::DVec> g2d(generator1, n, Nx, Ny);
@@ -136,7 +143,7 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "ConformalMonitor:\n";
-    dg::LiseikinCollective<dg::solovev::PsipR, dg::solovev::PsipZ, dg::solovev::PsipRR, dg::solovev::PsipRZ, dg::solovev::PsipZZ> lc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, 0.1, 0.001);
+    LiseikinCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> lc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, 0.1, 0.001);
     dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorMonitor( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
@@ -149,7 +156,7 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "ConformalAdaption:\n";
-    dg::NablaPsiInvCollective<dg::solovev::PsipR, dg::solovev::PsipZ, dg::solovev::PsipRR, dg::solovev::PsipRZ, dg::solovev::PsipZZ> nc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ);
+    NablaPsiInvCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ);
     dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorAdapt( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
@@ -162,7 +169,7 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "Ribeiro:\n";
-    dg::Ribeiro<dg::solovev::Psip, dg::solovev::PsipR, dg::solovev::PsipZ, dg::solovev::PsipRR, dg::solovev::PsipRZ, dg::solovev::PsipZZ>
+    dg::Ribeiro<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ>
       ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0.);
     for( unsigned i=0; i<nIter; i++)
     {

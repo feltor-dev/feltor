@@ -127,10 +127,10 @@ struct ConformalGrid2d : public dg::Grid2d
      * @param bcx
      */
     template< class Generator>
-    ConformalGrid2d( const Generator& hector, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+    ConformalGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator.width(), 0., generator.height(), n,Nx,Ny, bcx, dg::PER)
     {
-        ConformalGrid3d<container> g( hector, n,Nx,Ny,1,bcx);
+        ConformalGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         gradU2_=g.g_xx();

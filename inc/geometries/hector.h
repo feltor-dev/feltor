@@ -236,7 +236,7 @@ struct Hector
         g2d_(dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         //first construct u_
-        container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, dg::ONE(), dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
+        container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, dg::ONE(), dg::geo::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
         construct( u, psi0, psi1, dg::ONE(), dg::ZERO(), dg::ONE() );
         conformal_=orthogonal_=true;
         ////we actually don't need u_ but it makes a good testcase 
@@ -283,7 +283,7 @@ struct Hector
     Hector( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Chi chi, ChiX chiX, ChiY chiY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
         g2d_(dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
-        dg::detail::LaplaceAdaptPsi<PsiX, PsiY, dg::detail::LaplacePsi<PsiXX, PsiYY>, Chi, ChiX, ChiY> lapAdaPsi( psiX, psiY, dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), chi, chiX, chiY);
+        dg::geo::detail::LaplaceAdaptPsi<PsiX, PsiY, dg::geo::detail::LaplacePsi<PsiXX, PsiYY>, Chi, ChiX, ChiY> lapAdaPsi( psiX, psiY, dg::geo::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), chi, chiX, chiY);
         //first construct u_
         container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, chi, lapAdaPsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
         construct( u, psi0, psi1, chi, dg::ZERO(), chi );
@@ -340,7 +340,7 @@ struct Hector
         g2d_(dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY> (
                     psi, psiX, psiY, psiXX,psiXY,psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
-        dg::detail::LaplaceChiPsi<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Chi_XX, Chi_XY, Chi_YY, DivChiX, DivChiY>
+        dg::geo::detail::LaplaceChiPsi<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Chi_XX, Chi_XY, Chi_YY, DivChiX, DivChiY>
             lapChiPsi( psiX, psiY, psiXX, psiXY, psiYY, 
                 chi_XX, chi_XY, chi_YY, divChiX, divChiY);
         //first construct u_
