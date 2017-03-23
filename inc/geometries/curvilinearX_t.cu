@@ -7,17 +7,19 @@
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
-#include "file/read_input.h"
+//#include "file/read_input.h"
+#include "file/nc_utilities.h"
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
 #include "taylor.h"
 //#include "guenther.h"
 #include "curvilinearX.h"
+#include "ribeiroX.h"
 #include "dg/ds.h"
 #include "init.h"
 
-#include "file/nc_utilities.h"
+using namespace dg::geo;
 
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 double sine( double x) {return sin(x);}
@@ -211,7 +213,7 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2.0*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
-    solovev::Iris iris( gp);
+    Iris<solovev::Psip> iris( psip, gp.psipmin, gp.psipmax);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::DVec cutter = dg::pullback( iris, g2d), vol( cutter);
     dg::blas1::pointwiseDot(cutter, w2d, vol);

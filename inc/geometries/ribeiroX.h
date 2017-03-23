@@ -161,8 +161,8 @@ struct FpsiX
     }
     private:
     dg::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX_;
-    const solovev::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYT_;
-    const solovev::ribeiro::FieldRZYZ<PsiX, PsiY> fieldRZYZ_;
+    const dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYT_;
+    const dg::geo::ribeiro::FieldRZYZ<PsiX, PsiY> fieldRZYZ_;
 
 };
 
@@ -224,8 +224,8 @@ struct XFieldFinv
 
     private:
     FpsiX<Psi, PsiX, PsiY> fpsi_;
-    solovev::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYT_;
-    solovev::ribeiro::FieldRZYZ<PsiX, PsiY> fieldRZYZ_;
+    dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYT_;
+    dg::geo::ribeiro::FieldRZYZ<PsiX, PsiY> fieldRZYZ_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
     double xAtOne_;
@@ -310,7 +310,7 @@ struct RibeiroX
         psi_1_numerical_ = dg::detail::construct_psi_values( fpsiMinv_, psi0_, zeta0_, zeta1d, zeta1_, inside, psi_x);
 
         //std::cout << "In grid function:\n";
-        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;

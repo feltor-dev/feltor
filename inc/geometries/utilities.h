@@ -3,7 +3,7 @@
 ///@cond
 namespace dg
 {
-namespace detail
+namespace geo
 {
 
 ////////////////////////////////////////////for grid generation/////////////////
@@ -499,7 +499,10 @@ struct MinimalCurve
 };
 ////////////////////////////////////////////////////////////////////////////////
 
+} //namespace geo
 
+namespace detail
+{
 //compute psi(x) and f(x) for given discretization of x and a fpsiMinv functor
 //doesn't integrate over the x-point
 //returns psi_1
@@ -600,7 +603,6 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
 }
 
 } //namespace detail
-
 
 } //namespace dg
 ///@endcond

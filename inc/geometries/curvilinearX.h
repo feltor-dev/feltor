@@ -1,10 +1,13 @@
 #pragma once
-namespace dg
-{
 
 #include "dg/backend/gridX.h"
+#include "dg/backend/evaluationX.cuh"
+#include "dg/backend/functions.h"
 #include "dg/blas1.h"
 #include "dg/geometry/geometry_traits.h"
+
+namespace dg
+{
 
 ///@cond
 template< class container>

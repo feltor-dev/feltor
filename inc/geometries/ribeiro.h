@@ -148,9 +148,9 @@ struct Fpsi
     private:
     double R_init, Z_init;
     Psi psip_;
-    dg::detail::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTribeiro_;
-    dg::detail::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequalarc_;
-    dg::detail::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTribeiro_;
+    dg::geo::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequalarc_;
+    dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
     int mode_;
 };
 
@@ -171,8 +171,8 @@ struct FieldFinv
     }
     private:
     Fpsi<Psi, PsiR, PsiZ> fpsi_;
-    dg::detail::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYTribeiro_;
-    dg::detail::equalarc::FieldRZYT<PsiR, PsiZ> fieldRZYTequalarc_;
+    dg::geo::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYTribeiro_;
+    dg::geo::equalarc::FieldRZYT<PsiR, PsiZ> fieldRZYTequalarc_;
     unsigned N_steps;
     int mode_;
 };
@@ -259,8 +259,8 @@ struct Ribeiro
 
         //std::cout << "In grid function:\n";
         ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        dg::detail::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        dg::detail::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
