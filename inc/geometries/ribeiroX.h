@@ -13,6 +13,8 @@
 
 namespace dg
 {
+namespace geo
+{
 ///@cond
 namespace ribeiro
 {
@@ -160,7 +162,7 @@ struct FpsiX
         return fprime_old;
     }
     private:
-    dg::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX_;
+    dg::geo::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX_;
     const dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYT_;
     const dg::geo::ribeiro::FieldRZYZ<PsiX, PsiY> fieldRZYZ_;
 
@@ -237,7 +239,7 @@ struct XFieldFinv
 /**
  * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 (models aGeneratorX)
  * @ingroup generators
- * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct RibeiroX
@@ -278,19 +280,21 @@ struct RibeiroX
     thrust::host_vector<double> fx() const{ return fx_;}
     double psi1() const {return psi_1_numerical_;}
     /**
-     * @brief Generate the points and the elements of the Jacobian
-     *
-     * Call the width() and height() function before calling this function!
-     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
-     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
-     * @param x  = x(zeta,eta)
-     * @param y  = y(zeta,eta)
-     * @param zetaX = zeta_x(zeta,eta)
-     * @param zetaY = zeta_y(zeta,eta)
-     * @param etaX = eta_x(zeta,eta)
-     * @param etaY = eta_y(zeta,eta)
+    * @brief Generate grid points and elements of the Jacobian 
+    *
+    * @param zeta1d (input) a list of \f$ N_\zeta\f$ points \f$ f_0\psi_0<\zeta_i< -f_\zeta\zeta_0/(1-f_\zeta)\f$
+    * @param eta1d (input) a list of \f$ N_\eta\f$ points \f$ 0<\eta_j<\f$height() 
+    * @param x (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ x(\zeta_i, \eta_j)\f$ 
+    * @param y (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ y(\zeta_i, \eta_j)\f$ 
+    * @param nodeX0 is the index of the first point in eta1d  after the first jump in topology in \f$ \eta\f$
+    * @param nodeX1 is the index of the first point in eta1d  after the second jump in topology in \f$ \eta\f$
+    * @param zetaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial x (\zeta_i, \eta_j)\f$ 
+    * @param zetaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial y (\zeta_i, \eta_j)\f$ 
+    * @param etaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial x (\zeta_i, \eta_j)\f$ 
+    * @param etaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial y (\zeta_i, \eta_j)\f$ 
+    @note the \f$ \zeta\f$ coordinate is contiguous in memory
      * @note All the resulting vectors are write-only and get properly resized
-     */
+    */
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
@@ -307,7 +311,7 @@ struct RibeiroX
         for(unsigned i=0; i<zeta1d.size(); i++)
             if( zeta1d[i]< 0) inside++;//how many points are inside
         thrust::host_vector<double> psi_x;
-        psi_1_numerical_ = dg::detail::construct_psi_values( fpsiMinv_, psi0_, zeta0_, zeta1d, zeta1_, inside, psi_x);
+        psi_1_numerical_ = dg::geo::detail::construct_psi_values( fpsiMinv_, psi0_, zeta0_, zeta1d, zeta1_, inside, psi_x);
 
         //std::cout << "In grid function:\n";
         dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
@@ -321,7 +325,7 @@ struct RibeiroX
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0[2], Z0[2];
-            dg::detail::computeX_rzy( fpsi_, fieldRZYRYZYribeiro, psi_x[i], eta1d, nodeX0, nodeX1, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i]);
+            dg::geo::detail::computeX_rzy( fpsi_, fieldRZYRYZYribeiro, psi_x[i], eta1d, nodeX0, nodeX1, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
@@ -336,8 +340,8 @@ struct RibeiroX
     PsiXX psiXX_;
     PsiXY psiXY_;
     PsiYY psiYY_;
-    dg::ribeiro::detail::XFieldFinv<Psi, PsiX, PsiY> fpsiMinv_; 
-    dg::ribeiro::detail::FpsiX<Psi, PsiX, PsiY> fpsi_;
+    dg::geo::ribeiro::detail::XFieldFinv<Psi, PsiX, PsiY> fpsiMinv_; 
+    dg::geo::ribeiro::detail::FpsiX<Psi, PsiX, PsiY> fpsi_;
     double f0_, psi_1_numerical_;
     thrust::host_vector<double> fx_;
     double zeta0_, zeta1_;
@@ -346,4 +350,5 @@ struct RibeiroX
 };
 
 
+}//namespace geo
 }//namespace dg

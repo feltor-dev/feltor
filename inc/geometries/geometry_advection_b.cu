@@ -146,9 +146,9 @@ int main(int argc, char** argv)
     std::cout << "Constructing grid ... \n";
     t.tic();
     MagneticField c( gp);
-    dg::RibeiroFluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
+    dg::geo::RibeiroFluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
         ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
-    //dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip>
+    //dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip>
     //    ribeiro( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
     Geometry grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
     t.toc();

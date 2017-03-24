@@ -4,6 +4,8 @@
 
 namespace dg
 {
+namespace geo
+{
 /**
  * @brief This function finds the X-point via Newton iteration applied to the gradient of psi, 
  *
@@ -582,12 +584,13 @@ struct InitialX
     private:
     Psi psip_;
     const dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
-    dg::detail::XCross<Psi, PsiX, PsiY> xpointer_;
+    dg::geo::detail::XCross<Psi, PsiX, PsiY> xpointer_;
     double R_i_[4], Z_i_[4];
 
 };
 }//namespace detail
 }//namespace orthogonal
 ///@endcond
+} //namespace geo
 } //namespace dg
 

@@ -14,6 +14,8 @@
 
 namespace dg
 {
+namespace geo
+{
 ///@cond
 namespace orthogonal
 {
@@ -392,4 +394,5 @@ struct SimpleOrthogonal
     int firstline_;
 };
 
+}//namespace geo
 }//namespace dg

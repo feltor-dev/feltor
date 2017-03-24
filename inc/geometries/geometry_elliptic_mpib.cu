@@ -58,7 +58,7 @@ int main(int argc, char**argv)
     //ConformalMPIGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
     //ConformalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
     //dg::Elliptic<ConformalMPIGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
+    dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
         generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
     dg::OrthogonalMPIGrid3d<dg::DVec> g3d(generator, n, Nx, Ny,Nz,dg::DIR, comm); 
     dg::OrthogonalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();

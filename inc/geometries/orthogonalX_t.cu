@@ -120,15 +120,15 @@ int main( int argc, char* argv[])
     std::cout << "Psi min "<<c.psip(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::findXpoint( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, R_X, Z_X);
+    dg::geo::findXpoint( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, R_X, Z_X);
 
     //solovev::Psip psip( gp); 
     //std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     //solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
     //solovev::LaplacePsip laplacePsip(gp); 
     double R0 = gp.R_0, Z0 = 0;
-    dg::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    dg::geo::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::geo::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::OrthogonalGridX3d<dg::HVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //dg::OrthogonalGridX2d<dg::HVec> g2d = g3d.perp_grid();
     dg::OrthogonalRefinedGridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);

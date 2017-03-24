@@ -107,7 +107,7 @@ int main(int argc, char**argv)
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "eps\tn\t Nx\t Ny \t # iterations \t error  \t time/iteration (s)\t hx_max\t hy_max\t hx_min\t hy_min \n";
     std::cout << "Orthogonal:\n";
-    dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> generator0(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 0);
+    dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> generator0(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 0);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::OrthogonalGrid2d<dg::DVec> g2d(generator0, n, Nx, Ny);
@@ -119,7 +119,7 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "Orthogonal Adapted:\n";
-    dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> generator1(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> generator1(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::OrthogonalGrid2d<dg::DVec> g2d(generator1, n, Nx, Ny);
@@ -131,7 +131,7 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "Conformal:\n";
-    dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorConf( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
+    dg::geo::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorConf( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::ConformalGrid2d<dg::DVec> g2d(hectorConf, n, Nx, Ny);
@@ -144,7 +144,7 @@ int main(int argc, char**argv)
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "ConformalMonitor:\n";
     dg::geo::LiseikinCollective<PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ> lc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, 0.1, 0.001);
-    dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorMonitor( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
+    dg::geo::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorMonitor( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::CurvilinearGrid2d<dg::DVec> g2d(hectorMonitor, n, Nx, Ny);
@@ -157,7 +157,7 @@ int main(int argc, char**argv)
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "ConformalAdaption:\n";
     dg::geo::NablaPsiInvCollective<PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ> nc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ);
-    dg::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorAdapt( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
+    dg::geo::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorAdapt( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
         dg::OrthogonalGrid2d<dg::DVec> g2d(hectorAdapt, n, Nx, Ny);
@@ -169,7 +169,7 @@ int main(int argc, char**argv)
     Nx=NxIni, Ny=NyIni;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "Ribeiro:\n";
-    dg::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
+    dg::geo::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
       ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0.);
     for( unsigned i=0; i<nIter; i++)
     {

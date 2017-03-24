@@ -499,7 +499,6 @@ struct MinimalCurve
 };
 ////////////////////////////////////////////////////////////////////////////////
 
-} //namespace geo
 
 namespace detail
 {
@@ -603,7 +602,7 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
 }
 
 } //namespace detail
-
+} //namespace geo
 } //namespace dg
 ///@endcond
 

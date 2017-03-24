@@ -218,7 +218,7 @@ int main( int argc, char* argv[])
     unsigned npsi = 3, Npsi = 150;//set number of psivalues
     psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
-    dg::SafetyFactor<MagneticField, dg::DVec>     qprof(grid2d, c, alphaog2d );
+    dg::geo::SafetyFactor<MagneticField, dg::DVec>     qprof(grid2d, c, alphaog2d );
     dg::HVec sf         = dg::evaluate( qprof,    grid1d);
     dg::HVec abs        = dg::evaluate( dg::cooX1d, grid1d);
 

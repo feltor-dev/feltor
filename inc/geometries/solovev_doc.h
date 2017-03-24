@@ -23,16 +23,16 @@
  * 
  */
 /*! @mainpage
- * Welcome to the MagneticField extension of FELTOR.
+ * This extension adds new features to the FELTOR core dg library. 
  *
- * This extension adds new features to the FELTOR core dg library. Firstly, 
- * the conformal, orthogonal and curvilinear grid classes are added to the
+ * - the conformal, orthogonal and curvilinear grid classes are added to the
  * dg namespace. 
- * Secondly, several grid generator classes are added, among them our new Hector class. 
- * Thirdly, a bunch of new functors implementing various magnetic field geometries
- * and profiles are added to the dg::geo namespace
- * Lastly, there are some miscellaneous additions like a flux surface average class
- * and one used to integrate the field lines for parallel derivatives.
+ * - several grid generator classes are added, among them our new Hector class
+ *   are added to the dg::geo namespace
+ * - a bunch of new functors implementing various magnetic field geometries
+ *   and profiles are added to the dg::geo namespace
+ * - there are some miscellaneous additions like a flux surface average class
+ * and one used to integrate the field lines for parallel derivatives all in the dg::geo namespace.
  */
 
 

@@ -23,6 +23,8 @@ namespace geo
 {
 /**
  * @brief Contains the solovev state type flux function
+ *
+ * A.J. Cerfon and J.P. Freidberg: "One size fits all" analytic solutions to the Grad-Shafraonv equation, Physics of Plasmas 17, 032502 (2010)
  */
 namespace solovev 
 {

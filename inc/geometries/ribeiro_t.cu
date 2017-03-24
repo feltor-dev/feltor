@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing ribeiro grid ... \n";
     t.tic();
     dg::geo::solovev::MagneticField c( gp);
-    dg::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
+    dg::geo::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
         ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
     //dg::CurvilinearGrid3d<dg::HVec> g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR);
     //dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();

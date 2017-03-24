@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
 
-    dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> generator( Psip(gp), PsipR(gp), PsipZ(gp), LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> generator( Psip(gp), PsipR(gp), PsipZ(gp), LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 1);
     //dg::OrthogonalGrid3d<dg::HVec> g3d(generator, n, Nx, Ny,Nz, dg::DIR);
     //dg::OrthogonalGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::OrthogonalRefinedGrid3d<dg::HVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);

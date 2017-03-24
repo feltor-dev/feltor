@@ -27,11 +27,15 @@ struct OrthogonalGridX3d : public dg::GridX3d
     
      * @tparam GeneratorX models aGeneratorX
      * @param generator isOrthogonal() must return true
+     * @param psi_0
+     * @param fx
+     * @param fy
      * @param n 
      * @param Nx
      @param Ny
      @param Nz 
      @param bcx
+     @param bcy
      */
     template< class GeneratorX>
     OrthogonalGridX3d( GeneratorX generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy):
@@ -115,6 +119,19 @@ template< class container>
 struct OrthogonalGridX2d : public dg::GridX2d
 {
     typedef dg::OrthogonalTag metric_category;
+    /*!@brief Constructor
+    
+     * @tparam GeneratorX models aGeneratorX
+     * @param generator isOrthogonal() must return true
+     * @param psi_0 left flux surface
+     * @param fx
+     * @param fy
+     * @param n 
+     * @param Nx
+     @param Ny
+     @param bcx
+     @param bcy
+     */
     template<class Generator>
     OrthogonalGridX2d(Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy):
         dg::GridX2d( 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)

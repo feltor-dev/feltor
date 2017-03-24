@@ -24,8 +24,10 @@ namespace dg
 namespace geo
 {
 /**
- * @brief Contains the Cerfon Taylor state type flux functions
- * @note When the taylor field is used we need the boost library for special functions
+ * @brief Contains the Cerfon Taylor state type flux functions (using boost)
+ *
+ * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
+ * @attention When the taylor field is used we need the boost library for special functions
  */
 namespace taylor
 {

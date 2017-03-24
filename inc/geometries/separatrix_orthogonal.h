@@ -13,6 +13,8 @@
 
 namespace dg
 {
+namespace geo
+{
 ///@cond
 namespace orthogonal
 {
@@ -133,7 +135,7 @@ struct SimpleOrthogonalX
         double R0, Z0; 
         f0_ = fpsi.construct_f( psi_0, R0, Z0);
         zeta0_=f0_*psi_0;
-        dg::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX(psi, psiX, psiY, xX, yX);
+        dg::geo::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX(psi, psiX, psiY, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
     bool isConformal()const{return false;}
@@ -153,7 +155,7 @@ struct SimpleOrthogonalX
 
         thrust::host_vector<double> r_init, z_init;
         orthogonal::detail::computeX_rzy( psiX_, psiY_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        dg::orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        dg::geo::orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
@@ -228,7 +230,7 @@ struct SeparatrixOrthogonal
 
         thrust::host_vector<double> r_init, z_init;
         sep_.compute_rzy( eta1d, nodeX0, nodeX1, r_init, z_init);
-        dg::orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        dg::geo::orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
 
         //separate integration of inside and outside
         unsigned inside=0;
@@ -336,7 +338,7 @@ struct SeparatrixOrthogonal
     PsiX psiX_;
     PsiY psiY_;
     LaplacePsi laplacePsi_;
-    dg::detail::SeparatriX<Psi, PsiX, PsiY> sep_;
+    dg::geo::detail::SeparatriX<Psi, PsiX, PsiY> sep_;
 };
 
 // /**
@@ -419,5 +421,6 @@ struct SeparatrixOrthogonal
 //};
 //
 
+}//namespace geo
 }//namespace dg
 

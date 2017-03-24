@@ -69,7 +69,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Constructing grid ... \n";
     t.tic();
     MagneticField c( gp);
-    dg::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
+    dg::geo::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
         ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
     dg::CurvilinearMPIGrid3d<dg::HVec> g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR,comm);
     dg::CurvilinearMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();

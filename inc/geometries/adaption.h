@@ -81,7 +81,8 @@ struct LaplacePsi
 /**
  * @brief  A weight function for the Hector algorithm
  *\f[ |\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
- @note models aBinaryOperator
+ @tparam PsiX models aBinaryOperator
+ @tparam PsiY models aBinaryOperator
  */
 template<class PsiX, class PsiY>
 struct NablaPsiInv
@@ -89,8 +90,8 @@ struct NablaPsiInv
     /**
      * @brief Construct with derivatives
      *
-     * @param psiX
-     * @param psiX
+     @param psiX \f$ \psi_x\f$ derivative in x
+     @param psiY \f$ \psi_y\f$ derivative in y
      */
     NablaPsiInv( const PsiX& psiX, const PsiY& psiY): psiX_(psiX), psiY_(psiY){}
     /**
@@ -110,7 +111,6 @@ struct NablaPsiInv
 /**
  * @brief Derivative of the weight function
  *\f[\partial_x|\nabla\psi|^{-1} \f]
- @note models aBinaryOperator
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvX
@@ -137,7 +137,6 @@ struct NablaPsiInvX
 /**
  * @brief Derivative of the weight function
  *\f[ \partial_y|\nabla\psi|^{-1} \f]
- @note models aBinaryOperator
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct NablaPsiInvY
@@ -180,7 +179,6 @@ struct NablaPsiInvCollective
  *
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
- @note models aBinaryOperator
  */
 template<class PsiX, class PsiY>
 struct Liseikin_XX
@@ -206,7 +204,6 @@ struct Liseikin_XX
  *
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
- @note models aBinaryOperator
  */
 template<class PsiX, class PsiY>
 struct Liseikin_XY
@@ -232,7 +229,6 @@ struct Liseikin_XY
  *
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
- @note models aBinaryOperator
  */
 template<class PsiX, class PsiY>
 struct Liseikin_YY
@@ -255,7 +251,6 @@ struct Liseikin_YY
 /**
  * @brief The x-component of the divergence of the Liseikin monitor metric
  * \f[ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f]
- @note models aBinaryOperator
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct DivLiseikinX
@@ -288,7 +283,6 @@ struct DivLiseikinX
 /**
  * @brief The y-component of the divergence of the Liseikin monitor metric
  * \f[ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f]
- @note models aBinaryOperator
  */
 template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct DivLiseikinY
@@ -340,5 +334,4 @@ struct LiseikinCollective
 ///@}
 
 }//namespace geo
-
 }//namespace dg

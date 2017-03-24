@@ -151,9 +151,9 @@ int main(int argc, char** argv)
         int remain_dims[] = {true,true,false}; //true true false
         MPI_Cart_sub( comm, remain_dims, &planeComm);
     MagneticField c( gp);
-    dg::RibeiroFluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
+    dg::geo::RibeiroFluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
         generator( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
-    //dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
+    //dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
         //generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
     Geometry grid(generator, n, Nx, Ny,dg::DIR, planeComm); //2d
     t.toc();

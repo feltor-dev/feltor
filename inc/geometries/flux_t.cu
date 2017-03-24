@@ -77,7 +77,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing flux grid ... \n";
     t.tic();
     MagneticField c( gp);
-    dg::FluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ, Ipol, IpolR, IpolZ>
+    dg::geo::FluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ, Ipol, IpolR, IpolZ>
         flux( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, c.ipol, c.ipolR, c.ipolZ, psi_0, psi_1, gp.R_0, 0., 1);
     dg::CurvilinearGrid3d<dg::HVec> g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();

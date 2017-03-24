@@ -86,7 +86,6 @@ struct Alpha
     private:
     Geometry c_;
 };
-}//namespace geo
 
 /**
  * @brief Flux surface average over quantity
@@ -202,5 +201,7 @@ struct SafetyFactor
     const container w2d_;
     const container oneongrid_;
 };
+
+}//namespace geo
 
 }//namespace dg

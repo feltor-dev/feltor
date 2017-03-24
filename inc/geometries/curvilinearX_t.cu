@@ -107,10 +107,10 @@ int main( int argc, char* argv[])
     solovev::PsipRR psipRR(gp); solovev::PsipRZ psipRZ(gp); solovev::PsipZZ psipZZ(gp);
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::findXpoint( psipR, psipZ, psipRR, psipRZ, psipZZ, R_X, Z_X);
+    dg::geo::findXpoint( psipR, psipZ, psipRR, psipRZ, psipZZ, R_X, Z_X);
 
     double R0 = gp.R_0, Z0 = 0;
-    dg::RibeiroX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> generator(psip, psipR, psipZ, psipRR, psipRZ, psipZZ, psi_0, fx_0, R_X,Z_X, R0, Z0);
+    dg::geo::RibeiroX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> generator(psip, psipR, psipZ, psipRR, psipRZ, psipZZ, psi_0, fx_0, R_X,Z_X, R0, Z0);
     dg::CurvilinearGridX3d<dg::DVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     dg::CurvilinearGridX2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
