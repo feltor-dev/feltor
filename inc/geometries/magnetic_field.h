@@ -223,10 +223,8 @@ struct CurvatureNablaBZ
 };
 
 /**
- * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} \f]
- @tparam MagneticField models aTokamakMagneticField
+ * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}}=0 \f]
  */ 
-template<class MagneticField>
 struct CurvatureKappaR
 {
     /**
@@ -248,7 +246,7 @@ struct CurvatureKappaR
 
 /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}}  \f]
- @tparam MagneticField models aTokamakMagneticField
+ * @tparam MagneticField models aTokamakMagneticField
  */ 
 template<class MagneticField>
 struct CurvatureKappaZ
@@ -275,7 +273,7 @@ struct CurvatureKappaZ
 
 /**
  * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  \f]
- @tparam MagneticField models aTokamakMagneticField
+ * @tparam MagneticField models aTokamakMagneticField
  */ 
 template<class MagneticField>
 struct DivCurvatureKappa

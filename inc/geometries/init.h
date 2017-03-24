@@ -301,27 +301,25 @@ struct GaussianProfXDamping
 template<class Psi>
 struct TanhSource
 {
-        TanhSource(Psi psi, dg::geo::solovev::GeomParameters gp):
-        gp_(gp),
-        psip_(psi) {
-        }
+        TanhSource(Psi psi, double psipmin, double alpha):
+            psipmin_(psipmin), alpha_(alpha), psip_(psi) { }
     /**
      * @brief \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha}\right)\right)
    \f]
      */
     double operator( )(double R, double Z)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
     }
     /**
     * @brief == operator()(R,Z)
     */
     double operator( )(double R, double Z, double phi)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-psipmin_ + 3.*alpha_)/alpha_) );
     }
     private:
-    dg::geo::solovev::GeomParameters gp_;
+    double psipmin_, alpha_; 
     Psi psip_;
 };
 
@@ -356,6 +354,7 @@ struct TanhSource
  A_{bg} \text{ else } 
  \end{cases}
    \f]
+   @tparam Psi models aBinaryOperator
  */ 
 template<class Psi>
 struct Nprofile
