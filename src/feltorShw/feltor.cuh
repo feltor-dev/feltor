@@ -293,13 +293,13 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         polavg(npe[0],neavg);
         dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
         dg::blas1::scal(omega,0.0);
-        if (p.zf==0) {
+        if (p.hwmode==0) {
             dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
             dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
             dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
         }
 
-        if (p.zf==1) {
+        if (p.hwmode==1) {
             polavg(logn[0],lambda);       //<ln(ne)> 
             polavg(phi[0],phiavg);        //<phi>
             dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
@@ -405,10 +405,10 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         polavg(y[0],neavg); //<n_e_tilde>
         dg::blas1::axpby(1.,y[0],-1.,neavg,nedelta); // delta(n_e_tilde) = n_e_tilde-<n_e_tilde> 
         dg::blas1::scal(omega,0.0);
-        if (p.zf==0) {
+        if (p.hwmode==0) {
             dg::blas1::axpby(1.,phi[0],p.tau[0],y[0],omega); //omega = phi  - n_e_tilde )
         }
-        if (p.zf==1) {
+        if (p.hwmode==1) {
             polavg(phi[0],phiavg);        //<phi>
             dg::blas1::axpby(1.,phi[0], -1.,phiavg,phidelta); // delta(phi) = phi - <phi>
             dg::blas1::axpby(1.,phidelta,p.tau[0],nedelta,omega); //omega = delta(phi) - delta(n_e_tilde)
