@@ -61,8 +61,8 @@ struct ConformalGrid3d : public dg::Grid3d
         assert( hector.isConformal());
         dg::Grid1d gu( 0., hector.width(), n, Nx);
         dg::Grid1d gv( 0., hector.height(), n, Ny);
-        const dg::HVec u1d = dg::evaluate( dg::cooX1d, gu);
-        const dg::HVec v1d = dg::evaluate( dg::cooX1d, gv);
+        const thrust::host_vector<double> u1d = dg::evaluate( dg::cooX1d, gu);
+        const thrust::host_vector<double> v1d = dg::evaluate( dg::cooX1d, gv);
         hector( u1d, v1d, r_, z_, xr_, xz_, yr_, yz_);
         init_X_boundaries( 0., hector.width());
         lift3d( ); //lift to 3D grid

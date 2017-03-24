@@ -10,7 +10,7 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "file/read_input.h"
-#include "geometries/solovev.h"
+#include "geometries/geometries.h"
 
 #include "feltor/feltor.cuh"
 #include "feltor/parameters.h"
@@ -23,6 +23,7 @@
 
 
 typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
+using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
@@ -55,7 +56,7 @@ int main( int argc, char* argv[])
     }
     const eule::Parameters p( v);
     p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
+    const dg::geo::solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
     GLFWwindow* w = draw::glfwInitAndCreateWindow(  v2[2]*v2[3], v2[1]*v2[4], "");
@@ -79,7 +80,7 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //initial perturbation
     if (p.mode == 0  || p.mode ==1) 
@@ -94,14 +95,14 @@ int main( int argc, char* argv[])
     }
     if (p.mode == 3) 
     { 
-        solovev::ZonalFlow init0(p.amp, p.k_psi, gp);
+        dg::geo::ZonalFlow<Psip> init0(p.amp, p.k_psi, gp, Psip(gp));
         y1[1] = dg::evaluate( init0, grid);
     }
 
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+    dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping<Psip>(Psip(gp), gp), grid);
     dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     std::cout << "initialize ne" << std::endl;
     feltor.initializene( y0[1], y0[0]);    
