@@ -8,7 +8,7 @@ include ../../config/devices/devices.mk
 INCLUDE+= -I../         # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
 
-all: heat
+all: heat heat_hpc heat_hpc
 
 heat: heat.cu heat.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK  -g 
