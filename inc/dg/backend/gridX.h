@@ -19,7 +19,9 @@ namespace dg{
 * @brief 1D grid for X-point topology
 *
 * The grid looks like 
-* |------x----------x------|
+@code
+|------x----------x------|
+@endcode
 * , where the x indicates the periodicity and - the number of points
 * The left boundary is x0 and the right x1, the inner boundaries lie at
 * x0 + f*Lx and x1-f*Lx
@@ -202,13 +204,15 @@ struct GridX3d; //forward declare 3d version
  * @brief A 2D grid class with X-point topology
  *
  * is of the form
- *  | -----> y 
- *  |  |---x----------x---|
- *  |  |---x----------x---|
- *  v  |--- ---------- ---|
- *  x  |--- ---------- ---| fx*Lx
- *     |--- ---------- ---|
- *     fy*Ly
+ @code
+ | -----> y 
+ |  |---x----------x---|
+ |  |---x----------x---|
+ v  |--- ---------- ---|
+ x  |--- ---------- ---| fx*Lx
+    |--- ---------- ---|
+    fy*Ly
+ @endcode
  *
  * @tparam double scalar value type 
  */
@@ -500,7 +504,16 @@ struct GridX2d
  * @brief A 3D grid class  for cartesian coordinates
  *
  * In the third dimension only 1 polynomial coefficient is used,
- * not n.
+ * not n. In 2d it looks like
+ @code
+ | -----> y 
+ |  |---x----------x---|
+ |  |---x----------x---|
+ v  |--- ---------- ---|
+ x  |--- ---------- ---| fx*Lx
+    |--- ---------- ---|
+    fy*Ly
+ @endcode
  * @tparam double scalar value type 
  */
 struct GridX3d
