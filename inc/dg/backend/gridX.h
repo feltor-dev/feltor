@@ -781,9 +781,11 @@ struct GridX3d
     bc bcx_, bcy_, bcz_;
     DLT<double> dlt_;
 };
+///@}
 
+///@cond
 GridX2d::GridX2d( const GridX3d& g) : x0_(g.x0()), x1_(g.x1()), y0_(g.y0()), y1_(g.y1()), fx_(g.fx()), fy_(g.fy()), n_(g.n()), Nx_(g.Nx()), Ny_(g.Ny()), bcx_(g.bcx()), bcy_(g.bcy()), dlt_(g.n())
 {}
+///@endcond
 
-///@}
 }// namespace dg

@@ -13,16 +13,7 @@
 namespace dg
 {
 
-///**
-// * @brief Constant refinement in one direction 
-// */
-//enum direction
-//{
-//    XDIR, //!< x-direction
-//    YDIR, //!< y-direction
-//    XYDIR //!< both directions
-//};
-
+///@cond
 namespace detail
 {
     ///@cond
@@ -261,6 +252,7 @@ int linear_ref( unsigned multiple_x, const Grid1d& g, thrust::host_vector<double
 }//namespace detail
 
 struct RefinedGrid3d;
+///@endcond
 /**
  * @brief Refined grid 
  * @ingroup grid
@@ -270,9 +262,12 @@ struct RefinedGrid2d : public dg::Grid2d
     /**
      * @brief Refine a corner of a grid
      *
-     * @param c
+     * @param node_x
+     * @param node_y
      * @param add_x Add number of cells to the existing one
      * @param add_y Add number of cells to the existing one
+     * @param howmanyX Add number of cells to the existing one
+     * @param howmanyY Add number of cells to the existing one
      * @param x0
      * @param x1
      * @param y0
@@ -311,8 +306,8 @@ struct RefinedGrid2d : public dg::Grid2d
     /**
      * @brief Refine a all cells of a grid
      *
-     * @param multiple_x Add number of cells to the existing one
-     * @param multiple_y Add number of cells to the existing one
+     * @param multiple_x refine all cells in x 
+     * @param multiple_y refine all cells in y
      * @param x0
      * @param x1
      * @param y0
@@ -347,7 +342,7 @@ struct RefinedGrid2d : public dg::Grid2d
     }
 
     /**
-     * @brief Reduce from a  3d grid 
+     * @brief Reduce from a 3d grid 
      *
      * This is possible because all our grids are product space grids. 
      *
@@ -417,8 +412,12 @@ struct RefinedGrid3d : public dg::Grid3d
     /**
      * @brief Refine a corner of a grid
      *
+     * @param node_x index of X-point
+     * @param node_y index of X-point
      * @param add_x Add number of cells to the existing one
      * @param add_y Add number of cells to the existing one
+     * @param howmanyX howmany cells should be refined in x
+     * @param howmanyY howmany cells should be refined in y
      * @param x0
      * @param x1
      * @param y0
@@ -460,10 +459,10 @@ struct RefinedGrid3d : public dg::Grid3d
     }
 
     /**
-     * @brief Refine a all cells of a grid
+     * @brief Refine all cells of a grid
      *
-     * @param multiple_x Add number of cells to the existing one
-     * @param multiple_y Add number of cells to the existing one
+     * @param multiple_x Multiply all cells in x - direction
+     * @param multiple_y Multiply all cells in y - direction
      * @param x0
      * @param x1
      * @param y0

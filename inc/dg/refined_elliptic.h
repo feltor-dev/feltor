@@ -101,7 +101,7 @@ class RefinedElliptic
     /**
      * @brief Compute the Right hand side
      *
-     * P\sqrt{g} Q \rho
+     * \f[P\sqrt{g} Q \rho\f]
      * @param rhs the original right hand side
      * @param rhs_mod the modified right hand side of the same size (may equal rhs)
      */

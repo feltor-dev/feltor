@@ -36,12 +36,11 @@ struct DS
     * @brief Construct from a field and a grid
     *
     * @tparam InvB The inverse magnitude of the magnetic field \f$ \frac{1}{B}\f$
-    * @tparam Grid Grid Class 
     * @param field The fieldaligned object containing interpolation matrices
     * @param invB The inverse magentic field strength
-    * @param grid The grid on which to operate
     * @param no norm or not_normed affects the behaviour of the symv function
     * @param dir the direction affects both the operator() and the symv function
+    @param jumpX determines if a jump matrix is added in X-direction
     */
     template<class InvB>
     DS(const FA& field, InvB invB, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool jumpX = true);
