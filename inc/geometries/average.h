@@ -13,12 +13,13 @@ namespace geo
 /**
  * @brief Delta function for poloidal flux \f$ B_Z\f$
      \f[ |\nabla \psi_p|\delta(\psi_p(R,Z)-\psi_0) = \frac{\sqrt{ (\nabla \psi_p)^2}}{\sqrt{2\pi\varepsilon}} \exp\left(-\frac{(\psi_p(R,Z) - \psi_{0})^2}{2\varepsilon} \right)  \f]
-     @tparam Geometry models aTokamakGeometry
+     @tparam MagneticField models aTokamakMagneticField
+     @ingroup profiles
  */
-template<class Geometry>
+template<class MagneticField>
 struct DeltaFunction
 {
-    DeltaFunction(const Geometry& c, double epsilon,double psivalue) :
+    DeltaFunction(const MagneticField& c, double epsilon,double psivalue) :
         c_(c),
         epsilon_(epsilon),
         psivalue_(psivalue){
@@ -53,7 +54,7 @@ struct DeltaFunction
         return (*this)(R,Z);
     }
     private:
-    Geometry c_;
+    MagneticField c_;
     double epsilon_;
     double psivalue_;
 };
@@ -61,12 +62,13 @@ struct DeltaFunction
 /**
  * @brief Global safety factor
 \f[ \alpha(R,Z) = \frac{|B^\varphi|}{R|B^\eta|} = \frac{I_{pol}(R,Z)}{R|\nabla\psi_p|} \f]
-     @tparam Geometry models aTokamakGeometry
+     @tparam MagneticField models aTokamakMagneticField
+     @ingroup profiles
  */
-template<class Geometry>
+template<class MagneticField>
 struct Alpha
 {
-    Alpha( const Geometry& c):c_(c){}
+    Alpha( const MagneticField& c):c_(c){}
 
     /**
     * @brief \f[ \frac{ I_{pol}(R,Z)}{R \sqrt{\nabla\psi_p}} \f]
@@ -84,7 +86,7 @@ struct Alpha
         return operator()(R,Z);
     }
     private:
-    Geometry c_;
+    MagneticField c_;
 };
 
 /**
@@ -92,12 +94,12 @@ struct Alpha
  \f[ \langle f\rangle(\psi_0) = \frac{1}{A} \int dV \delta(\psi_p(R,Z)-\psi_0) |\nabla\psi_p|f(R,Z) \f]
 
  with \f$ A = \int dV \delta(\psi_p(R,Z)-\psi_0)|\nabla\psi_p|\f$
- * @tparam Geometry (models aTokamakGeometry) This collective needs to contain at least the 2d functors, 
+ * @tparam MagneticField (models aTokamakMagneticField) This collective needs to contain at least the 2d functors, 
  * psip and its derivatives psipR and psipZ. 
  * @tparam container  The container class of the vector to average
  * @ingroup misc
  */
-template <class Geometry, class container = thrust::host_vector<double> >
+template <class MagneticField, class container = thrust::host_vector<double> >
 struct FluxSurfaceAverage
 {
      /**
@@ -106,10 +108,10 @@ struct FluxSurfaceAverage
      * @param c contains psip, psipR and psipZ
      * @param f container for global safety factor
      */
-    FluxSurfaceAverage(const dg::Grid2d& g2d, const Geometry& c, const container& f) :
+    FluxSurfaceAverage(const dg::Grid2d& g2d, const MagneticField& c, const container& f) :
     g2d_(g2d),
     f_(f),
-    deltaf_(geo::DeltaFunction<Geometry>(c,0.0,0.0)),
+    deltaf_(geo::DeltaFunction<MagneticField>(c,0.0,0.0)),
     w2d_ ( dg::create::weights( g2d_)),
     oneongrid_(dg::evaluate(dg::one,g2d_))              
     {
@@ -140,7 +142,7 @@ struct FluxSurfaceAverage
     private:
     dg::Grid2d g2d_;
     container f_;
-    geo::DeltaFunction<Geometry> deltaf_;    
+    geo::DeltaFunction<MagneticField> deltaf_;    
     const container w2d_;
     const container oneongrid_;
 };
@@ -150,12 +152,12 @@ struct FluxSurfaceAverage
 
 where \f$ \alpha\f$ is the dg::geo::Alpha functor.
  * @tparam container The container class to use aContainer
- * @tparam Geometry (models aTokamakGeometry) This collective needs to contain at least the 2d functors, 
+ * @tparam MagneticField (models aTokamakMagneticField) This collective needs to contain at least the 2d functors, 
  * psip and its derivatives psipR and psipZ. 
  * @ingroup misc
  *
  */
-template <class Geometry, class container = thrust::host_vector<double> >
+template <class MagneticField, class container = thrust::host_vector<double> >
 struct SafetyFactor
 {
      /**
@@ -164,10 +166,10 @@ struct SafetyFactor
      * @param c contains psip, psipR and psipZ
      * @param f container for global safety factor
      */
-    SafetyFactor(const dg::Grid2d& g2d, const Geometry& c, const container& f) :
+    SafetyFactor(const dg::Grid2d& g2d, const MagneticField& c, const container& f) :
     g2d_(g2d),
     f_(f), //why not directly use Alpha??
-    deltaf_(geo::DeltaFunction<Geometry>(c,0.0,0.0)),
+    deltaf_(geo::DeltaFunction<MagneticField>(c,0.0,0.0)),
     w2d_ ( dg::create::weights( g2d_)),
     oneongrid_(dg::evaluate(dg::one,g2d_))              
     {
@@ -197,7 +199,7 @@ struct SafetyFactor
     private:
     dg::Grid2d g2d_;
     container f_;
-    geo::DeltaFunction<Geometry> deltaf_;    
+    geo::DeltaFunction<MagneticField> deltaf_;    
     const container w2d_;
     const container oneongrid_;
 };
