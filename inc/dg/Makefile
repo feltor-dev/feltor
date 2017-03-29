@@ -20,14 +20,6 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 %_mpib: %_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) 
 
-toefl_mpib: toefl_mpib.cu toefl.cuh
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
-
-toefl_t: toefl_t.cu toefl.cuh
-	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)
-toefl_b: toefl_b.cu toefl.cuh
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
-
 %_t: %_t.cu
 	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
 

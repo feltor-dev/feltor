@@ -18,23 +18,13 @@
 #include "dg/multistep.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
-// #include "solovev/geometry.h"
-// #include "geometry_g.h"
-#include "geometries/solovev.h"
-// for guenter
-// #include "geometries/guenther.h"
+#include "geometries/geometries.h"
 #include "heat/parameters.h"
 
 #include "heat.cuh"
 
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5. 
-        density fields are the real densities in XSPACE ( not logarithmic values)
-*/
-
 typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
+using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
@@ -63,7 +53,7 @@ int main( int argc, char* argv[])
     }
     const eule::Parameters p( v);
     p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
+    const dg::geo::solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     
     ///////////////////////////////////////////////////////////////////////////
@@ -106,7 +96,7 @@ int main( int argc, char* argv[])
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
         const eule::Parameters pin(file::read_input( inputin));
-        const solovev::GeomParameters gpin(file::read_input( geomin));
+        const dg::geo::solovev::GeomParameters gpin(file::read_input( geomin));
         double Rminin = gpin.R_0 - pin.boxscaleRm*gpin.a;
         double Zminin =-pin.boxscaleZm*gpin.a*gpin.elongation;
         double Rmaxin = gpin.R_0 + pin.boxscaleRp*gpin.a; 
@@ -137,7 +127,7 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT init0( 0.);
 
     //background profile
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);

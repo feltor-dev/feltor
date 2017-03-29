@@ -11,6 +11,7 @@
 #endif//MPI_VERSION
 #include "geometry/geometry_traits.h"
 #include "geometry/cartesian.h"
+#include "geometry/cartesianX.h"
 #include "geometry/cylindrical.h"
 #ifdef MPI_VERSION
 #include "geometry/mpi_grids.h"

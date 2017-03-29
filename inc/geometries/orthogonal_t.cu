@@ -13,10 +13,14 @@
 #include "solovev.h"
 #include "orthogonal.h"
 #include "refined_orthogonal.h"
+
+#include "simple_orthogonal.h"
 #include "dg/ds.h"
 #include "init.h"
+#include "testfunctors.h"
 
 #include "file/nc_utilities.h"
+using namespace dg::geo::solovev;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
@@ -59,9 +63,9 @@ int main( int argc, char* argv[])
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    solovev::GeomParameters gp(js);
-    solovev::Psip psip( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    GeomParameters gp(js);
+    MagneticField c( gp); 
+    std::cout << "Psi min "<<c.psip(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
@@ -74,7 +78,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
 
-    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 0);
+    dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> generator( Psip(gp), PsipR(gp), PsipZ(gp), LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 1);
     //dg::OrthogonalGrid3d<dg::HVec> g3d(generator, n, Nx, Ny,Nz, dg::DIR);
     //dg::OrthogonalGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::OrthogonalRefinedGrid3d<dg::HVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
@@ -97,7 +101,7 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
-    thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
+    thrust::host_vector<double> psi_p = dg::pullback( c.psip, g2d);
     //g.display();
     err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
@@ -144,10 +148,8 @@ int main( int argc, char* argv[])
 
     /*
     //alternative method to compute volume
-    solovev::PsipR psipR( gp);
-    solovev::PsipZ psipZ( gp);
-    dg::HVec psipR_ = dg::pullback(psipR, g2d);
-    dg::HVec psipZ_ = dg::pullback(psipZ, g2d);
+    dg::HVec psipR_ = dg::pullback(c.psipR, g2d);
+    dg::HVec psipZ_ = dg::pullback(c.psipZ, g2d);
     dg::HVec psip2_(psipR_);
     dg::blas1::pointwiseDot( psipR_, psipR_, psipR_);
     dg::blas1::pointwiseDot( psipZ_, psipZ_, psipZ_);
@@ -178,7 +180,7 @@ int main( int argc, char* argv[])
     double volume = dg::blas1::dot( vol, ones3d);
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    solovev::Iris iris( gp);
+    dg::geo::Iris<Psip> iris( c.psip, gp.psipmin, gp.psipmax);
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
 
     dg::HVec vec  = dg::evaluate( iris, g2dC);
@@ -199,9 +201,9 @@ int main( int argc, char* argv[])
 //     dg::DS<DFA, dg::DMatrix, dg::HVec> ds( fieldaligned, OrthogonalField(gp, g2d, g2d.f2_xy()), dg::normed, dg::centered);
 //     t.toc();
 //     std::cout << "Construction took "<<t.diff()<<"s\n";
-//     dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
-//     dg::HVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
-//     dg::HVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
+//     dg::HVec B = dg::pullback( dg::geo::InvB(gp), g3d), divB(B);
+//     dg::HVec lnB = dg::pullback( dg::geo::LnB(gp), g3d), gradB(B);
+//     dg::HVec gradLnB = dg::pullback( dg::geo::GradLnB(gp), g3d);
 //     dg::blas1::pointwiseDivide( ones3d, B, B);
 //     dg::HVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
 //     ds( function, derivative);
@@ -216,7 +218,7 @@ int main( int argc, char* argv[])
 //     std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
 //     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
      //X = g2d.lapx();
-     X = dg::pullback(solovev::FuncDirNeu(gp, psi_0, psi_1, 550, -150, 30., 1), g2d);
+     X = dg::pullback(dg::geo::FuncDirNeu<MagneticField>(c, psi_0, psi_1, 550, -150, 30., 1), g2d);
      err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
 //     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
 //     std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";

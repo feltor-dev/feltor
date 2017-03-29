@@ -5,14 +5,17 @@
 #include "dg/backend/interpolation.cuh"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
-#include "orthogonal.h"
 #include "flux.h"
+#include "conformal.h"
+#include "orthogonal.h"
 #include "curvilinear.h"
 #include "adaption.h"
 
 
 
 namespace dg
+{
+namespace geo
 {
 
 ///@cond
@@ -195,12 +198,12 @@ void transform(
 ///@endcond
 
 /**
- * @brief The High PrEcision Conformal grid generaTOR
+ * @brief The High PrEcision Conformal grid generaTOR (models aGenerator)
  *
  * @ingroup generators
  * @tparam IMatrix The interpolation matrix type
  * @tparam Matrix  The matrix type in the elliptic equation
- * @tparam container The container type for the elliptic equation (must be compatible to a thrust::host_vector<double> in the blas1::transfer function)
+ * @tparam container models aContainer 
  */
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>
 struct Hector
@@ -208,8 +211,18 @@ struct Hector
     /**
      * @brief Construct a conformal grid 
      *
-     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @tparam Psi models aBinaryOperator 
+     * @tparam PsiX models aBinaryOperator 
+     * @tparam PsiY models aBinaryOperator 
+     * @tparam PsiXX models aBinaryOperator 
+     * @tparam PsiXY models aBinaryOperator 
+     * @tparam PsiYY models aBinaryOperator 
+     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
+     @param psiX \f$ \psi_x\f$ its derivative in x
+     @param psiY \f$ \psi_y\f$ its derivative in y
+     @param psiXX \f$ \psi_{xx}\f$ second derivative
+     @param psiXY \f$ \psi_{xy}\f$ second derivative
+     @param psiYY \f$ \psi_{yy}\f$ second derivative
      * @param psi0 first boundary 
      * @param psi1 second boundary
      * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -222,10 +235,10 @@ struct Hector
      */
     template< class Psi, class PsiX, class PsiY, class PsiXX ,class PsiXY, class PsiYY >
     Hector( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        g2d_(dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         //first construct u_
-        container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, dg::ONE(), dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
+        container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, dg::ONE(), dg::geo::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
         construct( u, psi0, psi1, dg::ONE(), dg::ZERO(), dg::ONE() );
         conformal_=orthogonal_=true;
         ////we actually don't need u_ but it makes a good testcase 
@@ -240,9 +253,24 @@ struct Hector
     /**
      * @brief Construct an orthogonal grid with adaption
      *
-     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
-     * @param chi chi is the adaption function in Cartesian coordinates (x,y), chiX is its derivative in x, chiY the derivative in y
+     * @tparam Psi  models aBinaryOperator 
+     * @tparam PsiX models aBinaryOperator 
+     * @tparam PsiY models aBinaryOperator 
+     * @tparam PsiXX models aBinaryOperator 
+     * @tparam PsiXY models aBinaryOperator 
+     * @tparam PsiYY models aBinaryOperator 
+     * @tparam Chi  models aBinaryOperator 
+     * @tparam ChiX models aBinaryOperator 
+     * @tparam ChiY models aBinaryOperator 
+     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
+     @param psiX \f$ \psi_x\f$ its derivative in x
+     @param psiY \f$ \psi_y\f$ its derivative in y
+     @param psiXX \f$ \psi_{xx}\f$ second derivative
+     @param psiXY \f$ \psi_{xy}\f$ second derivative
+     @param psiYY \f$ \psi_{yy}\f$ second derivative
+     * @param chi \f$ \chi(x,y)\f$  is the adaption function in Cartesian coordinates (x,y)
+     @param chiX \f$ \chi_x\f$ its derivative in x 
+     @param chiY \f$ \chi_y\f$ its derivative in y 
      * @param psi0 first boundary 
      * @param psi1 second boundary
      * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -255,9 +283,9 @@ struct Hector
      */
     template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi, class ChiX, class ChiY>
     Hector( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Chi chi, ChiX chiX, ChiY chiY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        g2d_(dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
-        dg::detail::LaplaceAdaptPsi<PsiX, PsiY, dg::detail::LaplacePsi<PsiXX, PsiYY>, Chi, ChiX, ChiY> lapAdaPsi( psiX, psiY, dg::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), chi, chiX, chiY);
+        dg::geo::detail::LaplaceAdaptPsi<PsiX, PsiY, dg::geo::detail::LaplacePsi<PsiXX, PsiYY>, Chi, ChiX, ChiY> lapAdaPsi( psiX, psiY, dg::geo::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), chi, chiX, chiY);
         //first construct u_
         container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, chi, lapAdaPsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
         construct( u, psi0, psi1, chi, dg::ZERO(), chi );
@@ -275,10 +303,26 @@ struct Hector
     /**
      * @brief Construct a curvilinear grid with monitor metric
      *
-     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
-     * @param chi_XX chi_XX is the xx-component of the adaption tensor in Cartesian coordinates (x,y), chi_XY is its xy-component, chi_YY the yy-component
-     * @param divChiX divChiX is the x-component of the divergence of the tensor chi, divChiY is the y-component
+     * @tparam Psi   models aBinaryOperator 
+     * @tparam PsiX  models aBinaryOperator 
+     * @tparam PsiY  models aBinaryOperator 
+     * @tparam PsiXX models aBinaryOperator 
+     * @tparam PsiXY models aBinaryOperator 
+     * @tparam PsiYY models aBinaryOperator 
+     * @tparam Chi   models aBinaryOperator 
+     * @tparam ChiX  models aBinaryOperator 
+     * @tparam ChiY  models aBinaryOperator 
+     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
+     @param psiX \f$ \psi_x\f$ its derivative in x
+     @param psiY \f$ \psi_y\f$ its derivative in y
+     @param psiXX \f$ \psi_{xx}\f$ second derivative
+     @param psiXY \f$ \psi_{xy}\f$ second derivative
+     @param psiYY \f$ \psi_{yy}\f$ second derivative
+      @param chi_XX \f$  \chi^{xx}(x,y)\f$  is the contravariant xx-component of the adaption tensor in Cartesian coordinates (x,y)
+      @param chi_XY \f$  \chi^{xy}(x,y)\f$  is the contravariant xy-component of the adaption tensor in Cartesian coordinates (x,y)
+      @param chi_YY \f$  \chi^{yy}(x,y)\f$  is the contravariant yy-component of the adaption tensor in Cartesian coordinates (x,y)
+     * @param divChiX \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
+     * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
      * @param psi0 first boundary 
      * @param psi1 second boundary
      * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -295,10 +339,10 @@ struct Hector
             Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY, 
             DivChiX divChiX, DivChiY divChiY,
             double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY> (
+        g2d_(dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY> (
                     psi, psiX, psiY, psiXX,psiXY,psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
-        dg::detail::LaplaceChiPsi<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Chi_XX, Chi_XY, Chi_YY, DivChiX, DivChiY>
+        dg::geo::detail::LaplaceChiPsi<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Chi_XX, Chi_XY, Chi_YY, DivChiX, DivChiY>
             lapChiPsi( psiX, psiY, psiXX, psiXY, psiYY, 
                 chi_XX, chi_XY, chi_YY, divChiX, divChiY);
         //first construct u_
@@ -334,13 +378,13 @@ struct Hector
      */
     double height() const {return 2.*M_PI;}
     /**
-     * @brief Check if conformal constructor was used
+     * @brief True if conformal constructor was used
      *
      * @return true if conformal constructor was used
      */
     bool isConformal() const {return conformal_;}
     /**
-     * @brief Check if orthogonal constructor was used
+     * @brief True if orthogonal constructor was used
      *
      * @return true if orthogonal constructor was used
      */
@@ -352,13 +396,14 @@ struct Hector
      * Call the width() and height() function before calling this function!
      * @param u1d one-dimensional list of points inside the u-domain (0<u<width())
      * @param v1d one-dimensional list of points inside the v-domain (0<v<height())
-     * @param x  = x(u,v)
-     * @param y  = y(u,v)
-     * @param ux = u_x(u,v)
-     * @param uy = u_y(u,v)
-     * @param vx = v_x(u,v)
-     * @param vy = v_y(u,v)
+     * @param x  \f$= x(u,v)\f$
+     * @param y  \f$= y(u,v)\f$
+     * @param ux \f$= u_x(u,v)\f$
+     * @param uy \f$= u_y(u,v)\f$
+     * @param vx \f$= v_x(u,v)\f$
+     * @param vy \f$= v_y(u,v)\f$
      * @note All the resulting vectors are write-only and get properly resized
+     * @note The \f$ u\f$ direction is continuous in memory
      */
     void operator()( const thrust::host_vector<double>& u1d, 
                      const thrust::host_vector<double>& v1d, 
@@ -409,7 +454,7 @@ struct Hector
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
+        dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
         dg::CurvilinearGrid2d<container> g2d_old = g2d_;
         container adapt = dg::pullback(chi, g2d_old);
         dg::Elliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
@@ -454,7 +499,7 @@ struct Hector
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
+        dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
         dg::CurvilinearGrid2d<container> g2d_old = g2d_;
         dg::TensorElliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set( chi_XX, chi_XY, chi_YY);
@@ -563,4 +608,5 @@ struct Hector
 
 };
 
+}//namespace geo
 }//namespace dg

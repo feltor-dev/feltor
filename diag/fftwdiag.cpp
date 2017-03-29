@@ -41,8 +41,11 @@ int main( int argc, char* argv[])
     err = nc_close(ncid); 
 
     std::cout << "input "<<input<<std::endl;    
-    const eule::Parameters p(file::read_input( input));
-    p.display();
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    const eule::Parameters p(js);
+    p.display(std::cout);
     
     ///////////////////////////////////////////////////////////////////////////
     //Grids

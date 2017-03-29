@@ -15,22 +15,14 @@
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 
-// for solovev equ
-#include "geometries/solovev.h"
+#include "geometries/geometries.h"
 #include "heat/parameters.h"
-// for guenter
-// #include "geometries/guenther.h"
 
 
 #include "heat.cuh"
 
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the Feltor - functor and 
-   - directly visualizes results on the screen using parameters in window_params.txt
-*/
-
 typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
+using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
@@ -64,7 +56,7 @@ int main( int argc, char* argv[])
     }
     const eule::Parameters p( v);
     p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
+    const dg::geo::solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
 //     GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
@@ -146,7 +138,7 @@ int main( int argc, char* argv[])
     
     //background profile
     std::cout << "T background" << std::endl;
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     
 //     //field aligning

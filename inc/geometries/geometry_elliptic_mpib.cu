@@ -16,8 +16,11 @@
 //#include "guenther.h"
 #include "mpi_conformal.h"
 #include "mpi_orthogonal.h"
+#include "simple_orthogonal.h"
+#include "testfunctors.h"
 
 
+using namespace dg::geo::solovev;
 
 int main(int argc, char**argv)
 {
@@ -39,8 +42,9 @@ int main(int argc, char**argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    solovev::GeomParameters gp(js);
-    solovev::Psip psip( gp); 
+    GeomParameters gp(js);
+    MagneticField c(gp);
+    Psip psip( gp); 
     if(rank==0)std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
@@ -51,15 +55,14 @@ int main(int argc, char**argv)
     if(rank==0)std::cout << "Constructing grid ... \n";
     dg::Timer t;
     t.tic();
-    solovev::CollectivePsip c( gp);
     //ConformalMPIGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
     //ConformalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
     //dg::Elliptic<ConformalMPIGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> 
+    dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
         generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::OrthogonalMPIGrid3d<dg::DVec> g3d(generator, n, Nx, Ny,Nz,dg::DIR, MPI_COMM_WORLD); 
+    dg::OrthogonalMPIGrid3d<dg::DVec> g3d(generator, n, Nx, Ny,Nz,dg::DIR, comm); 
     dg::OrthogonalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<dg::OrthogonalMPIGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::OrthogonalMPIGrid2d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g2d, dg::not_normed, dg::forward); //something is wrong if g3d is used here
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -72,9 +75,9 @@ int main(int argc, char**argv)
     int coordsID[2], psiID, functionID, function2ID;
     ncerr = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     ncerr = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
-    ncerr = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim2d, &psiID);
-    ncerr = nc_def_var( ncid, "deformation", NC_DOUBLE, 2, dim2d, &functionID);
-    ncerr = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim2d, &function2ID);
+    ncerr = nc_def_var( ncid, "error", NC_DOUBLE, 2, dim2d, &psiID);
+    ncerr = nc_def_var( ncid, "num_solution", NC_DOUBLE, 2, dim2d, &functionID);
+    ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
 
     int dims[2], periods[2],  coords[2];
     MPI_Cart_get( g2d.communicator(), 2, dims, periods, coords);
@@ -96,11 +99,11 @@ int main(int argc, char**argv)
     ncerr = nc_put_vara_double( ncid, coordsID[0], start, count, X.data());
     ncerr = nc_put_vara_double( ncid, coordsID[1], start, count, Y.data());
     ///////////////////////////////////////////////////////////////////////////
-    dg::MDVec x =    dg::evaluate( dg::zero, g3d);
-    const dg::MDVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1, 1), g3d);
-    const dg::MDVec chi =  dg::pullback( solovev::Bmodule(gp), g3d);
-    const dg::MDVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1,1 ), g3d);
-    const dg::MDVec vol3d = dg::create::volume( g3d);
+    dg::MDVec x =    dg::evaluate( dg::zero, g2d);
+    const dg::MDVec b =    dg::pullback( dg::geo::EllipticDirPerM<MagneticField>(c, gp.R_0, psi_0, psi_1, 4), g2d);
+    const dg::MDVec chi =  dg::pullback( dg::geo::Bmodule<MagneticField>(c, gp.R_0), g2d);
+    const dg::MDVec solution = dg::pullback( dg::geo::FuncDirPer<MagneticField>(c, gp.R_0, psi_0, psi_1, 4), g2d);
+    const dg::MDVec vol3d = dg::create::volume( g2d);
     pol.set_chi( chi);
     //compute error
     dg::MDVec error( solution);
@@ -123,7 +126,7 @@ int main(int argc, char**argv)
     dg::blas1::pointwiseDot( gyy, vol, gyy);
     dg::blas1::scal( gxx, g2d.hx());
     dg::blas1::scal( gyy, g2d.hy());
-    if(rank==0)std::cout << "Max elements on first process\n";
+    if(rank==0)std::cout << "(Max elements on first process)\t";
     if(rank==0)std::cout << *thrust::max_element( gxx.data().begin(), gxx.data().end()) << "\t";
     if(rank==0)std::cout << *thrust::max_element( gyy.data().begin(), gyy.data().end()) << "\t";
     if(rank==0)std::cout<<t.diff()/(double)number<<"s"<<std::endl;

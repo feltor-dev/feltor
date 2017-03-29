@@ -2,7 +2,7 @@
 
 #include "dg/algorithm.h"
 #include "parameters.h"
-#include "geometries/init.h"
+#include "geometries/geometries.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -26,19 +26,33 @@ namespace eule
 template< class Geometry, class DS, class Matrix, class container>
 struct Rolkar
 {
-    Rolkar( const Geometry& g, eule::Parameters p, solovev::GeomParameters gp):
+    Rolkar( const Geometry& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp):
         p(p),
         gp(gp),
-        dampprof_( dg::evaluate( solovev::GaussianProfDamping( gp), g)),
-        dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), dg::normed, dg::centered ),
+        dsNU_( typename DS::FieldAligned(
+                dg::geo::Field<dg::geo::solovev::MagneticField>(
+                    dg::geo::solovev::MagneticField(gp), gp.R_0), 
+                g, gp.rk4eps, 
+                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(
+                    dg::geo::solovev::Psip(gp), gp.psipmaxlim
+                    ), 
+                g.bcx()
+                ), 
+            dg::geo::Field<dg::geo::solovev::MagneticField>(
+              dg::geo::solovev::MagneticField(gp), gp.R_0
+              ), dg::normed, dg::forward ),
         elliptic( g, dg::normed, dg::forward)
     {
-        container bfield = dg::evaluate( solovev::FieldR( gp),g);
+        using namespace dg::geo::solovev;
+        MagneticField c(gp);
+        container bfield = dg::evaluate( dg::geo::FieldR<MagneticField>(c, gp.R_0),g);
         elliptic.set_x( bfield);
-        bfield = dg::evaluate( solovev::FieldZ( gp),g);
+        bfield = dg::evaluate( dg::geo::FieldZ<MagneticField>(c, gp.R_0),g);
         elliptic.set_y( bfield);
-        bfield = dg::evaluate( solovev::FieldP( gp),g);
+        bfield = dg::evaluate( dg::geo::FieldP<MagneticField>(c, gp.R_0),g);
         elliptic.set_z( bfield);
+
+        dg::blas1::transfer( dg::pullback( dg::geo::GaussianProfDamping<Psip>(Psip(gp), gp.psipmax, gp.alpha), g), dampprof_);
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
     {
@@ -57,8 +71,8 @@ struct Rolkar
     const container& precond(){return elliptic.precond();}
   private:
     const eule::Parameters p;
-    const solovev::GeomParameters gp;
-    const container dampprof_;
+    const dg::geo::solovev::GeomParameters gp;
+    container dampprof_;
     DS dsNU_;
     dg::GeneralEllipticSym<Geometry, Matrix, container> elliptic;
 
@@ -74,7 +88,7 @@ struct Feltor
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
     template<class Grid3d>
-    Feltor( const Grid3d& g, eule::Parameters p,solovev::GeomParameters gp);
+    Feltor( const Grid3d& g, eule::Parameters p,dg::geo::solovev::GeomParameters gp);
 
     const DS ds(){return dsNU_;}
 
@@ -91,7 +105,7 @@ struct Feltor
 
 
     container chi, omega, lambda,tmo; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
-    const container binv, gradlnB;
+    container binv, gradlnB;
 //     ,pupil;
     const container  one;
     const container w3d, v3d;
@@ -103,7 +117,7 @@ struct Feltor
 //     dg::GeneralEllipticSym<Matrix, container> elliptic;
 
     const eule::Parameters p;
-    const solovev::GeomParameters gp;
+    const dg::geo::solovev::GeomParameters gp;
     std::vector<double> evec;
 
     double mass_, energy_, diff_, ediff_;
@@ -112,16 +126,37 @@ struct Feltor
 
 template<class DS, class Matrix, class container>
 template<class Grid>
-Feltor<DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
+Feltor<DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp): 
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), tmo(chi),
-    binv( dg::evaluate(solovev::Field(gp) , g) ),
-    gradlnB( dg::evaluate(solovev::GradLnB(gp) , g)),
-//     pupil(dg::evaluate( solovev::Pupil( gp), g)),
-//     pupil(dg::evaluate( solovev::GaussianProfDamping(gp ), g)),    //be aware of actual function!
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::volume(g)), v3d( dg::create::inv_volume(g)),      
-    dsDIR_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR), solovev::Field(gp), dg::normed, dg::centered ),
-    dsNU_( typename DS::FieldAligned(solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx()), solovev::Field(gp), dg::normed, dg::centered ),
+    dsDIR_( typename DS::FieldAligned( 
+                dg::geo::Field<dg::geo::solovev::MagneticField>(
+                    dg::geo::solovev::MagneticField(gp), gp.R_0
+                    ), 
+                g, gp.rk4eps, 
+                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(
+                    dg::geo::solovev::Psip(gp), gp.psipmaxlim
+                    ), 
+                dg::DIR
+                ), 
+            dg::geo::Field<dg::geo::solovev::MagneticField>(
+                dg::geo::solovev::MagneticField(gp), gp.R_0
+                ), 
+            dg::normed, dg::centered ),
+    dsNU_( typename DS::FieldAligned(
+                dg::geo::Field<dg::geo::solovev::MagneticField>(
+                    dg::geo::solovev::MagneticField(gp), gp.R_0), 
+                g, gp.rk4eps, 
+                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(
+                    dg::geo::solovev::Psip(gp), gp.psipmaxlim
+                    ), 
+                g.bcx()
+                ), 
+          dg::geo::Field<dg::geo::solovev::MagneticField>(
+              dg::geo::solovev::MagneticField(gp), gp.R_0
+              ), 
+          dg::normed, dg::centered ),
 //     lapperp ( g,g.bcx(), g.bcy(),     dg::normed,  dg::centered),
 //         elliptic( g, dg::normed, dg::forward),
     p(p),
@@ -134,6 +169,11 @@ Feltor<DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, solove
 //         elliptic.set_y( bfield);
 //         bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),g);
 //         elliptic.set_z( bfield);
+    //////////////////////////////init fields /////////////////////
+    using namespace dg::geo::solovev;
+    MagneticField mf(gp);
+    dg::blas1::transfer(  dg::pullback(dg::geo::Field<MagneticField>(mf, gp.R_0),                     g), binv);
+    dg::blas1::transfer(  dg::pullback(dg::geo::GradLnB<MagneticField>(mf, gp.R_0),                   g), gradlnB);
 }
 
 

@@ -1,19 +1,33 @@
 #pragma once
 #include "dg/nullstelle.h"
+#include "utilities.h"
 
 namespace dg
+{
+namespace geo
 {
 /**
  * @brief This function finds the X-point via Newton iteration applied to the gradient of psi, 
  *
  * The inverse of the Hessian matrix is computed analytically
+ * @tparam PsiR models aBinaryOperator
+ * @tparam PsiZ models aBinaryOperator
+ * @tparam PsiRR models aBinaryOperator
+ * @tparam PsiRZ models aBinaryOperator
+ * @tparam PsiZZ models aBinaryOperator
+    @param psiR \f$ \partial_R \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psiZ \f$ \partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psiRR \f$ \partial_R\partial_R \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psiRZ \f$ \partial_R\partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psiZZ \f$ \partial_Z\partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
  * @param R_X start value on input, X-point on output
  * @param Z_X start value on input, X-point on output
+ * @ingroup misc
  */
 template<class PsiR, class PsiZ, class PsiRR, class PsiRZ, class PsiZZ>
 void findXpoint( const PsiR& psiR, const PsiZ& psiZ, const PsiRR& psiRR, const PsiRZ& psiRZ, const PsiZZ& psiZZ, double& R_X, double& Z_X)
 {
-    solovev::HessianRZtau<PsiR, PsiZ, PsiRR, PsiRZ, PsiZZ> hessianRZtau(  psiR, psiZ, psiRR, psiRZ, psiZZ);
+    dg::geo::HessianRZtau<PsiR, PsiZ, PsiRR, PsiRZ, PsiZZ> hessianRZtau(  psiR, psiZ, psiRR, psiRZ, psiZZ);
     thrust::host_vector<double> X(2,0), XN(X), X_OLD(X);
     X[0] = R_X, X[1] = Z_X;
     double eps = 1e10, eps_old= 2e10;
@@ -91,7 +105,7 @@ struct XCross
 
     private:
     int quad_;
-    solovev::FieldRZtau<PsiR, PsiZ> fieldRZtau_;
+    dg::geo::FieldRZtau<PsiR, PsiZ> fieldRZtau_;
     Psi psip_;
     double R_X_, Z_X_;
     double R_i[4], Z_i[4];
@@ -267,8 +281,8 @@ struct PsipSep
     void set_Z( double z){ Z_=z;}
     double operator()(double R) { return psip_(R, Z_);}
     private:
-    double Z_;
     Psi psip_;
+    double Z_;
 };
 
 //!ATTENTION: choosing h on separatrix is a mistake if LaplacePsi does not vanish at X-point
@@ -453,12 +467,12 @@ struct SeparatriX
         return f_psi_;
     }
     int mode_;
-    solovev::equalarc::FieldRZY<PsiX, PsiY>   fieldRZYequi_;
-    solovev::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequi_;
-    solovev::equalarc::FieldRZYZ<PsiX, PsiY> fieldRZYZequi_;
-    solovev::ribeiro::FieldRZY<PsiX, PsiY>    fieldRZYconf_;
-    solovev::ribeiro::FieldRZYT<PsiX, PsiY>  fieldRZYTconf_;
-    solovev::ribeiro::FieldRZYZ<PsiX, PsiY>  fieldRZYZconf_;
+    dg::geo::equalarc::FieldRZY<PsiX, PsiY>   fieldRZYequi_;
+    dg::geo::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequi_;
+    dg::geo::equalarc::FieldRZYZ<PsiX, PsiY> fieldRZYZequi_;
+    dg::geo::ribeiro::FieldRZY<PsiX, PsiY>    fieldRZYconf_;
+    dg::geo::ribeiro::FieldRZYT<PsiX, PsiY>  fieldRZYTconf_;
+    dg::geo::ribeiro::FieldRZYZ<PsiX, PsiY>  fieldRZYZconf_;
     unsigned N_steps_;
     double R_i[4], Z_i[4], y_i[4];
     double f_psi_;
@@ -479,7 +493,7 @@ struct InitialX
         xpointer_(psi, psiX, psiY, xX, yX, 1e-4)
     {
         //constructor finds four points around X-point and integrates them a bit away from it
-        solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_(psiX, psiY);
+        dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_(psiX, psiY);
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin), end_old(end);
         double eps[] = {1e-11, 1e-12, 1e-11, 1e-12};
         for( unsigned i=0; i<4; i++)
@@ -569,13 +583,14 @@ struct InitialX
 
     private:
     Psi psip_;
-    const solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_;
-    dg::detail::XCross<Psi, PsiX, PsiY> xpointer_;
+    const dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    dg::geo::detail::XCross<Psi, PsiX, PsiY> xpointer_;
     double R_i_[4], Z_i_[4];
 
 };
 }//namespace detail
 }//namespace orthogonal
 ///@endcond
+} //namespace geo
 } //namespace dg
 

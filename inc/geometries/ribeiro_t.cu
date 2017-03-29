@@ -11,6 +11,7 @@
 #include "dg/backend/timer.cuh"
 //#include "guenther.h"
 #include "solovev.h"
+#include "ribeiro.h"
 #include "curvilinear.h"
 #include "refined_curvilinear.h"
 #include "dg/ds.h"
@@ -18,6 +19,7 @@
 
 #include "file/nc_utilities.h"
 
+using namespace dg::geo::solovev;
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
     thrust::host_vector<double> out(g.size());
@@ -61,8 +63,8 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    solovev::GeomParameters gp(js);
-    solovev::Psip psip( gp); 
+    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::solovev::Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
@@ -75,8 +77,8 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing ribeiro grid ... \n";
     t.tic();
-    solovev::CollectivePsip c( gp);
-    dg::Ribeiro<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ>
+    dg::geo::solovev::MagneticField c( gp);
+    dg::geo::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
         ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
     //dg::CurvilinearGrid3d<dg::HVec> g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR);
     //dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
@@ -164,7 +166,7 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    solovev::Iris iris( gp);
+    dg::geo::Iris<Psip> iris(c.psip, gp.psipmin, gp.psipmax);
     //dg::CylindricalGrid3d<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
 //     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -1.2*gp.a, 1.2*gp.a, 1, 1e3, 1e3, dg::PER, dg::PER);
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a, 2.0*gp.a, 1, 2e3, 2e3, dg::PER, dg::PER);
@@ -187,11 +189,11 @@ int main( int argc, char* argv[])
 
     //t.toc();
     //std::cout << "Construction took "<<t.diff()<<"s\n";
-    //dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
-    //dg::HVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
-    //dg::HVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
+    //dg::HVec B = dg::pullback( dg::geo::InvB(gp), g3d), divB(B);
+    //dg::HVec lnB = dg::pullback( dg::geo::LnB(gp), g3d), gradB(B);
+    //dg::HVec gradLnB = dg::pullback( dg::geo::GradLnB(gp), g3d);
     //dg::blas1::pointwiseDivide( ones3d, B, B);
-    //dg::HVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
+    //dg::HVec function = dg::pullback( dg::geo::FuncNeu(gp), g3d), derivative(function);
     //ds( function, derivative);
 
     //ds.centeredT( B, divB);

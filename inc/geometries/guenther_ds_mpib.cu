@@ -19,8 +19,10 @@
 #include "dg/backend/typedefs.cuh"
 // #include "draw/host_window.h"
 #include "guenther.h"
-#include "fields.h"
+#include "magnetic_field.h"
+#include "testfunctors.h"
 
+using namespace dg::geo::guenther;
 
 int main( int argc, char* argv[])
 {
@@ -42,16 +44,11 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
 
     /////////////////initialize params////////////////////////////////
-     std::vector<double> v;
-
-        try{
-            v = file::read_input( "guenther_params.txt"); 
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
-
-    const solovev::GeomParameters gp(v);
+    Json::Reader reader;
+    Json::Value js;
+    std::ifstream is("guenther_params.js");
+    reader.parse(is,js,false);
+    GeomParameters gp(js);
 //     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
@@ -62,21 +59,21 @@ int main( int argc, char* argv[])
     double Zmax=1.0*gp.a*gp.elongation;
     /////////////////////////////////////////////initialze fields /////////////////////
     
-    solovev::Field field(gp);
-    solovev::InvB invb(gp);
-    solovev::GradLnB gradlnB(gp);
-    solovev::LnB lnB(gp);
-    solovev::FieldR bR_(gp);
-    solovev::FieldZ bZ_(gp);
-    solovev::FieldP bPhi_(gp);
-    guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
-    guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
-    guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    guenther::Divb divb(gp.R_0,gp.I_0);
-    guenther::B Bfield(gp);
+    Field field(gp.R_0, gp.I_0);
+    InvB invb(gp.R_0, gp.I_0);
+    GradLnB gradlnB(gp.R_0, gp.I_0);
+    LnB lnB(gp.R_0, gp.I_0);
+    FieldR bR_(gp.R_0, gp.I_0);
+    FieldZ bZ_(gp.R_0, gp.I_0);
+    FieldP bPhi_(gp.R_0, gp.I_0);
+    FuncNeu funcNEU(gp.R_0,gp.I_0);
+    FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    DeriNeu deriNEU(gp.R_0,gp.I_0);
+    DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    DeriNeuT deriNEUT(gp.R_0,gp.I_0);
+    Divb divb(gp.R_0,gp.I_0);
+    B Bfield(gp.R_0, gp.I_0);
     
     //std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
