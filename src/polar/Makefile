@@ -1,5 +1,5 @@
 device=omp
-OS=arch
+OS=ubuntu1504
 
 #configure machine 
 include ../../config/default.mk
@@ -10,14 +10,17 @@ INCLUDE+= -I../         # other src libraries
 INCLUDE+= -I../../inc   # other project libraries
 
 
-all: polar polargl
+all: polar polargl logpolar logpolargl
 
 polar: polar.cu ns.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS) $(JSONLIB)
 polargl: polar.cu ns.h
 	$(CC) $(OPT) $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DOPENGL_WINDOW
-polargl: polar.cu ns.h
+logpolar: polar.cu ns.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DLOG_POLAR
+logpolargl: polar.cu ns.h
+	$(CC) $(OPT) $(CFLAGS) $< -o $@  $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DOPENGL_WINDOW -DLOG_POLAR
 .PHONY: clean
 
 clean:
-	rm -f polar polargl
+	rm -f polar polargl logpolar logpolargl
