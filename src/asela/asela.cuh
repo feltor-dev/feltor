@@ -725,7 +725,6 @@ void Asela<Geometry, DS, Matrix, container>::operator()( std::vector<container>&
         dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
     }
     //add particle source to dtN
-<<<<<<< HEAD
     //dtN_e
 
     if (p.omega_source!=0.0)

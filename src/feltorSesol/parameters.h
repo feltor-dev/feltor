@@ -34,7 +34,7 @@ struct Parameters
     double omega_source,sourceb,source_dampw;
     double omega_sink,sinkb;
     double dampw;
-    enum dg::bc bc_x,bc_y,bc_x_pot; 
+    enum dg::bc bc_x,bc_y,bc_x_phi; 
 
     /**
      * @brief constructor to make a const object
@@ -73,7 +73,7 @@ struct Parameters
         lx =  js["lx"].asDouble();
         ly =  js["ly"].asDouble();
         bc_x     = dg::str2bc(js["bc_x"].asString());
-	    bc_x_pot = dg::str2bc(js["bc_x_pot"].asString());
+	    bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
         bc_y     = dg::str2bc(js["bc_y"].asString());
         zf =  js["hwmode"].asUInt();
         ln =   js["ln"].asDouble();
@@ -144,7 +144,7 @@ struct Parameters
 	    <<"     damping width =   "<<dampw<<"\n"
 	    <<"     fluxmode =   "<<fluxmode<<"\n";
         displayBC( os, bc_x, bc_y);
-	    displayBC( os, bc_x_pot, bc_y);
+	    displayBC( os, bc_x_phi, bc_y);
         os << std::flush;//the endl is for the implicit flush 
     }
    private:

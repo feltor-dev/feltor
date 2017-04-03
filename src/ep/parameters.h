@@ -1,5 +1,4 @@
-#ifndef _DG_PARAMETERS_ 
-#define _DG_PARAMETERS_
+#pragma once
 #include <string>
 #include "dg/enums.h"
 #include "json/json.h"
@@ -16,15 +15,16 @@ struct Parameters
     unsigned maxout;
 
     double eps_pol, eps_gamma, eps_time;
-    double tau, kappa, friction, nu;
+    double tau[2], mu[2], kappa, nu; 
+    double z[2];
 
     double amp, sigma, posX, posY;
+    double debye;
 
     double lx, ly; 
     enum dg::bc bc_x, bc_y;
 
-    std::string init, equations;
-    bool boussinesq;
+    std::string init;
 
     /**
      * @brief constructor to make a const object
@@ -45,7 +45,9 @@ struct Parameters
         eps_pol = js["eps_pol"].asDouble();
         eps_gamma = js["eps_gamma"].asDouble();
         eps_time = js["eps_time"].asDouble();
-        tau = js["tau"].asDouble();
+        for (unsigned i=0;i<2;i++) tau[i] = js["tau"][i].asDouble();
+        for (unsigned i=0;i<2;i++)  mu[i] = js["mu"][i].asDouble();
+        for (unsigned i=0;i<2;i++)   z[i] = js["z"][i].asDouble();
         kappa = js["curvature"].asDouble();
         nu = js["nu_perp"].asDouble();
         amp = js["amplitude"].asDouble();
@@ -57,9 +59,7 @@ struct Parameters
         bc_x = dg::str2bc(js["bc_x"].asString());
         bc_y = dg::str2bc(js["bc_y"].asString());
         init = "blob";
-        equations = js.get("equations", "global").asString();
-        boussinesq = js.get("boussinesq", false).asBool();
-        friction = js.get("friction", 0.).asDouble();
+        debye = js.get( "debye", 0.).asDouble();
     }
     
     /**
@@ -72,11 +72,10 @@ struct Parameters
         os << "Physical parameters are: \n"
             <<"    Viscosity:       = "<<nu<<"\n"
             <<"    Curvature_y:     = "<<kappa<<"\n"
-            <<"    Friction:        = "<<friction<<"\n"
-            <<"    Ion-temperature: = "<<tau<<"\n";
-        os << "Equation parameters are: \n"
-            <<"    "<<equations<<"\n"
-            <<"    boussinesq  "<<boussinesq<<"\n";
+            <<"    temperatures e/p: = "<<tau[0]<<"/"<<tau[1]<<"\n"
+            <<"    masses       e/p: = "<<mu[0]<<"/"<<mu[1]<<"\n"
+            <<"    charges      e/p: = "<<z[0]<<"/"<<z[1]<<"\n"
+            <<"    Debye parameter is: = "<<debye<<"\n";
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";
@@ -147,6 +146,3 @@ struct Parameters
 };
 
 
-    
-
-#endif//_DG_PARAMETERS_

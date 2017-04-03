@@ -11,8 +11,6 @@
  */
 namespace dg{
 
-///@addtogroup matrixoperators
-///@{
 /**
  * @brief Matrix class that represents a Helmholtz-type operator
  *
