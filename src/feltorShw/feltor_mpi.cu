@@ -86,28 +86,50 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+    dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
 
     std::vector<dg::MDVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
     y1[1] = dg::evaluate( init0, grid);
 
     double time = 0;  
     if (argc ==3){
-        if (p.modelmode==0 || p.modelmode==1)
-        {
-            dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde
-            dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
-            dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-        }
-        if (p.modelmode==2)
-        {
-            y0[1] = dg::evaluate( init0, grid);
-        }
-        if(rank==0) std::cout << "intiialize ne" << std::endl;
-        feltor.initializene( y0[1], y0[0]);    
-        if(rank==0) std::cout << "Done!\n";
+	if (p.modelmode==0 || p.modelmode==1)
+	{
+	    dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde
+	    dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
+	    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+	    if(rank==0) std::cout << "intiialize ne" << std::endl;
+	    feltor.initializene( y0[1], y0[0]);    
+	    if(rank==0) std::cout << "Done!\n";
+	}
+	if (p.modelmode==2)
+	{
+	    y0[1] = dg::evaluate( init0, grid);
+	    if(rank==0) std::cout << "intiialize ne" << std::endl;
+	    feltor.initializene( y0[1], y0[0]);    
+	    if(rank==0) std::cout << "Done!\n";
+	}
+	if (p.modelmode==3)
+	{
+	    dg::blas1::pointwiseDot( y0[1],y1[1],y0[1]); //<n>*Ntilde
+	    dg::blas1::axpby( 1., y0[1], 1.,y1[0], y0[1]); //initialize Ni = <n> + <n>*Ntilde
+	    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize Ni-1
+	    
+	    if(rank==0) std::cout << "intiialize ne" << std::endl;
+	    feltor.initializene( y0[1], y0[0]); //n_e-1
+	    
+	    y0[1] = dg::evaluate( init0, grid); 
+	    dg::blas1::transform( y0[1], y0[1], dg::PLUS<>(+1.0)); // (1+Nitilde)
+	    dg::blas1::transform( y0[1], y0[1], dg::LN<double>()); //ln (1+Nitilde)
+	    
+	    dg::blas1::transform(y0[0], y0[0], dg::PLUS<>((p.bgprofamp + p.nprofileamp))); //ne
+	    dg::blas1::pointwiseDivide(y0[0], y1[0],y0[0]); // 1+ netilde
+	    dg::blas1::transform( y0[0], y0[0], dg::LN<double>()); //ln (1+netilde)
+
+	    if(rank==0) std::cout << "Done!\n";
+	}
     }
- if (argc==4) {
+    if (argc==4) {
       file::NC_Error_Handle errIN;
       int ncidIN;
       errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
