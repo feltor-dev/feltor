@@ -15,9 +15,8 @@
 #include "file/read_input.h"
 #include "file/nc_utilities.h"
 
-#include "geometries/solovev.h"
+#include "geometries/geometries.h"
 #include "feltor/parameters.h"
-#include "geometries/init.h"
 
 // #define RADIALELECTRONDENSITYFLUX
 // #define GRADIENTLENGTH
@@ -51,7 +50,7 @@ int main( int argc, char* argv[])
     std::cout << "input "<<input<<std::endl;
     std::cout << "geome "<<geom <<std::endl;
     const eule::Parameters p(file::read_input( input));
-    const solovev::GeomParameters gp(file::read_input( geom));
+    const dg::geo::solovev::GeomParameters gp(file::read_input( geom));
     p.display();
     gp.display();
     ///////////////////////////////////////////////////////////////////////////
@@ -66,7 +65,7 @@ int main( int argc, char* argv[])
     dg::Grid2d  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out,  p.bc, p.bc); 
     //1d grid
 
-    solovev::Psip psip(gp);
+    dg::geo::solovev::Psip psip(gp);
     dg::HVec transfer2d = dg::evaluate(dg::zero,g2d_out);
     dg::DVec w3d = dg::create::volume( g3d_out);   
         //Grids
@@ -75,7 +74,7 @@ int main( int argc, char* argv[])
     double psipmin = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
     double psipmax = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(), psipmin,thrust::maximum<double>()  );
 //     double psipmax = 0.0;
-    solovev::PsiPupil psipupil(gp,psipmax);
+    dg::geo::PsiPupil<dg::geo::solovev::Psip> psipupil(psip,psipmax);
     dg::HVec psipupilog2d   = dg::evaluate( psipupil, g2d_out);    
     dg::HVec psipupilog3d   = dg::evaluate( psipupil, g3d_out);    
 
@@ -136,10 +135,11 @@ int main( int argc, char* argv[])
 //     double energy_0 =0.,U_i_0=0.,U_e_0=0.,U_phi_0=0.,U_pare_0=0.,U_pari_0=0.,mass_0=0.;
 //     os << "#Time(1) mass(2) Ue(3) Ui(4) Uphi(5) Upare(6) Upari(7) Utot(8) EDiff(9)\n";
     std::cout << "Compute safety factor   "<< "\n";
-    solovev::Alpha alpha(gp); 
+    dg::geo::solovev::MagneticField c(gp);
+    dg::geo::Alpha<dg::geo::solovev::MagneticField> alpha(c); 
     dg::DVec alphaog2d   = dg::evaluate( alpha, g2d_out);      
-    dg::DVec abs = dg::evaluate( dg::coo1, g1d_out);
-    solovev::SafetyFactor<dg::DVec> qprofile(g2d_out, gp, alphaog2d );
+    dg::DVec abs = dg::evaluate( dg::cooX1d, g1d_out);
+    dg::geo::SafetyFactor<dg::geo::solovev::MagneticField, dg::DVec> qprofile(g2d_out, gp, alphaog2d );
     dg::DVec sf = dg::evaluate(qprofile, g1d_out);
 
 
@@ -153,19 +153,19 @@ int main( int argc, char* argv[])
     
     //Vectors and Matrices for Diffusion coefficient
 
-    const dg::DVec curvR = dg::evaluate( solovev::CurvatureNablaBR(gp), g3d_out);
-    const dg::DVec curvZ = dg::evaluate( solovev::CurvatureNablaBZ(gp), g3d_out);
+    const dg::DVec curvR = dg::evaluate( dg::geo::CurvatureNablaBR<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
+    const dg::DVec curvZ = dg::evaluate( dg::geo::CurvatureNablaBZ<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
     dg::Poisson<dg::CylindricalGrid3d<dg::DVec>,dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
-    const dg::DVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
+    const dg::DVec binv = dg::evaluate( dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0) , g3d_out) ;
     dg::DVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
     dg::DVec temp2 = dg::evaluate(dg::zero , g3d_out) ;
     dg::DVec temp3 = dg::evaluate(dg::zero , g3d_out) ;
     #ifdef RADIALELECTRONDENSITYFLUX
-    const dg::DVec psipR =  dg::evaluate( solovev::PsipR(gp), g3d_out);
-    const dg::DVec psipRR = dg::evaluate( solovev::PsipRR(gp), g3d_out);
-    const dg::DVec psipZ =  dg::evaluate( solovev::PsipZ(gp), g3d_out);
-    const dg::DVec psipZZ = dg::evaluate( solovev::PsipZZ(gp), g3d_out);
-    const dg::DVec psipRZ = dg::evaluate( solovev::PsipRZ(gp), g3d_out);
+    const dg::DVec psipR =  dg::evaluate( dg::geo::solovev::PsipR(gp), g3d_out);
+    const dg::DVec psipRR = dg::evaluate( dg::geo::solovev::PsipRR(gp), g3d_out);
+    const dg::DVec psipZ =  dg::evaluate( dg::geo::solovev::PsipZ(gp), g3d_out);
+    const dg::DVec psipZZ = dg::evaluate( dg::geo::solovev::PsipZZ(gp), g3d_out);
+    const dg::DVec psipRZ = dg::evaluate( dg::geo::solovev::PsipRZ(gp), g3d_out);
     dg::DVec Depsip3d =  dg::evaluate(dg::zero , g3d_out) ;   
     dg::DVec one3d    =  dg::evaluate(dg::one,g3d_out);
     dg::DVec one1d    =  dg::evaluate(dg::one,g1d_out);
@@ -232,7 +232,7 @@ int main( int argc, char* argv[])
 
 
             //computa fsa of quantities
-            solovev::FluxSurfaceAverage<dg::DVec> fsadata(g2d_out,gp, data2davg );
+            dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsadata(g2d_out,c, data2davg );
             dg::DVec data1dfsa = dg::evaluate(fsadata,g1d_out);
             dg::blas1::transfer(data1dfsa,transfer1d);
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[j], start1d, count1d,  transfer1d.data());
@@ -250,7 +250,7 @@ int main( int argc, char* argv[])
         dg::blas1::transfer(vor2davg,transfer2d);     
 
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[10],   start2d, count2d, transfer2d.data());
-        solovev::FluxSurfaceAverage<dg::DVec> fsavor(g2d_out,gp,vor2davg );
+        dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsavor(g2d_out,c, vor2davg );
         dg::DVec vor1dfsa = dg::evaluate(fsavor,g1d_out);
         dg::blas1::transfer(vor1dfsa,transfer1d);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[6], start1d, count1d,  transfer1d.data()); 
@@ -285,7 +285,7 @@ int main( int argc, char* argv[])
       
         toravg(Depsip3d,Depsip2davg);
 
-        solovev::FluxSurfaceAverage<dg::DVec> fsaDepsip(g2d_out,gp, Depsip2davg );
+        dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsaDepsip(g2d_out,c, Depsip2davg );
         dg::DVec  Depsip1Dfsa = dg::evaluate(fsaDepsip,g1d_out);
         //compute delta f on midplane : d Depsip2d = Depsip - <Depsip>       
         dg::blas2::gemv(fsaonrzphimatrix, Depsip1Dfsa , Depsip3dfluc ); //fsa on RZ grid
@@ -297,7 +297,7 @@ int main( int argc, char* argv[])
         //toroidal avg
         transfer2d = Depsip2davg;
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[11],   start2d, count2d, transfer2d.data());
-        solovev::FluxSurfaceAverage<dg::DVec> fsaDepsipfluc(g2d_out,gp,  Depsip2dflucavg );
+        dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsaDepsipfluc(g2d_out,c, Depsip2dflucavg );
         dg::DVec  Depsip1Dflucfsa = dg::evaluate(fsaDepsipfluc,g1d_out);
         transfer1d =Depsip1Dflucfsa;
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[7], start1d, count1d,   transfer1d.data()); 
@@ -311,7 +311,7 @@ int main( int argc, char* argv[])
         toravg(Lperpinv3d,Lperpinv2davg);
         transfer2d = Lperpinv2davg;
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, transfer2d.data());
-        solovev::FluxSurfaceAverage<dg::DVec> fsaLperpinv(g2d_out,gp,Lperpinv2davg );
+        dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsaLperpinv(g2d_out,c, Lperpinv2davg );
         dg::DVec  Lperpinv1Dfsa = dg::evaluate(fsaLperpinv,g1d_out);
         transfer1d =Lperpinv1Dfsa;
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[8], start1d, count1d,   transfer1d.data()); 

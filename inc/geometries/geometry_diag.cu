@@ -12,7 +12,14 @@
 #include "file/nc_utilities.h"
 
 #include "solovev.h"
+#include "taylor.h"
 #include "init.h"
+#include "magnetic_field.h"
+#include "average.h"
+
+//using namespace dg::geo::solovev;
+using namespace dg::geo::taylor;
+
 
 struct Parameters
 {
@@ -105,7 +112,7 @@ int main( int argc, char* argv[])
         reader.parse( geom, geom_js, false);
     }
     const Parameters p(input_js);
-    const solovev::GeomParameters gp(geom_js);
+    const GeomParameters gp(geom_js);
     p.display( std::cout);
     gp.display( std::cout);
     std::string input = input_js.toStyledString();
@@ -118,16 +125,7 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
  
     //construct all geometry quantities
-    solovev::Psip psip(gp);
-    solovev::PsipR psipR(gp);
-    solovev::PsipRR psipRR(gp);  
-    solovev::PsipZ psipZ(gp);  
-    solovev::PsipZZ psipZZ(gp);   
-    solovev::PsipRZ psipRZ(gp);  
-    solovev::Ipol ipol(gp);
-    solovev::InvB invB(gp);
-    solovev::BR bR(gp);
-    solovev::BZ bZ(gp);
+    MagneticField c(gp);
     const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     const double Z_X = -1.1*gp.elongation*gp.a;
     const double R_H = gp.R_0-gp.triangularity*gp.a;
@@ -137,34 +135,37 @@ int main( int argc, char* argv[])
     const double N2 =  (1.-alpha_)/(gp.a*gp.elongation*gp.elongation)*(1.-alpha_);
     const double N3 = -gp.elongation/(gp.a*cos(alpha_)*cos(alpha_));
     std::cout << "TEST ACCURACY OF PSI\n";
-    std::cout << "psip( 1+e,0)           "<<psip(gp.R_0 + gp.a, 0.)<<"\n";
-    std::cout << "psip( 1-e,0)           "<<psip(gp.R_0 - gp.a, 0.)<<"\n";
-    std::cout << "psip( 1-de,ke)         "<<psip(R_H, Z_H)<<"\n";
-    std::cout << "psip( 1-1.1de,-1.1ke)  "<<psip(R_X, Z_X)<<"\n";
-    std::cout << "psipZ( 1+e,0)          "<<psipZ(gp.R_0 + gp.a, 0.)<<"\n";
-    std::cout << "psipZ( 1-e,0)          "<<psipZ(gp.R_0 - gp.a, 0.)<<"\n";
-    std::cout << "psipR( 1-de,ke)        "<<psipR(R_H,Z_H)<<"\n";
-    std::cout << "psipR( 1-1.1de,-1.1ke) "<<psipR(R_X,Z_X)<<"\n";
-    std::cout << "psipZ( 1-1.1de,-1.1ke) "<<psipZ(R_X,Z_X)<<"\n";
-    std::cout << "psipZZ( 1+e,0)         "<<psipZZ(gp.R_0+gp.a,0.)+N1*psipR(gp.R_0+gp.a,0)<<"\n";
-    std::cout << "psipZZ( 1-e,0)         "<<psipZZ(gp.R_0-gp.a,0.)+N2*psipR(gp.R_0-gp.a,0)<<"\n";
-    std::cout << "psipRR( 1-de,ke)       "<<psipRR(R_H,Z_H)+N3*psipZ(R_H,Z_H)<<"\n";
+    std::cout << "psip( 1+e,0)           "<<c.psip(gp.R_0 + gp.a, 0.)<<"\n";
+    std::cout << "psip( 1-e,0)           "<<c.psip(gp.R_0 - gp.a, 0.)<<"\n";
+    std::cout << "psip( 1-de,ke)         "<<c.psip(R_H, Z_H)<<"\n";
+    std::cout << "psip( 1-1.1de,-1.1ke)  "<<c.psip(R_X, Z_X)<<"\n";
+    std::cout << "psipZ( 1+e,0)          "<<c.psipZ(gp.R_0 + gp.a, 0.)<<"\n";
+    std::cout << "psipZ( 1-e,0)          "<<c.psipZ(gp.R_0 - gp.a, 0.)<<"\n";
+    std::cout << "psipR( 1-de,ke)        "<<c.psipR(R_H,Z_H)<<"\n";
+    std::cout << "psipR( 1-1.1de,-1.1ke) "<<c.psipR(R_X,Z_X)<<"\n";
+    std::cout << "psipZ( 1-1.1de,-1.1ke) "<<c.psipZ(R_X,Z_X)<<"\n";
+    std::cout << "psipZZ( 1+e,0)         "<<c.psipZZ(gp.R_0+gp.a,0.)+N1*c.psipR(gp.R_0+gp.a,0)<<"\n";
+    std::cout << "psipZZ( 1-e,0)         "<<c.psipZZ(gp.R_0-gp.a,0.)+N2*c.psipR(gp.R_0-gp.a,0)<<"\n";
+    std::cout << "psipRR( 1-de,ke)       "<<c.psipRR(R_H,Z_H)+N3*c.psipZ(R_H,Z_H)<<"\n";
 
     //Feltor quantities
-    solovev::CurvatureNablaBR curvatureR(gp);
-    solovev::CurvatureNablaBZ curvatureZ(gp);
-    solovev::GradLnB gradLnB(gp);
-    solovev::Field field(gp);
-    solovev::FieldR fieldR(gp);
-    solovev::FieldZ fieldZ(gp);
-    solovev::FieldP fieldP(gp);
-    solovev::Iris iris(gp);
-    solovev::Pupil pupil(gp);
-    solovev::GaussianDamping dampgauss(gp);
-    solovev::GaussianProfDamping dampprof(gp);
-    solovev::ZonalFlow zonalflow(p.amp, p.k_psi, gp);
-    solovev::PsiLimiter psilimiter(gp);
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp);
+    dg::geo::InvB<MagneticField> invB(c, gp.R_0);
+    dg::geo::BR<MagneticField> bR(c, gp.R_0);
+    dg::geo::BZ<MagneticField> bZ(c, gp.R_0);
+    dg::geo::CurvatureNablaBR<MagneticField> curvatureR(c, gp.R_0);
+    dg::geo::CurvatureNablaBZ<MagneticField> curvatureZ(c, gp.R_0);
+    dg::geo::GradLnB<MagneticField> gradLnB(c, gp.R_0);
+    dg::geo::Field<MagneticField>   field(c, gp.R_0);
+    dg::geo::FieldR<MagneticField> fieldR(c, gp.R_0);
+    dg::geo::FieldZ<MagneticField> fieldZ(c, gp.R_0);
+    dg::geo::FieldP<MagneticField> fieldP(c, gp.R_0);
+    dg::geo::Iris<Psip> iris( c.psip, gp.psipmin, gp.psipmax );
+    dg::geo::Pupil<Psip> pupil(c.psip, gp.psipmaxcut);
+    dg::geo::GaussianDamping<Psip> dampgauss(c.psip, gp.psipmaxcut, gp.alpha);
+    dg::geo::GaussianProfDamping<Psip> dampprof(c.psip,gp.psipmax, gp.alpha);
+    dg::geo::ZonalFlow<Psip> zonalflow(p.amp, p.k_psi, gp, c.psip);
+    dg::geo::PsiLimiter<Psip> psilimiter(c.psip, gp.psipmaxlim);
+    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, c.psip);
 
     dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
@@ -176,8 +177,8 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> visual(21);
 
     //B field functions
-    hvisual[1] = dg::evaluate( psip, grid2d);
-    hvisual[2] = dg::evaluate( ipol, grid2d);
+    hvisual[1] = dg::evaluate( c.psip, grid2d);
+    hvisual[2] = dg::evaluate( c.ipol, grid2d);
     hvisual[3] = dg::evaluate( invB, grid2d);
     hvisual[4] = dg::evaluate( field, grid2d);
     hvisual[5] = dg::evaluate( curvatureR, grid2d);
@@ -210,14 +211,14 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDot(hvisual[10], hvisual[19], hvisual[19]); //damped 
 
     //Compute flux average
-    solovev::Alpha alpha(gp); // = B^phi / |nabla psip |
-    dg::DVec psipog2d   = dg::evaluate( psip, grid2d);
+    dg::geo::Alpha<MagneticField> alpha(c); // = B^phi / |nabla psip |
+    dg::DVec psipog2d   = dg::evaluate( c.psip, grid2d);
     dg::DVec alphaog2d  = dg::evaluate( alpha, grid2d); 
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned npsi = 3, Npsi = 150;//set number of psivalues
     psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
     dg::Grid1d grid1d(psipmin , gp.psipmax, npsi ,Npsi,dg::DIR);
-    solovev::SafetyFactor<dg::DVec>     qprof(grid2d, gp, alphaog2d );
+    dg::geo::SafetyFactor<MagneticField, dg::DVec>     qprof(grid2d, c, alphaog2d );
     dg::HVec sf         = dg::evaluate( qprof,    grid1d);
     dg::HVec abs        = dg::evaluate( dg::cooX1d, grid1d);
 

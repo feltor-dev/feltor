@@ -536,7 +536,7 @@ void stepperRK3(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
  * @param rhs The right-hand-side
  * @param begin initial condition 
  * @param end (write-only) contains solution on output
- * @param T_max initial time
+ * @param T_min initial time
  * @param T_max final time
  * @param N number of steps 
  */
@@ -554,7 +554,7 @@ void stepperRK4(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
  * @param rhs The right-hand-side
  * @param begin initial condition 
  * @param end (write-only) contains solution on output
- * @param T_max initial time
+ * @param T_min initial time
  * @param T_max final time
  * @param N number of steps 
  */
@@ -572,7 +572,7 @@ void stepperRK6(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
  * @param rhs The right-hand-side
  * @param begin initial condition 
  * @param end (write-only) contains solution on output
- * @param T_max initial time
+ * @param T_min initial time
  * @param T_max final time
  * @param N number of steps 
  */

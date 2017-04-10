@@ -2,9 +2,10 @@
 
 #include <mpi.h>
 
-#include "curvilinear.h"
+#include "dg/backend/mpi_evaluation.h"
 #include "dg/backend/mpi_grid.h"
 #include "dg/backend/mpi_vector.h"
+#include "curvilinear.h"
 
 
 
@@ -30,7 +31,7 @@ struct CurvilinearMPIGrid3d : public dg::MPIGrid3d
 
     template< class Generator>
     CurvilinearMPIGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
-        dg::MPIGrid3d( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
+        dg::MPIGrid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
     {
@@ -94,7 +95,7 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
 
     template< class Generator>
     CurvilinearMPIGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
-        dg::MPIGrid2d( 0, 1, 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
+        dg::MPIGrid2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER, comm2d),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), 
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
     {
@@ -103,24 +104,24 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( communicator(), 2, dims, periods, coords);
         init_X_boundaries( g.x0(), g.x1());
-            //for( unsigned py=0; py<dims[1]; py++)
-                for( unsigned i=0; i<this->n()*this->Ny(); i++)
-                    //for( unsigned px=0; px<dims[0]; px++)
-                        for( unsigned j=0; j<this->n()*this->Nx(); j++)
-                        {
-                            unsigned idx1 = i*this->n()*this->Nx() + j;
-                            unsigned idx2 = ((coords[1]*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            r_.data()[idx1] = g.r()[idx2];
-                            z_.data()[idx1] = g.z()[idx2];
-                            xr_.data()[idx1] = g.xr()[idx2];
-                            xz_.data()[idx1] = g.xz()[idx2];
-                            yr_.data()[idx1] = g.yr()[idx2];
-                            yz_.data()[idx1] = g.yz()[idx2];
-                            g_xx_.data()[idx1] = g.g_xx()[idx2];
-                            g_xy_.data()[idx1] = g.g_xy()[idx2];
-                            g_yy_.data()[idx1] = g.g_yy()[idx2];
-                            vol2d_.data()[idx1] = g.perpVol()[idx2];
-                        }
+        //for( unsigned py=0; py<dims[1]; py++)
+            for( unsigned i=0; i<this->n()*this->Ny(); i++)
+                //for( unsigned px=0; px<dims[0]; px++)
+                    for( unsigned j=0; j<this->n()*this->Nx(); j++)
+                    {
+                        unsigned idx1 = i*this->n()*this->Nx() + j;
+                        unsigned idx2 = ((coords[1]*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
+                        r_.data()[idx1] = g.r()[idx2];
+                        z_.data()[idx1] = g.z()[idx2];
+                        xr_.data()[idx1] = g.xr()[idx2];
+                        xz_.data()[idx1] = g.xz()[idx2];
+                        yr_.data()[idx1] = g.yr()[idx2];
+                        yz_.data()[idx1] = g.yz()[idx2];
+                        g_xx_.data()[idx1] = g.g_xx()[idx2];
+                        g_xy_.data()[idx1] = g.g_xy()[idx2];
+                        g_yy_.data()[idx1] = g.g_yy()[idx2];
+                        vol2d_.data()[idx1] = g.perpVol()[idx2];
+                    }
     }
     CurvilinearMPIGrid2d( const CurvilinearMPIGrid3d<LocalContainer>& g):
         dg::MPIGrid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),

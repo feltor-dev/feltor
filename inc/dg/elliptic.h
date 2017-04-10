@@ -583,7 +583,6 @@ struct TensorElliptic
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
-     * @param bcz boundary contition in z
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */

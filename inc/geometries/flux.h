@@ -9,16 +9,17 @@
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
 #include "dg/geometry.h"
-#include "fields.h"
 #include "ribeiro.h"
 
 
 namespace dg
 {
-
-namespace flux
+namespace geo
 {
 
+///@cond
+namespace flux
+{
 namespace detail
 {
 
@@ -111,29 +112,43 @@ struct Fpsi
     private:
     double X_init, Y_init;
     Psi psip_;
-    solovev::flux::FieldRZYT<PsiX, PsiY, Ipol> fieldRZYT_;
-    solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    dg::geo::flux::FieldRZYT<PsiX, PsiY, Ipol> fieldRZYT_;
+    dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
 
 };
 
 } //namespace detail
-
-
-
 }//namespace flux
+///@endcond
 
 /**
  * @brief A symmetry flux generator
  * @ingroup generators
- * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ * @tparam PsiX models aBinaryOperator 
+ * @tparam PsiY models aBinaryOperator 
+ * @tparam PsiXX models aBinaryOperator 
+ * @tparam PsiXY models aBinaryOperator 
+ * @tparam PsiYY models aBinaryOperator 
+ * @tparam Ipol models aBinaryOperator 
+ * @tparam IpolX models aBinaryOperator 
+ * @tparam IpolY models aBinaryOperator 
  */
-template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Ipol, class IpolR, class IpolZ>
+template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Ipol, class IpolX, class IpolY>
 struct FluxGenerator
 {
     /**
      * @brief Construct a symmetry flux grid generator
      *
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
+     @param psiX \f$ \psi_x\f$ its derivative in x
+     @param psiY \f$ \psi_y\f$ its derivative in y
+     @param psiXX \f$ \psi_{xx}\f$ second derivative
+     @param psiXY \f$ \psi_{xy}\f$ second derivative
+     @param psiYY \f$ \psi_{yy}\f$ second derivative
+     * @param ipol \f$ I(x,y)\f$ the current function in Cartesian coordinates (x,y)
+     * @param ipolX \f$ I_x(x,y)\f$ its derivative in x
+     * @param ipolY \f$ I_y(x,y)\f$ its derivative in x
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -141,8 +156,8 @@ struct FluxGenerator
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      * @note If mode == 1 then this class does the same as the RibeiroFluxGenerator
      */
-    FluxGenerator( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Ipol ipol, IpolR ipolR, IpolZ ipolZ, double psi_0, double psi_1, double x0, double y0, int mode=0):
-        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), ipol_(ipol), ipolR_(ipolR), ipolZ_(ipolZ), mode_(mode)
+    FluxGenerator( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Ipol ipol, IpolX ipolX, IpolY ipolY, double psi_0, double psi_1, double x0, double y0, int mode=0):
+        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), ipol_(ipol), ipolR_(ipolX), ipolZ_(ipolY), mode_(mode)
     {
         psi0_ = psi_0, psi1_ = psi_1;
         assert( psi_1 != psi_0);
@@ -161,6 +176,9 @@ struct FluxGenerator
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
+
+    bool isOrthogonal()const{return false;}
+    bool isConformal()const{return false;}
     /**
      * @brief The length of the zeta-domain
      *
@@ -207,9 +225,9 @@ struct FluxGenerator
 
         //std::cout << "In grid function:\n";
         flux::detail::Fpsi<Psi, PsiX, PsiY, Ipol> fpsi(psi_, psiX_, psiY_, ipol_, x0_, y0_);
-        solovev::flux::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Ipol, IpolR, IpolZ> fieldRZYRYZY(psiX_, psiY_, psiXX_, psiXY_, psiYY_, ipol_, ipolR_, ipolZ_);
+        dg::geo::flux::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Ipol, IpolX, IpolY> fieldRZYRYZY(psiX_, psiY_, psiXX_, psiXY_, psiYY_, ipol_, ipolR_, ipolZ_);
         ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsiRibeiro(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        solovev::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
@@ -221,8 +239,8 @@ struct FluxGenerator
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            if(mode_==0)dg::detail::compute_rzy( fpsi, fieldRZYRYZY, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
-            if(mode_==1)dg::detail::compute_rzy( fpsiRibeiro, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==0)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZY, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==1)dg::geo::detail::compute_rzy( fpsiRibeiro, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
@@ -239,8 +257,8 @@ struct FluxGenerator
     PsiXY psiXY_;
     PsiYY psiYY_;
     Ipol ipol_;
-    IpolR ipolR_;
-    IpolZ ipolZ_;
+    IpolX ipolR_;
+    IpolY ipolZ_;
     thrust::host_vector<double> fx_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
@@ -249,7 +267,12 @@ struct FluxGenerator
 /**
  * @brief Same as the Ribeiro class just but uses psi as a flux label directly
  * @ingroup generators
- * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
+     * @tparam PsiX models aBinaryOperator 
+     * @tparam PsiY models aBinaryOperator 
+     * @tparam PsiXX models aBinaryOperator 
+     * @tparam PsiXY models aBinaryOperator 
+     * @tparam PsiYY models aBinaryOperator 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct RibeiroFluxGenerator
@@ -257,8 +280,12 @@ struct RibeiroFluxGenerator
     /**
      * @brief Construct a flux aligned grid generator
      *
-     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
+     @param psiX \f$ \psi_x\f$ its derivative in x
+     @param psiY \f$ \psi_y\f$ its derivative in y
+     @param psiXX \f$ \psi_{xx}\f$ second derivative
+     @param psiXY \f$ \psi_{xy}\f$ second derivative
+     @param psiYY \f$ \psi_{yy}\f$ second derivative
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -277,6 +304,8 @@ struct RibeiroFluxGenerator
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
+    bool isOrthogonal()const{return false;}
+    bool isConformal()const{return false;}
     /**
      * @brief The length of the zeta-domain
      *
@@ -322,8 +351,8 @@ struct RibeiroFluxGenerator
             psi_x[i] = zeta1d[i]/f0_ +psi0_;
 
         ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        solovev::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
@@ -335,8 +364,8 @@ struct RibeiroFluxGenerator
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            if(mode_==0)dg::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
-            if(mode_==1)dg::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==0)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==1)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
@@ -356,4 +385,5 @@ struct RibeiroFluxGenerator
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
 };
+}//namespace geo
 }//namespace dg

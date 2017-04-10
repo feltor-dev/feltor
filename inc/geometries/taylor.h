@@ -11,17 +11,36 @@
 #include "dg/backend/functions.h"
 #include "dg/functors.h"
 #include "solovev_parameters.h"
+#include "magnetic_field.h"
 
 
 /*!@file
  *
- * Geometry objects 
+ * MagneticField objects 
+ * @attention When the taylor field is used we need the boost library for special functions
+ */
+namespace dg
+{
+namespace geo
+{
+/**
+ * @brief Contains the Cerfon Taylor state type flux functions (using boost)
+ *
+ * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
+ * @attention When the taylor field is used we need the boost library for special functions
  */
 namespace taylor
 {
 ///@addtogroup geom
 ///@{
+typedef dg::geo::solovev::GeomParameters GeomParameters; //!< bring GeomParameters into the taylor namespace 
 
+/**
+ * @brief \f[ \psi \f]
+ *
+ * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
+ * @attention When the taylor field is used we need the boost library for special functions
+ */
 struct Psip
 {
     /**
@@ -32,13 +51,13 @@ struct Psip
     Psip( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-/**
- * @brief \f$ \hat \psi_p(R,Z) \f$
-
-      @param R radius (boost::math::cylindrical coordinates)
-      @param Z height (boost::math::cylindrical coordinates)
+    /**
+     * @brief \f$ \hat \psi_p(R,Z) \f$
+     *
+      @param R radius (cylindrical coordinates)
+      @param Z height (cylindrical coordinates)
       @return \f$ \hat \psi_p(R,Z) \f$
- */
+     */
     double operator()(double R, double Z) const
     {    
         double Rn = R/R0_, Zn = Z/R0_;
@@ -78,6 +97,10 @@ struct Psip
     std::vector<double> c_;
 };
 
+/**
+ * @brief \f[\psi_R\f]
+ * @attention When the taylor field is used we need the boost library for special functions
+ */
 struct PsipR
 {
     /**
@@ -319,7 +342,7 @@ struct LaplacePsip
 
 
 /**
- * @brief \f[\hat{I}\f] 
+ * @brief \f[\hat{I} = c_{12}\psi\f] 
  */ 
 struct Ipol
 {
@@ -343,6 +366,9 @@ struct Ipol
     double c12_;
     Psip psip_;
 };
+/**
+ * @brief \f[\hat I_R\f]
+ */
 struct IpolR
 {
     IpolR(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipR_(gp) { }
@@ -361,6 +387,9 @@ struct IpolR
     double c12_;
     PsipR psipR_;
 };
+/**
+ * @brief \f[\hat I_Z\f]
+ */
 struct IpolZ
 {
     IpolZ(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
@@ -380,7 +409,28 @@ struct IpolZ
     PsipZ psipZ_;
 };
 
+/**
+ * @brief Contains all taylor fields (models aTokamakMagneticField)
+ */
+struct MagneticField
+{
+    MagneticField( solovev::GeomParameters gp):psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
+    Psip psip;
+    PsipR psipR;
+    PsipZ psipZ;
+    PsipRR psipRR;
+    PsipRZ psipRZ;
+    PsipZZ psipZZ;
+    LaplacePsip laplacePsip;
+    Ipol ipol;
+    IpolR ipolR;
+    IpolZ ipolZ;
+};
+
+///@}
+
 } //namespace taylor
+} //namespace geo
 
+}//namespace dg
 
-#include "fields.h"

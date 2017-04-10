@@ -357,7 +357,7 @@ struct Grid2d
      *
      * @note doesn't check periodicity!!
      * @param x x-point to check
-     * @param x y-point to check
+     * @param y y-point to check
      *
      * @return true if point is inside, false else
      */
@@ -672,9 +672,11 @@ struct Grid3d
     bc bcx_, bcy_, bcz_;
     DLT<double> dlt_;
 };
+///@}
 
+///@cond
 Grid2d::Grid2d( const Grid3d& g) : x0_(g.x0()), x1_(g.x1()), y0_(g.y0()), y1_(g.y1()), n_(g.n()), Nx_(g.Nx()), Ny_(g.Ny()), bcx_(g.bcx()), bcy_(g.bcy()), dlt_(g.n())
 {}
+///@endcond
 
-///@}
 }// namespace dg

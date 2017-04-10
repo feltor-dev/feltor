@@ -16,9 +16,8 @@
 #include "file/nc_utilities.h"
 
 #include "dg/geometry.h"
-#include "geometries/solovev.h"
 #include "feltor/parameters.h"
-#include "geometries/init.h"
+#include "geometries/geometries.h"
 
 int main( int argc, char* argv[])
 {
@@ -46,7 +45,7 @@ int main( int argc, char* argv[])
     std::cout << "input "<<input<<std::endl;
     std::cout << "geome "<<geom <<std::endl;
     const eule::Parameters p(file::read_input( input));
-    const solovev::GeomParameters gp(file::read_input( geom));
+    const dg::geo::solovev::GeomParameters gp(file::read_input( geom));
     p.display();
     gp.display();
     /////////////////////////////create Grids and weights//////////////////////////////////
@@ -91,16 +90,22 @@ int main( int argc, char* argv[])
     double time=0.;
 
     ///////////////////////Define helper variables for computations////////
-    dg::DDS dsN( typename dg::DDS::FieldAligned(solovev::Field(gp), g3d_out, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), dg::normed, dg::centered );
+    dg::geo::solovev::MagneticField c(gp);
+    dg::DDS dsN( typename dg::DDS::FieldAligned(
+                dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0), 
+                g3d_out, gp.rk4eps, 
+                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(c.psip, gp.psipmaxlim), 
+                dg::NEU,(2*M_PI)/((double)p.Nz)), 
+            dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0), dg::normed, dg::centered );
     dg::DVec vor3d    = dg::evaluate( dg::zero, g3d_out);
     dg::HVec transfer = dg::evaluate( dg::zero, g3d_out);
     dg::Elliptic<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
     const dg::DVec w3d = dg::create::weights( g3d_out);   
     const dg::DVec w2d = dg::create::weights( g2d_out);   
-    const dg::DVec curvR = dg::evaluate( solovev::CurvatureNablaBR(gp), g3d_out);
-    const dg::DVec curvZ = dg::evaluate( solovev::CurvatureNablaBZ(gp), g3d_out);
+    const dg::DVec curvR = dg::evaluate( dg::geo::CurvatureNablaBR<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
+    const dg::DVec curvZ = dg::evaluate( dg::geo::CurvatureNablaBZ<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
     dg::Poisson<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
-    const dg::DVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
+    const dg::DVec binv = dg::evaluate( dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0) , g3d_out) ;
     const dg::DVec one3d    =  dg::evaluate(dg::one,g3d_out);
     const dg::DVec one2d    =  dg::evaluate(dg::one,g2d_out);
     dg::DVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
@@ -108,8 +113,8 @@ int main( int argc, char* argv[])
     dg::DVec npe = dg::evaluate(dg::zero , g3d_out) ; //y[0] + 1 = Ne
 
     //rewritten if straight fieldlines
-    dg::DVec psipR =  dg::evaluate( solovev::PsipR(gp), g3d_out);
-    dg::DVec psipZ =  dg::evaluate( solovev::PsipZ(gp), g3d_out);
+    dg::DVec psipR =  dg::evaluate( dg::geo::solovev::PsipR(gp), g3d_out);
+    dg::DVec psipZ =  dg::evaluate( dg::geo::solovev::PsipZ(gp), g3d_out);
     dg::blas1::pointwiseDot( psipR, psipR, temp1);
     dg::blas1::pointwiseDot( psipZ, psipZ, temp2);
     dg::blas1::axpby( 1., temp1, 1., temp2);

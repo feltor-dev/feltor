@@ -1,11 +1,11 @@
-<hr>
-<h3> Welcome to the FELTOR project!</h3>
+### Welcome to the FELTOR project!
+
 ![3dsimulation](3dpic.jpg)
 
-<h4> 1. License </h4>
+#### 1. License 
 FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
 
-<h4> 2. Dependencies </h4>
+#### 2. Dependencies 
 Our code only depends on external libraries that are themselves openly available. We note here that we do not distribute copies of these libraries. The user has to obtain these according to his/her needs. 
 
 The most basic applications depend on [thrust]( https://github.com/thrust/thrust) and [cusp] (https://github.com/cusplibrary/cusplibrary) distributed under the Apache-2.0 license. The minimum requirement to compile and run an application is a working C++ compiler and a CPU. 
@@ -19,7 +19,7 @@ If the user intends to use the MPI backend, an implementation library of the mpi
 hdf5 and netcdf with the --enable-parallel flag. Do NOT use the pnetcdf library, which
 uses the classic netcdf file format.  The OpenMP standard is natively supported by most recent C++ compilers.
 
-<h4> 3. Compilation </h4>
+#### 3. Compilation 
 To simplify the compilation process we use the GNU Make utility, a standard build automation tool that automatically builds the executable program. 
 You will want to check the 
 config folder. Here, machine specific Makefile variables are defined. 
@@ -27,10 +27,10 @@ The default.mk file gives an example. You can use the default
 if you create an include folder in your home directory and create 
 links to the aforementioned libraries. Or you can 
 create your own file. 
-<h4> 4. Documentation </h4>
+#### 4. Documentation 
 The documentation can be generated with [Doxygen](http://www.doxygen.org) in each subfolder or you can access the whole documentation [online](http://feltor-dev.github.io/feltor/inc/dg/html/index.html).
-<h4> 5. Official releases </h4>
-Our latest code release v3.1 now has a shiny new DOI badge from zenodo
+#### 5. Official releases 
+Our latest code release has a shiny DOI badge from zenodo
 
 [![DOI](https://zenodo.org/badge/14143578.svg)](https://zenodo.org/badge/latestdoi/14143578)
 

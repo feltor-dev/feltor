@@ -358,7 +358,6 @@ struct MPIGrid3d
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      * @param bcz boundary condition in z
-     * @param sys cartesian or cylindrical
      * @param comm mpi communicator
      * @attention # of polynomial coefficients in z direction is always 1
      */

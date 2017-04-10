@@ -9,17 +9,17 @@
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
 #include "dg/geometry.h"
-#include "fields.h"
 #include "utilities.h"
 
 
 
 namespace dg
 {
+namespace geo
+{
+///@cond
 namespace ribeiro
 {
-
-///@cond
 namespace detail
 {
 
@@ -150,9 +150,9 @@ struct Fpsi
     private:
     double R_init, Z_init;
     Psi psip_;
-    solovev::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTribeiro_;
-    solovev::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequalarc_;
-    solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTribeiro_;
+    dg::geo::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequalarc_;
+    dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
     int mode_;
 };
 
@@ -173,19 +173,24 @@ struct FieldFinv
     }
     private:
     Fpsi<Psi, PsiR, PsiZ> fpsi_;
-    solovev::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYTribeiro_;
-    solovev::equalarc::FieldRZYT<PsiR, PsiZ> fieldRZYTequalarc_;
+    dg::geo::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYTribeiro_;
+    dg::geo::equalarc::FieldRZYT<PsiR, PsiZ> fieldRZYTequalarc_;
     unsigned N_steps;
     int mode_;
 };
 } //namespace detail
-///@endcond
 }//namespace ribeiro
+///@endcond
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by Ribeiro and Scott 2010
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 (models aGenerator)
  * @ingroup generators
- * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ * @tparam Psi All the template parameters must model aBinaryOperator
+     * @tparam PsiX models aBinaryOperator 
+     * @tparam PsiY models aBinaryOperator 
+     * @tparam PsiXX models aBinaryOperator 
+     * @tparam PsiXY models aBinaryOperator 
+     * @tparam PsiYY models aBinaryOperator 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct Ribeiro
@@ -194,6 +199,12 @@ struct Ribeiro
      * @brief Construct a near-conformal grid generator
      *
      * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
+     @param psiX \f$ \psi_x\f$ its derivative in x
+     @param psiY \f$ \psi_y\f$ its derivative in y
+     @param psiXX \f$ \psi_{xx}\f$ second derivative
+     @param psiXY \f$ \psi_{xy}\f$ second derivative
+     @param psiYY \f$ \psi_{yy}\f$ second derivative
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -209,6 +220,8 @@ struct Ribeiro
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
+    bool isOrthogonal()const{return false;}
+    bool isConformal()const{return false;}
     /**
      * @brief The length of the zeta-domain
      *
@@ -231,17 +244,17 @@ struct Ribeiro
      */
     thrust::host_vector<double> fx() const{ return fx_;}
     /**
-     * @brief Generate the points and the elements of the Jacobian
-     *
-     * Call the width() and height() function before calling this function!
-     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
-     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
-     * @param x  = x(zeta,eta)
-     * @param y  = y(zeta,eta)
-     * @param zetaX = zeta_x(zeta,eta)
-     * @param zetaY = zeta_y(zeta,eta)
-     * @param etaX = eta_x(zeta,eta)
-     * @param etaY = eta_y(zeta,eta)
+    * @brief Generate grid points and elements of the Jacobian 
+    *
+    * @param zeta1d (input) a list of \f$ N_\zeta\f$ points \f$ 0<\zeta_i<\f$width() 
+    * @param eta1d (input) a list of \f$ N_\eta\f$ points \f$ 0<\eta_j<\f$height() 
+    * @param x (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ x(\zeta_i, \eta_j)\f$ 
+    * @param y (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ y(\zeta_i, \eta_j)\f$ 
+    * @param zetaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial x (\zeta_i, \eta_j)\f$ 
+    * @param zetaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial y (\zeta_i, \eta_j)\f$ 
+    * @param etaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial x (\zeta_i, \eta_j)\f$ 
+    * @param etaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial y (\zeta_i, \eta_j)\f$ 
+    @note the \f$ \zeta\f$ coordinate is contiguous in memory
      * @note All the resulting vectors are write-only and get properly resized
      */
     void operator()( 
@@ -257,12 +270,12 @@ struct Ribeiro
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         ribeiro::detail::FieldFinv<Psi, PsiX, PsiY> fpsiMinv_(psi_, psiX_, psiY_, x0_,y0_, 500, mode_);
         thrust::host_vector<double> psi_x;
-        dg::detail::construct_psi_values( fpsiMinv_, psi0_, psi1_, 0., zeta1d, lx_, psi_x, fx_);
+        dg::geo::detail::construct_psi_values( fpsiMinv_, psi0_, psi1_, 0., zeta1d, lx_, psi_x, fx_);
 
         //std::cout << "In grid function:\n";
         ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        solovev::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
@@ -273,8 +286,8 @@ struct Ribeiro
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            if(mode_==0)dg::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
-            if(mode_==1)dg::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==0)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==1)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
@@ -300,7 +313,7 @@ struct Ribeiro
 // */ 
 //struct Field
 //{
-//    Field( solovev::GeomParameters gp,const thrust::host_vector<double>& x, const thrust::host_vector<double>& f_x):
+//    Field( dg::geo::detail::GeomParameters gp,const thrust::host_vector<double>& x, const thrust::host_vector<double>& f_x):
 //        gp_(gp),
 //        psipR_(gp), psipZ_(gp),
 //        ipol_(gp), invB_(gp), last_idx(0), x_(x), fx_(f_x)
@@ -365,15 +378,16 @@ struct Ribeiro
 //        return 0;
 //    }
 //    
-//    solovev::GeomParameters gp_;
-//    solovev::PsipR  psipR_;
-//    solovev::PsipZ  psipZ_;
-//    solovev::Ipol   ipol_;
-//    solovev::InvB   invB_;
+//    dg::geo::GeomParameters gp_;
+//    dg::geo::PsipR  psipR_;
+//    dg::geo::PsipZ  psipZ_;
+//    dg::geo::Ipol   ipol_;
+//    dg::geo::InvB   invB_;
 //    int last_idx;
 //    thrust::host_vector<double> x_;
 //    thrust::host_vector<double> fx_;
 //   
 //};
 //
+} //namespace geo
 } //namespace dg

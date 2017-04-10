@@ -14,8 +14,7 @@ double sin( double x, double y ) {
         else if( 0 <= y && y < 2*M_PI) return sin(x)*cos(y);
         else return sin(x)*sin(y - 2*M_PI);
     }
-    else
-        return sin(x)*sin(y);
+    return sin(x)*sin(y);
 }
 double cosx( double x, double y) { 
     if( x < 0)
@@ -23,9 +22,8 @@ double cosx( double x, double y) {
         if( y < 0) return cos(x)*sin(y);
         else if( 0 <= y && y < 2*M_PI) return cos(x)*cos(y);
         else return cos(x)*sin(y - 2*M_PI);
-    }
-    else
-        return cos(x)*sin(y);
+    } //has a discontinuity at x=0
+    return cos(x)*sin(y);
 }
 double cosy( double x, double y) { 
     if( x < 0)
@@ -34,8 +32,7 @@ double cosy( double x, double y) {
         else if( 0 <= y && y < 2*M_PI) return -sin(x)*sin(y);
         else return sin(x)*cos(y - 2*M_PI);
     }
-    else
-        return sin(x)*cos(y);
+    return sin(x)*cos(y);
 }
 double sin(  double x, double y, double z) { return sin(x,y)*sin(z);}
 double cosx( double x, double y, double z) { return cosx(x,y)*sin(z);}
@@ -53,8 +50,10 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cout << "Type in n, Nx (1./5.) and Ny (1./4.) and Nz!\n";
     std::cin >> n >> Nx >> Ny >> Nz;
-    dg::bc bcx=dg::DIR_NEU, bcy=dg::DIR, bcz = dg::PER;
-    dg::GridX2d g2d( -2.*M_PI, M_PI/2., -M_PI, 2*M_PI+M_PI, 1./5., 1./4., n, Nx, Ny, bcx, bcy);
+    //dg::bc bcx=dg::DIR_NEU, bcy=dg::DIR, bcz = dg::PER;
+    //dg::GridX2d g2d( -2.*M_PI, M_PI/2., -M_PI, 2*M_PI+M_PI, 1./5., 1./4., n, Nx, Ny, bcx, bcy);
+    dg::bc bcx=dg::DIR, bcy=dg::NEU, bcz = dg::PER;
+    dg::GridX2d g2d( -2.*M_PI, M_PI, -M_PI/2., 2.*M_PI+M_PI/2., 1./3., 1./6., n, Nx, Ny, bcx, bcy);
     g2d.display(std::cout);
     //dg::GridX2d g2d( -2.*M_PI, M_PI/2., 0., 2*M_PI, 1./5., 0., n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);

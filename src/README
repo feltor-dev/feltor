@@ -1,2 +1,7 @@
 The src folder contains specific projects that are based on the numerical algorithms
 in the inc folder
+
+In order to check if an update introduces an unwanted bug, do the following steps:
+- execute the project with default/verification input for the official branch
+- execute the same project with same input on the new branch
+- use the feltor/diag/compare program to compare the outputs

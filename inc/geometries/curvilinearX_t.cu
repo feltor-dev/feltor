@@ -7,17 +7,19 @@
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
-#include "file/read_input.h"
+//#include "file/read_input.h"
+#include "file/nc_utilities.h"
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
 #include "taylor.h"
 //#include "guenther.h"
 #include "curvilinearX.h"
+#include "ribeiroX.h"
 #include "dg/ds.h"
 #include "init.h"
 
-#include "file/nc_utilities.h"
+using namespace dg::geo;
 
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 double sine( double x) {return sin(x);}
@@ -105,10 +107,10 @@ int main( int argc, char* argv[])
     solovev::PsipRR psipRR(gp); solovev::PsipRZ psipRZ(gp); solovev::PsipZZ psipZZ(gp);
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::findXpoint( psipR, psipZ, psipRR, psipRZ, psipZZ, R_X, Z_X);
+    dg::geo::findXpoint( psipR, psipZ, psipRR, psipRZ, psipZZ, R_X, Z_X);
 
     double R0 = gp.R_0, Z0 = 0;
-    dg::RibeiroX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> generator(psip, psipR, psipZ, psipRR, psipRZ, psipZZ, psi_0, fx_0, R_X,Z_X, R0, Z0);
+    dg::geo::RibeiroX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> generator(psip, psipR, psipZ, psipRR, psipRZ, psipZZ, psi_0, fx_0, R_X,Z_X, R0, Z0);
     dg::CurvilinearGridX3d<dg::DVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     dg::CurvilinearGridX2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
@@ -211,7 +213,7 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2.0*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
-    solovev::Iris iris( gp);
+    Iris<solovev::Psip> iris( psip, gp.psipmin, gp.psipmax);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::DVec cutter = dg::pullback( iris, g2d), vol( cutter);
     dg::blas1::pointwiseDot(cutter, w2d, vol);

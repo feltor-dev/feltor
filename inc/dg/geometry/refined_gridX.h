@@ -9,7 +9,7 @@
 
 namespace dg
 {
-
+///@cond
 namespace detail
 {
 /**
@@ -86,6 +86,7 @@ int exponential_Xref( unsigned add_x, const GridX1d& g, thrust::host_vector<doub
 
 
 struct RefinedGridX3d;
+///@endcond
 /**
  * @brief Refined grid 
  * @ingroup grid
@@ -251,15 +252,19 @@ struct RefinedGridX3d : public dg::GridX3d
      * @brief Refine the X-point
      *
      * No refinement in the third dimension
-     * @param c
      * @param add_x Add number of cells to the existing one
      * @param add_y Add number of cells to the existing one
+     * @param howmanyX howmany cells are refined in x
+     * @param howmanyY howmany cells are refined in x
      * @param x0
      * @param x1
      * @param y0
      * @param y1
      * @param z0
-     * @param y1
+     * @param z1
+     * @param fx the ratio of cells outside to inside the separatrix
+     * @param fy
+     * @param n_ref number of polynomial coefficients in the refined grid
      * @param n
      * @param Nx
      * @param Ny
