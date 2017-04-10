@@ -61,6 +61,7 @@ int main( int argc, char* argv[])
     dg::HVec vor(dg::evaluate(dg::zero,g2d));
     std::vector<dg::HVec> logn(2,dg::evaluate(dg::zero,g2d));
     dg::HVec temp(dg::evaluate(dg::zero,g2d));
+    dg::HVec temp1(dg::evaluate(dg::zero,g2d));
     dg::HVec temp2(dg::evaluate(dg::zero,g2d));
     dg::HVec temp_in(dg::evaluate(dg::zero,g2d_in));
     dg::HVec one(dg::evaluate(dg::one,g2d));
@@ -81,8 +82,8 @@ int main( int argc, char* argv[])
     int dataIDs[4]; 
     //1d profiles
     file::NC_Error_Handle err_out;
-    int ncid_out,dataIDs1d[8], tvarIDout;
-    std::string names1d[8] =  {"neavg", "Niavg",  "ln(ne)avg","ln(Ni)avg","potentialavg","voravg","x_","vyavg"}; 
+    int ncid_out,dataIDs1d[14], tvarIDout;
+    std::string names1d[14] =  {"neavg", "Niavg",  "ln(ne)avg","ln(Ni)avg","potentialavg","voravg","x_","vyavg","Rfx","A","Rfn","An","dtfauy","Rx"}; 
     int dim_ids2d[3],dataIDs2d[4];
     std::string names2d[4] = {"ne","potential","vor","deltane"};
     size_t count1d[2]  = {1, g2d.n()*g2d.Nx()};
@@ -93,7 +94,7 @@ int main( int argc, char* argv[])
     err_out= nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
     err_out= file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
      int dim_ids1d[2] = {dim_ids2d[0],dim_ids2d[2]};
-    for( unsigned i=0; i<8; i++){
+    for( unsigned i=0; i<14; i++){
         err_out = nc_def_var( ncid_out, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
     for( unsigned i=0; i<4; i++){
@@ -119,6 +120,19 @@ int main( int argc, char* argv[])
     }
     const dg::HVec yprobecoords(num_probes,p.ly/2.);
     dg::HVec gamma(phi);
+    dg::HVec uy(phi);
+    dg::HVec ux(phi);
+    dg::HVec aux(phi);
+    dg::HVec auy(phi);
+    dg::HVec tux(phi);
+    dg::HVec tuy(phi);
+    dg::HVec faux(phi);
+    dg::HVec fauy(phi);
+    dg::HVec ftux(phi);
+    dg::HVec ftuy(phi);
+    dg::HVec anpe(phi);
+    dg::HVec R(phi);
+    dg::HVec Rf(phi);
     dg::HVec npe_probes(num_probes);
     dg::HVec phi_probes(num_probes);
     dg::HVec gamma_probes(num_probes);
@@ -246,6 +260,37 @@ int main( int argc, char* argv[])
                 dg::blas1::scal(temp,-1.);     // nabla ( nabla <phi>)
                 Omegaz =0.5* dg::blas2::dot( temp, w2d, temp);   //< nabla (N nabla phi) >^2 or better < nabla (N nabla phi)^2 >?
                 Omegaratio = Omegaz/Omega;
+                
+                
+                
+                //Favre and conventional Reynolds stress
+                polavg(npe[0],anpe);
+                dg::blas2::gemv(poisson.dxrhs(),phi,uy);
+                dg::blas2::gemv(poisson.dyrhs(),phi,ux);
+                dg::blas1::scal(ux,-1.0);
+
+                //conventional Reynolds stress
+                polavg(ux,aux);
+                polavg(uy,auy);
+                dg::blas1::axpby(1.0,ux,-1.0,aux,tux);
+                dg::blas1::axpby(1.0,uy,-1.0,auy,tuy);
+                dg::blas1::pointwiseDot(tuy,tux,temp);
+                polavg(temp,R);
+
+                
+                //Favre Reynolds stress
+                dg::blas1::pointwiseDot(ux,npe[0],temp1);
+                polavg(temp1,faux);
+                dg::blas1::pointwiseDivide(faux,anpe,faux);
+                dg::blas1::axpby(1.0,ux,-1.0,faux,ftux);
+                dg::blas1::pointwiseDot(uy,npe[0],temp1);
+                polavg(temp1,fauy);
+                dg::blas1::pointwiseDivide(fauy,anpe,fauy);
+                dg::blas1::axpby(1.0,uy,-1.0,fauy,ftuy);
+                dg::blas1::pointwiseDot(ftuy,ftux,temp);
+                dg::blas1::pointwiseDot(temp,npe[0],temp);
+                polavg(temp,temp1);
+                dg::blas1::pointwiseDivide(temp1,anpe,Rf);
             }
             if (p.modelmode==2)
             { 
@@ -292,6 +337,25 @@ int main( int argc, char* argv[])
                 dg::blas1::scal(temp,-1.);     // nabla ( nabla <phi>)
                 Omegaz =0.5* dg::blas2::dot( temp, w2d, temp);   //< nabla (N nabla phi) >^2 or better < nabla (N nabla phi)^2 >?
                 Omegaratio = Omegaz/Omega;
+                
+                //Favre Reynolds stress
+                polavg(netot[0],anpe);
+                dg::blas2::gemv(poisson.dxrhs(),phi,uy);
+                dg::blas2::gemv(poisson.dyrhs(),phi,ux);
+                dg::blas1::scal(ux,-1.0);
+
+                dg::blas1::pointwiseDot(ux,netot[0],temp1);
+                polavg(temp1,faux);
+                dg::blas1::pointwiseDivide(faux,anpe,faux);
+                dg::blas1::axpby(1.0,ux,-1.0,faux,ftux);
+                dg::blas1::pointwiseDot(uy,netot[0],temp1);
+                polavg(temp1,fauy);
+                dg::blas1::pointwiseDivide(fauy,anpe,fauy);
+                dg::blas1::axpby(1.0,uy,-1.0,fauy,ftuy);
+                dg::blas1::pointwiseDot(ftuy,ftux,temp);
+                dg::blas1::pointwiseDot(temp,netot[0],temp);
+                polavg(temp,temp1);
+                dg::blas1::pointwiseDivide(temp1,anpe,Rf);
             }
             
             polavg(phi,temp);      //<phi>      
@@ -306,21 +370,55 @@ int main( int argc, char* argv[])
             dg::blas2::gemv(interp,temp2,temp1d); 
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[7],   start1d, count1d, temp1d.data()); 
 
+          
+            
+            //Compute the 4 terms on the RHS
+            dg::blas2::gemv(poisson.dxrhs(),Rf,temp1);
+            dg::blas1::scal(temp1,-1.0); //-dx Rf
+            dg::blas1::axpby(1.0,temp1,0.0,temp);  
+            dg::blas2::gemv(interp,temp1,temp1d); 
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[8],   start1d, count1d, temp1d.data()); //Rfx =- dx Rf
+            dg::blas2::gemv(poisson.dxrhs(),fauy,temp1); // dx fauy
+            dg::blas1::pointwiseDot(faux,temp1,temp1); // faux dx fauy
+            dg::blas1::scal(temp1,-1.0);  // -  faux dx fauy
+            dg::blas1::axpby(1.0,temp1,1.0,temp);  
+            dg::blas2::gemv(interp,temp1,temp1d); 
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[9],   start1d, count1d, temp1d.data()); //A =  -  faux dx fauy
+            dg::blas1::transform(anpe, temp2, dg::LN<double>());
+            dg::blas2::gemv(poisson.dxrhs(),temp2,temp1); // dx ln<n_e>
+            dg::blas1::pointwiseDot(Rf,temp1,temp2); // Rf dx ln<n_e>
+            dg::blas1::axpby(1.0,temp2,1.0,temp);  
+            dg::blas2::gemv(interp,temp2,temp1d); 
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[10],   start1d, count1d, temp1d.data()); //Rfn = Rf dx ln<n_e>
+            dg::blas1::pointwiseDot(faux,temp1,temp2); // faux dx ln<n_e>
+            dg::blas1::pointwiseDot(fauy,temp2,temp1); // faux fauy dx ln<n_e>
+            dg::blas1::scal(temp1,2.0);  // 2 faux fauy dx ln<n_e>
+            dg::blas1::axpby(1.0,temp1,1.0,temp);  
+            dg::blas2::gemv(interp,temp1,temp1d); 
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[11],   start1d, count1d, temp1d.data()); //An = 2 faux fauy dx ln<n_e>
+            dg::blas2::gemv(interp,temp,temp1d); 
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[12],   start1d, count1d, temp1d.data()); //Rfx+A+Rfn+An
+            dg::blas2::gemv(poisson.dxrhs(),R,temp1);
+            dg::blas1::scal(temp1,-1.0); //-dx R
+            dg::blas2::gemv(interp,temp1,temp1d); 
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[13],   start1d, count1d, temp1d.data()); // Rx = - dx R
+            
+            
             //compute probe values by interpolation and write 2d data fields
             //normalize
-                polavg(npe[0],temp);
-                dg::blas1::pointwiseDivide(npe[0],temp,temp);
-                dg::blas1::axpby(1.0,temp,-1.0,one,temp);
-                err_out = nc_put_vara_double( ncid_out, dataIDs2d[3], start2d_out, count2d_out, temp.data());
+            polavg(npe[0],temp);
+            dg::blas1::pointwiseDivide(npe[0],temp,temp);
+            dg::blas1::axpby(1.0,temp,-1.0,one,temp);
+            err_out = nc_put_vara_double( ncid_out, dataIDs2d[3], start2d_out, count2d_out, temp.data());
           
             dg::blas2::gemv(probe_interp, temp, npe_probes);
 
-                polavg(phi,temp);
-                //do not normalise to fluctuations if <phi>=0
+            polavg(phi,temp);
+            //do not normalise to fluctuations if <phi>=0
 //                 dg::blas1::pointwiseDivide(phi,temp,temp);
 //                 dg::blas1::axpby(1.0,temp,-1.0,one,temp);
 //             dg::blas2::gemv(probe_interp, temp, phi_probes);
-                dg::blas2::gemv(probe_interp, phi, phi_probes);
+            dg::blas2::gemv(probe_interp, phi, phi_probes);
             dg::blas2::gemv(dy, phi, temp);
 
             dg::blas2::gemv(probe_interp, temp, gamma_probes);
