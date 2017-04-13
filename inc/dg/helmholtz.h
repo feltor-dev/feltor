@@ -35,11 +35,14 @@ struct Helmholtz
      * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz( Geometry g, double alpha = 1., direction dir = dg::forward):
-        laplaceM_(g, not_normed, dir), 
+    Helmholtz( Geometry g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
+        laplaceM_(g, normed, dir, jfactor), 
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
-        alpha_(alpha), isSet(false)
-    { }
+        alpha_(alpha), isSet(false), jfactor_(jfactor)
+    { 
+        dg::blas2::transfer( dg::create::jumpX( g, g.bcx()),   jumpX);
+        dg::blas2::transfer( dg::create::jumpY( g, g.bcy()),   jumpY);
+    }
     /**
      * @brief Construct Helmholtz operator
      *
@@ -51,11 +54,14 @@ struct Helmholtz
      * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward):
-        laplaceM_(g, bcx,bcy,not_normed, dir), 
+    Helmholtz( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
+        laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
-        alpha_(alpha), isSet(false)
-    { }
+        alpha_(alpha), isSet(false), jfactor_(jfactor)
+    { 
+        dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
+        dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
+    }
     /**
      * @brief apply operator
      *
@@ -69,12 +75,19 @@ struct Helmholtz
     {
         if( isSet)
             blas1::pointwiseDot( chi_, x, temp_);
+        else
+            blas1::transfer( x, temp_);
         if( alpha_ != 0)
             blas2::symv( laplaceM_, x, y);
-        if( isSet)
-            blas2::symv( 1., laplaceM_.weights(), temp_, -alpha_, y);
-        else
-            blas2::symv( 1., laplaceM_.weights(), x, -alpha_, y);
+
+        blas1::axpby( 1., temp_, -alpha_, y);
+        ////add jump terms
+        //dg::blas2::symv( jumpX, x, temp_);
+        //dg::blas1::axpby( jfactor_, temp_, 1., y, y); 
+        //dg::blas2::symv( jumpY, x, temp_);
+        //dg::blas1::axpby( jfactor_, temp_, 1., y, y); 
+
+        blas1::pointwiseDot( laplaceM_.weights(), y, y);
 
     }
     /**
@@ -120,9 +133,11 @@ struct Helmholtz
     const Vector& chi() const{return chi_;}
   private:
     Elliptic<Geometry, Matrix, Vector> laplaceM_;
+    Matrix jumpX, jumpY;
     Vector temp_, chi_;
     double alpha_;
     bool isSet;
+    double jfactor_;
 };
 
 /**
@@ -151,11 +166,14 @@ struct Helmholtz2
      * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz2( Geometry g, double alpha = 1., direction dir = dg::forward):
-        laplaceM_(g, not_normed, dir), 
-        temp_(dg::evaluate(dg::one, g)),temp2_(temp_),temp3_(temp_), chi_(temp_),
-        alpha_(alpha), isSet(false)
-    { }
+    Helmholtz2( Geometry g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
+        laplaceM_(g, normed, dir, jfactor), 
+        temp1_(dg::evaluate(dg::one, g)),temp2_(temp1_), chi_(temp1_),
+        alpha_(alpha), isSet(false), jfactor_(jfactor)
+    { 
+        dg::blas2::transfer( dg::create::jumpX( g, g.bcx()),   jumpX);
+        dg::blas2::transfer( dg::create::jumpY( g, g.bcy()),   jumpY);
+    }
     /**
      * @brief Construct Helmholtz operator
      *
@@ -167,11 +185,14 @@ struct Helmholtz2
      * @param dir Direction of the Laplace operator
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz2( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward):
-        laplaceM_(g, bcx,bcy,not_normed, dir), 
-        temp_(dg::evaluate(dg::one, g)), temp2_(temp_),temp3_(temp_),chi_(temp_),
-        alpha_(alpha), isSet(false)
-    { }
+    Helmholtz2( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
+        laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
+        temp1_(dg::evaluate(dg::one, g)), temp2_(temp1_),chi_(temp1_),
+        alpha_(alpha), isSet(false), jfactor_(jfactor)
+    { 
+        dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
+        dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
+    }
     /**
      * @brief apply operator
      *
@@ -183,25 +204,24 @@ struct Helmholtz2
      */
     void symv( Vector& x, Vector& y) 
     {
-        if( isSet)
-            blas1::pointwiseDot( chi_, x, temp_); //temp = chi*x
         if( alpha_ != 0)
         {
-            blas2::symv( laplaceM_, x, y); // y = W nabla_perp^2 x
-            blas1::pointwiseDivide(y, chi_, temp2_); //temp2_ = (chi^-1)*W*nabla_perp^2 x
-            blas2::symv( laplaceM_.precond(), temp2_, temp3_); //temp3_ = V*(chi^-1)*W*nabla_perp^2 x
-            blas2::symv( laplaceM_, temp3_, temp2_);//temp2_ = W * nabla_perp^2 *(chi^-1)*nabla_perp^2 x            
+            blas2::symv( laplaceM_, x, temp1_); // temp1_ = -nabla_perp^2 x
+            blas1::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*W*nabla_perp^2 x
+            blas2::symv( laplaceM_, y, temp2_);//temp2_ = nabla_perp^2 *(chi^-1)*nabla_perp^2 x            
         }
         if( isSet)
-        {
-            //y = W temp - alpha*y = W(chi + alpha nabla_perp^2)x
-            blas2::symv( 1., laplaceM_.weights(), temp_, -2.*alpha_, y); 
-            //y = W(chi + alpha nabla_perp^2+  nabla_perp^2 *(chi^-1)*nabla_perp^2 )x
-            blas1::axpby( alpha_*alpha_, temp2_, 1.0, y, y);
-        }
-        else
-            blas2::symv( 1., laplaceM_.weights(), x, -alpha_, y);
-
+            blas1::pointwiseDot( chi_, x, y); //y = chi*x
+        else 
+            blas1::transfer( x, y);
+        blas1::axpby( 1., y, -2.*alpha_, temp1_, y); 
+        blas1::axpby( alpha_*alpha_, temp2_, 1., y, y);
+        ////add jump terms
+        //dg::blas2::symv( jumpX, x, temp1_);
+        //dg::blas1::axpby( jfactor_, temp1_, 1., y, y); 
+        //dg::blas2::symv( jumpY, x, temp1_);
+        //dg::blas1::axpby( jfactor_, temp1_, 1., y, y); 
+        blas1::pointwiseDot( laplaceM_.weights(), y, y);//Helmholtz is never normed
     }
     /**
      * @brief These are the weights that made the operator symmetric
@@ -246,9 +266,11 @@ struct Helmholtz2
     const Vector& chi()const {return chi_;}
   private:
     Elliptic<Geometry, Matrix, Vector> laplaceM_;
-    Vector temp_,temp2_,temp3_, chi_;
+    Matrix jumpX, jumpY;
+    Vector temp1_, temp2_, chi_;
     double alpha_;
     bool isSet;
+    double jfactor_;
 };
 ///@cond
 template< class G, class M, class V>
