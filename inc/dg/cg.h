@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "blas.h"
+#include "functors.h"
 
 #ifdef DG_BENCHMARK
 #include "backend/timer.cuh"
@@ -378,7 +379,9 @@ struct Invert
     template< class SymmetricOp >
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho)
     {
-        return this->operator()(op, phi, rho, op.weights(), op.precond());
+        container inv_weights( op.weights());
+        dg::blas1::transform( inv_weights, inv_weights, dg::INVERT<double>());
+        return this->operator()(op, phi, rho, op.weights(), op.precond(), inv_weights);
     }
 
     /**
@@ -400,6 +403,31 @@ struct Invert
     template< class SymmetricOp, class Preconditioner >
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const container& w, Preconditioner& p)
     {
+        container inv_weights( w);
+        dg::blas1::transform( inv_weights, inv_weights, dg::INVERT<double>());
+        return this->operator()(op, phi, rho, w, p, inv_weights);
+    }
+
+    /**
+     * @brief Solve linear problem
+     *
+     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
+     * conjugate gradient method. The initial guess comes from an extrapolation 
+     * of the last solutions.
+     * @tparam SymmetricOp Symmetric matrix or operator (with the selfmade tag)
+     * @tparam Preconditioner class of the Preconditioner
+     * @param op selfmade symmetric Matrix operator class
+     * @param phi solution (write only)
+     * @param rho right-hand-side
+     * @param w The weights that made the operator symmetric
+     * @param p The preconditioner  
+     * @param inv_weights The inverse weights used to compute the scalar product in the CG solver
+     *
+     * @return number of iterations used 
+     */
+    template< class SymmetricOp, class Preconditioner >
+    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const container& w, Preconditioner& p, const container& inv_weights)
+    {
         assert( phi0.size() != 0);
         assert( &rho != &phi);
         blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi); // 1. phi0 + 0.*phi1 = phi
@@ -417,10 +445,10 @@ struct Invert
         if( multiplyWeights_ ) 
         {
             dg::blas2::symv( w, rho, phi2);
-            number = cg( op, phi, phi2, p, eps_, nrmb_correction_);
+            number = cg( op, phi, phi2, p, inv_weights, eps_, nrmb_correction_);
         }
         else
-            number = cg( op, phi, rho, p, eps_, nrmb_correction_);
+            number = cg( op, phi, rho, p, inv_weights, eps_, nrmb_correction_);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
         if(rank==0)
