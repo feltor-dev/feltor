@@ -23,7 +23,7 @@ dg::bc bcy = dg::PER;
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double initial( double x, double y) {return 0.;}
-double amp = 0.5;
+double amp = 0.9999;
 double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
 //double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
@@ -53,13 +53,16 @@ int main()
     dg::DVec x =    dg::evaluate( initial, grid);
     dg::DVec b =    dg::evaluate( rhs, grid);
     dg::DVec chi =  dg::evaluate( pol, grid);
+    dg::DVec chi_inv(chi); 
+    dg::blas1::transform( chi, chi_inv, dg::INVERT<double>());
+    dg::blas1::pointwiseDot( chi_inv, v2d, chi_inv);
     dg::DVec temp = x;
 
 
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     {
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol( grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol( grid, dg::not_normed, dg::centered, 1e-1);
     pol.set_chi( chi);
     t.toc();
     std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
@@ -69,7 +72,7 @@ int main()
 
     std::cout << eps<<" ";
     t.tic();
-    std::cout << " "<< invert( pol, x, b, w2d, one, v2d);
+    std::cout << " "<< invert( pol, x, b, w2d, chi_inv, v2d);
     t.toc();
     //std::cout << "Took "<<t.diff()<<"s\n";
     }
@@ -85,22 +88,22 @@ int main()
     const double norm = dg::blas2::dot( w2d, solution);
     std::cout << " "<<sqrt( err/norm);
     {
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward, 1.);
     pol_forward.set_chi( chi);
     x = temp;
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_fw( pol_forward, x, b);
+    std::cout << " "<< invert_fw( pol_forward, x, b, w2d, chi_inv, v2d);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm);
     }
 
     {
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, 1-amp);
     pol_backward.set_chi( chi);
     x = temp;
     dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_bw( pol_backward, x, b);
+    std::cout << " "<< invert_bw( pol_backward, x, b, w2d, v2d, v2d);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm)<<std::endl;
