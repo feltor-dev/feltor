@@ -113,7 +113,8 @@ struct Feltor
     dg::Elliptic< Geometry, Matrix, container > pol,lapperp; 
     dg::Helmholtz< Geometry, Matrix, container > invgammaPhi,invgammaN;
 
-    dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
+    dg::Inverttest< container> invert_pol;
+    dg::Invert<container> invert_invgammaN,invert_invgammaPhi;
     
     dg::PoloidalAverage<container, container > polavg; //device int vectors would be better for cuda
 
@@ -136,7 +137,7 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N/U then phi BCC
     pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered), 
-    lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
+    lapperp ( g,g.bcx(), g.bcy(),       dg::normed,          dg::centered),
     invgammaPhi( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaN(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
@@ -169,7 +170,8 @@ container& Feltor<Grid, Matrix, container>::polarisation( const std::vector<cont
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     charge_ = dg::blas2::dot(one,w2d,chi);
     //= Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+//     dg::blas1::pointwiseDivide(one,one,omega);
+    unsigned number = invert_pol( pol, phi[0], chi, w2d,v2d);     //Gamma n_i -ne = -nabla chi nabla phi
         if(  number == invert_pol.get_max())
             throw dg::Fail( p.eps_pol);
   }
@@ -182,7 +184,6 @@ container& Feltor<Grid, Matrix, container>::polarisation( const std::vector<cont
     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-1)    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) - (n_e-(bgamp+profamp)) = Gamma n_i - n_e
     charge_ = dg::blas2::dot(one,w2d,chi);
-
 //     dg::blas1::pointwiseDivide(chi,omega,chi);              // B^2(Gamma n_i - n_e )/  (\mu_i n_i )
     polavg(omega,lambda);
     dg::blas1::pointwiseDivide(chi,lambda,chi);              // (Gamma n_i - n_e )/  (\mu_i <n_i/B^2> )
