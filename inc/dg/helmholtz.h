@@ -19,6 +19,7 @@ namespace dg{
  * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
+ * @tparam Geometry The geometry you want to use
  * @tparam Matrix The cusp-matrix class you want to use
  * @tparam Vector The Vector class you want to use
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
@@ -29,38 +30,34 @@ struct Helmholtz
     /**
      * @brief Construct Helmholtz operator
      *
-     * @tparam Grid The Grid class
      * @param g The grid to use
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
+     * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
     Helmholtz( Geometry g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, normed, dir, jfactor), 
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
-        alpha_(alpha), isSet(false), jfactor_(jfactor)
+        alpha_(alpha), isSet(false)
     { 
-        dg::blas2::transfer( dg::create::jumpX( g, g.bcx()),   jumpX);
-        dg::blas2::transfer( dg::create::jumpY( g, g.bcy()),   jumpY);
     }
     /**
      * @brief Construct Helmholtz operator
      *
-     * @tparam Grid The Grid class
      * @param g The grid to use
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
+     * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
     Helmholtz( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
         temp_(dg::evaluate(dg::one, g)), chi_(temp_),
-        alpha_(alpha), isSet(false), jfactor_(jfactor)
+        alpha_(alpha), isSet(false)
     { 
-        dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
-        dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
     }
     /**
      * @brief apply operator
@@ -81,12 +78,6 @@ struct Helmholtz
             blas2::symv( laplaceM_, x, y);
 
         blas1::axpby( 1., temp_, -alpha_, y);
-        ////add jump terms
-        //dg::blas2::symv( jumpX, x, temp_);
-        //dg::blas1::axpby( jfactor_, temp_, 1., y, y); 
-        //dg::blas2::symv( jumpY, x, temp_);
-        //dg::blas1::axpby( jfactor_, temp_, 1., y, y); 
-
         blas1::pointwiseDot( laplaceM_.weights(), y, y);
 
     }
@@ -99,7 +90,6 @@ struct Helmholtz
     /**
      * @brief Vector to use in conjugate gradient solvers
      *
-     * multiply result by these coefficients to get the normed result
      * @return Vector
      */
     const Vector& precond()const {return laplaceM_.precond();}
@@ -133,11 +123,9 @@ struct Helmholtz
     const Vector& chi() const{return chi_;}
   private:
     Elliptic<Geometry, Matrix, Vector> laplaceM_;
-    Matrix jumpX, jumpY;
     Vector temp_, chi_;
     double alpha_;
     bool isSet;
-    double jfactor_;
 };
 
 /**
@@ -149,10 +137,12 @@ struct Helmholtz
  * \f[ \left[ \chi +2 \alpha\Delta +  \alpha^2\Delta \left(\chi^{-1}\Delta \right)\right] \f] 
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
+ * @tparam Geometry The geometry class you want to use
  * @tparam Matrix The cusp-matrix class you want to use
  * @tparam Vector The Vector class you want to use
- * @tparam Vector The Vector class you want to use
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
+ * @attention It might be better to solve the normal Helmholtz operator twice
+ * consecutively than solving the Helmholtz2 operator once. 
  */
 template< class Geometry, class Matrix, class Vector> 
 struct Helmholtz2
@@ -160,38 +150,34 @@ struct Helmholtz2
     /**
      * @brief Construct Helmholtz operator
      *
-     * @tparam Grid The Grid class
      * @param g The grid to use
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
+     * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
     Helmholtz2( Geometry g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, normed, dir, jfactor), 
         temp1_(dg::evaluate(dg::one, g)),temp2_(temp1_), chi_(temp1_),
-        alpha_(alpha), isSet(false), jfactor_(jfactor)
+        alpha_(alpha), isSet(false)
     { 
-        dg::blas2::transfer( dg::create::jumpX( g, g.bcx()),   jumpX);
-        dg::blas2::transfer( dg::create::jumpY( g, g.bcy()),   jumpY);
     }
     /**
      * @brief Construct Helmholtz operator
      *
-     * @tparam Grid The Grid class
      * @param g The grid to use
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
+     * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
     Helmholtz2( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
         temp1_(dg::evaluate(dg::one, g)), temp2_(temp1_),chi_(temp1_),
-        alpha_(alpha), isSet(false), jfactor_(jfactor)
+        alpha_(alpha), isSet(false)
     { 
-        dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
-        dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
     }
     /**
      * @brief apply operator
@@ -216,11 +202,6 @@ struct Helmholtz2
             blas1::transfer( x, y);
         blas1::axpby( 1., y, -2.*alpha_, temp1_, y); 
         blas1::axpby( alpha_*alpha_, temp2_, 1., y, y);
-        ////add jump terms
-        //dg::blas2::symv( jumpX, x, temp1_);
-        //dg::blas1::axpby( jfactor_, temp1_, 1., y, y); 
-        //dg::blas2::symv( jumpY, x, temp1_);
-        //dg::blas1::axpby( jfactor_, temp1_, 1., y, y); 
         blas1::pointwiseDot( laplaceM_.weights(), y, y);//Helmholtz is never normed
     }
     /**
@@ -266,11 +247,9 @@ struct Helmholtz2
     const Vector& chi()const {return chi_;}
   private:
     Elliptic<Geometry, Matrix, Vector> laplaceM_;
-    Matrix jumpX, jumpY;
     Vector temp1_, temp2_, chi_;
     double alpha_;
     bool isSet;
-    double jfactor_;
 };
 ///@cond
 template< class G, class M, class V>
