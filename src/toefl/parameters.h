@@ -16,6 +16,7 @@ struct Parameters
     unsigned maxout;
 
     double eps_pol, eps_gamma, eps_time;
+    double jfactor;
     double tau, kappa, friction, nu;
 
     double amp, sigma, posX, posY;
@@ -60,6 +61,7 @@ struct Parameters
         equations = js.get("equations", "global").asString();
         boussinesq = js.get("boussinesq", false).asBool();
         friction = js.get("friction", 0.).asDouble();
+        jfactor = js.get("jfactor", 1.).asDouble();
     }
     
     /**
@@ -95,6 +97,7 @@ struct Parameters
             << "    posX:         "<<posX<<"\n"
             << "    posY:         "<<posY<<"\n";
         os << "Stopping for CG:         "<<eps_pol<<"\n"
+            <<"scale for jump terms:    "<<jfactor<<"\n"
             <<"Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
             <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
