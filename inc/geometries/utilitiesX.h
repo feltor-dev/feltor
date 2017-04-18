@@ -85,7 +85,7 @@ struct XCross
             dg::stepperRK17( fieldRZtau_, begin, end, psi0, 0, N);
 
             eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
-            if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
+            if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
         }
         if( quad_ == 0 || quad_ == 2){ return end_old[1] - Z_X_;}
         return end_old[0] - R_X_;
@@ -206,7 +206,7 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
         double az = dg::blas1::dot( z, z);
         eps =  sqrt( er + ez)/sqrt(ar+az);
         std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
-        if( isnan(eps)) { eps = eps_old/2.; }
+        if( std::isnan(eps)) { eps = eps_old/2.; }
         steps*=2;
     }
     r = r_old, z = z_old, yr = yr_old, yz = yz_old, xr = xr_old, xz = xz_old;
@@ -458,7 +458,7 @@ struct SeparatriX
             }
             eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             //std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
-            if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
+            if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
         }
         N_steps_=N;
         std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
@@ -514,7 +514,7 @@ struct InitialX
                 N*=2; dg::stepperRK6( fieldRZtau_, begin, end, psi0, psi1, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
-                if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
+                if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
                 //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
@@ -528,7 +528,7 @@ struct InitialX
                 N*=2; dg::stepperRK6( fieldRZtau_, begin, end, psi0, psi1, N); //lower order integrator is better for difficult field
 
                 eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
-                if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
+                if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
                 //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
@@ -564,7 +564,7 @@ struct InitialX
                 dg::stepperRK17( fieldRZtau_, begin, end, psip_(begin[0], begin[1]), psi, steps);
                 eps = sqrt( (end[0]-end_old[0])*(end[0]- end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
-                if( isnan(eps)) { eps = eps_old/2.; end = end_old; }
+                if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
                 steps*=2;
             }
             //std::cout << "Found initial point "<<end_old[0]<<" "<<end_old[1]<<"\n";
