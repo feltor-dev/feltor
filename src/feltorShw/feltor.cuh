@@ -113,8 +113,8 @@ struct Feltor
     dg::Elliptic< Geometry, Matrix, container > pol,lapperp; 
     dg::Helmholtz< Geometry, Matrix, container > invgammaPhi,invgammaN;
 
-    dg::Inverttest< container> invert_pol;
-    dg::Invert<container> invert_invgammaN,invert_invgammaPhi;
+    
+    dg::Invert<container> invert_invgammaN,invert_invgammaPhi, invert_pol;
     
     dg::PoloidalAverage<container, container > polavg; //device int vectors would be better for cuda
 
@@ -135,8 +135,8 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
-    poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N/U then phi BCC
-    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered), 
+    poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N then phi BCC
+    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::forward,p.jfactor), //p.bgprofamp+p.nprofileamp*exp(-p.lx*p.invkappa)
     lapperp ( g,g.bcx(), g.bcy(),       dg::normed,          dg::centered),
     invgammaPhi( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaN(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
@@ -166,12 +166,14 @@ container& Feltor<Grid, Matrix, container>::polarisation( const std::vector<cont
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
+//     dg::blas1::pointwiseDivide(v2d,profne,omega);
+        dg::blas1::pointwiseDivide(one,chi,omega);
+
     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     charge_ = dg::blas2::dot(one,w2d,chi);
     //= Gamma n_i - n_e
-//     dg::blas1::pointwiseDivide(one,one,omega);
-    unsigned number = invert_pol( pol, phi[0], chi, w2d,v2d);     //Gamma n_i -ne = -nabla chi nabla phi
+    unsigned number = invert_pol( pol, phi[0], chi, w2d, omega, v2d);     //Gamma n_i -ne = -nabla chi nabla phi
         if(  number == invert_pol.get_max())
             throw dg::Fail( p.eps_pol);
   }
@@ -207,13 +209,14 @@ container& Feltor<Grid, Matrix, container>::polarisation( const std::vector<cont
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     dg::blas1::scal(chi,p.mu[1]);
     pol.set_chi( chi);
+    dg::blas1::pointwiseDivide(one,chi,lambda);
     dg::blas1::transform( npe[1], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
     invert_invgammaN(invgammaN,chi,omega); //chi= Gamma (Ni-(bgamp+profamp)) 
     dg::blas1::transform( npe[0], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
     dg::blas1::axpby( -1., omega, 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     charge_ = dg::blas2::dot(one,w2d,chi);
     //= Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+    unsigned number = invert_pol( pol, phi[0], chi, w2d, lambda, v2d);            //Gamma n_i -ne = -nabla chi nabla phi
         if(  number == invert_pol.get_max())
             throw dg::Fail( p.eps_pol);
   }

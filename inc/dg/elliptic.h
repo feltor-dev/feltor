@@ -53,10 +53,11 @@ class Elliptic
      * @param g The Grid, boundary conditions are taken from here
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
+     * @param jfactor scales the jump term
      * @note chi is assumed 1 per default
      */
-    Elliptic( Geometry g, norm no = not_normed, direction dir = forward): 
-        no_(no), g_(g)
+    Elliptic( Geometry g, norm no = not_normed, direction dir = forward, double jfactor = 1): 
+        no_(no), g_(g), jfactor_(jfactor)
     { 
         construct( g, g.bcx(), g.bcy(), dir);
     }
@@ -73,9 +74,10 @@ class Elliptic
      * @param bcy boundary contition in y
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
+     * @param jfactor scales the jump term
      */
-    Elliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
-        no_(no), g_(g)
+    Elliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor = 1): 
+        no_(no), g_(g), jfactor_(jfactor)
     { 
         construct( g, bcx, bcy, dir);
     }
@@ -106,7 +108,18 @@ class Elliptic
      * @return inverse weights
      */
     const Vector& precond()const {return precond_;}
-
+    /**
+     * @brief Change jfactor
+     *
+     * @return reference to jfactor
+     */
+    double& jfactor( ){  return jfactor_;}
+    /**
+     * @brief Access jfactor
+     *
+     * @return jfactor
+     */
+    double jfactor( ) const  {return jfactor_;}
     /**
      * @brief Computes the polarisation term
      *
@@ -134,9 +147,9 @@ class Elliptic
 
         //add jump terms
         dg::blas2::symv( jumpX, x, tempx);
-        dg::blas1::axpby( +1., tempx, 1., y, y); 
+        dg::blas1::axpby( jfactor_, tempx, 1., y, y); 
         dg::blas2::symv( jumpY, x, tempy);
-        dg::blas1::axpby( +1., tempy, 1., y, y); 
+        dg::blas1::axpby( jfactor_, tempy, 1., y, y); 
         if( no_ == not_normed)//multiply weights without volume
             dg::blas2::symv( weights_wo_vol, y, y);
 
@@ -179,6 +192,7 @@ class Elliptic
     Vector xchi, tempx, tempy, gradx;
     norm no_;
     Geometry g_;
+    double jfactor_;
 };
 
 
