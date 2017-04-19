@@ -57,6 +57,7 @@ struct GeomParameters
         psipmaxcut = v[22];
         psipmaxlim = v[23];
         qampl = v[24];
+        equilibrium = "solovev";
     }
     GeomParameters( const Json::Value& js) {
         A  = js.get("A", 0).asDouble();
@@ -104,6 +105,31 @@ struct GeomParameters
             <<" qampl    = "<<qampl<<"\n";
         os << std::flush;
 
+    }
+
+    /**
+     * @brief Put values into a json string
+     *
+     * @return 
+     */
+    Json::Value dump( ) const
+    {
+        Json::Value js; 
+        js["A"] = A;
+        for (unsigned i=0;i<12;i++) js["c"][i] = c[i];
+        js["R_0"] = R_0;
+        js["inverseaspectratio"] = a/R_0;
+        js["elongation"] = elongation;
+        js["triangularity"] = triangularity;
+        js["alpha"] = alpha; 
+        js["rk4eps"] = rk4eps;
+        js["psip_min"] = psipmin;
+        js["psip_max"] = psipmax;
+        js["psip_max_cut"] = psipmaxcut;
+        js["psip_max_lim"] = psipmaxlim;
+        js["qampl"] = qampl;
+        js[ "equilibrium"] = equilibrium;
+        return js;
     }
 };
 } //namespace solovev
