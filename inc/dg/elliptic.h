@@ -28,7 +28,16 @@ namespace dg
  * \f[ -\frac{1}{\sqrt{g}}\left( 
  * \partial_x\left(\sqrt{g}\chi \left(g^{xx}\partial_x + g^{xy}\partial_y \right)\right) 
  + \partial_y\left(\sqrt{g}\chi \left(g^{yx}\partial_x + g^{yy}\partial_y \right)\right) \right)\f]
- is discretized
+ is discretized. Note that the discontinuous Galerkin discretization adds so-called
+ jump terms via a jump matrix 
+ \f[ D^\dagger_x \chi D_x + \alpha J \f]
+ where \f$\alpha\f$  is a scale factor ( = jfactor). Usually the default \f$ \alpha=1 \f$ is a good choice.
+ However, in some cases, e.g. when \f$ \chi \f$ exhibits very large variations
+ \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values. 
+ In a time dependent problem the value of \f$\alpha\f$ also determines the 
+ numerical diffusion, i.e. for low values numerical oscillations may appear. 
+ Also note that a forward discretization has more diffusion than a centered discretization.
+
  * @tparam Geometry The geometry sets the metric of the grid
  * @tparam Matrix The Matrix class to use
  * @tparam Vector The Vector class to use
@@ -37,6 +46,9 @@ namespace dg
  * and thus in a conjugate gradient solver. 
  * @note The constructors initialize \f$ \chi=1\f$ so that a negative laplacian operator
  * results
+ * @note The inverse dG weights make a good general purpose preconditioner, but 
+ * the inverse of \f$ \chi\f$ should also seriously be considered
+ * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion
  * @attention Pay attention to the negative sign 
  */
 template <class Geometry, class Matrix, class Vector>
@@ -53,10 +65,11 @@ class Elliptic
      * @param g The Grid, boundary conditions are taken from here
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
+     * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @note chi is assumed 1 per default
      */
-    Elliptic( Geometry g, norm no = not_normed, direction dir = forward): 
-        no_(no), g_(g)
+    Elliptic( Geometry g, norm no = not_normed, direction dir = forward, double jfactor=1.): 
+        no_(no), g_(g), jfactor_(jfactor)
     { 
         construct( g, g.bcx(), g.bcy(), dir);
     }
@@ -73,9 +86,10 @@ class Elliptic
      * @param bcy boundary contition in y
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
+     * @param jfactor scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      */
-    Elliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
-        no_(no), g_(g)
+    Elliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.): 
+        no_(no), g_(g), jfactor_(jfactor)
     { 
         construct( g, bcx, bcy, dir);
     }
@@ -84,6 +98,7 @@ class Elliptic
      * @brief Change Chi 
      *
      * @param chi The new chi
+     * @note There is no get_chi because chi is multiplied with volume elements
      */
     void set_chi( const Vector& chi)
     {
@@ -96,16 +111,31 @@ class Elliptic
      * @brief Returns the weights used to make the matrix symmetric 
      *
      * i.e. the volume form 
-     * @return weights
+     * @return weights (volume form including dG weights)
      */
     const Vector& weights()const {return weights_;}
     /**
-     * @brief Returns the preconditioner to use in conjugate gradient
+     * @brief Returns the default preconditioner to use in conjugate gradient
      *
-     * In this case inverse weights are the best choice
-     * @return inverse weights
+     * Currently returns the inverse of the weights without volume elment
+     * @return inverse weights (without volume form)
+     * @note a better preconditioner might be the inverse of \f$\chi\f$ especially 
+     * when \f$ \chi\f$ exhibits large amplitudes or variations
      */
     const Vector& precond()const {return precond_;}
+
+    /**
+     * @brief Set the currently used jfactor
+     *
+     * @param new_jfactor The new scale factor for jump terms
+     */
+    void set_jfactor( double new_jfactor) {jfactor_ = new_jfactor;}
+    /**
+     * @brief Get the currently used jfactor
+     *
+     * @return  The current scale factor for jump terms
+     */
+    double get_jfactor() const {return jfactor_;}
 
     /**
      * @brief Computes the polarisation term
@@ -134,9 +164,9 @@ class Elliptic
 
         //add jump terms
         dg::blas2::symv( jumpX, x, tempx);
-        dg::blas1::axpby( +1., tempx, 1., y, y); 
+        dg::blas1::axpby( jfactor_, tempx, 1., y, y); 
         dg::blas2::symv( jumpY, x, tempy);
-        dg::blas1::axpby( +1., tempy, 1., y, y); 
+        dg::blas1::axpby( jfactor_, tempy, 1., y, y); 
         if( no_ == not_normed)//multiply weights without volume
             dg::blas2::symv( weights_wo_vol, y, y);
 
@@ -179,6 +209,7 @@ class Elliptic
     Vector xchi, tempx, tempy, gradx;
     norm no_;
     Geometry g_;
+    double jfactor_;
 };
 
 
@@ -305,13 +336,14 @@ struct GeneralElliptic
     /**
      * @brief Returns the weights used to make the matrix symmetric 
      *
-     * @return weights
+     * in this case the volume element
+     * @return weights (the volume element including dG weights)
      */
     const Vector& weights()const {return weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
      *
-     * In this case inverse weights are the best choice
+     * In this case inverse weights (without volume element) are returned
      * @return inverse weights
      */
     const Vector& precond()const {return precond_;}

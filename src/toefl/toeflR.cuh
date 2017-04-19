@@ -155,7 +155,7 @@ ToeflR< Geometry, M, container>::ToeflR( const Geometry& grid, const Parameters&
     phi( 2, chi), dyphi( phi), ype(phi),
     dyy(2,chi), lny( dyy), lapy(dyy),
     gamma_n(chi),
-    pol(     grid, not_normed, dg::centered), 
+    pol(     grid, not_normed, dg::centered, p.jfactor), 
     laplaceM( grid, normed, centered),
     gamma1(  grid, -0.5*p.tau, dg::centered),
     arakawa( grid), 
@@ -243,7 +243,9 @@ const container& ToeflR<G, M, container>::polarisation( const std::vector<contai
         if( boussinesq) 
             blas1::pointwiseDivide( omega, chi, omega);
     //invert 
-    unsigned number = invert_pol( pol, phi[0], omega);
+    dg::blas1::transform( chi, chi, dg::INVERT<double>());
+    dg::blas1::pointwiseDot( chi, v2d, chi);
+    unsigned number = invert_pol( pol, phi[0], omega, w2d, chi, v2d);
     if(  number == invert_pol.get_max())
         throw dg::Fail( eps_pol);
     return phi[0];

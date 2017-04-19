@@ -15,13 +15,18 @@ namespace dg
 * The idea of this mpi matrix is to separate communication and computation in order to reuse existing optimized matrix formats for the computation. 
 * It can be expected that this works particularly well for cases in which the communication to computation ratio is low. 
 * This class assumes that the matrix and vector elements are distributed rowwise among mpi processes.
-* The matrix elements are then further separated into columns that are inside the domain and the ones that are outside. 
-* For the computation of the inner points no communication is needed.
+* The matrix elements are then further separated into columns that are inside the domain and the ones that are outside, i.e. 
+* \f[
+ M=M_i+M_o
+ \f]
+ where \f$ M_i\f$ is the inner matrix which requires no communication, while
+ \f$ M_o\f$ is the outer matrix containing all elements which require 
+ communication from the Collective object.
 * @tparam LocalMatrixInner The class of the matrix for local computations of the inner points. 
  doSymv(m,x,y) needs to be callable on the container class of the MPI_Vector
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points. 
  doSymv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
-* @tparam Collective The Communication class needs to gather values across processes. 
+* @tparam Collective models aCommunicator The Communication class needs to gather values across processes. 
 container collect( const container& input);
 Gather points from other processes that are necessary for the outer computations.
 int size(); 
@@ -48,9 +53,11 @@ struct RowColDistMat
 
     * The idea is that a device matrix can be constructed by copying a host matrix.
     *
-    * @tparam OtherMatrixInner
-    * @tparam OtherMatrixOuter
-    * @tparam OtherCollective
+    * @tparam OtherMatrixInner LocalMatrixInner must be copy-constructible from OtherMatrixInner
+    * @tparam OtherMatrixOuter LocalMatrixOuter must be copy-constructible from OtherMatrixOuter
+
+    * @tparam OtherCollective Collective must be copy-constructible from OtherCollective
+
     * @param src another Matrix
     */
     template< class OtherMatrixInner, class OtherMatrixOuter, class OtherCollective>
@@ -139,7 +146,7 @@ struct RowColDistMat
 * This class assumes that the matrix and vector elements are distributed rowwise among mpi processes.
 * @tparam LocalMatrix The class of the matrix for local computations. 
  symv needs to be callable on the container class of the MPI_Vector
-* @tparam Collective The Communication class needs to scatter and gather values across processes. 
+* @tparam Collective models aCommunicator The Communication class needs to scatter and gather values across processes. 
 container collect( const container& input);
 Gather all points (including the ones that the process already has) necessary for the local matrix-vector
 product into one vector, such that the local matrix can be applied.
@@ -162,8 +169,8 @@ struct RowDistMat
     /**
     * @brief Copy Constructor 
     *
-    * @tparam OtherMatrix
-    * @tparam OtherCollective
+    * @tparam OtherMatrix LocalMatrix must be copy-constructible from OtherMatrix
+    * @tparam OtherCollective Collective must be copy-constructible from OtherCollective
     * @param src The other matrix
     */
     template< class OtherMatrix, class OtherCollective>
@@ -234,7 +241,7 @@ struct RowDistMat
 * This class assumes that the matrix and vector elements are distributed columnwise among mpi processes.
 * @tparam LocalMatrix The class of the matrix for local computations. 
  symv needs to be callable on the container class of the MPI_Vector
-* @tparam Collective The Communication class needs to scatter and gather values across processes. 
+* @tparam Collective models aCommunicator The Communication class needs to scatter and gather values across processes. 
 void send_and_reduce( const container& input, container& output);
 Sends the results of the local computations to the processes they belong to. 
 After that the results of the same lines need to be reduced.

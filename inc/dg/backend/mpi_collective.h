@@ -175,6 +175,9 @@ void Collective::gather_( const thrust::host_vector<double>& gatherFrom, thrust:
  coll.gather( hrecv, hrecv2);
  //hrecv2 now equals hvalues independent of process rank
  @endcode
+ @tparam Index an integer Vector
+ @tparam Vector a Vector
+ @note models aCommunicator
  */
 template< class Index, class Vector>
 struct BijectiveComm
