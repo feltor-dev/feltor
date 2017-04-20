@@ -28,7 +28,9 @@ if you create an include folder in your home directory and create
 links to the aforementioned libraries. Or you can 
 create your own file. 
 #### 4. Documentation 
-The documentation can be generated with [Doxygen](http://www.doxygen.org) in each subfolder or you can access the whole documentation [online](http://feltor-dev.github.io/feltor/inc/dg/html/index.html).
+The developer oriented documentation can be generated with [Doxygen](http://www.doxygen.org) in each subfolder or you can access the whole documentation [online](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html).
+Please also find some general information and the user oriented documentation 
+in the [Wiki pages](https://github.com/feltor-dev/feltor/wiki).
 #### 5. Official releases 
 Our latest code release has a shiny DOI badge from zenodo
 
