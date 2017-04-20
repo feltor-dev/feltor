@@ -1,5 +1,4 @@
-#ifndef _DG_PARAMETERS_ 
-#define _DG_PARAMETERS_
+#pragma once
 #include <string>
 #include "dg/enums.h"
 #include "json/json.h"
@@ -27,11 +26,6 @@ struct Parameters
     std::string init, equations;
     bool boussinesq;
 
-    /**
-     * @brief constructor to make a const object
-     *
-     * @param js json object
-     */
     Parameters( const Json::Value& js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
@@ -64,11 +58,6 @@ struct Parameters
         jfactor = js.get("jfactor", 1.).asDouble();
     }
     
-    /**
-     * @brief Display parameters
-     *
-     * @param os Output stream
-     */
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
@@ -106,8 +95,3 @@ struct Parameters
             <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
     }
 };
-
-
-    
-
-#endif//_DG_PARAMETERS_
