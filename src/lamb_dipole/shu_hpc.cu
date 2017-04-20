@@ -32,28 +32,24 @@ double shearLayer(double x, double y){
 int main( int argc, char * argv[])
 {
     dg::Timer t;
-    //input files
-    std::vector<double> v;
-    std::string input;
+    ////////////////////////Parameter initialisation//////////////////////////
+    Json::Reader reader;
+    Json::Value js;
     if( argc != 3)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else 
     {
-        v = file::read_input( argv[1]);
-        input = file::read_file( argv[1]);
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false); //read input without comments
     }
-    const Parameters p( v);
-    p.display();
-    if( p.k != k)
-    {
-        std::cerr << "Time stepper needs recompilation!\n";
-        return -1;
-    }
+    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const Parameters p( js);
+    p.display( std::cout);
 
-    //initiate solver 
+    //////////////initiate solver/////////////////////////////////////////
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::DVec w2d( dg::create::weights(grid));
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
@@ -94,6 +90,45 @@ int main( int argc, char * argv[])
         dg::blas1::transfer( transferD[i], output[i]);
     t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
     t5file.append( vorticity, enstrophy, energy, variation);
+    /////////////////////////////set up netcdf/////////////////////////////////////
+    file::NC_Error_Handle err;
+    int ncid;
+    err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    int dim_ids[3], tvarID;
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    //field IDs
+    std::string names[2] = {"electrons", "potential"}; 
+    int dataIDs[2]; 
+    for( unsigned i=0; i<2; i++){
+        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
+
+    //energy IDs
+    int EtimeID, EtimevarID;
+    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    int energyID, massID, dissID, dEdtID;
+    err = nc_def_var( ncid, "energy",      NC_DOUBLE, 1, &EtimeID, &energyID);
+    err = nc_def_var( ncid, "vorticity",        NC_DOUBLE, 1, &EtimeID, &massID);
+    err = nc_def_var( ncid, "enstrophy", NC_DOUBLE, 1, &EtimeID, &dissID);
+    err = nc_def_var( ncid, "dEdt",        NC_DOUBLE, 1, &EtimeID, &dEdtID);
+    err = nc_enddef(ncid);
+    size_t start[3] = {0, 0, 0};
+    size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+    size_t Estart[] = {0};
+    size_t Ecount[] = {1};
+    ///////////////////////////////////first output/////////////////////////
+    //output all three fields
+    std::vector<dg::DVec> transferD(4);
+    std::vector<dg::HVec> output(4);
+    transferD[0] = y1[0], transferD[1] = y1[1], transferD[2] = test.potential()[0], transferD[3] = test.potential()[0]; //electrons
+    start[0] = 0;
+    for( int k=0;k<4; k++)
+    {
+        dg::blas1::transfer( transferD[k], output[k]);
+        err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
+    }
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+    err = nc_close(ncid);
     try{
     for( unsigned i=0; i<p.maxout; i++)
     {

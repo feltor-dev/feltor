@@ -27,7 +27,6 @@ double aparallel( double x, double y)
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
-    std::stringstream title;
     Json::Reader reader;
     Json::Value js;
     if( argc == 1)
@@ -48,6 +47,7 @@ int main( int argc, char* argv[])
     const eule::Parameters p( js);
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
+    std::stringstream title;
     std::ifstream is( "window_params.js");
     reader.parse( is, js, false);
     is.close();

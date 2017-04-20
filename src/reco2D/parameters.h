@@ -27,11 +27,6 @@ struct Parameters
     unsigned maxout;
     dg::bc bc_x, bc_y;
 
-    /**
-     * @brief constructor to make a const object
-     *
-     * @param js json object
-     */
     Parameters( const Json::Value& js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
@@ -53,11 +48,6 @@ struct Parameters
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();
     }
-    /**
-     * @brief Display parameters
-     *
-     * @param os Output stream
-     */
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
