@@ -9,7 +9,7 @@ namespace eule
  */
 struct Parameters
 {
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny; 
     double dt; 
 
     double eps_pol, eps_maxwell, eps_time;
@@ -36,7 +36,6 @@ struct Parameters
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
         Ny = js["Ny"].asUInt();
-        Nz = js["Nz"].asUInt();
         dt = js["dt"].asDouble();
         eps_pol = js["eps_pol"].asDouble();
         eps_maxwell = js["eps_maxwell"].asDouble();
@@ -78,7 +77,6 @@ struct Parameters
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"
             <<"    Ny = "<<Ny<<"\n"
-            <<"    Nz = "<<Nz<<"\n"
             <<"    dt = "<<dt<<"\n";
         os  <<"Perturbation parameters are: \n"
             << "    amplitude:    "<<amp<<"\n";
