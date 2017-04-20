@@ -20,7 +20,7 @@
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
+    ////Parameter initialisation ////////////////////////////////////////////
     std::stringstream title;
     Json::Reader reader;
     Json::Value js;
@@ -39,15 +39,15 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    /////////////////////////////////////////////////////////////////////////
     const Parameters p( js);
     p.display( std::cout);
-
+    /////////glfw initialisation ////////////////////////////////////////////
     std::ifstream is( "window_params.js");
     reader.parse( is, js, false);
     is.close();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+    /////////////////////////////////////////////////////////////////////////
 
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 

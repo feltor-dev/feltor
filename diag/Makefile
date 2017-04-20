@@ -32,7 +32,7 @@ feltorSHvmaxdiag: feltorSHvmaxdiag.cu
 vmaxnc: vmaxnc.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 fftwdiag: fftwdiag.cpp
-	$(CC) $(OPT) $(CFLAGS) -std=c++0x $< -o $@ $(INCLUDE) $(LIBS)  -lfftw3 $(JSONLIB)
+	$(CC) $(OPT) $(CFLAGS) -std=c++0x $< -o $@ $(INCLUDE) $(LIBS) -I$(HOME)/include/spectral -lfftw3 $(JSONLIB)
 histdiag: histdiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 compare: compare.cpp
