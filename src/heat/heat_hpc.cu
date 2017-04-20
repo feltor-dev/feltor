@@ -12,7 +12,6 @@
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
 // #include "dg/backend/ell_interpolation.h"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "dg/runge_kutta.h"
 #include "dg/multistep.h"
@@ -28,9 +27,10 @@ using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
-    ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    ////Parameter initialisation ////////////////////////////////////////////
+    std::stringstream title;
+    Json::Reader reader;
+    Json::Value js, gs;
     if(!(( argc == 4) || ( argc == 5)) )
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [output.nc] [input.nc]\n";
@@ -39,24 +39,13 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-            v = file::read_input( argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            std::cout << geom << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( v);
-    p.display( std::cout);
-    const dg::geo::solovev::GeomParameters gp(v3);
-    gp.display( std::cout);
-    
-    ///////////////////////////////////////////////////////////////////////////
+    const Parameters p( js); p.display( std::cout);
+    const GeomParameters gp(gs); gp.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;

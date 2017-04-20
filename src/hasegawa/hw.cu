@@ -9,7 +9,6 @@
 #include "hw.cuh"
 #include "dg/multistep.h"
 #include "dg/backend/timer.cuh"
-#include "file/read_input.h"
 #include "../toefl/parameters.h"
 #include "dg/backend/xspacelib.cuh"
 
@@ -19,39 +18,36 @@
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
-const unsigned k = 3; //!< a change of k needs a recompilation!
-
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
-    std::vector<double> v, v2;
+    ////Parameter initialisation ////////////////////////////////////////////
     std::stringstream title;
+    Json::Reader reader;
+    Json::Value js;
     if( argc == 1)
     {
-        v = file::read_input("input.txt");
+        std::ifstream is("input.json");
+        reader.parse(is,js,false);
     }
     else if( argc == 2)
     {
-        v = file::read_input( argv[1]);
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
     }
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
-    draw::RenderHostData render(v2[1], v2[2]);
-    /////////////////////////////////////////////////////////////////////////
-    const Parameters p( v);
+    const Parameters p( js);
     p.display( std::cout);
-    if( p.k != k)
-    {
-        std::cerr << "ERROR: k doesn't match: "<<k<<" vs. "<<p.k<<"\n";
-        return -1;
-    }
-
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
+    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+    /////////////////////////////////////////////////////////////////////////
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     dg::HW<dg::DMatrix, dg::DVec > test( grid, p.kappa, p.tau, p.nu, p.eps_pol, (bool)p.global); 
@@ -71,7 +67,7 @@ int main( int argc, char* argv[])
     }
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
     //dg::TVB< std::vector<dg::DVec> > ab( y0);
-    dg::Karniadakis<std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
+    dg::Karniadakis<std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
     dg::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
