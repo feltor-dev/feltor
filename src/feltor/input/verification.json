@@ -40,13 +40,13 @@
     "bc"          : "DIR", //GLOBAL BC for parallel derivative
     //-------------------------------Miscellaneous----------------------------
     "source"     : 0,     //profile source rate
-    "boxscaleRp" :  1.1, // (a little larger than 1)
-    "boxscaleRm" :  1.1, // (a little larger than 1)
-    "boxscaleZp" :  1.1, // (a little larger than 1)
-    "boxscaleZm" :  1.2, // (a little larger than 1)
+    "boxscaleRp" :  1.11, // (a little larger than 1)
+    "boxscaleRm" :  1.11, // (a little larger than 1)
+    "boxscaleZp" :  1.11, // (a little larger than 1)
+    "boxscaleZm" :  1.21, // (a little larger than 1)
     //-------------------------------Tor limiter------------------------------
     "pollim"     : 0,    //poloidal limiter (0/1) 
-    "pardiss"    : 1,    //poloidal limiter (0/1) 
+    "pardiss"    : 0,    //poloidal limiter (0/1) 
     "mode"       : 0,    //poloidal limiter (0/1) 
     "initial"    : 2,    //initial condition blob(0), straight blob(1), turbulence(2)
     "curvmode"    : 0
