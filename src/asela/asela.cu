@@ -12,7 +12,6 @@
 #include "dg/backend/timer.cuh"
 #include "dg/backend/average.cuh"
 #include "dg/backend/typedefs.cuh"
-#include "file/read_input.h"
 #include "geometries/geometries.h"
 
 #include "asela.cuh"
@@ -30,44 +29,39 @@ using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
-     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v2,v3;
-    std::stringstream title;
+    ////Parameter initialisation ////////////////////////////////////////////
+    Json::Reader reader;
+    Json::Value js, gs;
     if( argc == 1)
     {
-        try{
-            v = file::read_input("input.txt");
-            v3 = file::read_input( "geometry_params.txt"); 
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is("input.json");
+        std::ifstream ks("geometry_params.json");
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
-    else if( argc == 3)
+    else if( argc == 2)
     {
-        try{
-            v = file::read_input(argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
     else
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
+        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const eule::Parameters p( v);
+    const Parameters p( js);
+    const dg::geo::solovev::GeomParameters gp(gs);
     p.display( std::cout);
-    const dg::geo::solovev::GeomParameters gp(v3);
     gp.display( std::cout);
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
-
-
-
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::stringstream title;
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz/js["reduction"].asUInt()+1)*js["width"].asDouble(), js["rows"].asDouble()*js["height"].asDouble(), "");
+    draw::RenderHostData render(js["rows"].asDouble(), p.Nz/js["reduction"].asUInt() + 1);
     //////////////////////////////////////////////////////////////////////////
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;

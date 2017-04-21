@@ -30,31 +30,32 @@ using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
-    if( argc != 4)
+    Json::Reader reader;
+    Json::Value js, gs;
+    if( argc == 1)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
+        std::ifstream is("input.json");
+        std::ifstream ks("geometry_params.js");
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
+    }
+    else if( argc == 2)
+    {
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
+    }
+    else
+    {
+        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    else 
-    {
-        try{
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-            v = file::read_input( argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            std::cout << geom << std::endl;
-            return -1;
-        }
-    }
-    const eule::Parameters p( v);
+    const Parameters p( js);
+    const dg::geo::solovev::GeomParameters gp(gs);
     p.display( std::cout);
-    const dg::geo::solovev::GeomParameters gp(v3);
     gp.display( std::cout);
+    std::string input = js.toStyledString(), geom = gs.toStyledString();
     ////////////////////////////////set up computations///////////////////////////
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;

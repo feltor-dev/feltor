@@ -60,8 +60,6 @@ int main( int argc, char* argv[])
     GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz/js["reduction"].asUInt()+1)*js["width"].asDouble(), js["rows"].asDouble()*js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), p.Nz/js["reduction"].asUInt() + 1);
     /////////////////////////////////////////////////////////////////////////
-
-    //////////////////////////////////////////////////////////////////////////
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
