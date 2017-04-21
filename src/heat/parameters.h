@@ -1,5 +1,6 @@
 #pragma once
 #include "dg/enums.h"
+#include "json.h"
 
 namespace eule{
 /**
