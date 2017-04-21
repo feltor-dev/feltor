@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include "dg/enums.h"
 #include "json/json.h"
 
@@ -21,6 +22,7 @@ struct Parameters
 
     unsigned itstp; 
     unsigned maxout;
+    std::string initial;
 
     Parameters( const Json::Value& js) {
         //names are chosen to be as consisten with other projects as possible
@@ -41,6 +43,7 @@ struct Parameters
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();
         U = js.get("velocity", 1).asDouble();
+        initial = js.get("initial", "lamb").asString();
     }
 
     void display( std::ostream& os = std::cout ) const
@@ -66,6 +69,8 @@ struct Parameters
             << "    posY:         "<<posY<<"\n";
         os << "Stopping for CG:         "<<eps<<"\n"
             <<"Steps between output:    "<<itstp<<"\n"
+            <<"Initial condition:       "<<initial<<"\n"
             <<"Number of outputs:       "<<maxout<<std::endl;
+
     }
 };

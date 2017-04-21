@@ -11,15 +11,10 @@
 
 #include "dg/exceptions.h"
 
-#include "file/read_input.h"
-#include "file/file.h"
+#include "file/nc_utilities.h"
 
 #include "shu.cuh"
 #include "parameters.h"
-
-
-
-const unsigned k = 3;
 
 double delta =0.05;
 double rho =M_PI/15.;
@@ -37,7 +32,7 @@ int main( int argc, char * argv[])
     Json::Value js;
     if( argc != 3)
     {
-        if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else 
@@ -53,8 +48,11 @@ int main( int argc, char * argv[])
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::DVec w2d( dg::create::weights(grid));
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
-    //dg::HVec omega = dg::evaluate ( lamb, grid);
-    dg::HVec omega = dg::evaluate ( shearLayer, grid);
+    dg::HVec omega; 
+    if( p.initial == "lamb")
+        omega = dg::evaluate ( lamb, grid);
+    else if ( p.initial == "shear")
+        omega = dg::evaluate ( shearLayer, grid);
     dg::DVec y0( omega );
     const dg::DVec one = dg::evaluate( dg::one, grid);
     //make solver and stepper
@@ -82,13 +80,13 @@ int main( int argc, char * argv[])
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
     err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
     //field IDs
-    std::string names3d[2] = {"vorticity", "potential"}; 
+    std::string names3d[2] = {"vorticity_field", "potential"}; 
     std::string names1d[4] = {"vorticity", "enstrophy", "energy", "variation"}; 
     int dataIDs[2], variableIDs[4]; 
     for( unsigned i=0; i<2; i++){
         err = nc_def_var( ncid, names3d[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
     for( unsigned i=0; i<4; i++){
-        err = nc_def_var( ncid, names1d[i].data(), NC_DOUBLE, 1, EtimeID, &variableIDs[i]);}
+        err = nc_def_var( ncid, names1d[i].data(), NC_DOUBLE, 1, &EtimeID, &variableIDs[i]);}
     err = nc_enddef(ncid);
     size_t start[3] = {0, 0, 0};
     size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
@@ -105,8 +103,8 @@ int main( int argc, char * argv[])
     for( int k=0;k<4; k++)
         err = nc_put_vara_double( ncid, variableIDs[k], Estart, Ecount, &output1d[k] );
     err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
-    err = nc_close(ncid);
     ///////////////////////////////////timeloop/////////////////////////
+    unsigned step=0;
     try{
     for( unsigned i=0; i<p.maxout; i++)
     {
@@ -145,6 +143,7 @@ int main( int argc, char * argv[])
         std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
         std::cerr << "Does Simulation respect CFL condition?\n";
     }
+    err = nc_close(ncid);
 
     return 0;
 

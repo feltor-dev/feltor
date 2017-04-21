@@ -61,9 +61,12 @@ int main( int argc, char* argv[])
     ////////////////////////////////////////////////////////////
 
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
+    dg::HVec omega; 
+    if( p.initial == "lamb")
+        omega = dg::evaluate ( lamb, grid);
+    else if ( p.initial == "shear")
+        omega = dg::evaluate ( shearLayer, grid);
 
-    HVec omega = evaluate ( lamb, grid);
-    //HVec omega = evaluate ( shearLayer, grid);
     DVec stencil = evaluate( one, grid);
     DVec y0( omega ), y1( y0);
     //subtract mean mass 

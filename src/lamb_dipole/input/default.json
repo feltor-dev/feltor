@@ -35,8 +35,9 @@
      
      //-----------------Miscellaneous----------------------------
      
-    "itstp"   : 5,  // (steps between output)
-    "maxout"  : 200 //# of outputs (excluding first)
+    "itstp"   : 5,     // (steps between output)
+    "maxout"  : 200,   //# of outputs (excluding first)
+    "initial" : "lamb" // lamb or shear
 }
 
 //@ ------------------------------------------------------------
