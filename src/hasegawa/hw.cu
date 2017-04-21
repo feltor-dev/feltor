@@ -50,11 +50,12 @@ int main( int argc, char* argv[])
     /////////////////////////////////////////////////////////////////////////
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::HW<dg::DMatrix, dg::DVec > test( grid, p.kappa, p.tau, p.nu, p.eps_pol, (bool)p.global); 
+    bool mhw = (p.equations == "modified");
+    dg::HW<dg::DMatrix, dg::DVec > test( grid, p.kappa, p.tau, p.nu, p.eps_pol, mhw); 
     dg::DVec one( grid.size(), 1.);
     //create initial vector
-    dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
-    dg::Vortex vortex( p.posX*grid.lx(), p.posY*grid.ly(), 0, p.sigma, p.n0);
+    dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+    dg::Vortex vortex( p.posX*grid.lx(), p.posY*grid.ly(), 0, p.sigma, p.amp);
     std::vector<dg::DVec> y0(2, dg::evaluate( vortex, grid)), y1(y0); // n_e' = gaussian
     dg::DVec w2d( dg::create::weights( grid));
 
@@ -85,7 +86,7 @@ int main( int argc, char* argv[])
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplacianM(grid, dg::normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplacianM(grid, dg::normed, dg::centered);
     while ( !glfwWindowShouldClose( w ))
     {
         if( p.bc_x == dg::PER && p.bc_y == dg::PER)
@@ -96,7 +97,7 @@ int main( int argc, char* argv[])
         //transform field to an equidistant grid
         dvisual = y0[0];
 
-        hvisual = dvisual;
+        dg::blas1::transfer( dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -108,7 +109,7 @@ int main( int argc, char* argv[])
         //transform phi
 
         dg::blas2::gemv( laplacianM, test.potential(), y1[1]);
-        hvisual = y1[1];
+        dg::blas1::transfer( y1[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );

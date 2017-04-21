@@ -9,7 +9,6 @@
 #include "mima.cuh"
 #include "dg/multistep.h"
 #include "dg/backend/timer.cuh"
-#include "file/read_input.h"
 #include "../toefl/parameters.h"
 
 /*
@@ -50,14 +49,15 @@ int main( int argc, char* argv[])
     /////////////////////////////////////////////////////////////////////////
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::Mima< dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.eps_pol, p.global); 
+    bool mhw = ( p.equations == "modified");
+    dg::Mima< dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.eps_pol, mhw); 
     dg::DVec one( grid.size(), 1.);
     //create initial vector
-    dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
-    dg::Vortex vortex( p.posX*grid.lx(), p.posY*grid.ly(), 0, p.sigma, p.n0);
+    dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
+    dg::Vortex vortex( p.posX*grid.lx(), p.posY*grid.ly(), 0, p.sigma, p.amp);
 
     dg::DVec phi = dg::evaluate( vortex, grid), omega( phi), y0(phi), y1(phi);
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplaceM( grid);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplaceM( grid);
     dg::blas2::gemv( laplaceM, phi, omega);
     dg::blas1::axpby( 1., phi, 1., omega, y0);
 
@@ -94,7 +94,7 @@ int main( int argc, char* argv[])
         //transform field to an equidistant grid
         dvisual = mima.potential();
 
-        hvisual = dvisual;
+        dg::blas1::transfer( dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -105,7 +105,7 @@ int main( int argc, char* argv[])
 
         //transform phi
         dg::blas2::gemv( laplaceM, mima.potential(), y1);
-        hvisual = y1;
+        dg::blas1::transfer( y1, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );

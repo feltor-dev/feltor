@@ -9,7 +9,7 @@
 #include "dg/backend/timer.cuh"
 #endif
 
-//@note This is an old copy of the toefl project and shouldn't be taken as a basis for a new project
+///@note This is an old copy of the toefl project and shouldn't be taken as a basis for a new project
 
 namespace dg
 {
