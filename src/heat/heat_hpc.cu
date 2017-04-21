@@ -44,7 +44,7 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
     }
-    const Parameters p( js); p.display( std::cout);
+    const eule::Parameters p( js); p.display( std::cout);
     const GeomParameters gp(gs); gp.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
 
@@ -84,8 +84,10 @@ int main( int argc, char* argv[])
         errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
-        const eule::Parameters pin(file::read_input( inputin));
-        const dg::geo::solovev::GeomParameters gpin(file::read_input( geomin));
+        reader.parse(inputin,js,false);
+        reader.parse(geomin,gs,false);
+        const eule::Parameters pin(js);
+        const dg::geo::solovev::GeomParameters gpin(gs);
         double Rminin = gpin.R_0 - pin.boxscaleRm*gpin.a;
         double Zminin =-pin.boxscaleZm*gpin.a*gpin.elongation;
         double Rmaxin = gpin.R_0 + pin.boxscaleRp*gpin.a; 
@@ -152,7 +154,9 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
+    std::string input = js.toStyledString(); 
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    std::string geom = gs.toStyledString(); 
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4];
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);

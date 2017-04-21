@@ -18,7 +18,7 @@
            -0.03006974108476955225335835678782676287818,
             0.004212671892103931178531621087067962015783 ],
     //----------------------geometric coefficients-------------
-    "R_0"                : 173.259 //different from geometries file??
+    "R_0"                : 173.259, //different from geometries file??
     "inverseaspectratio" : 0.41071428571428575, //a/R_0
     "elongation"         : 1.75,
     "triangularity"      : 0.47,

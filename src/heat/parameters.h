@@ -47,7 +47,7 @@ struct Parameters
         eps_time = js["eps_time"].asDouble();
         bc = dg::str2bc(js["bc"].asString());
         nprofileamp = js["nprofileamp"].asDouble();
-        bgprofamp = js["bgprofileamp"].asDouble();
+        bgprofamp = js["bgprofamp"].asDouble();
         boxscaleRp = js["boxscaleRp"].asDouble();
         boxscaleRm = js["boxscaleRm"].asDouble();
         boxscaleZp = js["boxscaleZp"].asDouble();

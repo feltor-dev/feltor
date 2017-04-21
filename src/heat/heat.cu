@@ -48,7 +48,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-    const Parameters p( js); p.display( std::cout);
+    const eule::Parameters p( js); p.display( std::cout);
     const GeomParameters gp(gs); gp.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::ifstream is( "window_params.js");
