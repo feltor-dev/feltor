@@ -21,7 +21,7 @@ struct Parameters
     double amp, sigma, posX, posY;
 
     double lx, ly; 
-    enum dg::bc bc_x, bc_y;
+    dg::bc bc_x, bc_y;
 
     std::string init, equations;
     bool boussinesq;
@@ -72,7 +72,7 @@ struct Parameters
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";
         os << "Boundary conditions in x are: \n"
-            <<"    "<<bc2str(bc_x)<<"\n";
+            <<"    "<<bc2str(bc_x)<<"\n";  //Curious! dg:: is not needed due to ADL!
         os << "Boundary conditions in y are: \n"
             <<"    "<<bc2str(bc_y)<<"\n";
         os << "Algorithmic parameters are: \n"
