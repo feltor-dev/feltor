@@ -12,7 +12,6 @@
 #include "dg/functors.h"
 
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "toefl/parameters.h"
 // #include "probes.h"
@@ -82,7 +81,6 @@ int main( int argc, char* argv[])
     Json::Reader reader;
     Json::Value js;
     reader.parse( input, js, false);
-    //const Parameters p(file::read_input( input));
     const Parameters p(js);
     p.display(std::cout);
     err = nc_close( ncid);
