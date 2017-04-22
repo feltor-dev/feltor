@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
     }
     else
     {
-        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
+        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
     const eule::Parameters p( js);
