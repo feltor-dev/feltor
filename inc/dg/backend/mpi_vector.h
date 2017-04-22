@@ -140,6 +140,31 @@ struct VectorTraits<const MPI_Vector<container> > {
 ///@endcond
 
 /////////////////////////////communicator exchanging columns//////////////////
+template< class T>
+struct Buffer
+{
+    Buffer(){
+        ptr = new T;
+    }
+    Buffer( const T& t){
+        ptr = new T(t);
+    }
+    ~Buffer(){
+        delete ptr;
+    }
+    Buffer( const Buffer& src){ 
+        ptr = new T(*src.ptr);
+    }
+    Buffer& operator=( const Buffer& src){
+        if( this == &src) return *this;
+        Buffer tmp(src);
+        std::swap( ptr, tmp.ptr);
+        return *this;
+    }
+    T* data( )const { return ptr;}
+    private:
+    T* ptr;
+};
 
 /**
 * @brief Communicator for nearest neighbor communication
@@ -154,11 +179,6 @@ template<class Index, class Vector>
 struct NearestNeighborComm
 {
     NearestNeighborComm(){
-        values = new Vector;
-        buffer1 = new Vector;
-        buffer2 = new Vector;
-        rb1 = new Vector;
-        rb2 = new Vector;
         silent_ = true;
     }
     /**
@@ -173,45 +193,6 @@ struct NearestNeighborComm
     {
         construct( n, vector_dimensions, comm, direction);
     }
-    ~NearestNeighborComm() { 
-        delete values;
-        delete buffer1;
-        delete buffer2;
-        delete rb1;
-        delete rb2;
-    }
-    NearestNeighborComm& operator=( const NearestNeighborComm& src)
-    {
-        if( &src == this) return *this;
-        NearestNeighborComm t(src);
-        n_ = t.n_, dim_[0] = t.dim_[0], dim_[1] = t.dim_[1], dim_[2] = t.dim_[2];
-        comm_ = t.comm_, direction_ = t.direction_, silent_ = t.silent_;
-        buffer_gather1 = t.buffer_gather1;
-        buffer_gather2 = t.buffer_gather2;
-        buffer_scatter1 = t.buffer_scatter1;
-        buffer_scatter2 = t.buffer_scatter2;
-        std::swap( values, t.values);
-        std::swap( buffer1, t.buffer1);
-        std::swap( buffer2, t.buffer2);
-        std::swap( rb1, t.rb1);
-        std::swap( rb2, t.rb2);
-        return *this;
-    }
-    NearestNeighborComm( const NearestNeighborComm& t)
-    {
-        n_ = t.n_, dim_[0] = t.dim_[0], dim_[1] = t.dim_[1], dim_[2] = t.dim_[2];
-        comm_ = t.comm_, direction_ = t.direction_, silent_ = t.silent_;
-        buffer_gather1 = t.buffer_gather1;
-        buffer_gather2 = t.buffer_gather2;
-        buffer_scatter1 = t.buffer_scatter1;
-        buffer_scatter2 = t.buffer_scatter2;
-        values = new Vector( *t.values);
-        buffer1 = new Vector( *t.buffer1);
-        buffer2 = new Vector( *t.buffer2);
-        rb1 = new Vector( *t.rb1);
-        rb2 = new Vector( *t.rb2);
-    }
-   
 
     /**
     * @brief Construct from other Communicator
@@ -274,9 +255,9 @@ struct NearestNeighborComm
     MPI_Comm comm_;
     int direction_;
     bool silent_;
-    Index buffer_gather1, buffer_gather2, buffer_scatter1, buffer_scatter2;
+    Index gather_map1, gather_map2, scatter_map1, scatter_map2;
     //dynamically allocate buffer so that collect can be const
-    Vector *values, *buffer1, *buffer2, *rb1, *rb2; 
+    Buffer<Vector> values, buffer1, buffer2, rb1, rb2; 
 
     void sendrecv( Vector&, Vector&, Vector& , Vector&)const;
     int buffer_size() const;
@@ -346,11 +327,11 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
         }
         break;
     }
-    buffer_gather1 =hbgather1, buffer_gather2 =hbgather2;
-    buffer_scatter1=hbscattr1, buffer_scatter2=hbscattr2;
-    values = new V(size());
-    buffer1 = new V(buffer_size()), buffer2 = new V(buffer_size());
-    rb1 = new V(buffer_size()), rb2 = new V(buffer_size());
+    gather_map1 =hbgather1, gather_map2 =hbgather2;
+    scatter_map1=hbscattr1, scatter_map2=hbscattr2;
+    values.data().resize( size());
+    buffer1.data().resize( buffer_size()), buffer2.data().resize( buffer_size());
+    rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
 }
 
 template<class I, class V>
@@ -379,7 +360,7 @@ int NearestNeighborComm<I,V>::buffer_size() const
 template<class I, class V>
 const V& NearestNeighborComm<I,V>::collect( const V& input) const
 {
-    if( silent_) return *values;
+    if( silent_) return *values.data();
         //int rank;
         //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         //dg::Timer t;
@@ -392,8 +373,8 @@ const V& NearestNeighborComm<I,V>::collect( const V& input) const
         //if(rank==0)std::cout << "Allocation   took "<<t.diff()<<"s\n";
         //t.tic();
     //gather values from input into sendbuffer
-    thrust::gather( buffer_gather1.begin(), buffer_gather1.end(), input.begin(), buffer1->begin());
-    thrust::gather( buffer_gather2.begin(), buffer_gather2.end(), input.begin(), buffer2->begin());
+    thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data()->begin());
+    thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data()->begin());
         //t.toc();
         //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
         //t.tic();
@@ -406,7 +387,7 @@ const V& NearestNeighborComm<I,V>::collect( const V& input) const
         //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";
         //t.tic();
     //mpi sendrecv
-    sendrecv( *buffer1, *buffer2, *rb1, *rb2);
+    sendrecv( *buffer1.data(), *buffer2.data(), *rb1.data(), *rb2.data());
         //t.toc();
         //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
         //t.tic();
@@ -418,8 +399,8 @@ const V& NearestNeighborComm<I,V>::collect( const V& input) const
         //if(rank==0)std::cout << "Allocation   took "<<t.diff()<<"s\n";
         //t.tic();
     //scatter received values into values array
-    thrust::scatter( rb1->begin(), rb1->end(), buffer_scatter1.begin(), values->begin());
-    thrust::scatter( rb2->begin(), rb2->end(), buffer_scatter2.begin(), values->begin());
+    thrust::scatter( rb1.data()->begin(), rb1.data()->end(), scatter_map1.begin(), values.data()->begin());
+    thrust::scatter( rb2.data()->begin(), rb2.data()->end(), scatter_map2.begin(), values.data()->begin());
         //t.toc();
         //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
     return *values;
