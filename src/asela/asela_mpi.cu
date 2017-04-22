@@ -12,7 +12,6 @@
 #include "dg/backend/interpolation.cuh"
 
 #include "netcdf_par.h" //exclude if par netcdf=OFF
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "asela.cuh"
