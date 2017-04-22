@@ -216,7 +216,7 @@ struct NearestNeighborComm
     *
     * @return new container
     */
-    const Vector& collect( const Vector& input)const;
+    Vector collect( const Vector& input)const;
     /**
     * @brief Size of the output of collect
     *
@@ -358,9 +358,10 @@ int NearestNeighborComm<I,V>::buffer_size() const
 }
 
 template<class I, class V>
-const V& NearestNeighborComm<I,V>::collect( const V& input) const
+V NearestNeighborComm<I,V>::collect( const V& input) const
 {
     if( silent_) return *values.data();
+    //std::cout << values.data()->size()<<" "<< buffer1.data()->size()<< " "<<buffer2.data()->size()<<" " << rb1.data()->size()<<" "<<rb2.data()->size()<<std::endl;
         //int rank;
         //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         //dg::Timer t;
@@ -387,6 +388,8 @@ const V& NearestNeighborComm<I,V>::collect( const V& input) const
         //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";
         //t.tic();
     //mpi sendrecv
+    //std::cout << values.data()<<" "<< buffer1.data()<< " "<<buffer2.data()<<" " << rb1.data()<<" "<<rb2.data()<<std::endl;
+    std::cout << values.data()->data()<<" "<< buffer1.data()->data()<< " "<<buffer2.data()->data()<<" " << rb1.data()->data()<<" "<<rb2.data()->data()<<std::endl;
     sendrecv( *buffer1.data(), *buffer2.data(), *rb1.data(), *rb2.data());
         //t.toc();
         //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
