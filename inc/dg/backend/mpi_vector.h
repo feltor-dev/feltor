@@ -329,9 +329,9 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
     }
     gather_map1 =hbgather1, gather_map2 =hbgather2;
     scatter_map1=hbscattr1, scatter_map2=hbscattr2;
-    values.data().resize( size());
-    buffer1.data().resize( buffer_size()), buffer2.data().resize( buffer_size());
-    rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
+    values.data()->resize( size());
+    buffer1.data()->resize( buffer_size()), buffer2.data()->resize( buffer_size());
+    rb1.data()->resize( buffer_size()), rb2.data()->resize( buffer_size());
 }
 
 template<class I, class V>
@@ -403,7 +403,7 @@ const V& NearestNeighborComm<I,V>::collect( const V& input) const
     thrust::scatter( rb2.data()->begin(), rb2.data()->end(), scatter_map2.begin(), values.data()->begin());
         //t.toc();
         //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
-    return *values;
+    return *values.data();
 }
 
 template<class I, class V>
