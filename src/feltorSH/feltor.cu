@@ -23,7 +23,6 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v2;
     Json::Reader reader;
     Json::Value js;
     if( argc == 1)
