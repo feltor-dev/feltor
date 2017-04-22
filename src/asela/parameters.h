@@ -107,7 +107,7 @@ struct Parameters
         mode        = js.get( "mode", 0).asUInt();
         initcond    = js.get( "initial", 0).asUInt();
         curvmode    = js.get( "curvmode", 0).asUInt();
-        flromode    = js.get( "flwmode", 0).asUInt();
+        flrmode     = js.get( "flrmode", 0).asUInt();
     }
     /**
      * @brief Display parameters

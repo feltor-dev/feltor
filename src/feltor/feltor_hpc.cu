@@ -50,7 +50,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const Parameters p( js);
+    const eule::Parameters p( js);
     const dg::geo::solovev::GeomParameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);

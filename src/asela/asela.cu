@@ -51,7 +51,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const Parameters p( js);
+    const eule::Parameters p( js);
     const dg::geo::solovev::GeomParameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);
@@ -60,7 +60,8 @@ int main( int argc, char* argv[])
     std::ifstream is( "window_params.js");
     reader.parse( is, js, false);
     is.close();
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz/js["reduction"].asUInt()+1)*js["width"].asDouble(), js["rows"].asDouble()*js["height"].asDouble(), "");
+    unsigned red = js.get("reduction", 1).asUInt();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz/red+1)*js["width"].asDouble(), js["rows"].asDouble()*js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), p.Nz/js["reduction"].asUInt() + 1);
     //////////////////////////////////////////////////////////////////////////
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
@@ -145,10 +146,10 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();   
         title << std::setprecision(2) << std::scientific;
         title <<"ne-1 / " << colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
@@ -161,10 +162,10 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();   
         title << std::setprecision(2) << std::scientific;
         title <<"ni-1 / " << colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
@@ -181,10 +182,10 @@ int main( int argc, char* argv[])
 //         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
         colors.scalemin() = -colors.scalemax();
         title <<"Phi / " << colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
@@ -197,10 +198,10 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
         title <<"Ue / " << colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
@@ -212,10 +213,10 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();   
         title <<"Ui / "<< colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
@@ -227,10 +228,10 @@ int main( int argc, char* argv[])
         colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0., thrust::maximum<double>()  );
         colors.scalemin() = - colors.scalemax();
         title <<"A / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<< "  " << colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);

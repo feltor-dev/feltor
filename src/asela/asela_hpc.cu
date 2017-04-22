@@ -4,15 +4,11 @@
 #include <sstream>
 #include <cmath>
 
-
-
 #include "dg/algorithm.h"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/interpolation.cuh"
 
-
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "asela.cuh"
@@ -51,7 +47,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const Parameters p( js);
+    const eule::Parameters p( js);
     const dg::geo::solovev::GeomParameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);

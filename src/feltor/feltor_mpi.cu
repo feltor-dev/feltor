@@ -79,7 +79,7 @@ int main( int argc, char* argv[])
         if(rank==0)std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const Parameters p( js);
+    const eule::Parameters p( js);
     const dg::geo::solovev::GeomParameters gp(gs);
     if(rank==0)p.display( std::cout);
     if(rank==0)gp.display( std::cout);
