@@ -11,7 +11,6 @@
 #include "dg/backend/timer.cuh"
 
 #include "dg/backend/interpolation.cuh"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -28,8 +27,8 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input;
+    Json::Reader reader;
+    Json::Value js;
     if( argc != 3 && argc != 4)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
@@ -38,13 +37,10 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        input = file::read_file( argv[1]); //deprecated, better use json reader directly, instead!
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false);
     }
-    Json::Reader reader;
-    Json::Value js;
-    reader.parse( input, js, false);
-    std::cout << js<<std::endl;
-    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
     p.display( std::cout);
 

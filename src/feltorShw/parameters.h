@@ -32,11 +32,6 @@ struct Parameters
     double omega_source,sourceb,sourcew;
     enum dg::bc bc_x,bc_y,bc_x_phi;
 
-    /**
-     * @brief constructor to make a const object
-     *
-     * @param v Vector from read_input function
-     */
     Parameters(const Json::Value& js)        {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
