@@ -19,7 +19,7 @@ asela_hpc: asela_hpc.cu asela.cuh
 asela_mpi: asela_mpi.cu asela.cuh 
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
 	
-.PHONY: clean doc
+.PHONY: clean
 
 clean:
 	rm -f asela asela_hpc asela_mpi

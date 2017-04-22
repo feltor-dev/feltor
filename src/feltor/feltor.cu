@@ -36,7 +36,7 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
     }
-    else if( argc == 2)
+    else if( argc == 3)
     {
         std::ifstream is(argv[1]);
         std::ifstream ks(argv[2]);

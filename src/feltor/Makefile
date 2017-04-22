@@ -19,7 +19,7 @@ feltor_hpc: feltor_hpc.cu feltor.cuh
 feltor_mpi: feltor_mpi.cu feltor.cuh 
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
 
-.PHONY: clean doc
+.PHONY: clean
 
 clean:
 	rm -f feltor feltor_hpc feltor_mpi
