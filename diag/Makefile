@@ -18,7 +18,7 @@ ncdiag: ncdiag.cpp
 filamentdiag: filamentdiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 feltordiag: feltordiag.cu
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -g 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -g 
 feltorSHdiag: feltorSHdiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) 
 toeflRdiag: toeflRdiag.cu
