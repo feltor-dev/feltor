@@ -28,24 +28,17 @@ int main( int argc, char* argv[])
     ////////////////////////Parameter initialisation//////////////////////////
     Json::Reader reader;
     Json::Value js, gs;
-    if( argc == 1)
+    if( argc != 4)
     {
-        std::ifstream is("input.json");
-        std::ifstream ks("geometry_params.js");
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
+        return -1;
     }
-    else if( argc == 2)
+    else 
     {
         std::ifstream is(argv[1]);
         std::ifstream ks(argv[2]);
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
-    }
-    else
-    {
-        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
-        return -1;
     }
     const eule::Parameters p( js);
     const dg::geo::solovev::GeomParameters gp(gs);
