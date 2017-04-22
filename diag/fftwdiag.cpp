@@ -16,7 +16,6 @@
 #include "dg/backend/average.cuh"
 #include "dg/functors.h"
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "feltorSH/parameters.h"
 int main( int argc, char* argv[])
