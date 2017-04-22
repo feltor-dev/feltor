@@ -8,6 +8,7 @@
 #include "selfmade_blas.cuh"
 #include "thrust_vector_blas.cuh"
 #include "cusp_vector_blas.h"
+#include "timer.cuh"
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
 #include "mpi_matrix.h"
