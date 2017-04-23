@@ -257,7 +257,6 @@ struct NearestNeighborComm
     bool silent_;
     Index gather_map1, gather_map2, scatter_map1, scatter_map2;
     //dynamically allocate buffer so that collect can be const
-    Buffer<Vector> values, buffer1, buffer2, rb1, rb2; 
 
     void sendrecv( Vector&, Vector&, Vector& , Vector&)const;
     int buffer_size() const;
@@ -329,9 +328,6 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
     }
     gather_map1 =hbgather1, gather_map2 =hbgather2;
     scatter_map1=hbscattr1, scatter_map2=hbscattr2;
-    values.data()->resize( size());
-    buffer1.data()->resize( buffer_size()), buffer2.data()->resize( buffer_size());
-    rb1.data()->resize( buffer_size()), rb2.data()->resize( buffer_size());
 }
 
 template<class I, class V>
@@ -360,8 +356,11 @@ int NearestNeighborComm<I,V>::buffer_size() const
 template<class I, class V>
 V NearestNeighborComm<I,V>::collect( const V& input) const
 {
+    Buffer<V> values, buffer1, buffer2, rb1, rb2; 
+    values.data()->resize( size());
+    buffer1.data()->resize( buffer_size()), buffer2.data()->resize( buffer_size());
+    rb1.data()->resize( buffer_size()), rb2.data()->resize( buffer_size());
     if( silent_) return *values.data();
-    //std::cout << values.data()->size()<<" "<< buffer1.data()->size()<< " "<<buffer2.data()->size()<<" " << rb1.data()->size()<<" "<<rb2.data()->size()<<std::endl;
         //int rank;
         //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         //dg::Timer t;
@@ -388,8 +387,6 @@ V NearestNeighborComm<I,V>::collect( const V& input) const
         //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";
         //t.tic();
     //mpi sendrecv
-    //std::cout << values.data()<<" "<< buffer1.data()<< " "<<buffer2.data()<<" " << rb1.data()<<" "<<rb2.data()<<std::endl;
-    std::cout << values.data()->data()<<" "<< buffer1.data()->data()<< " "<<buffer2.data()->data()<<" " << rb1.data()->data()<<" "<<rb2.data()->data()<<std::endl;
     sendrecv( *buffer1.data(), *buffer2.data(), *rb1.data(), *rb2.data());
         //t.toc();
         //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
