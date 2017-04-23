@@ -37,8 +37,8 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
         std::cerr << "No CUDA capable devices found"<<std::endl;
         return;
     }
-    if(rank==0)std::cout << "Computing with "<<num_devices<<" devices!\n";
     int device = rank % num_devices; //assume # of gpus/node is fixed
+    std::cout << "Rank "<<rank<<" computes with device "<<device<<" !\n";
     cudaSetDevice( device);
 #endif//cuda
 

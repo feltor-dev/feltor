@@ -216,7 +216,7 @@ struct NearestNeighborComm
     *
     * @return new container
     */
-    Vector collect( const Vector& input)const;
+    const Vector& collect( const Vector& input)const;
     /**
     * @brief Size of the output of collect
     *
@@ -354,7 +354,7 @@ int NearestNeighborComm<I,V>::buffer_size() const
 }
 
 template<class I, class V>
-V NearestNeighborComm<I,V>::collect( const V& input) const
+const V& NearestNeighborComm<I,V>::collect( const V& input) const
 {
     Buffer<V> values, buffer1, buffer2, rb1, rb2; 
     values.data()->resize( size());
@@ -365,38 +365,16 @@ V NearestNeighborComm<I,V>::collect( const V& input) const
         //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         //dg::Timer t;
         //t.tic();
-    //V buffer1( buffer_size());
-    //V buffer2( buffer_size());
-    //V sendbuffer2( buffer_size());
-    //V recvbuffer2( buffer_size());
-        //t.toc();
-        //if(rank==0)std::cout << "Allocation   took "<<t.diff()<<"s\n";
-        //t.tic();
     //gather values from input into sendbuffer
     thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data()->begin());
     thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data()->begin());
         //t.toc();
         //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
         //t.tic();
-    //copy to host 
-    //HVec sb1,sb2;
-    //dg::blas1::detail::doTransfer( buffer1, sb1, typename VectorTraits<V>::vector_category(), ThrustVectorTag());
-    //dg::blas1::detail::doTransfer( buffer2, sb2, typename VectorTraits<V>::vector_category(), ThrustVectorTag());
-    //V rb1(buffer_size(), 0), rb2( buffer_size(), 0);
-        //t.toc();
-        //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";
-        //t.tic();
     //mpi sendrecv
     sendrecv( *buffer1.data(), *buffer2.data(), *rb1.data(), *rb2.data());
         //t.toc();
         //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
-        //t.tic();
-    //send data back to device
-    //dg::blas1::detail::doTransfer( rb1, buffer1, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
-    //dg::blas1::detail::doTransfer( rb2, buffer2, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
-    //V values(size());
-        //t.toc();
-        //if(rank==0)std::cout << "Allocation   took "<<t.diff()<<"s\n";
         //t.tic();
     //scatter received values into values array
     thrust::scatter( rb1.data()->begin(), rb1.data()->end(), scatter_map1.begin(), values.data()->begin());
@@ -413,6 +391,9 @@ void NearestNeighborComm<I,V>::sendrecv( V& sb1, V& sb2 , V& rb1, V& rb2) const
     MPI_Status status;
     //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified 
     MPI_Cart_shift( comm_, direction_, -1, &source, &dest);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    cudaDeviceSynchronize(); //needs to be called 
+#endif //THRUST_DEVICE_SYSTEM
     MPI_Sendrecv(   thrust::raw_pointer_cast(sb1.data()), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 3,  //destination
                     thrust::raw_pointer_cast(rb2.data()), buffer_size(), MPI_DOUBLE, //receiver
