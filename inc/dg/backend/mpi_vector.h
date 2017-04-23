@@ -216,7 +216,7 @@ struct NearestNeighborComm
     *
     * @return new container
     */
-    Vector collect( const Vector& input)const;
+    const Vector& collect( const Vector& input)const;
     /**
     * @brief Size of the output of collect
     *
@@ -358,10 +358,9 @@ int NearestNeighborComm<I,V>::buffer_size() const
 }
 
 template<class I, class V>
-V NearestNeighborComm<I,V>::collect( const V& input) const
+const V& NearestNeighborComm<I,V>::collect( const V& input) const
 {
     if( silent_) return *values.data();
-    //std::cout << values.data()->size()<<" "<< buffer1.data()->size()<< " "<<buffer2.data()->size()<<" " << rb1.data()->size()<<" "<<rb2.data()->size()<<std::endl;
         //int rank;
         //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         //dg::Timer t;
@@ -388,8 +387,6 @@ V NearestNeighborComm<I,V>::collect( const V& input) const
         //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";
         //t.tic();
     //mpi sendrecv
-    //std::cout << values.data()<<" "<< buffer1.data()<< " "<<buffer2.data()<<" " << rb1.data()<<" "<<rb2.data()<<std::endl;
-    std::cout << values.data()->data()<<" "<< buffer1.data()->data()<< " "<<buffer2.data()->data()<<" " << rb1.data()->data()<<" "<<rb2.data()->data()<<std::endl;
     sendrecv( *buffer1.data(), *buffer2.data(), *rb1.data(), *rb2.data());
         //t.toc();
         //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
@@ -416,6 +413,9 @@ void NearestNeighborComm<I,V>::sendrecv( V& sb1, V& sb2 , V& rb1, V& rb2) const
     MPI_Status status;
     //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified 
     MPI_Cart_shift( comm_, direction_, -1, &source, &dest);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    cudaDeviceSynchronize();
+#endif //THRUST_DEVICE_SYSTEM
     MPI_Sendrecv(   thrust::raw_pointer_cast(sb1.data()), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 3,  //destination
                     thrust::raw_pointer_cast(rb2.data()), buffer_size(), MPI_DOUBLE, //receiver
