@@ -22,8 +22,6 @@
 #include "draw/host_window.h"
 #endif
 
-#include "file/read_input.h"
-
 #include "ns.h"
 #include "parameters.h"
 
@@ -150,16 +148,29 @@ struct LogPolarGenerator
     #define Generator PolarGenerator
 #endif
 
-int main()
+int main(int argc, char* argv[])
 {
     Timer t;
-    const Parameters p( file::read_input( "input.txt"));
-    p.display();
-    if( p.k != k)
+    ////Parameter initialisation ////////////////////////////////////////////
+    Json::Reader reader;
+    Json::Value js;
+    if( argc == 1)
     {
-        std::cerr << "Time stepper needs recompilation!\n";
+        std::ifstream is("input.json");
+        reader.parse(is,js,false);
+    }
+    else if( argc == 2)
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
+    else
+    {
+        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
+    const Parameters p( js);
+    p.display( std::cout);
 
     //Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     Generator generator(p.r_min, p.r_max); // Generator is defined by the compiler
@@ -185,8 +196,8 @@ int main()
 
     //make solver and stepper
     Shu<Grid, DMatrix, DVec> shu( grid, p.eps);
-    Diffusion<Grid, DMatrix, DVec> diffusion( grid, p.D);
-    Karniadakis< DVec > ab( y0, y0.size(), 1e-9);
+    Diffusion<Grid, DMatrix, DVec> diffusion( grid, p.nu);
+    Karniadakis< DVec > ab( y0, y0.size(), p.eps_time);
 
     t.tic();
     shu( y0, y1);
