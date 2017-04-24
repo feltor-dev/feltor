@@ -36,7 +36,6 @@ struct Diffusion
 template< class Geometry, class Matrix, class container >
 struct Shu 
 {
-    typedef typename container::value_type value_type;
     typedef container Vector;
 
     Shu( const Geometry& grid, double eps);
@@ -62,7 +61,7 @@ struct Shu
 
 template<class Geometry, class Matrix, class container>
 Shu< Geometry, Matrix, container>::Shu( const Geometry& g, double eps): 
-    psi( g.size()),
+    psi( evaluate(dg::zero, g) ),
     w2d( create::weights( g)), v2d( create::inv_weights(g)),  
     laplaceM( g, not_normed),
     arakawa_( g), 

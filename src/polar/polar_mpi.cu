@@ -153,11 +153,36 @@ struct LogPolarGenerator
     #define Generator PolarGenerator
 #endif
 
-int main()
+int main(int argc, char* argv[])
 {
-    MPI_Init(NULL, NULL);
-    int rank;
+    int provided;
+    MPI_Init_thread( &argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    if( provided != MPI_THREAD_FUNNELED)
+    {
+        std::cerr << "wrong mpi-thread environment provided!\n";
+        return -1;
+    }
+    int periods[2] = {false, true}; //non-, periodic
+    int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &size);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    if(num_devices==0){std::cerr << "No CUDA capable devices found"<<std::endl; return -1;}
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    cudaSetDevice( device);
+#endif//cuda
+    int np[2];
+    if(rank==0)
+    {
+        std::cin>> np[0] >> np[1];
+        std::cout << "Computing with "<<np[0]<<" x "<<np[1]<<" = "<<size<<std::endl;
+        assert( size == np[0]*np[1]);
+    }
+    MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Comm comm;
+    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
 
     Timer t;
     const Parameters p( file::read_input( "input.txt"));
@@ -170,7 +195,7 @@ int main()
 
     //Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     Generator generator(p.r_min, p.r_max); // Generator is defined by the compiler
-    Grid grid( generator, p.n, p.Nx, p.Ny, dg::DIR); // second coordiante is periodic by default
+    Grid grid( generator, p.n, p.Nx, p.Ny, dg::DIR, comm); // second coordiante is periodic by default
 
     MDVec w2d( create::weights(grid));
 
@@ -255,16 +280,18 @@ int main()
     glfwTerminate();
 #endif
 
-
     double vorticity_end = blas2::dot( stencil , w2d, ab.last());
     blas1::pointwiseDot( stencil, ab.last(), ry0);
     double enstrophy_end = 0.5*blas2::dot( ry0, w2d, ab.last());
     double energy_end    = 0.5*blas2::dot( ry0, w2d, shu.potential()) ;
-    cout << "Vorticity error           :  "<<vorticity_end-vorticity<<"\n";
-    cout << "Enstrophy error (relative):  "<<(enstrophy_end-enstrophy)/enstrophy<<"\n";
-    cout << "Energy error    (relative):  "<<(energy_end-energy)/energy<<"\n";
+    if(rank == 0) {
+        cout << "Vorticity error           :  "<<vorticity_end-vorticity<<"\n";
+        cout << "Enstrophy error (relative):  "<<(enstrophy_end-enstrophy)/enstrophy<<"\n";
+        cout << "Energy error    (relative):  "<<(energy_end-energy)/energy<<"\n";
 
-    cout << "Runtime: " << t.diff() << endl;
+        cout << "Runtime: " << t.diff() << endl;
+    }
 
+    MPI_Finalize();
     return 0;
 }
