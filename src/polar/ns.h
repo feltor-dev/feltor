@@ -29,7 +29,6 @@ struct Diffusion
   private:
     double nu_;
     const container w2d, v2d;
-    //dg::Elliptic<dg::CartesianGrid2d, Matrix,container> LaplacianM;
     dg::Elliptic<Geometry,Matrix,container> LaplacianM;
 };
 
@@ -41,7 +40,6 @@ struct Shu
     Shu( const Geometry& grid, double eps);
 
     const Elliptic<Matrix, container, container>& lap() const { return laplaceM;}
-    //ArakawaX<CartesianGrid2d, Matrix, container>& arakawa() {return arakawa_;}
     ArakawaX<Geometry, Matrix, container>& arakawa() {return arakawa_;}
     /**
      * @brief Returns psi that belong to the last y in operator()
@@ -52,7 +50,6 @@ struct Shu
     const container& potential( ) {return psi;}
     void operator()( Vector& y, Vector& yp);
   private:
-    //typedef typename VectorTraits< Vector>::value_type value_type;
     container psi, w2d, v2d;
     Elliptic<Geometry, Matrix, container> laplaceM;
     ArakawaX<Geometry, Matrix, container> arakawa_; 

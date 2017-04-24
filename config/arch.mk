@@ -1,4 +1,4 @@
-ifeq ($(OS),arch)
+ifeq ($(strip $(shell hostname)),linux-carbon3)
 #default machine values
 INCLUDE = -I$(HOME)/include#  # cusp and thrust and the draw libraries
 INCLUDE += -I/usr/include/hdf5/serial -I/opt/cuda/include/

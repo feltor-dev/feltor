@@ -44,6 +44,7 @@ struct Parameters
         posY = js["posY"].asDouble();
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();
+
     }
     /**
      * @brief Display parameters
