@@ -1,5 +1,4 @@
-#ifndef _DG_PARAMETERS_ 
-#define _DG_PARAMETERS_
+#pragma once
 #include <string>
 #include "dg/enums.h"
 #include "json/json.h"
@@ -22,16 +21,11 @@ struct Parameters
     double amp, sigma, posX, posY;
 
     double lx, ly; 
-    enum dg::bc bc_x, bc_y;
+    dg::bc bc_x, bc_y;
 
     std::string init, equations;
     bool boussinesq;
 
-    /**
-     * @brief constructor to make a const object
-     *
-     * @param js json object
-     */
     Parameters( const Json::Value& js) {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
@@ -64,11 +58,6 @@ struct Parameters
         jfactor = js.get("jfactor", 1.).asDouble();
     }
     
-    /**
-     * @brief Display parameters
-     *
-     * @param os Output stream
-     */
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
@@ -82,7 +71,10 @@ struct Parameters
         os << "Boundary parameters are: \n"
             <<"    lx = "<<lx<<"\n"
             <<"    ly = "<<ly<<"\n";
-        displayBC( os, bc_x, bc_y);
+        os << "Boundary conditions in x are: \n"
+            <<"    "<<bc2str(bc_x)<<"\n";  //Curious! dg:: is not needed due to ADL!
+        os << "Boundary conditions in y are: \n"
+            <<"    "<<bc2str(bc_y)<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"    n  = "<<n<<"\n"
             <<"    Nx = "<<Nx<<"\n"
@@ -102,54 +94,4 @@ struct Parameters
             <<"Steps between output:    "<<itstp<<"\n"
             <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
     }
-    private:
-    dg::bc map( int i)
-    {
-        switch( i)
-        {
-            case(0): return dg::PER;
-            case(1): return dg::DIR;
-            case(2): return dg::DIR_NEU;
-            case(3): return dg::NEU_DIR;
-            case(4): return dg::NEU;
-            default: return dg::PER;
-        }
-    }
-    void displayBC( std::ostream& os, dg::bc bcx, dg::bc bcy) const
-    {
-        os << "Boundary conditions in x are: \n";
-        switch( bcx)
-        {
-            case(0): os << "    PERIODIC";
-                     break;
-            case(1): os << "    DIRICHLET";
-                     break;
-            case(2): os << "    DIR_NEU";
-                     break;
-            case(3): os << "    NEU_DIR";
-                     break;
-            case(4): os << "    NEUMANN";
-                     break;
-        }
-        os << "\nBoundary conditions in y are: \n";
-        switch( bcy)
-        {
-            case(0): os << "    PERIODIC";
-                     break;
-            case(1): os << "    DIRICHLET";
-                     break;
-            case(2): os << "    DIR_NEU";
-                     break;
-            case(3): os << "    NEU_DIR";
-                     break;
-            case(4): os << "    NEUMANN";
-                     break;
-        }
-        os <<"\n";
-    }
 };
-
-
-    
-
-#endif//_DG_PARAMETERS_

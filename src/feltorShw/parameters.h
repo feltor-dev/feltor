@@ -32,11 +32,6 @@ struct Parameters
     double omega_source,sourceb,sourcew;
     enum dg::bc bc_x,bc_y,bc_x_phi;
 
-    /**
-     * @brief constructor to make a const object
-     *
-     * @param v Vector from read_input function
-     */
     Parameters(const Json::Value& js)        {
         n  = js["n"].asUInt();
         Nx = js["Nx"].asUInt();
@@ -124,59 +119,18 @@ struct Parameters
         os << "Box params: \n"
             <<"     lx  =              "<<lx<<"\n"
             <<"     ly  =              "<<ly<<"\n";
-            displayBC( os, bc_x, bc_y,bc_x_phi);
+        os << "Boundary conditions in x are: \n"
+            <<"    "<<bc2str(bc_x)<<"\n"; 
+        os << "Boundary conditions in y are: \n"
+            <<"    "<<bc2str(bc_y)<<"\n";
+        os << "Boundary conditions in phi in x are: \n"
+            <<"    "<<bc2str(bc_x_phi)<<"\n";
         os << "SOL/EDGE/Source params \n"
             <<"     source rate  =    "<<omega_source<<"\n"
             <<"     source boundary = "<<sourceb<<"\n"
             <<"     source width =    "<<sourcew<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
-private:
-    dg::bc map( int i)
-    {
-        switch( i)
-        {
-            case(0): return dg::PER;
-            case(1): return dg::DIR;
-            case(2): return dg::DIR_NEU;
-            case(3): return dg::NEU_DIR;
-            case(4): return dg::NEU;
-            default: return dg::PER;
-        }
-    }
-    void displayBC( std::ostream& os, dg::bc bcx, dg::bc bcy,dg::bc bcxphi) const
-    {
-        os << "Boundary conditions in x are: \n";
-        switch( bcx)
-        {
-            case(0): os << "    PERIODIC";
-                     break;
-            case(1): os << "    DIRICHLET";
-                     break;
-            case(2): os << "    DIR_NEU";
-                     break;
-            case(3): os << "    NEU_DIR";
-                     break;
-            case(4): os << "    NEUMANN";
-                     break;
-        }
-        os << "\nBoundary conditions in y are: \n";
-        switch( bcy)
-        {
-            case(0): os << "    PERIODIC";
-                     break;
-            case(1): os << "    DIRICHLET";
-                     break;
-            case(2): os << "    DIR_NEU";
-                     break;
-            case(3): os << "    NEU_DIR";
-                     break;
-            case(4): os << "    NEUMANN";
-                     break;
-        }
-        os <<"\n";
-    }
-
 };
 
 }//namespace eule

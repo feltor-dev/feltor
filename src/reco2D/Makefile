@@ -11,7 +11,7 @@ INCLUDE+= -I../../inc   # other project libraries
 all: asela
 
 asela: asela.cu asela.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DDG_BENCHMARK 
 
 .PHONY: clean
 

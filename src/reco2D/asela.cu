@@ -11,7 +11,6 @@
 #include "dg/runge_kutta.h"
 #include "dg/multistep.h"
 #include "dg/backend/timer.cuh"
-#include "file/read_input.h"
 #include "parameters.h"
 
 /*
@@ -27,43 +26,49 @@ double aparallel( double x, double y)
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
-    std::vector<double> v, v2;
-    std::stringstream title;
+    ////Parameter initialisation ////////////////////////////////////////////
+    Json::Reader reader;
+    Json::Value js;
     if( argc == 1)
     {
-        v = file::read_input("input.txt");
+        std::ifstream is("input.json");
+        reader.parse(is,js,false);
     }
     else if( argc == 2)
     {
-        v = file::read_input( argv[1]);
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
     }
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], v2[2]);
-    /////////////////////////////////////////////////////////////////////////
-    const eule::Parameters p( v);
+    const eule::Parameters p( js);
     p.display( std::cout);
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::stringstream title;
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
+    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+    /////////////////////////////////////////////////////////////////////////
 
-    dg::Grid2d grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bcx, p.bcy);
+    dg::Grid2d grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    eule::Asela< dg::DMatrix, dg::DVec > asela( grid, p); 
-    eule::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu, 1., 1. );
+    eule::Asela< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > asela( grid, p); 
+    eule::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu, 1., 1. );
     //create initial vector
     std::vector<dg::DVec> y0(4, dg::evaluate( dg::one, grid)), y1(y0); // n_e' = gaussian
     y0[2] = y0[3] = dg::evaluate( aparallel, grid);
     dg::DVec temp( y0[2]);
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplaceM(grid, dg::normed, dg::centered);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplaceM(grid, dg::normed, dg::centered);
     dg::blas2::gemv( laplaceM, y0[2], temp); //u_e = \Delta A_parallel
     dg::blas1::axpby( p.dhat[0]*p.dhat[0], temp, 1., y0[2]);//w_e = \Delta A + beta/mue A
    
-    asela.log( y0, y0, 2); //transform to logarithmic values
+    for( unsigned i=0; i<2; i++)
+        dg::blas1::transform( y0[i], y0[i], dg::LN<double>());
 
     dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
 
@@ -83,10 +88,11 @@ int main( int argc, char* argv[])
     unsigned step = 0;
     while ( !glfwWindowShouldClose( w ))
     {
-        asela.exp( y0, y1, 2);
+        for( unsigned i=0; i<2; i++)
+            dg::blas1::transform( y0[i], y0[i], dg::EXP<double>());
 
         thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
-        hvisual = dvisual;
+        dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -97,7 +103,7 @@ int main( int argc, char* argv[])
 
 
         thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-1));
-        hvisual = dvisual;
+        dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -108,7 +114,7 @@ int main( int argc, char* argv[])
 
 
         dvisual = asela.potential()[0];
-        hvisual = dvisual;
+        dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -119,7 +125,7 @@ int main( int argc, char* argv[])
 
         //transform phi
         dg::blas2::gemv(laplaceM, asela.potential()[0], dvisual);
-        hvisual = dvisual;
+        dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -130,7 +136,7 @@ int main( int argc, char* argv[])
 
         //transform Aparallel
         dvisual = asela.aparallel();
-        hvisual = dvisual;
+        dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
@@ -141,7 +147,7 @@ int main( int argc, char* argv[])
 
         //transform Aparallel
         dg::blas2::gemv( laplaceM, asela.aparallel(), dvisual);
-        hvisual = dvisual;
+        dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );

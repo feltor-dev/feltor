@@ -10,7 +10,6 @@
 #include "dg/backend/xspacelib.cuh"
 #include "toeflI.cuh"
 #include "dg/backend/timer.cuh" 
-#include "file/read_input.h"
 #include "parameters.h"
 
 /*
@@ -22,13 +21,11 @@
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
-    std::vector<double> v, v2;
     std::stringstream title;
     Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
-        v = file::read_input("input.json");
         std::ifstream is("input.json");
         reader.parse(is,js,false);
     }
@@ -42,13 +39,15 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
-    draw::RenderHostData render(v2[1], v2[2]);
-    /////////////////////////////////////////////////////////////////////////
     const imp::Parameters p( js);
     p.display( std::cout);
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
+    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+    /////////////////////////////////////////////////////////////////////////
     ////////////////////////////////set up computations///////////////////////////
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 

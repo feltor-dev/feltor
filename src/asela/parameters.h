@@ -1,5 +1,6 @@
 #pragma once
 #include "dg/enums.h"
+#include "json/json.h"
 
 namespace eule{
 /**
@@ -56,74 +57,57 @@ struct Parameters
     unsigned initcond; //!< 0 = zero electric potential, 1 = ExB vorticity equals ion diamagnetic vorticity
     unsigned curvmode; //!< 0 = low beta, 1 = toroidal field line 
     unsigned flrmode;
-    /**
-     * @brief constructor to make a const object
-     *
-     * @param v Vector from read_input function
-     */
-    Parameters( const std::vector< double>& v):layout_(0) {
-        if( layout_ == 0)
-        {
-            n  = (unsigned)v[1]; 
-            Nx = (unsigned)v[2];
-            Ny = (unsigned)v[3];
-            Nz = (unsigned)v[4];
-            dt = v[5];
-            n_out = v[6];
-            Nx_out = v[7];
-            Ny_out = v[8];
-            Nz_out = v[9];
-            itstp = v[10];
-            maxout = v[11];
-            eps_pol = v[12];
-            eps_maxwell = v[13];
-            eps_gamma = v[14];
-            eps_time = v[15];
-            eps_hat = 1.;
-            mu[0] = v[16];
-            mu[1] = 1.;
-            tau[0] = -1.;
-            tau[1] = v[17];
-            beta = v[18];
-            nu_perp = v[19];
-            nu_parallel = v[20];
-            c = v[21];            
-            amp = v[22];
-            sigma = v[23];
-            posX = v[24];
-            posY = v[25];
-            sigma_z = v[26];
-            k_psi = v[27];
-            nprofileamp = v[28];
-            bgprofamp = v[29];
-            omega_source = v[30];
-            boxscaleRp = v[31];
-            if(v.size() > 32)
-            {
-                boxscaleRm = v[32];
-                boxscaleZp = v[33];
-                boxscaleZm = v[34];
-                bc = map((int)v[35]);
-                pollim = (unsigned)v[36];
-                pardiss = (unsigned)v[37];
-                if( v.size() > 38)
-                    mode = (unsigned)v[38];
-                else mode = 0;
-                initcond = (unsigned)v[39];
-                curvmode = (unsigned)v[40];
-                flrmode = (unsigned)v[41];
-            }
-            else //to be compatible with older versions
-            {
-                boxscaleRm = v[31];
-                boxscaleZp = v[31];
-                boxscaleZm = v[31];
-                bc = map( 1);
-                pollim = 0;
-                pardiss = 0;
-                mode = 0;
-            }
-        }
+    Parameters( const Json::Value& js) {
+        n       = js["n"].asUInt();
+        Nx      = js["Nx"].asUInt();
+        Ny      = js["Ny"].asUInt();
+        Nz      = js["Nz"].asUInt();
+        dt      = js["dt"].asDouble();
+        n_out   = js["n_out"].asUInt();
+        Nx_out  = js["Nx_out"].asUInt();
+        Ny_out  = js["Ny_out"].asUInt();
+        Nz_out  = js["Nz_out"].asUInt();
+        itstp   = js["itstp"].asUInt();
+        maxout  = js["maxout"].asUInt();
+
+        eps_pol     = js["eps_pol"].asDouble();
+        eps_maxwell = js["eps_maxwell"].asDouble();
+        eps_gamma   = js["eps_gamma"].asDouble();
+        eps_time    = js["eps_time"].asDouble();
+        eps_hat     = 1.;
+
+        mu[0]       = js["mu"].asDouble();
+        mu[1]       = +1.;
+        tau[0]      = -1.;
+        tau[1]      = js["tau"].asDouble();
+        beta        = js["beta"].asDouble();
+        nu_perp     = js["nu_perp"].asDouble();
+        nu_parallel = js["nu_parallel"].asDouble();
+        c           = js["resistivity"].asDouble();
+
+        amp         = js["amplitude"].asDouble();
+        sigma       = js["sigma"].asDouble();
+        posX        = js["posX"].asDouble();
+        posY        = js["posY"].asDouble();
+        sigma_z     = js["sigma_z"].asDouble();
+        k_psi       = js["k_psi"].asDouble();
+        omega_source = js["source"].asDouble();
+
+        bc          = dg::str2bc(js["bc"].asString());
+        nprofileamp = js["nprofileamp"].asDouble();
+        bgprofamp   = js["bgprofamp"].asDouble();
+
+        boxscaleRp  = js.get("boxscaleRp",1.05).asDouble();
+        boxscaleRm  = js.get("boxscaleRm",1.05).asDouble();
+        boxscaleZp  = js.get("boxscaleZp",1.05).asDouble();
+        boxscaleZm  = js.get("boxscaleZm",1.05).asDouble();
+
+        pollim      = js.get( "pollim", 0).asUInt();
+        pardiss     = js.get( "pardiss", 0).asUInt();
+        mode        = js.get( "mode", 0).asUInt();
+        initcond    = js.get( "initial", 0).asUInt();
+        curvmode    = js.get( "curvmode", 0).asUInt();
+        flrmode     = js.get( "flrmode", 0).asUInt();
     }
     /**
      * @brief Display parameters
@@ -173,7 +157,7 @@ struct Parameters
             <<"     Steps between output: "<<itstp<<"\n"
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Boundary condition is: \n"
-            <<"     global BC             =              "<<bc<<"\n"
+            <<"     global BC             =              "<<dg::bc2str(bc)<<"\n"
             <<"     Poloidal limiter      =              "<<pollim<<"\n"
             <<"     Parallel dissipation  =              "<<pardiss<<"\n"
             <<"     Computation mode      =              "<<mode<<"\n"
@@ -181,39 +165,6 @@ struct Parameters
             <<"     curvature mode        =              "<<curvmode<<"\n"
             <<"     em. FLR mode          =              "<<flrmode<<"\n";
         os << std::flush;
-    }
-    private:
-    int layout_;
-    dg::bc map( int i)
-    {
-        switch( i)
-        {
-            case(0): return dg::PER;
-            case(1): return dg::DIR;
-            case(2): return dg::DIR_NEU;
-            case(3): return dg::NEU_DIR;
-            case(4): return dg::NEU;
-            default: return dg::PER;
-        }
-    }
-    void displayBC( std::ostream& os, dg::bc bc) const
-    {
-        os << "Boundary conditions  are: \n";
-        switch( bc)
-        {
-            case(0): os << "    PERIODIC";
-                     break;
-            case(1): os << "    DIRICHLET";
-                     break;
-            case(2): os << "    DIR_NEU";
-                     break;
-            case(3): os << "    NEU_DIR";
-                     break;
-            case(4): os << "    NEUMANN";
-                     break;
-        }
-
-        os <<"\n";
     }
 };
 

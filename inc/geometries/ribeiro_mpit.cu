@@ -9,7 +9,6 @@
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
-#include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
 #include "dg/backend/mpi_init.h"

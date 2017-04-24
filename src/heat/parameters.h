@@ -1,5 +1,6 @@
 #pragma once
 #include "dg/enums.h"
+#include "json.h"
 
 namespace eule{
 /**
@@ -22,53 +23,42 @@ struct Parameters
     enum dg::bc bc;
     double boxscaleRp,boxscaleRm,boxscaleZp,boxscaleZm;
     double eps_time;
-    /**
-     * @brief constructor to make a const object
-     *
-     * @param v Vector from read_input function
-     */
-    Parameters( const std::vector< double>& v):layout_(0) {
-        if( layout_ == 0)
-        {
-            n  = (unsigned)v[1]; 
-            Nx = (unsigned)v[2];
-            Ny = (unsigned)v[3];
-            Nz = (unsigned)v[4];
-            dt = v[5];
-            n_out = v[6];
-            Nx_out = v[7];
-            Ny_out = v[8];
-            Nz_out = v[9];
-            itstp = v[10];
-            maxout = v[11];
-            nu_perp = v[12];
-            nu_parallel = v[13];
-            amp = v[14];
-            sigma = v[15];
-            posX = v[16];
-            posY = v[17];
-            sigma_z = v[18];
-            k_psi = v[19];
-            nprofileamp = v[20];
-            bgprofamp = v[21];
-            bc = map((int)v[22]);
-            boxscaleRp = v[23];
-            boxscaleRm = v[24];
-            boxscaleZp = v[25];
-            boxscaleZm = v[26];
-            p_adv       =(unsigned) v[27];
-            p_diff      =(unsigned) v[28];
-            p_diffperp  =(unsigned) v[29];
-            p_torlim    =(unsigned) v[30];
-            eps_time = v[31];
+    Parameters( const Json::Value& js) {
+        n  = js["n"].asUInt();
+        Nx = js["Nx"].asUInt();
+        Ny = js["Ny"].asUInt();
+        Nz = js["Nz"].asUInt();
+        dt = js["dt"].asDouble();
+        n_out  = js["n_out"].asUInt();
+        Nx_out = js["Nx_out"].asUInt();
+        Ny_out = js["Ny_out"].asUInt();
+        Nz_out = js["Nz_out"].asUInt();
+        itstp = js["itstp"].asUInt();
+        maxout = js["maxout"].asUInt();
 
-        }
+        nu_perp     = js["nu_perp"].asDouble();
+        nu_parallel = js["nu_parallel"].asDouble();
+        amp = js["amplitude"].asDouble();
+        sigma = js["sigma"].asDouble();
+        posX = js["posX"].asDouble();
+        posY = js["posY"].asDouble();
+        sigma_z = js["sigma_z"].asDouble();
+        k_psi = js["k_psi"].asDouble();
+
+        eps_time = js["eps_time"].asDouble();
+        bc = dg::str2bc(js["bc"].asString());
+        nprofileamp = js["nprofileamp"].asDouble();
+        bgprofamp = js["bgprofamp"].asDouble();
+        boxscaleRp = js["boxscaleRp"].asDouble();
+        boxscaleRm = js["boxscaleRm"].asDouble();
+        boxscaleZp = js["boxscaleZp"].asDouble();
+        boxscaleZm = js["boxscaleZm"].asDouble();
+        p_adv       =js["adv"].asUInt();
+        p_diff      =js["diff"].asUInt();
+        p_diffperp  =js["diffperp"].asUInt();
+        p_torlim    =js["torlim"].asUInt();
     }
-    /**
-     * @brief Display parameters
-     *
-     * @param os Output stream
-     */
+
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
@@ -105,45 +95,12 @@ struct Parameters
             <<"     p_adv  =              "<<p_adv<<"\n"
             <<"     p_diff =              "<<p_diff<<"\n"            
             <<"     p_diffperp =          "<<p_diffperp<<"\n"
-            <<"     p_torlim =          "<<p_torlim<<"\n";           
+            <<"     p_torlim =            "<<p_torlim<<"\n";           
         os << "Boundary condition is: \n"
-            <<"     global BC  =              "<<bc<<"\n";
+            <<"     global BC  =              "<<bc2str(bc)<<"\n";
         os << "PCG epsilon for time stepper: \n"
             <<"     eps_time  =              "<<eps_time<<"\n";
         os << std::flush;//the endl is for the implicit flush 
-    }
-    private:
-    int layout_;
-    dg::bc map( int i)
-    {
-        switch( i)
-        {
-            case(0): return dg::PER;
-            case(1): return dg::DIR;
-            case(2): return dg::DIR_NEU;
-            case(3): return dg::NEU_DIR;
-            case(4): return dg::NEU;
-            default: return dg::PER;
-        }
-    }
-    void displayBC( std::ostream& os, dg::bc bc) const
-    {
-        os << "Boundary conditions  are: \n";
-        switch( bc)
-        {
-            case(0): os << "    PERIODIC";
-                     break;
-            case(1): os << "    DIRICHLET";
-                     break;
-            case(2): os << "    DIR_NEU";
-                     break;
-            case(3): os << "    NEU_DIR";
-                     break;
-            case(4): os << "    NEUMANN";
-                     break;
-        }
-
-        os <<"\n";
     }
 };
 

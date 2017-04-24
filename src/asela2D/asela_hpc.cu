@@ -10,7 +10,6 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "geometries/solovev.h"
 
@@ -29,8 +28,8 @@ using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    Json::Reader reader;
+    Json::Value js, gs;
     if( argc != 4)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
@@ -38,23 +37,16 @@ int main( int argc, char* argv[])
     }
     else 
     {
-
-        try{
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-            v = file::read_input( argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            std::cout << geom << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( v);
+    const eule::Parameters p( js);
+    const dg::geo::solovev::GeomParameters gp(gs);
     p.display( std::cout);
-    const dg::geo::solovev::GeomParameters gp(v3);
     gp.display( std::cout);
+    std::string input = js.toStyledString(), geom = gs.toStyledString();
     ////////////////////////////////set up computations///////////////////////////
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;

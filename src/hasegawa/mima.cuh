@@ -10,6 +10,8 @@
 #endif
 
 
+//@note This is an old copy of the toefl project and shouldn't be taken as a basis for a new project
+
 namespace dg
 {
 template< class Matrix, class container>
@@ -32,7 +34,7 @@ struct Diffusion
     double nu_;
     const container w2d, v2d;
     container temp;
-    Elliptic<Matrix, container, container> LaplacianM;
+    Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM;
 };
 
 
@@ -82,11 +84,11 @@ struct Mima
     container dxxphi, dxyphi;
 
     //matrices and solvers
-    Elliptic<Matrix, container, container> laplaceM;
-    ArakawaX< Matrix, container> arakawa; 
+    Elliptic<dg::CartesianGrid2d, Matrix, container> laplaceM;
+    ArakawaX<dg::CartesianGrid2d, Matrix, container> arakawa; 
     const container w2d, v2d;
     Invert<container> invert;
-    Helmholtz<Matrix, container, container> helmholtz;
+    Helmholtz<dg::CartesianGrid2d, Matrix, container> helmholtz;
 
 
 

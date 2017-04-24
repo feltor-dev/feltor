@@ -12,7 +12,6 @@
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
 // #include "dg/backend/ell_interpolation.h"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "dg/runge_kutta.h"
 #include "dg/multistep.h"
@@ -28,9 +27,10 @@ using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
-    ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    ////Parameter initialisation ////////////////////////////////////////////
+    std::stringstream title;
+    Json::Reader reader;
+    Json::Value js, gs;
     if(!(( argc == 4) || ( argc == 5)) )
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [output.nc] [input.nc]\n";
@@ -39,24 +39,13 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-            v = file::read_input( argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            std::cout << geom << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( v);
-    p.display( std::cout);
-    const dg::geo::solovev::GeomParameters gp(v3);
-    gp.display( std::cout);
-    
-    ///////////////////////////////////////////////////////////////////////////
+    const eule::Parameters p( js); p.display( std::cout);
+    const GeomParameters gp(gs); gp.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
@@ -95,8 +84,10 @@ int main( int argc, char* argv[])
         errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
-        const eule::Parameters pin(file::read_input( inputin));
-        const dg::geo::solovev::GeomParameters gpin(file::read_input( geomin));
+        reader.parse(inputin,js,false);
+        reader.parse(geomin,gs,false);
+        const eule::Parameters pin(js);
+        const dg::geo::solovev::GeomParameters gpin(gs);
         double Rminin = gpin.R_0 - pin.boxscaleRm*gpin.a;
         double Zminin =-pin.boxscaleZm*gpin.a*gpin.elongation;
         double Rmaxin = gpin.R_0 + pin.boxscaleRp*gpin.a; 
@@ -163,7 +154,9 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
+    std::string input = js.toStyledString(); 
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    std::string geom = gs.toStyledString(); 
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4];
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);

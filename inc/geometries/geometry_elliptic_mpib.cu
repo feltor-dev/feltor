@@ -3,7 +3,6 @@
 
 #include <netcdf_par.h>
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "dg/backend/timer.cuh"

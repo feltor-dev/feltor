@@ -145,7 +145,7 @@ struct Implicit
     void symv( const container& x, container& y) 
     {
         blas1::axpby( 1., x, 0, temp_);//f_ might destroy x
-        if( alpha_ != 0);
+        if( alpha_ != 0)
             f_( temp_,y);
         blas1::axpby( 1., x, alpha_, y, y);
         blas2::symv( f_.weights(), y,  y);
@@ -154,7 +154,7 @@ struct Implicit
     void operator()( const container& x, container& y) 
     {
         blas1::axpby( 1., x, 0, temp_);
-        if( alpha_ != 0);
+        if( alpha_ != 0)
             f_( temp_,y);
         blas1::axpby( 1., x, alpha_, y, y);
     }
