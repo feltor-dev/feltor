@@ -257,6 +257,7 @@ struct NearestNeighborComm
     bool silent_;
     Index gather_map1, gather_map2, scatter_map1, scatter_map2;
     //dynamically allocate buffer so that collect can be const
+    Buffer<Vector> values, buffer1, buffer2, rb1, rb2; 
 
     void sendrecv( Vector&, Vector&, Vector& , Vector&)const;
     int buffer_size() const;
@@ -328,6 +329,9 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
     }
     gather_map1 =hbgather1, gather_map2 =hbgather2;
     scatter_map1=hbscattr1, scatter_map2=hbscattr2;
+    values.data()->resize( size());
+    buffer1.data()->resize( buffer_size()), buffer2.data()->resize( buffer_size());
+    rb1.data()->resize( buffer_size()), rb2.data()->resize( buffer_size());
 }
 
 template<class I, class V>
@@ -356,10 +360,6 @@ int NearestNeighborComm<I,V>::buffer_size() const
 template<class I, class V>
 const V& NearestNeighborComm<I,V>::collect( const V& input) const
 {
-    Buffer<V> values, buffer1, buffer2, rb1, rb2; 
-    values.data()->resize( size());
-    buffer1.data()->resize( buffer_size()), buffer2.data()->resize( buffer_size());
-    rb1.data()->resize( buffer_size()), rb2.data()->resize( buffer_size());
     if( silent_) return *values.data();
         //int rank;
         //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
