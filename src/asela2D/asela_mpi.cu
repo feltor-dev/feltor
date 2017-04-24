@@ -25,6 +25,7 @@
 */
 
 typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
+using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
@@ -67,7 +68,7 @@ int main( int argc, char* argv[])
     }
     const eule::Parameters p( v);
     if(rank==0) p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
+    const dg::geo::solovev::GeomParameters gp(v3);
     if(rank==0) gp.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
     
@@ -89,7 +90,7 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
     std::vector<dg::MDVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //initial perturbation
     if (p.mode == 0  || p.mode ==1) 
@@ -104,13 +105,13 @@ int main( int argc, char* argv[])
     }
     if (p.mode == 3) 
     { 
-        solovev::ZonalFlow init0(p.amp, p.k_psi, gp);
+        dg::geo::ZonalFlow<Psip> init0(p.amp, p.k_psi, gp, Psip(gp));
         y1[1] = dg::evaluate( init0, grid);
     }
 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::MDVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+    dg::MDVec damping = dg::evaluate( dg::geo::GaussianProfXDamping<Psip>(Psip(gp), gp), grid);
     dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     asela.initializene(y0[1],y0[0]);    
 
@@ -134,9 +135,10 @@ int main( int argc, char* argv[])
         err = file::define_dimensions( ncid, dimids, &tvarID, global_grid_out);
 
 
-        solovev::FieldR fieldR(gp);
-        solovev::FieldZ fieldZ(gp);
-        solovev::FieldP fieldP(gp);
+        MagneticField c(gp);
+        dg::geo::FieldR<MagneticField> fieldR(c, gp.R_0);
+        dg::geo::FieldZ<MagneticField> fieldZ(c, gp.R_0);
+        dg::geo::FieldP<MagneticField> fieldP(c, gp.R_0);
         dg::HVec vecR = dg::evaluate( fieldR, global_grid_out);
         dg::HVec vecZ = dg::evaluate( fieldZ, global_grid_out);
         dg::HVec vecP = dg::evaluate( fieldP, global_grid_out);

@@ -1,17 +1,20 @@
 #pragma once
+#include <string>
 #include <vector>
 #include "json/json.h"
-
 /*!@file
  *
  * Geometry parameters
  */
+namespace dg
+{
+namespace geo
+{
 namespace solovev
 {
-///@addtogroup geom
-///@{
 /**
- * @brief Constructs and display geometric parameters
+ * @brief Constructs and display geometric parameters for the solovev and taylor fields
+ * @ingroup geom
  */    
 struct GeomParameters
 {
@@ -28,6 +31,7 @@ struct GeomParameters
            psipmaxlim,  //!< for limiter
            qampl; //scales grad-shafranov q factor
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
+    std::string equilibrium;
      /**
      * @brief constructor to make an object
      *
@@ -73,6 +77,7 @@ struct GeomParameters
         psipmaxcut= js["psip_max_cut"].asDouble();
         psipmaxlim= js["psip_max_lim"].asDouble();
         qampl = js.get("qampl", 1.).asDouble();
+        equilibrium = js.get( "equilibrium", "solovev").asString();
     }
     /**
      * @brief Display parameters
@@ -102,3 +107,5 @@ struct GeomParameters
     }
 };
 } //namespace solovev
+} //namespace geo
+} //namespace dg

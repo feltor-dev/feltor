@@ -3,8 +3,7 @@
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
 #include "parameters.h"
-#include "geometries/solovev.h"
-#include "geometries/init.h"
+#include "geometries/geometries.h"
 
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
@@ -43,7 +42,7 @@ struct Rolkar
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    Rolkar( const Geometry& g, eule::Parameters p, solovev::GeomParameters gp, DS& dsN, DS& dsDIR):
+    Rolkar( const Geometry& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp, DS& dsN, DS& dsDIR):
         p(p),
         gp(gp),
         LaplacianM_perpN  ( g, g.bcx(), g.bcy(), dg::normed, dg::centered),
@@ -51,8 +50,9 @@ struct Rolkar
         dsN_(dsN),
         dsDIR_(dsDIR)
     {
+        using dg::geo::solovev::Psip;
         dg::blas1::transfer( dg::evaluate( dg::zero, g), temp);
-        dg::blas1::transfer( dg::pullback( solovev::GaussianDamping(gp), g), dampgauss_);
+        dg::blas1::transfer( dg::pullback( dg::geo::GaussianDamping<Psip>(Psip(gp), gp.psipmaxcut, gp.alpha), g), dampgauss_);
     }
 
     /**
@@ -126,7 +126,7 @@ struct Rolkar
     //const container& damping(){return dampprof_;}
   private:
     const eule::Parameters p;
-    const solovev::GeomParameters gp;
+    const dg::geo::solovev::GeomParameters gp;
     container temp;
     container dampgauss_;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perpN,LaplacianM_perpDIR;
@@ -151,7 +151,7 @@ struct Feltor
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    Feltor( const Geometry& g, eule::Parameters p, solovev::GeomParameters gp);
+    Feltor( const Geometry& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp);
 
 
     /**
@@ -274,7 +274,7 @@ struct Feltor
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
 
     const eule::Parameters p;
-    const solovev::GeomParameters gp;
+    const dg::geo::solovev::GeomParameters gp;
 
     double mass_, energy_, diff_, ediff_, aligned_;
     std::vector<double> evec;
@@ -283,13 +283,34 @@ struct Feltor
 
 ///@cond
 template<class Grid, class DS, class Matrix, class container>
-Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, solovev::GeomParameters gp): 
+Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp): 
     dsDIR_( typename DS::FieldAligned( 
-                solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR, (2*M_PI)/((double)p.Nz)), 
-            solovev::Field(gp), dg::normed, dg::forward ),
+                dg::geo::Field<dg::geo::solovev::MagneticField>(
+                    dg::geo::solovev::MagneticField(gp), gp.R_0
+                    ), 
+                g, gp.rk4eps, 
+                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(
+                    dg::geo::solovev::Psip(gp), gp.psipmaxlim
+                    ), 
+                dg::DIR, (2*M_PI)/((double)p.Nz)
+                ), 
+            dg::geo::Field<dg::geo::solovev::MagneticField>(
+                dg::geo::solovev::MagneticField(gp), gp.R_0
+                ), 
+            dg::normed, dg::forward ),
     dsN_( typename DS::FieldAligned(
-                solovev::Field(gp), g, gp.rk4eps, solovev::PsiLimiter(gp), g.bcx(), (2*M_PI)/((double)p.Nz)), 
-          solovev::Field(gp), dg::normed, dg::forward ),
+                dg::geo::Field<dg::geo::solovev::MagneticField>(
+                    dg::geo::solovev::MagneticField(gp), gp.R_0), 
+                g, gp.rk4eps, 
+                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(
+                    dg::geo::solovev::Psip(gp), gp.psipmaxlim
+                    ), 
+                g.bcx(), (2*M_PI)/((double)p.Nz)
+                ), 
+          dg::geo::Field<dg::geo::solovev::MagneticField>(
+              dg::geo::solovev::MagneticField(gp), gp.R_0
+              ), 
+          dg::normed, dg::forward ),
     //////////the poisson operators ////////////////////////////////////////
     poissonN(  g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
@@ -315,19 +336,21 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
     invert_invgammaN.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
     invert_invgammaPhi.construct( omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
     //////////////////////////////init fields /////////////////////
-    dg::blas1::transfer(  dg::pullback(solovev::Field(gp),           g), binv);
-    dg::blas1::transfer(  dg::pullback(solovev::GradLnB(gp),         g), gradlnB);
-    dg::blas1::transfer(  dg::pullback(solovev::TanhSource(gp),      g), source);
-    dg::blas1::transfer(  dg::pullback(solovev::GaussianDamping(gp), g), damping);
+    using namespace dg::geo::solovev;
+    MagneticField mf(gp);
+    dg::blas1::transfer(  dg::pullback(dg::geo::Field<MagneticField>(mf, gp.R_0),                     g), binv);
+    dg::blas1::transfer(  dg::pullback(dg::geo::GradLnB<MagneticField>(mf, gp.R_0),                   g), gradlnB);
+    dg::blas1::transfer(  dg::pullback(dg::geo::TanhSource<Psip>(mf.psip, gp.psipmin, gp.alpha),      g), source);
+    dg::blas1::transfer(  dg::pullback(dg::geo::GaussianDamping<Psip>(mf.psip, gp.psipmax, gp.alpha), g), damping);
     ////////////////////////////transform curvature components////////
     typename dg::HostVec< typename dg::GeometryTraits<Grid>::memory_category>::host_vector tempX, tempY;
-    dg::geo::pushForwardPerp(solovev::CurvatureNablaBR(gp), solovev::CurvatureNablaBZ(gp), tempX, tempY, g);
+    dg::geo::pushForwardPerp(dg::geo::CurvatureNablaBR<MagneticField>(mf, gp.R_0), dg::geo::CurvatureNablaBZ<MagneticField>(mf, gp.R_0), tempX, tempY, g);
     dg::blas1::transfer(  tempX, curvX);
     dg::blas1::transfer(  tempY, curvY);
-    dg::blas1::transfer(  dg::pullback(solovev::DivCurvatureKappa(gp), g), divCurvKappa);
+    dg::blas1::transfer(  dg::pullback(dg::geo::DivCurvatureKappa<MagneticField>(mf, gp.R_0), g), divCurvKappa);
     if (p.curvmode==1) 
     {
-        dg::geo::pushForwardPerp(solovev::CurvatureKappaR(), solovev::CurvatureKappaZ(gp), tempX, tempY, g);
+        dg::geo::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ<MagneticField>(mf, gp.R_0), tempX, tempY, g);
         dg::blas1::transfer(  tempX, curvKappaX);
         dg::blas1::transfer(  tempY, curvKappaY);
         dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
@@ -342,7 +365,7 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
         dg::blas1::scal(divCurvKappa,0.);
     }
     ///////////////////init densities//////////////////////////////
-    dg::blas1::transfer( dg::pullback(solovev::Nprofile(p.bgprofamp, p.nprofileamp, gp),g), profne);
+    dg::blas1::transfer( dg::pullback(dg::geo::Nprofile<Psip>(p.bgprofamp, p.nprofileamp, gp, mf.psip),g), profne);
     dg::blas1::transfer(  profne ,profNi);
     dg::blas1::plus( profNi, -1); 
     initializene(profNi, profne); //ne = Gamma N_i (needs Invert object)

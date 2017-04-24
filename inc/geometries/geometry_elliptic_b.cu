@@ -16,8 +16,11 @@
 #include "orthogonal.h"
 #include "refined_curvilinear.h"
 #include "refined_orthogonal.h"
+#include "simple_orthogonal.h"
+#include "testfunctors.h"
 
 
+using namespace dg::geo::solovev;
 
 int main(int argc, char**argv)
 {
@@ -43,21 +46,23 @@ int main(int argc, char**argv)
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    solovev::GeomParameters gp(js);
+    GeomParameters gp(js);
+    MagneticField c(gp);
     gp.display( std::cout);
     dg::Timer t;
-    solovev::Psip psip( gp); 
+    Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Constructing grid ... \n";
     t.tic();
-    dg::SimpleOrthogonal<solovev::Psip, solovev::PsipR, solovev::PsipZ, solovev::LaplacePsip> generator( solovev::Psip(gp), solovev::PsipR(gp), solovev::PsipZ(gp), solovev::LaplacePsip(gp), psi_0, psi_1, gp.R_0, 0., 0);
 //     ConformalGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
 //     ConformalGrid2d<dg::DVec> g2d = g3d.perp_grid();
 //     dg::Elliptic<ConformalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g3d, dg::not_normed, dg::centered);
+    dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
+        generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
     dg::OrthogonalRefinedGrid3d<dg::DVec> g3d(multiple_x, multiple_y, generator, n_ref, n, Nx, Ny,Nz, dg::DIR);
     dg::OrthogonalRefinedGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<dg::OrthogonalRefinedGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::centered);
-    dg::RefinedElliptic<dg::OrthogonalRefinedGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::OrthogonalRefinedGrid2d<dg::DVec>, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+    dg::RefinedElliptic<dg::OrthogonalRefinedGrid2d<dg::DVec>, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_refined( g2d, dg::not_normed, dg::forward);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -84,17 +89,14 @@ int main(int argc, char**argv)
     ///////////////////////////////////////////////////////////////////////////
     dg::DVec x =    dg::evaluate( dg::zero, g2d.associated());
     dg::DVec x_fine =    dg::evaluate( dg::zero, g2d);
-    const dg::DVec b =    dg::pullback( solovev::EllipticDirNeuM(gp, psi_0, psi_1, 440, -220, 40., 1), g2d.associated());
-    dg::DVec bmod(b);
-    const dg::DVec chi =  dg::pullback( solovev::BmodTheta(gp), g2d.associated());
-    const dg::DVec solution = dg::pullback( solovev::FuncDirNeu(gp, psi_0, psi_1, 440, -220, 40.,1 ), g2d.associated());
-    //const dg::DVec b =    dg::pullback( solovev::EllipticDirPerM(gp, psi_0, psi_1, 4), g2d.associated());
-    //dg::DVec bmod(b);
-    //const dg::DVec chi =  dg::pullback( solovev::Bmodule(gp), g2d.associated());
-    //const dg::DVec solution = dg::pullback( solovev::FuncDirPer(gp, psi_0, psi_1, 4), g2d.associated());
-    //const dg::DVec b =        dg::pullback( solovev::LaplacePsi(gp), g2d.associated());
-    //const dg::DVec bFINE =    dg::pullback( solovev::LaplacePsi(gp), g2d);
-    //dg::DVec bmod(b);
+    //const dg::DVec b =    dg::pullback( dg::geo::EllipticDirNeuM<MagneticField>(c, gp.R_0, psi_0, psi_1, 440, -220, 40., 1), g2d.associated());
+    //const dg::DVec chi =  dg::pullback( dg::geo::BmodTheta<MagneticField>(c, gp.R_0), g2d.associated());
+    //const dg::DVec solution = dg::pullback( dg::geo::FuncDirNeu<MagneticField>(c,psi_0, psi_1, 440, -220, 40.,1 ), g2d.associated());
+    const dg::DVec b =    dg::pullback( dg::geo::EllipticDirPerM<MagneticField>(c, gp.R_0, psi_0, psi_1, 4), g2d.associated());
+    const dg::DVec chi =  dg::pullback( dg::geo::Bmodule<MagneticField>(c, gp.R_0), g2d.associated());
+    const dg::DVec solution = dg::pullback( dg::geo::FuncDirPer<MagneticField>(c, gp.R_0, psi_0, psi_1, 4), g2d.associated());
+    //const dg::DVec b =        dg::pullback( dg::geo::LaplacePsi(gp), g2d.associated());
+    //const dg::DVec bFINE =    dg::pullback( dg::geo::LaplacePsi(gp), g2d);
     //const dg::DVec chi =      dg::pullback( dg::one, g2d.associated());
     //const dg::DVec chiFINE =  dg::pullback( dg::one, g2d);
     //const dg::DVec solution =     dg::pullback( psip, g2d.associated());
@@ -118,6 +120,7 @@ int main(int argc, char**argv)
     std::cout << eps<<"\t";
     t.tic();
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny*Nz, eps);
+    dg::DVec bmod(b);
     pol_refined.compute_rhs( b_fine, bmod);
     unsigned number = invert(pol_refined, x,bmod);// vol3d, v3d );
     //dg::Invert<dg::DVec > invert( x_fine, x_fine.size(), eps);

@@ -3,14 +3,17 @@
 #include "json/json.h"
 /*!@file
  *
- * Geometry parameters
+ * Geometry parameters for guenther field
  */
-namespace solovev
+namespace dg
 {
-///@addtogroup geom
-///@{
+namespace geo
+{
+namespace guenther
+{
 /**
- * @brief Constructs and display geometric parameters
+ * @brief Constructs and display geometric parameters for the guenther field
+ * @ingroup geom
  */    
 struct GeomParameters
 {
@@ -81,4 +84,6 @@ struct GeomParameters
 
     }
 };
-} //namespace solovev
+} //namespace guenther
+} //namespace geo
+} //namespace dg

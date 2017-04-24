@@ -13,7 +13,7 @@
 #include "dg/backend/average.cuh"
 #include "dg/backend/typedefs.cuh"
 #include "file/read_input.h"
-#include "geometries/solovev.h"
+#include "geometries/geometries.h"
 
 #include "asela.cuh"
 #include "parameters.h"
@@ -26,6 +26,7 @@
 */
 typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 
+using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
@@ -59,7 +60,7 @@ int main( int argc, char* argv[])
     }
     const eule::Parameters p( v);
     p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
+    const dg::geo::solovev::GeomParameters gp(v3);
     gp.display( std::cout);
     v2 = file::read_input( "window_params.txt");
     GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
@@ -83,7 +84,7 @@ int main( int argc, char* argv[])
 
    /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //perturbation 
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
@@ -102,14 +103,14 @@ int main( int argc, char* argv[])
     }
     if( p.mode == 3)
     {
-        solovev::ZonalFlow init0(p.amp, p.k_psi, gp);
+        dg::geo::ZonalFlow<Psip> init0(p.amp, p.k_psi, gp, Psip(gp));
         y1[1] = asela.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
     }
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //sum up background and perturbation
     dg::blas1::plus(y0[1], -1); //initialize ni-1
     if( p.mode == 2 || p.mode == 3)
     {
-        dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+        dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping<Psip>(Psip(gp), gp), grid);
         dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     }
     std::cout << "intiialize ne" << std::endl;

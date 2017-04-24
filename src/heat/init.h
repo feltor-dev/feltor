@@ -6,6 +6,7 @@
 /*!@file
  *
  * Initialize and Damping objects
+ * @deprecated
  */
 namespace solovev
 {

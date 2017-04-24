@@ -1,11 +1,14 @@
 #pragma once
 //#include "solovev.h"
+#include "solovev_parameters.h"
 
 /*!@file
  *
  * Initialize and Damping objects
  */
-namespace solovev
+namespace dg
+{
+namespace geo
 {
 ///@addtogroup profiles
 ///@{
@@ -15,13 +18,13 @@ namespace solovev
         1  \text{ if } \psi_{p,min} < \psi_p(R,Z) < \psi_{p,max}\\
         0  \text{ else}
      \end{cases}\f]
+     @tparam Psi models aBinaryOperator
  */ 
+template<class Psi>
 struct Iris
 {
-    Iris( GeomParameters gp ): 
-        gp_(gp),
-        psip_(gp) {
-        }
+    Iris( Psi psi, double psi_min, double psi_max ): 
+        psip_(psi), psipmin_(psi_min), psipmax_(psi_max) { }
 
     /**
      * @brief 
@@ -32,8 +35,8 @@ struct Iris
      */
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmax) return 0.;
-        if( psip_(R,Z) < gp_.psipmin) return 0.;
+        if( psip_(R,Z) > psipmax_) return 0.;
+        if( psip_(R,Z) < psipmin_) return 0.;
         return 1.;
     }
     /**
@@ -44,8 +47,8 @@ struct Iris
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;
-    Psip psip_;
+    Psi psip_;
+    double psipmin_, psipmax_;
 };
 /**
  * @brief Returns zero outside psipmaxcut otherwise 1
@@ -54,12 +57,11 @@ struct Iris
         1  \text{ else}
      \end{cases}\f]
  */ 
+template<class Psi>
 struct Pupil
 {
-    Pupil( GeomParameters gp): 
-        gp_(gp),
-        psip_(gp) {
-        }
+    Pupil( Psi psi, double psipmaxcut): 
+        psip_(psi), psipmaxcut_(psipmaxcut) { }
     /**
      * @brief 
      \f[ \begin{cases}
@@ -69,7 +71,7 @@ struct Pupil
      */
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmaxcut) return 0.;
+        if( psip_(R,Z) > psipmaxcut_) return 0.;
         return 1.;
     }
     /**
@@ -80,8 +82,8 @@ struct Pupil
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;
-    Psip psip_;
+    Psi psip_;
+    double psipmaxcut_;
 };
 /**
  * @brief Returns psi inside psipmax and psipmax outside psipmax
@@ -90,13 +92,11 @@ struct Pupil
         \psi_p(R,Z) \text{ else}
      \end{cases}\f]
  */ 
+template<class Psi>
 struct PsiPupil
 {
-    PsiPupil( GeomParameters gp, double psipmax): 
-        gp_(gp),
-        psipmax_(psipmax),
-        psip_(gp) {
-        } 
+    PsiPupil( Psi psi, double psipmax): 
+        psipmax_(psipmax), psip_(psi) { } 
     /**
      * @brief 
      \f[ \begin{cases}
@@ -117,9 +117,8 @@ struct PsiPupil
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;
     double psipmax_;
-    Psip psip_;
+    Psi psip_;
 };
 /**
  * @brief Sets values to one outside psipmaxcut, zero else
@@ -129,12 +128,11 @@ struct PsiPupil
      \end{cases}\f]
  *
  */ 
+template<class Psi>
 struct PsiLimiter
 {
-    PsiLimiter( GeomParameters gp): 
-        gp_(gp),
-        psip_(gp) {
-        }
+    PsiLimiter( Psi psi, double psipmaxlim): 
+        psipmaxlim_(psipmaxlim), psip_(psi) { }
 
     /**
      * @brief 
@@ -145,7 +143,7 @@ struct PsiLimiter
      */
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmaxlim) return 1.;
+        if( psip_(R,Z) > psipmaxlim_) return 1.;
         return 0.;
     }
     /**
@@ -156,8 +154,8 @@ struct PsiLimiter
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;
-    Psip psip_;
+    double psipmaxlim_;
+    Psi psip_;
 };
 
 
@@ -174,12 +172,11 @@ struct PsiLimiter
    \f]
  *
  */ 
+template< class Psi>
 struct GaussianDamping
 {
-    GaussianDamping( GeomParameters gp):
-        gp_(gp),
-        psip_(gp) {
-        }
+    GaussianDamping( Psi psi, double psipmaxcut, double alpha):
+        psip_(psi), psipmaxcut_(psipmaxcut), alpha_(alpha) { }
     /**
      * @brief 
      \f[ \begin{cases}
@@ -191,9 +188,9 @@ struct GaussianDamping
      */
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmaxcut + 4.*gp_.alpha) return 0.;
-        if( psip_(R,Z) < (gp_.psipmaxcut)) return 1.;
-        return exp( -( psip_(R,Z)-gp_.psipmaxcut)*( psip_(R,Z)-gp_.psipmaxcut)/2./gp_.alpha/gp_.alpha);
+        if( psip_(R,Z) > psipmaxcut_ + 4.*alpha_) return 0.;
+        if( psip_(R,Z) < psipmaxcut_) return 1.;
+        return exp( -( psip_(R,Z)-psipmaxcut_)*( psip_(R,Z)-psipmaxcut_)/2./alpha_/alpha_);
     }
     /**
     * @brief == operator()(R,Z)
@@ -203,8 +200,8 @@ struct GaussianDamping
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;
-    Psip psip_;
+    Psi psip_;
+    double psipmaxcut_, alpha_;
 };
 /**
  * @brief Damps the inner boundary in a zone 
@@ -218,12 +215,11 @@ struct GaussianDamping
    \f]
  *
  */ 
+template< class Psi>
 struct GaussianProfDamping
 {
-    GaussianProfDamping( GeomParameters gp):
-        gp_(gp),
-        psip_(gp) {
-        }
+    GaussianProfDamping( Psi psi, double psipmax, double alpha):
+        psip_(psi), psipmax_(psipmax), alpha_(alpha) { }
     /**
      * @brief 
      \f[ \begin{cases}
@@ -235,9 +231,9 @@ struct GaussianProfDamping
      */
     double operator( )(double R, double Z)
     {
-        if( psip_(R,Z) > gp_.psipmax ) return 0.;
-        if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
-        return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
+        if( psip_(R,Z) > psipmax_ ) return 0.;
+        if( psip_(R,Z) < (psipmax_-4.*alpha_)) return 1.;
+        return exp( -( psip_(R,Z)-(psipmax_-4.*alpha_))*( psip_(R,Z)-(psipmax_-4.*alpha_))/2./alpha_/alpha_);
     }
     /**
     * @brief == operator()(R,Z)
@@ -247,8 +243,8 @@ struct GaussianProfDamping
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;
-    Psip psip_;
+    Psi psip_;
+    double psipmax_, alpha_;
 };
 /**
  * @brief Damps the inner boundary in a zone 
@@ -263,11 +259,12 @@ struct GaussianProfDamping
    \f]
  *
  */ 
+template <class Psi>
 struct GaussianProfXDamping
 {
-    GaussianProfXDamping( GeomParameters gp):
+    GaussianProfXDamping( Psi psi, dg::geo::solovev::GeomParameters gp):
         gp_(gp),
-        psip_(gp) {
+        psip_(psi) {
         }
     /**
      * @brief 
@@ -292,8 +289,8 @@ struct GaussianProfXDamping
         return (*this)(R,Z);
     }
     private:
-    GeomParameters gp_;
-    Psip psip_;
+    dg::geo::solovev::GeomParameters gp_;
+    Psi psip_;
 };
 
 /**
@@ -301,30 +298,29 @@ struct GaussianProfXDamping
  * Returns a tanh profile shifted to \f$ \psi_{p,min}-3\alpha\f$
  \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha}\right)\right) \f]
  */
+template<class Psi>
 struct TanhSource
 {
-        TanhSource( GeomParameters gp):
-        gp_(gp),
-        psip_(gp) {
-        }
+        TanhSource(Psi psi, double psipmin, double alpha):
+            psipmin_(psipmin), alpha_(alpha), psip_(psi) { }
     /**
      * @brief \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha}\right)\right)
    \f]
      */
     double operator( )(double R, double Z)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
     }
     /**
     * @brief == operator()(R,Z)
     */
     double operator( )(double R, double Z, double phi)
     {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-gp_.psipmin + 3.*gp_.alpha)/gp_.alpha) );
+        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-psipmin_ + 3.*alpha_)/alpha_) );
     }
     private:
-    GeomParameters gp_;
-    Psip psip_;
+    double psipmin_, alpha_; 
+    Psi psip_;
 };
 
 // struct Gradient
@@ -348,7 +344,7 @@ struct TanhSource
 //     private:
 //     eule::Parameters p_;
 //     GeomParameters gp_;
-//     Psip psip_;
+//     Psi psip_;
 // };
 
 /**
@@ -358,13 +354,15 @@ struct TanhSource
  A_{bg} \text{ else } 
  \end{cases}
    \f]
+   @tparam Psi models aBinaryOperator
  */ 
+template<class Psi>
 struct Nprofile
 {
-     Nprofile( double bgprofamp, double peakamp, GeomParameters gp):
+     Nprofile( double bgprofamp, double peakamp, dg::geo::solovev::GeomParameters gp, Psi psi):
          bgamp(bgprofamp), namp( peakamp),
          gp_(gp),
-         psip_(gp) { }
+         psip_(psi) { }
     /**
      * @brief \f[ N(R,Z)=\begin{cases}
  A_{bg} + A_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
@@ -387,8 +385,8 @@ struct Nprofile
     }
     private:
     double bgamp, namp;
-    GeomParameters gp_;
-    Psip psip_;
+    dg::geo::solovev::GeomParameters gp_;
+    Psi psip_;
 };
 
 /**
@@ -399,12 +397,13 @@ struct Nprofile
  \end{cases}
    \f]
  */ 
+template<class Psi>
 struct ZonalFlow
 {
-    ZonalFlow(  double amplitude, double k_psi, GeomParameters gp):
+    ZonalFlow(  double amplitude, double k_psi, dg::geo::solovev::GeomParameters gp, Psi psi):
         amp_(amplitude), k_(k_psi),
         gp_(gp),
-        psip_(gp) { }
+        psip_(psi) { }
     /**
      * @brief \f[ N(R,Z)=\begin{cases}
  A_{bg} |\cos(2\pi\psi_p(R,Z) k_\psi)| \text{ if }\psi_p < \psi_{p,max} \\
@@ -428,89 +427,12 @@ struct ZonalFlow
     }
     private:
     double amp_, k_;
-    GeomParameters gp_;
-    Psip psip_;
-};
-
-/**
- * @brief testfunction to test the parallel derivative 
-      \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
- */ 
-struct TestFunction
-{
-    TestFunction( GeomParameters gp) :  
-        gp_(gp),
-        bhatR_(gp),
-        bhatZ_(gp),
-        bhatP_(gp) {}
-    /**
-     * @brief \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
-     */ 
-    double operator()( double R, double Z, double phi)
-    {
-//         return psip_(R,Z,phi)*sin(phi);
-//         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
-//         double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
-//         double kR = 1.*M_PI/(Rmax - Rmin);
-//         double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
-//         double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
-//         double kZ = 1.*M_PI/(Zmax - Zmin);
-        double kP = 1.;
-//         return sin(phi*kP)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ); //DIR
-//         return cos(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ);
-//         return sin(phi*kP); //DIR
-//         return cos(phi*kP); //NEU
-        return -cos(phi*kP)/bhatP_(R,Z,phi)/R; //NEU 2
-
-    }
-    private:
-    GeomParameters gp_;
-    BHatR bhatR_;
-    BHatZ bhatZ_;
-    BHatP bhatP_;
-};
-/**
- * @brief analyitcal solution of the parallel derivative of the testfunction
- *  \f[ \nabla_\parallel(R,Z,\varphi) f = \frac{\sin(\varphi)}{R}\f]
- */ 
-struct DeriTestFunction
-{
-    DeriTestFunction( GeomParameters gp) :
-        gp_(gp),
-        bhatR_(gp),
-        bhatZ_(gp),
-        bhatP_(gp) {}
-/**
- * @brief \f[ \nabla_\parallel f = \frac{\sin(\varphi)}{R}\f]
- */ 
-    double operator()( double R, double Z, double phi)
-    {
-//         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
-//         double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
-//         double kR = 1.*M_PI/(Rmax - Rmin);
-//         double Zmin = -(p_.boxscaleZm)*gp_.a*gp_.elongation;
-//         double Zmax = (p_.boxscaleZp)*gp_.a*gp_.elongation;
-//         double kZ = 1.*M_PI/(Zmax - Zmin);
-        double kP = 1.;
-//          return (bhatR_(R,Z,phi)*sin(phi)*sin((Z-Zmin)*kZ)*cos((R-Rmin)*kR)*kR+
-//                 bhatZ_(R,Z,phi)*sin(phi)*sin((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kZ+
-//                 bhatP_(R,Z,phi)*cos(phi)*sin((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kP); //DIR
-//         return -bhatR_(R,Z,phi)*cos(phi)*cos((Z-Zmin)*kZ)*sin((R-Rmin)*kR)*kR-
-//                bhatZ_(R,Z,phi)*cos(phi)*cos((R-Rmin)*kR)*sin((Z-Zmin)*kZ)*kZ-
-//                bhatP_(R,Z,phi)*sin(phi)*cos((R-Rmin)*kR)*cos((Z-Zmin)*kZ)*kP;
-//         return  bhatP_(R,Z,phi)*cos(phi*kP)*kP; //DIR
-//         return  -bhatP_(R,Z,phi)*sin(phi*kP)*kP; //NEU
-        return sin(phi*kP)*kP/R; //NEU 2
-
-    }
-    private:
-    GeomParameters gp_;
-    BHatR bhatR_;
-    BHatZ bhatZ_;
-    BHatP bhatP_;
+    dg::geo::solovev::GeomParameters gp_;
+    Psi psip_;
 };
 
 
 ///@}
-}//namespace solovev
+}//namespace functors
+}//namespace dg
 

@@ -14,14 +14,30 @@
 //#include "guenther.h"
 #include "orthogonalX.h"
 #include "refined_orthogonalX.h"
+#include "separatrix_orthogonal.h"
 #include "dg/ds.h"
 #include "init.h"
 
 #include "file/nc_utilities.h"
 
+
+struct ZCutter
+{
+    ZCutter(double ZX): Z_X(ZX){}
+    double operator()(double R, double Z) const {
+        if( Z> Z_X) 
+            return 1;
+        return 0;
+    }
+    private:
+    double Z_X;
+};
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
 typedef dg::FieldAligned< dg::OrthogonalGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
+
+//using namespace dg::geo::solovev;
+using namespace dg::geo::taylor;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
@@ -86,13 +102,13 @@ int main( int argc, char* argv[])
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    solovev::GeomParameters gp(js);
+    GeomParameters gp(js);
     dg::Timer t;
     std::cout << "Type psi_0 \n";
     double psi_0 = -16;
     std::cin >> psi_0;
     std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
-    double fx_0=1./4., fy_0=1./22.;
+    double fx_0=1./8., fy_0=1./22.;
     std::cin >> fx_0>> fy_0;
     std::cout << "Type add_x and add_y \n";
     double add_x, add_y;
@@ -100,22 +116,19 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    taylor::Psip psip( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
-    taylor::PsipR psipR(gp); taylor::PsipZ psipZ(gp);
-    taylor::LaplacePsip laplacePsip(gp); 
-    taylor::PsipRR psipRR(gp); taylor::PsipRZ psipRZ(gp); taylor::PsipZZ psipZZ(gp);
+    MagneticField c(gp);
+    std::cout << "Psi min "<<c.psip(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::findXpoint( psipR, psipZ, psipRR, psipRZ, psipZZ, R_X, Z_X);
+    dg::geo::findXpoint( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, R_X, Z_X);
 
     //solovev::Psip psip( gp); 
     //std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     //solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
     //solovev::LaplacePsip laplacePsip(gp); 
     double R0 = gp.R_0, Z0 = 0;
-    dg::SeparatrixOrthogonal<taylor::Psip,taylor::PsipR,taylor::PsipZ,taylor::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::SimpleOrthogonalX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::LaplacePsip> generator(psip, psipR, psipZ, laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    dg::geo::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::geo::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::OrthogonalGridX3d<dg::HVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     //dg::OrthogonalGridX2d<dg::HVec> g2d = g3d.perp_grid();
     dg::OrthogonalRefinedGridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
@@ -123,6 +136,8 @@ int main( int argc, char* argv[])
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
+    double psi_1 = -fx_0/(1.-fx_0)*psi_0;
+    std::cout << "psi 1 is          "<<psi_1<<"\n";
     dg::Grid1d g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
     g1d.display( std::cout);
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
@@ -149,7 +164,7 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "volume", NC_DOUBLE, 3, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 3, dim3d, &divBID);
 
-    thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
+    thrust::host_vector<double> psi_p = dg::pullback( c.psip, g2d);
     g2d.display();
     err = nc_put_var_double( ncid, onesID, periodify(psi_p, g3d_periodic).data());
     //err = nc_put_var_double( ncid, onesID, periodify(g2d.g(), g3d_periodic).data());
@@ -244,18 +259,24 @@ int main( int argc, char* argv[])
     //error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(temp0,w2d,temp0);
     ////error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(temp0,temp0);
     //std::cout << "Rel Error of volume is "<<sqrt(error)<<"\n";
+    //
+    err = nc_close( ncid);
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, -2*gp.a*gp.elongation, 1.2*gp.a*gp.elongation, 1, 5e3, 1e4, dg::PER, dg::PER);
+    dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
-    solovev::Iris iris( gp);
+    dg::geo::Iris<Psip> iris( c.psip, gp.psipmin, gp.psipmax);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
-    dg::HVec cutter = dg::pullback( iris, g2d), vol( cutter);
-    w2d = dg::create::weights( g2d);//make weights w/o refined weights
-    dg::blas1::pointwiseDot(cutter, w2d, vol);
-    double volume = dg::blas1::dot( g2d.vol(), vol);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);
+
+    dg::HVec cutter = dg::pullback( iris, g2d), vol( cutter);
+    ZCutter cut(Z_X);
+    dg::HVec zcutter = dg::pullback( cut, g2d); 
+    w2d = dg::create::weights( g2d);//make weights w/o refined weights
+    dg::blas1::pointwiseDot(cutter, w2d, vol);
+    dg::blas1::pointwiseDot(zcutter, vol, vol);
+    double volume = dg::blas1::dot( g2d.vol(), vol);
     std::cout << "volumeXYP is "<< volume<<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
@@ -299,7 +320,6 @@ int main( int argc, char* argv[])
     //dg::blas1::transfer( g2d.g(), X);
     //dg::blas1::transfer( psiphom, X);
     //err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
-    err = nc_close( ncid);
 
 
     return 0;

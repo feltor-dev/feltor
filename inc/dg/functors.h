@@ -555,7 +555,7 @@ struct LinearZ
 
 /**
  * @brief Functor for a step function using tanh
- * \f[ f(x,y) = profamp*0.5(1+ sign \tanh((x-x_b)/width ) )+bgampg \f]
+ * \f[ f(x,y) = 0.5 profamp(1+ sign \tanh((x-x_b)/width ) )+bgampg \f]
  */
 struct TanhProfX {
     /**
@@ -590,6 +590,16 @@ struct TanhProfX {
 };
 /**
  * @brief Functor returning a Lamb dipole
+ \f[ f(x,y) = \begin{cases} 2\lambda U J_1(\lambda r) / J_0(\gamma)\cos(\theta) \text{ for } r<R \\
+         0 \text{ else}
+         \end{cases}
+ \f] 
+
+ with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$ 
+ \theta = \arctan_2( (y-y_), (x-x_0))\f$, 
+ \f$J_0, J_1\f$ are
+ Bessel functions of the first kind of order 0 and 1 and 
+ \f$\lambda = \gamma/R\f$ with \f$ \gamma = 3.83170597020751231561\f$
  */
 struct Lamb
 {
@@ -629,7 +639,8 @@ struct Lamb
      * @brief The total enstrophy of the dipole
      *
      * Analytic formula. True for periodic and dirichlet boundary conditions.
-     * @return enstrophy
+     * @return enstrophy \f$ \pi U^2\gamma^2\f$ 
+
      */
     double enstrophy( ) { return M_PI*U_*U_*gamma_*gamma_;}
 
@@ -637,7 +648,7 @@ struct Lamb
      * @brief The total energy of the dipole
      *
      * Analytic formula. True for periodic and dirichlet boundary conditions.
-     * @return  energy
+     * @return  energy \f$ 2\pi R^2U^2\f$ 
      */
     double energy() { return 2.*M_PI*R_*R_*U_*U_;}
   private:
@@ -646,6 +657,23 @@ struct Lamb
 
 /**
  * @brief Return a 2d vortex function 
+       \f[f(x,y) =\begin{cases}
+       \frac{u_d}{1.2965125} \left(
+       r\left(1+\frac{\beta_i^2}{g_i^2}\right) 
+       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
+      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
+      \end{cases}
+      \f]
+
+     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
+ with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$ \theta = \arctan_2( (y-y_), (x-x_0))\f$, 
+        \f$ g_0 = 3.831896621 \f$, 
+        \f$ g_1 = -3.832353624 \f$, 
+        \f$ g_2 = 7.016\f$, 
+        \f$ \beta_0 = 0.03827327723\f$, 
+        \f$ \beta_1 = 0.07071067810 \f$, 
+        \f$ \beta_2 = 0.07071067810 \f$
+        \f$ K_1\f$ is the modified and \f$ J_1\f$ the Bessel function
  */
 struct Vortex
 {
@@ -654,10 +682,10 @@ struct Vortex
      *
      * @param x0 X position
      * @param y0 Y position
-     * @param state mode
+     * @param state mode 0,1, or 2
      * @param R characteristic radius of dipole
-     * @param u_dipole u_drift/u_dipole
-     * @param kz
+     * @param u_dipole u_drift/u_dipole = \f$ u_d\f$
+     * @param kz multiply by \f$ \cos(k_z z) \f$ in three dimensions
      */
     Vortex( double x0, double y0, unsigned state, 
           double R,  double u_dipole, double kz = 0):
@@ -672,14 +700,14 @@ struct Vortex
     /**
      * @brief Evaluate the vortex
      *
-      \f[\begin{cases}
-       \frac{1}{1.2965125} u_d(
-       r(1+\frac{\beta_i^2}{g_i^2}) 
-       - R \frac{\beta_i^2}{g_i^2} J_1(g_i) \frac{r}{RJ_1(g_i)})\cos(\Theta) \text{ if } r/R < 1 \\
-      \frac{1}{1.2965125} u_dR \frac{K_1(\beta_i \frac{r}{R})}{K_1(\beta)} \cos(\Theta) \text{ else }
+       \f[f(x,y) =\begin{cases}
+       \frac{u_d}{1.2965125} \left(
+       r\left(1+\frac{\beta_i^2}{g_i^2}\right) 
+       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
+      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
       \f]
-     * where i is the mode number and r and \f$\Theta\f$ are poloidal coordinates
+     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
      * @param x value
      * @param y value
      *
@@ -702,14 +730,14 @@ struct Vortex
     /**
      * @brief Evaluate the vortex modulated by a sine wave in z
      *
-      \f[ \cos(k_z z)\begin{cases}
-       \frac{1}{1.2965125} u_d(
-       r(1+\frac{\beta_i^2}{g_i^2}) 
-       - R \frac{\beta_i^2}{g_i^2} J_1(g_i) \frac{r}{RJ_1(g_i)})\cos(\Theta) \text{ if } r/R < 1 \\
-      \frac{1}{1.2965125} u_dR \frac{K_1(\beta_i \frac{r}{R})}{K_1(\beta)} \cos(\Theta) \text{ else }
+       \f[f(x,y,z) =\cos(k_z z)\begin{cases}
+       \frac{u_d}{1.2965125} \left(
+       r\left(1+\frac{\beta_i^2}{g_i^2}\right) 
+       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
+      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
       \f]
-     * where i is the mode number and r and \f$\Theta\f$ are poloidal coordinates
+     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
      * @param x value
      * @param y value
      * @param z value
@@ -782,8 +810,8 @@ struct BathRZ{
      * @param Nz Number of planes in phi direction
      * @param R_min Minimal R (in units of rho_s)
      * @param Z_min Minimal Z (in units of rho_s)
-     * @param gamma exponent of the energy function \f[E_k=(k/(k+_k0)^2)^\gamma\f](typical around 30)
-     * @param eddysize \f[k_0=2*\pi*eddysize/XYm \f]
+     * @param gamma exponent of the energy function \f$E_k=(k/(k+k_0)^2)^\gamma\f$(typical around 30)
+     * @param eddysize \f$k_0=2\pi eddysize/\sqrt{R_m^2+Z_m^2} \f$
      * @param amp Amplitude
      */  
     BathRZ( unsigned Rm, unsigned Zm, unsigned Nz, double R_min, double Z_min, double gamma, double eddysize, double amp) : 
@@ -793,7 +821,6 @@ struct BathRZ{
         kvec( Rm_*Zm_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
         normal1(kvec), normal2(kvec), normalamp(kvec), normalphase(kvec)
     {
-        std::cout << "Constructing initial bath" << "\n";
         double Rm2=(double)(Rm_*Rm_);
         double Zm2=(double)(Zm_*Zm_);
         double RZm= sqrt(Rm2+Zm2);

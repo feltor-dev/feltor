@@ -3,18 +3,20 @@
 #include "dg/geometry/refined_grid.h"
 #include "conformal.h"
 
-
-
 namespace dg
 {
-///@addtogroup grids
-///@{
 
 ///@cond
 template< class container>
 struct ConformalRefinedGrid2d; 
 ///@endcond
 
+///@addtogroup grids
+///@{
+
+/**
+ * @brief A conformal refined grid
+ */
 template< class container>
 struct ConformalRefinedGrid3d : public dg::RefinedGrid3d
 {
@@ -41,7 +43,7 @@ struct ConformalRefinedGrid3d : public dg::RefinedGrid3d
     const thrust::host_vector<double>& xz()const{return xz_;}
     const thrust::host_vector<double>& yz()const{return yz_;}
     const container& g_xx()const{return g_xx_;}
-    const container& g_yy()const{return g_yy_;}
+    const container& g_yy()const{return g_xx_;}
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
@@ -102,6 +104,9 @@ struct ConformalRefinedGrid3d : public dg::RefinedGrid3d
 
 };
 
+/**
+ * @brief A conformal refined grid
+ */
 template< class container>
 struct ConformalRefinedGrid2d : public dg::RefinedGrid2d
 {
@@ -114,7 +119,7 @@ struct ConformalRefinedGrid2d : public dg::RefinedGrid2d
         dg::ConformalRefinedGrid3d<container> g( multiple_x, multiple_y, generator, n,n_old,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
-        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
+        g_xx_=g.g_xx();
         vol2d_=g.perpVol();
     }
 
@@ -149,6 +154,4 @@ struct ConformalRefinedGrid2d : public dg::RefinedGrid2d
 };
 
 ///@}
-}//namespace conformal
-}//namespace refined
 }//namespace dg

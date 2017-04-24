@@ -164,7 +164,7 @@ struct Feltor
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    Feltor( const Geometry& g, eule::Parameters p, solovev::GeomParameters gp);
+    Feltor( const Geometry& g, eule::Parameters p);
 
 
     /**

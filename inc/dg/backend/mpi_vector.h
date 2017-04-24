@@ -148,6 +148,7 @@ struct VectorTraits<const MPI_Vector<container> > {
 * @ingroup mpi_structures
 * @tparam Index the type of index container
 * @tparam Vector the vector container type
+* @note models aCommunicator
 */
 template<class Index, class Vector>
 struct NearestNeighborComm
