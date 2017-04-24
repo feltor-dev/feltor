@@ -3,8 +3,6 @@
 
 #include <mpi.h>
 
-#include "file/read_input.h"
-
 #include "dg/arakawa.h"
 #include "dg/poisson.h"
 #include "dg/geometry.h"

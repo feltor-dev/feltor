@@ -1,0 +1,29 @@
+/* This is a comment: Remember that comments are not conformal 
+with the JSON standard but are allowed only with some specifig JSON parsers. So remove them when you automate the process */
+{
+    "n" :  3,       //# x-y-polynomials
+    "Nx" : 100,     //# grid points in x
+    "Ny" : 100,     //# grid points in y
+    "dt" : 3.0,     //time step in units of c_s/rho_s
+    "n_out"  : 3,   //# x-y polynomials in output
+    "Nx_out" : 100, //# grid points in x in output fields
+    "Ny_out" : 100, //# grid points in y in output fields
+    "itstp"  : 2,   //steps between outputs
+    "maxout" : 100, //# outputs excluding first
+    "eps_pol"   : 1e-4,   //accuracy of polarisation solver
+    "eps_gamma" : 1e-5,   //accuracy of Gamma 
+    "eps_time"  : 1e-10,  //accuracy of implicit time-stepper
+    "curvature"  : 0.00015, //magnetic curvature
+    "tau"  : -1,        // used as the gradient
+    "nu_perp"  : 1e-3, //pependicular viscosity
+    "amplitude"  : 1.0,//amplitude of the blob
+    "sigma"  : 2,     //blob variance in units of rho_s
+    "posX"  : 0.5,     //blob x-position in units of lx
+    "posY"  : 0.5,     //blob y-position in units of ly
+    "lx"  : 64,       //lx in units of rho_s
+    "ly"  : 64,       //ly in units of rho_s
+    "bc_x"  : "DIR",   //boundary condition in x
+    "bc_y"  : "PER",   //boundary condition in y
+    "equations": "ordinary", //ordinary or modified
+
+}

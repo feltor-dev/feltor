@@ -3,8 +3,6 @@
 #include <mpi.h>
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
-#include "file/read_input.h"
-// #include "file/nc_utilities.h"
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/evaluation.cuh"

@@ -1,5 +1,4 @@
-#ifndef _DG_TOEFLR_CUH
-#define _DG_TOEFLR_CUH
+#pragma once
 
 #include <exception>
 
@@ -10,13 +9,11 @@
 #include "dg/backend/timer.cuh"
 #endif
 
-
-//TODO es wäre besser, wenn HW auch einen Zeitschritt berechnen würde 
-// dann wäre die Rückgabe der Felder (Potential vs. Masse vs. exp( y)) konsistenter
-// (nur das Objekt weiß welches Feld zu welchem Zeitschritt gehört)
+///@note This is an old copy of the toefl project and shouldn't be taken as a basis for a new project
 
 namespace dg
 {
+
 template< class Matrix, class container>
 struct Diffusion
 {
@@ -41,7 +38,7 @@ struct Diffusion
     double nu_;
     const container w2d, v2d;
     container temp;
-    Elliptic<Matrix, container, container> LaplacianM;
+    Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM;
 };
 
 
@@ -124,10 +121,10 @@ struct HW
     std::vector<container> lapy, laplapy;
 
     //matrices and solvers
-    ArakawaX< Matrix, container> arakawa; 
+    ArakawaX< dg::CartesianGrid2d, Matrix, container> arakawa; 
     CG<container > pcg;
     PoloidalAverage<container, thrust::device_vector<int> > average;
-    Elliptic<Matrix, container, container> A, laplaceM;
+    Elliptic<dg::CartesianGrid2d, Matrix, container> A, laplaceM;
 
     const container w2d, v2d, one;
     const double alpha;
@@ -248,5 +245,3 @@ void HW< M, container>::operator()( std::vector<container>& y, std::vector<conta
 
 
 }//namespace dg
-
-#endif //_DG_TOEFLR_CUH

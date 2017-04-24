@@ -110,8 +110,8 @@ struct Grid1d
             <<"    x0 = "<<x0_<<"\n"
             <<"    x1 = "<<x1_<<"\n"
             <<"    lx = "<<lx_<<"\n"
-            <<"Boundary conditions in x are: \n";
-        display_bc( bcx_, os);
+            <<"Boundary conditions in x are: \n"
+            <<"    "<<bc2str(bcx_)<<"\n";
     }
 
     /**
@@ -320,10 +320,10 @@ struct Grid2d
             <<"    y1 = "<<y1_<<"\n"
             <<"    lx = "<<lx_<<"\n"
             <<"    ly = "<<ly_<<"\n"
-            <<"Boundary conditions in x are: \n";
-        display_bc( bcx_, os);
-        os <<"Boundary conditions in y are: \n";
-        display_bc( bcy_, os);
+            <<"Boundary conditions in x are: \n"
+            <<"    "<<bc2str(bcx_)<<"\n"
+            <<"Boundary conditions in y are: \n"
+            <<"    "<<bc2str(bcy_)<<"\n";
     }
     /**
      * @brief Shifts a point coordinate due to topology
@@ -596,12 +596,12 @@ struct Grid3d
             <<"    lx = "<<lx_<<"\n"
             <<"    ly = "<<ly_<<"\n"
             <<"    lz = "<<lz_<<"\n"
-            <<"Boundary conditions in x are: \n";
-        display_bc( bcx_, os);
-        os <<"Boundary conditions in y are: \n";
-        display_bc( bcy_, os);
-        os <<"Boundary conditions in z are: \n";
-        display_bc( bcz_, os);
+            <<"Boundary conditions in x are: \n"
+            <<"    "<<bc2str(bcx_)<<"\n"
+            <<"Boundary conditions in y are: \n"
+            <<"    "<<bc2str(bcy_)<<"\n"
+            <<"Boundary conditions in z are: \n"
+            <<"    "<<bc2str(bcz_)<<"\n";
     }
 
     /**

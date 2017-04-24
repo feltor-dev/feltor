@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "file/read_input.h"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/grid.h"
 #include "dg/elliptic.h"

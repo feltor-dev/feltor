@@ -32,32 +32,6 @@ struct GeomParameters
            qampl; //scales grad-shafranov q factor
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
     std::string equilibrium;
-     /**
-     * @brief constructor to make an object
-     *
-     * maps parameters from input file to parameters 
-     * @param v Vector from read_input function
-     */   
-    GeomParameters( const std::vector< double>& v) {
-        A=v[1];
-        c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
-        for (unsigned i=0;i<12;i++) c[i]=v[i+2];
-        c[12] = 0;
-        if( A!=0) c[12] = 1;
-        for( unsigned i=0; i<12; i++)
-            if(c[i]!=0) c[12] = 1.;
-        R_0 = v[14];
-        a=R_0*v[15];
-        elongation=v[16];
-        triangularity=v[17];
-        alpha=v[18];
-        rk4eps=v[19];
-        psipmin= v[20];
-        psipmax= v[21];
-        psipmaxcut = v[22];
-        psipmaxlim = v[23];
-        qampl = v[24];
-    }
     GeomParameters( const Json::Value& js) {
         A  = js.get("A", 0).asDouble();
         c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
@@ -79,11 +53,6 @@ struct GeomParameters
         qampl = js.get("qampl", 1.).asDouble();
         equilibrium = js.get( "equilibrium", "solovev").asString();
     }
-    /**
-     * @brief Display parameters
-     *
-     * @param os Output stream
-     */
     void display( std::ostream& os = std::cout ) const
     {
         os << "Geometrical parameters are: \n"
@@ -104,6 +73,31 @@ struct GeomParameters
             <<" qampl    = "<<qampl<<"\n";
         os << std::flush;
 
+    }
+
+    /**
+     * @brief Put values into a json string
+     *
+     * @return 
+     */
+    Json::Value dump( ) const
+    {
+        Json::Value js; 
+        js["A"] = A;
+        for (unsigned i=0;i<12;i++) js["c"][i] = c[i];
+        js["R_0"] = R_0;
+        js["inverseaspectratio"] = a/R_0;
+        js["elongation"] = elongation;
+        js["triangularity"] = triangularity;
+        js["alpha"] = alpha; 
+        js["rk4eps"] = rk4eps;
+        js["psip_min"] = psipmin;
+        js["psip_max"] = psipmax;
+        js["psip_max_cut"] = psipmaxcut;
+        js["psip_max_lim"] = psipmaxlim;
+        js["qampl"] = qampl;
+        js[ "equilibrium"] = equilibrium;
+        return js;
     }
 };
 } //namespace solovev

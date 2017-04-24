@@ -1,0 +1,54 @@
+
+//                * Input-File for "HEAT" *
+//                -------------------------
+{
+    //----------------------------Space and Time discretization------------
+    "n"  : 3,   //(# of x,y-polynomials)
+    "Nx" : 40,  //(grid points in x)
+    "Ny" : 40,  //(grid points in y)
+    "Nz" : 25,  //(grid points in z)
+    "dt" : 1e-2,//(time step in units c_s/rho_s)
+    //-------------------------------Output parameters--------------------
+    "n_out" : 3,    //(# of x-y polynomials in output)
+    "Nx_out" : 40,  //(# grid points in output field)
+    "Ny_out" : 40,  //(# grid points in output field)
+    "Nz_out" : 25,  //(# grid points in output field)
+    "itstp"  : 5,   //(steps between outputs)
+    "maxout" : 10,  //total # of outputs (excluding first)
+    //-------------------------------Algorithmic parameters---------------------
+    "eps_pol"    : 1e-4, //( stop for polarisation)   
+    "eps_maxwell": 1e-4, //( stop for induction equ.) 
+    "eps_gamma"  : 1e-5, //( stop for Gamme operator) 
+    "eps_time"   : 1e-9, //( stop for time inversion) 
+    //----------------------Physical parameters----------------------------
+    "mu"          : -0.000544617, //(-m_e/m_i) -0.000544617, -0.000272121, -0.000181372
+    "tau"         : 0,      //T_i/T_e
+    "beta"        : 5e-6,      //Plasma beta 5e-6 tjk, 4e-3 compass
+    "nu_perp"     : 1e-4,   //  (perpendicular viscosity)
+    "nu_parallel" : 10e-3,     //  (parallel viscosity)
+    "resistivity" : 1e-4,   //parallel resistivity 5e-5 tjk
+    //---------------------Initial perturbation parameters---------------------
+    "amplitude" : 0.005, // (blob amplitude)
+    "sigma"     : 2.0,  // (blob variance in units of rho_s)
+    "posX"      : 0.75,  //x-position ( in units of a)
+    "posY"      : 0,    //y-position ( in units of a)
+    "sigma_z"   : 0.5, // (variance in units of R_0)
+    "k_psi"     : 7,    // (zonal modes)
+    "nprofileamp" : 2.5,  //Profile peak amplitude
+    "bgprofamp"   : 1,  //Background Prof amplitude (density on the boundary)
+    //-------------------------------Boundary condition----------------------------
+    "bc"          : "NEU_DIR", //GLOBAL BC for parallel derivative
+    //-------------------------------Miscellaneous----------------------------
+    "source"     :  0,     //profile source rate
+    "boxscaleRp" :  1.2, // (a little larger than 1)
+    "boxscaleRm" :  1.2, // (a little larger than 1)
+    "boxscaleZp" :  1.2, // (a little larger than 1)
+    "boxscaleZm" :  1.3, // (a little larger than 1)
+    //-------------------------------Tor limiter------------------------------
+    "pollim"     : 0,    //poloidal limiter (0/1) 
+    "pardiss"    : 0,    //poloidal limiter (0/1) 
+    "mode"       : 0,    //poloidal limiter (0/1) 
+    "initial"    : 2,    //initial condition blob(0), straight blob(1), turbulence(2)
+    "curvmode"    : 0
+}
+//@ ------------------------------------------------------------

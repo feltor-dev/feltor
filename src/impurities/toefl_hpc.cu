@@ -6,7 +6,6 @@
 #include "parameters.h"
 
 #include "file/nc_utilities.h"
-#include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
 
@@ -17,19 +16,22 @@
 */
 
 int main( int argc, char* argv[])
-{   ////////////////////////Parameter initialisation//////////////////////////
-    std::string input;
-    if( argc != 3)
-    {   std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
-        return -1;
-    }
-    else
-    {   input = file::read_file( argv[1]);
-    }
+{   
+    ////////////////////////Parameter initialisation//////////////////////////
     Json::Reader reader;
     Json::Value js;
-    reader.parse( input, js, false); //read input without comments
-    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    if( argc != 3)
+    {
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        return -1;
+    }
+    else 
+    {
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false); //read input without comments
+    }
+    std::cout << js<<std::endl;
+    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);
     p.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////

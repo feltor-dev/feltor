@@ -5,8 +5,8 @@
 #include <string>
 #include <cmath>
 #include <complex>
-#include "toefl/drt_dft.h"
-#include "toefl/drt_drt.h"
+#include "spectral/drt_dft.h"
+#include "spectral/drt_drt.h"
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
@@ -16,7 +16,6 @@
 #include "dg/backend/average.cuh"
 #include "dg/functors.h"
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "feltorSH/parameters.h"
 int main( int argc, char* argv[])
@@ -119,9 +118,9 @@ int main( int argc, char* argv[])
     //fftw setup
     const size_t rows =  g2d.n()*g2d.Ny();
     const size_t cols = g2d.n()*g2d.Nx();
-    toefl::Matrix<double, toefl::TL_DRT_DFT> temp(  g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx());
-    toefl::Matrix<std::complex<double> > comspec( g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()/2 +1 );
-    toefl::Matrix<double > squspec( g2d_f.Nx(), g2d_f.Ny());
+    spectral::Matrix<double, spectral::TL_DRT_DFT> temp(  g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx());
+    spectral::Matrix<std::complex<double> > comspec( g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()/2 +1 );
+    spectral::Matrix<double > squspec( g2d_f.Nx(), g2d_f.Ny());
     std::vector<double > shellspec( g2d_f.Nx());
     std::vector<double > tempx( g2d_f.Nx());
     std::vector<double > tempy( g2d_f.Ny());
@@ -131,7 +130,7 @@ int main( int argc, char* argv[])
     std::vector<double > abscompspecy( g2d_f.Ny());
 
     fftw_r2r_kind kind = FFTW_RODFT11; //DST & DST IV
-    toefl::DRT_DFT drt_dft( rows, cols, kind);
+    spectral::DRT_DFT drt_dft( rows, cols, kind);
 //     hindfty = fftw_plan_dft_1d(g2d_f.Ny(), tempy, compspecy, FFTW_FORWARD,FFTW_ESTIMATE); //DST
 //     hindftx = fftw_plan_r2r_1d(nx-2,       tempx, compspecx, FFTW_RODFT11,FFTW_ESTIMATE); //DST IV
 
