@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     std::cout<< std::setprecision(3);
 
     dg::ArakawaX<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> arakawa( grid);
-    unsigned multi=20;
+    unsigned multi=1000;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
