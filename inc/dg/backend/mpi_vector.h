@@ -137,9 +137,8 @@ struct VectorTraits<const MPI_Vector<container> > {
     typedef double value_type;
     typedef MPIVectorTag vector_category;
 };
-///@endcond
 
-/////////////////////////////communicator exchanging columns//////////////////
+//Memory buffer class: data can be written even if the object is const
 template< class T>
 struct Buffer
 {
@@ -165,7 +164,9 @@ struct Buffer
     private:
     T* ptr;
 };
+///@endcond
 
+/////////////////////////////communicator exchanging columns//////////////////
 /**
 * @brief Communicator for nearest neighbor communication
 *

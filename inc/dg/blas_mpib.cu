@@ -49,7 +49,6 @@ int main( int argc, char* argv[])
     Vector y(x);
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
-        dg::blas2::symv( M, x, y);
     t.tic();
     for( int i=0; i<20; i++)
         dg::blas2::symv( M, x, y);
@@ -57,7 +56,6 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"centered x derivative took       "<<t.diff()/20.<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dx( grid, dg::forward), M);
-        dg::blas2::symv( M, x, y);
     t.tic();
     for( int i=0; i<20; i++)
         dg::blas2::symv( M, x, y);
@@ -65,7 +63,6 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"forward x derivative took        "<<t.diff()/20<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dy( grid, dg::forward), M);
-        dg::blas2::symv( M, x, y);
     t.tic();
     for( int i=0; i<20; i++)
         dg::blas2::symv( M, x, y);
@@ -73,7 +70,6 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"forward y derivative took        "<<t.diff()/20<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dy( grid, dg::centered), M);
-        dg::blas2::symv( M, x, y);
     t.tic();
     for( int i=0; i<20; i++)
         dg::blas2::symv( M, x, y);
@@ -81,7 +77,6 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"centered y derivative took       "<<t.diff()/20<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::jumpX( grid), M);
-        dg::blas2::symv( M, x, y);
     t.tic();
     for( int i=0; i<20; i++)
         dg::blas2::symv( M, x, y);

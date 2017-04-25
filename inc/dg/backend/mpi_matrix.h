@@ -215,8 +215,7 @@ struct RowDistMat
             return;
 
         }
-        const container& temp = c_.collect( x.data());
-        //container temp = c_.collect( x.data());
+        container temp = c_.collect( x.data());
         //t.toc();
         //if(rank==0)std::cout << "collect took "<<t.diff()<<"s\n";
         //t.tic();
