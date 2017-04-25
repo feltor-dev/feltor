@@ -12,7 +12,6 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "feltorSH/parameters.h"
 // #include "probes.h"
@@ -38,7 +37,10 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     
-    const eule::Parameters p(file::read_input( input));
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    const eule::Parameters p(js);
     p.display();
     
     ///////////////////////////////////////////////////////////////////////////

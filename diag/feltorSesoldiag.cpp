@@ -13,7 +13,6 @@
 #include "dg/backend/average.cuh"
 #include "dg/functors.h"
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "feltorSesol/parameters.h"
 // #include "probes.h"

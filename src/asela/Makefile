@@ -11,18 +11,15 @@ INCLUDE+= -I../../inc   # other project libraries
 all: asela asela_hpc
 
 asela: asela.cu asela.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@  -g $(INCLUDE) $(GLFLAGS) -DDG_BENCHMARK 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@  -g $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DDG_BENCHMARK 
 
 asela_hpc: asela_hpc.cu asela.cuh 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
 
 asela_mpi: asela_mpi.cu asela.cuh 
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_BENCHMARK
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
 	
-.PHONY: clean doc
+.PHONY: clean
 
-doc: 
-	doxygen Doxyfile
-	
 clean:
 	rm -f asela asela_hpc asela_mpi

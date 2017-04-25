@@ -9,7 +9,6 @@
 //#include "draw/device_window.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
-#include "file/read_input.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
@@ -24,8 +23,6 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v2;
-    std::stringstream title;
     Json::Reader reader;
     Json::Value js;
     if( argc == 1)
@@ -45,10 +42,13 @@ int main( int argc, char* argv[])
     }
     const eule::Parameters p(  js);
     p.display( std::cout);
-
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow(  v2[2]*v2[3]*p.lx/p.ly, v2[1]*v2[4], "");
-    draw::RenderHostData render( v2[1], v2[2]);
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::stringstream title;
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
+    draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
     //////////////////////////////////////////////////////////////////////////
 
     //Make grid

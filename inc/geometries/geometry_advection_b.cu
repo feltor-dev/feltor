@@ -1,8 +1,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include "file/read_input.h"
-
 #include "dg/backend/timer.cuh"
 #include "dg/arakawa.h"
 #include "dg/poisson.h"

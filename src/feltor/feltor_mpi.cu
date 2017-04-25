@@ -12,7 +12,6 @@
 #include "dg/backend/interpolation.cuh"
 
 #include "netcdf_par.h" //exclude if par netcdf=OFF
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -59,8 +58,8 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    Json::Reader reader;
+    Json::Value js, gs;
     if( argc != 4)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
@@ -68,22 +67,16 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-            v = file::read_input( argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            if(rank==0)m.display();
-            if(rank==0) std::cout << input << std::endl;
-            if(rank==0) std::cout << geom << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( v);
-    if(rank==0) p.display( std::cout);
-    const GeomParameters gp(v3);
-    if(rank==0) gp.display( std::cout);
+    const eule::Parameters p( js);
+    const dg::geo::solovev::GeomParameters gp(gs);
+    if(rank==0)p.display( std::cout);
+    if(rank==0)gp.display( std::cout);
+    std::string input = js.toStyledString(), geom = gs.toStyledString();
     ////////////////////////////////set up computations///////////////////////////
     
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;

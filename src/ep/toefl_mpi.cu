@@ -5,8 +5,6 @@
 #include <mpi.h> //activate mpi
 
 #include "netcdf_par.h"
-#include "file/file.h"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "toeflR.cuh"

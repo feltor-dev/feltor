@@ -1,0 +1,54 @@
+
+//                * Input-File for "HEAT" *
+//                -------------------------
+{
+    //----------------------------Space and Time discretization------------
+    "n"  : 3,   //(# of x,y-polynomials)
+    "Nx" : 50,  //(grid points in x)
+    "Ny" : 50,  //(grid points in y)
+    "Nz" : 16,  //(grid points in z)
+    "dt" : 2e-3,//(time step in units c_s/rho_s)
+    //-------------------------------Output parameters--------------------
+    "n_out" : 3,    //(# of x-y polynomials in output)
+    "Nx_out" : 50,  //(# grid points in output field)
+    "Ny_out" : 50,  //(# grid points in output field)
+    "Nz_out" : 10,  //(# grid points in output field)
+    "itstp"  : 2,   //(steps between outputs)
+    "maxout" : 10,  //total # of outputs (excluding first)
+    //-------------------------------Algorithmic parameters---------------------
+    "eps_pol"    : 1e-6, //( stop for polarisation)   
+    "eps_maxwell": 1e-6, //( stop for induction equ.) 
+    "eps_gamma"  : 1e-6, //( stop for Gamme operator) 
+    "eps_time"   : 1e-9, //( stop for time inversion) 
+    //----------------------Physical parameters----------------------------
+    "mu"          : -0.00272121, //(-m_e/m_i) -0.000544617, -0.000272121, -0.000181372
+    "tau"         : 0,      //T_i/T_e
+    "beta"        : 0,      //Plasma beta
+    "nu_perp"     : 1e-2,   //  (perpendicular viscosity)
+    "nu_parallel" : 10,     //  (parallel viscosity)
+    "resistivity" : 1e-4,   //parallel resistivity
+    //---------------------Initial perturbation parameters---------------------
+    "amplitude" : 0.01, // (blob amplitude)
+    "sigma"     : 2.0,  // (blob variance in units of rho_s)
+    "posX"      : 0.3,  //x-position ( in units of a)
+    "posY"      : 0,    //y-position ( in units of a)
+    "sigma_z"   : 0.25, // (variance in units of R_0)
+    "k_psi"     : 0,    // (zonal modes)
+    "nprofileamp" : 4,  //Profile peak amplitude
+    "bgprofamp"   : 1,  //Background Prof amplitude (density on the boundary)
+    //-------------------------------Boundary condition----------------------------
+    "bc"          : "DIR", //GLOBAL BC for parallel derivative
+    //-------------------------------Miscellaneous----------------------------
+    "source"     : 0,     //profile source rate
+    "boxscaleRp" :  1.1, // (a little larger than 1)
+    "boxscaleRm" :  1.1, // (a little larger than 1)
+    "boxscaleZp" :  1.1, // (a little larger than 1)
+    "boxscaleZm" :  1.2, // (a little larger than 1)
+    //-------------------------------Tor limiter------------------------------
+    "pollim"     : 0,    //poloidal limiter (0/1) 
+    "pardiss"    : 1,    //poloidal limiter (0/1) 
+    "mode"       : 0,    //poloidal limiter (0/1) 
+    "initial"    : 2,    //initial condition blob(0), straight blob(1), turbulence(2)
+    "curvmode"    : 0
+}
+//@ ------------------------------------------------------------

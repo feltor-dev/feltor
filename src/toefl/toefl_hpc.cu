@@ -3,8 +3,6 @@
 #include <vector>
 
 
-#include "file/file.h"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "toeflR.cuh"
@@ -25,7 +23,6 @@
 int main( int argc, char* argv[])
 {
     //Parameter initialisation
-    std::vector<double> v;
     Json::Reader reader;
     Json::Value js;
     if( argc != 3)

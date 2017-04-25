@@ -45,8 +45,8 @@ int main()
 
     const dg::DVec chi = dg::evaluate( dg::LinearX(1.0,1.0), grid2d);
     
-    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
-    dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2barinv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered);
+    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered, 1);
+    dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2barinv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered, 1);
     dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2tilde(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered);
     gamma2barinv.set_chi(chi); 
 //     gamma2barinv.set_chi(one); 
@@ -109,7 +109,24 @@ int main()
     dg::blas1::axpby( 1., helmholtz_fct_, -1, temp_);
     std::cout << "error " << sqrt( dg::blas2::dot( helmholtz.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;*/
 
+    std::cout << "Alternative test with two Helmholtz operators\n";
+    gamma1inv.set_chi( chi);
+    dg::DVec phi(x_.size(), 0.);
+    dg::blas1::scal(x_,0.); //x_=0
+    dg::Invert<dg::DVec> invertO( x_, grid2d.size(), eps/100);
+    dg::Invert<dg::DVec> invertOO( x_, grid2d.size(), eps/100);
+    t.tic();
+    unsigned number1 = invertO( gamma1inv, phi, rholap);
+    dg::blas1::pointwiseDot( phi, chi, phi);
+    unsigned number2 = invertOO( gamma1inv, x_, phi);
+    t.toc();
+    //Evaluation
+    dg::blas1::axpby( 1., sol, -1., x_);
 
+    std::cout << "number of iterations:  "<<number1<<" and "<<number2<<std::endl;
+    std::cout << "abs error " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
+    std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, x_)/ dg::blas2::dot( w2d, sol))<<std::endl;
+    std::cout << "took  " << t.diff()<<"s"<<std::endl;
 
     //Tests GAMMA2
 

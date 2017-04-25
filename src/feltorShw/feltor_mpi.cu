@@ -14,7 +14,6 @@
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/interpolation.cuh"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -64,24 +63,22 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input;
+    Json::Reader reader;
+    Json::Value js;
     if( argc != 3 && argc != 4)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
-        std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
+        if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
+        if(rank==0)std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
     else 
     {
-        input = file::read_file( argv[1]);
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false);
     }
-    Json::Reader reader;
-    Json::Value js;
-    reader.parse( input, js, false); //read input without comments
-    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
-    if(rank==0) p.display( std::cout);
+    if(rank==0)p.display( std::cout);
      ////////////////////////////////setup MPI///////////////////////////////
     int periods[2] = {false, false}; //non-, non-, periodic
     if( p.bc_x == dg::PER) periods[0] = true;

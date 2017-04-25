@@ -1,0 +1,44 @@
+
+//                * Input-File for "ASELA" *
+//               --------------------------
+
+{
+    //--------------------Space and Time discretization------------
+    
+    "n"      :   3,    //# of x,y - polynomials
+    "Nx"     :   100,  //grid points in x
+    "Ny"     :   200,  //grid points in y 
+    "dt"     :   1e-2, //(time step in units c_s/rho_s)
+    
+    //------------------Algorithmic parameters-------------------
+    
+    "eps_pol"     : 1e-4,   // (stop for polarisation)
+    "eps_maxwell" : 1e-4,   // (stop for Aparallel CG)
+    "eps_time"    : 1e-9,   //( stop for time inversion )
+    
+    //------------------Boundary conditions----------------------
+    
+    "lxhalf"  : 1,      // (in terms of Pi)
+    "lyhalf"  : 4,      // (in terms of Pi)
+    "bc_x"    : "DIR",
+    "bc_y"    : "PER", 
+    
+    //------------------Physical parameters----------------------
+    
+    "dehat"     : 0.2,
+    "dihat"     : 0.2,    
+    "rhoshat"   : 0.2,
+    "rhoihat"   : 0.00,  
+    "nu_perp"   : 1e-6, 
+    
+    //---------------Initial perturbation parameters-------------
+    
+    "amplitude" : 0.1, // (perturbation amplitude)
+    
+    //------------------Miscellaneous----------------------------
+    
+    "itstp"     : 5,  // (steps between output) 
+    "maxout"    : 10  //# of outputs (excluding first)
+}
+
+//@ ------------------------------------------------------------

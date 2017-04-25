@@ -9,7 +9,6 @@
 #include "dg/algorithm.h"
 #include "dg/backend/xspacelib.cuh"
 #include "feltorSH/parameters.h"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 //scan all imputfiles for maximum radial velocity and write to std::out
@@ -38,7 +37,6 @@ int main( int argc, char* argv[])
         Json::Reader reader;
         Json::Value js;
         reader.parse( input, js, false);
-        //const Parameters p(file::read_input( input));
         const eule::Parameters p(js);
         err = nc_inq_dimid( ncid, "time", &timeID);
         err = nc_inq_dimlen( ncid, timeID, &numOut);

@@ -19,7 +19,6 @@ using namespace dg;
 const double lx = 2.*M_PI;//*50.;
 const double ly = 2.*M_PI;//*50.;
 
-const unsigned k = 3;
 //const double U = 1.; //the dipole doesn't move with this velocity because box is not infinite
 //const double R = 0.2*lx;
 const double T = 2.;
@@ -28,7 +27,6 @@ const double T = 2.;
 
 double D = 0.01;
 
-const unsigned m = 1; //mode number
 //const double kx = 2.*M_PI* (double)m/lx; 
 //const double ky = 2.*M_PI* (double)m/ly; 
 //const double ksqr = (kx*kx+ky*ky) ;//4.*M_PI*M_PI*(1./lx/lx + 1./ly/ly);
