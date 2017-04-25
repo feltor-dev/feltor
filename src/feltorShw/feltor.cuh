@@ -136,7 +136,7 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N then phi BCC
-    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::forward,p.jfactor), //p.bgprofamp+p.nprofileamp*exp(-p.lx*p.invkappa)
+    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered,p.jfactor), //p.bgprofamp+p.nprofileamp*exp(-p.lx*p.invkappa)
     lapperp ( g,g.bcx(), g.bcy(),       dg::normed,          dg::centered),
     invgammaPhi( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaN(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
