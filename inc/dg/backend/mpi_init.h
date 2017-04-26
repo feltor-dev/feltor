@@ -29,6 +29,18 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, comm);
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, comm);
     MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, comm);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    if(num_devices == 0)
+    {
+        std::cerr << "No CUDA capable devices found on rank "<<rank<<std::endl;
+        return;
+    }
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    std::cout << "Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
+    cudaSetDevice( device);
+#endif//cuda
 
 }
 
@@ -61,5 +73,17 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, 
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast( &Nz,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    int num_devices=0;
+    cudaGetDeviceCount(&num_devices);
+    if(num_devices == 0)
+    {
+        std::cerr << "No CUDA capable devices found on rank "<<rank<<std::endl;
+        return;
+    }
+    int device = rank % num_devices; //assume # of gpus/node is fixed
+    std::cout << "Rank "<<rank<<" computes with device "<<device<<" !"<<std::endl;
+    cudaSetDevice( device);
+#endif//cuda
 
 }

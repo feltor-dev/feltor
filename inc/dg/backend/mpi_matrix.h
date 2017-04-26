@@ -119,7 +119,7 @@ struct RowColDistMat
         //if(rank==0)std::cout << "Inner points took "<<t.diff()<<"s\n";
         //2. communicate outer points
         //t.tic();
-        container temp = c_.collect( x.data());
+        const container& temp = c_.collect( x.data());
         //t.toc();
         //if(rank==0)std::cout << "Collect      took "<<t.diff()<<"s\n";
         //3. compute and add outer points
