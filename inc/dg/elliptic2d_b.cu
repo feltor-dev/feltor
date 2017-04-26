@@ -24,13 +24,13 @@ dg::bc bcy = dg::PER;
 
 double initial( double x, double y) {return 0.;}
 double amp = 0.5;
-double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
+// double pol( double x, double y) {return 1. + amp*sin(x)*sin(y); } //must be strictly positive
 //double pol( double x, double y) {return 1.; }
-//double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
+double pol( double x, double y) {return 1. + sin(x)*sin(y) + x; } //must be strictly positive
 
-double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
+// double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(amp*sin(x)*sin(y)+1)-amp*sin(x)*sin(x)*cos(y)*cos(y)-amp*cos(x)*cos(x)*sin(y)*sin(y);}
 //double rhs( double x, double y) { return 2.*sin( x)*sin(y);}
-//double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
+double rhs( double x, double y) { return 2.*sin(x)*sin(y)*(sin(x)*sin(y)+1)-sin(x)*sin(x)*cos(y)*cos(y)-cos(x)*cos(x)*sin(y)*sin(y)+(x*sin(x)-cos(x))*sin(y) + x*sin(x)*sin(y);}
 double sol(double x, double y)  { return sin( x)*sin(y);}
 double der(double x, double y)  { return cos( x)*sin(y);}
 
@@ -53,7 +53,7 @@ int main()
     dg::DVec b =    dg::evaluate( rhs, grid);
     dg::DVec chi =  dg::evaluate( pol, grid);
     dg::DVec temp = x;
-
+    dg::DVec ones = dg::evaluate(dg::one,grid);
 
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
@@ -68,14 +68,19 @@ int main()
 
     std::cout << eps<<" ";
     t.tic();
-    std::cout << " "<< invert( pol, x, b);
+    std::cout << " "<< invert( pol, x, b,w2d,ones);
     t.toc();
-    //std::cout << "Took "<<t.diff()<<"s\n";
+    std::cout << "Took "<<t.diff()<<"s\n";
+        t.tic();
+    std::cout << " "<< invert( pol, x, b,w2d,v2d);
+    t.toc();
+    std::cout << "Took "<<t.diff()<<"s\n";
     }
 
     //compute error
     const dg::DVec solution = dg::evaluate( sol, grid);
     const dg::DVec derivati = dg::evaluate( der, grid);
+    
     dg::DVec error( solution);
 
     dg::blas1::axpby( 1.,x,-1., solution, error);
@@ -88,7 +93,7 @@ int main()
     pol_forward.set_chi( chi);
     x = temp;
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_fw( pol_forward, x, b);
+    std::cout << " "<< invert_fw( pol_forward, x, b,w2d,ones);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm);
@@ -99,7 +104,7 @@ int main()
     pol_backward.set_chi( chi);
     x = temp;
     dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_bw( pol_backward, x, b);
+    std::cout << " "<< invert_bw( pol_backward, x, b,w2d,ones);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm)<<std::endl;
