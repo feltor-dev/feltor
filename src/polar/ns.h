@@ -1,5 +1,4 @@
-#ifndef _DG_NS_H
-#define _DG_NS_H
+#pragma once
 
 #include <exception>
 #include <cusp/ell_matrix.h>
@@ -75,4 +74,3 @@ void Shu<Geometry, Matrix, container>::operator()( Vector& y, Vector& yp)
 
 }//namespace dg
 
-#endif //_DG_SHU_CUH

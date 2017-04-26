@@ -8,14 +8,13 @@
  */
 struct Parameters
 {
-    unsigned n, k, Nx, Ny; 
+    unsigned n, Nx, Ny; 
     double dt; 
 
     double eps, eps_time;
     double r_min, r_max;
 
     double nu;
-    int global;
 
     double U, R, posX, posY;
 

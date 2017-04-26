@@ -17,10 +17,6 @@
 
 #include "geometries/geometries.h"
 
-#ifdef OPENGL_WINDOW
-#include "draw/host_window.h"
-#endif
-
 #include "ns.h"
 #include "parameters.h"
 
@@ -103,13 +99,6 @@ int main(int argc, char* argv[])
 
     MDVec w2d( create::weights(grid));
 
-#ifdef OPENGL_WINDOW
-    //create CUDA context that uses OpenGL textures in Glfw window
-    std::stringstream title;
-    GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "");
-    draw::RenderHostData render( 1,1);
-#endif
-
     dg::Lamb lamb( p.posX, p.posY, p.R, p.U);
     MHVec omega = evaluate ( lamb, grid);
 #if LOG_POLAR
@@ -142,37 +131,12 @@ int main(int argc, char* argv[])
     }
 
     double time = 0;
-#ifdef OPENGL_WINDOW
-    //create visualisation vectors
-    MDVec visual( grid.size());
-    HVec hvisual( grid.size());
-    //transform vector to an equidistant grid
-    dg::IDMatrix equidistant = dg::create::backscatter( grid );
-    draw::ColorMapRedBlueExt colors( 1.);
-#endif
-
     ab.init( shu, diffusion, y0, p.dt);
     ab( shu, diffusion, y0); //make potential ready
 
     t.tic();
     while (time < p.maxout*p.itstp*p.dt)
     {
-#ifdef OPENGL_WINDOW
-        if(glfwWindowShouldClose(w))
-            break;
-
-        dg::blas2::symv( equidistant, ab.last(), visual);
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
-        //draw and swap buffers
-        dg::blas1::transfer( visual, hvisual);
-        render.renderQuad( hvisual, p.n*p.Nx, p.n*p.Ny, colors);
-        title << "Time "<<time<< " \ttook "<<t.diff()/(double)p.itstp<<"\t per step";
-        glfwSetWindowTitle(w, title.str().c_str());
-        title.str("");
-        glfwPollEvents();
-        glfwSwapBuffers(w);
-#endif
-
         //step 
         for( unsigned i=0; i<p.itstp; i++)
         {
@@ -182,10 +146,6 @@ int main(int argc, char* argv[])
 
     }
     t.toc();
-
-#ifdef OPENGL_WINDOW
-    glfwTerminate();
-#endif
 
     double vorticity_end = blas2::dot( stencil , w2d, ab.last());
     blas1::pointwiseDot( stencil, ab.last(), ry0);

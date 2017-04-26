@@ -25,7 +25,6 @@
 
 using namespace std;
 using namespace dg;
-const unsigned k = 3;
 
 #define Grid OrthogonalGrid2d<DVec>
 
@@ -74,7 +73,7 @@ int main(int argc, char* argv[])
 
     dg::Lamb lamb( p.posX, p.posY, p.R, p.U);
     HVec omega = evaluate ( lamb, grid);
-#if LOG_POLAR
+#ifdef LOG_POLAR
     DVec stencil = evaluate( one, grid);
 #else
     DVec stencil = evaluate( LinearX(1.0, p.r_min), grid);

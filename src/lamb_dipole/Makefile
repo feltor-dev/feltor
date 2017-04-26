@@ -1,5 +1,4 @@
-device=omp
-OS=ubuntu1504
+device=gpu
 
 #configure machine 
 include ../../config/default.mk
