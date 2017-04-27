@@ -1,5 +1,5 @@
 
-//                * Input-File for "HEAT" *
+//                * Input-File for "FELTOR" *
 //                -------------------------
 {
     //----------------------------Space and Time discretization------------
@@ -46,9 +46,10 @@
     "boxscaleZm" :  1.2, // (a little larger than 1)
     //-------------------------------Tor limiter------------------------------
     "pollim"     : 0,    //poloidal limiter (0/1) 
-    "pardiss"    : 1,    //poloidal limiter (0/1) 
-    "mode"       : 0,    //poloidal limiter (0/1) 
+    "pardiss"    : 0,    //Parallel dissipation(adj (0), nadj(1)) 
+    "mode"       : 0,    //init. phi cond. (stand(0), Force Balance(1)) 
     "initial"    : 2,    //initial condition blob(0), straight blob(1), turbulence(2)
-    "curvmode"    : 0
+    "curvmode"    : 1    //curvature (low beta (0), tfl (1))  
+    
 }
 //@ ------------------------------------------------------------
