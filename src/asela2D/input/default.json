@@ -17,6 +17,7 @@
     "maxout" : 10,  //total # of outputs (excluding first)
     //-------------------------------Algorithmic parameters---------------------
     "eps_pol"    : 1e-5, //( stop for polarisation)   
+    "jumpfactor" : 1, //jumpfactor € [0.01,1]
     "eps_maxwell": 1e-5, //( stop for induction equ.) 
     "eps_gamma"  : 1e-5, //( stop for Gamme operator) 
     "eps_time"   : 1e-12, //( stop for time inversion) 
@@ -46,9 +47,10 @@
     "boxscaleZm" :  1.01, // (a little larger than 1)
     //-------------------------------Tor limiter------------------------------
     "pollim"     : 0,    //poloidal limiter (0/1) 
-    "pardiss"    : 0,    //poloidal limiter (0/1) 
-    "mode"       : 0,    //poloidal limiter (0/1) 
-    "initial"    : 2,    //initial condition blob(0), straight blob(1), turbulence(2)
-    "curvmode"    : 0
+    "pardiss"    : 0,    //Parallel dissipation(adj (0), nadj(1))
+    "mode"       : 2,    //initial condition blob(0), straight blob(1), turbulence(2)
+    "initial"    : 0,    //init. phi cond. (stand(0), Force Balance(1)
+    "curvmode"   : 1,    //curvature (low beta (0), tfl (1))
+    "flrmode"    : 1     //em FLR mode (no FLR (0), FLR (1))
 }
 //@ ------------------------------------------------------------
