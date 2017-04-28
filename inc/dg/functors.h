@@ -422,6 +422,33 @@ struct SinXSinY
 };
 /**
  * @brief Functor for a sin prof in x-direction
+ * \f[ f(x,y) =B+ A sin(k_x x) \f]
+ */
+struct SinX
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     */
+    SinX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y){ return bamp_+amp_*sin(x*kx_);}
+  private:
+    double amp_,bamp_,kx_;
+};
+
+/**
+ * @brief Functor for a sin prof in x-direction
  * \f[ f(x,y) = B + A(1-\sin(k_xx )) \f]
  */
 struct SinProfX
