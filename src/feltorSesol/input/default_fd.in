@@ -11,6 +11,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "itstp"  : 10,   //steps between outputs
     "maxout" : 1000, //# outputs excluding first
     "eps_pol"   : 1e-5,   //accuracy of polarisation solver
+    "jumpfactor": 1,   //jumpfactor € [0.01,1]
     "eps_gamma" : 1e-5,   //accuracy of Gamma 
     "eps_time"  : 1e-12,  //accuracy of implicit time-stepper
     "mu_e"      : -0.000272121, // -m_e/m_i zb (-0.000544617,-0.000272121,-0.000181372 )

@@ -17,7 +17,7 @@
 #include "dg/functors.h"
 
 #include "file/nc_utilities.h"
-#include "feltorSH/parameters.h"
+#include "feltorShw/parameters.h"
 int main( int argc, char* argv[])
 {
     if( argc != 4)
@@ -75,32 +75,32 @@ int main( int argc, char* argv[])
 //     err = nc_close(ncid); 
     //2d file
     file::NC_Error_Handle err2d_f;
-    int ncid2d_f,dim_ids2d_f[3],dataIDs2d_f[3], tvarID2d_f;
-    std::string names2d_f[3] = {"S(Ue)","S(Ui)","S(UE)"}; //may  goto ln(n/<n>)
+    int ncid2d_f,dim_ids2d_f[3],dataIDs2d_f[5], tvarID2d_f;
+    std::string names2d_f[6] = {"S(Ue)","S(Ui)","S(UE)","S(ne2)","S(phi2)","gamma(phi2)"}; //may  goto ln(n/<n>)
     size_t count2d_f[3]  = {1, g2d_f.Ny(), g2d_f.Nx()};
     size_t start2d_f[3]  = {0, 0, 0};    
     err2d_f = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncid2d_f);
     err2d_f = nc_put_att_text( ncid2d_f, NC_GLOBAL, "inputfile", input.size(), input.data());
     err2d_f = file::define_dimensions( ncid2d_f, dim_ids2d_f, &tvarID2d_f, g2d_f);
-    for( unsigned i=0; i<3; i++){
+    for( unsigned i=0; i<6; i++){
         err2d_f = nc_def_var( ncid2d_f, names2d_f[i].data(), NC_DOUBLE, 3, dim_ids2d_f, &dataIDs2d_f[i]);
     }   
     err2d_f = nc_close(ncid2d_f); 
     //1d file
     dg::HVec kn= dg::evaluate(dg::cooX1d,g1d_f);
     file::NC_Error_Handle err1d_f;
-    int ncid1d_f,dim_ids1d_f[2],dataIDs1d_f[4], tvarID1d_f;
-    std::string names1d_f[4] = {"Sk(Ue)","Sk(Ui)","Sk(UE)","k"}; //may  goto ln(n/<n>)
+    int ncid1d_f,dim_ids1d_f[2],dataIDs1d_f[6], tvarID1d_f;
+    std::string names1d_f[7] = {"Sk(Ue)","Sk(Ui)","Sk(UE)","Sk(ne2)","Sk(phi2)","gamma(phi2)","k",}; //may  goto ln(n/<n>)
     size_t count1d_f[2]  = {1, g2d_f.Nx()};
     size_t start1d_f[2]  = {0, 0};
     
     err1d_f = nc_create(argv[3],NC_NETCDF4|NC_CLOBBER, &ncid1d_f);
     err1d_f = nc_put_att_text( ncid1d_f, NC_GLOBAL, "inputfile", input.size(), input.data());
     err1d_f = file::define_dimensions( ncid1d_f, dim_ids1d_f, &tvarID1d_f, g1d_f);
-    for( unsigned i=0; i<3; i++){
+    for( unsigned i=0; i<7; i++){
         err1d_f = nc_def_var( ncid1d_f, names1d_f[i].data(), NC_DOUBLE, 2, dim_ids1d_f, &dataIDs1d_f[i]);
     }   
-    err1d_f = nc_def_var( ncid1d_f, names1d_f[3].data(), NC_DOUBLE, 2, dim_ids1d_f, &dataIDs1d_f[3]);
+//     err1d_f = nc_def_var( ncid1d_f, names1d_f[3].data(), NC_DOUBLE, 2, dim_ids1d_f, &dataIDs1d_f[3]);
     err1d_f = nc_close(ncid1d_f); 
     
     // {"electrons", "ions",  "potential","vor"}; 
@@ -109,8 +109,8 @@ int main( int argc, char* argv[])
     dg::HVec phi(dg::evaluate(dg::zero,g2d));
     dg::HVec uE(dg::evaluate(dg::zero,g2d));
     dg::HVec one(dg::evaluate(dg::one,g2d));
-    std::vector<dg::HVec> energies(3,dg::evaluate(dg::zero,g2d)); //Se,Si,SE
-    std::vector<dg::HVec> energiesequi(3,dg::evaluate(dg::zero,g2d)); 
+    std::vector<dg::HVec> energies(5,dg::evaluate(dg::zero,g2d)); //Se,Si,SE
+    std::vector<dg::HVec> energiesequi(5,dg::evaluate(dg::zero,g2d)); 
 
     double time = 0.;
     dg::IHMatrix equi = dg::create::backscatter( g2d);
@@ -121,6 +121,9 @@ int main( int argc, char* argv[])
     spectral::Matrix<double, spectral::TL_DRT_DFT> temp(  g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx());
     spectral::Matrix<std::complex<double> > comspec( g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()/2 +1 );
     spectral::Matrix<double > squspec( g2d_f.Nx(), g2d_f.Ny());
+    spectral::Matrix<double > gammasquspec( g2d_f.Nx(), g2d_f.Ny());
+    
+    std::vector<double > gammashellspec( g2d_f.Nx());    
     std::vector<double > shellspec( g2d_f.Nx());
     std::vector<double > tempx( g2d_f.Nx());
     std::vector<double > tempy( g2d_f.Ny());
@@ -129,7 +132,9 @@ int main( int argc, char* argv[])
     std::vector<double > abscompspecx( g2d_f.Nx());
     std::vector<double > abscompspecy( g2d_f.Ny());
 
-    fftw_r2r_kind kind = FFTW_RODFT11; //DST & DST IV
+    //FFTW_RODFT11 computes an RODFT11 transform, i.e. a DST-IV. (Logical N=2*n, inverse is FFTW_RODFT11.)  -> DIR_NEU
+    // FFTW_RODFT10 computes an RODFT10 transform, i.e. a DST-II. (Logical N=2*n, inverse is FFTW_RODFT01.) -> DIR_DIR
+    fftw_r2r_kind kind = FFTW_RODFT10; //DST & DST IV
     spectral::DRT_DFT drt_dft( rows, cols, kind);
 //     hindfty = fftw_plan_dft_1d(g2d_f.Ny(), tempy, compspecy, FFTW_FORWARD,FFTW_ESTIMATE); //DST
 //     hindftx = fftw_plan_r2r_1d(nx-2,       tempx, compspecx, FFTW_RODFT11,FFTW_ESTIMATE); //DST IV
@@ -142,7 +147,18 @@ int main( int argc, char* argv[])
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
     err2d_f = nc_open( argv[2], NC_WRITE, &ncid2d_f);
     err1d_f = nc_open( argv[3], NC_WRITE, &ncid1d_f);
+    double deltaT = p.dt*p.itstp;
 
+    //initialize gammas
+    for( size_t m = 0; m < (rows/2 +1); m++) {
+        for( size_t n = 0; n < (cols/2 +1); n++) {
+            gammasquspec(n,m) =0.;;
+        }
+    }
+    for (size_t mn=0;mn<(unsigned)g2d_f.Nx();mn++) {
+            gammashellspec[mn]=0.;
+    }
+    
     for( unsigned i=imin; i<imax; i++)//timestepping
     {
             start2d[0] = i;
@@ -170,9 +186,10 @@ int main( int argc, char* argv[])
             dg::blas1::scal( energies[0], -p.tau[0]);
             dg::blas1::scal( energies[1], p.tau[1]);
             dg::blas1::scal( energies[2], 0.5*p.mu[1]);
-   
+            dg::blas1::pointwiseDot(npe[0],npe[0],energies[3]);
+            dg::blas1::pointwiseDot(phi,phi,energies[4]);
            
-            for (unsigned j=0;j<3;j++)
+            for (unsigned j=0;j<5;j++)
             {
                 dg::blas2::gemv( equi, energies[j],energiesequi[j]);
                 for( size_t m = 0; m < rows; m++) {
@@ -185,10 +202,10 @@ int main( int argc, char* argv[])
                 for( size_t m = 0; m < (rows/2 +1); m++) {
                     for( size_t n = 0; n < (cols/2 +1); n++) {
                         squspec(n,m) =sqrt(std::real(comspec(m,n)*std::conj(comspec(m,n))));
+                        if (j==4) gammasquspec(n,m) =(squspec(n,m) - gammasquspec(n,m))/deltaT;
                     }
                 }
                 err2d_f = nc_put_vara_double( ncid2d_f, dataIDs2d_f[j],   start2d_f, count2d_f, squspec.getPtr()); 
-          
 
 
                 //compute shell spectrum                   
@@ -198,24 +215,29 @@ int main( int argc, char* argv[])
                         for( size_t n = 0; n < (cols/2 +1); n++) {
                             if((unsigned)(sqrt(m*m+n*n) - mn)<1) {
                                 shellspec[mn] += squspec(m,n);
+                                if (j==4) gammashellspec[mn] =(shellspec[mn] - gammashellspec[mn])/deltaT;
                             }
                         }
                     }
                 }
+
                 err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[j],   start1d_f, count1d_f, shellspec.data()); 
                 
                 //compute E(ky) spectrum
-
-                //compute E(kx) spectrum
-                
+                //compute E(kx) spectrum                
               }
+            err2d_f = nc_put_vara_double( ncid2d_f, dataIDs2d_f[5],   start2d_f, count2d_f, gammasquspec.getPtr()); 
+            err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[5],   start1d_f, count1d_f, gammashellspec.data()); 
 
-            err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[3],   start1d_f, count1d_f, kn.data()); 
+              
+            err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[6],   start1d_f, count1d_f, kn.data()); 
             err1d_f = nc_put_vara_double( ncid1d_f, tvarID1d_f, start1d_f, count1d_f, &time);
             err2d_f = nc_put_vara_double( ncid2d_f, tvarID2d_f, start2d_f, count2d_f, &time);
         
     }
+
     err = nc_close(ncid);
+
     err2d_f = nc_close(ncid2d_f);
     err1d_f = nc_close(ncid1d_f);
 

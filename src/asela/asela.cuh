@@ -313,7 +313,7 @@ Asela<Grid, DS, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo:
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     //////////the elliptic and Helmholtz operators//////////////////////////
-    pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered), 
+    pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered, p.jfactor), 
     lapperpN (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     lapperpDIR (   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
     maxwell(       g, dg::DIR, dg::DIR, 1., dg::centered), //sign is already correct!
@@ -392,10 +392,11 @@ container& Asela<Geometry, DS, Matrix, container>::polarisation( const std::vect
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);        //chi = (\mu_i n_i ) /B^2
     pol.set_chi( chi);
+    dg::blas1::pointwiseDivide(v3d,chi,omega);
 
     invert_invgammaN(invgammaN,chi,y[1]);             //chi= Gamma (Ni-1)
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);        //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi); //Gamma n_i -ne = -nabla (chi nabla phi)
+    unsigned number = invert_pol( pol, phi[0], chi, w3d, omega, v3d); //Gamma n_i -ne = -nabla (chi nabla phi)
     if(  number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];
@@ -409,6 +410,7 @@ container& Asela<Geometry, DS, Matrix, container>::induct(const std::vector<cont
         dg::blas1::axpby( p.beta/p.mu[0], npe[0], 0., chi); //chi = beta/mu_e N_e
         dg::blas1::axpby(- p.beta/p.mu[1],  npe[1], 1., chi); //chi =beta/mu_e N_e-beta/mu_i  N_i
         maxwell.set_chi(chi);
+
         dg::blas1::pointwiseDot( npe[0], y[2], chi);                 //chi     = n_e w_e
         dg::blas1::pointwiseDot( npe[1], y[3], lambda);               //lambda = n_i w_i
         dg::blas1::axpby( -1.,lambda , 1., chi);  //chi = -n_i w_i + n_e w_e
@@ -422,6 +424,7 @@ container& Asela<Geometry, DS, Matrix, container>::induct(const std::vector<cont
     {
         dg::blas1::axpby( p.beta/p.mu[0], npe[0], 0., chi); //chi = beta/mu_e N_e
         maxwell.set_chi(chi);
+
         dg::blas1::pointwiseDot( npe[1], y[3], chi);               //lambda = N_i w_i
         invert_invgammaNW(invgammaDIR,lambda,chi);             //chi= Gamma (Ni wi)
         dg::blas1::pointwiseDot( npe[0], y[2], chi);                 //chi     = n_e w_e

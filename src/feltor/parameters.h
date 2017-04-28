@@ -22,6 +22,7 @@ struct Parameters
     unsigned maxout; //!< \# of outputs excluding first
 
     double eps_pol;  //!< accuracy of polarization 
+    double jfactor; //jump factor € [1,0.01]
     double eps_maxwell; //!< accuracy of induction equation
     double eps_gamma; //!< accuracy of gamma operator
     double eps_time;//!< accuracy of implicit timestep
@@ -71,7 +72,7 @@ struct Parameters
         maxout  = js["maxout"].asUInt();
 
         eps_pol     = js["eps_pol"].asDouble();
-	jfactor = js["jumpfactor"].asDouble();
+        jfactor     = js["jumpfactor"].asDouble();
         eps_maxwell = js["eps_maxwell"].asDouble();
         eps_gamma   = js["eps_gamma"].asDouble();
         eps_time    = js["eps_time"].asDouble();
