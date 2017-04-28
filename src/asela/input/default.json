@@ -7,7 +7,7 @@
     "Nx" : 50,  //(grid points in x)
     "Ny" : 50,  //(grid points in y)
     "Nz" : 16,  //(grid points in z)
-    "dt" : 1e-2,//(time step in units c_s/rho_s)
+    "dt" : 0.44,//(time step in units c_s/rho_s)
     //-------------------------------Output parameters--------------------
     "n_out" : 3,    //(# of x-y polynomials in output)
     "Nx_out" : 50,  //(# grid points in output field)
