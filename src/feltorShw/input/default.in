@@ -11,8 +11,9 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "Ny_out" : 150,  //# grid points in y in output fields
     "itstp"  : 10,   //steps between outputs
     "maxout" : 1000, //# outputs excluding first
-    "eps_pol"   : 1e-6,   //accuracy of polarisation solver
-    "eps_gamma" : 1e-6,   //accuracy of Gamma 
+    "eps_pol"   : 1e-5,   //accuracy of polarisation solver
+    "jfactor"   : 1,      //jump scale factor
+    "eps_gamma" : 1e-5,   //accuracy of Gamma 
     "eps_time"  : 1e-14,  //accuracy of implicit time-stepper
     "mu_e"      : -0.000272121, // -m_e/m_i 
     "tau"       : 0,         //Ti/Te

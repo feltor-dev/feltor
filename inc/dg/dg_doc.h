@@ -83,6 +83,8 @@
  *     @defgroup matrixoperators Elliptic and Helmholtz operators
  *     @defgroup fieldaligned Fieldaligned derivatives
  * @}
+ * @defgroup templates Level 99: Template models
+   Documentation for template models
  * 
  */
 /*! @mainpage
@@ -102,3 +104,87 @@
  *
  *
  */
+
+/**
+ * @brief Struct that performs collective scatter and gather operations across processes
+ * on distributed vectors using mpi
+ *
+ * @ingroup templates
+ @attention this is not a real class it's there for documentation only
+ @attention parameter names can be different
+ *
+ * @code
+ int i = myrank;
+ double values[10] = {i,i,i,i, 9,9,9,9};
+ thrust::host_vector<double> hvalues( values, values+10);
+ int pids[10] =      {0,1,2,3, 0,1,2,3};
+ thrust::host_vector<int> hpids( pids, pids+10);
+ BijectiveComm coll( hpids, MPI_COMM_WORLD);
+ thrust::host_vector<double> hrecv = coll.scatter( hvalues);
+ //hrecv is now {0,9,1,9,2,9,3,9} e.g. for process 0 
+ thrust::host_vector<double> hrecv2( coll.send_size());
+ coll.gather( hrecv, hrecv2);
+ //hrecv2 now equals hvalues independent of process rank
+ @endcode
+ */
+struct aCommunicator
+{
+
+    /**
+     * @brief Scatters data according to a specific scheme given in the Constructor
+     *
+     * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
+     * @param values data to send (must have the size given 
+     * by the map in the constructor, s.a. send_size())
+     * @tparam LocalContainer a container on a shared memory system
+     *
+     * @return received data from other processes of size recv_size()
+     * @note a scatter followed by a gather of the received values restores the original array
+     * @note this function is only needed in the RowDistMat matrix format
+     */
+    template< class LocalContainer>
+    LocalContainer collect( const LocalContainer& values)const;
+
+    /**
+     * @brief Gather data according to the map given in the constructor 
+     *
+     * This method is the inverse of scatter 
+     * @tparam LocalContainer a container on a shared memory system
+     * @param gatherFrom other processes collect data from this vector (has to be of size given by recv_size())
+     * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
+     * @note a scatter followed by a gather of the received values restores the original array
+     * @note this format is only needed in the ColDistMat matrix format
+     */
+    template< class LocalContainer>
+    void send_and_reduce( const LocalContainer& gatherFrom, LocalContainer& values) const;
+
+    /**
+     * @brief compute total # of elements the calling process receives in the scatter process (or sends in the gather process)
+     *
+     * (which might not equal the send size in each process)
+     *
+     * @return # of elements to receive
+     */
+    unsigned recv_size() const;
+    /**
+     * @brief return # of elements the calling process has to send in a scatter process (or receive in the gather process)
+     *
+     * equals the size of the map given in the constructor
+     * @return # of elements to send
+     */
+    unsigned send_size() const; 
+    /**
+    * @brief The size of the collected vector = recv_size()
+    *
+    * may return 0
+    * @return 
+    */
+    unsigned size() const;
+    /**
+    * @brief The internal mpi communicator used 
+    *
+    * used to assert that communicators of matrix and vector are the same
+    * @return MPI Communicator
+    */
+    MPI_Comm communicator() const {return p_.communicator();}
+};

@@ -16,10 +16,10 @@
 namespace eule
 {
 
-template<class Matrix, class container>
+template<class Geometry, class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d& g, double nu, double mue_hat, double mui_hat):
+    Diffusion( const Geometry& g, double nu, double mue_hat, double mui_hat):
         nu_(nu), mue_hat(mue_hat), mui_hat(mui_hat), 
         w2d_( dg::create::weights(g)), v2d_( dg::create::inv_weights(g)), 
         temp( g.size()), LaplacianM_perp( g, dg::normed)
@@ -44,54 +44,16 @@ struct Diffusion
     double nu_, mue_hat, mui_hat;
     container w2d_, v2d_;
     container temp;
-    dg::Elliptic<Matrix, container, container> LaplacianM_perp;
+    dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 };
 
-template< class Matrix, class container=thrust::device_vector<double> >
+template< class Geometry, class Matrix, class container=thrust::device_vector<double> >
 struct Asela
 {
-    typedef typename container::value_type value_type;
+    Asela( const Geometry& g, Parameters p);
 
-    /**
-     * @brief Construct a Asela solver object
-     *
-     * @param g The grid on which to operate
-     * @param p The parameters
-     */
-    Asela( const dg::Grid2d& g, Parameters p);
-
-    /**
-     * @brief Exponentiate pointwise every Vector in src 
-     *
-     * @param src source
-     * @param dst destination may equal source
-     */
-    void exp( const std::vector<container>& src, std::vector<container>& dst, unsigned howmany);
-
-    /**
-     * @brief Take the natural logarithm pointwise of every Vector in src 
-     *
-     * @param src source
-     * @param dst destination may equal source
-     */
-    void log( const std::vector<container>& src, std::vector<container>& dst, unsigned howmany);
-
-    /**
-     * @brief Returns phi and psi that belong to the last y in operator()
-     *
-     * In a multistep scheme this belongs to the point HEAD-1
-     * @return phi[0] is the electron and phi[1] the generalized ion potential
-     */
     const std::vector<container>& potential( ) const { return phi;}
     const container& aparallel( ) const { return apar;}
-
-
-    /**
-     * @brief Compute the right-hand side of the toefl equations
-     *
-     * @param y input vector
-     * @param yp the rhs yp = f(y)
-     */
     void operator()( std::vector<container>& y, std::vector<container>& yp);
 
   private:
@@ -103,18 +65,18 @@ struct Asela
 
     //matrices and solvers
 
-    dg::ArakawaX<Matrix, container> arakawa; 
+    dg::ArakawaX<Geometry, Matrix, container> arakawa; 
     dg::Invert<container> invert_pol, invert_maxwell; 
-    dg::Helmholtz<Matrix, container, container> maxwell;
+    dg::Helmholtz<Geometry, Matrix, container> maxwell;
 
-    dg::Elliptic< Matrix, container, container > pol, laplaceM; 
+    dg::Elliptic< Geometry, Matrix, container > pol, laplaceM; 
 
     Parameters p;
 
 };
 
-template< class M, class container>
-Asela< M, container>::Asela( const dg::Grid2d& grid, Parameters p ): 
+template< class G, class M, class container>
+Asela< G, M, container>::Asela( const G& grid, Parameters p ): 
     w2d( dg::create::weights(grid)),
     v2d( dg::create::inv_weights(grid)),
     one( dg::evaluate( dg::one, grid)),
@@ -130,20 +92,21 @@ Asela< M, container>::Asela( const dg::Grid2d& grid, Parameters p ):
     p(p)
 { }
 
-template<class M, class container>
-void Asela< M, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class G, class M, class container>
+void Asela< G, M, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 4);
     assert( y.size() == yp.size());
 
     //solve polarisation equation
-    exp( y, expy, 2);
+    for( unsigned i=0; i<2; i++)
+        dg::blas1::transform( y[i], expy[i], dg::EXP<double>());
     dg::blas1::axpby( p.dhat[1]*p.dhat[1], expy[1], 0., omega);
     pol.set_chi(omega);
     dg::blas1::axpby( -p.dhat[0], expy[0], p.dhat[1], expy[1], rho);
     invert_pol( pol, phi[0], rho, w2d, v2d);
     //compute phi[1]
-    arakawa.bracketS( phi[0], phi[0], phi[1]);
+    arakawa.variation( phi[0], phi[1]);
     dg::blas1::axpby( 1., phi[0], -0.5*p.dhat[1], phi[1]);////////////////////
 
     //solve induction equation
@@ -174,18 +137,6 @@ void Asela< M, container>::operator()( std::vector<container>& y, std::vector<co
 
 }
 
-template< class M, class container>
-void Asela< M, container>::exp( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
-{
-    for( unsigned i=0; i<howmany; i++)
-        dg::blas1::transform( y[i], target[i], dg::EXP<value_type>());
-}
-template< class M, class container>
-void Asela< M, container>::log( const std::vector<container>& y, std::vector<container>& target, unsigned howmany)
-{
-    for( unsigned i=0; i<howmany; i++)
-        dg::blas1::transform( y[i], target[i], dg::LN<value_type>());
-}
 
 
 }//namespace eule

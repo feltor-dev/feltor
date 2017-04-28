@@ -68,7 +68,7 @@ struct FpsiX
                 dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
-            if( isnan(eps)) { eps = eps_old/2.; end = end_old; 
+            if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; 
                 //std::cerr << "\t nan! error "<<eps<<"\n";
             } //near X-point integration can go wrong
             //y_eps = sqrt( (y_old - end[2])*(y_old-end[2]));
@@ -126,7 +126,7 @@ struct FpsiX
                 x0 = -dg::blas1::dot( f_vec, w1d);
 
             eps = fabs((x0 - x0_old)/x0);
-            if( isnan(eps)) { std::cerr << "Attention!!\n"; eps = eps_old -1e-15; x0 = x0_old;} //near X-point integration can go wrong
+            if( std::isnan(eps)) { std::cerr << "Attention!!\n"; eps = eps_old -1e-15; x0 = x0_old;} //near X-point integration can go wrong
             std::cout << "X = "<<-x0<<" rel. error "<<eps<<" with "<<P<<" polynomials\n";
         }
         return -x0_old;

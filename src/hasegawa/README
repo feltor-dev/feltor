@@ -1,2 +1,5 @@
 project description: 2d Hasegawa Wakatani using DG methods , 
 the mima code implements some test cases for Markus' paper
+
+!! This is base on an older copy of the toefl project and shouldn't be taken as !!
+!! the basis for a new project but is still maintained !!

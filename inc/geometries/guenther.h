@@ -310,7 +310,7 @@ struct Field
         return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
     }
     bool monitor( const dg::HVec& end){ 
-        if ( isnan(end[0]) || isnan(end[1]) || isnan(end[2]) ) 
+        if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) ) 
         {
             return false;
         }

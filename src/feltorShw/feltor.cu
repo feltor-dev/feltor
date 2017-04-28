@@ -9,7 +9,6 @@
 //#include "draw/device_window.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
-#include "file/read_input.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
@@ -27,8 +26,6 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v2;
-    std::stringstream title;
     Json::Reader reader;
     Json::Value js;
     if( argc == 1)
@@ -48,10 +45,13 @@ int main( int argc, char* argv[])
     }
     const eule::Parameters p(  js);    
     p.display( std::cout);
-
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow(  v2[2]*v2[3]*p.lx/p.ly, v2[1]*v2[4], "");
-    draw::RenderHostData render( v2[1], v2[2]);
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::stringstream title;
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
+    draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
     //////////////////////////////////////////////////////////////////////////
 
     //Make grid
@@ -64,12 +64,19 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
-    dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-
+//     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+        dg::BathRZ init0(16,16,1.,0.,0., 30.,5.,p.amp);
+        dg::DVec  dampr = dg::evaluate(dg::TanhProfX(p.lx*0.95,p.sourcew,-1.0,0.0,1.0),grid);
+        dg::DVec  dampl =dg::evaluate(dg::TanhProfX(p.lx*0.05,p.sourcew,1.0,0.0,1.0),grid);
+    
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
     
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
     y1[1] = dg::evaluate( init0, grid);
+       
+        dg::blas1::pointwiseDot(y1[1],dampr,y1[1]);
+        dg::blas1::pointwiseDot(y1[1],dampl,y1[1]);
+    
         
     if (p.modelmode==0 || p.modelmode==1)
     {

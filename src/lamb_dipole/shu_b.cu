@@ -15,8 +15,6 @@
 
 #include "draw/host_window.h"
 
-#include "file/read_input.h"
-
 #include "shu.cuh"
 #include "parameters.h"
 
@@ -30,31 +28,45 @@ double shearLayer(double x, double y){
 
 using namespace std;
 using namespace dg;
-const unsigned k = 3;
 
-int main()
+int main( int argc, char* argv[])
 {
-    Timer t;
-    const Parameters p( file::read_input( "input.txt"));
-    p.display();
-    if( p.k != k)
+    ////Parameter initialisation ////////////////////////////////////////////
+    Json::Reader reader;
+    Json::Value js;
+    if( argc == 1)
     {
-        std::cerr << "Time stepper needs recompilation!\n";
+        std::ifstream is("input/default.json");
+        reader.parse(is,js,false);
+    }
+    else if( argc == 2)
+    {
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
+    }
+    else
+    {
+        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
+    const Parameters p( js);
+    p.display( std::cout);
+    /////////////////////////////////////////////////////////////////
     Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     DVec w2d( create::weights(grid));
     /////////////////////////////////////////////////////////////////
-    //create CUDA context that uses OpenGL textures in Glfw window
     std::stringstream title;
     GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "");
     draw::RenderHostData render( 1,1);
     ////////////////////////////////////////////////////////////
 
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
+    dg::HVec omega; 
+    if( p.initial == "lamb")
+        omega = dg::evaluate ( lamb, grid);
+    else if ( p.initial == "shear")
+        omega = dg::evaluate ( shearLayer, grid);
 
-    HVec omega = evaluate ( lamb, grid);
-    //HVec omega = evaluate ( shearLayer, grid);
     DVec stencil = evaluate( one, grid);
     DVec y0( omega ), y1( y0);
     //subtract mean mass 
@@ -66,8 +78,9 @@ int main()
     //make solver and stepper
     Shu<DMatrix, DVec> shu( grid, p.eps);
     Diffusion<DMatrix, DVec> diffusion( grid, p.D);
-    Karniadakis< DVec > ab( y0, y0.size(), 1e-9);
+    Karniadakis< DVec > ab( y0, y0.size(), p.eps_time);
 
+    Timer t;
     t.tic();
     shu( y0, y1);
     t.toc();

@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "dg/geometry/refined_grid.h"

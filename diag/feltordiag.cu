@@ -12,7 +12,6 @@
 #include "dg/backend/average.cuh"
 #include "dg/functors.h"
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "geometries/geometries.h"
@@ -49,8 +48,12 @@ int main( int argc, char* argv[])
 
     std::cout << "input "<<input<<std::endl;
     std::cout << "geome "<<geom <<std::endl;
-    const eule::Parameters p(file::read_input( input));
-    const dg::geo::solovev::GeomParameters gp(file::read_input( geom));
+    Json::Reader reader;
+    Json::Value js,gs;
+    reader.parse( input, js, false);
+    const eule::Parameters p(js);
+    reader.parse( geom, gs, false);
+    const dg::geo::solovev::GeomParameters gp(gs);
     p.display();
     gp.display();
     ///////////////////////////////////////////////////////////////////////////

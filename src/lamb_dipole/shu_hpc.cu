@@ -11,15 +11,10 @@
 
 #include "dg/exceptions.h"
 
-#include "file/read_input.h"
-#include "file/file.h"
+#include "file/nc_utilities.h"
 
 #include "shu.cuh"
 #include "parameters.h"
-
-
-
-const unsigned k = 3;
 
 double delta =0.05;
 double rho =M_PI/15.;
@@ -32,9 +27,9 @@ double shearLayer(double x, double y){
 int main( int argc, char * argv[])
 {
     dg::Timer t;
-    //input files
-    std::vector<double> v;
-    std::string input;
+    ////////////////////////Parameter initialisation//////////////////////////
+    Json::Reader reader;
+    Json::Value js;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -42,40 +37,30 @@ int main( int argc, char * argv[])
     }
     else 
     {
-        v = file::read_input( argv[1]);
-        input = file::read_file( argv[1]);
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false); //read input without comments
     }
-    const Parameters p( v);
-    p.display();
-    if( p.k != k)
-    {
-        std::cerr << "Time stepper needs recompilation!\n";
-        return -1;
-    }
+    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const Parameters p( js);
+    p.display( std::cout);
 
-    //initiate solver 
+    //////////////initiate solver/////////////////////////////////////////
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::DVec w2d( dg::create::weights(grid));
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
-    //dg::HVec omega = dg::evaluate ( lamb, grid);
-    dg::HVec omega = dg::evaluate ( shearLayer, grid);
+    dg::HVec omega; 
+    if( p.initial == "lamb")
+        omega = dg::evaluate ( lamb, grid);
+    else if ( p.initial == "shear")
+        omega = dg::evaluate ( shearLayer, grid);
     dg::DVec y0( omega );
-    //subtract mean mass 
     const dg::DVec one = dg::evaluate( dg::one, grid);
-    //if( p.bc_x == dg::PER && p.bc_y == dg::PER)
-    //{
-    //    double meanMass = dg::blas2::dot( y0, w2d, one)/(double)(p.lx*p.ly);
-    //    dg::blas1::axpby( -meanMass, one, 1., y0);
-    //}
     //make solver and stepper
     dg::Shu<dg::DMatrix, dg::DVec> shu( grid, p.eps);
-    //dg::AB< k, dg::DVec > ab( y0);
     dg::Diffusion< dg::DMatrix, dg::DVec > diff( grid, p.D);
     dg::Karniadakis< dg::DVec> ab( y0, y0.size(), 1e-10);
     ab.init( shu, diff, y0, p.dt);
-    //ab( shu, y0, y1, p.dt);
     ab( shu, diff, y0); //make potential ready
-    //y0.swap( y1); //y1 now contains value at zero time
 
     dg::DVec varphi( grid.size()), potential;
     double vorticity = dg::blas2::dot( one , w2d, ab.last());
@@ -84,16 +69,42 @@ int main( int argc, char * argv[])
     potential = shu.potential();
     shu.arakawa().variation( potential, varphi);
     double variation = dg::blas2::dot( varphi, w2d, one );
-    /////////////////////////////////////////////////////////////////
-    file::T5trunc t5file( argv[2], input);
     double time = 0;
-    unsigned step = 0;
-    dg::DVec transferD[3] = { ab.last(), ab.last(), shu.potential()}; //intermediate transport locations
-    dg::HVec output[3];
-    for( int i=0;i<3; i++)
-        dg::blas1::transfer( transferD[i], output[i]);
-    t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
-    t5file.append( vorticity, enstrophy, energy, variation);
+    /////////////////////////////set up netcdf/////////////////////////////////////
+    file::NC_Error_Handle err;
+    int ncid;
+    err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
+    err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    int dim_ids[3], tvarID;
+    int EtimeID, EtimevarID;
+    err = file::define_dimensions( ncid, dim_ids, &tvarID, grid);
+    err = file::define_time( ncid, "energy_time", &EtimeID, &EtimevarID);
+    //field IDs
+    std::string names3d[2] = {"vorticity_field", "potential"}; 
+    std::string names1d[4] = {"vorticity", "enstrophy", "energy", "variation"}; 
+    int dataIDs[2], variableIDs[4]; 
+    for( unsigned i=0; i<2; i++){
+        err = nc_def_var( ncid, names3d[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
+    for( unsigned i=0; i<4; i++){
+        err = nc_def_var( ncid, names1d[i].data(), NC_DOUBLE, 1, &EtimeID, &variableIDs[i]);}
+    err = nc_enddef(ncid);
+    size_t start[3] = {0, 0, 0};
+    size_t count[3] = {1, grid.n()*grid.Ny(), grid.n()*grid.Nx()};
+    size_t Estart[] = {0};
+    size_t Ecount[] = {1};
+    ///////////////////////////////////first output/////////////////////////
+    std::vector<dg::HVec> output(2);
+    dg::blas1::transfer( ab.last(), output[0]);
+    dg::blas1::transfer( shu.potential(), output[1]);
+    for( int k=0;k<2; k++)
+        err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
+    err = nc_put_vara_double( ncid, tvarID, start, count, &time);
+    double output1d[4] = {vorticity, enstrophy, energy, variation};
+    for( int k=0;k<4; k++)
+        err = nc_put_vara_double( ncid, variableIDs[k], Estart, Ecount, &output1d[k] );
+    err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
+    ///////////////////////////////////timeloop/////////////////////////
+    unsigned step=0;
     try{
     for( unsigned i=0; i<p.maxout; i++)
     {
@@ -102,24 +113,27 @@ int main( int argc, char * argv[])
         ti.tic();
         for( unsigned j=0; j<p.itstp; j++)
         {
-            //ab( shu, y0, y1, p.dt);
             ab( shu, diff, y0);//one step further
-            vorticity = dg::blas2::dot( one , w2d, ab.last());
-            enstrophy = 0.5*dg::blas2::dot( ab.last(), w2d, ab.last());
+            output1d[0] = vorticity = dg::blas2::dot( one , w2d, ab.last());
+            output1d[1] = enstrophy = 0.5*dg::blas2::dot( ab.last(), w2d, ab.last());
             potential = shu.potential();
-            energy    = 0.5*dg::blas2::dot( ab.last(), w2d, potential) ;
+            output1d[2] = energy    = 0.5*dg::blas2::dot( ab.last(), w2d, potential) ;
             shu.arakawa().variation(potential, varphi);
-            variation = dg::blas2::dot( varphi, w2d, one );
-            t5file.append( vorticity, enstrophy, energy, variation);
+            output1d[3] = variation = dg::blas2::dot( varphi, w2d, one );
+            time += p.dt; Estart[0] += 1;
+            for( int k=0;k<4; k++)
+                err = nc_put_vara_double( ncid, variableIDs[k], Estart, Ecount, &output1d[k] );
+            err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
             if( energy>1e6) throw dg::Fail(p.eps);
         }
         step+=p.itstp;
-        time += p.itstp*p.dt;
         //output all fields
-        transferD[0] = ab.last(), transferD[1] = ab.last(), transferD[2] = shu.potential(); 
-        for( int i=0;i<3; i++)
-            dg::blas1::transfer( transferD[i], output[i]);
-        t5file.write( output[0], output[1], output[2], time, grid.n()*grid.Nx(), grid.n()*grid.Ny());
+        dg::blas1::transfer( ab.last(), output[0]);
+        dg::blas1::transfer( shu.potential(), output[1]);
+        start[0] = i;
+        for( int k=0;k<2; k++)
+            err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
+        err = nc_put_vara_double( ncid, tvarID, start, count, &time);
         ti.toc();
         std::cout << "\n\t Step "<<step <<" of "<<p.itstp*p.maxout <<" at time "<<time;
         std::cout << "\n\t Average time for one step: "<<ti.diff()/(double)p.itstp<<"s\n\n"<<std::flush;
@@ -129,6 +143,7 @@ int main( int argc, char * argv[])
         std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
         std::cerr << "Does Simulation respect CFL condition?\n";
     }
+    err = nc_close(ncid);
 
     return 0;
 
