@@ -112,9 +112,13 @@ int main( int argc, char* argv[])
         errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
         std::string inputIN( lengthIN, 'x');
         errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
-        std::cout << "input "<<inputIN<<std::endl;    
-        const eule::Parameters pIN(  js);    
-        pIN.display( std::cout);
+        
+        Json::Value jsIN;
+        reader.parse( inputIN, jsIN, false); 
+        const eule::Parameters pIN(  jsIN);    
+        std::cout << "[input.nc] file parameters" << std::endl;
+        pIN.display( std::cout);       
+        
         dg::Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
         dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
         size_t count2dIN[3]  = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};
@@ -132,7 +136,7 @@ int main( int argc, char* argv[])
         stepsIN-=1;
         start2dIN[0] = stepsIN/pIN.itstp;
         std::cout << "stepsin= "<< stepsIN <<  std::endl;
-        std::cout << "start2dIN[0]= "<< start2dIN[0] <<  std::endl;
+        std::cout << "start2dIN[0]= "<< start2dIN[0] <<  std::endl;        
         errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
         errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
         std::cout << "timein= "<< timeIN <<  std::endl;

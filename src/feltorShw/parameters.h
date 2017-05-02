@@ -94,7 +94,7 @@ struct Parameters
             <<"     Chat  :                          = "<<Chat<<"\n"
             <<"     g     :                          = "<<g<<"\n"
             <<"     modelmode:                       = "<<modelmode<<"\n"
-            <<"     hwmode:                              = "<<hwmode<<"\n"
+            <<"     hwmode:                          = "<<hwmode<<"\n"
             <<"     cmode:                           = "<<cmode<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"

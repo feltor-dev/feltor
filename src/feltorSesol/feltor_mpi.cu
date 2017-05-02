@@ -117,48 +117,52 @@ int main( int argc, char* argv[])
         if(rank==0) std::cout << "Done!\n";
     }
     if (argc==4) {
-      file::NC_Error_Handle errIN;
-      int ncidIN;
-      errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
-      ///////////////////read in and show inputfile und geomfile//////////////////
-      size_t lengthIN;
-      errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
-      std::string inputIN( lengthIN, 'x');
-      errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
-      std::cout << "input "<<inputIN<<std::endl;    
-      const eule::Parameters pIN( js);
-      pIN.display( std::cout);
-      dg::MPIGrid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y,comm);  
-      int dimsIN[2],  coordsIN[2];
-      MPI_Cart_get( comm, 2, dimsIN, periods, coordsIN);
-      size_t count2dIN[3] = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};  
-      size_t start2dIN[3] = {0, coordsIN[1]*count2dIN[1], coordsIN[0]*count2dIN[2]}; 
-      dg::HVec transferIN( dg::evaluate(dg::zero, grid_IN.local()));
-      dg::DVec transferIND( dg::evaluate(dg::zero, grid_IN.local()));
-      dg::IDMatrix interpolateIN = dg::create::interpolation( grid.local(),grid_IN.local()); 
-      std::string namesIN[2] = {"electrons", "ions"};       
-      int dataIDsIN[2];     
-      int timeIDIN;
-      double  timeIN;
-      size_t stepsIN;
-      /////////////////////The initial field///////////////////////////////////////////
-      /////////////////////Get time length and initial data///////////////////////////
-      errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
-      errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
-      stepsIN-=1;
-      start2dIN[0] = stepsIN/pIN.itstp;
-      errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
-      errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
-      if(rank==0) std::cout << "timein= "<< timeIN <<  std::endl;
-      time=timeIN;
-      errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN,transferIN.data());
-       dg::blas1::transfer(transferIN,transferIND);
-      dg::blas2::gemv( interpolateIN, transferIND,y0[0].data());
-      errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
-      errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferIN.data());
-      dg::blas1::transfer(transferIN,transferIND);
-      dg::blas2::gemv( interpolateIN, transferIND,y0[1].data());
-      errIN = nc_close(ncidIN);
+        file::NC_Error_Handle errIN;
+        int ncidIN;
+        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
+        ///////////////////read in and show inputfile und geomfile//////////////////
+        size_t lengthIN;
+        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
+        std::string inputIN( lengthIN, 'x');
+        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
+
+        Json::Value jsIN;
+        reader.parse( inputIN, jsIN, false); 
+        const eule::Parameters pIN(  jsIN);    
+        std::cout << "[input.nc] file parameters" << std::endl;
+        pIN.display( std::cout);   
+
+        dg::MPIGrid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y,comm);  
+        int dimsIN[2],  coordsIN[2];
+        MPI_Cart_get( comm, 2, dimsIN, periods, coordsIN);
+        size_t count2dIN[3] = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};  
+        size_t start2dIN[3] = {0, coordsIN[1]*count2dIN[1], coordsIN[0]*count2dIN[2]}; 
+        dg::HVec transferIN( dg::evaluate(dg::zero, grid_IN.local()));
+        dg::DVec transferIND( dg::evaluate(dg::zero, grid_IN.local()));
+        dg::IDMatrix interpolateIN = dg::create::interpolation( grid.local(),grid_IN.local()); 
+        std::string namesIN[2] = {"electrons", "ions"};       
+        int dataIDsIN[2];     
+        int timeIDIN;
+        double  timeIN;
+        size_t stepsIN;
+        /////////////////////The initial field///////////////////////////////////////////
+        /////////////////////Get time length and initial data///////////////////////////
+        errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
+        errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
+        stepsIN-=1;
+        start2dIN[0] = stepsIN/pIN.itstp;
+        errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
+        errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
+        if(rank==0) std::cout << "timein= "<< timeIN <<  std::endl;
+        time=timeIN;
+        errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN,transferIN.data());
+        dg::blas1::transfer(transferIN,transferIND);
+        dg::blas2::gemv( interpolateIN, transferIND,y0[0].data());
+        errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
+        errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferIN.data());
+        dg::blas1::transfer(transferIN,transferIND);
+        dg::blas2::gemv( interpolateIN, transferIND,y0[1].data());
+        errIN = nc_close(ncidIN);
     }
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     if(rank==0) std::cout << "intialize Timestepper" << std::endl;

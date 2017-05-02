@@ -70,7 +70,7 @@ int main( int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-        dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 
@@ -92,49 +92,52 @@ int main( int argc, char* argv[])
       std::cout << "Done!\n";
     }
     if (argc==4) {
-      file::NC_Error_Handle errIN;
-      int ncidIN;
-      errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
-      ///////////////////read in and show inputfile und geomfile//////////////////
-      size_t lengthIN;
-      errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
-      std::string inputIN( lengthIN, 'x');
-      errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
-      std::cout << "input "<<inputIN<<std::endl;    
-      const eule::Parameters pIN(  js);    
+        file::NC_Error_Handle errIN;
+        int ncidIN;
+        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
+        ///////////////////read in and show inputfile und geomfile//////////////////
+        size_t lengthIN;
+        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
+        std::string inputIN( lengthIN, 'x');
+        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
 
-      pIN.display( std::cout);
-      dg::Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
-      dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
-      size_t count2dIN[3]  = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};
-      size_t start2dIN[3]  = {0, 0, 0};
-      std::string namesIN[2] = {"electrons", "ions"}; 
-      
-      int dataIDsIN[2];     
-      int timeIDIN;
-      double  timeIN;
-      size_t stepsIN;
-      /////////////////////The initial field///////////////////////////////////////////
-      /////////////////////Get time length and initial data///////////////////////////
-      errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
-      errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
-      stepsIN-=1;
-      start2dIN[0] = stepsIN/pIN.itstp;
-      std::cout << "stepsIN= "<< stepsIN <<  std::endl;
-      std::cout << "start2dIN[0]= "<< start2dIN[0] <<  std::endl;
-      errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
-      errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
-      std::cout << "timeIN= "<< timeIN <<  std::endl;
-      time=timeIN;
-      dg::IHMatrix interpolateIN = dg::create::interpolation( grid,grid_IN); 
-      errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, transferINH.data());
-      dg::blas2::gemv( interpolateIN, transferINH,temp);
-      dg::blas1::transfer(temp,y0[0]);
-      errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
-      errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferINH.data());
-      dg::blas2::gemv( interpolateIN, transferINH,temp);
-      dg::blas1::transfer(temp,y0[1]);      
-      errIN = nc_close(ncidIN);
+        Json::Value jsIN;
+        reader.parse( inputIN, jsIN, false); 
+        const eule::Parameters pIN(  jsIN);    
+        std::cout << "[input.nc] file parameters" << std::endl;
+        pIN.display( std::cout);    
+
+        dg::Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
+        dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
+        size_t count2dIN[3]  = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};
+        size_t start2dIN[3]  = {0, 0, 0};
+        std::string namesIN[2] = {"electrons", "ions"}; 
+
+        int dataIDsIN[2];     
+        int timeIDIN;
+        double  timeIN;
+        size_t stepsIN;
+        /////////////////////The initial field///////////////////////////////////////////
+        /////////////////////Get time length and initial data///////////////////////////
+        errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
+        errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
+        stepsIN-=1;
+        start2dIN[0] = stepsIN/pIN.itstp;
+        std::cout << "stepsIN= "<< stepsIN <<  std::endl;
+        std::cout << "start2dIN[0]= "<< start2dIN[0] <<  std::endl;
+        errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
+        errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
+        std::cout << "timeIN= "<< timeIN <<  std::endl;
+        time=timeIN;
+        dg::IHMatrix interpolateIN = dg::create::interpolation( grid,grid_IN); 
+        errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, transferINH.data());
+        dg::blas2::gemv( interpolateIN, transferINH,temp);
+        dg::blas1::transfer(temp,y0[0]);
+        errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
+        errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferINH.data());
+        dg::blas2::gemv( interpolateIN, transferINH,temp);
+        dg::blas1::transfer(temp,y0[1]);      
+        errIN = nc_close(ncidIN);
 
     }
 
