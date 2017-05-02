@@ -180,7 +180,14 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
         blas2::symv( A, p, ap);
         alpha = nrm2r_old /blas1::dot( p, ap);
         blas1::axpby( alpha, p, 1.,x);
-        blas1::axpby( -alpha, ap, 1., r);
+	        //here one could add a ifstatement to remove accumulated floating point error
+        if (i % 100==0) {
+	  blas2::symv( A,x,r); 
+	  blas1::axpby( 1., b, -1., r); 
+	}
+	else {
+	  blas1::axpby( -alpha, ap, 1., r);
+	}
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
@@ -196,6 +203,7 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
             return i;
         blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
         nrm2r_old=nrm2r_new;
+
     }
     return max_iter;
 }

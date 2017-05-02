@@ -12,7 +12,7 @@
     "n_out" : 3,    //(# of x-y polynomials in output)
     "Nx_out" : 50,  //(# grid points in output field)
     "Ny_out" : 50,  //(# grid points in output field)
-    "Nz_out" : 10,  //(# grid points in output field)
+    "Nz_out" : 16,  //(# grid points in output field)
     "itstp"  : 2,   //(steps between outputs)
     "maxout" : 10,  //total # of outputs (excluding first)
     //-------------------------------Algorithmic parameters---------------------

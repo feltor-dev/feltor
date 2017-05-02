@@ -379,7 +379,7 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
 template<class Geometry, class DS, class Matrix, class container>
 container& Feltor<Geometry, DS, Matrix, container>::polarisation( const std::vector<container>& y)
 {
-    dg::blas1::axpby( p.mu[1], y[1], 0, chi);       //chi =  \mu_i (n_i-1) 
+ dg::blas1::axpby( p.mu[1], y[1], 0, chi);       //chi =  \mu_i (n_i-1) 
     dg::blas1::plus( chi, p.mu[1]);
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //chi = (\mu_i n_i ) /B^2

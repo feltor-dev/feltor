@@ -57,8 +57,10 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
     /////////////////////The initial field///////////////////////////////////////////
 //     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-        dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.lx);
-
+        dg::SinXSinY init0(p.amp,0.,p.sigma*2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
+//     dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
+    
+    
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
     
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
