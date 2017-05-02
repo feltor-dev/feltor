@@ -56,8 +56,8 @@ int main( int argc, char* argv[])
     eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
     std::cout << "Done!\n";
     /////////////////////The initial field///////////////////////////////////////////
-//     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
-        dg::SinXSinY init0(p.amp,0.,p.sigma*2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
+    dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+//         dg::SinXSinY init0(p.amp,0.,p.sigma*2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
 //     dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
     
     

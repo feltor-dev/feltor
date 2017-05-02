@@ -65,9 +65,9 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     
-//     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+    dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
     
-    dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
+//     dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
     
 //     dg::SinX init0(p.amp,0.,p.sigma*2*M_PI/p.lx);
 //         dg::BathRZ init0(16,16,1.,0.,0., 30.,5.,p.amp);
