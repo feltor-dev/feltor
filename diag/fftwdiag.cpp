@@ -6,7 +6,7 @@
 #include <cmath>
 #include <complex>
 #include "spectral/drt_dft.h"
-#include "spectral/drt_drt.h"
+// #include "spectral/drt_drt.h"
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
@@ -49,13 +49,13 @@ int main( int argc, char* argv[])
     //////////////////////////////Grids//////////////////////////////////////
     //input grid
     dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
-    const size_t rows =  g2d.n()*g2d.Ny();
-    const size_t cols = g2d.n()*g2d.Nx();
+    const size_t Ny =  g2d.n()*g2d.Ny();
+    const size_t Nx = g2d.n()*g2d.Nx();
     //output grids
     const double kxmin = 1./p.lx;
     const double kymin = 1./p.ly;
-    const unsigned Nkx = rows/2+1; //add padding of two (-1) ?
-    const unsigned Nky = cols ;   //add padding of two (+2) ?    
+    const unsigned Nky = Ny/2+1; 
+    const unsigned Nkx = Nx ;   
     const double kxmax = (Nkx)/p.lx; //?
     const double kymax = (Nky)/p.ly; //?
     const unsigned Nk = (unsigned)sqrt(Nkx*Nkx+Nky*Nky);
@@ -118,11 +118,10 @@ int main( int argc, char* argv[])
     dg::IHMatrix equi = dg::create::backscatter( g2d);
  
     //spectral stuff 
-    spectral::Matrix<double, spectral::TL_DRT_DFT> tempxy(  rows, cols);
-//     spectral::Matrix<std::complex<double> > tempkykx(cols+2, rows/2+1-1); // cols,rows/2 +1 );
-    spectral::Matrix<std::complex<double> > tempkykx(cols, rows/2+1); // cols,rows/2 +1 );
-    spectral::Matrix<double> kxkyspec( g2d_f.Nx(), g2d_f.Ny());
-    spectral::Matrix<double> gammakxkyspec( g2d_f.Nx(), g2d_f.Ny());
+    spectral::Matrix<double, spectral::TL_DRT_DFT> tempxy(  Ny, Nx);
+    spectral::Matrix<std::complex<double> > tempkykx(g2d_f.Nx(), g2d_f.Ny());  //# = (Nx, Ny/2+1)
+    spectral::Matrix<double> kxkyspec( g2d_f.Ny(), g2d_f.Nx()); //Dimensions are transposed of tempkykx = ( Ny/2+1,Nx)
+    spectral::Matrix<double> gammakxkyspec( g2d_f.Ny(), g2d_f.Nx());
     std::vector<double> gammakspec( g1d_f.N());    
     std::vector<double> kspec( g1d_f.N());
     std::vector<unsigned> counter( g1d_f.N());
@@ -132,8 +131,8 @@ int main( int argc, char* argv[])
     //FFTW_RODFT11 computes an RODFT11 transform, i.e. a DST-IV. (Logical N=2*n, inverse is FFTW_RODFT11.)  -> DIR_NEU
     //FFTW_RODFT10 computes an RODFT10 transform, i.e. a DST-II. (Logical N=2*n, inverse is FFTW_RODFT01.) -> DIR_DIR
     //FFTW_RODFT00 computes an RODFT00 transform, i.e. a DST-I. (Logical N=2*(n+1), inverse is FFTW_RODFT00.) -> DIR_DIR
-    fftw_r2r_kind kind = FFTW_RODFT10; //DST & DST IV
-    spectral::DRT_DFT drt_dft( rows, cols, kind);
+    fftw_r2r_kind kind = FFTW_RODFT00; //DST & DST IV
+    spectral::DRT_DFT trafo( Ny, Nx, kind);
     
     
     //open netcdf files
@@ -153,8 +152,8 @@ int main( int argc, char* argv[])
     double deltaT = p.dt*p.itstp;     //define timestep
 
     //initialize gammas
-    for( unsigned m = 0; m < g2d_f.Nx(); m++) {
-        for( unsigned n = 0; n < g2d_f.Ny(); n++) {
+    for( unsigned m = 0; m < gammakxkyspec.rows(); m++) {
+        for( unsigned n = 0; n < gammakxkyspec.cols(); n++) {
             gammakxkyspec(m,n) =0.;
         }
     }
@@ -162,7 +161,9 @@ int main( int argc, char* argv[])
         gammakspec[mn]=0.;
         kspec[mn]=0.;
     }
-
+ 
+//     std::cout<< kxkyspec.cols() << " " << kxkyspec.rows() << std::endl;
+//     std::cout<< g2d_f.Nx() << " " << g2d_f.Ny() << std::endl;
     for( unsigned i=imin; i<imax+1; i++)//timestepping
     {
             start2d[0] = i;
@@ -194,23 +195,20 @@ int main( int argc, char* argv[])
                 //Fill (x,y) matrix with values, normalise trafo
                 for( unsigned m = 0; m < tempxy.rows(); m++) {
                     for( unsigned n = 0; n <tempxy.cols(); n++) {   
-                        tempxy(m,n) = energiesequi[j][n+m*cols];
+                        tempxy(m,n) = energiesequi[j][n+m*tempxy.cols()];
                     }
                 }
-
                 //compute 2d spectrum E(kx,ky) with forward real to complex transform
-                drt_dft.r2c_T( tempxy, tempkykx); //Note that output is transposed
+                trafo.r2c_T( tempxy, tempkykx); //Note that output is transposed
 
                 for( unsigned m = 0; m <  tempkykx.rows(); m++) {
                     for( unsigned n = 0; n < tempkykx.cols(); n++) {
                         //transpose absolute of transposed output
                         kxkyspec(n,m) = std::abs(tempkykx(m,n)); //is padded -> Y?
                         
-//                         squspec(m,n)/=sqrt((2.*((double)cols)+1.)*(double)rows); //for rodft00
-                        kxkyspec(n,m)/= sqrt((2.*((double)cols))*(double)rows); //otherwise
+//                         squspec(m,n)/=sqrt((2.*((double)Nx)+1.)*(double)Ny); //for rodft00
+                        kxkyspec(n,m)/= sqrt((2.*((double)Nx))*(double)Ny); //otherwise
                         
-//                         if (j==0) std::cout << squspec(m,n) << " ";
-//                         if (j==0 && n==tempkykx.cols()-1) std::cout << "\n";
                         //grow rate for phi spec
                         if (j==1) gammakxkyspec(n,m) =(kxkyspec(n,m) - gammakxkyspec(n,m))/deltaT;
                     }
@@ -225,8 +223,8 @@ int main( int argc, char* argv[])
                 for (unsigned mn=0;mn<g1d_f.N();mn++) {
                     kspec[mn]=0.;
                     counter[mn]=0;
-                    for( unsigned m = 0; m <g2d_f.Nx(); m++) {
-                        for( unsigned n = 0; n < g2d_f.Ny(); n++){			  
+                    for( unsigned m = 0; m <kxkyspec.rows(); m++) {
+                        for( unsigned n = 0; n < kxkyspec.cols(); n++){			  
                             if((unsigned)(sqrt(m*m+n*n) - mn)<1) {
                                 counter[mn]+=1;
                                 kspec[mn] += kxkyspec(m,n);
