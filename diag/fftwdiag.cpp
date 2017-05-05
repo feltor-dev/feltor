@@ -53,11 +53,11 @@ int main( int argc, char* argv[])
     const size_t Nx = g2d.n()*g2d.Nx();
     //output grids
     const double kxmin = 1./p.lx;
-    const double kymin = 1./p.ly;
-    const unsigned Nky = Ny/2+1; 
-    const unsigned Nkx = Nx ;   
-    const double kxmax = (Nkx)/p.lx; //?
-    const double kymax = (Nky)/p.ly; //?
+    const double kymin = 1./p.ly;    
+    const unsigned Nkx = Nx ; 
+    const unsigned Nky = Ny/2+1;       
+    const double kxmax = (Nkx/2.+1)/p.lx; //see fftw docu
+    const double kymax = (Nky)/p.ly; 
     const unsigned Nk = (unsigned)sqrt(Nkx*Nkx+Nky*Nky);
     const double kmin = sqrt(kxmin*kxmin + kymin*kymin);
     const double kmax = sqrt(kxmax*kxmax + kymax*kymax);
@@ -131,7 +131,7 @@ int main( int argc, char* argv[])
     //FFTW_RODFT11 computes an RODFT11 transform, i.e. a DST-IV. (Logical N=2*n, inverse is FFTW_RODFT11.)  -> DIR_NEU
     //FFTW_RODFT10 computes an RODFT10 transform, i.e. a DST-II. (Logical N=2*n, inverse is FFTW_RODFT01.) -> DIR_DIR
     //FFTW_RODFT00 computes an RODFT00 transform, i.e. a DST-I. (Logical N=2*(n+1), inverse is FFTW_RODFT00.) -> DIR_DIR
-    fftw_r2r_kind kind = FFTW_RODFT00; //DST & DST IV
+    fftw_r2r_kind kind = FFTW_RODFT10; //DST & DST IV
     spectral::DRT_DFT trafo( Ny, Nx, kind);
     
     
