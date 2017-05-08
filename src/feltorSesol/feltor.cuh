@@ -171,7 +171,7 @@ container& Feltor<G, Matrix, container>::polarisation( const std::vector<contain
     invert_invgammaN(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi, omega, v2d);            //Gamma n_i -ne = -nabla chi nabla phi
+    unsigned number = invert_pol( pol, phi[0], chi, w2d, omega, v2d);            //Gamma n_i -ne = -nabla chi nabla phi
         if(  number == invert_pol.get_max())
             throw dg::Fail( p.eps_pol);
     return phi[0];

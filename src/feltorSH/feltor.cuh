@@ -111,7 +111,7 @@ struct Feltor
     dg::Elliptic<   Geometry, Matrix, container> pol,lapperpM; 
     dg::Helmholtz<  Geometry, Matrix, container> invgamma1;    
     dg::Helmholtz2< Geometry, Matrix, container> invgamma2;
-    dg::Invert<container> invert_pol,invert_invgammadag,invert_invgamma,invert_invgamma2;
+    dg::Invert<container> invert_pol,invert_invgammadag,invert_invgamma,invert_invgamma2,invert_invgamma2a,invert_invgamma2b;
     const eule::Parameters p;
 
     double mass_, energy_, diff_, ediff_;
@@ -136,6 +136,8 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     invert_invgammadag( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     invert_invgamma(    omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     invert_invgamma2(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    invert_invgamma2a(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    invert_invgamma2b(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     p(p),
     evec(3)
 {
@@ -151,7 +153,7 @@ container& Feltor<G, Matrix, container>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);                              //set chi of polarisation: nabla_perp (chi nabla_perp )
-
+    dg::blas1::pointwiseDivide(v2d,chi,iota);
     if (p.flrmode == 1)
     {
         dg::blas1::transform( y[3], chi, dg::PLUS<>( (p.bgprofamp + p.nprofileamp))); //Ti
@@ -174,7 +176,7 @@ container& Feltor<G, Matrix, container>::polarisation( const std::vector<contain
 
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);  //chi= Gamma1^dagger (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
 
-    unsigned number = invert_pol( pol, phi[0], chi);   //Gamma1^dagger( N_i) -ne = -nabla ( chi nabla phi)
+    unsigned number = invert_pol( pol, phi[0], chi,w2d, iota, v2d);   //Gamma1^dagger( N_i) -ne = -nabla ( chi nabla phi)
     if(  number == invert_pol.get_max())
      throw dg::Fail( p.eps_pol);
     return phi[0];
@@ -207,13 +209,16 @@ container& Feltor<G, Matrix,container>::compute_chii(const container& ti,contain
 {    
     if (p.flrmode==1)
     {
-    //  setup rhs
+            //  setup rhs
         dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
-        invgamma2.set_chi(lambda); //(B^2/T - tau_i nabla_perp^2 +  0.25*tau_i^2 nabla_perp^2 T/B^2  nabla_perp^2)
+        invgamma1.set_chi(lambda); //(B^2/T - tau_i nabla_perp^2 +  0.25*tau_i^2 nabla_perp^2 T/B^2  nabla_perp^2)
     //  set up the lhs
         dg::blas2::gemv(lapperpM,potential,lambda); //lambda = - nabla_perp^2 phi
         dg::blas1::scal(lambda,-0.5*p.tau[1]*p.mu[1]); // lambda = 0.5*tau_i*nabla_perp^2 phi 
-        invert_invgamma2(invgamma2,chii,lambda);
+        invert_invgamma2a(invgamma1,chii,lambda);
+        dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
+        dg::blas1::pointwiseDot(chii,lambda,lambda);
+        invert_invgamma2b(invgamma1,chii,lambda);
     }
     return chii;
 }
