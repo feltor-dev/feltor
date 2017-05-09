@@ -213,18 +213,18 @@ int main( int argc, char* argv[])
                         if (j==1) gammakxkyspec(n,m) =(kxkyspec(n,m) - gammakxkyspec(n,m))/deltaT;
                     }
                 } 
-                std::cout << std::setprecision(4) << std::fixed;
-                if (j==0) std::cout << "plotting"<< std::endl;
-                if (j==0) std::cout << kxkyspec << std::endl;
+//                 std::cout << std::setprecision(4) << std::fixed;
+//                 if (j==0) std::cout << "plotting"<< std::endl;
+//                 if (j==0) std::cout << kxkyspec << std::endl;
                 //Write E(kx,ky) spectrum
                 err2d_f = nc_put_vara_double( ncid2d_f, dataIDs2d_f[j],   start2d_f, count2d_f, kxkyspec.getPtr()); 
                 
-                //compute (normalised) shell spectrum        
+//                 compute (normalised) shell spectrum        
                 for (unsigned mn=0;mn<g1d_f.N();mn++) {
                     kspec[mn]=0.;
                     counter[mn]=0;
                     for( unsigned m = 0; m <kxkyspec.rows(); m++) {
-                        for( unsigned n = 0; n < kxkyspec.cols(); n++){			  
+                        for( unsigned n = 0; n < kxkyspec.cols(); n++){           
                             if((unsigned)(sqrt(m*m+n*n) - mn)<1) {
                                 counter[mn]+=1;
                                 kspec[mn] += kxkyspec(m,n);
@@ -236,14 +236,15 @@ int main( int argc, char* argv[])
                     //normalise
                     kspec[mn] /= counter[mn];
                     //grow rate for phi spec
-                    if (j==1) gammakspec[mn] /= (counter[mn]*deltaT);	
+                    if (j==1) gammakspec[mn] /= (counter[mn]*deltaT);   
                 }
 
                 //Write E(k) spectrum
                 err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[j],   start1d_f, count1d_f, kspec.data()); 
-                // 		todo                
+                //      todo                
                 //compute E(ky) spectrum
-                //compute E(kx) spectrum            
+                //compute E(kx) spectrum                
+
               }
 
             err2d_f = nc_put_vara_double( ncid2d_f, dataIDs2d_f[2],   start2d_f, count2d_f, gammakxkyspec.getPtr()); 
