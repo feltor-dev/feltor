@@ -395,7 +395,7 @@ struct GaussianZ
 
 };
 /**
- * @brief Functor for a sin prof in x-direction
+ * @brief Functor for a sin prof in x and y-direction
  * \f[ f(x,y) =B+ A sin(k_x x) sin(k_y y) \f]
  */
 struct SinXSinY
@@ -406,6 +406,7 @@ struct SinXSinY
      * @param amp amplitude
      * @param bamp backgroundamp
      * @param kx  kx
+     * @param ky  ky
      */
     SinXSinY( double amp, double bamp, double kx, double ky):amp_(amp), bamp_(bamp),kx_(kx),ky_(ky){}
     /**
