@@ -137,10 +137,36 @@ struct VectorTraits<const MPI_Vector<container> > {
     typedef double value_type;
     typedef MPIVectorTag vector_category;
 };
+
+//Memory buffer class: data can be written even if the object is const
+template< class T>
+struct Buffer
+{
+    Buffer(){
+        ptr = new T;
+    }
+    Buffer( const T& t){
+        ptr = new T(t);
+    }
+    ~Buffer(){
+        delete ptr;
+    }
+    Buffer( const Buffer& src){ 
+        ptr = new T(*src.ptr);
+    }
+    Buffer& operator=( const Buffer& src){
+        if( this == &src) return *this;
+        Buffer tmp(src);
+        std::swap( ptr, tmp.ptr);
+        return *this;
+    }
+    T* data( )const { return ptr;}
+    private:
+    T* ptr;
+};
 ///@endcond
 
 /////////////////////////////communicator exchanging columns//////////////////
-
 /**
 * @brief Communicator for nearest neighbor communication
 *
@@ -153,7 +179,9 @@ struct VectorTraits<const MPI_Vector<container> > {
 template<class Index, class Vector>
 struct NearestNeighborComm
 {
-    NearestNeighborComm(){silent_ = true;}
+    NearestNeighborComm(){
+        silent_ = true;
+    }
     /**
     * @brief Construct 
     *
@@ -189,7 +217,7 @@ struct NearestNeighborComm
     *
     * @return new container
     */
-    Vector collect( const Vector& input)const;
+    const Vector& collect( const Vector& input)const;
     /**
     * @brief Size of the output of collect
     *
@@ -228,9 +256,11 @@ struct NearestNeighborComm
     MPI_Comm comm_;
     int direction_;
     bool silent_;
-    Index buffer_gather1, buffer_gather2, buffer_scatter1, buffer_scatter2;
+    Index gather_map1, gather_map2, scatter_map1, scatter_map2;
+    //dynamically allocate buffer so that collect can be const
+    Buffer<Vector> values, buffer1, buffer2, rb1, rb2; 
 
-    void sendrecv( HVec&, HVec&, HVec& , HVec&)const;
+    void sendrecv( Vector&, Vector&, Vector& , Vector&)const;
     int buffer_size() const;
 };
 
@@ -298,8 +328,11 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
         }
         break;
     }
-    buffer_gather1 =hbgather1, buffer_gather2 =hbgather2;
-    buffer_scatter1=hbscattr1, buffer_scatter2=hbscattr2;
+    gather_map1 =hbgather1, gather_map2 =hbgather2;
+    scatter_map1=hbscattr1, scatter_map2=hbscattr2;
+    values.data()->resize( size());
+    buffer1.data()->resize( buffer_size()), buffer2.data()->resize( buffer_size());
+    rb1.data()->resize( buffer_size()), rb2.data()->resize( buffer_size());
 }
 
 template<class I, class V>
@@ -326,70 +359,51 @@ int NearestNeighborComm<I,V>::buffer_size() const
 }
 
 template<class I, class V>
-V NearestNeighborComm<I,V>::collect( const V& input) const
+const V& NearestNeighborComm<I,V>::collect( const V& input) const
 {
-    if( silent_) return V();
+    if( silent_) return *values.data();
         //int rank;
         //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         //dg::Timer t;
         //t.tic();
-    V values( size());
-    V buffer1( buffer_size());
-    V buffer2( buffer_size());
-    //V sendbuffer2( buffer_size());
-    //V recvbuffer2( buffer_size());
-        //t.toc();
-        //if(rank==0)std::cout << "Allocation   took "<<t.diff()<<"s\n";
-        //t.tic();
     //gather values from input into sendbuffer
-    thrust::gather( buffer_gather1.begin(), buffer_gather1.end(), input.begin(), buffer1.begin());
-    thrust::gather( buffer_gather2.begin(), buffer_gather2.end(), input.begin(), buffer2.begin());
+    thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data()->begin());
+    thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data()->begin());
         //t.toc();
         //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
         //t.tic();
-    //copy to host 
-    HVec sb1,sb2;
-    dg::blas1::detail::doTransfer( buffer1, sb1, typename VectorTraits<V>::vector_category(), ThrustVectorTag());
-    dg::blas1::detail::doTransfer( buffer2, sb2, typename VectorTraits<V>::vector_category(), ThrustVectorTag());
-    HVec rb1(buffer_size(), 0), rb2( buffer_size(), 0);
-        //t.toc();
-        //if(rank==0)std::cout << "Copy to host took "<<t.diff()<<"s\n";
-        //t.tic();
     //mpi sendrecv
-    sendrecv( sb1, sb2, rb1, rb2);
+    sendrecv( *buffer1.data(), *buffer2.data(), *rb1.data(), *rb2.data());
         //t.toc();
         //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
         //t.tic();
-    //send data back to device
-    dg::blas1::detail::doTransfer( rb1, buffer1, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
-    dg::blas1::detail::doTransfer( rb2, buffer2, ThrustVectorTag(), typename VectorTraits<V>::vector_category());
-        //t.toc();
-        //if(rank==0)std::cout << "Copy to devi took "<<t.diff()<<"s\n";
-        //t.tic();
     //scatter received values into values array
-    thrust::scatter( buffer1.begin(), buffer1.end(), buffer_scatter1.begin(), values.begin());
-    thrust::scatter( buffer2.begin(), buffer2.end(), buffer_scatter2.begin(), values.begin());
+    thrust::scatter( rb1.data()->begin(), rb1.data()->end(), scatter_map1.begin(), values.data()->begin());
+    thrust::scatter( rb2.data()->begin(), rb2.data()->end(), scatter_map2.begin(), values.data()->begin());
         //t.toc();
         //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
-    return values;
+    return *values.data();
 }
 
 template<class I, class V>
-void NearestNeighborComm<I,V>::sendrecv( HVec& sb1, HVec& sb2 , HVec& rb1, HVec& rb2) const
+void NearestNeighborComm<I,V>::sendrecv( V& sb1, V& sb2 , V& rb1, V& rb2) const
 {
     int source, dest;
     MPI_Status status;
     //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified 
     MPI_Cart_shift( comm_, direction_, -1, &source, &dest);
-    MPI_Sendrecv(   sb1.data(), buffer_size(), MPI_DOUBLE,  //sender
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    cudaDeviceSynchronize(); //needs to be called 
+#endif //THRUST_DEVICE_SYSTEM
+    MPI_Sendrecv(   thrust::raw_pointer_cast(sb1.data()), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 3,  //destination
-                    rb2.data(), buffer_size(), MPI_DOUBLE, //receiver
+                    thrust::raw_pointer_cast(rb2.data()), buffer_size(), MPI_DOUBLE, //receiver
                     source, 3, //source
                     comm_, &status);
     MPI_Cart_shift( comm_, direction_, +1, &source, &dest);
-    MPI_Sendrecv(   sb2.data(), buffer_size(), MPI_DOUBLE,  //sender
+    MPI_Sendrecv(   thrust::raw_pointer_cast(sb2.data()), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 9,  //destination
-                    rb1.data(), buffer_size(), MPI_DOUBLE, //receiver
+                    thrust::raw_pointer_cast(rb1.data()), buffer_size(), MPI_DOUBLE, //receiver
                     source, 9, //source
                     comm_, &status);
 }
