@@ -126,18 +126,6 @@ class Elliptic
      */
     const Vector& precond()const {return precond_;}
     /**
-     * @brief Change jfactor
-     *
-     * @return reference to jfactor
-     */
-    double& jfactor( ){  return jfactor_;}
-    /**
-     * @brief Access jfactor
-     *
-     * @return jfactor
-     */
-    double jfactor( ) const  {return jfactor_;}
-    /**
      * @brief Set the currently used jfactor
      *
      * @param new_jfactor The new scale factor for jump terms
