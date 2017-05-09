@@ -181,13 +181,14 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
         alpha = nrm2r_old /blas1::dot( p, ap);
         blas1::axpby( alpha, p, 1.,x);
 	        //here one could add a ifstatement to remove accumulated floating point error
-        if (i % 100==0) {
-	  blas2::symv( A,x,r); 
-	  blas1::axpby( 1., b, -1., r); 
-	}
-	else {
-	  blas1::axpby( -alpha, ap, 1., r);
-	}
+//             if (i % 100==0) {
+//                   blas2::symv( A,x,r); 
+//                   blas1::axpby( 1., b, -1., r); 
+//             }
+//             else {
+//                   blas1::axpby( -alpha, ap, 1., r);
+//             }
+        blas1::axpby( -alpha, ap, 1., r);
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
