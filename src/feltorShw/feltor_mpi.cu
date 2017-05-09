@@ -78,7 +78,7 @@ int main( int argc, char* argv[])
     }
     std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
-    if(rank==0)p.display( std::cout);
+    if(rank==0) p.display( std::cout);
      ////////////////////////////////setup MPI///////////////////////////////
     int periods[2] = {false, false}; //non-, non-, periodic
     if( p.bc_x == dg::PER) periods[0] = true;
@@ -165,8 +165,8 @@ int main( int argc, char* argv[])
         Json::Value jsIN;
         reader.parse( inputIN, jsIN, false); 
         const eule::Parameters pIN(  jsIN);    
-        std::cout << "[input.nc] file parameters" << std::endl;
-        pIN.display( std::cout);   
+        if(rank==0) std::cout << "[input.nc] file parameters" << std::endl;
+        if(rank==0) pIN.display( std::cout);   
 
         dg::MPIGrid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y,comm);  
         int dimsIN[2],  coordsIN[2];
