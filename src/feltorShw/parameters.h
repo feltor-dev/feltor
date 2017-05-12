@@ -96,7 +96,7 @@ struct Parameters
             <<"     g     :                          = "<<g<<"\n"
             <<"     modelmode:                       = "<<modelmode<<"\n"
             <<"     hwmode:                          = "<<hwmode<<"\n"
-            <<"     cmode:                           = "<<cmode<<"\n";
+            <<"     cmode:                           = "<<cmode<<"\n"
 	    <<"     initmode:                        = "<<initmode<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
