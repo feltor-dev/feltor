@@ -173,8 +173,8 @@ int main( int argc, char* argv[])
       if (p.initmode == 2) {
       dg::BathRZ init0(16,16,1.,0.,0., 30.,5.,p.amp);
       y1[1] = dg::evaluate( init0, grid);
-      dg::DVec  dampr = dg::evaluate(dg::TanhProfX(p.lx*0.95,p.sourcew,-1.0,0.0,1.0),grid);
-      dg::DVec  dampl = dg::evaluate(dg::TanhProfX(p.lx*0.05,p.sourcew,1.0,0.0,1.0),grid);
+      dg::MDVec  dampr = dg::evaluate(dg::TanhProfX(p.lx*0.95,p.sourcew,-1.0,0.0,1.0),grid);
+      dg::MDVec  dampl = dg::evaluate(dg::TanhProfX(p.lx*0.05,p.sourcew,1.0,0.0,1.0),grid);
       dg::blas1::pointwiseDot(y1[1],dampr,y1[1]);
       dg::blas1::pointwiseDot(y1[1],dampl,y1[1]);
 	if (p.modelmode==2) {
