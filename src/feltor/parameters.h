@@ -27,7 +27,6 @@ struct Parameters
     double eps_gamma; //!< accuracy of gamma operator
     double eps_time;//!< accuracy of implicit timestep
     double eps_hat;//!< 1
-    double jfactor;
 
     double mu[2]; //!< mu[0] = mu_e, m[1] = mu_i
     double tau[2]; //!< tau[0] = -1, tau[1] = tau_i

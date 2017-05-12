@@ -30,7 +30,7 @@ struct Parameters
     double amp, sigma, posX, posY;
     
     double  nprofileamp, bgprofamp;
-    unsigned hwmode,modelmode,cmode;
+    unsigned hwmode,modelmode,cmode,initmode;
     double omega_source,sourceb,sourcew;
     enum dg::bc bc_x,bc_y,bc_x_phi;
 
@@ -69,6 +69,7 @@ struct Parameters
         bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
         bc_y = dg::str2bc(js["bc_y"].asString());
         hwmode =  js["hwmode"].asUInt();
+	initmode =  js["initmode"].asUInt();
         invkappa =   js["invkappa"].asDouble();
         Chat = (double)(lx*alpha);
         g = (double) (lx/invkappa);
@@ -96,6 +97,7 @@ struct Parameters
             <<"     modelmode:                       = "<<modelmode<<"\n"
             <<"     hwmode:                          = "<<hwmode<<"\n"
             <<"     cmode:                           = "<<cmode<<"\n";
+	    <<"     initmode:                        = "<<initmode<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
             << "    width:        "<<sigma<<"\n"

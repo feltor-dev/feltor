@@ -65,23 +65,24 @@ int main( int argc, char* argv[])
 
     /////////////////////The initial field///////////////////////////////////////////
     
-    dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+    if (p.initmode == 0) dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
     
-//     dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
+    if (p.initmode == 1) dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
     
-//     dg::SinX init0(p.amp,0.,p.sigma*2*M_PI/p.lx);
-//         dg::BathRZ init0(16,16,1.,0.,0., 30.,5.,p.amp);
-//         dg::DVec  dampr = dg::evaluate(dg::TanhProfX(p.lx*0.95,p.sourcew,-1.0,0.0,1.0),grid);
-//         dg::DVec  dampl =dg::evaluate(dg::TanhProfX(p.lx*0.05,p.sourcew,1.0,0.0,1.0),grid);
-    
+    if (p.initmode == 2) {
+      dg::BathRZ init0(16,16,1.,0.,0., 30.,5.,p.amp);
+      dg::DVec  dampr = dg::evaluate(dg::TanhProfX(p.lx*0.95,p.sourcew,-1.0,0.0,1.0),grid);
+      dg::DVec  dampl =dg::evaluate(dg::TanhProfX(p.lx*0.05,p.sourcew,1.0,0.0,1.0),grid);
+    }
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
     
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
     y1[1] = dg::evaluate( init0, grid);
        
-//         dg::blas1::pointwiseDot(y1[1],dampr,y1[1]);
-//         dg::blas1::pointwiseDot(y1[1],dampl,y1[1]);
-    
+    if ( p.initmode==2) {
+      dg::blas1::pointwiseDot(y1[1],dampr,y1[1]);
+      dg::blas1::pointwiseDot(y1[1],dampl,y1[1]);
+    }
         
     if (p.modelmode==0 || p.modelmode==1)
     {
