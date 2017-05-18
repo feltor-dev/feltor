@@ -534,18 +534,18 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         if (p.cmode==1) {
             dg::blas1::pointwiseDot(omega,npe[0],omega);  //(coupling)*Ne for constant resi
         }
-	dg::blas1::pointwiseDivide(omega,npe[0],omega); 
+        dg::blas1::pointwiseDivide(omega,npe[0],omega); 
         dg::blas1::axpby(p.alpha,omega,1.0,yp[0]);
         
         //---------- coupling energy
         dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
         dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
-	dg::blas1::pointwiseDot(omega,npe[0],omega);  
+        dg::blas1::pointwiseDot(omega,npe[0],omega);  
         coupling_ =  z[0]*p.alpha* dg::blas2::dot(chi, w2d, omega);
         //Compute rhs of energy theorem
         ediff_= Dperp[0]+Dperp[1]+ coupling_ ;
 
-        //Density source terms
+        //Density source terms (dont add sources in this case if you want to compare with df )
         if (p.omega_source>1e-14) 
         {
             dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0p - <ne>
