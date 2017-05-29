@@ -58,7 +58,8 @@ int main( int argc, char* argv[])
     
     dg::HVec phi(dg::evaluate(dg::zero,g2d));
     dg::HVec vor(dg::evaluate(dg::zero,g2d));
-    std::vector<dg::HVec> ntilde(2,dg::evaluate(dg::zero,g2d));
+    std::vector<dg::HVec> ntilde(2,dg::evaluate(dg::zero,g2d)); // = N/n_G -1
+    std::vector<dg::HVec> navgtilde(2,dg::evaluate(dg::zero,g2d)); // = N/<N> -1
     std::vector<dg::HVec> npe(2,dg::evaluate(dg::zero,g2d));
     std::vector<dg::HVec> logn(2,dg::evaluate(dg::zero,g2d));
     dg::HVec temp(dg::evaluate(dg::zero,g2d));
@@ -85,7 +86,7 @@ int main( int argc, char* argv[])
     int dataIDs[4]; 
     //1d profiles
     file::NC_Error_Handle err_out;
-    int ncid_out,dataIDs1d[22], tvarIDout;
+    int ncid_out,dataIDs1d[24], tvarIDout;
     //Rfx = -\partial_x\overbar{\overbar{\delta} u_x \overbar{\delta} u_y } = -\partial_x R_favre
     //A   = -\overbar{u_x} \partial_x \overbar{u_y} 
     //Rfn = \overbar{\overbar{\delta} u_x \overbar{\delta} u_y } \partial_x ln(<n_e>)
@@ -96,7 +97,7 @@ int main( int argc, char* argv[])
     //Tx  = -\partial_x <\delta n_e \delta u_x \delta u_y>
     //Guynx= -\partial_x (<\delta n_e \delta u_x> < u_y >/<n_e>)
     //Tx  = -\partial_x (<\delta n_e \delta u_x \delta u_y>/<n_e>)
-    std::string names1d[22] =  {"neavg", "Niavg",  "ln(ne)avg","ln(Ni)avg","potentialavg","voravg","x_","vyavg","Rfx","A","Rfn","An","dtfauy","Rx","invkappa","vyfavg","nvyavg","Rnx","Guyx","Tx","Guynx","Tnx"};  //,"nvyavg","Rnx","Guyx","Tx"
+    std::string names1d[24] =  {"neavg", "Niavg",  "ln(ne)avg","ln(Ni)avg","potentialavg","voravg","x_", "vyavg","Rfx","A","Rfn","An","dtfauy","Rx","invkappa","vyfavg","nvyavg","Rnx","Guyx","Tx","Guynx","Tnx","net","neat"};  //,"nvyavg","Rnx","Guyx","Tx"
     int dim_ids2d[3];
     size_t count1d[2]  = {1, g2d.n()*g2d.Nx()};
     size_t start1d[2]  = {0, 0};    
@@ -104,7 +105,7 @@ int main( int argc, char* argv[])
     err_out= nc_put_att_text( ncid_out, NC_GLOBAL, "inputfile", input.size(), input.data());
     err_out= file::define_dimensions( ncid_out, dim_ids2d, &tvarIDout, g2d);
      int dim_ids1d[2] = {dim_ids2d[0],dim_ids2d[2]};
-    for( unsigned i=0; i<22; i++){
+    for( unsigned i=0; i<24; i++){
         err_out = nc_def_var( ncid_out, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
 // UNCOMMENT for 2d output
@@ -144,7 +145,7 @@ int main( int argc, char* argv[])
     dg::HVec anpe(phi);
     dg::HVec R(phi);
     dg::HVec Rf(phi);
-    dg::HVec dne(phi);
+    dg::HVec dne(phi); //ne - <N_G>
     dg::HVec npe_probes(num_probes);
     dg::HVec phi_probes(num_probes);
     dg::HVec gamma_probes(num_probes);
@@ -153,7 +154,7 @@ int main( int argc, char* argv[])
     //probe netcdf file
     err_out = nc_redef(ncid_out);
     int npe_probesID[num_probes],phi_probesID[num_probes],gamma_probesID[num_probes];
-    int OmegaID, OmegazID, OmegaratioID, TperpzID, TperpID, TperpratioID, Gamma_neID,invkappaavgID,RfxnormID,AnormID,RfnnormID,AnnormID,RxnormID,RnxnormID,GuyxnormID,TxnormID,GuynxnormID,TnxnormID;
+    int OmegaID, OmegazID, OmegaratioID, TperpzID, TperpID, TperpratioID, Gamma_neID,invkappaavgID,RfxnormID,AnormID,RfnnormID,AnnormID,RxnormID,RnxnormID,GuyxnormID,TxnormID,GuynxnormID,TnxnormID,netnormID,neatnormID;
     std::string npe_probes_names[num_probes] ;
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
@@ -189,6 +190,8 @@ int main( int argc, char* argv[])
     err_out = nc_def_var( ncid_out, "Txnorm",    NC_DOUBLE, 1, &timeID, &TxnormID);
     err_out = nc_def_var( ncid_out, "Guynxnorm",    NC_DOUBLE, 1, &timeID, &GuynxnormID);
     err_out = nc_def_var( ncid_out, "Tnxnorm",    NC_DOUBLE, 1, &timeID, &TnxnormID);
+    err_out = nc_def_var( ncid_out, "netnorm",    NC_DOUBLE, 1, &timeID, &netnormID);
+    err_out = nc_def_var( ncid_out, "neatnorm",    NC_DOUBLE, 1, &timeID, &neatnormID);
 
     err_out = nc_enddef(ncid_out);   
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
@@ -229,6 +232,11 @@ int main( int argc, char* argv[])
                     dg::blas1::transform( npe[i], logn[i], dg::LN<double>());
                     dg::blas1::pointwiseDivide(npe[i],nprof,ntilde[i]);
                     dg::blas1::transform(ntilde[i], ntilde[i], dg::PLUS<>(-1.0));
+		    
+		    polavg(npe[i],temp);
+		    dg::blas1::pointwiseDivide(npe[i],temp,navgtilde[i]);
+		    dg::blas1::transform(navgtilde[i], navgtilde[i], dg::PLUS<>(-1.0));
+		    
                 }
 
                 poisson.variationRHS(phi,temp2);
@@ -294,6 +302,10 @@ int main( int argc, char* argv[])
                     dg::blas1::pointwiseDot(nprof,ntilde[i],temp);
                     dg::blas1::axpby(1.0,nprof,1.0,temp,npe[i]);
                     dg::blas1::transform( npe[i], logn[i], dg::LN<double>());
+		    
+		    polavg(npe[i],temp);
+		    dg::blas1::pointwiseDivide(npe[i],temp,navgtilde[i]);
+		    dg::blas1::transform(navgtilde[i], navgtilde[i], dg::PLUS<>(-1.0));
                 }
                                     
                 poisson.variationRHS(phi,temp2);
@@ -428,6 +440,13 @@ int main( int argc, char* argv[])
             dg::blas2::gemv(interp,temp1,temp1d); 
             double Tnxnorm = sqrt(dg::blas2::dot(temp1d,w1d,temp1d))/p.lx;
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[21],   start1d, count1d, temp1d.data()); //Tnx =  - dx ( <\delta n_e \delta u_x \delta u_y >/<n_e>
+	    dg::blas2::gemv(interp,ntilde[0],temp1d); 
+	    
+            double netnorm = sqrt(dg::blas2::dot(temp1d,w1d,temp1d))/p.lx;
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[22],   start1d, count1d, temp1d.data()); //netilde
+	    dg::blas2::gemv(interp,navgtilde[0],temp1d); 
+            double neatnorm = sqrt(dg::blas2::dot(temp1d,w1d,temp1d))/p.lx;
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[23],   start1d, count1d, temp1d.data()); //neavgtilde
             
             //write 2d fields (ne,phi,vor)
 //          UNCOMMENT for 2d output
@@ -482,6 +501,8 @@ int main( int argc, char* argv[])
             err_out = nc_put_vara_double( ncid_out, TxnormID, start1d, count1d, &Txnorm);
             err_out = nc_put_vara_double( ncid_out, GuynxnormID, start1d, count1d, &Guynxnorm);
             err_out = nc_put_vara_double( ncid_out, TnxnormID, start1d, count1d, &Tnxnorm);
+	    err_out = nc_put_vara_double( ncid_out, netnormID, start1d, count1d, &netnorm);
+            err_out = nc_put_vara_double( ncid_out, neatnormID, start1d, count1d, &neatnorm);
             
             err_out = nc_put_vara_double( ncid_out, tvarIDout, start1d, count1d, &time);        
 	    

@@ -22,7 +22,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "hwmode": 1,             // ordinary/modified HW (0/1)
     "nu_perp"   : 1e-3,      //pependicular viscosity
     "alpha"         : 0.01, //adiabaticity 
-    "initmode"      : 2,     // (0) blob, (1) Wave in x and y (2) bath
+    "initmode"      : 0,     // (0) blob, (1) Wave in x and y (2) bath
     "amplitude" :0.1,        //amplitude of the perturbation
     "sigma"  : 2.5,          //blob variance in units of rho_s or ky of wave
     "posX"  : 0.5,           //blob x-position in units of lx
