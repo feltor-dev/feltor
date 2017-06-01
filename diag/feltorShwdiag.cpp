@@ -154,7 +154,7 @@ int main( int argc, char* argv[])
     //probe netcdf file
     err_out = nc_redef(ncid_out);
     int npe_probesID[num_probes],phi_probesID[num_probes],gamma_probesID[num_probes];
-    int OmegaID, OmegazID, OmegaratioID, TperpzID, TperpID, TperpratioID, Gamma_neID,invkappaavgID,RfxnormID,AnormID,RfnnormID,AnnormID,RxnormID,RnxnormID,GuyxnormID,TxnormID,GuynxnormID,TnxnormID,netnormID,neatnormID;
+    int OmegaID, OmegazID, OmegaratioID, TperpzID, TperpID, TperpratioID, Gamma_neID,invkappaavgID,RfxnormID,AnormID,RfnnormID,AnnormID,RxnormID,RnxnormID,GuyxnormID,TxnormID,GuynxnormID,TnxnormID,netnormID,neatnormID,dtfauynormID;
     std::string npe_probes_names[num_probes] ;
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
@@ -190,16 +190,17 @@ int main( int argc, char* argv[])
     err_out = nc_def_var( ncid_out, "Txnorm",    NC_DOUBLE, 1, &timeID, &TxnormID);
     err_out = nc_def_var( ncid_out, "Guynxnorm",    NC_DOUBLE, 1, &timeID, &GuynxnormID);
     err_out = nc_def_var( ncid_out, "Tnxnorm",    NC_DOUBLE, 1, &timeID, &TnxnormID);
+    err_out = nc_def_var( ncid_out, "dtfauynorm",    NC_DOUBLE, 1, &timeID, &dtfauynormID);
     err_out = nc_def_var( ncid_out, "netnorm",    NC_DOUBLE, 1, &timeID, &netnormID);
     err_out = nc_def_var( ncid_out, "neatnorm",    NC_DOUBLE, 1, &timeID, &neatnormID);
 
     err_out = nc_enddef(ncid_out);   
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
-    err = nc_inq_varid(ncid, names[0].data(), &dataIDs[0]);
+    err = nc_inq_dimid(ncid, "time", &timeID);
     size_t steps;
-    err = nc_inq_dimlen(ncid, dataIDs[0], &steps);
+    err = nc_inq_dimlen(ncid, timeID, &steps);
     steps-=1;
-    imax = steps/p.itstp;
+    imax = steps;
     for( unsigned i=imin; i<imax; i++)//timestepping
     {
             start2d[0] = i;
@@ -349,103 +350,105 @@ int main( int argc, char* argv[])
                 dg::blas1::pointwiseDivide(temp1,anpe,Rf);
             }
             
-            polavg(phi,temp);      //<phi>      
-            dg::blas2::gemv(interp,temp,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[4],   start1d, count1d, temp1d.data()); //<phi>      
-            polavg(vor,temp);     //<nabla_perp^2 phi>      
-            dg::blas2::gemv(interp,temp,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[5],   start1d, count1d, temp1d.data()); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[6],   start1d, count1d, xcoo.data());             
-            dg::blas2::gemv(poisson.dxrhs(),phi,temp);
-            polavg(temp,temp2);             //<u_Ey>    
-            dg::blas2::gemv(interp,temp2,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[7],   start1d, count1d, temp1d.data());           
-            
-            //Compute the 4 terms on the RHS
-            dg::blas2::gemv(poisson.dxrhs(),Rf,temp1);
-            dg::blas1::scal(temp1,-1.0); //-dx Rf
-            dg::blas1::axpby(1.0,temp1,0.0,temp); 
+        polavg(phi,temp);      //<phi>      
+        dg::blas2::gemv(interp,temp,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[4],   start1d, count1d, temp1d.data()); //<phi>      
+        polavg(vor,temp);     //<nabla_perp^2 phi>      
+        dg::blas2::gemv(interp,temp,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[5],   start1d, count1d, temp1d.data()); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[6],   start1d, count1d, xcoo.data());             
+        dg::blas2::gemv(poisson.dxrhs(),phi,temp);
+        polavg(temp,temp2);             //<u_Ey>    
+        dg::blas2::gemv(interp,temp2,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[7],   start1d, count1d, temp1d.data());           
+        
+        //Compute the 4 terms on the RHS
+        dg::blas2::gemv(poisson.dxrhs(),Rf,temp1);
+        dg::blas1::scal(temp1,-1.0); //-dx Rf
+        dg::blas1::axpby(1.0,temp1,0.0,temp); 
 	    double Rfxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
-            dg::blas2::gemv(interp,temp1,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[8],   start1d, count1d, temp1d.data()); //Rfx =- dx Rf
-            dg::blas2::gemv(poisson.dxrhs(),fauy,temp1); // dx fauy
-            dg::blas1::pointwiseDot(faux,temp1,temp1); // faux dx fauy
-            dg::blas1::scal(temp1,-1.0);  // -  faux dx fauy
-            dg::blas1::axpby(1.0,temp1,1.0,temp);  
+        dg::blas2::gemv(interp,temp1,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[8],   start1d, count1d, temp1d.data()); //Rfx =- dx Rf
+        dg::blas2::gemv(poisson.dxrhs(),fauy,temp1); // dx fauy
+        dg::blas1::pointwiseDot(faux,temp1,temp1); // faux dx fauy
+        dg::blas1::scal(temp1,-1.0);  // -  faux dx fauy
+        dg::blas1::axpby(1.0,temp1,1.0,temp);  
 	    double Anorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
-            dg::blas2::gemv(interp,temp1,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[9],   start1d, count1d, temp1d.data()); //A =  -  faux dx fauy
-            dg::blas1::transform(anpe, temp2, dg::LN<double>()); //ln<n_e>
-            dg::blas2::gemv(poisson.dxlhs(),temp2,temp1); // dx ln<n_e>
-            dg::blas2::gemv(interp,temp1,temp1d); // dx ln<n_e> =- kappa(x)
-            double invkappaavg = -p.lx/dg::blas2::dot(one1d,w1d,temp1d); //-1/(dx ln<n_e>)
-            dg::blas1::scal(temp1d,-1.0);   // -dx ln<n_e>   
-            dg::blas1::transform(temp1d,temp1d, dg::INVERT<double>()); // -1/dx ln<n_e>   
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[14],   start1d, count1d, temp1d.data());  //invkappa(x) = -dxln<n_e>  
-            dg::blas1::pointwiseDot(Rf,temp1,temp2); // Rf dx ln<n_e>
-            dg::blas1::axpby(1.0,temp2,1.0,temp);  
+        dg::blas2::gemv(interp,temp1,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[9],   start1d, count1d, temp1d.data()); //A =  -  faux dx fauy
+        dg::blas1::transform(anpe, temp2, dg::LN<double>()); //ln<n_e>
+        dg::blas2::gemv(poisson.dxlhs(),temp2,temp1); // dx ln<n_e>
+        dg::blas2::gemv(interp,temp1,temp1d); // dx ln<n_e> =- kappa(x)
+        double invkappaavg = -p.lx/dg::blas2::dot(one1d,w1d,temp1d); //-1/(dx ln<n_e>)
+        dg::blas1::scal(temp1d,-1.0);   // -dx ln<n_e>   
+        dg::blas1::transform(temp1d,temp1d, dg::INVERT<double>()); // -1/dx ln<n_e>   
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[14],   start1d, count1d, temp1d.data());  //invkappa(x) = -dxln<n_e>  
+        dg::blas1::pointwiseDot(Rf,temp1,temp2); // Rf dx ln<n_e>
+        dg::blas1::axpby(1.0,temp2,1.0,temp);  
 	    double Rfnnorm = sqrt(dg::blas2::dot(temp2,w2d,temp2))/p.lx/p.ly;
-            dg::blas2::gemv(interp,temp2,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[10],   start1d, count1d, temp1d.data()); //Rfn = Rf dx ln<n_e>
-            dg::blas1::pointwiseDot(faux,temp1,temp2); // faux dx ln<n_e>
-            dg::blas1::pointwiseDot(fauy,temp2,temp1); // faux fauy dx ln<n_e>
-            dg::blas1::scal(temp1,2.0);  // 2 faux fauy dx ln<n_e>
-            dg::blas1::axpby(1.0,temp1,1.0,temp);  
+        dg::blas2::gemv(interp,temp2,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[10],   start1d, count1d, temp1d.data()); //Rfn = Rf dx ln<n_e>
+        dg::blas1::pointwiseDot(faux,temp1,temp2); // faux dx ln<n_e>
+        dg::blas1::pointwiseDot(fauy,temp2,temp1); // faux fauy dx ln<n_e>
+        dg::blas1::scal(temp1,2.0);  // 2 faux fauy dx ln<n_e>
+        dg::blas1::axpby(1.0,temp1,1.0,temp);  
 	    double Annorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
-            dg::blas2::gemv(interp,temp1,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[11],   start1d, count1d, temp1d.data()); //An = 2 faux fauy dx ln<n_e>
-            dg::blas2::gemv(interp,temp,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[12],   start1d, count1d, temp1d.data()); //Rfx+A+Rfn+An
-            dg::blas2::gemv(poisson.dxrhs(),R,temp1);
-            dg::blas1::scal(temp1,-1.0); //-dx R
+        dg::blas2::gemv(interp,temp1,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[11],   start1d, count1d, temp1d.data()); //An = 2 faux fauy dx ln<n_e>
+        double dtfauynorm = sqrt(dg::blas2::dot(temp,w2d,temp))/p.lx/p.ly;
+        dg::blas2::gemv(interp,temp,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[12],   start1d, count1d, temp1d.data()); //Rfx+A+Rfn+An
+        dg::blas2::gemv(poisson.dxrhs(),R,temp1);
+        dg::blas1::scal(temp1,-1.0); //-dx R
 	    double Rxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
-            dg::blas2::gemv(interp,temp1,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[13],   start1d, count1d, temp1d.data()); // Rx = - dx R
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[15],   start1d, count1d, fauy.data()); 
-            dg::blas1::pointwiseDot(npe[0],uy,temp2); //n u_y
-            polavg(temp2,temp1);   //< n u_y >
-            dg::blas2::gemv(interp,temp1,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[16],   start1d, count1d, temp1d.data()); //< n u_y >
-            dg::blas1::pointwiseDot(R,anpe,temp2);
-            dg::blas2::gemv(poisson.dxrhs(),temp2,temp1);
-            dg::blas1::scal(temp1,-1.0); //temp1 = -dx ( <n_e>  R)
+        dg::blas2::gemv(interp,temp1,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[13],   start1d, count1d, temp1d.data()); // Rx = - dx R
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[15],   start1d, count1d, fauy.data()); 
+        dg::blas1::pointwiseDot(npe[0],uy,temp2); //n u_y
+        polavg(temp2,temp1);   //< n u_y >
+        dg::blas2::gemv(interp,temp1,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[16],   start1d, count1d, temp1d.data()); //< n u_y >
+        dg::blas1::pointwiseDot(R,anpe,temp2);
+        dg::blas2::gemv(poisson.dxrhs(),temp2,temp1);
+        dg::blas1::scal(temp1,-1.0); //temp1 = -dx ( <n_e>  R)
 	    double Rnxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
 	    dg::blas2::gemv(interp,temp1,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[17],   start1d, count1d, temp1d.data()); //Rnx = -dx ( <n_e>  R)
-            dg::blas1::pointwiseDot(dne,tux,temp1);
-            polavg(temp1,temp2);   //temp2 = <\delta ne \ðelta u_y >
-            dg::blas1::pointwiseDot(temp2,auy,temp2); //temp2 =<u_y> <\delta ne \ðelta u_y >
-            dg::blas1::pointwiseDivide(temp2,anpe,temp); //temp2 =<u_y> <\delta ne \ðelta u_y >/<n_e>
-            dg::blas2::gemv(poisson.dxrhs(),temp2,temp1); //temp1 = dx (<u_y> <\delta ne \ðelta u_y >)
-            dg::blas1::scal(temp1,-1.0); //temp1 = -dx (<u_y> <\delta ne \ðelta u_y >)
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[17],   start1d, count1d, temp1d.data()); //Rnx = -dx ( <n_e>  R)
+        dg::blas1::pointwiseDot(dne,tux,temp1);
+        polavg(temp1,temp2);   //temp2 = <\delta ne \ðelta u_y >
+        dg::blas1::pointwiseDot(temp2,auy,temp2); //temp2 =<u_y> <\delta ne \ðelta u_y >
+        dg::blas1::pointwiseDivide(temp2,anpe,temp); //temp2 =<u_y> <\delta ne \ðelta u_y >/<n_e>
+        dg::blas2::gemv(poisson.dxrhs(),temp2,temp1); //temp1 = dx (<u_y> <\delta ne \ðelta u_y >)
+        dg::blas1::scal(temp1,-1.0); //temp1 = -dx (<u_y> <\delta ne \ðelta u_y >)
 	    double Guyxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
-            dg::blas2::gemv(interp,temp1,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[18],   start1d, count1d, temp1d.data()); //Guyx =  -dx (<u_y> <\delta ne \ðelta u_y >)
-            dg::blas2::gemv(poisson.dxrhs(),temp,temp1); //temp1 = dx (<u_y> <\delta ne \ðelta u_y >/<n_e>)
-            dg::blas1::scal(temp1,-1.0); //temp1 = -dx (<u_y> <\delta ne \ðelta u_y >/<n_e>)
+        dg::blas2::gemv(interp,temp1,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[18],   start1d, count1d, temp1d.data()); //Guyx =  -dx (<u_y> <\delta ne \ðelta u_y >)
+        dg::blas2::gemv(poisson.dxrhs(),temp,temp1); //temp1 = dx (<u_y> <\delta ne \ðelta u_y >/<n_e>)
+        dg::blas1::scal(temp1,-1.0); //temp1 = -dx (<u_y> <\delta ne \ðelta u_y >/<n_e>)
 	    double Guynxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
-            dg::blas2::gemv(interp,temp1,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[20],   start1d, count1d, temp1d.data()); //Guynx =  -dx (<u_y> <\delta ne \ðelta u_y >/<n_e>)            
-            dg::blas1::pointwiseDot(dne,tux,temp1);       //temp1 = \delta n_e \delta u_x
-            dg::blas1::pointwiseDot(tuy,temp1,temp1);     //temp1 = \delta n_e \delta u_x \delta u_y
-            polavg(temp1,temp2);                          //temp2 = <\delta n_e \delta u_x \delta u_y >
-            dg::blas1::pointwiseDivide(temp2,anpe,temp);
-            dg::blas2::gemv(poisson.dxrhs(),temp2,temp1); //temp1 = dx <\delta n_e \delta u_x \delta u_y >
-            dg::blas1::scal(temp1,-1.0);                  //temp1 =-dx <\delta n_e \delta u_x \delta u_y >
+        dg::blas2::gemv(interp,temp1,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[20],   start1d, count1d, temp1d.data()); //Guynx =  -dx (<u_y> <\delta ne \ðelta u_y >/<n_e>)            
+        dg::blas1::pointwiseDot(dne,tux,temp1);       //temp1 = \delta n_e \delta u_x
+        dg::blas1::pointwiseDot(tuy,temp1,temp1);     //temp1 = \delta n_e \delta u_x \delta u_y
+        polavg(temp1,temp2);                          //temp2 = <\delta n_e \delta u_x \delta u_y >
+        dg::blas1::pointwiseDivide(temp2,anpe,temp);
+        dg::blas2::gemv(poisson.dxrhs(),temp2,temp1); //temp1 = dx <\delta n_e \delta u_x \delta u_y >
+        dg::blas1::scal(temp1,-1.0);                  //temp1 =-dx <\delta n_e \delta u_x \delta u_y >
 	    double Txnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
-            dg::blas2::gemv(interp,temp1,temp1d);             
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[19], start1d, count1d, temp1d.data()); //Tx =  - dx <\delta n_e \delta u_x \delta u_y >
-            dg::blas2::gemv(poisson.dxrhs(),temp,temp1); //temp1 = dx <\delta n_e \delta u_x \delta u_y >
-            dg::blas1::scal(temp1,-1.0);                  //temp1 =-dx <\delta n_e \delta u_x \delta u_y >
+        dg::blas2::gemv(interp,temp1,temp1d);             
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[19], start1d, count1d, temp1d.data()); //Tx =  - dx <\delta n_e \delta u_x \delta u_y >
+        dg::blas2::gemv(poisson.dxrhs(),temp,temp1); //temp1 = dx <\delta n_e \delta u_x \delta u_y >
+        dg::blas1::scal(temp1,-1.0);                  //temp1 =-dx <\delta n_e \delta u_x \delta u_y >
 	    double Tnxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
-            dg::blas2::gemv(interp,temp1,temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[21],   start1d, count1d, temp1d.data()); //Tnx =  - dx ( <\delta n_e \delta u_x \delta u_y >/<n_e>
-	    double netnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.ly;
+        dg::blas2::gemv(interp,temp1,temp1d); 
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[21],   start1d, count1d, temp1d.data()); //Tnx =  - dx ( <\delta n_e \delta u_x \delta u_y >/<n_e>
+        
+	    double netnorm = sqrt(dg::blas2::dot(ntilde[0],w2d,ntilde[0]))/p.ly;
 	    dg::blas2::gemv(interp,ntilde[0],temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[22],   start1d, count1d, temp1d.data()); //netilde
-	    double neatnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.ly;
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[22],   start1d, count1d, temp1d.data()); //netilde
+	    double neatnorm = sqrt(dg::blas2::dot(navgtilde[0],w2d,navgtilde[0]))/p.ly;
 	    dg::blas2::gemv(interp,navgtilde[0],temp1d); 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[23],   start1d, count1d, temp1d.data()); //neavgtilde
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[23],   start1d, count1d, temp1d.data()); //neavgtilde
             
             //write 2d fields (ne,phi,vor)
 //          UNCOMMENT for 2d output
@@ -500,8 +503,9 @@ int main( int argc, char* argv[])
             err_out = nc_put_vara_double( ncid_out, TxnormID, start1d, count1d, &Txnorm);
             err_out = nc_put_vara_double( ncid_out, GuynxnormID, start1d, count1d, &Guynxnorm);
             err_out = nc_put_vara_double( ncid_out, TnxnormID, start1d, count1d, &Tnxnorm);
-	    err_out = nc_put_vara_double( ncid_out, netnormID, start1d, count1d, &netnorm);
+            err_out = nc_put_vara_double( ncid_out, netnormID, start1d, count1d,  &netnorm);
             err_out = nc_put_vara_double( ncid_out, neatnormID, start1d, count1d, &neatnorm);
+            err_out = nc_put_vara_double( ncid_out, dtfauynormID, start1d, count1d, &dtfauynorm);
             
             err_out = nc_put_vara_double( ncid_out, tvarIDout, start1d, count1d, &time);        
 	    

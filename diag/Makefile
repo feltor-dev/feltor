@@ -43,7 +43,8 @@ feltorSesoldiag: feltorSesoldiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g $(JSONLIB)
 feltorShwdiag: feltorShwdiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
-
+feltorShwmerger: feltorShwmerger.cpp
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
 .PHONY: clean
 
 clean:
