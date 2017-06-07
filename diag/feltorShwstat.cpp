@@ -38,8 +38,8 @@ int main( int argc, char* argv[])
     //nc defs
     file::NC_Error_Handle err;
     int ncid;
-    int dataIDs[13];
-    std::string names[13] =  {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm"}; 
+    int dataIDs[14];
+    std::string names[14] =  {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma"}; 
     //input nc files
     for( int i=1; i< argc; i++)
     {
@@ -66,13 +66,14 @@ int main( int argc, char* argv[])
 	
 	err = nc_get_vara_double( ncid, timeID,     &start0d, &numOut, vt.data());
         //Timestepping
-	double timepointexact= 100.*p.invkappa; //in units omega_ci 
+	double timepointexact=100.*p.invkappa; //in units omega_ci 
+std::cout << timepointexact;
 	std::vector<double>::iterator timepoint;
 	timepoint=std::lower_bound (vt.begin(), vt.end(), timepointexact);
 	unsigned timepos = std::distance( vt.begin(),timepoint);
 	std::cout << p.alpha << " " << p.invkappa;
 	//read and write data
-	for( unsigned m=0; m<13; m++) {
+	for( unsigned m=0; m<14; m++) {
 	    err = nc_inq_varid(ncid, names[m].data(), &dataIDs[m]);
 	    err = nc_get_vara_double( ncid, dataIDs[m], &start0d, &numOut, temp.data());
 
