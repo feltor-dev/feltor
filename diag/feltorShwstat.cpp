@@ -67,7 +67,7 @@ int main( int argc, char* argv[])
 	err = nc_get_vara_double( ncid, timeID,     &start0d, &numOut, vt.data());
         //Timestepping
 	double timepointexact=100.*p.invkappa; //in units omega_ci 
-std::cout << timepointexact;
+
 	std::vector<double>::iterator timepoint;
 	timepoint=std::lower_bound (vt.begin(), vt.end(), timepointexact);
 	unsigned timepos = std::distance( vt.begin(),timepoint);
