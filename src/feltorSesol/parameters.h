@@ -16,6 +16,7 @@ struct Parameters
 
     double eps_pol,  eps_gamma, eps_time;
     double eps_hat;
+    double jfactor;
 
     double mu[2];
     double tau[2];
@@ -52,6 +53,7 @@ struct Parameters
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();
         eps_pol = js["eps_pol"].asDouble();
+        jfactor = js["jumpfactor"].asDouble();
         eps_gamma = js["eps_gamma"].asDouble();
         eps_time = js["eps_time"].asDouble();
         eps_hat = 1.;
@@ -120,6 +122,7 @@ struct Parameters
             <<"     Ny = "<<Ny<<"\n"
             <<"     dt = "<<dt<<"\n";
         os << "     Stopping for Polar CG:   "<<eps_pol<<"\n"
+            <<"     Jump scale factor:   "<<jfactor<<"\n"
             <<"     Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"     Stopping for Time  CG:   "<<eps_time<<"\n";
         os << "Output parameters are: \n"

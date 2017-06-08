@@ -394,6 +394,59 @@ struct GaussianZ
     double  z00, sigma_z, amplitude;
 
 };
+/**
+ * @brief Functor for a sin prof in x and y-direction
+ * \f[ f(x,y) =B+ A sin(k_x x) sin(k_y y) \f]
+ */
+struct SinXSinY
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     * @param ky  ky
+     */
+    SinXSinY( double amp, double bamp, double kx, double ky):amp_(amp), bamp_(bamp),kx_(kx),ky_(ky){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y){ return bamp_+amp_*sin(x*kx_)*sin(y*ky_);}
+  private:
+    double amp_,bamp_,kx_,ky_;
+};
+/**
+ * @brief Functor for a sin prof in x-direction
+ * \f[ f(x,y) =B+ A sin(k_x x) \f]
+ */
+struct SinX
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     */
+    SinX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y){ return bamp_+amp_*sin(x*kx_);}
+  private:
+    double amp_,bamp_,kx_;
+};
 
 /**
  * @brief Functor for a sin prof in x-direction

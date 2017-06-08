@@ -315,7 +315,7 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
     poissonN(  g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     //////////the elliptic and Helmholtz operators//////////////////////////
-    pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered), 
+    pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered, p.jfactor), 
     lapperpN (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     lapperpDIR (   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
     invgammaDIR(   g, dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered),
@@ -379,15 +379,15 @@ Feltor<Grid, DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, 
 template<class Geometry, class DS, class Matrix, class container>
 container& Feltor<Geometry, DS, Matrix, container>::polarisation( const std::vector<container>& y)
 {
-    dg::blas1::axpby( p.mu[1], y[1], 0, chi);       //chi =  \mu_i (n_i-1) 
+ dg::blas1::axpby( p.mu[1], y[1], 0, chi);       //chi =  \mu_i (n_i-1) 
     dg::blas1::plus( chi, p.mu[1]);
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //chi = (\mu_i n_i ) /B^2
     pol.set_chi( chi);
- 
+    dg::blas1::pointwiseDivide(v3d,chi,omega);
     invert_invgammaN(invgammaN,chi,y[1]);           //chi= Gamma (Ni-1)    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);       //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi);//Gamma n_i -ne = -nabla (chi nabla phi)
+    unsigned number = invert_pol( pol, phi[0], chi, w3d, omega, v3d);//Gamma n_i -ne = -nabla (chi nabla phi)
     if(  number == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);
     return phi[0];

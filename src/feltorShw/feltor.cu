@@ -64,25 +64,63 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
-    dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
-    
     std::vector<dg::DVec> y0(2, dg::evaluate( prof, grid)), y1(y0); 
-    y1[1] = dg::evaluate( init0, grid);
+
+    
+    if (p.initmode == 0) { 
+      dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+      y1[1] = dg::evaluate( init0, grid);
+    }
+    if (p.initmode == 1) {
+      dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
+      y1[1] = dg::evaluate( init0, grid);
+    }
+    if (p.initmode == 2) {
+      dg::BathRZ init0(16,16,1.,0.,0., 30.,5.,p.amp);
+      y1[1] = dg::evaluate( init0, grid);
+      dg::DVec  dampr = dg::evaluate(dg::TanhProfX(p.lx*0.95,p.sourcew,-1.0,0.0,1.0),grid);
+      dg::DVec  dampl = dg::evaluate(dg::TanhProfX(p.lx*0.05,p.sourcew,1.0,0.0,1.0),grid);
+      dg::blas1::pointwiseDot(y1[1],dampr,y1[1]);
+      dg::blas1::pointwiseDot(y1[1],dampl,y1[1]);
+   
+    }  
         
-    if (p.modelmode==0 || p.modelmode==1)
+    if (p.modelmode == 0 || p.modelmode == 1)
     {
         dg::blas1::pointwiseDot(y1[1], y0[1],y1[1]); //<n>*ntilde
         dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni = <n> + <n>*ntilde
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+        std::cout << "intiialize ne" << std::endl;
+        feltor.initializene( y0[1], y0[0]);    
+        std::cout << "Done!\n";
     }
-    if (p.modelmode==2)
-    {
-        y0[1] = dg::evaluate( init0, grid);
+    if (p.modelmode == 2) {
+        std::cout << "intiialize ne" << std::endl;
+        dg::blas1::axpby(1.0,y1[1],0.,y0[1],y0[1]);
+        feltor.initializene( y1[1], y0[0]);    
+        std::cout << "Done!\n";
     }
-    std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1], y0[0]);    
-    std::cout << "Done!\n";
+    if (p.modelmode == 3) {
+        dg::blas1::pointwiseDot( y0[1],y1[1],y0[1]); //<n>*Ntilde
+        dg::blas1::axpby( 1., y0[1], 1.,y1[0], y0[1]); //initialize Ni = <n> + <n>*Ntilde
+        dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize Ni-1
+        
+        std::cout << "intiialize ne" << std::endl;
+        feltor.initializene( y0[1], y0[0]); //n_e-1
+        
+        
+        dg::blas1::transform( y1[1], y0[1], dg::PLUS<>(+1.0)); // (1+Nitilde)
+        dg::blas1::transform( y0[1], y0[1], dg::LN<double>()); //ln (1+Nitilde)
+        
+        dg::blas1::transform(y0[0], y0[0], dg::PLUS<>((p.bgprofamp + p.nprofileamp))); //ne
+        dg::blas1::pointwiseDivide(y0[0], y1[0],y0[0]); // 1+ netilde
+        dg::blas1::transform( y0[0], y0[0], dg::LN<double>()); //ln (1+netilde)
+
+        std::cout << "Done!\n";
+    } 
+
 
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);

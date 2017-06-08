@@ -113,7 +113,8 @@ struct Feltor
     dg::Elliptic< Geometry, Matrix, container > pol,lapperp; 
     dg::Helmholtz< Geometry, Matrix, container > invgammaPhi,invgammaN;
 
-    dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
+    
+    dg::Invert<container> invert_invgammaN,invert_invgammaPhi, invert_pol;
     
     dg::PoloidalAverage<container, container > polavg; //device int vectors would be better for cuda
 
@@ -134,9 +135,9 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
-    poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N/U then phi BCC
-    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered), 
-    lapperp ( g,g.bcx(), g.bcy(),     dg::normed,         dg::centered),
+    poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N then phi BCC
+    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered, p.jfactor), 
+    lapperp ( g,g.bcx(), g.bcy(),       dg::normed,          dg::centered),
     invgammaPhi( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaN(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
@@ -165,11 +166,15 @@ container& Feltor<Grid, Matrix, container>::polarisation( const std::vector<cont
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
+
+    dg::blas1::pointwiseDivide(v2d,chi,omega);
+
     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     charge_ = dg::blas2::dot(one,w2d,chi);
     //= Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+
+    unsigned number = invert_pol( pol, phi[0], chi, w2d, omega, v2d);     //Gamma n_i -ne = -nabla chi nabla phi
         if(  number == invert_pol.get_max())
             throw dg::Fail( p.eps_pol);
   }
@@ -182,7 +187,6 @@ container& Feltor<Grid, Matrix, container>::polarisation( const std::vector<cont
     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-1)    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) - (n_e-(bgamp+profamp)) = Gamma n_i - n_e
     charge_ = dg::blas2::dot(one,w2d,chi);
-
 //     dg::blas1::pointwiseDivide(chi,omega,chi);              // B^2(Gamma n_i - n_e )/  (\mu_i n_i )
     polavg(omega,lambda);
     dg::blas1::pointwiseDivide(chi,lambda,chi);              // (Gamma n_i - n_e )/  (\mu_i <n_i/B^2> )
@@ -201,13 +205,29 @@ container& Feltor<Grid, Matrix, container>::polarisation( const std::vector<cont
         if(  number == invert_pol.get_max())
             throw dg::Fail( p.eps_pol);
   }
+  if (p.modelmode==3) {
+    dg::blas1::pointwiseDot( npe[1], binv, chi);
+    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
+    dg::blas1::scal(chi,p.mu[1]);
+    pol.set_chi( chi);
+    dg::blas1::pointwiseDivide(one,chi,lambda);
+    dg::blas1::transform( npe[1], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
+    invert_invgammaN(invgammaN,chi,omega); //chi= Gamma (Ni-(bgamp+profamp)) 
+    dg::blas1::transform( npe[0], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
+    dg::blas1::axpby( -1., omega, 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
+    charge_ = dg::blas2::dot(one,w2d,chi);
+    //= Gamma n_i - n_e
+    unsigned number = invert_pol( pol, phi[0], chi, w2d, lambda, v2d);            //Gamma n_i -ne = -nabla chi nabla phi
+        if(  number == invert_pol.get_max())
+            throw dg::Fail( p.eps_pol);
+  }
   return phi[0];
 }
 
 template< class Grid, class Matrix, class container>
 container& Feltor<Grid, Matrix, container>::compute_psi( container& potential)
 {
-    if (p.modelmode==0 || p.modelmode==1)
+    if (p.modelmode==0 || p.modelmode==1 || p.modelmode==3)
     {
         invert_invgammaPhi(invgammaPhi,chi,potential);                 //chi  = Gamma phi
         poisson.variationRHS(potential, omega);
@@ -241,7 +261,7 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
            y[1] := N_i - (p.bgprofamp + p.nprofileamp)
         */
-        phi[0] = polarisation( y);
+        phi[0] = polarisation(y);
         phi[1] = compute_psi( phi[0]); //sets omega
 
         //transform compute n and logn
@@ -303,6 +323,11 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
             polavg(logn[0],lambda);       //<ln(ne)> 
             polavg(phi[0],phiavg);        //<phi>
             dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
+	    
+/*	    dg::blas1::pointwiseDivide(nedelta,neavg,lambda); // delta(phi) = phi - <phi>
+	    polavg(lambda,omega);       //<ln(ne)> 
+	    dg::blas1::axpby(1.,lambda,-1.,omega,nedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>   */      
+	    
             dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
             dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
         }
@@ -398,7 +423,6 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
             Dgrad[i] = - z[i]*p.tau[i]/p.invkappa*dg::blas2::dot(y[i], w2d, omega);
             dg::blas1::pointwiseDot(omega,binv,omega); //1/B dy phi
             gammanex_ =-1.* dg::blas2::dot(one,w2d,omega);//int(1/B  dy phi)
-
         }
         
         //Coupling term for the electrons
@@ -421,6 +445,133 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         //Compute rhs of energy theorem
         ediff_= Dperp[0]+Dperp[1]+ Dgrad[0]+Dgrad[1]+coupling_ ;
         
+    }
+    
+    if (p.modelmode==3 )
+    {
+        /* y[0] := ln (1+\tilde N_e )
+           y[1] := ln(1+\ŧilde N_i )
+        */
+	
+	        //transform compute n and logn
+        for(unsigned i=0; i<2; i++)
+        {
+	    dg::blas1::transform( y[i], npe[i], dg::EXP<value_type>()); // 1+ \tilde{N}
+	    dg::blas1::pointwiseDot(npe[i],profne,npe[i]); //N
+            dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
+        }  
+        
+        phi[0] = polarisation( y);
+        phi[1] = compute_psi( phi[0]); //sets omega
+
+  
+        
+        // START computation of energies
+        double z[2]    = {-1.0,1.0};
+        double S[2]    = {0.0, 0.0};
+        double Dperp[2] = {0.0, 0.0};
+        double Dsource[2] = {0.0, 0.0};
+        //transform compute n and logn and energies
+        for(unsigned i=0; i<2; i++)
+        {
+            S[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w2d, npe[i]); // N LN N
+        }
+        mass_ = dg::blas2::dot( one, w2d, npe[0] ); //take real ion density which is electron density!!
+        double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w2d, omega);   //= 0.5 mu_i N_i u_E^2
+        energy_ = S[0] + S[1]  + Tperp; 
+        evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp;
+        //Compute the perp dissipative energy 
+        for( unsigned i=0; i<2;i++)
+        {
+
+            dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN)
+            dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_z(1+lnN)+phi)
+
+            //---------- perp dissipation 
+            dg::blas2::gemv( lapperp, y[i], lambda);
+            dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
+	    dg::blas1::pointwiseDot( npe[i], omega, omega);//nabla_RZ^4 N_e
+            Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_z(1+lnN)+phi) nabla_RZ^4 \tilde N
+        }                
+        //compute the radial electron density  transport
+        dg::blas2::gemv( poisson.dyrhs(), phi[0], omega); //dy phi
+        dg::blas1::pointwiseDot(omega,binv,omega); //1/B dy phi
+        gammanex_ =-1.* dg::blas2::dot(npe[0],w2d,omega);//int(1/B N dy phi)       
+        
+        
+        for( unsigned i=0; i<2; i++)
+        {
+            //ExB dynamics
+            poisson( y[i], phi[i], yp[i]);  //[ln(1+tilde N),phi]_RZ
+            dg::blas1::pointwiseDot( yp[i], binv, yp[i]);                        // dt ln(1+tilde N) =1/B [ln(1+tilde N),phi]_RZ                
+	    
+	    //density gradient term
+            dg::blas2::gemv( poisson.dyrhs(), phi[i], omega); //lambda = dy psi
+	    dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt ln(1+tilde N) += - kappa dy psi   
+        }        
+        //Coupling term for the electrons
+        polavg(npe[0],neavg);
+        dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
+        dg::blas1::scal(omega,0.0);
+        if (p.hwmode==0) {
+            dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
+            dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
+            dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
+        }
+
+        if (p.hwmode==1) {
+            polavg(logn[0],lambda);       //<ln(ne)> 
+            polavg(phi[0],phiavg);        //<phi>
+            dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
+	    
+/*	    dg::blas1::pointwiseDivide(nedelta,neavg,lambda); // delta(phi) = phi - <phi>
+	    polavg(lambda,omega);       //<ln(ne)> 
+	    dg::blas1::axpby(1.,lambda,-1.,omega,nedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>   */      
+	    
+            dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
+            dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
+        }
+        if (p.cmode==1) {
+            dg::blas1::pointwiseDot(omega,npe[0],omega);  //(coupling)*Ne for constant resi
+        }
+        dg::blas1::pointwiseDivide(omega,npe[0],omega); 
+        dg::blas1::axpby(p.alpha,omega,1.0,yp[0]);
+        
+        //---------- coupling energy
+        dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnN)
+        dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnN)+phi)   
+        dg::blas1::pointwiseDot(omega,npe[0],omega);  
+        coupling_ =  z[0]*p.alpha* dg::blas2::dot(chi, w2d, omega);
+        //Compute rhs of energy theorem
+        ediff_= Dperp[0]+Dperp[1]+ coupling_ ;
+
+        //Density source terms (dont add sources in this case if you want to compare with df )
+        if (p.omega_source>1e-14) 
+        {
+            dg::blas1::axpby(1.0,profne,-1.0,neavg,lambda); //lambda = ne0p - <ne>
+            //dtN_e
+            dg::blas1::pointwiseDot(lambda,lhs,omega); //omega =lhs*(ne0p - <ne>)
+            dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //= P [lhs*(n0ep - <ne>) ]
+            dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne+= - omega_s P [lhs*(ne0p - <ne>) ]
+            
+            dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnNe)
+            dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnNe)+phi)
+            Dsource[0]=z[0]* p.omega_source*dg::blas2::dot(chi, w2d, omega);
+   
+            //dt Ni without FLR
+            dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);  //dtNi += omega_s* P [lhs*(ne0p - <ne>)]
+            dg::blas1::axpby(1.,one,1., logn[1] ,chi); //chi = (1+lnNi)
+            dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //chi = (tau_i(1+lnNi)+psi)
+            Dsource[1]=z[1]* p.omega_source*dg::blas2::dot(chi, w2d, omega);
+            //add the FLR term (tanh and postrans before lapl seems to work because of cancelation)
+            dg::blas1::pointwiseDot(lambda,lhs,lambda);
+            dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());         
+            dg::blas2::gemv( lapperp, lambda, omega);
+            dg::blas1::axpby(p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[1]); //dtNi +=- omega_s*0.5*tau_i nabla_perp^2 P [lhs*(ne0p - <ne>)]
+            Dsource[1]+=z[1]* p.omega_source*0.5*p.tau[1]*p.mu[1]*dg::blas2::dot(chi, w2d, omega);
+
+        }
+        ediff_+=Dsource[0]+ Dsource[1];
     }
     
     t.toc();

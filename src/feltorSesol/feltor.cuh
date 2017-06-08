@@ -133,7 +133,7 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N/U then phi BCC
-    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered), 
+    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered, p.jfactor), 
     lapperpM ( g,g.bcx(), g.bcy(),       dg::normed,         dg::centered),
     invgammaPot( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invgammaNU(  g,g.bcx(),    g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
@@ -166,10 +166,12 @@ container& Feltor<G, Matrix, container>::polarisation( const std::vector<contain
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
     pol.set_chi( chi);
+    dg::blas1::pointwiseDivide(v2d,chi,omega);
+
     invert_invgammaN(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+    unsigned number = invert_pol( pol, phi[0], chi, w2d, omega, v2d);            //Gamma n_i -ne = -nabla chi nabla phi
         if(  number == invert_pol.get_max())
             throw dg::Fail( p.eps_pol);
     return phi[0];

@@ -95,14 +95,14 @@ int main( int argc, char* argv[])
     if (p.iso == 1) dg::blas1::axpby( 1.,y1[2], 0., y0[3]); //initialize Ti = prof
     if (p.iso == 0) dg::blas1::axpby( 1.,y0[1], 0., y0[3]); //initialize Ti = N_i
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //= Ni - bg
-    std::cout << "intiialize ne" << std::endl;
+    if(rank==0) std::cout << "intiialize ne" << std::endl;
     if( p.init == 0)
         feltor.initializene( y0[1],y0[3], y0[0]);    //ne -bg
     else  
         dg::blas1::axpby( 1., y0[1], 0., y0[0], y0[0]); // for Omega*=0
-    std::cout << "Done!\n";    
+    if(rank==0) std::cout << "Done!\n";    
     
-    std::cout << "intialize ti=te" << std::endl;
+    if(rank==0) std::cout << "intialize ti=te" << std::endl;
     if (p.iso == 1) {
         dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
         dg::blas1::axpby( 1.,y0[3], 0., y0[2]); //initialize Ti = N_i
@@ -123,7 +123,7 @@ int main( int argc, char* argv[])
         dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg 
     }
-    std::cout << "Done!\n";
+    if(rank==0) std::cout << "Done!\n";
 
     
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);

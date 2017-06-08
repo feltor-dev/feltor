@@ -25,10 +25,12 @@ struct Parameters
     double Chat,g;
     double nu_perp,alpha;
     
+    double jfactor;
+    
     double amp, sigma, posX, posY;
     
     double  nprofileamp, bgprofamp;
-    unsigned hwmode,modelmode,cmode;
+    unsigned hwmode,modelmode,cmode,initmode;
     double omega_source,sourceb,sourcew;
     enum dg::bc bc_x,bc_y,bc_x_phi;
 
@@ -43,6 +45,7 @@ struct Parameters
         itstp = js["itstp"].asUInt();
         maxout = js["maxout"].asUInt();
         eps_pol = js["eps_pol"].asDouble();
+        jfactor = js["jumpfactor"].asDouble();
         eps_gamma = js["eps_gamma"].asDouble();
         eps_time = js["eps_time"].asDouble();
         eps_hat = 1.;
@@ -66,6 +69,7 @@ struct Parameters
         bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
         bc_y = dg::str2bc(js["bc_y"].asString());
         hwmode =  js["hwmode"].asUInt();
+	initmode =  js["initmode"].asUInt();
         invkappa =   js["invkappa"].asDouble();
         Chat = (double)(lx*alpha);
         g = (double) (lx/invkappa);
@@ -91,8 +95,9 @@ struct Parameters
             <<"     Chat  :                          = "<<Chat<<"\n"
             <<"     g     :                          = "<<g<<"\n"
             <<"     modelmode:                       = "<<modelmode<<"\n"
-            <<"     hwmode:                              = "<<hwmode<<"\n"
-            <<"     cmode:                           = "<<cmode<<"\n";
+            <<"     hwmode:                          = "<<hwmode<<"\n"
+            <<"     cmode:                           = "<<cmode<<"\n"
+	    <<"     initmode:                        = "<<initmode<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
             << "    width:        "<<sigma<<"\n"
@@ -108,6 +113,7 @@ struct Parameters
             <<"     Ny = "<<Ny<<"\n"
             <<"     dt = "<<dt<<"\n";
         os << "     Stopping for Polar CG:   "<<eps_pol<<"\n"
+            <<"     Jump scale factor:   "<<jfactor<<"\n"
             <<"     Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"     Stopping for Time  CG:   "<<eps_time<<"\n";
         os << "Output parameters are: \n"

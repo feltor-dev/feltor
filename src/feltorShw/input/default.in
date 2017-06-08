@@ -1,6 +1,7 @@
 /* This is a comment: Remember that comments are not conformal 
 with the JSON standard but are allowed only with some specifig JSON parsers. So remove them when you automate the process */
 {
+
     "n" :  1,        //# x-y-polynomials
     "Nx" : 100,      //# grid points in x
     "Ny" : 100,      //# grid points in y
@@ -11,6 +12,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "itstp"  : 10,   //steps between outputs
     "maxout" : 1000, //# outputs excluding first
     "eps_pol"   : 1e-6,   //accuracy of polarisation solver
+    "jumpfactor": 0.01,   //jumpfactor € [0.01,1]
     "eps_gamma" : 1e-6,   //accuracy of Gamma 
     "eps_time"  : 1e-14,  //accuracy of implicit time-stepper
     "mu_e"      : -0.000272121, // -m_e/m_i 
@@ -19,9 +21,10 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "cmode" : 0,             //dyn/const collisionality (0/1)  
     "hwmode": 1,             // ordinary/modified HW (0/1)
     "nu_perp"   : 1e-3,      //pependicular viscosity
-    "alpha"         : 0.01  ,//adiabaticity 
-    "amplitude" :0.1,        //amplitude of the blob
-    "sigma"  : 2.5,          //blob variance in units of rho_s
+    "alpha"         : 0.01, //adiabaticity 
+    "initmode"      : 0,     // (0) blob, (1) Wave in x and y (2) bath
+    "amplitude" :0.1,        //amplitude of the perturbation
+    "sigma"  : 2.5,          //blob variance in units of rho_s or ky of wave
     "posX"  : 0.5,           //blob x-position in units of lx
     "posY"  : 0.5,           //blob y-position in units of ly
     "prof_amp": 1.0,         //Profile amplitude

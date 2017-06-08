@@ -65,6 +65,7 @@ class Elliptic
      * @param g The Grid, boundary conditions are taken from here
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
+
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @note chi is assumed 1 per default
      */
@@ -86,6 +87,7 @@ class Elliptic
      * @param bcy boundary contition in y
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
+
      * @param jfactor scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      */
     Elliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.): 
@@ -123,7 +125,6 @@ class Elliptic
      * when \f$ \chi\f$ exhibits large amplitudes or variations
      */
     const Vector& precond()const {return precond_;}
-
     /**
      * @brief Set the currently used jfactor
      *

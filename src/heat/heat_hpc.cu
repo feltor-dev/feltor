@@ -136,9 +136,9 @@ int main( int argc, char* argv[])
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     ///////////////////TIME STEPPER   
     //RK solver
-    dg::RK<4, std::vector<dg::DVec> >  rk( y0);
+//     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
-//     dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
 //     karniadakis.init( feltor, rolkar, y0, p.dt);
 
@@ -254,8 +254,8 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{
-                rk( feltor, y0, y1, p.dt); //RK stepper
-//                 sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
+//                 rk( feltor, y0, y1, p.dt); //RK stepper
+                sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
 //                 karniadakis( feltor, rolkar, y0);  //Karniadakis stepper
                 y0.swap( y1);}
               catch( dg::Fail& fail) { 
