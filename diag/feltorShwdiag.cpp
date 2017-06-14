@@ -391,10 +391,11 @@ int main( int argc, char* argv[])
         dg::blas1::transform(temp1d,temp1d, dg::INVERT<double>()); // -1/dx ln<n_e>   
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[14],   start1d, count1d, temp1d.data());  //invkappa(x) = -dxln<n_e>  
         dg::blas1::pointwiseDot(Rf,temp1,temp2); // Rf dx ln<n_e>
+	dg::blas1::scal(temp2,-1.0); //-Rf dx ln<n_e>
         dg::blas1::axpby(1.0,temp2,1.0,temp);  
 	    double Rfnnorm = sqrt(dg::blas2::dot(temp2,w2d,temp2))/p.lx/p.ly;
         dg::blas2::gemv(interp,temp2,temp1d); 
-        err_out = nc_put_vara_double( ncid_out, dataIDs1d[10],   start1d, count1d, temp1d.data()); //Rfn = Rf dx ln<n_e>
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[10],   start1d, count1d, temp1d.data()); //Rfn = -Rf dx ln<n_e>
         dg::blas1::pointwiseDot(faux,temp1,temp2); // faux dx ln<n_e>
         dg::blas1::pointwiseDot(fauy,temp2,temp1); // faux fauy dx ln<n_e>
         dg::blas1::scal(temp1,2.0);  // 2 faux fauy dx ln<n_e>
@@ -429,14 +430,14 @@ int main( int argc, char* argv[])
 	    double Guyxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly; //norm of  -dx (<u_y> <\delta ne \ðelta u_y >)
         dg::blas2::gemv(interp,temp1,temp1d); 
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[18],   start1d, count1d, temp1d.data()); //Guyx =  -dx (<u_y> <\delta ne \ðelta u_x >)
-        dg::blas1::pointwiseDot(ftuy,tux,temp2); //= hat(u_y) ||u_x||
-	dg::blas1::pointwiseDot(auy,tux,temp); //= <u_y> ||u_x||
-	dg::blas1::axpby(-1.0,temp2,1.0,temp,temp); //||u_x|| (<u_y>- hat(u_y))
-        dg::blas2::gemv(poisson.dxrhs(),temp,temp1); //temp1 = dx (||u_x|| (<u_y>- hat(u_y)))
-        dg::blas1::scal(temp1,-1.0); //temp1 = -dx (||u_x|| (<u_y>- hat(u_y)))
+        dg::blas1::pointwiseDot(fauy,faux,temp2); //= ||u_y|| ||u_x||
+	dg::blas1::pointwiseDot(auy,faux,temp); //= <u_y> ||u_x||
+	dg::blas1::axpby(-1.0,temp2,1.0,temp,temp); //||u_x|| (<u_y>- ||u_y||)
+        dg::blas2::gemv(poisson.dxrhs(),temp,temp1); //temp1 = dx (||u_x|| (<u_y>- ||u_y||))
+        dg::blas1::scal(temp1,-1.0); //temp1 = -dx (||u_x|| (<u_y>- ||u_y||))
 	    double Guynxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly; 
         dg::blas2::gemv(interp,temp1,temp1d); 
-        err_out = nc_put_vara_double( ncid_out, dataIDs1d[20],   start1d, count1d, temp1d.data()); //Guynx =  -dx (||u_x|| (<u_y>- hat(u_y)))            
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[20],   start1d, count1d, temp1d.data()); //Guynx =  -dx (||u_x|| (<u_y>- ||u_y||))            
         dg::blas1::pointwiseDot(dne,tux,temp1);       //temp1 = \delta n_e \delta u_x
         dg::blas1::pointwiseDot(tuy,temp1,temp1);     //temp1 = \delta n_e \delta u_x \delta u_y
         polavg(temp1,temp2);                          //temp2 = <\delta n_e \delta u_x \delta u_y >
@@ -468,7 +469,7 @@ int main( int argc, char* argv[])
 // 	double Annormscal = Annorm/sumnorm;
 // 	double Rfnnormscal = Rfnnorm/sumnorm;
 	
-	double sumnorm = Rxnorm + Guynxnorm+ Tnxnorm + Anorm + Annorm;
+	double sumnorm = Rxnorm + Guynxnorm+ Tnxnorm + Anorm + Rfnnorm;
 	double Rxnormscal = Rxnorm/sumnorm;
 	double Guynxnormscal = Guynxnorm/sumnorm;
 	double Tnxnormscal = Tnxnorm/sumnorm;
