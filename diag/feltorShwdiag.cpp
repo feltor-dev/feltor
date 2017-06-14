@@ -422,20 +422,22 @@ int main( int argc, char* argv[])
 	    double Rnxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
 	    dg::blas2::gemv(interp,temp1,temp1d); 
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[17],   start1d, count1d, temp1d.data()); //Rnx = -dx ( <n_e>  R)
-        dg::blas1::pointwiseDot(dne,tux,temp1);
-        polavg(temp1,temp2);   //temp2 = <\delta ne \ðelta u_y >
-        dg::blas1::pointwiseDot(temp2,auy,temp2); //temp2 =<u_y> <\delta ne \ðelta u_y >
-        dg::blas1::pointwiseDivide(temp2,anpe,temp); //temp2 =<u_y> <\delta ne \ðelta u_y >/<n_e>
+        dg::blas1::pointwiseDot(dne,tux,temp1); //= \delta ne \ðelta u_x 
+        polavg(temp1,temp2);   //temp2 = <\delta ne \ðelta u_x >
+        dg::blas1::pointwiseDot(temp2,auy,temp2); //temp2 =<u_y> <\delta ne \ðelta u_x >
         dg::blas2::gemv(poisson.dxrhs(),temp2,temp1); //temp1 = dx (<u_y> <\delta ne \ðelta u_y >)
         dg::blas1::scal(temp1,-1.0); //temp1 = -dx (<u_y> <\delta ne \ðelta u_y >)
-	    double Guyxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
+	    double Guyxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly; //norm of  -dx (<u_y> <\delta ne \ðelta u_y >)
         dg::blas2::gemv(interp,temp1,temp1d); 
-        err_out = nc_put_vara_double( ncid_out, dataIDs1d[18],   start1d, count1d, temp1d.data()); //Guyx =  -dx (<u_y> <\delta ne \ðelta u_y >)
-        dg::blas2::gemv(poisson.dxrhs(),temp,temp1); //temp1 = dx (<u_y> <\delta ne \ðelta u_y >/<n_e>)
-        dg::blas1::scal(temp1,-1.0); //temp1 = -dx (<u_y> <\delta ne \ðelta u_y >/<n_e>)
-	    double Guynxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[18],   start1d, count1d, temp1d.data()); //Guyx =  -dx (<u_y> <\delta ne \ðelta u_x >)
+        dg::blas1::pointwiseDot(fauy,faux,temp2); //= hat(u_y) ||u_x||
+	dg::blas1::pointwiseDot(auy,faux,temp); //= <u_y> ||u_x||
+	dg::blas1::axpby(-1.0,temp2,1.0,temp,temp); //||u_x|| (<u_y>- hat(u_y))
+        dg::blas2::gemv(poisson.dxrhs(),temp,temp1); //temp1 = dx (||u_x|| (<u_y>- hat(u_y)))
+        dg::blas1::scal(temp1,-1.0); //temp1 = -dx (||u_x|| (<u_y>- hat(u_y)))
+	    double Guynxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly; 
         dg::blas2::gemv(interp,temp1,temp1d); 
-        err_out = nc_put_vara_double( ncid_out, dataIDs1d[20],   start1d, count1d, temp1d.data()); //Guynx =  -dx (<u_y> <\delta ne \ðelta u_y >/<n_e>)            
+        err_out = nc_put_vara_double( ncid_out, dataIDs1d[20],   start1d, count1d, temp1d.data()); //Guynx =  -dx (||u_x|| (<u_y>- hat(u_y)))            
         dg::blas1::pointwiseDot(dne,tux,temp1);       //temp1 = \delta n_e \delta u_x
         dg::blas1::pointwiseDot(tuy,temp1,temp1);     //temp1 = \delta n_e \delta u_x \delta u_y
         polavg(temp1,temp2);                          //temp2 = <\delta n_e \delta u_x \delta u_y >
@@ -462,13 +464,22 @@ int main( int argc, char* argv[])
         double neatsupnorm =*thrust::max_element(temp.begin(),temp.end()); 
             
 	
-        double sumnorm       = Rxnorm + Guynxnorm + Tnxnorm + Anorm + Annorm + Rfnnorm;
-        double Rxnormscal    = Rxnorm/sumnorm;
-        double Guynxnormscal = Guynxnorm/sumnorm;
-        double Tnxnormscal   = Tnxnorm/sumnorm;
-        double Anormscal     = Anorm/sumnorm;
-        double Annormscal    = Annorm/sumnorm;
-        double Rfnnormscal   = Rfnnorm/sumnorm;
+// 	double sumnorm = Rxnorm + Guynxnorm+ Tnxnorm + Anorm + Annorm + Rfnnorm;
+// 	double Rxnormscal = Rxnorm/sumnorm;
+// 	double Guynxnormscal = Guynxnorm/sumnorm;
+// 	double Tnxnormscal = Tnxnorm/sumnorm;
+// 	double Anormscal = Anorm/sumnorm;
+// 	double Annormscal = Annorm/sumnorm;
+// 	double Rfnnormscal = Rfnnorm/sumnorm;
+	
+	double sumnorm = Rxnorm + Guynxnorm+ Tnxnorm + Anorm + Rfnnorm;
+	double Rxnormscal = Rxnorm/sumnorm;
+	double Guynxnormscal = Guynxnorm/sumnorm;
+	double Tnxnormscal = Tnxnorm/sumnorm;
+	double Anormscal = Anorm/sumnorm;
+	double Annormscal = Annorm/sumnorm;
+	double Rfnnormscal = Rfnnorm/sumnorm;
+	
             //write 2d fields (ne,phi,vor)
 //          UNCOMMENT for 2d output
 //             err_out = nc_put_vara_double( ncid_out, dataIDs2d[0], start2d_out, count2d_out, npe[0].data());
