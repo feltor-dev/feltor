@@ -154,7 +154,7 @@ int main( int argc, char* argv[])
     //probe netcdf file
     err_out = nc_redef(ncid_out);
     int npe_probesID[num_probes],phi_probesID[num_probes],gamma_probesID[num_probes];
-    int OmegaID, OmegazID, OmegaratioID, TperpzID, TperpID, TperpratioID, Gamma_neID,invkappaavgID,RfxnormID,AnormID,RfnnormID,AnnormID,RxnormID,RnxnormID,GuyxnormID,TxnormID,GuynxnormID,TnxnormID,netnormID,neatnormID,dtfauynormID,RxnormscalID,GuynxnormscalID,TnxnormscalID,AnormscalID,AnnormscalID,RfnnormscalID;
+    int OmegaID, OmegazID, OmegaratioID, TperpzID, TperpID, TperpratioID, Gamma_neID,invkappaavgID,RfxnormID,AnormID,RfnnormID,AnnormID,RxnormID,RnxnormID,GuyxnormID,TxnormID,GuynxnormID,TnxnormID,netnormID,neatnormID,dtfauynormID,RxnormscalID,GuynxnormscalID,TnxnormscalID,AnormscalID,AnnormscalID,RfnnormscalID,neatsupnormID;
     std::string npe_probes_names[num_probes] ;
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
@@ -193,6 +193,7 @@ int main( int argc, char* argv[])
     err_out = nc_def_var( ncid_out, "dtfauynorm",    NC_DOUBLE, 1, &timeID, &dtfauynormID);
     err_out = nc_def_var( ncid_out, "netnorm",    NC_DOUBLE, 1, &timeID, &netnormID);
     err_out = nc_def_var( ncid_out, "neatnorm",    NC_DOUBLE, 1, &timeID, &neatnormID);
+    err_out = nc_def_var( ncid_out, "neatsupnorm",    NC_DOUBLE, 1, &timeID, &neatsupnormID);
     
     err_out = nc_def_var( ncid_out, "Rxnormscal",    NC_DOUBLE, 1, &timeID, &RxnormscalID);
     err_out = nc_def_var( ncid_out, "Guynxnormscal",    NC_DOUBLE, 1, &timeID, &GuynxnormscalID);
@@ -450,21 +451,24 @@ int main( int argc, char* argv[])
         dg::blas2::gemv(interp,temp1,temp1d); 
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[21],   start1d, count1d, temp1d.data()); //Tnx =  - dx ( <\delta n_e \delta u_x \delta u_y >/<n_e>
         
-	    double netnorm = sqrt(dg::blas2::dot(ntilde[0],w2d,ntilde[0]))/p.ly;
+	    double netnorm = sqrt(dg::blas2::dot(ntilde[0],w2d,ntilde[0]))/p.lx/p.ly;
 	    dg::blas2::gemv(interp,ntilde[0],temp1d); 
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[22],   start1d, count1d, temp1d.data()); //netilde
-	    double neatnorm = sqrt(dg::blas2::dot(navgtilde[0],w2d,navgtilde[0]))/p.ly;
+	    double neatnorm = sqrt(dg::blas2::dot(navgtilde[0],w2d,navgtilde[0]))/p.lx/p.ly;
 	    dg::blas2::gemv(interp,navgtilde[0],temp1d); 
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[23],   start1d, count1d, temp1d.data()); //neavgtilde
+        dg::blas1::transform(navgtilde[0],temp, dg::ABS<double>()); // -1/dx ln<n_e>   
+         
+        double neatsupnorm =*thrust::max_element(temp.begin(),temp.end()); 
             
 	
-	double sumnorm = Rxnorm + Guynxnorm+ Tnxnorm + Anorm + Annorm + Rfnnorm;
-	double Rxnormscal = Rxnorm/sumnorm;
-	double Guynxnormscal = Guynxnorm/sumnorm;
-	double Tnxnormscal = Tnxnorm/sumnorm;
-	double Anormscal = Anorm/sumnorm;
-	double Annormscal = Annorm/sumnorm;
-	double Rfnnormscal = Rfnnorm/sumnorm;
+        double sumnorm       = Rxnorm + Guynxnorm + Tnxnorm + Anorm + Annorm + Rfnnorm;
+        double Rxnormscal    = Rxnorm/sumnorm;
+        double Guynxnormscal = Guynxnorm/sumnorm;
+        double Tnxnormscal   = Tnxnorm/sumnorm;
+        double Anormscal     = Anorm/sumnorm;
+        double Annormscal    = Annorm/sumnorm;
+        double Rfnnormscal   = Rfnnorm/sumnorm;
             //write 2d fields (ne,phi,vor)
 //          UNCOMMENT for 2d output
 //             err_out = nc_put_vara_double( ncid_out, dataIDs2d[0], start2d_out, count2d_out, npe[0].data());
@@ -520,13 +524,14 @@ int main( int argc, char* argv[])
             err_out = nc_put_vara_double( ncid_out, TnxnormID, start1d, count1d, &Tnxnorm);
             err_out = nc_put_vara_double( ncid_out, netnormID, start1d, count1d,  &netnorm);
             err_out = nc_put_vara_double( ncid_out, neatnormID, start1d, count1d, &neatnorm);
+            err_out = nc_put_vara_double( ncid_out, neatsupnormID, start1d, count1d, &neatsupnorm);
             err_out = nc_put_vara_double( ncid_out, dtfauynormID, start1d, count1d, &dtfauynorm);
             err_out = nc_put_vara_double( ncid_out, RxnormscalID, start1d, count1d, &Rxnormscal);
-	    err_out = nc_put_vara_double( ncid_out, GuynxnormscalID, start1d, count1d, &Guynxnormscal);
-	    err_out = nc_put_vara_double( ncid_out, TnxnormscalID, start1d, count1d, &Tnxnormscal);
-	    err_out = nc_put_vara_double( ncid_out, AnormscalID, start1d, count1d, &Anormscal);
-	    err_out = nc_put_vara_double( ncid_out, AnnormscalID, start1d, count1d, &Annormscal);
-	    err_out = nc_put_vara_double( ncid_out, RfnnormscalID, start1d, count1d, &Rfnnormscal);
+            err_out = nc_put_vara_double( ncid_out, GuynxnormscalID, start1d, count1d, &Guynxnormscal);
+            err_out = nc_put_vara_double( ncid_out, TnxnormscalID, start1d, count1d, &Tnxnormscal);
+            err_out = nc_put_vara_double( ncid_out, AnormscalID, start1d, count1d, &Anormscal);
+            err_out = nc_put_vara_double( ncid_out, AnnormscalID, start1d, count1d, &Annormscal);
+            err_out = nc_put_vara_double( ncid_out, RfnnormscalID, start1d, count1d, &Rfnnormscal);
             err_out = nc_put_vara_double( ncid_out, tvarIDout, start1d, count1d, &time);        
 	    
     }
