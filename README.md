@@ -10,7 +10,7 @@ Our lowest core level functions are parallelized for a variety of hardware from 
 
 
 
-## Quick start guide
+## 1. Quick start guide
 Go ahead and clone our library into any folder you like 
 ```sh
 $ git clone https://www.github.com/feltor-dev/feltor
@@ -85,7 +85,7 @@ Now, we want to compile a simulation program. First, we have to download and ins
 As in Step 3 you need to create links to the draw and the jsoncpp library in your include folder or provide the paths in your config file. 
 
 ```sh
- $ cd path/to/feltor/src/toefl
+ $ cd path/to/feltor/src/toefl # or any other project in the src folder
  
  $ make toeflR device=gpu # (for a live simulation on gpu with glfw output)
  # or
@@ -96,8 +96,17 @@ As in Step 3 you need to create links to the draw and the jsoncpp library in you
 A default input file is located in `path/to/feltor/src/toefl/input`
 > The mpi program will wait for you to type the number of processes in x and y direction before starting
 
-## Further reading
+## 2. Further reading
 Please check out our [Wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information and user oriented documentation. The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) is generated with [Doxygen](http://www.doxygen.org) from source code.
+
+## 3. Contributions and Acknowledgements
+For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).
+We gratefully acknowledge contributions from 
+- Ralph Kube
+- Eduard Reiter
+- Lukas Einkemmer
+## 4. License 
+FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
 
 ## Official releases 
 Our latest code release has a shiny DOI badge from zenodo
@@ -105,13 +114,3 @@ Our latest code release has a shiny DOI badge from zenodo
 [![DOI](https://zenodo.org/badge/14143578.svg)](https://zenodo.org/badge/latestdoi/14143578)
 
 which makes us officially citable.
-
-## Contributions and Acknowledgements
-For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).
-We gratefully acknowledge contributions from 
-- Ralph Kube
-- Eduard Reiter
-- Lukas Einkemmer
-## License 
-FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
-
