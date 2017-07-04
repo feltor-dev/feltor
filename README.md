@@ -6,9 +6,10 @@ FELTOR (Full-F ELectromagnetic code in TORoidal geometry) is both a numerical li
 
 Its main physical target are plasma edge and scrape-off layer (gyro-)fluid simulations.
 The numerical methods centre around discontinuous Galerkin methods on structured grids. 
-Our lowest core level functions are parallelized for a variety of hardware from multi-core cpu to hybrid MPI+GPU, which makes them incredibly fast. 
+Our core level functions are parallelized for a variety of hardware from multi-core cpu to hybrid MPI+GPU, which makes the library incredibly fast. 
 
-
+[![DOI](https://zenodo.org/badge/14143578.svg)](https://zenodo.org/badge/latestdoi/14143578)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## 1. Quick start guide
 Go ahead and clone our library into any folder you like 
@@ -60,7 +61,7 @@ which makes a grid with 3 polynomial coefficients, 100 cells in x, 100 cells in 
 
 Now, let us test the mpi setup 
 > You can of course skip this if you don't have mpi installed on your computer.
-> If you intend to use the MPI backend, an implementation library of the mpi standard is required.
+> If you intend to use the MPI backend, an implementation library of the mpi standard is required. Per default `mpic++` is used for compilation.
 
 ```sh
  $ cd path/to/feltor/inc/dg
@@ -77,8 +78,9 @@ when prompted for input vector sizes type for example
 `3 100 100 10` (number of cells divided by number of procs must be an integer number)
 
 Now, we want to compile a simulation program. First, we have to download and install some libraries for I/O-operations.
-> For data output we use the [NetCDF](http://www.unidata.ucar.edu/software/netcdf/) library under an MIT - like license. The underlying [HDF5](https://www.hdfgroup.org/HDF5/) library also uses a very permissive license. Note that for the mpi versions of applications you need to build hdf5 and netcdf with the --enable-parallel flag. Do NOT use the pnetcdf library, which uses the classic netcdf file format.  
-> Our JSON input files are parsed by [JsonCpp](https://www.github.com/open-source-parsers/jsoncpp) distributed under the MIT license (the 0.y.x branch to avoid C++-11 support).     
+
+For data output we use the [NetCDF](http://www.unidata.ucar.edu/software/netcdf/) library under an MIT - like license. The underlying [HDF5](https://www.hdfgroup.org/HDF5/) library also uses a very permissive license. Note that for the mpi versions of applications you need to build hdf5 and netcdf with the --enable-parallel flag. Do NOT use the pnetcdf library, which uses the classic netcdf file format.  
+Our JSON input files are parsed by [JsonCpp](https://www.github.com/open-source-parsers/jsoncpp) distributed under the MIT license (the 0.y.x branch to avoid C++-11 support).     
 > Some desktop applications in FELTOR use the [draw library]( https://github.com/mwiesenberger/draw) (developed by us also under MIT), which depends on OpenGL (s.a. [installation guide](http://en.wikibooks.org/wiki/OpenGL_Programming)) and [glfw](http://www.glfw.org), an OpenGL development library under a BSD-like license. You don't need these when you are on a cluster. 
 
  
