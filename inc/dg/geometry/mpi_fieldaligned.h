@@ -94,7 +94,7 @@ struct ZShifter
  * @tparam LocalContainer The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
  */
 template <class Geometry, class LocalMatrix, class Communicator, class LocalContainer>
-struct MPI_FieldAligned
+struct FieldAligned< Geometry, RowDistMat<LocalMatrix, Communicator>, MPI_Vector<LocalContainer> > 
 {
     /**
     * @brief Construct from a field and a grid
@@ -111,7 +111,7 @@ struct MPI_FieldAligned
     * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    MPI_FieldAligned(Field field, Geometry grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1 );
+    FieldAligned(Field field, Geometry grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1 );
 
     /**
      * @brief Set boundary conditions
@@ -281,7 +281,7 @@ struct MPI_FieldAligned
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalMatrix, class CommunicatorXY, class LocalContainer>
 template <class Field, class Limiter>
-MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_FieldAligned(Field field, MPIGeometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
+FieldAligned<MPIGeometry, RowDistMat<LocalMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::FieldAligned(Field field, MPIGeometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()), 
     tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()), temp_(g_.Nz())
@@ -377,14 +377,14 @@ MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_
 
 template<class G, class M, class C, class container>
 template< class BinaryOp>
-MPI_Vector<container> MPI_FieldAligned<G,M,C,container>::evaluate( BinaryOp binary, unsigned p0) const
+MPI_Vector<container> FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::evaluate( BinaryOp binary, unsigned p0) const
 {
     return evaluate( binary, dg::CONSTANT(1), p0, 0);
 }
 
 template<class G, class M, class C, class container>
 template< class BinaryOp, class UnaryOp>
-MPI_Vector<container> MPI_FieldAligned<G,M,C, container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
+MPI_Vector<container> FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
 {
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
@@ -463,7 +463,7 @@ MPI_Vector<container> MPI_FieldAligned<G,M,C, container>::evaluate( BinaryOp bin
 }
 
 template<class G, class M, class C, class container>
-void MPI_FieldAligned<G,M,C, container>::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
+void FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::einsPlus( const MPI_Vector<container>& f, MPI_Vector<container>& fplus ) 
 {
     //dg::blas2::detail::doSymv( plus, f, fplus, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     const container& in = f.data();
@@ -539,7 +539,7 @@ void MPI_FieldAligned<G,M,C, container>::einsPlus( const MPI_Vector<container>& 
 }
 
 template<class G,class M, class C, class container>
-void MPI_FieldAligned<G,M,C,container>::einsMinus( const MPI_Vector<container>& f, MPI_Vector<container>& fminus ) 
+void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsMinus( const MPI_Vector<container>& f, MPI_Vector<container>& fminus ) 
 {
     const container& in = f.data();
     container& out = fminus.data();
@@ -610,7 +610,7 @@ void MPI_FieldAligned<G,M,C,container>::einsMinus( const MPI_Vector<container>& 
     }
 }
 template< class G, class M, class C, class container>
-void MPI_FieldAligned<G,M,C,container>::einsMinusT( const MPI_Vector<container>& f, MPI_Vector<container>& fpe)
+void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsMinusT( const MPI_Vector<container>& f, MPI_Vector<container>& fpe)
 {
     //dg::blas2::detail::doSymv( minusT, f, fpe, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     const container& in = f.data();
@@ -684,7 +684,7 @@ void MPI_FieldAligned<G,M,C,container>::einsMinusT( const MPI_Vector<container>&
     }
 }
 template< class G,class M, class C, class container>
-void MPI_FieldAligned<G,M,C,container>::einsPlusT( const MPI_Vector<container>& f, MPI_Vector<container>& fme)
+void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsPlusT( const MPI_Vector<container>& f, MPI_Vector<container>& fme)
 {
     //dg::blas2::detail::doSymv( plusT, f, fme, MPIMatrixTag(), MPIVectorTag(), MPIVectorTag());
     const container& in = f.data();

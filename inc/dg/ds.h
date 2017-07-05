@@ -467,8 +467,8 @@ struct MatrixTraits< DS<F,M, V> >
 typedef dg::DS<dg::FieldAligned<dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> DDS;//!< device DS type
 typedef dg::DS<dg::FieldAligned<dg::CylindricalGrid3d<dg::HVec>, dg::IHMatrix, dg::HVec>, dg::HMatrix, dg::HVec> HDS; //!< host DS type
 #ifdef MPI_VERSION
-typedef dg::DS< dg::MPI_FieldAligned<dg::CylindricalMPIGrid3d<dg::MDVec>, dg::IDMatrix, dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec>, dg::MDMatrix, dg::MDVec > MDDS; //!< MPI device DS type
-typedef dg::DS< dg::MPI_FieldAligned<dg::CylindricalMPIGrid3d<dg::MHVec>, dg::IHMatrix, dg::BijectiveComm< dg::iHVec, dg::HVec >, dg::HVec>, dg::MHMatrix, dg::MHVec > MHDS; //!< MPI host DS type
+typedef dg::DS< dg::FieldAligned<dg::CylindricalMPIGrid3d<dg::MDVec>, dg::RowDistMat<dg::IDMatrix, dg::BijectiveComm< dg::iDVec, dg::DVec > >, dg::MPI_Vector<dg::DVec> >, dg::MDMatrix, dg::MDVec > MDDS; //!< MPI device DS type
+typedef dg::DS< dg::FieldAligned<dg::CylindricalMPIGrid3d<dg::MHVec>, dg::RowDistMat<dg::IHMatrix, dg::BijectiveComm< dg::iHVec, dg::HVec > >, dg::MPI_Vector<dg::HVec> >, dg::MHMatrix, dg::MPI_Vector<dg::MHVec>  > MHDS; //!< MPI host DS type
 #endif //MPI_VERSION
 ///@}
 
