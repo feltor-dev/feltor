@@ -18,6 +18,7 @@ namespace dg
  communicate (e.g. boundary points in matrix-vector multiplications) and use
  the existing blas functions for the local computations. 
  * (At the blas level 1 level communication is needed for scalar products)
+ * @note Don't start looking for ghostcells, there aren't any
  * @tparam container underlying local container class
  */
 template<class container>

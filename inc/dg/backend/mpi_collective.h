@@ -161,6 +161,9 @@ void Collective::gather_( const thrust::host_vector<double>& gatherFrom, thrust:
  * @ingroup mpi_structures
  * @brief Struct that performs collective scatter and gather operations across processes
  * on distributed vectors using mpi
+ * In the bijective operations every element in a vector belongs to 
+ exactly one MPI process, i.e. one value is not sent to more than 
+ one process and the reduction in the send_and_reduce is not necessary
  *
  * @code
  int i = myrank;

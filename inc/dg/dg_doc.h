@@ -25,8 +25,10 @@
  *     @}
  *     @defgroup sparsematrix Sparse matrix formats
  *     @defgroup mpi_structures MPI backend functionality
+ *             The general idea is to separate global communication from local parallelization and thus 
+ *             readily reuse the existing, optimized library for the local part
  *     @defgroup typedefs Typedefs
-       Useful type definitions for easy programming
+ *          Useful type definitions for easy programming
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * These algorithms make use only of blas level 1 and 2 functions
