@@ -65,7 +65,7 @@ std::vector<double> coefficients( double xn, unsigned n)
 
 }//namespace detail
 ///@endcond
-///@addtogroup utilities
+///@addtogroup interpolation
 ///@{
 /**
  * @brief Create interpolation matrix
@@ -510,6 +510,7 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
  * @param v The vector to interpolate in LSPACE
  * @param g The Grid on which to operate
  *
+ * @ingroup interpolation
  * @return interpolated point
  */
 double interpolate( double x, double y,  const thrust::host_vector<double>& v, const Grid2d& g )

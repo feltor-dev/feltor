@@ -52,17 +52,13 @@
  *             use the product space. We choose x to be the contiguous direction.
  *             The first elements of the resulting vector lie in the cell at (x0,y0) and the last
  *             in (x1, y1).
- *         @defgroup functions Functions and Functors
- *
- *             The functions are useful mainly in the constructor of Operator objects. 
- *             The functors are useful for either vector transformations or
- *             as init functions in the evaluate routines.
  *         @defgroup lowlevel Lowlevel helper functions and classes
  *             Low level helper routines.
  *         @defgroup highlevel Weight functions
  *         @defgroup creation Discrete derivatives 
  *
  *             High level matrix creation functions
+           @defgroup interpolation Interpolation and projection
  *         @defgroup scatter Scatter
  *     @}
  *     @defgroup geometry Geometric grids and operations
@@ -72,7 +68,7 @@
       @{
           @defgroup basicgrids Basic grids
  *        @defgroup utilities Fieldalignment and Averaging
- *            Utilities that might come in handy at some place or the other.
+ *            The classes to perform field line integration for DS and averaging classes
       @}
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes
@@ -85,6 +81,15 @@
  * @}
  * @defgroup templates Level 99: Template models
    Documentation for template models
+ * @defgroup misc Level 00: Miscellaneous additions
+   @{
+ *     @defgroup functions Functions and Functors
+ * 
+ *         The functions are useful mainly in the constructor of Operator objects. 
+ *         The functors are useful for either vector transformations or
+ *         as init functions in the evaluate routines.
+       @defgroup timer Timer class
+   @}
  * 
  */
 /*! @mainpage

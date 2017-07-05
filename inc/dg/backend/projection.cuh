@@ -10,7 +10,7 @@
   contains creation of projection matrices
  */
 namespace dg{
-///@addtogroup utilities
+///@addtogroup interpolation
 ///@{
 
 namespace create{
@@ -100,8 +100,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid2d& g
  of the projected vector will be conserved and the difference in the L2 norm 
  between old and new vector small. 
  * 
- * @param g_new The new grid 
- * @param g_old The old grid
+ * @param g_new The new (coarse) grid 
+ * @param g_old The old (fine) grid
  *
  * @return transposed interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
@@ -159,8 +159,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid3d& g
  of the projected vector will be conserved and the difference in the L2 norm 
  between old and new vector small. 
  * 
- * @param g_new The new grid 
- * @param g_old The old grid
+ * @param g_new The new (coarse) grid 
+ * @param g_old The old (fine) grid
  *
  * @return transposed interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
@@ -193,10 +193,10 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid3d& g_ne
     return A;
 }
 
+///@}
 
 }//namespace create
 
-///@}
 
 
 
