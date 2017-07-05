@@ -56,7 +56,7 @@ $ ./blas_b
 ```
 and when prompted for input vector sizes type for example
 `3 100 100 10`
-which makes a grid with 3 polynomial coefficients, 100 cells in x, 100 cells in y and 10 in z. 
+which makes a grid with 3 polynomial coefficients, 100 cells in x, 100 cells in y and 10 in z. If you compiled for OpenMP, you can set the number of threads with e.g. `export OMP_NUM_THREADS=4`.
 > Go ahead and play around and see what happens. You can compile and run any other program that ends in `_t.cu` or `_b.cu` in `feltor/inc/dg` in this way. 
 
 Now, let us test the mpi setup 
@@ -75,7 +75,7 @@ Run the code with
 then tell how many process you want to use in the x-, y- and z- direction, for example:
 `2 2 1` (i.e. 2 procs in x, 2 procs in y and 1 in z; total number of procs is 4)
 when prompted for input vector sizes type for example
-`3 100 100 10` (number of cells divided by number of procs must be an integer number)
+`3 100 100 10` (number of cells divided by number of procs must be an integer number). If you compiled for MPI+OpenMP, you can set the number of OpenMP threads with e.g. `export OMP_NUM_THREADS=2`.
 
 Now, we want to compile a simulation program. First, we have to download and install some libraries for I/O-operations.
 
@@ -84,19 +84,25 @@ Our JSON input files are parsed by [JsonCpp](https://www.github.com/open-source-
 > Some desktop applications in FELTOR use the [draw library]( https://github.com/mwiesenberger/draw) (developed by us also under MIT), which depends on OpenGL (s.a. [installation guide](http://en.wikibooks.org/wiki/OpenGL_Programming)) and [glfw](http://www.glfw.org), an OpenGL development library under a BSD-like license. You don't need these when you are on a cluster. 
 
  
-As in Step 3 you need to create links to the draw and the jsoncpp library in your include folder or provide the paths in your config file. 
+As in Step 3 you need to create links to the jsoncpp library include path (and optionally the draw library) in your include folder or provide the paths in your config file. We are ready to compile now
 
 ```sh
  $ cd path/to/feltor/src/toefl # or any other project in the src folder
  
- $ make toeflR device=gpu # (for a live simulation on gpu with glfw output)
+ $ make toeflR device=gpu     # (compile on gpu or omp)
+ $ ./toeflR <inputfile.json>  # (behold a live simulation with glfw output on screen)
  # or
- $ make toefl_hpc device=gpu # (for a simulation on gpu with output stored to disc)
+ $ make toefl_hpc device=gpu  # (compile on gpu or omp)
+ $ ./toefl_hpc <inputfile.json> <outputfile.nc> # (a single node simulation with output stored in a file)
  # or
- $ make toefl_mpi device=omp  # (for an mpi simulation with output stored to disc)
+ $ make toefl_mpi device=omp  # (compile on gpu or omp)
+ $ export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI) 
+ $ echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.json>
+ $ # (a multi node simulation with now in total 8 threads with output stored in a file)
+ $ # The mpi program will wait for you to type the number of processes in x and y direction before
+ $ # running. That is why the echo is there. 
 ```
-A default input file is located in `path/to/feltor/src/toefl/input`
-> The mpi program will wait for you to type the number of processes in x and y direction before starting
+A default input file is located in `path/to/feltor/src/toefl/input`. All three programs solve the same equations. For more info and a description of input parameters see [here](https://github.com/feltor-dev/feltor/wiki/The-toefl-project). 
 
 ## 2. Further reading
 Please check out our [Wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information and user oriented documentation. The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) is generated with [Doxygen](http://www.doxygen.org) from source code.
