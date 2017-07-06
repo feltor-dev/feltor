@@ -12,13 +12,13 @@ int main()
 {
     std::cout << "TEST 1D\n";
     unsigned n_old = 4, n_new = 3, N_old = 10, N_new = 1;
-    std::cout << "Type n and N of old (find) grid!\n";
+    std::cout << "Type n and N of old (fine) grid!\n";
     std::cin >> n_old >> N_old;
     std::cout << "Type n and N of new (coarser) grid!\n";
     std::cin >> n_new >> N_new;
     dg::Grid1d go ( 0, M_PI, n_old, N_old);
     dg::Grid1d gn ( 0, M_PI, n_new, N_new);
-    cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::projection( gn, go);
+    cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::transformation( gn, go);
     cusp::coo_matrix<int, double, cusp::host_memory> inte = dg::create::interpolation( gn, go);
     thrust::host_vector<double> v = dg::evaluate( sine, go);
     thrust::host_vector<double> w1do = dg::create::weights( go);
@@ -36,16 +36,10 @@ int main()
     std::cout << "Difference       "<<dg::blas2::dot( oneo, w1do, v) - dg::blas2::dot( onen, w1dn, w) << "\n"<<std::endl;
 
     std::cout << "TEST 2D\n";
-    //n_old = 7, n_new = 3, N_old = 4, N_new = 3;
-    //std::cout << "Type n and N of old (find) grid!\n";
-    //std::cin >> n_old >> N_old;
-    //std::cout << "Type n and N of new (coarser) grid!\n";
-    //std::cin >> n_new >> N_new;
     
-    //old grid is larger than the new grid
     dg::Grid2d g2o (0, M_PI, 0, M_PI, n_old, N_old, N_old);
     dg::Grid2d g2n (0, M_PI, 0, M_PI, n_new, N_new, N_new);
-    cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::projection( g2n, g2o);
+    cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::transformation( g2n, g2o);
     cusp::coo_matrix<int, double, cusp::host_memory> inte2d = dg::create::interpolation( g2n, g2o);
     const dg::HVec sinO = dg::evaluate( sine, g2o), 
                    sinN = dg::evaluate( sine, g2n);
@@ -55,23 +49,13 @@ int main()
     dg::blas2::gemv( proj2d, sinO, sinP);
     std::cout << "Original vector     "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) << "\n";
     std::cout << "Projected vector    "<<sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n";
-    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n" << std::endl;
-    dg::HVec temp(sinP);
-    dg::blas1::axpby(1.,sinN,-1.,sinP,temp);
-    std::cout << "Rel Difference in L2 norm is " << sqrt(dg::blas2::dot( temp, w2dn, temp)/dg::blas2::dot( sinN, w2dn, sinN))<< std::endl;
-    //std::cout << "Difference between two grid evaluations:\n";
-    //std::cout << diff( sinO, sinN)<<" (should converge to zero!) \n";
-    std::cout << "Difference between projection and evaluation      \n";
+    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << std::endl;
+    std::cout << "Difference between projection and evaluation      ";
     dg::blas1::axpby( 1., sinN, -1., sinP);
-    std::cout << dg::blas2::dot( sinP, w2dn, sinP)<<" (smaller than above)\n";
+    std::cout << sqrt(dg::blas2::dot( sinP, w2dn, sinP)/dg::blas2::dot(sinN, w2dn, sinN))<<"\n";
     dg::blas2::gemv( inte2d, sinO, sinP);
-    std::cout << "Original vector     "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) << "\n";
     std::cout << "Interpolated vec    "<<sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n";
     std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n" << std::endl;
-
-    std::cout << "What you should observe is that the projection does only work if the coarse grid is a division of the fine grid!\n"
-    << "If it works it is better than interpolation in that it conserves the integral value and has smaller L2 errors\n";
-    std::cout << "Interpolation always works!\n";
 
     return 0;
 }

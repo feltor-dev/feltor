@@ -13,6 +13,40 @@ namespace dg{
 ///@addtogroup interpolation
 ///@{
 
+/**
+ * @brief Greatest common divisor
+ *
+ * @param a First number
+ * @param b Second number
+ *
+ * @return greatest common divisor
+ */
+unsigned gcd( unsigned a, unsigned b)
+{
+    unsigned r2 = std::max(a,b);
+    unsigned r1 = std::min(a,b);
+    while( r1!=0)
+    {
+        r2 = r2%r1;
+        std::swap( r1, r2);
+    }
+    return r2;
+}
+
+/**
+ * @brief Least common multiple
+ *
+ * @param a Fist number
+ * @param b Second number 
+ *
+ * @return Least common multiple
+ */
+unsigned lcm( unsigned a, unsigned b)
+{
+    unsigned g = gcd( a,b);
+    return a/g*b;
+}
+
 namespace create{
 
 /**
@@ -193,6 +227,99 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid3d& g_ne
     return A;
 }
 
+/**
+ * @brief Create a transformation matrix between two grids
+ *
+ * The transformation matrix is probably the most correct way of 
+ transforming dG vectors between two grids of differen resolution. 
+ It first finds the least common multiple grid (lcm) of the old and the new grid. Then
+ it interpolates the values to the lcm grid and finally projects them back to
+ the new grid. In total we have
+ \f[
+ \mathcal T = P Q 
+ \f] 
+ where \f$ Q\f$ is the interpolation matrix and \f$ P \f$ the projection. If either new or
+ old grid is already the lcm grid this function reduces to the interpolation/projection function. 
+ * 
+ * @param g_new The new grid 
+ * @param g_old The old grid
+ *
+ * @return transformation matrix
+ * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @note If the grid are very incompatible the matrix-matrix multiplication can take a while
+ */
+cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid3d& g_new, const Grid3d& g_old)
+{
+    Grid3d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), g_new.z0(), g_new.z1(), 
+                 lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()), 
+                 lcm(g_new.Nz(), g_old.Nz()));
+    cusp::coo_matrix< int, double, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
+    cusp::coo_matrix< int, double, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
+    cusp::multiply( P, Q, Y);
+    Y.sort_by_row_and_column();
+    return Y;
+}
+/**
+ * @brief Create a transformation matrix between two grids
+ *
+ * The transformation matrix is probably the most correct way of 
+ transforming dG vectors between two grids of differen resolution. 
+ It first finds the least common multiple grid (lcm) of the old and the new grid. Then
+ it interpolates the values to the lcm grid and finally projects them back to
+ the new grid. In total we have
+ \f[
+ \mathcal T = P Q 
+ \f] 
+ where \f$ Q\f$ is the interpolation matrix and \f$ P \f$ the projection. If either new or
+ old grid is already the lcm grid this function reduces to the interpolation/projection function. 
+ * 
+ * @param g_new The new grid 
+ * @param g_old The old grid
+ *
+ * @return transformation matrix
+ * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @note If the grid are very incompatible the matrix-matrix multiplication can take a while
+ */
+cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid2d& g_new, const Grid2d& g_old)
+{
+    Grid2d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), 
+                 lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()));
+    cusp::coo_matrix< int, double, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
+    cusp::coo_matrix< int, double, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
+    cusp::multiply( P, Q, Y);
+    Y.sort_by_row_and_column();
+    return Y;
+}
+/**
+ * @brief Create a transformation matrix between two grids
+ *
+ * The transformation matrix is probably the most correct way of 
+ transforming dG vectors between two grids of differen resolution. 
+ It first finds the least common multiple grid (lcm) of the old and the new grid. Then
+ it interpolates the values to the lcm grid and finally projects them back to
+ the new grid. In total we have
+ \f[
+ \mathcal T = P Q 
+ \f] 
+ where \f$ Q\f$ is the interpolation matrix and \f$ P \f$ the projection. If either new or
+ old grid is already the lcm grid this function reduces to the interpolation/projection function. 
+ * 
+ * @param g_new The new grid 
+ * @param g_old The old grid
+ *
+ * @return transformation matrix
+ * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @note If the grid are very incompatible the matrix-matrix multiplication can take a while
+ */
+cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid1d& g_new, const Grid1d& g_old)
+{
+    Grid1d g_lcm(g_new.x0(), g_new.x1(), lcm(g_new.n(), g_old.n()), lcm(g_new.N(), g_old.N()));
+    cusp::coo_matrix< int, double, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
+    cusp::coo_matrix< int, double, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
+    cusp::multiply( P, Q, Y);
+    Y.sort_by_row_and_column();
+    return Y;
+}
 ///@}
 
 }//namespace create
