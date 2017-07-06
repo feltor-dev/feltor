@@ -534,8 +534,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> projection( const Grid2d& g_coa
     assert( g_coarse.x1() <= g_fine.x1());
     assert( g_coarse.y0() >= g_fine.y0());
     assert( g_coarse.y1() <= g_fine.y1());
-    assert( g_fine.Nx() % g_coarse.Nx() == 0);
-    assert( g_fine.Ny() % g_coarse.Ny() == 0);
+    //assert( g_fine.Nx() % g_coarse.Nx() == 0);
+    //assert( g_fine.Ny() % g_coarse.Ny() == 0);
 
     unsigned num_cellsX = g_fine.Nx() / g_coarse.Nx();
     unsigned num_cellsY = g_fine.Ny() / g_coarse.Ny();
