@@ -5,19 +5,16 @@
 #include <cmath>
 
 #include <mpi.h> //activate mpi
-#include <netcdf_par.h>
 
 #include "dg/algorithm.h"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/interpolation.cuh"
-#include "file/read_input.h"
+
+#include "netcdf_par.h" //exclude if par netcdf=OFF
 #include "file/nc_utilities.h"
 
-#include "solovev/geometry.h"
-
 #include "feltor/feltor.cuh"
-#include "feltor/parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -26,7 +23,8 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
-typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
+typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
+using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
@@ -46,8 +44,8 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    Json::Reader reader;
+    Json::Value js, gs;
     if( argc != 4)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
@@ -55,22 +53,16 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-            v = file::read_input( argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            if(rank==0)m.display();
-            if(rank==0) std::cout << input << std::endl;
-            if(rank==0) std::cout << geom << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( v);
-    if(rank==0) p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
-    if(rank==0) gp.display( std::cout);
+    const eule::Parameters p( js);
+    const dg::geo::solovev::GeomParameters gp(gs);
+    if(rank==0)p.display( std::cout);
+    if(rank==0)gp.display( std::cout);
+    std::string input = js.toStyledString(), geom = gs.toStyledString();
     ////////////////////////////////set up computations///////////////////////////
     
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
@@ -80,37 +72,40 @@ int main( int argc, char* argv[])
    
     //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
 
-    dg::CylindricalMPIGrid<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, comm);  
-    dg::CylindricalMPIGrid<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, p.bc, p.bc, dg::PER, comm);  
+    dg::CylindricalMPIGrid3d<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, comm);  
+    dg::CylindricalMPIGrid3d<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, p.bc, p.bc, dg::PER, comm);  
      
     if(rank==0)std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
     if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    eule::Rolkar< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
-    /////////////////////The initial field////////////////////////////////////////////
+    /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p, gp); //initial background profile
+    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
     std::vector<dg::MDVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
-
     //initial perturbation
-    //dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI/p.Nz, p.sigma, p.sigma, p.sigma, p.amp);
-//     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
-    //solovev::ZonalFlow init0(p, gp);
-//     dg::CONSTANT init0( 0.);
-
-    //averaged field aligned initializer
-    //dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-    //y1[1] = feltor.dz().evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-
-    //no field aligning
-    y1[1] = dg::evaluate( init0, grid);
+    if (p.mode == 0  || p.mode ==1) 
+    { 
+        dg::Gaussian3d init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+        y1[1] = dg::evaluate( init0, grid);
+    }
+    if (p.mode == 2) 
+    { 
+        dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
+        y1[1] = dg::evaluate( init0, grid);
+    }
+    if (p.mode == 3) 
+    { 
+        dg::geo::ZonalFlow<Psip> init0(p.amp, p.k_psi, gp, Psip(gp));
+        y1[1] = dg::evaluate( init0, grid);
+    }
 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+    dg::MDVec damping = dg::evaluate( dg::geo::GaussianProfXDamping<Psip>(Psip(gp), gp), grid);
+    dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     feltor.initializene(y0[1],y0[0]);    
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
@@ -123,18 +118,20 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid);
+    err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
+//     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid); //MPI OFF
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile",  geom.size(), geom.data());
     int dimids[4], tvarID;
     {
-        dg::Grid3d<double> global_grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out);  
+        dg::Grid3d global_grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out);  
         err = file::define_dimensions( ncid, dimids, &tvarID, global_grid_out);
 
 
-        solovev::FieldR fieldR(gp);
-        solovev::FieldZ fieldZ(gp);
-        solovev::FieldP fieldP(gp);
+        MagneticField c(gp);
+        dg::geo::FieldR<MagneticField> fieldR(c, gp.R_0);
+        dg::geo::FieldZ<MagneticField> fieldZ(c, gp.R_0);
+        dg::geo::FieldP<MagneticField> fieldP(c, gp.R_0);
         dg::HVec vecR = dg::evaluate( fieldR, global_grid_out);
         dg::HVec vecZ = dg::evaluate( fieldZ, global_grid_out);
         dg::HVec vecP = dg::evaluate( fieldP, global_grid_out);
@@ -185,18 +182,20 @@ int main( int argc, char* argv[])
     MPI_Cart_get( comm, 3, dims, periods, coords);
     size_t count[4] = {1, grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
-    dg::MDVec transferD( dg::evaluate(dg::zero, grid));
+    dg::MDVec transfer( dg::evaluate(dg::zero, grid));
+    dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));
     dg::HVec transferH( dg::evaluate(dg::zero, grid_out.local()));
-    //create local interpolation matrix
-    cusp::csr_matrix<int, double, cusp::host_memory> interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
+    dg::IDMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); //create local interpolation matrix
     if(rank==0)std::cout << "First output ...\n";
     for( unsigned i=0; i<4; i++)
     {
-        dg::blas2::symv( interpolate, y0[i].data(), transferH);
+        dg::blas2::gemv( interpolate, y0[i].data(), transferD);
+        dg::blas1::transfer( transferD, transferH);
         err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
     }
-    transferD = feltor.potential()[0];
-    dg::blas2::symv( interpolate, transferD.data(), transferH);
+    transfer = feltor.potential()[0];
+    dg::blas2::gemv( interpolate, transfer.data(), transferD);
+    dg::blas1::transfer( transferD, transferH);    
     err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data());
     double time = 0;
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
@@ -272,11 +271,13 @@ int main( int argc, char* argv[])
         start[0] = i;
         for( unsigned j=0; j<4; j++)
         {
-            dg::blas2::symv( interpolate, y0[j].data(), transferH);
+            dg::blas2::gemv( interpolate, y0[j].data(), transferD);
+            dg::blas1::transfer( transferD, transferH);
             err = nc_put_vara_double( ncid, dataIDs[j], start, count, transferH.data());
         }
-        transferD = feltor.potential()[0];
-        dg::blas2::symv( interpolate, transferD.data(), transferH);
+        transfer = feltor.potential()[0];
+        dg::blas2::gemv( interpolate, transfer.data(), transferD);
+        dg::blas1::transfer( transferD, transferH);        
         err = nc_put_vara_double( ncid, dataIDs[4], start, count, transferH.data() );
         err = nc_put_vara_double( ncid, tvarID, start, count, &time);
 

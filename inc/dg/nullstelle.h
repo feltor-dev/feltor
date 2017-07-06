@@ -8,34 +8,12 @@
 
 #include <exception>
 #include <math.h>
+#include "exceptions.h"
 namespace dg{
 
-/**
- * @brief Class you might want to throw in case of a non convergence
+/*! @brief Exception class, that stores boundaries for 1D root finding
  *
- * @ingroup utilities
- */
-struct Ooops : public std::exception
-{
-
-    /**
-     * @brief Construct from error string
-     *
-     * @param c error string
-     */
-    Ooops( const char * c): c_( c) {}
-    /**
-     * @brief What string
-     *
-     * @return error string 
-     */
-    char const* what() const throw(){ return c_;}
-  private:
-    const char* c_;
-};
-/*! @brief Exception class, that stores boundaries for 1D root finding 
- *
- * @ingroup utilities
+ * @ingroup numerical0
  */
 class KeineNST_1D: public std::exception
 {
@@ -66,7 +44,7 @@ class KeineNST_1D: public std::exception
 
 /*! @brief Find a root of a 1d function in given boundaries
  *
- * @ingroup utilities
+ * @ingroup root
  * It is assumed that a sign change occurs at the root.
  * Function jumps closer to the root by checking the sign. 
  * \tparam UnaryOp unary function operator

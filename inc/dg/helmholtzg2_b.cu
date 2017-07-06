@@ -32,7 +32,7 @@ int main()
     unsigned n, Nx, Ny, Nz; 
     std::cout << "Type n, Nx Ny and Nz\n";
     std::cin >> n>> Nx >> Ny >> Nz;
-    dg::Grid2d<double> grid2d( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny,dg::DIR,dg::PER);
+    dg::Grid2d grid2d( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny,dg::DIR,dg::PER);
     const dg::DVec w2d = dg::create::weights( grid2d);
     const dg::DVec v2d = dg::create::inv_weights( grid2d);
     const dg::DVec one = dg::evaluate( dg::one, grid2d);
@@ -45,8 +45,8 @@ int main()
 
     const dg::DVec chi = dg::evaluate( dg::LinearX(1.0,1.0), grid2d);
     
-    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered);
-    dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2barinv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered);
+    dg::Helmholtz< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma1inv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha ,dg::centered, 1);
+    dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2barinv(grid2d,grid2d.bcx(),grid2d.bcy(), alpha,dg::centered, 1);
     dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2tilde(grid2d,grid2d.bcx(), grid2d.bcy(), dg::normed, dg::centered);
     gamma2barinv.set_chi(chi); 
 //     gamma2barinv.set_chi(one); 
@@ -94,7 +94,7 @@ int main()
     
 /*    
     std::cout << "Test 3d cylincdrical norm:\n";
-    dg::Grid3d<double> g3d( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical);
+    dg::Grid3d g3d( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical);
     dg::DVec fct_ = dg::evaluate(fct, g3d );
     dg::DVec laplace_fct_ = dg::evaluate( laplace_fct, g3d);
     dg::DVec helmholtz_fct_ = dg::evaluate( helmholtz_fct, g3d);
@@ -109,7 +109,24 @@ int main()
     dg::blas1::axpby( 1., helmholtz_fct_, -1, temp_);
     std::cout << "error " << sqrt( dg::blas2::dot( helmholtz.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;*/
 
+    std::cout << "Alternative test with two Helmholtz operators\n";
+    gamma1inv.set_chi( chi);
+    dg::DVec phi(x_.size(), 0.);
+    dg::blas1::scal(x_,0.); //x_=0
+    dg::Invert<dg::DVec> invertO( x_, grid2d.size(), eps/100);
+    dg::Invert<dg::DVec> invertOO( x_, grid2d.size(), eps/100);
+    t.tic();
+    unsigned number1 = invertO( gamma1inv, phi, rholap);
+    dg::blas1::pointwiseDot( phi, chi, phi);
+    unsigned number2 = invertOO( gamma1inv, x_, phi);
+    t.toc();
+    //Evaluation
+    dg::blas1::axpby( 1., sol, -1., x_);
 
+    std::cout << "number of iterations:  "<<number1<<" and "<<number2<<std::endl;
+    std::cout << "abs error " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
+    std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, x_)/ dg::blas2::dot( w2d, sol))<<std::endl;
+    std::cout << "took  " << t.diff()<<"s"<<std::endl;
 
     //Tests GAMMA2
 

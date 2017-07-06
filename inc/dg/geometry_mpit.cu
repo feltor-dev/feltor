@@ -43,7 +43,7 @@ int main( int argc, char* argv[] )
 
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
-    dg::CylindricalMPIGrid<dg::MDVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::PER, dg::PER, dg::PER, comm);
+    dg::CylindricalMPIGrid3d<dg::MDVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::PER, dg::PER, dg::PER, comm);
 
     dg::MDVec b = dg::evaluate( sine, grid);
     dg::MDVec vol3d = dg::create::volume( grid);

@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "blas.h"
+#include "functors.h"
 
 #ifdef DG_BENCHMARK
 #include "backend/timer.cuh"
@@ -21,7 +22,7 @@ namespace dg{
 * @brief Functor class for the preconditioned conjugate gradient method to solve
 * \f[ Ax=b\f]
 *
- @ingroup algorithms
+ @ingroup invert
  @tparam Vector The Vector class: needs to model Assignable 
 
  The following 3 pseudo - BLAS routines need to be callable 
@@ -91,12 +92,37 @@ class CG
      * @param P The preconditioner to be used
      * @param eps The relative error to be respected
      * @param nrmb_correction Correction factor C for norm of b
+     * @attention This versions uses the Preconditioner to compute the norm for the error condition (this safes one scalar product)
      *
      * @return Number of iterations used to achieve desired precision
      */
     template< class Matrix, class Preconditioner >
     unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
     //version of CG where Preconditioner is not trivial
+    /**
+     * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
+     *
+     * The iteration stops if \f$ ||Ax||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is 
+     * a correction factor to the absolute error and \f$ S \f$ defines a square norm
+     @tparam Matrix The matrix class: no requirements except for the 
+            BLAS routines
+     @tparam Preconditioner no requirements except for the blas routines. Thus far the dg library
+        provides only diagonal preconditioners, which should be enough if the result is extrapolated from
+        previous timesteps.
+     @tparam SquareNorm  (usually is the same as the container class)
+
+     * In every iteration the following BLAS functions are called: \n
+       symv 1x, dot 1x, axpby 2x, Prec. dot 1x, Prec. symv 1x
+     * @param A A symmetric positive definit matrix
+     * @param x Contains an initial value on input and the solution on output.
+     * @param b The right hand side vector. x and b may be the same vector.
+     * @param P The preconditioner to be used
+     * @param S Weights used to compute the norm for the error condition
+     * @param eps The relative error to be respected
+     * @param nrmb_correction Correction factor C for norm of b
+     *
+     * @return Number of iterations used to achieve desired precision
+     */
     template< class Matrix, class Preconditioner, class SquareNorm >
     unsigned operator()( Matrix& A, Vector& x, const Vector& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
@@ -141,7 +167,6 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
         blas1::axpby( 1., b, 0., x);
         return 0;
     }
-    //r = b; blas2::symv( -1., A, x, 1.,r); //compute r_0 
     blas2::symv( A,x,r);
     blas1::axpby( 1., b, -1., r);
     blas2::symv( P, r, p );//<-- compute p_0
@@ -155,6 +180,14 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
         blas2::symv( A, p, ap);
         alpha = nrm2r_old /blas1::dot( p, ap);
         blas1::axpby( alpha, p, 1.,x);
+	        //here one could add a ifstatement to remove accumulated floating point error
+//             if (i % 100==0) {
+//                   blas2::symv( A,x,r); 
+//                   blas1::axpby( 1., b, -1., r); 
+//             }
+//             else {
+//                   blas1::axpby( -alpha, ap, 1., r);
+//             }
         blas1::axpby( -alpha, ap, 1., r);
         nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
@@ -171,6 +204,7 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
             return i;
         blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
         nrm2r_old=nrm2r_new;
+
     }
     return max_iter;
 }
@@ -198,6 +232,7 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
     }
     blas2::symv( A,x,r);
     blas1::axpby( 1., b, -1., r);
+    //note that dot does automatically synchronize
     if( sqrt( blas2::dot(S,r) ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
         return 0;
     blas2::symv( P, r, p );//<-- compute p_0
@@ -221,11 +256,9 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
 #endif //DG_DEBUG
         if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction)) 
             return i;
-
         blas2::symv(P,r,ap);
         nrmzr_new = blas1::dot( ap, r); 
         blas1::axpby(1.,ap, nrmzr_new/nrmzr_old, p );
-
         nrmzr_old=nrmzr_new;
     }
     return max_iter;
@@ -238,20 +271,22 @@ unsigned CG< Vector>::operator()( Matrix& A, Vector& x, const Vector& b, Precond
  * Solve a symmetric linear inversion problem using a conjugate gradient method and 
  * the last two solutions.
  *
- * @ingroup algorithms
+ * @ingroup invert
  * Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
  * for any operator \f$\hat O\f$ that was made symmetric 
  * by appropriate weights \f$W\f$ (s. comment below). 
  * It uses solutions from the last two calls to 
  * extrapolate a solution for the current call.
  * @tparam container The Vector class to be used
- * @note A note on weights and preconditioning. 
+ * @note A note on weights, inverse weights and preconditioning. 
  * A normalized DG-discretized derivative or operator is normally not symmetric. 
  * The diagonal coefficient matrix that is used to make the operator 
  * symmetric is called weights W, i.e. \f$ \hat O = W\cdot O\f$ is symmetric. 
+ * Now, to compute the correct scalar product of the right hand side the
+ * inverse weights have to be used i.e. \f$ W\rho\cdot W \rho /W\f$.
  * Independent from this, a preconditioner should be used to solve the
- * symmetric matrix equation. Most often the inverse of \f$W\f$ is 
- * a good preconditioner. 
+ * symmetric matrix equation. The inverse of \f$W\f$ is 
+ * a good general purpose preconditioner. 
  */
 template<class container>
 struct Invert
@@ -372,13 +407,16 @@ struct Invert
      * @param op selfmade symmetric Matrix operator class
      * @param phi solution (write only)
      * @param rho right-hand-side
+     * @note computes inverse weights from the weights 
      *
      * @return number of iterations used 
      */
     template< class SymmetricOp >
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho)
     {
-        return this->operator()(op, phi, rho, op.weights(), op.precond());
+        container inv_weights( op.weights());
+        dg::blas1::transform( inv_weights, inv_weights, dg::INVERT<double>());
+        return this->operator()(op, phi, rho, op.weights(), op.precond(), inv_weights);
     }
 
     /**
@@ -394,11 +432,38 @@ struct Invert
      * @param rho right-hand-side
      * @param w The weights that made the operator symmetric
      * @param p The preconditioner  
+     * @note computes inverse weights from the weights 
      *
      * @return number of iterations used 
      */
     template< class SymmetricOp, class Preconditioner >
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const container& w, Preconditioner& p)
+    {
+        container inv_weights( w);
+        dg::blas1::transform( inv_weights, inv_weights, dg::INVERT<double>());
+        return this->operator()(op, phi, rho, w, p, inv_weights);
+    }
+
+    /**
+     * @brief Solve linear problem
+     *
+     * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
+     * conjugate gradient method. The initial guess comes from an extrapolation 
+     * of the last solutions.
+     * @tparam SymmetricOp Symmetric matrix or operator (with the selfmade tag)
+     * @tparam Preconditioner class of the Preconditioner
+     * @param op selfmade symmetric Matrix operator class
+     * @param phi solution (write only)
+     * @param rho right-hand-side
+     * @param w The weights that made the operator symmetric
+     * @param p The preconditioner  
+     * @param inv_weights The inverse weights used to compute the scalar product in the CG solver
+     * @note Calls the most general form of the CG solver with SquareNorm being the container class
+     *
+     * @return number of iterations used 
+     */
+    template< class SymmetricOp, class Preconditioner >
+    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const container& w, Preconditioner& p, const container& inv_weights)
     {
         assert( phi0.size() != 0);
         assert( &rho != &phi);
@@ -417,10 +482,10 @@ struct Invert
         if( multiplyWeights_ ) 
         {
             dg::blas2::symv( w, rho, phi2);
-            number = cg( op, phi, phi2, p, eps_, nrmb_correction_);
+            number = cg( op, phi, phi2, p, inv_weights, eps_, nrmb_correction_);
         }
         else
-            number = cg( op, phi, rho, p, eps_, nrmb_correction_);
+            number = cg( op, phi, rho, p, inv_weights, eps_, nrmb_correction_);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
         if(rank==0)
@@ -451,6 +516,7 @@ struct Invert
  * @brief This struct holds a matrix and applies its inverse to vectors 
  *
  * The inverse is computed with a conjugate gradient method
+ * @ingroup invert
  * @tparam SymmetricOp A symmetric Matrix type
  * @tparam container The container type to use
  */
@@ -494,7 +560,7 @@ struct MatrixTraits< Inverse< M, V > >
 /**
  * @brief Function version of CG class
  *
- * @ingroup algorithms
+ * @ingroup invert 
  * @tparam Matrix Matrix type
  * @tparam Vector Vector type (must be constructible from given size)
  * @tparam Preconditioner Preconditioner type

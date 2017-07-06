@@ -14,7 +14,7 @@ namespace dg
 /**
  * @brief Class you might want to throw in case of a non convergence
  *
- * @ingroup utilities
+ * @ingroup numerical0
  */
 struct Fail : public std::exception
 {
@@ -39,6 +39,30 @@ struct Fail : public std::exception
     char const* what() const throw(){ return "Failed to converge";}
   private:
     double eps;
+};
+
+/**
+ * @brief Class you might want to throw in case something goes wrong
+ *
+ * @ingroup numerical0
+ */
+struct Ooops : public std::exception
+{
+
+    /**
+     * @brief Construct from error string
+     *
+     * @param c error string
+     */
+    Ooops( const char * c): c_( c) {}
+    /**
+     * @brief What string
+     *
+     * @return error string
+     */
+    char const* what() const throw(){ return c_;}
+  private:
+    const char* c_;
 };
 
 }//namespace dg

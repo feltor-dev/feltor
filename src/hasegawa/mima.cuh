@@ -10,12 +10,14 @@
 #endif
 
 
+//@note This is an old copy of the toefl project and shouldn't be taken as a basis for a new project
+
 namespace dg
 {
 template< class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
+    Diffusion( const dg::Grid2d& g, double nu): nu_(nu),
         w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()), LaplacianM( g, dg::normed, dg::centered) {
         }
     void operator()( const container& x, container& y)
@@ -32,7 +34,7 @@ struct Diffusion
     double nu_;
     const container w2d, v2d;
     container temp;
-    Elliptic<Matrix, container, container> LaplacianM;
+    Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM;
 };
 
 
@@ -55,7 +57,7 @@ struct Mima
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    Mima( const Grid2d<value_type>& g, double kappa, double eps, bool global);
+    Mima( const Grid2d& g, double kappa, double eps, bool global);
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -82,18 +84,18 @@ struct Mima
     container dxxphi, dxyphi;
 
     //matrices and solvers
-    Elliptic<Matrix, container, container> laplaceM;
-    ArakawaX< Matrix, container> arakawa; 
+    Elliptic<dg::CartesianGrid2d, Matrix, container> laplaceM;
+    ArakawaX<dg::CartesianGrid2d, Matrix, container> arakawa; 
     const container w2d, v2d;
     Invert<container> invert;
-    Helmholtz<Matrix, container, container> helmholtz;
+    Helmholtz<dg::CartesianGrid2d, Matrix, container> helmholtz;
 
 
 
 };
 
 template< class M, class container>
-Mima< M, container>::Mima( const Grid2d<value_type>& grid, double kappa, double eps, bool global ): 
+Mima< M, container>::Mima( const Grid2d& grid, double kappa, double eps, bool global ): 
     kappa( kappa), global(global),
     phi( grid.size(), 0.), dxphi( phi), dyphi( phi), omega(phi),
     dxxphi( phi), dxyphi(phi),

@@ -9,12 +9,9 @@
 //#include "draw/device_window.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
-#include "file/read_input.h"
 
 #include "feltor.cuh"
 #include "parameters.h"
-
-
 
 /*
    - reads parameters from input.txt or any other given file, 
@@ -26,44 +23,36 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v2;
-    std::stringstream title;
+    Json::Reader reader;
+    Json::Value js;
     if( argc == 1)
     {
-        try{
-            v = file::read_input("input.txt");
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is("input.json");
+        reader.parse(is,js,false);
     }
     else if( argc == 2)
     {
-        try{
-            v = file::read_input(argv[1]);
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
     }
     else
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
+        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const eule::Parameters p( v);
+    const eule::Parameters p(  js);
     p.display( std::cout);
-
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow(  v2[2]*v2[3]*p.lx/p.ly, v2[1]*v2[4], "");
-    draw::RenderHostData render( v2[1], v2[2]);
-
-
-
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::stringstream title;
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
+    draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
     //////////////////////////////////////////////////////////////////////////
 
     //Make grid
-     dg::Grid2d<double > grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
+    dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
@@ -74,6 +63,7 @@ int main( int argc, char* argv[])
     /////////////////////The initial field///////////////////////////////////////////
     //initial perturbation
     dg::Gaussian init0( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
+
     dg::CONSTANT prof(p.bgprofamp );
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); //Ne,Ni,Te,Ti = prof    
    
@@ -85,7 +75,6 @@ int main( int argc, char* argv[])
     if (p.iso == 0) dg::blas1::axpby( 1.,y0[1], 0., y0[3]); //initialize Ti = N_i
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //= Ni - bg
     std::cout << "intiialize ne" << std::endl;
-
     if( p.init == 0)
         feltor.initializene( y0[1],y0[3], y0[0]);    //ne -bg
     else  
@@ -101,18 +90,14 @@ int main( int argc, char* argv[])
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //Ni
         dg::blas1::pointwiseDot(y0[1],y0[3],y1[3]); // = Ni Ti
         dg::blas1::transform(y1[3], y1[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi = Pi - bg^2
-        if( p.init == 0)
-            feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
+
+        feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
+//         dg::blas1::axpby( 1.,y1[3], 0., y0[2]); //initialize pi = P_i
+
         //compute ti-bg = ((pi-bg^2) +bg^2)/ne -bg
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //=ne    
         dg::blas1::pointwiseDivide(y0[2],y0[0],y0[2]);
-        
-
-        if( p.init != 0){
-            dg::blas1::axpby(0., y0[3], 1., y1[2],y0[3]); //constant temperature
-            dg::blas1::axpby( 1., y0[3], 0., y0[2], y0[2]); //for Omega*=0
-        }
 
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =ne-bg
@@ -238,7 +223,8 @@ int main( int argc, char* argv[])
                          " d E/dt = " << diff <<
                          " Lambda =" << diss <<  std::endl;
  
-            
+                                     std::cout << E1 << std::endl;
+
             E0 = E1;
 
         }

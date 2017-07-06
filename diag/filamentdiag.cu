@@ -12,12 +12,11 @@
 #include "dg/backend/average.cuh"
 #include "dg/functors.h"
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
-#include "solovev/geometry.h"
+#include "dg/geometry.h"
 #include "feltor/parameters.h"
-#include "solovev/init.h"
+#include "geometries/geometries.h"
 
 int main( int argc, char* argv[])
 {
@@ -44,8 +43,12 @@ int main( int argc, char* argv[])
 
     std::cout << "input "<<input<<std::endl;
     std::cout << "geome "<<geom <<std::endl;
-    const eule::Parameters p(file::read_input( input));
-    const solovev::GeomParameters gp(file::read_input( geom));
+    Json::Reader reader;
+    Json::Value js,gs;
+    reader.parse( input, js, false);
+    const eule::Parameters p(js);
+    reader.parse( geom, gs, false);
+    const dg::geo::solovev::GeomParameters gp(gs);
     p.display();
     gp.display();
     /////////////////////////////create Grids and weights//////////////////////////////////
@@ -55,8 +58,8 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Grids
-    dg::Grid3d<double > g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
-    dg::Grid2d<double>  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
+    dg::CylindricalGrid3d<dg::DVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER);  
+    dg::CartesianGrid2d  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
     //--------generate nc file and define dimensions----------------
     int ncidout; 
     err = nc_create(argv[2],NC_NETCDF4|NC_CLOBBER, &ncidout);
@@ -90,16 +93,22 @@ int main( int argc, char* argv[])
     double time=0.;
 
     ///////////////////////Define helper variables for computations////////
-    dg::DDS dsN( typename dg::DDS::FieldAligned(solovev::Field(gp), g3d_out, gp.rk4eps, solovev::PsiLimiter(gp), dg::NEU,(2*M_PI)/((double)p.Nz)), solovev::Field(gp), g3d_out, dg::normed, dg::centered );
+    dg::geo::solovev::MagneticField c(gp);
+    dg::DDS dsN( typename dg::DDS::FieldAligned(
+                dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0), 
+                g3d_out, gp.rk4eps, 
+                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(c.psip, gp.psipmaxlim), 
+                dg::NEU,(2*M_PI)/((double)p.Nz)), 
+            dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0), dg::normed, dg::centered );
     dg::DVec vor3d    = dg::evaluate( dg::zero, g3d_out);
     dg::HVec transfer = dg::evaluate( dg::zero, g3d_out);
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    dg::Elliptic<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
     const dg::DVec w3d = dg::create::weights( g3d_out);   
     const dg::DVec w2d = dg::create::weights( g2d_out);   
-    const dg::DVec curvR = dg::evaluate( solovev::CurvatureR(gp), g3d_out);
-    const dg::DVec curvZ = dg::evaluate( solovev::CurvatureZ(gp), g3d_out);
-    dg::Poisson<dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
-    const dg::DVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
+    const dg::DVec curvR = dg::evaluate( dg::geo::CurvatureNablaBR<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
+    const dg::DVec curvZ = dg::evaluate( dg::geo::CurvatureNablaBZ<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
+    dg::Poisson<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
+    const dg::DVec binv = dg::evaluate( dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0) , g3d_out) ;
     const dg::DVec one3d    =  dg::evaluate(dg::one,g3d_out);
     const dg::DVec one2d    =  dg::evaluate(dg::one,g2d_out);
     dg::DVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
@@ -107,8 +116,8 @@ int main( int argc, char* argv[])
     dg::DVec npe = dg::evaluate(dg::zero , g3d_out) ; //y[0] + 1 = Ne
 
     //rewritten if straight fieldlines
-    dg::DVec psipR =  dg::evaluate( solovev::PsipR(gp), g3d_out);
-    dg::DVec psipZ =  dg::evaluate( solovev::PsipZ(gp), g3d_out);
+    dg::DVec psipR =  dg::evaluate( dg::geo::solovev::PsipR(gp), g3d_out);
+    dg::DVec psipZ =  dg::evaluate( dg::geo::solovev::PsipZ(gp), g3d_out);
     dg::blas1::pointwiseDot( psipR, psipR, temp1);
     dg::blas1::pointwiseDot( psipZ, psipZ, temp2);
     dg::blas1::axpby( 1., temp1, 1., temp2);
@@ -154,7 +163,7 @@ int main( int argc, char* argv[])
         thrust::copy( fields3d_d[0].begin() + kmp*g2d_out.size(), fields3d_d[0].begin() + (kmp+1)*g2d_out.size(), fields2d[0].begin());
         //----------------Start vorticity computation
         dg::blas2::gemv( laplacian,fields3d_d[4],vor3d);
-        transfer = vor3d;
+        dg::blas1::transfer( vor3d, transfer);
         err = nc_put_vara_double( ncidout, dataIDs3d[0], start, count, transfer.data());
         //----------------Stop vorticity computation
         //--------------- Start RADIALELECTRONDENSITYFLUX computation

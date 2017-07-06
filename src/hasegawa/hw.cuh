@@ -1,5 +1,4 @@
-#ifndef _DG_TOEFLR_CUH
-#define _DG_TOEFLR_CUH
+#pragma once
 
 #include <exception>
 
@@ -10,17 +9,15 @@
 #include "dg/backend/timer.cuh"
 #endif
 
-
-//TODO es wäre besser, wenn HW auch einen Zeitschritt berechnen würde 
-// dann wäre die Rückgabe der Felder (Potential vs. Masse vs. exp( y)) konsistenter
-// (nur das Objekt weiß welches Feld zu welchem Zeitschritt gehört)
+///@note This is an old copy of the toefl project and shouldn't be taken as a basis for a new project
 
 namespace dg
 {
+
 template< class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d<double>& g, double nu): nu_(nu),
+    Diffusion( const dg::Grid2d& g, double nu): nu_(nu),
         w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()), LaplacianM( g, dg::normed, dg::centered) {
         }
     void operator()( const std::vector<container>& x, std::vector<container>& y)
@@ -41,7 +38,7 @@ struct Diffusion
     double nu_;
     const container w2d, v2d;
     container temp;
-    Elliptic<Matrix, container, container> LaplacianM;
+    Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM;
 };
 
 
@@ -64,7 +61,7 @@ struct HW
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    HW( const Grid2d<value_type>& g, double , double , double , double , bool);
+    HW( const Grid2d& g, double , double , double , double , bool);
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -124,10 +121,10 @@ struct HW
     std::vector<container> lapy, laplapy;
 
     //matrices and solvers
-    ArakawaX< Matrix, container> arakawa; 
+    ArakawaX< dg::CartesianGrid2d, Matrix, container> arakawa; 
     CG<container > pcg;
     PoloidalAverage<container, thrust::device_vector<int> > average;
-    Elliptic<Matrix, container, container> A, laplaceM;
+    Elliptic<dg::CartesianGrid2d, Matrix, container> A, laplaceM;
 
     const container w2d, v2d, one;
     const double alpha;
@@ -142,7 +139,7 @@ struct HW
 };
 
 template< class Matrix, class container>
-HW<Matrix, container>::HW( const Grid2d<value_type>& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
+HW<Matrix, container>::HW( const Grid2d& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
     chi( grid.size(), 0.), omega(chi), phi( chi), phi_old( chi), dyphi( chi),
     lapphiM(chi), lapy( 2, chi),  laplapy( lapy),
     A( grid, not_normed, centered), laplaceM( grid, normed, centered),
@@ -248,5 +245,3 @@ void HW< M, container>::operator()( std::vector<container>& y, std::vector<conta
 
 
 }//namespace dg
-
-#endif //_DG_TOEFLR_CUH

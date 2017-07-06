@@ -18,7 +18,7 @@ double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 typedef dg::DVec Vector;
 typedef dg::EllSparseBlockMatDevice<double> Matrix;
 //typedef dg::HVec Vector;
-//typedef dg::EllSparseBlockMat Matrix;
+//typedef dg::EllSparseBlockMat<double> Matrix;
 
 int main()
 {
@@ -26,7 +26,7 @@ int main()
     std::cout << "Type in n, Nx and Ny and Nz!\n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::bc bcx=dg::DIR, bcz=dg::NEU_DIR, bcy=dg::PER;
-    dg::Grid2d<double> g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
+    dg::Grid2d g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);
 
     Matrix dx2 = dg::create::dx( g2d, dg::forward);
@@ -55,7 +55,7 @@ int main()
     dg::blas1::axpby( 1., tempX, 1., tempY, tempY);
     dg::blas1::axpby( 1., null2, -1., tempY);
     std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tempY, w2d, tempY))<<"\n";
-    dg::Grid3d<double> g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
+    dg::Grid3d g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);

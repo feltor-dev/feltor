@@ -13,7 +13,6 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/interpolation.cuh"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -41,26 +40,21 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    Json::Reader reader;
+    Json::Value js;
     if( argc != 3)
     {
-        if(rank==0) std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            v = file::read_input( argv[1]);
-        }catch( toefl::Message& m){
-            if(rank==0) m.display();
-            if(rank==0) std::cout << input << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false);
     }
-    const eule::Parameters p( v);
-    if(rank==0) p.display( std::cout);
+    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const eule::Parameters p( js);
+    if(rank==0)p.display( std::cout);
      ////////////////////////////////setup MPI///////////////////////////////
     int periods[2] = {false, false}; //non-, non-, periodic
 
@@ -79,8 +73,8 @@ int main( int argc, char* argv[])
     //////////////////////////////////////////////////////////////
 
      //Make grid
-    dg::MPI_Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
-    dg::MPI_Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
+    dg::MPIGrid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y,comm);
+    dg::MPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
     if(rank==0) std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > feltor( grid, p); //initialize before rolkar!
@@ -101,14 +95,14 @@ int main( int argc, char* argv[])
     if (p.iso == 1) dg::blas1::axpby( 1.,y1[2], 0., y0[3]); //initialize Ti = prof
     if (p.iso == 0) dg::blas1::axpby( 1.,y0[1], 0., y0[3]); //initialize Ti = N_i
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //= Ni - bg
-    std::cout << "intiialize ne" << std::endl;
+    if(rank==0) std::cout << "intiialize ne" << std::endl;
     if( p.init == 0)
         feltor.initializene( y0[1],y0[3], y0[0]);    //ne -bg
     else  
         dg::blas1::axpby( 1., y0[1], 0., y0[0], y0[0]); // for Omega*=0
-    std::cout << "Done!\n";    
+    if(rank==0) std::cout << "Done!\n";    
     
-    std::cout << "intialize ti=te" << std::endl;
+    if(rank==0) std::cout << "intialize ti=te" << std::endl;
     if (p.iso == 1) {
         dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
         dg::blas1::axpby( 1.,y0[3], 0., y0[2]); //initialize Ti = N_i
@@ -118,22 +112,18 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot(y0[1],y0[3],y1[3]); // = Ni Ti
         dg::blas1::transform(y1[3], y1[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi = Pi - bg^2
 
-        if( p.init == 0)
-            feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
+        feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
         //compute ti-bg = ((pi-bg^2) +bg^2)/ne -bg
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //=ne    
         dg::blas1::pointwiseDivide(y0[2],y0[0],y0[2]);
-
-        if( p.init != 0)
-            dg::blas1::axpby( 1., y0[3], 0., y0[2], y0[2]); //for Omega*=0
 
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =ne-bg
         dg::blas1::transform(y0[3], y0[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ti - bg
         dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =Ni - bg 
     }
-    std::cout << "Done!\n";
+    if(rank==0) std::cout << "Done!\n";
 
     
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
@@ -152,7 +142,7 @@ int main( int argc, char* argv[])
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
     err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
-    dg::Grid2d<double> global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
+    dg::Grid2d global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
     err = file::define_dimensions( ncid, dim_ids, &tvarID, global_grid_out);
     err = nc_enddef( ncid);
     err = nc_redef(ncid);

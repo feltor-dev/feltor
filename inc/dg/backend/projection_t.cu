@@ -13,8 +13,8 @@ int main()
     //Projection might not be correct any more due to layout change
     std::cout << "TEST 1D\n";
     unsigned n_old = 4, n_new = 3, N = 10, Nf = 1;
-    dg::Grid1d<double> go ( 0, M_PI, n_old, N);
-    dg::Grid1d<double> gn ( 0, M_PI, n_new, N*Nf);
+    dg::Grid1d go ( 0, M_PI, n_old, N);
+    dg::Grid1d gn ( 0, M_PI, n_new, N*Nf);
     cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::projection( go, gn);
     thrust::host_vector<double> v = dg::evaluate( sine, go);
     thrust::host_vector<double> w1do = dg::create::weights( go);
@@ -41,8 +41,8 @@ int main()
     std::cin >> Nf;
     
     //old grid is larger than the new grid
-    dg::Grid2d<double> g2o (0, M_PI, 0, M_PI, n_old, N*Nf, N*Nf);
-    dg::Grid2d<double> g2n (0, M_PI, 0, M_PI, n_new, N, N);
+    dg::Grid2d g2o (0, M_PI, 0, M_PI, n_old, N*Nf, N*Nf);
+    dg::Grid2d g2n (0, M_PI, 0, M_PI, n_new, N, N);
     cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::projection( g2o, g2n);
     const dg::HVec sinO = dg::evaluate( sine, g2o), 
                    sinN = dg::evaluate( sine, g2n);

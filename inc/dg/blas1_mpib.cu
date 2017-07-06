@@ -27,7 +27,7 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm);
 
-    dg::MPI_Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, comm);
+    dg::MPIGrid2d grid( 0., lx, 0, ly, n, Nx, Ny, comm);
     MPIVector w2d, v2d;
     dg::blas1::transfer( dg::create::weights(grid), w2d);
     dg::blas1::transfer( dg::create::inv_weights(grid), v2d);

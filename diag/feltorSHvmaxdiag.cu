@@ -9,7 +9,6 @@
 #include "dg/algorithm.h"
 #include "dg/backend/xspacelib.cuh"
 #include "feltorSH/parameters.h"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 //scan all imputfiles for maximum radial velocity and write to std::out
@@ -35,8 +34,10 @@ int main( int argc, char* argv[])
         std::string input( length, 'x');
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
 //         std::cout << "input "<<input<<std::endl;
-        const eule::Parameters p(file::read_input( input));
-
+        Json::Reader reader;
+        Json::Value js;
+        reader.parse( input, js, false);
+        const eule::Parameters p(js);
         err = nc_inq_dimid( ncid, "time", &timeID);
         err = nc_inq_dimlen( ncid, timeID, &numOut);
         err = nc_inq_varid( ncid, "velX", &varID);
@@ -47,7 +48,7 @@ int main( int argc, char* argv[])
         
         size_t count1d[2]  = {1, p.n_out* p.Nx_out}; 
         size_t start1d[2] =  {0,0};
-        dg::Grid1d<double > g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
+        dg::Grid1d g1d( 0., p.lx, p.n_out, p.Nx_out, p.bc_x);
         dg::HVec nemax(dg::evaluate( dg::one, g1d));
         dg::HVec temax(dg::evaluate( dg::one, g1d));
         err = nc_inq_varid( ncid, "ne_max", &varID2);
@@ -63,47 +64,47 @@ int main( int argc, char* argv[])
         double gammath =20./sqrt((2+p.amp)*p.amp*p.mcv/(p.sigma*(1.)));
         double gammathreal = sqrt((2+neamp)*neamp*p.mcv/p.sigma);
         double gammathrealdpe = sqrt(dpe*p.mcv/p.sigma);
-        if (p.sigma==10.)
-        {
-            if (p.tau[1]==4.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==2.) gammathrealdpe =17./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==1.) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==0.5) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==0.1) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==0.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
-        }
-        if (p.sigma==20.)
-        {
-            if (p.tau[1]==4.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==2.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==1.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==0.5) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==0.1) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==0.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
-        }
-        if (p.sigma==5.)
-        {
-            if (p.tau[1]==4.) 
-            {
-                if (p.amp==2.) gammathrealdpe =16./sqrt(dpe*p.mcv/p.sigma);
-                if (p.amp==1.) gammathrealdpe =13./sqrt(dpe*p.mcv/p.sigma);
-                if (p.amp==0.5) gammathrealdpe =17./sqrt(dpe*p.mcv/p.sigma);
-                if (p.amp==0.1) gammathrealdpe =17./sqrt(dpe*p.mcv/p.sigma);
-            }
-            if (p.tau[1]==2.) 
-            {
-                if (p.amp==2.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
-                if (p.amp==1.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
-                if (p.amp==0.5) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
-                if (p.amp==0.1) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
-            }
-            if (p.tau[1]==1.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==0.5) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==0.1) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
-            if (p.tau[1]==0.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
-        }
+//         if (p.sigma==10.)
+//         {
+//             if (p.tau[1]==4.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==2.) gammathrealdpe =17./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==1.) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==0.5) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==0.1) gammathrealdpe =19./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==0.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+//         }
+//         if (p.sigma==20.)
+//         {
+//             if (p.tau[1]==4.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==2.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==1.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==0.5) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==0.1) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==0.) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+//         }
+//         if (p.sigma==5.)
+//         {
+//             if (p.tau[1]==4.) 
+//             {
+//                 if (p.amp==2.) gammathrealdpe =16./sqrt(dpe*p.mcv/p.sigma);
+//                 if (p.amp==1.) gammathrealdpe =13./sqrt(dpe*p.mcv/p.sigma);
+//                 if (p.amp==0.5) gammathrealdpe =17./sqrt(dpe*p.mcv/p.sigma);
+//                 if (p.amp==0.1) gammathrealdpe =17./sqrt(dpe*p.mcv/p.sigma);
+//             }
+//             if (p.tau[1]==2.) 
+//             {
+//                 if (p.amp==2.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+//                 if (p.amp==1.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+//                 if (p.amp==0.5) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+//                 if (p.amp==0.1) gammathrealdpe =15./sqrt(dpe*p.mcv/p.sigma);
+//             }
+//             if (p.tau[1]==1.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==0.5) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==0.1) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+//             if (p.tau[1]==0.) gammathrealdpe =20./sqrt(dpe*p.mcv/p.sigma);
+//         }
 
-
+        gammathrealdpe = 10./sqrt(dpe*p.mcv/p.sigma);
 
         std::vector<double>::iterator timepoint;
         timepoint=std::lower_bound (vt.begin() ,vt.end() ,gammathrealdpe );
@@ -124,7 +125,6 @@ int main( int argc, char* argv[])
                   <<dpe <<std::endl;   
     }
 
-    
     return 0;
 }
 

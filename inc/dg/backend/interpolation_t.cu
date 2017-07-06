@@ -4,6 +4,11 @@
 #include "../blas.h"
 #include "xspacelib.cuh"
 #include "interpolation.cuh"
+#include "../blas.h"
+#include "evaluation.cuh"
+
+double function( double x, double y){return sin(x)*sin(y);}
+double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}
 
  unsigned n = 3;
  unsigned Nx = 30; 
@@ -25,7 +30,7 @@ int main()
 
 
     {
-    dg::Grid2d<double> g( -10, 10, -5, 5, n, Nx, Ny);
+    dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
     Matrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 
@@ -39,7 +44,12 @@ int main()
                     g.y0() + (i+0.5)*g.hy()/(double)(g.n());
         }
     Matrix B = dg::create::interpolation( x, y, g);
-    bool passed = true;
+    thrust::host_vector<double> vec = dg::evaluate( function, g), inter1(vec), inter2(vec);
+    dg::blas2::symv( A, vec, inter1);
+    dg::blas2::symv( B, vec, inter2);
+    dg::blas1::axpby( 1., inter1, -1., inter2, vec);
+    double error = dg::blas1::dot( vec, vec);
+    std::cout << "Error is "<<error<<" (should be small)!\n";
     //cusp::print(A);
     //cusp::print(B);
     //ATTENTION: backscatter might delete zeroes in matrices
@@ -60,9 +70,9 @@ int main()
         std::cout << "2D TEST PASSED!\n";
 
 
-    passed = true;
-    thrust::host_vector<double> xs = dg::evaluate( dg::coo1, g); 
-    thrust::host_vector<double> ys = dg::evaluate( dg::coo2, g); 
+    bool passed = true;
+    thrust::host_vector<double> xs = dg::evaluate( dg::cooX2d, g); 
+    thrust::host_vector<double> ys = dg::evaluate( dg::cooY2d, g); 
     thrust::host_vector<double> xF = dg::create::forward_transform( xs, g);
     thrust::host_vector<double> yF = dg::create::forward_transform( ys, g);
     for( unsigned i=0; i<x.size(); i++)
@@ -83,7 +93,7 @@ int main()
     if( passed)
         std::cout << "2D INTERPOLATE TEST PASSED!\n";
 
-    dg::Grid2d<double> gfine( -10, 10, -5, 5, nf, Nf*Nx, Nf*Ny);
+    dg::Grid2d gfine( -10, 10, -5, 5, nf, Nf*Nx, Nf*Ny);
     const thrust::host_vector<double> xfine = dg::evaluate( sinex, gfine);
     thrust::host_vector<double> xcoarseI = dg::evaluate( sinex, g);
     const thrust::host_vector<double> xcoarse = dg::evaluate( sinex, g);
@@ -114,7 +124,7 @@ int main()
     }
     ////////////////////////////////////////////////////////////////////////////
     {
-    dg::Grid3d<double> g( -10, 10, -5, 5, -7, -3, n, Nx, Ny, Nz);
+    dg::Grid3d g( -10, 10, -5, 5, -7, -3, n, Nx, Ny, Nz);
     Matrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 
@@ -142,7 +152,7 @@ int main()
     }
     if( passed)
         std::cout << "3D TEST PASSED!\n";
-    dg::Grid3d<double> gfine( -10, 10, -5, 5, -7, -3,  nf, Nf*Nx, Nf*Ny, Nz);
+    dg::Grid3d gfine( -10, 10, -5, 5, -7, -3,  nf, Nf*Nx, Nf*Ny, Nz);
     const thrust::host_vector<double> xfine = dg::evaluate( sinex, gfine);
     thrust::host_vector<double> xcoarseI = dg::evaluate( sinex, g);
     const thrust::host_vector<double> xcoarse = dg::evaluate( sinex, g);

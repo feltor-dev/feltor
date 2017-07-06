@@ -43,9 +43,9 @@ int main()
     std::cout << "# of grid cells is: "<< N<<std::endl;
     Nx = N; Ny = 2*N; Nz = 10*N;
 
-    dg::Grid1d<double> g1d( 0, lx, n, N);
-    dg::Grid2d<double> g2d( 0, lx,0, ly,n, Nx, Ny);
-    dg::Grid3d<double> g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
+    dg::Grid1d g1d( 0, lx, n, N);
+    dg::Grid2d g2d( 0, lx,0, ly,n, Nx, Ny);
+    dg::Grid3d g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
 
     //test evaluation functions
     const HVec h_x = dg::evaluate( function, g1d);

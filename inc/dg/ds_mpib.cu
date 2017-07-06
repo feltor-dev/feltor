@@ -12,16 +12,6 @@
 struct Field
 {
     Field( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    void operator()( const std::vector<dg::HVec>& y, std::vector<dg::HVec>& yp) const
-    {
-        for( unsigned i=0; i<y[0].size(); i++)
-        {
-            double gradpsi = ((y[0][i]-R_0)*(y[0][i]-R_0) + y[1][i]*y[1][i])/I_0/I_0;
-            yp[2][i] = y[0][i]*sqrt(1 + gradpsi);
-            yp[0][i] = y[0][i]*y[1][i]/I_0;
-            yp[1][i] = -y[0][i]*y[0][i]/I_0 + R_0/I_0*y[0][i] ;
-        }
-    }
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double gradpsi = ((y[0]-R_0)*(y[0]-R_0) + y[1]*y[1])/I_0/I_0;
@@ -33,6 +23,22 @@ struct Field
     {
         double gradpsi = ((x-R_0)*(x-R_0) + y*y)/I_0/I_0;
         return  x/sqrt( 1 + gradpsi)/R_0/I_0;
+    }
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) ) 
+        {
+            return false;
+        }
+        //if new integrated point outside domain
+        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        {
+            return false;
+        }
+        return true;
     }
     private:
     double R_0, I_0;
@@ -62,7 +68,7 @@ int main(int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     Field field( R_0, I_0);
-    dg::CylindricalMPIGrid<dg::MDVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
+    dg::CylindricalMPIGrid3d<dg::MDVec> g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
     const dg::MDVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();

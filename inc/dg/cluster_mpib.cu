@@ -10,6 +10,7 @@
 
 #include "backend/timer.cuh"
 #include "../geometries/guenther.h"
+#include "../geometries/magnetic_field.h"
 
 
 const double lx = 2*M_PI;
@@ -156,10 +157,10 @@ int main(int argc, char* argv[])
     periods[0] = false, periods[1] = false;
     MPI_Comm commEll;
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &commEll);
-    dg::CylindricalMPIGrid<Vector> gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
+    dg::CylindricalMPIGrid3d<Vector> gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
     const Vector ellw3d = dg::create::volume(gridEll);
     const Vector ellv3d = dg::create::inv_volume(gridEll);
-    dg::Elliptic<dg::CylindricalMPIGrid<Vector>, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::CylindricalMPIGrid3d<Vector>, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
     const Vector solution = dg::evaluate ( fct, gridEll);
     const Vector deriv = dg::evaluate( derivative, gridEll);
     Vector x = dg::evaluate( initial, gridEll);
@@ -180,11 +181,12 @@ int main(int argc, char* argv[])
         double Zmin=-1.0*gpa*1.00;
         double Rmax=gpR0+1.0*gpa; 
         double Zmax=1.0*gpa*1.00;
-        dg::CylindricalMPIGrid<Vector> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
-        guenther::Field field(gpR0, gpI0);
+        dg::CylindricalMPIGrid3d<Vector> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
+        dg::geo::guenther::MagneticField magfield(gpR0, gpI0);
+        dg::geo::Field<dg::geo::guenther::MagneticField> field(magfield, gpR0);
         dg::MDDS::FieldAligned dsFA( field, g3d, 1e-4, dg::DefaultLimiter(), dg::DIR);
         dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered);
-        guenther::FuncNeu funcNEU(gpR0,gpI0);
+        dg::geo::guenther::FuncNeu funcNEU(gpR0,gpI0);
         Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
 
         t.tic(); 

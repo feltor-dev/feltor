@@ -25,74 +25,6 @@ namespace dg{
 namespace create{
 ///@addtogroup scatter
 ///@{
-//TODO make one scatterMap for n, m and then apply to projection
-//to be used in thrust::scatter and thrust::gather (Attention: don't scatter inplace -> Pb with n>1)
-//(the inverse is its transpose) 
-/**
- * @brief Index Map for scatter operation on dg formatted vectors
-
- In 2D the vector elements of an x-space dg vector in one cell  lie
- contiguously in memory. Sometimes you want elements in the x-direction 
- to lie contiguously instead. This map can be used in a scatter operation 
- to permute elements in exactly that way.
- The elements of the map contain the indices where this place goes to
- i.e. w[m[i]] = v[i]
- Scatter from not-contiguous to contiguous or Gather from contiguous to non-contiguous
- 
- * @param nx # of polynomial coefficients in x
- * @param ny # of polynomial coefficients in y
- * @param Nx # of points in x
- * @param Ny # of points in y
- *
- * @return map of indices
- * @deprecated memory layout has been changed 
- */
-thrust::host_vector<int> scatterMap(unsigned nx, unsigned ny, unsigned Nx, unsigned Ny )
-{
-    thrust::host_vector<int> map( nx*ny*Nx*Ny);
-    for( unsigned i=0; i<Ny; i++)
-        for( unsigned j=0; j<Nx; j++)
-            for( unsigned k=0; k<ny; k++)
-                for( unsigned l=0; l<nx; l++)
-                    map[ i*Nx*nx*ny + j*nx*ny + k*nx + l] =(int)( i*Nx*nx*ny + k*Nx*nx + j*nx + l);
-    return map;
-}
-
-///@cond
-thrust::host_vector<int> scatterMap( unsigned n, unsigned Nx, unsigned Ny)
-{
-    return scatterMap( n, n, Nx, Ny);
-}
-///@endcond
-
-/**
- * @brief Index map for gather operations on dg formatted vectors
-
- In 2D the vector elements of an x-space dg vector in one cell  lie
- contiguously in memory. Sometimes you want elements in the x-direction 
- to lie contiguously instead. This map can be used in a gather operation 
- to permute elements in exactly that way.
- The elements of the map contain the indices that come at that place
- i.e. w[i] = v[m[i]]
- Gather from not-contiguous to contiguous or Scatter from contiguous to non-contiguous
- *
- * @param n # of polynomial coefficients
- * @param Nx # of points in x
- * @param Ny # of points in y
- *
- * @return map of indices
- * @deprecated memory layout has been changed
- */
-thrust::host_vector<int> gatherMap( unsigned n, unsigned Nx, unsigned Ny )
-{
-    thrust::host_vector<int> map( n*n*Nx*Ny);
-    for( unsigned i=0; i<Ny; i++)
-        for( unsigned j=0; j<Nx; j++)
-            for( unsigned k=0; k<n; k++)
-                for( unsigned l=0; l<n; l++)
-                    map[ i*Nx*n*n + k*Nx*n + j*n + l] =(int)( i*Nx*n*n + j*n*n + k*n + l);
-    return map;
-}
 
 /**
  * @brief Create a permutation matrix from a permutation map
@@ -149,16 +81,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> scatter( const thrust::host_vec
  * @brief make a matrix that transforms values to an equidistant grid ready for visualisation
  *
  * Useful if you want to visualize a dg-formatted vector.
- * @tparam T value type
  * @param g The grid on which to operate 
  *
  * @return transformation matrix
  * @note this matrix has ~n^4 N^2 entries and is not sorted
  */
-template < class T>
-cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g)
+cusp::coo_matrix<int, double, cusp::host_memory> backscatter( const Grid2d& g)
 {
-    typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
+    typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
     //create equidistant backward transformation
     dg::Operator<double> backwardeq( g.dlt().backwardEQ());
     dg::Operator<double> forward( g.dlt().forward());
@@ -181,18 +111,16 @@ cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid2d<T>& g)
  * @brief make a matrix that transforms values to an equidistant grid ready for visualisation
  *
  * Useful if you want to visualize a dg-formatted vector.
- * @tparam T value type
  * @param g The 3d grid on which to operate 
  *
  * @return transformation matrix
  * @note this matrix has ~n^4 N^2 entries and is not sorted
  */
-template < class T>
-cusp::coo_matrix<int, T, cusp::host_memory> backscatter( const Grid3d<T>& g)
+cusp::coo_matrix<int, double, cusp::host_memory> backscatter( const Grid3d& g)
 {
-    Grid2d<T> g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
-    cusp::coo_matrix<int,T, cusp::host_memory> back2d = backscatter( g2d);
-    return dgtensor<T>( 1, tensor<T>( g.Nz(), delta(1)), back2d);
+    Grid2d g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
+    cusp::coo_matrix<int,double, cusp::host_memory> back2d = backscatter( g2d);
+    return dgtensor<double>( 1, tensor<double>( g.Nz(), delta(1)), back2d);
 }
 
 

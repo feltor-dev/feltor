@@ -88,7 +88,7 @@ struct ZShifter
 /**
  * @brief Class for the evaluation of a parallel derivative (MPI Version)
  *
- * @ingroup algorithms
+ * @ingroup utilities
  * @tparam LocalMatrix The matrix class of the interpolation matrix
  * @tparam Communicator The communicator used to exchange data in the RZ planes
  * @tparam LocalContainer The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
@@ -125,7 +125,7 @@ struct MPI_FieldAligned
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         bcz_ = bcz; 
-        const dg::Grid2d<double> g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
+        const dg::Grid2d g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
         left_  = dg::evaluate( dg::CONSTANT(left), g2d);
         right_ = dg::evaluate( dg::CONSTANT(right),g2d);
     }
@@ -139,11 +139,11 @@ struct MPI_FieldAligned
      * @param left left boundary value 
      * @param right right boundary value
      */
-    void set_boundaries( dg::bc bcz, const LocalContainer& left, const LocalContainer& right)
+    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& left, const MPI_Vector<LocalContainer>& right)
     {
         bcz_ = bcz; 
-        left_ = left;
-        right_ = right;
+        left_ = left.data();
+        right_ = right.data();
     }
 
     /**
@@ -156,7 +156,25 @@ struct MPI_FieldAligned
      * @param scal_left left scaling factor
      * @param scal_right right scaling factor
      */
-    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right);
+    void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
+    {
+        bcz_ = bcz;
+        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
+        if( g_.z0() == g_.global().z0())
+        {
+            cView left( global.data().cbegin(), global.data().cbegin() + size);
+            View leftView( left_.begin(), left_.end());
+            cusp::copy( left, leftView);
+            dg::blas1::scal( left_, scal_left);
+        }
+        if( g_.z1() == g_.global().z1())
+        {
+            cView right( global.data().cbegin()+(g_.Nz()-1)*size, global.data().cbegin() + g_.Nz()*size);
+            View rightView( right_.begin(), right_.end());
+            cusp::copy( right, rightView);
+            dg::blas1::scal( right_, scal_right);
+        }
+    }
 
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
@@ -276,11 +294,11 @@ MPI_FieldAligned<MPIGeometry, LocalMatrix, CommunicatorXY, LocalContainer>::MPI_
     ghostM.resize( localsize); ghostP.resize( localsize);
     //set up grid points as start for fieldline integrations 
     std::vector<MPI_Vector<thrust::host_vector<double> > > y( 5, dg::evaluate(dg::zero, g2d));
-    y[0] = dg::evaluate( dg::coo1, g2d);
-    y[1] = dg::evaluate( dg::coo2, g2d);
+    y[0] = dg::evaluate( dg::cooX2d, g2d);
+    y[1] = dg::evaluate( dg::cooY2d, g2d);
     y[2] = dg::evaluate( dg::zero, g2d);//distance (not angle)
-    y[3] = dg::pullback( dg::coo1, g2d);
-    y[4] = dg::pullback( dg::coo2, g2d);
+    y[3] = dg::pullback( dg::cooX2d, g2d);
+    y[4] = dg::pullback( dg::cooY2d, g2d);
     //integrate to next z-planes
     std::vector<thrust::host_vector<double> > yp(3, y[0].data()), ym(yp); 
     if(deltaPhi<=0) deltaPhi = grid.hz();

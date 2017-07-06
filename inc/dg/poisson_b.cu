@@ -48,7 +48,7 @@ int main()
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d<double> grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     //S2D<double > s2d( grid);
     dg::DVec w2d = dg::create::weights( grid);
     std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;

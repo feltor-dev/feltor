@@ -12,16 +12,14 @@
 #include "dg/backend/average.cuh"
 #include "dg/functors.h"
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
-#include "solovev/geometry.h"
+#include "geometries/geometries.h"
 #include "feltor/parameters.h"
-#include "solovev/init.h"
 
-#define RADIALELECTRONDENSITYFLUX
-#define GRADIENTLENGTH
-
+// #define RADIALELECTRONDENSITYFLUX
+// #define GRADIENTLENGTH
+// #defina FSA
 
 
 int main( int argc, char* argv[])
@@ -50,8 +48,12 @@ int main( int argc, char* argv[])
 
     std::cout << "input "<<input<<std::endl;
     std::cout << "geome "<<geom <<std::endl;
-    const eule::Parameters p(file::read_input( input));
-    const solovev::GeomParameters gp(file::read_input( geom));
+    Json::Reader reader;
+    Json::Value js,gs;
+    reader.parse( input, js, false);
+    const eule::Parameters p(js);
+    reader.parse( geom, gs, false);
+    const dg::geo::solovev::GeomParameters gp(gs);
     p.display();
     gp.display();
     ///////////////////////////////////////////////////////////////////////////
@@ -60,31 +62,28 @@ int main( int argc, char* argv[])
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
-    //old boxscale
-//     double Rmin=gp.R_0-p.boxscaleRp*gp.a;
-//     double Zmin=-p.boxscaleRp*gp.a*gp.elongation;
-//     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
-//     double Zmax=p.boxscaleRp*gp.a*gp.elongation;
-
     //Grids
-    dg::Grid3d<double > g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER, dg::cylindrical);  
-    dg::Grid2d<double>  g2d_out( Rmin,Rmax, Zmin,Zmax,p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
+
+    dg::CylindricalGrid3d<dg::DVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER); 
+    dg::Grid2d  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out,  p.bc, p.bc); 
     //1d grid
-    solovev::Psip psip(gp);
+
+    dg::geo::solovev::Psip psip(gp);
     dg::HVec transfer2d = dg::evaluate(dg::zero,g2d_out);
-    dg::DVec w3d = dg::create::weights( g3d_out);   
-    
+    dg::DVec w3d = dg::create::volume( g3d_out);   
+        //Grids
+
     dg::DVec psipog2d   = dg::evaluate( psip, g2d_out);    
     double psipmin = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
-    double psipmax = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(),psipmin,thrust::maximum<double>()  );
+    double psipmax = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(), psipmin,thrust::maximum<double>()  );
 //     double psipmax = 0.0;
-    solovev::PsiPupil psipupil(gp,psipmax);
-    dg::DVec psipupilog2d   = dg::evaluate( psipupil, g2d_out);    
-    dg::DVec psipupilog3d   = dg::evaluate( psipupil, g3d_out);    
+    dg::geo::PsiPupil<dg::geo::solovev::Psip> psipupil(psip,psipmax);
+    dg::HVec psipupilog2d   = dg::evaluate( psipupil, g2d_out);    
+    dg::HVec psipupilog3d   = dg::evaluate( psipupil, g3d_out);    
 
-    unsigned Npsi = 2;//set number of psivalues
+    unsigned Npsi = 50;//set number of psivalues
     std::cout << "psipmin =" << psipmin << " psipmax =" << psipmax << " Npsi =" << Npsi  <<std::endl;
-    dg::Grid1d<double>  g1d_out(psipmin  ,psipmax ,3, Npsi,dg::NEU); //one dimensional sipgrid
+    dg::Grid1d  g1d_out(psipmin  ,psipmax ,3, Npsi,dg::NEU); //one dimensional sipgrid
     dg::DVec w1d = dg::create::weights( g1d_out);   
     dg::HVec transfer1d = dg::evaluate(dg::zero,g1d_out);
     //read in midplane of electrons, ions Ue, Ui, and potential, and energy
@@ -116,8 +115,8 @@ int main( int argc, char* argv[])
 //     size_t start3dp[4] = {0, 0, 0, 0};
 
      //generate 1d nc file for one time step for the f(psi) quantities
-    std::string names1d[9] = {"Ne_fsa", "Ni_fsa", "Ue_Fsa", "Ui_fsa", "phi_fsa","q","vor_fsa","Depsi_fsa","Lperpinv_fsa"}; 
-    int dataIDs1d[9];
+    std::string names1d[10] = {"Ne_fsa", "Ni_fsa", "Ue_Fsa", "Ui_fsa", "phi_fsa","q","vor_fsa","Depsi_fsa","Lperpinv_fsa","psip1d"}; 
+    int dataIDs1d[10];
     file::NC_Error_Handle err1d; 
     int ncid1d; 
 
@@ -126,7 +125,7 @@ int main( int argc, char* argv[])
     err1d = nc_put_att_text( ncid1d, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids1d[2], tvarID1d;
     err1d = file::define_dimensions( ncid1d, dim_ids1d, &tvarID1d, g1d_out);
-    for( unsigned i=0; i<9; i++){
+    for( unsigned i=0; i<10; i++){
         err1d = nc_def_var( ncid1d, names1d[i].data(), NC_DOUBLE, 2, dim_ids1d, &dataIDs1d[i]);
     }   
 //  midplane 2d fields
@@ -138,35 +137,38 @@ int main( int argc, char* argv[])
 
 //     double energy_0 =0.,U_i_0=0.,U_e_0=0.,U_phi_0=0.,U_pare_0=0.,U_pari_0=0.,mass_0=0.;
 //     os << "#Time(1) mass(2) Ue(3) Ui(4) Uphi(5) Upare(6) Upari(7) Utot(8) EDiff(9)\n";
-//         std::cout << "Compute safety factor   "<< "\n";
-//         solovev::Alpha alpha(gp); 
-//         dg::DVec alphaog2d   = dg::evaluate( alpha, g2d_out);      
-//         dg::DVec abs = dg::evaluate( dg::coo1, g1d_out);
-//         solovev::SafetyFactor<dg::DVec> qprofile(g2d_out, gp, alphaog2d );
-//         dg::DVec sf = dg::evaluate(qprofile, g1d_out);
+    std::cout << "Compute safety factor   "<< "\n";
+    dg::geo::solovev::MagneticField c(gp);
+    dg::geo::Alpha<dg::geo::solovev::MagneticField> alpha(c); 
+    dg::DVec alphaog2d   = dg::evaluate( alpha, g2d_out);      
+    dg::DVec abs = dg::evaluate( dg::cooX1d, g1d_out);
+    dg::geo::SafetyFactor<dg::geo::solovev::MagneticField, dg::DVec> qprofile(g2d_out, gp, alphaog2d );
+    dg::DVec sf = dg::evaluate(qprofile, g1d_out);
+
 
     //perp laplacian for computation of vorticity
 
     dg::DVec vor3d    = dg::evaluate( dg::zero, g3d_out);
-    dg::Elliptic<dg::DMatrix, dg::DVec, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    dg::Elliptic<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
     dg::IDMatrix fsaonrzmatrix,fsaonrzphimatrix;     
     fsaonrzmatrix    =  dg::create::interpolation(psipupilog2d ,g1d_out);    
     fsaonrzphimatrix =  dg::create::interpolation(psipupilog3d ,g1d_out);    
     
     //Vectors and Matrices for Diffusion coefficient
-    const dg::DVec curvR = dg::evaluate( solovev::CurvatureR(gp), g3d_out);
-    const dg::DVec curvZ = dg::evaluate( solovev::CurvatureZ(gp), g3d_out);
-    dg::Poisson<dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
-    const dg::DVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
+
+    const dg::DVec curvR = dg::evaluate( dg::geo::CurvatureNablaBR<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
+    const dg::DVec curvZ = dg::evaluate( dg::geo::CurvatureNablaBZ<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
+    dg::Poisson<dg::CylindricalGrid3d<dg::DVec>,dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
+    const dg::DVec binv = dg::evaluate( dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0) , g3d_out) ;
     dg::DVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
     dg::DVec temp2 = dg::evaluate(dg::zero , g3d_out) ;
     dg::DVec temp3 = dg::evaluate(dg::zero , g3d_out) ;
     #ifdef RADIALELECTRONDENSITYFLUX
-    const dg::DVec psipR =  dg::evaluate( solovev::PsipR(gp), g3d_out);
-    const dg::DVec psipRR = dg::evaluate( solovev::PsipRR(gp), g3d_out);
-    const dg::DVec psipZ =  dg::evaluate( solovev::PsipZ(gp), g3d_out);
-    const dg::DVec psipZZ = dg::evaluate( solovev::PsipZZ(gp), g3d_out);
-    const dg::DVec psipRZ = dg::evaluate( solovev::PsipRZ(gp), g3d_out);
+    const dg::DVec psipR =  dg::evaluate( dg::geo::solovev::PsipR(gp), g3d_out);
+    const dg::DVec psipRR = dg::evaluate( dg::geo::solovev::PsipRR(gp), g3d_out);
+    const dg::DVec psipZ =  dg::evaluate( dg::geo::solovev::PsipZ(gp), g3d_out);
+    const dg::DVec psipZZ = dg::evaluate( dg::geo::solovev::PsipZZ(gp), g3d_out);
+    const dg::DVec psipRZ = dg::evaluate( dg::geo::solovev::PsipRZ(gp), g3d_out);
     dg::DVec Depsip3d =  dg::evaluate(dg::zero , g3d_out) ;   
     dg::DVec one3d    =  dg::evaluate(dg::one,g3d_out);
     dg::DVec one1d    =  dg::evaluate(dg::one,g1d_out);
@@ -178,12 +180,16 @@ int main( int argc, char* argv[])
     std::vector<dg::DVec> fields3d(5,dg::evaluate(dg::zero,g3d_out));
     std::vector<dg::DVec> fields2d(5,dg::evaluate(dg::zero,g3d_out));
     dg::ToroidalAverage<dg::DVec> toravg(g3d_out);
-    unsigned outlim = p.maxout;
-    std::cout << "number of outputs ? : " << std::endl;
-    std::cin>>outlim;
+    unsigned outlim = 0.; int timeID;
+    size_t steps;
+    err = nc_open( argv[1], NC_NOWRITE, &ncid); //open 3d file
+    err = nc_inq_unlimdim( ncid, &timeID);
+    err = nc_inq_dimlen( ncid, timeID, &steps);
+    steps-=1;
+    outlim = steps/p.itstp;
     for( unsigned i=0; i<outlim; i++)//timestepping
     {
-//         start3dp[0] = i; //set specific time  
+//      start3dp[0] = i; //set specific time  
         start3d[0] = i; //set specific time  
         start2d[0] = i;
         start1d[0] = i;
@@ -224,32 +230,32 @@ int main( int argc, char* argv[])
             
             //for fluctuations to be  f_varphi
 //             dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2davg,data2dflucmid); //Compute z fluctuation
-
-            transfer2d = data2davg;
+            dg::blas1::transfer(data2davg,transfer2d);            
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[j],   start2d, count2d, transfer2d.data()); //write avg
 
 
             //computa fsa of quantities
-            solovev::FluxSurfaceAverage<dg::DVec> fsadata(g2d_out,gp, data2davg );
+            dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsadata(g2d_out,c, data2davg );
             dg::DVec data1dfsa = dg::evaluate(fsadata,g1d_out);
-            transfer1d = data1dfsa;
+            dg::blas1::transfer(data1dfsa,transfer1d);
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[j], start1d, count1d,  transfer1d.data());
             
             //compute delta f on midplane : df = f_mp - <f>
             dg::blas2::gemv(fsaonrzmatrix, data1dfsa, data2dfsa); //fsa on RZ grid
             dg::blas1::axpby(1.0,data2dflucmid,-1.0,data2dfsa,data2dflucmid); 
-            transfer2d = data2dflucmid;
+            dg::blas1::transfer(data2dflucmid,transfer2d);     
             err2d = nc_put_vara_double( ncid2d, dataIDs2d[j+5], start2d, count2d, transfer2d.data());
 
         }
         //----------------Start vorticity computation
         dg::blas2::gemv( laplacian,fields3d[4],vor3d);
         toravg(vor3d,vor2davg);
-        transfer2d = vor2davg;
+        dg::blas1::transfer(vor2davg,transfer2d);     
+
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[10],   start2d, count2d, transfer2d.data());
-        solovev::FluxSurfaceAverage<dg::DVec> fsavor(g2d_out,gp,vor2davg );
+        dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsavor(g2d_out,c, vor2davg );
         dg::DVec vor1dfsa = dg::evaluate(fsavor,g1d_out);
-        transfer1d = vor1dfsa;
+        dg::blas1::transfer(vor1dfsa,transfer1d);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[6], start1d, count1d,  transfer1d.data()); 
         //----------------Stop vorticity computation
         
@@ -282,7 +288,7 @@ int main( int argc, char* argv[])
       
         toravg(Depsip3d,Depsip2davg);
 
-        solovev::FluxSurfaceAverage<dg::DVec> fsaDepsip(g2d_out,gp, Depsip2davg );
+        dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsaDepsip(g2d_out,c, Depsip2davg );
         dg::DVec  Depsip1Dfsa = dg::evaluate(fsaDepsip,g1d_out);
         //compute delta f on midplane : d Depsip2d = Depsip - <Depsip>       
         dg::blas2::gemv(fsaonrzphimatrix, Depsip1Dfsa , Depsip3dfluc ); //fsa on RZ grid
@@ -294,7 +300,7 @@ int main( int argc, char* argv[])
         //toroidal avg
         transfer2d = Depsip2davg;
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[11],   start2d, count2d, transfer2d.data());
-        solovev::FluxSurfaceAverage<dg::DVec> fsaDepsipfluc(g2d_out,gp,  Depsip2dflucavg );
+        dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsaDepsipfluc(g2d_out,c, Depsip2dflucavg );
         dg::DVec  Depsip1Dflucfsa = dg::evaluate(fsaDepsipfluc,g1d_out);
         transfer1d =Depsip1Dflucfsa;
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[7], start1d, count1d,   transfer1d.data()); 
@@ -308,7 +314,7 @@ int main( int argc, char* argv[])
         toravg(Lperpinv3d,Lperpinv2davg);
         transfer2d = Lperpinv2davg;
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, transfer2d.data());
-        solovev::FluxSurfaceAverage<dg::DVec> fsaLperpinv(g2d_out,gp,Lperpinv2davg );
+        dg::geo::FluxSurfaceAverage<dg::geo::solovev::MagneticField, dg::DVec> fsaLperpinv(g2d_out,c, Lperpinv2davg );
         dg::DVec  Lperpinv1Dfsa = dg::evaluate(fsaLperpinv,g1d_out);
         transfer1d =Lperpinv1Dfsa;
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[8], start1d, count1d,   transfer1d.data()); 
@@ -316,7 +322,10 @@ int main( int argc, char* argv[])
         #endif
         
         //put safety factor into file
-//         err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  sf.data());
+        dg::blas1::transfer(sf,transfer1d);
+        err1d = nc_put_vara_double( ncid1d, dataIDs1d[5], start1d, count1d,  transfer1d.data());
+        dg::blas1::transfer(abs,transfer1d);
+        err1d = nc_put_vara_double( ncid1d, dataIDs1d[9], start1d, count1d, transfer1d.data());
         //write time data
         err1d = nc_put_vara_double( ncid1d, tvarID1d, start1d, count1d, &time);
         err1d = nc_close(ncid1d);  //close 1d netcdf files

@@ -11,7 +11,6 @@
 #include "dg/backend/timer.cuh"
 
 #include "dg/backend/interpolation.cuh"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -28,32 +27,28 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
-    if( argc != 3)
+    Json::Reader reader;
+    Json::Value js;
+    if( argc != 3 && argc != 4)
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
+        std::cerr << "Usage: "<<argv[0]<<" [input.txt] [output.nc] [input.nc] \n";
         return -1;
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            v = file::read_input( argv[1]);
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false);
     }
-    const eule::Parameters p( v);
+    std::string input = js.toStyledString(); 
+    const eule::Parameters p( js);
     p.display( std::cout);
 
     //Make grid
-    dg::Grid2d<double> grid( 0., p.lx, 0., p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    dg::Grid2d<double> grid_out( 0., p.lx, 0., p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
+    dg::Grid2d grid( 0., p.lx, 0., p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d grid_out( 0., p.lx, 0., p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
     // Grid for radial probe location. This is used only in netcdf output, probe positioning is still hard-coded
-    dg::Grid1d<double> grid_probe(0, p.lx, 1, 8, p.bc_x);
+    dg::Grid1d grid_probe(0, p.lx, 1, 8, p.bc_x);
     //create RHS 
     std::cout << "Constructing Feltor...\n";
     eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
@@ -75,24 +70,76 @@ int main( int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-        dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
+     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
 //     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 
     std::vector<dg::DVec> y0(2, dg::evaluate(prof, grid)), y1(y0); 
-    //no field aligning
-    y1[1] = dg::evaluate( init0, grid);
-    dg::blas1::pointwiseDot(y1[1], y0[1], y1[1]);
+    dg::HVec temp(dg::evaluate(dg::zero,grid));
+    double time = 0;
+    
+    if (argc ==3){
+      y1[1] = dg::evaluate( init0, grid);
+      dg::blas1::pointwiseDot(y1[1], y0[1], y1[1]);
 
-    dg::blas1::axpby(1., y1[1], 1., y0[1]); //initialize ni
-    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
-//     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
-    std::cout << "intiialize ne" << std::endl;
-    feltor.initializene(y0[1], y0[0]);    
-    std::cout << "Done!\n";
+      dg::blas1::axpby(1., y1[1], 1., y0[1]); //initialize ni
+      dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //initialize ni-1
+  //     dg::blas1::pointwiseDot(rolkar.damping(),y0[1], y0[1]); //damp with gaussprofdamp
+      std::cout << "intiialize ne" << std::endl;
+      feltor.initializene(y0[1], y0[0]);    
+      std::cout << "Done!\n";
+    }
+    if (argc==4) {
+        file::NC_Error_Handle errIN;
+        int ncidIN;
+        errIN = nc_open( argv[3], NC_NOWRITE, &ncidIN);
+        ///////////////////read in and show inputfile und geomfile//////////////////
+        size_t lengthIN;
+        errIN = nc_inq_attlen( ncidIN, NC_GLOBAL, "inputfile", &lengthIN);
+        std::string inputIN( lengthIN, 'x');
+        errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
 
+        Json::Value jsIN;
+        reader.parse( inputIN, jsIN, false); 
+        const eule::Parameters pIN(  jsIN);    
+        std::cout << "[input.nc] file parameters" << std::endl;
+        pIN.display( std::cout);    
+
+        dg::Grid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y);  
+        dg::HVec transferINH( dg::evaluate(dg::zero, grid_IN));
+        size_t count2dIN[3]  = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};
+        size_t start2dIN[3]  = {0, 0, 0};
+        std::string namesIN[2] = {"electrons", "ions"}; 
+
+        int dataIDsIN[2];     
+        int timeIDIN;
+        double  timeIN;
+        size_t stepsIN;
+        /////////////////////The initial field///////////////////////////////////////////
+        /////////////////////Get time length and initial data///////////////////////////
+        errIN = nc_inq_varid(ncidIN, namesIN[0].data(), &dataIDsIN[0]);
+        errIN = nc_inq_dimlen(ncidIN, dataIDsIN[0], &stepsIN);
+        stepsIN-=1;
+        start2dIN[0] = stepsIN/pIN.itstp;
+        std::cout << "stepsIN= "<< stepsIN <<  std::endl;
+        std::cout << "start2dIN[0]= "<< start2dIN[0] <<  std::endl;
+        errIN = nc_inq_varid(ncidIN, "time", &timeIDIN);
+        errIN = nc_get_vara_double( ncidIN, timeIDIN,start2dIN, count2dIN, &timeIN);
+        std::cout << "timeIN= "<< timeIN <<  std::endl;
+        time=timeIN;
+        dg::IHMatrix interpolateIN = dg::create::interpolation( grid,grid_IN); 
+        errIN = nc_get_vara_double( ncidIN, dataIDsIN[0], start2dIN, count2dIN, transferINH.data());
+        dg::blas2::gemv( interpolateIN, transferINH,temp);
+        dg::blas1::transfer(temp,y0[0]);
+        errIN = nc_inq_varid(ncidIN, namesIN[1].data(), &dataIDsIN[1]);
+        errIN = nc_get_vara_double( ncidIN, dataIDsIN[1], start2dIN, count2dIN, transferINH.data());
+        dg::blas2::gemv( interpolateIN, transferINH,temp);
+        dg::blas1::transfer(temp,y0[1]);      
+        errIN = nc_close(ncidIN);
+
+    }
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     karniadakis.init( feltor, rolkar, y0, p.dt);
@@ -131,7 +178,7 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, energies[i].data(), NC_DOUBLE, 1, &EtimeID, &energyIDs[i]);
     }
 
-   // Probe IDs
+    //// Probe IDs
     std::vector<std::string> varname_probes;
     varname_probes.push_back("probe_ne"); varname_probes.push_back("probe_phi"); varname_probes.push_back("probe_Gamma_x");
     // Create x-dimension for probe 
@@ -173,7 +220,6 @@ int main( int argc, char* argv[])
     dg::blas2::symv( interpolate,y1[1], transferD);
     dg::blas1::transfer( transferD, transferH);
     err = nc_put_vara_double( ncid, dataIDs[3], start, count, transferH.data() );
-    double time = 0;
 
 
 
@@ -193,7 +239,6 @@ int main( int argc, char* argv[])
 
     err = nc_put_vara_double( ncid, dissID, Estart, Ecount, &diss);
     err = nc_put_vara_double( ncid, dEdtID, Estart, Ecount, &dEdt);
-
     err = nc_put_vara_double( ncid, couplingID, Estart, Ecount, &coupling);
     err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount, &accuracy);
 
@@ -244,7 +289,6 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, dEdtID,     Estart, Ecount,&dEdt);
             err = nc_put_vara_double( ncid, couplingID, Estart, Ecount,&coupling);    
             err = nc_put_vara_double( ncid, accuracyID, Estart, Ecount,&accuracy);
-
 
             std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";

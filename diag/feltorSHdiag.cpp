@@ -12,7 +12,6 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "feltorSH/parameters.h"
 // #include "probes.h"
@@ -38,12 +37,15 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     
-    const eule::Parameters p(file::read_input( input));
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    const eule::Parameters p(js);
     p.display();
     
     ///////////////////////////////////////////////////////////////////////////
     //Grids
-    dg::Grid2d<double > g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
+    dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     double time = 0.;
     //2d field
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -55,8 +57,8 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> tpe(2,dg::evaluate(dg::zero,g2d));
     dg::HVec phi(dg::evaluate(dg::zero,g2d));
     dg::HVec vor(dg::evaluate(dg::zero,g2d));
-    dg::HVec xvec = dg::evaluate( dg::coo1, g2d);
-    dg::HVec yvec = dg::evaluate( dg::coo2, g2d);
+    dg::HVec xvec = dg::evaluate( dg::cooX2d, g2d);
+    dg::HVec yvec = dg::evaluate( dg::cooY2d, g2d);
     dg::HVec one = dg::evaluate( dg::one, g2d);
     dg::HVec w2d = dg::create::weights( g2d);
     
@@ -65,7 +67,7 @@ int main( int argc, char* argv[])
     double velX,velY,velX_old=0 , velY_old=0.;    
     double accX,accY=0.;
     double deltaT = p.dt*p.itstp;
-    dg::Grid1d<double > g1d( 0., p.lx,p.n_out, p.Nx_out, p.bc_x);
+    dg::Grid1d g1d( 0., p.lx,p.n_out, p.Nx_out, p.bc_x);
     size_t count1d[2]  = {1, g2d.n()*g2d.Nx()};
     size_t start1d[2]  = {0, 0};    
     //1d netcdf output file    

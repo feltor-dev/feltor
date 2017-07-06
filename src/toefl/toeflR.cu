@@ -9,7 +9,6 @@
 #include "toeflR.cuh"
 #include "dg/algorithm.h"
 #include "dg/backend/xspacelib.cuh"
-#include "file/read_input.h"
 #include "parameters.h"
 
 /*
@@ -18,61 +17,58 @@
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
-const unsigned k = 3; //!< a change of k needs a recompilation!
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
-    std::vector<double> v, v2;
+    ////Parameter initialisation ////////////////////////////////////////////
     std::stringstream title;
+    Json::Reader reader;
+    Json::Value js;
     if( argc == 1)
     {
-        v = file::read_input("input.txt");
+        std::ifstream is("input.json");
+        reader.parse(is,js,false);
     }
     else if( argc == 2)
     {
-        v = file::read_input( argv[1]);
+        std::ifstream is(argv[1]);
+        reader.parse(is,js,false);
     }
     else
     {
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
-    draw::RenderHostData render(v2[1], v2[2]);
-    /////////////////////////////////////////////////////////////////////////
-    const Parameters p( v);
+    const Parameters p( js);
     p.display( std::cout);
-    if( p.k != k)
-    {
-        std::cerr << "ERROR: k doesn't match: "<<k<<" vs. "<<p.k<<"\n";
-        return -1;
-    }
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
+    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+    /////////////////////////////////////////////////////////////////////////
 
-    dg::Grid2d<double > grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR< dg::DMatrix, dg::DVec > test( grid, p.kappa, p.nu, p.tau, p.eps_pol, p.eps_gamma, p.global); 
-    dg::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu, p.global);
-    //create initial vector
-    dg::Gaussian g( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.n0); //gaussian width is in absolute values
+    dg::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
+    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
+    //////////////////create initial vector///////////////////////////////////////
+    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     {
         dg::DVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
-
-    if( p.global)
-    {
-        dg::blas1::plus( y0[0], +1);
-        dg::blas1::plus( y0[1], +1);
-        test.log( y0, y0); //transform to logarithmic values
+    if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
+        y0[1] = dg::evaluate( dg::zero, grid);
     }
+    //////////////////////////////////////////////////////////////////////
+
 
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
+    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -90,13 +86,7 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
         //transform field to an equidistant grid
-        if( p.global)
-        {
-            test.exp( y0, y1);
-            dg::blas1::transform( y1[0], dvisual, dg::PLUS<double>(-1));
-        }
-        else
-            dvisual = y0[0];
+        dvisual = y0[0];
 
         dg::blas1::transfer( dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
@@ -131,7 +121,6 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
-            if( p.global)
             {
                 std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
                 E0 = E1;

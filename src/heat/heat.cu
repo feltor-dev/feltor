@@ -9,77 +9,61 @@
 //#include "draw/device_window.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/timer.cuh"
-#include "file/read_input.h"
 #include "dg/runge_kutta.h"
 #include "dg/multistep.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 
-// for solovev equ
-#include "geometries/solovev.h"
+#include "geometries/geometries.h"
 #include "heat/parameters.h"
-// for guenter
-// #include "geometries/guenther.h"
 
 
 #include "heat.cuh"
 
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the Feltor - functor and 
-   - directly visualizes results on the screen using parameters in window_params.txt
-*/
-
-typedef dg::FieldAligned< dg::CylindricalGrid<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
+using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
-    std::vector<double> v,v2,v3;
+    ////Parameter initialisation ////////////////////////////////////////////
     std::stringstream title;
+    Json::Reader reader;
+    Json::Value js, gs;
     if( argc == 1)
     {
-        try{
-            v = file::read_input("input.txt");
-            v3 = file::read_input( "geometry_params.txt"); 
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is("input.json");
+        std::ifstream ks("geometry_params.js");
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
     else if( argc == 3)
     {
-        try{
-            v = file::read_input(argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
     else
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-    const eule::Parameters p( v);
-    p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
-    gp.display( std::cout);
-    v2 = file::read_input( "window_params.txt");
-//     GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
-//     draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
-    //draw only average
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (1)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (1)/v2[2]); 
-    //////////////////////////////////////////////////////////////////////////
+    const eule::Parameters p( js); p.display( std::cout);
+    const GeomParameters gp(gs); gp.display( std::cout);
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
+    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+    /////////////////////////////////////////////////////////////////////////
     
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
-     dg::CylindricalGrid<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+     dg::CylindricalGrid3d<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
 
 //     dg::DVec w3d_ = dg::create::volume( grid);
 //     dg::DVec v3d_ = dg::create::inv_volume( grid);
@@ -131,7 +115,7 @@ int main( int argc, char* argv[])
     std::cout << "initialize feltor" << std::endl;
     eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
     std::cout << "initialize rolkar" << std::endl;
-    eule::Rolkar<dg::CylindricalGrid<dg::DVec> , dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
+    eule::Rolkar<dg::CylindricalGrid3d<dg::DVec> , dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation
@@ -146,7 +130,7 @@ int main( int argc, char* argv[])
     
     //background profile
     std::cout << "T background" << std::endl;
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     
 //     //field aligning

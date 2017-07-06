@@ -6,12 +6,12 @@
 namespace dg
 {
 
-///@addtogroup grid
+///@addtogroup basicgrids
 ///@{
 /**
  * @brief one-dimensional Grid with Cartesian metric
  */
-struct CartesianGrid1d: public Grid1d<double>
+struct CartesianGrid1d: public dg::Grid1d
 {
     typedef OrthonormalTag metric_category; 
     /**
@@ -23,19 +23,19 @@ struct CartesianGrid1d: public Grid1d<double>
      @param N # of cells
      @param bcx boundary conditions
      */
-    CartesianGrid1d( double x0, double x1, unsigned n, unsigned N, bc bcx = PER): Grid1d<double>(x0,x1,n,N,bcx){}
+    CartesianGrid1d( double x0, double x1, unsigned n, unsigned N, bc bcx = PER): dg::Grid1d(x0,x1,n,N,bcx){}
     /**
      * @brief Construct from existing topology
      *
      * @param grid existing grid class
      */
-    CartesianGrid1d( const Grid1d<double>& grid):Grid1d<double>(grid){}
+    CartesianGrid1d( const dg::Grid1d& grid):dg::Grid1d(grid){}
 };
 
 /**
  * @brief two-dimensional Grid with Cartesian metric
  */
-struct CartesianGrid2d: public Grid2d<double>
+struct CartesianGrid2d: public dg::Grid2d
 {
     typedef OrthonormalTag metric_category; 
     /**
@@ -51,45 +51,19 @@ struct CartesianGrid2d: public Grid2d<double>
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      */
-    CartesianGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): Grid2d<double>(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
+    CartesianGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::Grid2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
     /**
      * @brief Construct from existing topology
      *
      * @param grid existing grid class
      */
-    CartesianGrid2d( const Grid2d<double>& grid):Grid2d<double>(grid){}
+    CartesianGrid2d( const dg::Grid2d& grid):dg::Grid2d(grid){}
 };
-///@}
 
-/**
- * @brief evaluates a two-dimensional function 
- *
- * same as evaluate
- * @ingroup evaluation
- * @tparam BinaryOp Binary function object
- * @param f functor
- * @param g geometry
- *
- * @return new instance of thrust vector
- */
-template<class BinaryOp>
-thrust::host_vector<double> pullback( BinaryOp f, const CartesianGrid2d& g)
-{
-    return evaluate( f, g);
-}
-///@cond
-thrust::host_vector<double> pullback( double(f)(double,double), const CartesianGrid2d& g)
-{
-    return pullback<double(double,double)>( f, g);
-}
-///@endcond
-
-///@addtogroup grid
-///@{
 /**
  * @brief three-dimensional Grid with Cartesian metric
  */
-struct CartesianGrid3d: public Grid3d<double>
+struct CartesianGrid3d: public dg::Grid3d
 {
     typedef OrthonormalTag metric_category; 
     /**
@@ -110,16 +84,15 @@ struct CartesianGrid3d: public Grid3d<double>
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): Grid3d<double>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::Grid3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     /**
      * @brief Construct from existing topology
      *
      * @param grid existing grid class
      */
-    CartesianGrid3d( const Grid3d<double>& grid):Grid3d<double>(grid){}
+    CartesianGrid3d( const dg::Grid3d& grid):dg::Grid3d(grid){}
 };
 
-//if a pullback is ever needed write an adapter class and use evaluate functions
 ///@}
 
 } //namespace dg

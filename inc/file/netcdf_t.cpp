@@ -22,10 +22,10 @@ int main()
     double Tmax=2.*M_PI;
     double NT = 10;
     double h = Tmax/NT;
-    dg::Grid1d<double> gx( 0, 2.*M_PI, 3, 10);
-    dg::Grid1d<double> gy( 0, 2.*M_PI, 3, 10);
-    dg::Grid1d<double> gz( 0, 2.*M_PI, 1, 20);
-    dg::Grid3d<double> g( gx, gy, gz);
+    dg::Grid1d gx( 0, 2.*M_PI, 3, 10);
+    dg::Grid1d gy( 0, 2.*M_PI, 3, 10);
+    dg::Grid1d gz( 0, 2.*M_PI, 1, 20);
+    dg::Grid3d g( gx, gy, gz);
     std::string hello = "Hello world\n";
     thrust::host_vector<double> data = dg::evaluate( function, g);
     int ncid;

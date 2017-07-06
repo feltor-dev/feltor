@@ -11,6 +11,7 @@
 #endif//MPI_VERSION
 #include "geometry/geometry_traits.h"
 #include "geometry/cartesian.h"
+#include "geometry/cartesianX.h"
 #include "geometry/cylindrical.h"
 #ifdef MPI_VERSION
 #include "geometry/mpi_grids.h"
@@ -31,9 +32,9 @@ namespace dg{
  * Don't forget to specialize in the dg namespace.
  */
 namespace geo{
-
 ///@addtogroup geometry
 ///@{
+
 /**
  * @brief Multiply the input with the volume element without the dG weights!
  *
@@ -86,6 +87,29 @@ void raisePerpIndex( container& covX, container& covY, container& contraX, conta
     dg::geo::detail::doRaisePerpIndex( covX, covY, contraX, contraY, g, typename dg::GeometryTraits<Geometry>::metric_category());
 
 }
+/**
+ * @brief Raises the index of a covariant vector in 2d and multiplies the perpendicular volume
+ *
+ * Computes \f$ v^i = \sqrt{g/g_{zz}} g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the two dimensions of a 2x1 product space. This special 
+ * form occurs in the discretization of elliptic operators which is why it get's a special function.
+ * @tparam container the container class
+ * @tparam Geometry the geometry class
+ * @param covX (input) covariant first component (may get destroyed!!)
+ * @param covY (input) covariant second component (may get destroyed!!)
+ * @param contraX (output) contravariant first component
+ * @param contraY (output) contravariant second component
+ * @param g The geometry object
+ * @note covX, covY, contraX and contraY may not be the same
+ */
+template<class container, class Geometry>
+void volRaisePerpIndex( container& covX, container& covY, container& contraX, container& contraY, const Geometry& g)
+{
+    assert( &covX != &contraX);
+    assert( &covY != &contraY);
+    assert( &covY != &covX);
+    dg::geo::detail::doVolRaisePerpIndex( covX, covY, contraX, contraY, g, typename dg::GeometryTraits<Geometry>::metric_category());
+
+}
 
 /**
  * @brief Multiplies the two-dimensional volume element
@@ -118,7 +142,7 @@ void dividePerpVolume( container& inout, const Geometry& g)
 }
 
 /**
- * @brief Push forward a vector from cylindrical to a new coordinate system
+ * @brief Push forward a vector from cylindrical or Cartesian to a new coordinate system
  *
  * Computes \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
                v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
@@ -130,8 +154,8 @@ void dividePerpVolume( container& inout, const Geometry& g)
  * @param vy y-component of vector (gets properly resized)
  * @param g The geometry object
  */
-template<class TernaryOp1, class TernaryOp2, class Geometry> 
-void pushForwardPerp( TernaryOp1 vR, TernaryOp2 vZ, 
+template<class Functor1, class Functor2, class Geometry> 
+void pushForwardPerp( Functor1 vR, Functor2 vZ, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vx, 
         typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vy,
         const Geometry& g)
@@ -151,11 +175,41 @@ void pushForwardPerp(
 }
 ///@endcond
 
-}//namespace geo
+/**
+ * @brief Push forward a symmetric 2d tensor from cylindrical or Cartesian to a new coordinate system
+ *
+ * Computes \f[ 
+ \chi^{xx}(x,y) = x_R x_R \chi^{RR} + 2x_Rx_Z \chi^{RZ} + x_Zx_Z\chi^{ZZ} \\
+ \chi^{xy}(x,y) = x_R x_R \chi^{RR} + (x_Ry_Z+y_Rx_Z) \chi^{RZ} + x_Zx_Z\chi^{ZZ} \\
+ \chi^{yy}(x,y) = y_R y_R \chi^{RR} + 2y_Ry_Z \chi^{RZ} + y_Zy_Z\chi^{ZZ} \\
+               \f]
+   where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
+ * @tparam Geometry The Geometry class
+ * @param chiRR input RR-component in cylindrical coordinates
+ * @param chiRZ input RZ-component in cylindrical coordinates
+ * @param chiZZ input ZZ-component in cylindrical coordinates
+ * @param chixx xx-component of tensor (gets properly resized)
+ * @param chixy xy-component of tensor (gets properly resized)
+ * @param chiyy yy-component of tensor (gets properly resized)
+ * @param g The geometry object
+ */
+template<class FunctorRR, class FunctorRZ, class FunctorZZ, class Geometry> 
+void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx, 
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixy,
+        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chiyy, 
+        const Geometry& g)
+{
+    dg::geo::detail::doPushForwardPerp( chiRR, chiRZ, chiZZ, chixx, chixy, chiyy, g, typename GeometryTraits<Geometry>::metric_category() ); 
+}
 
 ///@}
+}//namespace geo
+
 
 namespace create{
+///@addtogroup geometry
+///@{
 
 /**
  * @brief Create the volume element on the grid (including weights!!)
@@ -187,6 +241,28 @@ typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vect
     return detail::doCreateInvVolume( g, typename GeometryTraits<Geometry>::metric_category());
 }
 
+///@}
 }//namespace create
+
+/**
+ * @brief This function pulls back a function defined in cartesian coordinates to the curvilinear coordinate system
+ *
+ * @ingroup geometry
+ * i.e. F(x,y) = f(R(x,y), Z(x,y)) in 2d 
+ * @tparam Functor The (binary or ternary) function object 
+ * @param f The function defined in cartesian coordinates
+ * @param g The grid
+ * @note Template deduction will fail if you overload functions with different dimensionality (e.g. double sine( double x) and double sine(double x, double y) )
+ * You will want to rename those uniquely
+ *
+ * @return A set of points representing F
+ */
+template< class Functor, class Geometry>
+typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector 
+    pullback( Functor f, const Geometry& g)
+{
+    return dg::detail::doPullback( f, g, typename GeometryTraits<Geometry>::metric_category(), typename GeometryTraits<Geometry>::dimensionality(), typename GeometryTraits<Geometry>::memory_category() );
+}
+
 
 }//namespace dg

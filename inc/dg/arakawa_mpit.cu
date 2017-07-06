@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     unsigned n, Nx, Ny; 
     MPI_Comm comm;
     mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
-    dg::MPI_Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
+    dg::MPIGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
     dg::MHVec w2d = dg::create::weights( grid);

@@ -28,7 +28,7 @@ double initial( double x, double y, double z) {return sin(0);}
 int main()
 {
     std::cout << "TEST 3D VERSION\n";
-    dg::Grid3d<double> g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER);
+    dg::Grid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER);
     dg::HVec w3d = dg::create::weights( g3d);
     dg::HVec v3d = dg::create::inv_weights( g3d);
     dg::HVec x3 = dg::evaluate( initial, g3d);

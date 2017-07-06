@@ -3,8 +3,6 @@
 #include <mpi.h>
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
-#include "file/read_input.h"
-// #include "file/nc_utilities.h"
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/evaluation.cuh"
@@ -19,8 +17,10 @@
 #include "dg/backend/typedefs.cuh"
 // #include "draw/host_window.h"
 #include "guenther.h"
-#include "fields.h"
+#include "magnetic_field.h"
+#include "testfunctors.h"
 
+using namespace dg::geo::guenther;
 
 int main( int argc, char* argv[])
 {
@@ -42,16 +42,11 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
 
     /////////////////initialize params////////////////////////////////
-     std::vector<double> v;
-
-        try{
-            v = file::read_input( "guenther_params.txt"); 
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
-
-    const solovev::GeomParameters gp(v);
+    Json::Reader reader;
+    Json::Value js;
+    std::ifstream is("guenther_params.js");
+    reader.parse(is,js,false);
+    GeomParameters gp(js);
 //     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
@@ -62,21 +57,21 @@ int main( int argc, char* argv[])
     double Zmax=1.0*gp.a*gp.elongation;
     /////////////////////////////////////////////initialze fields /////////////////////
     
-    solovev::Field field(gp);
-    solovev::InvB invb(gp);
-    solovev::GradLnB gradlnB(gp);
-    solovev::LnB lnB(gp);
-    solovev::FieldR bR_(gp);
-    solovev::FieldZ bZ_(gp);
-    solovev::FieldP bPhi_(gp);
-    guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
-    guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
-    guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    guenther::Divb divb(gp.R_0,gp.I_0);
-    guenther::B Bfield(gp);
+    Field field(gp.R_0, gp.I_0);
+    InvB invb(gp.R_0, gp.I_0);
+    GradLnB gradlnB(gp.R_0, gp.I_0);
+    LnB lnB(gp.R_0, gp.I_0);
+    FieldR bR_(gp.R_0, gp.I_0);
+    FieldZ bZ_(gp.R_0, gp.I_0);
+    FieldP bPhi_(gp.R_0, gp.I_0);
+    FuncNeu funcNEU(gp.R_0,gp.I_0);
+    FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    DeriNeu deriNEU(gp.R_0,gp.I_0);
+    DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    DeriNeuT deriNEUT(gp.R_0,gp.I_0);
+    Divb divb(gp.R_0,gp.I_0);
+    B Bfield(gp.R_0, gp.I_0);
     
     //std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
@@ -98,8 +93,8 @@ int main( int argc, char* argv[])
 
 
 
-        dg::CylindricalMPIGrid<dg::MDVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER, comm);
-        dg::MPI_Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn, dg::DIR, dg::DIR, comm);
+        dg::CylindricalMPIGrid3d<dg::MDVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER, comm);
+        dg::MPIGrid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn, dg::DIR, dg::DIR, comm);
 
         if(rank==0)std::cout << "NR = " << Nxn << std::endl;
         if(rank==0)std::cout << "NZ = " << Nyn<< std::endl;
@@ -107,8 +102,8 @@ int main( int argc, char* argv[])
 //            Nxn = (unsigned)ceil(Nxn*pow(2,(double)(2./n)));
 //     Nyn = (unsigned)ceil( Nyn*pow(2,(double)(2./n)));
 
-//        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
-//     dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
+//        dg::Grid3d g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
+//     dg::Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
     const dg::MDVec w3d = dg::create::volume( g3d);
     const dg::MDVec w2d = dg::create::weights( g2d);
     const dg::MDVec v3d = dg::create::inv_volume( g3d);
@@ -124,7 +119,7 @@ int main( int argc, char* argv[])
 
 //     dg::DS<dg::DMatrix, dg::MDVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
-//     dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
+//     dg::Grid3d g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
     
 //     dg::DS<dg::DMatrix, dg::MDVec> ds2d( field, g3dp, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     dg::MDVec boundary=dg::evaluate( dg::zero, g3d);

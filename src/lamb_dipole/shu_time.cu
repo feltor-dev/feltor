@@ -30,7 +30,7 @@ int main( int argc, char * argv[])
     std::cout << "type dt0 (1e-3)!\n";
     std::cin >> dt0;
     std::cout << "k n dt Nx eps vort enstr energy\n";
-    Grid2d<double> grid( 0, 1, 0, 1, n, Nx, Ny, dg::PER, dg::PER);
+    Grid2d grid( 0, 1, 0, 1, n, Nx, Ny, dg::PER, dg::PER);
     DVec w2d( create::weights(grid));
     dg::Lamb lamb( 0.5, 0.8, 0.1, 1.);
     const HVec omega = evaluate ( lamb, grid);
@@ -51,8 +51,6 @@ int main( int argc, char * argv[])
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
         double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
         /////////////////////////////////////////////////////////////////
-        double time = 0;
-        unsigned step = 0;
         try{
         for( unsigned i=0; i<NT; i++)
         {
@@ -84,8 +82,6 @@ int main( int argc, char * argv[])
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
         double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
         /////////////////////////////////////////////////////////////////
-        double time = 0;
-        unsigned step = 0;
         try{
         for( unsigned i=0; i<NT; i++)
         {
@@ -117,8 +113,6 @@ int main( int argc, char * argv[])
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
         double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
         /////////////////////////////////////////////////////////////////
-        double time = 0;
-        unsigned step = 0;
         try{
         for( unsigned i=0; i<NT; i++)
         {
@@ -150,8 +144,6 @@ int main( int argc, char * argv[])
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
         double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
         /////////////////////////////////////////////////////////////////
-        double time = 0;
-        unsigned step = 0;
         try{
         for( unsigned i=0; i<NT; i++)
         {

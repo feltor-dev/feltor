@@ -2,8 +2,6 @@
 
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
-#include "file/read_input.h"
-// #include "file/nc_utilities.h"
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/evaluation.cuh"
@@ -16,24 +14,21 @@
 #include "dg/cg.h"
 // #include "draw/host_window.h"
 #include "guenther.h"
-#include "fields.h"
+#include "magnetic_field.h"
+#include "testfunctors.h"
 
+using namespace dg::geo::guenther;
 
 int main( )
 {
 
     /////////////////initialize params////////////////////////////////
-     std::vector<double> v;
-
-        try{
-            v = file::read_input( "guenther_params.txt"); 
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
-
-    const solovev::GeomParameters gp(v);
-//     gp.display( std::cout);
+    Json::Reader reader;
+    Json::Value js;
+    std::ifstream is("guenther_params.js");
+    reader.parse(is,js,false);
+    GeomParameters gp(js);
+    gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
     
@@ -43,22 +38,23 @@ int main( )
     double Zmax=1.0*gp.a*gp.elongation;
     /////////////////////////////////////////////initialze fields /////////////////////
     
-    solovev::Field field(gp);
-    solovev::InvB invb(gp);
-    solovev::GradLnB gradlnB(gp);
-    solovev::LnB lnB(gp);
-    solovev::FieldR bR_(gp);
-    solovev::FieldZ bZ_(gp);
-    solovev::FieldP bPhi_(gp);
-    guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
-    guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
-    guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    guenther::Divb divb(gp.R_0,gp.I_0);
-    guenther::B Bfield(gp);
-        
+    Field field(gp.R_0, gp.I_0);
+    InvB invb(gp.R_0, gp.I_0);
+    GradLnB gradlnB(gp.R_0, gp.I_0);
+    LnB lnB(gp.R_0, gp.I_0);
+    FieldR bR_(gp.R_0, gp.I_0);
+    FieldZ bZ_(gp.R_0, gp.I_0);
+    FieldP bPhi_(gp.R_0, gp.I_0);
+    FuncNeu funcNEU(gp.R_0,gp.I_0);
+    FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    DeriNeu deriNEU(gp.R_0,gp.I_0);
+    DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    DeriNeuT deriNEUT(gp.R_0,gp.I_0);
+    Divb divb(gp.R_0,gp.I_0);
+    B Bfield(gp.R_0, gp.I_0);
+    
+    std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n=3, Nx=5, Ny=5, Nz=5;
     unsigned fn;
@@ -86,7 +82,7 @@ int main( )
 
         dg::CylindricalGrid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
         dg::CylindricalGrid<dg::DVec> g3d_fein( Rmin,Rmax, Zmin,Zmax, z0, z1,  fn,fN*Nxn ,fN*Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
-        dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
+        dg::Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
 
         std::cout << "NR = " << Nxn << std::endl;
         std::cout << "NZ = " << Nyn<< std::endl;
@@ -94,8 +90,8 @@ int main( )
 //            Nxn = (unsigned)ceil(Nxn*pow(2,(double)(2./n)));
 //     Nyn = (unsigned)ceil( Nyn*pow(2,(double)(2./n)));
 
-//        dg::Grid3d<double> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER,dg::cylindrical);
-//     dg::Grid2d<double> g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
+//        dg::Grid3d g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, Nz*pow(2,i),dg::DIR, dg::DIR, dg::PER);
+//     dg::Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nx, Ny); 
     const dg::DVec w3d = dg::create::volume( g3d);
     const dg::DVec w2d = dg::create::weights( g2d);
     const dg::DVec v3d = dg::create::inv_volume( g3d);
@@ -114,7 +110,7 @@ int main( )
     std::cout << "Creating took " << timer.diff() << std::endl;
 //     dg::DS<dg::DMatrix, dg::DVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
-//     dg::Grid3d<double> g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
+//     dg::Grid3d g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
     
 //     dg::DS<dg::DMatrix, dg::DVec> ds2d( field, g3dp, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
@@ -265,13 +261,13 @@ int main( )
         //dg::blas1::pointwiseDivide( dsTdsfb, inverseB, dsTdsfb);
 //     ds.centeredT( derivative2, dsTds2); //dsT(ds(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
-//      ds.centeredT( ones, divbT);
+     ds.centeredT( ones, divbT);
 //     
 //     double normdsds =dg::blas2::dot(derivative2, w3d,derivative2);
 //     double normds1ds =dg::blas2::dot(derivativeones, w3d,derivative2);
 //     double normdivBT =dg::blas2::dot(divBT, w3d,divBT);
-//      double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-//      double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
+     double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+     double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
 //     double normdsTf = dg::blas2::dot(derivativeT2, w3d, function2);
 //     double normdsT_1 = dg::blas2::dot(derivativeT2, w3d, ones);
 //     double normdsT1 = dg::blas2::dot(derivativeTones, w3d, function2);
@@ -301,15 +297,15 @@ int main( )
 //     errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);    
 //     std::cout << "Relative Difference in DS is "<< sqrt( errRZPhi/norm )<<"\n"; 
 //     
-//      std::cout << "--------------------testing divb" << std::endl;
-//      //std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
-//      //std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
-//      dg::blas1::axpby( 1., divbsol, -1., divbT);
-//      normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-//      std::cout << "Relative Difference in divb is   "<<sqrt( normdivbT/normdivb)<<"\n";
-//      //std::cout << "-------------------- " << std::endl;
-//      //std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
-// // 
+     std::cout << "--------------------testing dsT" << std::endl;
+     std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
+     std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
+     dg::blas1::axpby( 1., divbsol, -1., divbT);
+     normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+     std::cout << "Relative Difference in DST is   "<<sqrt( normdivbT)<<"\n";
+     std::cout << "-------------------- " << std::endl;
+     //std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
+// 
 //     
 //     std::cout << "-------------------- " << std::endl;
 //     double normT = dg::blas2::dot( w3d, solutionT);

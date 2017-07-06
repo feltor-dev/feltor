@@ -11,8 +11,7 @@
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/interpolation.cuh"
 
-#include "netcdf_par.h"
-#include "file/read_input.h"
+#include "netcdf_par.h" //exclude if par netcdf=OFF
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -25,7 +24,8 @@
         output dimensions must be divisible by the mpi process numbers
 */
 
-typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
+typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
+using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
@@ -58,8 +58,8 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    Json::Reader reader;
+    Json::Value js, gs;
     if( argc != 4)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
@@ -67,22 +67,16 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-            v = file::read_input( argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            if(rank==0)m.display();
-            if(rank==0) std::cout << input << std::endl;
-            if(rank==0) std::cout << geom << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( v);
-    if(rank==0) p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
-    if(rank==0) gp.display( std::cout);
+    const eule::Parameters p( js);
+    const dg::geo::solovev::GeomParameters gp(gs);
+    if(rank==0)p.display( std::cout);
+    if(rank==0)gp.display( std::cout);
+    std::string input = js.toStyledString(), geom = gs.toStyledString();
     ////////////////////////////////set up computations///////////////////////////
     
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
@@ -90,19 +84,19 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-     dg::CylindricalMPIGrid<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER, comm);  
-     dg::CylindricalMPIGrid<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
+     dg::CylindricalMPIGrid3d<dg::MDVec> grid(     Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n,     p.Nx,     p.Ny,     p.Nz,     p.bc, p.bc, dg::PER, comm);  
+     dg::CylindricalMPIGrid3d<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
      
     //create RHS 
     if(rank==0)std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
     if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalMPIGrid<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    eule::Rolkar< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field/////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
     std::vector<dg::MDVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //perturbation 
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
@@ -121,18 +115,20 @@ int main( int argc, char* argv[])
     }
     if( p.mode == 3)
     {
-        solovev::ZonalFlow init0(p.amp, p.k_psi, gp);
+        dg::geo::ZonalFlow<Psip> init0(p.amp, p.k_psi, gp, Psip(gp));
         y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
     }
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //sum up background and perturbation
     dg::blas1::plus(y0[1], -1); //initialize ni-1
     if( p.mode == 2 || p.mode == 3)
     {
-        dg::MDVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+        dg::MDVec damping = dg::evaluate( dg::geo::GaussianProfXDamping<Psip>(Psip(gp), gp), grid);
         dg::blas1::pointwiseDot(damping, y0[1], y0[1]); //damp with gaussprofdamp
     }
-    feltor.initializene( y0[1], y0[0]);    
-    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
+    std::cout << "intiialize ne" << std::endl;
+    if( p.initcond == 0) feltor.initializene( y0[1], y0[0]);
+    if( p.initcond == 1) dg::blas1::axpby( 1., y0[1], 0.,y0[0], y0[0]); //set n_e = N_i
+    std::cout << "Done!\n";    dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
@@ -142,16 +138,17 @@ int main( int argc, char* argv[])
     int ncid;
     MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( argv[3], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
-//  err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
+    //err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid); //MPI OFF
 
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile",  geom.size(), geom.data());
     int dimids[4], tvarID;
     {
+        MagneticField c(gp);
         err = file::define_dimensions( ncid, dimids, &tvarID, grid_out.global());
-        solovev::FieldR fieldR(gp);
-        solovev::FieldZ fieldZ(gp);
-        solovev::FieldP fieldP(gp);
+        dg::geo::FieldR<MagneticField> fieldR(c, gp.R_0);
+        dg::geo::FieldZ<MagneticField> fieldZ(c, gp.R_0);
+        dg::geo::FieldP<MagneticField> fieldP(c, gp.R_0);
         dg::HVec vecR = dg::evaluate( fieldR, grid_out.global());
         dg::HVec vecZ = dg::evaluate( fieldZ, grid_out.global());
         dg::HVec vecP = dg::evaluate( fieldP, grid_out.global());

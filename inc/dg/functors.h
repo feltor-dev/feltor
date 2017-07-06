@@ -1,5 +1,4 @@
-#ifndef _DG_FUNCTORS_CUH_
-#define _DG_FUNCTORS_CUH_
+#pragma once
 
 #include <cmath>
 #include <vector>
@@ -131,6 +130,78 @@ struct Gaussian
   private:
     double  x00, y00, sigma_x, sigma_y, amplitude, kz_;
 
+};
+
+/**
+ * @brief A blob that drops to zero 
+ * \f[
+   f(x,y) = Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - \right)^{-1}} 
+   \f]
+ */
+struct Cauchy
+{
+    /**
+     * @brief A blob that drops to zero 
+     *
+     * @param x0 x-center-coordinate
+     * @param y0 y-center-coordinate
+     * @param sigma_x radius in x 
+     * @param sigma_y radius in y  
+     * @param amp Amplitude
+     */
+    Cauchy( double x0, double y0, double sigma_x, double sigma_y, double amp): x0_(x0), y0_(y0), sigmaX_(sigma_x), sigmaY_(sigma_y), amp_(amp){}
+    double operator()(double x, double y )const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        if( xbar*xbar + ybar*ybar < 1.)
+            return amp_*exp( 1. +  1./( xbar*xbar + ybar*ybar -1.) );
+        return 0.;
+    }
+    bool inside( double x, double y)const
+    {
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        if( xbar*xbar + ybar*ybar < 1.)
+            return true;
+        return false;
+    }
+
+    double dx( double x, double y )const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        double temp = sigmaX_*(xbar*xbar + ybar*ybar  - 1.);
+        return -2.*(x-x0_)*this->operator()(x,y)/temp/temp;
+    }
+    double dxx( double x, double y)const{ 
+        double temp = sigmaY_*sigmaY_*(x-x0_)*(x-x0_) + sigmaX_*sigmaX_*((y-y0_)*(y-y0_) - sigmaY_*sigmaY_);
+        double bracket = sigmaX_*sigmaX_*((y-y0_)*(y-y0_)-sigmaY_*sigmaY_)*sigmaX_*sigmaX_*((y-y0_)*(y-y0_)-sigmaY_*sigmaY_)
+            -3.*sigmaY_*sigmaY_*sigmaY_*sigmaY_*(x-x0_)*(x-x0_)*(x-x0_)*(x-x0_)
+            -2.*sigmaY_*sigmaY_*sigmaX_*sigmaX_*(x-x0_)*(x-x0_)*(y-y0_)*(y-y0_);
+        return -2.*sigmaX_*sigmaX_*sigmaY_*sigmaY_*sigmaY_*sigmaY_*this->operator()(x,y)*bracket/temp/temp/temp/temp;
+    }
+    double dy( double x, double y)const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        double temp = sigmaY_*(xbar*xbar + ybar*ybar  - 1.);
+        return -2.*(y-y0_)*this->operator()(x,y)/temp/temp;
+    }
+    double dyy( double x, double y)const{ 
+        double temp = sigmaX_*sigmaX_*(y-y0_)*(y-y0_) + sigmaY_*sigmaY_*((x-x0_)*(x-x0_) - sigmaX_*sigmaX_);
+        double bracket = sigmaY_*sigmaY_*((x-x0_)*(x-x0_)-sigmaX_*sigmaX_)*sigmaY_*sigmaY_*((x-x0_)*(x-x0_)-sigmaX_*sigmaX_)
+            -3.*sigmaX_*sigmaX_*sigmaX_*sigmaX_*(y-y0_)*(y-y0_)*(y-y0_)*(y-y0_)
+            -2.*sigmaX_*sigmaX_*sigmaY_*sigmaY_*(y-y0_)*(y-y0_)*(x-x0_)*(x-x0_);
+        return -2.*sigmaY_*sigmaY_*sigmaX_*sigmaX_*sigmaX_*sigmaX_*this->operator()(x,y)*bracket/temp/temp/temp/temp;
+    }
+    double dxy( double x, double y )const{ 
+        double xbar = (x-x0_)/sigmaX_;
+        double ybar = (y-y0_)/sigmaY_;
+        double temp = (xbar*xbar + ybar*ybar  - 1.);
+        return 8.*xbar*ybar*this->operator()(x,y)/temp/temp/temp/sigmaX_/sigmaY_
+            + 4.*xbar*ybar*this->operator()(x,y)/temp/temp/temp/temp/sigmaX_/sigmaY_
+;
+    }
+    private:
+    double x0_, y0_, sigmaX_, sigmaY_, amp_;
 };
 
 /**
@@ -323,6 +394,59 @@ struct GaussianZ
     double  z00, sigma_z, amplitude;
 
 };
+/**
+ * @brief Functor for a sin prof in x and y-direction
+ * \f[ f(x,y) =B+ A sin(k_x x) sin(k_y y) \f]
+ */
+struct SinXSinY
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     * @param ky  ky
+     */
+    SinXSinY( double amp, double bamp, double kx, double ky):amp_(amp), bamp_(bamp),kx_(kx),ky_(ky){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y){ return bamp_+amp_*sin(x*kx_)*sin(y*ky_);}
+  private:
+    double amp_,bamp_,kx_,ky_;
+};
+/**
+ * @brief Functor for a sin prof in x-direction
+ * \f[ f(x,y) =B+ A sin(k_x x) \f]
+ */
+struct SinX
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     */
+    SinX( double amp, double bamp, double kx):amp_(amp), bamp_(bamp),kx_(kx){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y){ return bamp_+amp_*sin(x*kx_);}
+  private:
+    double amp_,bamp_,kx_;
+};
 
 /**
  * @brief Functor for a sin prof in x-direction
@@ -394,6 +518,16 @@ struct LinearX
      *
      * @param x x - coordinate
      * @param y y - coordinate
+     * @param z z - coordinate
+     
+     * @return result
+     */
+   double operator()( double x, double y, double z){ return a_*x+b_;}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
      
      * @return result
      */
@@ -425,8 +559,18 @@ struct LinearY
     /**
      * @brief Return linear polynomial in x 
      *
-     * @param x x - coordianate
-     * @param y y - coordianate
+     * @param x x - coordinate
+     * @param y y - coordinate
+     * @param z z - coordinate
+     
+     * @return result
+     */
+    double operator()( double x, double y, double z){ return a_*y+b_;}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
      
      * @return result
      */
@@ -434,11 +578,37 @@ struct LinearY
   private:
     double a_,b_;
 };
+/**
+ * @brief Functor for a linear polynomial in z-direction
+ * \f[ f(x,y,z) = az+b \f]
+ */
+struct LinearZ
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param a linear coefficient 
+     * @param b constant coefficient
+     */
+    LinearZ( double a, double b):a_(a), b_(b){}
+    /**
+     * @brief Return linear polynomial in x 
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     * @param z z - coordinate
+     
+     * @return result
+     */
+    double operator()( double x, double y, double z){ return a_*z+b_;}
+  private:
+    double a_,b_;
+};
 
 
 /**
  * @brief Functor for a step function using tanh
- * \f[ f(x,y) = profamp*0.5(1+ sign \tanh((x-x_b)/width ) )+bgampg \f]
+ * \f[ f(x,y) = 0.5 profamp(1+ sign \tanh((x-x_b)/width ) )+bgampg \f]
  */
 struct TanhProfX {
     /**
@@ -473,6 +643,16 @@ struct TanhProfX {
 };
 /**
  * @brief Functor returning a Lamb dipole
+ \f[ f(x,y) = \begin{cases} 2\lambda U J_1(\lambda r) / J_0(\gamma)\cos(\theta) \text{ for } r<R \\
+         0 \text{ else}
+         \end{cases}
+ \f] 
+
+ with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$ 
+ \theta = \arctan_2( (y-y_), (x-x_0))\f$, 
+ \f$J_0, J_1\f$ are
+ Bessel functions of the first kind of order 0 and 1 and 
+ \f$\lambda = \gamma/R\f$ with \f$ \gamma = 3.83170597020751231561\f$
  */
 struct Lamb
 {
@@ -512,7 +692,8 @@ struct Lamb
      * @brief The total enstrophy of the dipole
      *
      * Analytic formula. True for periodic and dirichlet boundary conditions.
-     * @return enstrophy
+     * @return enstrophy \f$ \pi U^2\gamma^2\f$ 
+
      */
     double enstrophy( ) { return M_PI*U_*U_*gamma_*gamma_;}
 
@@ -520,110 +701,32 @@ struct Lamb
      * @brief The total energy of the dipole
      *
      * Analytic formula. True for periodic and dirichlet boundary conditions.
-     * @return  energy
+     * @return  energy \f$ 2\pi R^2U^2\f$ 
      */
     double energy() { return 2.*M_PI*R_*R_*U_*U_;}
   private:
     double R_, U_, x0_, y0_, lambda_, gamma_, j_;
 };
-// ----------------------------------------------------------------------
-/**
- * @brief Returns the Bessel function \f$ J_1(x)\f$ for any real x. 
- *
- * @param x x-value
- *
- * @return J_1(x)
- */
-double bessj1(double x) 
-{   double ax,z; 
-    double xx,y,ans,ans1,ans2; 
-    if ((ax=fabs(x)) < 8.0) 
-    { 
-	y=x*x; 
-	ans1 = x*(72362614232.0 + y*(-7895059235.0 + 
-		   y*(242396853.1 + y*(-2972611.439 + 
-		     y*(15704.48260+y*(-30.16036606))))));  
-	ans2 = 144725228442.0 + y*(2300535178.0 + 
-		   y*(18583304.74 + y*(99447.43394 + 
-		    y*(376.9991397+y*1.0)))); 
-	ans=ans1/ans2; 
-    } 
-    else 
-    { 
-	z=8.0/ax; 
-	y=z*z; 
-	xx=ax-2.356194491; 
-	ans1 = 1.0+y*(0.183105e-2+y*(-0.3516396496e-4 +
-		   y*(0.2457520174e-5+y*(-0.240337019e-6)))); 
-	ans2 = 0.04687499995+y*(-0.2002690873e-3 +
-                   y*(0.8449199096e-5+y*(-0.88228987e-6 +y*0.105787412e-6))); 
-	ans = sqrt(0.636619772/ax)*(cos(xx)*ans1-z*sin(xx)*ans2); 
-	if (x < 0.0) ans = -ans; 
-    } 
-    return ans; 
-}   
-
-// ----------------------------------------------------------------------
-
-/**
- * @brief Returns the modified Bessel function \f$ I_1(x)\f$ for any real x. 
- *
- * @param x
- *
- * @return I_1(x)
- */
-double bessi1(double x) 
-{   double ax,ans; 
-    double y; 
-    if ((ax=fabs(x)) < 3.75) 
-    {
-	y=x/3.75; 
-	y*=y; 
-	ans = ax*(0.5+y*(0.87890594+y*(0.51498869+y*(0.15084934 +
-               y*(0.2658733e-1+y*(0.301532e-2+y*0.32411e-3)))))); 
-    } 
-    else 
-    { 
-	y=3.75/ax; 
-	ans = 0.2282967e-1+y*(-0.2895312e-1+y*(0.1787654e-1 -
-              y*0.420059e-2)); ans=0.39894228+y*(-0.3988024e-1+
-              y*(-0.362018e-2 +y*(0.163801e-2+y*(-0.1031555e-1+y*ans)))); 
-	ans *= (exp(ax)/sqrt(ax)); 
-    } 
-    return x < 0.0 ? -ans : ans; 
-}
-
-// ----------------------------------------------------------------------
-/**
- * @brief Returns the modified Bessel function \f$ K_1(x)\f$ for positive real x.
- *
- * @param x x-value
- *
- * @return K_1(x)
- */
-double bessk1(double x)
-{ 
-    double bessi1(double x); 
-    double y,ans;
-    if (x <= 2.0) 
-    {
-	y=x*x/4.0; 
-	ans = (log(x/2.0)*bessi1(x))+(1.0/x)*(1.0+y*(0.15443144 +
-               y*(-0.67278579+y*(-0.18156897+y*(-0.1919402e-1 +
-               y*(-0.110404e-2+y*(-0.4686e-4))))))); 
-    } 
-    else 
-    { 
-	y=2.0/x; 
-	ans = (exp(-x)/sqrt(x))*(1.25331414+y*(0.23498619 +
-              y*(-0.3655620e-1+y*(0.1504268e-1+y*(-0.780353e-2 +
-              y*(0.325614e-2+y*(-0.68245e-3))))))); 
-    } 
-    return ans; 
-}
 
 /**
  * @brief Return a 2d vortex function 
+       \f[f(x,y) =\begin{cases}
+       \frac{u_d}{1.2965125} \left(
+       r\left(1+\frac{\beta_i^2}{g_i^2}\right) 
+       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
+      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
+      \end{cases}
+      \f]
+
+     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
+ with \f$ r = \sqrt{(x-x_0)^2 + (y-y_0)^2}\f$, \f$ \theta = \arctan_2( (y-y_), (x-x_0))\f$, 
+        \f$ g_0 = 3.831896621 \f$, 
+        \f$ g_1 = -3.832353624 \f$, 
+        \f$ g_2 = 7.016\f$, 
+        \f$ \beta_0 = 0.03827327723\f$, 
+        \f$ \beta_1 = 0.07071067810 \f$, 
+        \f$ \beta_2 = 0.07071067810 \f$
+        \f$ K_1\f$ is the modified and \f$ J_1\f$ the Bessel function
  */
 struct Vortex
 {
@@ -632,10 +735,10 @@ struct Vortex
      *
      * @param x0 X position
      * @param y0 Y position
-     * @param state mode
+     * @param state mode 0,1, or 2
      * @param R characteristic radius of dipole
-     * @param u_dipole u_drift/u_dipole
-     * @param kz
+     * @param u_dipole u_drift/u_dipole = \f$ u_d\f$
+     * @param kz multiply by \f$ \cos(k_z z) \f$ in three dimensions
      */
     Vortex( double x0, double y0, unsigned state, 
           double R,  double u_dipole, double kz = 0):
@@ -650,14 +753,14 @@ struct Vortex
     /**
      * @brief Evaluate the vortex
      *
-      \f[\begin{cases}
-       \frac{1}{1.2965125} u_d(
-       r(1+\frac{\beta_i^2}{g_i^2}) 
-       - R \frac{\beta_i^2}{g_i^2} J_1(g_i) \frac{r}{RJ_1(g_i)})\cos(\Theta) \text{ if } r/R < 1 \\
-      \frac{1}{1.2965125} u_dR \frac{K_1(\beta_i \frac{r}{R})}{K_1(\beta)} \cos(\Theta) \text{ else }
+       \f[f(x,y) =\begin{cases}
+       \frac{u_d}{1.2965125} \left(
+       r\left(1+\frac{\beta_i^2}{g_i^2}\right) 
+       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
+      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
       \f]
-     * where i is the mode number and r and \f$\Theta\f$ are poloidal coordinates
+     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
      * @param x value
      * @param y value
      *
@@ -680,14 +783,14 @@ struct Vortex
     /**
      * @brief Evaluate the vortex modulated by a sine wave in z
      *
-      \f[ \cos(k_z z)\begin{cases}
-       \frac{1}{1.2965125} u_d(
-       r(1+\frac{\beta_i^2}{g_i^2}) 
-       - R \frac{\beta_i^2}{g_i^2} J_1(g_i) \frac{r}{RJ_1(g_i)})\cos(\Theta) \text{ if } r/R < 1 \\
-      \frac{1}{1.2965125} u_dR \frac{K_1(\beta_i \frac{r}{R})}{K_1(\beta)} \cos(\Theta) \text{ else }
+       \f[f(x,y,z) =\cos(k_z z)\begin{cases}
+       \frac{u_d}{1.2965125} \left(
+       r\left(1+\frac{\beta_i^2}{g_i^2}\right) 
+       - R \frac{\beta_i^2}{g_i^2} \frac{J_1(g_ir/R)}{J_1(g_i)}\right)\cos(\theta) \text{ if } r < R \\
+      \frac{u_d}{1.2965125} R \frac{K_1(\beta_i {r}/{R})}{K_1(\beta)} \cos(\theta) \text{ else }
       \end{cases}
       \f]
-     * where i is the mode number and r and \f$\Theta\f$ are poloidal coordinates
+     * where \f$ i\in \{0,1,2\}\f$ is the mode number and r and \f$\theta\f$ are poloidal coordinates
      * @param x value
      * @param y value
      * @param z value
@@ -760,8 +863,8 @@ struct BathRZ{
      * @param Nz Number of planes in phi direction
      * @param R_min Minimal R (in units of rho_s)
      * @param Z_min Minimal Z (in units of rho_s)
-     * @param gamma exponent of the energy function \f[E_k=(k/(k+_k0)^2)^\gamma\f](typical around 30)
-     * @param eddysize \f[k_0=2*\pi*eddysize/XYm \f]
+     * @param gamma exponent of the energy function \f$E_k=(k/(k+k_0)^2)^\gamma\f$(typical around 30)
+     * @param eddysize \f$k_0=2\pi eddysize/\sqrt{R_m^2+Z_m^2} \f$
      * @param amp Amplitude
      */  
     BathRZ( unsigned Rm, unsigned Zm, unsigned Nz, double R_min, double Z_min, double gamma, double eddysize, double amp) : 
@@ -771,7 +874,6 @@ struct BathRZ{
         kvec( Rm_*Zm_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
         normal1(kvec), normal2(kvec), normalamp(kvec), normalphase(kvec)
     {
-        std::cout << "Constructing initial bath" << "\n";
         double Rm2=(double)(Rm_*Rm_);
         double Zm2=(double)(Zm_*Zm_);
         double RZm= sqrt(Rm2+Zm2);
@@ -1046,6 +1148,27 @@ struct PLUS
 };
 
 /**
+ * @brief Invert the given value
+ * \f[ f(x) = 1/x \f]
+ *
+ * @tparam T value type
+ */
+template <class T = double>
+struct INVERT
+{
+    /**
+     * @brief Invert the given value
+     *
+     * @param x  the input
+     * @return  1/x
+     */
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+        T operator()(const T& x){ return 1./x;}
+};
+
+/**
  * @brief returns (positive) modulo 
  * \f[ f(x) = x\mod m\f]
  *
@@ -1180,6 +1303,47 @@ struct CONSTANT
 };
 
 /**
+ * @brief Return one
+ * \f[ f(x) = 1\f]
+ *
+ */
+struct ONE
+{
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x){return 1.;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x, double y){return 1.;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x, double y, double z){return 1.;}
+};
+/**
+ * @brief Return zero
+ * \f[ f(x) = 0\f]
+ *
+ */
+struct ZERO
+{
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x){return 0.;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x, double y){return 0.;}
+#ifdef __CUDACC__
+    __host__ __device__
+#endif
+    double operator()(double x, double y, double z){return 0.;}
+};
+
+/**
  * @brief Compute a histogram on a 1D grid
  * @tparam container 
  */ 
@@ -1191,7 +1355,7 @@ struct Histogram
      * @param g1d grid on which to compute the histogram ( grid.h() is the binwidth)
      * @param in input vector (if grid.x0() < in[i] <grid.x1() it falls in a bin)
      */
-    Histogram(const dg::Grid1d<double>& g1d, const std::vector<double>& in) :
+    Histogram(const dg::Grid1d& g1d, const std::vector<double>& in) :
     g1d_(g1d),
     in_(in),
     binwidth_(g1d_.h()),
@@ -1232,7 +1396,7 @@ struct Histogram
     }
 
     private:
-    dg::Grid1d<double> g1d_;
+    dg::Grid1d g1d_;
     const std::vector<double> in_;
     double binwidth_;
     container  count_;
@@ -1251,7 +1415,7 @@ struct Histogram2D
      * @param inx input vector in x - direction (if grid.x0() < in[i] <grid.x1() it falls in a bin)
      * @param iny input vector in y - direction (if grid.y0() < in[i] <grid.y1() it falls in a bin)
      */
-    Histogram2D(const dg::Grid2d<double>& g2d, const std::vector<double>& inx,const std::vector<double>& iny) :
+    Histogram2D(const dg::Grid2d& g2d, const std::vector<double>& inx,const std::vector<double>& iny) :
     g2d_(g2d),
     inx_(inx),
     iny_(iny),
@@ -1298,7 +1462,7 @@ struct Histogram2D
 
     }
     private:
-    dg::Grid2d<double> g2d_;
+    dg::Grid2d g2d_;
     const std::vector<double> inx_,iny_;
     double binwidthx_,binwidthy_;
     container count_;
@@ -1306,4 +1470,3 @@ struct Histogram2D
 ///@}
 } //namespace dg
 
-#endif //_DG_FUNCTORS_CUH

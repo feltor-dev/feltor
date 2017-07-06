@@ -20,7 +20,7 @@ int main()
     GLFWwindow* w = draw::glfwInitAndCreateWindow( 400, 400, "Hello world!");
     draw::RenderHostData render( 1, 1);
     //generate a grid 
-    dg::Grid2d<double> grid( 0, 1., 0, 1., n, Nx, Ny);
+    dg::Grid2d grid( 0, 1., 0, 1., n, Nx, Ny);
     // generate a vector on the grid to visualize 
     //dg::Gaussian g( 0.5, 0.5, .1, .1, 1);
     dg::Lamb g( 0.5*grid.lx(), 0.5*grid.ly(), .3, 1);
