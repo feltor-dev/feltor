@@ -11,7 +11,7 @@
 namespace dg{
 
 namespace create{
-///@addtogroup utilities
+///@addtogroup interpolation
 ///@{
 /**
  * @brief Create interpolation matrix

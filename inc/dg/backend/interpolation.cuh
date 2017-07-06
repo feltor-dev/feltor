@@ -89,7 +89,7 @@ struct Legendre
 
 }//namespace detail
 ///@endcond
-///@addtogroup utilities
+///@addtogroup interpolation
 ///@{
 /**
  * @brief Create interpolation matrix
@@ -649,6 +649,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> projection( const Grid3d& g_coa
  * @param v The vector to interpolate in LSPACE
  * @param g The Grid on which to operate
  *
+ * @ingroup interpolation
  * @return interpolated point
  */
 double interpolate( double x, double y,  const thrust::host_vector<double>& v, const Grid2d& g )
