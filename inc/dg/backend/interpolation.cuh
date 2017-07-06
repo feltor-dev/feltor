@@ -541,7 +541,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> projection( const Grid2d& g_coa
     unsigned num_cellsY = g_fine.Ny() / g_coarse.Ny();
 
     //construct elemental grid with fine number of cells and polynomials
-    Grid2d<double> g_elemental( -1., 1., -1., 1., g_fine.n(), num_cellsX, num_cellsY);
+    Grid2d g_elemental( -1., 1., -1., 1., g_fine.n(), num_cellsX, num_cellsY);
     //now evaluate the coarse Legendre polynomials on the fine grid
     thrust::host_vector<double> coeffsX[g_coarse.n()*g_coarse.n()];
     thrust::host_vector<double> coeffsL[g_coarse.n()*g_coarse.n()];
@@ -569,7 +569,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> projection( const Grid2d& g_coa
             coeffsL[p*g_coarse.n()+q] = transform( forward.transpose(), coeffsX[p*g_coarse.n() + q], g_elemental);
             
         }
-    Grid2d<double> gc_elemental( -1., 1., -1., 1., g_coarse.n(), 1, 1);
+    Grid2d gc_elemental( -1., 1., -1., 1., g_coarse.n(), 1, 1);
     Operator<double> backward( gc_elemental.dlt().backward());
     Operator<double> sisj_inv = dg::create::pipj_inv( gc_elemental.n());
     Operator<double> left = backward*sisj_inv;    
@@ -623,8 +623,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> projection( const Grid3d& g_coa
     assert( g_coarse.Nz() == g_fine.Nz());
     const unsigned Nz = g_coarse.Nz();
 
-    Grid2d<double> g2d_coarse( g_coarse.x0(), g_coarse.x1(), g_coarse.y0(), g_coarse.y1(), g_coarse.n(), g_coarse.Nx(), g_coarse.Ny());
-    Grid2d<double> g2d_fine( g_fine.x0(), g_fine.x1(), g_fine.y0(), g_fine.y1(), g_fine.n(), g_fine.Nx(), g_fine.Ny());
+    Grid2d g2d_coarse( g_coarse.x0(), g_coarse.x1(), g_coarse.y0(), g_coarse.y1(), g_coarse.n(), g_coarse.Nx(), g_coarse.Ny());
+    Grid2d g2d_fine( g_fine.x0(), g_fine.x1(), g_fine.y0(), g_fine.y1(), g_fine.n(), g_fine.Nx(), g_fine.Ny());
     cusp::coo_matrix<int, double, cusp::host_memory> A2d = projection( g2d_coarse, g2d_fine);
 
     cusp::coo_matrix<int, double, cusp::host_memory> A( A2d.num_rows*Nz, A2d.num_cols*Nz, A2d.num_entries*Nz);

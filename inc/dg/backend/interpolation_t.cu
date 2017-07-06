@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include <cusp/print.h>
-#include "../blas.h"
 #include "xspacelib.cuh"
 #include "interpolation.cuh"
 #include "../blas.h"
@@ -10,24 +9,15 @@
 double function( double x, double y){return sin(x)*sin(y);}
 double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}
 
- unsigned n = 3;
- unsigned Nx = 30; 
- unsigned Ny = 50; 
- unsigned Nz = 2; 
+const unsigned n = 3;
+const unsigned Nx = 3; 
+const unsigned Ny = 5; 
+const unsigned Nz = 2; 
 
 typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
 
-double sinex( double x, double y) {return sin(x)*sin(x)*sin(y)*sin(y)*x*x*y*y;}
-double sinex( double x, double y, double z) {return sin(x)*sin(x)*sin(y)*sin(y)*x*x*y*y;}
-
 int main()
 {
-    std::cout << "type n, Nx, Ny, Nz\n";
-    std::cin >> n >> Nx >> Ny >> Nz;
-    std::cout << "type nfine, Nmultiply (fine grid is nf, NfNx, NfNy, Nz)\n";
-    unsigned nf, Nf;
-    std::cin >> nf >> Nf;
-
 
     {
     dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
@@ -53,20 +43,22 @@ int main()
     //cusp::print(A);
     //cusp::print(B);
     //ATTENTION: backscatter might delete zeroes in matrices
-    for( unsigned i=0; i<A.values.size(); i++)
-    {
-        if( (A.values[i] - B.values[i]) > 1e-10)
-        {
-            std::cerr << "NOT EQUAL "<<A.row_indices[i] <<" "<<A.column_indices[i]<<" "<<A.values[i] << "\t "<<B.row_indices[i]<<" "<<B.column_indices[i]<<" "<<B.values[i]<<"\n";
-            passed = false;
-        }
-    }
-    if( A.num_entries != B.num_entries)
-    {
-        std::cerr << "Number of entries not equal!\n";
-        passed = false;
-    }
-    if( passed)
+    //for( unsigned i=0; i<A.values.size(); i++)
+    //{
+    //    if( (A.values[i] - B.values[i]) > 1e-14)
+    //    {
+    //        std::cerr << "NOT EQUAL "<<A.row_indices[i] <<" "<<A.column_indices[i]<<" "<<A.values[i] << "\t "<<B.row_indices[i]<<" "<<B.column_indices[i]<<" "<<B.values[i]<<"\n";
+    //        passed = false;
+    //    }
+    //}
+    //if( A.num_entries != B.num_entries)
+    //{
+    //    std::cerr << "Number of entries not equal!\n";
+    //    passed = false;
+    //}
+    if( error > 1e-14) 
+        std::cout<< "2D TEST FAILED!\n";
+    else
         std::cout << "2D TEST PASSED!\n";
 
 
@@ -92,35 +84,6 @@ int main()
     }
     if( passed)
         std::cout << "2D INTERPOLATE TEST PASSED!\n";
-
-    dg::Grid2d gfine( -10, 10, -5, 5, nf, Nf*Nx, Nf*Ny);
-    const thrust::host_vector<double> xfine = dg::evaluate( sinex, gfine);
-    thrust::host_vector<double> xcoarseI = dg::evaluate( sinex, g);
-    const thrust::host_vector<double> xcoarse = dg::evaluate( sinex, g);
-    const thrust::host_vector<double> wfine = dg::create::weights( gfine);
-    const thrust::host_vector<double> wcoarse = dg::create::weights( g);
-    double coarseL2 = dg::blas2::dot( xcoarse, wcoarse, xcoarse);
-    double fineL2 =   dg::blas2::dot( xfine, wfine, xfine);
-    std::cout << "coarse L2 norm:       "<<coarseL2<<"\n";
-    std::cout << "Fine L2 norm:         "<<fineL2<<" \n";
-
-    Matrix f2c = dg::create::projection( g, gfine); 
-    dg::blas2::symv( f2c, xfine, xcoarseI);
-    coarseL2 = dg::blas2::dot( xcoarseI, wcoarse, xcoarseI);
-    std::cout << "interpolated L2 norm: "<<coarseL2<<"\n";
-    std::cout << "Difference in L2      "<<fabs(fineL2-coarseL2)/fabs(fineL2)<<"\n";
-    //integrals
-    double coarseI = dg::blas1::dot( wcoarse, xcoarse);
-    double fineI = dg::blas1::dot( wfine, xfine);
-    std::cout << "coarse integral:      "<<coarseI<<"\n";
-    std::cout << "Fine integral:        "<<fineI<<" \n";
-    coarseI = dg::blas1::dot( wcoarse, xcoarseI);
-    std::cout << "interpolated integral "<<coarseI<<"\n";
-    std::cout << "Difference Integral   "<<fabs(fineI-coarseI)/fabs(fineI)<<"\n";
-    dg::blas1::axpby( 1., xcoarseI, -1., xcoarse, xcoarseI);
-    double norm = dg::blas2::dot( xcoarseI, wcoarse, xcoarseI);
-    std::cout << "Difference evaluated to interpolated: "<<norm/coarseL2<<"\n";
-
     }
     ////////////////////////////////////////////////////////////////////////////
     {
@@ -141,44 +104,28 @@ int main()
                         g.z0() + (k+0.5)*g.hz();
             }
     Matrix B = dg::create::interpolation( x, y, z, g);
-    bool passed = true;
-    for( unsigned i=0; i<A.values.size(); i++)
-    {
-        if( (A.values[i] - B.values[i]) > 1e-10)
-        {
-            std::cerr << "NOT EQUAL "<<A.row_indices[i] <<" "<<A.column_indices[i]<<" "<<A.values[i] << "\t "<<B.row_indices[i]<<" "<<B.column_indices[i]<<" "<<B.values[i]<<"\n";
-            passed = false;
-        }
-    }
-    if( passed)
+    thrust::host_vector<double> vec = dg::evaluate( function, g), inter1(vec), inter2(vec);
+    dg::blas2::symv( A, vec, inter1);
+    dg::blas2::symv( B, vec, inter2);
+    dg::blas1::axpby( 1., inter1, -1., inter2, vec);
+    double error = dg::blas1::dot( vec, vec);
+    std::cout << "Error is "<<error<<" (should be small)!\n";
+    if( error > 1e-14) 
+        std::cout<< "3D TEST FAILED!\n";
+    else
         std::cout << "3D TEST PASSED!\n";
-    dg::Grid3d gfine( -10, 10, -5, 5, -7, -3,  nf, Nf*Nx, Nf*Ny, Nz);
-    const thrust::host_vector<double> xfine = dg::evaluate( sinex, gfine);
-    thrust::host_vector<double> xcoarseI = dg::evaluate( sinex, g);
-    const thrust::host_vector<double> xcoarse = dg::evaluate( sinex, g);
-    const thrust::host_vector<double> wfine = dg::create::weights( gfine);
-    const thrust::host_vector<double> wcoarse = dg::create::weights( g);
-    double coarseL2 = dg::blas2::dot( xcoarse, wcoarse, xcoarse);
-    double fineL2 =   dg::blas2::dot( xfine, wfine, xfine);
-    std::cout << "coarse L2 norm:       "<<coarseL2<<"\n";
-    std::cout << "Fine L2 norm:         "<<fineL2<<" \n";
 
-    Matrix f2c = dg::create::projection( g, gfine); 
-    dg::blas2::symv( f2c, xfine, xcoarseI);
-    coarseL2 = dg::blas2::dot( xcoarseI, wcoarse, xcoarseI);
-    std::cout << "interpolated L2 norm: "<<coarseL2<<"\n";
-    std::cout << "Difference in L2      "<<fabs(fineL2-coarseL2)/fabs(fineL2)<<"\n";
-    //integrals
-    double coarseI = dg::blas1::dot( wcoarse, xcoarse);
-    double fineI = dg::blas1::dot( wfine, xfine);
-    std::cout << "coarse integral:      "<<coarseI<<"\n";
-    std::cout << "Fine integral:        "<<fineI<<" \n";
-    coarseI = dg::blas1::dot( wcoarse, xcoarseI);
-    std::cout << "interpolated integral "<<coarseI<<"\n";
-    std::cout << "Difference Integral   "<<fabs(fineI-coarseI)/fabs(fineI)<<"\n";
-    dg::blas1::axpby( 1., xcoarseI, -1., xcoarse, xcoarseI);
-    double norm = dg::blas2::dot( xcoarseI, wcoarse, xcoarseI);
-    std::cout << "Difference evaluated to interpolated: "<<norm/coarseL2<<"\n";
+    //bool passed = true;
+    //for( unsigned i=0; i<A.values.size(); i++)
+    //{
+    //    if( (A.values[i] - B.values[i]) > 1e-14)
+    //    {
+    //        std::cerr << "NOT EQUAL "<<A.row_indices[i] <<" "<<A.column_indices[i]<<" "<<A.values[i] << "\t "<<B.row_indices[i]<<" "<<B.column_indices[i]<<" "<<B.values[i]<<"\n";
+    //        passed = false;
+    //    }
+    //}
+    //if( passed)
+    //    std::cout << "3D TEST PASSED!\n";
     }
 
     return 0;
