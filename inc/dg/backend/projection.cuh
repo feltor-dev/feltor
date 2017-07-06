@@ -20,6 +20,7 @@ namespace dg{
  * @param b Second number
  *
  * @return greatest common divisor
+ * @ingroup misc
  */
 unsigned gcd( unsigned a, unsigned b)
 {
@@ -40,6 +41,7 @@ unsigned gcd( unsigned a, unsigned b)
  * @param b Second number 
  *
  * @return Least common multiple
+ * @ingroup misc
  */
 unsigned lcm( unsigned a, unsigned b)
 {
@@ -64,6 +66,24 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid1d& g
     cusp::transpose( temp, A);
     return A;
 }
+/**
+ * @copydoc interpolationT
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid2d& g_new, const Grid2d& g_old)
+{
+    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
+    cusp::transpose( temp, A);
+    return A;
+}
+/**
+ * @copydoc interpolationT
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid3d& g_new, const Grid3d& g_old)
+{
+    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
+    cusp::transpose( temp, A);
+    return A;
+}
 
 /**
  * @brief Create a projection between two grids
@@ -80,6 +100,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid1d& g
  *
  * @return Projection matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @note also check the transformation matrix, which is the more general solution
  @attention Projection only works if the number of cells in the
  fine grid are multiple of the number of cells in the coarse grid
  */
@@ -108,39 +129,9 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g_ne
     return A;
 }
 
-/**
- * @brief Create the transpose of the interpolation matrix from new to old
- *
- * @param g_new The new grid 
- * @param g_old The old grid
- *
- * @return transposed interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid2d& g_new, const Grid2d& g_old)
-{
-    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
-    cusp::transpose( temp, A);
-    return A;
-}
 
 /**
- * @brief Create a projection between two grids
- *
- * The projection matrix is the adjoint of the interpolation matrix
- * This matrix can be applied to vectors defined on the old (fine) grid to obtain
- * its values on the new (coarse) grid. 
- * If the fine grid is a multiple of the coarse grid, the integral value
- of the projected vector will be conserved and the difference in the L2 norm 
- between old and new vector small. 
- * 
- * @param g_new The new (coarse) grid 
- * @param g_old The old (fine) grid
- *
- * @return transposed interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- @attention Projection only works if the number of cells in the
- fine grid are multiple of the number of cells in the coarse grid
+ * @copydoc projection
  */
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d& g_new, const Grid2d& g_old)
 {
@@ -167,39 +158,9 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d& g_ne
     A.sort_by_row_and_column();
     return A;
 }
-/**
- * @brief Create the transpose of the interpolation matrix from new to old
- *
- * @param g_new The new grid 
- * @param g_old The old grid
- *
- * @return transposed interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid3d& g_new, const Grid3d& g_old)
-{
-    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
-    cusp::transpose( temp, A);
-    return A;
-}
 
 /**
- * @brief Create a projection between two grids
- *
- * The projection matrix is the adjoint of the interpolation matrix
- * This matrix can be applied to vectors defined on the old (fine) grid to obtain
- * its values on the new (coarse) grid. 
- * If the fine grid is a multiple of the coarse grid, the integral value
- of the projected vector will be conserved and the difference in the L2 norm 
- between old and new vector small. 
- * 
- * @param g_new The new (coarse) grid 
- * @param g_old The old (fine) grid
- *
- * @return transposed interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- @attention Projection only works if the number of cells in the
- fine grid are multiple of the number of cells in the coarse grid
+ * @copydoc projection
  */
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid3d& g_new, const Grid3d& g_old)
 {
@@ -231,7 +192,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid3d& g_ne
  * @brief Create a transformation matrix between two grids
  *
  * The transformation matrix is probably the most correct way of 
- transforming dG vectors between two grids of differen resolution. 
+ transforming dG vectors between any two grids of different resolution. 
  It first finds the least common multiple grid (lcm) of the old and the new grid. Then
  it interpolates the values to the lcm grid and finally projects them back to
  the new grid. In total we have
@@ -260,25 +221,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid3d& 
     return Y;
 }
 /**
- * @brief Create a transformation matrix between two grids
- *
- * The transformation matrix is probably the most correct way of 
- transforming dG vectors between two grids of differen resolution. 
- It first finds the least common multiple grid (lcm) of the old and the new grid. Then
- it interpolates the values to the lcm grid and finally projects them back to
- the new grid. In total we have
- \f[
- \mathcal T = P Q 
- \f] 
- where \f$ Q\f$ is the interpolation matrix and \f$ P \f$ the projection. If either new or
- old grid is already the lcm grid this function reduces to the interpolation/projection function. 
- * 
- * @param g_new The new grid 
- * @param g_old The old grid
- *
- * @return transformation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- * @note If the grid are very incompatible the matrix-matrix multiplication can take a while
+ * @copydoc transformation
  */
 cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid2d& g_new, const Grid2d& g_old)
 {
@@ -291,25 +234,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid2d& 
     return Y;
 }
 /**
- * @brief Create a transformation matrix between two grids
- *
- * The transformation matrix is probably the most correct way of 
- transforming dG vectors between two grids of differen resolution. 
- It first finds the least common multiple grid (lcm) of the old and the new grid. Then
- it interpolates the values to the lcm grid and finally projects them back to
- the new grid. In total we have
- \f[
- \mathcal T = P Q 
- \f] 
- where \f$ Q\f$ is the interpolation matrix and \f$ P \f$ the projection. If either new or
- old grid is already the lcm grid this function reduces to the interpolation/projection function. 
- * 
- * @param g_new The new grid 
- * @param g_old The old grid
- *
- * @return transformation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- * @note If the grid are very incompatible the matrix-matrix multiplication can take a while
+ * @copydoc transformation
  */
 cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid1d& g_new, const Grid1d& g_old)
 {
