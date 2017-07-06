@@ -116,9 +116,42 @@
  * @brief Struct that performs collective scatter and gather operations across processes
  * on distributed vectors using mpi
  *
+ * In order to understand the issue you must first really(!) understand what 
+ gather and scatter operations are, so grab pen and paper: 
+
+ Gather: imagine a vector v and a map that gives to every element in this vector v
+ an index into a source vector w where the value of this element should be taken from
+ i.e. \f$ v[i] = w[idx[i]] \f$ 
+ Note that an index in the source vector can appear several times or not at all. 
+ This is why the source vector w can have any size and even be smaller than v. 
+ If we throw away all unused elements in w the source vector is always equal 
+ or smaller in size than v. 
+
+ Scatter: imagine a vector w and a map that gives to every element in the vector w an
+ index in a target vector v where this element should go to, 
+ i.e. \f$ w[idx[i]] = v[i] \f$. 
+ Note again that a target index can appear several times. Then in our case we 
+ perform a reduction operation (we sum up all elements). If we throw away all
+ unused elements in w the, then w is always equal or smaller in size than v. 
+
+Think of the index map as establishing fixed connections between two vectors. 
+When you apply scatter and gather operations you send data back and forth
+between these two vectors along these connections.
+ However, only if the index map is bijective, the scatter operation is actually the inverse of 
+ the gather operation. 
+
+ Now, consider that both vectors v and w are distributed across processes.
+ That means when you send data with MPI you will probably need a communication buffers.
+    There are three types of indices that you need to consider: 
+
+    a) the global vector index is the index of an element if there was only one vector that lay contiguously in memory. 
+
+    b) the local vector index is the index of the local chunk a process has. 
+
+    c) the buffer index is the index into the communication buffer. 
+
  * @ingroup templates
  @attention this is not a real class it's there for documentation only
- @attention parameter names can be different
  *
  * @code
  int i = myrank;
@@ -138,32 +171,30 @@ struct aCommunicator
 {
 
     /**
-     * @brief Scatters data according to a specific scheme given in the Constructor
+     * @brief Gather data across processes
      *
-     * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
-     * @param values data to send (must have the size given 
-     * by the map in the constructor, s.a. send_size())
+        1. create a local send buffer and locally gather values from input vector (c) into a send buffer (order with PID, note that a given value can be sent to several processes -> that's why it's a gather)
+        2. globally scatter these values into recv buffer (b)  
+     * @param values data to send (s.a. send_size())
      * @tparam LocalContainer a container on a shared memory system
      *
      * @return received data from other processes of size recv_size()
-     * @note a scatter followed by a gather of the received values restores the original array
-     * @note this function is only needed in the RowDistMat matrix format
      */
     template< class LocalContainer>
-    LocalContainer collect( const LocalContainer& values)const;
+    LocalContainer global_gather( const LocalContainer& values)const;
 
     /**
-     * @brief Gather data according to the map given in the constructor 
+     * @brief Scatters data accross processes and reduces on double indices
      *
-     * This method is the inverse of scatter 
+     * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
+        2. globally scatter the values in this buffer to a recv buffer (b) (every value in the result belongs to exactly one line/process)  
+        3. then permute and reduce the recv buffer on double indices and store result in output vector (c) 
      * @tparam LocalContainer a container on a shared memory system
      * @param gatherFrom other processes collect data from this vector (has to be of size given by recv_size())
-     * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
-     * @note a scatter followed by a gather of the received values restores the original array
-     * @note this format is only needed in the ColDistMat matrix format
+     * @param values contains values from other processes sent back to the origin (or send_size())
      */
     template< class LocalContainer>
-    void send_and_reduce( const LocalContainer& gatherFrom, LocalContainer& values) const;
+    void global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const;
 
     /**
      * @brief compute total # of elements the calling process receives in the scatter process (or sends in the gather process)
@@ -193,5 +224,5 @@ struct aCommunicator
     * used to assert that communicators of matrix and vector are the same
     * @return MPI Communicator
     */
-    MPI_Comm communicator() const {return p_.communicator();}
+    MPI_Comm communicator() const;
 };

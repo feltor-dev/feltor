@@ -163,7 +163,7 @@ void Collective::gather_( const thrust::host_vector<double>& gatherFrom, thrust:
  * on distributed vectors using mpi
  * In the bijective operations every element in a vector belongs to 
  exactly one MPI process, i.e. one value is not sent to more than 
- one process and the reduction in the send_and_reduce is not necessary
+ one process and the reduction in the global_scatter_reduce is not necessary
  *
  * @code
  int i = myrank;
@@ -229,7 +229,7 @@ struct BijectiveComm
      * @return received data from other processes of size recv_size()
      * @note a scatter followed by a gather of the received values restores the original array
      */
-     Vector collect( const Vector& values)const
+     Vector global_gather( const Vector& values)const
     {
         assert( values.size() == idx_.size());
         Vector values_(values);
@@ -249,7 +249,7 @@ struct BijectiveComm
      * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
      * @note a scatter followed by a gather of the received values restores the original array
      */
-    void send_and_reduce( const Vector& gatherFrom, Vector& values) const
+    void global_scatter_reduce( const Vector& gatherFrom, Vector& values) const
     {
         Vector values_(values.size());
         //sammeln
