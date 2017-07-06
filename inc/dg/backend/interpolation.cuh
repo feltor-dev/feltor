@@ -62,30 +62,6 @@ std::vector<double> coefficients( double xn, unsigned n)
     }
     return px;
 }
-    
-/**
- * @brief The n-th Legendre Polynomial on [-1;1]
- */
-struct Legendre
-{
-    Legendre( unsigned n): n_(n+1), m_(0){}
-    Legendre( unsigned n, unsigned m): n_(n+1), m_(m+1){}
-    double operator()( double x)
-    {
-        //compute p_i(xn) and return the last value
-        std::vector<double> px = coefficients(x, n_);
-        return px[n_-1];
-    }
-    double operator()( double x, double y)
-    {
-        std::vector<double> px = coefficients(x, n_);
-        std::vector<double> py = coefficients(y, m_);
-        return px[n_-1]*py[m_-1];
-    }
-    private:
-    unsigned n_, m_;
-};
-
 
 }//namespace detail
 ///@endcond
@@ -499,20 +475,9 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d& g_
     return interpolation( pointsX, pointsY, pointsZ, g_old);
 
 }
+///@}
 
-thrust::host_vector<double> transform( const Operator<double>& op, const thrust::host_vector<double>& in, const Grid2d& g)
-{
-    assert( op.size() == g.n());
-    thrust::host_vector<double> out(in.size(), 0);
-    for( unsigned i=0; i<g.Ny(); i++)
-    for( unsigned k=0; k<g.n(); k++)
-    for( unsigned j=0; j<g.Nx(); j++)
-    for( unsigned l=0; l<g.n(); l++)
-    for( unsigned o=0; o<g.n(); o++)
-    for( unsigned m=0; m<g.n(); m++)
-        out[((i*g.n() + k)*g.Nx() + j)*g.n() + l] += op(k,o)*op( l, m)*in[((i*g.n() + o)*g.Nx() + j)*g.n() + m];
-    return out;
-}
+
 /**
  * @brief Transform a vector from XSPACE to LSPACE
  *
@@ -523,121 +488,17 @@ thrust::host_vector<double> transform( const Operator<double>& op, const thrust:
  */
 thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const Grid2d& g)
 {
+    thrust::host_vector<double> out(in.size(), 0);
     dg::Operator<double> forward( g.dlt().forward());
-    return transform( forward, in, g);
+    for( unsigned i=0; i<g.Ny(); i++)
+    for( unsigned k=0; k<g.n(); k++)
+    for( unsigned j=0; j<g.Nx(); j++)
+    for( unsigned l=0; l<g.n(); l++)
+    for( unsigned m=0; m<g.n(); m++)
+    for( unsigned o=0; o<g.n(); o++)
+        out[((i*g.n() + k)*g.Nx() + j)*g.n() + l] += forward(k,o)*forward( l, m)*in[((i*g.n() + o)*g.Nx() + j)*g.n() + m];
+    return out;
 }
-
-cusp::coo_matrix<int, double, cusp::host_memory> projection( const Grid2d& g_coarse, const Grid2d& g_fine)
-{
-
-    assert( g_coarse.x0() >= g_fine.x0());
-    assert( g_coarse.x1() <= g_fine.x1());
-    assert( g_coarse.y0() >= g_fine.y0());
-    assert( g_coarse.y1() <= g_fine.y1());
-    //assert( g_fine.Nx() % g_coarse.Nx() == 0);
-    //assert( g_fine.Ny() % g_coarse.Ny() == 0);
-
-    unsigned num_cellsX = g_fine.Nx() / g_coarse.Nx();
-    unsigned num_cellsY = g_fine.Ny() / g_coarse.Ny();
-
-    //construct elemental grid with fine number of cells and polynomials
-    Grid2d g_elemental( -1., 1., -1., 1., g_fine.n(), num_cellsX, num_cellsY);
-    //now evaluate the coarse Legendre polynomials on the fine grid
-    thrust::host_vector<double> coeffsX[g_coarse.n()*g_coarse.n()];
-    thrust::host_vector<double> coeffsL[g_coarse.n()*g_coarse.n()];
-    Operator<double> sisj = dg::create::pipj( g_elemental.n());
-    Operator<double> forward( g_elemental.dlt().forward());
-    for( unsigned p=0; p<g_coarse.n(); p++) //y
-        for( unsigned q=0; q<g_coarse.n(); q++)//x
-        {
-            detail::Legendre legendre( q, p); 
-            coeffsX[p*g_coarse.n()+q] = dg::evaluate( legendre, g_elemental);
-            //forward transform coefficients
-            coeffsL[p*g_coarse.n()+q] = transform( forward, coeffsX[p*g_coarse.n() + q], g_elemental);
-
-            //multiply by S matrix 
-            coeffsX[p*g_coarse.n()+q] = transform( sisj, coeffsL[p*g_coarse.n() + q], g_elemental);
-            //std::cout << "p "<<p<<" q "<<q<<"\n";
-            //for( unsigned i=0; i<g_fine.n(); i++)
-            //{
-            //    for( unsigned j=0; j<g_fine.n(); j++)
-            //        std::cout << coeffsX[p*g_coarse.n()+q][i*g_fine.n()*num_cellsX+j] <<" ";
-            //    std::cout << "\n";
-            //}
-            //std::cout <<std::endl;
-            //multiply by forward transpose
-            coeffsL[p*g_coarse.n()+q] = transform( forward.transpose(), coeffsX[p*g_coarse.n() + q], g_elemental);
-            
-        }
-    Grid2d gc_elemental( -1., 1., -1., 1., g_coarse.n(), 1, 1);
-    Operator<double> backward( gc_elemental.dlt().backward());
-    Operator<double> sisj_inv = dg::create::pipj_inv( gc_elemental.n());
-    Operator<double> left = backward*sisj_inv;    
-    //multiply left over all coarse polynomials
-    for( unsigned k=0; k<g_coarse.n(); k++)
-    for( unsigned q=0; q<g_coarse.n(); q++)
-    {
-        for( unsigned i=0; i<g_elemental.size(); i++)
-        {
-                coeffsX[k*g_coarse.n()+q][i] = 0.;
-                for( unsigned m=0; m<g_coarse.n(); m++)
-                for( unsigned l=0; l<g_coarse.n(); l++)
-                {
-                    coeffsX[k*g_coarse.n()+q][i] += left(k,m)*left(q,l)*coeffsL[m*g_coarse.n()+l][i];
-                }
-                coeffsX[k*g_coarse.n()+q][i] *= g_fine.hx()*g_fine.hy()/g_coarse.hx()/g_coarse.hy();
-        }
-    }
-    cusp::coo_matrix<int, double, cusp::host_memory> A( g_coarse.size(), g_fine.size(), g_coarse.size()*num_cellsX*num_cellsY*g_fine.n()*g_fine.n());
-    int number = 0;
-    for( unsigned i=0; i<g_coarse.Ny(); i++)
-    for( unsigned k=0; k<g_coarse.n(); k++)
-    for( unsigned j=0; j<g_coarse.Nx(); j++)
-    for( unsigned q=0; q<g_coarse.n(); q++)
-    {
-        unsigned line = ((i*g_coarse.n()+k)*g_coarse.Nx()+j)*g_coarse.n()+q;
-        //add correct line to A
-        for( unsigned m=0; m<num_cellsY; m++)
-        for( unsigned n=0; n<num_cellsX; n++)
-        {
-            //column for indices (i,j,m,n) the (0,0) element
-            unsigned col_begin = (((i*num_cellsY+m)*g_fine.n()*g_coarse.Nx()+j)*num_cellsX+n)*g_fine.n();
-            std::vector<double> temp(g_fine.n()*g_fine.n());
-            for( unsigned e=0; e<g_fine.n(); e++)
-                for( unsigned h=0; h<g_fine.n(); h++)
-                    temp[e*g_fine.n()+h] = coeffsX[k*g_coarse.n()+q]
-                        [((m*g_fine.n() + e)*num_cellsX + n)*g_fine.n()+h];
-            detail::add_line( A, number, line,  col_begin, g_fine.n(), g_fine.Nx(), temp); 
-        }
-    }
-
-    A.sort_by_row_and_column();
-    return A;
-}
-
-cusp::coo_matrix<int, double, cusp::host_memory> projection( const Grid3d& g_coarse, const Grid3d& g_fine)
-{
-
-    assert( g_coarse.z0() >= g_fine.z0());
-    assert( g_coarse.z1() <= g_fine.z1());
-    assert( g_coarse.Nz() == g_fine.Nz());
-    const unsigned Nz = g_coarse.Nz();
-
-    Grid2d g2d_coarse( g_coarse.x0(), g_coarse.x1(), g_coarse.y0(), g_coarse.y1(), g_coarse.n(), g_coarse.Nx(), g_coarse.Ny());
-    Grid2d g2d_fine( g_fine.x0(), g_fine.x1(), g_fine.y0(), g_fine.y1(), g_fine.n(), g_fine.Nx(), g_fine.Ny());
-    cusp::coo_matrix<int, double, cusp::host_memory> A2d = projection( g2d_coarse, g2d_fine);
-
-    cusp::coo_matrix<int, double, cusp::host_memory> A( A2d.num_rows*Nz, A2d.num_cols*Nz, A2d.num_entries*Nz);
-    for( unsigned i=0; i<Nz; i++)
-        for( unsigned j=0; j<A2d.num_entries; j++)
-        {
-            A.column_indices[i*A2d.num_entries+j] = i*A2d.num_cols + A2d.column_indices[j];
-            A.row_indices[i*A2d.num_entries+j] = i*A2d.num_rows + A2d.row_indices[j];
-            A.values[i*A2d.num_entries+j] = A2d.values[j];
-        }
-    return A;
-}
-///@}
 
 }//namespace create
 

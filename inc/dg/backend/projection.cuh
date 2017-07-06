@@ -108,7 +108,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid2d& g
  @attention Projection only works if the number of cells in the
  fine grid are multiple of the number of cells in the coarse grid
  */
-cusp::coo_matrix< int, double, cusp::host_memory> projection_( const Grid2d& g_new, const Grid2d& g_old)
+cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d& g_new, const Grid2d& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!!\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!!\n";
@@ -167,7 +167,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid3d& g
  @attention Projection only works if the number of cells in the
  fine grid are multiple of the number of cells in the coarse grid
  */
-cusp::coo_matrix< int, double, cusp::host_memory> projection_( const Grid3d& g_new, const Grid3d& g_old)
+cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid3d& g_new, const Grid3d& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!!\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!!\n";

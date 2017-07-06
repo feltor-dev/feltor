@@ -7,20 +7,19 @@
 
 double sine( double x){ return sin(x);}
 double sine( double x, double y){return sin(x)*sin(y);}
-typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
 
 int main()
 {
     std::cout << "TEST 1D\n";
     unsigned n_old = 4, n_new = 3, N_old = 10, N_new = 1;
-    std::cout << "Type n and N of old (fine) grid!\n";
+    std::cout << "Type n and N of old (find) grid!\n";
     std::cin >> n_old >> N_old;
     std::cout << "Type n and N of new (coarser) grid!\n";
     std::cin >> n_new >> N_new;
     dg::Grid1d go ( 0, M_PI, n_old, N_old);
     dg::Grid1d gn ( 0, M_PI, n_new, N_new);
-    Matrix proj = dg::create::projection( gn, go);
-    Matrix inte = dg::create::interpolation( gn, go);
+    cusp::coo_matrix<int, double, cusp::host_memory> proj = dg::create::projection( gn, go);
+    cusp::coo_matrix<int, double, cusp::host_memory> inte = dg::create::interpolation( gn, go);
     thrust::host_vector<double> v = dg::evaluate( sine, go);
     thrust::host_vector<double> w1do = dg::create::weights( go);
     thrust::host_vector<double> w1dn = dg::create::weights( gn);
@@ -46,8 +45,8 @@ int main()
     //old grid is larger than the new grid
     dg::Grid2d g2o (0, M_PI, 0, M_PI, n_old, N_old, N_old);
     dg::Grid2d g2n (0, M_PI, 0, M_PI, n_new, N_new, N_new);
-    Matrix proj2d = dg::create::projection_( g2n, g2o);
-    Matrix inte2d = dg::create::interpolation( g2n, g2o);
+    cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::projection( g2n, g2o);
+    cusp::coo_matrix<int, double, cusp::host_memory> inte2d = dg::create::interpolation( g2n, g2o);
     const dg::HVec sinO = dg::evaluate( sine, g2o), 
                    sinN = dg::evaluate( sine, g2n);
     dg::HVec w2do = dg::create::weights( g2o);
@@ -62,7 +61,7 @@ int main()
     std::cout << "Rel Difference in L2 norm is " << sqrt(dg::blas2::dot( temp, w2dn, temp)/dg::blas2::dot( sinN, w2dn, sinN))<< std::endl;
     //std::cout << "Difference between two grid evaluations:\n";
     //std::cout << diff( sinO, sinN)<<" (should converge to zero!) \n";
-    std::cout << "Difference between projection and evaluation      ";
+    std::cout << "Difference between projection and evaluation      \n";
     dg::blas1::axpby( 1., sinN, -1., sinP);
     std::cout << dg::blas2::dot( sinP, w2dn, sinP)<<" (smaller than above)\n";
     dg::blas2::gemv( inte2d, sinO, sinP);
@@ -73,34 +72,6 @@ int main()
     std::cout << "What you should observe is that the projection does only work if the coarse grid is a division of the fine grid!\n"
     << "If it works it is better than interpolation in that it conserves the integral value and has smaller L2 errors\n";
     std::cout << "Interpolation always works!\n";
-
-    std::cout << "TEST hand made projection\n";
-    const thrust::host_vector<double> xfine = dg::evaluate( sine, g2o);
-    thrust::host_vector<double> xcoarseI = dg::evaluate( sine, g2n);
-    const thrust::host_vector<double> xcoarse = dg::evaluate( sine, g2n);
-    const thrust::host_vector<double> wfine = dg::create::weights( g2o);
-    const thrust::host_vector<double> wcoarse = dg::create::weights( g2n);
-    double coarseL2 = sqrt(dg::blas2::dot( xcoarse, wcoarse, xcoarse));
-    double fineL2 =   sqrt(dg::blas2::dot( xfine, wfine, xfine));
-    std::cout << "coarse L2 norm:       "<<coarseL2<<"\n";
-    std::cout << "Fine L2 norm:         "<<fineL2<<" \n";
-
-    Matrix f2c = dg::create::projection( g2n, g2o); 
-    dg::blas2::symv( f2c, xfine, xcoarseI);
-    coarseL2 = sqrt(dg::blas2::dot( xcoarseI, wcoarse, xcoarseI));
-    std::cout << "projected    L2 norm: "<<coarseL2<<"\n";
-    std::cout << "Difference in L2      "<<fabs(fineL2-coarseL2)<<"\n";
-    //integrals
-    double coarseI = dg::blas1::dot( wcoarse, xcoarse);
-    double fineI = dg::blas1::dot( wfine, xfine);
-    std::cout << "coarse integral:      "<<coarseI<<"\n";
-    std::cout << "Fine integral:        "<<fineI<<" \n";
-    coarseI = dg::blas1::dot( wcoarse, xcoarseI);
-    std::cout << "projected    integral "<<coarseI<<"\n";
-    std::cout << "Difference Integral   "<<fabs(fineI-coarseI)/fabs(fineI)<<"\n";
-    dg::blas1::axpby( 1., xcoarseI, -1., xcoarse, xcoarseI);
-    double norm = dg::blas2::dot( xcoarseI, wcoarse, xcoarseI);
-    std::cout << "Difference evaluated to interpolated: "<<norm/coarseL2<<"\n";
 
     return 0;
 }
