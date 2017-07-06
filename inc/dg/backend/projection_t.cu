@@ -33,10 +33,9 @@ int main()
 
     std::cout << "TEST 2D\n";
     n_old = 7, n_new = 3, N = 4, Nf = 3;
-    std::cout << "Type n_old,n_new, N, Nf "<< std::endl;
+    std::cout << "Type n, N, Nf "<< std::endl;
     std::cin >>n_old;
-//     n_new = n_old;
-    std::cin >> n_new;
+    n_new = n_old;
     std::cin >> N;
     std::cin >> Nf;
     

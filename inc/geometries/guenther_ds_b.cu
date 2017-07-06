@@ -57,22 +57,16 @@ int main( )
     std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n=3, Nx=5, Ny=5, Nz=5;
-    unsigned fn;
-    double fN;
-    std::cout << "Type n\n";
-    std::cin >> n;
-    std::cout << "Type fn, fN\n";
-
-    std::cin >> fn>> fN;
+    //std::cin >> n>> Nx>>Ny>>Nz;
     unsigned Nxn = Nx;
     unsigned Nyn = Ny;
     unsigned Nzn = Nz;
 
     double rk4eps = 1e-8;
-//     std::cout << "Type RK4 eps (1e-8)\n";
-//     std::cin >> rk4eps;
+    //std::cout << "Type RK4 eps (1e-8)\n";
+    //std::cin >> rk4eps;
     double z0 = 0, z1 = 2.*M_PI;
-    for (unsigned i=0;i<6;i+=1) { 
+    for (unsigned i=1;i<4;i+=2) { 
 
         Nzn = unsigned(Nz*pow(2,i));
         Nxn = (unsigned)ceil(Nx*pow(2,(double)(i*2./n)));
@@ -80,8 +74,7 @@ int main( )
 
 
 
-        dg::CylindricalGrid<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
-        dg::CylindricalGrid<dg::DVec> g3d_fein( Rmin,Rmax, Zmin,Zmax, z0, z1,  fn,fN*Nxn ,fN*Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
+        dg::CylindricalGrid3d<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
         dg::Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
 
         std::cout << "NR = " << Nxn << std::endl;
@@ -96,18 +89,14 @@ int main( )
     const dg::DVec w2d = dg::create::weights( g2d);
     const dg::DVec v3d = dg::create::inv_volume( g3d);
 
-//     std::cout << "computing dsDIR" << std::endl;
-//     dg::DDS::FieldAligned dsFA( field, g3d_fein, rk4eps, dg::DefaultLimiter(), dg::DIR);
+    std::cout << "computing dsDIR" << std::endl;
+    dg::DDS::FieldAligned dsFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
     std::cout << "computing dsNEU" << std::endl;
-    dg::DDS::FieldAligned dsNUFA( field, g3d_fein, rk4eps, dg::DefaultLimiter(), dg::NEU);
-    dg::Timer timer;
+    dg::DDS::FieldAligned dsNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
 
-    timer.tic();
-    dg::DDS 
-//     ds ( dsFA, g3d, field, dg::not_normed, dg::centered), 
-        dsNU ( dsNUFA, g3d, field, dg::not_normed, dg::forward);
-    timer.toc();
-    std::cout << "Creating took " << timer.diff() << std::endl;
+    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered), 
+        dsNU ( dsNUFA, field, dg::not_normed, dg::centered);
+
 //     dg::DS<dg::DMatrix, dg::DVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
 //     dg::Grid3d g3dp( Rmin,Rmax, Zmin,Zmax, z0, z1,  n, Nx, Ny, 1);
@@ -183,7 +172,7 @@ int main( )
 //     
 //     
   
-//     dsNU( function, derivative); //ds(f)
+    dsNU( function, derivative); //ds(f)
 
 //     dsNU.forward( function, derivativef); //ds(f)
 //     dsNU.backward( function, derivativeb); //ds(f)
@@ -242,7 +231,7 @@ int main( )
 //     ellipticsym.symv(function,dsTds);
 //     dg::blas1::scal(dsTds,-1.0);
 // //     ds.centeredT(ones,divbT);
-//     ds.forwardT( derivativef, dsTdsf);  //dsT(ds(f))
+    ds.forwardT( derivativef, dsTdsf);  //dsT(ds(f))
 //     ds.backwardT( derivativeb, dsTdsb); //dsT(ds(f))
 
 //     //centered
@@ -253,8 +242,8 @@ int main( )
 //     //arithmetic average
 //     dg::blas1::axpby(0.5,dsTdsb,0.5,dsTdsf,dsTdsfb);
 //     dg::blas1::axpby(0.5,dsTdsbd,0.5,dsTdsfd,dsTdsfbd); 
-//     ds.symv(function,dsTdsfb);
-//     dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
+    ds.symv(function,dsTdsfb);
+    dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
         //ds( function, temp);
         //dg::blas1::pointwiseDot( temp, inverseB, temp);
         //ds(temp, dsTdsfb);
@@ -280,14 +269,14 @@ int main( )
 //     double normBds1 = dg::blas2::dot(temp2, w3d, derivativeones);
 //     double normfds1 = dg::blas2::dot(function2, w3d, derivativeones);
 // 
-//     std::cout << "--------------------testing ds" << std::endl;
-//     double norm = dg::blas2::dot( w3d, solution);
-//     //std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
-//     double err =dg::blas2::dot( w3d, derivative);
-//     //std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
-//     dg::blas1::axpby( 1., solution, -1., derivative);
-//     err =dg::blas2::dot( w3d, derivative);
-//     std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
+    std::cout << "--------------------testing ds" << std::endl;
+    double norm = dg::blas2::dot( w3d, solution);
+    std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
+    double err =dg::blas2::dot( w3d, derivative);
+    std::cout << "|| Derivative || "<<sqrt( err)<<"\n";
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    err =dg::blas2::dot( w3d, derivative);
+    std::cout << "Relative Difference in DS is "<< sqrt( err/norm )<<"\n"; 
    
 //     std::cout << "--------------------testing ds with RZPhi method" << std::endl;
 //     std::cout << "|| Solution ||   "<<sqrt( norm)<<"\n";
@@ -344,15 +333,15 @@ int main( )
 //     errdsTds =dg::blas2::dot( w3d, dsTds);
 //     std::cout << "Relative Difference in DST is "<< sqrt( errdsTds/normdsTds )<<"\n";   
     
-//     std::cout << "--------------------testing dsTdsfb " << std::endl;
-//     //std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
-//     double remainder =dg::blas1::dot( w3d,dsTdsfb);
-//     double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
-//     //std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
-//     //std::cout << "   Integral          "<<remainder<<"\n";
-//     dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
-//     errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
-//     std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
+    std::cout << "--------------------testing dsTdsfb " << std::endl;
+    std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
+    double remainder =dg::blas1::dot( w3d,dsTdsfb);
+    double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
+    std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
+    std::cout << "   Integral          "<<remainder<<"\n";
+    dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
+    errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
+    std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
 //   
 //     std::cout << "--------------------testing dsTdsfb with direct method" << std::endl;
 //     std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
@@ -412,7 +401,7 @@ int main( )
 //     elliptic.set_z(bhatPhi);
     
     
-    double eps =1e-7;   
+    double eps =1e-8;   
     dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
     std::cout << "MAX # iterations = " << w3d.size() << std::endl;
 // 
@@ -430,15 +419,8 @@ int main( )
 //     errinvT =dg::blas2::dot( w3d, functionTinv);
 //     std::cout << "Relative Difference is  "<< sqrt( errinvT/normf )<<"\n";
 //     
-    std::cout << "--------------------testing inversion dsTds" << std::endl; 
-    timer.tic();
-    
-    unsigned iterations;
-    iterations =  invert( dsNU, functionTinv2,solutiondsTds ); //is dsTds
-    timer.toc();
-    std::cout << "inversion took " << timer.diff() << std::endl;
-    std::cout << " # of iterations "<< iterations << std::endl;
-    std::cout << " inversion/# of iterations "<<timer.diff()/iterations << std::endl;
+    std::cout << "--------------------testing dsT" << std::endl; 
+    std::cout << " # of iterations "<< invert( dsNU, functionTinv2,solutiondsTds ) << std::endl; //is dsTds
     std::cout << "Norm analytic Solution  "<<sqrt( normf)<<"\n";
     double errinvT2 =dg::blas2::dot( w3d, functionTinv2);
     std::cout << "Norm numerical Solution "<<sqrt( errinvT2)<<"\n";

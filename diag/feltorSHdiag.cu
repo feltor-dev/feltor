@@ -22,8 +22,8 @@ double Y( double x, double y) {return y;}
 
 struct Heaviside2d
 {
-//     Heaviside2d( double sigma):sigma2_(sigma*sigma/2.), x_(0), y_(0){} //for 2sigma^2
-    Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){} //for 4 sigma^2
+    Heaviside2d( double sigma):sigma2_(sigma*sigma/4.), x_(0), y_(0){}
+//     Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
     void set_origin( double x0, double y0){ x_=x0, y_=y0;}
     double operator()(double x, double y)
     {
@@ -166,7 +166,7 @@ int main( int argc, char* argv[])
     double posX_max = 0.0,posY_max = 0.0,posX_max_old = 0.0,posY_max_old = 0.0,velX_max=0.0, velY_max=0.0,posX_max_hs=0.0,posY_max_hs=0.0,velCOM=0.0;
     double compactness_ne=0.0;
     //-----------------Start timestepping
-    for( unsigned i=0; i<2; i++)
+    for( unsigned i=0; i<p.maxout; i++)
     {
         start2d[0] = i;
         start1d[0] = i;
@@ -289,7 +289,7 @@ int main( int argc, char* argv[])
 //         err_out = nc_put_vara_double( ncid_out, names2dID[2], start2d, count2d, transfer2d.data());
 // 
 //      
-//         //Compute ion temperature with phi=0
+// //         //Compute ion temperature with phi=0
 //         dg::blas1::pointwiseDivide(B2,tpe[1],helper);        //helper  = B^2/Ti
 //         invgamma2.set_chi(helper);                           //helmholtz2 chi = B^2/Ti
 // 
@@ -322,31 +322,25 @@ int main( int argc, char* argv[])
 //         dg::blas2::symv(polti,phi,helper3); //-nabla(P_i/B^2 (nabla_perp phi));
 //         dg::blas1::axpby(1.0, target, -2.0*p.mu[1], helper3,helper2);//pi  =  2 nabla(P_i/B^2 (nabla_perp phi)) + p_i_bar
 //         dg::blas1::pointwiseDivide(helper2,npe[0],helper2); //ti=(pi-amp^2)/ne
-//         
-        //compute Omega_d //therm
-//         dg::blas1::transform(helper2,helper, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //                 
+// //         
+// //          //compute Omega_d
+//                 dg::blas1::transform(helper2,helper, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
+// //                 
 //         polti.set_chi(one);
 //         dg::blas2::symv(polti,helper,helper3); //nabla(nabla_perp p_i/B^2 );
 //         dg::blas1::scal(helper3,-1.0*p.tau[1]);
-        //compute Omega_d //iso
-        dg::blas1::transform(npe[0],helper, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); //       
-       dg::blas1::pointwiseDot( helper, binv, helper);
-        dg::blas1::pointwiseDot( helper, binv, helper);    //helper2 = P_i/B^2  
-        polti.set_chi(one);
-        dg::blas2::symv(polti,helper,helper3); //nabla(nabla_perp p_i/B^2 );
-        dg::blas1::scal(helper3,-1.0*p.tau[1]);
+// //         
+// //         //write t_i into 2dnetcdf
+//         transfer2d = helper2;
+//         err_out = nc_put_vara_double( ncid_out, names2dID[0], start2d, count2d, transfer2d.data());
+//         //write Omega_d into 2dnetcdf
+//         transfer2d = helper3;
+//         err_out = nc_put_vara_double( ncid_out, names2dID[1], start2d, count2d, transfer2d.data());
+//               
 //         
-//         //write t_i into 2dnetcdf
-        transfer2d = helper2;
-        err_out = nc_put_vara_double( ncid_out, names2dID[0], start2d, count2d, transfer2d.data());
-        //write Omega_d into 2dnetcdf
-        transfer2d = helper3;
-        err_out = nc_put_vara_double( ncid_out, names2dID[1], start2d, count2d, transfer2d.data());
-              
         
-        
-//      compute Omega_E and write Omega_E into 2dnetcdf
-        dg::blas1::pointwiseDot( npe[0],one,helper3); 
+        //compute Omega_E and write Omega_E into 2dnetcdf
+        dg::blas1::pointwiseDot( npe[1],one,helper3); 
         dg::blas1::pointwiseDot( helper3, binv, helper2);
         dg::blas1::pointwiseDot( helper2, binv, helper2);   
         polti.set_chi(helper2);
