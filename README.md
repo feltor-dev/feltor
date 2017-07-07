@@ -114,9 +114,11 @@ We gratefully acknowledge contributions from
 - Ralph Kube
 - Eduard Reiter
 - Lukas Einkemmer
+
 We further acknowledge support on the Knights landing architecture from the High Level Support Team from 
 - Albert Gutiérrez
-- Xavier Saéz
+- Xavier Saez
+
 and from Intel Barcelona
 - Harald Servat
 ## 4. License 
