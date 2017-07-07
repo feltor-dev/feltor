@@ -57,7 +57,8 @@ $ ./blas_b
 and when prompted for input vector sizes type for example
 `3 100 100 10`
 which makes a grid with 3 polynomial coefficients, 100 cells in x, 100 cells in y and 10 in z. If you compiled for OpenMP, you can set the number of threads with e.g. `export OMP_NUM_THREADS=4`.
-> Go ahead and play around and see what happens. You can compile and run any other program that ends in `_t.cu` or `_b.cu` in `feltor/inc/dg` in this way. 
+> This is a benchmark program to benchmark various elemental functions the library is built on. Go ahead and vary the input parameters and
+see how your hardware performs. You can compile and run any other program that ends in `_t.cu` (test programs) or `_b.cu` (benchmark programs) in `feltor/inc/dg` in this way. 
 
 Now, let us test the mpi setup 
 > You can of course skip this if you don't have mpi installed on your computer.
@@ -113,6 +114,11 @@ We gratefully acknowledge contributions from
 - Ralph Kube
 - Eduard Reiter
 - Lukas Einkemmer
+We further acknowledge support on the Knights landing architecture from the High Level Support Team from 
+- Albert Gutiérrez
+- Xavier Saéz
+and from Intel Barcelona
+- Harald Servat
 ## 4. License 
 FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
 
