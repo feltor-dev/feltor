@@ -412,6 +412,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  *
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @note also check the transformation matrix, which is the more general solution
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d& g_new, const Grid1d& g_old)
 {
@@ -423,16 +424,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d& g_
 
 }
 /**
- * @brief Create interpolation between two grids
- *
- * This matrix can be applied to vectors defined on the old grid to obtain
- * its values on the new grid.
- * 
- * @param g_new The new points 
- * @param g_old The old grid
- *
- * @return Interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @copydoc interpolation(const Grid1d&,const Grid1d&)
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d& g_new, const Grid2d& g_old)
 {
@@ -449,16 +441,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d& g_
 }
 
 /**
- * @brief Create interpolation between two grids
- *
- * This matrix can be applied to vectors defined on the old grid to obtain
- * its values on the new grid.
- * 
- * @param g_new The new points 
- * @param g_old The old grid
- *
- * @return Interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @copydoc interpolation(const Grid1d&,const Grid1d&)
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d& g_new, const Grid3d& g_old)
 {
