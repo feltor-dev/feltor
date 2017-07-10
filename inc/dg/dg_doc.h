@@ -134,11 +134,11 @@
  perform a reduction operation (we sum up all elements). If we throw away all
  unused elements in w the, then w is always equal or smaller in size than v. 
 
-Think of the index map as establishing fixed connections between two vectors. 
-When you apply scatter and gather operations you send data back and forth
-between these two vectors along these connections.
- However, only if the index map is bijective, the scatter operation is actually the inverse of 
- the gather operation. 
+Since it is a vector operation the gather and scatter operation can 
+also be represented by a matrix. The gather matrix is just a 
+(permutation) matrix of 1's and 0's with exactly one "1" in each line.
+The corresponding scatter-and-reduce matrix is just the transpose of the gather matrix. The scatter matrix can have zero, one or more "1"s in each line.
+
 
  Now, consider that both vectors v and w are distributed across processes.
  That means when you send data with MPI you will probably need a communication buffers.
@@ -187,10 +187,10 @@ struct aCommunicator
      * @brief Scatters data accross processes and reduces on double indices
      *
      * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
-        2. globally scatter the values in this buffer to a recv buffer (b) (every value in the result belongs to exactly one line/process)  
-        3. then permute and reduce the recv buffer on double indices and store result in output vector (c) 
+        1. globally scatter the values in this buffer to a recv buffer (b) (every value in the result belongs to exactly one line/process)  
+        2. then permute and reduce the recv buffer on double indices and store result in output vector (c) 
      * @tparam LocalContainer a container on a shared memory system
-     * @param gatherFrom other processes collect data from this vector (has to be of size given by recv_size())
+     * @param toScatter other processes collect data from this vector (has to be of size given by recv_size())
      * @param values contains values from other processes sent back to the origin (or send_size())
      */
     template< class LocalContainer>
@@ -207,7 +207,6 @@ struct aCommunicator
     /**
      * @brief return # of elements the calling process has to send in a scatter process (or receive in the gather process)
      *
-     * equals the size of the map given in the constructor
      * @return # of elements to send
      */
     unsigned send_size() const; 
