@@ -19,7 +19,7 @@ namespace geo
 template<class MagneticField>
 struct Bmodule
 {
-    Bmodule( const MagneticField& c, double R0 ):  R_0_(R0), c_(c)  { }
+    Bmodule( const MagneticField& c):  R_0_(c.R_0), c_(c)  { }
     /**
     * @brief \f[   \hat{B} \f]
     */ 
@@ -47,7 +47,7 @@ struct Bmodule
 template<class MagneticField>
 struct InvB
 {
-    InvB(  const MagneticField& c, double R0 ):  R_0_(R0), c_(c)  { }
+    InvB(  const MagneticField& c):  R_0_(c.R_0), c_(c)  { }
     /**
     * @brief \f[   \frac{1}{\hat{B}} = 
         \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
@@ -77,7 +77,7 @@ struct InvB
 template<class MagneticField>
 struct LnB
 {
-    LnB(  const MagneticField& c, double R0 ):  R_0_(R0), c_(c)  { }
+    LnB(  const MagneticField& c):  R_0_(c.R_0), c_(c)  { }
 /**
  * @brief \f[   \ln{(   \hat{B})} = \ln{\left[
       \frac{\hat{R}_0}{\hat{R}} \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
@@ -107,7 +107,7 @@ struct LnB
 template<class MagneticField>
 struct BR
 {
-    BR(const MagneticField& c, double R0):  R_0_(R0), invB_(c, R0), c_(c) { }
+    BR(const MagneticField& c):  R_0_(c.R_0), invB_(c, R0), c_(c) { }
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} = 
       -\frac{1}{\hat B \hat R}   
@@ -142,7 +142,7 @@ template<class MagneticField>
 struct BZ
 {
 
-    BZ(const MagneticField& c, double R0):  R_0_(R0), c_(c), invB_(c, R0) { }
+    BZ(const MagneticField& c ):  R_0_(c.R_0), c_(c), invB_(c, R0) { }
     /**
      * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} = 
      \frac{ \hat I \left(\frac{\partial \hat I}{\partial\hat Z}    \right)+
@@ -307,7 +307,7 @@ struct DivCurvatureKappa
 template<class MagneticField>
 struct GradLnB
 {
-    GradLnB( const MagneticField& c, double R0): R_0_(R0), c_(c), invB_(c, R0), bR_(c, R0), bZ_(c, R0) { } 
+    GradLnB( const MagneticField& c): R_0_(c.R_0), c_(c), invB_(c, R0), bR_(c, R0), bZ_(c, R0) { } 
     /**
  * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} = \frac{1}{\hat{R}\hat{B}^2 } \left[ \hat{B}, \hat{\psi}_p\right]_{\hat{R}\hat{Z}} \f]
  */ 
@@ -403,7 +403,7 @@ struct FieldZ
 template<class MagneticField>
 struct FieldT
 {
-    FieldT( const MagneticField& c, double R0):  R_0_(R0), fieldR_(c, R0), fieldZ_(c, R0){}
+    FieldT( const MagneticField& c):  R_0_(c.R_0), fieldR_(c, R0), fieldZ_(c, R0){}
   /**
  * @brief \f[  B^{\theta} = 
  * B^R\partial_R\theta + B^Z\partial_Z\theta\f]
@@ -497,7 +497,7 @@ struct BHatP
 template<class MagneticField>
 struct Field
 {
-    Field( const MagneticField& c, double R0):c_(c), R_0_(R0), invB_(c, R0) { }
+    Field( const MagneticField& c):c_(c), R_0_(c.R_0), invB_(c, R0) { }
     /**
      * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
      \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}

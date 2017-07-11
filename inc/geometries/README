@@ -32,6 +32,7 @@
     taylor.h
     guenther.h
     guenther_parameters.h
+    toroidal.h
 
     testfunctors.h 
     init.h

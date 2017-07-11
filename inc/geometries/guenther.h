@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iostream>
-#include <fstream>
 #include <cmath>
 #include <vector>
 
@@ -168,7 +167,8 @@ struct IpolZ
  */
 struct MagneticField
 {
-    MagneticField( double R_0, double I_0):psip(R_0), psipR(R_0), psipZ(R_0), psipRR(R_0), psipRZ(R_0), psipZZ(R_0), laplacePsip(R_0), ipol(I_0), ipolR(), ipolZ(){}
+    MagneticField( double R_0, double I_0): R_0(R_0), psip(R_0), psipR(R_0), psipZ(R_0), psipRR(R_0), psipRZ(R_0), psipZZ(R_0), laplacePsip(R_0), ipol(I_0), ipolR(), ipolZ(){}
+    double R_0;
     Psip psip;
     PsipR psipR;
     PsipZ psipZ;
