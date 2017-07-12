@@ -11,7 +11,11 @@
 #include "thrust_vector_blas.cuh"
 #include "dg/blas1.h"
 
-//TODO: Make Collective cuda-aware
+//TODO: use Buffer class from MPI_Vector, since Device cannot(!) be 
+//arbitrary type (has to be on device if Index is on device e.g.)
+
+//TODO: The MPI_Alltoallv function only send DOUBLEs so no int vector can be used 
+//
 namespace dg{
 
 
@@ -287,7 +291,7 @@ struct BijectiveComm
  @note models aCommunicator
  */
 template< class Index>
-class SurjectiveComm
+struct SurjectiveComm
 {
     /**
      * @brief Construct empty class
@@ -309,7 +313,8 @@ class SurjectiveComm
         assert( buffer_size_ == pidGatherMap.size());
         //the bijectiveComm behaves as if we had given the gather map for the store
         //now gather the localGatherMap from the buffer to the store to get the final gather map 
-        Index gatherMap = bijectiveComm_.global_gather( localGatherMap);
+        thrust::device_vector<double> localGatherMap_d = localGatherMap;
+        Index gatherMap = bijectiveComm_.global_gather( localGatherMap_d);
         dg::blas1::transfer(gatherMap, gatherMap_);
         store_size_ = gatherMap_.size();
 

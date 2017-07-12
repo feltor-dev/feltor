@@ -16,7 +16,7 @@ int main( int argc, char * argv[])
     if(rank==0)std::cout <<"Size =  " <<size <<std::endl;
     if(size!=4 && rank == 0){std::cerr <<"You run with "<<size<<" processes. Run with 4 processes!\n"; MPI_Finalize(); return -1;}
 
-    if(rank==0)std::cout << "Test if scatter followed by gather leaves the input vector intact\n";
+    if(rank==0)std::cout << "Test BijectiveComm: scatter followed by gather leaves the input vector intact\n";
     thrust::host_vector<double> v( Nx*Ny, 3*rank);
     thrust::host_vector<double> m( Nx*Ny);
     for( unsigned i=0; i<m.size(); i++)
@@ -28,17 +28,7 @@ int main( int argc, char * argv[])
     dg::BijectiveComm<thrust::host_vector<int> > c(m, MPI_COMM_WORLD);
     thrust::host_vector<double> receive(c.size());
     receive = c.global_gather( v);
-    //for( unsigned i=0; i<receive.size(); i++)
-    //{
-    //    if( rank==0)
-    //        std::cout << receive[i]<<std::endl;
-    //}
     MPI_Barrier( MPI_COMM_WORLD);
-    //for( unsigned i=0; i<receive.size(); i++)
-    //{
-    //    if( rank==1)
-    //        std::cout << receive[i]<<std::endl;
-    //}
     c.global_scatter_reduce( receive, v);
     bool equal = true;
     for( unsigned i=0; i<m.size(); i++)
@@ -56,6 +46,20 @@ int main( int argc, char * argv[])
         else
             std::cerr << "TEST FAILED\n";
     }
+    if(rank==0)std::cout << "Test SurjectiveComm:\n";
+    Nx = 3, Ny = 3; 
+    thrust::host_vector<double> vec( Nx*Ny, rank);
+    thrust::host_vector<int> idx( (Nx+1)*(Ny+1)), pids( (Nx+1)*(Ny+1));
+    for( unsigned i=0; i<(Nx+1)*(Ny+1); i++)
+    {
+        idx[i] = i%(Nx*Ny);
+        pids[i] = rank;
+        if( i>=Nx*Ny) pids[i] = (rank+1)%size;
+    }
+    dg::SurjectiveComm<thrust::host_vector<int> > s( idx, pids, MPI_COMM_WORLD);
+    //receive = s.global_gather( vec);
+    //for( unsigned i=0; i<(Nx+1)*(Ny+1); i++)
+    //    if(rank==0) std::cout << i << std::endl;
 
     MPI_Finalize();
 
