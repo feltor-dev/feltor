@@ -25,7 +25,7 @@ int main( int argc, char * argv[])
         v[i] = v[i] + (double)(i + 17%(rank+1));
     }
     const thrust::host_vector<double> w(v);
-    dg::BijectiveComm<thrust::host_vector<int>, thrust::host_vector<double> > c(m, MPI_COMM_WORLD);
+    dg::BijectiveComm<thrust::host_vector<int> > c(m, MPI_COMM_WORLD);
     thrust::host_vector<double> receive(c.size());
     receive = c.global_gather( v);
     //for( unsigned i=0; i<receive.size(); i++)

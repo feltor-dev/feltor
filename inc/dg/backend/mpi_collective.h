@@ -9,6 +9,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include "thrust_vector_blas.cuh"
+#include "dg/blas1.h"
 
 //TODO: Make Collective cuda-aware
 namespace dg{
@@ -24,6 +25,7 @@ namespace dg{
  * In this way gather and scatter are defined with respect to the buffer and 
  * the store is the vector.
  */
+template<class Index>
 struct Collective
 {
     Collective(){}
@@ -39,20 +41,22 @@ struct Collective
 
     void construct( const thrust::host_vector<int>& map, MPI_Comm comm){
         //sollte schnell sein
-        sendTo_=map, recvFrom_=sendTo_, comm_=comm;
-        accS_ = sendTo_, accR_ = recvFrom_;
+        thrust::host_vector<int> sendTo=map, recvFrom=sendTo; 
+        comm_=comm;
+        thrust::host_vector<int> accS = sendTo, accR = recvFrom;
         int rank, size; 
         MPI_Comm_rank( comm_, &rank);
         MPI_Comm_size( comm_, &size);
-        assert( sendTo_.size() == (unsigned)size);
-        thrust::host_vector<unsigned> global_( size*size);
-        MPI_Allgather( sendTo_.data(),  size, MPI_UNSIGNED,
-                       global_.data(), size, MPI_UNSIGNED,
+        assert( sendTo.size() == (unsigned)size);
+        thrust::host_vector<unsigned> global( size*size);
+        MPI_Allgather( sendTo.data(), size, MPI_UNSIGNED,
+                       global.data(), size, MPI_UNSIGNED,
                        comm_);
         for( unsigned i=0; i<(unsigned)size; i++)
-            recvFrom_[i] = global_[i*size+rank]; 
-        thrust::exclusive_scan( sendTo_.begin(),   sendTo_.end(),   accS_.begin());
-        thrust::exclusive_scan( recvFrom_.begin(), recvFrom_.end(), accR_.begin());
+            recvFrom[i] = global[i*size+rank]; 
+        thrust::exclusive_scan( sendTo.begin(),   sendTo.end(),   accS.begin());
+        thrust::exclusive_scan( recvFrom.begin(), recvFrom.end(), accR.begin());
+        sendTo_=sendTo, recvFrom_=recvFrom, accS_=accS, accR_=accR;
     }
     /**
      * @brief Number of processes in the communicator
@@ -64,6 +68,23 @@ struct Collective
     unsigned size() const {return sendTo_.size();}
     MPI_Comm comm() const {return comm_;}
 
+
+    /**
+     * @brief swaps the send and receive maps 
+     *
+     * Now the pattern works backwards
+     */
+    void transpose(){ sendTo_.swap( recvFrom_);}
+    void invert(){ sendTo_.swap( recvFrom_);}
+
+    template<class Device>
+    void scatter( const Device& values, Device& store) const;
+    template<class Device>
+    void gather( const Device& store, Device& values) const;
+    unsigned store_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
+    unsigned values_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
+    MPI_Comm communicator() const{return comm_;}
+    private:
     /**
      * @brief Number of elements to send to process pid 
      *
@@ -81,84 +102,46 @@ struct Collective
      * @return Number
      */
     unsigned recvFrom( unsigned pid) const {return recvFrom_[pid];}
-
-    /**
-     * @brief swaps the send and receive maps 
-     *
-     * Now the pattern works backwards
-     */
-    void transpose(){ sendTo_.swap( recvFrom_);}
-    void invert(){ sendTo_.swap( recvFrom_);}
-
-    thrust::host_vector<double> scatter( const thrust::host_vector<double>& values)const;
-    template<class Device>
-    void scatter( const Device& values, Device& store) const;
-    template<class Device>
-    void gather( const Device& store, Device& values) const;
-    unsigned store_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
-    unsigned values_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
-    MPI_Comm communicator() const{return comm_;}
-    private:
-    void scatter_( const thrust::host_vector<double>& values, thrust::host_vector<double>& store) const;
-    void gather_( const thrust::host_vector<double>& store, thrust::host_vector<double>& values) const;
     unsigned sum;
-    thrust::host_vector<int> sendTo_,   accS_; //accumulated send
-    thrust::host_vector<int> recvFrom_, accR_; //accumulated recv
+    Index sendTo_,   accS_; //accumulated send
+    Index recvFrom_, accR_; //accumulated recv
     MPI_Comm comm_;
 };
 
+template< class Index>
 template<class Device>
-void Collective::scatter( const Device& values, Device& store) const
-{
-    //transfer to host, then scatter and transfer result to device
-    thrust::host_vector<double> hvalues, hstore(store.size());
-    dg::blas1::detail::doTransfer( values, hvalues, typename VectorTraits<Device>::vector_category(), ThrustVectorTag()) ;
-    scatter_( hvalues, hstore);
-    dg::blas1::detail::doTransfer( hstore, store, ThrustVectorTag(), typename VectorTraits<Device>::vector_category()) ;
-    thrust::copy( hstore.begin(), hstore.end(), store.begin());
-}
-
-void Collective::scatter_( const thrust::host_vector<double>& values, thrust::host_vector<double>& store) const
+void Collective<Index>::scatter( const Device& values, Device& store) const
 {
     assert( store.size() == store_size() );
-    MPI_Alltoallv( const_cast<double*>(values.data()), 
-                   const_cast<int*>(sendTo_.data()), 
-                   const_cast<int*>(accS_.data()), MPI_DOUBLE,
-                   store.data(), 
-                   const_cast<int*>(recvFrom_.data()), 
-                   const_cast<int*>(accR_.data()), MPI_DOUBLE, comm_);
-                   //the const_cast shouldn't be necessary any more in MPI-3 standard
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    cudaDeviceSynchronize(); //needs to be called 
+#endif //THRUST_DEVICE_SYSTEM
+    MPI_Alltoallv( 
+            thrust::raw_pointer_cast( values.data()), 
+            thrust::raw_pointer_cast( sendTo_.data()), 
+            thrust::raw_pointer_cast( accS_.data()), MPI_DOUBLE, 
+            thrust::raw_pointer_cast( store.data()),
+            thrust::raw_pointer_cast( recvFrom_.data()),
+            thrust::raw_pointer_cast( accR_.data()), MPI_DOUBLE, comm_);
 }
 
-thrust::host_vector<double> Collective::scatter( const thrust::host_vector<double>& values) const 
-{
-    thrust::host_vector<double> received( store_size() );
-    scatter_( values, received);
-    return received;
-}
-
+template< class Index>
 template<class Device>
-void Collective::gather( const Device& gatherFrom, Device& values) const 
-{
-    //transfer to host, then gather and transfer result to device
-    thrust::host_vector<double> hvalues(values.size()), hgatherFrom;
-    dg::blas1::detail::doTransfer( (gatherFrom), hgatherFrom, typename VectorTraits<Device>::vector_category(), ThrustVectorTag()) ;
-    gather_( hgatherFrom, hvalues);
-    dg::blas1::detail::doTransfer( hvalues, values, ThrustVectorTag(), typename VectorTraits<Device>::vector_category()) ;
-}
-
-void Collective::gather_( const thrust::host_vector<double>& gatherFrom, thrust::host_vector<double>& values) const 
+void Collective<Index>::gather( const Device& gatherFrom, Device& values) const 
 {
     //std::cout << gatherFrom.size()<<" "<<store_size()<<std::endl;
     assert( gatherFrom.size() == store_size() );
     values.resize( values_size() );
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    cudaDeviceSynchronize(); //needs to be called 
+#endif //THRUST_DEVICE_SYSTEM
     MPI_Alltoallv( 
-            const_cast<double*>(gatherFrom.data()), 
-            const_cast<int*>(recvFrom_.data()),
-            const_cast<int*>(accR_.data()), MPI_DOUBLE, 
-            values.data(), 
-            const_cast<int*>(sendTo_.data()), 
-            const_cast<int*>(accS_.data()), MPI_DOUBLE, comm_);
+            thrust::raw_pointer_cast( gatherFrom.data()), 
+            thrust::raw_pointer_cast( recvFrom_.data()),
+            thrust::raw_pointer_cast( accR_.data()), MPI_DOUBLE, 
+            thrust::raw_pointer_cast( values.data()), 
+            thrust::raw_pointer_cast( sendTo_.data()), 
+            thrust::raw_pointer_cast( accS_.data()), MPI_DOUBLE, comm_);
 }
 //BijectiveComm ist der Spezialfall, dass jedes Element nur ein einziges Mal gebraucht wird. 
 ///@endcond
@@ -289,25 +272,27 @@ struct BijectiveComm
     MPI_Comm communicator() const {return p_.communicator();}
     private:
     Index idx_;
-    Collective p_;
+    Collective<Index> p_;
 };
 
 /**
  * @ingroup mpi_structures
  * @brief Struct that performs general collective scatter and gather operations across processes on distributed vectors using mpi
  *
- * This Communicator can perform the most general global gather and
- scatter operations 
+ * This Communicator can perform general global gather and
+ scatter operations. We only assume that the gather/scatter map
+ is surjective, i.e. all elements in a vector get gathered. This
+ is important only in the global_scatter_reduce function.
  @tparam Index an integer Vector
  @note models aCommunicator
  */
 template< class Index>
-class GeneralComm
+class SurjectiveComm
 {
     /**
      * @brief Construct empty class
      */
-    GeneralComm(){}
+    SurjectiveComm(){}
     /**
     * @brief Construct from local indices and PIDs
     *
@@ -316,8 +301,9 @@ class GeneralComm
     Same size as localGatherMap.
      *   The rank needs to be element of the given communicator.
     * @param comm The MPI communicator participating in the scatter/gather operations
+    * @note we assume that the gather map is surjective
     */
-    GeneralComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm): bijectiveComm(pidGatherMap, comm)
+    SurjectiveComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm): bijectiveComm_(pidGatherMap, comm)
     {
         buffer_size_ = localGatherMap.size();
         assert( buffer_size_ == pidGatherMap.size());
@@ -342,10 +328,6 @@ class GeneralComm
                 one.begin(), keys.begin(), number.begin() ); 
         unsigned distance = thrust::distance( keys.begin(), new_end.first);
         vector_size_ = distance;
-        thrust::host_vector<int> scatterMap( size, 0 );
-        thrust::copy( keys.begin(), keys.begin()+distance, scatterMap.begin());
-
-            
     }
     template<class Vector >
     Vector global_gather( const Vector& values)const
@@ -365,11 +347,10 @@ class GeneralComm
         //first gather values into store
         Vector store_ = bijectiveComm_.global_gather( toScatter);
         //now perform a local sort, reduce and scatter operation
-        Vector sortedStore(store_size_), values_(vector_size_);
+        Vector sortedStore(store_size_);
         thrust::gather( sortMap_.begin(), sortMap_.end(), store_.begin(), sortedStore.begin());
         Index keys( vector_size_);
-        thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), sortedStore.begin(), keys.begin(), values_.begin());
-        thrust::scatter( values_.begin(), values_.end(), scatterMap_.begin(), values.begin()  );
+        thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), sortedStore.begin(), keys.begin(), values.begin());
     }
     unsigned size() const {return buffer_size_;}
     private:
