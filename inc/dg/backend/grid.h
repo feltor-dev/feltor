@@ -289,6 +289,31 @@ struct Grid2d
      * @return 
      */
     Grid2d local_grid() const {return *this;}
+
+    /**
+    * @brief Return a copy of the grid with increased number of cells
+    *
+    * @param nx multiply # of cells in x 
+    * @param ny multiply # of cells in y
+    *
+    * @return a copy of this grid with nx*Nx and ny*Ny cells in x and y
+    */
+    virtual Grid2d multiply( unsigned nx, unsigned ny) const {
+        return Grid2d( x0_, x1_, y0_, y1_, n_, nx*Nx_, ny*Ny_, bcx_, bcy_);
+    }
+    /**
+    * @brief Return a copy of the grid with reduced number of cells
+    *
+    * @param nx divide # of cells in x 
+    * @param ny divide # of cells in y
+    *
+    * @return a copy of this grid with Nx/nx and Ny/ny cells in x and y
+    * @attention The function won't check if the number of cells are divisible without rest
+    */
+    virtual Grid2d divide( unsigned nx, unsigned ny) const {
+        return Grid2d( x0_, x1_, y0_, y1_, n_, Nx_/nx, Ny_/ny, bcx_, bcy_);
+    }
+
     /**
      * @brief discrete legendre trafo
      *
@@ -442,6 +467,32 @@ struct Grid3d
         lx_ = (x1_-x0_), ly_ = (y1_-y0_), lz_ = (z1_-z0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
     }
+    /**
+    * @brief Return a copy of the grid with increased number of cells
+    *
+    * @param nx multiply # of cells in x 
+    * @param ny multiply # of cells in y
+    * @param nz multiply # of cells in z 
+    *
+    * @return a copy of this grid with nx*Nx, ny*Ny and nz*Nz cells in x, y and z
+    */
+    virtual Grid3d multiply( unsigned nx, unsigned ny, unsigned nz) const {
+        return Grid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, nx*Nx_, ny*Ny_, nz*Nz_, bcx_, bcy_, bcz_);
+    }
+    /**
+    * @brief Return a copy of the grid with reduced number of cells
+    *
+    * @param nx divide # of cells in x 
+    * @param ny divide # of cells in y
+    * @param nz divide # of cells in z 
+    *
+    * @return a copy of this grid with Nx/nx, Ny/ny cells in x, y and z
+    * @attention The function won't check if the number of cells are divisible without rest
+    */
+    virtual Grid3d divide( unsigned nx, unsigned ny, unsigned nz) const {
+        return Grid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, Nx_/nx, Ny_/ny, Nz_/nz, bcx_, bcy_, bcz_);
+    }
+
     /**
      * @brief left boundary in x
      *

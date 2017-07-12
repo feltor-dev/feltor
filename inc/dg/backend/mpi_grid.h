@@ -95,6 +95,30 @@ struct MPIGrid2d
             else assert( periods[1] == false);
         }
     }
+    /**
+    * @brief Return a copy of the grid with increased number of cells
+    *
+    * @param nx multiply # of cells in x 
+    * @param ny multiply # of cells in y
+    *
+    * @return a copy of this grid with nx*Nx and ny*Ny cells in x and y
+    */
+    virtual MPIGrid2d multiply( unsigned nx, unsigned ny) const {
+        return MPIGrid2d( x0_, x1_, y0_, y1_, n_, nx*Nx_, ny*Ny_, bcx_, bcy_, comm_);
+    }
+    /**
+    * @brief Return a copy of the grid with reduced number of cells
+    *
+    * @param nx divide # of cells in x 
+    * @param ny divide # of cells in y
+    *
+    * @return a copy of this grid with Nx/nx and Ny/ny cells in x and y
+    * @attention The function won't check if the number of cells are divisible without rest
+         but it does check if the number of processes is still a divisor
+    */
+    virtual MPIGrid2d divide( unsigned nx, unsigned ny) const {
+        return MPIGrid2d( x0_, x1_, y0_, y1_, n_, Nx_/nx, Ny_/ny, bcx_, bcy_, comm_);
+    }
 
     /**
      * @brief Return local x0
@@ -387,6 +411,32 @@ struct MPIGrid3d
         }
     }
 
+    /**
+    * @brief Return a copy of the grid with increased number of cells
+    *
+    * @param nx multiply # of cells in x 
+    * @param ny multiply # of cells in y
+    * @param nz multiply # of cells in z 
+    *
+    * @return a copy of this grid with nx*Nx, ny*Ny and nz*Nz cells in x, y and z
+    */
+    virtual MPIGrid3d multiply( unsigned nx, unsigned ny, unsigned nz) const {
+        return MPIGrid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, nx*Nx_, ny*Ny_, nz*Nz_, bcx_, bcy_, bcz_, comm_);
+    }
+    /**
+    * @brief Return a copy of the grid with reduced number of cells
+    *
+    * @param nx divide # of cells in x 
+    * @param ny divide # of cells in y
+    * @param nz divide # of cells in z 
+    *
+    * @return a copy of this grid with Nx/nx, Ny/ny cells in x, y and z
+    * @attention The function won't check if the number of cells are divisible without rest
+    *   but it does check if the number of processes is still a divisor
+    */
+    virtual MPIGrid3d divide( unsigned nx, unsigned ny, unsigned nz) const {
+        return MPIGrid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, Nx_/nx, Ny_/ny, Nz_/nz, bcx_, bcy_, bcz_, comm_);
+    }
     /**
      * @brief Return local x0
      *
