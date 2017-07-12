@@ -334,8 +334,8 @@ FieldAligned<MPIGeometry, RowDistMat<LocalMatrix, CommunicatorXY>, MPI_Vector<Lo
     CommunicatorXY cp( pids, g2d.communicator());
     commXYplus_ = cp;
     thrust::host_vector<double> pX, pY;
-    dg::blas1::transfer( cp.collect( yp[0]), pX);
-    dg::blas1::transfer( cp.collect( yp[1]), pY);
+    dg::blas1::transfer( cp.global_gather( yp[0]), pX);
+    dg::blas1::transfer( cp.global_gather( yp[1]), pY);
 
     //construt interpolation matrix
     plus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
@@ -353,8 +353,8 @@ FieldAligned<MPIGeometry, RowDistMat<LocalMatrix, CommunicatorXY>, MPI_Vector<Lo
     }
     CommunicatorXY cm( pids, g2d.communicator());
     commXYminus_ = cm;
-    dg::blas1::transfer( cm.collect( ym[0]), pX);
-    dg::blas1::transfer( cm.collect( ym[1]), pY);
+    dg::blas1::transfer( cm.global_gather( ym[0]), pX);
+    dg::blas1::transfer( cm.global_gather( ym[1]), pY);
     minus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( minus, minusT);
     //copy to device
@@ -412,14 +412,14 @@ MPI_Vector<container> FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::e
             {
                 if( sizeXY != 1){
                     dg::blas2::symv( plus, tempP, tXYplus);
-                    commXYplus_.send_and_reduce( tXYplus, temp);
+                    commXYplus_.global_scatter_reduce( tXYplus, temp);
                 }
                 else
                     dg::blas2::symv( plus, tempP, temp);
                 temp.swap( tempP);
                 if( sizeXY != 1){
                     dg::blas2::symv( minus, tempM, tXYminus);
-                    commXYminus_.send_and_reduce( tXYminus, temp);
+                    commXYminus_.global_scatter_reduce( tXYminus, temp);
                 }
                 else
                     dg::blas2::symv( minus, tempM, temp);
@@ -483,7 +483,7 @@ void FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::einsPlus( const MP
             View tempV( tempXYplus_[i0].begin(), tempXYplus_[i0].end() );
             cusp::multiply( plus, inV, tempV);
             //exchange data in XY
-            commXYplus_.send_and_reduce( tempXYplus_[i0], temp_[i0]);
+            commXYplus_.global_scatter_reduce( tempXYplus_[i0], temp_[i0]);
         }
     }
     else //directly compute in temp_
@@ -558,7 +558,7 @@ void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsMinus( const MP
             View tempV( tempXYminus_[i0].begin(), tempXYminus_[i0].end());
             cusp::multiply( minus, inV, tempV);
             //exchange data in XY
-            commXYminus_.send_and_reduce( tempXYminus_[i0], temp_[i0]);
+            commXYminus_.global_scatter_reduce( tempXYminus_[i0], temp_[i0]);
         }
     }
     else //directly compute in temp_
@@ -628,7 +628,7 @@ void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsMinusT( const M
         for( int i0=0; i0<(int)g_.Nz(); i0++)
         {
             thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
-            tempXYminus_[i0] = commXYminus_.collect( temp_[i0] );
+            tempXYminus_[i0] = commXYminus_.global_gather( temp_[i0] );
             cView inV( tempXYminus_[i0].cbegin(), tempXYminus_[i0].cend() );
             View tempV( temp_[i0].begin(), temp_[i0].end() );
             cusp::multiply( minusT, inV, tempV);
@@ -702,7 +702,7 @@ void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsPlusT( const MP
         {
             //first exchange data in XY
             thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
-            tempXYplus_[i0] = commXYplus_.collect( temp_[i0]);
+            tempXYplus_[i0] = commXYplus_.global_gather( temp_[i0]);
             cView inV( tempXYplus_[i0].cbegin(), tempXYplus_[i0].cend() );
             View tempV( temp_[i0].begin(), temp_[i0].end() );
             cusp::multiply( plusT, inV, tempV);

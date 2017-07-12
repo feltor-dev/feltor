@@ -159,11 +159,8 @@ void Collective::gather_( const thrust::host_vector<double>& gatherFrom, thrust:
 //
 /**
  * @ingroup mpi_structures
- * @brief Struct that performs collective scatter and gather operations across processes
+ * @brief Struct that performs bijective collective scatter and gather operations across processes
  * on distributed vectors using mpi
- * In the bijective operations every element in a vector belongs to 
- exactly one MPI process, i.e. one value is not sent to more than 
- one process and the reduction in the global_scatter_reduce is not necessary
  *
  * @code
  int i = myrank;
@@ -190,10 +187,13 @@ struct BijectiveComm
      */
     BijectiveComm( ){ }
     /**
-     * @brief Construct from a given map 
+     * @brief Construct from a given map with respect to the data vector
      *
-     * @param pids Gives to every point of the values array the rank to which to send this data element. The rank needs to be element of the given communicator.
+     * @param pids Gives to every point of the values/data vector (not the buffer vector!) 
+     *   the rank to which to send this data element. 
+     *   The rank needs to be element of the given communicator.
      * @param comm An MPI Communicator that contains the participants of the scatter/gather
+     * @note The actual scatter/gather map is constructed from the given map 
      */
     BijectiveComm( thrust::host_vector<int> pids, MPI_Comm comm): idx_(pids)
     {
@@ -220,13 +220,14 @@ struct BijectiveComm
     }
 
     /**
-     * @brief Scatters data according to the map given in the Constructor
+     * @brief Globally gathers data into a buffer according to the map given in the Constructor
      *
-     * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
+     * The order of the received elements is according to their original array index 
+     * (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
      * @param values data to send (must have the size given 
-     * by the map in the constructor, s.a. send_size())
+     * by the map in the constructor, s.a. size())
      *
-     * @return received data from other processes of size recv_size()
+     * @return received data from other processes of size size()
      * @note a scatter followed by a gather of the received values restores the original array
      */
      Vector global_gather( const Vector& values)const
@@ -242,14 +243,14 @@ struct BijectiveComm
     }
 
     /**
-     * @brief Gather data according to the map given in the constructor 
+     * @brief Scatter data according to the map given in the constructor 
      *
-     * This method is the inverse of scatter 
-     * @param gatherFrom other processes collect data from this vector (has to be of size given by recv_size())
+     * This method is the inverse of gather
+     * @param toScatter other processes collect data from this vector (has to be of size given by recv_size())
      * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
      * @note a scatter followed by a gather of the received values restores the original array
      */
-    void global_scatter_reduce( const Vector& gatherFrom, Vector& values) const
+    void global_scatter_reduce( const Vector& toScatter, Vector& values) const
     {
         Vector values_(values.size());
         //sammeln
@@ -265,23 +266,7 @@ struct BijectiveComm
      *
      * @return # of elements to receive
      */
-    unsigned recv_size() const {
-        return p_.store_size();}
-    /**
-     * @brief return # of elements the calling process has to send in a scatter process (or receive in the gather process)
-     *
-     * equals the size of the map given in the constructor
-     * @return # of elements to send
-     */
-    unsigned send_size() const {
-        return p_.values_size();}
-    /**
-    * @brief The size of the collected vector
-    *
-    * @return 
-    */
-    unsigned size() const {
-        return p_.store_size();}
+    unsigned size() const { return p_.store_size();}
     /**
     * @brief The internal communicator used 
     *

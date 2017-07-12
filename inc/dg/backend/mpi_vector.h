@@ -220,7 +220,7 @@ struct NearestNeighborComm
     */
     const Vector& global_gather( const Vector& input)const;
     /**
-    * @brief Size of the output of global_gather
+    * @brief local size of the output of global_gather
     *
     * @return size
     */

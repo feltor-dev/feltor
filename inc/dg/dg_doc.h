@@ -119,53 +119,39 @@
  * In order to understand the issue you must first really(!) understand what 
  gather and scatter operations are, so grab pen and paper: 
 
- Gather: imagine a vector v and a map that gives to every element in this vector v
- an index into a source vector w where the value of this element should be taken from
- i.e. \f$ v[i] = w[idx[i]] \f$ 
- Note that an index in the source vector can appear several times or not at all. 
- This is why the source vector w can have any size and even be smaller than v. 
- If we throw away all unused elements in w the source vector is always equal 
- or smaller in size than v. 
+ First we note that gather and scatter are most often used in the context
+ of memory buffers. The buffer needs to be filled wih values (gather) or these
+ values need to be written back into the original place (scatter).
 
- Scatter: imagine a vector w and a map that gives to every element in the vector w an
+ Gather: imagine a buffer vector w and a map that gives to every element in this vector w
+ an index into a source vector v where the value of this element should be taken from
+ i.e. \f$ w[i] = v[\text{idx}[i]] \f$ 
+ Note that an index in the source vector can appear several times or not at all. 
+ This is why the source vector w can have any size and even be smaller than w. 
+
+ Scatter: imagine a buffer vector w and a map that gives to every element in the buffer w an
  index in a target vector v where this element should go to, 
- i.e. \f$ w[idx[i]] = v[i] \f$. 
- Note again that a target index can appear several times. Then in our case we 
- perform a reduction operation (we sum up all elements). If we throw away all
- unused elements in w the, then w is always equal or smaller in size than v. 
+ i.e. \f$ v[\text{idx}[i]] = w[i] \f$. This is ill-defined.
+ Note again that an index in v can appear several times or never at all. 
+ Then in our case we perform a reduction operation (we sum up all elements) beginning
+ with 0 which remedies the defintion. 
 
 Since it is a vector operation the gather and scatter operation can 
-also be represented by a matrix. The gather matrix is just a 
+also be represented/defined by a matrix. The gather matrix is just a 
 (permutation) matrix of 1's and 0's with exactly one "1" in each line.
-The corresponding scatter-and-reduce matrix is just the transpose of the gather matrix. The scatter matrix can have zero, one or more "1"s in each line.
+We uniquely define the corresponding scatter matrix as the transpose of the gather matrix. 
+The scatter matrix can have zero, one or more "1"s in each line.
+\f[ w = G v \\
+    v = S w \f]
 
+The scatter matrix S is the actual inverse of G if and only if the gather map is bijective.
+In this case the buffer and the vector can swap their roles. 
 
- Now, consider that both vectors v and w are distributed across processes.
- That means when you send data with MPI you will probably need a communication buffers.
-    There are three types of indices that you need to consider: 
-
-    a) the global vector index is the index of an element if there was only one vector that lay contiguously in memory. 
-
-    b) the local vector index is the index of the local chunk a process has. 
-
-    c) the buffer index is the index into the communication buffer. 
+Finally note that when v is filled with its indices, i.e. \f$ v[i] = i \f$, then
+the gather operation will reproduce the index map in the buffer w \f$ w[i] = \text{idx}[i]\f$ .
 
  * @ingroup templates
  @attention this is not a real class it's there for documentation only
- *
- * @code
- int i = myrank;
- double values[10] = {i,i,i,i, 9,9,9,9};
- thrust::host_vector<double> hvalues( values, values+10);
- int pids[10] =      {0,1,2,3, 0,1,2,3};
- thrust::host_vector<int> hpids( pids, pids+10);
- BijectiveComm coll( hpids, MPI_COMM_WORLD);
- thrust::host_vector<double> hrecv = coll.scatter( hvalues);
- //hrecv is now {0,9,1,9,2,9,3,9} e.g. for process 0 
- thrust::host_vector<double> hrecv2( coll.send_size());
- coll.gather( hrecv, hrecv2);
- //hrecv2 now equals hvalues independent of process rank
- @endcode
  */
 struct aCommunicator
 {
@@ -173,12 +159,10 @@ struct aCommunicator
     /**
      * @brief Gather data across processes
      *
-        1. create a local send buffer and locally gather values from input vector (c) into a send buffer (order with PID, note that a given value can be sent to several processes -> that's why it's a gather)
-        2. globally scatter these values into recv buffer (b)  
-     * @param values data to send (s.a. send_size())
+     * @param values data to gather from
      * @tparam LocalContainer a container on a shared memory system
      *
-     * @return received data from other processes of size recv_size()
+     * @return the buffer vector of size size()
      */
     template< class LocalContainer>
     LocalContainer global_gather( const LocalContainer& values)const;
@@ -187,34 +171,22 @@ struct aCommunicator
      * @brief Scatters data accross processes and reduces on double indices
      *
      * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
-        1. globally scatter the values in this buffer to a recv buffer (b) (every value in the result belongs to exactly one line/process)  
-        2. then permute and reduce the recv buffer on double indices and store result in output vector (c) 
      * @tparam LocalContainer a container on a shared memory system
-     * @param toScatter other processes collect data from this vector (has to be of size given by recv_size())
-     * @param values contains values from other processes sent back to the origin (or send_size())
+     * @param toScatter buffer vector (has to be of size given by size())
+     * @param values contains values from other processes sent back to the origin 
      */
     template< class LocalContainer>
     void global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const;
 
     /**
-     * @brief compute total # of elements the calling process receives in the scatter process (or sends in the gather process)
-     *
-     * (which might not equal the send size in each process)
-     *
-     * @return # of elements to receive
-     */
-    unsigned recv_size() const;
-    /**
-     * @brief return # of elements the calling process has to send in a scatter process (or receive in the gather process)
-     *
-     * @return # of elements to send
-     */
-    unsigned send_size() const; 
-    /**
-    * @brief The size of the collected vector = recv_size()
+    * @brief The size of the local buffer = local map size
     *
-    * may return 0
-    * @return 
+ Consider that both the vector v and the buffer w are distributed across processes.
+ In Feltor the vector v is distributed equally among processes and the local size
+ of v is the same for all processes. However the buffer size might be different for each process. 
+    * @note may return 0 to indicate identity between v and w and that no MPI communication is needed 
+    * @note we assume that the vector size is always the local size of a dg::MPI_Vector
+    * @return buffer size
     */
     unsigned size() const;
     /**

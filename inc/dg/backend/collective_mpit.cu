@@ -27,7 +27,7 @@ int main( int argc, char * argv[])
     const thrust::host_vector<double> w(v);
     dg::BijectiveComm<thrust::host_vector<int>, thrust::host_vector<double> > c(m, MPI_COMM_WORLD);
     thrust::host_vector<double> receive(c.size());
-    receive = c.collect( v);
+    receive = c.global_gather( v);
     //for( unsigned i=0; i<receive.size(); i++)
     //{
     //    if( rank==0)
@@ -39,7 +39,7 @@ int main( int argc, char * argv[])
     //    if( rank==1)
     //        std::cout << receive[i]<<std::endl;
     //}
-    c.send_and_reduce( receive, v);
+    c.global_scatter_reduce( receive, v);
     bool equal = true;
     for( unsigned i=0; i<m.size(); i++)
     {
