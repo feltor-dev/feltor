@@ -139,6 +139,8 @@
 Since it is a vector operation the gather and scatter operation can 
 also be represented/defined by a matrix. The gather matrix is just a 
 (permutation) matrix of 1's and 0's with exactly one "1" in each line.
+In a "coo" formatted sparse matrix format the values array would consist only of "1"s, 
+row array is just the index and column array is the gather map.
 We uniquely define the corresponding scatter matrix as the transpose of the gather matrix. 
 The scatter matrix can have zero, one or more "1"s in each line.
 \f[ w = G v \\
