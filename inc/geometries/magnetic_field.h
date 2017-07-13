@@ -511,26 +511,6 @@ struct Field
         yp[1] = -y[0]*c_.psipR(y[0],y[1])/ipol ;             //dZ/dphi = -R/I Psip_R
 
     }
-    /**
-     * @brief \f[   \frac{1}{\hat{B}} = 
-      \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
-      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
-     */ 
-    double operator()( double R, double Z) const
-    {
-        //modified
-//          return invB_(R,Z)* invB_(R,Z)*ipol_(R,Z)*gp_.R_0/R;
-        return invB_(R,Z);
-    }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()( double R, double Z, double phi) const
-    {
-        return invB_(R,Z,phi);
-
-//         return invB_(R,Z,phi)*invB_(R,Z,phi)*ipol_(R,Z,phi)*gp_.R_0/R;
-    }
     double error( const dg::HVec& x0, const dg::HVec& x1)
     {
         return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
@@ -552,7 +532,46 @@ struct Field
     MagneticField c_;
     double R_0_;
     InvB<MagneticField>   invB_;
-   
+};
+
+
+template<class container>
+struct DSField
+{
+    DSField( const MagneticField& c)
+
+    private:
+    thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
+
+};
+struct Interpolate
+{
+    Interpolate( const thrust::host_vector<double>& fZeta, 
+                 const thrust::host_vector<double>& fEta, 
+                 const dg::Grid2d& g2d ): 
+        iter0_( dg::create::forward_transform( fZeta, g2d) ), 
+        iter1_( dg::create::forward_transform(  fEta, g2d) ), 
+        g_(g2d), zeta1_(g2d.x1()), eta1_(g2d.y1()){}
+    void operator()(const thrust::host_vector<double>& zeta, thrust::host_vector<double>& fZeta)
+    {
+        fZeta[0] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter0_, g_);
+        fZeta[1] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter1_, g_);
+        //fZeta[0] = interpolate(  zeta[0], zeta[1], iter0_, g_);
+        //fZeta[1] = interpolate(  zeta[0], zeta[1], iter1_, g_);
+    }
+    void operator()(const std::vector<thrust::host_vector<double> >& zeta, std::vector< thrust::host_vector<double> >& fZeta)
+    {
+        for( unsigned i=0; i<zeta[0].size(); i++)
+        {
+            fZeta[0][i] = interpolate( fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), iter0_, g_);
+            fZeta[1][i] = interpolate( fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), iter1_, g_);
+        }
+    }
+    private:
+    thrust::host_vector<double> iter0_;
+    thrust::host_vector<double> iter1_;
+    dg::Grid2d g_;
+    double zeta1_, eta1_;
 };
 
 ///**

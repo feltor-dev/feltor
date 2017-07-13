@@ -21,17 +21,16 @@ namespace dg{
 *
 * This class discretizes the operators \f$ \nabla_\parallel = 
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
-cylindrical coordinates
+arbitrary coordinates
 * @ingroup fieldaligned
-* @tparam FA Engine class for interpolation, provides the necessary interpolation operations
+* @tparam Geometry The grid geometry
+* @tparam IMatrix The type of the interpolation matrix
 * @tparam Matrix The matrix class of the jump matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class FA, class Matrix, class container >
+template< class Geometry, class IMatrix, class Matrix, class container >
 struct DS
 {
-    typedef FA FieldAligned;//!< typedef for easier construction of corresponding fieldaligned object
-
     /**
     * @brief Construct from a field and a grid
     *
@@ -213,7 +212,7 @@ struct DS
     private:
     FA f_;
     Matrix jumpX, jumpY;
-    typename FA::InterpolationMatrix f2c, c2f, f2cT, c2fT;
+    IMatrix f2c, c2f, f2cT, c2fT;
     container tempP, temp0, tempM;
     container tempPc, tempMc, temp0c;
     container f, dsf;
@@ -231,9 +230,9 @@ struct DS
 ///@cond
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
-template<class FA, class M, class container>
-template <class Field, class Geometry>
-DS<FA, M,container>::DS(const FA& field, Geometry gridc, Field inverseB, dg::norm no, dg::direction dir, bool jumpX):
+template<class G, class I, class M, class container>
+template <class MagneticField>
+DS<G, I, M,container>::DS(const FA& field, Geometry gridc, Field inverseB, dg::norm no, dg::direction dir, bool jumpX):
         f_(field),
         jumpX( dg::create::jumpX( gridc)),
         jumpY( dg::create::jumpY( gridc)),
@@ -257,8 +256,8 @@ DS<FA, M,container>::DS(const FA& field, Geometry gridc, Field inverseB, dg::nor
 
 }
 
-template<class F, class M, class container>
-inline void DS<F,M,container>::operator()( const container& f, container& dsf) { 
+template<class G, class I, class M, class container>
+inline void DS<G,I,M,container>::operator()( const container& f, container& dsf) { 
     if( dir_ == dg::centered)
         return centered( f, dsf);
     else if( dir_ == dg::forward)
@@ -268,8 +267,8 @@ inline void DS<F,M,container>::operator()( const container& f, container& dsf) {
 }
 
 
-template<class F, class M, class container>
-void DS<F,M,container>::centered( const container& fc, container& dsfc)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::centered( const container& fc, container& dsfc)
 {
     //direct discretisation
     assert( &fc != &dsfc);
@@ -295,8 +294,8 @@ void DS<F,M,container>::centered( const container& fc, container& dsfc)
 //     dg::blas1::pointwiseDot( inv3d, dsfc, dsfc); 
 }
 
-template<class F, class M, class container>
-void DS<F,M,container>::centeredT( const container& fc, container& dsfc)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::centeredT( const container& fc, container& dsfc)
 {               
     //adjoint discretisation
     assert( &fc != &dsfc);    
@@ -337,8 +336,8 @@ void DS<F,M,container>::centeredT( const container& fc, container& dsfc)
 //         dg::blas1::pointwiseDivide( dsf,w2d,  dsf);  
 }
 
-template<class F, class M, class container>
-void DS<F,M,container>::centeredTD( const container& f, container& dsf)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::centeredTD( const container& f, container& dsf)
 {       
 //     Direct discretisation
     assert( &f != &dsf);    
@@ -350,8 +349,8 @@ void DS<F,M,container>::centeredTD( const container& f, container& dsf)
     dg::blas1::pointwiseDivide( dsf, invB, dsf);
 }
 
-template<class F, class M, class container>
-void DS<F,M,container>::forward( const container& fc, container& dsfc)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::forward( const container& fc, container& dsfc)
 {
     //direct
     assert( &fc != &dsfc);
@@ -371,8 +370,8 @@ void DS<F,M,container>::forward( const container& fc, container& dsfc)
     cusp::multiply( f2c, dsf, dsfc);
 }
 
-template<class F, class M, class container>
-void DS<F,M,container>::forwardT( const container& fc, container& dsfc)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::forwardT( const container& fc, container& dsfc)
 {    
     //adjoint discretisation
     assert( &fc != &dsfc);
@@ -386,8 +385,8 @@ void DS<F,M,container>::forwardT( const container& fc, container& dsfc)
     dg::blas1::pointwiseDot( inv3d, dsfc, dsfc); 
 }
 
-template<class F, class M, class container>
-void DS<F,M,container>::forwardTD( const container& fc, container& dsfc)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::forwardTD( const container& fc, container& dsfc)
 {
     //direct discretisation
     assert( &fc != &dsfc);
@@ -403,8 +402,8 @@ void DS<F,M,container>::forwardTD( const container& fc, container& dsfc)
 
 
 }
-template<class F, class M, class container>
-void DS<F,M,container>::backward( const container& fc, container& dsfc)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::backward( const container& fc, container& dsfc)
 {
     //direct
     assert( &fc != &dsfc);
@@ -424,8 +423,8 @@ void DS<F,M,container>::backward( const container& fc, container& dsfc)
 //     dg::blas1::pointwiseDot( dsf, invB, dsf);
     cusp::multiply( f2c, dsf, dsfc);
 }
-template<class F, class M, class container>
-void DS<F,M,container>::backwardT( const container& fc, container& dsfc)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::backwardT( const container& fc, container& dsfc)
 {    
     //adjoint discretisation
     assert( &fc != &dsfc);
@@ -440,8 +439,8 @@ void DS<F,M,container>::backwardT( const container& fc, container& dsfc)
     dg::blas1::pointwiseDot( inv3d, dsfc, dsfc); 
 }
 
-template<class F, class M, class container>
-void DS<F,M,container>::backwardTD( const container& fc, container& dsfc)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::backwardTD( const container& fc, container& dsfc)
 {
     //direct
     assert( &fc != &dsfc);
@@ -455,8 +454,8 @@ void DS<F,M,container>::backwardTD( const container& fc, container& dsfc)
     cusp::multiply( f2c, dsf, dsfc);
 }
 
-template< class F, class M, class container >
-void DS<F,M,container>::symv( const container& f, container& dsTdsf)
+template<class G, class I, class M, class container>
+void DS<G,I,M,container>::symv( const container& f, container& dsTdsf)
 {
     if(dir_ == dg::centered)
     {
@@ -508,25 +507,14 @@ void DS<F,M,container>::symv( const container& f, container& dsTdsf)
 
 
 //enables the use of the dg::blas2::symv function 
-template< class F, class M, class V>
-struct MatrixTraits< DS<F,M, V> >
+template< class G, class I, class M, class V>
+struct MatrixTraits< DS<G,I,M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 
 ///@endcond
-
-///@addtogroup typedefs
-///@{
-typedef dg::DS<dg::FieldAligned<dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec>, dg::DMatrix, dg::DVec> DDS;//!< device DS type
-typedef dg::DS<dg::FieldAligned<dg::CylindricalGrid3d<dg::HVec>, dg::IHMatrix, dg::HVec>, dg::HMatrix, dg::HVec> HDS; //!< host DS type
-#ifdef MPI_VERSION
-typedef dg::DS< dg::MPI_FieldAligned<dg::CylindricalMPIGrid3d<dg::MDVec>, dg::IDMatrix, dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec>, dg::MDMatrix, dg::MDVec > MDDS; //!< MPI device DS type
-typedef dg::DS< dg::MPI_FieldAligned<dg::CylindricalMPIGrid3d<dg::MHVec>, dg::IHMatrix, dg::BijectiveComm< dg::iHVec, dg::HVec >, dg::HVec>, dg::MHMatrix, dg::MHVec > MHDS; //!< MPI host DS type
-#endif //MPI_VERSION
-///@}
-
 
 }//namespace dg
 

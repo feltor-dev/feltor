@@ -12,6 +12,7 @@ namespace toroidal{
  * @brief Models a slab toroidal field (models aTokamakMagneticField)
  *
  * \f$ B=\frac{R_0}{R}\f$, \f$ \psi_p = 1\f$ and \f$ I = 1\f$.
+ @note The solovev field can also be made to model a todoidal slab field
  */
 struct MagneticField
 {
