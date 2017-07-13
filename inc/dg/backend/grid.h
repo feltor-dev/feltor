@@ -115,16 +115,14 @@ struct Grid1d
     }
 
     /**
-     * @brief Shifts a point coordinate due to topology
+     * @brief Shifts a point coordinate if periodic
      *
-     * If you want to construct a point by adding delta X to a given point
-     * x0 then the resulting coordinate x1 might be incorrect due to topologic reasons (periodic boundaries). This function corrects this coordinate
-     * @param x0 starting point (must lie inside of the grid)
+     * This function shifts a point coordinate to its value between x0() and x1() if bcx() returns dg::PER
+     * @param x0 arbitrary point (irrelevant for the function, it's there to be consistent with GridX1d)
      * @param x1 end point (inout)
      */
     void shift_topologic( double x0, double& x1)const
     {
-        assert( contains(x0));
         double deltaX;
         if( x1 > x0_) deltaX = x1 -x0_;
         else deltaX = x1_ - x1;
@@ -139,7 +137,7 @@ struct Grid1d
      * @note Doesn't check periodicity!!
      * @param x point to check
      *
-     * @return true if x is between x0 and x1, false else
+     * @return true if x0()<x<x1(), false else
      */
     bool contains( double x)const
     {
@@ -351,18 +349,17 @@ struct Grid2d
             <<"    "<<bc2str(bcy_)<<"\n";
     }
     /**
-     * @brief Shifts a point coordinate due to topology
+     * @brief Shifts point coordinates if periodic
      *
-     * If you want to construct a point by adding (delta X, delta Y) to a given point
-     * (x0, y0) then the resulting coordinate (x1, y1) might be incorrect due to topologic reasons (periodic boundaries). This function corrects this coordinate
-     * @param x0 starting x-point (must lie inside of the grid)
-     * @param y0 starting y-point (must lie inside of the grid)
-     * @param x1 end x-point (inout)
-     * @param y1 end y-point (inout)
+     * This function shifts point coordinates to its values inside
+     the domain if the respective boundary condition is periodic
+     * @param x0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with GridX2d)
+     * @param y0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with GridX2d)
+     * @param x1 x-coordinate to shift (inout)
+     * @param y1 y-coordinate to shift (inout)
      */
     void shift_topologic( double x0, double y0, double& x1, double& y1)const
     {
-        assert( contains(x0, y0));
         double deltaX;
         if( x1 > x0_) deltaX = (x1 -x0_);
         else deltaX = x1_ - x1;
@@ -381,10 +378,10 @@ struct Grid2d
      * @brief Check if the grid contains a point
      *
      * @note doesn't check periodicity!!
-     * @param x x-point to check
-     * @param y y-point to check
+     * @param x x-coordinate to check
+     * @param y y-coordinate to check
      *
-     * @return true if point is inside, false else
+     * @return true if x0()<x<x1() and y0()<y<y1(), false else
      */
     bool contains( double x, double y)const
     {
@@ -656,20 +653,19 @@ struct Grid3d
     }
 
     /**
-     * @brief Shifts a point coordinate due to topology
+     * @brief Shifts point coordinates if periodic
      *
-     * If you want to construct a point by adding (delta X, delta Y, delta Z) to a given point
-     * (x0, y0, z0) then the resulting coordinate (x1, y1, z1) might be incorrect due to topologic reasons (periodic boundaries). This function corrects this coordinate
-     * @param x0 starting x-point (must lie inside of the grid)
-     * @param y0 starting y-point (must lie inside of the grid)
-     * @param z0 starting y-point (must lie inside of the grid)
-     * @param x1 end x-point (inout)
-     * @param y1 end y-point (inout)
-     * @param z1 end z-point (inout)
+     * This function shifts point coordinates to its values inside
+     the domain if the respective boundary condition is periodic
+     * @param x0 arbitrary x-coordinate (irrelevant for the function, it's there to be consistent with GridX3d)
+     * @param y0 arbitrary y-coordinate (irrelevant for the function, it's there to be consistent with GridX3d)
+     * @param z0 arbitrary z-coordinate (irrelevant for the function, it's there to be consistent with GridX3d)
+     * @param x1 x-coordinate to shift (inout)
+     * @param y1 y-coordinate to shift (inout)
+     * @param z1 z-coordinate to shift (inout)
      */
     void shift_topologic( double x0, double y0, double z0, double& x1, double& y1, double& z1)const
     {
-        assert( contains(x0, y0, z0));
         double deltaX;
         if( x1 > x0_) deltaX = (x1 -x0_);
         else deltaX = x1_ - x1;
@@ -694,11 +690,11 @@ struct Grid3d
      * @brief Check if the grid contains a point
      *
      * @note doesn't check periodicity!!
-     * @param x x-point to check
-     * @param y y-point to check
-     * @param z z-point to check
+     * @param x x-coordinate to check
+     * @param y y-coordinate to check
+     * @param z z-coordinate to check
      *
-     * @return true if x is between x0 and x1, false else
+     * @return true if x0()<x<x1() and y0()<y<y1() and z0()<z<z1() , false else
      */
     bool contains( double x, double y, double z)const
     {
