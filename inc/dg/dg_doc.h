@@ -173,7 +173,6 @@ struct aCommunicator
     /**
      * @brief Scatters data accross processes and reduces on double indices
      *
-     * The order of the received elements is according to their original array index (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
      * @tparam LocalContainer a container on a shared memory system
      * @param toScatter buffer vector (has to be of size given by size())
      * @param values contains values from other processes sent back to the origin 

@@ -43,7 +43,7 @@ int main( int argc, char * argv[])
             std::cerr <<"Rank "<<rank<<" TEST FAILED"<<std::endl;
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    if(rank==0)std::cout << "Test SurjectiveComm:\n";
+    if(rank==0)std::cout << "Test SurjectiveComm and GeneralComm:\n";
     Nx = 3, Ny = 3; 
     thrust::host_vector<double> vec( Nx*Ny, rank), result( Nx*Ny);
     thrust::host_vector<int> idx( (Nx+1)*(Ny+1)), pids( (Nx+1)*(Ny+1));
@@ -53,7 +53,7 @@ int main( int argc, char * argv[])
         pids[i] = rank;
         if( i>=Nx*Ny) pids[i] = (rank+1)%size;
     }
-    dg::SurjectiveComm<thrust::host_vector<int>, thrust::host_vector<double> > s( idx, pids, MPI_COMM_WORLD);
+    dg::GeneralComm<thrust::host_vector<int>, thrust::host_vector<double> > s( idx, pids, MPI_COMM_WORLD);
     receive = s.global_gather( vec);
     //for( unsigned i=0; i<(Nx+1)*(Ny+1); i++)
     //    if(rank==0) std::cout << i<<"\t "<< receive[i] << std::endl;

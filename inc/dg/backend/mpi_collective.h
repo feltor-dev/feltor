@@ -12,11 +12,6 @@
 #include "dg/blas1.h"
 #include "mpi_vector.h"
 
-//TODO: use Buffer class from MPI_Vector, since Device cannot(!) be 
-//arbitrary type (has to be on device if Index is on device e.g.)
-
-//TODO: The MPI_Alltoallv function only send DOUBLEs so no int vector can be used 
-//
 namespace dg{
 
 
@@ -164,32 +159,15 @@ struct BijectiveComm
      * @param comm An MPI Communicator that contains the participants of the scatter/gather
      * @note The actual scatter/gather map is constructed from the given map so the result behaves as if pids was the actual scatter/gather map on the buffer
      */
-    BijectiveComm( thrust::host_vector<int> pids, MPI_Comm comm): idx_(pids)
+    BijectiveComm( const thrust::host_vector<int>& pids, MPI_Comm comm)
     {
-        int rank, size; 
-        MPI_Comm_size( comm, &size);
-        MPI_Comm_rank( comm, &rank);
-        for( unsigned i=0; i<pids.size(); i++)
-            assert( 0 <= pids[i] && pids[i] < size);
-        thrust::host_vector<int> index(pids);
-        thrust::sequence( index.begin(), index.end());
-        thrust::stable_sort_by_key( pids.begin(), pids.end(), index.begin());//note: this also sorts the pids
-        idx_=index;
-        //now we can repeat/invert the sort by a gather/scatter operation with index as map 
-        //i.e. we could sort pids by a gather 
+        construct( pids, comm);
+    }
 
-        //Now construct the collective object by getting the number of elements to send
-        thrust::host_vector<int> one( pids.size(), 1), keys(one), number(one);
-        typedef thrust::host_vector<int>::iterator iterator;
-        thrust::pair< iterator, iterator> new_end = 
-            thrust::reduce_by_key( pids.begin(), pids.end(), //sorted!
-                one.begin(), keys.begin(), number.begin() ); 
-        unsigned distance = thrust::distance( keys.begin(), new_end.first);
-        thrust::host_vector<int> sendTo( size, 0 );
-        for( unsigned i=0; i<distance; i++)
-            sendTo[keys[i]] = number[i];
-        p_.construct( sendTo, comm);
-        values_.data()->resize( idx_.size());
+    template<class OtherIndex, class OtherVector>
+    BijectiveComm( const BijectiveComm<OtherIndex, OtherVector>& src)
+    {
+        construct( src.get_pids(), src.communicator());
     }
 
     /**
@@ -197,7 +175,6 @@ struct BijectiveComm
      *
      * The order of the received elements is according to their original array index 
      * (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
-     * @tparam Vector a Vector
      * @param values data to send (must have the size given 
      * by the map in the constructor, s.a. size())
      *
@@ -247,15 +224,52 @@ struct BijectiveComm
     * @return MPI Communicator
     */
     MPI_Comm communicator() const {return p_.communicator();}
+    /**
+    * @brief These are the pids that was given in the Constructor
+    *
+    * @return the vector given in the constructor
+    */
+    const thrust::host_vector<int> get_pids()const{return pids_;}
     private:
+    void construct( thrust::host_vector<int> pids, MPI_Comm comm)
+    {
+        pids_ = pids;
+        idx_.resize( pids.size());
+        dg::blas1::transfer( pids, idx_);
+        int rank, size; 
+        MPI_Comm_size( comm, &size);
+        MPI_Comm_rank( comm, &rank);
+        for( unsigned i=0; i<pids.size(); i++)
+            assert( 0 <= pids[i] && pids[i] < size);
+        thrust::host_vector<int> index(pids);
+        thrust::sequence( index.begin(), index.end());
+        thrust::stable_sort_by_key( pids.begin(), pids.end(), index.begin());//note: this also sorts the pids
+        idx_=index;
+        //now we can repeat/invert the sort by a gather/scatter operation with index as map 
+        //i.e. we could sort pids by a gather 
+
+        //Now construct the collective object by getting the number of elements to send
+        thrust::host_vector<int> one( pids.size(), 1), keys(one), number(one);
+        typedef thrust::host_vector<int>::iterator iterator;
+        thrust::pair< iterator, iterator> new_end = 
+            thrust::reduce_by_key( pids.begin(), pids.end(), //sorted!
+                one.begin(), keys.begin(), number.begin() ); 
+        unsigned distance = thrust::distance( keys.begin(), new_end.first);
+        thrust::host_vector<int> sendTo( size, 0 );
+        for( unsigned i=0; i<distance; i++)
+            sendTo[keys[i]] = number[i];
+        p_.construct( sendTo, comm);
+        values_.data()->resize( idx_.size());
+    }
     Buffer<Vector> values_;
     Index idx_;
     Collective<Index, Vector> p_;
+    thrust::host_vector<int> pids_;
 };
 
 /**
  * @ingroup mpi_structures
- * @brief Struct that performs general collective scatter and gather operations across processes on distributed vectors using mpi
+ * @brief Struct that performs surjective collective scatter and gather operations across processes on distributed vectors using mpi
  *
  * This Communicator can perform general global gather and
  scatter operations. We only assume that the gather/scatter map
@@ -284,37 +298,16 @@ struct SurjectiveComm
     */
     SurjectiveComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm): bijectiveComm_(pidGatherMap, comm)
     {
-        buffer_size_ = localGatherMap.size();
-        assert( buffer_size_ == pidGatherMap.size());
-        //the bijectiveComm behaves as if we had given the gather map for the store
-        //now gather the localGatherMap from the buffer to the store to get the final gather map 
-        Vector localGatherMap_d;
-        dg::blas1::transfer( localGatherMap, localGatherMap_d);
-        Index gatherMap = bijectiveComm_.global_gather( localGatherMap_d);
-        dg::blas1::transfer(gatherMap, gatherMap_);
-        store_size_ = gatherMap_.size();
+        construct( localGatherMap, pidGatherMap, comm);
+    }
 
-        //now prepare a reduction map and a scatter map
-        thrust::host_vector<int> sortMap(gatherMap);
-        thrust::sequence( sortMap.begin(), sortMap.end());
-        thrust::stable_sort_by_key( gatherMap.begin(), gatherMap.end(), sortMap.begin());//note: this also sorts the gatherMap
-        dg::blas1::transfer( sortMap, sortMap_);
-        dg::blas1::transfer( gatherMap, sortedGatherMap_);
-        //now we can repeat/invert the sort by a gather/scatter operation with sortMap as map 
-
-        thrust::host_vector<int> one( gatherMap.size(), 1), keys(one), number(one);
-        typedef thrust::host_vector<int>::iterator iterator;
-        thrust::pair< iterator, iterator> new_end = 
-            thrust::reduce_by_key( gatherMap.begin(), gatherMap.end(), //sorted!
-                one.begin(), keys.begin(), number.begin() ); 
-        unsigned distance = thrust::distance( keys.begin(), new_end.first);
-        vector_size_ = distance;
-        store_.data()->resize( store_size_);
-        keys_.data()->resize( vector_size_);
+    template<class OtherIndex, class OtherVector>
+    SurjectiveComm( const SurjectiveComm<OtherIndex, OtherVector>& src): bijectiveComm_(src.getPidGatherMap(), src.communicator())
+    {
+        construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
     }
     Vector global_gather( const Vector& values)const
     {
-        assert( values.size() == vector_size_);
         //gather values to store
         thrust::gather( gatherMap_.begin(), gatherMap_.end(), values.begin(), store_.data()->begin());
         //now gather from store into buffer
@@ -331,14 +324,98 @@ struct SurjectiveComm
         thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), store_.data()->begin(), keys_.data()->begin(), values.begin());
     }
     unsigned size() const {return buffer_size_;}
+    const thrust::host_vector<int> getLocalGatherMap() const {return localGatherMap_;}
+    const thrust::host_vector<int> getPidGatherMap() const {return pidGatherMap_;}
+    MPI_Comm communicator()const{return bijectiveComm_.communicator();}
+    const Index& getSortedGatherMap() const {return sortedGatherMap_;}
     private:
-    unsigned vector_size_, buffer_size_, store_size_;
+    void construct( thrust::host_vector<int> localGatherMap, thrust::host_vector<int> pidGatherMap, MPI_Comm comm)
+    {
+        localGatherMap_ = localGatherMap, pidGatherMap_ = pidGatherMap;
+        buffer_size_ = localGatherMap.size();
+        assert( buffer_size_ == pidGatherMap.size());
+        //the bijectiveComm behaves as if we had given the gather map for the store
+        //now gather the localGatherMap from the buffer to the store to get the final gather map 
+        Vector localGatherMap_d;
+        dg::blas1::transfer( localGatherMap, localGatherMap_d);
+        Index gatherMap = bijectiveComm_.global_gather( localGatherMap_d);
+        dg::blas1::transfer(gatherMap, gatherMap_);
+        store_size_ = gatherMap_.size();
+        store_.data()->resize( store_size_);
+        keys_.data()->resize( store_size_);
+
+        //now prepare a reduction map and a scatter map
+        thrust::host_vector<int> sortMap(gatherMap);
+        thrust::sequence( sortMap.begin(), sortMap.end());
+        thrust::stable_sort_by_key( gatherMap.begin(), gatherMap.end(), sortMap.begin());//note: this also sorts the gatherMap
+        dg::blas1::transfer( sortMap, sortMap_);
+        dg::blas1::transfer( gatherMap, sortedGatherMap_);
+        //now we can repeat/invert the sort by a gather/scatter operation with sortMap as map 
+    }
+    unsigned buffer_size_, store_size_;
     BijectiveComm<Index, Vector> bijectiveComm_;
     Index gatherMap_; 
-    Index sortMap_, sortedGatherMap_, scatterMap_;
+    Index sortMap_, sortedGatherMap_;
     Buffer<Index> keys_;
     Buffer<Vector> store_;
-
+    thrust::host_vector<int> localGatherMap_, pidGatherMap_;
 };
 
+/**
+ * @ingroup mpi_structures
+ * @brief Struct that performs general collective scatter and gather operations across processes on distributed vectors using mpi
+ *
+ * This Communicator can perform general global gather and
+ scatter operations. 
+ @tparam Index an integer Vector
+ @tparam Vector a Vector (the data type of Vector must be double)
+ @note models aCommunicator
+ */
+template< class Index, class Vector>
+struct GeneralComm
+{
+    GeneralComm(){}
+    GeneralComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm): surjectiveComm_(localGatherMap, pidGatherMap, comm)
+    {
+        construct( localGatherMap, pidGatherMap, comm);
+    }
+    template<class OtherIndex, class OtherVector>
+    GeneralComm( const GeneralComm<OtherIndex, OtherVector>& src): surjectiveComm_(src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator())
+    {
+        construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
+    }
+    Vector global_gather( const Vector& values)const
+    {
+        return surjectiveComm_.global_gather( values);
+    }
+    void global_scatter_reduce( const Vector& toScatter, Vector& values)
+    {
+        surjectiveComm_.global_scatter_reduce( toScatter, *store_.data());
+        thrust::scatter( store_.data()->begin(), store_.data()->end(), scatterMap_.begin(), values.begin());
+    }
+
+    unsigned size() const{return surjectiveComm_.size();}
+    const thrust::host_vector<int> getLocalGatherMap() const {return surjectiveComm_.getLocalGatherMap();}
+    const thrust::host_vector<int> getPidGatherMap() const {return surjectiveComm_.getPidGatherMap();}
+    MPI_Comm communicator()const{return surjectiveComm_.communicator();}
+    private:
+    void construct( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
+    {
+        const Index& sortedGatherMap_ = surjectiveComm_.getSortedGatherMap();
+        thrust::host_vector<int> gatherMap;
+        dg::blas1::transfer( sortedGatherMap_, gatherMap);
+        thrust::host_vector<int> one( gatherMap.size(), 1), keys(one), number(one);
+        typedef thrust::host_vector<int>::iterator iterator;
+        thrust::pair< iterator, iterator> new_end = 
+            thrust::reduce_by_key( gatherMap.begin(), gatherMap.end(), //sorted!
+                one.begin(), keys.begin(), number.begin() ); 
+        unsigned distance = thrust::distance( keys.begin(), new_end.first);
+        store_.data()->resize( distance);
+        scatterMap_.resize(distance);
+        thrust::copy( keys.begin(), keys.begin() + distance, scatterMap_.begin());
+    }
+    SurjectiveComm<Index, Vector> surjectiveComm_;
+    Buffer<Vector> store_;
+    Index scatterMap_;
+};
 }//namespace dg
