@@ -344,19 +344,8 @@ struct SimpleOrthogonal
      */
     bool isConformal()  const{return false;}
     /**
-     * @brief Generate the points and the elements of the Jacobian
-     *
-     * Call the width() and height() function before calling this function!
-     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
-     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
-     * @param x  \f$= x(\zeta,\eta)\f$
-     * @param y  \f$= y(\zeta,\eta)\f$
-     * @param zetaX \f$= \zeta_x(\zeta,\eta)\f$
-     * @param zetaY \f$= \zeta_y(\zeta,\eta)\f$
-     * @param etaX \f$= \eta_x(\zeta,\eta)\f$
-     * @param etaY \f$= \eta_y(\zeta,\eta)\f$
+     * @copydoc aGenerator::operator()(const thrust::host_vector<double>&,const thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&)
      * @note All the resulting vectors are write-only and get properly resized
-     * @note The \f$ \zeta\f$ direction is continuous in memory
      */
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 

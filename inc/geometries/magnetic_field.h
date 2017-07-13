@@ -535,15 +535,16 @@ struct Field
 };
 
 
-template<class container>
+template<class Field>
+
 struct DSField
 {
     DSField( const MagneticField& c)
 
     private:
-    thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
 
 };
+//interpolate the two components of a vector field
 struct Interpolate
 {
     Interpolate( const thrust::host_vector<double>& fZeta, 

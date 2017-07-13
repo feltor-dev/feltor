@@ -195,17 +195,7 @@ struct FluxGenerator
      */
     double height() const{return 2.*M_PI;}
     /**
-     * @brief Generate the points and the elements of the Jacobian
-     *
-     * Call the width() and height() function before calling this function!
-     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
-     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
-     * @param x  = x(zeta,eta)
-     * @param y  = y(zeta,eta)
-     * @param zetaX = zeta_x(zeta,eta)
-     * @param zetaY = zeta_y(zeta,eta)
-     * @param etaX = eta_x(zeta,eta)
-     * @param etaY = eta_y(zeta,eta)
+     * @copydoc aGenerator::operator()(const thrust::host_vector<double>&,const thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&)
      * @note All the resulting vectors are write-only and get properly resized
      */
     void operator()( 
@@ -322,17 +312,7 @@ struct RibeiroFluxGenerator
      */
     double height() const{return 2.*M_PI;}
     /**
-     * @brief Generate the points and the elements of the Jacobian
-     *
-     * Call the width() and height() function before calling this function!
-     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
-     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
-     * @param x  = x(zeta,eta)
-     * @param y  = y(zeta,eta)
-     * @param zetaX = zeta_x(zeta,eta)
-     * @param zetaY = zeta_y(zeta,eta)
-     * @param etaX = eta_x(zeta,eta)
-     * @param etaY = eta_y(zeta,eta)
+     * @copydoc aGenerator::operator()(const thrust::host_vector<double>&,const thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&)
      * @note All the resulting vectors are write-only and get properly resized
      */
     void operator()( 
