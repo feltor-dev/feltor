@@ -296,13 +296,25 @@ struct SurjectiveComm
     * @param comm The MPI communicator participating in the scatter/gather operations
     * @note we assume that the gather map is surjective
     */
-    SurjectiveComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm): bijectiveComm_(pidGatherMap, comm)
+    SurjectiveComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
     {
         construct( localGatherMap, pidGatherMap, comm);
     }
 
+    template<class MPIGeometry>
+    SurjectiveComm( const thrust::host_vector<int>& globalGatherMap, const MPIGeometry& g)
+    {
+        thrust::host_vector<int> local(globalGatherMap.size()), pids(globalGatherMap.size());
+        bool success = true;
+        for(unsigned i=0; i<local.size(); i++)
+            if( !g.global2localIdx(globalGatherMap[i], pids[i], local[i]) ) success = false;
+
+        assert( success);
+        construct( local, pids, g.communicator());
+    }
+
     template<class OtherIndex, class OtherVector>
-    SurjectiveComm( const SurjectiveComm<OtherIndex, OtherVector>& src): bijectiveComm_(src.getPidGatherMap(), src.communicator())
+    SurjectiveComm( const SurjectiveComm<OtherIndex, OtherVector>& src)
     {
         construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
     }
@@ -332,6 +344,7 @@ struct SurjectiveComm
     private:
     void construct( thrust::host_vector<int> localGatherMap, thrust::host_vector<int> pidGatherMap, MPI_Comm comm)
     {
+        bijectiveComm_ = BijectiveComm<Index, Vector>( pidGatherMap, comm);
         localGatherMap_ = localGatherMap, pidGatherMap_ = pidGatherMap;
         buffer_size_ = localGatherMap.size();
         assert( buffer_size_ == pidGatherMap.size());
@@ -376,15 +389,24 @@ template< class Index, class Vector>
 struct GeneralComm
 {
     GeneralComm(){}
-    GeneralComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm): surjectiveComm_(localGatherMap, pidGatherMap, comm)
-    {
+    GeneralComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm) {
         construct( localGatherMap, pidGatherMap, comm);
     }
     template<class OtherIndex, class OtherVector>
-    GeneralComm( const GeneralComm<OtherIndex, OtherVector>& src): surjectiveComm_(src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator())
-    {
+    GeneralComm( const GeneralComm<OtherIndex, OtherVector>& src){
         construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
     }
+    template<class MPIGeometry>
+    GeneralComm( const thrust::host_vector<int>& globalGatherMap, MPIGeometry& g)
+    {
+        thrust::host_vector<int> local(globalGatherMap.size()), pids(globalGatherMap.size());
+        bool success = true;
+        for(unsigned i=0; i<local.size(); i++)
+            if( !g.global2localIdx(globalGatherMap[i], pids[i], local[i]) ) success = false;
+        assert( success);
+        construct( local, pids, g.communicator());
+    }
+
     Vector global_gather( const Vector& values)const
     {
         return surjectiveComm_.global_gather( values);
@@ -402,6 +424,8 @@ struct GeneralComm
     private:
     void construct( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
     {
+        surjectiveComm_ = SurjectiveComm<Index,Vector>(localGatherMap, pidGatherMap, comm);
+
         const Index& sortedGatherMap_ = surjectiveComm_.getSortedGatherMap();
         thrust::host_vector<int> gatherMap;
         dg::blas1::transfer( sortedGatherMap_, gatherMap);

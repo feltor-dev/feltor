@@ -73,12 +73,12 @@ int main(int argc, char** argv)
         int globalIdx, localIdx, PID, result;
         std::cout << "Type in global vector index: \n";
         std::cin >> globalIdx;
-        if( g2d.global2localIdx( globalIdx, localIdx, PID) == MPI_SUCCESS)
+        if( g2d.global2localIdx( globalIdx, localIdx, PID) )
             std::cout <<"2d Local Index "<<localIdx<<" with rank "<<PID<<"\n";
         g2d.local2globalIdx( localIdx, PID, result);
         if( globalIdx !=  result)
             std::cerr <<"Inversion failed "<<result<<"\n";
-        if( g3d.global2localIdx( globalIdx, localIdx, PID) == MPI_SUCCESS)
+        if( g3d.global2localIdx( globalIdx, localIdx, PID) )
             std::cout <<"3d Local Index "<<localIdx<<" with rank "<<PID<<"\n";
         g3d.local2globalIdx( localIdx, PID, result);
         if( globalIdx != result)
