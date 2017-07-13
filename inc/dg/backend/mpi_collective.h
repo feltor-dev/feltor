@@ -306,6 +306,7 @@ struct SurjectiveComm
     {
         construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
     }
+
     Vector global_gather( const Vector& values)const
     {
         //gather values to store

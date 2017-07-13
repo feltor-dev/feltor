@@ -104,7 +104,7 @@ struct MPIGrid2d
     * @return a copy of this grid with nx*Nx and ny*Ny cells in x and y
     */
     virtual MPIGrid2d multiply( unsigned nx, unsigned ny) const {
-        return MPIGrid2d( x0_, x1_, y0_, y1_, n_, nx*Nx_, ny*Ny_, bcx_, bcy_, comm_);
+        return MPIGrid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), nx*g.Nx(), ny*g.Ny(), g.bcx(), g.bcy(), comm);
     }
     /**
     * @brief Return a copy of the grid with reduced number of cells
@@ -117,7 +117,7 @@ struct MPIGrid2d
          but it does check if the number of processes is still a divisor
     */
     virtual MPIGrid2d divide( unsigned nx, unsigned ny) const {
-        return MPIGrid2d( x0_, x1_, y0_, y1_, n_, Nx_/nx, Ny_/ny, bcx_, bcy_, comm_);
+        return MPIGrid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx()/nx, g.Ny()/ny, g.bcx(), g.bcy(), comm);
     }
 
     /**
@@ -299,6 +299,57 @@ struct MPIGrid2d
      * @return pid of a process, or -1 if non of the grids matches
      */
     int pidOf( double x, double y) const;
+
+    /**
+    * @brief Map a local index plus the PID to a global vector index
+    *
+    * @param localIdx a local vector index
+    * @param PID a PID in the communicator
+    * @param globalIdx the corresponding global vector Index (contains result on output)
+    * @return MPI_SUCESS if successful, -1 if localIdx or PID is not part of the grid
+    */
+    int local2globalIdx( int localIdx, int PID, int& globalIdx)
+    {
+        if( localIdx < 0 || localIdx >= (int)size()) return -1;
+        int coords[2];
+        if( MPI_Cart_coords( comm, PID, 2, coords) != MPI_SUCCESS)
+            return -1;
+        int lIdx0 = localIdx %(n()*Nx());
+        int lIdx1 = localIdx /(n()*Nx());
+        int gIdx0 = coords[0]*n()*Nx()+lIdx0;
+        int gIdx1 = coords[1]*n()*Ny()+lIdx1;
+        globalIdx = gIdx1*g.n()*g.Nx() + gIdx0;
+        return MPI_SUCCESS;
+    }
+    /**
+    * @brief Map a global vector index to a local vector Index and the corresponding PID
+    *
+    * @param globalIdx a global vector Index
+    * @param localIdx contains local vector index on output
+    * @param PID contains corresponding PID in the communicator on output
+    * @return MPI_SUCESS if successful, -1 if globalIdx is not part of the grid
+    */
+    int global2localIdx( int globalIdx, int& localIdx, int& PID)
+    {
+        if( globalIdx < 0 || globalIdx >= (int)g.size()) return -1;
+        int coords[2];
+        int gIdx0 = globalIdx%(g.n()*g.Nx());
+        int gIdx1 = globalIdx/(g.n()*g.Nx());
+        coords[0] = gIdx0/(n()*Nx());
+        coords[1] = gIdx1/(n()*Ny());
+        int lIdx0 = gIdx0%(n()*Nx());
+        int lIdx1 = gIdx1%(n()*Ny());
+        localIdx = lIdx1*n()*Nx() + lIdx0;
+        std::cout<< gIdx0<<" "<<gIdx1<<" "<<coords[0]<<" "<<coords[1]<<" "<<lIdx0<<" "<<lIdx1<<" "<<localIdx<<std::endl;
+        if( MPI_Cart_rank( comm, coords, &PID) == MPI_SUCCESS ) 
+            return MPI_SUCCESS;
+        else
+        {
+            std::cout<<"Failed "<<PID<<"\n";
+            return -1;
+        }
+    }
+
     protected:
     void init_X_boundaries( double global_x0, double global_x1)
     {
@@ -421,7 +472,7 @@ struct MPIGrid3d
     * @return a copy of this grid with nx*Nx, ny*Ny and nz*Nz cells in x, y and z
     */
     virtual MPIGrid3d multiply( unsigned nx, unsigned ny, unsigned nz) const {
-        return MPIGrid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, nx*Nx_, ny*Ny_, nz*Nz_, bcx_, bcy_, bcz_, comm_);
+        return MPIGrid3d( g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(), g.n(), nx*g.Nx(), ny*g.Ny(), nz*g.Nz(), g.bcx(), g.bcy(), g.bcz(), comm);
     }
     /**
     * @brief Return a copy of the grid with reduced number of cells
@@ -435,7 +486,7 @@ struct MPIGrid3d
     *   but it does check if the number of processes is still a divisor
     */
     virtual MPIGrid3d divide( unsigned nx, unsigned ny, unsigned nz) const {
-        return MPIGrid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, Nx_/nx, Ny_/ny, Nz_/nz, bcx_, bcy_, bcz_, comm_);
+        return MPIGrid3d( g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(), g.n(), g.Nx()/nx, g.Ny()/ny, g.Nz()/nz, g.bcx(), g.bcy(), g.bcz(), comm);
     }
     /**
      * @brief Return local x0
@@ -651,6 +702,46 @@ struct MPIGrid3d
      * @return pid of a process, or -1 if non of the grids matches
      */
     int pidOf( double x, double y, double z) const;
+    /**
+    * @copydoc MPIGrid2d::local2globalIdx(int,int,int&)
+    */
+    int local2globalIdx( int localIdx, int PID, int& globalIdx)
+    {
+        if( localIdx < 0 || localIdx >= (int)size()) return -1;
+        int coords[3];
+        if( MPI_Cart_coords( comm, PID, 3, coords) != MPI_SUCCESS)
+            return -1;
+        int lIdx0 = localIdx %(n()*Nx());
+        int lIdx1 = (localIdx /(n()*Nx())) % (n()*Ny());
+        int lIdx2 = localIdx / (n()*n()*Nx()*Ny());
+        int gIdx0 = coords[0]*n()*Nx()+lIdx0;
+        int gIdx1 = coords[1]*n()*Ny()+lIdx1;
+        int gIdx2 = coords[2]*Nz()  + lIdx2;
+        globalIdx = (gIdx2*g.n()*g.Ny() + gIdx1)*g.n()*g.Nx() + gIdx0;
+        return MPI_SUCCESS;
+    }
+    /**
+    * @copydoc MPIGrid2d::global2localIdx(int,int&,int&)
+    */
+    int global2localIdx( int globalIdx, int& localIdx, int& PID)
+    {
+        if( globalIdx < 0 || globalIdx >= (int)g.size()) return -1;
+        int coords[3];
+        int gIdx0 = globalIdx%(g.n()*g.Nx());
+        int gIdx1 = (globalIdx/(g.n()*g.Nx())) % (g.n()*g.Ny());
+        int gIdx2 = globalIdx/(g.n()*g.n()*g.Nx()*g.Ny());
+        coords[0] = gIdx0/(n()*Nx());
+        coords[1] = gIdx1/(n()*Ny());
+        coords[2] = gIdx2/Nz();
+        int lIdx0 = gIdx0%(n()*Nx());
+        int lIdx1 = gIdx1%(n()*Ny());
+        int lIdx2 = gIdx2%Nz();
+        localIdx = (lIdx2*n()*Ny() + lIdx1)*n()*Nx() + lIdx0;
+        if( MPI_Cart_rank( comm, coords, &PID) == MPI_SUCCESS ) 
+            return MPI_SUCCESS;
+        else
+            return -1;
+    }
     protected:
     void init_X_boundaries( double global_x0, double global_x1)
     {
