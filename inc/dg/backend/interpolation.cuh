@@ -467,6 +467,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d& g_
  * @param in input
  * @param g grid
  *
+ * @ingroup misc
  * @return the vector in LSPACE
  */
 thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const Grid2d& g)
@@ -490,11 +491,12 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
  *
  * @param x X-coordinate of interpolation point
  * @param y Y-coordinate of interpolation point
- * @param v The vector to interpolate in LSPACE
+ * @param v The vector to interpolate in LSPACE, s.a. dg::forward_transform( )
  * @param g The Grid on which to operate
  *
  * @ingroup interpolation
  * @return interpolated point
+ * @note g.contains(x,y) must return true
  */
 double interpolate( double x, double y,  const thrust::host_vector<double>& v, const Grid2d& g )
 {

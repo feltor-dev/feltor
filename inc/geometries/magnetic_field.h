@@ -174,7 +174,7 @@ struct BZ
 template<class MagneticField>
 struct CurvatureNablaBR
 {
-    CurvatureNablaBR(const MagneticField& c, double R0 ): invB_(c, R0), bZ_(c, R0) { }
+    CurvatureNablaBR(const MagneticField& c): invB_(c), bZ_(c) { }
     /**
      * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f]
      */ 
@@ -202,7 +202,7 @@ struct CurvatureNablaBR
 template<class MagneticField>
 struct CurvatureNablaBZ
 {
-    CurvatureNablaBZ( const MagneticField& c, double R0): invB_(c, R0), bR_(c, R0) { }
+    CurvatureNablaBZ( const MagneticField& c): invB_(c), bR_(c) { }
  /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f]
  */    
@@ -251,8 +251,8 @@ struct CurvatureKappaR
 template<class MagneticField>
 struct CurvatureKappaZ
 {
-    CurvatureKappaZ( const MagneticField c, double R0):
-        invB_(c, R0) { }
+    CurvatureKappaZ( const MagneticField c):
+        invB_(c) { }
  /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f]
  */    
@@ -278,9 +278,9 @@ struct CurvatureKappaZ
 template<class MagneticField>
 struct DivCurvatureKappa
 {
-    DivCurvatureKappa( const MagneticField& c, double R0):
-        invB_(c, R0),
-        bZ_(c, R0){ }
+    DivCurvatureKappa( const MagneticField& c):
+        invB_(c),
+        bZ_(c){ }
  /**
  * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  = \frac{1}{\hat{R}  \hat{B}^2 } \partial_{\hat{Z}} \hat{B}\f]
  */    
@@ -307,7 +307,7 @@ struct DivCurvatureKappa
 template<class MagneticField>
 struct GradLnB
 {
-    GradLnB( const MagneticField& c): R_0_(c.R_0), c_(c), invB_(c, R0), bR_(c, R0), bZ_(c, R0) { } 
+    GradLnB( const MagneticField& c): R_0_(c.R_0), c_(c), invB_(c), bR_(c), bZ_(c) { } 
     /**
  * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} = \frac{1}{\hat{R}\hat{B}^2 } \left[ \hat{B}, \hat{\psi}_p\right]_{\hat{R}\hat{Z}} \f]
  */ 
@@ -335,7 +335,7 @@ struct GradLnB
 template<class MagneticField>
 struct FieldP
 {
-    FieldP( const MagneticField& c, double R0): R_0(R0), c_(c){}
+    FieldP( const MagneticField& c): R_0(c.R_0), c_(c){}
     double operator()( double R, double Z, double phi) const
     {
         return R_0*c_.ipol(R,Z)/R/R;
@@ -353,7 +353,7 @@ struct FieldP
 template<class MagneticField>
 struct FieldR
 {
-    FieldR( const MagneticField& c, double R0): R_0(R0), c_(c){}
+    FieldR( const MagneticField& c): R_0(c.R_0), c_(c){}
     double operator()( double R, double Z) const
     {
         return  R_0/R*c_.psipZ(R,Z);
@@ -378,7 +378,7 @@ struct FieldR
 template<class MagneticField>
 struct FieldZ
 {
-    FieldZ( const MagneticField& c, double R0): R_0(R0), c_(c){}
+    FieldZ( const MagneticField& c): R_0(c.R_0), c_(c){}
     double operator()( double R, double Z) const
     {
         return  -R_0/R*c_.psipR(R,Z);
@@ -403,7 +403,7 @@ struct FieldZ
 template<class MagneticField>
 struct FieldT
 {
-    FieldT( const MagneticField& c):  R_0_(c.R_0), fieldR_(c, R0), fieldZ_(c, R0){}
+    FieldT( const MagneticField& c):  R_0_(c.R_0), fieldR_(c), fieldZ_(c){}
   /**
  * @brief \f[  B^{\theta} = 
  * B^R\partial_R\theta + B^Z\partial_Z\theta\f]
@@ -435,7 +435,7 @@ struct FieldT
 template<class MagneticField>
 struct BHatR
 {
-    BHatR( const MagneticField& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
+    BHatR( const MagneticField& c): c_(c), R_0(c.R_0), invB_(c){ }
     double operator()( double R, double Z, double phi) const
     {
         return  invB_(R,Z)*R_0/R*c_.psipZ(R,Z);
@@ -454,7 +454,7 @@ struct BHatR
 template<class MagneticField>
 struct BHatZ
 {
-    BHatZ( const MagneticField& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
+    BHatZ( const MagneticField& c): c_(c), R_0(c.R_0), invB_(c){ }
 
     double operator()( double R, double Z, double phi) const
     {
@@ -474,7 +474,7 @@ struct BHatZ
 template<class MagneticField>
 struct BHatP
 {
-    BHatP( const MagneticField& c, double R0): c_(c), R_0(R0), invB_(c, R0){ }
+    BHatP( const MagneticField& c): c_(c), R_0(c.R_0), invB_(c){ }
     double operator()( double R, double Z, double phi) const
     {
         return invB_(R,Z)*R_0*c_.ipol(R,Z)/R/R;
@@ -497,7 +497,7 @@ struct BHatP
 template<class MagneticField>
 struct Field
 {
-    Field( const MagneticField& c):c_(c), R_0_(c.R_0), invB_(c, R0) { }
+    Field( const MagneticField& c):c_(c), invB_(c), R_0_(c.R_0) { }
     /**
      * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
      \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
@@ -530,8 +530,8 @@ struct Field
     
     private:
     MagneticField c_;
+    InvB invB_;
     double R_0_;
-    InvB<MagneticField>   invB_;
 };
 
 
@@ -539,9 +539,24 @@ template<class Field>
 
 struct DSField
 {
-    DSField( const MagneticField& c)
+    DSField( const MagneticField& c, const Geometry& g)
+    {
+        InvB invB(c);
+        FieldR fieldR(c);
 
+    }
+
+    void operator()(const thrust::host_vector<double>& y, thrust::host_vector<double>& yp)
+    {
+        g_.shift_topologic( y[0], y[1]
+        //shift points onto domain
+        //if contains is false return 0
+        //else interpolate
+        interpolate( zeta, eta, 
+    }
     private:
+    thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
+    Geometry g_;
 
 };
 //interpolate the two components of a vector field
@@ -574,73 +589,6 @@ struct Interpolate
     dg::Grid2d g_;
     double zeta1_, eta1_;
 };
-
-///**
-// * @brief Integrates the equations for a field line and 1/B
-// */ 
-//template<class MagneticField>
-//struct OrthogonalField
-//{
-//    OrthogonalField( const MagneticField& c, double R0, dg::solovev::GeomParameters gp, const dg::Grid2d& gXY, const thrust::host_vector<double>& f2):
-//        c_(c), R_0_(R0), invB_(c, R0), gXY_(gXY), 
-//        g_(dg::create::forward_transform(f2, gXY)) 
-//    { }
-//
-//    /**
-//     * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
-//     \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
-//     \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
-//     */ 
-//    void operator()( const dg::HVec& y, dg::HVec& yp)
-//    {
-//        //x,y,s,R,Z
-//        double psipR = c_.psipR(y[3],y[4]), psipZ = c_.psipZ(y[3],y[4]), ipol = c_.ipol( y[3],y[4]);
-//        double xs = y[0],ys=y[1];
-//        gXY_.shift_topologic( y[0], M_PI, xs,ys);
-//        double g = dg::interpolate( xs,  ys, g_, gXY_);
-//        yp[0] = 0;
-//        yp[1] = y[3]*g*(psipR*psipR+psipZ*psipZ)/ipol;
-//        //yp[1] = g/ipol;
-//        yp[2] =  y[3]*y[3]/invB_(y[3],y[4])/ipol/R_0_; //ds/dphi =  R^2 B/I/R_0_hat
-//        yp[3] =  y[3]*psipZ/ipol;              //dR/dphi =  R/I Psip_Z
-//        yp[4] = -y[3]*psipR/ipol;             //dZ/dphi = -R/I Psip_R
-//
-//    }
-//    /**
-//     * @brief \f[   \frac{1}{\hat{B}} = 
-//      \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
-//      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
-//     */ 
-//    double operator()( double R, double Z) const { return invB_(R,Z); }
-//    /**
-//     * @brief == operator()(R,Z)
-//     */ 
-//    double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
-//    double error( const dg::HVec& x0, const dg::HVec& x1)
-//    {
-//        //compute error in x,y,s
-//        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
-//    }
-//    bool monitor( const dg::HVec& end){ 
-//        if ( std::isnan(end[1]) || std::isnan(end[2]) || std::isnan(end[3])||std::isnan( end[4]) ) 
-//        {
-//            return false;
-//        }
-//        if( (end[3] < 1e-5) || end[3]*end[3] > 1e10 ||end[1]*end[1] > 1e10 ||end[2]*end[2] > 1e10 ||(end[4]*end[4] > 1e10) )
-//        {
-//            return false;
-//        }
-//        return true;
-//    }
-//    
-//    private:
-//    MagneticField c_;
-//    double R_0_;
-//    dg::magnetic::InvB<MagneticField>   invB_;
-//    const dg::Grid2d gXY_;
-//    thrust::host_vector<double> g_;
-//};
-
 
 
 } //namespace geo
