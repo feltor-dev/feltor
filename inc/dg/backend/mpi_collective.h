@@ -145,6 +145,7 @@ void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values
  //hrecv2 now equals hvalues independent of process rank
  @endcode
  @tparam Index an integer Vector
+ @tparam Vector a Vector (the data type of Vector must be double)
  @note models aCommunicator
  */
 template< class Index, class Vector>
@@ -261,6 +262,7 @@ struct BijectiveComm
  is surjective, i.e. all elements in a vector get gathered. This
  is important only in the global_scatter_reduce function.
  @tparam Index an integer Vector
+ @tparam Vector a Vector (the data type of Vector must be double)
  @note models aCommunicator
  */
 template< class Index, class Vector>
