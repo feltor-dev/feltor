@@ -490,7 +490,7 @@ struct BHatP
 ///@} 
 
 /**
- * @brief Integrates the equations for a field line and 1/B
+ * @brief Integrates the equations for a field line 
  * @tparam MagneticField models aTokamakMagneticField
  * @ingroup misc
  */ 
@@ -535,59 +535,62 @@ struct Field
 };
 
 
-template<class Field>
-
+template< class GeometryPerp>
 struct DSField
 {
-    DSField( const MagneticField& c, const Geometry& g)
+    template<class MagneticField>
+    DSField( const MagneticField& c, const GeometryPerp& g)
     {
-        InvB invB(c);
-        FieldR fieldR(c);
-
+        InvB<MagneticField> invB(c);
+        FieldR<MagneticField> fieldR(c);
+        FieldZ<MagneticField> fieldZ(c);
+        thrust::host_vector<double> b_zeta, b_eta;
+        dg::geo::pushForwardPerp( fieldR, fieldZ, b_zeta, b_eta, g);
+        FieldP<MagneticField> fieldP(c);
+        thrust::host_vector<double> b_phi = dg::pullback( fieldP, g);
+        Bmodule<MagneticField> bmod( c);
+        thrust::host_vector<double> b_mod = dg::pullback( bmod, g);
+        dg::blas1::pointwiseDivide( b_zeta, b_phi, b_zeta);
+        dg::blas1::pointwiseDivide( b_eta,  b_phi, b_eta);
+        dg::blas1::pointwiseDivide( b_mod,  b_phi, b_mod);
+        dzetadphi_ = dg::forward_transform( b_zeta, g );
+        detadphi_  = dg::forward_transform( b_eta, g );
+        dsdphi_    = dg::forward_transform( b_mod, g );
     }
 
-    void operator()(const thrust::host_vector<double>& y, thrust::host_vector<double>& yp)
+    void operator()(thrust::host_vector<double> y, thrust::host_vector<double>& yp)
     {
-        g_.shift_topologic( y[0], y[1]
-        //shift points onto domain
-        //if contains is false return 0
-        //else interpolate
-        interpolate( zeta, eta, 
+        g_.shift_topologic( y[0], y[1], y[0], y[1]); //shift points onto domain
+        if( !g_.contains( y[0], y[1])) yp[0] = yp[1]= yp[2] = 0;
+        else
+        {
+            //else interpolate
+            yp[0] = interpolate( y[0], y[1], dzetadphi_, g_);
+            yp[1] = interpolate( y[0], y[1], detadphi_, g_);
+            yp[2] = interpolate( y[0], y[1], dsphi_, g_);
+        }
+    }
+
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) ) 
+        {
+            return false;
+        }
+        //if new integrated point outside domain
+        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        {
+            return false;
+        }
+        return true;
     }
     private:
     thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
-    Geometry g_;
+    GeometryPerp g_;
 
-};
-//interpolate the two components of a vector field
-struct Interpolate
-{
-    Interpolate( const thrust::host_vector<double>& fZeta, 
-                 const thrust::host_vector<double>& fEta, 
-                 const dg::Grid2d& g2d ): 
-        iter0_( dg::create::forward_transform( fZeta, g2d) ), 
-        iter1_( dg::create::forward_transform(  fEta, g2d) ), 
-        g_(g2d), zeta1_(g2d.x1()), eta1_(g2d.y1()){}
-    void operator()(const thrust::host_vector<double>& zeta, thrust::host_vector<double>& fZeta)
-    {
-        fZeta[0] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter0_, g_);
-        fZeta[1] = interpolate( fmod( zeta[0]+zeta1_, zeta1_), fmod( zeta[1]+eta1_, eta1_), iter1_, g_);
-        //fZeta[0] = interpolate(  zeta[0], zeta[1], iter0_, g_);
-        //fZeta[1] = interpolate(  zeta[0], zeta[1], iter1_, g_);
-    }
-    void operator()(const std::vector<thrust::host_vector<double> >& zeta, std::vector< thrust::host_vector<double> >& fZeta)
-    {
-        for( unsigned i=0; i<zeta[0].size(); i++)
-        {
-            fZeta[0][i] = interpolate( fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), iter0_, g_);
-            fZeta[1][i] = interpolate( fmod( zeta[0][i]+zeta1_, zeta1_), fmod( zeta[1][i]+eta1_, eta1_), iter1_, g_);
-        }
-    }
-    private:
-    thrust::host_vector<double> iter0_;
-    thrust::host_vector<double> iter1_;
-    dg::Grid2d g_;
-    double zeta1_, eta1_;
 };
 
 
