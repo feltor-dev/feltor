@@ -10,6 +10,7 @@
 #include <thrust/device_vector.h>
 #include "thrust_vector_blas.cuh"
 #include "dg/blas1.h"
+#include "mpi_vector.h"
 
 //TODO: use Buffer class from MPI_Vector, since Device cannot(!) be 
 //arbitrary type (has to be on device if Index is on device e.g.)
@@ -28,8 +29,9 @@ namespace dg{
  * to send (or gather from) and connects it to an intermediate "store"
  * In this way gather and scatter are defined with respect to the buffer and 
  * the store is the vector.
+ @note the data type of the Vector class has to be double
  */
-template<class Index>
+template<class Index, class Vector>
 struct Collective
 {
     Collective(){}
@@ -72,49 +74,24 @@ struct Collective
     unsigned size() const {return sendTo_.size();}
     MPI_Comm comm() const {return comm_;}
 
-
-    /**
-     * @brief swaps the send and receive maps 
-     *
-     * Now the pattern works backwards
-     */
     void transpose(){ sendTo_.swap( recvFrom_);}
     void invert(){ sendTo_.swap( recvFrom_);}
 
-    template<class Device>
-    void scatter( const Device& values, Device& store) const;
-    template<class Device>
-    void gather( const Device& store, Device& values) const;
+    void scatter( const Vector& values, Vector& store) const;
+    void gather( const Vector& store, Vector& values) const;
     unsigned store_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
     unsigned values_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
     MPI_Comm communicator() const{return comm_;}
     private:
-    /**
-     * @brief Number of elements to send to process pid 
-     *
-     * @param pid Process ID
-     *
-     * @return Number
-     */
     unsigned sendTo( unsigned pid) const {return sendTo_[pid];}
-
-    /**
-     * @brief Number of elements received from process pid
-     *
-     * @param pid Process ID
-     *
-     * @return Number
-     */
     unsigned recvFrom( unsigned pid) const {return recvFrom_[pid];}
-    unsigned sum;
     Index sendTo_,   accS_; //accumulated send
     Index recvFrom_, accR_; //accumulated recv
     MPI_Comm comm_;
 };
 
-template< class Index>
-template<class Device>
-void Collective<Index>::scatter( const Device& values, Device& store) const
+template< class Index, class Device>
+void Collective<Index, Device>::scatter( const Device& values, Device& store) const
 {
     assert( store.size() == store_size() );
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
@@ -129,9 +106,8 @@ void Collective<Index>::scatter( const Device& values, Device& store) const
             thrust::raw_pointer_cast( accR_.data()), MPI_DOUBLE, comm_);
 }
 
-template< class Index>
-template<class Device>
-void Collective<Index>::gather( const Device& gatherFrom, Device& values) const 
+template< class Index, class Device>
+void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values) const 
 {
     //std::cout << gatherFrom.size()<<" "<<store_size()<<std::endl;
     assert( gatherFrom.size() == store_size() );
@@ -171,7 +147,7 @@ void Collective<Index>::gather( const Device& gatherFrom, Device& values) const
  @tparam Index an integer Vector
  @note models aCommunicator
  */
-template< class Index>
+template< class Index, class Vector>
 struct BijectiveComm
 {
     /**
@@ -212,6 +188,7 @@ struct BijectiveComm
         for( unsigned i=0; i<distance; i++)
             sendTo[keys[i]] = number[i];
         p_.construct( sendTo, comm);
+        values_.data()->resize( idx_.size());
     }
 
     /**
@@ -226,18 +203,16 @@ struct BijectiveComm
      * @return received data from other processes of size size()
      * @note a scatter followed by a gather of the received values restores the original array
      */
-    template<class Vector >
     Vector global_gather( const Vector& values)const
     {
         //actually this is a scatter but we constructed it invertedly
         //we could maybe transpose the Collective object!?
         assert( values.size() == idx_.size());
-        Vector values_(values);
         //nach PID ordnen
-        thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.begin());
+        thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.data()->begin());
         //senden
         Vector store( p_.store_size());
-        p_.scatter( values_, store);
+        p_.scatter( *values_.data(), store);
         return store;
     }
 
@@ -249,15 +224,12 @@ struct BijectiveComm
      * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
      * @note a scatter followed by a gather of the received values restores the original array
      */
-    template<class Vector >
     void global_scatter_reduce( const Vector& toScatter, Vector& values) const
     {
         //actually this is a gather but we constructed it invertedly
-        Vector values_(values.size());
-        //sammeln
-        p_.gather( toScatter, values_);
+        p_.gather( toScatter, *values_.data());
         //nach PID geordnete Werte wieder umsortieren
-        thrust::scatter( values_.begin(), values_.end(), idx_.begin(), values.begin());
+        thrust::scatter( values_.data()->begin(), values_.data()->end(), idx_.begin(), values.begin());
     }
 
     /**
@@ -275,8 +247,9 @@ struct BijectiveComm
     */
     MPI_Comm communicator() const {return p_.communicator();}
     private:
+    Buffer<Vector> values_;
     Index idx_;
-    Collective<Index> p_;
+    Collective<Index, Vector> p_;
 };
 
 /**
@@ -290,7 +263,7 @@ struct BijectiveComm
  @tparam Index an integer Vector
  @note models aCommunicator
  */
-template< class Index>
+template< class Index, class Vector>
 struct SurjectiveComm
 {
     /**
@@ -313,7 +286,8 @@ struct SurjectiveComm
         assert( buffer_size_ == pidGatherMap.size());
         //the bijectiveComm behaves as if we had given the gather map for the store
         //now gather the localGatherMap from the buffer to the store to get the final gather map 
-        thrust::device_vector<double> localGatherMap_d = localGatherMap;
+        Vector localGatherMap_d;
+        dg::blas1::transfer( localGatherMap, localGatherMap_d);
         Index gatherMap = bijectiveComm_.global_gather( localGatherMap_d);
         dg::blas1::transfer(gatherMap, gatherMap_);
         store_size_ = gatherMap_.size();
@@ -333,36 +307,35 @@ struct SurjectiveComm
                 one.begin(), keys.begin(), number.begin() ); 
         unsigned distance = thrust::distance( keys.begin(), new_end.first);
         vector_size_ = distance;
+        store_.data()->resize( store_size_);
+        keys_.data()->resize( vector_size_);
     }
-    template<class Vector >
     Vector global_gather( const Vector& values)const
     {
         assert( values.size() == vector_size_);
         //gather values to store
-        Vector store_(store_size_);
-        thrust::gather( gatherMap_.begin(), gatherMap_.end(), values.begin(), store_.begin());
+        thrust::gather( gatherMap_.begin(), gatherMap_.end(), values.begin(), store_.data()->begin());
         //now gather from store into buffer
         Vector buffer( buffer_size_);
-        bijectiveComm_.global_scatter_reduce( store_, buffer);
+        bijectiveComm_.global_scatter_reduce( *store_.data(), buffer);
         return buffer;
     }
-    template<class Vector>
     void global_scatter_reduce( const Vector& toScatter, Vector& values)
     {
         //first gather values into store
-        Vector store_ = bijectiveComm_.global_gather( toScatter);
+        Vector store_t = bijectiveComm_.global_gather( toScatter);
         //now perform a local sort, reduce and scatter operation
-        Vector sortedStore(store_size_);
-        thrust::gather( sortMap_.begin(), sortMap_.end(), store_.begin(), sortedStore.begin());
-        Index keys( vector_size_);
-        thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), sortedStore.begin(), keys.begin(), values.begin());
+        thrust::gather( sortMap_.begin(), sortMap_.end(), store_t.begin(), store_.data()->begin());
+        thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), store_.data()->begin(), keys_.data()->begin(), values.begin());
     }
     unsigned size() const {return buffer_size_;}
     private:
     unsigned vector_size_, buffer_size_, store_size_;
-    BijectiveComm<Index> bijectiveComm_;
+    BijectiveComm<Index, Vector> bijectiveComm_;
     Index gatherMap_; 
     Index sortMap_, sortedGatherMap_, scatterMap_;
+    Buffer<Index> keys_;
+    Buffer<Vector> store_;
 
 };
 

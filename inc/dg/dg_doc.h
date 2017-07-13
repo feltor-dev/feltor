@@ -168,6 +168,7 @@ struct aCommunicator
      */
     template< class LocalContainer>
     LocalContainer global_gather( const LocalContainer& values)const;
+    //actually the return type in NNC is const LocalContainer& 
 
     /**
      * @brief Scatters data accross processes and reduces on double indices
