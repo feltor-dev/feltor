@@ -191,11 +191,11 @@ cylindrical coordinates
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class Geometry, class Matrix, class container >
+template< class Geometry, class IMatrix, class container >
 struct FieldAligned
 {
 
-    typedef Matrix InterpolationMatrix;
+    typedef IMatrix InterpolationMatrix;
 
     /**
     * @brief Construct from a field and a grid
@@ -218,8 +218,7 @@ struct FieldAligned
         If there is no limiter the boundary condition is periodic.
     */
     template <class Field, class Limiter>
-    FieldAligned(Field field, Geometry grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
-
+    FieldAligned(Field field, Geometry grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -355,7 +354,7 @@ struct FieldAligned
     private:
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
-    Matrix plus, minus, plusT, minusT; //interpolation matrices
+    IMatrix plus, minus, plusT, minusT; //interpolation matrices
     container hz_, hp_,hm_, ghostM, ghostP;
     Geometry g_;
     dg::bc bcz_;
