@@ -26,7 +26,7 @@ int main( int argc, char* argv[])
         return -1;
     }
 //     std::ofstream os( argv[2]);
-    std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
+//     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     //////////////////////////////open nc file//////////////////////////////////
     file::NC_Error_Handle err;
@@ -39,25 +39,25 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);    
     err = nc_close(ncid); 
 
-    std::cout << "input "<<input<<std::endl;    
+//     std::cout << "input "<<input<<std::endl;    
     Json::Reader reader;
     Json::Value js;
     reader.parse( input, js, false);
     const eule::Parameters p(js);
-    p.display(std::cout);
+//     p.display(std::cout);
     
     //////////////////////////////Grids//////////////////////////////////////
     //input grid
     dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     const size_t Ny =  g2d.n()*g2d.Ny();
-    const size_t Nx = g2d.n()*g2d.Nx();
+    const size_t Nx =  g2d.n()*g2d.Nx();
     //output grids
-    const double kxmin = 1./p.lx;
-    const double kymin = 1./p.ly;    
+    const double kxmin = 0./p.lx;
+    const double kymin = 0./p.ly;    
     const unsigned Nkx = Nx ; 
     const unsigned Nky = Ny/2+1;       
-    const double kxmax = (Nkx/2.+1)/p.lx; //see fftw docu
-    const double kymax = (Nky)/p.ly; 
+    const double kxmax = Nkx;//(Nkx/2.+1)/p.lx; //see fftw docu
+    const double kymax = Nky;//(Nky)/p.ly; 
     const unsigned Nk = (unsigned)sqrt(Nkx*Nkx+Nky*Nky);
     const double kmin = sqrt(kxmin*kxmin + kymin*kymin);
     const double kmax = sqrt(kxmax*kxmax + kymax*kymax);
@@ -68,6 +68,15 @@ int main( int argc, char* argv[])
     dg::Grid1d g1dx_f( kxmin, kxmax,1., Nkx,  p.bc_x);
     dg::Grid1d g1dy_f( kymin, kymax,1., Nky,  p.bc_y);
 
+    
+//     double kx_mode = 1./p.lx;;
+//     double ky_mode = p.sigma/p.ly; 
+    
+    unsigned i_mode = 0;
+    unsigned j_mode = 1*p.sigma;
+//     std::cou
+//     std::cout << kxmax << " " << kymax<< std::endl;
+//     std::cout << i_mode << " " << j_mode<< std::endl;
 
     //2d field netcdf vars of input.nc
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -121,6 +130,7 @@ int main( int argc, char* argv[])
     spectral::Matrix<double, spectral::TL_DRT_DFT> tempxy(  Ny, Nx);
     spectral::Matrix<std::complex<double> > tempkykx(g2d_f.Nx(), g2d_f.Ny());  //# = (Nx, Ny/2+1)
     spectral::Matrix<double> kxkyspec( g2d_f.Ny(), g2d_f.Nx()); //Dimensions are transposed of tempkykx = ( Ny/2+1,Nx)
+    spectral::Matrix<double> kxkyspec_old( g2d_f.Ny(), g2d_f.Nx()); //Dimensions are transposed of tempkykx = ( Ny/2+1,Nx)
     spectral::Matrix<double> gammakxkyspec( g2d_f.Ny(), g2d_f.Nx());
     std::vector<double> gammakspec( g1d_f.N());    
     std::vector<double> kspec( g1d_f.N());
@@ -131,7 +141,7 @@ int main( int argc, char* argv[])
     //FFTW_RODFT11 computes an RODFT11 transform, i.e. a DST-IV. (Logical N=2*n, inverse is FFTW_RODFT11.)  -> DIR_NEU
     //FFTW_RODFT10 computes an RODFT10 transform, i.e. a DST-II. (Logical N=2*n, inverse is FFTW_RODFT01.) -> DIR_DIR
     //FFTW_RODFT00 computes an RODFT00 transform, i.e. a DST-I. (Logical N=2*(n+1), inverse is FFTW_RODFT00.) -> DIR_DIR
-    fftw_r2r_kind kind = FFTW_RODFT10; //DST & DST IV
+    fftw_r2r_kind kind = FFTW_RODFT10; //DFT & DST 2
     spectral::DRT_DFT trafo( Ny, Nx, kind);
     
     
@@ -161,6 +171,7 @@ int main( int argc, char* argv[])
         gammakspec[mn]=0.;
         kspec[mn]=0.;
     }
+    double gammakspecavg=0.;
  
 //     std::cout<< kxkyspec.cols() << " " << kxkyspec.rows() << std::endl;
 //     std::cout<< g2d_f.Nx() << " " << g2d_f.Ny() << std::endl;
@@ -169,7 +180,7 @@ int main( int argc, char* argv[])
             start2d[0] = i;
             start2d_f[0] = i;
             start1d_f[0] = i;
-            std::cout << "time = "<< time << " i = " << i <<  std::endl;
+//             std::cout << "time = "<< time << " i = " << i <<  std::endl;
 
             //get input.nc data
             err = nc_inq_varid(ncid, names[0].data(), &dataIDs[0]);
@@ -192,7 +203,7 @@ int main( int argc, char* argv[])
             {
                 //Backscatter to equidistant grid
                 dg::blas2::gemv( equi, energies[j],energiesequi[j]);
-                //Fill (x,y) matrix with values, normalise trafo
+                //Fill (x,y) matrix with values of xy data
                 for( unsigned m = 0; m < tempxy.rows(); m++) {
                     for( unsigned n = 0; n <tempxy.cols(); n++) {   
                         tempxy(m,n) = energiesequi[j][n+m*tempxy.cols()];
@@ -205,12 +216,20 @@ int main( int argc, char* argv[])
                     for( unsigned n = 0; n < tempkykx.cols(); n++) {
                         //transpose absolute of transposed output
                         kxkyspec(n,m) = std::abs(tempkykx(m,n)); //is padded -> Y?
-                        
+                        //normalise trafo
 //                         squspec(m,n)/=sqrt((2.*((double)Nx)+1.)*(double)Ny); //for rodft00
                         kxkyspec(n,m)/= sqrt((2.*((double)Nx))*(double)Ny); //otherwise
-                        
-                        //grow rate for phi spec
-                        if (j==1) gammakxkyspec(n,m) =(kxkyspec(n,m) - gammakxkyspec(n,m))/deltaT;
+                        if (i==0) 
+                        //grow rate for phi spec with simple forward difference in time \gamma(kx,ky) = |\phi(kx,ky,(t+1))|-|\phi(kx,ky,(t))|/(\Delta t)
+                        if (j==1 && i==0) { 
+                            gammakxkyspec(n,m) =kxkyspec(n,m)/deltaT;
+                            kxkyspec_old(n,m) = kxkyspec(n,m);
+                        }
+                        if (j==1 && i>0) { 
+                            gammakxkyspec(n,m) =(kxkyspec(n,m) - kxkyspec_old(n,m))/deltaT;
+                            kxkyspec_old(n,m) = kxkyspec(n,m);
+                            
+                        }
                     }
                 } 
 //                 std::cout << std::setprecision(4) << std::fixed;
@@ -246,7 +265,9 @@ int main( int argc, char* argv[])
                 //compute E(kx) spectrum                
 
               }
-
+            if (i>=2 ) gammakspecavg+=gammakxkyspec(j_mode,i_mode);
+// 	        std::cout << p.sigma << " " <<  gammakxkyspec(j_mode,i_mode)<<"\n";
+   
             err2d_f = nc_put_vara_double( ncid2d_f, dataIDs2d_f[2],   start2d_f, count2d_f, gammakxkyspec.getPtr()); 
             err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[2],   start1d_f, count1d_f, gammakspec.data()); 
             err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[3],   start1d_f, count1d_f, k.data()); 
@@ -256,6 +277,9 @@ int main( int argc, char* argv[])
             //advance time
             time += p.itstp*p.dt;        
     }
+//     std::cout << p.sigma << " " <<  gammakspecavg/imax-<<"\n";
+    std::cout << p.sigma << " " <<  gammakspecavg/(imax-2)<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" " <<  p.lx << "\n";
+
     err1d_f = nc_close(ncid1d_f);
     err2d_f = nc_close(ncid2d_f);
     err = nc_close(ncid);

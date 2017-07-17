@@ -552,7 +552,7 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
             //dtN_e
             dg::blas1::pointwiseDot(lambda,lhs,omega); //omega =lhs*(ne0p - <ne>)
             dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //= P [lhs*(n0ep - <ne>) ]
-            dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne+= - omega_s P [lhs*(ne0p - <ne>) ]
+            dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne+=  omega_s P [lhs*(ne0p - <ne>) ]
             
             dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnNe)
             dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnNe)+phi)

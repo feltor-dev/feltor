@@ -66,8 +66,8 @@ int main( int argc, char* argv[])
 	
 	err = nc_get_vara_double( ncid, timeID,     &start0d, &numOut, vt.data());
         //Timestepping
-	double timepointexact_min=100.*p.invkappa; //in units omega_ci 
-	double timepointexact_max=1000.*p.invkappa; //in units omega_ci 
+	double timepointexact_min=50.*p.invkappa; //in units omega_ci 
+	double timepointexact_max=100.*p.invkappa; //in units omega_ci 
 
 	std::vector<double>::iterator timepoint_min,timepoint_max;
 	timepoint_min=std::lower_bound (vt.begin(), vt.end(), timepointexact_min);
@@ -90,6 +90,7 @@ int main( int argc, char* argv[])
 	    double stddev = StdDev(temp, mean, timepos_min, timepos_max); 
 	    std::cout << " " << mean << " " << stddev; // << " " << stddev/mean;
 	}
+        std::cout << " " << vt[timepos_max-1]/p.invkappa;
         std::cout << "\n";
         err = nc_close(ncid);
         
