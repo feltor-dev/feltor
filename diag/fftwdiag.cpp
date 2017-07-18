@@ -141,7 +141,9 @@ int main( int argc, char* argv[])
     //FFTW_RODFT11 computes an RODFT11 transform, i.e. a DST-IV. (Logical N=2*n, inverse is FFTW_RODFT11.)  -> DIR_NEU
     //FFTW_RODFT10 computes an RODFT10 transform, i.e. a DST-II. (Logical N=2*n, inverse is FFTW_RODFT01.) -> DIR_DIR
     //FFTW_RODFT00 computes an RODFT00 transform, i.e. a DST-I. (Logical N=2*(n+1), inverse is FFTW_RODFT00.) -> DIR_DIR
-    fftw_r2r_kind kind = FFTW_RODFT10; //DFT & DST 2
+//    fftw_r2r_kind kind = FFTW_RODFT10; //DFT & DST 2
+    fftw_r2r_kind kind = FFTW_RODFT00; //DFT & DST 1
+
     spectral::DRT_DFT trafo( Ny, Nx, kind);
     
     
@@ -217,8 +219,8 @@ int main( int argc, char* argv[])
                         //transpose absolute of transposed output
                         kxkyspec(n,m) = std::abs(tempkykx(m,n)); //is padded -> Y?
                         //normalise trafo
-//                         squspec(m,n)/=sqrt((2.*((double)Nx)+1.)*(double)Ny); //for rodft00
-                        kxkyspec(n,m)/= sqrt((2.*((double)Nx))*(double)Ny); //otherwise
+                         kxkyspec(n,m)/=sqrt((2.*((double)Nx)+1.)*(double)Ny); //for rodft00
+//                        kxkyspec(n,m)/= sqrt((2.*((double)Nx))*(double)Ny); //otherwise
                         if (i==0) 
                         //grow rate for phi spec with simple forward difference in time \gamma(kx,ky) = |\phi(kx,ky,(t+1))|-|\phi(kx,ky,(t))|/(\Delta t)
                         if (j==1 && i==0) { 
@@ -278,7 +280,7 @@ int main( int argc, char* argv[])
             time += p.itstp*p.dt;        
     }
 //     std::cout << p.sigma << " " <<  gammakspecavg/imax-<<"\n";
-    std::cout << p.sigma << " " <<  gammakspecavg/(imax-2)<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" " <<  p.lx << "\n";
+    std::cout << p.sigma << " " <<  gammakspecavg/(imax-2.)<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" " <<  p.lx << "\n";
 
     err1d_f = nc_close(ncid1d_f);
     err2d_f = nc_close(ncid2d_f);
