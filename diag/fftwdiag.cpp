@@ -26,7 +26,7 @@ int main( int argc, char* argv[])
         return -1;
     }
 //     std::ofstream os( argv[2]);
-    std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
+//     std::cout << argv[1]<< " -> "<<argv[2]<<std::endl;
 
     //////////////////////////////open nc file//////////////////////////////////
     file::NC_Error_Handle err;
@@ -39,12 +39,12 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);    
     err = nc_close(ncid); 
 
-    std::cout << "input "<<input<<std::endl;    
+//     std::cout << "input "<<input<<std::endl;    
     Json::Reader reader;
     Json::Value js;
     reader.parse( input, js, false);
     const eule::Parameters p(js);
-    p.display(std::cout);
+//     p.display(std::cout);
     
     //////////////////////////////Grids//////////////////////////////////////
     //input grid
@@ -52,12 +52,12 @@ int main( int argc, char* argv[])
     const size_t Ny =  g2d.n()*g2d.Ny();
     const size_t Nx = g2d.n()*g2d.Nx();
     //output grids
-    const double kxmin = 1./p.lx;
-    const double kymin = 1./p.ly;    
+    const double kxmin = 0./p.lx;
+    const double kymin = 0./p.ly;    
     const unsigned Nkx = Nx ; 
     const unsigned Nky = Ny/2+1;       
-    const double kxmax = (Nkx/2.+1)/p.lx; //see fftw docu
-    const double kymax = (Nky)/p.ly; 
+    const double kxmax = Nkx;//(Nkx/2.+1)/p.lx; //see fftw docu
+    const double kymax = Nky;//(Nky)/p.ly; 
     const unsigned Nk = (unsigned)sqrt(Nkx*Nkx+Nky*Nky);
     const double kmin = sqrt(kxmin*kxmin + kymin*kymin);
     const double kmax = sqrt(kxmax*kxmax + kymax*kymax);
@@ -68,6 +68,15 @@ int main( int argc, char* argv[])
     dg::Grid1d g1dx_f( kxmin, kxmax,1., Nkx,  p.bc_x);
     dg::Grid1d g1dy_f( kymin, kymax,1., Nky,  p.bc_y);
 
+    
+//     double kx_mode = 1./p.lx;;
+//     double ky_mode = p.sigma/p.ly; 
+    
+    unsigned i_mode = 0;
+    unsigned j_mode = 1*p.sigma;
+//     std::cou
+//     std::cout << kxmax << " " << kymax<< std::endl;
+//     std::cout << i_mode << " " << j_mode<< std::endl;
 
     //2d field netcdf vars of input.nc
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -161,6 +170,7 @@ int main( int argc, char* argv[])
         gammakspec[mn]=0.;
         kspec[mn]=0.;
     }
+    double gammakspecavg=0.;
  
 //     std::cout<< kxkyspec.cols() << " " << kxkyspec.rows() << std::endl;
 //     std::cout<< g2d_f.Nx() << " " << g2d_f.Ny() << std::endl;
@@ -169,7 +179,7 @@ int main( int argc, char* argv[])
             start2d[0] = i;
             start2d_f[0] = i;
             start1d_f[0] = i;
-            std::cout << "time = "<< time << " i = " << i <<  std::endl;
+//             std::cout << "time = "<< time << " i = " << i <<  std::endl;
 
             //get input.nc data
             err = nc_inq_varid(ncid, names[0].data(), &dataIDs[0]);
@@ -246,7 +256,9 @@ int main( int argc, char* argv[])
                 //compute E(kx) spectrum                
 
               }
-
+            if (i>=2 && i<=3) gammakspecavg+=gammakxkyspec(j_mode,i_mode);
+// 	     std::cout << p.sigma << " " <<  gammakxkyspec(j_mode,i_mode)<<"\n";
+   
             err2d_f = nc_put_vara_double( ncid2d_f, dataIDs2d_f[2],   start2d_f, count2d_f, gammakxkyspec.getPtr()); 
             err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[2],   start1d_f, count1d_f, gammakspec.data()); 
             err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[3],   start1d_f, count1d_f, k.data()); 
@@ -256,6 +268,9 @@ int main( int argc, char* argv[])
             //advance time
             time += p.itstp*p.dt;        
     }
+//     std::cout << p.sigma << " " <<  gammakspecavg/imax-<<"\n";
+    std::cout << p.sigma << " " <<  gammakspecavg/2.<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" " <<  p.lx << "\n";
+
     err1d_f = nc_close(ncid1d_f);
     err2d_f = nc_close(ncid2d_f);
     err = nc_close(ncid);
