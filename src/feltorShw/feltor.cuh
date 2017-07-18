@@ -415,10 +415,11 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         {
             //ExB dynamics
             poisson( y[i], phi[i], yp[i]);  //dt N = 1/B[N_tilde,phi]_RZ
-            
+
             //density gradient term
             dg::blas2::gemv( poisson.dyrhs(), phi[i], omega); //lambda = dy psi
             dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt N_tilde += - kappa dy psi    
+   
             
             Dgrad[i] = - z[i]*p.tau[i]/p.invkappa*dg::blas2::dot(y[i], w2d, omega);
             dg::blas1::pointwiseDot(omega,binv,omega); //1/B dy phi
@@ -552,7 +553,7 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
             //dtN_e
             dg::blas1::pointwiseDot(lambda,lhs,omega); //omega =lhs*(ne0p - <ne>)
             dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //= P [lhs*(n0ep - <ne>) ]
-            dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne+= - omega_s P [lhs*(ne0p - <ne>) ]
+            dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne+=  omega_s P [lhs*(ne0p - <ne>) ]
             
             dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnNe)
             dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnNe)+phi)

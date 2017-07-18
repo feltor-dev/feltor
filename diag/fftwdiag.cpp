@@ -50,7 +50,7 @@ int main( int argc, char* argv[])
     //input grid
     dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     const size_t Ny =  g2d.n()*g2d.Ny();
-    const size_t Nx = g2d.n()*g2d.Nx();
+    const size_t Nx =  g2d.n()*g2d.Nx();
     //output grids
     const double kxmin = 0./p.lx;
     const double kymin = 0./p.ly;    
@@ -130,6 +130,7 @@ int main( int argc, char* argv[])
     spectral::Matrix<double, spectral::TL_DRT_DFT> tempxy(  Ny, Nx);
     spectral::Matrix<std::complex<double> > tempkykx(g2d_f.Nx(), g2d_f.Ny());  //# = (Nx, Ny/2+1)
     spectral::Matrix<double> kxkyspec( g2d_f.Ny(), g2d_f.Nx()); //Dimensions are transposed of tempkykx = ( Ny/2+1,Nx)
+    spectral::Matrix<double> kxkyspec_old( g2d_f.Ny(), g2d_f.Nx()); //Dimensions are transposed of tempkykx = ( Ny/2+1,Nx)
     spectral::Matrix<double> gammakxkyspec( g2d_f.Ny(), g2d_f.Nx());
     std::vector<double> gammakspec( g1d_f.N());    
     std::vector<double> kspec( g1d_f.N());
@@ -140,7 +141,9 @@ int main( int argc, char* argv[])
     //FFTW_RODFT11 computes an RODFT11 transform, i.e. a DST-IV. (Logical N=2*n, inverse is FFTW_RODFT11.)  -> DIR_NEU
     //FFTW_RODFT10 computes an RODFT10 transform, i.e. a DST-II. (Logical N=2*n, inverse is FFTW_RODFT01.) -> DIR_DIR
     //FFTW_RODFT00 computes an RODFT00 transform, i.e. a DST-I. (Logical N=2*(n+1), inverse is FFTW_RODFT00.) -> DIR_DIR
-    fftw_r2r_kind kind = FFTW_RODFT10; //DST & DST IV
+//    fftw_r2r_kind kind = FFTW_RODFT10; //DFT & DST 2
+    fftw_r2r_kind kind = FFTW_RODFT00; //DFT & DST 1
+
     spectral::DRT_DFT trafo( Ny, Nx, kind);
     
     
@@ -202,7 +205,7 @@ int main( int argc, char* argv[])
             {
                 //Backscatter to equidistant grid
                 dg::blas2::gemv( equi, energies[j],energiesequi[j]);
-                //Fill (x,y) matrix with values, normalise trafo
+                //Fill (x,y) matrix with values of xy data
                 for( unsigned m = 0; m < tempxy.rows(); m++) {
                     for( unsigned n = 0; n <tempxy.cols(); n++) {   
                         tempxy(m,n) = energiesequi[j][n+m*tempxy.cols()];
@@ -215,12 +218,20 @@ int main( int argc, char* argv[])
                     for( unsigned n = 0; n < tempkykx.cols(); n++) {
                         //transpose absolute of transposed output
                         kxkyspec(n,m) = std::abs(tempkykx(m,n)); //is padded -> Y?
-                        
-//                         squspec(m,n)/=sqrt((2.*((double)Nx)+1.)*(double)Ny); //for rodft00
-                        kxkyspec(n,m)/= sqrt((2.*((double)Nx))*(double)Ny); //otherwise
-                        
-                        //grow rate for phi spec
-                        if (j==1) gammakxkyspec(n,m) =(kxkyspec(n,m) - gammakxkyspec(n,m))/deltaT;
+                        //normalise trafo
+                         kxkyspec(n,m)/=sqrt((2.*((double)Nx)+1.)*(double)Ny); //for rodft00
+//                        kxkyspec(n,m)/= sqrt((2.*((double)Nx))*(double)Ny); //otherwise
+                        if (i==0) 
+                        //grow rate for phi spec with simple forward difference in time \gamma(kx,ky) = |\phi(kx,ky,(t+1))|-|\phi(kx,ky,(t))|/(\Delta t)
+                        if (j==1 && i==0) { 
+                            gammakxkyspec(n,m) =kxkyspec(n,m)/deltaT;
+                            kxkyspec_old(n,m) = kxkyspec(n,m);
+                        }
+                        if (j==1 && i>0) { 
+                            gammakxkyspec(n,m) =(kxkyspec(n,m) - kxkyspec_old(n,m))/deltaT;
+                            kxkyspec_old(n,m) = kxkyspec(n,m);
+                            
+                        }
                     }
                 } 
 //                 std::cout << std::setprecision(4) << std::fixed;
@@ -256,8 +267,9 @@ int main( int argc, char* argv[])
                 //compute E(kx) spectrum                
 
               }
-            if (i>=2 && i<=3) gammakspecavg+=gammakxkyspec(j_mode,i_mode);
-// 	     std::cout << p.sigma << " " <<  gammakxkyspec(j_mode,i_mode)<<"\n";
+
+            if (i>=2 ) gammakspecavg+=gammakxkyspec(j_mode,i_mode);
+// 	        std::cout << p.sigma << " " <<  gammakxkyspec(j_mode,i_mode)<<"\n";
    
             err2d_f = nc_put_vara_double( ncid2d_f, dataIDs2d_f[2],   start2d_f, count2d_f, gammakxkyspec.getPtr()); 
             err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[2],   start1d_f, count1d_f, gammakspec.data()); 
@@ -269,7 +281,8 @@ int main( int argc, char* argv[])
             time += p.itstp*p.dt;        
     }
 //     std::cout << p.sigma << " " <<  gammakspecavg/imax-<<"\n";
-    std::cout << p.sigma << " " <<  gammakspecavg/2.<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" " <<  p.lx << "\n";
+
+    std::cout << p.sigma << " " <<  gammakspecavg/(imax-2.)<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" " <<  p.lx << "\n";
 
     err1d_f = nc_close(ncid1d_f);
     err2d_f = nc_close(ncid2d_f);
