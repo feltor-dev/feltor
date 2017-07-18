@@ -95,6 +95,7 @@ This is a program for 2d isothermal blob simulations.
 Currently we implemented $5$ slightly different sets of equations. $n$ is the electron density, $N$ is the ion gyrocentre density and $\rho$
 the vorticity density. $\phi$ is the electric potential. We
 use Cartesian coordinates $x$, $y$. 
+\subsection{Models}
 
 "local"
 \begin{subequations}
@@ -116,7 +117,7 @@ use Cartesian coordinates $x$, $y$.
 "global"
 \begin{subequations}
 \begin{align}
-B(x)^{-1} = \kappa x +1-\kappa X l_x\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\\
+B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\\
  -\nabla\cdot \left(\frac{N}{B^2} \nabla \phi\right) = \Gamma_1 N-n, \quad
  \text{Boussinesq:}\quad -\nabla^2 \phi = \frac{B^2}{N} (\Gamma_1 N -n) \\
 \psi = \Gamma_1 \phi - \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
@@ -154,9 +155,9 @@ B(x)^{-1} = \kappa x +1-\kappa X l_x\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\
 "drift global"
 \begin{subequations}
 \begin{align}
-B(x)^{-1} = \kappa x +1-\kappa X l_x\\
+B(x)^{-1} = \kappa x +1-\kappa X\\
  \nabla \cdot \left(\frac{n}{B^2} \nabla \phi\right) = \rho \quad
- \text{Boussinesq:}\quad \nabla^2\phi = \rho \frac{B^2}{n} \\
+ \text{Boussinesq:}\quad \nabla^2\phi = \rho \frac{B^2}{n} \quad
 \psi = \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
  \frac{\partial n}{\partial t}     = 
     \frac{1}{B}\{ n, \phi\} 
@@ -170,6 +171,28 @@ B(x)^{-1} = \kappa x +1-\kappa X l_x\\
   - \kappa\frac{\partial n}{\partial y} +\nu\nabla^2\rho 
 \end{align}
 \end{subequations}
+
+
+\subsection{Initialization}
+Initialization of $n$ is a Gaussian 
+\begin{align}
+    n(x,y) = 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right)
+    \label{}
+\end{align}
+where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
+radius of the blob.
+We initialize 
+\begin{align}
+    N = \Gamma_1^{-1} n \quad \phi = 0 \\
+    \rho = \phi = 0
+    \label{}
+\end{align}
+\subsection{Diagnostics}
+\begin{align}
+    M(t) = \int n-1 \\
+    \Lambda_n = \nu \int \Delta n  \\
+    \label{}
+\end{align}
 \section{Numerical methods}
 discontinuouos Galerkin on structured grid
 \begin{longtable}{ll>{\RaggedRight}p{7cm}}
@@ -224,13 +247,13 @@ eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
 curvature  & float &0.00015& - & magnetic curvature $\kappa$ \\
 tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\
 nu\_perp    & float &5e-3   & - & pependicular viscosity $\nu$ \\
-amplitude  & float &1.0    & - & amplitude of the blob \\
-sigma      & float &10     & - & blob variance in units of $\rho_s$ \\
-posX       & float &0.3    & - & blob x-position in units of $l_x$ \\
-posY       & float &0.5    & - & blob y-position in units of $l_y$ \\
-lx         & float &200    & - & $l_x$ in units of $\rho_s$ \\
-ly         & float &200    & - & $l_y$ in units of $\rho_s$ \\
-friction   & float & 0     & 0 & friction coefficient in gravity model \\
+amplitude  & float &1.0    & - & amplitude $A$ of the blob \\
+sigma      & float &10     & - & blob radius $\sigma$ \\
+posX       & float &0.3    & - & blob x-position in units of $l_x$, i.e. $X = p_x l_x$\\
+posY       & float &0.5    & - & blob y-position in units of $l_y$, i.e. $Y = p_y l_y$ \\
+lx         & float &200    & - & $l_x$  \\
+ly         & float &200    & - & $l_y$  \\
+friction   & float & 0     & 0 & friction coefficient $\eta$ in gravity model \\
 bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
 bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
 equations  & char & "global" & "global" &local, global, gravity\_local, gravity\_global, drift\_global \\
