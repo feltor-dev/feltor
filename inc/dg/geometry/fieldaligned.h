@@ -182,7 +182,7 @@ void boxintegrator( Field& field, const Grid& grid,
         }
         else if (globalbcz == dg::NEU )
         {
-             coords1[0] = coords0[0]; coords1[1] = coords0[1];  
+             coords1[0] = coords0[0]; coords1[1] = coords0[1];  //this is clearly wrong -> makes ds a d\varphi
         }
         else if (globalbcz == DIR_NEU )std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
         else if (globalbcz == NEU_DIR )std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
@@ -200,11 +200,12 @@ cylindrical coordinates
 * @tparam Matrix The matrix class of the interpolation matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class Geometry, class IMatrix, class container >
+template<class IMatrix, class container >
 struct FieldAligned
 {
 
     typedef IMatrix InterpolationMatrix;
+    FieldAligned(){}
 
     /**
     * @brief Construct from a field and a grid
@@ -226,7 +227,7 @@ struct FieldAligned
         by the bcz variable from the grid and can be changed by the set_boundaries function. 
         If there is no limiter the boundary condition is periodic.
     */
-    template <class Field, class Limiter>
+    template <class Field, class Geometry, class Limiter>
     FieldAligned(Field field, Geometry grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
 
     /**
@@ -355,36 +356,38 @@ struct FieldAligned
 ///@cond 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
-template<class Geometry, class M, class container>
-template <class Field, class Limiter>
-FieldAligned<Geometry, M,container>::FieldAligned(Field field, Geometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
+template<class I, class container>
+template <class Field, class Geometry, class Limiter>
+FieldAligned<I, container>::FieldAligned(Field field, Geometry grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         Nz_(grid.Nz()), bcz_(grid.bcz())
 {
     //Resize vector to 2D grid size
 
-    typename Geometry::perpendicular_grid g2d = grid.perp_grid( );
-    perp_size_ = g2d.size();
-    limiter_ = dg::evaluate( limit, g2d);
-    right_ = left_ = dg::evaluate( zero, g2d);
+    typename Geometry::perpendicular_grid g2dCoarse = grid.perp_grid( );
+    perp_size_ = g2dCoarse.size();
+    limiter_ = dg::evaluate( limit, g2dCoarse);
+    right_ = left_ = dg::evaluate( zero, g2dCoarse);
     ghostM.resize( perp_size_); ghostP.resize( perp_size_);
     //Set starting points
-    std::vector<thrust::host_vector<double> > y( 5, dg::evaluate( dg::cooX2d, g2d)); // x
-    y[1] = dg::evaluate( dg::cooY2d, g2d); //y
-    y[2] = dg::evaluate( dg::zero, g2d);
-    y[3] = dg::pullback( dg::cooX2d, g2d); //R
-    y[4] = dg::pullback( dg::cooY2d, g2d); //Z
+    typename Geometry::perpendicular_grid g2dFine = g2dCoarse.multiply( mX, mY);
+    
+    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::cooX2d, g2dFine)); // x
+    y[1] = dg::evaluate( dg::cooY2d, g2dFine); //y
+    y[2] = dg::evaluate( dg::zero, g2dFine);
     //integrate field lines for all points
-    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2d)), ym(yp); 
+    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp); 
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
+    dg::Timer t;
+    t.tic();
 #ifdef _OPENMP
 #pragma omp parallel for shared(field)
 #endif //_OPENMP
-    for( unsigned i=0; i<perp_size_; i++)
+    for( unsigned i=0; i<g2dF.size(); i++)
     {
-        thrust::host_vector<double> coords(5), coordsP(5), coordsM(5);
-        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i], coords[3] = y[3][i], coords[4] = y[4][i]; //x,y,s,R,Z
+        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
+        coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]; //x,y,s
         double phi1 = deltaPhi;
         boxintegrator( field, g2d, coords, coordsP, phi1, eps, globalbcz);
         phi1 =  - deltaPhi;
@@ -392,25 +395,40 @@ FieldAligned<Geometry, M,container>::FieldAligned(Field field, Geometry grid, do
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
-    //fange Periodische RB ab
-    plus  = dg::create::interpolation( yp[0], yp[1], g2d, globalbcz);
-    minus = dg::create::interpolation( ym[0], ym[1], g2d, globalbcz);
-// //     Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix and MPI_Matrix lacks of transpose function!!!
+    t.toc(); 
+    std::cout << "Fieldline integration took "<<t.diff()<<"s\n";
+    t.tic();
+    IMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], g2dCoarse, globalbcz);
+    IMatrix minusFine = dg::create::interpolation( ym[0], ym[1], g2dCoarse, globalbcz);
+    IMatrix interpolation = dg::create::interpolation( g2dFine, g2dCoarse);
+    IMatrix projection = dg::create::projection( g2dCoarse, g2dFine);
+    t.toc();
+    std::cout <<"Creation of interpolation/projection took "<<t.diff()<<"s\n";
+    t.tic();
+    cusp::multiply( projection, plusFine, plus);
+    cusp::multiply( projection, minusFine, minus);
+    t.toc();
+    std::cout<< "Multiplication of PI took: "<<t.diff()<<"s\n";
+    //Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
     cusp::transpose( plus, plusT);
     cusp::transpose( minus, minusT);     
 //     copy into h vectors
+    
+    thrust::host_vector<double> hp( perp_size_), hm(hp);
+    dg::blas2::symv( projection, yp[2], hp);
+    dg::blas2::symv( projection, ym[2], hm);
     for( unsigned i=0; i<grid.Nz(); i++)
     {
-        thrust::copy( yp[2].begin(), yp[2].end(), hp_.begin() + i*perp_size_);
-        thrust::copy( ym[2].begin(), ym[2].end(), hm_.begin() + i*perp_size_);
+        thrust::copy( hp.begin(), hp.end(), hp_.begin() + i*perp_size_);
+        thrust::copy( hm.begin(), hm.end(), hm_.begin() + i*perp_size_);
     }
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);    //
  
 }
 
-template<class G, class M, class container>
-void FieldAligned<G,M,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
+template<class I, class container>
+void FieldAligned<I,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
 {
     cView left( global.cbegin(), global.cbegin() + perp_size_);
     cView right( global.cbegin()+(Nz_-1)*perp_size_, global.cbegin() + Nz_*perp_size_);
@@ -423,16 +441,16 @@ void FieldAligned<G,M,container>::set_boundaries( dg::bc bcz, const container& g
     bcz_ = bcz;
 }
 
-template< class G, class M, class container>
-template< class BinaryOp>
-container FieldAligned<G,M,container>::evaluate( BinaryOp binary, unsigned p0) const
+template< class I, class container>
+template< class BinaryOp, class Grid>
+container FieldAligned<I,container>::evaluate( BinaryOp binary, unsigned p0, Grid grid) const
 {
-    return evaluate( binary, dg::CONSTANT(1), p0, 0);
+    return evaluate( binary, dg::CONSTANT(1), p0, 0, grid);
 }
 
-template<class G, class M, class container>
+template<class I, class container>
 template< class BinaryOp, class UnaryOp, class Grid>
-container FieldAligned<G,M,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds, Grid g_) const
+container FieldAligned<I,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds, Grid g_) const
 {
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
@@ -496,14 +514,15 @@ container FieldAligned<G,M,container>::evaluate( BinaryOp binary, UnaryOp unary,
 }
 
 
-void FieldAligned< >::operator()(enum whichMatrix which, const container& f, container& fe)
+template< class I, class container>
+void FieldAligned<I, container >::operator()(enum whichMatrix which, const container& f, container& fe)
 {
     if(which == einsPlus || which == einsMinusT) einsPlus( which, f, fe);
     if(which == einsMinus || which == einsPlusT) einsMinus( which, f, fe);
 }
 
-template< class G, class M, class container>
-void FieldAligned<G,M, container>::einsPlus( enum whichMatrix which, const container& f, container& fpe)
+template< class I, class container>
+void FieldAligned<I, container>::einsPlus( enum whichMatrix which, const container& f, container& fpe)
 {
     View ghostPV( ghostP.begin(), ghostP.end());
     View ghostMV( ghostM.begin(), ghostM.end());
@@ -537,8 +556,8 @@ void FieldAligned<G,M, container>::einsPlus( enum whichMatrix which, const conta
     }
 }
 
-template< class G,class M, class container>
-void FieldAligned<G,M, container>::einsMinus( enum whichMatrix which, const container& f, container& fme)
+template< class I, class container>
+void FieldAligned<I, container>::einsMinus( enum whichMatrix which, const container& f, container& fme)
 {
     //note that thrust functions don't work on views
     View ghostPV( ghostP.begin(), ghostP.end());

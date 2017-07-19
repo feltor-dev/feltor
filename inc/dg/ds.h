@@ -196,9 +196,9 @@ struct DS
     *
     * @return acces to fieldaligned object
     */
-    const FA& fieldaligned() const{return f_;}
+    const FieldAligned<IMatrix, container>& fieldaligned() const{return f_;}
     private:
-    FieldAligned<G,I,container> f_;
+    FieldAligned<IMatrix,container> f_;
     Matrix jumpX, jumpY;
     container tempP, temp0, tempM;
     container f, dsf;
@@ -217,13 +217,12 @@ struct DS
 template<class G, class I, class M, class container>
 template <class MagneticField>
 DS<G, I, M,container>::DS(MagneticField mag, Geometry grid, dg::norm no, dg::direction dir, bool jumpX):
-        f_(field),
         jumpX( dg::create::jumpX( grid)),
         jumpY( dg::create::jumpY( grid)),
         tempP( dg::evaluate( dg::zero, field.grid())), temp0( tempP), tempM( tempP), 
         f(tempP), dsf(tempP),
         vol3d( dg::create::volume( grid)), inv3d( dg::create::inv_volume( grid)),
-        invB(dg::pullback(inverseB,field.grid())), //R_(dg::evaluate(dg::coo1,grid)), 
+        invB(dg::pullback(dg::geo::InvB<MagneticField>(mag),grid)), 
         no_(no), dir_(dir), apply_jumpX_(jumpX)
 {
     volume_ = dg::evaluate( dg::one, grid);
