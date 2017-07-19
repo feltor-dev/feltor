@@ -20,24 +20,7 @@ struct CylindricalGrid3d : public dg::Grid3d
 {
     typedef OrthonormalCylindricalTag metric_category; 
     typedef dg::CartesianGrid2d perpendicular_grid;
-    /**
-     * @brief Construct a 3D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param z0 lower boundary in z
-     * @param z1 upper boundary in z 
-     * @param n  # of polynomial coefficients per (x-,y-) dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param Nz # of points in z
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     * @param bcz boundary condition in z
-     * @attention # of polynomial coefficients in z direction is always 1
-     */
+    ///@copydoc Grid3d()
     CylindricalGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): 
         dg::Grid3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz),
         R_(dg::evaluate( dg::cooX3d, *this)){}
@@ -50,14 +33,23 @@ struct CylindricalGrid3d : public dg::Grid3d
     CylindricalGrid3d( const dg::Grid3d& grid):
         dg::Grid3d(grid),
         R_(dg::evaluate( dg::cooX3d, *this)){}
-    /**
-     * @brief The volume element
-     *
-     * @return the volume element
-     */
 
+    /**
+    * @brief Return the grid of the R-Z planes
+    *
+    * @return a Cartesian 2d grid of the R-Z plane
+    */
     perpendicular_grid perp_grid() const { return dg::CartesianGrid2d( x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
+    /**
+     * @brief The volume element R
+     *
+     * @return the volume element R
+     */
     const container& vol()const {return R_;}
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
+        this->set(new_n,new_Ny,new_Nz);
+        R_=dg::evaluate(dg::cooX3d, *this);
+    }
     private:
     container R_;
 };

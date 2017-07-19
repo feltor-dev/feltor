@@ -100,18 +100,8 @@ struct RefinedGridX2d : public dg::GridX2d
      * @param add_y Add number of cells to the existing one
      * @param howmanyX Add number of cells to the existing one
      * @param howmanyY Add number of cells to the existing one
-     * @param x0
-     * @param x1
-     * @param y0
-     * @param y1
-     * @param fx
-     * @param fy
      * @param n_ref The new number of polynomial coefficients
-     * @param n
-     * @param Nx
-     * @param Ny
-     * @param bcx
-     * @param bcy
+     * @copydetails GridX2d::GridX2d()
      */
     RefinedGridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, 
             double x0, double x1, double y0, double y1, 
@@ -256,22 +246,8 @@ struct RefinedGridX3d : public dg::GridX3d
      * @param add_y Add number of cells to the existing one
      * @param howmanyX howmany cells are refined in x
      * @param howmanyY howmany cells are refined in x
-     * @param x0
-     * @param x1
-     * @param y0
-     * @param y1
-     * @param z0
-     * @param z1
-     * @param fx the ratio of cells outside to inside the separatrix
-     * @param fy
      * @param n_ref number of polynomial coefficients in the refined grid
-     * @param n
-     * @param Nx
-     * @param Ny
-     * @param Nz
-     * @param bcx
-     * @param bcy
-     * @param bcz
+     * @copydetails GridX3d::GridX3d()
      */
     RefinedGridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX,  unsigned howmanyY,
             double x0, double x1, double y0, double y1, double z0, double z1,

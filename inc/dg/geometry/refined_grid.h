@@ -268,15 +268,7 @@ struct RefinedGrid2d : public dg::Grid2d
      * @param add_y Add number of cells to the existing one
      * @param howmanyX Add number of cells to the existing one
      * @param howmanyY Add number of cells to the existing one
-     * @param x0
-     * @param x1
-     * @param y0
-     * @param y1
-     * @param n
-     * @param Nx
-     * @param Ny
-     * @param bcx
-     * @param bcy
+     * @copydetails Grid2d::Grid2d()
      */
     RefinedGrid2d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
             unsigned howmanyX, unsigned howmanyY,
@@ -308,16 +300,8 @@ struct RefinedGrid2d : public dg::Grid2d
      *
      * @param multiple_x refine all cells in x 
      * @param multiple_y refine all cells in y
-     * @param x0
-     * @param x1
-     * @param y0
-     * @param y1
-     * @param n
-     * @param n_old
-     * @param Nx
-     * @param Ny
-     * @param bcx
-     * @param bcy
+     * @param n_old the polynomials in the old grid
+     * @copydetails Grid2d::Grid2d()
      */
     RefinedGrid2d( unsigned multiple_x, unsigned multiple_y,
             double x0, double x1, double y0, double y1, unsigned n,
@@ -418,19 +402,7 @@ struct RefinedGrid3d : public dg::Grid3d
      * @param add_y Add number of cells to the existing one
      * @param howmanyX howmany cells should be refined in x
      * @param howmanyY howmany cells should be refined in y
-     * @param x0
-     * @param x1
-     * @param y0
-     * @param y1
-     * @param z0
-     * @param z1
-     * @param n
-     * @param Nx
-     * @param Ny
-     * @param Nz
-     * @param bcx
-     * @param bcy
-     * @param bcz
+     * @copydetails Grid3d::Grid3d()
      */
     RefinedGrid3d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
             unsigned howmanyX, unsigned howmanyY,
@@ -463,20 +435,7 @@ struct RefinedGrid3d : public dg::Grid3d
      *
      * @param multiple_x Multiply all cells in x - direction
      * @param multiple_y Multiply all cells in y - direction
-     * @param x0
-     * @param x1
-     * @param y0
-     * @param y1
-     * @param z0
-     * @param z1
-     * @param n
-     * @param n_old
-     * @param Nx
-     * @param Ny
-     * @param Nz
-     * @param bcx
-     * @param bcy
-     * @param bcz
+     * @copydetails Grid3d::Grid3d()
      */
     RefinedGrid3d( unsigned multiple_x, unsigned multiple_y,
             double x0, double x1, double y0, double y1, double z0, double z1, 
