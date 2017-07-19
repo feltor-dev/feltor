@@ -47,7 +47,7 @@ struct CylindricalGrid3d : public dg::Grid3d
      */
     const container& vol()const {return R_;}
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        this->set(new_n,new_Ny,new_Nz);
+        dg::Grid3d::set(new_n,new_Ny,new_Nz);
         R_=dg::evaluate(dg::cooX3d, *this);
     }
     private:

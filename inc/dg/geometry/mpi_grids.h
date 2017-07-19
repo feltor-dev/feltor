@@ -104,7 +104,7 @@ struct CylindricalMPIGrid3d : public MPIGrid3d
         return dg::CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), planeComm);
     }
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        this->set(new_n,new_Ny,new_Nz);
+        MPIGrid3d::set(new_n,new_Ny,new_Nz);
         R_=dg::evaluate(dg::cooX3d, *this);
     }
     private:

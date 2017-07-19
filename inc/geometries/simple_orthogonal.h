@@ -284,7 +284,7 @@ void construct_rz( Nemov nemov,
  * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-struct SimpleOrthogonal
+struct SimpleOrthogonal : public aGenerator
 {
     /**
      * @brief Construct a simple orthogonal grid 
@@ -344,7 +344,7 @@ struct SimpleOrthogonal
      */
     bool isConformal()  const{return false;}
     /**
-     * @copydoc aGenerator::operator()(const thrust::host_vector<double>&,const thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&)
+     * @copydoc aGenerator::operator()()
      * @note All the resulting vectors are write-only and get properly resized
      */
     void operator()( 

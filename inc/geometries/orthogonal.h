@@ -3,6 +3,7 @@
 #include "dg/backend/grid.h"
 #include "dg/blas1.h"
 #include "dg/geometry/geometry_traits.h"
+#include "dg/generator.h"
 
 namespace dg
 {
@@ -26,20 +27,29 @@ struct OrthogonalGrid3d : public dg::Grid3d
 
     /*!@brief Constructor
     
-     * @tparam Generator models aGenerator
-     * @param generator must generate an orthogonal grid
+     * @param generator the pointer must not be deleted as long as you intend to call the set() function
      * @param n 
      * @param Nx
      @param Ny
      @param Nz 
      @param bcx
      */
-    template< class Generator>
-    OrthogonalGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
-        dg::Grid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+    OrthogonalGrid3d( aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+        dg::Grid3d( 0, generator->width(), 0., generator->height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
-        assert( generator.isOrthogonal());
-        construct( generator, n, Nx, Ny);
+        assert( generator->isOrthogonal());
+        generator_ = generator;
+        construct( n, Nx, Ny);
+    }
+    /**
+    * @brief Reconstruct the grid coordinates
+    *
+    * @copydetails Grid3d::set()
+    * @attention the generator must still live when this function is called
+    */
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny){
+        dg::Grid3d::set( new_n, new_Nx, new_Ny);
+        construct( new_n, new_Nx, new_Ny);
     }
 
     perpendicular_grid perp_grid() const { return OrthogonalGrid2d<container>(*this);}
@@ -56,15 +66,14 @@ struct OrthogonalGrid3d : public dg::Grid3d
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    template< class Generator>
-    void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny)
+    void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
-        dg::Grid1d gY1d( 0, generator.height(), n, Ny, dg::PER);
-        dg::Grid1d gX1d( 0., generator.width(), n, Nx);
+        dg::Grid1d gY1d( 0, generator_->height(), n, Ny, dg::PER);
+        dg::Grid1d gX1d( 0., generator_->width(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
-        generator( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
-        init_X_boundaries( 0., generator.width());
+        *generator_( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
+        init_X_boundaries( 0., generator->width());
         lift3d( ); //lift to 3D grid
         construct_metric();
     }
@@ -106,6 +115,7 @@ struct OrthogonalGrid3d : public dg::Grid3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
+    aGenerator* generator_;
 };
 
 /**
