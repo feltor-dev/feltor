@@ -8,6 +8,7 @@
 #include "backend/mpi_derivatives.h"
 #include "geometry/mpi_fieldaligned.h"
 #endif //MPI_VERSION
+#include "../geometries/magnetic_field.h"
 
 /*!@file 
  *
@@ -225,6 +226,14 @@ DS<G, I, M,container>::DS(MagneticField mag, Geometry grid, dg::norm no, dg::dir
         invB(dg::pullback(dg::geo::InvB<MagneticField>(mag),grid)), 
         no_(no), dir_(dir), apply_jumpX_(jumpX)
 {
+    //if geometry = cylindrical  (use traits)
+    //construct cylinder field Field
+    Field<Magneticfield> field(mag);
+    //else 
+    //construct interpolate field DSField
+    DSField<typename G::perpendicular_grid> field( mag, grid.perp_grid());
+    //if flux-aligned
+    //use only 1d refinement
     volume_ = dg::evaluate( dg::one, grid);
     dg::geo::multiplyVolume( volume_, grid);
 }

@@ -275,21 +275,22 @@ struct MPIGrid2d
     }
 
     /**
-     * @brief Return a grid local for the calling process
+     * @brief Return a non-MPI grid local for the calling process
      *
      * The local grid returns the same values for x0(), x1(), ..., Nx(), Ny(), ... as the grid
-     * class itself
+     * class itself 
      * @return Grid object
+     * @note the boundary conditions in the local grid are not well defined since there might not actually be any boundaries
      */
     Grid2d local() const {return Grid2d(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
 
     /**
-     * @brief Return a grid global for the calling process
+     * @brief Return the global non-MPI grid 
      *
-     * The global grid contains the global boundaries
-     * @return Grid object
+     * The global grid contains the global boundaries and cell numbers. This is the grid that we would have to use in a non-MPI implementation.
+     * @return non-MPI Grid object
      */
-    Grid2d global() const {return g;}
+    virtual const Grid2d& global() const {return g;}
     /**
      * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
@@ -627,20 +628,13 @@ struct MPIGrid3d
 
     }
     /**
-     * @brief Return a grid local for the calling process
-     *
-     * The local grid returns the same values for x0(), x1(), ..., Nx(), Ny(), ... as the grid
-     * class itself
-     * @return Grid object
+     *@copydoc MPIGrid2d::local()const
      */
     Grid3d local() const {return Grid3d(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
     /**
-     * @brief Return a grid global for the calling process
-     *
-     * The global grid contains the global boundaries
-     * @return Grid object
+     *@copydoc MPIGrid2d::global()const
      */
-    Grid3d global() const {return g;}
+    virtual const Grid3d& global() const {return g;}
     /**
      * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
