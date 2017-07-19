@@ -289,27 +289,16 @@ struct Grid2d
     Grid2d local_grid() const {return *this;}
 
     /**
-    * @brief Return a copy of the grid with increased number of cells
+    * @brief Set the number of polynomials and cells
     *
-    * @param nx multiply # of cells in x 
-    * @param ny multiply # of cells in y
-    *
-    * @return a copy of this grid with nx*Nx and ny*Ny cells in x and y
+    * @param new_n new number of %Gaussian nodes
+    * @param new_Nx new number of cells in x 
+    * @param new_Ny new number of cells in y
     */
-    virtual Grid2d multiply( unsigned nx, unsigned ny) const {
-        return Grid2d( x0_, x1_, y0_, y1_, n_, nx*Nx_, ny*Ny_, bcx_, bcy_);
-    }
-    /**
-    * @brief Return a copy of the grid with reduced number of cells
-    *
-    * @param nx divide # of cells in x 
-    * @param ny divide # of cells in y
-    *
-    * @return a copy of this grid with Nx/nx and Ny/ny cells in x and y
-    * @attention The function won't check if the number of cells are divisible without rest
-    */
-    virtual Grid2d divide( unsigned nx, unsigned ny) const {
-        return Grid2d( x0_, x1_, y0_, y1_, n_, Nx_/nx, Ny_/ny, bcx_, bcy_);
+    virtual void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+        n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny;
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
+        dlt_ = DLT<double>( new_n);
     }
 
     /**
@@ -465,29 +454,17 @@ struct Grid3d
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
     }
     /**
-    * @brief Return a copy of the grid with increased number of cells
+    * @brief Set the number of polynomials and cells
     *
-    * @param nx multiply # of cells in x 
-    * @param ny multiply # of cells in y
-    * @param nz multiply # of cells in z 
-    *
-    * @return a copy of this grid with nx*Nx, ny*Ny and nz*Nz cells in x, y and z
+    * @param new_n new number of %Gaussian nodes
+    * @param new_Nx new number of cells in x 
+    * @param new_Ny new number of cells in y
+    * @param new_Nz new number of cells in z
     */
-    virtual Grid3d multiply( unsigned nx, unsigned ny, unsigned nz) const {
-        return Grid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, nx*Nx_, ny*Ny_, nz*Nz_, bcx_, bcy_, bcz_);
-    }
-    /**
-    * @brief Return a copy of the grid with reduced number of cells
-    *
-    * @param nx divide # of cells in x 
-    * @param ny divide # of cells in y
-    * @param nz divide # of cells in z 
-    *
-    * @return a copy of this grid with Nx/nx, Ny/ny cells in x, y and z
-    * @attention The function won't check if the number of cells are divisible without rest
-    */
-    virtual Grid3d divide( unsigned nx, unsigned ny, unsigned nz) const {
-        return Grid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, Nx_/nx, Ny_/ny, Nz_/nz, bcx_, bcy_, bcz_);
+    virtual void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+        n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny, Nz_ = new_Nz;
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ =lz_/(double)Nz_;
+        dlt_ = DLT<double>( new_n);
     }
 
     /**

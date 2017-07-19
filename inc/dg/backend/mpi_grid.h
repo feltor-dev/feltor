@@ -19,105 +19,42 @@ namespace dg
  *
  * Represents the local grid coordinates and the process topology. 
  * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
+ * @note a single cell is never divided across processes.
  * @attention
  * The boundaries in the constructors are global boundaries, the boundaries returned by the access functions are local boundaries, this is because the grid represents the information given to one process
  *
- * @note Note that a single cell is never divided across processes.
  */
 struct MPIGrid2d
 {
     typedef MPITag memory_category;
     typedef TwoDimensionalTag dimensionality;
     /**
-     * @brief Construct mpi grid
-     *
-     * @param x0
-     * @param x1
-     * @param y0
-     * @param y1
-     * @param n
-     * @param Nx
-     * @param Ny
-     * @param comm
+     * @copydoc dg::Grid2d::Grid2d()
+     * @param comm a two-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
      */
     MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny), comm( comm)
     {
-        int rank, dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        MPI_Comm_rank( comm, &rank);
-        if( rank == 0)
-        {
-            if(Nx%dims[0]!=0)
-                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
-            assert( Nx%dims[0] == 0);
-            if(Ny%dims[1]!=0)
-                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
-            assert( Ny%dims[1] == 0);
-            if( g.bcx() == dg::PER) assert( periods[0] == true);
-            else assert( periods[0] == false);
-            if( g.bcy() == dg::PER) assert( periods[1] == true);
-            else assert( periods[1] == false);
-        }
+        check_division( Nx, Ny, g.bcx(), g.bcy());
     }
 
     /**
-     * @brief Construct mpi grid
-     *
-     * @param x0
-     * @param x1
-     * @param y0
-     * @param y1
-     * @param n
-     * @param Nx
-     * @param Ny
-     * @param bcx
-     * @param bcy
-     * @param comm
+     * @copydoc dg::Grid2d::Grid2d()
+     * @param comm a two-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
      */
     MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), comm( comm)
     {
-        int rank, dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        MPI_Comm_rank( comm, &rank);
-        if( rank == 0)
-        {
-            if(Nx%dims[0]!=0)
-                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
-            assert( Nx%dims[0] == 0);
-            if(Ny%dims[1]!=0)
-                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
-            assert( Ny%dims[1] == 0);
-            if( bcx == dg::PER) assert( periods[0] == true);
-            else assert( periods[0] == false);
-            if( bcy == dg::PER) assert( periods[1] == true);
-            else assert( periods[1] == false);
-        }
+        check_division( Nx, Ny, bcx, bcy);
     }
-    /**
-    * @brief Return a copy of the grid with increased number of cells
-    *
-    * @param nx multiply # of cells in x 
-    * @param ny multiply # of cells in y
-    *
-    * @return a copy of this grid with nx*Nx and ny*Ny cells in x and y
-    */
-    virtual MPIGrid2d multiply( unsigned nx, unsigned ny) const {
-        return MPIGrid2d( x0_, x1_, y0_, y1_, n_, nx*Nx_, ny*Ny_, bcx_, bcy_, comm_);
-    }
-    /**
-    * @brief Return a copy of the grid with reduced number of cells
-    *
-    * @param nx divide # of cells in x 
-    * @param ny divide # of cells in y
-    *
-    * @return a copy of this grid with Nx/nx and Ny/ny cells in x and y
-    * @attention The function won't check if the number of cells are divisible without rest
-         but it does check if the number of processes is still a divisor
-    */
-    virtual MPIGrid2d divide( unsigned nx, unsigned ny) const {
-        return MPIGrid2d( x0_, x1_, y0_, y1_, n_, Nx_/nx, Ny_/ny, bcx_, bcy_, comm_);
+
+    ///@copydoc Grid2d::set(unsigned,unsigned,unsigned)
+    ///@note these are global parameters
+    virtual void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+        g.set(new_n,new_Nx,new_Ny);
+        check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
     }
 
     /**
@@ -306,6 +243,25 @@ struct MPIGrid2d
         g.init_X_boundaries(global_x0, global_x1);
     }
     private:
+    void check_division( unsigned Nx, unsigned Ny, bc bcx, bc bcy)
+    {
+        int rank, dims[2], periods[2], coords[2];
+        MPI_Cart_get( comm, 2, dims, periods, coords);
+        MPI_Comm_rank( comm, &rank);
+        if( rank == 0)
+        {
+            if(Nx%dims[0]!=0)
+                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
+            assert( Nx%dims[0] == 0);
+            if(Ny%dims[1]!=0)
+                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
+            assert( Ny%dims[1] == 0);
+            if( bcx == dg::PER) assert( periods[0] == true);
+            else assert( periods[0] == false);
+            if( bcy == dg::PER) assert( periods[1] == true);
+            else assert( periods[1] == false);
+        }
+    }
     Grid2d g; //global grid
     MPI_Comm comm; //just an integer...
 
@@ -326,118 +282,33 @@ struct MPIGrid3d
     typedef MPITag memory_category;
     typedef ThreeDimensionalTag dimensionality;
     /**
-     * @brief Construct a 3D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param z0 lower boundary in z
-     * @param z1 upper boundary in z 
-     * @param n  # of polynomial coefficients per (x-,y-) dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param Nz # of points in z
-     * @param comm mpi communicator
-     * @attention # of polynomial coefficients in z direction is always 1
+     * @copydoc Grid3d::Grid3d()
+     * @param comm a three-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
      */
     MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz), comm( comm)
     {
-        int rank, dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        MPI_Comm_rank( comm, &rank);
-        if( rank == 0)
-        {
-            if(!(Nx%dims[0]==0))
-                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
-            assert( Nx%dims[0] == 0);
-            if( !(Ny%dims[1]==0))
-                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
-            assert( Ny%dims[1] == 0);
-            if( !(Nz%dims[2]==0))
-                std::cerr << "Nz "<<Nz<<" npz "<<dims[2]<<std::endl;
-            assert( Nz%dims[2] == 0);
-            if( g.bcx() == dg::PER) assert( periods[0] == true);
-            else assert( periods[0] == false);
-            if( g.bcy() == dg::PER) assert( periods[1] == true);
-            else assert( periods[1] == false);
-            if( g.bcz() == dg::PER) assert( periods[2] == true);
-            else assert( periods[2] == false);
-        }
+        check_division( Nx, Ny, Nz, bcx(), bcy(), bcz());
     }
 
     /**
-     * @brief Construct a 3D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param z0 lower boundary in z
-     * @param z1 upper boundary in z 
-     * @param n  # of polynomial coefficients per (x-,y-) dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param Nz # of points in z
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     * @param bcz boundary condition in z
-     * @param comm mpi communicator
-     * @attention # of polynomial coefficients in z direction is always 1
+     * @copydoc Grid3d::Grid3d()
+     * @param comm a three-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
      */
     MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), comm( comm)
     {
-        int rank, dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        MPI_Comm_rank( comm, &rank);
-        if( rank == 0)
-        {
-            if(!(Nx%dims[0]==0))
-                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
-            assert( Nx%dims[0] == 0);
-            if( !(Ny%dims[1]==0))
-                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
-            assert( Ny%dims[1] == 0);
-            if( !(Nz%dims[2]==0))
-                std::cerr << "Nz "<<Nz<<" npz "<<dims[2]<<std::endl;
-            assert( Nz%dims[2] == 0);
-            if( bcx == dg::PER) assert( periods[0] == true);
-            else assert( periods[0] == false);
-            if( bcy == dg::PER) assert( periods[1] == true);
-            else assert( periods[1] == false);
-            if( bcz == dg::PER) assert( periods[2] == true);
-            else assert( periods[2] == false);
-        }
+        check_division( Nx, Ny, Nz, bcx, bcy, bcz);
+    }
+    ///@copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
+    ///@note these are global parameters
+    virtual void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+        g.set(new_n,new_Nx,new_Ny,new_Nz);
+        check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());
     }
 
-    /**
-    * @brief Return a copy of the grid with increased number of cells
-    *
-    * @param nx multiply # of cells in x 
-    * @param ny multiply # of cells in y
-    * @param nz multiply # of cells in z 
-    *
-    * @return a copy of this grid with nx*Nx, ny*Ny and nz*Nz cells in x, y and z
-    */
-    virtual MPIGrid3d multiply( unsigned nx, unsigned ny, unsigned nz) const {
-        return MPIGrid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, nx*Nx_, ny*Ny_, nz*Nz_, bcx_, bcy_, bcz_, comm_);
-    }
-    /**
-    * @brief Return a copy of the grid with reduced number of cells
-    *
-    * @param nx divide # of cells in x 
-    * @param ny divide # of cells in y
-    * @param nz divide # of cells in z 
-    *
-    * @return a copy of this grid with Nx/nx, Ny/ny cells in x, y and z
-    * @attention The function won't check if the number of cells are divisible without rest
-    *   but it does check if the number of processes is still a divisor
-    */
-    virtual MPIGrid3d divide( unsigned nx, unsigned ny, unsigned nz) const {
-        return MPIGrid3d( x0_, x1_, y0_, y1_, z0_, z1_, n_, Nx_/nx, Ny_/ny, Nz_/nz, bcx_, bcy_, bcz_, comm_);
-    }
     /**
      * @brief Return local x0
      *
@@ -651,6 +522,30 @@ struct MPIGrid3d
         g.init_X_boundaries(global_x0, global_x1);
     }
     private:
+    void check_division( unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz)
+    {
+        int rank, dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        MPI_Comm_rank( comm, &rank);
+        if( rank == 0)
+        {
+            if(!(Nx%dims[0]==0))
+                std::cerr << "Nx "<<Nx<<" npx "<<dims[0]<<std::endl;
+            assert( Nx%dims[0] == 0);
+            if( !(Ny%dims[1]==0))
+                std::cerr << "Ny "<<Ny<<" npy "<<dims[1]<<std::endl;
+            assert( Ny%dims[1] == 0);
+            if( !(Nz%dims[2]==0))
+                std::cerr << "Nz "<<Nz<<" npz "<<dims[2]<<std::endl;
+            assert( Nz%dims[2] == 0);
+            if( bcx == dg::PER) assert( periods[0] == true);
+            else assert( periods[0] == false);
+            if( bcy == dg::PER) assert( periods[1] == true);
+            else assert( periods[1] == false);
+            if( bcz == dg::PER) assert( periods[2] == true);
+            else assert( periods[2] == false);
+        }
+    }
     Grid3d g; //global grid
     MPI_Comm comm; //just an integer...
 };
