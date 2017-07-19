@@ -134,56 +134,59 @@ void doVolRaisePerpIndex( container& in1, container& in2, container& out1, conta
 };
 
 
-template<class TernaryOp1, class TernaryOp2, class Geometry> 
+template<class TernaryOp1, class TernaryOp2, class container, class Geometry> 
 void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
+        container& vx, container& vy,
         const Geometry& g, OrthonormalCylindricalTag)
 {
+    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, out2; 
     out1 = evaluate( f1, g);
     out2 = evaluate( f2, g);
+    dg::blas1::transfer( out1, vx);
+    dg::blas1::transfer( out2, vy);
 }
 
-template<class TernaryOp1, class TernaryOp2, class Geometry> 
+template<class TernaryOp1, class TernaryOp2, class container, class Geometry> 
 void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
+        container& vx, container& vy,
         const Geometry& g, CurvilinearCylindricalTag)
 {
-    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector container;
-    out1 = pullback( f1, g);
-    out2 = pullback( f2, g);
-    container temp1( out1), temp2( out2);
+    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, out2, temp1, temp2; 
+    temp1 = out1 = pullback( f1, g);
+    temp2 = out2 = pullback( f2, g);
     dg::blas1::pointwiseDot( g.xr(), temp1, out1);
     dg::blas1::pointwiseDot( 1., g.xz(), temp2, 1., out1);
     dg::blas1::pointwiseDot( g.yr(), temp1, out2);
     dg::blas1::pointwiseDot( 1., g.yz(), temp2, 1., out2);
+    dg::blas1::transfer( out1, vx);
+    dg::blas1::transfer( out2, vy);
 }
 
-template<class FunctorRR, class FunctorRZ, class FunctorZZ, class Geometry> 
+template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry> 
 void doPushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixy,
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chiyy, 
+        container& chixx, container& chixy, container& chiyy,
         const Geometry& g, OrthonormalCylindricalTag)
 {
-    chixx = evaluate( chiRR, g);
-    chixy = evaluate( chiRZ, g);
-    chiyy = evaluate( chiZZ, g);
+    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx_, chixy_, chiyy_; 
+    chixx_ = evaluate( chiRR, g);
+    chixy_ = evaluate( chiRZ, g);
+    chiyy_ = evaluate( chiZZ, g);
+    dg::blas1::transfer( chixx_, chixx);
+    dg::blas1::transfer( chixy_, chixy);
+    dg::blas1::transfer( chiyy_, chiyy);
 }
 
-template<class FunctorRR, class FunctorRZ, class FunctorZZ, class Geometry> 
+template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry> 
 void doPushForwardPerp( FunctorRR chiRR_, FunctorRZ chiRZ_, FunctorZZ chiZZ_,
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixy,
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chiyy, 
+        container& chixx, container& chixy, container& chiyy,
         const Geometry& g, CurvilinearCylindricalTag)
 {
     //compute the rhs
     typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector chiRR, chiRZ, chiZZ;
-    chixx = chiRR = pullback( chiRR_, g);
-    chixy = chiRZ = pullback( chiRZ_, g);
-    chiyy = chiZZ = pullback( chiZZ_, g);
+    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx_, chixy_, chiyy_; 
+    chixx_ = chiRR = pullback( chiRR_, g);
+    chixy_ = chiRZ = pullback( chiRZ_, g);
+    chiyy_ = chiZZ = pullback( chiZZ_, g);
     //compute the transformation matrix
     typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector t00(chixx), t01(t00), t02(t00), t10(t00), t11(t00), t12(t00), t20(t00), t21(t00), t22(t00);
     dg::blas1::pointwiseDot( g.xr(), g.xr(), t00);
@@ -201,15 +204,18 @@ void doPushForwardPerp( FunctorRR chiRR_, FunctorRZ chiRZ_, FunctorZZ chiZZ_,
     dg::blas1::scal( t21, 2.);
     dg::blas1::pointwiseDot( g.yz(), g.yz(), t22);
     //now multiply
-    dg::blas1::pointwiseDot(     t00, chiRR, chixx);
-    dg::blas1::pointwiseDot( 1., t01, chiRZ, 1., chixx);
-    dg::blas1::pointwiseDot( 1., t02, chiZZ, 1., chixx);
-    dg::blas1::pointwiseDot(     t10, chiRR, chixy);
-    dg::blas1::pointwiseDot( 1., t11, chiRZ, 1., chixy);
-    dg::blas1::pointwiseDot( 1., t12, chiZZ, 1., chixy);
-    dg::blas1::pointwiseDot(     t20, chiRR, chiyy);
-    dg::blas1::pointwiseDot( 1., t21, chiRZ, 1., chiyy);
-    dg::blas1::pointwiseDot( 1., t22, chiZZ, 1., chiyy);
+    dg::blas1::pointwiseDot(     t00, chiRR, chixx_);
+    dg::blas1::pointwiseDot( 1., t01, chiRZ, 1., chixx_);
+    dg::blas1::pointwiseDot( 1., t02, chiZZ, 1., chixx_);
+    dg::blas1::pointwiseDot(     t10, chiRR, chixy_);
+    dg::blas1::pointwiseDot( 1., t11, chiRZ, 1., chixy_);
+    dg::blas1::pointwiseDot( 1., t12, chiZZ, 1., chixy_);
+    dg::blas1::pointwiseDot(     t20, chiRR, chiyy_);
+    dg::blas1::pointwiseDot( 1., t21, chiRZ, 1., chiyy_);
+    dg::blas1::pointwiseDot( 1., t22, chiZZ, 1., chiyy_);
+    dg::blas1::transfer( chixx_, chixx);
+    dg::blas1::transfer( chixy_, chixy);
+    dg::blas1::transfer( chiyy_, chiyy);
 
 }
 

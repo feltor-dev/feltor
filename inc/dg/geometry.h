@@ -154,21 +154,19 @@ void dividePerpVolume( container& inout, const Geometry& g)
  * @param vy y-component of vector (gets properly resized)
  * @param g The geometry object
  */
-template<class Functor1, class Functor2, class Geometry> 
+template<class Functor1, class Functor2, class container, class Geometry> 
 void pushForwardPerp( Functor1 vR, Functor2 vZ, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vx, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& vy,
+        container& vx, container& vy,
         const Geometry& g)
 {
     dg::geo::detail::doPushForwardPerp( vR, vZ, vx, vy, g, typename GeometryTraits<Geometry>::metric_category() ); 
 }
 
 ///@cond
-template<class Geometry> 
+template<class container, class Geometry> 
 void pushForwardPerp(
         double(fR)(double,double,double), double(fZ)(double, double, double), 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out2,
+        container& out1, container& out2,
         const Geometry& g)
 {
     pushForwardPerp<double(double, double, double), double(double, double, double), Geometry>( fR, fZ, out1, out2, g); 
@@ -195,9 +193,7 @@ void pushForwardPerp(
  */
 template<class FunctorRR, class FunctorRZ, class FunctorZZ, class Geometry> 
 void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx, 
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixy,
-        typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chiyy, 
+        container& chixx, container& chixy, container& chiyy,
         const Geometry& g)
 {
     dg::geo::detail::doPushForwardPerp( chiRR, chiRZ, chiZZ, chixx, chixy, chiyy, g, typename GeometryTraits<Geometry>::metric_category() ); 
