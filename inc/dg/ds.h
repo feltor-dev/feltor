@@ -14,6 +14,7 @@
  * This file includes the appropriate headers for parallel derivatives
  */
 
+//TODO: use buffers to make symv const
 namespace dg{
 
 /**
@@ -45,7 +46,7 @@ struct DS
     DS(const FA& field, Geometry, InvB invB, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool jumpX = true);
 
     /**
-    * @brief Apply the derivative on a 3d vector
+    * @brief Apply the forward derivative on a 3d vector
     *
     * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
     * @param f The vector to derive
@@ -53,7 +54,7 @@ struct DS
     */
     void forward( const container& f, container& dsf);
     /**
-    * @brief Apply the derivative on a 3d vector
+    * @brief Apply the backward derivative on a 3d vector
     *
     * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
     * @param f The vector to derive
@@ -61,7 +62,7 @@ struct DS
     */
     void backward( const container& f, container& dsf);
     /**
-    * @brief Apply the derivative on a 3d vector
+    * @brief Apply the centered derivative on a 3d vector
     *
     * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
     * @param f The vector to derive
@@ -72,56 +73,51 @@ struct DS
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector
     *
+    * @param f The vector to derive
+    * @param dsf contains result on output (write only)
+    */
+    void forwardAdj( const container& f, container& dsf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * @param f The vector to derive
+    * @param dsf contains result on output (write only)
+    */
+    void backwardAdj( const container& f, container& dsf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector
+    *
+    * @param f The vector to derive
+    * @param dsf contains result on output (write only)
+    */
+    void centeredAdjDir( const container& f, container& dsf);
+    /**
+    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
+    *
     * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
     * @param f The vector to derive
     * @param dsf contains result on output (write only)
     */
-    void forwardT( const container& f, container& dsf);
-    /**
-    * @brief Apply the negative adjoint derivative on a 3d vector
-    *
-    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
-    * @param f The vector to derive
-    * @param dsf contains result on output (write only)
-    */
-    void backwardT( const container& f, container& dsf);
-    /**
-    * @brief Apply the negative adjoint derivative on a 3d vector
-    *
-    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
-    * @param f The vector to derive
-    * @param dsf contains result on output (write only)
-    */
-    void centeredTD( const container& f, container& dsf);
+    void forwardAdjDir( const container& f, container& dsf);
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
     *
-    * forward derivative \f$ \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
     * @param f The vector to derive
     * @param dsf contains result on output (write only)
     */
-    void forwardTD( const container& f, container& dsf);
+    void backwardAdjDir( const container& f, container& dsf);
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
     *
-    * backward derivative \f$ \frac{1}{2h_z^-}(f_{i} - f_{i-1})\f$
     * @param f The vector to derive
     * @param dsf contains result on output (write only)
     */
-    void backwardTD( const container& f, container& dsf);
-    /**
-    * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
-    *
-    * centered derivative \f$ \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
-    * @param f The vector to derive
-    * @param dsf contains result on output (write only)
-    */
-    void centeredT( const container& f, container& dsf);
+    void centeredAdj( const container& f, container& dsf);
 
     /**
-    * @brief is the negative transposed of centered
+    * @brief compute parallel derivative
     *
-    * redirects to centered
+    * dependent on dir redirects to either forward(), backward() or centered()
     * @param f The vector to derive
     * @param dsf contains result on output (write only)
     */
@@ -129,20 +125,12 @@ struct DS
 
 
     /**
-     * @brief Compute the second derivative using finite differences
-     *
-     * discretizes \f$ \nabla_\parallel\cdot \nabla_\parallel\f$
-     * @param f input function
-     * @param dssf output (write-only)
-     */
-    void dss( const container& f, container& dssf);
-
-    /**
      * @brief Discretizes the parallel Laplacian as a symmetric matrix
      *
-     * forward followed by forwardT and adding jump terms
+     * if direction is centered then centered followed by centeredAdj and adding jump terms
      * @param f The vector to derive
      * @param dsTdsf contains result on output (write only)
+     * @note if apply_jumpX is false then no jumpy terms will be added in the x-direction
      */
     void symv( const container& f, container& dsTdsf);
 
@@ -210,20 +198,16 @@ struct DS
     */
     const FA& fieldaligned() const{return f_;}
     private:
-    FA f_;
+    FieldAligned<G,I,container> f_;
     Matrix jumpX, jumpY;
-    IMatrix f2c, c2f, f2cT, c2fT;
     container tempP, temp0, tempM;
-    container tempPc, tempMc, temp0c;
     container f, dsf;
     container vol3d, inv3d;
-    container vol3df, inv3df;
     container invB;
     //container R_;
     dg::norm no_;
     dg::direction dir_;
     bool apply_jumpX_;
-
     container volume_;
 };
 
@@ -232,28 +216,18 @@ struct DS
 
 template<class G, class I, class M, class container>
 template <class MagneticField>
-DS<G, I, M,container>::DS(const FA& field, Geometry gridc, Field inverseB, dg::norm no, dg::direction dir, bool jumpX):
+DS<G, I, M,container>::DS(MagneticField mag, Geometry grid, dg::norm no, dg::direction dir, bool jumpX):
         f_(field),
-        jumpX( dg::create::jumpX( gridc)),
-        jumpY( dg::create::jumpY( gridc)),
+        jumpX( dg::create::jumpX( grid)),
+        jumpY( dg::create::jumpY( grid)),
         tempP( dg::evaluate( dg::zero, field.grid())), temp0( tempP), tempM( tempP), 
-        tempPc( dg::evaluate( dg::zero, gridc)), temp0c( tempPc), tempMc( tempPc), 
         f(tempP), dsf(tempP),
-        vol3d( dg::create::volume( gridc)), inv3d( dg::create::inv_volume( gridc)),
-        vol3df( dg::create::volume( field.grid())), inv3df( dg::create::inv_volume( field.grid())),
+        vol3d( dg::create::volume( grid)), inv3d( dg::create::inv_volume( grid)),
         invB(dg::pullback(inverseB,field.grid())), //R_(dg::evaluate(dg::coo1,grid)), 
         no_(no), dir_(dir), apply_jumpX_(jumpX)
 {
-
-    f2c = dg::create::projection( gridc, field.grid());
-    c2f = dg::create::interpolation( field.grid(), gridc);
-    cusp::transpose( f2c, f2cT);
-    cusp::transpose( c2f, c2fT);     
-
-    volume_ = dg::evaluate( dg::one, gridc);
-    dg::geo::multiplyVolume( volume_, gridc);
-
-
+    volume_ = dg::evaluate( dg::one, grid);
+    dg::geo::multiplyVolume( volume_, grid);
 }
 
 template<class G, class I, class M, class container>
@@ -268,190 +242,108 @@ inline void DS<G,I,M,container>::operator()( const container& f, container& dsf)
 
 
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::centered( const container& fc, container& dsfc)
+void DS<G,I,M,container>::centered( const container& f, container& dsf)
 {
     //direct discretisation
-    assert( &fc != &dsfc);
-    cusp::multiply( c2f, fc, f);
-    f_.einsPlus( f, tempP);
-    f_.einsMinus( f, tempM);
+    assert( &f != &dsf);
+    f_(einsPlus, f, tempP);
+    f_(einsMinus, f, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, f_.hz(), dsf);
-      cusp::multiply( f2c, dsf, dsfc);  
-
-    
-    ////adjoint discretisation
-//     assert( &fc != &dsfc);
-//     dg::blas1::pointwiseDot( vol3d, fc, dsfc);
-//     cusp::multiply( f2cT, dsfc, dsf);
-//     dg::blas1::pointwiseDivide( dsf, f_.hz(), dsf);
-//     dg::blas1::pointwiseDivide( dsf, invB, dsf);
-//     f_.einsPlusT( dsf, tempP);
-//     f_.einsMinusT( dsf, tempM);
-//     dg::blas1::axpby( 1., tempM, -1., tempP);
-//     dg::blas1::pointwiseDot( tempP, invB, tempP);
-//     cusp::multiply( c2fT, tempP, dsfc);
-//     dg::blas1::pointwiseDot( inv3d, dsfc, dsfc); 
 }
 
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::centeredT( const container& fc, container& dsfc)
+void DS<G,I,M,container>::centeredAdj( const container& f, container& dsf)
 {               
     //adjoint discretisation
-    assert( &fc != &dsfc);    
-    dg::blas1::pointwiseDot( vol3d, fc, dsfc);
-    cusp::multiply( f2cT, dsfc, dsf);
-
+    assert( &f != &dsf);    
+    dg::blas1::pointwiseDot( vol3d, f, dsf);
     dg::blas1::pointwiseDivide( dsf, f_.hz(), dsf);
-    f_.einsPlusT( dsf, tempP);
-    f_.einsMinusT( dsf, tempM);
-    dg::blas1::axpby( 1., tempM, -1., tempP);        
-
-    cusp::multiply( c2fT, tempP, dsfc);
-    dg::blas1::pointwiseDot( inv3d, dsfc, dsfc); 
-    
-    //non adjoint direct 
-//     assert( &fc != &dsfc);     
-//     cusp::multiply( c2f, fc, f);
-//     dg::blas1::pointwiseDot( f, invB, dsf);
-//     f_.einsPlus( dsf, tempP);
-//     f_.einsMinus( dsf, tempM);
-//     dg::blas1::axpby( 1., tempP, -1., tempM);
-//     dg::blas1::pointwiseDivide( tempM, f_.hz(), dsf);        
-//     dg::blas1::pointwiseDivide( dsf, invB, dsf);
-//     cusp::multiply( f2c, dsf, dsfc);  
-//       dg::blas1::pointwiseDot( inv3d, tempP,tempP); //make it symmetric
-        //stegmeir weights
-//         dg::blas1::pointwiseDot( f_.hz()h, f, dsf);
-//         dg::blas1::pointwiseDot( invB, dsf, dsf);
-//         dg::blas1::pointwiseDot( w2d, dsf, dsf);
-//         dg::blas1::pointwiseDivide( dsf, f_.hz(), dsf);
-//         einsPlusT( dsf, tempP);
-//         einsMinusT( dsf, tempM);
-//         dg::blas1::axpby( 1., tempM, -1., tempP);        
-//         dg::blas1::pointwiseDot( inv3d, tempP, dsf);
-//         dg::blas1::scal(dsf,0.5);
-//         dg::blas1::pointwiseDivide( tempP,f_.hz()h,  dsf);
-//         dg::blas1::pointwiseDivide(  dsf,invB, dsf);
-//         dg::blas1::pointwiseDivide( dsf,w2d,  dsf);  
+    f_(einsPlusT, dsf, tempP);
+    f_(einsMinusT, dsf, tempM);
+    dg::blas1::axpby( 1., tempM, -1., tempP, dsf);        
+    dg::blas1::pointwiseDot( inv3d, dsf, dsf); 
 }
 
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::centeredTD( const container& f, container& dsf)
+void DS<G,I,M,container>::centeredAdjDir( const container& f, container& dsf)
 {       
 //     Direct discretisation
     assert( &f != &dsf);    
     dg::blas1::pointwiseDot( f, invB, dsf);
-    f_.einsPlus( dsf, tempP);
-    f_.einsMinus( dsf, tempM);
+    f_(einsPlus, dsf, tempP);
+    f_(einsMinus, dsf, tempM);
     dg::blas1::axpby( 1., tempP, -1., tempM);
     dg::blas1::pointwiseDivide( tempM, f_.hz(), dsf);        
     dg::blas1::pointwiseDivide( dsf, invB, dsf);
 }
 
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::forward( const container& fc, container& dsfc)
+void DS<G,I,M,container>::forward( const container& f, container& dsf)
 {
     //direct
-    assert( &fc != &dsfc);
-    cusp::multiply( c2f, fc, f);
-    f_.einsPlus( f, tempP);
+    assert( &f != &dsf);
+    f_(einsPlus, f, tempP);
     dg::blas1::axpby( 1., tempP, -1., f, tempP);
     dg::blas1::pointwiseDivide( tempP, f_.hp(), dsf);
-    //adjoint discretisation
-//     assert( &f != &dsf);    
-//     dg::blas1::pointwiseDot( vol3d, f, dsf);
-//     dg::blas1::pointwiseDivide( dsf, f_.hm(), dsf);
-//     dg::blas1::pointwiseDivide( dsf, invB, dsf);
-//     einsMinusT( dsf, tempP);
-//     dg::blas1::axpby( 1., tempP,-1.,dsf,dsf);
-//     dg::blas1::pointwiseDot( inv3d, dsf, dsf);
-//     dg::blas1::pointwiseDot( dsf, invB, dsf);
-    cusp::multiply( f2c, dsf, dsfc);
 }
 
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::forwardT( const container& fc, container& dsfc)
+void DS<G,I,M,container>::forwardAdj( const container& f, container& dsf)
 {    
     //adjoint discretisation
-    assert( &fc != &dsfc);
-    dg::blas1::pointwiseDot( vol3d, fc, dsfc);
-    cusp::multiply( f2cT, dsfc, dsf);
+    assert( &f != &dsf);
+    dg::blas1::pointwiseDot( vol3d, f, dsf);
     dg::blas1::pointwiseDivide( dsf, f_.hp(), dsf);
-    f_.einsPlusT( dsf, tempP);
+    f_(einsPlusT, dsf, tempP);
     dg::blas1::axpby( -1., tempP, 1., dsf, dsf);
-
-    cusp::multiply( c2fT, dsf, dsfc);
-    dg::blas1::pointwiseDot( inv3d, dsfc, dsfc); 
+    dg::blas1::pointwiseDot( inv3d, dsf, dsf); 
 }
 
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::forwardTD( const container& fc, container& dsfc)
+void DS<G,I,M,container>::forwardAdjDir( const container& f, container& dsf)
 {
     //direct discretisation
-    assert( &fc != &dsfc);
-    cusp::multiply( c2f, fc, f);
-
+    assert( &f != &dsf);
     dg::blas1::pointwiseDot( f, invB, dsf);
-    f_.einsMinus( dsf, tempP);
+    f_(einsMinus, dsf, tempP);
     dg::blas1::axpby( -1., tempP, 1., dsf, dsf);
     dg::blas1::pointwiseDivide( dsf, f_.hm(), dsf);        
     dg::blas1::pointwiseDivide( dsf, invB, dsf);
-
-    cusp::multiply( f2c, dsf, dsfc);
-
-
 }
+
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::backward( const container& fc, container& dsfc)
+void DS<G,I,M,container>::backward( const container& f, container& dsf)
 {
     //direct
-    assert( &fc != &dsfc);
-    cusp::multiply( c2f, fc, f);
-    f_.einsMinus( f, tempM);
+    assert( &f != &dsf);
+    f_(einsMinus, f, tempM);
     dg::blas1::axpby( 1., tempM, -1., f, tempM);
     dg::blas1::pointwiseDivide( tempM, f_.hm(), dsf);
-    
-    //adjoint discretisation
-//     assert( &f != &dsf);    
-//     dg::blas1::pointwiseDot( vol3d, f, dsf);
-//     dg::blas1::pointwiseDivide( dsf, f_.hp(), dsf);
-//     dg::blas1::pointwiseDivide( dsf, invB, dsf);
-//     einsPlusT( dsf, tempM);
-//     dg::blas1::axpby( 1., tempM, -1.,dsf,dsf);
-//     dg::blas1::pointwiseDot( inv3d,dsf, dsf);
-//     dg::blas1::pointwiseDot( dsf, invB, dsf);
-    cusp::multiply( f2c, dsf, dsfc);
 }
+
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::backwardT( const container& fc, container& dsfc)
+void DS<G,I,M,container>::backwardAdj( const container& f, container& dsf)
 {    
     //adjoint discretisation
-    assert( &fc != &dsfc);
-    dg::blas1::pointwiseDot( vol3d, fc, dsfc);
-    cusp::multiply( f2cT, dsfc, dsf);
-
+    assert( &f != &dsf);
+    dg::blas1::pointwiseDot( vol3d, f, dsf);
     dg::blas1::pointwiseDivide( dsf, f_.hm(), dsf);
-    f_.einsMinusT( dsf, tempM);
+    f_(einsMinusT, dsf, tempM);
     dg::blas1::axpby( -1., tempM, 1., dsf, dsf);
-
-    cusp::multiply( c2fT, dsf, dsfc);
-    dg::blas1::pointwiseDot( inv3d, dsfc, dsfc); 
+    dg::blas1::pointwiseDot( inv3d, dsf, dsf); 
 }
 
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::backwardTD( const container& fc, container& dsfc)
+void DS<G,I,M,container>::backwardAdjDir( const container& f, container& dsf)
 {
     //direct
-    assert( &fc != &dsfc);
-    cusp::multiply( c2f, fc, f);
+    assert( &f != &dsf);
     dg::blas1::pointwiseDot( f, invB, dsf);
-    f_.einsPlus( dsf, tempM);
+    f_(einsPlus, dsf, tempM);
     dg::blas1::axpby( -1., tempM, 1., dsf, dsf);
     dg::blas1::pointwiseDivide( dsf, f_.hp(), dsf);        
     dg::blas1::pointwiseDivide( dsf, invB, dsf);
-
-    cusp::multiply( f2c, dsf, dsfc);
 }
 
 template<class G, class I, class M, class container>
@@ -459,52 +351,33 @@ void DS<G,I,M,container>::symv( const container& f, container& dsTdsf)
 {
     if(dir_ == dg::centered)
     {
-        centered( f, tempPc);
-        centeredT( tempPc, dsTdsf);
+        centered( f, tempP);
+        centeredAdj( tempP, dsTdsf);
     }
     else 
     {
-        forward( f, tempPc);
-        forwardT( tempPc, dsTdsf);
-        backward( f, tempMc);
-        backwardT( tempMc, temp0c);
-        dg::blas1::axpby(0.5,temp0c,0.5,dsTdsf,dsTdsf);
+        forward( f, tempP);
+        forwardAdj( tempP, dsTdsf);
+        backward( f, tempM);
+        backwardAdj( tempM, temp0);
+        dg::blas1::axpby(0.5,temp0,0.5,dsTdsf,dsTdsf);
     }
 //     add jump term 
 
     if(apply_jumpX_)
     {
-        dg::blas2::symv( jumpX, f, temp0c);
-        dg::blas1::pointwiseDivide( temp0c, volume_, temp0c);
+        dg::blas2::symv( jumpX, f, temp0);
+        dg::blas1::pointwiseDivide( temp0, volume_, temp0);
         dg::blas1::axpby( -1., temp0c, 1., dsTdsf, dsTdsf);
     }
-    dg::blas2::symv( jumpY, f, temp0c);
-    //dg::geo::divideVolume( temp0c, gridc);
-    dg::blas1::pointwiseDivide( temp0c, volume_, temp0c);
-    //dg::blas1::pointwiseDivide( temp0, R_, temp0);
-    dg::blas1::axpby( -1., temp0c, 1., dsTdsf, dsTdsf);
+    dg::blas2::symv( jumpY, f, temp0);
+    dg::blas1::pointwiseDivide( temp0, volume_, temp0);
+    dg::blas1::axpby( -1., temp0, 1., dsTdsf, dsTdsf);
     if( no_ == not_normed)
     {
         dg::blas1::pointwiseDot( vol3d, dsTdsf, dsTdsf); //make it symmetric
     }
 }
-
-//template< class F, class M, class container >
-//void DS<F,M,container>::dss( const container& f, container& dssf)
-//{
-//    assert( &f != &dssf);
-//    f_.einsPlus(  f, tempP);
-//    f_.einsMinus( f, tempM);
-//    dg::blas1::pointwiseDivide( tempP, f_.hp(), tempP);
-//    dg::blas1::pointwiseDivide( tempP, f_.hz(), tempP);
-//    dg::blas1::pointwiseDivide( f, f_.hp(), temp0);
-//    dg::blas1::pointwiseDivide( temp0, f_.hm(), temp0);
-//    dg::blas1::pointwiseDivide( tempM, f_.hm(), tempM);
-//    dg::blas1::pointwiseDivide( tempM, f_.hz(), tempM);
-//    dg::blas1::axpby(  2., tempP, +2., tempM); //fp+fm
-//    dg::blas1::axpby( -2., temp0, +1., tempM, dssf); 
-//}
-
 
 //enables the use of the dg::blas2::symv function 
 template< class G, class I, class M, class V>
