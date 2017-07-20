@@ -67,6 +67,24 @@ int main(int argc, char** argv)
     double solution3 = solution2*solution;
     if(rank==0)std::cout << "Correct square norm is    "<<solution3<<std::endl;
     if(rank==0)std::cout << "Relative 3d error is      "<<(norm3d-solution3)/solution3<<"\n";
+
+    if(rank==0)
+    {
+        int globalIdx, localIdx, PID, result;
+        std::cout << "Type in global vector index: \n";
+        std::cin >> globalIdx;
+        if( g2d.global2localIdx( globalIdx, localIdx, PID) )
+            std::cout <<"2d Local Index "<<localIdx<<" with rank "<<PID<<"\n";
+        g2d.local2globalIdx( localIdx, PID, result);
+        if( globalIdx !=  result)
+            std::cerr <<"Inversion failed "<<result<<"\n";
+        if( g3d.global2localIdx( globalIdx, localIdx, PID) )
+            std::cout <<"3d Local Index "<<localIdx<<" with rank "<<PID<<"\n";
+        g3d.local2globalIdx( localIdx, PID, result);
+        if( globalIdx != result)
+            std::cerr <<"Inversion failed "<<result<<"\n";
+    }
+
     MPI_Finalize();
     return 0;
 } 

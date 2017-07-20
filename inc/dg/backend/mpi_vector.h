@@ -18,6 +18,7 @@ namespace dg
  communicate (e.g. boundary points in matrix-vector multiplications) and use
  the existing blas functions for the local computations. 
  * (At the blas level 1 level communication is needed for scalar products)
+ * @note Don't start looking for ghostcells, there aren't any
  * @tparam container underlying local container class
  */
 template<class container>
@@ -217,9 +218,9 @@ struct NearestNeighborComm
     *
     * @return new container
     */
-    const Vector& collect( const Vector& input)const;
+    const Vector& global_gather( const Vector& input)const;
     /**
-    * @brief Size of the output of collect
+    * @brief local size of the output of global_gather
     *
     * @return size
     */
@@ -257,7 +258,7 @@ struct NearestNeighborComm
     int direction_;
     bool silent_;
     Index gather_map1, gather_map2, scatter_map1, scatter_map2;
-    //dynamically allocate buffer so that collect can be const
+    //dynamically allocate buffer so that global_gather can be const
     Buffer<Vector> values, buffer1, buffer2, rb1, rb2; 
 
     void sendrecv( Vector&, Vector&, Vector& , Vector&)const;
@@ -359,7 +360,7 @@ int NearestNeighborComm<I,V>::buffer_size() const
 }
 
 template<class I, class V>
-const V& NearestNeighborComm<I,V>::collect( const V& input) const
+const V& NearestNeighborComm<I,V>::global_gather( const V& input) const
 {
     if( silent_) return *values.data();
         //int rank;

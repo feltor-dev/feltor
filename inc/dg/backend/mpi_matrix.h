@@ -26,11 +26,10 @@ namespace dg
  doSymv(m,x,y) needs to be callable on the container class of the MPI_Vector
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points. 
  doSymv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
-* @tparam Collective models aCommunicator The Communication class needs to gather values across processes. 
-container collect( const container& input);
+* @tparam Collective models aCommunicator The Communication class needs to gather values across processes. Only the global_gather and size
+member functions are needed. 
 Gather points from other processes that are necessary for the outer computations.
-int size(); 
-should give the size of the vector that collect returns. If size()==0 the collect() function won't be called and
+ If size()==0 the global_gather() function won't be called and
 only the inner matrix is applied.
 */
 template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
@@ -86,7 +85,7 @@ struct RowColDistMat
     * @brief Matrix Vector product
     *
     * First the inner elements are computed with a call to doSymv then 
-    * the collect function of the communication object is called. 
+    * the global_gather function of the communication object is called. 
     * Finally the outer elements are added with a call to doSymv for the outer matrix
     * @tparam container container class of the vector elements
     * @param x input
@@ -119,7 +118,7 @@ struct RowColDistMat
         //if(rank==0)std::cout << "Inner points took "<<t.diff()<<"s\n";
         //2. communicate outer points
         //t.tic();
-        const container& temp = c_.collect( x.data());
+        const container& temp = c_.global_gather( x.data());
         //t.toc();
         //if(rank==0)std::cout << "Collect      took "<<t.diff()<<"s\n";
         //3. compute and add outer points
@@ -147,11 +146,11 @@ struct RowColDistMat
 * @tparam LocalMatrix The class of the matrix for local computations. 
  symv needs to be callable on the container class of the MPI_Vector
 * @tparam Collective models aCommunicator The Communication class needs to scatter and gather values across processes. 
-container collect( const container& input);
+container global_gather( const container& input);
 Gather all points (including the ones that the process already has) necessary for the local matrix-vector
 product into one vector, such that the local matrix can be applied.
 int size(); 
-should give the size of the vector that collect returns. If size()==0 the collect() function won't be called and
+should give the size of the vector that global_gather returns. If size()==0 the global_gather() function won't be called and
 only the inner matrix is applied.
 */
 template<class LocalMatrix, class Collective >
@@ -215,9 +214,9 @@ struct RowDistMat
             return;
 
         }
-        container temp = c_.collect( x.data());
+        container temp = c_.global_gather( x.data());
         //t.toc();
-        //if(rank==0)std::cout << "collect took "<<t.diff()<<"s\n";
+        //if(rank==0)std::cout << "global_gather took "<<t.diff()<<"s\n";
         //t.tic();
         dg::blas2::detail::doSymv( m_, temp, y.data(), 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
@@ -241,12 +240,12 @@ struct RowDistMat
 * This class assumes that the matrix and vector elements are distributed columnwise among mpi processes.
 * @tparam LocalMatrix The class of the matrix for local computations. 
  symv needs to be callable on the container class of the MPI_Vector
-* @tparam Collective models aCommunicator The Communication class needs to scatter and gather values across processes. 
-void send_and_reduce( const container& input, container& output);
+* @tparam Collective models aCommunicator 
+void global_scatter_reduce( const container& input, container& output);
 Sends the results of the local computations to the processes they belong to. 
 After that the results of the same lines need to be reduced.
 int size(); 
-should give the size of the vector that send_and_reduce needs. If size()==0 the send_and_reduce() function won't be called and
+should give the size of the vector that global_scatter_reduce needs. If size()==0 the global_scatter_reduce() function won't be called and
 only the inner matrix is applied.
 */
 template<class LocalMatrix, class Collective >
@@ -300,7 +299,7 @@ struct ColDistMat
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
-        c_.send_and_reduce( temp, y.data());
+        c_.global_scatter_reduce( temp, y.data());
     }
     private:
     LocalMatrix m_;
