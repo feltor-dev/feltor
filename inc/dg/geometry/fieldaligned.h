@@ -50,6 +50,109 @@ struct DefaultField
 };
 
 /**
+ * @brief Integrates the equations for a field line 
+ * @tparam MagneticField models aTokamakMagneticField
+ * @ingroup misc
+ */ 
+template<class MagneticField>
+struct Field
+{
+    Field( const MagneticField& c):c_(c), invB_(c), R_0_(c.R_0) { }
+    /**
+     * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
+     \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
+     \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
+     */ 
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double ipol = c_.ipol(y[0],y[1]);
+        yp[2] =  y[0]*y[0]/invB_(y[0],y[1])/ipol/R_0_;       //ds/dphi =  R^2 B/I/R_0_hat
+        yp[0] =  y[0]*c_.psipZ(y[0],y[1])/ipol;              //dR/dphi =  R/I Psip_Z
+        yp[1] = -y[0]*c_.psipR(y[0],y[1])/ipol ;             //dZ/dphi = -R/I Psip_R
+
+    }
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) ) 
+        {
+            return false;
+        }
+        //if new integrated point outside domain
+        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        {
+            return false;
+        }
+        return true;
+    }
+    
+    private:
+    MagneticField c_;
+    InvB invB_;
+    double R_0_;
+};
+
+template< class GeometryPerp>
+struct DSField
+{
+    template<class MagneticField>
+    DSField( const MagneticField& c, const GeometryPerp& g)
+    {
+        InvB<MagneticField> invB(c);
+        FieldR<MagneticField> fieldR(c);
+        FieldZ<MagneticField> fieldZ(c);
+        thrust::host_vector<double> b_zeta, b_eta;
+        dg::geo::pushForwardPerp( fieldR, fieldZ, b_zeta, b_eta, g);
+        FieldP<MagneticField> fieldP(c);
+        thrust::host_vector<double> b_phi = dg::pullback( fieldP, g);
+        Bmodule<MagneticField> bmod( c);
+        thrust::host_vector<double> b_mod = dg::pullback( bmod, g);
+        dg::blas1::pointwiseDivide( b_zeta, b_phi, b_zeta);
+        dg::blas1::pointwiseDivide( b_eta,  b_phi, b_eta);
+        dg::blas1::pointwiseDivide( b_mod,  b_phi, b_mod);
+        dzetadphi_ = dg::forward_transform( b_zeta, g );
+        detadphi_  = dg::forward_transform( b_eta, g );
+        dsdphi_    = dg::forward_transform( b_mod, g );
+    }
+
+    void operator()(thrust::host_vector<double> y, thrust::host_vector<double>& yp)
+    {
+        g_.shift_topologic( y[0], y[1], y[0], y[1]); //shift points onto domain
+        if( !g_.contains( y[0], y[1])) yp[0] = yp[1]= yp[2] = 0;
+        else
+        {
+            //else interpolate
+            yp[0] = interpolate( y[0], y[1], dzetadphi_, g_);
+            yp[1] = interpolate( y[0], y[1], detadphi_, g_);
+            yp[2] = interpolate( y[0], y[1], dsphi_, g_);
+        }
+    }
+
+    double error( const dg::HVec& x0, const dg::HVec& x1)
+    {
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+    }
+    bool monitor( const dg::HVec& end){ 
+        if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) ) 
+        {
+            return false;
+        }
+        //if new integrated point outside domain
+        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        {
+            return false;
+        }
+        return true;
+    }
+    private:
+    thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
+    GeometryPerp g_;
+
+};
+
+/**
  * @brief Default Limiter means there is a limiter everywhere
  */
 struct DefaultLimiter
@@ -228,8 +331,8 @@ struct FieldAligned
         by the bcz variable from the grid and can be changed by the set_boundaries function. 
         If there is no limiter the boundary condition is periodic.
     */
-    template <class Field, class Geometry, class Limiter>
-    FieldAligned(Field field, Geometry grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
+    template <class MagneticField, class Geometry, class Limiter>
+    FieldAligned(MagnetricField field, Geometry grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -359,7 +462,7 @@ struct FieldAligned
 
 template<class I, class container>
 template <class MagneticField, class Geometry, class Limiter>
-FieldAligned<I, container>::FieldAligned(MagneticField mag, Geometry grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi, bool integrateAll):
+FieldAligned<I, container>::FieldAligned(MagneticField mag, Geometry grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         Nz_(grid.Nz()), bcz_(grid.bcz())
 {
@@ -384,7 +487,7 @@ FieldAligned<I, container>::FieldAligned(MagneticField mag, Geometry grid, unsig
     //construct field on high polynomial grid, then integrate it
     typename Geometry::perpendicular_grid g2dField = g2dCoarse;
     g2dField.set( 11, g2dField.Nx(), g2dField.Ny());
-    dg::geo::DSField<typename Geometry::perpendicular_grid> field( mag, g2dField);
+    dg::DSField<typename Geometry::perpendicular_grid> field( mag, g2dField);
 #ifdef _OPENMP
 #pragma omp parallel for shared(field)
 #endif //_OPENMP

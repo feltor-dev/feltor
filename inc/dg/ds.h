@@ -25,12 +25,11 @@ namespace dg{
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
 arbitrary coordinates
 * @ingroup fieldaligned
-* @tparam Geometry The grid geometry
 * @tparam IMatrix The type of the interpolation matrix
 * @tparam Matrix The matrix class of the jump matrix
 * @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
 */
-template< class Geometry, class IMatrix, class Matrix, class container >
+template< class IMatrix, class Matrix, class container >
 struct DS
 {
     /**
@@ -43,8 +42,8 @@ struct DS
     * @param dir the direction affects both the operator() and the symv function
     @param jumpX determines if a jump matrix is added in X-direction
     */
-    template<class InvB, class Geometry>
-    DS(const FA& field, Geometry, InvB invB, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool jumpX = true);
+    template<class MagneticField, class Geometry>
+    DS(const MagneticField& field, Geometry, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool jumpX = true, unsigned mx=1, unsigned my=1);
 
     /**
     * @brief Apply the forward derivative on a 3d vector
@@ -215,12 +214,12 @@ struct DS
 ///@cond
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
-template<class G, class I, class M, class container>
-template <class MagneticField>
-DS<G, I, M,container>::DS(MagneticField mag, Geometry grid, dg::norm no, dg::direction dir, bool jumpX):
+template<class I, class M, class container>
+template <class MagneticField, class Geometry>
+DS< I, M,container>::DS(MagneticField mag, Geometry grid, dg::norm no, dg::direction dir, bool jumpX, unsigned mx, unsigned my):
         jumpX( dg::create::jumpX( grid)),
         jumpY( dg::create::jumpY( grid)),
-        tempP( dg::evaluate( dg::zero, field.grid())), temp0( tempP), tempM( tempP), 
+        tempP( dg::evaluate( dg::zero, grid())), temp0( tempP), tempM( tempP), 
         f(tempP), dsf(tempP),
         vol3d( dg::create::volume( grid)), inv3d( dg::create::inv_volume( grid)),
         invB(dg::pullback(dg::geo::InvB<MagneticField>(mag),grid)), 
@@ -230,8 +229,8 @@ DS<G, I, M,container>::DS(MagneticField mag, Geometry grid, dg::norm no, dg::dir
     dg::geo::multiplyVolume( volume_, grid);
 }
 
-template<class G, class I, class M, class container>
-inline void DS<G,I,M,container>::operator()( const container& f, container& dsf) { 
+template<class I, class M, class container>
+inline void DS<I,M,container>::operator()( const container& f, container& dsf) { 
     if( dir_ == dg::centered)
         return centered( f, dsf);
     else if( dir_ == dg::forward)
@@ -241,8 +240,8 @@ inline void DS<G,I,M,container>::operator()( const container& f, container& dsf)
 }
 
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::centered( const container& f, container& dsf)
+template<class I, class M, class container>
+void DS<I,M,container>::centered( const container& f, container& dsf)
 {
     //direct discretisation
     assert( &f != &dsf);
@@ -252,8 +251,8 @@ void DS<G,I,M,container>::centered( const container& f, container& dsf)
     dg::blas1::pointwiseDivide( tempM, f_.hz(), dsf);
 }
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::centeredAdj( const container& f, container& dsf)
+template<class I, class M, class container>
+void DS<I,M,container>::centeredAdj( const container& f, container& dsf)
 {               
     //adjoint discretisation
     assert( &f != &dsf);    
@@ -265,8 +264,8 @@ void DS<G,I,M,container>::centeredAdj( const container& f, container& dsf)
     dg::blas1::pointwiseDot( inv3d, dsf, dsf); 
 }
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::centeredAdjDir( const container& f, container& dsf)
+template<class I, class M, class container>
+void DS<I,M,container>::centeredAdjDir( const container& f, container& dsf)
 {       
 //     Direct discretisation
     assert( &f != &dsf);    
@@ -278,8 +277,8 @@ void DS<G,I,M,container>::centeredAdjDir( const container& f, container& dsf)
     dg::blas1::pointwiseDivide( dsf, invB, dsf);
 }
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::forward( const container& f, container& dsf)
+template<class I, class M, class container>
+void DS<I,M,container>::forward( const container& f, container& dsf)
 {
     //direct
     assert( &f != &dsf);
@@ -288,8 +287,8 @@ void DS<G,I,M,container>::forward( const container& f, container& dsf)
     dg::blas1::pointwiseDivide( tempP, f_.hp(), dsf);
 }
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::forwardAdj( const container& f, container& dsf)
+template<class I, class M, class container>
+void DS<I,M,container>::forwardAdj( const container& f, container& dsf)
 {    
     //adjoint discretisation
     assert( &f != &dsf);
@@ -300,8 +299,8 @@ void DS<G,I,M,container>::forwardAdj( const container& f, container& dsf)
     dg::blas1::pointwiseDot( inv3d, dsf, dsf); 
 }
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::forwardAdjDir( const container& f, container& dsf)
+template<class I, class M, class container>
+void DS<I,M,container>::forwardAdjDir( const container& f, container& dsf)
 {
     //direct discretisation
     assert( &f != &dsf);
@@ -312,8 +311,8 @@ void DS<G,I,M,container>::forwardAdjDir( const container& f, container& dsf)
     dg::blas1::pointwiseDivide( dsf, invB, dsf);
 }
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::backward( const container& f, container& dsf)
+template<class I, class M, class container>
+void DS<I,M,container>::backward( const container& f, container& dsf)
 {
     //direct
     assert( &f != &dsf);
@@ -322,8 +321,8 @@ void DS<G,I,M,container>::backward( const container& f, container& dsf)
     dg::blas1::pointwiseDivide( tempM, f_.hm(), dsf);
 }
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::backwardAdj( const container& f, container& dsf)
+template<class I, class M, class container>
+void DS<I,M,container>::backwardAdj( const container& f, container& dsf)
 {    
     //adjoint discretisation
     assert( &f != &dsf);
@@ -334,8 +333,8 @@ void DS<G,I,M,container>::backwardAdj( const container& f, container& dsf)
     dg::blas1::pointwiseDot( inv3d, dsf, dsf); 
 }
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::backwardAdjDir( const container& f, container& dsf)
+template<class I, class M, class container>
+void DS<I,M,container>::backwardAdjDir( const container& f, container& dsf)
 {
     //direct
     assert( &f != &dsf);
@@ -346,8 +345,8 @@ void DS<G,I,M,container>::backwardAdjDir( const container& f, container& dsf)
     dg::blas1::pointwiseDivide( dsf, invB, dsf);
 }
 
-template<class G, class I, class M, class container>
-void DS<G,I,M,container>::symv( const container& f, container& dsTdsf)
+template<class I, class M, class container>
+void DS<I,M,container>::symv( const container& f, container& dsTdsf)
 {
     if(dir_ == dg::centered)
     {
@@ -380,8 +379,8 @@ void DS<G,I,M,container>::symv( const container& f, container& dsTdsf)
 }
 
 //enables the use of the dg::blas2::symv function 
-template< class G, class I, class M, class V>
-struct MatrixTraits< DS<G,I,M, V> >
+template< class I, class M, class V>
+struct MatrixTraits< DS<I,M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
