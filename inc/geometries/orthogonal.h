@@ -41,14 +41,15 @@ struct OrthogonalGrid3d : public dg::Grid3d
         generator_ = generator;
         construct( n, Nx, Ny);
     }
+
     /**
     * @brief Reconstruct the grid coordinates
     *
     * @copydetails Grid3d::set()
     * @attention the generator must still live when this function is called
     */
-    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny){
-        dg::Grid3d::set( new_n, new_Nx, new_Ny);
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
+        dg::Grid3d::set( new_n, new_Nx, new_Ny, new_Nz);
         construct( new_n, new_Nx, new_Ny);
     }
 
@@ -65,12 +66,12 @@ struct OrthogonalGrid3d : public dg::Grid3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    const OrthogonalGrid3d& global() const{return *this;}
+    aGenerator* const generator() const{return generator_;}
     private:
     void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
         dg::Grid1d gY1d( 0, generator_->height(), n, Ny, dg::PER);
-        dg::Grid1d gX1d( 0., generator_->width(), n, Nx);
+        dg::Grid1d gX1d( 0, generator_->width(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
         *generator_( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
@@ -129,18 +130,17 @@ struct OrthogonalGrid2d : public dg::Grid2d
     typedef dg::OrthogonalTag metric_category;
     /*!@brief Constructor
     
-     * @tparam Generator models aGenerator
      * @param generator must generate an orthogonal grid
      * @param n number of polynomial coefficients
      * @param Nx number of cells in first coordinate
      @param Ny number of cells in second coordinate
      @param bcx boundary condition in first coordinate
      */
-    template< class Generator>
-    OrthogonalGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
-        dg::Grid2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER)
+    OrthogonalGrid2d( aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+        dg::Grid2d( 0, generator->width(), 0., generator->height(), n, Nx, Ny, bcx, dg::PER)
     {
-        OrthogonalGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
+        generator_=generator;
+        OrthogonalGrid3d<container> g( generator_, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
@@ -150,6 +150,7 @@ struct OrthogonalGrid2d : public dg::Grid2d
     OrthogonalGrid2d( const OrthogonalGrid3d<container>& g):
         dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
+        generator_ = g.generator();
         unsigned s = this->size();
         r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
         g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
@@ -159,6 +160,14 @@ struct OrthogonalGrid2d : public dg::Grid2d
         thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
+    }
+    void set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
+    {
+        dg::Grid2d::set( new_n, new_Nx, new_Ny, new_Nz);
+        OrthogonalGrid3d<container> g( generator_, n,Nx,Ny,1,bcx);
+        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
+        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
+        vol2d_=g.perpVol();
     }
 
     const thrust::host_vector<double>& r()const{return r_;}
@@ -172,10 +181,11 @@ struct OrthogonalGrid2d : public dg::Grid2d
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
-    const OrthogonalGrid2d& global() const{return *this;}
+    aGenerator* const generator() const{return generator_;}
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
+    aGenerator* generator_;
 };
 
 ///@}

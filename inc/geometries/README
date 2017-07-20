@@ -15,6 +15,7 @@
     refined_orthogonalX.h
 
 #generators
+    generator.h
     simple_orthogonal.h
     separatrix_orthogonal.h
     ribeiro.h

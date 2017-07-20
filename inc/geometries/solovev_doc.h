@@ -37,46 +37,6 @@
 
 
 /**
-* @brief The generator template model
-
-A generator is there to construct coordinates from some coordinates
-\f$ x,y\f$ to the computational domain \f$\zeta, \eta\f$, which
-is a product space. 
- @attention this is not a real class it's there for documentation only
- @attention parameter names can be different
- @ingroup temp
-*/
-struct aGenerator
-{
-    double width() const; //!<length in \f$ \zeta\f$ 
-    double height() const; //!<length in \f$ \eta\f$
-    bool isOrthogonal() const; //!< true if coordinate system is orthogonal
-    bool isConformal() const; //!< true if coordinate system is conformal
-    /**
-    * @brief Generate grid points and elements of the Jacobian 
-    *
-    * @param zeta1d (input) a list of \f$ N_\zeta\f$ points \f$ 0<\zeta_i<\f$width() 
-    * @param eta1d (input) a list of \f$ N_\eta\f$ points \f$ 0<\eta_j<\f$height() 
-    * @param x (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ x(\zeta_i, \eta_j)\f$ 
-    * @param y (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ y(\zeta_i, \eta_j)\f$ 
-    * @param zetaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial x (\zeta_i, \eta_j)\f$ 
-    * @param zetaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial y (\zeta_i, \eta_j)\f$ 
-    * @param etaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial x (\zeta_i, \eta_j)\f$ 
-    * @param etaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial y (\zeta_i, \eta_j)\f$ 
-    @note the \f$ \zeta\f$ coordinate is contiguous in memory
-    */
-    void operator()( 
-         const thrust::host_vector<double>& zeta1d, 
-         const thrust::host_vector<double>& eta1d, 
-         thrust::host_vector<double>& x, 
-         thrust::host_vector<double>& y, 
-         thrust::host_vector<double>& zetaX, 
-         thrust::host_vector<double>& zetaY, 
-         thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) ;
-};
-
-/**
 * @brief The generatorX  template model
 
 A generator is there to construct coordinates from some coordinates

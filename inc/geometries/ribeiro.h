@@ -10,6 +10,7 @@
 #include "dg/nullstelle.h"
 #include "dg/geometry.h"
 #include "utilities.h"
+#include "generator.h"
 
 
 
@@ -193,7 +194,7 @@ struct FieldFinv
      * @tparam PsiYY models aBinaryOperator 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct Ribeiro
+struct Ribeiro : public aGenerator
 {
     /**
      * @brief Construct a near-conformal grid generator
@@ -243,20 +244,7 @@ struct Ribeiro
      * @return f(x)
      */
     thrust::host_vector<double> fx() const{ return fx_;}
-    /**
-    * @brief Generate grid points and elements of the Jacobian 
-    *
-    * @param zeta1d (input) a list of \f$ N_\zeta\f$ points \f$ 0<\zeta_i<\f$width() 
-    * @param eta1d (input) a list of \f$ N_\eta\f$ points \f$ 0<\eta_j<\f$height() 
-    * @param x (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ x(\zeta_i, \eta_j)\f$ 
-    * @param y (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ y(\zeta_i, \eta_j)\f$ 
-    * @param zetaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial x (\zeta_i, \eta_j)\f$ 
-    * @param zetaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial y (\zeta_i, \eta_j)\f$ 
-    * @param etaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial x (\zeta_i, \eta_j)\f$ 
-    * @param etaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial y (\zeta_i, \eta_j)\f$ 
-    @note the \f$ \zeta\f$ coordinate is contiguous in memory
-     * @note All the resulting vectors are write-only and get properly resized
-     */
+
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 

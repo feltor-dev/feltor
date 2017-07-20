@@ -10,6 +10,7 @@
 #include "dg/nullstelle.h"
 #include "dg/geometry.h"
 #include "ribeiro.h"
+#include "generator.h"
 
 
 namespace dg
@@ -135,7 +136,7 @@ struct Fpsi
  * @tparam IpolY models aBinaryOperator 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Ipol, class IpolX, class IpolY>
-struct FluxGenerator
+struct FluxGenerator : public aGenerator
 {
     /**
      * @brief Construct a symmetry flux grid generator
@@ -194,10 +195,7 @@ struct FluxGenerator
      * @return 2pi 
      */
     double height() const{return 2.*M_PI;}
-    /**
-     * @copydoc aGenerator::operator()(const thrust::host_vector<double>&,const thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&)
-     * @note All the resulting vectors are write-only and get properly resized
-     */
+
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
@@ -265,7 +263,7 @@ struct FluxGenerator
      * @tparam PsiYY models aBinaryOperator 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct RibeiroFluxGenerator
+struct RibeiroFluxGenerator : public aGenerator
 {
     /**
      * @brief Construct a flux aligned grid generator
@@ -311,10 +309,7 @@ struct RibeiroFluxGenerator
      * @return 2pi 
      */
     double height() const{return 2.*M_PI;}
-    /**
-     * @copydoc aGenerator::operator()(const thrust::host_vector<double>&,const thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&,thrust::host_vector<double>&)
-     * @note All the resulting vectors are write-only and get properly resized
-     */
+
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 

@@ -3,6 +3,7 @@
 #include "dg/backend/grid.h"
 #include "dg/blas1.h"
 #include "dg/geometry/geometry_traits.h"
+#include "generator.h"
 
 namespace dg
 {
@@ -26,7 +27,6 @@ struct CurvilinearGrid3d : public dg::Grid3d
 
     /*!@brief Constructor
     
-     * @tparam Generator models aGenerator
      * @param generator must generate an orthogonal grid
      * @param n 
      * @param Nx
@@ -34,11 +34,21 @@ struct CurvilinearGrid3d : public dg::Grid3d
      @param Nz 
      @param bcx
      */
-    template< class Generator>
-    CurvilinearGrid3d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
-        dg::Grid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
+    CurvilinearGrid3d( aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+        dg::Grid3d( 0, generator->width(), 0., generator->height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
-        construct( generator, n, Nx, Ny);
+        generator_ = generator;
+        construct( n, Nx, Ny);
+    }
+    /**
+    * @brief Reconstruct the grid coordinates
+    *
+    * @copydetails Grid3d::set()
+    * @attention the generator must still live when this function is called
+    */
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny,unsigned new_Nz){
+        dg::Grid3d::set( new_n, new_Nx, new_Ny,new_Nz);
+        construct( new_n, new_Nx, new_Ny);
     }
 
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
@@ -54,16 +64,16 @@ struct CurvilinearGrid3d : public dg::Grid3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
+    aGenerator* const generator() const{return generator_;}
     private:
-    template< class Generator>
-    void construct( Generator generator, unsigned n, unsigned Nx, unsigned Ny)
+    void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
-        dg::Grid1d gY1d( 0, generator.height(), n, Ny, dg::PER);
-        dg::Grid1d gX1d( 0., generator.width(), n, Nx);
+        dg::Grid1d gY1d( 0, generator_->height(), n, Ny, dg::PER);
+        dg::Grid1d gX1d( 0., generator_->width(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
-        generator( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
-        init_X_boundaries( 0., generator.width());
+        *generator_( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
+        init_X_boundaries( 0., generator->width());
         lift3d( ); //lift to 3D grid
         construct_metric();
     }
@@ -105,6 +115,7 @@ struct CurvilinearGrid3d : public dg::Grid3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
+    aGenerator* generator_;
 };
 
 /**
@@ -123,9 +134,8 @@ struct CurvilinearGrid2d : public dg::Grid2d
      @param Ny number of cells in second coordinate
      @param bcx boundary condition in first coordinate
      */
-    template< class Generator>
-    CurvilinearGrid2d( Generator generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
-        dg::Grid2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER)
+    CurvilinearGrid2d( aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+        dg::Grid2d( 0, generator->width(), 0., generator->height(), n, Nx, Ny, bcx, dg::PER)
     {
         CurvilinearGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
@@ -137,6 +147,7 @@ struct CurvilinearGrid2d : public dg::Grid2d
     CurvilinearGrid2d( const CurvilinearGrid3d<container>& g):
         dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
+        generator_ = g.generator();
         unsigned s = this->size();
         r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
         g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
@@ -148,6 +159,14 @@ struct CurvilinearGrid2d : public dg::Grid2d
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
 
+    void set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
+    {
+        dg::Grid2d::set( new_n, new_Nx, new_Ny, new_Nz);
+        CurvilinearGrid3d<container> g( generator_, n,Nx,Ny,1,bcx);
+        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
+        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
+        vol2d_=g.perpVol();
+    }
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -159,9 +178,11 @@ struct CurvilinearGrid2d : public dg::Grid2d
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
+    aGenerator* const generator() const{return generator_;}
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
+    aGenerator* generator_;
 };
 
 ///@}

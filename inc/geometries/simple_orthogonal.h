@@ -10,6 +10,7 @@
 #include "dg/nullstelle.h"
 #include "dg/geometry.h"
 #include "utilities.h"
+#include "generator.h"
 
 
 namespace dg
@@ -343,10 +344,7 @@ struct SimpleOrthogonal : public aGenerator
      * @return false
      */
     bool isConformal()  const{return false;}
-    /**
-     * @copydoc aGenerator::operator()()
-     * @note All the resulting vectors are write-only and get properly resized
-     */
+
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 

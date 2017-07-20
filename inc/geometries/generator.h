@@ -29,7 +29,8 @@ struct aGenerator
     * @param zetaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial y (\zeta_i, \eta_j)\f$ 
     * @param etaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial x (\zeta_i, \eta_j)\f$ 
     * @param etaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial y (\zeta_i, \eta_j)\f$ 
-    @note the \f$ \zeta\f$ coordinate is contiguous in memory
+    * @note the \f$ \zeta\f$ coordinate is contiguous in memory
+    * @note All the resulting vectors are write-only and get properly resized
     */
     virtual void operator()( 
          const thrust::host_vector<double>& zeta1d, 

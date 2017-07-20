@@ -10,6 +10,7 @@
 #include "orthogonal.h"
 #include "curvilinear.h"
 #include "adaption.h"
+#include "generator.h"
 
 
 
@@ -206,7 +207,7 @@ void transform(
  * @tparam container models aContainer 
  */
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>
-struct Hector
+struct Hector : public aGenerator
 {
     /**
      * @brief Construct a conformal grid 
