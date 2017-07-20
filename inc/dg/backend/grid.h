@@ -289,6 +289,16 @@ struct Grid2d
     Grid2d local_grid() const {return *this;}
 
     /**
+    * @brief Resize the number of cells relative to the old ones
+    *
+    * With this function you can resize the grid ignorantly of its current size
+    * @param fx new number of cells is fx*Nx()
+    * @param fy new number of cells is fy*Ny()
+    */
+    void resize( double fx, double fy){
+        set(n_, floor(fx*(double)Nx_+0.5), floor(fy*(double)Ny_+0.5));
+    }
+    /**
     * @brief Set the number of polynomials and cells
     *
     * @param new_n new number of %Gaussian nodes
@@ -299,6 +309,7 @@ struct Grid2d
         n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny;
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
         dlt_ = DLT<double>( new_n);
+        assert( n_> 0 && Nx_ > 0  && Ny_ > 0);
     }
 
     /**
@@ -453,6 +464,10 @@ struct Grid3d
         lx_ = (x1_-x0_), ly_ = (y1_-y0_), lz_ = (z1_-z0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
     }
+    ///@copydoc Grid2d::resize()
+    void resize( double fx, double fy){
+        set(n_, floor(fx*(double)Nx_+0.5), floor(fy*(double)Ny_+0.5), Nz());
+    }
     /**
     * @brief Set the number of polynomials and cells
     *
@@ -465,6 +480,7 @@ struct Grid3d
         n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny, Nz_ = new_Nz;
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ =lz_/(double)Nz_;
         dlt_ = DLT<double>( new_n);
+        assert( n_>0); assert( Nx_ > 0  && Ny_ > 0); assert( Nz_ > 0);
     }
 
     /**
