@@ -41,4 +41,7 @@
     adaption.h
 
 #miscellaneous
+    ds.h
+    fieldaligned.h
+    mpi_fieldaligned.h
     average.h
