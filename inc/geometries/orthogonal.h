@@ -65,6 +65,7 @@ struct OrthogonalGrid3d : public dg::Grid3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
+    const OrthogonalGrid3d& global() const{return *this;}
     private:
     void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
@@ -171,6 +172,7 @@ struct OrthogonalGrid2d : public dg::Grid2d
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
+    const OrthogonalGrid2d& global() const{return *this;}
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;

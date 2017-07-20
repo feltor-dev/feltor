@@ -22,11 +22,12 @@ struct OrthogonalMPIGrid2d;
 /**
  * @tparam LocalContainer Vector class that holds metric coefficients
  */
-template<class LocalContainer>
+template<class MPIContainer>
 struct OrthogonalMPIGrid3d : public dg::MPIGrid3d
 {
     typedef dg::OrthogonalTag metric_category; //!< metric tag
     typedef dg::OrthogonalMPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
+    typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
 
     template< class Generator>
     OrthogonalMPIGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
@@ -88,10 +89,11 @@ struct OrthogonalMPIGrid3d : public dg::MPIGrid3d
 /**
  * @tparam LocalContainer Vector class that holds metric coefficients
  */
-template<class LocalContainer>
+template<class MPIContainer>
 struct OrthogonalMPIGrid2d : public dg::MPIGrid2d
 {
     typedef dg::OrthogonalTag metric_category; 
+    typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
 
     template< class Generator>
     OrthogonalMPIGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 

@@ -36,13 +36,11 @@ struct CylindricalGrid3d : public dg::Grid3d
 
     /**
     * @brief Return the grid of the R-Z planes
-    *
     * @return a Cartesian 2d grid of the R-Z plane
     */
     perpendicular_grid perp_grid() const { return dg::CartesianGrid2d( x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
     /**
      * @brief The volume element R
-     *
      * @return the volume element R
      */
     const container& vol()const {return R_;}

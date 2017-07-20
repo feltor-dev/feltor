@@ -388,6 +388,11 @@ struct Grid2d
         if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true; 
         return false;
     }
+    /**
+    * @brief This function corresponds to MPIGrid2d::global()
+    * @return *this
+    */
+    virtual const Grid2d& global()const{return *this;}
   protected:
     virtual void init_X_boundaries( double x0, double x1)
     {
@@ -695,6 +700,11 @@ struct Grid3d
             return true; 
         return false;
     }
+    /**
+    * @brief This function corresponds to MPIGrid3d::global()
+    * @return *this
+    */
+    virtual const Grid3d& global()const{return *this;}
   protected:
     virtual void init_X_boundaries( double x0, double x1)
     {

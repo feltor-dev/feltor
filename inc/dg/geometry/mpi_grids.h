@@ -63,11 +63,12 @@ struct CartesianMPIGrid3d : public dg::MPIGrid3d
  * @brief MPI version of Cylindrical grid
  *
  * @ingroup basicgrids
- * @tparam container The MPI Vector container
+ * @tparam MPIContainer The MPI Vector container
  */
-template<class container>
+template<class MPIContainer>
 struct CylindricalMPIGrid3d : public MPIGrid3d
 {
+    typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
     typedef OrthonormalCylindricalTag metric_category; 
     typedef dg::CartesianMPIGrid2d perpendicular_grid;
 
@@ -95,7 +96,7 @@ struct CylindricalMPIGrid3d : public MPIGrid3d
         R_( dg::evaluate( dg::cooX3d, *this))
     {}
 
-    const container& vol() const { return R_;}
+    const MPIContainer& vol() const { return R_;}
     ///@copydoc CylindricalGrid3d::perp_grid()
     perpendicular_grid perp_grid() const { 
         MPI_Comm planeComm;
@@ -108,7 +109,7 @@ struct CylindricalMPIGrid3d : public MPIGrid3d
         R_=dg::evaluate(dg::cooX3d, *this);
     }
     private:
-    container R_;
+    MPIContainer R_;
 };
 ///@}
 
