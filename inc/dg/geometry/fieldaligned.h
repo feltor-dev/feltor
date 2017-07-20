@@ -11,6 +11,7 @@
 #include "../functors.h"
 #include "../nullstelle.h"
 #include "../runge_kutta.h"
+#include "../../geometries/magnetic_field.h"
 
 namespace dg{
 
@@ -357,8 +358,8 @@ struct FieldAligned
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class I, class container>
-template <class Field, class Geometry, class Limiter>
-FieldAligned<I, container>::FieldAligned(Field field, Geometry grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
+template <class MagneticField, class Geometry, class Limiter>
+FieldAligned<I, container>::FieldAligned(MagneticField mag, Geometry grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi, bool integrateAll):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         Nz_(grid.Nz()), bcz_(grid.bcz())
 {
@@ -370,17 +371,20 @@ FieldAligned<I, container>::FieldAligned(Field field, Geometry grid, unsigned mx
     right_ = left_ = dg::evaluate( zero, g2dCoarse);
     ghostM.resize( perp_size_); ghostP.resize( perp_size_);
     //Set starting points
-    typename Geometry::perpendicular_grid g2dFine = g2dCoarse.multiply( mX, mY);
+    typename Geometry::perpendicular_grid g2dFine = g2dCoarse.resize( (double)mX, (double)mY);
     
     std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::cooX2d, g2dFine)); // x
     y[1] = dg::evaluate( dg::cooY2d, g2dFine); //y
     y[2] = dg::evaluate( dg::zero, g2dFine);
-    //integrate field lines for all points
     std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp); 
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     dg::Timer t;
     t.tic();
+    //construct field on high polynomial grid, then integrate it
+    typename Geometry::perpendicular_grid g2dField = g2dCoarse;
+    g2dField.set( 11, g2dField.Nx(), g2dField.Ny());
+    dg::geo::DSField<typename Geometry::perpendicular_grid> field( mag, g2dField);
 #ifdef _OPENMP
 #pragma omp parallel for shared(field)
 #endif //_OPENMP
