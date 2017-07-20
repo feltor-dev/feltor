@@ -29,8 +29,7 @@ struct ConformalMPIGrid3d : public dg::MPIGrid3d
     typedef dg::ConformalMPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
 
-    template< class Generator>
-    ConformalMPIGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
+    ConformalMPIGrid3d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
         dg::MPIGrid3d( 0, generator->width(), 0., generator->height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
         g( generator, n,Nx, Ny, local().Nz(), bcx)
     {
@@ -58,7 +57,7 @@ struct ConformalMPIGrid3d : public dg::MPIGrid3d
     const MPIContainer& vol()const{return vol_;}
     const MPIContainer& perpVol()const{return vol2d_;}
     const dg::ConformalGrid3d<LocalContainer>& global() const {return g;}
-    aGenerator* const generator() const{return g.generator();}
+    geo::aGenerator* const generator() const{return g.generator();}
     private:
     void divide_and_conquer(){
         r_=dg::evaluate( dg::one, *this), z_=r_, xr_=r_, xz_=r_, yr_=r_, yz_=r_;
@@ -104,7 +103,7 @@ struct ConformalMPIGrid2d : public dg::MPIGrid2d
     typedef dg::ConformalCylindricalTag metric_category; 
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
 
-    ConformalMPIGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
+    ConformalMPIGrid2d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
         dg::MPIGrid2d( 0, 1, 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), 
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_),
@@ -153,7 +152,7 @@ struct ConformalMPIGrid2d : public dg::MPIGrid2d
     const MPIContainer& vol()const{return vol2d_;}
     const MPIContainer& perpVol()const{return vol2d_;}
     const dg::ConformalGrid2d<LocalContainer>& global()const{return g_;}
-    aGenerator* const generator() const{return g.generator();}
+    geo::aGenerator* const generator() const{return g.generator();}
     private:
     MPI_Comm get_reduced_comm( MPI_Comm src)
     {

@@ -3,7 +3,7 @@
 #include "dg/backend/grid.h"
 #include "dg/blas1.h"
 #include "dg/geometry/geometry_traits.h"
-#include "dg/generator.h"
+#include "generator.h"
 
 namespace dg
 {
@@ -34,7 +34,7 @@ struct OrthogonalGrid3d : public dg::Grid3d
      @param Nz 
      @param bcx
      */
-    OrthogonalGrid3d( aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+    OrthogonalGrid3d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
         dg::Grid3d( 0, generator->width(), 0., generator->height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         assert( generator->isOrthogonal());
@@ -66,7 +66,7 @@ struct OrthogonalGrid3d : public dg::Grid3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    aGenerator* const generator() const{return generator_;}
+    geo::aGenerator* const generator() const{return generator_;}
     private:
     void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
@@ -74,7 +74,7 @@ struct OrthogonalGrid3d : public dg::Grid3d
         dg::Grid1d gX1d( 0, generator_->width(), n, Nx);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
-        *generator_( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
+        (*generator_)( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
         init_X_boundaries( 0., generator->width());
         lift3d( ); //lift to 3D grid
         construct_metric();
@@ -117,7 +117,7 @@ struct OrthogonalGrid3d : public dg::Grid3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    aGenerator* generator_;
+    geo::aGenerator* generator_;
 };
 
 /**
@@ -136,7 +136,7 @@ struct OrthogonalGrid2d : public dg::Grid2d
      @param Ny number of cells in second coordinate
      @param bcx boundary condition in first coordinate
      */
-    OrthogonalGrid2d( aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+    OrthogonalGrid2d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator->width(), 0., generator->height(), n, Nx, Ny, bcx, dg::PER)
     {
         generator_=generator;
@@ -163,8 +163,8 @@ struct OrthogonalGrid2d : public dg::Grid2d
     }
     void set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
-        dg::Grid2d::set( new_n, new_Nx, new_Ny, new_Nz);
-        OrthogonalGrid3d<container> g( generator_, n,Nx,Ny,1,bcx);
+        dg::Grid2d::set( new_n, new_Nx, new_Ny);
+        OrthogonalGrid3d<container> g( generator_, new_n,new_Nx,new_Ny,1,bcx());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
@@ -181,11 +181,11 @@ struct OrthogonalGrid2d : public dg::Grid2d
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
-    aGenerator* const generator() const{return generator_;}
+    geo::aGenerator* const generator() const{return generator_;}
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    aGenerator* generator_;
+    geo::aGenerator* generator_;
 };
 
 ///@}

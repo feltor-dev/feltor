@@ -206,7 +206,7 @@ void pushForwardPerp(
  * @param chiyy yy-component of tensor (gets properly resized)
  * @param g The geometry object
  */
-template<class FunctorRR, class FunctorRZ, class FunctorZZ, class Geometry> 
+template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry> 
 void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
         container& chixx, container& chixy, container& chiyy,
         const Geometry& g)

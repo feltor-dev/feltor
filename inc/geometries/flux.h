@@ -204,7 +204,7 @@ struct FluxGenerator : public aGenerator
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const 
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         thrust::host_vector<double> psi_x(zeta1d);
@@ -219,6 +219,7 @@ struct FluxGenerator : public aGenerator
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
+        thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
         thrust::host_vector<double> f_p(fx_);
         unsigned Nx = zeta1d.size(), Ny = eta1d.size();
@@ -247,7 +248,6 @@ struct FluxGenerator : public aGenerator
     Ipol ipol_;
     IpolX ipolR_;
     IpolY ipolZ_;
-    thrust::host_vector<double> fx_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
 };
@@ -318,7 +318,7 @@ struct RibeiroFluxGenerator : public aGenerator
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         thrust::host_vector<double> psi_x(zeta1d);
@@ -331,6 +331,7 @@ struct RibeiroFluxGenerator : public aGenerator
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
+        thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
         thrust::host_vector<double> f_p(fx_);
         unsigned Nx = zeta1d.size(), Ny = eta1d.size();
@@ -356,7 +357,6 @@ struct RibeiroFluxGenerator : public aGenerator
     PsiXX psiXX_;
     PsiXY psiXY_;
     PsiYY psiYY_;
-    thrust::host_vector<double> fx_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
 };

@@ -16,7 +16,6 @@
 #include "curvilinear.h"
 #include "hector.h"
 //#include "refined_conformal.h"
-#include "dg/ds.h"
 #include "init.h"
 
 #include "file/nc_utilities.h"
@@ -77,8 +76,9 @@ int main( int argc, char* argv[])
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
     dg::geo::solovev::MagneticField c( gp); 
+    Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>* hector;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+    hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     dg::ConformalGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
     dg::ConformalGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -96,7 +96,7 @@ int main( int argc, char* argv[])
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
-    std::cout << "Length in u is    "<<hector.width()<<std::endl;
+    std::cout << "Length in u is    "<<hector->width()<<std::endl;
     int ncid;
     file::NC_Error_Handle err;
     err = nc_create( "conformal.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
@@ -157,12 +157,13 @@ int main( int argc, char* argv[])
     dg::HVec ones2d = dg::evaluate( dg::one, g2d);
     double volumeUV = dg::blas1::dot( vol, ones2d);
 
-    vol = dg::create::volume( hector.internal_grid());
-    ones2d = dg::evaluate( dg::one, hector.internal_grid());
+    vol = dg::create::volume( hector->internal_grid());
+    ones2d = dg::evaluate( dg::one, hector->internal_grid());
     double volumeZE = dg::blas1::dot( vol, ones2d);
     std::cout << "volumeUV is "<< volumeUV<<std::endl;
     std::cout << "volumeZE is "<< volumeZE<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeUV - volumeZE)/volumeZE<<std::endl;
     err = nc_close( ncid);
+    delete hector;
     return 0;
 }

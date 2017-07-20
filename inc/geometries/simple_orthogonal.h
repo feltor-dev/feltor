@@ -353,7 +353,7 @@ struct SimpleOrthogonal : public aGenerator
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const
     {
         thrust::host_vector<double> r_init, z_init;
         orthogonal::detail::compute_rzy( psiX_, psiY_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);

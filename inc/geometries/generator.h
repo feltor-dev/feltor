@@ -14,10 +14,10 @@ is a product space.
 */
 struct aGenerator
 {
-    virtual double width() =0 const; //!<length in \f$ \zeta\f$ 
-    virtual double height()=0 const; //!<length in \f$ \eta\f$
-    virtual bool isOrthogonal()=0 const; //!< true if coordinate system is orthogonal
-    virtual bool isConformal()=0 const; //!< true if coordinate system is conformal
+    virtual double width()  const=0; //!<length in \f$ \zeta\f$ 
+    virtual double height() const=0; //!<length in \f$ \eta\f$
+    virtual bool isOrthogonal() const=0; //!< true if coordinate system is orthogonal
+    virtual bool isConformal()const=0; //!< true if coordinate system is conformal
     /**
     * @brief Generate grid points and elements of the Jacobian 
     *
@@ -40,7 +40,9 @@ struct aGenerator
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY)=0;
+         thrust::host_vector<double>& etaY) const =0;
+
+   virtual ~aGenerator(){}
 };
 
 }//namespace geo

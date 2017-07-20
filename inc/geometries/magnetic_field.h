@@ -107,7 +107,7 @@ struct LnB
 template<class MagneticField>
 struct BR
 {
-    BR(const MagneticField& c):  R_0_(c.R_0), invB_(c, R0), c_(c) { }
+    BR(const MagneticField& c):  R_0_(c.R_0), invB_(c), c_(c) { }
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} = 
       -\frac{1}{\hat B \hat R}   
@@ -142,7 +142,7 @@ template<class MagneticField>
 struct BZ
 {
 
-    BZ(const MagneticField& c ):  R_0_(c.R_0), c_(c), invB_(c, R0) { }
+    BZ(const MagneticField& c ):  R_0_(c.R_0), c_(c), invB_(c) { }
     /**
      * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} = 
      \frac{ \hat I \left(\frac{\partial \hat I}{\partial\hat Z}    \right)+

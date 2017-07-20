@@ -36,10 +36,10 @@ struct ConformalGrid3d : public dg::Grid3d
      * @param Nz
      * @param bcx
      */
-    ConformalGrid3d( aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR) :
+    ConformalGrid3d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR) :
         dg::Grid3d( 0, generator->width(), 0., generator->height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     {
-        assert( generator.isConformal());
+        assert( generator->isConformal());
         generator_=generator;
         construct(n,Nx, Ny);
     }
@@ -66,7 +66,7 @@ struct ConformalGrid3d : public dg::Grid3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    aGenerator* const generator() const{return generator_;}
+    geo::aGenerator* const generator() const{return generator_;}
     private:
     void construct( unsigned n, unsigned Nx, unsigned Ny) 
     {
@@ -74,7 +74,7 @@ struct ConformalGrid3d : public dg::Grid3d
         dg::Grid1d gv( 0., generator_->height(), n, Ny);
         const thrust::host_vector<double> u1d = dg::evaluate( dg::cooX1d, gu);
         const thrust::host_vector<double> v1d = dg::evaluate( dg::cooX1d, gv);
-        *generator_( u1d, v1d, r_, z_, xr_, xz_, yr_, yz_);
+        (*generator_)( u1d, v1d, r_, z_, xr_, xz_, yr_, yz_);
         init_X_boundaries( 0., generator_->width());
         lift3d( ); //lift to 3D grid
         construct_metric();
@@ -117,7 +117,7 @@ struct ConformalGrid3d : public dg::Grid3d
     
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
     container gradU2_, g_pp_, vol_, vol2d_;
-    aGenerator* generator_;
+    geo::aGenerator* generator_;
 
 };
 
@@ -137,7 +137,7 @@ struct ConformalGrid2d : public dg::Grid2d
      * @param Ny
      * @param bcx
      */
-    ConformalGrid2d( aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+    ConformalGrid2d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator->width(), 0., generator->height(), n,Nx,Ny, bcx, dg::PER)
     {
         generator_=generator;
@@ -162,8 +162,8 @@ struct ConformalGrid2d : public dg::Grid2d
 
     void set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
-        dg::Grid2d::set( new_n, new_Nx, new_Ny, new_Nz);
-        ConformalGrid3d<container> g( generator_, n,Nx,Ny,1,bcx);
+        dg::Grid2d::set( new_n, new_Nx, new_Ny);
+        ConformalGrid3d<container> g( generator_, new_n,new_Nx,new_Ny,1,bcx());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         gradU2_=g.g_xx(), vol2d_=g.perpVol();
     }
@@ -179,11 +179,11 @@ struct ConformalGrid2d : public dg::Grid2d
     const container& g_yy()const{return gradU2_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
-    aGenerator* const generator() const{return generator_;}
+    geo::aGenerator* const generator() const{return generator_;}
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container gradU2_, vol2d_;
-    aGenerator* generator_;
+    geo::aGenerator* generator_;
 };
 
 ///@}

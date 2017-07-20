@@ -253,7 +253,7 @@ struct Ribeiro : public aGenerator
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         ribeiro::detail::FieldFinv<Psi, PsiX, PsiY> fpsiMinv_(psi_, psiX_, psiY_, x0_,y0_, 500, mode_);
