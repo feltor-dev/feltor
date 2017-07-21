@@ -106,6 +106,12 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
 };
 
 template <class container, class Geometry>
+void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthonormalCylindricalTag)
+{
+    in1.swap( out1);
+    in2.swap( out2);
+};
+template <class container, class Geometry>
 void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearCylindricalTag)
 {
     if( g.isConformal())
