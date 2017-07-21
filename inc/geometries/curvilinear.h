@@ -64,9 +64,9 @@ struct CurvilinearGrid3d : public dg::Grid3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    geo::aGenerator const * generator() const{return generator_;}
-    bool isOrthogonal() const { return generator_.isOrthogonal();}
-    bool isConformal() const { return generator_.isConformal();}
+    const geo::aGenerator * generator() const{return generator_;}
+    bool isOrthogonal() const { return generator_->isOrthogonal();}
+    bool isConformal() const { return generator_->isConformal();}
     private:
     void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
@@ -135,7 +135,7 @@ struct CurvilinearGrid2d : public dg::Grid2d
      @param Ny number of cells in second coordinate
      @param bcx boundary condition in first coordinate
      */
-    CurvilinearGrid2d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+    CurvilinearGrid2d( const geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator->width(), 0., generator->height(), n, Nx, Ny, bcx, dg::PER)
     {
         CurvilinearGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
@@ -179,13 +179,13 @@ struct CurvilinearGrid2d : public dg::Grid2d
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
-    geo::aGenerator const * generator() const{return generator_;}
-    bool isOrthogonal() const { return generator_.isOrthogonal();}
-    bool isConformal() const { return generator_.isConformal();}
+    const geo::aGenerator * generator() const{return generator_;}
+    bool isOrthogonal() const { return generator_->isOrthogonal();}
+    bool isConformal() const { return generator_->isConformal();}
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    geo::aGenerator* generator_;
+    const geo::aGenerator* generator_;
 };
 
 ///@}

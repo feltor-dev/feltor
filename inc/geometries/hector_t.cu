@@ -11,8 +11,6 @@
 #include "dg/backend/timer.cuh"
 //#include "guenther.h"
 #include "solovev.h"
-#include "conformal.h"
-#include "orthogonal.h"
 #include "curvilinear.h"
 #include "hector.h"
 //#include "refined_conformal.h"
@@ -78,20 +76,24 @@ int main( int argc, char* argv[])
     dg::geo::solovev::MagneticField c( gp); 
     Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>* hector;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
-    dg::ConformalGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
-    dg::ConformalGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    int construction = 0;
+    if( construction == 0)
+    {
+        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+    }
+    else if( construction == 1)
+    {
+        dg::geo::NablaPsiInvCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ);
+        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+    }
+    else
+    {
+        dg::geo::LiseikinCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> lc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, 0.1, 0.001);
+        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+    }
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    //dg::geo::NablaPsiInvCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ);
-    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
-    //dg::OrthogonalGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
-    //dg::OrthogonalGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    //dg::geo::LiseikinCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> lc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, 0.1, 0.001);
-    //dg::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec> hector( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
-    //dg::CurvilinearGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
-    //dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    dg::CurvilinearGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
+    dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
 
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();

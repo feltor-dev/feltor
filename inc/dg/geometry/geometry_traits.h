@@ -136,9 +136,9 @@ void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2,
         container& vx, container& vy,
         const Geometry& g, OrthonormalCylindricalTag)
 {
-    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, out2; 
-    out1 = evaluate( f1, g);
-    out2 = evaluate( f2, g);
+    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
+    host_vec out1 = evaluate( f1, g);
+    host_vec out2 = evaluate( f2, g);
     dg::blas1::transfer( out1, vx);
     dg::blas1::transfer( out2, vy);
 }
@@ -148,9 +148,9 @@ void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2,
         container& vx, container& vy,
         const Geometry& g, CurvilinearCylindricalTag)
 {
-    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& out1, out2, temp1, temp2; 
-    temp1 = out1 = pullback( f1, g);
-    temp2 = out2 = pullback( f2, g);
+    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
+    host_vec out1 = pullback( f1, g), temp1(out1);
+    host_vec out2 = pullback( f2, g), temp2(out2);
     dg::blas1::pointwiseDot( g.xr(), temp1, out1);
     dg::blas1::pointwiseDot( 1., g.xz(), temp2, 1., out1);
     dg::blas1::pointwiseDot( g.yr(), temp1, out2);
@@ -164,10 +164,10 @@ void doPushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
         container& chixx, container& chixy, container& chiyy,
         const Geometry& g, OrthonormalCylindricalTag)
 {
-    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx_, chixy_, chiyy_; 
-    chixx_ = evaluate( chiRR, g);
-    chixy_ = evaluate( chiRZ, g);
-    chiyy_ = evaluate( chiZZ, g);
+    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
+    host_vec chixx_ = evaluate( chiRR, g);
+    host_vec chixy_ = evaluate( chiRZ, g);
+    host_vec chiyy_ = evaluate( chiZZ, g);
     dg::blas1::transfer( chixx_, chixx);
     dg::blas1::transfer( chixy_, chixy);
     dg::blas1::transfer( chiyy_, chiyy);
@@ -179,13 +179,12 @@ void doPushForwardPerp( FunctorRR chiRR_, FunctorRZ chiRZ_, FunctorZZ chiZZ_,
         const Geometry& g, CurvilinearCylindricalTag)
 {
     //compute the rhs
-    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector chiRR, chiRZ, chiZZ;
-    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector& chixx_, chixy_, chiyy_; 
-    chixx_ = chiRR = pullback( chiRR_, g);
-    chixy_ = chiRZ = pullback( chiRZ_, g);
-    chiyy_ = chiZZ = pullback( chiZZ_, g);
+    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
+    host_vec chixx_ = pullback( chiRR_, g), chiRR(chixx_);
+    host_vec chixy_ = pullback( chiRZ_, g), chiRZ(chixy_);
+    host_vec chiyy_ = pullback( chiZZ_, g), chiZZ(chiyy_);
     //compute the transformation matrix
-    typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector t00(chixx), t01(t00), t02(t00), t10(t00), t11(t00), t12(t00), t20(t00), t21(t00), t22(t00);
+    host_vec t00(chixx), t01(t00), t02(t00), t10(t00), t11(t00), t12(t00), t20(t00), t21(t00), t22(t00);
     dg::blas1::pointwiseDot( g.xr(), g.xr(), t00);
     dg::blas1::pointwiseDot( g.xr(), g.xz(), t01);
     dg::blas1::scal( t01, 2.);
@@ -238,8 +237,7 @@ template< class Geometry>
 typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector doCreateVolume( const Geometry& g, CurvilinearTag)
 {
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vector;
-    host_vector temp, vol;
-    dg::blas1::transfer( dg::create::weights( g), temp);
+    host_vector temp = dg::create::weights( g), vol(temp);
     dg::blas1::transfer( g.vol(), vol); //g.vol might be on device
     dg::blas1::pointwiseDot( vol, temp, temp);
     return temp;
@@ -249,8 +247,7 @@ template< class Geometry>
 typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector doCreateInvVolume( const Geometry& g, CurvilinearTag)
 {
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vector;
-    host_vector temp, vol;
-    dg::blas1::transfer( dg::create::inv_weights( g), temp);
+    host_vector temp = dg::create::inv_weights(g), vol(temp);
     dg::blas1::transfer( g.vol(), vol); //g.vol might be on device
     dg::blas1::pointwiseDivide( temp, vol, temp);
     return temp;

@@ -6,8 +6,6 @@
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 #include "flux.h"
-#include "conformal.h"
-#include "orthogonal.h"
 #include "curvilinear.h"
 #include "adaption.h"
 #include "generator.h"
@@ -236,7 +234,8 @@ struct Hector : public aGenerator
      */
     template< class Psi, class PsiX, class PsiY, class PsiXX ,class PsiXY, class PsiYY >
     Hector( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        generator_( new dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1)),
+        g2d_(generator_, n, Nx, Ny, dg::DIR)
     {
         //first construct u_
         container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, dg::ONE(), dg::geo::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
@@ -284,7 +283,8 @@ struct Hector : public aGenerator
      */
     template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi, class ChiX, class ChiY>
     Hector( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Chi chi, ChiX chiX, ChiY chiY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        generator_( new dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1)),
+        g2d_(generator_, n, Nx, Ny, dg::DIR)
     {
         dg::geo::detail::LaplaceAdaptPsi<PsiX, PsiY, dg::geo::detail::LaplacePsi<PsiXX, PsiYY>, Chi, ChiX, ChiY> lapAdaPsi( psiX, psiY, dg::geo::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), chi, chiX, chiY);
         //first construct u_
@@ -340,8 +340,8 @@ struct Hector : public aGenerator
             Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY, 
             DivChiX divChiX, DivChiY divChiY,
             double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY> (
-                    psi, psiX, psiY, psiXX,psiXY,psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        generator_( new dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1)),
+        g2d_(generator_, n, Nx, Ny, dg::DIR)
     {
         dg::geo::detail::LaplaceChiPsi<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Chi_XX, Chi_XY, Chi_YY, DivChiX, DivChiY>
             lapChiPsi( psiX, psiY, psiXX, psiXY, psiYY, 
@@ -449,13 +449,16 @@ struct Hector : public aGenerator
      * @return  orthogonal zeta, eta grid
      */
     const dg::CurvilinearGrid2d<container>& internal_grid() const {return g2d_;}
+    ~Hector() { delete generator_;}
     private:
+    //make Hector non-copyable
+    Hector( const Hector& src);
+    Hector& operator=( const Hector& src);
     template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi, class LaplaceChiPsi>
     container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Chi chi, LaplaceChiPsi lapCP, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u , bool verbose) 
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
         dg::CurvilinearGrid2d<container> g2d_old = g2d_;
         container adapt = dg::pullback(chi, g2d_old);
         dg::Elliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
@@ -469,7 +472,7 @@ struct Hector : public aGenerator
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            dg::CurvilinearGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            dg::CurvilinearGrid2d<container> g2d(generator_, n, Nx, Ny, dg::DIR);
             if(verbose) std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
             dg::Elliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             adapt = dg::pullback(chi, g2d);
@@ -500,7 +503,6 @@ struct Hector : public aGenerator
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
         dg::CurvilinearGrid2d<container> g2d_old = g2d_;
         dg::TensorElliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set( chi_XX, chi_XY, chi_YY);
@@ -513,7 +515,7 @@ struct Hector : public aGenerator
         {
             eps = eps_old;
             Nx*=2, Ny*=2;
-            dg::CurvilinearGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            dg::CurvilinearGrid2d<container> g2d(generator_, n, Nx, Ny, dg::DIR);
             if(verbose)std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
             dg::TensorElliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             ellipticD.set( chi_XX, chi_XY, chi_YY );
@@ -605,6 +607,7 @@ struct Hector : public aGenerator
     double c0_, lu_;
     thrust::host_vector<double> u_, ux_, uy_, vx_, vy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
+    aGenerator* generator_;
     dg::CurvilinearGrid2d<container> g2d_;
 
 };

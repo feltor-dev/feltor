@@ -30,7 +30,7 @@ struct CurvilinearMPIGrid3d : public dg::MPIGrid3d
     typedef dg::CurvilinearMPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
 
-    CurvilinearMPIGrid3d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
+    CurvilinearMPIGrid3d( const geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
         dg::MPIGrid3d( 0, generator->width(), 0., generator->height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
         g( generator, n,Nx, Ny, local().Nz(), bcx)
     {
@@ -58,7 +58,9 @@ struct CurvilinearMPIGrid3d : public dg::MPIGrid3d
     const MPIContainer& vol()const{return vol_;}
     const MPIContainer& perpVol()const{return vol2d_;}
     const dg::CurvilinearGrid3d<LocalContainer>& global() const {return g;}
-    geo::aGenerator* const generator() const{return g.generator();}
+    const geo::aGenerator* generator() const{return g.generator();}
+    bool isOrthogonal() const { return g.isOrthogonal();}
+    bool isConformal() const { return g.isConformal();}
     private:
     void divide_and_conquer( )
     {
@@ -105,7 +107,7 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
     typedef dg::CurvilinearCylindricalTag metric_category; 
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
 
-    CurvilinearMPIGrid2d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
+    CurvilinearMPIGrid2d( const geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
         dg::MPIGrid2d( 0, generator->width(), 0., generator->height(), n, Nx, Ny, bcx, dg::PER, comm2d),
         g_( generator, n,Nx, Ny, bcx)
     {
@@ -152,7 +154,9 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
     const MPIContainer& vol()const{return vol2d_;}
     const MPIContainer& perpVol()const{return vol2d_;}
     const dg::CurvilinearGrid2d<LocalContainer>& global() const {return g_;}
-    geo::aGenerator* const generator() const{return g.generator();}
+    const geo::aGenerator* generator() const{return g.generator();}
+    bool isOrthogonal() const { return g.isOrthogonal();}
+    bool isConformal() const { return g.isConformal();}
     private:
     MPI_Comm get_reduced_comm( MPI_Comm src)
     {
