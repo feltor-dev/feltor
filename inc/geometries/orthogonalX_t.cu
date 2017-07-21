@@ -12,7 +12,7 @@
 #include "solovev.h"
 #include "taylor.h"
 //#include "guenther.h"
-#include "orthogonalX.h"
+#include "curilinearX.h"
 #include "refined_orthogonalX.h"
 #include "separatrix_orthogonal.h"
 #include "dg/ds.h"
@@ -34,7 +34,7 @@ struct ZCutter
 };
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< dg::OrthogonalGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
+typedef dg::FieldAligned< dg::CurvilinearGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
 
 //using namespace dg::geo::solovev;
 using namespace dg::geo::taylor;
@@ -130,9 +130,9 @@ int main( int argc, char* argv[])
     dg::geo::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::geo::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::OrthogonalGridX3d<dg::HVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    //dg::OrthogonalGridX2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::OrthogonalRefinedGridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    dg::OrthogonalRefinedGridX2d<dg::HVec> g2d = g3d.perp_grid();
+    //dg::CurvilinearGridX2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::CurvilinearRefinedGridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    dg::CurvilinearRefinedGridX2d<dg::HVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;

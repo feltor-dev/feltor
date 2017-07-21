@@ -3,15 +3,15 @@
 #include <cusp/transpose.h>
 #include <cusp/csr_matrix.h>
 
-#include "../backend/grid.h"
-#include "../blas.h"
-#include "../backend/interpolation.cuh"
-#include "../backend/functions.h"
+#include "dg/backend/grid.h"
+#include "dg/blas.h"
+#include "dg/backend/interpolation.cuh"
+#include "dg/backend/functions.h"
 
-#include "../functors.h"
-#include "../nullstelle.h"
-#include "../runge_kutta.h"
-#include "../../geometries/magnetic_field.h"
+#include "dg/functors.h"
+#include "dg/nullstelle.h"
+#include "dg/runge_kutta.h"
+#include "magnetic_field.h"
 
 namespace dg{
 

@@ -15,11 +15,9 @@
 //#include "guenther.h"
 #include "solovev.h"
 #include "mpi_curvilinear.h"
-#include "mpi_orthogonal.h"
-#include "mpi_conformal.h"
 #include "ribeiro.h"
 #include "simple_orthogonal.h"
-#include "dg/ds.h"
+//#include "ds.h"
 #include "init.h"
 
 #include <netcdf_par.h>
@@ -70,7 +68,7 @@ int main( int argc, char* argv[])
     MagneticField c( gp);
     dg::geo::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
         ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearMPIGrid3d<dg::HVec> g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR,comm);
+    dg::CurvilinearMPIGrid3d<dg::HVec> g3d(&ribeiro, n, Nx, Ny,Nz, dg::DIR,comm);
     dg::CurvilinearMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
     //    orthogonal( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);

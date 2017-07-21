@@ -23,8 +23,7 @@ struct CurvilinearRefinedGrid3d : public dg::RefinedGrid3d
     typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
     typedef CurvilinearRefinedGrid2d<container> perpendicular_grid; //!< the two-dimensional grid type
 
-    template<class Generator>
-    CurvilinearRefinedGrid3d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
+    CurvilinearRefinedGrid3d( unsigned multiple_x, unsigned multiple_y, const geo::aGenerator* generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
         dg::RefinedGrid3d( multiple_x, multiple_y, 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, n_old, Nx, Ny, Nz, bcx, dg::PER, dg::PER),
         g_assoc_( generator, n_old, Nx, Ny, Nz, bcx)
     { 
@@ -46,16 +45,15 @@ struct CurvilinearRefinedGrid3d : public dg::RefinedGrid3d
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
     private:
-    template< class Generator>
-    void construct( Generator generator)
+    void construct( const geo::aGenerator* generator)
     {
-        init_X_boundaries( 0., generator.width());
+        init_X_boundaries( 0., generator->width());
         unsigned sizeY = this->n()*this->Ny();
         unsigned sizeX = this->n()*this->Nx();
         thrust::host_vector<double> y_vec(sizeY), x_vec(sizeX);
         for(unsigned i=0; i<sizeY; i++) y_vec[i] = this->abscissasY()[i*sizeX];
         for(unsigned i=0; i<sizeX; i++) x_vec[i] = this->abscissasX()[i];
-        generator( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
+        (*generator)( x_vec, y_vec, r_, z_, xr_, xz_, yr_, yz_);
         lift3d( ); //lift to 3D grid
         construct_metric();
     }
@@ -110,8 +108,7 @@ struct CurvilinearRefinedGrid2d : public dg::RefinedGrid2d
 {
     typedef dg::CurvilinearCylindricalTag metric_category;
 
-    template< class Generator>
-    CurvilinearRefinedGrid2d( unsigned multiple_x, unsigned multiple_y, const Generator& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx):
+    CurvilinearRefinedGrid2d( unsigned multiple_x, unsigned multiple_y, const geo::aGenerator* generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx):
         dg::RefinedGrid2d( multiple_x, multiple_y, 0, 1., 0., 2*M_PI, n,n_old,Nx,Ny, bcx, dg::PER),
         g_assoc_( generator, n_old, Nx, Ny, bcx) 
     {
@@ -149,6 +146,8 @@ struct CurvilinearRefinedGrid2d : public dg::RefinedGrid2d
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
+    bool isOrthogonal() const{return false;}
+    bool isConformal() const{return false;}
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; 
     container g_xx_, g_xy_, g_yy_, vol2d_;

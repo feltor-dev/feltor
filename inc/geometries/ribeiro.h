@@ -238,12 +238,6 @@ struct Ribeiro : public aGenerator
      * @return 2pi 
      */
     double height() const{return 2.*M_PI;}
-    /**
-     * @brief The vector f(x)
-     *
-     * @return f(x)
-     */
-    thrust::host_vector<double> fx() const{ return fx_;}
 
     void operator()( 
          const thrust::host_vector<double>& zeta1d, 
@@ -257,7 +251,7 @@ struct Ribeiro : public aGenerator
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         ribeiro::detail::FieldFinv<Psi, PsiX, PsiY> fpsiMinv_(psi_, psiX_, psiY_, x0_,y0_, 500, mode_);
-        thrust::host_vector<double> psi_x;
+        thrust::host_vector<double> psi_x, fx_;
         dg::geo::detail::construct_psi_values( fpsiMinv_, psi0_, psi1_, 0., zeta1d, lx_, psi_x, fx_);
 
         //std::cout << "In grid function:\n";
@@ -291,7 +285,6 @@ struct Ribeiro : public aGenerator
     PsiXX psiXX_;
     PsiXY psiXY_;
     PsiYY psiYY_;
-    thrust::host_vector<double> fx_;
     double lx_, x0_, y0_, psi0_, psi1_;
     int mode_; //0 = ribeiro, 1 = equalarc
 };

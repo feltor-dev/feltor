@@ -9,12 +9,11 @@
 #include "dg/functors.h"
 
 #include "dg/backend/timer.cuh"
-#include "orthogonal.h"
 #include "curvilinear.h"
 //#include "guenther.h"
 #include "solovev.h"
 #include "flux.h"
-#include "dg/ds.h"
+//#include "ds.h"
 #include "init.h"
 
 #include "file/nc_utilities.h"
@@ -43,8 +42,6 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-typedef dg::FieldAligned< dg::CurvilinearGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
-//typedef dg::FieldAligned< OrthogonalGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -78,7 +75,7 @@ int main( int argc, char* argv[])
     MagneticField c( gp);
     dg::geo::FluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ, Ipol, IpolR, IpolZ>
         flux( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, c.ipol, c.ipolR, c.ipolZ, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearGrid3d<dg::HVec> g3d(flux, n, Nx, Ny,Nz, dg::DIR);
+    dg::CurvilinearGrid3d<dg::HVec> g3d(&flux, n, Nx, Ny,Nz, dg::DIR);
     dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
     //OrthogonalGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
     //OrthogonalGrid2d<dg::HVec> g2d = g3d.perp_grid();

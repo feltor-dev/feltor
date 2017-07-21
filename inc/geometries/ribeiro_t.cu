@@ -14,7 +14,7 @@
 #include "ribeiro.h"
 #include "curvilinear.h"
 #include "refined_curvilinear.h"
-#include "dg/ds.h"
+//#include "ds.h"
 #include "init.h"
 
 #include "file/nc_utilities.h"
@@ -42,8 +42,6 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-typedef dg::FieldAligned< dg::CurvilinearGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
-//typedef dg::FieldAligned< dg::ribeiro::RefinedGrid3d<dg::HVec> , dg::IHMatrix, dg::HVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -82,7 +80,7 @@ int main( int argc, char* argv[])
         ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
     //dg::CurvilinearGrid3d<dg::HVec> g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR);
     //dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::CurvilinearRefinedGrid3d<dg::HVec> g3d(multiple_x, multiple_y, ribeiro, n_ref, n, Nx, Ny,Nz, dg::DIR);
+    dg::CurvilinearRefinedGrid3d<dg::HVec> g3d(multiple_x, multiple_y, &ribeiro, n_ref, n, Nx, Ny,Nz, dg::DIR);
     dg::CurvilinearRefinedGrid2d<dg::HVec> g2d = g3d.perp_grid();
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();

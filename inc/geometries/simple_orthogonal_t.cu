@@ -11,11 +11,11 @@
 #include "dg/backend/timer.cuh"
 //#include "guenther.h"
 #include "solovev.h"
-#include "orthogonal.h"
-#include "refined_orthogonal.h"
+#include "curvilinear.h"
+#include "refined_curvilinear.h"
 
 #include "simple_orthogonal.h"
-#include "dg/ds.h"
+#include "ds.h"
 #include "init.h"
 #include "testfunctors.h"
 

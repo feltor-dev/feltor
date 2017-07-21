@@ -542,7 +542,7 @@ RefinedGrid2d::RefinedGrid2d( const dg::RefinedGrid3d& g) :
 template<class container>
 struct CartesianRefinedGrid2d : public dg::RefinedGrid2d
 {
-    typedef OrthogonalTag metric_category; 
+    typedef CurvilinearCylindricalTag metric_category; 
     CartesianRefinedGrid2d( unsigned multiple_x, unsigned multiple_y, double x0, double x1, double y0, double y1, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::RefinedGrid2d(multiple_x, multiple_y,x0,x1,y0,y1,n,n_old,Nx,Ny,bcx,bcy), g_assoc_(x0,x1,y0,y1,n_old,Nx,Ny,bcx,bcy){ 
         dg::blas1::transfer( weightsX(), g_xx_);
         dg::blas1::transfer( weightsY(), g_yy_);
@@ -560,6 +560,8 @@ struct CartesianRefinedGrid2d : public dg::RefinedGrid2d
     const container& g_yy()const{return g_yy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
+    bool isOrthogonal()const{return true;}
+    bool isConformal()const{return false;}
     private:
     container g_xx_, g_yy_, vol2d_;
     dg::CartesianGrid2d g_assoc_;

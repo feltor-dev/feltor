@@ -1,14 +1,14 @@
 #pragma once
 
-#include "blas.h"
-#include "geometry.h"
-#include "backend/derivatives.h"
-#include "geometry/fieldaligned.h"
+#include "dg/blas.h"
+#include "dg/geometry.h"
+#include "dg/backend/derivatives.h"
+#include "fieldaligned.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_derivatives.h"
-#include "geometry/mpi_fieldaligned.h"
+#include "mpi_fieldaligned.h"
 #endif //MPI_VERSION
-#include "../geometries/magnetic_field.h"
+#include "magnetic_field.h"
 
 /*!@file 
  *

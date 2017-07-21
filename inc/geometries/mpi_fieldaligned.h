@@ -1,15 +1,15 @@
 #pragma once
 
 #include "fieldaligned.h"
-#include "../backend/grid.h"
-#include "../backend/mpi_evaluation.h"
-#include "../backend/mpi_matrix.h"
-#include "../backend/mpi_matrix_blas.h"
-#include "../backend/mpi_collective.h"
-#include "../backend/mpi_grid.h"
-#include "../backend/interpolation.cuh"
-#include "../backend/functions.h"
-#include "../runge_kutta.h"
+#include "dg/backend/grid.h"
+#include "dg/backend/mpi_evaluation.h"
+#include "dg/backend/mpi_matrix.h"
+#include "dg/backend/mpi_matrix_blas.h"
+#include "dg/backend/mpi_collective.h"
+#include "dg/backend/mpi_grid.h"
+#include "dg/backend/interpolation.cuh"
+#include "dg/backend/functions.h"
+#include "dg/runge_kutta.h"
 
 namespace dg{
  
