@@ -8,10 +8,7 @@ namespace dg
 //
 struct CurvilinearTag{};  //! 3d curvilinear
 struct CurvilinearCylindricalTag: public CurvilinearTag{}; //! perpVol, vol(), g_xx, g_xy, g_yy
-struct OrthogonalTag:public CurvilinearCylindricalTag{}; //! perpVol, vol(), g_xx, g_yy
-struct ConformalCylindricalTag:public OrthogonalTag{}; //! perpVol, vol(), g_xx, g_yy
-struct ConformalTag:public ConformalCylindricalTag{}; //! A 2d conformal 
-struct OrthonormalCylindricalTag:public ConformalCylindricalTag{}; //! vol(), cylindrical grid
+struct OrthonormalCylindricalTag:public CurvilinearCylindricalTag{}; //! vol(), cylindrical grid
 struct OrthonormalTag: public OrthonormalCylindricalTag{}; //! Cartesian grids
 
 //memory_category and dimensionality Tags are already defined in grid.h
@@ -94,14 +91,14 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
     in2.swap( out2);
 };
 template <class container, class Geometry>
-void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthogonalTag)
-{
-    dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
-    dg::blas1::pointwiseDot( g.g_yy(), in2, out2); //gyy*v_y
-};
-template <class container, class Geometry>
 void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearCylindricalTag)
 {
+    if( g.isOrthogonal())
+    {
+        dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
+        dg::blas1::pointwiseDot( g.g_yy(), in2, out2); //gyy*v_y
+        return;
+    }
     dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
     dg::blas1::pointwiseDot( g.g_xy(), in1, out2); //gyx*v_x
     dg::blas1::pointwiseDot( 1., g.g_xy(), in2, 1., out1);//gxy*v_y
@@ -109,22 +106,22 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
 };
 
 template <class container, class Geometry>
-void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, ConformalCylindricalTag)
-{
-    in1.swap( out1);
-    in2.swap( out2);
-};
-template <class container, class Geometry>
-void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthogonalTag)
-{
-    dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
-    dg::blas1::pointwiseDot( g.g_yy(), in2, out2); //gyy*v_y
-    dg::blas1::pointwiseDot( out1, g.perpVol(), out1);
-    dg::blas1::pointwiseDot( out2, g.perpVol(), out2);
-};
-template <class container, class Geometry>
 void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearCylindricalTag)
 {
+    if( g.isConformal())
+    {
+        in1.swap( out1);
+        in2.swap( out2);
+        return;
+    }
+    if( g.isOrthogonal())
+    {
+        dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
+        dg::blas1::pointwiseDot( g.g_yy(), in2, out2); //gyy*v_y
+        dg::blas1::pointwiseDot( out1, g.perpVol(), out1);
+        dg::blas1::pointwiseDot( out2, g.perpVol(), out2);
+        return;
+    }
     dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
     dg::blas1::pointwiseDot( g.g_xy(), in1, out2); //gyx*v_x
     dg::blas1::pointwiseDot( 1., g.g_xy(), in2, 1., out1);//gxy*v_y

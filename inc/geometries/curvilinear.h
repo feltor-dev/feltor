@@ -34,7 +34,7 @@ struct CurvilinearGrid3d : public dg::Grid3d
      @param Nz 
      @param bcx
      */
-    CurvilinearGrid3d( geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+    CurvilinearGrid3d( const geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
         dg::Grid3d( 0, generator->width(), 0., generator->height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         generator_ = generator;
@@ -64,7 +64,9 @@ struct CurvilinearGrid3d : public dg::Grid3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    geo::aGenerator* const generator() const{return generator_;}
+    geo::aGenerator const * generator() const{return generator_;}
+    bool isOrthogonal() const { return generator_.isOrthogonal();}
+    bool isConformal() const { return generator_.isConformal();}
     private:
     void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
@@ -115,7 +117,7 @@ struct CurvilinearGrid3d : public dg::Grid3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    geo::aGenerator* generator_;
+    const geo::aGenerator* generator_;
 };
 
 /**
@@ -177,7 +179,9 @@ struct CurvilinearGrid2d : public dg::Grid2d
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
-    geo::aGenerator* const generator() const{return generator_;}
+    geo::aGenerator const * generator() const{return generator_;}
+    bool isOrthogonal() const { return generator_.isOrthogonal();}
+    bool isConformal() const { return generator_.isConformal();}
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;

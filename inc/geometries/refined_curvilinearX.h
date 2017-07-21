@@ -8,7 +8,7 @@ namespace dg
 
 ///@cond
 template< class container>
-struct OrthogonalRefinedGridX2d;
+struct CurvilinearRefinedGridX2d;
 ///@endcond
 
 ///@addtogroup grids
@@ -18,23 +18,23 @@ struct OrthogonalRefinedGridX2d;
  * @brief A three-dimensional refined X-Grid
  */
 template< class container>
-struct OrthogonalRefinedGridX3d : public dg::RefinedGridX3d
+struct CurvilinearRefinedGridX3d : public dg::RefinedGridX3d
 {
-    typedef dg::OrthogonalTag metric_category;
-    typedef dg::OrthogonalRefinedGridX2d<container> perpendicular_grid;
+    typedef dg::CurvilinearCylindricalTag metric_category;
+    typedef dg::CurvilinearRefinedGridX2d<container> perpendicular_grid;
 
     template <class Generator>
-    OrthogonalRefinedGridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
+    CurvilinearRefinedGridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
         dg::RefinedGridX3d( add_x, add_y, howmanyX, howmanyY, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, n_old, Nx, Ny, Nz, bcx, bcy, dg::PER),
         r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
         g_assoc_( generator, psi_0, fx, fy, n_old, Nx, Ny, Nz, bcx, bcy)
     {
-        assert( generator.isOrthogonal());
+        assert( generator.isCurvilinear());
         construct( generator, psi_0, fx);
     }
 
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
-    const dg::OrthogonalGridX3d<container>& associated() const{ return g_assoc_;}
+    const dg::CurvilinearGridX3d<container>& associated() const{ return g_assoc_;}
 
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
@@ -114,29 +114,29 @@ struct OrthogonalRefinedGridX3d : public dg::RefinedGridX3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    dg::OrthogonalGridX3d<container> g_assoc_;
+    dg::CurvilinearGridX3d<container> g_assoc_;
 };
 
 /**
  * @brief A two-dimensional refined X-Grid
  */
 template< class container>
-struct OrthogonalRefinedGridX2d : public dg::RefinedGridX2d
+struct CurvilinearRefinedGridX2d : public dg::RefinedGridX2d
 {
-    typedef dg::OrthogonalTag metric_category;
+    typedef dg::CurvilinearCylindricalTag metric_category;
 
     template<class Generator>
-    OrthogonalRefinedGridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
+    CurvilinearRefinedGridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
         dg::RefinedGridX2d( add_x, add_y, howmanyX, howmanyY, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, n_old, Nx, Ny, bcx, bcy),
         g_assoc_( generator, psi_0, fx, fy, n_old, Nx, Ny, bcx, bcy) 
     {
-        dg::OrthogonalRefinedGridX3d<container> g(add_x, add_y, howmanyX, howmanyY, generator, psi_0, fx,fy, n,n_old,Nx,Ny,1,bcx,bcy);
+        dg::CurvilinearRefinedGridX3d<container> g(add_x, add_y, howmanyX, howmanyY, generator, psi_0, fx,fy, n,n_old,Nx,Ny,1,bcx,bcy);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
-    OrthogonalRefinedGridX2d( const OrthogonalRefinedGridX3d<container>& g):
+    CurvilinearRefinedGridX2d( const CurvilinearRefinedGridX3d<container>& g):
         dg::RefinedGridX2d(g), g_assoc_(g.associated())
     {
         unsigned s = this->size();
@@ -149,7 +149,7 @@ struct OrthogonalRefinedGridX2d : public dg::RefinedGridX2d
         thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
-    const dg::OrthogonalGridX2d<container>& associated()const{return g_assoc_;}
+    const dg::CurvilinearGridX2d<container>& associated()const{return g_assoc_;}
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -167,7 +167,7 @@ struct OrthogonalRefinedGridX2d : public dg::RefinedGridX2d
     private:
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //2d vector
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    dg::OrthogonalGridX2d<container> g_assoc_;
+    dg::CurvilinearGridX2d<container> g_assoc_;
 };
 ///@}
 
