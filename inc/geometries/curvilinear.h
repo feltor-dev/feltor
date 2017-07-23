@@ -27,7 +27,7 @@ struct CurvilinearGrid3d : public dg::Grid3d
 
     /*!@brief Constructor
     
-     * @param generator must generate an orthogonal grid
+     * @param generator must generate a grid
      * @param n 
      * @param Nx
      @param Ny

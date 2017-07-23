@@ -305,12 +305,11 @@ struct Grid2d
     * @param new_Nx new number of cells in x 
     * @param new_Ny new number of cells in y
     */
-    virtual void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
-        n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny;
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
-        dlt_ = DLT<double>( new_n);
-        assert( n_> 0 && Nx_ > 0  && Ny_ > 0);
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+        assert( new_n> 0 && new_Nx > 0  && new_Ny > 0);
+        do_set(new_n,new_Nx,new_Ny);
     }
+
 
     /**
      * @brief discrete legendre trafo
@@ -389,6 +388,15 @@ struct Grid2d
         return false;
     }
   protected:
+    virtual ~Grid2d(){}
+    Grid2d(const Grid2d& src){}
+    Grid2d& operator=(const Grid2d& src){}
+    ///@copydoc set()
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+        n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny;
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
+        dlt_ = DLT<double>( new_n);
+    }
     virtual void init_X_boundaries( double x0, double x1)
     {
         x0_ = x0, x1_ = x1;
@@ -476,11 +484,9 @@ struct Grid3d
     * @param new_Ny new number of cells in y
     * @param new_Nz new number of cells in z
     */
-    virtual void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny, Nz_ = new_Nz;
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ =lz_/(double)Nz_;
-        dlt_ = DLT<double>( new_n);
-        assert( n_>0); assert( Nx_ > 0  && Ny_ > 0); assert( Nz_ > 0);
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+        assert( new_n>0); assert( new_Nx > 0  && new_Ny > 0); assert( new_Nz > 0);
+        do_set(new_n, new_Nx,new_Ny,new_Nz);
     }
 
     /**
@@ -696,6 +702,15 @@ struct Grid3d
         return false;
     }
   protected:
+    virtual ~Grid3d(){}
+    Grid3d(const Grid3d& src){}
+    Grid3d& operator=(const Grid3d& src){}
+    virtual void do_set(unsigned new_n, unsigned new_Ny, unsigned new_Nz)
+    {
+        n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny, Nz_ = new_Nz;
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ =lz_/(double)Nz_;
+        dlt_ = DLT<double>( new_n);
+    }
     virtual void init_X_boundaries( double x0, double x1)
     {
         x0_ = x0, x1_ = x1;

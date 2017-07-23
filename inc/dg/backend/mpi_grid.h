@@ -65,8 +65,8 @@ struct MPIGrid2d
     * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny()) is NOT(!) what you want
     *           use the resize function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny())
     */
-    virtual void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
-        g.set(new_n,new_Nx,new_Ny);
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+        do_set( new_n,new_Nx,new_Ny);
         check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
     }
 
@@ -225,23 +225,6 @@ struct MPIGrid2d
     }
 
     /**
-     * @brief Return a non-MPI grid local for the calling process
-     *
-     * The local grid returns the same values for x0(), x1(), ..., Nx(), Ny(), ... as the grid
-     * class itself 
-     * @return Grid object
-     * @note the boundary conditions in the local grid are not well defined since there might not actually be any boundaries
-     */
-    Grid2d local() const {return Grid2d(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
-
-    /**
-     * @brief Return the global non-MPI grid 
-     *
-     * The global grid contains the global boundaries and cell numbers. This is the grid that we would have to use in a non-MPI implementation.
-     * @return non-MPI Grid object
-     */
-    virtual const Grid2d& global() const {return g;}
-    /**
      * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
      * @param x X-coord
@@ -301,7 +284,30 @@ struct MPIGrid2d
         }
     }
 
+    /**
+     * @brief Return a non-MPI grid local for the calling process
+     *
+     * The local grid returns the same values for x0(), x1(), ..., Nx(), Ny(), ... as the grid
+     * class itself 
+     * @return Grid object
+     * @note the boundary conditions in the local grid are not well defined since there might not actually be any boundaries
+     */
+    Grid2d local() const {return Grid2d(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
+
+    /**
+     * @brief Return the global non-MPI grid 
+     *
+     * The global grid contains the global boundaries and cell numbers. This is the grid that we would have to use in a non-MPI implementation.
+     * @return non-MPI Grid object
+     */
+    virtual const Grid2d& global() const {return g;}
     protected:
+    virtual ~MPIGrid2d(){}
+    MPIGrid2d(const MPIGrid2d& src){}
+    MPIGrid2d& operator=(const MPIGrid2d& src){}
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+        g.set(new_n,new_Nx,new_Ny);
+    }
     void init_X_boundaries( double global_x0, double global_x1)
     {
         g.init_X_boundaries(global_x0, global_x1);
@@ -375,10 +381,11 @@ struct MPIGrid3d
      * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny(), 2*g.Nz()) is NOT(!) what you want
      *           use the resize function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny(), 2*g.global().Nz())
      */
-    virtual void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        g.set(new_n,new_Nx,new_Ny,new_Nz);
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+        do_set(new_n,new_Nx,new_Ny,new_Nz);
         check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());
     }
+
 
     /**
      * @brief Return local x0
@@ -570,14 +577,6 @@ struct MPIGrid3d
 
     }
     /**
-     *@copydoc MPIGrid2d::local()const
-     */
-    Grid3d local() const {return Grid3d(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
-    /**
-     *@copydoc MPIGrid2d::global()const
-     */
-    virtual const Grid3d& global() const {return g;}
-    /**
      * @brief Returns the pid of the process that holds the local grid surrounding the given point
      *
      * @param x X-coord
@@ -627,7 +626,21 @@ struct MPIGrid3d
         else
             return false;
     }
+    /**
+     *@copydoc MPIGrid2d::local()const
+     */
+    Grid3d local() const {return Grid3d(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
+    /**
+     *@copydoc MPIGrid2d::global()const
+     */
+    virtual const Grid3d& global() const {return g;}
     protected:
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+        g.set(new_n,new_Nx,new_Ny,new_Nz);
+    }
+    virtual ~MPIGrid3d(){}
+    MPIGrid3d(const MPIGrid3d& src){}
+    MPIGrid3d& operator=(const MPIGrid3d& src){}
     void init_X_boundaries( double global_x0, double global_x1)
     {
         g.init_X_boundaries(global_x0, global_x1);

@@ -56,6 +56,8 @@ struct aGridGenerator
     virtual aGridGenerator* clone() const=0;
 
     protected:
+    aGridGenerator(const aGridGenerator& src){}
+    aGridGenerator& operator=(const aGridGenerator& src){}
     ///@copydoc operator()()
     virtual void generate(
          const thrust::host_vector<double>& zeta1d, 
