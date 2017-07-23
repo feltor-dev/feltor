@@ -72,5 +72,60 @@ struct aGridGenerator
    virtual ~aGridGenerator(){}
 };
 
+/**
+* @brief The identity coordinate transformation
+
+ @ingroup generators
+*/
+struct IdentityGenerator: public aGridGenerator
+{
+    virtual double width()  const{return lx_;} 
+    virtual double height() const{return ly_;}
+    virtual bool isOrthonormal() const{return true;}
+    virtual bool isOrthogonal() const{return true;}
+    virtual bool isConformal()const{return true;}
+    virtual IdentityGenerator* clone() const{return new IdentityGenerator(*this);}
+
+    /**
+    * @brief Define the 2d box in which to construct the coordinates
+    *
+    * @param x0 x-coordinate of lower left point
+    * @param x1 x-coordinate of upper right point
+    * @param y0 y-coordinate of lower left point
+    * @param y1 y-coordainte of upper right point
+    */
+    IdentityGenerator( double x0, double x1, double y0, double y1){
+        x0_ = x0; lx_ = (x1-x0);
+        y0_ = y0; ly_ = (y1-y0);
+    }
+
+    protected:
+    virtual void generate(
+         const thrust::host_vector<double>& zeta1d, 
+         const thrust::host_vector<double>& eta1d, 
+         thrust::host_vector<double>& x, 
+         thrust::host_vector<double>& y, 
+         thrust::host_vector<double>& zetaX, 
+         thrust::host_vector<double>& zetaY, 
+         thrust::host_vector<double>& etaX, 
+         thrust::host_vector<double>& etaY) const
+     {
+         for(unsigned i=0; i<eta1d.size();i++)
+             for(unsigned j=0; j<zeta1d.size();j++)
+             {
+                 x[i*zeta1d.size()+j] = x0_ + zeta1d[j];
+                 y[i*zeta1d.size()+j] = y0_ + eta1d[i];
+                 zetaX[i*zeta1d.size()+j] = 1;
+                 zetaY[i*zeta1d.size()+j] = 0;
+                 etaX[i*zeta1d.size()+j] = 0.;
+                 etaY[i*zeta1d.size()+j] = 1.;
+             }
+                 
+     }
+     private:
+     double x0_,y0_,lx_,ly_;
+    
+};
+
 }//namespace geo
 }//namespace dg
