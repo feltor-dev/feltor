@@ -389,9 +389,15 @@ struct Grid2d
     }
   protected:
     virtual ~Grid2d(){}
-    Grid2d(const Grid2d& src){}
-    Grid2d& operator=(const Grid2d& src){}
-    ///@copydoc set()
+    Grid2d(const Grid2d& src):dlt_(src.dlt_){*this = src;}
+    Grid2d& operator=(const Grid2d& src){
+        x0_=src.x0_, x1_=src.x1_,y0_=src.y0_,y1_=src.y1_;
+        lx_=src.lx_,ly_=src.ly_;
+        n_=src.n_,Nx_=src.Nx_,Ny_=src.Ny_;
+        hx_=src.hx_,hy_=src.hy_;
+        bcx_=src.bcx_,bcy_=src.bcy_;
+        dlt_=src.dlt_;
+    }
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny;
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
@@ -703,8 +709,15 @@ struct Grid3d
     }
   protected:
     virtual ~Grid3d(){}
-    Grid3d(const Grid3d& src){}
-    Grid3d& operator=(const Grid3d& src){}
+    Grid3d(const Grid3d& src):dlt_(src.dlt_){*this = src;}
+    Grid3d& operator=(const Grid3d& src){ //use default in C++11
+        x0_=src.x0_, x1_=src.x1_,y0_=src.y0_,y1_=src.y1_,z0_=src.z0_,z1_=src.z1_;
+        lx_=src.lx_,ly_=src.ly_,lz_=src.lz_;
+        n_=src.n_,Nx_=src.Nx_,Ny_=src.Ny_,Nz_=src.Nz_;
+        hx_=src.hx_,hy_=src.hy_,hz_=src.hz_;
+        bcx_=src.bcx_,bcy_=src.bcy_,bcz_=src.bcz_;
+        dlt_=src.dlt_;
+    }
     virtual void do_set(unsigned new_n, unsigned new_Ny, unsigned new_Nz)
     {
         n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny, Nz_ = new_Nz;

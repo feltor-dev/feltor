@@ -40,16 +40,6 @@ struct CurvilinearGrid3d : public dg::Grid3d
         generator_ = generator;
         construct( n, Nx, Ny);
     }
-    /**
-    * @brief Reconstruct the grid coordinates
-    *
-    * @copydetails Grid3d::set()
-    * @attention the generator must still live when this function is called
-    */
-    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny,unsigned new_Nz){
-        dg::Grid3d::set( new_n, new_Nx, new_Ny,new_Nz);
-        construct( new_n, new_Nx, new_Ny);
-    }
 
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
     const thrust::host_vector<double>& r()const{return r_;}
@@ -64,10 +54,32 @@ struct CurvilinearGrid3d : public dg::Grid3d
     const container& g_pp()const{return g_pp_;}
     const container& vol()const{return vol_;}
     const container& perpVol()const{return vol2d_;}
-    const geo::aGenerator * generator() const{return generator_;}
+    const geo::aGenerator & generator() const{return *generator_;}
+    bool isOrthonormal() const { return generator_->isOrthonormal();}
     bool isOrthogonal() const { return generator_->isOrthogonal();}
     bool isConformal() const { return generator_->isConformal();}
+    Curvilinear3d( const Curvilinear3d& src):Grid3d(src), g_xx_(src.g_xx_),g_xy_(src.g_xy_),g_yy_(src.g_yy_),g_pp_(src.g_pp_),vol_(src.vol_),vol2d_(src.vol2d_)
+    {
+        r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
+        generator_ = src.generator_->clone();
+    }
+    Curvilinear3d& operator=( const Curvilinear3d& src)
+    {
+        Grid3d::operator=(src);//call base class assignment
+        delete generator_;
+        g_xx_=src.g_xx_,g_xy_=src.g_xy_,g_yy_=src.g_yy_,g_pp_=src.g_pp_,vol_=src.vol_,vol2d_=src.vol2d_;
+        r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
+        generator_ = src.generator_->clone();
+        return *this;
+    }
+    ~Curvilinear3d(){
+        delete generator_;
+    }
     private:
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny,unsigned new_Nz){
+        dg::Grid3d::do_set( new_n, new_Nx, new_Ny,new_Nz);
+        construct( new_n, new_Nx, new_Ny);
+    }
     void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
         dg::Grid1d gY1d( 0, generator_->height(), n, Ny, dg::PER);
@@ -160,14 +172,6 @@ struct CurvilinearGrid2d : public dg::Grid2d
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
 
-    void set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
-    {
-        dg::Grid2d::set( new_n, new_Nx, new_Ny);
-        CurvilinearGrid3d<container> g( generator_, new_n,new_Nx,new_Ny,1,bcx());
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
-        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
-        vol2d_=g.perpVol();
-    }
     const thrust::host_vector<double>& r()const{return r_;}
     const thrust::host_vector<double>& z()const{return z_;}
     const thrust::host_vector<double>& xr()const{return xr_;}
@@ -179,10 +183,37 @@ struct CurvilinearGrid2d : public dg::Grid2d
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const container& perpVol()const{return vol2d_;}
-    const geo::aGenerator * generator() const{return generator_;}
+    const geo::aGenerator& generator() const{return *generator_;}
+    bool isOrthonormal() const { return generator_->isOrthonormal();}
     bool isOrthogonal() const { return generator_->isOrthogonal();}
     bool isConformal() const { return generator_->isConformal();}
+
+    Curvilinear2d( const Curvilinear2d& src):Grid2d(src), g_xx_(src.g_xx_),g_xy_(src.g_xy_),g_yy_(src.g_yy_),vol2d_(src.vol2d_)
+    {
+        r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
+        generator_ = src.generator_->clone();
+    }
+    Curvilinear2d& operator=( const Curvilinear2d& src)
+    {
+        Grid2d::operator=(src); //call base class assignment
+        delete generator_;
+        g_xx_=src.g_xx_,g_xy_=src.g_xy_,g_yy_=src.g_yy_,vol2d_=src.vol2d_;
+        r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
+        generator_ = src.generator_->clone();
+        return *this;
+    }
+    ~Curvilinear2d(){
+        delete generator_;
+    }
     private:
+    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
+    {
+        dg::Grid2d::do_set( new_n, new_Nx, new_Ny);
+        CurvilinearGrid3d<container> g( generator_, new_n,new_Nx,new_Ny,1,bcx());
+        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
+        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
+        vol2d_=g.perpVol();
+    }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
     const geo::aGenerator* generator_;

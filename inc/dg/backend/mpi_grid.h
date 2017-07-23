@@ -66,8 +66,8 @@ struct MPIGrid2d
     *           use the resize function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny())
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
-        do_set( new_n,new_Nx,new_Ny);
         check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
+        do_set( new_n,new_Nx,new_Ny);
     }
 
     /**
@@ -303,8 +303,10 @@ struct MPIGrid2d
     virtual const Grid2d& global() const {return g;}
     protected:
     virtual ~MPIGrid2d(){}
-    MPIGrid2d(const MPIGrid2d& src){}
-    MPIGrid2d& operator=(const MPIGrid2d& src){}
+    MPIGrid2d(const MPIGrid2d& src):g(src.g),comm(src.comm){}
+    MPIGrid2d& operator=(const MPIGrid2d& src){
+        g = src.g; comm = src.comm;
+    }
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         g.set(new_n,new_Nx,new_Ny);
     }
@@ -382,8 +384,8 @@ struct MPIGrid3d
      *           use the resize function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny(), 2*g.global().Nz())
      */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        do_set(new_n,new_Nx,new_Ny,new_Nz);
         check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());
+        do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 
 
@@ -639,8 +641,10 @@ struct MPIGrid3d
         g.set(new_n,new_Nx,new_Ny,new_Nz);
     }
     virtual ~MPIGrid3d(){}
-    MPIGrid3d(const MPIGrid3d& src){}
-    MPIGrid3d& operator=(const MPIGrid3d& src){}
+    MPIGrid3d(const MPIGrid3d& src):g(src.g),comm(src.comm){}
+    MPIGrid3d& operator=(const MPIGrid3d& src){
+        g = src.g; comm = src.comm;
+    }
     void init_X_boundaries( double global_x0, double global_x1)
     {
         g.init_X_boundaries(global_x0, global_x1);

@@ -71,7 +71,7 @@ struct dg::geo::aCloneableBinaryFunctor : public dg::geo::aBinaryFunctor
     *
     * @return new copy of the functor
     */
-    virtual aBinaryFunctor* clone() const
+    virtual Derived* clone() const
     {
         return new Derived(static_cast<Derived const &>(*this));
     }
@@ -104,6 +104,7 @@ struct aTokamakMagneticField
     aTokamakMagneticField& operator=( const aTokamakMagneticField& mag)
     {
         aTokamakMagneticField temp(mag);
+        std::swap( temp.R0_, R0_);
         std::swap( temp.p_, p_);
         return *this;
     }
@@ -147,6 +148,7 @@ struct aTokamakMagneticField
         aBinaryFunctor* ipolR,
         aBinaryFunctor* ipolZ
         ):p_(10){ 
+            R0_(R0),
             p_[0] = psip,
             p_[1] = psipR,
             p_[2] = psipZ,
