@@ -12,6 +12,7 @@
 
 namespace dg
 {
+    //actually there shouldn't be a reason to manually refine a grid when we can use our generators instead
 
 ///@cond
 namespace detail
@@ -255,6 +256,7 @@ struct RefinedGrid3d;
 ///@endcond
 /**
  * @brief Refined grid 
+ * @deprecated
  * @ingroup grid
  */
 struct RefinedGrid2d : public dg::Grid2d
@@ -389,6 +391,7 @@ struct RefinedGrid2d : public dg::Grid2d
 
 /**
  * @brief Refined grid 
+ * @deprecated
  * @ingroup grid
  */
 struct RefinedGrid3d : public dg::Grid3d
@@ -537,6 +540,7 @@ RefinedGrid2d::RefinedGrid2d( const dg::RefinedGrid3d& g) :
  * @brief A refined cartesian grid
  *
  * @ingroup basicgrids
+ * @deprecated
  * @tparam container
  */
 template<class container>
@@ -569,6 +573,7 @@ struct CartesianRefinedGrid2d : public dg::RefinedGrid2d
 
 namespace create{
 
+///@deprecated
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::RefinedGrid2d& g_fine)
 {
     dg::Grid2d g = g_fine.associated();
@@ -577,6 +582,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::Refine
     return dg::create::interpolation( x,y, g);
 
 }
+///@deprecated
 cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::RefinedGrid2d& g_fine)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
@@ -584,6 +590,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::Refin
     return A;
 }
 
+///@deprecated
 cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::RefinedGrid2d& g_fine)
 {
     //form the adjoint
@@ -609,6 +616,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::RefinedGr
     return A;
 }
 
+///@deprecated
 cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::RefinedGrid2d& g)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> A = interpolation(g);
@@ -619,6 +627,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::RefinedGri
     return C; 
 }
 
+///@deprecated
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::RefinedGrid3d& g_fine)
 {
     dg::Grid3d g = g_fine.associated();
@@ -628,6 +637,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const dg::Refine
     return dg::create::interpolation( x,y,z, g);
 }
 
+///@deprecated
 cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::RefinedGrid3d& g_fine)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
@@ -635,6 +645,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const dg::Refin
     return A;
 }
 
+///@deprecated
 cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::RefinedGrid3d& g_fine)
 {
     //form the adjoint
@@ -660,6 +671,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::RefinedGr
     return A;
 }
 
+///@deprecated
 cusp::coo_matrix<int, double, cusp::host_memory> smoothing( const dg::RefinedGrid3d& g)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> A = interpolation(g);

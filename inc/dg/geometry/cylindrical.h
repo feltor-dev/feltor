@@ -44,11 +44,11 @@ struct CylindricalGrid3d : public dg::Grid3d
      * @return the volume element R
      */
     const container& vol()const {return R_;}
-    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
+    private:
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
         dg::Grid3d::set(new_n,new_Nx,new_Ny,new_Nz);
         R_=dg::evaluate(dg::cooX3d, *this);
     }
-    private:
     container R_;
 };
 
