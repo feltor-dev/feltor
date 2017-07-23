@@ -285,7 +285,7 @@ void construct_rz( Nemov nemov,
  * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-struct SimpleOrthogonal : public aGenerator
+struct SimpleOrthogonal : public aGridGenerator
 {
     /**
      * @brief Construct a simple orthogonal grid 
@@ -324,28 +324,24 @@ struct SimpleOrthogonal : public aGenerator
      * @return length of zeta-domain (f0*(psi_1-psi_0))
      * @note the length is always positive
      */
-    double width() const{return lz_;}
+    virtual double width() const{return lz_;}
     /**
      * @brief 2pi (length of the eta domain)
      *
      * Always returns 2pi
      * @return 2pi 
      */
-    double height() const{return 2.*M_PI;}
+    virtual double height() const{return 2.*M_PI;}
     /**
      * @brief Indicate orthogonality
      *
      * @return true
      */
-    bool isOrthogonal() const{return true;}
-    /**
-     * @brief Indicate conformity
-     *
-     * @return false
-     */
-    bool isConformal()  const{return false;}
+    virtual bool isOrthogonal() const{return true;}
+    virtual SimpleOrthogonal* clone() const{return new SimpleOrthogonal(*this);}
 
-    void operator()( 
+    private:
+    virtual void generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -361,8 +357,6 @@ struct SimpleOrthogonal : public aGenerator
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
-        zetaX.resize(size), zetaY.resize(size), 
-        etaX.resize(size), etaY.resize(size);
         for( unsigned idx=0; idx<size; idx++)
         {
             double psipR = psiX_(x[idx], y[idx]);
@@ -373,7 +367,6 @@ struct SimpleOrthogonal : public aGenerator
             etaY[idx] = +h[idx]*psipR;
         }
     }
-    private:
     PsiX psiX_;
     PsiY psiY_;
     LaplacePsi laplacePsi_;

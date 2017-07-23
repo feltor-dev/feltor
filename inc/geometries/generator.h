@@ -12,12 +12,13 @@ A generator is there to construct coordinate transformations from physical coord
 is a product space. 
  @ingroup generators
 */
-struct aGenerator
+struct aGridGenerator
 {
     virtual double width()  const=0; //!<length in \f$ \zeta\f$ 
     virtual double height() const=0; //!<length in \f$ \eta\f$
-    virtual bool isOrthogonal() const=0; //!< true if coordinate system is orthogonal
-    virtual bool isConformal()const=0; //!< true if coordinate system is conformal
+    virtual bool isOrthonormal() const{return false;} //!< true if coordinate system is orthonormal (false by default)
+    virtual bool isOrthogonal() const{return false;} //!< true if coordinate system is orthogonal (false by default)
+    virtual bool isConformal()const{return false;} //!< true if coordinate system is conformal (false by default)
     /**
     * @brief Generate grid points and elements of the Jacobian 
     *
@@ -32,7 +33,7 @@ struct aGenerator
     * @note the \f$ \zeta\f$ coordinate is contiguous in memory
     * @note All the resulting vectors are write-only and get properly resized
     */
-    virtual void operator()( 
+    void operator()( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -40,9 +41,33 @@ struct aGenerator
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) const =0;
+         thrust::host_vector<double>& etaY) const
+    {
+        unsigned size = zeta1d.size()*eta1d.size();
+        x.resize(size), y.resize(size);
+        zetaX = zetaY = etaX = etaY =x ;
+        generate( zeta1d, eta1d, x,y,zetaX,zetaY,etaX,etaY);
+    }
+    /**
+    * @brief Abstract clone method that returns a copy on the heap
+    *
+    * @return a copy of *this on the heap
+    */
+    virtual aGridGenerator* clone() const=0;
 
-   virtual ~aGenerator(){}
+    protected:
+    ///@copydoc operator()()
+    virtual void generate(
+         const thrust::host_vector<double>& zeta1d, 
+         const thrust::host_vector<double>& eta1d, 
+         thrust::host_vector<double>& x, 
+         thrust::host_vector<double>& y, 
+         thrust::host_vector<double>& zetaX, 
+         thrust::host_vector<double>& zetaY, 
+         thrust::host_vector<double>& etaX, 
+         thrust::host_vector<double>& etaY) const = 0;
+    
+   virtual ~aGridGenerator(){}
 };
 
 }//namespace geo

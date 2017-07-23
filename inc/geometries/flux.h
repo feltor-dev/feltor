@@ -136,7 +136,7 @@ struct Fpsi
  * @tparam IpolY models aBinaryOperator 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Ipol, class IpolX, class IpolY>
-struct FluxGenerator : public aGenerator
+struct FluxGenerator : public aGridGenerator
 {
     /**
      * @brief Construct a symmetry flux grid generator
@@ -178,8 +178,6 @@ struct FluxGenerator : public aGenerator
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
 
-    bool isOrthogonal()const{return false;}
-    bool isConformal()const{return false;}
     /**
      * @brief The length of the zeta-domain
      *
@@ -187,16 +185,18 @@ struct FluxGenerator : public aGenerator
      * @return length of zeta-domain (f0*(psi_1-psi_0))
      * @note the length is always positive
      */
-    double width() const{return lx_;}
+    virtual double width() const{return lx_;}
     /**
      * @brief 2pi (length of the eta domain)
      *
      * Always returns 2pi
      * @return 2pi 
      */
-    double height() const{return 2.*M_PI;}
+    virtual double height() const{return 2.*M_PI;}
+    virtual FluxGenerator* clone() const{return new FluxGenerator(*this);}
 
-    void operator()( 
+    private:
+    virtual void generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -216,9 +216,6 @@ struct FluxGenerator : public aGenerator
         dg::geo::flux::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Ipol, IpolX, IpolY> fieldRZYRYZY(psiX_, psiY_, psiXX_, psiXY_, psiYY_, ipol_, ipolR_, ipolZ_);
         ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsiRibeiro(psi_, psiX_, psiY_, x0_, y0_, mode_);
         dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        unsigned size = zeta1d.size()*eta1d.size();
-        x.resize(size), y.resize(size);
-        zetaX = zetaY = etaX = etaY =x ;
         thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
         thrust::host_vector<double> f_p(fx_);
@@ -238,7 +235,6 @@ struct FluxGenerator : public aGenerator
             }
         }
     }
-    private:
     Psi psi_;
     PsiX psiX_;
     PsiY psiY_;
@@ -263,7 +259,7 @@ struct FluxGenerator : public aGenerator
      * @tparam PsiYY models aBinaryOperator 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct RibeiroFluxGenerator : public aGenerator
+struct RibeiroFluxGenerator : public aGridGenerator
 {
     /**
      * @brief Construct a flux aligned grid generator
@@ -292,8 +288,6 @@ struct RibeiroFluxGenerator : public aGenerator
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
-    bool isOrthogonal()const{return false;}
-    bool isConformal()const{return false;}
     /**
      * @brief The length of the zeta-domain
      *
@@ -301,16 +295,18 @@ struct RibeiroFluxGenerator : public aGenerator
      * @return length of zeta-domain (f0*(psi_1-psi_0))
      * @note the length is always positive
      */
-    double width() const{return lx_;}
+    virtual double width() const{return lx_;}
     /**
      * @brief 2pi (length of the eta domain)
      *
      * Always returns 2pi
      * @return 2pi 
      */
-    double height() const{return 2.*M_PI;}
+    virtual double height() const{return 2.*M_PI;}
+    virtual RibeiroFluxGenerator* clone() const{return new RibeiroFluxGenerator(*this);}
 
-    void operator()( 
+    private:
+    virtual void generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -328,9 +324,6 @@ struct RibeiroFluxGenerator : public aGenerator
         ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
         dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        unsigned size = zeta1d.size()*eta1d.size();
-        x.resize(size), y.resize(size);
-        zetaX = zetaY = etaX = etaY =x ;
         thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
         thrust::host_vector<double> f_p(fx_);
@@ -350,7 +343,6 @@ struct RibeiroFluxGenerator : public aGenerator
             }
         }
     }
-    private:
     Psi psi_;
     PsiX psiX_;
     PsiY psiY_;

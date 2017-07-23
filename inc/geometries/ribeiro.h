@@ -221,8 +221,6 @@ struct Ribeiro : public aGenerator
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
-    bool isOrthogonal()const{return false;}
-    bool isConformal()const{return false;}
     /**
      * @brief The length of the zeta-domain
      *
@@ -230,16 +228,18 @@ struct Ribeiro : public aGenerator
      * @return length of zeta-domain (f0*(psi_1-psi_0))
      * @note the length is always positive
      */
-    double width() const{return lx_;}
+    virtual double width() const{return lx_;}
     /**
      * @brief 2pi (length of the eta domain)
      *
      * Always returns 2pi
      * @return 2pi 
      */
-    double height() const{return 2.*M_PI;}
+    virtual double height() const{return 2.*M_PI;}
+    virtual Ribeiro* clone() const{return new Ribeiro(*this);}
 
-    void operator()( 
+    private:
+    virtual void generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -258,9 +258,6 @@ struct Ribeiro : public aGenerator
         ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
         dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
         dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        unsigned size = zeta1d.size()*eta1d.size();
-        x.resize(size), y.resize(size);
-        zetaX = zetaY = etaX = etaY =x ;
         thrust::host_vector<double> f_p(fx_);
         unsigned Nx = zeta1d.size(), Ny = eta1d.size();
         for( unsigned i=0; i<zeta1d.size(); i++)
@@ -278,7 +275,6 @@ struct Ribeiro : public aGenerator
             }
         }
     }
-    private:
     Psi psi_;
     PsiX psiX_;
     PsiY psiY_;

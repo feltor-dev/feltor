@@ -370,43 +370,37 @@ struct Hector : public aGenerator
      * @return length of u-domain
      * @note the length is always positive
      */
-    double width() const {return lu_;}
+    virtual double width() const {return lu_;}
     /**
      * @brief 2pi
      *
      * Always returns 2pi
      * @return 2pi 
      */
-    double height() const {return 2.*M_PI;}
+    virtual double height() const {return 2.*M_PI;}
     /**
      * @brief True if conformal constructor was used
      *
      * @return true if conformal constructor was used
      */
-    bool isConformal() const {return conformal_;}
+    virtual bool isConformal() const {return conformal_;}
     /**
      * @brief True if orthogonal constructor was used
      *
      * @return true if orthogonal constructor was used
      */
-    bool isOrthogonal() const {return orthogonal_;}
+    virtual bool isOrthogonal() const {return orthogonal_;}
 
     /**
-     * @brief Generate the points and the elements of the Jacobian
+     * @brief Return the internally used orthogonal grid
      *
-     * Call the width() and height() function before calling this function!
-     * @param u1d one-dimensional list of points inside the u-domain (0<u<width())
-     * @param v1d one-dimensional list of points inside the v-domain (0<v<height())
-     * @param x  \f$= x(u,v)\f$
-     * @param y  \f$= y(u,v)\f$
-     * @param ux \f$= u_x(u,v)\f$
-     * @param uy \f$= u_y(u,v)\f$
-     * @param vx \f$= v_x(u,v)\f$
-     * @param vy \f$= v_y(u,v)\f$
-     * @note All the resulting vectors are write-only and get properly resized
-     * @note The \f$ u\f$ direction is continuous in memory
+     * @return  orthogonal zeta, eta grid
      */
-    void operator()( const thrust::host_vector<double>& u1d, 
+    const dg::CurvilinearGrid2d<container>& internal_grid() const {return g2d_;}
+    virtual ~Hector() { delete generator_;}
+    virtual Hector* clone() const{return new Hector(*this);}
+    private:
+    virtual void generate( const thrust::host_vector<double>& u1d, 
                      const thrust::host_vector<double>& v1d, 
                      thrust::host_vector<double>& x, 
                      thrust::host_vector<double>& y, 
@@ -424,8 +418,6 @@ struct Hector : public aGenerator
             eta[i] = fmod(eta[i]+2.*M_PI, 2.*M_PI); 
         dg::IHMatrix Q = dg::create::interpolation( zeta, eta, g2d_);
 
-        thrust::host_vector<double> u(u1d.size()*v1d.size());
-        x = y = ux = uy = vx = vy = u;  //resize 
         dg::blas2::symv( Q, g2d_.r(), x);
         dg::blas2::symv( Q, g2d_.z(), y);
         dg::blas2::symv( Q, ux_, ux);
@@ -433,6 +425,7 @@ struct Hector : public aGenerator
         dg::blas2::symv( Q, vx_, vx);
         dg::blas2::symv( Q, vy_, vy);
         ////Test if u1d is u
+        //thrust::host_vector<double> u(u1d.size()*v1d.size());
         //dg::blas2::symv( Q, u_, u);
         //dg::HVec u2d(u1d.size()*v1d.size());
         //for( unsigned i=0; i<v1d.size(); i++)
@@ -443,14 +436,6 @@ struct Hector : public aGenerator
         //std::cout << "Error in u is "<<eps<<std::endl;
     }
 
-    /**
-     * @brief Return the internally used orthogonal grid
-     *
-     * @return  orthogonal zeta, eta grid
-     */
-    const dg::CurvilinearGrid2d<container>& internal_grid() const {return g2d_;}
-    ~Hector() { delete generator_;}
-    private:
     //make Hector non-copyable
     Hector( const Hector& src);
     Hector& operator=( const Hector& src);
