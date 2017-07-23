@@ -57,7 +57,7 @@ namespace solovev
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  *
  */    
-struct Psip
+struct Psip: public aBinaryFunctor
 {
     /**
      * @brief Construct from given geometric parameters
@@ -167,7 +167,7 @@ struct Psip
       \ln{(\bar{R}   )})\Bigg\} \f]
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  */ 
-struct PsipR
+struct PsipR: public aBinaryFunctor
 {
     /**
      * @brief Construct from given geometric parameters
@@ -230,7 +230,7 @@ struct PsipR
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
  */ 
-struct PsipRR
+struct PsipRR: public aBinaryFunctor
 {
     /**
     * @brief Constructor
@@ -302,7 +302,7 @@ struct PsipRR
 /**
  * @brief \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\f]
  */ 
-struct PsipZ
+struct PsipZ: public aBinaryFunctor
 {
     PsipZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
 /**
@@ -359,7 +359,7 @@ struct PsipZ
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}\f]
  */ 
-struct PsipZZ
+struct PsipZZ: public aBinaryFunctor
 {
   PsipZZ( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
 /**
@@ -403,7 +403,7 @@ struct PsipZZ
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\f] 
  */ 
-struct PsipRZ
+struct PsipRZ: public aBinaryFunctor
 {
     PsipRZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
 /**
@@ -454,7 +454,7 @@ struct PsipRZ
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2 } + \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2 } \f] 
  */
-struct LaplacePsip
+struct LaplacePsip: public aBinaryFunctor
 {
     LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
     /**
@@ -481,7 +481,7 @@ struct LaplacePsip
 /**
  * @brief \f[\hat{I}\f] 
  */ 
-struct Ipol
+struct Ipol: public aBinaryFunctor
 {
     Ipol(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp) { }
     /**
@@ -506,7 +506,7 @@ struct Ipol
 /**
  * @brief \f[\hat I_R\f]
  */
-struct IpolR
+struct IpolR: public aBinaryFunctor
 {
     IpolR(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipR_(gp) { }
     double operator()(double R, double Z) const
@@ -528,7 +528,7 @@ struct IpolR
 /**
  * @brief \f[\hat I_Z\f]
  */
-struct IpolZ
+struct IpolZ: public aBinaryFunctor
 {
     IpolZ(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipZ_(gp) { }
     double operator()(double R, double Z) const
@@ -551,20 +551,19 @@ struct IpolZ
 /**
  * @brief Contains all solovev fields (models aTokamakMagneticField)
  */
-struct MagneticField
+struct MagneticField : dg::geo::aToakamakMagneticField
 {
-    MagneticField( GeomParameters gp): R_0(gp.R_0), psip(gp), psipR(gp), psipZ(gp), psipRR(gp), psipRZ(gp), psipZZ(gp), laplacePsip(gp), ipol(gp), ipolR(gp), ipolZ(gp){}
-    double R_0;
-    Psip psip;
-    PsipR psipR;
-    PsipZ psipZ;
-    PsipRR psipRR;
-    PsipRZ psipRZ;
-    PsipZZ psipZZ;
-    LaplacePsip laplacePsip;
-    Ipol ipol;
-    IpolR ipolR;
-    IpolZ ipolZ;
+    MagneticField( GeomParameters gp): aTokamakMagneticField(gp.R_0, 
+        new Psip(gp), 
+        new PsipR(gp), 
+        new PsipZ(gp), 
+        new PsipRR(gp), 
+        new PsipRZ(gp), 
+        new PsipZZ(gp), 
+        new LaplacePsip(gp), 
+        new Ipol(gp), 
+        new IpolR(gp), 
+        new IpolZ(gp)){}
 };
 ///@}
 
@@ -572,7 +571,7 @@ struct MagneticField
 namespace mod
 {
 
-struct Psip
+struct Psip: public aBinaryFunctor
 {
     Psip( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
@@ -602,7 +601,7 @@ struct Psip
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipR
+struct PsipR: public aBinaryFunctor
 {
     PsipR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
@@ -634,7 +633,7 @@ struct PsipR
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipZ
+struct PsipZ: public aBinaryFunctor
 {
     PsipZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -667,7 +666,7 @@ struct PsipZ
     dg::Cauchy cauchy_;
 };
 
-struct PsipZZ
+struct PsipZZ: public aBinaryFunctor
 {
     PsipZZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -700,7 +699,7 @@ struct PsipZZ
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipRR
+struct PsipRR: public aBinaryFunctor
 {
     PsipRR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -733,7 +732,7 @@ struct PsipRR
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipRZ
+struct PsipRZ: public aBinaryFunctor
 {
     PsipRZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -769,7 +768,7 @@ struct PsipRZ
     dg::Cauchy cauchy_;
 };
 
-struct LaplacePsip
+struct LaplacePsip: public aBinaryFunctor
 {
     LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
     double operator()(double R, double Z) const
