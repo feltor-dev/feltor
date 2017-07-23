@@ -57,7 +57,7 @@ namespace solovev
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  *
  */    
-struct Psip: public aBinaryFunctor
+struct Psip: public aCloneableBinaryFunctor<Psip>
 {
     /**
      * @brief Construct from given geometric parameters
@@ -75,19 +75,6 @@ struct Psip: public aBinaryFunctor
     double operator()(double R, double Z) const
     {    
         return psi_alt( R, Z);
-    }
-    /**
-     * @brief \f$ \psi_p(R,Z,\phi) \equiv \psi_p(R,Z)\f$
-     *
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
-      @param phi angle (cylindrical coordinates)
-     *
-     * @return \f$ \hat \psi_p(R,Z,\phi) \f$
-     */
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
     }
     /**
      * @brief Show parameters to std::cout
@@ -167,7 +154,7 @@ struct Psip: public aBinaryFunctor
       \ln{(\bar{R}   )})\Bigg\} \f]
       with \f$ \bar R := \frac{ R}{R_0} \f$ and \f$\bar Z := \frac{Z}{R_0}\f$
  */ 
-struct PsipR: public aBinaryFunctor
+struct PsipR: public aCloneableBinaryFunctor<PsipR>
 {
     /**
      * @brief Construct from given geometric parameters
@@ -186,18 +173,6 @@ struct PsipR: public aBinaryFunctor
     {    
         return psipR_alt( R, Z);
     }
-    /**
-     * @brief \f$ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z,\phi) \equiv \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)\f$
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
-      @param phi angle (cylindrical coordinates)
-    * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z,\phi)  \f$
- */ 
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
-    }
-
 
     /**
      * @brief Print parameters to std::cout
@@ -230,7 +205,7 @@ struct PsipR: public aBinaryFunctor
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\f]
  */ 
-struct PsipRR: public aBinaryFunctor
+struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 {
     /**
     * @brief Constructor
@@ -261,19 +236,6 @@ struct PsipRR: public aBinaryFunctor
         return psipRR_alt( R, Z);
     }
     /**
-    * @brief return operator()(R,Z)
-    *
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
-      @param phi angle (cylindrical coordinates)
-    *
-    * @return value
-    */
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
-    }
-    /**
     * @brief Display the internal parameters to std::cout
     */
     void display()
@@ -302,7 +264,7 @@ struct PsipRR: public aBinaryFunctor
 /**
  * @brief \f[\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\f]
  */ 
-struct PsipZ: public aBinaryFunctor
+struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 {
     PsipZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
 /**
@@ -340,13 +302,6 @@ struct PsipZ: public aBinaryFunctor
     {    
         return psipZ_alt(R, Z);
     }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
-    }
     void display() const
     {
         std::cout << R_0_ <<"  " <<A_ <<"\n";
@@ -359,28 +314,21 @@ struct PsipZ: public aBinaryFunctor
 /**
  * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}\f]
  */ 
-struct PsipZZ: public aBinaryFunctor
+struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 {
-  PsipZZ( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
-/**
- * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}=
+    PsipZZ( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
+  /**
+   * @brief \f[ \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2}=
       \hat{R}_0^{-1} \Bigg\{2 c_3 -8 c_4 \bar{R}^2 +6 c_{10}  \bar{Z}-24 c_{11}
       \bar{R}^2  \bar{Z}+c_6 (-24 \bar{R}^4 +96 \bar{R}^2  \bar{Z}^2)
       +c_5 (-18 \bar{R}^2 +24  \bar{Z}^2-24 \bar{R}^2  \ln{(\bar{R}   )})+
       c_{12} (160  \bar{Z}^3-480 \bar{R}^2  \bar{Z} \ln{(\bar{R}   )})
       +c_7 (150 \bar{R}^4 -1680 \bar{R}^2  \bar{Z}^2+240  \bar{Z}^4+360 \bar{R}^4 
       \ln{(\bar{R}   )}-1440 \bar{R}^2  \bar{Z}^2 \ln{(\bar{R}   )})\Bigg\} \f]
- */ 
+    */ 
     double operator()(double R, double Z) const
     {    
         return psipZZ_alt( R, Z);
-    }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
     }
     void display() const
     {
@@ -403,7 +351,7 @@ struct PsipZZ: public aBinaryFunctor
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\f] 
  */ 
-struct PsipRZ: public aBinaryFunctor
+struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 {
     PsipRZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
 /**
@@ -420,13 +368,6 @@ struct PsipRZ: public aBinaryFunctor
     double operator()(double R, double Z) const
     {    
         return psipRZ_alt( R, Z);
-    }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
     }
     void display() const
     {
@@ -454,7 +395,7 @@ struct PsipRZ: public aBinaryFunctor
 /**
  * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2 } + \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2 } \f] 
  */
-struct LaplacePsip: public aBinaryFunctor
+struct LaplacePsip: public aCloneableBinaryFunctor<LaplacePsip>
 {
     LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
     /**
@@ -463,13 +404,6 @@ struct LaplacePsip: public aBinaryFunctor
     double operator()(double R, double Z) const
     {    
         return psipRR_(R,Z) + psipZZ_(R,Z);
-    }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
     }
   private:
     PsipRR psipRR_;
@@ -481,7 +415,7 @@ struct LaplacePsip: public aBinaryFunctor
 /**
  * @brief \f[\hat{I}\f] 
  */ 
-struct Ipol: public aBinaryFunctor
+struct Ipol: public aCloneableBinaryFunctor<Ipol>
 {
     Ipol(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp) { }
     /**
@@ -492,13 +426,6 @@ struct Ipol: public aBinaryFunctor
         //sign before A changed to -
         return qampl_*sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.);
     }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()( R,Z);
-    }
   private:
     double R_0_, A_,qampl_;
     Psip psip_;
@@ -506,19 +433,12 @@ struct Ipol: public aBinaryFunctor
 /**
  * @brief \f[\hat I_R\f]
  */
-struct IpolR: public aBinaryFunctor
+struct IpolR: public aCloneableBinaryFunctor<IpolR>
 {
     IpolR(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipR_(gp) { }
     double operator()(double R, double Z) const
     {    
         return -qampl_/sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.)*(A_*psipR_(R,Z)/R_0_);
-    }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()( R,Z);
     }
   private:
     double R_0_, A_,qampl_;
@@ -528,19 +448,12 @@ struct IpolR: public aBinaryFunctor
 /**
  * @brief \f[\hat I_Z\f]
  */
-struct IpolZ: public aBinaryFunctor
+struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
 {
     IpolZ(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipZ_(gp) { }
     double operator()(double R, double Z) const
     {    
         return -qampl_/sqrt(-2.*A_* psip_(R,Z) /R_0_ + 1.)*(A_*psipZ_(R,Z)/R_0_);
-    }
-    /**
-     * @brief == operator()(R,Z)
-     */ 
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()( R,Z);
     }
   private:
     double R_0_, A_,qampl_;
@@ -549,9 +462,9 @@ struct IpolZ: public aBinaryFunctor
 };
 
 /**
- * @brief Contains all solovev fields (models aTokamakMagneticField)
+ * @brief Contains all solovev fields
  */
-struct MagneticField : dg::geo::aToakamakMagneticField
+struct MagneticField : public dg::geo::aTokamakMagneticField
 {
     MagneticField( GeomParameters gp): aTokamakMagneticField(gp.R_0, 
         new Psip(gp), 
@@ -571,7 +484,7 @@ struct MagneticField : dg::geo::aToakamakMagneticField
 namespace mod
 {
 
-struct Psip: public aBinaryFunctor
+struct Psip: public aCloneableBinaryFunctor
 {
     Psip( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
@@ -588,10 +501,6 @@ struct Psip: public aBinaryFunctor
         double psip_2 =  0.5*(- psipZZ_X_*Rbar*Rbar + 2.*psipRZ_X_*Rbar*Zbar - psipRR_X_*Zbar*Zbar) - psip_RZ ; 
         return  psip_RZ + 0.5*psip_2*cauchy_(R,Z);
     }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()( R,Z);
-    }
     private:
     double R_X, Z_X; 
     double psipZZ_X_, psipRZ_X_, psipRR_X_;
@@ -601,7 +510,7 @@ struct Psip: public aBinaryFunctor
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipR: public aBinaryFunctor
+struct PsipR: public aCloneableBinaryFunctor
 {
     PsipR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
@@ -619,10 +528,6 @@ struct PsipR: public aBinaryFunctor
         double psip_2R =  - psipZZ_X_*Rbar + psipRZ_X_*Zbar - psipR_RZ;
         return psipR_RZ + 0.5*(psip_2R*cauchy_(R,Z) + psip_2*cauchy_.dx(R,Z)  );
     }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()( R,Z);
-    }
     private:
     double R_X, Z_X; 
     double psipZZ_X_, psipRZ_X_, psipRR_X_;
@@ -633,7 +538,7 @@ struct PsipR: public aBinaryFunctor
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipZ: public aBinaryFunctor
+struct PsipZ: public aCloneableBinaryFunctor
 {
     PsipZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -651,10 +556,6 @@ struct PsipZ: public aBinaryFunctor
         double psip_2Z =  - psipRR_X_*Zbar + psipRZ_X_*Rbar - psipZ_RZ;
         return psipZ_RZ + 0.5*(psip_2Z*cauchy_(R,Z) + psip_2*cauchy_.dy(R,Z));
     }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()( R,Z);
-    }
     private:
     double R_X, Z_X; 
     double psipZZ_X_, psipRZ_X_, psipRR_X_;
@@ -666,7 +567,7 @@ struct PsipZ: public aBinaryFunctor
     dg::Cauchy cauchy_;
 };
 
-struct PsipZZ: public aBinaryFunctor
+struct PsipZZ: public aCloneableBinaryFunctor
 {
     PsipZZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -685,10 +586,6 @@ struct PsipZZ: public aBinaryFunctor
         double psip_2ZZ =  - psipRR_X_ - psipZZ_RZ;
         return psipZZ_RZ + 0.5*(psip_2ZZ*cauchy_(R,Z) + 2.*cauchy_.dy(R,Z)*psip_2Z +  psip_2*cauchy_.dyy(R,Z));
     }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()( R,Z);
-    }
     private:
     double R_X, Z_X; 
     double psipZZ_X_, psipRZ_X_, psipRR_X_;
@@ -699,7 +596,7 @@ struct PsipZZ: public aBinaryFunctor
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipRR: public aBinaryFunctor
+struct PsipRR: public aCloneableBinaryFunctor
 {
     PsipRR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -718,10 +615,6 @@ struct PsipRR: public aBinaryFunctor
         double psip_2RR =  - psipZZ_X_ - psipRR_RZ;
         return psipRR_RZ + 0.5*(psip_2RR*cauchy_(R,Z) + 2.*cauchy_.dx(R,Z)*psip_2R +  psip_2*cauchy_.dxx(R,Z));
     }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()( R,Z);
-    }
     private:
     double R_X, Z_X; 
     double psipZZ_X_, psipRZ_X_, psipRR_X_;
@@ -732,7 +625,7 @@ struct PsipRR: public aBinaryFunctor
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipRZ: public aBinaryFunctor
+struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 {
     PsipRZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -752,10 +645,6 @@ struct PsipRZ: public aBinaryFunctor
         double psip_2RZ =  - psipRZ_X_ - psipRZ_RZ;
         return psipRZ_RZ + 0.5*(psip_2RZ*cauchy_(R,Z) + cauchy_.dx(R,Z)*psip_2Z + cauchy_.dy(R,Z)*psip_2R  +  psip_2*cauchy_.dxy(R,Z));
     }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()( R,Z);
-    }
     private:
     double R_X, Z_X; 
     double psipZZ_X_, psipRZ_X_, psipRR_X_;
@@ -768,16 +657,12 @@ struct PsipRZ: public aBinaryFunctor
     dg::Cauchy cauchy_;
 };
 
-struct LaplacePsip: public aBinaryFunctor
+struct LaplacePsip: public aCloneableBinaryFunctor<LaplacePsip>
 {
     LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
     double operator()(double R, double Z) const
     {    
         return psipRR_(R,Z) + psipZZ_(R,Z);
-    }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
     }
   private:
     solovev::mod::PsipRR psipRR_;

@@ -10,26 +10,56 @@ namespace dg
 namespace geo
 {
 
+/**
+* @brief This functor represents functions written in cylindrical coordinates
+        that are independent of the angle phi
+*/
 struct aBinaryFunctor
 {
+    /**
+    * @brief The function value
+    *
+    * @param R radius (cylindrical coordinate)
+    * @param Z height (cylindrical coordinate)
+    *
+    * @return f(R,Z)
+    */
     virtual double operator()(double R, double Z) const=0;
+    /**
+    * @brief Redirects to the 2D version
+    *
+    * @param R radius (cylindrical coordinate)
+    * @param Z height (cylindrical coordinate)
+    * @param phi angle (cylindrical coordinate)
+    *
+    * @return f(R,Z)
+    */
     double operator()(double R, double Z, double phi)
     {
         return this->operator()(R,Z);
     }
     virtual aBinaryFunctor* clone()const=0;
+    protected:
     virtual ~aBinaryFunctor(){}
+    //do not allow object slicing
+    aBinaryFunctor(const aBinaryFunctor&){}
+    aBinaryFunctor& operator=(const aBinaryFunctor&){return *this}
 };
 
-//https://katyscode.wordpress.com/2013/08/22/c-polymorphic-cloning-and-the-crtp-curiously-recurring-template-pattern/
+/**
+* @brief Implementation helper for the clone pattern
+
+https://katyscode.wordpress.com/2013/08/22/c-polymorphic-cloning-and-the-crtp-curiously-recurring-template-pattern/
+*/
 template<class Derived<
 struct aCloneableBinaryFunctor : public a BinaryFunctor
 {
     virtual aBinaryFunctor* clone() const
     {
-        return new Derived(statimag_cast<Derived const &>(*this));
+        return new Derived(static_cast<Derived const &>(*this));
     }
 };
+
 /**
  * @brief Contains all solovev fields (models aTokamakMagneticField)
  */

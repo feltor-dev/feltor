@@ -31,84 +31,79 @@ namespace guenther
 /**
  * @brief \f[\cos(\pi(R-R_0)/2)\cos(\pi Z/2)\f]
  */
-struct Psip
+struct Psip : public aCloneableBinaryFunctor<Psip>
 {
     Psip(double R_0 ):   R_0(R_0) {}
     double operator()(double R, double Z) const
     {    
         return cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0;
 };
 /**
  * @brief \f[-\pi\sin(\pi(R-R_0)/2)\cos(\pi Z/2)/2\f]
  */
-struct PsipR
+struct PsipR : public aCloneableBinaryFunctor<PsipR>
 {
     PsipR(double R_0 ):   R_0(R_0) {}
     double operator()(double R, double Z) const
     {    
         return -M_PI*0.5*sin(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0;
 };
 /**
  * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
  */
-struct PsipRR
+struct PsipRR : public aCloneableBinaryFunctor<PsipRR>
 {
     PsipRR(double R_0 ):   R_0(R_0) {}
     double operator()(double R, double Z) const
     {    
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0;
 };
 /**
  * @brief \f[-\pi\cos(\pi(R-R_0)/2)\sin(\pi Z/2)/2\f]
  */
-struct PsipZ
+struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
+
 {
     PsipZ(double R_0 ):   R_0(R_0) {}
     double operator()(double R, double Z) const
     {    
         return -M_PI*0.5*cos(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0;
 };
 /**
  * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
  */
-struct PsipZZ
+struct PsipZZ : public aCloneableBinaryFunctor<PsipZZ>
 {
     PsipZZ(double R_0 ):   R_0(R_0){}
     double operator()(double R, double Z) const
     {    
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0;
 };
 /**
  * @brief \f[ \pi^2\sin(\pi(R-R_0)/2)\sin(\pi Z/2)/4\f]
  */
-struct PsipRZ
+struct PsipRZ : public aCloneableBinaryFunctor<PsipRZ>
 {
     PsipRZ(double R_0 ):   R_0(R_0) {}
     double operator()(double R, double Z) const
     {    
         return M_PI*M_PI*0.25*sin(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
   private:
     double R_0;
 };
@@ -116,16 +111,12 @@ struct PsipRZ
 /**
  * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/2\f]
  */
-struct LaplacePsip
+struct LaplacePsip : public aCloneableBinaryFunctor<LaplacePsip>
 {
     LaplacePsip( double R_0 ): psipRR_(R_0), psipZZ_(R_0){}
     double operator()(double R, double Z) const
     {    
         return psipRR_(R,Z) + psipZZ_(R,Z);
-    }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
     }
   private:
     PsipRR psipRR_;
@@ -135,50 +126,46 @@ struct LaplacePsip
 /**
  * @brief \f[ I_0\f]
  */
-struct Ipol
+struct Ipol : public aCloneableBinaryFunctor<Ipol>
 {
     Ipol( double I_0):   I_0(I_0) {}
     double operator()(double R, double Z) const { return I_0; }
-    double operator()(double R, double Z, double phi) const { return I_0; }
   private:
     double I_0;
 };
 /**
  * @brief \f[0\f]
  */
-struct IpolR
+struct IpolR : public aCloneableBinaryFunctor<IpolR>
 {
     IpolR(  ) {}
     double operator()(double R, double Z) const { return 0; }
-    double operator()(double R, double Z, double phi) const { return 0; }
 };
 /**
  * @brief \f[0\f]
  */
-struct IpolZ
+struct IpolZ : public aCloneableBinaryFunctor<IpolZ>
 {
     IpolZ(  ) {}
     double operator()(double R, double Z) const { return 0; }
-    double operator()(double R, double Z, double phi) const { return 0; }
 };
 
 /**
- * @brief Contains all guenther fields (models aTokamakMagneticField)
+ * @brief Contains all guenther fields
  */
-struct MagneticField
+struct MagneticField : public dg::geo::aTokamakMagneticField
 {
-    MagneticField( double R_0, double I_0): R_0(R_0), psip(R_0), psipR(R_0), psipZ(R_0), psipRR(R_0), psipRZ(R_0), psipZZ(R_0), laplacePsip(R_0), ipol(I_0), ipolR(), ipolZ(){}
-    double R_0;
-    Psip psip;
-    PsipR psipR;
-    PsipZ psipZ;
-    PsipRR psipRR;
-    PsipRZ psipRZ;
-    PsipZZ psipZZ;
-    LaplacePsip laplacePsip;
-    Ipol ipol;
-    IpolR ipolR;
-    IpolZ ipolZ;
+    MagneticField( GeomParameters gp): aTokamakMagneticField(gp.R_0, 
+        new Psip(gp), 
+        new PsipR(gp), 
+        new PsipZ(gp), 
+        new PsipRR(gp), 
+        new PsipRZ(gp), 
+        new PsipZZ(gp), 
+        new LaplacePsip(gp), 
+        new Ipol(gp), 
+        new IpolR(gp), 
+        new IpolZ(gp)){}
 };
 ///@}
 
