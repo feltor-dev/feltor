@@ -13,6 +13,7 @@ namespace geo
 /**
 * @brief This functor represents functions written in cylindrical coordinates
         that are independent of the angle phi
+  @ingroup fluxfunctions
 */
 struct aBinaryFunctor
 {
@@ -38,31 +39,60 @@ struct aBinaryFunctor
     {
         return this->operator()(R,Z);
     }
+    /**
+    * @brief abstract copy of a binary functor
+    *
+    * @return a functor on the heap
+    */
     virtual aBinaryFunctor* clone()const=0;
     protected:
     virtual ~aBinaryFunctor(){}
-    //do not allow object slicing
+    /**
+    * @brief We do not allow object slicing so the copy is protected
+    */
     aBinaryFunctor(const aBinaryFunctor&){}
+    /**
+    * @brief We do not allow object slicing so the assignment is protected
+    */
     aBinaryFunctor& operator=(const aBinaryFunctor&){return *this}
 };
 
 /**
 * @brief Implementation helper for the clone pattern
 
-https://katyscode.wordpress.com/2013/08/22/c-polymorphic-cloning-and-the-crtp-curiously-recurring-template-pattern/
+    https://katyscode.wordpress.com/2013/08/22/c-polymorphic-cloning-and-the-crtp-curiously-recurring-template-pattern/
+  @ingroup fluxfunctions
 */
-template<class Derived<
-struct aCloneableBinaryFunctor : public a BinaryFunctor
+template<class Derived>
+struct dg::geo::aCloneableBinaryFunctor : public dg::geo::aBinaryFunctor
 {
+    /**
+    * @brief Returns a copy of the functor dynamically allocated on the heap
+    *
+    * @return new copy of the functor
+    */
     virtual aBinaryFunctor* clone() const
     {
         return new Derived(static_cast<Derived const &>(*this));
     }
 };
 
+///@addtogroup magnetic
+///@{
 /**
- * @brief Contains all solovev fields (models aTokamakMagneticField)
- */
+* @brief Base class of a tokamak magnetic geometry model
+
+ This is the representation of magnetic fields that can be modeled in the form
+ \f[
+ \vec B = \frac{R_0}{R} \left( I \hat e_\varphi + \nabla \psi_p \times \hat e_\varphi\right)
+ \f]
+ where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the current 
+ and \f$ \psi_p\f$ the poloidal flux function.
+ 
+ This class holds and controls instances of aBinaryFunctor dynamically 
+ on the heap.
+ @note an instance of this class cannot be constructed nor deleted directly but it can be copied and assigned
+*/
 struct aTokamakMagneticField
 {
     aTokamakMagneticField( const aTokamakMagneticField& mag)
@@ -77,16 +107,27 @@ struct aTokamakMagneticField
         std::swap( temp.p_, p_);
         return *this;
     }
+    /// \f$ R_0 \f$ 
     double R0()const {return R0_;}
+    /// \f$ \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
     const aBinaryFunctor& psip()const{return *p_[0];}
+    /// \f$ \partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
     const aBinaryFunctor& psipR()const{return *p_[1];}
+    /// \f$ \partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
     const aBinaryFunctor& psipZ()const{return *p_[2];}
+    /// \f$ \partial_R\partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
     const aBinaryFunctor& psipRR()const{return *p_[3];}
+    /// \f$ \partial_R\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
     const aBinaryFunctor& psipRZ()const{return *p_[4];}
+    /// \f$ \partial_Z\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
     const aBinaryFunctor& psipZZ()const{return *p_[5];}
+    /// 2d Laplacian of \f$ \psi_p\f$ 
     const aBinaryFunctor& laplacePsip()const{return *p_[6];}
+    /// \f$ I(\psi_p) \f$ the current
     const aBinaryFunctor& ipol()const{return *p_[7];}
+    /// \f$ \partial_R I(\psi_p) \f$ 
     const aBinaryFunctor& ipolR()const{return *p_[8];}
+    /// \f$ \partial_Z I(\psi_p) \f$ 
     const aBinaryFunctor& ipolZ()const{return *p_[9];}
 
     protected:
@@ -122,8 +163,6 @@ struct aTokamakMagneticField
     std::vector<aBinaryFunctor*> p_;
 };
 
-///@addtogroup magnetic
-///@{
 
 /**
  * @brief \f[   |B| = R_0\sqrt{I^2+(\nabla\psi)^2}/R   \f]

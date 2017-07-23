@@ -116,33 +116,3 @@ struct aContainer
 {
 };
 
-/**
-* @brief The tokamak magnetic geometry template model
-
-This is the representation of magnetic fields that can be modeled in the form
-\f[
-\vec B = \frac{R_0}{R} \left( I \hat e_\varphi + \nabla \psi_p \times \hat e_\varphi\right)
-\f]
-where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the current 
-and \f$ \psi_p\f$ the poloidal flux function.
-
-A tokamak geometry must contain the functors named as follows, all of
-which must model aBinaryOperator.
- @attention this is not a real class it's there for documentation only
- @attention parameter names cannot be different
- @ingroup temp
-*/
-struct aTokamakMagneticField
-{
-    double R_0; //!< \f$ R_0 \f$ 
-    Psip psip; //!< \f$ \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    PsipR psipR;//!< \f$ \partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    PsipZ psipZ;//!< \f$ \partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    PsipRR psipRR;//!< \f$ \partial_R\partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    PsipRZ psipRZ;//!< \f$ \partial_R\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    PsipZZ psipZZ;//!< \f$ \partial_Z\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    LaplacePsip laplacePsip; //!< 2d Laplacian of \f$ \psi_p\f$ 
-    Ipol ipol; //!< \f$ I(\psi_p) \f$ the current
-    IpolR ipolR; //!< \f$ \partial_R I(\psi_p) \f$ 
-    IpolZ ipolZ; //!< \f$ \partial_Z I(\psi_p) \f$ 
-};
