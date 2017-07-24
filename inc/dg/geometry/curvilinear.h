@@ -20,10 +20,17 @@ struct CurvilinearGrid2d;
  @tparam container models aContainer
  */
 template< class container>
-struct CurvilinearGrid3d : public dg::Grid3d
+struct CylindricalGrid3d : public dg::Grid3d
 {
-    typedef dg::CurvilinearCylindricalTag metric_category;
+    typedef dg::CurvilinearPerpTag metric_category;
     typedef CurvilinearGrid2d<container> perpendicular_grid;
+
+    CylindricalGrid3d( double R0, double R1, double Z0, double Z1, double phi0, double phi1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcr = PER, bc bcz = PER, bc bcphi = PER): 
+        dg::Grid3d(0,R1-R0,0,Z1-Z0,phi0,phi1,n,NR,NZ,Nphi,bcR,bcZ,bcphi)
+        {
+            generator_ = new IdentityGenerator(R0,R1,Z0,Z1);
+            construct( n, NR, NZ);
+        }
 
     /*!@brief Constructor
     
@@ -34,7 +41,7 @@ struct CurvilinearGrid3d : public dg::Grid3d
      @param Nz 
      @param bcx
      */
-    CurvilinearGrid3d( const geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+    CylindricalGrid3d( const geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
         dg::Grid3d( 0, generator->width(), 0., generator->height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         generator_ = generator;
@@ -58,12 +65,12 @@ struct CurvilinearGrid3d : public dg::Grid3d
     bool isOrthonormal() const { return generator_->isOrthonormal();}
     bool isOrthogonal() const { return generator_->isOrthogonal();}
     bool isConformal() const { return generator_->isConformal();}
-    Curvilinear3d( const Curvilinear3d& src):Grid3d(src), g_xx_(src.g_xx_),g_xy_(src.g_xy_),g_yy_(src.g_yy_),g_pp_(src.g_pp_),vol_(src.vol_),vol2d_(src.vol2d_)
+    CylindricalGrid3d( const CylindricalGrid3d& src):Grid3d(src), g_xx_(src.g_xx_),g_xy_(src.g_xy_),g_yy_(src.g_yy_),g_pp_(src.g_pp_),vol_(src.vol_),vol2d_(src.vol2d_)
     {
         r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
         generator_ = src.generator_->clone();
     }
-    Curvilinear3d& operator=( const Curvilinear3d& src)
+    CylindricalGrid3d& operator=( const CylindricalGrid3d& src)
     {
         Grid3d::operator=(src);//call base class assignment
         delete generator_;
@@ -72,7 +79,7 @@ struct CurvilinearGrid3d : public dg::Grid3d
         generator_ = src.generator_->clone();
         return *this;
     }
-    ~Curvilinear3d(){
+    ~CylindricalGrid3d(){
         delete generator_;
     }
     private:
@@ -138,7 +145,14 @@ struct CurvilinearGrid3d : public dg::Grid3d
 template< class container>
 struct CurvilinearGrid2d : public dg::Grid2d
 {
-    typedef dg::CurvilinearCylindricalTag metric_category;
+    typedef dg::CurvilinearPerpTag metric_category;
+
+    CurvilinearGrid2d( double R0, double R1, double Z0, double Z1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcR = PER, bc bcZ = PER): 
+        dg::Grid2d(0,R1-R0,0,Z1-Z0,n,NR,NZ,bcR,bcZ)
+        {
+            generator_ = new IdentityGenerator(R0,R1,Z0,Z1);
+            construct( n, NR, NZ);
+        }
     /*!@brief Constructor
     
      * @param generator must generate an orthogonal grid
@@ -150,14 +164,14 @@ struct CurvilinearGrid2d : public dg::Grid2d
     CurvilinearGrid2d( const geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator->width(), 0., generator->height(), n, Nx, Ny, bcx, dg::PER)
     {
-        CurvilinearGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
+        CylindricalGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
         init_X_boundaries( g.x0(), g.x1());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
 
     }
-    CurvilinearGrid2d( const CurvilinearGrid3d<container>& g):
+    CurvilinearGrid2d( const CylindricalGrid3d<container>& g):
         dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
     {
         generator_ = g.generator();
@@ -209,7 +223,7 @@ struct CurvilinearGrid2d : public dg::Grid2d
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
         dg::Grid2d::do_set( new_n, new_Nx, new_Ny);
-        CurvilinearGrid3d<container> g( generator_, new_n,new_Nx,new_Ny,1,bcx());
+        CylindricalGrid3d<container> g( generator_, new_n,new_Nx,new_Ny,1,bcx());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();

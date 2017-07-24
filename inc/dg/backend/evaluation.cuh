@@ -54,8 +54,7 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d& g)
  * @param g The 2d grid on which to evaluate f
  *
  * @return  A dG Host Vector with values
- * @note Copies the binary Operator. This function is meant for small function objects, that
-            may be constructed during function call.
+ * @note if you don't like to copy f then just pass a (const) reference then the type should adapt
  */
 template< class BinaryOp>
 thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d& g)
@@ -94,8 +93,7 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d& g
  * @param g The 3d grid on which to evaluate f
  *
  * @return  A dG Host Vector with values
- * @note Copies the ternary Operator. This function is meant for small function objects, that
-            may be constructed during function call.
+ * @note if you don't like to copy f then just pass a (const) reference then the type should adapt
  */
 template< class TernaryOp>
 thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d& g)

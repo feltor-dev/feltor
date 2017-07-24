@@ -546,7 +546,7 @@ RefinedGrid2d::RefinedGrid2d( const dg::RefinedGrid3d& g) :
 template<class container>
 struct CartesianRefinedGrid2d : public dg::RefinedGrid2d
 {
-    typedef CurvilinearCylindricalTag metric_category; 
+    typedef CurvilinearPerpTag metric_category; 
     CartesianRefinedGrid2d( unsigned multiple_x, unsigned multiple_y, double x0, double x1, double y0, double y1, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::RefinedGrid2d(multiple_x, multiple_y,x0,x1,y0,y1,n,n_old,Nx,Ny,bcx,bcy), g_assoc_(x0,x1,y0,y1,n_old,Nx,Ny,bcx,bcy){ 
         dg::blas1::transfer( weightsX(), g_xx_);
         dg::blas1::transfer( weightsY(), g_yy_);

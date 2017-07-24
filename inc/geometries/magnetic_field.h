@@ -131,11 +131,6 @@ struct aTokamakMagneticField
     /// \f$ \partial_Z I(\psi_p) \f$ 
     const aBinaryFunctor& ipolZ()const{return *p_[9];}
 
-    protected:
-    ~aTokamakMagneticField(){
-        for( unsigned i=0; i<p_.size(); i++)
-            delete p_[i];
-    }
     aTokamakMagneticField( double R0,
         aBinaryFunctor* psip,
         aBinaryFunctor* psipR,
@@ -160,6 +155,11 @@ struct aTokamakMagneticField
             p_[8] = ipolR,
             p_[9] = ipolZ,
         }
+    protected:
+    ~aTokamakMagneticField(){
+        for( unsigned i=0; i<p_.size(); i++)
+            delete p_[i];
+    }
     private:
     double R0_;
     std::vector<aBinaryFunctor*> p_;

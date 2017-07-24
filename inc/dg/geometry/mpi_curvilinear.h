@@ -21,16 +21,40 @@ struct CurvilinearMPIGrid2d;
 ///@{
 
 /**
- * @tparam LocalContainer Vector class that holds metric coefficients
+ * This is s 2x1 product space grid
+ * @tparam MPIContainer Vector class that holds metric coefficients
  */
 template<class MPIContainer>
-struct CurvilinearMPIGrid3d : public dg::MPIGrid3d
+struct CylindricalMPIGrid3d : public dg::MPIGrid3d
 {
-    typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
-    typedef dg::CurvilinearMPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
+    typedef dg::CurvilinearPerpTag metric_category; //!< metric tag
+    typedef dg::CylindricalMPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
+    /**
+     * @copydoc Grid3d::Grid3d()
+     * @param comm a three-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
+     */
+    CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
+        dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, comm),
+        g( new IdentityGenerator(x0,x1,y0,y1), n,Nx,Ny,local().Nz(), bcx,bcy,bcz)
+     {
+        divide_and_conquer();
+     }
 
-    CurvilinearMPIGrid3d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
+    /**
+     * @copydoc Grid3d::Grid3d()
+     * @param comm a three-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
+     */
+    CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+        dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
+        g( new IdentityGenerator(x0,x1,y0,y1), n,Nx,Ny,local().Nz(), bcx,bcy,bcz)
+     {
+        divide_and_conquer();
+     }
+
+    CylindricalMPIGrid3d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
         dg::MPIGrid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
         g( generator, n,Nx, Ny, local().Nz(), bcx)
     {
@@ -51,16 +75,22 @@ struct CurvilinearMPIGrid3d : public dg::MPIGrid3d
     const MPIContainer& g_pp()const{return g_pp_;}
     const MPIContainer& vol()const{return vol_;}
     const MPIContainer& perpVol()const{return vol2d_;}
-    const dg::CurvilinearGrid3d<LocalContainer>& global() const {return g;}
+    /**
+     * @brief returns global non-MPI grid
+     *
+     * @attention the number of z-planes in this grid is the local number this process holds NOT the global one
+     * @return 
+     */
+    const dg::CylindricalGrid3d<LocalContainer>& global() const {return g;}
     const geo::aGenerator& generator() const{return g.generator();}
     bool isOrthonormal() const { return g.isOrthonormal();}
     bool isOrthogonal() const { return g.isOrthogonal();}
     bool isConformal() const { return g.isConformal();}
-    MPICurvilinear3d( const MPICurvilinear3d& src):MPIGrid3d(src), g_xx_(src.g_xx_),g_xy_(src.g_xy_),g_yy_(src.g_yy_),g_pp_(src.g_pp_),vol_(src.vol_),vol2d_(src.vol2d_),g(src.g)
+    MPICylindricalGrid3d( const MPICylindricalGrid3d& src):MPIGrid3d(src), g_xx_(src.g_xx_),g_xy_(src.g_xy_),g_yy_(src.g_yy_),g_pp_(src.g_pp_),vol_(src.vol_),vol2d_(src.vol2d_),g(src.g)
     {
         r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
     }
-    MPICurvilinear3d& operator=( const MPICurvilinear3d& src)
+    MPICylindricalGrid3d& operator=( const MPICylindricalGrid3d& src)
     {
         MPIGrid3d::operator=(src);//call base class assignment
         g_xx_=src.g_xx_,g_xy_=src.g_xy_,g_yy_=src.g_yy_,g_pp_=src.g_pp_,vol_=src.vol_,vol2d_=src.vol2d_;
@@ -68,7 +98,7 @@ struct CurvilinearMPIGrid3d : public dg::MPIGrid3d
         g = src.g;
         return *this;
     }
-    ~MPICurvilinear3d(){ }
+    ~MPICylindricalGrid3d(){ }
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)
     {
@@ -109,17 +139,37 @@ struct CurvilinearMPIGrid3d : public dg::MPIGrid3d
     }
     dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_; //3d vector
     MPIContainer g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    dg::CurvilinearGrid3d<LocalContainer> g;
+    dg::CylindricalGrid3d<LocalContainer> g;
 };
 
 /**
- * @tparam LocalContainer Vector class that holds metric coefficients
+ * @tparam MPIContainer Vector class that holds metric coefficients
  */
 template<class MPIContainer>
 struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
 {
-    typedef dg::CurvilinearCylindricalTag metric_category; 
+    typedef dg::CurvilinearPerpTag metric_category; 
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
+    /**
+     * @copydoc Grid2d::Grid2d()
+     * @param comm a two-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
+     */
+    CurvilinearMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): dg::MPIGrid2d( x0, x1, y0, y1, n, Nx, Ny, comm),
+    g_(new IdentityGenerator(x0,x1,y0,y1),n,Nx,Ny){
+        divide_and_conquer();
+    
+    }
+
+    /**
+     * @copydoc Grid2d::Grid2d()
+     * @param comm a two-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
+     */
+    CurvilinearMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):dg::MPIGrid2d( x0, x1, y0, y1, n, Nx, Ny,bcx, bcy, comm),
+    g_(new IdentityGenerator(x0,x1,y0,y1),n,Nx,Ny){
+        divide_and_conquer();
+    }
 
     CurvilinearMPIGrid2d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
         dg::MPIGrid2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER, comm2d),
@@ -127,7 +177,7 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
     {
         divide_and_conquer();
     }
-    CurvilinearMPIGrid2d( const CurvilinearMPIGrid3d<LocalContainer>& g):
+    CurvilinearMPIGrid2d( const CylindricalMPIGrid3d<LocalContainer>& g):
         dg::MPIGrid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
         r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), 
         g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_),

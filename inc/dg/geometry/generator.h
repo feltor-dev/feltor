@@ -10,12 +10,13 @@ namespace geo
 A generator is there to construct coordinate transformations from physical coordinates
 \f$ x,y\f$ to the computational domain \f$\zeta, \eta\f$, which
 is a product space. 
+@note the origin of the computational space is assumed to be (0,0)
  @ingroup generators
 */
 struct aGridGenerator
 {
-    virtual double width()  const=0; //!<length in \f$ \zeta\f$ 
-    virtual double height() const=0; //!<length in \f$ \eta\f$
+    virtual double width()  const=0; //!<length in \f$ \zeta\f$ of the computational space
+    virtual double height() const=0; //!<length in \f$ \eta\f$ of the computational space
     virtual bool isOrthonormal() const{return false;} //!< true if coordinate system is orthonormal (false by default)
     virtual bool isOrthogonal() const{return false;} //!< true if coordinate system is orthogonal (false by default)
     virtual bool isConformal()const{return false;} //!< true if coordinate system is conformal (false by default)
@@ -73,8 +74,9 @@ struct aGridGenerator
 };
 
 /**
-* @brief The identity coordinate transformation
+* @brief The shifted identity coordinate transformation
 
+@note in fact it's not completely the identity because we assume that the origin is always (0,0) in the computational space
  @ingroup generators
 */
 struct IdentityGenerator: public aGridGenerator
@@ -87,7 +89,7 @@ struct IdentityGenerator: public aGridGenerator
     virtual IdentityGenerator* clone() const{return new IdentityGenerator(*this);}
 
     /**
-    * @brief Define the 2d box in which to construct the coordinates
+    * @brief Define the 2d box in the physical domain in which to construct the coordinates
     *
     * @param x0 x-coordinate of lower left point
     * @param x1 x-coordinate of upper right point

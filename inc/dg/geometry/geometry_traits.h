@@ -6,10 +6,9 @@ namespace dg
 {
 //categories
 //
-struct CurvilinearTag{};  //! 3d curvilinear
-struct CurvilinearCylindricalTag: public CurvilinearTag{}; //! perpVol, vol(), g_xx, g_xy, g_yy
-struct OrthonormalCylindricalTag:public CurvilinearCylindricalTag{}; //! vol(), cylindrical grid
-struct OrthonormalTag: public OrthonormalCylindricalTag{}; //! Cartesian grids
+struct CurvilinearTag{};  //! For completeness only (in fact we don't have a true 3d curvilinear grid right now)
+struct CurvilinearPerpTag: public CurvilinearTag{}; //! perpVol, vol(), g_xx, g_xy, g_yy (2x1 product grid, or 2d curvilinear)
+struct OrthonormalTag: public CurvilinearPerpTag{}; //! Cartesian grids  (3d or 2d)
 
 //memory_category and dimensionality Tags are already defined in grid.h
 
@@ -63,36 +62,44 @@ void doDivideVolume( container& inout, const Geometry& g, CurvilinearTag)
 };
 
 template <class container, class Geometry>
-void doMultiplyPerpVolume( container& inout, const Geometry& g, OrthonormalCylindricalTag)
+void doMultiplyPerpVolume( container& inout, const Geometry& g, OrthonormalTag)
 {
 };
 
 template <class container, class Geometry>
-void doMultiplyPerpVolume( container& inout, const Geometry& g, CurvilinearCylindricalTag)
+void doMultiplyPerpVolume( container& inout, const Geometry& g, CurvilinearPerpTag)
 {
-    dg::blas1::pointwiseDot( inout, g.perpVol(), inout);
+    if( !g.isOrthonormal())
+        dg::blas1::pointwiseDot( inout, g.perpVol(), inout);
 };
 
 template <class container, class Geometry>
-void doDividePerpVolume( container& inout, const Geometry& g, OrthonormalCylindricalTag)
+void doDividePerpVolume( container& inout, const Geometry& g, OrthonormalTag)
 {
 };
 
 template <class container, class Geometry>
-void doDividePerpVolume( container& inout, const Geometry& g, CurvilinearCylindricalTag)
+void doDividePerpVolume( container& inout, const Geometry& g, CurvilinearPerpTag)
 {
-    dg::blas1::pointwiseDivide( inout, g.perpVol(), inout);
+    if( !g.isOrthonormal())
+        dg::blas1::pointwiseDivide( inout, g.perpVol(), inout);
 };
 
 template <class container, class Geometry>
-void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthonormalCylindricalTag)
+void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
 {
     in1.swap( out1);
     in2.swap( out2);
 };
 template <class container, class Geometry>
-void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearCylindricalTag)
+void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearPerpTag)
 {
+    if( g.isOrthonormal())
+    {
+        in1.swap( out1);
+        in2.swap( out2);
+        return;
+    }
     if( g.isOrthogonal())
     {
         dg::blas1::pointwiseDot( g.g_xx(), in1, out1); //gxx*v_x
@@ -106,13 +113,13 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
 };
 
 template <class container, class Geometry>
-void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthonormalCylindricalTag)
+void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
 {
     in1.swap( out1);
     in2.swap( out2);
 };
 template <class container, class Geometry>
-void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearCylindricalTag)
+void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearPerpTag)
 {
     if( g.isConformal())
     {
@@ -140,7 +147,7 @@ void doVolRaisePerpIndex( container& in1, container& in2, container& out1, conta
 template<class TernaryOp1, class TernaryOp2, class container, class Geometry> 
 void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
         container& vx, container& vy,
-        const Geometry& g, OrthonormalCylindricalTag)
+        const Geometry& g, OrthonormalTag)
 {
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
     host_vec out1 = evaluate( f1, g);
@@ -152,7 +159,7 @@ void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2,
 template<class TernaryOp1, class TernaryOp2, class container, class Geometry> 
 void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2, 
         container& vx, container& vy,
-        const Geometry& g, CurvilinearCylindricalTag)
+        const Geometry& g, CurvilinearPerpTag)
 {
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
     host_vec out1 = pullback( f1, g), temp1(out1);
@@ -168,7 +175,7 @@ void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2,
 template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry> 
 void doPushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
         container& chixx, container& chixy, container& chiyy,
-        const Geometry& g, OrthonormalCylindricalTag)
+        const Geometry& g, OrthonormalTag)
 {
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
     host_vec chixx_ = evaluate( chiRR, g);
@@ -182,7 +189,7 @@ void doPushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
 template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry> 
 void doPushForwardPerp( FunctorRR chiRR_, FunctorRZ chiRZ_, FunctorZZ chiZZ_,
         container& chixx, container& chixy, container& chiyy,
-        const Geometry& g, CurvilinearCylindricalTag)
+        const Geometry& g, CurvilinearPerpTag)
 {
     //compute the rhs
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
@@ -286,7 +293,7 @@ thrust::host_vector<double> doPullback( BinaryOp f, const Geometry& g, Curviline
 }
 
 template< class TernaryOp, class Geometry>
-thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, CurvilinearTag, ThreeDimensionalTag, SharedTag)
+thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, CurvilinearPerpTag, ThreeDimensionalTag, SharedTag)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
@@ -298,12 +305,12 @@ thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, Curvilin
     return vec;
 }
 template< class BinaryOp, class Geometry>
-thrust::host_vector<double> doPullback( BinaryOp f, const Geometry& g, OrthonormalCylindricalTag, TwoDimensionalTag, SharedTag)
+thrust::host_vector<double> doPullback( BinaryOp f, const Geometry& g, OrthonormalTag, TwoDimensionalTag, SharedTag)
 {
     return evaluate( f, g);
 }
 template< class TernaryOp, class Geometry>
-thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, OrthonormalCylindricalTag, ThreeDimensionalTag, SharedTag)
+thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, OrthonormalTag, ThreeDimensionalTag, SharedTag)
 {
     return evaluate( f,g);
 }

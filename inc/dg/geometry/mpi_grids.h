@@ -2,7 +2,7 @@
 
 #include "geometry_traits.h"
 #include "../backend/mpi_grid.h"
-#include "cylindrical.h"
+#include "curvilinear_cylindrical.h"
 
 namespace dg
 {
@@ -59,60 +59,6 @@ struct CartesianMPIGrid3d : public dg::MPIGrid3d
 
 ///@}
 
-/**
- * @brief MPI version of Cylindrical grid
- *
- * @ingroup basicgrids
- * @tparam MPIContainer The MPI Vector container
- */
-template<class MPIContainer>
-struct CylindricalMPIGrid3d : public MPIGrid3d
-{
-    typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
-    typedef OrthonormalCylindricalTag metric_category; 
-    typedef dg::CartesianMPIGrid2d perpendicular_grid;
-
-    /**
-     * @copydoc Grid3d::Grid3d()
-     * @param comm a three-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
-    CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
-        dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, comm), 
-        R_( dg::evaluate( dg::cooX3d, *this)) { }
-
-    /**
-     * @copydoc Grid3d::Grid3d()
-     * @param comm a three-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
-    CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
-        R_( dg::evaluate( dg::cooX3d, *this))
-        {}
-
-    CylindricalMPIGrid3d( const MPIGrid3d& grid ):
-        MPIGrid3d( grid),
-        R_( dg::evaluate( dg::cooX3d, *this))
-    {}
-
-    const MPIContainer& vol() const { return R_;}
-    ///@copydoc CylindricalGrid3d::perp_grid()
-    perpendicular_grid perp_grid() const { 
-        MPI_Comm planeComm;
-        int remain_dims[] = {true,true,false}; //true true false
-        MPI_Cart_sub( communicator(), remain_dims, &planeComm);
-        return dg::CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), planeComm);
-    }
-    private:
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        MPIGrid3d::set(new_n,new_Ny,new_Nz);
-        R_=dg::evaluate(dg::cooX3d, *this);
-    }
-    MPIContainer R_;
-};
-///@}
-
 ///@cond
 /////////////////////////////////////////////////////MPI pullbacks/////////////////////////////////////////////////
 namespace detail{
@@ -138,7 +84,7 @@ MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry
 }
 
 template< class TernaryOp, class Geometry>
-MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, CurvilinearTag, ThreeDimensionalTag, MPITag)
+MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, CurvilinearPerpTag, ThreeDimensionalTag, MPITag)
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
@@ -151,12 +97,12 @@ MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometr
     return v;
 }
 template< class BinaryOp, class Geometry>
-MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry& g, OrthonormalCylindricalTag, TwoDimensionalTag, MPITag)
+MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry& g, OrthonormalTag, TwoDimensionalTag, MPITag)
 {
     return evaluate( f, g);
 }
 template< class TernaryOp, class Geometry>
-MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, OrthonormalCylindricalTag, ThreeDimensionalTag, MPITag)
+MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, OrthonormalTag, ThreeDimensionalTag, MPITag)
 {
     return evaluate( f,g);
 }
