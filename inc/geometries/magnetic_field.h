@@ -1,5 +1,6 @@
 #pragma once
 
+#include "fluxfunctions.h"
 
 /*!@file
  *
@@ -36,67 +37,35 @@ struct aTokamakMagneticField
         aBinaryFunctor* psipRR,
         aBinaryFunctor* psipRZ,
         aBinaryFunctor* psipZZ,
-        aBinaryFunctor* laplacePsip,
         aBinaryFunctor* ipol,
         aBinaryFunctor* ipolR,
         aBinaryFunctor* ipolZ
-        ):p_(10){ 
-            R0_(R0),
-            p_[0] = psip,
-            p_[1] = psipR,
-            p_[2] = psipZ,
-            p_[3] = psipRR,
-            p_[4] = psipRZ,
-            p_[5] = psipZZ,
-            p_[6] = laplacePsip,
-            p_[7] = psip,
-            p_[8] = ipolR,
-            p_[9] = ipolZ,
-        }
-    aTokamakMagneticField( const aTokamakMagneticField& mag)
-    {
-        R0_ = mag.R0_;
-        for( unsigned i=0; i<p_.size(); i++)
-            p_[i] = mag.p_[i]->clone();
-    }
-    aTokamakMagneticField& operator=( const aTokamakMagneticField& mag)
-    {
-        aTokamakMagneticField temp(mag);
-        std::swap( temp.R0_, R0_);
-        std::swap( temp.p_, p_);
-        return *this;
-    }
+        ): R0_(R0), psip_(psip,psipR,psipZ,psipRR,psipRZ,psipZZ),ipol_(ipol,ipolR,ipolZ){ }
     /// \f$ R_0 \f$ 
     double R0()const {return R0_;}
     /// \f$ \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psip()const{return *p_[0];}
+    const aBinaryFunctor& psip()const{return psip_.f();}
     /// \f$ \partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipR()const{return *p_[1];}
+    const aBinaryFunctor& psipR()const{return psip_.fx();}
     /// \f$ \partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipZ()const{return *p_[2];}
+    const aBinaryFunctor& psipZ()const{return psip_.fy();}
     /// \f$ \partial_R\partial_R \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipRR()const{return *p_[3];}
+    const aBinaryFunctor& psipRR()const{return psip_.fxx();}
     /// \f$ \partial_R\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipRZ()const{return *p_[4];}
+    const aBinaryFunctor& psipRZ()const{return psip_.fxy();}
     /// \f$ \partial_Z\partial_Z \psi_p(R,Z)\f$, where R, Z are cylindrical coordinates
-    const aBinaryFunctor& psipZZ()const{return *p_[5];}
-    /// 2d Laplacian of \f$ \psi_p\f$ 
-    const aBinaryFunctor& laplacePsip()const{return *p_[6];}
+    const aBinaryFunctor& psipZZ()const{return psip_.fyy();}
     /// \f$ I(\psi_p) \f$ the current
-    const aBinaryFunctor& ipol()const{return *p_[7];}
+    const aBinaryFunctor& ipol()const{return ipol_.f();}
     /// \f$ \partial_R I(\psi_p) \f$ 
-    const aBinaryFunctor& ipolR()const{return *p_[8];}
+    const aBinaryFunctor& ipolR()const{return ipol_.fx();}
     /// \f$ \partial_Z I(\psi_p) \f$ 
-    const aBinaryFunctor& ipolZ()const{return *p_[9];}
+    const aBinaryFunctor& ipolZ()const{return ipol_.fy();}
 
-    protected:
-    ~aTokamakMagneticField(){
-        for( unsigned i=0; i<p_.size(); i++)
-            delete p_[i];
-    }
     private:
     double R0_;
-    std::vector<aBinaryFunctor*> p_;
+    BinaryFunctorsLvl2 psip_;
+    BinaryFunctorsLvl1 ipol_;
 };
 
 

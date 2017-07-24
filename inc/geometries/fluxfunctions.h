@@ -4,10 +4,12 @@ namespace dg
 {
 namespace geo
 {
+///@addtogroup fluxfunctions
+///@{
+
 /**
 * @brief This functor represents functions written in cylindrical coordinates
         that are independent of the angle phi
-  @ingroup fluxfunctions
 */
 struct aBinaryFunctor
 {
@@ -55,7 +57,6 @@ struct aBinaryFunctor
 * @brief Implementation helper for the clone pattern
 
     https://katyscode.wordpress.com/2013/08/22/c-polymorphic-cloning-and-the-crtp-curiously-recurring-template-pattern/
-  @ingroup fluxfunctions
 */
 template<class Derived>
 struct dg::geo::aCloneableBinaryFunctor : public dg::geo::aBinaryFunctor
@@ -71,26 +72,12 @@ struct dg::geo::aCloneableBinaryFunctor : public dg::geo::aBinaryFunctor
     }
 };
 
-
-
+/**
+* @brief Manage and deep copy binary Functors on the heap
+*/
 struct aBinaryFunctorBundle
 {
-    aBinaryFunctorBundle( 
-        aBinaryFunctor* psip,
-        aBinaryFunctor* psipR,
-        aBinaryFunctor* psipZ,
-        aBinaryFunctor* psipRR,
-        aBinaryFunctor* psipRZ,
-        aBinaryFunctor* psipZZ,
-        ):p_(6){ 
-            R0_(R0),
-            p_[0] = psip,
-            p_[1] = psipR,
-            p_[2] = psipZ,
-            p_[3] = psipRR,
-            p_[4] = psipRZ,
-            p_[5] = psipZZ,
-        }
+    protected:
     aBinaryFunctorBundle( const aBinaryFunctorBundle& b)
     {
         //deep copy
@@ -107,8 +94,109 @@ struct aBinaryFunctorBundle
         for( unsigned i=0; i<p_.size(); i++)
             delete p_[i];
     }
-    private:
     std::vector<aBinaryFunctor*> p_;
 };
+
+/**
+* @brief This struct bundles a function and its first derivatives
+*/
+struct BinaryFunctorsLvl1 : public aBinaryFunctorBundle
+{
+    /**
+    * @brief Take ownership of newly allocated functors
+    *
+    * @param f f 
+    * @param fx partial f / partial x
+    * @param fy partial f / partial y
+    */
+    BinaryFunctorsLvl1( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy): p_(3)
+    {
+        p_[0] = f;
+        p_[1] = fx;
+        p_[2] = fy;
+    }
+    ///f 
+    const aBinaryFunctor& f()const{return *p_[0];}
+    /// partial f / partial x
+    const aBinaryFunctor& fx()const{return *p_[1];}
+    /// partial f / partial y
+    const aBinaryFunctor& fy()const{return *p_[2];}
+};
+/**
+* @brief This struct bundles a function and its first and second derivatives
+*/
+struct BinaryFunctorsLvl2 : public aBinaryFunctorBundle
+{
+    /**
+    * @brief Take ownership of newly allocated functors
+    *
+    * @param f f 
+    * @param fx partial f / partial x
+    * @param fy partial f / partial y
+    * @param fxx partial2 f / partial x2
+    * @param fxy partial2 f / partial x /partial y
+    * @param fyy partial2 f / partial y2
+    */
+    BinaryFunctorsLvl2( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy,
+    aBinaryFunctor* fxx, aBinaryFunctor* fxy, aBinaryFunctor* fyy): p_(6)
+    {
+        p_[0] = f;
+        p_[1] = fx;
+        p_[2] = fy;
+        p_[3] = fxx;
+        p_[4] = fxy;
+        p_[5] = fyy;
+    }
+    /// f
+    const aBinaryFunctor& f()const{return *p_[0];}
+    /// partial f /partial x
+    const aBinaryFunctor& fx()const{return *p_[1];}
+    /// partial f /partial y
+    const aBinaryFunctor& fy()const{return *p_[2];}
+    /// partial^2f/partial x^2
+    const aBinaryFunctor& fxx()const{return *p_[3];}
+    /// partial^2 f / partial x partial y
+    const aBinaryFunctor& fxy()const{return *p_[4];}
+    /// partial^2f/partial y^2
+    const aBinaryFunctor& fyy()const{return *p_[5];}
+};
+/**
+* @brief This struct bundles a symmetric tensor and its divergence
+*/
+struct BinarySymmTensorLvl1 : public aBinaryFunctorBundle
+{
+    /**
+    * @brief Take ownership of newly allocated functors
+    *
+    * let's assume the tensor is called chi
+    * @param chi_xx contravariant xx component
+    * @param chi_xy contravariant xy component
+    * @param chi_yy contravariant yy component
+     * @param divChiX \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
+     * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
+    */
+    BinarySymmTensorLvl1( aBinaryFunctor* chi_xx, aBinaryFunctor* chi_xy, aBinaryFunctor* chi_yy,
+    aBinaryFunctor* divChiX, aBinaryFunctor* divChiY): p_(5)
+    {
+        p_[0] = chi_xx;
+        p_[1] = chi_xy;
+        p_[2] = chi_yy;
+        p_[3] = divChiX;
+        p_[4] = divChiY;
+    }
+    ///xx component
+    const aBinaryFunctor& xx()const{return *p_[0];}
+    ///xy component
+    const aBinaryFunctor& xy()const{return *p_[1];}
+    ///yy component
+    const aBinaryFunctor& yy()const{return *p_[2];}
+    ///x component of the divergence 
+    const aBinaryFunctor& divX()const{return *p_[3];}
+    ///y component of the divergence 
+    const aBinaryFunctor& divY()const{return *p_[4];}
+};
+
+
+///@}
 }//namespace geo
 }//namespace dg

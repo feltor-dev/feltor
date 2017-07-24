@@ -5,6 +5,7 @@
 #include "dg/backend/interpolation.cuh"
 #include "dg/geometry/curvilinear.h"
 #include "dg/elliptic.h"
+#include "fluxfunctions.h"
 #include "dg/cg.h"
 #include "flux.h"
 #include "adaption.h"
