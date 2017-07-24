@@ -1,20 +1,16 @@
 
 #grids
-    curvilinear.h
-    mpi_curvilinear.h
-    refined_curvilinear.h
-
     curvilinearX.h
     refined_curvilinearX.h
 
 #generators
-    generator.h
     simple_orthogonal.h
-    separatrix_orthogonal.h
     ribeiro.h
-    ribeiroX.h
     flux.h
     hector.h
+
+    separatrix_orthogonal.h
+    ribeiroX.h
 
     #utilities
         utilities.h

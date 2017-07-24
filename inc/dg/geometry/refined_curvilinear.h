@@ -16,6 +16,7 @@ struct CurvilinearRefinedGrid2d;
 
 /**
  * @brief A curvilinear refined grid
+ * @deprecated
  */
 template< class container>
 struct CurvilinearRefinedGrid3d : public dg::RefinedGrid3d
@@ -102,6 +103,7 @@ struct CurvilinearRefinedGrid3d : public dg::RefinedGrid3d
 
 /**
  * @brief A curvilinear refined grid
+ * @deprecated
  */
 template< class container>
 struct CurvilinearRefinedGrid2d : public dg::RefinedGrid2d
