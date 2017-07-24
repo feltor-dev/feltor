@@ -3,10 +3,10 @@
 #include <vector>
 #include "dg/backend/grid.h"
 #include "dg/backend/interpolation.cuh"
+#include "dg/geometry/curvilinear.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 #include "flux.h"
-#include "curvilinear.h"
 #include "adaption.h"
 #include "generator.h"
 
