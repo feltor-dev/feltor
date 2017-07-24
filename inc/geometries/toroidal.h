@@ -1,8 +1,6 @@
 #pragma once
 
-#include "functors.h"
 #include "magnetic_field.h"
-
 
 namespace dg{
 namespace geo{
@@ -16,7 +14,7 @@ struct Constant:public aCloneableBinaryOperator<Constant>
     double c_;
 };
 /**
- * @brief Models a slab toroidal field (models aTokamakMagneticField)
+ * @brief Models a slab toroidal field 
  *
  * \f$ B=\frac{R_0}{R}\f$, \f$ \psi_p = 1\f$ and \f$ I = 1\f$.
  @note The solovev field can also be made to model a todoidal slab field
