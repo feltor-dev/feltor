@@ -9,6 +9,7 @@
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
 #include "dg/geometry.h"
+#include "fluxfunctions.h"
 #include "ribeiro.h"
 #include "generator.h"
 

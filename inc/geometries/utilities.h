@@ -1,4 +1,5 @@
 #pragma once
+#include "fluxfunctions.h"
 
 ///@cond
 namespace dg
@@ -15,14 +16,13 @@ namespace flux{
  * \f[  d Z/d \theta =   B^Z/B^\theta \f],
  * \f[  d y/d \theta =   B^y/B^\theta\f]
  */ 
-template< class PsiR, class PsiZ, class Ipol>
 struct FieldRZYT
 {
-    FieldRZYT( PsiR psiR, PsiZ psiZ, Ipol ipol, double R0, double Z0): R_0_(R0), psipR_(psiR), psipZ_(psiZ),ipol_(ipol){}
+    FieldRZYT( const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip), ipol_(ipol){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double ipol=ipol_(y[0], y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double ipol=ipol_.f()(y[0], y[1]);
         yp[0] =  psipZ;//fieldR
         yp[1] = -psipR;//fieldZ
         yp[2] =ipol/y[0];
@@ -34,19 +34,17 @@ struct FieldRZYT
     }
   private:
     double R_0_, Z_0_;
-    PsiR psipR_;
-    PsiZ psipZ_;
-    Ipol ipol_;
+    BinaryFunctorsLvl2 psip_;
+    BinaryFunctorsLvl1 ipol_;
 };
 
-template< class PsiR, class PsiZ, class Ipol>
 struct FieldRZYZ
 {
-    FieldRZYZ( PsiR psiR, PsiZ psiZ, Ipol ipol): psipR_(psiR), psipZ_(psiZ), ipol_(ipol){}
+    FieldRZYZ( const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol):psip_(psip), ipol_(ipol) {}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double ipol=ipol_(y[0], y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double ipol=ipol_.f()(y[0], y[1]);
         yp[0] =  psipZ;//fieldR
         yp[1] = -psipR;//fieldZ
         yp[2] =   ipol/y[0]; //fieldYbar
@@ -55,9 +53,8 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    PsiR psipR_;
-    PsiZ psipZ_;
-    Ipol ipol_;
+    BinaryFunctorsLvl2 psip_;
+    BinaryFunctorsLvl1 ipol_;
 };
 
 /**
@@ -65,24 +62,22 @@ struct FieldRZYZ
  * \f[  d R/d y =   B^R/B^y \f], 
  * \f[  d Z/d y =   B^Z/B^y \f],
  */ 
-template< class PsiR, class PsiZ, class Ipol>
 struct FieldRZY
 {
-    FieldRZY( PsiR psiR, PsiZ psiZ, Ipol ipol): f_(1.), psipR_(psiR), psipZ_(psiZ),ipol_(ipol){}
+    FieldRZY( const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol): f_(1.), psip_(psip), ipol_(ipol){}
     void set_f(double f){ f_ = f;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double ipol=ipol_(y[0], y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double ipol=ipol_.f()(y[0], y[1]);
         double fnorm = y[0]/ipol/f_;       
         yp[0] =  (psipZ)*fnorm;
         yp[1] = -(psipR)*fnorm;
     }
   private:
     double f_;
-    PsiR psipR_;
-    PsiZ psipZ_;
-    Ipol ipol_;
+    BinaryFunctorsLvl2 psip_;
+    BinaryFunctorsLvl1 ipol_;
 };
 
 /**
@@ -96,34 +91,32 @@ struct FieldRZY
     -\frac{\partial^2 \psi_p}{\partial R \partial Z} y_Z\right]+ 
     \frac{\partial \psi_p}{\partial Z} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)\f],
  */ 
-template<class PsiR, class PsiZ, class PsiRR, class PsiRZ, class PsiZZ, class Ipol, class IpolR, class IpolZ>
 struct FieldRZYRYZY
 {
-    FieldRZYRYZY( PsiR psiR, PsiZ psiZ, PsiRR psiRR, PsiRZ psiRZ, PsiZZ psiZZ, Ipol ipol, IpolR ipolR, IpolZ ipolZ): 
-        psipR_(psiR), psipZ_(psiZ), psipRR_(psiRR), psipRZ_(psiRZ), psipZZ_(psiZZ), ipol_(ipol), ipolR_(ipolR), ipolZ_(ipolZ){ f_ = f_prime_ = 1.;}
+    FieldRZYRYZY(const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol): f_(1.), f_prime_(1), psip_(psip), ipol_(ipol){}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void initialize( double R0, double Z0, double& yR, double& yZ)
     {
-        double psipR = psipR_(R0, Z0), psipZ = psipZ_(R0,Z0);
+        double psipR = psip_.dfx()(R0, Z0), psipZ = psip_.dfy()(R0,Z0);
         double psip2 = (psipR*psipR+ psipZ*psipZ);
-        double fnorm =R0/ipol_(R0,Z0)/f_; //=Rq/I
+        double fnorm =R0/ipol_.f()(R0,Z0)/f_; //=Rq/I
         yR = -psipZ_(R0, Z0)/psip2/fnorm;
         yZ = +psipR_(R0, Z0)/psip2/fnorm;
     }
     void derive( double R0, double Z0, double& xR, double& xZ)
     {
-        xR = +f_*psipR_(R0, Z0);
-        xZ = +f_*psipZ_(R0, Z0);
+        xR = +f_*psip_.dfx()(R0, Z0);
+        xZ = +f_*psip_.dfy()(R0, Z0);
     }
     
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
-        double ipol=ipol_(y[0], y[1]);
-        double ipolR=ipolR_(y[0], y[1]);
-        double ipolZ=ipolZ_(y[0], y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
+        double ipol=ipol_.f()(y[0], y[1]);
+        double ipolR=ipol_.dfx()(y[0], y[1]);
+        double ipolZ=ipol_.dfy()(y[0], y[1]);
         double fnorm =y[0]/ipol/f_; //=R/(I/q)
 
         yp[0] = -(psipZ)*fnorm;
@@ -134,23 +127,16 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsiR psipR_;
-    PsiZ psipZ_;
-    PsiRR psipRR_;
-    PsiRZ psipRZ_;
-    PsiZZ psipZZ_;
-    Ipol ipol_;
-    IpolR ipolR_;
-    IpolZ ipolZ_;
+    BinaryFunctorsLvl2 psip_;
+    BinaryFunctorsLvl1 ipol_;
 };
 
 }//namespace flux
 namespace ribeiro{
 
-template< class PsiR, class PsiZ>
 struct FieldRZYT
 {
-    FieldRZYT( PsiR psiR, PsiZ psiZ, double R0, double Z0): R_0_(R0), Z_0_(Z0), psipR_(psiR), psipZ_(psiZ){}
+    FieldRZYT( const BinaryFunctorsLvl2, double R0, double Z0): R_0_(R0), Z_0_(Z0), psipR_(psiR), psipZ_(psiZ){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);

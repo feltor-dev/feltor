@@ -120,14 +120,14 @@ struct BinaryFunctorsLvl1 : public aBinaryFunctorBundle
     ///f 
     const aBinaryFunctor& f()const{return *p_[0];}
     /// partial f / partial x
-    const aBinaryFunctor& fx()const{return *p_[1];}
+    const aBinaryFunctor& dfx()const{return *p_[1];}
     /// partial f / partial y
-    const aBinaryFunctor& fy()const{return *p_[2];}
+    const aBinaryFunctor& dfy()const{return *p_[2];}
 };
 /**
 * @brief This struct bundles a function and its first and second derivatives
 */
-struct BinaryFunctorsLvl2 : public aBinaryFunctorBundle
+struct BinaryFunctorsLvl2 : public BinaryFunctorLvl1
 {
     /**
     * @brief Take ownership of newly allocated functors
@@ -140,27 +140,18 @@ struct BinaryFunctorsLvl2 : public aBinaryFunctorBundle
     * @param fyy partial2 f / partial y2
     */
     BinaryFunctorsLvl2( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy,
-    aBinaryFunctor* fxx, aBinaryFunctor* fxy, aBinaryFunctor* fyy): p_(6)
+    aBinaryFunctor* fxx, aBinaryFunctor* fxy, aBinaryFunctor* fyy): BinaryFunctorLvl1(f,fx,fy) 
     {
-        p_[0] = f;
-        p_[1] = fx;
-        p_[2] = fy;
-        p_[3] = fxx;
-        p_[4] = fxy;
-        p_[5] = fyy;
+        p_.append( fxx);
+        p_.append( fxy);
+        p_.append( fyy);
     }
-    /// f
-    const aBinaryFunctor& f()const{return *p_[0];}
-    /// partial f /partial x
-    const aBinaryFunctor& fx()const{return *p_[1];}
-    /// partial f /partial y
-    const aBinaryFunctor& fy()const{return *p_[2];}
     /// partial^2f/partial x^2
-    const aBinaryFunctor& fxx()const{return *p_[3];}
+    const aBinaryFunctor& dfxx()const{return *p_[3];}
     /// partial^2 f / partial x partial y
-    const aBinaryFunctor& fxy()const{return *p_[4];}
+    const aBinaryFunctor& dfxy()const{return *p_[4];}
     /// partial^2f/partial y^2
-    const aBinaryFunctor& fyy()const{return *p_[5];}
+    const aBinaryFunctor& dfyy()const{return *p_[5];}
 };
 /**
 * @brief This struct bundles a symmetric tensor and its divergence
