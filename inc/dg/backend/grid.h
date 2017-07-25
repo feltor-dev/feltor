@@ -289,13 +289,13 @@ struct Grid2d
     Grid2d local_grid() const {return *this;}
 
     /**
-    * @brief Resize the number of cells relative to the old ones
+    * @brief Multiply the number of cells with a given factor
     *
     * With this function you can resize the grid ignorantly of its current size
     * @param fx new number of cells is fx*Nx()
     * @param fy new number of cells is fy*Ny()
     */
-    void resize( double fx, double fy){
+    void multiplyCellNumber( double fx, double fy){
         set(n_, floor(fx*(double)Nx_+0.5), floor(fy*(double)Ny_+0.5));
     }
     /**
@@ -478,8 +478,8 @@ struct Grid3d
         lx_ = (x1_-x0_), ly_ = (y1_-y0_), lz_ = (z1_-z0_);
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
     }
-    ///@copydoc Grid2d::resize()
-    void resize( double fx, double fy){
+    ///@copydoc Grid2d::multiplyCellNumber()
+    void multiplyCellNumber( double fx, double fy){
         set(n_, floor(fx*(double)Nx_+0.5), floor(fy*(double)Ny_+0.5), Nz());
     }
     /**

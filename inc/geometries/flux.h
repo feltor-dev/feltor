@@ -228,7 +228,6 @@ struct FluxGenerator : public aGridGenerator
  * @brief Same as the Ribeiro class just but uses psi as a flux label directly
  * @ingroup generators
  */
-template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct RibeiroFluxGenerator : public aGridGenerator
 {
     /**

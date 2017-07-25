@@ -6,13 +6,6 @@ namespace dg{
 namespace geo{
 namespace toroidal{
 
-struct Constant:public aCloneableBinaryOperator<Constant> 
-{ 
-    Constant(double c):c_(c){}
-    double operator()(double R,double Z)const{return c_;}
-    private:
-    double c_;
-};
 /**
  * @brief Models a slab toroidal field 
  *

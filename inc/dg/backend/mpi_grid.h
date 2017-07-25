@@ -51,19 +51,19 @@ struct MPIGrid2d
     }
 
     /**
-    * @brief Resize the number of cells relative to the old ones
+    * @brief Multiply the number of cells with a given factor
     *
     * With this function you can resize the grid ignorantly of its current size
     * @param fx new global number of cells is fx*global().Nx()
     * @param fy new global number of cells is fy*global().Ny()
     */
-    void resize( double fx, double fy){
+    void multiplyCellNumber( double fx, double fy){
         set(n_, floor(fx*(double)global.Nx()+0.5), floor(fy*(double)global.Ny()+0.5));
     }
     /**
     * @copydoc Grid2d::set(unsigned,unsigned,unsigned)
     * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny()) is NOT(!) what you want
-    *           use the resize function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny())
+    *           use the multiplyCellNumber function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny())
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
@@ -374,14 +374,14 @@ struct MPIGrid3d
     {
         check_division( Nx, Ny, Nz, bcx, bcy, bcz);
     }
-    ///@copydoc MPIGrid2d::resize()
-    void resize( double fx, double fy){
+    ///@copydoc MPIGrid2d::multiplyCellNumber()
+    void multiplyCellNumber( double fx, double fy){
         set(n_, floor(fx*(double)global.Nx()+0.5), floor(fy*(double)global.Ny()+0.5), global.Nz());
     }
     /**
      * @copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
      * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny(), 2*g.Nz()) is NOT(!) what you want
-     *           use the resize function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny(), 2*g.global().Nz())
+     *           use the multiply function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny(), 2*g.global().Nz())
      */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());

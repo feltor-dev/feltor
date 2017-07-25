@@ -186,6 +186,13 @@ struct BinarySymmTensorLvl1 : public aBinaryFunctorBundle
     const aBinaryFunctor& divY()const{return *p_[4];}
 };
 
+struct Constant:public aCloneableBinaryOperator<Constant> 
+{ 
+    Constant(double c):c_(c){}
+    double operator()(double R,double Z)const{return c_;}
+    private:
+    double c_;
+};
 
 ///@}
 }//namespace geo
