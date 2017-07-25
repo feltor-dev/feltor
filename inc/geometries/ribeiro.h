@@ -26,14 +26,13 @@ namespace detail
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
-template< class Psi, class PsiX, class PsiY>
 struct Fpsi
 {
-    Fpsi( Psi psi, PsiX psiX, PsiY psiY, double x0, double y0, int mode): 
-        psip_(psi), fieldRZYTribeiro_(psiX, psiY, x0, y0),fieldRZYTequalarc_(psiX, psiY, x0, y0), fieldRZtau_(psiX, psiY), mode_(mode)
+    Fpsi( const BinaryFuncotsLvl1& psi_, double x0, double y0, int mode): 
+        psip_(psi), fieldRZYTribeiro_(psi,x0, y0),fieldRZYTequalarc_(psi, x0, y0), fieldRZtau_(psi), mode_(mode)
     {
         R_init = x0; Z_init = y0;
-        while( fabs( psiX(R_init, Z_init)) <= 1e-10 && fabs( psiY( R_init, Z_init)) <= 1e-10)
+        while( fabs( psi.dfx()(R_init, Z_init)) <= 1e-10 && fabs( psi.dfy()( R_init, Z_init)) <= 1e-10)
             R_init = x0 + 1.; Z_init = y0;
     }
     //finds the starting points for the integration in y direction
@@ -48,7 +47,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_(R_init, Z_init), psi, N);
+            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_.f()(R_init, Z_init), psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         R_init = R_0 = end2d_old[0], Z_init = Z_0 = end2d_old[1];
@@ -150,19 +149,18 @@ struct Fpsi
 
     private:
     double R_init, Z_init;
-    Psi psip_;
-    dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTribeiro_;
-    dg::geo::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequalarc_;
-    dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    BinaryFunctorsLvl1 psip_;
+    dg::geo::ribeiro::FieldRZYT fieldRZYTribeiro_;
+    dg::geo::equalarc::FieldRZYT fieldRZYTequalarc_;
+    dg::geo::FieldRZtau fieldRZtau_;
     int mode_;
 };
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
-template<class Psi, class PsiR, class PsiZ>
 struct FieldFinv
 {
-    FieldFinv( Psi psi, PsiR psiR, PsiZ psiZ, double x0, double y0, unsigned N_steps, int mode):
-        fpsi_(psi, psiR, psiZ, x0, y0, mode), fieldRZYTribeiro_(psiR, psiZ, x0, y0), fieldRZYTequalarc_(psiR, psiZ, x0, y0), N_steps(N_steps), mode_(mode) { }
+    FieldFinv( const BinaryFunctorsLvl1& psi, double x0, double y0, unsigned N_steps, int mode):
+        fpsi_(psi, x0, y0, mode), fieldRZYTribeiro_(psi, x0, y0), fieldRZYTequalarc_(psi, x0, y0), N_steps(N_steps), mode_(mode) { }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
@@ -173,9 +171,9 @@ struct FieldFinv
         //std::cout <<"fpsiMinverse is "<<fpsiM[0]<<" "<<-1./fpsi_(psi[0])<<" "<<eps<<"\n";
     }
     private:
-    Fpsi<Psi, PsiR, PsiZ> fpsi_;
-    dg::geo::ribeiro::FieldRZYT<PsiR, PsiZ> fieldRZYTribeiro_;
-    dg::geo::equalarc::FieldRZYT<PsiR, PsiZ> fieldRZYTequalarc_;
+    Fpsi fpsi_;
+    dg::geo::ribeiro::FieldRZYT fieldRZYTribeiro_;
+    dg::geo::equalarc::FieldRZYT fieldRZYTequalarc_;
     unsigned N_steps;
     int mode_;
 };
@@ -186,37 +184,25 @@ struct FieldFinv
 /**
  * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 (models aGenerator)
  * @ingroup generators
- * @tparam Psi All the template parameters must model aBinaryOperator
-     * @tparam PsiX models aBinaryOperator 
-     * @tparam PsiY models aBinaryOperator 
-     * @tparam PsiXX models aBinaryOperator 
-     * @tparam PsiXY models aBinaryOperator 
-     * @tparam PsiYY models aBinaryOperator 
  */
-template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct Ribeiro : public aGenerator
 {
     /**
      * @brief Construct a near-conformal grid generator
      *
      * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
-     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
-     @param psiX \f$ \psi_x\f$ its derivative in x
-     @param psiY \f$ \psi_y\f$ its derivative in y
-     @param psiXX \f$ \psi_{xx}\f$ second derivative
-     @param psiXY \f$ \psi_{xy}\f$ second derivative
-     @param psiYY \f$ \psi_{yy}\f$ second derivative
+     * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    Ribeiro( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi_0, double psi_1, double x0, double y0, int mode = 0):
-        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), mode_(mode)
+    Ribeiro( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode = 0):
+        psi_(psi), mode_(mode)
     {
         assert( psi_1 != psi_0);
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, mode);
+        ribeiro::detail::Fpsi fpsi(psi, x0, y0, mode);
         lx_ = fabs(fpsi.find_x1( psi_0, psi_1));
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
@@ -250,14 +236,14 @@ struct Ribeiro : public aGenerator
          thrust::host_vector<double>& etaY) const
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
-        ribeiro::detail::FieldFinv<Psi, PsiX, PsiY> fpsiMinv_(psi_, psiX_, psiY_, x0_,y0_, 500, mode_);
+        ribeiro::detail::FieldFinv fpsiMinv_(psi_, psiX_, psiY_, x0_,y0_, 500, mode_);
         thrust::host_vector<double> psi_x, fx_;
         dg::geo::detail::construct_psi_values( fpsiMinv_, psi0_, psi1_, 0., zeta1d, lx_, psi_x, fx_);
 
         //std::cout << "In grid function:\n";
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        ribeiro::detail::Fpsi fpsi(psi_, x0_, y0_, mode_);
+        dg::geo::ribeiro::FieldRZYRYZY fieldRZYRYZYribeiro(psi_);
+        dg::geo::equalarc::FieldRZYRYZY fieldRZYRYZYequalarc(psi_);
         thrust::host_vector<double> f_p(fx_);
         unsigned Nx = zeta1d.size(), Ny = eta1d.size();
         for( unsigned i=0; i<zeta1d.size(); i++)
@@ -275,12 +261,7 @@ struct Ribeiro : public aGenerator
             }
         }
     }
-    Psi psi_;
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
+    BinaryFunctorsLvl2 psi_;
     double lx_, x0_, y0_, psi0_, psi1_;
     int mode_; //0 = ribeiro, 1 = equalarc
 };

@@ -109,21 +109,6 @@ struct PsipRZ : public aCloneableBinaryFunctor<PsipRZ>
 };
 
 /**
- * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/2\f]
- */
-struct LaplacePsip : public aCloneableBinaryFunctor<LaplacePsip>
-{
-    LaplacePsip( double R_0 ): psipRR_(R_0), psipZZ_(R_0){}
-    double operator()(double R, double Z) const
-    {    
-        return psipRR_(R,Z) + psipZZ_(R,Z);
-    }
-  private:
-    PsipRR psipRR_;
-    PsipZZ psipZZ_;
-};
-
-/**
  * @brief \f[ I_0\f]
  */
 struct Ipol : public aCloneableBinaryFunctor<Ipol>
@@ -162,7 +147,6 @@ struct MagneticField : public dg::geo::aTokamakMagneticField
         new PsipRR(gp), 
         new PsipRZ(gp), 
         new PsipZZ(gp), 
-        new LaplacePsip(gp), 
         new Ipol(gp), 
         new IpolR(gp), 
         new IpolZ(gp)){}

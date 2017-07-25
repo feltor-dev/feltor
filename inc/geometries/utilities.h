@@ -18,7 +18,7 @@ namespace flux{
  */ 
 struct FieldRZYT
 {
-    FieldRZYT( const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip), ipol_(ipol){}
+    FieldRZYT( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip), ipol_(ipol){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -34,13 +34,12 @@ struct FieldRZYT
     }
   private:
     double R_0_, Z_0_;
-    BinaryFunctorsLvl2 psip_;
-    BinaryFunctorsLvl1 ipol_;
+    BinaryFunctorsLvl1 psip_, ipol_;
 };
 
 struct FieldRZYZ
 {
-    FieldRZYZ( const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol):psip_(psip), ipol_(ipol) {}
+    FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol):psip_(psip), ipol_(ipol) {}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -53,8 +52,7 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    BinaryFunctorsLvl2 psip_;
-    BinaryFunctorsLvl1 ipol_;
+    BinaryFunctorsLvl1 psip_, ipol_;
 };
 
 /**
@@ -76,8 +74,7 @@ struct FieldRZY
     }
   private:
     double f_;
-    BinaryFunctorsLvl2 psip_;
-    BinaryFunctorsLvl1 ipol_;
+    BinaryFunctorsLvl1 psip_,ipol_;
 };
 
 /**
@@ -101,8 +98,8 @@ struct FieldRZYRYZY
         double psipR = psip_.dfx()(R0, Z0), psipZ = psip_.dfy()(R0,Z0);
         double psip2 = (psipR*psipR+ psipZ*psipZ);
         double fnorm =R0/ipol_.f()(R0,Z0)/f_; //=Rq/I
-        yR = -psipZ_(R0, Z0)/psip2/fnorm;
-        yZ = +psipR_(R0, Z0)/psip2/fnorm;
+        yR = -psipZ/psip2/fnorm;
+        yZ = +psipR/psip2/fnorm;
     }
     void derive( double R0, double Z0, double& xR, double& xZ)
     {
@@ -136,10 +133,10 @@ namespace ribeiro{
 
 struct FieldRZYT
 {
-    FieldRZYT( const BinaryFunctorsLvl2, double R0, double Z0): R_0_(R0), Z_0_(Z0), psipR_(psiR), psipZ_(psiZ){}
+    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip)
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] = +psipR;//fieldZ
@@ -155,17 +152,15 @@ struct FieldRZYT
     }
   private:
     double R_0_, Z_0_;
-    PsiR psipR_;
-    PsiZ psipZ_;
+    BinaryFunctorsLvl1 psip_;
 };
 
-template< class PsiR, class PsiZ>
 struct FieldRZYZ
 {
-    FieldRZYZ( PsiR psiR, PsiZ psiZ): psipR_(psiR), psipZ_(psiZ){}
+    FieldRZYZ( const BinaryFunctorsLvl1& psip): psip_(psip){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] =  psipR;//fieldZ
@@ -178,18 +173,16 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    PsiR psipR_;
-    PsiZ psipZ_;
+    BinaryFunctorsLvl1 psip_;
 };
 
-template <class PsiR, class PsiZ>
 struct FieldRZY
 {
-    FieldRZY( PsiR psiR, PsiZ psiZ): f_(1.), psipR_(psiR), psipZ_(psiZ){}
+    FieldRZY( const BinaryFunctorsLvl1& psip): f_(1.),psip_(psip){}
     void set_f(double f){ f_ = f;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
         //yp[0] = +psipZ/f_;//volume 
         //yp[1] = -psipR/f_;//volume 
@@ -202,33 +195,30 @@ struct FieldRZY
     }
   private:
     double f_;
-    PsiR psipR_;
-    PsiZ psipZ_;
+    BinaryFunctorsLvl1 psip_;
 };
 
 
-template<class PsiR, class PsiZ, class PsiRR, class PsiRZ, class PsiZZ>
 struct FieldRZYRYZY
 {
-    FieldRZYRYZY( PsiR psiR, PsiZ psiZ, PsiRR psiRR, PsiRZ psiRZ, PsiZZ psiZZ): 
-        psipR_(psiR), psipZ_(psiZ), psipRR_(psiRR), psipRZ_(psiRZ), psipZZ_(psiZZ){ f_ = f_prime_ = 1.;}
+    FieldRZYRYZY( const BinaryFunctorsLvl2& psip):psip_(psip){ f_ = f_prime_ = 1.;}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void initialize( double R0, double Z0, double& yR, double& yZ)
     {
-        yR = -f_*psipZ_(R0, Z0);
-        yZ = +f_*psipR_(R0, Z0);
+        yR = -f_*psip_.dfy()(R0, Z0);
+        yZ = +f_*psip_.dfx()(R0, Z0);
     }
     void derive( double R0, double Z0, double& xR, double& xZ)
     {
-        xR = +f_*psipR_(R0, Z0);
-        xZ = +f_*psipZ_(R0, Z0);
+        xR = +f_*psip_.dfx()(R0, Z0);
+        xZ = +f_*psip_.dfy()(R0, Z0);
     }
 
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
         double psip2 = (psipR*psipR+ psipZ*psipZ);
 
         yp[0] =  -psipZ/f_/psip2;
@@ -240,23 +230,18 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsiR psipR_;
-    PsiZ psipZ_;
-    PsiRR psipRR_;
-    PsiRZ psipRZ_;
-    PsiZZ psipZZ_;
+    BinaryFunctorsLvl2 psip_;
 };
 }//namespace ribeiro
 namespace equalarc{
 
 
-template< class PsiR, class PsiZ>
 struct FieldRZYT
 {
-    FieldRZYT( PsiR psiR, PsiZ psiZ, double R0, double Z0): R_0_(R0), Z_0_(Z0), psipR_(psiR), psipZ_(psiZ){}
+    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] = +psipR;//fieldZ
@@ -272,17 +257,15 @@ struct FieldRZYT
     }
   private:
     double R_0_, Z_0_;
-    PsiR psipR_;
-    PsiZ psipZ_;
+    BinaryFunctorsLvl1 psip_;
 };
 
-template< class PsiR, class PsiZ>
 struct FieldRZYZ
 {
-    FieldRZYZ( PsiR psiR, PsiZ psiZ): psipR_(psiR), psipZ_(psiZ){}
+    FieldRZYZ( const BinaryFunctorsLvl1& psip): psip_(psip){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] = +psipR;//fieldZ
@@ -295,18 +278,16 @@ struct FieldRZYZ
         yp[1] =  1.;
     }
   private:
-    PsiR psipR_;
-    PsiZ psipZ_;
+    BinaryFunctorsLvl1 psip_;
 };
 
-template <class PsiR, class PsiZ>
 struct FieldRZY
 {
-    FieldRZY( PsiR psiR, PsiZ psiZ): f_(1.), psipR_(psiR), psipZ_(psiZ){}
+    FieldRZY( const BinaryFunctorsLvl1& psip):f_(1.), psip_(psip){}
     void set_f(double f){ f_ = f;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 = psipR*psipR+psipZ*psipZ;
         //yp[0] = +psipZ/f_;//volume 
         //yp[1] = -psipR/f_;//volume 
@@ -319,35 +300,32 @@ struct FieldRZY
     }
   private:
     double f_;
-    PsiR psipR_;
-    PsiZ psipZ_;
+    BinaryFunctorsLvl1 psip_;
 };
 
 
-template<class PsiR, class PsiZ, class PsiRR, class PsiRZ, class PsiZZ>
 struct FieldRZYRYZY
 {
-    FieldRZYRYZY( PsiR psiR, PsiZ psiZ, PsiRR psiRR, PsiRZ psiRZ, PsiZZ psiZZ): 
-        psipR_(psiR), psipZ_(psiZ), psipRR_(psiRR), psipRZ_(psiRZ), psipZZ_(psiZZ){ f_ = f_prime_ = 1.;}
+    FieldRZYRYZY( const BinaryFunctorsLvl2& psip):  psip_(psip){ f_ = f_prime_ = 1.;}
     void set_f( double new_f){ f_ = new_f;}
     void set_fp( double new_fp){ f_prime_ = new_fp;}
     void initialize( double R0, double Z0, double& yR, double& yZ)
     {
-        double psipR = psipR_(R0, Z0), psipZ = psipZ_(R0,Z0);
+        double psipR = psip_.dfx()(R0, Z0), psipZ = psip_.dfy()(R0,Z0);
         double psip2 = (psipR*psipR+ psipZ*psipZ);
-        yR = -f_*psipZ_(R0, Z0)/sqrt(psip2);
-        yZ = +f_*psipR_(R0, Z0)/sqrt(psip2);
+        yR = -f_*psipZ/sqrt(psip2);
+        yZ = +f_*psipR/sqrt(psip2);
     }
     void derive( double R0, double Z0, double& xR, double& xZ)
     {
-        xR = +f_*psipR_(R0, Z0);
-        xZ = +f_*psipZ_(R0, Z0);
+        xR = +f_*psip_.dfx()(R0, Z0);
+        xZ = +f_*psip_.dfy()(R0, Z0);
     }
 
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
-        double psipRR = psipRR_(y[0], y[1]), psipRZ = psipRZ_(y[0],y[1]), psipZZ = psipZZ_(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
         double psip2 = (psipR*psipR+ psipZ*psipZ);
 
         yp[0] =  -psipZ/f_/sqrt(psip2);
@@ -359,41 +337,34 @@ struct FieldRZYRYZY
     }
   private:
     double f_, f_prime_;
-    PsiR psipR_;
-    PsiZ psipZ_;
-    PsiRR psipRR_;
-    PsiRZ psipRZ_;
-    PsiZZ psipZZ_;
+    BinaryFunctorsLvl2 psip_;
 };
 
 }//namespace equalarc
 
-template < class PsiR, class PsiZ>
 struct FieldRZtau
 {
-    FieldRZtau( PsiR psiR, PsiZ psiZ): psipR_(psiR), psipZ_(psiZ){}
+    FieldRZtau(const BinaryFunctorsLvl1& psip): psip_(psip){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psi2 = psipR*psipR+ psipZ*psipZ;
         yp[0] =  psipR/psi2;
         yp[1] =  psipZ/psi2;
     }
   private:
-    PsiR psipR_;
-    PsiZ psipZ_;
+    BinaryFunctorsLvl1 psip_;
 };
 
-template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct HessianRZtau
 {
-    HessianRZtau( PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY): norm_(false), quad_(1), psipR_(psiX), psipZ_(psiY), psipRR_(psiXX), psipRZ_(psiXY), psipZZ_(psiYY){}
+    HessianRZtau( const BinaryFunctorsLvl2): norm_(false), quad_(1), psip_(psip){}
     // if true goes into positive Z - direction and X else
     void set_quadrant( int quadrant) {quad_ = quadrant;}
     void set_norm( bool normed) {norm_ = normed;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipRZ = psipRZ_(y[0], y[1]);
+        double psipRZ = psip_.dfxy(y[0], y[1]);
         if( psipRZ == 0)
         {
             if(      quad_ == 0) { yp[0] = 1; yp[1] = 0; }
@@ -403,7 +374,7 @@ struct HessianRZtau
         }
         else
         {
-            double psipRR = psipRR_(y[0], y[1]), psipZZ = psipZZ_(y[0],y[1]);
+            double psipRR = psip_.dfxx(y[0], y[1]), psipZZ = psip_.dfyy(y[0],y[1]);
             double T = psipRR + psipZZ; 
             double D = psipZZ*psipRR - psipRZ*psipRZ;
             double L1 = 0.5*T+sqrt( 0.25*T*T-D); // > 0
@@ -415,7 +386,7 @@ struct HessianRZtau
         }
         if( norm_) 
         {
-            double vgradpsi = yp[0]*psipR_(y[0],y[1]) + yp[1]*psipZ_(y[0],y[1]);
+            double vgradpsi = yp[0]*psip_.dfx()(y[0],y[1]) + yp[1]*psip_.dfy()(y[0],y[1]);
             yp[0] /= vgradpsi, yp[1] /= vgradpsi;
         }
         else
@@ -427,9 +398,9 @@ struct HessianRZtau
     }
     void newton_iteration( const dg::HVec&y, dg::HVec& yp)
     {
-        double psipRZ = psipRZ_(y[0], y[1]);
-        double psipRR = psipRR_(y[0], y[1]), psipZZ = psipZZ_(y[0],y[1]);
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]);
+        double psipRZ = psip_.dfxy()(y[0], y[1]);
+        double psipRR = psip_.dfxx()(y[0], y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0], y[1]);
         double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
         yp[0] = y[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
         yp[1] = y[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
@@ -437,22 +408,17 @@ struct HessianRZtau
   private:
     bool norm_;
     int quad_;
-    PsiX  psipR_;
-    PsiY  psipZ_;
-    PsiXX psipRR_;
-    PsiXY psipRZ_;
-    PsiYY psipZZ_;
+    BinaryFunctorsLvl2 psip_;
 };
 
-template<class Psi, class PsiX, class PsiY>
 struct MinimalCurve
 {
-    MinimalCurve(Psi psi, PsiX psiX, PsiY psiY): norm_(false), 
-        psip_(psi), psipR_(psiX), psipZ_(psiY){}
+    MinimalCurve(const BinaryFunctorsLvl1& psip): norm_(false), 
+        psip_(psip){}
     void set_norm( bool normed) {norm_ = normed;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0], y[1]);
         yp[0] = y[2];
         yp[1] = y[3];
         //double psipRZ = psipRZ_(y[0], y[1]), psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]), psipRR=psipRR_(y[0], y[1]), psipZZ=psipZZ_(y[0], y[1]); 
@@ -460,7 +426,7 @@ struct MinimalCurve
         //double grad2 = psipR*psipR+psipZ*psipZ;
         //yp[2] = D2/(1.+grad2) * psipR ;
         //yp[3] = D2/(1.+grad2) * psipZ ;
-        if( psip_(y[0], y[1]) < 0)
+        if( psip_.f()(y[0], y[1]) < 0)
         {
             yp[2] = -10.*psipR;
             yp[3] = -10.*psipZ;
@@ -479,9 +445,7 @@ struct MinimalCurve
     }
   private:
     bool norm_;
-    Psi  psip_;
-    PsiX psipR_;
-    PsiY psipZ_;
+    BinaryFunctorsLvl1 psip_;
 };
 ////////////////////////////////////////////////////////////////////////////////
 

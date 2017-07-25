@@ -30,6 +30,7 @@ namespace geo
 */
 struct aTokamakMagneticField
 {
+    //maybe construct using make functions instead of deriving from it?
     aTokamakMagneticField( double R0,
         aBinaryFunctor* psip,
         aBinaryFunctor* psipR,
@@ -61,6 +62,9 @@ struct aTokamakMagneticField
     const aBinaryFunctor& ipolR()const{return ipol_.fx();}
     /// \f$ \partial_Z I(\psi_p) \f$ 
     const aBinaryFunctor& ipolZ()const{return ipol_.fy();}
+
+    const BinaryFunctorsLvl2& get_psip() const{return psip_;}
+    const BinaryFunctorsLvl1& get_ipol() const{return ipol_;}
 
     private:
     double R0_;

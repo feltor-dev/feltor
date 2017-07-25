@@ -264,19 +264,6 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
     std::vector<double> c_;
 };
 
-struct LaplacePsip: public aCloneableBinaryFunctor<LaplacePsip>
-{
-    LaplacePsip( solovev::GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
-    double operator()(double R, double Z) const
-    {    
-        return psipRR_(R,Z) + psipZZ_(R,Z);
-    }
-  private:
-    PsipRR psipRR_;
-    PsipZZ psipZZ_;
-};
-
-
 /**
  * @brief \f[\hat{I} = c_{12}\psi\f] 
  */ 
@@ -336,7 +323,6 @@ struct MagneticField : public dg::geo::aTokamakMagneticField
         new PsipRR(gp), 
         new PsipRZ(gp), 
         new PsipZZ(gp), 
-        new LaplacePsip(gp), 
         new Ipol(gp), 
         new IpolR(gp), 
         new IpolZ(gp)){}

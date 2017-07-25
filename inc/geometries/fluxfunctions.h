@@ -82,6 +82,7 @@ struct aBinaryFunctorBundle
     aBinaryFunctorBundle();
     aBinaryFunctorBundle( const aBinaryFunctorBundle& b)
     {
+        p_.resize( b.p_.size());
         //deep copy
         for( unsigned i=0; i<p_.size(); i++)
             p_[i] = b.p_[i]->clone();
@@ -107,9 +108,9 @@ struct BinaryFunctorsLvl1 : public aBinaryFunctorBundle
     /**
     * @brief Take ownership of newly allocated functors
     *
-    * @param f f 
-    * @param fx partial f / partial x
-    * @param fy partial f / partial y
+    * @param f \f$ f(x,y)\f$ the function in some coordinates (x,y)
+    * @param fx \f$ \partial f / \partial x \f$ its derivative in the first coordinate
+    * @param fy \f$ \partial f / \partial y \f$ its derivative in the second coordinate
     */
     BinaryFunctorsLvl1( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy): p_(3)
     {
@@ -117,40 +118,36 @@ struct BinaryFunctorsLvl1 : public aBinaryFunctorBundle
         p_[1] = fx;
         p_[2] = fy;
     }
-    ///f 
+    /// \f$ f \f$
     const aBinaryFunctor& f()const{return *p_[0];}
-    /// partial f / partial x
+    /// \f$ \partial f / \partial x \f$ 
     const aBinaryFunctor& dfx()const{return *p_[1];}
-    /// partial f / partial y
+    /// \f$ \partial f / \partial y\f$
     const aBinaryFunctor& dfy()const{return *p_[2];}
 };
 /**
 * @brief This struct bundles a function and its first and second derivatives
 */
-struct BinaryFunctorsLvl2 : public BinaryFunctorLvl1
+struct BinaryFunctorsLvl2 : public BinaryFunctorsLvl1
 {
     /**
-    * @brief Take ownership of newly allocated functors
-    *
-    * @param f f 
-    * @param fx partial f / partial x
-    * @param fy partial f / partial y
-    * @param fxx partial2 f / partial x2
-    * @param fxy partial2 f / partial x /partial y
-    * @param fyy partial2 f / partial y2
+    * @copydoc BinaryFunctorsLvl1
+    * @param fxx \f$ \partial^2 f / \partial x^2\f$ second derivative in first coordinate
+    * @param fxy \f$ \partial^2 f / \partial x \partial y\f$ second mixed derivative 
+    * @param fyy \f$ \partial^2 f / \partial y^2\f$ second derivative in second coordinate
     */
     BinaryFunctorsLvl2( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy,
-    aBinaryFunctor* fxx, aBinaryFunctor* fxy, aBinaryFunctor* fyy): BinaryFunctorLvl1(f,fx,fy) 
+    aBinaryFunctor* fxx, aBinaryFunctor* fxy, aBinaryFunctor* fyy): BinaryFunctorsLvl1(f,fx,fy) 
     {
-        p_.append( fxx);
-        p_.append( fxy);
-        p_.append( fyy);
+        p_.push_back( fxx);
+        p_.push_back( fxy);
+        p_.push_back( fyy);
     }
-    /// partial^2f/partial x^2
+    /// \f$ \partial^2f/\partial x^2\f$
     const aBinaryFunctor& dfxx()const{return *p_[3];}
-    /// partial^2 f / partial x partial y
+    /// \f$ \partial^2 f / \partial x \partial y\f$
     const aBinaryFunctor& dfxy()const{return *p_[4];}
-    /// partial^2f/partial y^2
+    /// \f$ \partial^2f/\partial y^2\f$
     const aBinaryFunctor& dfyy()const{return *p_[5];}
 };
 /**
@@ -159,12 +156,12 @@ struct BinaryFunctorsLvl2 : public BinaryFunctorLvl1
 struct BinarySymmTensorLvl1 : public aBinaryFunctorBundle
 {
     /**
-    * @brief Take ownership of newly allocated functors
-    *
-    * let's assume the tensor is called chi
-    * @param chi_xx contravariant xx component
-    * @param chi_xy contravariant xy component
-    * @param chi_yy contravariant yy component
+     * @brief Take ownership of newly allocated functors
+     *
+     * let's assume the tensor is called \f$ \chi \f$ (chi)
+     * @param chi_xx contravariant xx component \f$ \chi^{xx}\f$ 
+     * @param chi_xy contravariant xy component \f$ \chi^{xy}\f$ 
+     * @param chi_yy contravariant yy component \f$ \chi^{yy}\f$ 
      * @param divChiX \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
      * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     */
@@ -177,15 +174,15 @@ struct BinarySymmTensorLvl1 : public aBinaryFunctorBundle
         p_[3] = divChiX;
         p_[4] = divChiY;
     }
-    ///xx component
+    ///xy component \f$ \chi^{xx}\f$ 
     const aBinaryFunctor& xx()const{return *p_[0];}
-    ///xy component
+    ///xy component \f$ \chi^{xy}\f$ 
     const aBinaryFunctor& xy()const{return *p_[1];}
-    ///yy component
+    ///yy component \f$ \chi^{yy}\f$ 
     const aBinaryFunctor& yy()const{return *p_[2];}
-    ///x component of the divergence 
+     /// \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
     const aBinaryFunctor& divX()const{return *p_[3];}
-    ///y component of the divergence 
+     /// \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     const aBinaryFunctor& divY()const{return *p_[4];}
 };
 

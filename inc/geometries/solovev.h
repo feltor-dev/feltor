@@ -391,27 +391,6 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
     std::vector<double> c_;
 };
 
-
-/**
- * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2 } + \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2 } \f] 
- */
-struct LaplacePsip: public aCloneableBinaryFunctor<LaplacePsip>
-{
-    LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
-    /**
-     * @brief  \f[\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2 } + \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2 } \f] 
-     */
-    double operator()(double R, double Z) const
-    {    
-        return psipRR_(R,Z) + psipZZ_(R,Z);
-    }
-  private:
-    PsipRR psipRR_;
-    PsipZZ psipZZ_;
-};
-
-
-
 /**
  * @brief \f[\hat{I}\f] 
  */ 
@@ -473,7 +452,6 @@ struct MagneticField : public dg::geo::aTokamakMagneticField
         new PsipRR(gp), 
         new PsipRZ(gp), 
         new PsipZZ(gp), 
-        new LaplacePsip(gp), 
         new Ipol(gp), 
         new IpolR(gp), 
         new IpolZ(gp)){}
@@ -656,19 +634,6 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-
-struct LaplacePsip: public aCloneableBinaryFunctor<LaplacePsip>
-{
-    LaplacePsip( GeomParameters gp ): psipRR_(gp), psipZZ_(gp){}
-    double operator()(double R, double Z) const
-    {    
-        return psipRR_(R,Z) + psipZZ_(R,Z);
-    }
-  private:
-    solovev::mod::PsipRR psipRR_;
-    solovev::mod::PsipZZ psipZZ_;
-};
-
 
 } //namespace mod
 ///@endcond

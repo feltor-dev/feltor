@@ -27,16 +27,15 @@ namespace detail
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
-template< class Psi, class PsiX, class PsiY, class Ipol>
 struct Fpsi
 {
     
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( Psi psi, PsiX psiX, PsiY psiY, Ipol ipol, double x0, double y0): 
-        psip_(psi), fieldRZYT_(psiX, psiY, ipol, x0, y0), fieldRZtau_(psiX, psiY)
+    Fpsi( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double x0, double y0): 
+        psip_(psip), fieldRZYT_(psip, ipol, x0, y0), fieldRZtau_(psip)
     {
         X_init = x0, Y_init = y0;
-        while( fabs( psiX(X_init, Y_init)) <= 1e-10 && fabs( psiY( X_init, Y_init)) <= 1e-10)
+        while( fabs( psip.dfx()(X_init, Y_init)) <= 1e-10 && fabs( psip.dfy()( X_init, Y_init)) <= 1e-10)
             X_init +=  1.; 
     }
     //finds the starting points for the integration in y direction
@@ -50,7 +49,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_(X_init, Y_init), psi, N);
+            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_.f()(X_init, Y_init), psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
@@ -113,9 +112,9 @@ struct Fpsi
 
     private:
     double X_init, Y_init;
-    Psi psip_;
-    dg::geo::flux::FieldRZYT<PsiX, PsiY, Ipol> fieldRZYT_;
-    dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    BinaryFunctorsLvl1 psip_;
+    dg::geo::flux::FieldRZYT fieldRZYT_;
+    dg::geo::FieldRZtau fieldRZtau_;
 
 };
 
@@ -126,31 +125,14 @@ struct Fpsi
 /**
  * @brief A symmetry flux generator
  * @ingroup generators
- * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
- * @tparam PsiX models aBinaryOperator 
- * @tparam PsiY models aBinaryOperator 
- * @tparam PsiXX models aBinaryOperator 
- * @tparam PsiXY models aBinaryOperator 
- * @tparam PsiYY models aBinaryOperator 
- * @tparam Ipol models aBinaryOperator 
- * @tparam IpolX models aBinaryOperator 
- * @tparam IpolY models aBinaryOperator 
  */
-template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Ipol, class IpolX, class IpolY>
 struct FluxGenerator : public aGridGenerator
 {
     /**
      * @brief Construct a symmetry flux grid generator
      *
-     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
-     @param psiX \f$ \psi_x\f$ its derivative in x
-     @param psiY \f$ \psi_y\f$ its derivative in y
-     @param psiXX \f$ \psi_{xx}\f$ second derivative
-     @param psiXY \f$ \psi_{xy}\f$ second derivative
-     @param psiYY \f$ \psi_{yy}\f$ second derivative
-     * @param ipol \f$ I(x,y)\f$ the current function in Cartesian coordinates (x,y)
-     * @param ipolX \f$ I_x(x,y)\f$ its derivative in x
-     * @param ipolY \f$ I_y(x,y)\f$ its derivative in x
+     * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
+     * @param ipol \f$ I(x,y)\f$ the current function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -158,19 +140,19 @@ struct FluxGenerator : public aGridGenerator
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      * @note If mode == 1 then this class does the same as the RibeiroFluxGenerator
      */
-    FluxGenerator( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Ipol ipol, IpolX ipolX, IpolY ipolY, double psi_0, double psi_1, double x0, double y0, int mode=0):
-        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), ipol_(ipol), ipolR_(ipolX), ipolZ_(ipolY), mode_(mode)
+    FluxGenerator( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1 ipol, double psi_0, double psi_1, double x0, double y0, int mode=0):
+        psi_(psi), ipol_(ipol), mode_(mode)
     {
         psi0_ = psi_0, psi1_ = psi_1;
         assert( psi_1 != psi_0);
         if( mode==0)
         {
-            flux::detail::Fpsi<Psi, PsiX, PsiY, Ipol> fpsi(psi, psiX, psiY, ipol, x0, y0);
+            flux::detail::Fpsi fpsi(psi, ipol, x0, y0);
             f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
         }
         else
         {
-            ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, mode);
+            ribeiro::detail::Fpsi fpsi(psi, x0, y0, mode);
             f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
         }
         if( psi_1 < psi_0) f0_*=-1;
@@ -213,10 +195,10 @@ struct FluxGenerator : public aGridGenerator
             psi_x[i] = zeta1d[i]/f0_ +psi0_;
 
         //std::cout << "In grid function:\n";
-        flux::detail::Fpsi<Psi, PsiX, PsiY, Ipol> fpsi(psi_, psiX_, psiY_, ipol_, x0_, y0_);
-        dg::geo::flux::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Ipol, IpolX, IpolY> fieldRZYRYZY(psiX_, psiY_, psiXX_, psiXY_, psiYY_, ipol_, ipolR_, ipolZ_);
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsiRibeiro(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        flux::detail::Fpsi fpsi(psi_, ipol_, x0_, y0_);
+        dg::geo::flux::FieldRZYRYZY fieldRZYRYZY(psi_, ipol_);
+        ribeiro::detail::Fpsi fpsiRibeiro(psi_, x0_, y0_, mode_);
+        dg::geo::equalarc::FieldRZYRYZY fieldRZYRYZYequalarc(psi_);
         thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
         thrust::host_vector<double> f_p(fx_);
@@ -236,15 +218,8 @@ struct FluxGenerator : public aGridGenerator
             }
         }
     }
-    Psi psi_;
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
-    Ipol ipol_;
-    IpolX ipolR_;
-    IpolY ipolZ_;
+    BinaryFunctorsLvl2 psi_;
+    BinaryFunctorsLvl1 ipol_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
 };
@@ -252,12 +227,6 @@ struct FluxGenerator : public aGridGenerator
 /**
  * @brief Same as the Ribeiro class just but uses psi as a flux label directly
  * @ingroup generators
- * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
-     * @tparam PsiX models aBinaryOperator 
-     * @tparam PsiY models aBinaryOperator 
-     * @tparam PsiXX models aBinaryOperator 
-     * @tparam PsiXY models aBinaryOperator 
-     * @tparam PsiYY models aBinaryOperator 
  */
 template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct RibeiroFluxGenerator : public aGridGenerator
@@ -265,24 +234,19 @@ struct RibeiroFluxGenerator : public aGridGenerator
     /**
      * @brief Construct a flux aligned grid generator
      *
-     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
-     @param psiX \f$ \psi_x\f$ its derivative in x
-     @param psiY \f$ \psi_y\f$ its derivative in y
-     @param psiXX \f$ \psi_{xx}\f$ second derivative
-     @param psiXY \f$ \psi_{xy}\f$ second derivative
-     @param psiYY \f$ \psi_{yy}\f$ second derivative
+     * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    RibeiroFluxGenerator( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi_0, double psi_1, double x0, double y0, int mode=0):
-        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), mode_(mode)
+    RibeiroFluxGenerator( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0):
+        psi_(psi), mode_(mode)
     {
         psi0_ = psi_0, psi1_ = psi_1;
         assert( psi_1 != psi_0);
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, mode);
+        ribeiro::detail::Fpsi fpsi(psi, x0, y0, mode);
         f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
         if( psi_1 < psi_0) f0_*=-1;
         lx_ =  f0_*(psi_1-psi_0);
@@ -322,9 +286,9 @@ struct RibeiroFluxGenerator : public aGridGenerator
         for( unsigned i=0; i<psi_x.size(); i++)
             psi_x[i] = zeta1d[i]/f0_ +psi0_;
 
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        dg::geo::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        ribeiro::detail::Fpsi fpsi(psi_, x0_, y0_, mode_);
+        dg::geo::ribeiro::FieldRZYRYZY fieldRZYRYZYribeiro(psi_);
+        dg::geo::equalarc::FieldRZYRYZY fieldRZYRYZYequalarc(psi_);
         thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
         thrust::host_vector<double> f_p(fx_);
@@ -344,12 +308,7 @@ struct RibeiroFluxGenerator : public aGridGenerator
             }
         }
     }
-    Psi psi_;
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
+    BinaryFunctorsLvl2 psip_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
 };
