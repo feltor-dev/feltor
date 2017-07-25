@@ -41,8 +41,8 @@ struct aBinaryFunctor
     * @return a functor on the heap
     */
     virtual aBinaryFunctor* clone()const=0;
-    protected:
     virtual ~aBinaryFunctor(){}
+    protected:
     /**
     * @brief We do not allow object slicing so the copy is protected
     */
@@ -78,6 +78,8 @@ struct dg::geo::aCloneableBinaryFunctor : public dg::geo::aBinaryFunctor
 struct aBinaryFunctorBundle
 {
     protected:
+    /// constructor is deleted
+    aBinaryFunctorBundle();
     aBinaryFunctorBundle( const aBinaryFunctorBundle& b)
     {
         //deep copy

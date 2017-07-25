@@ -387,7 +387,6 @@ struct Grid2d
         if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true; 
         return false;
     }
-  protected:
     virtual ~Grid2d(){}
     Grid2d(const Grid2d& src):dlt_(src.dlt_){*this = src;}
     Grid2d& operator=(const Grid2d& src){
@@ -398,6 +397,7 @@ struct Grid2d
         bcx_=src.bcx_,bcy_=src.bcy_;
         dlt_=src.dlt_;
     }
+    protected:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny;
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
@@ -707,7 +707,6 @@ struct Grid3d
             return true; 
         return false;
     }
-  protected:
     virtual ~Grid3d(){}
     Grid3d(const Grid3d& src):dlt_(src.dlt_){*this = src;}
     Grid3d& operator=(const Grid3d& src){ //use default in C++11
@@ -718,6 +717,7 @@ struct Grid3d
         bcx_=src.bcx_,bcy_=src.bcy_,bcz_=src.bcz_;
         dlt_=src.dlt_;
     }
+    protected:
     virtual void do_set(unsigned new_n, unsigned new_Ny, unsigned new_Nz)
     {
         n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny, Nz_ = new_Nz;

@@ -301,12 +301,12 @@ struct MPIGrid2d
      * @return non-MPI Grid object
      */
     virtual const Grid2d& global() const {return g;}
-    protected:
     virtual ~MPIGrid2d(){}
     MPIGrid2d(const MPIGrid2d& src):g(src.g),comm(src.comm){}
     MPIGrid2d& operator=(const MPIGrid2d& src){
         g = src.g; comm = src.comm;
     }
+    protected:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         g.set(new_n,new_Nx,new_Ny);
     }
@@ -636,14 +636,14 @@ struct MPIGrid3d
      *@copydoc MPIGrid2d::global()const
      */
     virtual const Grid3d& global() const {return g;}
-    protected:
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        g.set(new_n,new_Nx,new_Ny,new_Nz);
-    }
     virtual ~MPIGrid3d(){}
     MPIGrid3d(const MPIGrid3d& src):g(src.g),comm(src.comm){}
     MPIGrid3d& operator=(const MPIGrid3d& src){
         g = src.g; comm = src.comm;
+    }
+    protected:
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+        g.set(new_n,new_Nx,new_Ny,new_Nz);
     }
     void init_X_boundaries( double global_x0, double global_x1)
     {
