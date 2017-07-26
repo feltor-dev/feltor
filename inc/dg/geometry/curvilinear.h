@@ -122,8 +122,6 @@ struct CylindricalGrid3d : public dg::Grid3d
         for( unsigned k=1; k<this->Nz(); k++)
             for( unsigned i=0; i<Nx*Ny; i++)
             {
-                r_[k*Nx*Ny+i] = r_[(k-1)*Nx*Ny+i];
-                z_[k*Nx*Ny+i] = z_[(k-1)*Nx*Ny+i];
                 xr_[k*Nx*Ny+i] = xr_[(k-1)*Nx*Ny+i];
                 xz_[k*Nx*Ny+i] = xz_[(k-1)*Nx*Ny+i];
                 yr_[k*Nx*Ny+i] = yr_[(k-1)*Nx*Ny+i];
@@ -133,13 +131,16 @@ struct CylindricalGrid3d : public dg::Grid3d
     //compute metric elements from xr, xz, yr, yz, r and z
     void construct_metric( )
     {
-        thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
-        for( unsigned i = 0; i<this->size(); i++)
+        thrust::host_vector<double> tempxx( xr_), tempxy(xr_), tempyy(xr_), tempvol(xr_), tempvol2d(xr_);
+        unsigned size2d = this->n()*this->n()*this->Nx()*this->Ny();
+        for( unsigned i = 0; i<this->Nz(); i++)
+        for( unsigned j = 0; j<size2d; j++)
         {
-            tempxx[i] = (xr_[i]*xr_[i]+xz_[i]*xz_[i]);
-            tempxy[i] = (yr_[i]*xr_[i]+yz_[i]*xz_[i]);
-            tempyy[i] = (yr_[i]*yr_[i]+yz_[i]*yz_[i]);
-            tempvol[i] = r_[i]/sqrt( tempxx[i]*tempyy[i] -tempxy[i]*tempxy[i] );
+            unsigned idx = i*size2d+j;
+            tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
+            tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
+            tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
+            tempvol[idx] = r_[j]/sqrt( tempxx[idx]*tempyy[idx] -tempxy[idx]*tempxy[idx] );
         }
         g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
         dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
