@@ -54,7 +54,7 @@ struct aBinaryFunctor
 };
 
 /**
-* @brief Implementation helper for the clone pattern
+* @brief Intermediate implementation helper class for the clone pattern with CRTP
 
     https://katyscode.wordpress.com/2013/08/22/c-polymorphic-cloning-and-the-crtp-curiously-recurring-template-pattern/
 */
@@ -71,6 +71,31 @@ struct dg::geo::aCloneableBinaryFunctor : public dg::geo::aBinaryFunctor
         return new Derived(static_cast<Derived const &>(*this));
     }
 };
+/**
+ * @brief With this adapater class you can make any Functor cloneable
+ *
+ * @tparam BinaryFunctor must overload the operator() like
+ * double operator()(double,double)const;
+ */
+template<class BinaryFunctor>
+struct Adapter : public dg::geo::aCloneableBinaryFunctor<Adapter>
+{
+    Adapter( const BinaryFunctor& f):f_(f){}
+    double operator()(double x, double y)const{return f_(x,y);}
+    private:
+    BinaryFunctor f_;
+};
+/**
+ * @brief Use this function when you want to convert any Functor to aBinaryFunctor
+ *
+ * @tparam BinaryFunctor must overload the operator() like
+ * double operator()(double,double)const;
+ * @param f const reference to a functor class
+ * @return a newly allocated instance of aBinaryFunctor on the heap
+ * @note the preferred way is to derive your Functor from aCloneableBinaryFunctor but if you can't or don't want to for whatever reason then use this to make one
+ */
+temmplate<class BinaryFunctor>
+aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new Adapter<BinaryFunctor>(f);}
 
 /**
 * @brief Manage and deep copy binary Functors on the heap
