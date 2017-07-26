@@ -147,10 +147,10 @@ class Elliptic
     void symv( const Vector& x, Vector& y) 
     {
         //compute gradient
-        dg::blas2::gemv( rightx, x, tempx); //R_x*f 
-        dg::blas2::gemv( righty, x, tempy); //R_y*f
+        dg::blas2::gemv( rightx, x, gradx); //R_x*f 
+        dg::blas2::gemv( righty, x, y); //R_y*f
 
-        dg::geo::volRaisePerpIndex( tempx, tempy, gradx, y, g_);
+        dg::geo::volRaisePerpIndex( gradx, y, gradx, y, g_);
 
         //multiply with chi 
         dg::blas1::pointwiseDot( xchi, gradx, gradx); //Chi*R_x*x 

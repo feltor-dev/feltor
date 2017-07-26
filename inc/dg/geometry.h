@@ -82,20 +82,23 @@ void divideVolume( container& inout, const Geometry& g)
 }
 
 /**
- * @brief Raises the index of a covariant vector in 2d
+ * @brief Raises the index of a covariant vector with the help of the projection tensor in 2d
  *
- * Computes \f$ v^i = g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the two dimensions of a 2x1 product space
+ * The projection tensor is defined as \f[ h^{ij} := g^{ij} - b^ib^ĵ \f]
+ * where \f$ b^i\f$ are the contravariant components of a unit vector.
+ * Here, we assume that the projection tensor equals the perpendicular metric tensor:
+ * Compute \f$ v^i = g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the two dimensions of a 2x1 product space
  * @tparam container the container class
  * @tparam Geometry the geometry class
- * @param covX (input) covariant first component (may get destroyed!!)
- * @param covY (input) covariant second component (may get destroyed!!)
- * @param contraX (output) contravariant first component
- * @param contraY (output) contravariant second component
+ * @param covX (input) covariant first component 
+ * @param covY (input) covariant second component
+ * @param contraX (output) contravariant first component (can be the same as covX)
+ * @param contraY (output) contravariant second component (can be the same as covY)
  * @param g The geometry object
- * @note covX, covY, contraX and contraY may not be the same
+ * @note if contraX==covX and/or contraY==covY the transformation is done in-place
  */
 template<class container, class Geometry>
-void raisePerpIndex( container& covX, container& covY, container& contraX, container& contraY, const Geometry& g)
+void raisePerpIndex( const container& covX, const container& covY, container& contraX, container& contraY, const Geometry& g)
 {
     assert( &covX != &contraX);
     assert( &covY != &contraY);
@@ -104,18 +107,21 @@ void raisePerpIndex( container& covX, container& covY, container& contraX, conta
 
 }
 /**
- * @brief Raises the index of a covariant vector in 2d and multiplies the perpendicular volume
+ * @brief Raises the index of a covariant vector in 2d with the help of the projection tensor in 2d and multiplies the perpendicular volume
  *
- * Computes \f$ v^i = \sqrt{g/g_{zz}} g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the two dimensions of a 2x1 product space. This special 
+ * The projection tensor is defined as \f[ h^{ij} := g^{ij} - b^ib^ĵ \f]
+ * where \f$ b^i\f$ are the contravariant components of a unit vector.
+ * Here, we assume that the projection tensor equals the perpendicular metric tensor:
+ * Compute \f$ v^i = \sqrt{g/g_{zz}} g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the two dimensions of a 2x1 product space. This special 
  * form occurs in the discretization of elliptic operators which is why it get's a special function.
  * @tparam container the container class
  * @tparam Geometry the geometry class
- * @param covX (input) covariant first component (may get destroyed!!)
- * @param covY (input) covariant second component (may get destroyed!!)
- * @param contraX (output) contravariant first component
- * @param contraY (output) contravariant second component
+ * @param covX (input) covariant first component 
+ * @param covY (input) covariant second component
+ * @param contraX (output) contravariant first component (can be the same as covX)
+ * @param contraY (output) contravariant second component (can be the same as covY)
  * @param g The geometry object
- * @note covX, covY, contraX and contraY may not be the same
+ * @note if contraX==covX and/or contraY==covY the transformation is done in-place
  */
 template<class container, class Geometry>
 void volRaisePerpIndex( container& covX, container& covY, container& contraX, container& contraY, const Geometry& g)

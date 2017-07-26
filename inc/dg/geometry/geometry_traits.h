@@ -86,18 +86,18 @@ void doDividePerpVolume( container& inout, const Geometry& g, CurvilinearPerpTag
 };
 
 template <class container, class Geometry>
-void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
+void doRaisePerpIndex( const container& in1, const container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
 {
-    in1.swap( out1);
-    in2.swap( out2);
+    out1=in1;//the container type should check for self-assignment
+    out2=in2;//the container type should check for self-assignment
 };
 template <class container, class Geometry>
-void doRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearPerpTag)
+void doRaisePerpIndex( const container& in1, const container& in2, container& out1, container& out2, const Geometry& g, CurvilinearPerpTag)
 {
     if( g.isOrthonormal())
     {
-        in1.swap( out1);
-        in2.swap( out2);
+        out1=in1;//the container type should check for self-assignment
+        out2=in2;//the container type should check for self-assignment
         return;
     }
     if( g.isOrthogonal())
@@ -113,18 +113,18 @@ void doRaisePerpIndex( container& in1, container& in2, container& out1, containe
 };
 
 template <class container, class Geometry>
-void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
+void doVolRaisePerpIndex( const container& in1, const container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
 {
-    in1.swap( out1);
-    in2.swap( out2);
+    out1=in1;//the container type should check for self-assignment
+    out2=in2;//the container type should check for self-assignment
 };
 template <class container, class Geometry>
-void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, CurvilinearPerpTag)
+void doVolRaisePerpIndex( const container& in1, const container& in2, container& out1, container& out2, const Geometry& g, CurvilinearPerpTag)
 {
     if( g.isConformal())
     {
-        in1.swap( out1);
-        in2.swap( out2);
+        out1=in1;//the container type should check for self-assignment
+        out2=in2;//the container type should check for self-assignment
         return;
     }
     if( g.isOrthogonal())
