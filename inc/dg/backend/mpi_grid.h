@@ -298,10 +298,11 @@ struct MPIGrid2d
     /**
      * @brief Return the global non-MPI grid 
      *
-     * The global grid contains the global boundaries and cell numbers. This is the grid that we would have to use in a non-MPI implementation.
+     * The global grid contains the global boundaries and cell numbers. 
+     * This is the grid that we would have to use in a non-MPI implementation.
      * @return non-MPI Grid object
      */
-    virtual const Grid2d& global() const {return g;}
+    const Grid2d& global() const {return g;}
     virtual ~MPIGrid2d(){}
     MPIGrid2d(const MPIGrid2d& src):g(src.g),comm(src.comm){}
     MPIGrid2d& operator=(const MPIGrid2d& src){
@@ -637,7 +638,7 @@ struct MPIGrid3d
     /**
      *@copydoc MPIGrid2d::global()const
      */
-    virtual const Grid3d& global() const {return g;}
+    const Grid3d& global() const {return g;}
     virtual ~MPIGrid3d(){}
     MPIGrid3d(const MPIGrid3d& src):g(src.g),comm(src.comm){}
     MPIGrid3d& operator=(const MPIGrid3d& src){

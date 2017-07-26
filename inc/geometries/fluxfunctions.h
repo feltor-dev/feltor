@@ -98,37 +98,9 @@ temmplate<class BinaryFunctor>
 aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new Adapter<BinaryFunctor>(f);}
 
 /**
-* @brief Manage and deep copy binary Functors on the heap
-*/
-struct aBinaryFunctorBundle
-{
-    protected:
-    /// constructor is deleted
-    aBinaryFunctorBundle();
-    aBinaryFunctorBundle( const aBinaryFunctorBundle& b)
-    {
-        p_.resize( b.p_.size());
-        //deep copy
-        for( unsigned i=0; i<p_.size(); i++)
-            p_[i] = b.p_[i]->clone();
-    }
-    aBinaryFunctorBundle& operator=( const aBinaryFunctorBundle& b)
-    {
-        aBinaryFunctorBundle temp(b);
-        std::swap( temp.p_, p_);
-        return *this;
-    }
-    ~aBinaryFunctorBundle(){
-        for( unsigned i=0; i<p_.size(); i++)
-            delete p_[i];
-    }
-    std::vector<aBinaryFunctor*> p_;
-};
-
-/**
 * @brief This struct bundles a function and its first derivatives
 */
-struct BinaryFunctorsLvl1 : public aBinaryFunctorBundle
+struct BinaryFunctorsLvl1 
 {
     /**
     * @brief Take ownership of newly allocated functors
@@ -137,18 +109,20 @@ struct BinaryFunctorsLvl1 : public aBinaryFunctorBundle
     * @param fx \f$ \partial f / \partial x \f$ its derivative in the first coordinate
     * @param fy \f$ \partial f / \partial y \f$ its derivative in the second coordinate
     */
-    BinaryFunctorsLvl1( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy): p_(3)
+    BinaryFunctorsLvl1( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy): 
     {
-        p_[0] = f;
-        p_[1] = fx;
-        p_[2] = fy;
+        p_[0].set(f);
+        p_[1].set(fx);
+        p_[2].set(fy);
     }
     /// \f$ f \f$
-    const aBinaryFunctor& f()const{return *p_[0];}
+    const aBinaryFunctor& f()const{return p_[0].get();}
     /// \f$ \partial f / \partial x \f$ 
-    const aBinaryFunctor& dfx()const{return *p_[1];}
+    const aBinaryFunctor& dfx()const{return p_[1].get();}
     /// \f$ \partial f / \partial y\f$
-    const aBinaryFunctor& dfy()const{return *p_[2];}
+    const aBinaryFunctor& dfy()const{return p_[2].get();}
+    private:
+    Handle<aBinaryFunctor> p_[3];
 };
 /**
 * @brief This struct bundles a function and its first and second derivatives
@@ -164,21 +138,24 @@ struct BinaryFunctorsLvl2 : public BinaryFunctorsLvl1
     BinaryFunctorsLvl2( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy,
     aBinaryFunctor* fxx, aBinaryFunctor* fxy, aBinaryFunctor* fyy): BinaryFunctorsLvl1(f,fx,fy) 
     {
-        p_.push_back( fxx);
-        p_.push_back( fxy);
-        p_.push_back( fyy);
+        p_[0].set( fxx);
+        p_[1].set( fxy);
+        p_[2].set( fyy);
     }
     /// \f$ \partial^2f/\partial x^2\f$
-    const aBinaryFunctor& dfxx()const{return *p_[3];}
+    const aBinaryFunctor& dfxx()const{return p_[0].get();}
     /// \f$ \partial^2 f / \partial x \partial y\f$
-    const aBinaryFunctor& dfxy()const{return *p_[4];}
+    const aBinaryFunctor& dfxy()const{return p_[1].get();}
     /// \f$ \partial^2f/\partial y^2\f$
-    const aBinaryFunctor& dfyy()const{return *p_[5];}
+    const aBinaryFunctor& dfyy()const{return p_[2].get();}
+    private:
+    Handle<aBinaryFunctor> p_[3];
 };
+
 /**
 * @brief This struct bundles a symmetric tensor and its divergence
 */
-struct BinarySymmTensorLvl1 : public aBinaryFunctorBundle
+struct BinarySymmTensorLvl1
 {
     /**
      * @brief Take ownership of newly allocated functors
@@ -191,24 +168,26 @@ struct BinarySymmTensorLvl1 : public aBinaryFunctorBundle
      * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     */
     BinarySymmTensorLvl1( aBinaryFunctor* chi_xx, aBinaryFunctor* chi_xy, aBinaryFunctor* chi_yy,
-    aBinaryFunctor* divChiX, aBinaryFunctor* divChiY): p_(5)
+    aBinaryFunctor* divChiX, aBinaryFunctor* divChiY)
     {
-        p_[0] = chi_xx;
-        p_[1] = chi_xy;
-        p_[2] = chi_yy;
-        p_[3] = divChiX;
-        p_[4] = divChiY;
+        p_[0].set( chi_xx);
+        p_[1].set( chi_xy);
+        p_[2].set( chi_yy);
+        p_[3].set( divChiX);
+        p_[4].set( divChiY);
     }
     ///xy component \f$ \chi^{xx}\f$ 
-    const aBinaryFunctor& xx()const{return *p_[0];}
+    const aBinaryFunctor& xx()const{return p_[0].get();}
     ///xy component \f$ \chi^{xy}\f$ 
-    const aBinaryFunctor& xy()const{return *p_[1];}
+    const aBinaryFunctor& xy()const{return p_[1].get();}
     ///yy component \f$ \chi^{yy}\f$ 
-    const aBinaryFunctor& yy()const{return *p_[2];}
+    const aBinaryFunctor& yy()const{return p_[2].get();}
      /// \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
-    const aBinaryFunctor& divX()const{return *p_[3];}
+    const aBinaryFunctor& divX()const{return p_[3].get();}
      /// \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
-    const aBinaryFunctor& divY()const{return *p_[4];}
+    const aBinaryFunctor& divY()const{return p_[4].get();}
+    private:
+    Handle<aBinaryFunctor> p_[5];
 };
 
 struct Constant:public aCloneableBinaryOperator<Constant> 
