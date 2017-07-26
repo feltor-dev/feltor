@@ -78,7 +78,7 @@ MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry
 {
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( g.r().data()[i], g.z().data()[i]);
+        vec[i] = f( g.r()[i], g.z()[i]);
     MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
     return v;
 }
@@ -88,11 +88,9 @@ MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometr
 {
     thrust::host_vector<double> vec( g.size());
     unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
-    Grid1d gz( g.z0(), g.z1(), 1, g.Nz());
-    thrust::host_vector<double> absz = create::abscissas( gz);
     for( unsigned k=0; k<g.Nz(); k++)
         for( unsigned i=0; i<size2d; i++)
-            vec[k*size2d+i] = f( g.r().data()[k*size2d+i], g.z().data()[k*size2d+i], absz[k]);
+            vec[k*size2d+i] = f( g.r()[i], g.z()[i], g.phi()[k]);
     MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
     return v;
 }

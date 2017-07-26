@@ -63,8 +63,9 @@ struct CylindricalMPIGrid3d : public dg::MPIGrid3d
 
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
 
-    const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& z()const{return z_;}
+    const thrust::host_vector<double>& r()const{return r_;}
+    const thrust::host_vector<double>& z()const{return z_;}
+    const thrust::host_vector<double>& phi()const{return phi_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& xr()const{return xr_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
@@ -88,13 +89,13 @@ struct CylindricalMPIGrid3d : public dg::MPIGrid3d
     bool isConformal() const { return g.isConformal();}
     MPICylindricalGrid3d( const MPICylindricalGrid3d& src):MPIGrid3d(src), g_xx_(src.g_xx_),g_xy_(src.g_xy_),g_yy_(src.g_yy_),g_pp_(src.g_pp_),vol_(src.vol_),vol2d_(src.vol2d_),g(src.g)
     {
-        r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
+        r_=src.r_,z_=src.z_,phi_=src.phi_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
     }
     MPICylindricalGrid3d& operator=( const MPICylindricalGrid3d& src)
     {
         MPIGrid3d::operator=(src);//call base class assignment
         g_xx_=src.g_xx_,g_xy_=src.g_xy_,g_yy_=src.g_yy_,g_pp_=src.g_pp_,vol_=src.vol_,vol2d_=src.vol2d_;
-        r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
+        r_=src.r_,z_=src.z_,phi_=src.phi_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
         g = src.g;
         return *this;
     }
@@ -108,8 +109,11 @@ struct CylindricalMPIGrid3d : public dg::MPIGrid3d
     }
     void divide_and_conquer( )
     {
-        r_=dg::evaluate( dg::one, *this), z_=r_, xr_=r_, xz_=r_, yr_=r_, yz_=r_;
-        dg::blas1::transfer( r_, g_xx_);
+        r_.resize( this->n()*this->n()*this->Nx()*this->Ny());
+        z_ = r_;
+        phi_.resize( this->Nz());
+        xr_=dg::evaluate( dg::one, *this), xz_=xr_, yr_=xr_, yz_=xr_;
+        dg::blas1::transfer( xr_, g_xx_);
         g_xy_=g_xx_, g_yy_=g_xx_, g_pp_=g_xx_, vol_=g_xx_, vol2d_=g_xx_;
         //divide and conquer
         int dims[3], periods[3], coords[3];
@@ -121,10 +125,13 @@ struct CylindricalMPIGrid3d : public dg::MPIGrid3d
                     //for( unsigned px=0; px<dims[0]; px++)
                         for( unsigned j=0; j<this->n()*this->Nx(); j++)
                         {
+                            unsigned idx2D1 = i*this->n()*this->Nx() + j;
+                            unsigned idx2D2 = ((coords[1]*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
+                            r_[idx2D1] = g.r()[idx2D2];
+                            z_[idx2D1] = g.z()[idx2D2];
+                            phi_[s] = g.phi()[coords[2]*this->Nz()+s];
                             unsigned idx1 = (s*this->n()*this->Ny()+i)*this->n()*this->Nx() + j;
                             unsigned idx2 = (((s*dims[1]+coords[1])*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            r_.data()[idx1] = g.r()[idx2];
-                            z_.data()[idx1] = g.z()[idx2];
                             xr_.data()[idx1] = g.xr()[idx2];
                             xz_.data()[idx1] = g.xz()[idx2];
                             yr_.data()[idx1] = g.yr()[idx2];
@@ -137,7 +144,8 @@ struct CylindricalMPIGrid3d : public dg::MPIGrid3d
                             vol2d_.data()[idx1] = g.perpVol()[idx2];
                         }
     }
-    dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_; //3d vector
+    thrust::host_vector<double> r_,z_,phi_;
+    dg::MPI_Vector<thrust::host_vector<double> > xr_, xz_, yr_, yz_; //3d vector
     MPIContainer g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
     dg::CylindricalGrid3d<LocalContainer> g;
 };
@@ -179,15 +187,15 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
     }
     CurvilinearMPIGrid2d( const CylindricalMPIGrid3d<LocalContainer>& g):
         dg::MPIGrid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
-        r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), 
-        g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_),
+        xr_(dg::evaluate( dg::one, *this)), xz_(xr_), yr_(xr_), yz_(xr_), 
+        g_xx_(xr_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_),
         g_( g.global())
     {
+        r_=g.r(); 
+        z_=g.z(); 
         unsigned s = this->size();
         for( unsigned i=0; i<s; i++)
         {
-            r_.data()[i]=g.r().data()[i]; 
-            z_.data()[i]=g.z().data()[i]; 
             xr_.data()[i]=g.xr().data()[i]; 
             xz_.data()[i]=g.xz().data()[i]; 
             yr_.data()[i]=g.yr().data()[i]; 
@@ -200,8 +208,8 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
         
     }
 
-    const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& z()const{return z_;}
+    const thrust::host_vector<double>& r()const{return r_;}
+    const thrust::host_vector<double>& z()const{return z_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& xr()const{return xr_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
@@ -246,8 +254,10 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
     }
     void divide_and_conquer()
     {
-        r_=dg::evaluate( dg::one, *this), z_=r_, xr_=r_, xz_=r_, yr_=r_, yz_=r_;
-        dg::blas1::transfer( r_, g_xx_);
+        r_.resize( this->n()*this->n()*this->Nx()*this->Ny());
+        z_=r_;
+        xr_=dg::evaluate( dg::one, *this), xz_=xr_, yr_=xr_, yz_=xr_;
+        dg::blas1::transfer( xr_, g_xx_);
         g_xy_=g_xx_, g_yy_=g_xx_, vol2d_=g_xx_;
         //divide and conquer
         int dims[2], periods[2], coords[2];
@@ -260,8 +270,8 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
                         {
                             unsigned idx1 = i*this->n()*this->Nx() + j;
                             unsigned idx2 = ((coords[1]*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            r_.data()[idx1] = g_.r()[idx2];
-                            z_.data()[idx1] = g_.z()[idx2];
+                            r_[idx1] = g_.r()[idx2];
+                            z_[idx1] = g_.z()[idx2];
                             xr_.data()[idx1] = g_.xr()[idx2];
                             xz_.data()[idx1] = g_.xz()[idx2];
                             yr_.data()[idx1] = g_.yr()[idx2];
@@ -273,7 +283,8 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
                         }
     }
 
-    dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_; //2d vector
+    thrust::host_vector<double> r_,z_;
+    dg::MPI_Vector<thrust::host_vector<double> > xr_, xz_, yr_, yz_; //2d vector
     dg::MPIContainer g_xx_, g_xy_, g_yy_, vol2d_;
     dg::CurvilinearGrid2d<LocalContainer> g_;
 };

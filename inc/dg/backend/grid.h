@@ -307,6 +307,7 @@ struct Grid2d
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         assert( new_n> 0 && new_Nx > 0  && new_Ny > 0);
+        if( new_n == n_ && new_Nx == Nx_ && new_Ny == Ny_) return;
         do_set(new_n,new_Nx,new_Ny);
     }
 
@@ -492,6 +493,7 @@ struct Grid3d
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         assert( new_n>0); assert( new_Nx > 0  && new_Ny > 0); assert( new_Nz > 0);
+        if( new_n == n_ && new_Nx == Nx_ && new_Ny == Ny_ && new_Nz == Nz_) return;
         do_set(new_n, new_Nx,new_Ny,new_Nz);
     }
 

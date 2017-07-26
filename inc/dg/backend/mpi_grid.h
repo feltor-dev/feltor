@@ -67,6 +67,7 @@ struct MPIGrid2d
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
+        if( new_n == g.n() && new_Nx == g.Nx() && new_Ny == g.Ny()) return;
         do_set( new_n,new_Nx,new_Ny);
     }
 
@@ -385,6 +386,7 @@ struct MPIGrid3d
      */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());
+        if( new_n == g.n() && new_Nx == g.Nx() && new_Ny == g.Ny() && new_Nz == g.Nz()) return;
         do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 
