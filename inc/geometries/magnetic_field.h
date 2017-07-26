@@ -23,10 +23,10 @@ namespace geo
  \f]
  where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the current 
  and \f$ \psi_p\f$ the poloidal flux function.
- 
- This class holds and controls instances of aBinaryFunctor dynamically 
- on the heap.
- @note an instance of this class cannot be constructed nor deleted directly but it can be copied and assigned
+ @note We implicitly also assume the toroidal field line approximation, i.e. all curvature
+ and other perpendicular terms created with this field will assume that the perpendicular 
+ direction lies within the
+ R-Z planes of a cylindrical grid (The plane \f$ \perp \hat e_\varphi\f$ )
 */
 struct aTokamakMagneticField
 {

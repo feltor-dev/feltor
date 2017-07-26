@@ -73,13 +73,16 @@ struct CylindricalGrid3d : public dg::Grid3d
     CylindricalGrid3d& operator=( const CylindricalGrid3d& src)
     {
         Grid3d::operator=(src);//call base class assignment
-        delete generator_;
-        g_xx_=src.g_xx_,g_xy_=src.g_xy_,g_yy_=src.g_yy_,g_pp_=src.g_pp_,vol_=src.vol_,vol2d_=src.vol2d_;
-        r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
-        generator_ = src.generator_->clone();
+        if( &src!=this)
+        {
+            delete generator_;
+            g_xx_=src.g_xx_,g_xy_=src.g_xy_,g_yy_=src.g_yy_,g_pp_=src.g_pp_,vol_=src.vol_,vol2d_=src.vol2d_;
+            r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
+            generator_ = src.generator_->clone();
+        }
         return *this;
     }
-    ~CylindricalGrid3d(){
+    virtual ~CylindricalGrid3d(){
         delete generator_;
     }
     private:
@@ -136,7 +139,7 @@ struct CylindricalGrid3d : public dg::Grid3d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    const geo::aGenerator* generator_;
+    geo::aGenerator* generator_;
 };
 
 /**
@@ -164,12 +167,7 @@ struct CurvilinearGrid2d : public dg::Grid2d
     CurvilinearGrid2d( const geo::aGenerator* generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator->width(), 0., generator->height(), n, Nx, Ny, bcx, dg::PER)
     {
-        CylindricalGrid3d<container> g( generator, n,Nx,Ny,1,bcx);
-        init_X_boundaries( g.x0(), g.x1());
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
-        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
-        vol2d_=g.perpVol();
-
+        construct( n,Nx,Ny);
     }
     CurvilinearGrid2d( const CylindricalGrid3d<container>& g):
         dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
@@ -210,27 +208,34 @@ struct CurvilinearGrid2d : public dg::Grid2d
     Curvilinear2d& operator=( const Curvilinear2d& src)
     {
         Grid2d::operator=(src); //call base class assignment
-        delete generator_;
-        g_xx_=src.g_xx_,g_xy_=src.g_xy_,g_yy_=src.g_yy_,vol2d_=src.vol2d_;
-        r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
-        generator_ = src.generator_->clone();
+        if( &src!=this)
+        {
+            delete generator_;
+            g_xx_=src.g_xx_,g_xy_=src.g_xy_,g_yy_=src.g_yy_,vol2d_=src.vol2d_;
+            r_=src.r_,z_=src.z_,xr_=src.xr_,xz_=src.xz_,yr_=src.yr_,yz_=src.yz_;
+            generator_ = src.generator_->clone();
+        }
         return *this;
     }
-    ~Curvilinear2d(){
+    virtual ~Curvilinear2d(){
         delete generator_;
     }
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
         dg::Grid2d::do_set( new_n, new_Nx, new_Ny);
-        CylindricalGrid3d<container> g( generator_, new_n,new_Nx,new_Ny,1,bcx());
+        construct( new_n, new_Nx, new_Ny);
+    }
+    void construct( unsigned n, unsigned Nx, unsigned Ny)
+    {
+        CylindricalGrid3d<container> g( generator_, n,Nx,Ny,1,bcx());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    const geo::aGenerator* generator_;
+    geo::aGenerator* generator_;
 };
 
 ///@}

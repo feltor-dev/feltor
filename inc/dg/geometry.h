@@ -86,7 +86,7 @@ void divideVolume( container& inout, const Geometry& g)
  *
  * The projection tensor is defined as \f[ h^{ij} := g^{ij} - b^ib^ĵ \f]
  * where \f$ b^i\f$ are the contravariant components of a unit vector.
- * Here, we assume that the projection tensor equals the perpendicular metric tensor:
+ * Here, we assume that the metric forms a 2x1 product space and b only has one component \f$ b^3b^3 = g_{33}^{-1} = g^{33}\f$:
  * Compute \f$ v^i = g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the two dimensions of a 2x1 product space
  * @tparam container the container class
  * @tparam Geometry the geometry class
@@ -111,8 +111,8 @@ void raisePerpIndex( const container& covX, const container& covY, container& co
  *
  * The projection tensor is defined as \f[ h^{ij} := g^{ij} - b^ib^ĵ \f]
  * where \f$ b^i\f$ are the contravariant components of a unit vector.
- * Here, we assume that the projection tensor equals the perpendicular metric tensor:
- * Compute \f$ v^i = \sqrt{g/g_{zz}} g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the two dimensions of a 2x1 product space. This special 
+ * Here, we assume that the metric forms a 2x1 product space and b only has one component \f$ b^3b^3 = g_{33}^{-1} = g^{33}\f$:
+ * Compute \f$ v^i = \sqrt{g/g_{33}} g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the two dimensions of a 2x1 product space. This special 
  * form occurs in the discretization of elliptic operators which is why it get's a special function.
  * @tparam container the container class
  * @tparam Geometry the geometry class
