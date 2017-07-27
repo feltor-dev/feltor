@@ -143,7 +143,6 @@ int main( int argc, char* argv[])
     //FFTW_RODFT00 computes an RODFT00 transform, i.e. a DST-I. (Logical N=2*(n+1), inverse is FFTW_RODFT00.) -> DIR_DIR
 //    fftw_r2r_kind kind = FFTW_RODFT10; //DFT & DST 2
     fftw_r2r_kind kind = FFTW_RODFT00; //DFT & DST 1
-
     spectral::DRT_DFT trafo( Ny, Nx, kind);
     
     
@@ -173,11 +172,8 @@ int main( int argc, char* argv[])
         gammakspec[mn]=0.;
         kspec[mn]=0.;
     }
-    double gammakspecavg=0.;
- 
-//     std::cout<< kxkyspec.cols() << " " << kxkyspec.rows() << std::endl;
-//     std::cout<< g2d_f.Nx() << " " << g2d_f.Ny() << std::endl;
-    for( unsigned i=imin; i<imax+1; i++)//timestepping
+
+    for( unsigned i=imin; i<=imax; i++)//timestepping
     {
             start2d[0] = i;
             start2d_f[0] = i;
@@ -191,16 +187,23 @@ int main( int argc, char* argv[])
             err = nc_get_vara_double( ncid, dataIDs[1], start2d, count2d, npe[1].data());
             err = nc_inq_varid(ncid, names[2].data(), &dataIDs[2]);
             err = nc_get_vara_double( ncid, dataIDs[2], start2d, count2d, phi.data());
-            dg::blas1::transform( npe[0], npe[0], dg::PLUS<>(p.bgprofamp + p.nprofileamp));
-            dg::blas1::transform( npe[1], npe[1], dg::PLUS<>(p.bgprofamp + p.nprofileamp));
-
+            
             //compute tilde_N
-            dg::blas1::pointwiseDivide(npe[0],nprof,ntilde[0]);
-            dg::blas1::axpby(1.0,ntilde[0],-1.0,one,ntilde[0]);
-            dg::blas1::pointwiseDot(one,ntilde[0],energies[0]);
+	    if (p.modelmode==0 || p.modelmode==1)
+	    {
+	      dg::blas1::transform( npe[0], npe[0], dg::PLUS<>(p.bgprofamp + p.nprofileamp));
+	      dg::blas1::transform( npe[1], npe[1], dg::PLUS<>(p.bgprofamp + p.nprofileamp));
+
+	      dg::blas1::pointwiseDivide(npe[0],nprof,ntilde[0]);
+	      dg::blas1::axpby(1.0,ntilde[0],-1.0,one,ntilde[0]);
+	      dg::blas1::pointwiseDot(one,ntilde[0],energies[0]);
+	    }
+	    if (p.modelmode==2) {
+	      dg::blas1::pointwiseDot(one,npe[0],energies[0]);
+	    }
+		
             dg::blas1::pointwiseDot(phi,one,energies[1]);
-           
-            //
+
             for (unsigned j=0;j<2;j++)
             {
                 //Backscatter to equidistant grid
@@ -219,24 +222,22 @@ int main( int argc, char* argv[])
                         //transpose absolute of transposed output
                         kxkyspec(n,m) = std::abs(tempkykx(m,n)); //is padded -> Y?
                         //normalise trafo
-                         kxkyspec(n,m)/=sqrt((2.*((double)Nx)+1.)*(double)Ny); //for rodft00
-//                        kxkyspec(n,m)/= sqrt((2.*((double)Nx))*(double)Ny); //otherwise
-                        if (i==0) 
-                        //grow rate for phi spec with simple forward difference in time \gamma(kx,ky) = |\phi(kx,ky,(t+1))|-|\phi(kx,ky,(t))|/(\Delta t)
-                        if (j==1 && i==0) { 
-                            gammakxkyspec(n,m) =kxkyspec(n,m)/deltaT;
-                            kxkyspec_old(n,m) = kxkyspec(n,m);
-                        }
-                        if (j==1 && i>0) { 
-                            gammakxkyspec(n,m) =(kxkyspec(n,m) - kxkyspec_old(n,m))/deltaT;
-                            kxkyspec_old(n,m) = kxkyspec(n,m);
-                            
-                        }
+//                      kxkyspec(n,m)/=sqrt(2.*((double)Nx+1.)*(double)Ny); //for rodft00
+//                      kxkyspec(n,m)/=sqrt(2.*(double)Nx*(double)Ny); //otherwise
+			
+                        //grow rate for phi spec with simple forward difference in time \gamma(kx,ky) = |ln \phi(kx,ky,(t+1))|-|ln \phi(kx,ky,(t))|/(\Delta t)
+			if (j==1) {
+			  if (i==0) { 
+			      gammakxkyspec(n,m) = 0.;
+			      kxkyspec_old(n,m)  = kxkyspec(n,m);
+			  }
+			  if (i>0) { 
+			      gammakxkyspec(n,m) =(log(kxkyspec(n,m)) - log(kxkyspec_old(n,m)))/deltaT;
+			      kxkyspec_old(n,m) = kxkyspec(n,m);
+			  }
+			}
                     }
                 } 
-//                 std::cout << std::setprecision(4) << std::fixed;
-//                 if (j==0) std::cout << "plotting"<< std::endl;
-//                 if (j==0) std::cout << kxkyspec << std::endl;
                 //Write E(kx,ky) spectrum
                 err2d_f = nc_put_vara_double( ncid2d_f, dataIDs2d_f[j],   start2d_f, count2d_f, kxkyspec.getPtr()); 
                 
@@ -268,9 +269,8 @@ int main( int argc, char* argv[])
 
               }
 
-            if (i>=2 ) gammakspecavg+=gammakxkyspec(j_mode,i_mode);
-// 	        std::cout << p.sigma << " " <<  gammakxkyspec(j_mode,i_mode)<<"\n";
-   
+//             if (i>=2 ) gammakspecavg+=gammakxkyspec(j_mode,i_mode);
+//  if (i==15)     std::cout << p.sigma << " " << gammakxkyspec(j_mode,i_mode)<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" "    
             err2d_f = nc_put_vara_double( ncid2d_f, dataIDs2d_f[2],   start2d_f, count2d_f, gammakxkyspec.getPtr()); 
             err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[2],   start1d_f, count1d_f, gammakspec.data()); 
             err1d_f = nc_put_vara_double( ncid1d_f, dataIDs1d_f[3],   start1d_f, count1d_f, k.data()); 
@@ -280,9 +280,6 @@ int main( int argc, char* argv[])
             //advance time
             time += p.itstp*p.dt;        
     }
-//     std::cout << p.sigma << " " <<  gammakspecavg/imax-<<"\n";
-
-    std::cout << p.sigma << " " <<  gammakspecavg/(imax-2.)<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" " <<  p.lx << "\n";
 
     err1d_f = nc_close(ncid1d_f);
     err2d_f = nc_close(ncid2d_f);
