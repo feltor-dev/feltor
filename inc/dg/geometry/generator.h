@@ -79,14 +79,14 @@ struct aGridGenerator
 @note in fact it's not completely the identity because we assume that the origin is always (0,0) in the computational space
  @ingroup generators
 */
-struct IdentityGenerator: public aGridGenerator
+struct ShiftedIdentityGenerator: public aGridGenerator
 {
     virtual double width()  const{return lx_;} 
     virtual double height() const{return ly_;}
     virtual bool isOrthonormal() const{return true;}
     virtual bool isOrthogonal() const{return true;}
     virtual bool isConformal()const{return true;}
-    virtual IdentityGenerator* clone() const{return new IdentityGenerator(*this);}
+    virtual ShiftedIdentityGenerator* clone() const{return new ShiftedIdentityGenerator(*this);}
 
     /**
     * @brief Define the 2d box in the physical domain in which to construct the coordinates
@@ -96,7 +96,7 @@ struct IdentityGenerator: public aGridGenerator
     * @param y0 y-coordinate of lower left point
     * @param y1 y-coordainte of upper right point
     */
-    IdentityGenerator( double x0, double x1, double y0, double y1){
+    ShiftedIdentityGenerator( double x0, double x1, double y0, double y1){
         x0_ = x0; lx_ = (x1-x0);
         y0_ = y0; ly_ = (y1-y0);
     }

@@ -84,15 +84,9 @@ MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry
 }
 
 template< class TernaryOp, class Geometry>
-MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, CurvilinearPerpTag, ThreeDimensionalTag, MPITag)
+MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, CurvilinearTag, ThreeDimensionalTag, MPITag)
 {
-    thrust::host_vector<double> vec( g.size());
-    unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
-    for( unsigned k=0; k<g.Nz(); k++)
-        for( unsigned i=0; i<size2d; i++)
-            vec[k*size2d+i] = f( g.r()[i], g.z()[i], g.phi()[k]);
-    MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
-    return v;
+    return g.doPullback(f);
 }
 template< class BinaryOp, class Geometry>
 MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry& g, OrthonormalTag, TwoDimensionalTag, MPITag)

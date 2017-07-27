@@ -32,7 +32,7 @@ struct CylindricalGrid3d : public dg::Grid3d
     CylindricalGrid3d( double R0, double R1, double Z0, double Z1, double phi0, double phi1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcr = PER, bc bcz = PER, bc bcphi = PER): 
         dg::Grid3d(0,R1-R0,0,Z1-Z0,phi0,phi1,n,NR,NZ,Nphi,bcR,bcZ,bcphi)
         {
-            handle_.set( new IdentityGenerator(R0,R1,Z0,Z1));
+            handle_.set( new ShiftedIdentityGenerator(R0,R1,Z0,Z1));
             construct( n, NR, NZ,Nphi);
         }
 
@@ -55,12 +55,20 @@ struct CylindricalGrid3d : public dg::Grid3d
     }
 
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
-    /// a 2d vector containing R(x,y)
-    const thrust::host_vector<double>& r()const{return r_;}
-    /// a 2d vector containing Z(x,y)
-    const thrust::host_vector<double>& z()const{return z_;}
-    /// a 1d vector containing the phi values
-    const thrust::host_vector<double>& phi()const{return phi_;}
+
+    /**
+    * @brief Function to do the pullback
+    * @note Don't call! Use the pullback() function
+    */
+    template<class TernaryOp>
+    thrust::host_vector<double> doPullback( TernaryOp f)const {
+        thrust::host_vector<double> vec( size());
+        unsigned size2d = n()*n()*Nx()*Ny();
+        for( unsigned k=0; k<Nz(); k++)
+            for( unsigned i=0; i<size2d; i++)
+                vec[k*size2d+i] = f( r_[i], z_[i], phi_[k]);
+        return vec;
+    }
     /// a 3d vector containing dx/dR
     const thrust::host_vector<double>& xr()const{return xr_;}
     /// a 3d vector containing dy/dR
@@ -146,7 +154,7 @@ struct CurvilinearGrid2d : public dg::Grid2d
     typedef dg::CurvilinearPerpTag metric_category;
 
     CurvilinearGrid2d( double R0, double R1, double Z0, double Z1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcR = PER, bc bcZ = PER): 
-        dg::Grid2d(0,R1-R0,0,Z1-Z0,n,NR,NZ,bcR,bcZ), handle_(new IdentityGenerator(R0,R1,Z0,Z1))
+        dg::Grid2d(0,R1-R0,0,Z1-Z0,n,NR,NZ,bcR,bcZ), handle_(new ShiftedIdentityGenerator(R0,R1,Z0,Z1))
         {
             construct( n, NR, NZ);
         }
@@ -155,8 +163,8 @@ struct CurvilinearGrid2d : public dg::Grid2d
      * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
      * @param n number of polynomial coefficients
      * @param Nx number of cells in first coordinate
-     @param Ny number of cells in second coordinate
-     @param bcx boundary condition in first coordinate
+     * @param Ny number of cells in second coordinate
+     * @param bcx boundary condition in first coordinate
      */
     CurvilinearGrid2d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER), handle_(generator)
@@ -190,7 +198,6 @@ struct CurvilinearGrid2d : public dg::Grid2d
     const container& g_yy()const{return g_yy_;}
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
-    const container& perpVol()const{return vol2d_;}
     const geo::aGenerator& generator() const{return handle_.get();}
     bool isOrthonormal() const { return generator_->isOrthonormal();}
     bool isOrthogonal() const { return generator_->isOrthogonal();}

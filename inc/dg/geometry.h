@@ -136,11 +136,12 @@ void volRaisePerpIndex( container& covX, container& covY, container& contraX, co
  * @tparam Geometry the geometry class
  * @param inout input (contains result on output)
  * @param g The geometry object
+ * @note if g is two-dimensional this function will redirect to multiplyVolume()
  */
 template<class container, class Geometry>
 void multiplyPerpVolume( container& inout, const Geometry& g)
 {
-    dg::geo::detail::doMultiplyPerpVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+    dg::geo::detail::doMultiplyPerpVolume( inout, g, typename GeometryTraits<Geometry>::dimensionality());
 }
 
 /**
@@ -151,11 +152,12 @@ void multiplyPerpVolume( container& inout, const Geometry& g)
  * @tparam Geometry the geometry class
  * @param inout input (contains result on output)
  * @param g The geometry object
+ * @note if g is two-dimensional this function will redirect to divideVolume()
  */
 template<class container, class Geometry>
 void dividePerpVolume( container& inout, const Geometry& g)
 {
-    dg::geo::detail::doDividePerpVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+    dg::geo::detail::doDividePerpVolume( inout, g, typename GeometryTraits<Geometry>::dimensionality());
 }
 
 /**

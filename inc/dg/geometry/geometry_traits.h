@@ -61,29 +61,51 @@ void doDivideVolume( container& inout, const Geometry& g, CurvilinearTag)
     dg::blas1::pointwiseDivide( inout, g.vol(), inout);
 };
 
+//////////////////multiplyPerpVol/////////////
 template <class container, class Geometry>
-void doMultiplyPerpVolume( container& inout, const Geometry& g, OrthonormalTag)
+void doMultiplyPerpVolume( container& inout, const Geometry& g, TwoDimensionalTag)
+{
+    doMultiplyVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+};
+template <class container, class Geometry>
+void doMultiplyPerpVolume( container& inout, const Geometry& g, ThreeDimensionalTag)
+{
+    doMultiplyPerpVolume3d( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+};
+template <class container, class Geometry>
+void doMultiplyPerpVolume3d( container& inout, const Geometry& g, OrthonormalTag)
 {
 };
 
 template <class container, class Geometry>
-void doMultiplyPerpVolume( container& inout, const Geometry& g, CurvilinearPerpTag)
+void doMultiplyPerpVolume3d( container& inout, const Geometry& g, CurvilinearPerpTag)
 {
     if( !g.isOrthonormal())
         dg::blas1::pointwiseDot( inout, g.perpVol(), inout);
 };
 
+//////////////////dividePerpVol/////////////
 template <class container, class Geometry>
-void doDividePerpVolume( container& inout, const Geometry& g, OrthonormalTag)
+void doDividePerpVolume( container& inout, const Geometry& g, TwoDimensionalTag)
+{
+    doDivideVolume( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+};
+template <class container, class Geometry>
+void doDividePerpVolume( container& inout, const Geometry& g, ThreeDimensionalTag)
+{
+    doDividePerpVolume3d( inout, g, typename dg::GeometryTraits<Geometry>::metric_category());
+};
+template <class container, class Geometry>
+void doDividePerpVolume3d( container& inout, const Geometry& g, OrthonormalTag)
 {
 };
-
 template <class container, class Geometry>
-void doDividePerpVolume( container& inout, const Geometry& g, CurvilinearPerpTag)
+void doDividePerpVolume3d( container& inout, const Geometry& g, CurvilinearPerpTag)
 {
     if( !g.isOrthonormal())
         dg::blas1::pointwiseDivide( inout, g.perpVol(), inout);
 };
+
 
 template <class container, class Geometry>
 void doRaisePerpIndex( const container& in1, const container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
@@ -312,14 +334,9 @@ thrust::host_vector<double> doPullback( BinaryOp f, const Geometry& g, Curviline
 }
 
 template< class TernaryOp, class Geometry>
-thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, CurvilinearPerpTag, ThreeDimensionalTag, SharedTag)
+thrust::host_vector<double> doPullback( TernaryOp f, const Geometry& g, CurvilinearTag, ThreeDimensionalTag, SharedTag)
 {
-    thrust::host_vector<double> vec( g.size());
-    unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
-    for( unsigned k=0; k<g.Nz(); k++)
-        for( unsigned i=0; i<size2d; i++)
-            vec[k*size2d+i] = f( g.r()[i], g.z()[i], g.phi()[k]);
-    return vec;
+    return g.doPullback( f);
 }
 template< class BinaryOp, class Geometry>
 thrust::host_vector<double> doPullback( BinaryOp f, const Geometry& g, OrthonormalTag, TwoDimensionalTag, SharedTag)

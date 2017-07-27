@@ -13,7 +13,7 @@ namespace dg
 {
 
 ///@cond
-template< class container>
+template< class MPIcontainer>
 struct CurvilinearMPIGrid2d; 
 ///@endcond
 //
@@ -37,8 +37,9 @@ struct CylindricalMPIGrid3d : public dg::MPIGrid3d
      */
     CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
         dg::MPIGrid3d( 0, x1-x0, 0, y1-y0, z0, z1, n, Nx, Ny, Nz, comm),
-        g( new IdentityGenerator(x0,x1,y0,y1), n,Nx,Ny,local().Nz(), bcx,bcy,bcz)
+        handle_( new ShiftedIdentityGenerator(x0,x1,y0,y1), n,Nx,Ny,local().Nz(), bcx,bcy,bcz)
      {
+        CylindricalGrid3d<LocalContainer> g(handle_.get(),n,Nx,Ny,this->Nz());
         divide_and_conquer();
      }
 
@@ -48,10 +49,10 @@ struct CylindricalMPIGrid3d : public dg::MPIGrid3d
      * @note the paramateres given in the constructor are global parameters 
      */
     CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        dg::MPIGrid3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
-        handle_( new IdentityGenerator(x0,x1,y0,y1))
+        dg::MPIGrid3d( 0, x1-x0, 0, y1-y0, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
+        handle_( new ShiftedIdentityGenerator(x0,x1,y0,y1))
      {
-        CylindricalGrid3d<LocalContainer> g(generator,n,Nx,Ny,this->Nz());
+        CylindricalGrid3d<LocalContainer> g(handle_.get(),n,Nx,Ny,this->Nz());
         divide_and_conquer(g);
      }
 
@@ -65,9 +66,16 @@ struct CylindricalMPIGrid3d : public dg::MPIGrid3d
 
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
 
-    const thrust::host_vector<double>& r()const{return r_;}
-    const thrust::host_vector<double>& z()const{return z_;}
-    const thrust::host_vector<double>& phi()const{return phi_;}
+    template<class TernaryOp>
+    dg::MPI_Vector<thrust::host_vector<double> > doPullback(TernaryOp f)const{
+        thrust::host_vector<double> vec( g.size());
+        unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
+        for( unsigned k=0; k<g.Nz(); k++)
+            for( unsigned i=0; i<size2d; i++)
+                vec[k*size2d+i] = f( g.r()[i], g.z()[i], g.phi()[k]);
+        MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
+        return v;
+    }
     const dg::MPI_Vector<thrust::host_vector<double> >& xr()const{return xr_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
     const dg::MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
@@ -154,7 +162,7 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
      * @note the paramateres given in the constructor are global parameters 
      */
     CurvilinearMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm): dg::MPIGrid2d( x0, x1, y0, y1, n, Nx, Ny, comm),
-    g_(new IdentityGenerator(x0,x1,y0,y1),n,Nx,Ny){
+    g_(new ShiftedIdentityGenerator(x0,x1,y0,y1),n,Nx,Ny){
         divide_and_conquer();
     
     }
@@ -165,7 +173,7 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
      * @note the paramateres given in the constructor are global parameters 
      */
     CurvilinearMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):dg::MPIGrid2d( 0, x1-x0, 0, y1-y0, n, Nx, Ny,bcx, bcy, comm),
-    handle_(new IdentityGenerator(x0,x1,y0,y1)){
+    handle_(new ShiftedIdentityGenerator(x0,x1,y0,y1)){
         dg::CurvilinearGrid2d<thrust::host_vector<double> > g(generator, n, Nx, Ny);
         divide_and_conquer(g);
     }
@@ -208,7 +216,6 @@ struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
     const MPIContainer& g_yy()const{return g_yy_;}
     const MPIContainer& g_xy()const{return g_xy_;}
     const MPIContainer& vol()const{return vol2d_;}
-    const MPIContainer& perpVol()const{return vol2d_;}
     const geo::aGenerator& generator() const{return g.generator();}
     bool isOrthonormal() const { return g.isOrthonormal();}
     bool isOrthogonal() const { return g.isOrthogonal();}
