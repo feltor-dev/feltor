@@ -110,16 +110,16 @@ void doDividePerpVolume3d( container& inout, const Geometry& g, CurvilinearPerpT
 template <class container, class Geometry>
 void doRaisePerpIndex( const container& in1, const container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
 {
-    out1=in1;//the container type should check for self-assignment
-    out2=in2;//the container type should check for self-assignment
+    out1.swap(in1);
+    out2.swap(in2);
 };
 template <class container, class Geometry>
 void doRaisePerpIndex( const container& in1, const container& in2, container& out1, container& out2, const Geometry& g, CurvilinearPerpTag)
 {
     if( g.isOrthonormal())
     {
-        out1=in1;//the container type should check for self-assignment
-        out2=in2;//the container type should check for self-assignment
+        out1.swap(in1);
+        out2.swap(in2);
         return;
     }
     if( g.isOrthogonal())
@@ -135,18 +135,18 @@ void doRaisePerpIndex( const container& in1, const container& in2, container& ou
 };
 
 template <class container, class Geometry>
-void doVolRaisePerpIndex( const container& in1, const container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
+void doVolRaisePerpIndex( container& in1, container& in2, container& out1, container& out2, const Geometry& g, OrthonormalTag)
 {
-    out1=in1;//the container type should check for self-assignment
-    out2=in2;//the container type should check for self-assignment
+    out1.swap(in1);
+    out2.swap(in2);
 };
 template <class container, class Geometry>
 void doVolRaisePerpIndex( const container& in1, const container& in2, container& out1, container& out2, const Geometry& g, CurvilinearPerpTag)
 {
     if( g.isConformal())
     {
-        out1=in1;//the container type should check for self-assignment
-        out2=in2;//the container type should check for self-assignment
+        out1.swap(in1);
+        out2.swap(in2);
         return;
     }
     if( g.isOrthogonal())
