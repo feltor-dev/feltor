@@ -42,6 +42,42 @@ struct SparseUnitTensor
     std::vector<container> values_;
 
 };
+
+template<class container>
+struct SparseForm
+{
+    SparseForm():isSet(false){}
+    SparseForm(const container& value):isSet_(true), value_(value){}
+    bool isSet()const{return isSet_;}
+    const container& get()const{return value_;}
+    void set(const container& value){ 
+        isSet_=true;
+        value_ = value; 
+    }
+    private:
+    bool isSet_;
+    container value_;
+};
+
+//needs to construct two/three coordinates from given index
+//probably needs to know the coordinate sizes to make simplified versions
+struct PointMap2d
+{
+    double first( int i);
+    double second( int i);
+    private:
+    thrust::host_vector<double> first_, second_;
+};
+
+struct PointMap3d
+{
+    double first( int i);
+    double second( int i);
+    double third( int i);
+    private:
+    thrust::host_vector<double> first_, second_, third_;
+};
+
 namespace geo
 {
 
