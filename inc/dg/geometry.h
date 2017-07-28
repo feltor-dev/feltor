@@ -25,19 +25,14 @@
  */
 
 /*
-Comment: there is a little design flaw in basing the geometry routines also on template programming. 
-For example it is a flaw that we have to recompile when we want to use an Orthogonal instead
-of a Curvilinear grid. Also, the performance gain from using template should be minimal.
-At the same time we cannot get rid of the distinction between Grids and MPIGrids. 
-There is also nothing wrong with recompiling there 
-as this is always accompanied with changing the hardware the program runs on. 
-Now, the question is how severe this flaw actually affects execution in 
-real life, i.e. do users want to change between grids during a parameter scan?
-It might not be that severe especially with the generator mechanism to 
-construct grids. 
-If ever a problem: A possible solution could be to make the geometry functions virtual 
-in the Grid and the MPI_Grid each (we still need both). Then objects would have to
-keep pointers to the grid-base-class (Grid* or MPIGrid*) and work through these.
+Comment: we want to use template functions for the geometry routines
+because we fundamentally have to distinguish between Grid and MPIGrid. 
+A change in hardware (from shared to distributed memory) always 
+necessitates a recompilation. 
+We try to avoid recompilation when we change the grid 
+at least for the cases in which you don't have to change the model anyways.
+The point is that these functions are not really performance critical 
+so we shouldn't make the distinctions too fine grained.
 */
 namespace dg{
 
@@ -194,6 +189,13 @@ void pushForwardPerp(
     pushForwardPerp<double(double, double, double), double(double, double, double), Geometry>( fR, fZ, out1, out2, g); 
 }
 ///@endcond
+template<class Functor1, class Functor2, class Functor3 class container, class Geometry> 
+void pushForward( Functor1 vR, Functor2 vZ, Functor3 vPhi,
+        container& vx, container& vy, container& vz,
+        const Geometry& g)
+{
+    dg::geo::detail::doPushForward( vR, vZ,vPhi,vx, vy,vz, g, typename GeometryTraits<Geometry>::metric_category() ); 
+}
 
 /**
  * @brief Push forward a symmetric 2d tensor from cylindrical or Cartesian to a new coordinate system

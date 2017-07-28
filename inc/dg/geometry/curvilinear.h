@@ -15,6 +15,10 @@ template< class container>
 struct CurvilinearGrid2d; 
 ///@endcond
 
+//when we make a 3d grid with eta and phi swapped the metric structure and the transformation changes 
+//In practise it can only be orthogonal due to the projection matrix in the elliptic operator
+
+
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
  @tparam container models aContainer

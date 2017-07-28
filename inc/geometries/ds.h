@@ -43,7 +43,7 @@ struct DS
     @param jumpX determines if a jump matrix is added in X-direction
     */
     template<class MagneticField, class Geometry>
-    DS(const MagneticField& field, Geometry, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool jumpX = true, unsigned mx=1, unsigned my=1);
+    DS(const MagneticField& field, Geometry, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool dependsOnX = true, bool dependsOnY=true, unsigned mx=1, unsigned my=1);
 
     /**
     * @brief Apply the forward derivative on a 3d vector
@@ -215,8 +215,8 @@ struct DS
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class I, class M, class container>
-template <class MagneticField, class Geometry>
-DS< I, M,container>::DS(MagneticField mag, Geometry grid, dg::norm no, dg::direction dir, bool jumpX, unsigned mx, unsigned my):
+template <class Geometry>
+DS< I, M,container>::DS(const BinaryVectorLvl1& vector, Geometry grid, dg::norm no, dg::direction dir, bool jumpX, bool jumpY, unsigned mx, unsigned my):
         jumpX( dg::create::jumpX( grid)),
         jumpY( dg::create::jumpY( grid)),
         tempP( dg::evaluate( dg::zero, grid())), temp0( tempP), tempM( tempP), 

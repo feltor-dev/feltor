@@ -78,9 +78,9 @@ struct dg::geo::aCloneableBinaryFunctor : public dg::geo::aBinaryFunctor
  * double operator()(double,double)const;
  */
 template<class BinaryFunctor>
-struct Adapter : public dg::geo::aCloneableBinaryFunctor<Adapter>
+struct BinaryFunctorAdapter : public dg::geo::aCloneableBinaryFunctor<Adapter>
 {
-    Adapter( const BinaryFunctor& f):f_(f){}
+    BinaryFunctorAdapter( const BinaryFunctor& f):f_(f){}
     double operator()(double x, double y)const{return f_(x,y);}
     private:
     BinaryFunctor f_;
@@ -95,7 +95,7 @@ struct Adapter : public dg::geo::aCloneableBinaryFunctor<Adapter>
  * @note the preferred way is to derive your Functor from aCloneableBinaryFunctor but if you can't or don't want to for whatever reason then use this to make one
  */
 temmplate<class BinaryFunctor>
-aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new Adapter<BinaryFunctor>(f);}
+aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFunctorAdapter<BinaryFunctor>(f);}
 
 /**
 * @brief This struct bundles a function and its first derivatives
@@ -152,9 +152,7 @@ struct BinaryFunctorsLvl2 : public BinaryFunctorsLvl1
     Handle<aBinaryFunctor> p_[3];
 };
 
-/**
-* @brief This struct bundles a symmetric tensor and its divergence
-*/
+/// A symmetric 2d tensor field and its divergence
 struct BinarySymmTensorLvl1
 {
     /**
@@ -188,6 +186,25 @@ struct BinarySymmTensorLvl1
     const aBinaryFunctor& divY()const{return p_[4].get();}
     private:
     Handle<aBinaryFunctor> p_[5];
+};
+
+/// A vector field with three components that depend only on the first two coordinates
+struct BinaryVectorLvl0
+{
+    BinaryVectorLvl0( aBinaryFunctor* v_x, aBinaryFunctor* v_y, aBinaryFunctor* v_z)
+    {
+        p_[0].set(v_x);
+        p_[1].set(v_y);
+        p_[2].set(v_z);
+    }
+    /// x-component of the vector
+    const aBinaryFunctor& x()const{return p_[0];}
+    /// y-component of the vector
+    const aBinaryFunctor& y()const{return p_[1];}
+    /// z-component of the vector
+    const aBinaryFunctor& z()const{return p_[2];}
+    private:
+    Handle<aBinaryFunctor> p_[3];
 };
 
 struct Constant:public aCloneableBinaryOperator<Constant> 

@@ -172,6 +172,25 @@ void doPushForwardPerp( TernaryOp1 f1, TernaryOp2 f2,
     dg::blas1::transfer( out2, vy);
 }
 
+template<class TernaryOp1, class TernaryOp2, class TernaryOp3 class container, class Geometry> 
+void doPushForward( TernaryOp1 f1, TernaryOp2 f2, TernaryOp3,
+        container& vx, container& vy, container& vz,
+        const Geometry& g, CurvilinearPerpTag)
+{
+    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
+    doPushForwardPerp(f1,f2,vx,vy,CurvilinearPerpTag());
+    host_vec out3 = pullback( f3, g), temp3(out3);
+    dg::blas1::pointwiseDot( g.zP(), temp3, out3);
+    dg::blas1::transfer( out3, vz);
+}
+template<class TernaryOp1, class TernaryOp2, class TernaryOp3 class container, class Geometry> 
+void doPushForward( TernaryOp1 f1, TernaryOp2 f2, TernaryOp3,
+        container& vx, container& vy, container& vz,
+        const Geometry& g, OrthonormalTag)
+{
+    doPushForwardPerp( f1,f2,f3,vx,vy,vz,OrthonormalTag());
+}
+
 template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry> 
 void doPushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
         container& chixx, container& chixy, container& chiyy,

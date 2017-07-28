@@ -97,24 +97,20 @@ struct Field
 template< class GeometryPerp>
 struct DSField
 {
-    template<class MagneticField>
-    DSField( const MagneticField& c, const GeometryPerp& g)
+    DSField( const BinaryVectorLvl0& v, const GeometryPerp& g)
     {
-        InvB<MagneticField> invB(c);
-        FieldR<MagneticField> fieldR(c);
-        FieldZ<MagneticField> fieldZ(c);
+        thrust::host_vector<double> vx, vy, vz;
         thrust::host_vector<double> b_zeta, b_eta;
         dg::geo::pushForwardPerp( fieldR, fieldZ, b_zeta, b_eta, g);
         FieldP<MagneticField> fieldP(c);
         thrust::host_vector<double> b_phi = dg::pullback( fieldP, g);
-        Bmodule<MagneticField> bmod( c);
         thrust::host_vector<double> b_mod = dg::pullback( bmod, g);
         dg::blas1::pointwiseDivide( b_zeta, b_phi, b_zeta);
         dg::blas1::pointwiseDivide( b_eta,  b_phi, b_eta);
         dg::blas1::pointwiseDivide( b_mod,  b_phi, b_mod);
-        dzetadphi_ = dg::forward_transform( b_zeta, g );
-        detadphi_  = dg::forward_transform( b_eta, g );
-        dsdphi_    = dg::forward_transform( b_mod, g );
+        dxdz_ = dg::forward_transform( b_zeta, g );
+        dypz_ = dg::forward_transform( b_eta, g );
+        dsdz_ = dg::forward_transform( b_mod, g );
     }
 
     void operator()(thrust::host_vector<double> y, thrust::host_vector<double>& yp)
@@ -331,8 +327,8 @@ struct FieldAligned
         by the bcz variable from the grid and can be changed by the set_boundaries function. 
         If there is no limiter the boundary condition is periodic.
     */
-    template <class MagneticField, class Geometry, class Limiter>
-    FieldAligned(MagnetricField field, Geometry grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1);
+    template <class Geometry, class Limiter>
+    FieldAligned(const BinaryVectorLvl0& vec, Geometry grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, bool dependsOnX=true, bool dependsOnY=true, double deltaPhi = -1);
 
     /**
     * @brief Set boundary conditions in the limiter region
