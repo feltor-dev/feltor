@@ -4,6 +4,20 @@ namespace dg
 {
 namespace geo
 {
+
+///The analytically given continuous representation of the real world coordinates and metric
+enum PhysicalSpaceCoordinates{
+    cartesian=0;///2d or 3d X,Y,Z
+    cylindrical=1;///3d R,Z,P
+};
+///The type of discrete coordinates and metric
+enum ComputationalSpaceCoordinates{
+    orthonormal=0; ///coordinate lines are orthogonal (only unity diagonal metric elements)
+    conformal=1; ///only 2d coordinates can be conformal (volume and metric elements are all the same)
+    orthogonal=2; ///coordinate lines are orthogonal (only diagonal metric elements)
+    curvilinear=3; ///non-orthogonal coordinate lines
+};
+
 /**
 * @brief The abstract generator base class 
 
@@ -17,9 +31,19 @@ struct aGridGenerator
 {
     virtual double width()  const=0; //!<length in \f$ \zeta\f$ of the computational space
     virtual double height() const=0; //!<length in \f$ \eta\f$ of the computational space
-    virtual bool isOrthonormal() const{return false;} //!< true if coordinate system is orthonormal (false by default)
-    virtual bool isOrthogonal() const{return false;} //!< true if coordinate system is orthogonal (false by default)
-    virtual bool isConformal()const{return false;} //!< true if coordinate system is conformal (false by default)
+    /**
+    * @brief This is the analytical coordinate system we transform to
+    * @return type of physical space coordinates (default is dg::geo::cartesian)
+    */
+    virtual enum PhysicalSpaceCoordinates physical()const{ return cartesian;} 
+    /**
+    * @brief The type of coordinate system of the computational space
+    * @return default is dg::geo::orthonormal
+    * @note This is a performance hint for the computation and storage of metric elements.
+    *    We believe that you do not lie about what you generate.
+    */
+    virtual enum ComputationalSpaceCoordinates computational()const{ return orthonormal;} 
+
     /**
     * @brief Generate grid points and elements of the Jacobian 
     *
@@ -49,6 +73,7 @@ struct aGridGenerator
         zetaX = zetaY = etaX = etaY =x ;
         generate( zeta1d, eta1d, x,y,zetaX,zetaY,etaX,etaY);
     }
+
     /**
     * @brief Abstract clone method that returns a copy on the heap
     *
