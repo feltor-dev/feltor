@@ -7,13 +7,20 @@
 namespace dg
 {
 /**
-* @brief Abstract base class for Sparse matrices of containers
+* @brief Abstract base class for matrices and vectors sharing or implicitly assuming elements 
 *
-* The size is always assumed 3x3.
-* The elements are implicitly assumed either 1 (diagonal) or 0 (off-diagonal)
+* The goal of this class is to enable shared access to stored containers 
+* or not store them at all since the storage of (and computation with) a container is expensive.
+
+* This class contains both a (dense) matrix and a (dense) vector of integers.
+* If positive or zero, the integer represents a gather index into an array of containers, 
+if negative the value of the container is assumed to be 1, except for the off-diagonal entries
+    in the matrix where it is assumed to be 0.
+* We then only need to store non-trivial and non-repetitive containers.
+* @tparam container container class
 */
 template<class container>
-struct SparseUnitTensor
+struct SharedContainers
 {
     /**
     * @brief check if an index is set or not
@@ -25,66 +32,66 @@ struct SparseUnitTensor
         if( get_value_idx(i,j) <0) return false;
         return true;
     }
-    /**
-    * @brief set an index into the values array (if <0 then value is assumed implicitly)
-    * @param i row index 0<i<2
-    * @param j col index 0<j<2
-    * @return reference to an index     
-    */
-    int& valueIdx(size_t i, size_t j){ return get_value_idx(i,j); }
-    /**
-    * @brief get an index into the values array (if <0 then value is assumed implicitly)
-    * @param i row index 0<i<2
-    * @param j col index 0<j<2
-    * @return reference to an index     
-    */
-    int valueIdx(size_t i, size_t j)const{ return get_value_idx(i,j); }
+    bool isSet(size_t i) const{
+        if( get_value_idx(i)<0) return false;
+        return true;
+    }
+    /// Access the underlying container
+    /// @return if !isSet(i,j) the default constructor of container is called, otherwise values[mat_idx(i,j)] is returned
     const container& getValue(size_t i, size_t j)const{ 
         int k = get_value_idx(i,j);
         if(k<0) return container();
-        return getValue(k); 
+        return values_[k];
     }
-    const container& getValue(size_t i)const{ return values_[i]; }
-    ///set a value for the given idx
-    container& getValue(int i){ return values_[i]; }
+    /// Access the underlying container
+    /// @return if !isSet(i) the default constructor of container is called, otherwise values[vec_idx(i)] is returned
+    const container& getValue(size_t i)const{ 
+        int k = get_value_idx(i);
+        if(k<0) return container();
+        return values_[k];
+    }
     protected:
-    ///by protecting the constructor we fix the size of the values 
-    ///array associated with the types of derived classes
-    SparseUnitTensor( size_t values_size=9): values_(values_size),idx_(3,-1){}
+    ///by protecting the constructor we disallow changing anything through a base class reference
+    SharedContainers( const dg::Operator<int>& mat_idx, std::vector<int>& vec_idx, std::vector<container>& values ): mat_idx_(mat_idx), vec_idx(vec_idx), values_(values){}
     ///we disallow changeing the size
-    SparseUnitTensor( const SparseUnitTensor& src): values_(src.values_), idx_(src.idx_){}
+    SharedContainers( const SharedContainers& src):  mat_idx_(src.mat_idx_), vec_idx_(src.vec_idx_), values_(src.values_){}
     ///we disallow changeing the size
-    SparseUnitTensor& operator=()(SparseUnitTensor src)
+    SharedContainers& operator=()(SharedContainers src)
     {
         values_.swap( src.values_);
-        std::swap( idx_, src.idx_)
+        std::swap( mat_idx_, src.mat_idx_)
+        std::swap( vec_idx_, src.vec_idx_)
         return *this;
     }
     ///rule of three
-    ~SparseUnitTensor(){}
+    ~SharedContainers(){}
     template<class otherContainer>
-    SparseUnitTensor( const SparseUnitTensor<otherContainer>& src): values_(src.values_.size()), idx_(src.idx_){
-        dg::blas1::transfer( src.values_, values_);
+    SharedContainers( const SharedContainers<otherContainer>& src): mat_idx_(src.mat_idx()), vec_idx_(src.vec_idx()), values_(src.values().size()), idx_(src.idx_){
+        dg::blas1::transfer( src.values(), values_);
     }
+    const dg::Operator<int>& mat_idx() const {return mat_idx_;}
+    const std::vector<int>& vec_idx() const {return vec_idx_;}
+    const std::vector<container>& values() const{return values_;}
     private:
-    int get_value_idx(size_t i, size_t j)const{return idx_(i,j);}
-    int& get_value_idx(size_t i, size_t j){return idx_(i,j);}
+    int get_value_idx(size_t i, size_t j)const{return mat_idx_(i,j);}
+    int get_value_idx(size_t i)const{return vec_idx_[i];}
+    dg::Operator<int> mat_idx_;
+    std::vector<int> vec_idx_;
     std::vector<container> values_;
-    dg::Operator<int>& idx_;
 };
 
 ///The metric tensor is a SparseTensor 
 template<class container>
-struct MetricTensor: public SparseUnitTensor<container>
+struct MetricTensor: public SharedContainers<container>
 {
     /// default size is 3 and no values are set
-    MetricTensor( ):SparseUnitTensor( 11){ volIdx_=perpVolIdx_=-1; }
+    MetricTensor( ):SharedContainers( 11){ volIdx_=perpVolIdx_=-1; }
     bool volIsSet() const{ 
         if(volIdx_<0)return false;
         else return true;
     }
     template<class otherContainer>
-    MatricTensor( MetricTensor<otherContainer>& src):SparseUnitTensor<container>(src){}
+    MatricTensor( MetricTensor<otherContainer>& src):SharedContainers<container>(src){}
     bool perpVolIsSet() const{ 
         if(perpVolIdx_<0)return false;
         else return true;
@@ -109,10 +116,10 @@ struct MetricTensor: public SparseUnitTensor<container>
 };
 
 template<class container>
-struct CoordinateTransformation: public SparseUnitTensor<container>
+struct CoordinateTransformation: public SharedContainers<container>
 {
     /// the coordinates have index 9, 10 and 11
-    CoordinateTransformation():SparseUnitTensor( 12){}
+    CoordinateTransformation():SharedContainers( 12){}
 };
 
 namespace geo
@@ -122,7 +129,7 @@ namespace geo
 ///may destroy input (either swap in or use as temporary storage)
 ///no alias allowed
 template<class container>
-void multiply( const SparseUnitTensor& t, container& in1, container& in2, container& out1, container& out2)
+void multiply( const SharedContainers& t, container& in1, container& in2, container& out1, container& out2)
 {
     if( !tensor.isSet(0,0) && !tensor.isSet(0,1) && !tensor.isSet(1,0) && !tensor.isSet(1,1))
     {
@@ -144,7 +151,7 @@ void multiply( const SparseUnitTensor& t, container& in1, container& in2, contai
 }
 
 template<class container>
-void multiply( const SparseUnitTensor& t, container& in1, container& in2, container& in3, container& out1, container& out2, container& out3)
+void multiply( const SharedContainers& t, container& in1, container& in2, container& in3, container& out1, container& out2, container& out3)
 {
     bool empty = true;
     for( unsigned i=0; i<3; i++)
