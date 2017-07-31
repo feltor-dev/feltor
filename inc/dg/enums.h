@@ -62,7 +62,7 @@ std::string bc2str( bc bcx)
  * - NEU_DIR and neu_dir to dg::NEU_DIR
  * - DIR_NEU and dir_neu to dg::DIR_NEU
  *
- * or throws an Ooops if string doesn't match any of these
+ * or throws a runtime_exception if string doesn't match any of these
  * @param s the input string
  * @ingroup creation
  */
@@ -78,7 +78,7 @@ bc str2bc( std::string s)
         return NEU_DIR;
     if( s=="DIR_NEU"||s=="dir_neu" )
         return DIR_NEU;
-    throw Ooops( "No matching boundary condition!");
+    throw std::runtime_exception( "No matching boundary condition!");
 }
 
 /**

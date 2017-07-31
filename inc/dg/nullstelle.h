@@ -79,7 +79,7 @@ int bisection1d (UnaryOp& funktion, double& x_min, double& x_max, const double a
         else 				                x_min = mitte;
         if((x_max-x_min)<aufloesung)        return j+3; 
     }
-    throw Ooops("Zu viele Schritte bei Nullstellensuche! evtl. j_max aendern");
+    throw std::runtime_exception("Zu viele Schritte bei Nullstellensuche! evtl. j_max aendern");
 }
 
       

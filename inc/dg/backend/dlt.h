@@ -187,7 +187,7 @@ DLT<T>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
     for( unsigned j=0; j<n*n; j++) stream >> forw_[j];
     for( unsigned j=0; j<n*n; j++) stream >> backEQ_[j];
     if( !stream.good())
-        throw dg::Ooops( "Error: n>20 not allowed!");
+        throw std::invalid_argument( "Error: n>20 not allowed!");
 }
 
 
