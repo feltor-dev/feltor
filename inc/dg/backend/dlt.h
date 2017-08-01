@@ -23,7 +23,7 @@ class DLT
        * @brief Initialize coefficients
        *
        * The constructor reads the data corresponding to given n from the file dlt.dat. 
-       * @param n # of polynomial coefficients
+       * @param n # of polynomial coefficients (0<n<21)
        */
     DLT( unsigned n);
 
@@ -186,8 +186,10 @@ DLT<T>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
     for( unsigned j=0; j<n*n; j++) stream >> back_[j];
     for( unsigned j=0; j<n*n; j++) stream >> forw_[j];
     for( unsigned j=0; j<n*n; j++) stream >> backEQ_[j];
+    
+    if( n==0) throw Error( Message() << "n==0 not allowed! You typed "<<n,_ping_);
     if( !stream.good())
-        throw std::invalid_argument( "Error: n>20 not allowed!");
+        throw Error( Message()<<"n>20 not allowed! You typed: "<<n, _ping_);
 }
 
 
