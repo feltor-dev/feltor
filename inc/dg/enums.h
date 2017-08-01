@@ -62,8 +62,9 @@ std::string bc2str( bc bcx)
  * - NEU_DIR and neu_dir to dg::NEU_DIR
  * - DIR_NEU and dir_neu to dg::DIR_NEU
  *
- * or throws a runtime_exception if string doesn't match any of these
  * @param s the input string
+ * @return a valid boundary condition
+ * \throw std::runtime_exception if string doesn't match any of the above
  * @ingroup creation
  */
 bc str2bc( std::string s)

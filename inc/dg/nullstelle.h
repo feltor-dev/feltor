@@ -54,7 +54,7 @@ class KeineNST_1D: public std::exception
  * \param aufloesung accuracy of the root finding	
  * \return number of used steps to reach the desired accuracy
  * \throw KeineNST_1D if no root lies between the given boundaries
- * \throw Oooops if after 50 steps the accuracy wasn't reached
+ * \throw std::runtime_exception if after 60 steps the accuracy wasn't reached
  *
  * \code nullstelle_1D(funk, x_min, x_max, aufloesung); \endcode
  * \note If the root is found exactly the x_min = x_max 
