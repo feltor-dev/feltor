@@ -6,6 +6,7 @@
 
 namespace dg
 {
+
 /**
 * @brief Abstract base class for matrices and vectors sharing or implicitly assuming elements 
 *
@@ -29,42 +30,30 @@ struct SharedContainers
     * @return true if container is non-empty, false if value is assumed implicitly
     */
     bool isSet(size_t i, size_t j)const{
-        if( get_value_idx(i,j) <0) return false;
+        if( mat_idx_(i,j) <0) return false;
         return true;
     }
+
     bool isSet(size_t i) const{
-        if( get_value_idx(i)<0) return false;
+        if( vec_idx_[i]<0) return false;
         return true;
     }
     /// Access the underlying container
     /// @return if !isSet(i,j) the default constructor of container is called, otherwise values[mat_idx(i,j)] is returned
     const container& getValue(size_t i, size_t j)const{ 
-        int k = get_value_idx(i,j);
+        int k = mat_idx(i,j);
         if(k<0) return container();
         return values_[k];
     }
     /// Access the underlying container
     /// @return if !isSet(i) the default constructor of container is called, otherwise values[vec_idx(i)] is returned
     const container& getValue(size_t i)const{ 
-        int k = get_value_idx(i);
+        int k = vec_idx_[i];
         if(k<0) return container();
         return values_[k];
     }
-    protected:
-    ///by protecting the constructor we disallow changing anything through a base class reference
+    SharedContainers( ) {}
     SharedContainers( const dg::Operator<int>& mat_idx, std::vector<int>& vec_idx, std::vector<container>& values ): mat_idx_(mat_idx), vec_idx(vec_idx), values_(values){}
-    ///we disallow changeing the size
-    SharedContainers( const SharedContainers& src):  mat_idx_(src.mat_idx_), vec_idx_(src.vec_idx_), values_(src.values_){}
-    ///we disallow changeing the size
-    SharedContainers& operator=()(SharedContainers src)
-    {
-        values_.swap( src.values_);
-        std::swap( mat_idx_, src.mat_idx_)
-        std::swap( vec_idx_, src.vec_idx_)
-        return *this;
-    }
-    ///rule of three
-    ~SharedContainers(){}
     template<class otherContainer>
     SharedContainers( const SharedContainers<otherContainer>& src): mat_idx_(src.mat_idx()), vec_idx_(src.vec_idx()), values_(src.values().size()), idx_(src.idx_){
         dg::blas1::transfer( src.values(), values_);
@@ -73,53 +62,9 @@ struct SharedContainers
     const std::vector<int>& vec_idx() const {return vec_idx_;}
     const std::vector<container>& values() const{return values_;}
     private:
-    int get_value_idx(size_t i, size_t j)const{return mat_idx_(i,j);}
-    int get_value_idx(size_t i)const{return vec_idx_[i];}
     dg::Operator<int> mat_idx_;
     std::vector<int> vec_idx_;
     std::vector<container> values_;
-};
-
-///The metric tensor is a SparseTensor 
-template<class container>
-struct MetricTensor: public SharedContainers<container>
-{
-    /// default size is 3 and no values are set
-    MetricTensor( ):SharedContainers( 11){ volIdx_=perpVolIdx_=-1; }
-    bool volIsSet() const{ 
-        if(volIdx_<0)return false;
-        else return true;
-    }
-    template<class otherContainer>
-    MatricTensor( MetricTensor<otherContainer>& src):SharedContainers<container>(src){}
-    bool perpVolIsSet() const{ 
-        if(perpVolIdx_<0)return false;
-        else return true;
-    }
-    int& volIdx(){ return volIdx_;}
-    int& perpVolIdx(){ return perpVolIdx_;}
-    int volIdx()const{ return volIdx_;}
-    int perpVolIdx()const{ return perpVolIdx_;}
-
-    const container& getVol() const{return get(volIdx_);}
-    const container& getPerpVol() const{return get(perpVolIdx_);}
-    void setVol(const container& vol){ 
-        volIdx_=9;
-        this->get(9) = value; 
-    }
-    void setPerpVol(const container& vol){ 
-        perpVolIdx_=10;
-        this->get(10) = value; 
-    }
-    private:
-    int volIdx_, perpVolIdx_;
-};
-
-template<class container>
-struct CoordinateTransformation: public SharedContainers<container>
-{
-    /// the coordinates have index 9, 10 and 11
-    CoordinateTransformation():SharedContainers( 12){}
 };
 
 namespace geo
