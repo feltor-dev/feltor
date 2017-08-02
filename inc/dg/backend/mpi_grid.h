@@ -24,31 +24,10 @@ namespace dg
  * The boundaries in the constructors are global boundaries, the boundaries returned by the access functions are local boundaries, this is because the grid represents the information given to one process
  *
  */
-struct MPIGrid2d
+struct aMPITopology2d
 {
     typedef MPITag memory_category;
     typedef TwoDimensionalTag dimensionality;
-    /**
-     * @copydoc dg::Grid2d::Grid2d()
-     * @param comm a two-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
-    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
-        g( x0, x1, y0, y1, n, Nx, Ny), comm( comm)
-    {
-        check_division( Nx, Ny, g.bcx(), g.bcy());
-    }
-
-    /**
-     * @copydoc dg::Grid2d::Grid2d()
-     * @param comm a two-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
-    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
-        g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), comm( comm)
-    {
-        check_division( Nx, Ny, bcx, bcy);
-    }
 
     /**
     * @brief Multiply the number of cells with a given factor
@@ -58,7 +37,7 @@ struct MPIGrid2d
     * @param fy new global number of cells is fy*global().Ny()
     */
     void multiplyCellNumber( double fx, double fy){
-        set(n_, floor(fx*(double)global.Nx()+0.5), floor(fy*(double)global.Ny()+0.5));
+        set(g.n(), floor(fx*(double)g.Nx()+0.5), floor(fy*(double)g.Ny()+0.5));
     }
     /**
     * @copydoc Grid2d::set(unsigned,unsigned,unsigned)
@@ -275,7 +254,6 @@ struct MPIGrid2d
         int lIdx0 = gIdx0%(n()*Nx());
         int lIdx1 = gIdx1%(n()*Ny());
         localIdx = lIdx1*n()*Nx() + lIdx0;
-        std::cout<< gIdx0<<" "<<gIdx1<<" "<<coords[0]<<" "<<coords[1]<<" "<<lIdx0<<" "<<lIdx1<<" "<<localIdx<<std::endl;
         if( MPI_Cart_rank( comm, coords, &PID) == MPI_SUCCESS ) 
             return true;
         else
@@ -302,13 +280,26 @@ struct MPIGrid2d
      * This is the grid that we would have to use in a non-MPI implementation.
      * @return non-MPI Grid object
      */
-    const Grid2d& global() const {return g;}
-    virtual ~MPIGrid2d(){}
-    MPIGrid2d(const MPIGrid2d& src):g(src.g),comm(src.comm){}
-    MPIGrid2d& operator=(const MPIGrid2d& src){
-        g = src.g; comm = src.comm;
-    }
+    Grid2d global() const {return g;}
+    virtual ~aMPITopology2d(){}
+    virtual aMPITopology2d* clone()const=0;
     protected:
+
+    /**
+     * @copydoc dg::Grid2d::Grid2d()
+     * @param comm a two-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
+     */
+    aMPITopology2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
+        g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), comm( comm)
+    {
+        check_division( Nx, Ny, bcx, bcy);
+    }
+    aMPITopology2d(const aMPITopology2d& src):g(src.g),comm(src.comm){}
+    aMPITopology2d& operator=(const aMPITopology2d& src){
+        g = src.g; comm = src.comm;
+        return *this;
+    }
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         g.set(new_n,new_Nx,new_Ny);
     }
@@ -351,34 +342,13 @@ struct MPIGrid2d
  *
  * @note Note that a single cell is never divided across processes.
  */
-struct MPIGrid3d
+struct aMPITopology3d
 {
     typedef MPITag memory_category;
     typedef ThreeDimensionalTag dimensionality;
-    /**
-     * @copydoc Grid3d::Grid3d()
-     * @param comm a three-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
-    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
-        g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz), comm( comm)
-    {
-        check_division( Nx, Ny, Nz, bcx(), bcy(), bcz());
-    }
-
-    /**
-     * @copydoc Grid3d::Grid3d()
-     * @param comm a three-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
-    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), comm( comm)
-    {
-        check_division( Nx, Ny, Nz, bcx, bcy, bcz);
-    }
-    ///@copydoc MPIGrid2d::multiplyCellNumber()
+    ///@copydoc aMPITopology2d::multiplyCellNumber()
     void multiplyCellNumber( double fx, double fy){
-        set(n_, floor(fx*(double)global.Nx()+0.5), floor(fy*(double)global.Ny()+0.5), global.Nz());
+        set(g.n(), floor(fx*(double)g.Nx()+0.5), floor(fy*(double)g.Ny()+0.5), g.Nz());
     }
     /**
      * @copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
@@ -592,7 +562,7 @@ struct MPIGrid3d
      */
     int pidOf( double x, double y, double z) const;
     /**
-    * @copydoc MPIGrid2d::local2globalIdx(int,int,int&)
+    * @copydoc aMPITopology2d::local2globalIdx(int,int,int&)
     */
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)
     {
@@ -610,7 +580,7 @@ struct MPIGrid3d
         return true;
     }
     /**
-    * @copydoc MPIGrid2d::global2localIdx(int,int&,int&)
+    * @copydoc aMPITopology2d::global2localIdx(int,int&,int&)
     */
     bool global2localIdx( int globalIdx, int& localIdx, int& PID)
     {
@@ -632,19 +602,32 @@ struct MPIGrid3d
             return false;
     }
     /**
-     *@copydoc MPIGrid2d::local()const
+     *@copydoc aMPITopology2d::local()const
      */
     Grid3d local() const {return Grid3d(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
     /**
-     *@copydoc MPIGrid2d::global()const
+     *@copydoc aMPITopology2d::global()const
      */
-    const Grid3d& global() const {return g;}
-    virtual ~MPIGrid3d(){}
-    MPIGrid3d(const MPIGrid3d& src):g(src.g),comm(src.comm){}
-    MPIGrid3d& operator=(const MPIGrid3d& src){
-        g = src.g; comm = src.comm;
-    }
+    Grid3d global() const {return g;}
+    virtual ~aMPITopology3d(){}
+    virtual aMPITopology3d* clone() const=0;
     protected:
+
+    /**
+     * @copydoc Grid3d::Grid3d()
+     * @param comm a three-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
+     */
+    aMPITopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+        g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), comm( comm)
+    {
+        check_division( Nx, Ny, Nz, bcx, bcy, bcz);
+    }
+    aMPITopology3d(const aMPITopology3d& src):g(src.g),comm(src.comm){}
+    aMPITopology3d& operator=(const aMPITopology3d& src){
+        g = src.g; comm = src.comm;
+        return *this;
+    }
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         g.set(new_n,new_Nx,new_Ny,new_Nz);
     }
@@ -681,7 +664,7 @@ struct MPIGrid3d
     MPI_Comm comm; //just an integer...
 };
 ///@cond
-int MPIGrid2d::pidOf( double x, double y) const
+int aMPITopology2d::pidOf( double x, double y) const
 {
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
@@ -696,7 +679,7 @@ int MPIGrid2d::pidOf( double x, double y) const
     else
         return -1;
 }
-int MPIGrid3d::pidOf( double x, double y, double z) const
+int aMPITopology3d::pidOf( double x, double y, double z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
@@ -714,6 +697,47 @@ int MPIGrid3d::pidOf( double x, double y, double z) const
         return -1;
 }
 ///@endcond
+
+struct MPIGrid2d: public aMPITopology2d
+{
+    /**
+     * @copydoc dg::Grid2d::Grid2d()
+     * @param comm a two-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
+     */
+    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
+        aMPITopology2d( x0,x1,y0,y1,n,Nx,Ny,dg::PER,dg::PER,comm)
+    { }
+
+    /**
+     * @copydoc dg::Grid2d::Grid2d()
+     * @param comm a two-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
+     */
+    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
+        aMPITopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy,comm)
+    { }
+    virtual MPIGrid2d* clone()const{return new MPIGrid2d(*this);}
+};
+
+
+
+struct MPIGrid3d : public aMPITopology3d
+{
+    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
+        aMPITopology3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER,comm )
+    { }
+
+    /**
+     * @copydoc Grid3d::Grid3d()
+     * @param comm a three-dimensional Cartesian communicator
+     * @note the paramateres given in the constructor are global parameters 
+     */
+    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+        aMPITopology3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm)
+    { }
+    virtual MPIGrid3d* clone()const{return new MPIGrid3d(*this);}
+};
 
 
 ///@}
