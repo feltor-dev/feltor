@@ -8,14 +8,14 @@
 
 /*! @file 
   
-  Grid objects
+  aTopology objects
   */
 
 
 namespace dg{
 
-class MPIGrid2d;
-class MPIGrid3d;
+class aMPITopology2d;
+class aMPITopology3d;
 
 
 ///@addtogroup grid
@@ -103,7 +103,7 @@ struct Grid1d
     const DLT<double>& dlt() const {return dlt_;}
     void display( std::ostream& os = std::cout) const
     {
-        os << "Grid parameters are: \n"
+        os << "aTopology parameters are: \n"
             <<"    n  = "<<n_<<"\n"
             <<"    N = "<<Nx_<<"\n"
             <<"    h = "<<hx_<<"\n"
@@ -118,7 +118,7 @@ struct Grid1d
      * @brief Shifts a point coordinate if periodic
      *
      * This function shifts a point coordinate to its value between x0() and x1() if bcx() returns dg::PER
-     * @param x0 arbitrary point (irrelevant for the function, it's there to be consistent with GridX1d)
+     * @param x0 arbitrary point (irrelevant for the function, it's there to be consistent with aTopologyX1d)
      * @param x1 end point (inout)
      */
     void shift_topologic( double x0, double& x1)const
@@ -153,56 +153,17 @@ struct Grid1d
     DLT<double> dlt_;
 };
 
-struct Grid3d; //forward declare 3d version
-
+struct aTopology3d; //forward declare 3d version
 
 /**
- * @brief A 2D grid class 
- *
+ * @brief An abstract base class for two-dimensional grids
  */
-struct Grid2d
+struct aTopology2d
 {
     typedef SharedTag memory_category;
     typedef TwoDimensionalTag dimensionality;
-    /**
-     * @brief Construct a 2D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param n  # of polynomial coefficients per dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     */
-    Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
-        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
-    {
-        assert( n != 0);
-        assert( x1 > x0 && y1 > y0);
-        assert( Nx > 0  && Ny > 0);
-        lx_ = (x1_-x0_), ly_ = (y1_-y0_);
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
-    }
-    /**
-     * @brief Construct a 2d grid as the product of two 1d grids
-     *
-     * @param gx Grid in x - direction
-     * @param gy Grid in y - direction
-     */
-    Grid2d( const Grid1d& gx, const Grid1d& gy): 
-        x0_(gx.x0()), x1_(gx.x1()), y0_(gy.x0()), y1_(gy.x1()), 
-        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), bcx_(gx.bcx()), bcy_( gy.bcx()), dlt_(gx.n())
-    {
-        assert( gx.n() == gy.n() );
-        lx_ = (x1_-x0_), ly_ = (y1_-y0_);
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
-    }
 
-    Grid2d( const Grid3d& g);
+    //aTopology2d( const aTopology3d& g);
     /**
      * @brief Left boundary in x
      *
@@ -281,12 +242,6 @@ struct Grid2d
      * @return 
      */
     bc bcy() const {return bcy_;}
-    /**
-     * @brief Return a copy
-     *
-     * @return 
-     */
-    Grid2d local_grid() const {return *this;}
 
     /**
     * @brief Multiply the number of cells with a given factor
@@ -331,7 +286,7 @@ struct Grid2d
      */
     void display( std::ostream& os = std::cout) const
     {
-        os << "Grid parameters are: \n"
+        os << "aTopology parameters are: \n"
             <<"    n  = "<<n_<<"\n"
             <<"    Nx = "<<Nx_<<"\n"
             <<"    Ny = "<<Ny_<<"\n"
@@ -353,8 +308,8 @@ struct Grid2d
      *
      * This function shifts point coordinates to its values inside
      the domain if the respective boundary condition is periodic
-     * @param x0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with GridX2d)
-     * @param y0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with GridX2d)
+     * @param x0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aTopologyX2d)
+     * @param y0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aTopologyX2d)
      * @param x1 x-coordinate to shift (inout)
      * @param y1 y-coordinate to shift (inout)
      */
@@ -388,17 +343,60 @@ struct Grid2d
         if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true; 
         return false;
     }
-    virtual ~Grid2d(){}
-    Grid2d(const Grid2d& src):dlt_(src.dlt_){*this = src;}
-    Grid2d& operator=(const Grid2d& src){
+    ///allow destruction through base class pointer
+    virtual ~aTopology2d(){}
+    ///deep copy of an object onto the heap
+    virtual aTopology2d* clone()const=0;
+    protected:
+    /**
+     * @brief Construct a 2D grid
+     *
+     * @param x0 left boundary in x
+     * @param x1 right boundary in x 
+     * @param y0 lower boundary in y
+     * @param y1 upper boundary in y 
+     * @param n  # of polynomial coefficients per dimension
+     * @param Nx # of points in x 
+     * @param Ny # of points in y
+     * @param bcx boundary condition in x
+     * @param bcy boundary condition in y
+     */
+    aTopology2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), 
+        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
+    {
+        assert( n != 0);
+        assert( x1 > x0 && y1 > y0);
+        assert( Nx > 0  && Ny > 0);
+        lx_ = (x1_-x0_), ly_ = (y1_-y0_);
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
+    }
+    /**
+     * @brief Construct a 2d grid as the product of two 1d grids
+     *
+     * @param gx aTopology in x - direction
+     * @param gy aTopology in y - direction
+     * @note gx and gy must have the same n
+     */
+    aTopology2d( const Grid1d& gx, const Grid1d& gy): 
+        x0_(gx.x0()), x1_(gx.x1()), y0_(gy.x0()), y1_(gy.x1()), 
+        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), bcx_(gx.bcx()), bcy_( gy.bcx()), dlt_(gx.n())
+    {
+        assert( gx.n() == gy.n() );
+        lx_ = (x1_-x0_), ly_ = (y1_-y0_);
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
+    }
+
+    aTopology2d(const aTopology2d& src):dlt_(src.dlt_){*this = src;}
+    aTopology2d& operator=(const aTopology2d& src){
         x0_=src.x0_, x1_=src.x1_,y0_=src.y0_,y1_=src.y1_;
         lx_=src.lx_,ly_=src.ly_;
         n_=src.n_,Nx_=src.Nx_,Ny_=src.Ny_;
         hx_=src.hx_,hy_=src.hy_;
         bcx_=src.bcx_,bcy_=src.bcy_;
         dlt_=src.dlt_;
+        return *this;
     }
-    protected:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny;
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
@@ -411,8 +409,8 @@ struct Grid2d
         lx_ = (x1_-x0_);
         hx_ = lx_/(double)Nx_;
     }
-  private:
-    friend class MPIGrid2d;
+    private:
+    friend class aMPITopology2d;
     double x0_, x1_, y0_, y1_;
     double lx_, ly_;
     unsigned n_, Nx_, Ny_;
@@ -421,65 +419,18 @@ struct Grid2d
     DLT<double> dlt_;
 };
 
+
 /**
  * @brief A 3D grid class  for cartesian coordinates
  *
  * In the third dimension only 1 polynomial coefficient is used,
  * not n.
  */
-struct Grid3d
+struct aTopology3d
 {
     typedef SharedTag memory_category;
     typedef ThreeDimensionalTag dimensionality;
-    /**
-     * @brief Construct a 3D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param z0 lower boundary in z
-     * @param z1 upper boundary in z 
-     * @param n  # of polynomial coefficients per (x-,y-) dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param Nz # of points in z
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     * @param bcz boundary condition in z
-     * @attention # of polynomial coefficients in z direction is always 1
-     */
-    Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1),
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
-    {
-        assert( n != 0);
-        assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
-        assert( Nx > 0  && Ny > 0); assert( Nz > 0);
-
-        lx_ = (x1-x0), ly_ = (y1-y0), lz_ = (z1-z0);
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
-    }
-    /**
-     * @brief Construct a 3d cartesian grid as the product of three 1d grids
-     *
-     * @param gx Grid in x - direction
-     * @param gy Grid in y - direction
-     * @param gz Grid in z - direction
-     */
-    Grid3d( const Grid1d& gx, const Grid1d& gy, const Grid1d& gz): 
-        x0_(gx.x0()), x1_(gx.x1()),  
-        y0_(gy.x0()), y1_(gy.x1()),
-        z0_(gz.x0()), z1_(gz.x1()),
-        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), Nz_(gz.N()),
-        bcx_(gx.bcx()), bcy_( gy.bcx()), bcz_(gz.bcx()), 
-        dlt_(gx.n())
-    {
-        assert( gx.n() == gy.n() );
-        lx_ = (x1_-x0_), ly_ = (y1_-y0_), lz_ = (z1_-z0_);
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
-    }
-    ///@copydoc Grid2d::multiplyCellNumber()
+    ///@copydoc aTopology2d::multiplyCellNumber()
     void multiplyCellNumber( double fx, double fy){
         set(n_, floor(fx*(double)Nx_+0.5), floor(fy*(double)Ny_+0.5), Nz());
     }
@@ -494,7 +445,7 @@ struct Grid3d
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         assert( new_n>0); assert( new_Nx > 0  && new_Ny > 0); assert( new_Nz > 0);
         if( new_n == n_ && new_Nx == Nx_ && new_Ny == Ny_ && new_Nz == Nz_) return;
-        do_set(new_n, new_Nx,new_Ny,new_Nz);
+        do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 
     /**
@@ -634,7 +585,7 @@ struct Grid3d
      */
     void display( std::ostream& os = std::cout) const
     {
-        os << "Grid parameters are: \n"
+        os << "aTopology parameters are: \n"
             <<"    n  = "<<n_<<"\n"
             <<"    Nx = "<<Nx_<<"\n"
             <<"    Ny = "<<Ny_<<"\n"
@@ -664,9 +615,9 @@ struct Grid3d
      *
      * This function shifts point coordinates to its values inside
      the domain if the respective boundary condition is periodic
-     * @param x0 arbitrary x-coordinate (irrelevant for the function, it's there to be consistent with GridX3d)
-     * @param y0 arbitrary y-coordinate (irrelevant for the function, it's there to be consistent with GridX3d)
-     * @param z0 arbitrary z-coordinate (irrelevant for the function, it's there to be consistent with GridX3d)
+     * @param x0 arbitrary x-coordinate (irrelevant for the function, it's there to be consistent with aTopologyX3d)
+     * @param y0 arbitrary y-coordinate (irrelevant for the function, it's there to be consistent with aTopologyX3d)
+     * @param z0 arbitrary z-coordinate (irrelevant for the function, it's there to be consistent with aTopologyX3d)
      * @param x1 x-coordinate to shift (inout)
      * @param y1 y-coordinate to shift (inout)
      * @param z1 z-coordinate to shift (inout)
@@ -709,18 +660,69 @@ struct Grid3d
             return true; 
         return false;
     }
-    virtual ~Grid3d(){}
-    Grid3d(const Grid3d& src):dlt_(src.dlt_){*this = src;}
-    Grid3d& operator=(const Grid3d& src){ //use default in C++11
+    ///allow deletion through base class pointer
+    virtual ~aTopology3d(){}
+    virtual aTopology3d* clone()const =0;
+    protected:
+    /**
+     * @brief Construct a 3D grid
+     *
+     * @param x0 left boundary in x
+     * @param x1 right boundary in x 
+     * @param y0 lower boundary in y
+     * @param y1 upper boundary in y 
+     * @param z0 lower boundary in z
+     * @param z1 upper boundary in z 
+     * @param n  # of polynomial coefficients per (x-,y-) dimension
+     * @param Nx # of points in x 
+     * @param Ny # of points in y
+     * @param Nz # of points in z
+     * @param bcx boundary condition in x
+     * @param bcy boundary condition in y
+     * @param bcz boundary condition in z
+     * @attention # of polynomial coefficients in z direction is always 1
+     */
+    aTopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER):
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1),
+        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
+    {
+        assert( n != 0);
+        assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
+        assert( Nx > 0  && Ny > 0); assert( Nz > 0);
+
+        lx_ = (x1-x0), ly_ = (y1-y0), lz_ = (z1-z0);
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
+    }
+    /**
+     * @brief Construct a 3d cartesian grid as the product of three 1d grids
+     *
+     * @param gx a Grid1d in x - direction
+     * @param gy a Grid1d in y - direction
+     * @param gz a Grid1d in z - direction
+     */
+    aTopology3d( const Grid1d& gx, const Grid1d& gy, const Grid1d& gz): 
+        x0_(gx.x0()), x1_(gx.x1()),  
+        y0_(gy.x0()), y1_(gy.x1()),
+        z0_(gz.x0()), z1_(gz.x1()),
+        n_(gx.n()), Nx_(gx.N()), Ny_(gy.N()), Nz_(gz.N()),
+        bcx_(gx.bcx()), bcy_( gy.bcx()), bcz_(gz.bcx()), 
+        dlt_(gx.n())
+    {
+        assert( gx.n() == gy.n() );
+        lx_ = (x1_-x0_), ly_ = (y1_-y0_), lz_ = (z1_-z0_);
+        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
+    }
+    aTopology3d(const aTopology3d& src):dlt_(src.dlt_){*this = src;}
+    aTopology3d& operator=(const aTopology3d& src){ //use default in C++11
         x0_=src.x0_, x1_=src.x1_,y0_=src.y0_,y1_=src.y1_,z0_=src.z0_,z1_=src.z1_;
         lx_=src.lx_,ly_=src.ly_,lz_=src.lz_;
         n_=src.n_,Nx_=src.Nx_,Ny_=src.Ny_,Nz_=src.Nz_;
         hx_=src.hx_,hy_=src.hy_,hz_=src.hz_;
         bcx_=src.bcx_,bcy_=src.bcy_,bcz_=src.bcz_;
         dlt_=src.dlt_;
+        return *this;
     }
-    protected:
-    virtual void do_set(unsigned new_n, unsigned new_Ny, unsigned new_Nz)
+    virtual void do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsigned new_Nz)
     {
         n_ = new_n, Nx_ = new_Nx, Ny_ = new_Ny, Nz_ = new_Nz;
         hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ =lz_/(double)Nz_;
@@ -734,7 +736,7 @@ struct Grid3d
         hx_ = lx_/(double)Nx_;
     }
   private:
-    friend class MPIGrid3d;
+    friend class aMPITopology3d;
     double x0_, x1_, y0_, y1_, z0_, z1_;
     double lx_, ly_, lz_;
     unsigned n_, Nx_, Ny_, Nz_;
@@ -745,8 +747,27 @@ struct Grid3d
 ///@}
 
 ///@cond
-Grid2d::Grid2d( const Grid3d& g) : x0_(g.x0()), x1_(g.x1()), y0_(g.y0()), y1_(g.y1()), n_(g.n()), Nx_(g.Nx()), Ny_(g.Ny()), bcx_(g.bcx()), bcy_(g.bcy()), dlt_(g.n())
-{}
+//aTopology2d::aTopology2d( const aTopology3d& g) : x0_(g.x0()), x1_(g.x1()), y0_(g.y0()), y1_(g.y1()), n_(g.n()), Nx_(g.Nx()), Ny_(g.Ny()), bcx_(g.bcx()), bcy_(g.bcy()), dlt_(g.n())
+//{}
 ///@endcond
+
+struct Grid2d : public aTopology2d
+{
+
+    Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+        aTopology2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy) { }
+    Grid2d( const Grid1d& gx, const Grid1d& gy): aTopology2d(gx,gy){ }
+    Grid2d* clone() const{return new Grid2d(*this);}
+
+};
+struct Grid3d : public aTopology3d
+{
+
+    Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):
+        aTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
+    Grid3d( const Grid1d& gx, const Grid1d& gy, const Grid1d& gz): 
+        aTopology3d(gx,gy,gz){ }
+    Grid3d* clone() const{return new Grid3d(*this);}
+};
 
 }// namespace dg

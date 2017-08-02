@@ -57,7 +57,7 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d& g)
  * @note if you don't like to copy f then just pass a (const) reference then the type should adapt
  */
 template< class BinaryOp>
-thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d& g)
+thrust::host_vector<double> evaluate( BinaryOp f, const aTopology2d& g)
 {
     unsigned n= g.n();
     //TODO: opens dlt.dat twice...!!
@@ -77,7 +77,7 @@ thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d& g)
     return v;
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d& g)
+thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology2d& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
     return evaluate<double(double, double)>( f, g);
@@ -96,7 +96,7 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d& g
  * @note if you don't like to copy f then just pass a (const) reference then the type should adapt
  */
 template< class TernaryOp>
-thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d& g)
+thrust::host_vector<double> evaluate( TernaryOp f, const aTopology3d& g)
 {
     unsigned n= g.n();
     //TODO: opens dlt.dat three times...!!
@@ -118,7 +118,7 @@ thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d& g)
     return v;
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double, double), const Grid3d& g)
+thrust::host_vector<double> evaluate( double(f)(double, double, double), const aTopology3d& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
     return evaluate<double(double, double, double)>( f, g);
