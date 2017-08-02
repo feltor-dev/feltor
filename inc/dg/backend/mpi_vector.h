@@ -5,6 +5,7 @@
 #include <thrust/gather.h>
 #include "vector_traits.h"
 #include "thrust_vector_blas.cuh"
+#include "manage.h"
 
 namespace dg
 {
@@ -139,32 +140,6 @@ struct VectorTraits<const MPI_Vector<container> > {
     typedef MPIVectorTag vector_category;
 };
 
-//Memory buffer class: data can be written even if the object is const
-template< class T>
-struct Buffer
-{
-    Buffer(){
-        ptr = new T;
-    }
-    Buffer( const T& t){
-        ptr = new T(t);
-    }
-    ~Buffer(){
-        delete ptr;
-    }
-    Buffer( const Buffer& src){ 
-        ptr = new T(*src.ptr);
-    }
-    Buffer& operator=( const Buffer& src){
-        if( this == &src) return *this;
-        Buffer tmp(src);
-        std::swap( ptr, tmp.ptr);
-        return *this;
-    }
-    T* data( )const { return ptr;}
-    private:
-    T* ptr;
-};
 ///@endcond
 
 /////////////////////////////communicator exchanging columns//////////////////
@@ -331,9 +306,9 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
     }
     gather_map1 =hbgather1, gather_map2 =hbgather2;
     scatter_map1=hbscattr1, scatter_map2=hbscattr2;
-    values.data()->resize( size());
-    buffer1.data()->resize( buffer_size()), buffer2.data()->resize( buffer_size());
-    rb1.data()->resize( buffer_size()), rb2.data()->resize( buffer_size());
+    values.data().resize( size());
+    buffer1.data().resize( buffer_size()), buffer2.data().resize( buffer_size());
+    rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
 }
 
 template<class I, class V>
@@ -368,8 +343,8 @@ const V& NearestNeighborComm<I,V>::global_gather( const V& input) const
         //dg::Timer t;
         //t.tic();
     //gather values from input into sendbuffer
-    thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data()->begin());
-    thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data()->begin());
+    thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data().begin());
+    thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data().begin());
         //t.toc();
         //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
         //t.tic();
@@ -379,8 +354,8 @@ const V& NearestNeighborComm<I,V>::global_gather( const V& input) const
         //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
         //t.tic();
     //scatter received values into values array
-    thrust::scatter( rb1.data()->begin(), rb1.data()->end(), scatter_map1.begin(), values.data()->begin());
-    thrust::scatter( rb2.data()->begin(), rb2.data()->end(), scatter_map2.begin(), values.data()->begin());
+    thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values.data().begin());
+    thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.data().begin());
         //t.toc();
         //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
     return *values.data();

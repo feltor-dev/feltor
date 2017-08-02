@@ -2,6 +2,7 @@
 
 #include "evaluation.cuh"
 #include "xspacelib.cuh"
+#include "cloneable.h"
 #include "../blas1.h"
 
 /*! @file 
@@ -33,7 +34,7 @@ struct PoloidalAverage
      *
      * @param g 2d Grid
      */
-    PoloidalAverage( const Grid2d& g):
+    PoloidalAverage( const aTopology2d& g):
         dummy( g.n()*g.Nx()), 
         helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
     {
@@ -95,9 +96,9 @@ struct ToroidalAverage
      *
      * @param g3d 3d Grid
      */
-    ToroidalAverage(const dg::Grid3d& g3d):
+    ToroidalAverage(const dg::aTopology3d& g3d):
         g3d_(g3d),
-        sizeg2d_(g3d_.size()/g3d_.Nz())
+        sizeg2d_(g3d_.get().size()/g3d_.get().Nz())
     {        
     }
     /**
@@ -108,15 +109,15 @@ struct ToroidalAverage
      */
     void operator()(const container& src, container& res)
     {
-        for( unsigned k=0; k<g3d_.Nz(); k++)
+        for( unsigned k=0; k<g3d_.get().Nz(); k++)
         {
             container data2d(src.begin() + k*sizeg2d_,src.begin() + (k+1)*sizeg2d_);
             dg::blas1::axpby(1.0,data2d,1.0,res); 
         }
-        dg::blas1::scal(res,1./g3d_.Nz()); //scale avg
+        dg::blas1::scal(res,1./g3d_.get().Nz()); //scale avg
     }
     private:
-    const dg::Grid3d& g3d_;
+    Handle<dg::aTopology3d> g3d_;
     unsigned sizeg2d_;
 };
 }//namespace dg

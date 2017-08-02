@@ -19,10 +19,23 @@ if negative the value of the container is assumed to be 1, except for the off-di
     in the matrix where it is assumed to be 0.
 * We then only need to store non-trivial and non-repetitive containers.
 * @tparam container container class
+* @ingroup misc
 */
 template<class container>
 struct SharedContainers
 {
+    SharedContainers( ) {}
+    SharedContainers( const dg::Operator<int>& mat_idx, std::vector<int>& vec_idx, std::vector<container>& values ): mat_idx_(mat_idx), vec_idx(vec_idx), values_(values){}
+    template<class otherContainer>
+    SharedContainers( const SharedContainers<otherContainer>& src): mat_idx_(src.mat_idx()), vec_idx_(src.vec_idx()), values_(src.values().size()), idx_(src.idx_){
+        dg::blas1::transfer( src.values(), values_);
+    }
+    void set( const dg::Operator<int>& mat_idx, std::vector<int>& vec_idx, std::vector<container>& values ){
+        mat_idx_=mat_idx;
+        vec_idx_=vec_idx;
+        values_=values;
+    }
+
     /**
     * @brief check if an index is set or not
     * @param i row index 0<i<2
@@ -38,25 +51,21 @@ struct SharedContainers
         if( vec_idx_[i]<0) return false;
         return true;
     }
-    /// Access the underlying container
-    /// @return if !isSet(i,j) the default constructor of container is called, otherwise values[mat_idx(i,j)] is returned
+    /*!@brief Access the underlying container
+     * @return if !isSet(i,j) the default constructor of container is called, otherwise values[mat_idx(i,j)] is returned. If the indices fall out of range of mat_idx the result is undefined
+     */
     const container& getValue(size_t i, size_t j)const{ 
         int k = mat_idx(i,j);
         if(k<0) return container();
         return values_[k];
     }
-    /// Access the underlying container
-    /// @return if !isSet(i) the default constructor of container is called, otherwise values[vec_idx(i)] is returned
+    /*!@brief Access the underlying container
+     * @return if !isSet(i) the default constructor of container is called, otherwise values[vec_idx(i)] is returned. If the index falls out of range of vec_idx the result is undefined
+     */
     const container& getValue(size_t i)const{ 
         int k = vec_idx_[i];
         if(k<0) return container();
         return values_[k];
-    }
-    SharedContainers( ) {}
-    SharedContainers( const dg::Operator<int>& mat_idx, std::vector<int>& vec_idx, std::vector<container>& values ): mat_idx_(mat_idx), vec_idx(vec_idx), values_(values){}
-    template<class otherContainer>
-    SharedContainers( const SharedContainers<otherContainer>& src): mat_idx_(src.mat_idx()), vec_idx_(src.vec_idx()), values_(src.values().size()), idx_(src.idx_){
-        dg::blas1::transfer( src.values(), values_);
     }
     const dg::Operator<int>& mat_idx() const {return mat_idx_;}
     const std::vector<int>& vec_idx() const {return vec_idx_;}

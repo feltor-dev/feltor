@@ -17,7 +17,7 @@ namespace dg
 {
 
 ///small class holding a stringstream 
-///@ingroup numerical0
+///@ingroup misc
 class Message 
 {
   private:
@@ -54,7 +54,7 @@ class Message
  * try{ throw Error(Message()<<"This is error number "<<number, _ping_);}
  * catch( Error& m) {std::cerr << m.what();}
  * \endcode
- * numerical0
+ * @ingroup misc
  */
 class Error : public std::exception
 {
@@ -88,7 +88,7 @@ class Error : public std::exception
 
 /**
  * @brief Class you might want to throw in case of a non convergence
- * @ingroup numerical0
+ * @ingroup misc
  */
 struct Fail : public std::exception
 {

@@ -10,7 +10,7 @@
 #include <thrust/device_vector.h>
 #include "thrust_vector_blas.cuh"
 #include "dg/blas1.h"
-#include "mpi_vector.h"
+#include "manage.h"
 
 namespace dg{
 
@@ -187,7 +187,7 @@ struct BijectiveComm
         //we could maybe transpose the Collective object!?
         assert( values.size() == idx_.size());
         //nach PID ordnen
-        thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.data()->begin());
+        thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.data().begin());
         //senden
         Vector store( p_.store_size());
         p_.scatter( *values_.data(), store);
@@ -207,7 +207,7 @@ struct BijectiveComm
         //actually this is a gather but we constructed it invertedly
         p_.gather( toScatter, *values_.data());
         //nach PID geordnete Werte wieder umsortieren
-        thrust::scatter( values_.data()->begin(), values_.data()->end(), idx_.begin(), values.begin());
+        thrust::scatter( values_.data().begin(), values_.data().end(), idx_.begin(), values.begin());
     }
 
     /**
@@ -259,7 +259,7 @@ struct BijectiveComm
         for( unsigned i=0; i<distance; i++)
             sendTo[keys[i]] = number[i];
         p_.construct( sendTo, comm);
-        values_.data()->resize( idx_.size());
+        values_.data().resize( idx_.size());
     }
     Buffer<Vector> values_;
     Index idx_;
@@ -322,7 +322,7 @@ struct SurjectiveComm
     Vector global_gather( const Vector& values)const
     {
         //gather values to store
-        thrust::gather( gatherMap_.begin(), gatherMap_.end(), values.begin(), store_.data()->begin());
+        thrust::gather( gatherMap_.begin(), gatherMap_.end(), values.begin(), store_.data().begin());
         //now gather from store into buffer
         Vector buffer( buffer_size_);
         bijectiveComm_.global_scatter_reduce( *store_.data(), buffer);
@@ -333,8 +333,8 @@ struct SurjectiveComm
         //first gather values into store
         Vector store_t = bijectiveComm_.global_gather( toScatter);
         //now perform a local sort, reduce and scatter operation
-        thrust::gather( sortMap_.begin(), sortMap_.end(), store_t.begin(), store_.data()->begin());
-        thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), store_.data()->begin(), keys_.data()->begin(), values.begin());
+        thrust::gather( sortMap_.begin(), sortMap_.end(), store_t.begin(), store_.data().begin());
+        thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), store_.data().begin(), keys_.data().begin(), values.begin());
     }
     unsigned size() const {return buffer_size_;}
     const thrust::host_vector<int> getLocalGatherMap() const {return localGatherMap_;}
@@ -355,8 +355,8 @@ struct SurjectiveComm
         Index gatherMap = bijectiveComm_.global_gather( localGatherMap_d);
         dg::blas1::transfer(gatherMap, gatherMap_);
         store_size_ = gatherMap_.size();
-        store_.data()->resize( store_size_);
-        keys_.data()->resize( store_size_);
+        store_.data().resize( store_size_);
+        keys_.data().resize( store_size_);
 
         //now prepare a reduction map and a scatter map
         thrust::host_vector<int> sortMap(gatherMap);
@@ -414,7 +414,7 @@ struct GeneralComm
     void global_scatter_reduce( const Vector& toScatter, Vector& values)
     {
         surjectiveComm_.global_scatter_reduce( toScatter, *store_.data());
-        thrust::scatter( store_.data()->begin(), store_.data()->end(), scatterMap_.begin(), values.begin());
+        thrust::scatter( store_.data().begin(), store_.data().end(), scatterMap_.begin(), values.begin());
     }
 
     unsigned size() const{return surjectiveComm_.size();}
@@ -435,7 +435,7 @@ struct GeneralComm
             thrust::reduce_by_key( gatherMap.begin(), gatherMap.end(), //sorted!
                 one.begin(), keys.begin(), number.begin() ); 
         unsigned distance = thrust::distance( keys.begin(), new_end.first);
-        store_.data()->resize( distance);
+        store_.data().resize( distance);
         scatterMap_.resize(distance);
         thrust::copy( keys.begin(), keys.begin() + distance, scatterMap_.begin());
     }
