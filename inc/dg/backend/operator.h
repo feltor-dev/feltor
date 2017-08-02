@@ -363,17 +363,10 @@ namespace create
 namespace detail
 {
 
-struct Message : public std::exception
-{
-    Message( const char * m) : message(m){}
-    char const*  what() const throw(){return message;}
-    private:
-    const char * message;
-};
-
 /*! @brief LU Decomposition with partial pivoting
  *
  * @tparam T value type
+ * @note this function throws a runtime_error when the matrix is singular
  */
 template< class T>
 T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
@@ -417,7 +410,7 @@ T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
 
         }
         else 
-            throw Message( "Matrix is singular!!");
+            throw std::runtime_error( "Matrix is singular!!");
     }
     if( numberOfSwaps % 2 != 0)
         determinant*=-1.;
@@ -470,7 +463,7 @@ void lr_solve( const dg::Operator<T>& lr, const std::vector<unsigned>& p, std::v
  * @param in input matrix
  *
  * @return the inverse of in if it exists
- * @note throws a message if in is singular
+ * @note throws a std::runtime_error if in is singular
  */
 template<class T>
 dg::Operator<T> invert( const dg::Operator<T>& in)
@@ -481,7 +474,7 @@ dg::Operator<T> invert( const dg::Operator<T>& in)
     dg::Operator<T> lr(in);
     T determinant = detail::lr_pivot( lr, pivot);
     if( fabs(determinant ) < 1e-14) 
-        throw detail::Message( "Determinant zero!!");
+        throw std::runtime_error( "Determinant zero!");
     for( unsigned i=0; i<n; i++)
     {
         std::vector<T> unit(n, 0);

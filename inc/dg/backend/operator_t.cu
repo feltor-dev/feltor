@@ -28,7 +28,7 @@ int main()
     std::cout << "Multiplication\n"<<inv_op*op<<"\n";
 
     op.zero();
-    op(0,2) = op(1,1) = op(2,0) = 1;// op(3,3)= 1;
+    op(0,2) = op(1,1) = op(2,0) = 0;// op(3,3)= 1;
     std::cout << "Operator\n"<<op<<"\n";
     inv_op = dg::create::invert(op);
     lr = op;
