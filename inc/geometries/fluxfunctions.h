@@ -102,6 +102,8 @@ aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFun
 */
 struct BinaryFunctorsLvl1 
 {
+    ///the access functions are undefined as long as the class remains empty
+    BinaryFunctorsLvl1(){}
     /**
     * @brief Take ownership of newly allocated functors
     *
@@ -109,11 +111,15 @@ struct BinaryFunctorsLvl1
     * @param fx \f$ \partial f / \partial x \f$ its derivative in the first coordinate
     * @param fy \f$ \partial f / \partial y \f$ its derivative in the second coordinate
     */
-    BinaryFunctorsLvl1( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy): 
+    BinaryFunctorsLvl1( const aBinaryFunctor* f, const aBinaryFunctor* fx, const aBinaryFunctor* fy)
     {
-        p_[0].set(f);
-        p_[1].set(fx);
-        p_[2].set(fy);
+        reset(f,fx,fy);
+    }
+    void reset( const aBinaryFunctor* f, const aBinaryFunctor* fx, const aBinaryFunctor* fy)
+    {
+        p_[0].reset(f);
+        p_[1].reset(fx);
+        p_[2].reset(fy);
     }
     /// \f$ f \f$
     const aBinaryFunctor& f()const{return p_[0].get();}
@@ -129,18 +135,18 @@ struct BinaryFunctorsLvl1
 */
 struct BinaryFunctorsLvl2 
 {
+    ///the access functions are undefined as long as the class remains empty
+    BinaryFunctorsLvl2(){}
     /**
     * @copydoc BinaryFunctorsLvl1
     * @param fxx \f$ \partial^2 f / \partial x^2\f$ second derivative in first coordinate
     * @param fxy \f$ \partial^2 f / \partial x \partial y\f$ second mixed derivative 
     * @param fyy \f$ \partial^2 f / \partial y^2\f$ second derivative in second coordinate
     */
-    BinaryFunctorsLvl2( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy,
-    aBinaryFunctor* fxx, aBinaryFunctor* fxy, aBinaryFunctor* fyy): f(f,fx,fy) 
-    {
-        p_[0].set( fxx);
-        p_[1].set( fxy);
-        p_[2].set( fyy);
+    BinaryFunctorsLvl2( const aBinaryFunctor* f, const aBinaryFunctor* fx, const aBinaryFunctor* fy, const aBinaryFunctor* fxx, const aBinaryFunctor* fxy, const aBinaryFunctor* fyy): f(f,fx,fy), f1(fxx,fxy,fyy) 
+    { }
+    void reset( const aBinaryFunctor* f, const aBinaryFunctor* fx, const aBinaryFunctor* fy, const aBinaryFunctor* fxx, const aBinaryFunctor* fxy, const aBinaryFunctor* fyy){ 
+        f.reset(f,fx,fy), f1.reset(fxx,fxy,fyy) 
     }
     operator BinaryFunctorsLvl1 ()const {return f;}
     /// \f$ f \f$
@@ -150,19 +156,19 @@ struct BinaryFunctorsLvl2
     /// \f$ \partial f / \partial y\f$
     const aBinaryFunctor& dfy()const{return f.dfy();}
     /// \f$ \partial^2f/\partial x^2\f$
-    const aBinaryFunctor& dfxx()const{return p_[0].get();}
+    const aBinaryFunctor& dfxx()const{return f1.f();}
     /// \f$ \partial^2 f / \partial x \partial y\f$
-    const aBinaryFunctor& dfxy()const{return p_[1].get();}
+    const aBinaryFunctor& dfxy()const{return f1.fx();}
     /// \f$ \partial^2f/\partial y^2\f$
-    const aBinaryFunctor& dfyy()const{return p_[2].get();}
+    const aBinaryFunctor& dfyy()const{return f1.fy();}
     private:
-    BinaryFunctorsLvl1 f;
-    Handle<aBinaryFunctor> p_[3];
+    BinaryFunctorsLvl1 f,f1;
 };
 
 /// A symmetric 2d tensor field and its divergence
 struct BinarySymmTensorLvl1
 {
+    BinarySymmTensorLvl1( ){}
     /**
      * @brief Take ownership of newly allocated functors
      *
@@ -173,14 +179,17 @@ struct BinarySymmTensorLvl1
      * @param divChiX \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
      * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     */
-    BinarySymmTensorLvl1( aBinaryFunctor* chi_xx, aBinaryFunctor* chi_xy, aBinaryFunctor* chi_yy,
-    aBinaryFunctor* divChiX, aBinaryFunctor* divChiY)
+    BinarySymmTensorLvl1( const aBinaryFunctor* chi_xx, const aBinaryFunctor* chi_xy, const aBinaryFunctor* chi_yy, const aBinaryFunctor* divChiX, const aBinaryFunctor* divChiY)
     {
-        p_[0].set( chi_xx);
-        p_[1].set( chi_xy);
-        p_[2].set( chi_yy);
-        p_[3].set( divChiX);
-        p_[4].set( divChiY);
+        reset(chi_xx,chi_xy,chi_yy,divChiX,divChiY);
+    }
+    void reset( const aBinaryFunctor* chi_xx, const aBinaryFunctor* chi_xy, const aBinaryFunctor* chi_yy, const aBinaryFunctor* divChiX, const aBinaryFunctor* divChiY)
+    {
+        p_[0].reset( chi_xx);
+        p_[1].reset( chi_xy);
+        p_[2].reset( chi_yy);
+        p_[3].reset( divChiX);
+        p_[4].reset( divChiY);
     }
     ///xy component \f$ \chi^{xx}\f$ 
     const aBinaryFunctor& xx()const{return p_[0].get();}
@@ -199,11 +208,16 @@ struct BinarySymmTensorLvl1
 /// A vector field with three components that depend only on the first two coordinates
 struct BinaryVectorLvl0
 {
-    BinaryVectorLvl0( aBinaryFunctor* v_x, aBinaryFunctor* v_y, aBinaryFunctor* v_z)
+    BinaryVectorLvl0(){}
+    BinaryVectorLvl0( const aBinaryFunctor* v_x, const aBinaryFunctor* v_y, const aBinaryFunctor* v_z)
     {
-        p_[0].set(v_x);
-        p_[1].set(v_y);
-        p_[2].set(v_z);
+        reset(v_x,v_y,v_z);
+    }
+    void reset( const aBinaryFunctor* v_x, const aBinaryFunctor* v_y, const aBinaryFunctor* v_z)
+    {
+        p_[0].reset(v_x);
+        p_[1].reset(v_y);
+        p_[2].reset(v_z);
     }
     /// x-component of the vector
     const aBinaryFunctor& x()const{return p_[0];}

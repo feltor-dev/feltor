@@ -180,11 +180,13 @@ struct Handle
         if(ptr_!=0) delete ptr_;
     }
     const cloneable& get()const {return *ptr_;}
-    void set( cloneable* ptr){ 
+    ///takes ownership of the ptr and deletes the current one if non-empty
+    void reset( cloneable* ptr){ 
         Handle tmp(ptr);
         *this=tmp;
     }
-    void set( const cloneable& src){ 
+    ///clones the src
+    void reset( const cloneable& src){ 
         Handle tmp(src);
         *this=tmp;
     }

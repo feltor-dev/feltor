@@ -42,8 +42,7 @@ typedef dg::geo::solovev::GeomParameters GeomParameters; //!< bring GeomParamete
  * @attention When the taylor field is used we need the boost library for special functions
  */
 struct Psip : public aCloneableBinaryFunctor<Psip>
-{
-    /**
+{ /**
      * @brief Construct from given geometric parameters
      *
      * @param gp useful geometric parameters
@@ -311,22 +310,20 @@ struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
     PsipZ psipZ_;
 };
 
-/**
- * @brief Contains all taylor fields 
- */
-struct MagneticField : public dg::geo::aTokamakMagneticField
+BinaryFunctorsLvl2 createPsip( solovev::GeomParameters gp)
 {
-    MagneticField( solovev::GeomParameters gp): aTokamakMagneticField(gp.R_0, 
-        new Psip(gp), 
-        new PsipR(gp), 
-        new PsipZ(gp), 
-        new PsipRR(gp), 
-        new PsipRZ(gp), 
-        new PsipZZ(gp), 
-        new Ipol(gp), 
-        new IpolR(gp), 
-        new IpolZ(gp)){}
-};
+    BinaryFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
+    return psip;
+}
+BinaryFunctorsLvl1 createIpol( solovev::GeomParameters gp)
+{
+    BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp))
+    return ipol;
+}
+MagneticField createMagField( solovev::GeomParameters gp)
+{
+    return MagneticField( gp.R_0, createPsip(gp), createIpol(gp));
+}
 
 ///@}
 

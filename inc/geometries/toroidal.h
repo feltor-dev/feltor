@@ -26,6 +26,20 @@ struct MagneticField : public dg::geo::aTokamakMagneticField
         new Constant(0), 
         new Constant(0)){}
 };
+BinaryFunctorsLvl2 createPsip( )
+{
+    BinaryFunctorsLvl2 psip( new Constant(1), new Constant(0), new Constant(0),new Constant(0), new Constant(0), new Constant(0));
+    return psip;
+}
+BinaryFunctorsLvl1 createIpol( )
+{
+    BinaryFunctorsLvl1 ipol( new Constant(1), new Constant(0), new Constant(0))
+    return ipol;
+}
+MagneticField createMagField( double R0)
+{
+    return MagneticField( R0, createPsip(), createIpol());
+}
 
 }//namespace toroidal
 }//namespace geo

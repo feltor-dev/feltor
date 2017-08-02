@@ -440,22 +440,20 @@ struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
     PsipZ psipZ_;
 };
 
-/**
- * @brief Contains all solovev fields
- */
-struct MagneticField : public dg::geo::aTokamakMagneticField
+BinaryFunctorsLvl2 createPsip( GeomParameters gp)
 {
-    MagneticField( GeomParameters gp): aTokamakMagneticField(gp.R_0, 
-        new Psip(gp), 
-        new PsipR(gp), 
-        new PsipZ(gp), 
-        new PsipRR(gp), 
-        new PsipRZ(gp), 
-        new PsipZZ(gp), 
-        new Ipol(gp), 
-        new IpolR(gp), 
-        new IpolZ(gp)){}
-};
+    BinaryFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
+    return psip;
+}
+BinaryFunctorsLvl1 createIpol( GeomParameters gp)
+{
+    BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp))
+    return ipol;
+}
+MagneticField createMagField( GeomParameters gp)
+{
+    return MagneticField( gp.R_0, createPsip(gp), createIpol(gp));
+}
 ///@}
 
 ///@cond
