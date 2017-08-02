@@ -86,7 +86,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> scatter( const thrust::host_vec
  * @return transformation matrix
  * @note this matrix has ~n^4 N^2 entries and is not sorted
  */
-cusp::coo_matrix<int, double, cusp::host_memory> backscatter( const Grid2d& g)
+cusp::coo_matrix<int, double, cusp::host_memory> backscatter( const aTopology2d& g)
 {
     typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
     //create equidistant backward transformation
@@ -116,7 +116,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> backscatter( const Grid2d& g)
  * @return transformation matrix
  * @note this matrix has ~n^4 N^2 entries and is not sorted
  */
-cusp::coo_matrix<int, double, cusp::host_memory> backscatter( const Grid3d& g)
+cusp::coo_matrix<int, double, cusp::host_memory> backscatter( const aTopology3d& g)
 {
     Grid2d g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
     cusp::coo_matrix<int,double, cusp::host_memory> back2d = backscatter( g2d);

@@ -127,7 +127,7 @@ struct BinaryFunctorsLvl1
 /**
 * @brief This struct bundles a function and its first and second derivatives
 */
-struct BinaryFunctorsLvl2 : public BinaryFunctorsLvl1
+struct BinaryFunctorsLvl2 
 {
     /**
     * @copydoc BinaryFunctorsLvl1
@@ -136,12 +136,19 @@ struct BinaryFunctorsLvl2 : public BinaryFunctorsLvl1
     * @param fyy \f$ \partial^2 f / \partial y^2\f$ second derivative in second coordinate
     */
     BinaryFunctorsLvl2( aBinaryFunctor* f, aBinaryFunctor* fx, aBinaryFunctor* fy,
-    aBinaryFunctor* fxx, aBinaryFunctor* fxy, aBinaryFunctor* fyy): BinaryFunctorsLvl1(f,fx,fy) 
+    aBinaryFunctor* fxx, aBinaryFunctor* fxy, aBinaryFunctor* fyy): f(f,fx,fy) 
     {
         p_[0].set( fxx);
         p_[1].set( fxy);
         p_[2].set( fyy);
     }
+    operator BinaryFunctorsLvl1 ()const {return f;}
+    /// \f$ f \f$
+    const aBinaryFunctor& f()const{return f.f();}
+    /// \f$ \partial f / \partial x \f$ 
+    const aBinaryFunctor& dfx()const{return f.dfx();}
+    /// \f$ \partial f / \partial y\f$
+    const aBinaryFunctor& dfy()const{return f.dfy();}
     /// \f$ \partial^2f/\partial x^2\f$
     const aBinaryFunctor& dfxx()const{return p_[0].get();}
     /// \f$ \partial^2 f / \partial x \partial y\f$
@@ -149,6 +156,7 @@ struct BinaryFunctorsLvl2 : public BinaryFunctorsLvl1
     /// \f$ \partial^2f/\partial y^2\f$
     const aBinaryFunctor& dfyy()const{return p_[2].get();}
     private:
+    BinaryFunctorsLvl1 f;
     Handle<aBinaryFunctor> p_[3];
 };
 

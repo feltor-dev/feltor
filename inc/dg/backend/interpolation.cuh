@@ -125,7 +125,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d& g , dg::bc boundary = dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const aTopology2d& g , dg::bc boundary = dg::NEU)
 {
     assert( x.size() == y.size());
     std::vector<double> gauss_nodes = g.dlt().abscissas(); 
@@ -270,7 +270,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @return interpolation matrix
  * @attention all points (x, y, z) must lie within or on the boundaries of g
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const Grid3d& g, dg::bc boundary= dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const aTopology3d& g, dg::bc boundary= dg::NEU)
 {
     assert( x.size() == y.size());
     assert( y.size() == z.size());
@@ -429,7 +429,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d& g_
 /**
  * @copydoc interpolation(const Grid1d&,const Grid1d&)
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d& g_new, const Grid2d& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopology2d& g_new, const aTopology2d& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -446,7 +446,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d& g_
 /**
  * @copydoc interpolation(const Grid1d&,const Grid1d&)
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d& g_new, const Grid3d& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopology3d& g_new, const aTopology3d& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -473,7 +473,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d& g_
  * @ingroup misc
  * @return the vector in LSPACE
  */
-thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const Grid2d& g)
+thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const aTopology2d& g)
 {
     thrust::host_vector<double> out(in.size(), 0);
     dg::Operator<double> forward( g.dlt().forward());
@@ -501,7 +501,7 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
  * @return interpolated point
  * @note g.contains(x,y) must return true
  */
-double interpolate( double x, double y,  const thrust::host_vector<double>& v, const Grid2d& g )
+double interpolate( double x, double y,  const thrust::host_vector<double>& v, const aTopology2d& g )
 {
     assert( v.size() == g.size());
 

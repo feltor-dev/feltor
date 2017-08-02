@@ -69,7 +69,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid1d& g
 /**
  * @copydoc interpolationT
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid2d& g_new, const Grid2d& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology2d& g_new, const aTopology2d& g_old)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
     cusp::transpose( temp, A);
@@ -78,7 +78,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid2d& g
 /**
  * @copydoc interpolationT
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid3d& g_new, const Grid3d& g_old)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology3d& g_new, const aTopology3d& g_old)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
     cusp::transpose( temp, A);
@@ -133,7 +133,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g_ne
 /**
  * @copydoc projection
  */
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d& g_new, const Grid2d& g_old)
+cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology2d& g_new, const aTopology2d& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!!\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!!\n";
@@ -162,7 +162,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid2d& g_ne
 /**
  * @copydoc projection
  */
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid3d& g_new, const Grid3d& g_old)
+cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology3d& g_new, const aTopology3d& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!!\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!!\n";
@@ -209,7 +209,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid3d& g_ne
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  * @note If the grid are very incompatible the matrix-matrix multiplication can take a while
  */
-cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid3d& g_new, const Grid3d& g_old)
+cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopology3d& g_new, const aTopology3d& g_old)
 {
     Grid3d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), g_new.z0(), g_new.z1(), 
                  lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()), 
@@ -223,7 +223,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid3d& 
 /**
  * @copydoc transformation
  */
-cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid2d& g_new, const Grid2d& g_old)
+cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopology2d& g_new, const aTopology2d& g_old)
 {
     Grid2d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), 
                  lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()));

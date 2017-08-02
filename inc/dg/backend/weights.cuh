@@ -87,7 +87,7 @@ int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
 *
 * @return Host Vector
 */
-thrust::host_vector<double> weights( const Grid2d& g)
+thrust::host_vector<double> weights( const aTopology2d& g)
 {
     //choose layout
     thrust::host_vector<double> v( g.size());
@@ -105,7 +105,7 @@ thrust::host_vector<double> weights( const Grid2d& g)
 *
 * @return Host Vector
 */
-thrust::host_vector<double> inv_weights( const Grid2d& g)
+thrust::host_vector<double> inv_weights( const aTopology2d& g)
 {
     thrust::host_vector<double> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)
@@ -120,7 +120,7 @@ thrust::host_vector<double> inv_weights( const Grid2d& g)
 *
 * @return Host Vector
 */
-thrust::host_vector<double> weights( const Grid3d& g)
+thrust::host_vector<double> weights( const aTopology3d& g)
 {
     thrust::host_vector<double> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
@@ -138,7 +138,7 @@ thrust::host_vector<double> weights( const Grid3d& g)
 *
 * @return Host Vector
 */
-thrust::host_vector<double> inv_weights( const Grid3d& g)
+thrust::host_vector<double> inv_weights( const aTopology3d& g)
 {
     thrust::host_vector<double> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)
