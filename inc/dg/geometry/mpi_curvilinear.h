@@ -6,6 +6,7 @@
 #include "dg/backend/mpi_grid.h"
 #include "dg/backend/mpi_vector.h"
 #include "curvilinear.h"
+#include "generator.h"
 
 
 
@@ -25,7 +26,7 @@ struct CurvilinearMPIGrid2d;
  * @tparam MPIContainer Vector class that holds metric coefficients
  */
 template<class MPIContainer>
-struct CylindricalMPIGrid3d : public dg::MPIGrid3d
+struct CylindricalMPIGrid3d : public dg::aMPIGeometry3d
 {
     typedef dg::CurvilinearPerpTag metric_category; //!< metric tag
     typedef dg::CylindricalMPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
@@ -152,7 +153,7 @@ struct CylindricalMPIGrid3d : public dg::MPIGrid3d
  * @tparam MPIContainer Vector class that holds metric coefficients
  */
 template<class MPIContainer>
-struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
+struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
 {
     typedef dg::CurvilinearPerpTag metric_category; 
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type

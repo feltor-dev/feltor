@@ -19,6 +19,8 @@ struct aMPIGeometry2d : public aMPITopology2d
     SharedContainers<host_vec > compute_metric()const {
         return do_compute_metric();
     }
+    ///Geometries are cloneable
+    virtual aMPIGeometry2d* clone()const=0;
     ///allow deletion through base class pointer
     virtual ~aMPIGeometry2d(){}
     protected:
@@ -44,6 +46,8 @@ struct aMPIGeometry3d : public aMPITopology3d
     SharedContainers<host_vec > compute_metric()const {
         return do_compute_metric();
     }
+    ///Geometries are cloneable
+    virtual aMPIGeometry3d* clone()const=0;
     ///allow deletion through base class pointer
     virtual ~aMPIGeometry3d(){}
     protected:

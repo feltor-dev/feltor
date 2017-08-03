@@ -259,7 +259,7 @@ struct RefinedGrid3d;
  * @deprecated
  * @ingroup grid
  */
-struct RefinedGrid2d : public dg::Grid2d
+struct RefinedGrid2d : public dg::aTopology2d
 {
     /**
      * @brief Refine a corner of a grid
@@ -275,7 +275,7 @@ struct RefinedGrid2d : public dg::Grid2d
     RefinedGrid2d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
             unsigned howmanyX, unsigned howmanyY,
             double x0, double x1, double y0, double y1, 
-            unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d( x0, x1, y0, y1, n, n_new(Nx, add_x*howmanyX, bcx), n_new(Ny, add_y*howmanyY, bcy), bcx, bcy), 
+            unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::aTopology2d( x0, x1, y0, y1, n, n_new(Nx, add_x*howmanyX, bcx), n_new(Ny, add_y*howmanyY, bcy), bcx, bcy), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy)
     {
@@ -307,7 +307,7 @@ struct RefinedGrid2d : public dg::Grid2d
      */
     RefinedGrid2d( unsigned multiple_x, unsigned multiple_y,
             double x0, double x1, double y0, double y1, unsigned n,
-            unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::Grid2d( x0, x1, y0, y1, n, multiple_x*Nx, multiple_y*Ny, bcx, bcy), 
+            unsigned n_old, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::aTopology2d( x0, x1, y0, y1, n, multiple_x*Nx, multiple_y*Ny, bcx, bcy), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, n_old, Nx, Ny, bcx, bcy)
     {
@@ -394,7 +394,7 @@ struct RefinedGrid2d : public dg::Grid2d
  * @deprecated
  * @ingroup grid
  */
-struct RefinedGrid3d : public dg::Grid3d
+struct RefinedGrid3d : public dg::aTopology3d
 {
     /**
      * @brief Refine a corner of a grid
@@ -410,7 +410,7 @@ struct RefinedGrid3d : public dg::Grid3d
     RefinedGrid3d( unsigned node_x, unsigned node_y, unsigned add_x, unsigned add_y, 
             unsigned howmanyX, unsigned howmanyY,
             double x0, double x1, double y0, double y1, double z0, double z1, 
-            unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : dg::Grid3d( x0, x1, y0, y1, z0, z1, n, n_new(Nx, add_x*howmanyX, bcx), n_new(Ny, add_y*howmanyY, bcy), Nz, bcx, bcy, bcz), 
+            unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : dg::aTopology3d( x0, x1, y0, y1, z0, z1, n, n_new(Nx, add_x*howmanyX, bcx), n_new(Ny, add_y*howmanyY, bcy), Nz, bcx, bcy, bcz), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz)
     {
@@ -445,7 +445,7 @@ struct RefinedGrid3d : public dg::Grid3d
             unsigned n,
             unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, 
             bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : 
-        dg::Grid3d( x0, x1, y0, y1, z0, z1, n, multiple_x*Nx, multiple_y*Ny, Nz, bcx, bcy, bcz), 
+        dg::aTopology3d( x0, x1, y0, y1, z0, z1, n, multiple_x*Nx, multiple_y*Ny, Nz, bcx, bcy, bcz), 
         wx_(size()), wy_(size()), absX_(size()), absY_(size()),
         g_assoc_( x0, x1, y0, y1, z0, z1, n_old, Nx, Ny, Nz, bcx, bcy, bcz)
     {

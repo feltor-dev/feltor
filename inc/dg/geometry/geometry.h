@@ -18,6 +18,8 @@ struct aGeometry2d : public aTopology2d
     SharedContainers<thrust::host_vector<double> > compute_metric()const {
         return do_compute_metric();
     }
+    ///Geometries are cloneable
+    virtual aGeometry2d* clone()const=0;
     ///allow deletion through base class pointer
     virtual ~aGeometry2d(){}
     protected:
@@ -42,6 +44,8 @@ struct aGeometry3d : public aTopology3d
     SharedContainers<thrust::host_vector<double> > compute_metric()const {
         return do_compute_metric();
     }
+    ///Geometries are cloneable
+    virtual aGeometry3d* clone()const=0;
     ///allow deletion through base class pointer
     virtual ~aGeometry3d(){}
     protected:
