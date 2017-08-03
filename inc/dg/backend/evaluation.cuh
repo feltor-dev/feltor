@@ -60,9 +60,8 @@ template< class BinaryOp>
 thrust::host_vector<double> evaluate( BinaryOp f, const aTopology2d& g)
 {
     unsigned n= g.n();
-    //TODO: opens dlt.dat twice...!!
-    Grid1d gx( g.x0(), g.x1(), n, g.Nx()); 
-    Grid1d gy( g.y0(), g.y1(), n, g.Ny());
+    Grid1d gx = g.gx();
+    Grid1d gy = g.gy();
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
 
@@ -99,10 +98,9 @@ template< class TernaryOp>
 thrust::host_vector<double> evaluate( TernaryOp f, const aTopology3d& g)
 {
     unsigned n= g.n();
-    //TODO: opens dlt.dat three times...!!
-    Grid1d gx( g.x0(), g.x1(), n, g.Nx()); 
-    Grid1d gy( g.y0(), g.y1(), n, g.Ny());
-    Grid1d gz( g.z0(), g.z1(), 1, g.Nz());
+    Grid1d gx = g.gx();
+    Grid1d gy = g.gy();
+    Grid1d gz = g.gz();
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
     thrust::host_vector<double> absz = create::abscissas( gz);

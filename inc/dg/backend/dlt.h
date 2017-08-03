@@ -19,13 +19,14 @@ template< class T>
 class DLT
 {
   public:
+
       /**
        * @brief Initialize coefficients
        *
        * The constructor reads the data corresponding to given n from the file dlt.dat. 
        * @param n # of polynomial coefficients (0<n<21)
        */
-    DLT( unsigned n);
+    DLT( unsigned n=3);
 
     /**
      * @brief Return Gauss-Legendre weights
