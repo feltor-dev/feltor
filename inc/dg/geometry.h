@@ -18,6 +18,7 @@
 #include "geometry/mpi_curvilinear.h"
 #endif//MPI_VERSION
 #include "geometry/tensor.h"
+#include "geometry/transform.h"
 
 
 /*!@file 

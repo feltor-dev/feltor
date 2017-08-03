@@ -70,6 +70,41 @@ SharedContainers<thrust::host_vector<double> > metric( const aGeometry3d& g)
 
 }//namespace create
 
+///@}
+///@addtogroup basicgrids
+///@{
+
+/**
+ * @brief two-dimensional Grid with Cartesian metric
+ */
+struct CartesianGrid2d: public dg::aGeometry2d
+{
+    typedef OrthonormalTag metric_category; 
+    ///@copydoc Grid2d::Grid2d()
+    CartesianGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::Grid2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
+    /**
+     * @brief Construct from existing topology
+     *
+     * @param grid existing grid class
+     */
+    CartesianGrid2d( const dg::Grid2d& grid):dg::Grid2d(grid){}
+};
+
+/**
+ * @brief three-dimensional Grid with Cartesian metric
+ */
+struct CartesianGrid3d: public dg::aGeometry3d
+{
+    typedef OrthonormalTag metric_category; 
+    ///@copydoc Grid3d::Grid3d()
+    CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::Grid3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    /**
+     * @brief Construct from existing topology
+     *
+     * @param grid existing grid class
+     */
+    CartesianGrid3d( const dg::Grid3d& grid):dg::Grid3d(grid){}
+};
 
 ///@}
 } //namespace dg
