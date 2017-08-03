@@ -47,6 +47,11 @@ struct SharedContainers
         return true;
     }
 
+    /**
+    * @brief check if an index is set or not
+    * @param i row index 0<i<2
+    * @return true if container is non-empty, false if value is assumed implicitly
+    */
     bool isSet(size_t i) const{
         if( vec_idx_[i]<0) return false;
         return true;
@@ -67,6 +72,7 @@ struct SharedContainers
         if(k<0) return container();
         return values_[k];
     }
+
     const dg::Operator<int>& mat_idx() const {return mat_idx_;}
     const std::vector<int>& vec_idx() const {return vec_idx_;}
     const std::vector<container>& values() const{return values_;}
@@ -76,8 +82,6 @@ struct SharedContainers
     std::vector<container> values_;
 };
 
-namespace geo
-{
 
 ///container sizes must match each other and the tensor container size
 ///may destroy input (either swap in or use as temporary storage)
@@ -144,5 +148,4 @@ void multiply( const SharedContainers& t, container& in1, container& in2, contai
         dg::blas1::pointwiseDot( 1., tensor.getValue(2,0), in1, 1., out3);
 }
 
-}//namespace geo
 }//namespace dg

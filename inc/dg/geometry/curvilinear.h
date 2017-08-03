@@ -2,12 +2,13 @@
 
 #include "dg/backend/grid.h"
 #include "dg/blas1.h"
-#include "dg/geometry/geometry_traits.h"
+#include "geometry.h"
+#include "geometry_traits.h"
 #include "generator.h"
 
 namespace dg
 {
-///@addtogroup grids
+///@addtogroup basicgrids
 ///@{
 
 ///@cond
@@ -24,7 +25,7 @@ struct CurvilinearGrid2d;
  @tparam container models aContainer
  */
 template< class container>
-struct CylindricalGrid3d : public dg::Grid3d
+struct CylindricalGrid3d : public dg::aGeometry3d
 {
     typedef dg::CurvilinearPerpTag metric_category;
     typedef CurvilinearGrid2d<container> perpendicular_grid;
@@ -149,7 +150,7 @@ struct CylindricalGrid3d : public dg::Grid3d
  * @brief A three-dimensional grid based on curvilinear coordinates
  */
 template< class container>
-struct CurvilinearGrid2d : public dg::Grid2d
+struct CurvilinearGrid2d : public dg::aGeometry2d
 {
     typedef dg::CurvilinearPerpTag metric_category;
 
