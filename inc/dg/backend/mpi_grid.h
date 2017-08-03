@@ -303,10 +303,6 @@ struct aMPITopology2d
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         g.set(new_n,new_Nx,new_Ny);
     }
-    void init_X_boundaries( double global_x0, double global_x1)
-    {
-        g.init_X_boundaries(global_x0, global_x1);
-    }
     private:
     void check_division( unsigned Nx, unsigned Ny, bc bcx, bc bcy)
     {
@@ -630,10 +626,6 @@ struct aMPITopology3d
     }
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         g.set(new_n,new_Nx,new_Ny,new_Nz);
-    }
-    void init_X_boundaries( double global_x0, double global_x1)
-    {
-        g.init_X_boundaries(global_x0, global_x1);
     }
     private:
     void check_division( unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz)

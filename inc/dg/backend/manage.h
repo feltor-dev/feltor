@@ -32,7 +32,7 @@ struct Handle
     * @param src an oject to copy, clones the contained object if not empty
     */
     Handle( const Handle& src):ptr_(0) {
-        if(src.ptr_!=0) ptr_ = src.ptr->clone(); //deep copy
+        if(src.ptr_!=0) ptr_ = src.ptr_->clone(); //deep copy
     }
     /**
     * @brief deep copy the given handle
@@ -56,7 +56,7 @@ struct Handle
     * @brief Non constant access to the object on the heap
     * @return a non-const reference to the cloneable object
     */
-    cloneable& get()const {return *ptr_;}
+    cloneable& get() {return *ptr_;}
 
     /**
     * @brief Take the ownership of the given pointer and delete the currently held one if non-empty
@@ -125,11 +125,6 @@ struct Buffer
     * @attention never try to delete this
     */
     T& data( )const { return *ptr;}
-    /**
-    * @brief Get a constant reference to the data on the heap
-    * @return a reference to the data object
-    */
-    const T& data( )const { return *ptr;}
     private:
     T* ptr;
 };
