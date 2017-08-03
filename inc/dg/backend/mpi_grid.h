@@ -20,6 +20,7 @@ namespace dg
  * Represents the local grid coordinates and the process topology. 
  * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
  * @note a single cell is never divided across processes.
+ * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @attention
  * The boundaries in the constructors are global boundaries, the boundaries returned by the access functions are local boundaries, this is because the grid represents the information given to one process
  *
@@ -336,6 +337,7 @@ struct aMPITopology2d
  * The boundaries in the constructors are global boundaries, the boundaries returned by the access functions are local boundaries, this is because the grid represents the information given to one process
  *
  * @note Note that a single cell is never divided across processes.
+ * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  */
 struct aMPITopology3d
 {

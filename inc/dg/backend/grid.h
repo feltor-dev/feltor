@@ -192,6 +192,7 @@ struct Grid1d
 
 /**
  * @brief An abstract base class for two-dimensional grids
+ * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  */
 struct aTopology2d
 {
@@ -389,8 +390,8 @@ struct aTopology2d
     /**
      * @brief Construct a 2d grid as the product of two 1d grids
      *
-     * @param gx aTopology in x - direction
-     * @param gy aTopology in y - direction
+     * @param gx a Grid in x - direction
+     * @param gy a Grid in y - direction
      * @note gx and gy must have the same n
      */
     aTopology2d( const Grid1d& gx, const Grid1d& gy): gx_(gx),gy_(gy)
@@ -408,11 +409,6 @@ struct aTopology2d
     private:
     Grid1d gx_, gy_; 
 };
-void aTopology2d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
-{
-    gx_.set(new_n, new_Nx);
-    gy_.set(new_n, new_Ny);
-}
 
 
 
@@ -421,6 +417,7 @@ void aTopology2d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
  *
  * In the third dimension only 1 polynomial coefficient is used,
  * not n.
+ * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  */
 struct aTopology3d
 {
@@ -703,20 +700,19 @@ struct aTopology3d
   private:
     Grid1d gx_,gy_,gz_;
 };
-void aTopology3d::do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsigned new_Nz)
-{
-    gx_.set(new_n, new_Nx);
-    gy_.set(new_n, new_Ny);
-    gz_.set(1,new_Nz);
-}
-///@}
 
+/**
+ * @brief The simplest implementation of aTopology2d
+ */
 struct Grid2d : public aTopology2d
 {
 
+    ///@copydoc aTopology2d::aTopology2d()
     Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         aTopology2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy) { }
+    ///@copydoc aTopology2d::aTopology2d(const Grid1d&,const Grid1d&)
     Grid2d( const Grid1d& gx, const Grid1d& gy): aTopology2d(gx,gy){ }
+    ///@allow explicit type conversion from any other topology
     explicit Grid2d( const aTopology2d& src): aTopology2d(src){}
     private:
     virtual void do_set( unsigned n, unsigned Nx, unsigned Ny){ 
@@ -724,16 +720,36 @@ struct Grid2d : public aTopology2d
     }
 
 };
+/**
+ * @brief The simplest implementation of aTopology3d
+ */
 struct Grid3d : public aTopology3d
 {
+    ///@copydoc aTopology3d::aTopology3d()
     Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):
         aTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
+    ///@copydoc aTopology3d::aTopology3d(const Grid1d&,const Grid1d&,const Grid1d&)
     Grid3d( const Grid1d& gx, const Grid1d& gy, const Grid1d& gz): aTopology3d(gx,gy,gz){ }
+    ///@allow explicit type conversion from any other topology
     explicit Grid3d( const aTopology3d& src): aTopology3d(src){ }
     private:
     virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz){ 
         aTopology3d::do_set(n,Nx,Ny,Nz);
     }
 };
+///@}
+///@cond
+void aTopology2d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
+{
+    gx_.set(new_n, new_Nx);
+    gy_.set(new_n, new_Ny);
+}
+void aTopology3d::do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsigned new_Nz)
+{
+    gx_.set(new_n, new_Nx);
+    gy_.set(new_n, new_Ny);
+    gz_.set(1,new_Nz);
+}
+///@endcond
 
 }// namespace dg
