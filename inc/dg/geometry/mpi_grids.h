@@ -14,7 +14,7 @@ namespace dg
 /**
  * @brief The mpi version of a cartesian grid
  */
-struct CartesianMPIGrid2d : public dg::MPIGrid2d
+struct CartesianMPIGrid2d : public aMPIGeometry2d
 {
     typedef OrthonormalTag metric_category; 
 
@@ -37,7 +37,7 @@ struct CartesianMPIGrid2d : public dg::MPIGrid2d
 /**
  * @brief The mpi version of a cartesian grid
  */
-struct CartesianMPIGrid3d : public dg::MPIGrid3d
+struct CartesianMPIGrid3d : public aMPIGeometry3d
 {
     typedef OrthonormalTag metric_category; 
 
@@ -58,48 +58,5 @@ struct CartesianMPIGrid3d : public dg::MPIGrid3d
 };
 
 ///@}
-
-///@cond
-/////////////////////////////////////////////////////MPI pullbacks/////////////////////////////////////////////////
-namespace detail{
-template< class Geometry>
-MPI_Vector< thrust::host_vector<double> > doPullback( double(f)(double,double), const Geometry& g, CurvilinearTag, TwoDimensionalTag, MPITag)
-{
-    return doPullback<double(double,double), Geometry>( f, g);
-}
-template< class Geometry>
-MPI_Vector< thrust::host_vector<double> > pullback( double(f)(double,double,double), const Geometry& g, CurvilinearTag, ThreeDimensionalTag, MPITag)
-{
-    return doPullback<double(double,double,double), Geometry>( f, g);
-}
-
-template< class BinaryOp, class Geometry>
-MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry& g, CurvilinearTag, TwoDimensionalTag, MPITag)
-{
-    thrust::host_vector<double> vec( g.size());
-    for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( g.r()[i], g.z()[i]);
-    MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
-    return v;
-}
-
-template< class TernaryOp, class Geometry>
-MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, CurvilinearTag, ThreeDimensionalTag, MPITag)
-{
-    return g.doPullback(f);
-}
-template< class BinaryOp, class Geometry>
-MPI_Vector< thrust::host_vector<double> > doPullback( BinaryOp f, const Geometry& g, OrthonormalTag, TwoDimensionalTag, MPITag)
-{
-    return evaluate( f, g);
-}
-template< class TernaryOp, class Geometry>
-MPI_Vector< thrust::host_vector<double> > doPullback( TernaryOp f, const Geometry& g, OrthonormalTag, ThreeDimensionalTag, MPITag)
-{
-    return evaluate( f,g);
-}
-
-} //namespace detail
-///@endcond
 
 }//namespace dg

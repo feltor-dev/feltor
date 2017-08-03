@@ -6,7 +6,7 @@
 
 namespace dg{
 
-    ///@cond
+///@cond
 template< class Vector>
 struct VectorTraits {
     typedef typename Vector::value_type value_type;

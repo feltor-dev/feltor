@@ -196,8 +196,8 @@ struct Grid1d
  */
 struct aTopology2d
 {
-    typedef SharedTag memory_category;
-    typedef TwoDimensionalTag dimensionality;
+    typedef SharedTag memory_category; //!< tag for choosing default host vector type
+    typedef TwoDimensionalTag dimensionality; 
 
     /**
      * @brief Left boundary in x

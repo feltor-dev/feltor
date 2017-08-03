@@ -1148,7 +1148,7 @@ struct PLUS
 };
 
 /**
- * @brief Invert the given value
+ * @brief %Invert the given value
  * \f[ f(x) = 1/x \f]
  *
  * @tparam T value type

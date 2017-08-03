@@ -32,7 +32,7 @@ class Operator
     /**
      * @brief allocate storage for nxn matrix
      *
-     * @param n
+     * @param n size
      */
     Operator( const unsigned n): n_(n), data_(n_*n_){}
     /**
@@ -107,9 +107,9 @@ class Operator
     }
 
     /**
-     * @brief Size of the Operator
+     * @brief Size n of the Operator
      *
-     * @return 
+     * @return n
      */
     unsigned size() const { return n_;}
     /**
