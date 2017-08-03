@@ -337,7 +337,7 @@ int NearestNeighborComm<I,V>::buffer_size() const
 template<class I, class V>
 const V& NearestNeighborComm<I,V>::global_gather( const V& input) const
 {
-    if( silent_) return *values.data();
+    if( silent_) return values.data();
         //int rank;
         //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         //dg::Timer t;
@@ -349,7 +349,7 @@ const V& NearestNeighborComm<I,V>::global_gather( const V& input) const
         //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
         //t.tic();
     //mpi sendrecv
-    sendrecv( *buffer1.data(), *buffer2.data(), *rb1.data(), *rb2.data());
+    sendrecv( buffer1.data(), buffer2.data(), rb1.data(), rb2.data());
         //t.toc();
         //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
         //t.tic();
@@ -358,7 +358,7 @@ const V& NearestNeighborComm<I,V>::global_gather( const V& input) const
     thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.data().begin());
         //t.toc();
         //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
-    return *values.data();
+    return values.data();
 }
 
 template<class I, class V>

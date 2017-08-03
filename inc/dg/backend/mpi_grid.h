@@ -15,7 +15,7 @@ namespace dg
 
 
 /**
- * @brief 2D MPI Grid class 
+ * @brief 2D MPI abstract grid class 
  *
  * Represents the local grid coordinates and the process topology. 
  * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
@@ -281,9 +281,9 @@ struct aMPITopology2d
      * @return non-MPI Grid object
      */
     Grid2d global() const {return g;}
-    virtual ~aMPITopology2d(){}
-    virtual aMPITopology2d* clone()const=0;
     protected:
+    ///disallow deletion through base class pointer
+    ~aMPITopology2d(){}
 
     /**
      * @copydoc dg::Grid2d::Grid2d()
@@ -300,9 +300,7 @@ struct aMPITopology2d
         g = src.g; comm = src.comm;
         return *this;
     }
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
-        g.set(new_n,new_Nx,new_Ny);
-    }
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)=0;
     private:
     void check_division( unsigned Nx, unsigned Ny, bc bcx, bc bcy)
     {
@@ -328,6 +326,7 @@ struct aMPITopology2d
 
 };
 
+
 /**
  * @brief 3D MPI Grid class 
  *
@@ -344,7 +343,7 @@ struct aMPITopology3d
     typedef ThreeDimensionalTag dimensionality;
     ///@copydoc aMPITopology2d::multiplyCellNumber()
     void multiplyCellNumber( double fx, double fy){
-        set(g.n(), floor(fx*(double)g.Nx()+0.5), floor(fy*(double)g.Ny()+0.5), g.Nz());
+        set(g.n(), round(fx*(double)g.Nx()), round(fy*(double)g.Ny()), g.Nz());
     }
     /**
      * @copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
@@ -605,9 +604,9 @@ struct aMPITopology3d
      *@copydoc aMPITopology2d::global()const
      */
     Grid3d global() const {return g;}
-    virtual ~aMPITopology3d(){}
-    virtual aMPITopology3d* clone() const=0;
     protected:
+    ///disallow deletion through base class pointer
+    ~aMPITopology3d(){}
 
     /**
      * @copydoc Grid3d::Grid3d()
@@ -624,9 +623,7 @@ struct aMPITopology3d
         g = src.g; comm = src.comm;
         return *this;
     }
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        g.set(new_n,new_Nx,new_Ny,new_Nz);
-    }
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)=0; 
     private:
     void check_division( unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz)
     {
@@ -688,6 +685,12 @@ int aMPITopology3d::pidOf( double x, double y, double z) const
     else
         return -1;
 }
+void aMPITopology2d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+    g.set(new_n,new_Nx,new_Ny);
+}
+void aMPITopology3d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+    g.set(new_n,new_Nx,new_Ny,new_Nz);
+}
 ///@endcond
 
 struct MPIGrid2d: public aMPITopology2d
@@ -709,7 +712,10 @@ struct MPIGrid2d: public aMPITopology2d
     MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         aMPITopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy,comm)
     { }
-    virtual MPIGrid2d* clone()const{return new MPIGrid2d(*this);}
+    private:
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny){
+        aMPITopology2d::do_set(new_n,new_Nx,new_Ny);
+    }
 };
 
 
@@ -728,7 +734,10 @@ struct MPIGrid3d : public aMPITopology3d
     MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         aMPITopology3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm)
     { }
-    virtual MPIGrid3d* clone()const{return new MPIGrid3d(*this);}
+    private:
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
+        aMPITopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
+    }
 };
 
 
