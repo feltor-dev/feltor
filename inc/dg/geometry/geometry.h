@@ -1,163 +1,170 @@
 #pragma once
 
-#include "dg/backend/grid.h"
+#include <cassert>
+#include "thrust/host_vector.h"
+#include "../backend/evaluation.cuh"
+#include "../backend/weights.cuh"
+#ifdef MPI_VERSION
+#include "../backend/mpi_vector.h"
+#include "../backend/mpi_evaluation.h"
+#include "../backend/mpi_precon.h"
+#endif//MPI_VERSION
+#include "base.h"
+#include "curvilinear.h"
+#include "cartesianX.h"
+#ifdef MPI_VERSION
+#include "mpi_base.h"
+#include "mpi_curvilinear.h"
+#endif//MPI_VERSION
 #include "tensor.h"
+#include "transform.h"
 
-namespace dg
-{
 
+/*!@file 
+ *
+ * geometry functions
+ */
+
+namespace dg{
+
+/*! @brief Geometry routines 
+ *
+ * @ingroup geometry
+ * Only those routines that are actually called need to be implemented.
+ * Don't forget to specialize in the dg namespace.
+ */
+namespace geo{
 ///@addtogroup geometry
 ///@{
 
 /**
- * @brief This is the abstract interface class for a two-dimensional Geometry
+ * @brief Multiply the input with the volume element without the dG weights!
+ *
+ * Computes \f$ f = \sqrt{g}f\f$ 
+ * @tparam container container class 
+ * @param inout input (contains result on output)
+ * @param metric the metric object
  */
-struct aGeometry2d : public aTopology2d
+template<class container>
+void multiplyVolume( container& inout, const SharedContainers<container>& metric)
 {
-    const SharedContainers<thrust::host_vector<double> >& map()const{return map_;}
-    SharedContainers<thrust::host_vector<double> > compute_metric()const {
-        return do_compute_metric();
-    }
-    ///Geometries are cloneable
-    virtual aGeometry2d* clone()const=0;
-    ///allow deletion through base class pointer
-    virtual ~aGeometry2d(){}
-    protected:
-    /*!
-     * @copydoc aTopology2d::aTopology2d()
-     * @note the default coordinate map will be the identity 
-     */
-    aGeometry2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aTopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy),map_(3){}
-    aGeometry2d( const aGeometry2d& src):map_(src.map_), metric_(src.metric_){}
-    aGeometry2d& operator=( const aGeometry2d& src){
-        map_=src.map_;
-        metric_=src.metric_;
-    }
-    SharedContainers<thrust::host_vector<double> >& map(){return map_;}
-    private:
-    SharedContainers<thrust::host_vector<double> > map_;
-    virtual SharedContainers<thrust::host_vector<double> > do_compute_metric()const=0;
-};
+    if( metric.isSet(0))
+        dg::blas1::pointwiseDot( metric.getValue(0), inout, inout);
+}
 
 /**
- * @brief This is the abstract interface class for a two-dimensional Geometry
+ * @brief Divide the input vector with the volume element without the dG weights
+ *
+ * Computes \f$ v = v/ \sqrt{g}\f$ 
+ * @tparam container container class 
+ * @param inout input (contains result on output)
+ * @param metric the metric
  */
-struct aGeometry3d : public aTopology3d
+template<class container>
+void divideVolume( container& inout, const SharedContainers<container>& metric)
 {
-    const SharedContainers<thrust::host_vector<double> >& map()const{return map_;}
-    SharedContainers<thrust::host_vector<double> > compute_metric()const {
-        return do_compute_metric();
-    }
-    ///Geometries are cloneable
-    virtual aGeometry3d* clone()const=0;
-    ///allow deletion through base class pointer
-    virtual ~aGeometry3d(){}
-    protected:
-    /*!
-     * @copydoc aTopology3d::aTopology3d()
-     * @note the default coordinate map will be the identity 
-     */
-    aGeometry3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
-    aGeometry3d( const aGeometry3d& src):map_(src.map_){}
-    aGeometry3d& operator=( const aGeometry3d& src){
-        map_=src.map_;
-    }
-    SharedContainers<thrust::host_vector<double> >& map(){return map_;}
-    private:
-    SharedContainers<thrust::host_vector<double> > map_;
-    virtual SharedContainers<thrust::host_vector<double> > do_compute_metric()const=0;
-};
-
-namespace create
-{
-
-SharedContainers<thrust::host_vector<double> > metric( const aGeometry2d& g)
-{
-    return g.compute_metric();
-}
-SharedContainers<thrust::host_vector<double> > metric( const aGeometry3d& g)
-{
-    return g.compute_metric();
+    if( metric.isSet(0))
+        dg::blas1::pointwiseDivide( inout, metric.getValue(0), inout);
 }
 
-}//namespace create
+/**
+ * @brief Raises the index of a covariant vector with the help of the projection tensor in 2d
+ *
+ * Compute \f$ v^i = g^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions 
+ * @tparam container the container class
+ * @param covX (input) covariant first component (undefined content on output)
+ * @param covY (input) covariant second component (undefined content on output)
+ * @param contraX (output) contravariant first component 
+ * @param contraY (output) contravariant second component 
+ * @param metric The metric
+ * @note no alias allowed 
+ */
+template<class container>
+void raisePerpIndex( container& covX, container& covY, container& contraX, container& contraY, const SharedContainers<container>& metric)
+{
+    assert( &covX != &contraX);
+    assert( &covY != &contraY);
+    assert( &covY != &covX);
+    dg::detail::multiply( metric, covX, covY, contraX, contraY);
+}
+
+/**
+ * @brief Multiplies the two-dimensional volume element
+ *
+ * Computes \f$ f = \sqrt{g_\perp}f\f$ where the perpendicualar volume is computed from the 2x2 submatrix of g in the first two coordinates.
+ * @tparam container the container class
+ * @param inout input (contains result on output)
+ * @param metric The metric  
+ * @note if metric is two-dimensional this function will have the same result as multiplyVolume()
+ */
+template<class container>
+void multiplyPerpVolume( container& inout, const SharedContainers<container>& metric)
+{
+    if( metric.isSet(1))
+        dg::blas1::pointwiseDot( metric.getValue(1), inout, inout);
+}
+
+/**
+ * @brief Divides the two-dimensional volume element
+ *
+ * Computes \f$ f = f /\sqrt{g_\perp}\f$ where the perpendicualar volume is computed from the 2x2 submatrix of g in the first two coordinates.
+ * @tparam container the container class
+ * @param inout input (contains result on output)
+ * @param metric The metric tensor
+ * @note if metric is two-dimensional this function will have the same result as divideVolume()
+ */
+template<class container>
+void dividePerpVolume( container& inout, const SharedContainers<container>& metric)
+{
+    if( metric.isSet(1))
+        dg::blas1::pointwiseDivide( metric.getValue(1), inout, inout);
+}
+
 
 ///@}
-///@addtogroup basicgrids
+}//namespace geo
+
+namespace create{
+///@addtogroup geometry
 ///@{
 
 /**
- * @brief two-dimensional Grid with Cartesian metric
+ * @brief Create the volume element on the grid (including weights!!)
+ *
+ * This is the same as the weights multiplied by the volume form \f$ \sqrt{g}\f$
+ * @tparam Geometry any Geometry class
+ * @param g Geometry object
+ *
+ * @return  The volume form
  */
-struct CartesianGrid2d: public dg::aGeometry2d
+template< class Geometry>
+typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector volume( const Geometry& g)
 {
-    ///@copydoc Grid2d::Grid2d()
-    CartesianGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aGeometry2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
-    /**
-     * @brief Construct from existing topology
-     *
-     * @param grid existing grid class
-     */
-    CartesianGrid2d( const dg::Grid2d& grid):dg::Grid2d(grid){}
-    virtual CartesianGrid2d* clone()const{return new CartesianGrid2d(*this);}
-    private:
-    virtual SharedContainers<thrust::host_vector<double> > do_compute_metric()const{
-        return SharedContainers<thrust::host_vector<double> >( 3);
-    }
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny){
-        aTopology2d::do_set(new_n,new_Nx,new_Ny);
-    }
-};
+    typedef typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
+    SharedContainers<host_vector> metric = g.compute_metric();
+    host_vector temp = dg::create::weights( g);
+    dg::geo::multiplyVolume( temp, metric);
+    return temp;
+}
 
 /**
- * @brief three-dimensional Grid with Cartesian metric
+ * @brief Create the inverse volume element on the grid (including weights!!)
+ *
+ * This is the same as the inv_weights divided by the volume form \f$ \sqrt{g}\f$
+ * @tparam Geometry any Geometry class
+ * @param g Geometry object
+ *
+ * @return  The inverse volume form
  */
-struct CartesianGrid3d: public dg::aGeometry3d
+template< class Geometry>
+typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector inv_volume( const Geometry& g)
 {
-    ///@copydoc Grid3d::Grid3d()
-    CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
-    /**
-     * @brief Implicit type conversion from Grid3d
-     * @param grid existing grid class
-     */
-    CartesianGrid3d( const dg::Grid3d& grid):dg::Grid3d(grid){}
-    virtual CartesianGrid3d* clone()const{return new CartesianGrid3d(*this);}
-    private:
-    virtual SharedContainers<thrust::host_vector<double> > do_compute_metric()const{
-        return SharedContainers<thrust::host_vector<double> >( 3);
-    }
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        aTopology2d::do_set(new_n,new_Nx,new_Ny,new_Nz);
-    }
-};
+    typedef typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
+    host_vector temp = volume(g);
+    dg::blas1::transform(temp,temp,dg::INVERT<double>());
+    return temp;
+}
 
-/**
- * @brief three-dimensional Grid with Cylindrical metric
- */
-struct CylindricalGrid3d: public dg::aGeometry3d
-{
-    CylindricalGrid3d( double R0, double R1, double Z0, double Z1, double phi0, double phi1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcR, bc bcZ, bc bcphi = PER): dg::aGeometry3d(R0,R1,Z0,Z1,phi0,phi1,n,NR,NZ,Nphi,bcR,bcZ,bcphi){}
-    virtual CylindricalGrid3d* clone()const{return new CylindricalGrid3d(*this);}
-    private:
-    virtual SharedContainers<thrust::host_vector<double> > do_compute_metric()const{
-
-        std::vector<thrust::host_vector<double> > values(2, size());
-        thrust::host_vector<double> R = dg::evaluate(dg::coo1, *this);
-        unsigned size2d = n()*n()*Nx()*Ny();
-        for( unsigned i = 0; i<Nz(); i++)
-        for( unsigned j = 0; j<size2d; j++)
-        {
-            unsigned idx = i*size2d+j;
-            values[1][idx] = R[j];
-            values[0][idx] = 1./R[j]/R[j];
-        }
-        Operator<int> mat_idx(3,-1); mat_idx(2,2) = 0;
-        std::vector<int> vec_idx(3,-1); vec_idx[0] = 1;
-        return SharedContainers<thrust::host_vector<double> >( mat_idx, vec_idx, values);
-    }
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        aTopology2d::do_set(new_n,new_Nx,new_Ny,new_Nz);
-    }
-};
 ///@}
-} //namespace dg
+}//namespace create
+}//namespace dg
