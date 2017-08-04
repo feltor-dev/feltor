@@ -62,8 +62,11 @@ struct aMPIGeometry3d : public aMPITopology3d
     virtual SharedContainers<host_vec > do_compute_metric()const=0;
 };
 
+///@}
 namespace create
 {
+///@addtogroup metric
+///@{
 
 SharedContainers<host_vec > metric( const aMPIGeometry2d& g)
 {
@@ -74,10 +77,10 @@ SharedContainers<host_vec > metric( const aMPIGeometry3d& g)
     return g.compute_metric();
 }
 
+///@}
 }//namespace create
 
 
-///@}
 
 ///@addtogroup basicgrids
 ///@{

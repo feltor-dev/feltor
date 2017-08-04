@@ -15,9 +15,8 @@ struct HostVec< SharedTag>
 
 ///@endcond
 /**
- * @brief This function pulls back a function defined in cartesian coordinates to the curvilinear coordinate system
+ * @brief This function pulls back a function defined in some basic coordinates to the curvilinear coordinate system
  *
- * @ingroup geometry
  * e.g. F(x,y) = f(R(x,y), Z(x,y)) in 2d 
  * @tparam Functor The binary or ternary function object 
  * @param f The function defined in cartesian coordinates
@@ -27,6 +26,7 @@ struct HostVec< SharedTag>
  * You will want to rename those uniquely
  *
  * @return A set of points representing F
+ * @ingroup pullback
  */
 template< class Functor>
 thrust::host_vector<double> pullback( Functor f, const aGeometry2d& g)
@@ -41,6 +41,7 @@ thrust::host_vector<double> pullback( Functor f, const aGeometry2d& g)
 }
 
 ///@copydoc pullback(Functor,const aGeometry2d&)
+///@ingroup pullback
 template< class Functor>
 thrust::host_vector<double> pullback( Functor f, const aGeometry3d& g)
 {
@@ -65,6 +66,7 @@ struct HostVec< MPITag>
 ///@endcond
 
 ///@copydoc pullback(Functor,const aGeometry2d&)
+///@ingroup pullback
 template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry2d& g)
 {
@@ -78,6 +80,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry
 }
 
 ///@copydoc pullback(Functor,const aGeometry2d&)
+///@ingroup pullback
 template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry3d& g)
 {
@@ -97,7 +100,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry
  * @brief Push forward a vector from cylindrical or Cartesian to a new coordinate system
  *
  * Computes \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
-               v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
+                v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Geometry The Geometry class
@@ -106,6 +109,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry
  * @param vx x-component of vector (gets properly resized)
  * @param vy y-component of vector (gets properly resized)
  * @param g The geometry object
+ * @ingroup pullback
  */
 template<class Functor1, class Functor2, class container, class Geometry> 
 void pushForwardPerp( Functor1 vR, Functor2 vZ, 
@@ -124,7 +128,7 @@ void pushForwardPerp( Functor1 vR, Functor2 vZ,
  * @brief Push forward a vector from cylindrical or Cartesian to a new coordinate system
  *
  * Computes \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
-               v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
+                v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Geometry The Geometry class
@@ -135,6 +139,7 @@ void pushForwardPerp( Functor1 vR, Functor2 vZ,
  * @param vy y-component of vector (gets properly resized)
  * @param vz z-component of vector (gets properly resized)
  * @param g The geometry object
+ * @ingroup pullback
  */
 template<class Functor1, class Functor2, class Functor3 class container, class Geometry> 
 void pushForward( Functor1 vR, Functor2 vZ, Functor3 vPhi,
@@ -168,6 +173,7 @@ void pushForward( Functor1 vR, Functor2 vZ, Functor3 vPhi,
  * @param chixy xy-component of tensor (gets properly resized)
  * @param chiyy yy-component of tensor (gets properly resized)
  * @param g The geometry object
+ * @ingroup pullback
  */
 template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry> 
 void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,

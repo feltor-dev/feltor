@@ -125,7 +125,7 @@ void dividePerpVolume( container& inout, const SharedContainers<container>& metr
 }//namespace geo
 
 namespace create{
-///@addtogroup geometry
+///@addtogroup metric
 ///@{
 
 /**

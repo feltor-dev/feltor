@@ -691,7 +691,7 @@ struct Grid2d : public aTopology2d
         aTopology2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy) { }
     ///@copydoc aTopology2d::aTopology2d(const Grid1d&,const Grid1d&)
     Grid2d( const Grid1d& gx, const Grid1d& gy): aTopology2d(gx,gy){ }
-    ///@allow explicit type conversion from any other topology
+    ///allow explicit type conversion from any other topology
     explicit Grid2d( const aTopology2d& src): aTopology2d(src){}
     private:
     virtual void do_set( unsigned n, unsigned Nx, unsigned Ny){ 
@@ -699,6 +699,7 @@ struct Grid2d : public aTopology2d
     }
 
 };
+
 /**
  * @brief The simplest implementation of aTopology3d
  */
@@ -709,7 +710,7 @@ struct Grid3d : public aTopology3d
         aTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
     ///@copydoc aTopology3d::aTopology3d(const Grid1d&,const Grid1d&,const Grid1d&)
     Grid3d( const Grid1d& gx, const Grid1d& gy, const Grid1d& gz): aTopology3d(gx,gy,gz){ }
-    ///@allow explicit type conversion from any other topology
+    ///allow explicit type conversion from any other topology
     explicit Grid3d( const aTopology3d& src): aTopology3d(src){ }
     private:
     virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz){ 
@@ -717,6 +718,7 @@ struct Grid3d : public aTopology3d
     }
 };
 ///@}
+//
 ///@cond
 void aTopology2d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
 {

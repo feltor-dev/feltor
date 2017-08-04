@@ -68,9 +68,11 @@ struct aGeometry3d : public aTopology3d
     virtual SharedContainers<thrust::host_vector<double> > do_compute_metric()const=0;
 };
 
+///@}
 namespace create
 {
-
+///@addtogroup metric
+///@{
 SharedContainers<thrust::host_vector<double> > metric( const aGeometry2d& g)
 {
     return g.compute_metric();
@@ -79,10 +81,10 @@ SharedContainers<thrust::host_vector<double> > metric( const aGeometry3d& g)
 {
     return g.compute_metric();
 }
+///@}
 
 }//namespace create
 
-///@}
 ///@addtogroup basicgrids
 ///@{
 

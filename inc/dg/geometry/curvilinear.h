@@ -151,11 +151,6 @@ struct CurvilinearGrid3d : public dg::aGeometry3d
 template< class container>
 struct CurvilinearGrid2d : public dg::aGeometry2d
 {
-    CurvilinearGrid2d( double R0, double R1, double Z0, double Z1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcR = PER, bc bcZ = PER): 
-        dg::Grid2d(0,R1-R0,0,Z1-Z0,n,NR,NZ,bcR,bcZ), handle_(new ShiftedIdentityGenerator(R0,R1,Z0,Z1))
-        {
-            construct( n, NR, NZ);
-        }
     /*!@brief Constructor
     
      * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
@@ -197,13 +192,10 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     const container& g_xy()const{return g_xy_;}
     const container& vol()const{return vol2d_;}
     const geo::aGenerator& generator() const{return handle_.get();}
-    bool isOrthonormal() const { return generator_->isOrthonormal();}
-    bool isOrthogonal() const { return generator_->isOrthogonal();}
-    bool isConformal() const { return generator_->isConformal();}
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
-        dg::Grid2d::do_set( new_n, new_Nx, new_Ny);
+        dg::aTopology2d::do_set( new_n, new_Nx, new_Ny);
         construct( new_n, new_Nx, new_Ny);
     }
     void construct( unsigned n, unsigned Nx, unsigned Ny)
@@ -215,7 +207,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    dg::Handle<geo::aGenerator> handle_;
+    dg::Handle<geo::aGenerator2d> handle_;
 };
 
 ///@}

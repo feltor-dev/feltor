@@ -44,7 +44,7 @@
  *     Objects that store topological information (which point is neighbour of which other point) 
  *     about the grid. 
  *     @{
- *         @defgroup evaluation Function discretization
+ *         @defgroup evaluation evaluate functions
  *             
  *             The function discretisation routines compute the DG discretisation
  *             of analytic functions on a given grid. In 1D the discretisation
@@ -54,10 +54,10 @@
  *             use the product space. We choose x to be the contiguous direction.
  *             The first elements of the resulting vector lie in the cell at (x0,y0) and the last
  *             in (x1, y1).
- *         @defgroup lowlevel Lowlevel helper functions and classes
- *             Low level helper routines.
- *         @defgroup highlevel Weight functions
- *         @defgroup creation Discrete derivatives 
+ *         @defgroup highlevel create weights 
+ *              overloads for the create::weights and create::inv_weights functions for all
+ *              available topologies
+ *         @defgroup creation create derivatives 
  *
  *             High level matrix creation functions
            @defgroup interpolation Interpolation and projection
@@ -68,7 +68,9 @@
           These routines form the heart of our geometry free numerical algorithms. 
           They are called by our geometric operators like the Poisson bracket. 
       @{
-          @defgroup basicgrids Basic grids
+          @defgroup pullback pullback and pushforward
+          @defgroup metric create metric
+          @defgroup basicgrids basic grids
  *        @defgroup utilities Fieldalignment and Averaging
  *            The classes to perform field line integration for DS and averaging classes
       @}
@@ -91,6 +93,8 @@
  *         The functors are useful for either vector transformations or
  *         as init functions in the evaluate routines.
        @defgroup timer Timer class
+ *     @defgroup lowlevel Lowlevel helper functions and classes
+ *         Low level helper routines.
    @}
  * 
  */
