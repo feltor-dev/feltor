@@ -284,9 +284,6 @@ struct aTopology2d
      */
     const DLT<double>& dlt() const{return gx_.dlt();}
 
-    Grid1d gx()const{return gx_; }
-    Grid1d gy()const{return gy_; }
-
     /**
     * @brief Multiply the number of cells with a given factor
     *
@@ -385,7 +382,7 @@ struct aTopology2d
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      */
-    aTopology2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+    aTopology2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
         gx_(x0,x1,n,Nx,bcx), gy_(y0,y1,n,Ny,bcy) { }
     /**
      * @brief Construct a 2d grid as the product of two 1d grids
@@ -564,24 +561,6 @@ struct aTopology3d
      */
     const DLT<double>& dlt() const{return gx_.dlt();}
     /**
-     * @brief Return a 1d grid in x
-     *
-     * @return 
-     */
-    Grid1d gx()const{return gx_; }
-    /**
-     * @brief Return a 1d grid in y
-     *
-     * @return 
-     */
-    Grid1d gy()const{return gy_; }
-    /**
-     * @brief Return a 1d grid in z
-     *
-     * @return 
-     */
-    Grid1d gz()const{return gz_; }
-    /**
      * @brief The total number of points
      *
      * @return n*n*Nx*Ny*Nz
@@ -675,7 +654,7 @@ struct aTopology3d
      * @param bcz boundary condition in z
      * @attention # of polynomial coefficients in z direction is always 1
      */
-    aTopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): 
+    aTopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): 
         gx_(x0,x1,n,Nx,bcx),
         gy_(y0,y1,n,Ny,bcy),
         gz_(z0,z1,1,Nz,bcz){}

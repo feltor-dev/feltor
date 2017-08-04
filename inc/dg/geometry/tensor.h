@@ -25,6 +25,7 @@ template<class container>
 struct SharedContainers
 {
     SharedContainers( ) {}
+    SharedContainers( unsigned size):mat_idx_(size,-1), vec_idx_(size,-1){}
 
     /**
     * @brief 

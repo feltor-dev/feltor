@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dg/backend/grid.h"
+#include "dg/backend/manage.h"
 #include "dg/blas1.h"
 #include "geometry.h"
 #include "geometry_traits.h"
@@ -25,12 +25,11 @@ struct CurvilinearGrid2d;
  @tparam container models aContainer
  */
 template< class container>
-struct CylindricalGrid3d : public dg::aGeometry3d
+struct CurvilinearGrid3d : public dg::aGeometry3d
 {
-    typedef dg::CurvilinearPerpTag metric_category;
     typedef CurvilinearGrid2d<container> perpendicular_grid;
 
-    CylindricalGrid3d( double R0, double R1, double Z0, double Z1, double phi0, double phi1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcr = PER, bc bcz = PER, bc bcphi = PER): 
+    CurvilinearGrid3d( double R0, double R1, double Z0, double Z1, double phi0, double phi1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcr = PER, bc bcz = PER, bc bcphi = PER): 
         dg::Grid3d(0,R1-R0,0,Z1-Z0,phi0,phi1,n,NR,NZ,Nphi,bcR,bcZ,bcphi)
         {
             handle_.set( new ShiftedIdentityGenerator(R0,R1,Z0,Z1));
@@ -48,7 +47,7 @@ struct CylindricalGrid3d : public dg::aGeometry3d
      @param bcx boundary condition in x
      @note the boundary conditions for y and z are set periodic
      */
-    CylindricalGrid3d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+    CurvilinearGrid3d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
         dg::Grid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         handle_ = generator;
@@ -152,8 +151,6 @@ struct CylindricalGrid3d : public dg::aGeometry3d
 template< class container>
 struct CurvilinearGrid2d : public dg::aGeometry2d
 {
-    typedef dg::CurvilinearPerpTag metric_category;
-
     CurvilinearGrid2d( double R0, double R1, double Z0, double Z1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcR = PER, bc bcZ = PER): 
         dg::Grid2d(0,R1-R0,0,Z1-Z0,n,NR,NZ,bcR,bcZ), handle_(new ShiftedIdentityGenerator(R0,R1,Z0,Z1))
         {
@@ -172,7 +169,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     {
         construct( n,Nx,Ny);
     }
-    CurvilinearGrid2d( const CylindricalGrid3d<container>& g):
+    CurvilinearGrid2d( const CurvilinearGrid3d<container>& g):
         dg::Grid2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy()), handle_(g.generator())
     {
         r_ = g.r();
@@ -211,14 +208,14 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     }
     void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
-        CylindricalGrid3d<container> g( handle_, n,Nx,Ny,1,bcx());
+        CurvilinearGrid3d<container> g( handle_, n,Nx,Ny,1,bcx());
         r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
     thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, vol2d_;
-    dg::Hanle<geo::aGenerator> handle_;
+    dg::Handle<geo::aGenerator> handle_;
 };
 
 ///@}
