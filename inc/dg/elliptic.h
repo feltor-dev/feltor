@@ -18,7 +18,7 @@ namespace dg
 {
 
 /**
- * @brief Operator that acts as a 2d negative elliptic differential operator
+ * @brief %Operator that acts as a 2d negative elliptic differential operator
  *
  * @ingroup matrixoperators
  *
@@ -215,7 +215,7 @@ class Elliptic
 
 
 /**
- * @brief Operator that acts as a 3d negative elliptic differential operator
+ * @brief %Operator that acts as a 3d negative elliptic differential operator
  *
  * @ingroup matrixoperators
  *
@@ -225,7 +225,7 @@ class Elliptic
  * \f[ 
  * \begin{align}
  * v = b^x \partial_x f + b^y\partial_y f + b^z \partial_z f \\
- * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} b^x v ) + \partial_y(\sqrt{g}b_y v) + \partial_z(\sqrt{g} b_z v)\right)
+ * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} b^x v ) + \partial_y(\sqrt{g}b^y v) + \partial_z(\sqrt{g} b^z v)\right)
  *  \end{align}
  *  \f] 
  * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
@@ -418,7 +418,7 @@ struct GeneralElliptic
 };
 
 /**
- * @brief Operator that acts as a 3d negative elliptic differential operator. Is the symmetric of the GeneralElliptic with 
+ * @brief %Operator that acts as a 3d negative elliptic differential operator. Is the symmetric of the GeneralElliptic with 
  * 0.5(D_+ + D_-) or vice versa
  *
  * @ingroup matrixoperators
@@ -429,7 +429,7 @@ struct GeneralElliptic
  * \f[ 
  * \begin{align}
  * v = b^x \partial_x f + b^y\partial_y f + b^z \partial_z f \\
- * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} b^x v ) + \partial_y(\sqrt{g}b_y v) + \partial_z(\sqrt{g} b_z v)\right)
+ * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} b^x v ) + \partial_y(\sqrt{g}b^y v) + \partial_z(\sqrt{g} b^z v)\right)
  *  \end{align}
  *  \f] 
  * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
@@ -563,7 +563,7 @@ struct GeneralEllipticSym
 };
 
 /**
- * @brief Operator that acts as a 2d negative elliptic differential operator
+ * @brief %Operator that acts as a 2d negative elliptic differential operator
  *
  * @ingroup matrixoperators
  *
