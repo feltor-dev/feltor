@@ -119,7 +119,7 @@ void pushForwardPerp( Functor1 vR, Functor2 vZ,
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
     host_vec out1 = pullback( vR, g), temp1(out1);
     host_vec out2 = pullback( vZ, g), temp2(out2);
-    dg::detail::multiply(g.map(), out1, out2, temp1, temp2);
+    dg::tensor::multiply(g.map(), out1, out2, temp1, temp2);
     dg::blas1::transfer( out1, vx);
     dg::blas1::transfer( out2, vy);
 }
@@ -150,7 +150,7 @@ void pushForward( Functor1 vR, Functor2 vZ, Functor3 vPhi,
     host_vec out1 = pullback( vR, g), temp1(out1);
     host_vec out2 = pullback( vZ, g), temp2(out2);
     host_vec out3 = pullback( vPhi, g), temp3(out3);
-    dg::detail::multiply(g.map(), out1, out2, out3, temp1, temp2, temp3);
+    dg::tensor::multiply(g.map(), out1, out2, out3, temp1, temp2, temp3);
     dg::blas1::transfer( out1, vx);
     dg::blas1::transfer( out2, vy);
     dg::blas1::transfer( out3, vz);
@@ -181,13 +181,32 @@ void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
         const Geometry& g)
 {
     typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
-    host_vec chiRR_ = pullback( chiRR, g), chixx_(chiRR_);
-    host_vec chiRZ_ = pullback( chiRZ, g), chixy_(chiRZ_);
-    host_vec chiZZ_ = pullback( chiZZ, g), chiyy_(chiZZ_);
-    dg::detail::sandwich( g.map(), chiRR_,chiRZ_,chiZZ_, chixx_,chixy_,chiyy_);
-    dg::blas1::transfer( chixx_, chixx);
-    dg::blas1::transfer( chixy_, chixy);
-    dg::blas1::transfer( chiyy_, chiyy);
+    host_vec chiRR_ = pullback( chiRR, g);
+    host_vec chiRZ_ = pullback( chiRZ, g);
+    host_vec chiZZ_ = pullback( chiZZ, g);
+    //transfer to device
+    if(g.map().isEmpty())
+    {
+        chiRR_.swap(chixx);
+        chiRZ_.swap(chixy);
+        chiZZ_.swap(chiyy);
+        return;
+    }
+    const dg::SparseTensor<container> jac = g.map();
+    std::vector<container> values( 3); 
+    values[0] = chiRR_, values[1] = chiRZ_, values[2] = chiZZ_;
+    SparseTensor<container> chi(values);
+    chi(0,0)=0, chi(0,1)=chi(1,0)=1, chi(1,1)=2;
+
+    SparseTensor<container> d = jac.dense(); //now we have a dense tensor
+    container tmp00(d.getValue(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
+    // multiply Chi*t -> tmp
+    dg::tensor::const_multiply( chi, d.getValue(0,0), d.getValue(1,0), tmp00, tmp10);
+    dg::tensor::const_multiply( chi, d.getValue(0,1), d.getValue(1,1), tmp01, tmp11);
+    // multiply tT * tmp -> Chi
+    SparseTensor<container> transpose = jac.transpose();
+    dg::tensor::multiply( transpose, tmp00, tmp01, chixx, chixy);
+    dg::tensor::multiply( transpose, tmp10, tmp11, chixy, chiyy);
 }
 
 } //namespace dg
