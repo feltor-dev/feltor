@@ -135,7 +135,7 @@ struct SparseTensor
     //always returns a container, if i does not exist yet we resize
     container& value( size_t i)
     {
-        if(i>=values_size());
+        if(i>=values_.size());
         values_.resize(i+1);
         return values_[i];
     }
@@ -207,16 +207,16 @@ struct CholeskyTensor
             diag.idx(0,0)=0;
             diag.value(0)=in.value(0,0);
         }
-        if(in.isSet(1,0)
+        if(in.isSet(1,0))
         {
-            container tmp=in(1,0):
+            container tmp=in(1,0);
             if(diag.isSet(0,0)) dg::blas1::pointwiseDivide(tmp,diag.value(0,0),tmp);
             q_.idx(1,0)=0;
             q_.value(0)=tmp;
         }
         if(in.isSet(2,0))
         {
-            container tmp=in(2,0):
+            container tmp=in(2,0);
             if(diag.isSet(0,0))dg::blas1::pointwiseDivide(tmp,diag.value(0,0),tmp);
             q_.idx(1,0)=1;
             q_.value(1)=tmp;
@@ -240,7 +240,7 @@ struct CholeskyTensor
             dg::blas1::pointwiseDot(denseL.value(2,0), denseL.value(1,0), tmp);
             if(diag.isSet(0,0))dg::blas1::pointwiseDot(tmp, diag.value(0,0), tmp);
             dg::blas1::axpby(1., denseIn(2,1),-1.,tmp, tmp);
-            if(diag.isSet(1,1))dg:.blas1::pointwiseDivide(tmp, diag.value(1,1),tmp);
+            if(diag.isSet(1,1))dg::blas1::pointwiseDivide(tmp, diag.value(1,1),tmp);
             q_.idx(2,1)=2;
             q_.value(2)=tmp;
         }
@@ -282,7 +282,7 @@ struct CholeskyTensor
     const SparseTensor<container>& diagonal()const{return diag;}
 
     private:
-    SparseTensor q_, diag;
+    SparseTensor<container> q_, diag;
     bool lower_;
 };
 
@@ -404,9 +404,9 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
     if(!t.isSet(0,1))//lower triangular
     {
         if(t.isSet(1,1))  dg::blas1::pointwiseDot( t.value(1,1), in1, out1);
-        else out1=in1
+        else out1=in1;
         if(t.isSet(1,0)) dg::blas1::pointwiseDot( 1., t.value(1,0), in0, 1., out1);
-        if( t.isSet(0,0)) dg::blas::pointwiseDot( t.value(0,0), in0, out0);
+        if( t.isSet(0,0)) dg::blas1::pointwiseDot( t.value(0,0), in0, out0);
         else out0=in0;
         return;
     }
@@ -524,7 +524,7 @@ void scal(const CholeskyTensor<container>& ch, const SparseElement<container>& e
         diag.value(size) = e.value();
     for( unsigned i=0; i<2; i++)
     {
-        if(!diag.isSet(i,i)
+        if(!diag.isSet(i,i))
             diag.idx(i,i)=size;
         else
             dg::blas1::pointwiseDot( e.value(), diag.value(i,i), diag.value(i,i));
