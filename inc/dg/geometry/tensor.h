@@ -2,6 +2,7 @@
 
 #include <cusp/coo_matrix.h>
 #include "dg/backend/operator.h"
+#include "dg/functors.h"
 #include "dg/blas1.h"
 
 namespace dg
@@ -19,7 +20,7 @@ namespace dg
 7  perp_metric = metric.perp(); //for use in arakawa when computing perp_vol
 8  dense_metric = metric.dens(); //add 0 and 1 to values and rewrite indices
 9  metric.isPerp(), metric.isDense(), metric.isEmpty()
-11 dg::tensor::product( tensor, jac, temp) //make jac dense and then use multiply 3 times (needs write access in getValue(i,j)
+11 dg::tensor::product( tensor, jac, temp) //make jac dense and then use multiply 3 times (needs write access in value(i,j)
 12 dg::tensor::product( jac.transpose(), temp, result)  //then use three elements if symmetric
 13 Geometry has  std::vector<sparseElements>  v[0], v[1], v[2] and Jacobian 
 14 when computing metric believe generator and compute on host for-loop
@@ -43,7 +44,8 @@ if negative the value of the container is assumed to be 1, except for the off-di
 template<class container>
 struct SparseTensor
 {
-    SparseTensor( ):mat_idx(3-1) {}
+    SparseTensor( ):mat_idx_(3,-1.) {}
+    SparseTensor( unsigned value_size): mat_idx_(3,-1.), values_(value_size){}
 
     /**
     * @brief 
@@ -51,10 +53,10 @@ struct SparseTensor
     * @param mat_idx
     * @param values The contained containers must all have the same size
     */
-    SparseTensor( const std::vector<container>& values ): mat_idx_(3,-1), values_(values){}
+    SparseTensor( const std::vector<container>& values ): mat_idx_(3,-1.), values_(values){}
 
     template<class otherContainer>
-    SparseTensor( const SparseTensor<otherContainer>& src): mat_idx_(src.mat_idx()), values_(src.values().size()), idx_(src.idx_){
+    SparseTensor( const SparseTensor<otherContainer>& src): mat_idx_(src.mat_idx()), values_(src.values().size()){
         dg::blas1::transfer( src.values(), values_);
     }
     ///sets values leaves indices unchanged (size must be  the same or larger as current 
@@ -73,8 +75,8 @@ struct SparseTensor
         return true;
     }
 
-    int operator()(unsigned i, unsigned j)const{return mat_idx_(i,j);}
-    int& operator()(unsigned i, unsigned j){return mat_idx_(i,j);}
+    int idx(unsigned i, unsigned j)const{return mat_idx_(i,j);}
+    int& idx(unsigned i, unsigned j){return mat_idx_(i,j);}
 
     /**
     * @brief Test the matrix for emptiness
@@ -115,11 +117,9 @@ struct SparseTensor
      SparseTensor dense()const;
      ///copy and erase all values in the third dimension
      SparseTensor perp()const;
-     ///unset an index and clears values
-     void erase( unsigned i, unsigned j) {
-         if(!isSet(i,j)) return;
+     ///unset an index don't clear values
+     void unset( unsigned i, unsigned j) {
          mat_idx_(i,j)=-1;
-         clear_unused_values();
      }
      ///clear any unused valuse and reset the corresponding indices
      void clear_unused_values();
@@ -128,29 +128,31 @@ struct SparseTensor
      * @return if !isSet(i,j) the result is undefined, otherwise values[mat_idx(i,j)] is returned. 
      * @note If the indices fall out of range of mat_idx the result is undefined
      */
-    const container& getValue(size_t i, size_t j)const{ 
+    const container& value(size_t i, size_t j)const{ 
         int k = mat_idx_(i,j);
         return values_[k];
     }
-    container& getValue( size_t i, size_t j)
+    container& value( size_t i)
     {
-        int k = mat_idx_(i,j);
-        return values_[k];
+        return values_[i];
     }
     ///clear all values
     void clear(){
         mat_idx_=dg::Operator<int>(3,-1);
-        values_.clear()
+        values_.clear();
     }
+
     SparseTensor transpose()const{
         SparseTensor tmp(*this);
         tmp.mat_idx_ = mat_idx_.transpose();
+        return tmp;
     }
+    const std::vector<container>& values()const{return values_;}
 
     private:
     dg::Operator<int> mat_idx_;
     std::vector<container> values_;
-    void unique_insert(std::vector<int>& indices, int& idx)
+    void unique_insert(std::vector<int>& indices, int& idx);
 };
 ///@cond
 template<class container>
@@ -183,7 +185,7 @@ SparseTensor<container> SparseTensor<container>::dense() const
 }
 
 template<class container>
-SparseTensor<container> SparseTensor<container>::unique_insert(std::vector<int>& indices, int& idx) 
+void SparseTensor<container>::unique_insert(std::vector<int>& indices, int& idx) 
 {
     bool unique=true;
     unsigned size=indices.size();
@@ -235,14 +237,15 @@ template<class container>
 struct SparseElement
 {
     SparseElement(){}
+    SparseElement(const container& value):value_(1,value){ }
     void set( const container& value){ 
         value_.clear();
         value_.push_back(value);
     }
-    const container& getValue( )const { 
+    const container& value( )const { 
         return value_[0];
     }
-    container& getValue() {
+    container& value() {
         return value_[0];
     }
     bool isSet()const{
@@ -250,6 +253,17 @@ struct SparseElement
         return true;
     }
     void clear(){value_.clear();}
+    SparseElement sqrt(){ 
+        SparseElement tmp(*this);
+        if( isSet()) dg::blas1::transform( tmp.value_, tmp.value_, dg::SQRT<double>());
+        return tmp;
+    }
+    SparseElement invert(){ 
+        SparseElement tmp(*this);
+        if( isSet()) dg::blas1::transform( tmp.value_, tmp.value_, dg::INVERT<double>());
+        return tmp;
+    }
+
 
     private:
     std::vector<container> value_;
@@ -265,14 +279,14 @@ void scal( SparseTensor<container>& t, const SparseElement<container>& e)
     if(!e.isSet()) return;
     for( unsigned i=0; i<2; i++)
         for( unsigned j=0; j<2; i++)
-            if(t.isSet(i,j)) dg::blas1::pointwiseDot( e.getValue(), t.getValue(i,j), t.getValue(i,j));
+            if(t.isSet(i,j)) dg::blas1::pointwiseDot( e.value(), t.value(i,j), t.value(i,j));
 }
 
 template<class container>
 void multiply( const SparseElement<container>& e, const container& in, container& out)
 {
     if(e.isSet()) 
-        dg::blas1::pointwiseDot(e.getValue(), in,out);
+        dg::blas1::pointwiseDot(e.value(), in,out);
     else
         out=in;
 }
@@ -281,48 +295,65 @@ template<class container>
 void divide( const container& in, const SparseElement<container>& e, container& out)
 {
     if(e.isSet()) 
-        dg::blas1::pointwiseDivide(in, e.getValue(),out);
+        dg::blas1::pointwiseDivide(in, e.value(),out);
     else
         out=in;
 }
 
 ///no aliasing allowed
 template<class container>
-void multiply( const SparseTensor<container>& t, container& in1, container& in2, container& out1, container& out2)
+void multiply( const SparseTensor<container>& t, container& inout0, container& inout1, container& workspace)
 {
-    if( !t.isSet(0,0)&& !t.isSet(0,1) && !t.isSet(1,0) &&!t.isSet(1,1)) 
+    if( !t.isSet(1,0) && !t.isSet(0,1))
     {
-        in1.swap(out1);
-        in2.swap(out2);
+        if(t.isSet(0,0)dg::blas1::pointwiseDot( t.value(0,0), inout0,inout0);
+        if(t.isSet(1,1)dg::blas1::pointwiseDot( t.value(1,1), inout1,inout1);
+        //else inout0/1 contain result already
         return;
     }
-    const_multiply(t,in1,in2,out1,out2);
+    if(!t.isSet(1,0)) //decoupled
+    {
+        if(t.isSet(0,0))  dg::blas1::pointwiseDot( t.value(0,0), inout0, inout0);
+        //else inout0=inout0
+        if(t.isSet(0,1)) dg::blas1::pointwiseDot( 1., t.value(0,1), inout1, 1., inout0);
+        if( t.isSet(1,1) dg::blas::pointwiseDot( t.value(1,1), inout1, inout1);
+        return;
+    }
+
+    if(!t.isSet(0,1))
+    {
+        if(t.isSet(1,1))  dg::blas1::pointwiseDot( t.value(1,1), inout1, inout1);
+        //else inout1=inout1
+        if(t.isSet(1,0)) dg::blas1::pointwiseDot( 1., t.value(1,0), inout0, 1., inout1);
+        if( t.isSet(0,0) dg::blas::pointwiseDot( t.value(0,0), inout0, inout0);
+        return;
+    }
+    //else all elements are set
+    dg::blas1::pointwiseDot( t.value(0,1),inout1, workspace);
+    dg::blas1::pointwiseDot( t.value(1,1),inout1, inout1);
+    dg::blas1::pointwiseDot( 1., t.value(1,0),inout0, 1., inout1);
+    dg::blas1::pointwiseDot( 1., t.value(0,0),inout0, 1., workspace);
+    inout0.swap(workspace);
 }
 ///this version keeps the input intact in1 may alias in2
 template<class container>
-void const_multiply( const SparseTensor<container>& t, const container& in1, const container& in2, container& out1, container& out2)
+void multiply( const SparseTensor<container>& t, const container& in1, const container& in2, container& out1, container& out2)
 {
-    if( !t.isSet(0,0)&& !t.isSet(0,1) && !t.isSet(1,0) &&!t.isSet(1,1)) 
-    {
-        out1 = in1;
-        out2 = in2;
-        return;
-    }
     if( !t.isSet(0,0)) out1=in1;
     if(t.isSet( 0,0))
-        dg::blas1::pointwiseDot( t.getValue(0,0), in1, out1); 
+        dg::blas1::pointwiseDot( t.value(0,0), in1, out1); 
     if(t.isSet( 0,1))
-        dg::blas1::pointwiseDot( 1., t.getValue(0,1), in2, 1., out1);
+        dg::blas1::pointwiseDot( 1., t.value(0,1), in2, 1., out1);
 
     if( !t.isSet(1,1)) out2=in2;
     if(t.isSet(1,1))
-        dg::blas1::pointwiseDot( t.getValue(1,1), in2, out2);
+        dg::blas1::pointwiseDot( t.value(1,1), in2, out2);
     if(t.isSet(1,0))
-        dg::blas1::pointwiseDot( 1., t.getValue(1,0), in1, 1., out2);
+        dg::blas1::pointwiseDot( 1., t.value(1,0), in1, 1., out2);
 }
 
 template<class container>
-void multiply( const SparseTensor<container>& t, container& in1, container& in2, container& in3, container& out1, container& out2, container& out3)
+void multiply( const SparseTensor<container>& t, container& inout1, container& inout2, container& inout3, container& out1, container& out2, container& out3)
 {
     if( t.isEmpty())
     {
@@ -334,38 +365,31 @@ void multiply( const SparseTensor<container>& t, container& in1, container& in2,
     const_multiply(t,in1,in2,in3,out1,out2,out3);
 }
 template<class container>
-void const_multiply( const SparseTensor<container>& t, const container& in1, const container& in2, const container& in3, container& out1, container& out2, container& out3)
+void multiply( const SparseTensor<container>& t, const container& in1, const container& in2, const container& in3, container& out1, container& out2, container& out3, container& workspace1)
 {
-    if( t.isEmpty())
-    {
-        out1 = in1;
-        out2 = in2;
-        out3 = in3;
-        return;
-    }
-    if( !tensor.isSet(0,0)) out1=in1;
-    if(tensor.isSet( 0,0))
-        dg::blas1::pointwiseDot( tensor.getValue(0,0), in1, out1); 
-    if(tensor.isSet( 0,1))
-        dg::blas1::pointwiseDot( 1., tensor.getValue(0,1), in2, 1., out1);
-    if(tensor.isSet( 0,2))
-        dg::blas1::pointwiseDot( 1., tensor.getValue(0,2), in3, 1., out1);
+    if( !t.isSet(0,0)) out1=in1;
+    if(t.isSet( 0,0))
+        dg::blas1::pointwiseDot( t.value(0,0), in1, out1); 
+    if(t.isSet( 0,1))
+        dg::blas1::pointwiseDot( 1., t.value(0,1), in2, 1., out1);
+    if(t.isSet( 0,2))
+        dg::blas1::pointwiseDot( 1., t.value(0,2), in3, 1., out1);
 
-    if( !tensor.isSet(1,1)) out2=in2;
-    if(tensor.isSet(1,1))
-        dg::blas1::pointwiseDot( tensor.getValue(1,1), in2, out2);
-    if(tensor.isSet(1,0))
-        dg::blas1::pointwiseDot( 1., tensor.getValue(1,0), in1, 1., out2);
-    if(tensor.isSet(1,2))
-        dg::blas1::pointwiseDot( 1., tensor.getValue(1,2), in1, 1., out2);
+    if( !t.isSet(1,1)) out2=in2;
+    if(t.isSet(1,1))
+        dg::blas1::pointwiseDot( t.value(1,1), in2, out2);
+    if(t.isSet(1,0))
+        dg::blas1::pointwiseDot( 1., t.value(1,0), in1, 1., out2);
+    if(t.isSet(1,2))
+        dg::blas1::pointwiseDot( 1., t.value(1,2), in1, 1., out2);
 
-    if(!tensor.isSet(2,2)) out3=in3;
-    if(tensor.isSet(2,2))
-        dg::blas1::pointwiseDot( tensor.getValue(2,2), in3, out3);
-    if(tensor.isSet(2,1))
-        dg::blas1::pointwiseDot( 1., tensor.getValue(2,1), in2, 1., out3);
-    if(tensor.isSet(2,0))
-        dg::blas1::pointwiseDot( 1., tensor.getValue(2,0), in1, 1., out3);
+    if(!t.isSet(2,2)) out3=in3;
+    if(t.isSet(2,2))
+        dg::blas1::pointwiseDot( t.value(2,2), in3, out3);
+    if(t.isSet(2,1))
+        dg::blas1::pointwiseDot( 1., t.value(2,1), in2, 1., out3);
+    if(t.isSet(2,0))
+        dg::blas1::pointwiseDot( 1., t.value(2,0), in1, 1., out3);
 }
 
 template<class container>
@@ -373,7 +397,7 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
 {
     if(t.isEmpty())  return SparseElement<container>();
     SparseTensor<container> d = t.dense();
-    container det = d.getValue(0,0);
+    container det = d.value(0,0);
     std::vector<container> sub_det(3,det);
     dg::blas1::transform( det, det, dg::CONSTANT(0));
     //first compute the det of three submatrices

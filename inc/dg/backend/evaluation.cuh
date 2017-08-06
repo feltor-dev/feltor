@@ -60,8 +60,8 @@ template< class BinaryOp>
 thrust::host_vector<double> evaluate( BinaryOp f, const aTopology2d& g)
 {
     unsigned n= g.n();
-    Grid1d gx = g.gx();
-    Grid1d gy = g.gy();
+    Grid1d gx(g.x0(), g.x1(), g.n(), g.Nx());
+    Grid1d gy(g.y0(), g.y1(), g.n(), g.Ny());
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
 
@@ -98,9 +98,9 @@ template< class TernaryOp>
 thrust::host_vector<double> evaluate( TernaryOp f, const aTopology3d& g)
 {
     unsigned n= g.n();
-    Grid1d gx = g.gx();
-    Grid1d gy = g.gy();
-    Grid1d gz = g.gz();
+    Grid1d gx(g.x0(), g.x1(), g.n(), g.Nx());
+    Grid1d gy(g.y0(), g.y1(), g.n(), g.Ny());
+    Grid1d gz(g.z0(), g.z1(), 1, g.Nz());
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
     thrust::host_vector<double> absz = create::abscissas( gz);
