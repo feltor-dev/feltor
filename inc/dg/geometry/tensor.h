@@ -1,6 +1,5 @@
 #pragma once 
 
-#include <cusp/coo_matrix.h>
 #include "dg/backend/operator.h"
 #include "dg/functors.h"
 #include "dg/blas1.h"
@@ -202,6 +201,11 @@ struct CholeskyTensor
     void decompose( const SparseTensor<container>& in)
     {
         SparseTensor<container> denseIn=in.dense();
+        /*
+         * One nice property of positive definite is that the diagonal elements are 
+         * greater than zero.
+         */
+
         if(in.isSet(0,0))
         {
             diag.idx(0,0)=0;
@@ -283,6 +287,7 @@ struct CholeskyTensor
 
     private:
     SparseTensor<container> q_, diag;
+    int pivot_;
     bool lower_;
 };
 
@@ -363,175 +368,5 @@ void SparseTensor<container>::clear_unused_values()
 }
 ///@endcond
 
-
-
-///@cond
-namespace tensor
-{
-
-template<class container>
-void scal( SparseTensor<container>& t, const SparseElement<container>& e)
-{
-    if(!e.isSet()) return;
-    for( unsigned i=0; i<2; i++)
-        for( unsigned j=0; j<2; i++)
-            if(t.isSet(i,j)) dg::blas1::pointwiseDot( e.value(), t.value(i,j), t.value(i,j));
-}
-
-template<class container>
-void multiply( const SparseElement<container>& e, const container& in, container& out)
-{
-    if(e.isSet()) 
-        dg::blas1::pointwiseDot(e.value(), in,out);
-    else
-        out=in;
-}
-
-template<class container>
-void divide( const container& in, const SparseElement<container>& e, container& out)
-{
-    if(e.isSet()) 
-        dg::blas1::pointwiseDivide(in, e.value(),out);
-    else
-        out=in;
-}
-
-///this version keeps the input intact 
-///aliasing allowed if tensor is either lower, upper or diagonal alias allowed
-template<class container>
-void multiply( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, container& out1)
-{
-    if(!t.isSet(0,1))//lower triangular
-    {
-        if(t.isSet(1,1))  dg::blas1::pointwiseDot( t.value(1,1), in1, out1);
-        else out1=in1;
-        if(t.isSet(1,0)) dg::blas1::pointwiseDot( 1., t.value(1,0), in0, 1., out1);
-        if( t.isSet(0,0)) dg::blas1::pointwiseDot( t.value(0,0), in0, out0);
-        else out0=in0;
-        return;
-    }
-    //upper triangular
-    if( t.isSet(0,0) ) 
-        dg::blas1::pointwiseDot( t.value(0,0), in0, out0); 
-    else out0=in0;
-    if(t.isSet(0,1))
-        dg::blas1::pointwiseDot( 1.,  t.value(0,1), in1, 1., out0);
-
-    if( t.isSet(1,1) )
-        dg::blas1::pointwiseDot( t.value(1,1), in1, out1);
-    else out1=in1;
-    if(t.isSet(1,0))
-        dg::blas1::pointwiseDot( 1.,  t.value(1,0), in0, 1., out1);
-}
-
-///aliasing allowed if t is known to be lower or upper triangular
-template<class container>
-void multiply( const SparseTensor<container>& t, const container& in1, const container& in2, const container& in3, container& out1, container& out2, container& out3, container& workspace1)
-{
-    if( !t.isSet(0,1)&&!t.isSet(0,2)&&!t.isSet(1,2))
-    {
-        //lower triangular
-        if(!t.isSet(2,2)) out3=in3;
-        else dg::blas1::pointwiseDot( t.value(2,2), in3, out3);
-        if(t.isSet(2,1))
-            dg::blas1::pointwiseDot( 1., t.value(2,1), in2, 1., out3);
-        if(t.isSet(2,0))
-            dg::blas1::pointwiseDot( 1., t.value(2,0), in1, 1., out3);
-        if( !t.isSet(1,1)) out2=in2;
-        else dg::blas1::pointwiseDot( t.value(1,1), in2, out2);
-        if(t.isSet(1,0))
-            dg::blas1::pointwiseDot( 1., t.value(1,0), in1, 1., out2);
-        if( !t.isSet(0,0)) out1=in1;
-        else dg::blas1::pointwiseDot( t.value(0,0), in1, out1); 
-    }
-    //upper triangular
-    if( !t.isSet(0,0)) out1=in1;
-    else dg::blas1::pointwiseDot( t.value(0,0), in1, out1); 
-    if(t.isSet( 0,1))
-        dg::blas1::pointwiseDot( 1., t.value(0,1), in2, 1., out1);
-    if(t.isSet( 0,2))
-        dg::blas1::pointwiseDot( 1., t.value(0,2), in3, 1., out1);
-
-    if( !t.isSet(1,1)) out2=in2;
-    else dg::blas1::pointwiseDot( t.value(1,1), in2, out2);
-    if(t.isSet(1,0))
-        dg::blas1::pointwiseDot( 1., t.value(1,0), in1, 1., out2);
-    if(t.isSet(1,2))
-        dg::blas1::pointwiseDot( 1., t.value(1,2), in1, 1., out2);
-
-    if(!t.isSet(2,2)) out3=in3;
-    else dg::blas1::pointwiseDot( t.value(2,2), in3, out3);
-    if(t.isSet(2,1))
-        dg::blas1::pointwiseDot( 1., t.value(2,1), in2, 1., out3);
-    if(t.isSet(2,0))
-        dg::blas1::pointwiseDot( 1., t.value(2,0), in1, 1., out3);
-}
-
-template<class container>
-SparseElement<container> determinant( const SparseTensor<container>& t)
-{
-    if(t.isEmpty())  return SparseElement<container>();
-    SparseTensor<container> d = t.dense();
-    container det = d.value(0,0);
-    std::vector<container> sub_det(3,det);
-    dg::blas1::transform( det, det, dg::CONSTANT(0));
-    //first compute the det of three submatrices
-    dg::blas1::pointwiseDot( d(0,0), d(1,1), sub_det[2]);
-    dg::blas1::pointwiseDot( -1., d(1,0), d(0,1), 1. ,sub_det[2]);
-
-    dg::blas1::pointwiseDot( d(0,0), d(2,1), sub_det[1]);
-    dg::blas1::pointwiseDot( -1., d(2,0), d(0,1), 1. ,sub_det[1]);
-
-    dg::blas1::pointwiseDot( d(1,0), d(2,1), sub_det[0]);
-    dg::blas1::pointwiseDot( -1., d(2,0), d(1,1), 1. ,sub_det[0]);
-
-    //now multiply accordint to Laplace expansion
-    dg::blas1::pointwiseDot( 1., d(0,2), sub_det[0], 1.,  det);
-    dg::blas1::pointwiseDot(-1., d(1,2), sub_det[1], 1.,  det);
-    dg::blas1::pointwiseDot( 1., d(2,2), sub_det[2], 1.,  det);
-
-    return SparseElement<container>(det);
-}
-
-//alias always allowed
-template<class container>
-void multiply( const CholeskyTensor<container>& ch, const container& in0, const container& in1, container& out0, container& out1)
-{
-    multiply(ch.upper(), in0, in1, out0, out1);
-    multiply(ch.diag(), out0, out1, out0, out1);
-    multiply(ch.lower(), out0, out1, out0, out1);
-}
-
-template<class container>
-SparseElement<container> determinant( const CholeskyTensor<container>& ch)
-{
-    SparseTensor<container> diag = ch.diag().dense();
-    SparseElement<container> det;
-    if(diag.isEmpty()) return det;
-    else det.value()=diag.value(0,0);
-    dg::blas1::pointwiseDot( det.value(), diag.value(1,1), det.value());
-    dg::blas1::pointwiseDot( det.value(), diag.value(2,2), det.value());
-    return det;
-}
-
-template<class container>
-void scal(const CholeskyTensor<container>& ch, const SparseElement<container>& e)
-{
-    const SparseTensor<container>& diag = ch.diag();
-    if(!e.isSet()) return;
-    unsigned size=diag.values().size();
-    if(!diag.isSet(0,0)|| !diag.isSet(1,1) || !diag.isSet(2,2))
-        diag.value(size) = e.value();
-    for( unsigned i=0; i<2; i++)
-    {
-        if(!diag.isSet(i,i))
-            diag.idx(i,i)=size;
-        else
-            dg::blas1::pointwiseDot( e.value(), diag.value(i,i), diag.value(i,i));
-    }
-}
-
-}//namespace tensor
-///@endcond
 
 }//namespace dg
