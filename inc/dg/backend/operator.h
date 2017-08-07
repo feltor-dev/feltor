@@ -55,7 +55,7 @@ class Operator
         unsigned n = std::distance( first, last);
         n_ = (unsigned)sqrt( (value_type)n);
 #ifdef DG_DEBUG
-        assert( n_*n_ == n);
+        if( n_*n_!=n) throw Error( Message(_ping_)<<"Too few elements "<<n<<" need "<<n_*n_<<"\n");
 #endif
     }
     /**
@@ -68,7 +68,7 @@ class Operator
         unsigned n = src.size();
         n_ = (unsigned)sqrt( (value_type)n);
 #ifdef DG_DEBUG
-        assert( n_*n_ == n);
+        if( n_*n_!=n) throw Error( Message(_ping_)<<"Wrong number of elements "<<n<<" need "<<n_*n_<<"\n");
 #endif
     }
 
@@ -89,7 +89,7 @@ class Operator
      */
     T& operator()(const size_t i, const size_t j){
 #ifdef DG_DEBUG
-        assert( i<n_ && j < n_);
+        if(!(i<n_&&j<n_)) throw Error( Message(_ping_) << "You tried to access out of range "<<i<<" "<<j<<" size is "<<n_<<"\n");
 #endif
         return data_[ i*n_+j];
     }
@@ -101,7 +101,7 @@ class Operator
      */
     const T& operator()(const size_t i, const size_t j) const {
 #ifdef DG_DEBUG
-        assert( i<n_ && j < n_);
+        if(!(i<n_&&j<n_)) throw Error( Message(_ping_) << "You tried to access out of range "<<i<<" "<<j<<" size is "<<n_<<"\n");
 #endif
         return data_[ i*n_+j];
     }
@@ -134,7 +134,7 @@ class Operator
      */
     void swap_lines( const size_t i, const size_t k)
     {
-        assert( i< n_ && k<n_);
+        if(!( i< n_ && k<n_)) throw Error( Message(_ping_) << "Out of range "<<i<<" "<<k<<" range is "<<n_<<"\n");
         for( size_t j = 0; j<n_; j++)
         {
             std::swap( data_[i*n_+j], data_[k*n_+j]);

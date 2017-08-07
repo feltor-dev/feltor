@@ -27,6 +27,15 @@ class Message
   public:
     ///construct an empty message
     Message(){}
+    /*!@brief Initiate message with the file and line it comes from
+
+     * @param file The file in which the exception is thrown (contained in the predefined Macro __FILE__)
+     * @param line The line in which the exception is thrown (contained in the predefined Macro __LINE__)
+     * \note The Macro _ping_ combines __FILE__, __LINE__ in one. 
+     */
+    Message(const char* file, const int line){
+        sstream_ << "\n    Message from file **"<<file<<"** in line **" <<line<<"**:\n    ";
+    }
     /**
      * @brief Construct message with string
      * @param m puts m into stream
@@ -67,21 +76,14 @@ class Error : public std::exception
 {
   private:
     std::string m;//with a string the Error is copyable
-    const char* f;
-    const int l;
   public:
      
     /*! @brief Constructor
      *
      * @param message An instance of a Message class
-     * @param file The file in which the exception is thrown (contained in the predefined Macro __FILE__)
-     * @param line The line in which the exception is thrown (contained in the predefined Macro __LINE__)
-     * \note The Macro _ping_ combines __FILE__, __LINE__ in one. 
      */
-    Error(const Message& message, const char* file, const int line): f(file), l(line){
-        Message tmp;
-        tmp << "\n    Message from file **"<<f<<"** in line **" <<l<<"**:\n    "<<message<<"\n";
-        m = tmp.str();
+    Error(const Message& message){
+        m = message.str();
     }
     
     /// @return file, line and the message given in the constructor as a string of char
