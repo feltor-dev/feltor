@@ -7,6 +7,9 @@
 namespace tensor
 {
 
+///@addtogroup geometry
+///@{
+
 template<class container>
 void scal( SparseTensor<container>& t, const SparseElement<container>& e)
 {
@@ -205,6 +208,7 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
     return SparseElement<container>(det);
 }
 
+///@cond
 //alias always allowed
 template<class container>
 void multiply( const CholeskyTensor<container>& ch, const container& in0, const container& in1, container& out0, container& out1)
@@ -242,5 +246,8 @@ void scal(const CholeskyTensor<container>& ch, const SparseElement<container>& e
             dg::blas1::pointwiseDot( e.value(), diag.value(i,i), diag.value(i,i));
     }
 }
+///@endcond
+
+///@}
 
 }//namespace tensor

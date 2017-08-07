@@ -16,7 +16,7 @@
 namespace dg
 {
 
-///small class holding a stringstream 
+///@brief small class holding a stringstream 
 ///@ingroup misc
 class Message 
 {
@@ -25,9 +25,15 @@ class Message
     Message( const Message&); //we can't copy ostreams in C++
     Message& operator=(const Message&);
   public:
+    ///construct an empty message
     Message(){}
+    /**
+     * @brief Construct message with string
+     * @param m puts m into stream
+     */
     Message( std::string m){ sstream_<<m;}
     ~Message(){}
+    ///@brief add values to the message stream
     /// @note you can't use std::endl or std::flush in here
     template<class T>
     Message & operator << (const T& value)
@@ -35,9 +41,10 @@ class Message
         sstream_ << value;
         return *this;
     }
-    ///return the message as a string
+    ///return the message contained in the stream as a string
     std::string str() const {return sstream_.str();}
     ///put the sringstream string into the ostream
+    ///@note same as os<<m.str();
     friend std::ostream& operator<<(std::ostream& os, const Message& m)
     {
         os<<m.str();

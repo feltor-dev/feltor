@@ -7,33 +7,14 @@
 namespace dg
 {
 
-/*
-1. make SparseTensor (remove vec_idx in SparseTensor)
-2. make SparseElement (a std::vector with 0 or 1 element)
-10  SparseElement det = dg::tensor::determinant(metric) //if not empty make dense and then compute
-3. dg::tensor::sqrt(metric) //inverse sqrt of determinant
-4. if(vol.isSet()) dg::blas1::pointwiseDot( vol, ...)
-5. dg::tensor::scal( metric, vol); //if(isSet) multiply all values elements
-6. dg::tensor::multiply( metric, in1, in2, out1, out2); //sparse matrix dense vector mult
-6. dg::tensor::multiply( metric, in1, in2, in3, out1, out2, out3);  
-7  perp_metric = metric.perp(); //for use in arakawa when computing perp_vol
-8  dense_metric = metric.dens(); //add 0 and 1 to values and rewrite indices
-9  metric.isPerp(), metric.isDense(), metric.isEmpty()
-11 dg::tensor::product( tensor, jac, temp) //make jac dense and then use multiply 3 times (needs write access in value(i,j)
-12 dg::tensor::product( jac.transpose(), temp, result)  //then use three elements if symmetric
-13 Geometry has  std::vector<sparseElements>  v[0], v[1], v[2] and Jacobian 
-14 when computing metric believe generator and compute on host for-loop
-*/
-  
-
 /**
-* @brief Abstract base class for matrices and vectors sharing or implicitly assuming elements 
+* @brief Class for 2x2 and 3x3 matrices sharing or implicitly assuming elements 
 *
-* The goal of this class is to enable shared access to stored containers 
+* This class enables shared access to stored containers 
 * or not store them at all since the storage of (and computation with) a container is expensive.
 
-* This class contains both a (dense) matrix and a (dense) vector of integers.
-* If positive or zero, the integer represents a gather index into an array of containers, 
+* This class contains both a (dense) matrix of integers.
+* If positive or zero, the integer represents a gather index into the stored array of containers, 
 if negative the value of the container is assumed to be 1, except for the off-diagonal entries
     in the matrix where it is assumed to be 0.
 * We then only need to store non-trivial and non-repetitive containers.
@@ -43,28 +24,33 @@ if negative the value of the container is assumed to be 1, except for the off-di
 template<class container>
 struct SparseTensor
 {
+    ///no element is set
     SparseTensor( ):mat_idx_(3,-1.) {}
+
+    /**
+     * @brief reserve space for containers in the values array
+     * @param value_size reserve space for this number of containers (default constructor) 
+     */
     SparseTensor( unsigned value_size): mat_idx_(3,-1.), values_(value_size){}
 
     /**
-    * @brief 
-    *
-    * @param mat_idx
+    * @brief pass array of containers
     * @param values The contained containers must all have the same size
     */
     SparseTensor( const std::vector<container>& values ): mat_idx_(3,-1.), values_(values){}
 
-    template<class otherContainer>
-    SparseTensor( const SparseTensor<otherContainer>& src): mat_idx_(src.mat_idx()), values_(src.values().size()){
+    /**
+     * @brief Type conversion from other container types
+     * @tparam OtherContainer calls dg::blas1::transfer to convert OtherContainer to container
+     * @param src the source matrix to convert
+     */
+    template<class OtherContainer>
+    SparseTensor( const SparseTensor<OtherContainer>& src): values_(src.values().size()){
         dg::blas1::transfer( src.values(), values_);
-    }
-    ///sets values leaves indices unchanged (size must be  the same or larger as current 
-    void set( const std::vector<container>& values ){
-        values_=values;
     }
 
     /**
-    * @brief check if an index is set or not
+    * @brief check if a value is set at the given position or not
     * @param i row index 0<i<2
     * @param j col index 0<j<2
     * @return true if container is non-empty, false if value is assumed implicitly
@@ -74,12 +60,74 @@ struct SparseTensor
         return true;
     }
 
+    /**
+    * @brief return index into the values array for the given position
+    * @param i row index 0<i<2
+    * @param j col index 0<j<2
+    * @return -1 if !isSet(i,j), index into values array else
+    */
     int idx(unsigned i, unsigned j)const{return mat_idx_(i,j);}
+    /**
+    * @brief main set function to modify indices
+    *
+    * use this and the value() member to assemble the tensor
+    * @param i row index 0<i<2
+    * @param j col index 0<j<2
+    * @return write access to value index to be set
+    */
     int& idx(unsigned i, unsigned j){return mat_idx_(i,j);}
+     /*! @brief unset an index, does not clear the associated value
+      *
+      * @param i row index 0<i<2
+      * @param j col index 0<j<2
+      */
+     void unset( unsigned i, unsigned j) {
+         mat_idx_(i,j)=-1;
+     }
+     /**
+      * @brief clear any unused values and reset the corresponding indices
+      *
+      * This function erases all values that are unreferenced by any index and appropriately redefines the remaining indices
+      */
+     void clear_unused_values();
+
+    /*!@brief Access the underlying container
+     * @return if !isSet(i,j) the result is undefined, otherwise values[idx(i,j)] is returned. 
+     * @param i row index 0<i<2
+     * @param j col index 0<j<2
+     * @note If the indices fall out of range of index the result is undefined
+     */
+    const container& value(size_t i, size_t j)const{ 
+        int k = mat_idx_(i,j);
+        return values_[k];
+    }
+    /**
+     * @brief Return the container at given position, create one if there isn't one already
+     * @param i index into the values array
+     * @return  always returns a container 
+     */
+    container& value( size_t i)
+    {
+        if(i>=values_.size());
+        values_.resize(i+1);
+        return values_[i];
+    }
+    /**
+     * @brief Return read access to the values array
+     * @return read access to values array
+     */
+    const std::vector<container>& values()const{return values_;}
+    ///clear all values, Tensor is empty after that
+    void clear(){
+        mat_idx_=dg::Operator<int>(3,-1);
+        values_.clear();
+    }
 
     /**
     * @brief Test the matrix for emptiness
-    * @return  true if no value in the matrix is set
+    *
+    * The matrix is empty if !isSet(i,j) for all i and j
+    * @return true if no value in the matrix is set
     */
     bool isEmpty()const{ 
         bool empty=true;
@@ -89,7 +137,13 @@ struct SparseTensor
                     empty=false;
         return empty;
     }
-    ///if all elements are set
+
+    /**
+    * @brief Test the matrix for emptiness
+    *
+    * The matrix is dense if isSet(i,j) for all i and j
+    * @return true if all values in the matrix are set
+    */
     bool isDense()const{
         bool dense=true;
         for(unsigned i=0; i<3; i++)
@@ -98,7 +152,13 @@ struct SparseTensor
                     dense=false;
         return dense;
     }
-    ///if all elements in the third dimension are empty
+
+    /**
+    * @brief Test if the elements in the third dimension are unset
+    *
+    * The matrix is perpendicular if !isSet(i,j) for any i,j=2
+    * @return true if perpenicular
+    * */
     bool isPerp() const
     {
         bool empty=true;
@@ -110,46 +170,24 @@ struct SparseTensor
         return empty;
     }
      
-     ///return an empty Tensor
+     ///construct an empty Tensor
      SparseTensor empty()const{return SparseTensor();}
-     ///copy and fill all unset values
+     ///Construct a tensor filled unset values with explicit 0 or 1
+     /// @note returns an empty matrix if isEmpty() returns true
      SparseTensor dense()const;
      ///copy and erase all values in the third dimension
+     ///@note calls clear_unused_values() to get rid of the elements
      SparseTensor perp()const;
-     ///unset an index don't clear values
-     void unset( unsigned i, unsigned j) {
-         mat_idx_(i,j)=-1;
-     }
-     ///clear any unused valuse and reset the corresponding indices
-     void clear_unused_values();
 
-    /*!@brief Access the underlying container
-     * @return if !isSet(i,j) the result is undefined, otherwise values[mat_idx(i,j)] is returned. 
-     * @note If the indices fall out of range of mat_idx the result is undefined
+    /**
+     * @brief Return the transpose of the currrent tensor
+     * @return swapped rows and columns
      */
-    const container& value(size_t i, size_t j)const{ 
-        int k = mat_idx_(i,j);
-        return values_[k];
-    }
-    //always returns a container, if i does not exist yet we resize
-    container& value( size_t i)
-    {
-        if(i>=values_.size());
-        values_.resize(i+1);
-        return values_[i];
-    }
-    ///clear all values
-    void clear(){
-        mat_idx_=dg::Operator<int>(3,-1);
-        values_.clear();
-    }
-
     SparseTensor transpose()const{
         SparseTensor tmp(*this);
         tmp.mat_idx_ = mat_idx_.transpose();
         return tmp;
     }
-    const std::vector<container>& values()const{return values_;}
 
     private:
     dg::Operator<int> mat_idx_;
@@ -157,29 +195,61 @@ struct SparseTensor
     void unique_insert(std::vector<int>& indices, int& idx);
 };
 
-//neutral element wrt multiplication represents forms
+
+/**
+ * @brief This is a sparse Tensor with only one element i.e. a Form
+ *
+ * @tparam container a container class
+ * @ingroup misc
+ */
 template<class container>
 struct SparseElement
 {
+    ///create empty object
     SparseElement(){}
+    /**
+     * @brief copy construct value
+     * @param value a value
+     */
     SparseElement(const container& value):value_(1,value){ }
+
+    ///@brief Read access
+    ///@return read access to contained value
     const container& value( )const { 
         return value_[0];
     }
+    /**
+     * @brief write access, create a container if there isn't one already
+     * @return write access, always returns a container 
+     */
     container& value() {
         if(!isSet()) value_.resize(1);
         return value_[0];
     }
+
+    /**
+     * @brief check if an element is set or not
+     * @return false if the value array is empty
+     */
     bool isSet()const{
         if( value_.empty()) return false;
         return true;
     }
+    ///@brief Clear contained value
     void clear(){value_.clear();}
+    /**
+     * @brief calls sqrt transform function on value
+     * @return Sparse element containing sqrt
+     */
     SparseElement sqrt(){ 
         SparseElement tmp(*this);
         if( isSet()) dg::blas1::transform( tmp.value_, tmp.value_, dg::SQRT<double>());
         return tmp;
     }
+    /**
+     * @brief calls invert transform function on value
+     * @return Sparse element containing inverse 
+     */
     SparseElement invert(){ 
         SparseElement tmp(*this);
         if( isSet()) dg::blas1::transform( tmp.value_, tmp.value_, dg::INVERT<double>());
@@ -191,13 +261,33 @@ struct SparseElement
     std::vector<container> value_;
 };
 
+/**
+ * @brief data structure to hold the LDL^T decomposition of a symmetric positive definite matrix
+ *
+ * LDL^T stands for a lower triangular matrix L,  a diagonal matrix D and the transpose L^T
+ * @tparam container a valid container class
+ * @attention the tensor in the Elliptic classes actually only need to be positive **semi-definite**
+ * and unfortunately the decomposition is unstable for semi-definite matrices.
+* @ingroup misc
+ */
 template<class container>
 struct CholeskyTensor
 {
+    /**
+     * @brief decompose given tensor
+     *
+     * @param in must be symmetric and positive definite
+     */
     CholeskyTensor( const SparseTensor<container>& in)
     {
         decompose(in);
     }
+    /**
+     * @brief decompose given tensor
+     *
+     * overwrites the existing decomposition
+     * @param in must be symmetric and positive definite
+     */
     void decompose( const SparseTensor<container>& in)
     {
         SparseTensor<container> denseIn=in.dense();
@@ -265,6 +355,11 @@ struct CholeskyTensor
         q_.clear_unused_values();
         lower_=true;
     }
+
+    /**
+     * @brief Returns L
+     * @return a lower triangular matrix with 1 on diagonal
+     */
     const SparseTensor<container>& lower()const{
         if(lower_) return q_;
         std::swap(q_.idx(1,0), q_.idx(0,1));
@@ -274,6 +369,10 @@ struct CholeskyTensor
         return q_;
 
     }
+    /**
+     * @brief Returns L^T
+     * @return a upper triangular matrix with 1 on diagonal
+     */
     const SparseTensor<container>& upper()const{
         if(!lower_) return q_;
         std::swap(q_.idx(1,0), q_.idx(0,1));
@@ -283,6 +382,11 @@ struct CholeskyTensor
         return q_;
 
     }
+
+    /**
+     * @brief Returns D
+     * @return only diagonal elements are set if any
+     */
     const SparseTensor<container>& diagonal()const{return diag;}
 
     private:

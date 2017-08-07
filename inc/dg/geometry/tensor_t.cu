@@ -2,6 +2,7 @@
 #include <cmath>
 
 #include "tensor.h"
+#include "multiply.h"
 
 void print( const dg::SparseTensor<thrust::host_vector<double> >& t)
 {
