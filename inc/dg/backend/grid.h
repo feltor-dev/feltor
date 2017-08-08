@@ -303,7 +303,8 @@ struct aTopology2d
     * @param new_Ny new number of cells in y
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
-        do_set(new_n,new_Nx,new_Ny);
+        if( !( new_n==n() && new_Nx==Nx() && new_Ny == Ny() ) ) 
+            do_set(new_n,new_Nx,new_Ny);
     }
 
 
@@ -433,7 +434,8 @@ struct aTopology3d
     * @param new_Nz new number of cells in z
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        do_set(new_n,new_Nx,new_Ny,new_Nz);
+        if(!( new_n==n() && new_Nx ==Nx() && new_Ny == Ny() && new_Nz==Nz())) 
+            do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 
     /**
