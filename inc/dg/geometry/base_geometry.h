@@ -46,7 +46,10 @@ struct aGeometry2d : public aTopology2d
         return SharedContainer<thrust::host_vector<double> >();
     }
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{
-        return std::vector<thrust::host_vector<double> >();
+        std::vector<thrust::host_vector<double> > map(2);
+        map[0] = dg::evaluate(dg::cooX2d, *this);
+        map[1] = dg::evaluate(dg::cooY2d, *this);
+        return map;
     }
 
 
@@ -89,7 +92,11 @@ struct aGeometry3d : public aTopology3d
         return SharedContainer<thrust::host_vector<double> >();
     }
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{
-        return std::vector<thrust::host_vector<double> >();
+        std::vector<thrust::host_vector<double> > map(3);
+        map[0] = dg::evaluate(dg::cooX3d, *this);
+        map[1] = dg::evaluate(dg::cooY3d, *this);
+        map[2] = dg::evaluate(dg::cooZ3d, *this);
+        return map;
     }
 };
 

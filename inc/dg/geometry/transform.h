@@ -37,12 +37,10 @@ struct MemoryTraits< SharedTag>
 template< class Functor>
 thrust::host_vector<double> pullback( Functor f, const aGeometry2d& g)
 {
-    const SharedContainers<thrust::host_vector<double> >& map = g.map();
-    if( !map.isSet(0) && !map.isSet(1)) //implicit
-        return evaluate(f,g);
+    std::vector<thrust::host_vector<double> > map = g.map();
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( map.getValue(0)[i], map.getValue(1)[i]);
+        vec[i] = f( map[0][i], map[1][i]);
     return vec;
 }
 
@@ -51,13 +49,10 @@ thrust::host_vector<double> pullback( Functor f, const aGeometry2d& g)
 template< class Functor>
 thrust::host_vector<double> pullback( Functor f, const aGeometry3d& g)
 {
-    const SharedContainers<thrust::host_vector<double> >& map = g.map();
-    if( !map.isSet(0) && !map.isSet(1) && !map.isSet(2)) //implicit
-        return evaluate(f,g);
-
+    std::vector<thrust::host_vector<double> > map = g.map();
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( map.getValue(0)[i], map.getValue(1)[i], map.getValue(2)[i]);
+        vec[i] = f( map[0][i], map[1][i], map[2][i]);
     return vec;
 }
 
@@ -76,12 +71,10 @@ struct MemoryTraits< MPITag>
 template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry2d& g)
 {
-    const SharedContainers<MPI_Vector<thrust::host_vector<double> >& map = g.map();
-    if( !map.isSet(0) && !map.isSet(1)) //implicit
-        return evaluate(f,g);
+    std::vector<MPI_Vector<thrust::host_vector<double> > map = g.map();
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( map.getValue(0).data()[i], map.getValue(1).data()[i]);
+        vec[i] = f( map[0].data()[i], map[1].data()[i]);
     return vec;
 }
 
@@ -90,13 +83,10 @@ MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry
 template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry3d& g)
 {
-    const SharedContainers<MPI_Vector<thrust::host_vector<double> >& map = g.map();
-    if( !map.isSet(0) && !map.isSet(1) && !map.isSet(2)) //implicit
-        return evaluate(f,g);
-
+    std::vector<MPI_Vector<thrust::host_vector<double> > map = g.map();
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        vec[i] = f( map.getValue(0).data()[i], map.getValue(1).data()[i], map.getValue(2).data()[i]);
+        vec[i] = f( map[0].data()[i], map[1].data()[i], map[2].data()[i]);
     return vec;
 }
 
