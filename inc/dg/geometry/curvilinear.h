@@ -12,7 +12,6 @@ namespace dg
 ///@{
 
 ///@cond
-template< class container>
 struct CurvilinearGrid2d; 
 ///@endcond
 
@@ -22,9 +21,7 @@ struct CurvilinearGrid2d;
 
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
- @tparam container models aContainer
  */
-template< class container>
 struct CylindricalProductGrid3d : public dg::aGeometry3d
 {
     typedef CurvilinearGrid2d<container> perpendicular_grid;
@@ -35,11 +32,11 @@ struct CylindricalProductGrid3d : public dg::aGeometry3d
      * @param generator must generate a grid
      * @param n number of %Gaussian nodes in x and y
      * @param Nx number of cells in x
-     @param Ny number of cells in y 
-     @param Nz  number of cells z
-     @param bcx boundary condition in x
-     @param bcy boundary condition in y
-     @param bcz boundary condition in z
+     * @param Ny number of cells in y 
+     * @param Nz  number of cells z
+     * @param bcx boundary condition in x
+     * @param bcy boundary condition in y
+     * @param bcz boundary condition in z
      */
     CylindricalProductGrid3d( const aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
         dg::aGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz)
@@ -105,15 +102,12 @@ struct CylindricalProductGrid3d : public dg::aGeometry3d
             temppp[i] = 1./map_[2][i]/map_[2][i]; //1/R^2
         }
         SparseTensor<thrust::host_vector<double> > metric;
-        metric.idx(0,0) = 0;
-        metric.value(0) = tempxx;
-        metric.idx(1,1) = 1;
-        metric.value(1) = tempyy;
-        metric.idx(2,2) = 2;
-        metric.value(2) = temppp;
+        metric.idx(0,0) = 0; metric.value(0) = tempxx;
+        metric.idx(1,1) = 1; metric.value(1) = tempyy;
+        metric.idx(2,2) = 2; metric.value(2) = temppp;
         if( !handle_.get().isOrthogonal())
         {
-            metric.idx(0,1) = metric.idx(1,0) = 3;
+            metric.idx(0,1) = metric.idx(1,0) = 3; 
             metric.value(3) = tempxy;
         }
     }
@@ -124,9 +118,8 @@ struct CylindricalProductGrid3d : public dg::aGeometry3d
 };
 
 /**
- * @brief A three-dimensional grid based on curvilinear coordinates
+ * @brief A two-dimensional grid based on curvilinear coordinates
  */
-template< class container>
 struct CurvilinearGrid2d : public dg::aGeometry2d
 {
     /*!@brief Constructor
@@ -154,6 +147,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     }
 
     const aGenerator2d& generator() const{return handle_.get();}
+    virtual CurvilinearGrid2d* clone()const{return new CurvilinearGrid2d(*this);}
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
