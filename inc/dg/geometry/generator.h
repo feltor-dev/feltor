@@ -2,21 +2,6 @@
 
 namespace dg
 {
-namespace geo
-{
-
-///The analytically given continuous representation of the real world coordinates and metric
-enum PhysicalSpaceCoordinates{
-    cartesian=0;///2d or 3d X,Y,Z
-    cylindrical=1;///3d R,Z,P
-};
-///The type of discrete coordinates and metric
-enum ComputationalSpaceCoordinates{
-    orthonormal=0; ///coordinate lines are orthogonal (only unity diagonal metric elements)
-    conformal=1; ///only 2d coordinates can be conformal (volume and metric elements are all the same)
-    orthogonal=2; ///coordinate lines are orthogonal (only diagonal metric elements)
-    curvilinear=3; ///non-orthogonal coordinate lines
-};
 
 /**
 * @brief The abstract generator base class 
@@ -27,22 +12,14 @@ is a product space.
 @note the origin of the computational space is assumed to be (0,0)
  @ingroup generators
 */
-struct aGridGenerator
+struct aGenerator2d
 {
-    virtual double width()  const=0; //!<length in \f$ \zeta\f$ of the computational space
-    virtual double height() const=0; //!<length in \f$ \eta\f$ of the computational space
-    /**
-    * @brief This is the analytical coordinate system we transform to
-    * @return type of physical space coordinates (default is dg::geo::cartesian)
-    */
-    virtual enum PhysicalSpaceCoordinates physical()const{ return cartesian;} 
-    /**
-    * @brief The type of coordinate system of the computational space
-    * @return default is dg::geo::orthonormal
-    * @note This is a performance hint for the computation and storage of metric elements.
-    *    We believe that you do not lie about what you generate.
-    */
-    virtual enum ComputationalSpaceCoordinates computational()const{ return orthonormal;} 
+    ///@brief length in \f$ \zeta\f$ of the computational space
+    double width()  const{return do_width();}
+    ///@brief length in \f$ \eta\f$ of the computational space
+    double height() const{return do_height();}
+    ///@brief sparsity pattern for metric
+    bool isOrthogonal() const { return doIsOrthogonal(); }
 
     /**
     * @brief Generate grid points and elements of the Jacobian 
@@ -58,7 +35,7 @@ struct aGridGenerator
     * @note the first (\f$ \zeta\f$) coordinate shall be constructed contiguously in memory, i.e. the resuling lists are \f$ x_0=x(\zeta_0, \eta_0),\ x_1=x(\zeta_1, \eta_0)\ x_2=x(\zeta_2, \eta_0)\dots x_{NM-1}=x(\zeta_{N-1} \eta_{M-1})\f$
     * @note All the resulting vectors are write-only and get properly resized
     */
-    void operator()( 
+    void generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -71,7 +48,7 @@ struct aGridGenerator
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
-        generate( zeta1d, eta1d, x,y,zetaX,zetaY,etaX,etaY);
+        do_generate( zeta1d, eta1d, x,y,zetaX,zetaY,etaX,etaY);
     }
 
     /**
@@ -80,12 +57,13 @@ struct aGridGenerator
     * @return a copy of *this on the heap
     */
     virtual aGridGenerator* clone() const=0;
+    virtual ~aGridGenerator(){}
 
     protected:
     aGridGenerator(const aGridGenerator& src){}
     aGridGenerator& operator=(const aGridGenerator& src){}
-    ///@copydoc operator()()
-    virtual void generate(
+    private:
+    virtual void do_generate(
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -94,65 +72,11 @@ struct aGridGenerator
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
          thrust::host_vector<double>& etaY) const = 0;
-    
-   virtual ~aGridGenerator(){}
+     virtual double do_width() const =0;
+     virtual double do_height() const =0;
+     virtual bool doIsOrthogonal()const{return false;}
+
+
 };
 
-/**
-* @brief The shifted identity coordinate transformation
-
-@note in fact it's not completely the identity because we assume that the origin is always (0,0) in the computational space
- @ingroup generators
-*/
-struct ShiftedIdentityGenerator: public aGridGenerator
-{
-    virtual double width()  const{return lx_;} 
-    virtual double height() const{return ly_;}
-    virtual bool isOrthonormal() const{return true;}
-    virtual bool isOrthogonal() const{return true;}
-    virtual bool isConformal()const{return true;}
-    virtual ShiftedIdentityGenerator* clone() const{return new ShiftedIdentityGenerator(*this);}
-
-    /**
-    * @brief Define the 2d box in the physical domain in which to construct the coordinates
-    *
-    * @param x0 x-coordinate of lower left point
-    * @param x1 x-coordinate of upper right point
-    * @param y0 y-coordinate of lower left point
-    * @param y1 y-coordainte of upper right point
-    */
-    ShiftedIdentityGenerator( double x0, double x1, double y0, double y1){
-        x0_ = x0; lx_ = (x1-x0);
-        y0_ = y0; ly_ = (y1-y0);
-    }
-
-    protected:
-    virtual void generate(
-         const thrust::host_vector<double>& zeta1d, 
-         const thrust::host_vector<double>& eta1d, 
-         thrust::host_vector<double>& x, 
-         thrust::host_vector<double>& y, 
-         thrust::host_vector<double>& zetaX, 
-         thrust::host_vector<double>& zetaY, 
-         thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) const
-     {
-         for(unsigned i=0; i<eta1d.size();i++)
-             for(unsigned j=0; j<zeta1d.size();j++)
-             {
-                 x[i*zeta1d.size()+j] = x0_ + zeta1d[j];
-                 y[i*zeta1d.size()+j] = y0_ + eta1d[i];
-                 zetaX[i*zeta1d.size()+j] = 1;
-                 zetaY[i*zeta1d.size()+j] = 0;
-                 etaX[i*zeta1d.size()+j] = 0.;
-                 etaY[i*zeta1d.size()+j] = 1.;
-             }
-                 
-     }
-     private:
-     double x0_,y0_,lx_,ly_;
-    
-};
-
-}//namespace geo
 }//namespace dg

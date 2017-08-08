@@ -47,7 +47,7 @@ struct CurvilinearGrid3d : public dg::aGeometry3d
      @param bcx boundary condition in x
      @note the boundary conditions for y and z are set periodic
      */
-    CurvilinearGrid3d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
+    CurvilinearGrid3d( const aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx=dg::DIR):
         dg::Grid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER)
     { 
         handle_ = generator;
@@ -69,24 +69,7 @@ struct CurvilinearGrid3d : public dg::aGeometry3d
                 vec[k*size2d+i] = f( r_[i], z_[i], phi_[k]);
         return vec;
     }
-    /// a 3d vector containing dx/dR
-    const thrust::host_vector<double>& xr()const{return xr_;}
-    /// a 3d vector containing dy/dR
-    const thrust::host_vector<double>& yr()const{return yr_;}
-    /// a 3d vector containing dx/dZ
-    const thrust::host_vector<double>& xz()const{return xz_;}
-    /// a 3d vector containing dy/dZ
-    const thrust::host_vector<double>& yz()const{return yz_;}
-    const container& g_xx()const{return g_xx_;}
-    const container& g_yy()const{return g_yy_;}
-    const container& g_xy()const{return g_xy_;}
-    const container& g_pp()const{return g_pp_;}
-    const container& vol()const{return vol_;}
-    const container& perpVol()const{return vol2d_;}
-    const geo::aGenerator & generator() const{return handle_.get()}
-    bool isOrthonormal() const { return handle_.get().isOrthonormal();}
-    bool isOrthogonal() const { return handle_.get().isOrthogonal();}
-    bool isConformal() const { return handle_.get().isConformal();}
+    const aGenerator & generator() const{return handle_.get()}
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny,unsigned new_Nz){
         dg::Grid3d::do_set( new_n, new_Nx, new_Ny,new_Nz);
@@ -142,7 +125,7 @@ struct CurvilinearGrid3d : public dg::aGeometry3d
     thrust::host_vector<double> r_, z_, phi_;  //2d and 1d vectors
     thrust::host_vector<double> xr_, xz_, yr_, yz_;
     container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    dg::Handle<geo::aGenerator> handle_;
+    dg::Handle<aGenerator> handle_;
 };
 
 /**
@@ -159,7 +142,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
      * @param Ny number of cells in second coordinate
      * @param bcx boundary condition in first coordinate
      */
-    CurvilinearGrid2d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
+    CurvilinearGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR):
         dg::Grid2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER), handle_(generator)
     {
         construct( n,Nx,Ny);
@@ -181,17 +164,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
         thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
     }
 
-    const thrust::host_vector<double>& r()const{return r_;}
-    const thrust::host_vector<double>& z()const{return z_;}
-    const thrust::host_vector<double>& xr()const{return xr_;}
-    const thrust::host_vector<double>& yr()const{return yr_;}
-    const thrust::host_vector<double>& xz()const{return xz_;}
-    const thrust::host_vector<double>& yz()const{return yz_;}
-    const container& g_xx()const{return g_xx_;}
-    const container& g_yy()const{return g_yy_;}
-    const container& g_xy()const{return g_xy_;}
-    const container& vol()const{return vol2d_;}
-    const geo::aGenerator& generator() const{return handle_.get();}
+    const aGenerator& generator() const{return handle_.get();}
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
@@ -205,9 +178,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
         g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
         vol2d_=g.perpVol();
     }
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
-    container g_xx_, g_xy_, g_yy_, vol2d_;
-    dg::Handle<geo::aGenerator2d> handle_;
+    dg::Handle<aGenerator2d> handle_;
 };
 
 ///@}
