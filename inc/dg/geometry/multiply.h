@@ -12,6 +12,27 @@ namespace tensor
 
 ///@addtogroup geometry
 ///@{
+/**
+ * @brief calls sqrt transform function on value
+ * @param mu if empty, value is assumed 1 and empty element is returned
+ * @return Sparse element containing sqrt of input element
+ */
+SparseElement sqrt(const SparseElement& mu){ 
+    SparseElement mu(*this);
+    if( isSet()) dg::blas1::transform( mu.value(), mu.value(), dg::SQRT<double>());
+    return mu;
+}
+
+/**
+ * @brief calls invert transform function on value
+ * @param mu if empty, value is assumed 1 and empty element is returned
+ * @return Sparse element containing inverse of input element
+ */
+SparseElement invert(const SparseElement& mu){ 
+    SparseElement mu(*this);
+    if( isSet()) dg::blas1::transform( mu.value(), mu.value(), dg::INVERT<double>());
+    return mu;
+}
 
 /**
  * @brief Scale tensor with a container

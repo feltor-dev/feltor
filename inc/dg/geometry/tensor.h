@@ -6,6 +6,61 @@
 
 namespace dg
 {
+    //separate algorithms from interface!!
+
+/**
+ * @brief This is a sparse Tensor with only one element i.e. a Form
+ *
+ * @tparam container a container class
+ * @ingroup misc
+ */
+template<class container>
+struct SparseElement
+{
+    ///create empty object
+    SparseElement(){}
+    /**
+     * @brief copy construct value
+     * @param value a value
+     */
+    SparseElement(const container& value):value_(1,value){ }
+    template<class OtherContainer>
+    SparseElement( const SparseElement<OtherContainer>& src)
+    {
+        if(src.isSet())
+        {
+            value_.resize(1);
+            dg::blas1::transfer(src.value(), value_[0]);
+        }
+    }
+
+    ///@brief Read access
+    ///@return read access to contained value
+    const container& value( )const { 
+        return value_[0];
+    }
+    /**
+     * @brief write access, create a container if there isn't one already
+     * @return write access, always returns a container 
+     */
+    container& value() {
+        if(!isSet()) value_.resize(1);
+        return value_[0];
+    }
+
+    /**
+     * @brief check if an element is set or not
+     * @return false if the value array is empty
+     */
+    bool isSet()const{
+        if( value_.empty()) return false;
+        return true;
+    }
+    ///@brief Clear contained value
+    void clear(){value_.clear();}
+    private:
+    std::vector<container> value_;
+};
 
 /**
 * @brief Class for 2x2 and 3x3 matrices sharing or implicitly assuming elements 
@@ -202,79 +257,6 @@ struct SparseTensor
 };
 
 
-/**
- * @brief This is a sparse Tensor with only one element i.e. a Form
- *
- * @tparam container a container class
- * @ingroup misc
- */
-template<class container>
-struct SparseElement
-{
-    ///create empty object
-    SparseElement(){}
-    /**
-     * @brief copy construct value
-     * @param value a value
-     */
-    SparseElement(const container& value):value_(1,value){ }
-    template<class OtherContainer>
-    SparseElement( const SparseElement<OtherContainer>& src)
-    {
-        if(src.isSet())
-        {
-            value_.resize(1);
-            dg::blas1::transfer(src.value(), value_[0]);
-        }
-    }
-
-    ///@brief Read access
-    ///@return read access to contained value
-    const container& value( )const { 
-        return value_[0];
-    }
-    /**
-     * @brief write access, create a container if there isn't one already
-     * @return write access, always returns a container 
-     */
-    container& value() {
-        if(!isSet()) value_.resize(1);
-        return value_[0];
-    }
-
-    /**
-     * @brief check if an element is set or not
-     * @return false if the value array is empty
-     */
-    bool isSet()const{
-        if( value_.empty()) return false;
-        return true;
-    }
-    ///@brief Clear contained value
-    void clear(){value_.clear();}
-    /**
-     * @brief calls sqrt transform function on value
-     * @return Sparse element containing sqrt
-     */
-    SparseElement sqrt(){ 
-        SparseElement tmp(*this);
-        if( isSet()) dg::blas1::transform( tmp.value_, tmp.value_, dg::SQRT<double>());
-        return tmp;
-    }
-    /**
-     * @brief calls invert transform function on value
-     * @return Sparse element containing inverse 
-     */
-    SparseElement invert(){ 
-        SparseElement tmp(*this);
-        if( isSet()) dg::blas1::transform( tmp.value_, tmp.value_, dg::INVERT<double>());
-        return tmp;
-    }
-
-
-    private:
-    std::vector<container> value_;
-};
 
 /**
  * @brief data structure to hold the LDL^T decomposition of a symmetric positive definite matrix
