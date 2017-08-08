@@ -14,9 +14,14 @@ namespace dg
  */
 struct aGeometry2d : public aTopology2d
 {
-    const SharedContainers<thrust::host_vector<double> >& map()const{return map_;}
-    SharedContainers<thrust::host_vector<double> > metric()const {
-        return do_compute_metric();
+    SharedContainers<thrust::host_vector<double> > jacobian()const{
+        return do_provide_jacobian();
+    }
+    SharedContainers<thrust::host_vector<double> > metric()const { 
+        return do_provide_metric(); 
+    }
+    std::vector<thrust::host_vector<double> > map(){
+        return do_provide_map();
     }
     ///Geometries are cloneable
     virtual aGeometry2d* clone()const=0;
@@ -33,10 +38,10 @@ struct aGeometry2d : public aTopology2d
         map_=src.map_;
         metric_=src.metric_;
     }
-    SharedContainers<thrust::host_vector<double> >& map(){return map_;}
     private:
-    SharedContainers<thrust::host_vector<double> > map_;
     virtual SharedContainers<thrust::host_vector<double> > do_compute_metric()const=0;
+    virtual SharedContainers<thrust::host_vector<double> > do_compute_jacobian()const=0;
+    virtual std::vector<thrust::host_vector<double> > do_compute_map()const=0;
 };
 
 /**
@@ -44,8 +49,8 @@ struct aGeometry2d : public aTopology2d
  */
 struct aGeometry3d : public aTopology3d
 {
-    const SharedContainers<thrust::host_vector<double> >& map()const{return map_;}
-    SharedContainers<thrust::host_vector<double> > metric()const {
+    std::vector<thrust::host_vector<double> >& map(){return map_;}
+    SharedContainers<thrust::host_vector<double> > metric() {
         return do_compute_metric();
     }
     ///Geometries are cloneable
