@@ -109,7 +109,7 @@ struct CartesianGrid2d: public dg::aGeometry2d
     virtual CartesianGrid2d* clone()const{return new CartesianGrid2d(*this);}
     private:
     virtual SharedContainers<thrust::host_vector<double> > do_compute_metric()const{
-        return SharedContainers<thrust::host_vector<double> >( 3);
+        return SharedContainers<thrust::host_vector<double> >();
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny){
         aTopology2d::do_set(new_n,new_Nx,new_Ny);

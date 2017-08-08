@@ -42,10 +42,10 @@ namespace create{
  * @return  The volume form
  */
 template< class Geometry>
-typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector volume( const Geometry& g)
+typename GeometryTraits<Geometry>::host_vector volume( const Geometry& g)
 {
-    typedef typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
-    SparseElement<host_vecotr> vol = dg::tensor::determinant(g.metric());
+    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
+    SparseElement<host_vector> vol = dg::tensor::determinant(g.metric());
     host_vector temp = dg::create::weights( g);
     dg::tensor::pointwiseDot( vol, temp, temp);
     return temp;
@@ -61,9 +61,9 @@ typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vect
  * @return  The inverse volume form
  */
 template< class Geometry>
-typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector inv_volume( const Geometry& g)
+typename GeometryTraits<Geometry>::host_vector inv_volume( const Geometry& g)
 {
-    typedef typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
+    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
     host_vector temp = volume(g);
     dg::blas1::transform(temp,temp,dg::INVERT<double>());
     return temp;

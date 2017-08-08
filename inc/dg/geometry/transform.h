@@ -4,11 +4,17 @@
 namespace dg
 {
 ///@cond
+template<class Geometry>
+class GeometryTraits
+{
+    typedef typename MemoryTraits< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
+
+};
 template<class MemoryTag>
-struct HostVec {
+struct MemoryTraits {
 };
 template<>
-struct HostVec< SharedTag>
+struct MemoryTraits< SharedTag>
 {
     typedef thrust::host_vector<double> host_vector;
 };
@@ -59,7 +65,7 @@ thrust::host_vector<double> pullback( Functor f, const aGeometry3d& g)
 
 ///@cond
 template<>
-struct HostVec< MPITag>
+struct MemoryTraits< MPITag>
 {
     typedef MPI_Vector<thrust::host_vector<double> > host_vector;
 };
@@ -116,7 +122,7 @@ void pushForwardPerp( Functor1 vR, Functor2 vZ,
         container& vx, container& vy,
         const Geometry& g)
 {
-    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
+    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
     host_vec out1 = pullback( vR, g), temp1(out1);
     host_vec out2 = pullback( vZ, g), temp2(out2);
     dg::tensor::multiply(g.map(), out1, out2, temp1, temp2);
@@ -146,7 +152,7 @@ void pushForward( Functor1 vR, Functor2 vZ, Functor3 vPhi,
         container& vx, container& vy, container& vz,
         const Geometry& g)
 {
-    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
+    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
     host_vec out1 = pullback( vR, g), temp1(out1);
     host_vec out2 = pullback( vZ, g), temp2(out2);
     host_vec out3 = pullback( vPhi, g), temp3(out3);
@@ -180,7 +186,7 @@ void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
         container& chixx, container& chixy, container& chiyy,
         const Geometry& g)
 {
-    typedef typename HostVec< typename GeometryTraits<Geometry>::memory_category>::host_vector host_vec;
+    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
     host_vec chiRR_ = pullback( chiRR, g);
     host_vec chiRZ_ = pullback( chiRZ, g);
     host_vec chiZZ_ = pullback( chiZZ, g);
