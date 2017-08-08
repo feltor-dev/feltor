@@ -157,13 +157,12 @@ struct CylindricalGrid3d: public dg::aGeometry3d
         thrust::host_vector<double> R = dg::evaluate(dg::coo1, *this);
         for( unsigned i = 0; i<size(); i++)
             R[i] = 1./R[i]/R[i];
-        metric.value(0) = R;
         metric.idx(2,2)=0;
+        metric.value(0) = R;
         return metric;
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
         aTopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
-};
-///@}
+}; ///@}
 } //namespace dg

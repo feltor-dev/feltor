@@ -14,26 +14,39 @@ namespace dg
  */
 struct aMPIGeometry2d : public aMPITopology2d
 {
-    typedef MPI_Vector<thrust::host_vector<double> > host_vec;
-    const SharedContainers<host_vec >& map()const{return map_;}
-    SharedContainers<host_vec > compute_metric()const {
+    typedef MPI_Vector<thrust::host_vector<double> > host_vector;
+    SparseTensor<host_vector > jacobian()const {
+        return do_compute_jacobian();
+    }
+    SparseTensor<host_vector > metric()const {
         return do_compute_metric();
+    }
+    std::vector<host_vec > map()const{
+        return do_compute_map();
     }
     ///Geometries are cloneable
     virtual aMPIGeometry2d* clone()const=0;
     ///allow deletion through base class pointer
     virtual ~aMPIGeometry2d(){}
     protected:
-    aMPIGeometry2d(const SharedContainers<host_vec >& map, const SharedContainers<container >& metric): map_(map), metric_(metric){}
-    aMPIGeometry2d( const aMPIGeometry2d& src):map_(src.map_), metric_(src.metric_){}
+    aMPIGeometry2d( const aMPIGeometry2d& src):aMPITopology2d(src){}
     aMPIGeometry2d& operator=( const aMPIGeometry2d& src){
-        map_=src.map_;
-        metric_=src.metric_;
+        aMPITopology2d::operator=(src);
+        return *this;
     }
-    SharedContainers<host_vec >& map(){return map_;}
     private:
-    SharedContainers<host_vec > map_;
-    virtual SharedContainers<host_vec > do_compute_metric()const=0;
+    virtual SparseTensor<host_vector > do_compute_metric()const {
+        return SharedContainer<host_vector >();
+    }
+    virtual SparseTensor<host_vector > do_compute_jacobian()const {
+        return SharedContainer<host_vector >();
+    }
+    virtual std::vector<host_vector > do_compute_map()const{
+        std::vector<host_vector> map(2);
+        map[0] = dg::evaluate(dg::cooX2d, *this);
+        map[1] = dg::evaluate(dg::cooY2d, *this);
+        return map;
+    }
 };
 
 /**
@@ -41,46 +54,43 @@ struct aMPIGeometry2d : public aMPITopology2d
  */
 struct aMPIGeometry3d : public aMPITopology3d
 {
-    typedef MPI_Vector<thrust::host_vector<double> > host_vec;
-    const SharedContainers<host_vec >& map()const{return map_;}
-    SharedContainers<host_vec > compute_metric()const {
-        return do_compute_metric();
+    typedef MPI_Vector<thrust::host_vector<double> > host_vector;
+    SparseTensor<host_vector > jacobian()const{
+        return do_compute_jacobian();
+    }
+    SparseTensor<host_vector > metric()const { 
+        return do_compute_metric(); 
+    }
+    std::vector<host_vector > map(){
+        return do_compute_map();
     }
     ///Geometries are cloneable
     virtual aMPIGeometry3d* clone()const=0;
     ///allow deletion through base class pointer
     virtual ~aMPIGeometry3d(){}
     protected:
-    aMPIGeometry3d(const SharedContainers<host_vec >& map): map_(map){}
-    aMPIGeometry3d( const aMPIGeometry2d& src):map_(src.map_){}
+    aMPIGeometry3d( const aMPIGeometry3d& src):aMPITopology3d(src){}
     aMPIGeometry3d& operator=( const aMPIGeometry3d& src){
-        map_=src.map_;
+        aMPITopology3d::operator=(src);
+        return *this;
     }
-    SharedContainers<host_vec >& map(){return map_;}
     private:
-    SharedContainers<host_vec > map_;
-    virtual SharedContainers<host_vec > do_compute_metric()const=0;
+    virtual SparseTensor<host_vector > do_compute_metric()const {
+        return SharedContainer<host_vector >();
+    }
+    virtual SparseTensor<host_vector > do_compute_jacobian()const {
+        return SharedContainer<host_vector >();
+    }
+    virtual std::vector<host_vector > do_compute_map()const{
+        std::vector<host_vector> map(3);
+        map[0] = dg::evaluate(dg::cooX3d, *this);
+        map[1] = dg::evaluate(dg::cooY3d, *this);
+        map[2] = dg::evaluate(dg::cooZ3d, *this);
+        return map;
+    }
 };
 
 ///@}
-namespace create
-{
-///@addtogroup metric
-///@{
-
-SharedContainers<host_vec > metric( const aMPIGeometry2d& g)
-{
-    return g.compute_metric();
-}
-SharedContainers<host_vec > metric( const aMPIGeometry3d& g)
-{
-    return g.compute_metric();
-}
-
-///@}
-}//namespace create
-
-
 
 ///@addtogroup basicgrids
 ///@{
@@ -104,6 +114,12 @@ struct CartesianMPIGrid2d : public aMPIGeometry2d
      */
     CartesianMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):dg::aMPIGeometry2d( x0, x1, y0, y1, n, Nx, Ny,bcx, bcy, comm){}
     CartesianMPIGrid2d( const dg::MPIGrid2d& g): aMPIGeometry2d( g.x0(),g.x1(),g.y0(),g.y1(),g.n(),g.Nx(),g.Ny(),g.bcx(),g.bcy(),g.comm()){}
+    virtual CartesianMPIGrid2d* clone()const{return new CartesianMPIGrid2d(*this);}
+    private:
+    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny){
+        aMPITopology2d::do_set(new_n,new_Nx,new_Ny);
+    }
+
 };
 
 /**
@@ -126,6 +142,11 @@ struct CartesianMPIGrid3d : public aMPIGeometry3d
     CartesianMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):aMPIGeometry3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm){}
 
     CartesianMPIGrid3d( const dg::MPIGrid3d& g): aMPIGeometry3d( g.x0(),g.x1(),g.y0(),g.y1(),g.z0(),g.z1(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz(),g.comm()){}
+    virtual CartesianMPIGrid3d* clone()const{return new CartesianMPIGrid3d(*this);}
+    private:
+    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
+        aMPITopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
+    }
 };
 
 /**
@@ -139,24 +160,17 @@ struct CylindricalMPIGrid3d: public aMPIGeometry3d
 
     virtual CylindricalMPIGrid3d* clone()const{return new CylindricalMPIGrid3d(*this);}
     private:
-    virtual SharedContainers<thrust::host_vector<double> > do_compute_metric()const{
-
-        std::vector<MPI_Vector<thrust::host_vector<double> > > values(2, size());
-        MPI_Vector<thrust::host_vector<double> > R = dg::evaluate(dg::coo1, *this);
-        unsigned size2d = n()*n()*Nx()*Ny();
-        for( unsigned i = 0; i<Nz(); i++)
-        for( unsigned j = 0; j<size2d; j++)
-        {
-            unsigned idx = i*size2d+j;
-            values[1].data()[idx] = R.data()[j];
-            values[0].data()[idx] = 1./R.data()[j]/R.data()[j];
-        }
-        Operator<int> mat_idx(3,-1); mat_idx(2,2) = 0;
-        std::vector<int> vec_idx(3,-1); vec_idx[0] = 1;
-        return SharedContainers<thrust::host_vector<double> >( mat_idx, vec_idx, values);
+    virtual SparseTensor<host_vector > do_compute_metric()const{
+        SparseTensor<host_vector> metric(1);
+        host_vector R = dg::evaluate(dg::coo1, *this);
+        for( unsigned i = 0; i<size(); i++)
+            R.data()[i] = 1./R.data()[i]/R.data()[i];
+        metric.idx(2,2)=0;
+        metric.value(0) = R;
+        return metric;
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        aMPITopology2d::do_set(new_n,new_Nx,new_Ny,new_Nz);
+        aMPITopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 };
 
