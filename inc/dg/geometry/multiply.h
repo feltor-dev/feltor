@@ -14,24 +14,24 @@ namespace tensor
 ///@{
 /**
  * @brief calls sqrt transform function on value
- * @param mu if empty, value is assumed 1 and empty element is returned
- * @return Sparse element containing sqrt of input element
+ * @tparam container container class 
+ * @param mu if empty, stays empty, else contains sqrt of input
  */
-SparseElement sqrt(const SparseElement& mu){ 
-    SparseElement mu(*this);
-    if( isSet()) dg::blas1::transform( mu.value(), mu.value(), dg::SQRT<double>());
-    return mu;
+template<class container>
+void sqrt( SparseElement<container>& mu){ 
+    if( mu.isSet()) 
+        dg::blas1::transform( mu.value(), mu.value(), dg::SQRT<double>());
 }
 
 /**
  * @brief calls invert transform function on value
- * @param mu if empty, value is assumed 1 and empty element is returned
- * @return Sparse element containing inverse of input element
+ * @tparam container container class 
+ * @param mu if empty, stays empty, else contains inverse of input
  */
-SparseElement invert(const SparseElement& mu){ 
-    SparseElement mu(*this);
-    if( isSet()) dg::blas1::transform( mu.value(), mu.value(), dg::INVERT<double>());
-    return mu;
+template<class container>
+void invert(SparseElement<container>& mu){ 
+    if(mu.isSet()) 
+        dg::blas1::transform( mu.value(), mu.value(), dg::INVERT<double>());
 }
 
 /**
@@ -156,7 +156,7 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
  * @param inout0 (input/output) covariant first component 
  * @param inout1 (input/output) covariant second component
  * @param workspace (write) optional workspace
- * @note this version overwrites the input and may or may not write into the workspace
+ * @note this version overwrites the input and the workspace
  * @attention aliasing not allowed
  */
 template<class container>
@@ -215,6 +215,7 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
             dg::blas1::pointwiseDot( 1., t.value(1,0), in0, 1., out1);
         if( !t.isSet(0,0)) out0=in0;
         else dg::blas1::pointwiseDot( t.value(0,0), in0, out0); 
+        return;
     }
     //upper triangular and default
     if( !t.isSet(0,0)) out0=in0;
@@ -226,10 +227,10 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
 
     if( !t.isSet(1,1)) out1=in1;
     else dg::blas1::pointwiseDot( t.value(1,1), in1, out1);
-    if(t.isSet(1,0))
-        dg::blas1::pointwiseDot( 1., t.value(1,0), in0, 1., out1);
     if(t.isSet(1,2))
-        dg::blas1::pointwiseDot( 1., t.value(1,2), in0, 1., out1);
+        dg::blas1::pointwiseDot( 1., t.value(1,2), in2, 1., out1);
+    if(t.isSet(1,0)) //wrong if inplace
+        dg::blas1::pointwiseDot( 1., t.value(1,0), in0, 1., out1);
 
     if(!t.isSet(2,2)) out2=in2;
     else dg::blas1::pointwiseDot( t.value(2,2), in2, out2);
@@ -256,6 +257,7 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
 template<class container>
 void multiply_inplace( const SparseTensor<container>& t, container& inout0, container& inout1, container& inout2, container& workspace0, container& workspace1)
 {
+    //first: store off-diagonals of first two rows
     if( t.isSet(0,1) ) {
         dg::blas1::pointwiseDot( t.value(0,1), inout1, workspace0);
         if( t.isSet(0,2) ) dg::blas1::pointwiseDot( 1.,t.value(0,2), inout2, 1.,workspace0);
@@ -276,11 +278,12 @@ void multiply_inplace( const SparseTensor<container>& t, container& inout0, cont
     }
     //else workspace1 is empty
     //
-    //compute out2 inplace
+    //second: compute out2 inplace
     if( t.isSet(2,2)) dg::blas1::pointwiseDot( t.value(2,2), inout2, inout2);
     if( t.isSet(2,1)) dg::blas1::pointwiseDot( 1., t.value(2,1), inout1, 1., inout2);
     if( t.isSet(2,0)) dg::blas1::pointwiseDot( 1., t.value(2,0), inout0, 1., inout2);
 
+    //third add values stored in workspaces
     if(t.isSet(0,1) ||t.isSet(0,2) ) //workspace0 is filled
     {
         if( !t.isSet(0,0)) dg::blas1::axpby( 1., inout0, 1., workspace0, workspace0);
@@ -339,16 +342,16 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
 template<class container>
 void multiply( const CholeskyTensor<container>& ch, const container& in0, const container& in1, container& out0, container& out1)
 {
-    multiply(ch.upper(), in0, in1, out0, out1);
-    //multiply( ch.diagonal(), out0, out1, out0, out1);
-    //multiply(ch.lower(), out0, out1, out0, out1);
+    multiply(ch.upper(),     in0,  in1,  out0, out1);
+    multiply(ch.diagonal(),  out0, out1, out0, out1);
+    multiply(ch.lower(),     out0, out1, out0, out1);
 }
 template<class container>
 void multiply( const CholeskyTensor<container>& ch, const container& in0, const container& in1, const container& in2, container& out0, container& out1, container& out2)
 {
-    multiply(ch.upper(), in0, in1,in2, out0, out1,out2);
-    multiply(ch.diagonal(), out0, out1,out2, out0, out1,out2);
-    multiply(ch.lower(), out0, out1,out2, out0, out1,out2);
+    multiply(ch.upper(),    in0,  in1, in2,  out0, out1, out2);
+    multiply(ch.diagonal(), out0, out1,out2, out0, out1, out2);
+    multiply(ch.lower(),    out0, out1,out2, out0, out1, out2);
 }
 
 template<class container>

@@ -60,9 +60,9 @@ int main()
     sparse3d.clear_unused_values();
     std::cout << "Size after  "<<sparse3d.values().size()<<"\n";
     std::cout << "tensor after \n";
-    print( sparse3d);
+    if(!sparse3d.isDiagonal()) print( sparse3d);
     std::cout << "empty Tensor \n";
-    print( sparse3d.empty());
+    if(sparse3d.empty().isDiagonal()) print( sparse3d.empty());
     std::cout << "explicit dense Tensor \n";
     dg::SparseTensor<thrust::host_vector<double> > dense3d = sparse3d.dense();
     if(dense3d.isDense())print( dense3d);
@@ -94,12 +94,8 @@ int main()
     ee = e;
     e.value()=nine;
     std::cout << "Assignment and set : "<<ee<<" (80) "<<e<<"(90)\n";
-    dg::SparseElement<thrust::host_vector<double> > sqr = e.sqrt();
-    std::cout<<"sqrt(): "<<sqr<<" ("<<std::sqrt(90)<<")\n";
-    sqr = sqr.invert();
-    std::cout<<"invert(): "<<sqr<<"\n";
-    sqr.clear();
-    std::cout<<"clear(): "<<sqr<<"\n";
+    e.clear();
+    std::cout<<"clear(): "<<e<<"\n";
     std::cout <<std::flush;
     return 0;
 

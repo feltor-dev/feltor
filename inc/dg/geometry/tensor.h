@@ -200,7 +200,7 @@ struct SparseTensor
     }
 
     /**
-    * @brief Test the matrix for emptiness
+    * @brief Test if all elements are set
     *
     * The matrix is dense if isSet(i,j) for all i and j
     * @return true if all values in the matrix are set
@@ -220,8 +220,7 @@ struct SparseTensor
     * The matrix is perpendicular if !isSet(i,j) for any i,j=2
     * @return true if perpenicular
     * */
-    bool isPerp() const
-    {
+    bool isPerp() const {
         bool empty=true;
         for(unsigned i=0; i<3; i++)
         {
@@ -229,6 +228,20 @@ struct SparseTensor
                 empty=false;
         }
         return empty;
+    }
+    /**
+    * @brief Test if no off-diagonals are set
+    *
+    * The matrix is diagonal if no off-diagonal element is set
+    * @return true if no off-diagonal element is set
+    */
+    bool isDiagonal()const{
+        bool diagonal=true;
+        for(unsigned i=0; i<3; i++)
+            for(unsigned j=i+1; j<3; j++)
+                if( isSet(i,j) ||  isSet(j,i))
+                    diagonal=false;
+        return diagonal;
     }
      
      ///construct an empty Tensor
