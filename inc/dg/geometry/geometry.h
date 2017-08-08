@@ -141,7 +141,7 @@ template< class Geometry>
 typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector volume( const Geometry& g)
 {
     typedef typename HostVec< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
-    SharedContainers<host_vector> metric = g.compute_metric();
+    SharedContainers<host_vector> metric = g.metric();
     host_vector temp = dg::create::weights( g);
     dg::geo::multiplyVolume( temp, metric);
     return temp;

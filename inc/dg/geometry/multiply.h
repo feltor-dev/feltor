@@ -110,19 +110,19 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
         else out0=in0;
         return;
     }
-    //upper triangular
+    //upper triangular and default
     if( t.isSet(0,0) ) 
         dg::blas1::pointwiseDot( t.value(0,0), in0, out0); 
     else 
         out0=in0;
-    if(t.isSet(0,1))
+    if(t.isSet(0,1)) //true
         dg::blas1::pointwiseDot( 1.,  t.value(0,1), in1, 1., out0);
 
     if( t.isSet(1,1) )
         dg::blas1::pointwiseDot( t.value(1,1), in1, out1);
     else 
         out1=in1;
-    if(t.isSet(1,0))
+    if(t.isSet(1,0)) //if aliasing happens this is wrong
         dg::blas1::pointwiseDot( 1.,  t.value(1,0), in0, 1., out1);
 }
 

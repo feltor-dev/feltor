@@ -15,7 +15,7 @@ namespace dg
 struct aGeometry2d : public aTopology2d
 {
     const SharedContainers<thrust::host_vector<double> >& map()const{return map_;}
-    SharedContainers<thrust::host_vector<double> > compute_metric()const {
+    SharedContainers<thrust::host_vector<double> > metric()const {
         return do_compute_metric();
     }
     ///Geometries are cloneable
@@ -45,7 +45,7 @@ struct aGeometry2d : public aTopology2d
 struct aGeometry3d : public aTopology3d
 {
     const SharedContainers<thrust::host_vector<double> >& map()const{return map_;}
-    SharedContainers<thrust::host_vector<double> > compute_metric()const {
+    SharedContainers<thrust::host_vector<double> > metric()const {
         return do_compute_metric();
     }
     ///Geometries are cloneable
@@ -75,11 +75,11 @@ namespace create
 ///@{
 SharedContainers<thrust::host_vector<double> > metric( const aGeometry2d& g)
 {
-    return g.compute_metric();
+    return g.metric();
 }
 SharedContainers<thrust::host_vector<double> > metric( const aGeometry3d& g)
 {
-    return g.compute_metric();
+    return g.metric();
 }
 ///@}
 
