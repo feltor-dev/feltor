@@ -137,7 +137,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
         construct( n,Nx,Ny);
     }
     CurvilinearGrid2d( CylindricalProductGrid3d<container> g):
-        dg::aGeometry2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy()), handle_(g.generator())
+        dg::aGeometry2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy() ), handle_(g.generator())
     {
         g.set( n(), Nx(), Ny(), 1); //shouldn't trigger 2d grid generator
         map_=g.map();

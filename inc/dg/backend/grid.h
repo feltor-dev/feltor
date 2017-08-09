@@ -32,11 +32,11 @@ struct Grid1d
     /**
      * @brief 1D grid
      * 
-     @param x0 left boundary
-     @param x1 right boundary
-     @param n # of polynomial coefficients
-     @param N # of cells
-     @param bcx boundary conditions
+     * @param x0 left boundary
+     * @param x1 right boundary
+     * @param n # of polynomial coefficients
+     * @param N # of cells
+     * @param bcx boundary conditions
      */
     Grid1d( double x0, double x1, unsigned n, unsigned N, bc bcx = PER)
     {
@@ -411,10 +411,7 @@ struct aTopology2d
 
 
 /**
- * @brief A 3D grid class  for cartesian coordinates
- *
- * In the third dimension only 1 polynomial coefficient is used,
- * not n.
+ * @brief An abstract base class for three-dimensional grids
  * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  */
 struct aTopology3d

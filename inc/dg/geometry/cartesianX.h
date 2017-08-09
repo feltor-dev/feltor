@@ -9,21 +9,6 @@ namespace dg
 ///@addtogroup basicgrids
 ///@{
 //
-/**
- * @brief one-dimensional Grid with Cartesian metric
- */
-struct CartesianGridX1d: public dg::GridX1d
-{
-    typedef OrthonormalTag metric_category; 
-    ///@copydoc GridX1d::GridX1d()
-    CartesianGridX1d( double x0, double x1, double f, unsigned n, unsigned N, bc bcx = NEU):
-        dg::GridX1d(x0,x1,f,n,N,bcx){}
-    /**
-     * @brief Construct from existing topology
-     * @param grid existing grid class
-     */
-    CartesianGridX1d( const dg::GridX1d& grid):dg::GridX1d(grid){}
-};
 
 /**
  * @brief two-dimensional Grid with Cartesian metric

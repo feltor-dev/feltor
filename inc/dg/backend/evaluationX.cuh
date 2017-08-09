@@ -50,36 +50,12 @@ thrust::host_vector<double> evaluate( double (f)(double), const GridX1d& g)
             may be constructed during function call.
  */
 template< class BinaryOp>
-thrust::host_vector<double> evaluate( BinaryOp f, const GridX2d& g)
+thrust::host_vector<double> evaluate( BinaryOp f, const aTopologyX2d& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double), const GridX2d& g)
-{
-    return evaluate( f, g.grid());
-};
-///@endcond
-
-/**
- * @brief Evaluate a function on gaussian abscissas
- *
- * Evaluates f(x,y,z) on the given grid
- * @tparam TernaryOp Model of Ternary Function
- * @param f The function to evaluate: f = f(x,y,z)
- * @param g The 3d grid on which to evaluate f
- *
- * @return  A dG Host Vector with values
- * @note Copies the ternary Operator. This function is meant for small function objects, that
-            may be constructed during function call.
- */
-template< class TernaryOp>
-thrust::host_vector<double> evaluate( TernaryOp f, const GridX3d& g)
-{
-    return evaluate( f, g.grid());
-};
-///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double, double), const GridX3d& g)
+thrust::host_vector<double> evaluate( double(f)(double, double), const aTopologyX2d& g)
 {
     return evaluate( f, g.grid());
 };
