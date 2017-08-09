@@ -20,7 +20,7 @@ struct aGeometry2d : public aTopology2d
     SparseTensor<thrust::host_vector<double> > metric()const { 
         return do_compute_metric(); 
     }
-    std::vector<thrust::host_vector<double> > map(){
+    std::vector<thrust::host_vector<double> > map()const{
         return do_compute_map();
     }
     ///Geometries are cloneable
@@ -40,10 +40,10 @@ struct aGeometry2d : public aTopology2d
     }
     private:
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const {
-        return SharedContainer<thrust::host_vector<double> >();
+        return SparseTensor<thrust::host_vector<double> >();
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian()const {
-        return SharedContainer<thrust::host_vector<double> >();
+        return SparseTensor<thrust::host_vector<double> >();
     }
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{
         std::vector<thrust::host_vector<double> > map(2);
@@ -66,7 +66,7 @@ struct aGeometry3d : public aTopology3d
     SparseTensor<thrust::host_vector<double> > metric()const { 
         return do_compute_metric(); 
     }
-    std::vector<thrust::host_vector<double> > map(){
+    std::vector<thrust::host_vector<double> > map()const{
         return do_compute_map();
     }
     ///Geometries are cloneable
@@ -86,10 +86,10 @@ struct aGeometry3d : public aTopology3d
     }
     private:
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const {
-        return SharedContainer<thrust::host_vector<double> >();
+        return SparseTensor<thrust::host_vector<double> >();
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian()const {
-        return SharedContainer<thrust::host_vector<double> >();
+        return SparseTensor<thrust::host_vector<double> >();
     }
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{
         std::vector<thrust::host_vector<double> > map(3);
@@ -114,10 +114,9 @@ struct CartesianGrid2d: public dg::aGeometry2d
     CartesianGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aGeometry2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
     /**
      * @brief Construct from existing topology
-     *
-     * @param grid existing grid class
+     * @param g existing grid class
      */
-    CartesianGrid2d( const dg::Grid2d& grid):dg::Grid2d(grid){}
+    CartesianGrid2d( const dg::Grid2d& g):dg::aGeometry2d(g.x0(),g.x1(),g.y0(),g.y1(),g.n(),g.Nx(),g.Ny(),g.bcx(),g.bcy()){}
     virtual CartesianGrid2d* clone()const{return new CartesianGrid2d(*this);}
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny){
@@ -134,9 +133,9 @@ struct CartesianGrid3d: public dg::aGeometry3d
     CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     /**
      * @brief Implicit type conversion from Grid3d
-     * @param grid existing grid class
+     * @param g existing grid class
      */
-    CartesianGrid3d( const dg::Grid3d& grid):dg::Grid3d(grid){}
+    CartesianGrid3d( const dg::Grid3d& g):dg::aGeometry3d(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
     virtual CartesianGrid3d* clone()const{return new CartesianGrid3d(*this);}
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
@@ -153,8 +152,8 @@ struct CylindricalGrid3d: public dg::aGeometry3d
     virtual CylindricalGrid3d* clone()const{return new CylindricalGrid3d(*this);}
     private:
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const{
-        SparseTensor<thrust::host_vector<double> metric(1);
-        thrust::host_vector<double> R = dg::evaluate(dg::coo1, *this);
+        SparseTensor<thrust::host_vector<double> > metric(1);
+        thrust::host_vector<double> R = dg::evaluate(dg::cooX3d, *this);
         for( unsigned i = 0; i<size(); i++)
             R[i] = 1./R[i]/R[i];
         metric.idx(2,2)=0;

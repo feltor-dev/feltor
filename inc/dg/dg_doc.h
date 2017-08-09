@@ -118,8 +118,20 @@
 // */
 
  /**
-  * @class hide_container
-  * @tparam container A container class that can be used in blas functions
+  * @class hide_container_lvl1
+  * @tparam container A data container class for which the blas1 functionality is overloaded. Currently this is one of 
+  *   dg::HVec, dg::DVec, dg::MHVec or dg::MDVec
+  */
+ /**
+  * @class hide_matrix_container
+  * @tparam Matrix A class for which the blas2 functions are callable in connection with the container class
+  *  - dg::HMatrix with dg::HVec
+  *  - dg::DMatrix with dg::DVec
+  *  - dg::MHMatrix with dg::MHVec
+  *  - dg::MDMatrix with dg::MDVec
+  *
+  * @tparam container A data container class for which the blas1 functionality is overloaded. Currently this is one of 
+  *   dg::HVec, dg::DVec, dg::MHVec or dg::MDVec
   */
 
 /**

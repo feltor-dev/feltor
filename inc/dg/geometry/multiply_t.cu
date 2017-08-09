@@ -62,16 +62,16 @@ int main()
     std::cout << "Restore 8 = "<<inout0[0]<<"\n";
     std::cout << "Test Tensor multiplies \n";
     std::cout << "Multiply T with [8,9]\n";
-    dg::tensor::multiply(t, inout0, inout1, work0, work1);
+    dg::tensor::multiply2d(t, inout0, inout1, work0, work1);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<"]\n";
-    dg::tensor::multiply_inplace(t, inout0, inout1, work1);
+    dg::tensor::multiply2d_inplace(t, inout0, inout1, work1);
     std::cout << "Result inplace is ["<<inout0[0]<<" "<<inout1[0]<<"]\n";
     t.idx(0,2) = 2; std::swap( t.idx(1,1), t.idx(2,1));  print(t);
     std::cout << "Multiply T with [8,9,2]\n";
-    dg::tensor::multiply(t, eight, nine,two, work0, work1, work2);
+    dg::tensor::multiply3d(t, eight, nine,two, work0, work1, work2);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<" "<<work2[0]<<"]\n";
     inout0=eight, inout1=nine, inout2=two;
-    dg::tensor::multiply_inplace(t, inout0, inout1,inout2, work1,work2);
+    dg::tensor::multiply3d_inplace(t, inout0, inout1,inout2, work1,work2);
     std::cout << "Result inplace is ["<<inout0[0]<<" "<<inout1[0]<<" "<<inout2[0]<<"]\n";
     std::cout << "Determinant of T: "<<dg::tensor::determinant(t).value()[0]<<" (320)\n";
     std::swap(t.idx(2,1), t.idx(2,0)); 
@@ -87,10 +87,10 @@ int main()
     std::cout << "upper \n"; print(ch.upper());
     std::cout << "Multiply T with [8,9]\n";
     inout0=eight, inout1=nine, inout2=two;
-    dg::tensor::multiply(ch, inout0, inout1, inout0, inout1);
+    dg::tensor::multiply2d(ch, inout0, inout1, inout0, inout1);
     std::cout << "Result         is ["<<inout0[0]<<", "<<inout1[0]<<"] ([94, 93])\n";
     std::cout << "Multiply T with [8,9,2]\n";
-    dg::tensor::multiply(ch, eight,nine,two, work0, work1, work2);
+    dg::tensor::multiply3d(ch, eight,nine,two, work0, work1, work2);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<" "<<work2[0]<<"] (110, 93, 74)\n";
     return 0;
 

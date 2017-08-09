@@ -2,7 +2,7 @@
 #define _DG_ARAKAWA_CUH
 
 #include "blas.h"
-#include "geometry.h"
+#include "geometry/geometry.h"
 #include "enums.h"
 #include "backend/evaluation.cuh"
 #include "backend/derivatives.h"
@@ -21,9 +21,8 @@ namespace dg
 /**
  * @brief X-space generalized version of Arakawa's scheme
  *
+ * @copydoc hide_matrix_container
  * @ingroup arakawa
- * @tparam Matrix The Matrix class to use
- * @tparam container The vector class on which to operate on. The blas2 function symv( m, x, y) must be callable and may not change x. 
  */
 template< class Geometry, class Matrix, class container >
 struct ArakawaX
@@ -85,9 +84,7 @@ struct ArakawaX
     {
         blas2::symv( bdxf, phi, dxrhs);
         blas2::symv( bdyf, phi, dyrhs);
-        blas1::copy( dxrhs, dxlhs);//save results
-        blas1::copy( dyrhs, dylhs);
-        geo::raisePerpIndex( dxlhs, dylhs, varphi, helper_, grid); //input gets destroyed
+        tensor::multiply2d( metric_, dxrhs, dyrhs, varphi, helper_);
         blas1::pointwiseDot( varphi, dxrhs, varphi);
         blas1::pointwiseDot( 1., helper_, dyrhs,1., varphi );
     }
@@ -95,21 +92,30 @@ struct ArakawaX
   private:
     container dxlhs, dxrhs, dylhs, dyrhs, helper_;
     Matrix bdxf, bdyf;
-    Geometry grid;
+    SparseElement<container> perp_vol_inv_;
+    SparseTensor<container> metric_;
 };
 
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g ): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs), 
     bdxf( dg::create::dx( g, g.bcx())),
-    bdyf( dg::create::dy( g, g.bcy())), grid( g)
-{ }
+    bdyf( dg::create::dy( g, g.bcy()))
+{
+    metric_=g.metric().perp();
+    perp_vol_inv_ = dg::tensor::determinant(metric_);
+    dg::tensor::sqrt(perp_vol_inv_);
+}
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g, bc bcx, bc bcy): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf(dg::create::dx( g, bcx)),
-    bdyf(dg::create::dy( g, bcy)), grid(g)
-{ }
+    bdyf(dg::create::dy( g, bcy))
+{ 
+    metric_=g.metric().perp();
+    perp_vol_inv_ = dg::tensor::determinant(metric_);
+    dg::tensor::sqrt(perp_vol_inv_);
+}
 
 template< class Geometry, class Matrix, class container>
 void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
@@ -149,7 +155,7 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     //now sum everything up
     blas1::axpby( 1., dxlhs, 1., result); //result + dxlhs -> result
     blas1::axpby( 1., dxrhs, 1., result); //result + dyrhs -> result
-    geo::dividePerpVolume( result, grid);
+    tensor::pointwiseDot( perp_vol_inv_, result, result);
 }
 
 }//namespace dg

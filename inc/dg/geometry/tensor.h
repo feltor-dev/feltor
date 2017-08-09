@@ -11,10 +11,10 @@ namespace dg
 /**
  * @brief This is a sparse Tensor with only one element i.e. a Form
  *
- * @tparam container a container class
+ * @tparam T a T class
  * @ingroup misc
  */
-template<class container>
+template<class T>
 struct SparseElement
 {
     ///create empty object
@@ -23,9 +23,14 @@ struct SparseElement
      * @brief copy construct value
      * @param value a value
      */
-    SparseElement(const container& value):value_(1,value){ }
-    template<class OtherContainer>
-    SparseElement( const SparseElement<OtherContainer>& src)
+    SparseElement(const T& value):value_(1,value){ }
+    /**
+     * @brief Type conversion from other value types
+     * @tparam OtherT dg::blas1::transfer must be callable for T and OtherT
+     * @param src the source matrix to convert
+     */
+    template<class OtherT>
+    SparseElement( const SparseElement<OtherT>& src)
     {
         if(src.isSet())
         {
@@ -36,14 +41,14 @@ struct SparseElement
 
     ///@brief Read access
     ///@return read access to contained value
-    const container& value( )const { 
+    const T& value( )const { 
         return value_[0];
     }
     /**
-     * @brief write access, create a container if there isn't one already
-     * @return write access, always returns a container 
+     * @brief write access, create a T if there isn't one already
+     * @return write access, always returns a T 
      */
-    container& value() {
+    T& value() {
         if(!isSet()) value_.resize(1);
         return value_[0];
     }
@@ -59,48 +64,48 @@ struct SparseElement
     ///@brief Clear contained value
     void clear(){value_.clear();}
     private:
-    std::vector<container> value_;
+    std::vector<T> value_;
 };
 
 /**
 * @brief Class for 2x2 and 3x3 matrices sharing or implicitly assuming elements 
 *
-* This class enables shared access to stored containers 
-* or not store them at all since the storage of (and computation with) a container is expensive.
+* This class enables shared access to stored Ts 
+* or not store them at all since the storage of (and computation with) a T is expensive.
 
 * This class contains both a (dense) matrix of integers.
-* If positive or zero, the integer represents a gather index into the stored array of containers, 
-if negative the value of the container is assumed to be 1, except for the off-diagonal entries
+* If positive or zero, the integer represents a gather index into the stored array of Ts, 
+if negative the value of the T is assumed to be 1, except for the off-diagonal entries
     in the matrix where it is assumed to be 0.
-* We then only need to store non-trivial and non-repetitive containers.
-* @tparam container container class
+* We then only need to store non-trivial and non-repetitive Ts.
+* @tparam T must be default constructible and copyable
 * @ingroup misc
 */
-template<class container>
+template<class T>
 struct SparseTensor
 {
     ///no element is set
     SparseTensor( ):mat_idx_(3,-1.) {}
 
     /**
-     * @brief reserve space for containers in the values array
-     * @param value_size reserve space for this number of containers (default constructor) 
+     * @brief reserve space for Ts in the values array
+     * @param value_size reserve space for this number of Ts (default constructor) 
      */
     SparseTensor( unsigned value_size): mat_idx_(3,-1.), values_(value_size){}
 
     /**
-    * @brief pass array of containers
-    * @param values The contained containers must all have the same size
+    * @brief pass array of Ts
+    * @param values The contained Ts must all have the same size
     */
-    SparseTensor( const std::vector<container>& values ): mat_idx_(3,-1.), values_(values){}
+    SparseTensor( const std::vector<T>& values ): mat_idx_(3,-1.), values_(values){}
 
     /**
-     * @brief Type conversion from other container types
-     * @tparam OtherContainer calls dg::blas1::transfer to convert OtherContainer to container
+     * @brief Type conversion from other value types
+     * @tparam OtherT dg::blas1::transfer must be callable for T and OtherT
      * @param src the source matrix to convert
      */
-    template<class OtherContainer>
-    SparseTensor( const SparseTensor<OtherContainer>& src): mat_idx_(3,-1.), values_(src.values().size()){
+    template<class OtherT>
+    SparseTensor( const SparseTensor<OtherT>& src): mat_idx_(3,-1.), values_(src.values().size()){
         for(unsigned i=0; i<3; i++)
             for(unsigned j=0; j<3; j++)
                 mat_idx_(i,j)=src.idx(i,j);
@@ -113,7 +118,7 @@ struct SparseTensor
     * @brief check if a value is set at the given position or not
     * @param i row index 0<=i<3
     * @param j col index 0<=j<3
-    * @return true if container is non-empty, false if value is assumed implicitly
+    * @return true if T is non-empty, false if value is assumed implicitly
     */
     bool isSet(size_t i, size_t j)const{
         if( mat_idx_(i,j) <0) return false;
@@ -151,24 +156,24 @@ struct SparseTensor
       */
      void clear_unused_values();
 
-    /*!@brief Read access the underlying container
+    /*!@brief Read access the underlying T
      * @return if !isSet(i,j) the result is undefined, otherwise values[idx(i,j)] is returned. 
      * @param i row index 0<=i<3
      * @param j col index 0<=j<3
      * @note If the indices fall out of range of index the result is undefined
      */
-    const container& value(size_t i, size_t j)const{ 
+    const T& value(size_t i, size_t j)const{ 
         int k = mat_idx_(i,j);
         return values_[k];
     }
     //if you're looking for this function: YOU DON'T NEED IT!!ALIASING
-    //container& value(size_t i, size_t j);
+    //T& value(size_t i, size_t j);
     /**
-     * @brief Return the container at given position, create one if there isn't one already
+     * @brief Return the T at given position, create one if there isn't one already
      * @param i index into the values array
-     * @return  always returns a container 
+     * @return  always returns a T 
      */
-    container& value( size_t i)
+    T& value( size_t i)
     {
         if(i>=values_.size() ) values_.resize(i+1);
         return values_[i];
@@ -177,7 +182,7 @@ struct SparseTensor
      * @brief Return read access to the values array
      * @return read access to values array
      */
-    const std::vector<container>& values()const{return values_;}
+    const std::vector<T>& values()const{return values_;}
     ///clear all values, Tensor is empty after that
     void clear(){
         mat_idx_=dg::Operator<int>(3,-1);
@@ -265,7 +270,7 @@ struct SparseTensor
 
     private:
     dg::Operator<int> mat_idx_;
-    std::vector<container> values_;
+    std::vector<T> values_;
     void unique_insert(std::vector<int>& indices, int& idx);
 };
 
@@ -275,7 +280,7 @@ struct SparseTensor
  * @brief data structure to hold the LDL^T decomposition of a symmetric positive definite matrix
  *
  * LDL^T stands for a lower triangular matrix L,  a diagonal matrix D and the transpose L^T
- * @tparam container a valid container class
+ * @copydoc hide_container_lvl1
  * @attention the tensor in the Elliptic classes actually only need to be positive **semi-definite**
  * and unfortunately the decomposition is unstable for semi-definite matrices.
 * @ingroup misc
@@ -292,6 +297,11 @@ struct CholeskyTensor
     {
         decompose(in);
     }
+    /**
+     * @brief Type conversion from other value types
+     * @tparam OtherContainer dg::blas1::transfer must be callable for container and OtherContainer
+     * @param src the source matrix to convert
+     */
     template<class OtherContainer>
     CholeskyTensor( const CholeskyTensor<OtherContainer>& in):q_(in.lower()),diag_(in.diagonal()),upper_(in.upper())
     { 

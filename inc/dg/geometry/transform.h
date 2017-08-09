@@ -1,15 +1,11 @@
 #pragma once
+#include "../backend/topological_traits.h"
+#include "multiply.h"
 
 
 namespace dg
 {
 ///@cond
-template<class Geometry>
-class GeometryTraits
-{
-    typedef typename MemoryTraits< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
-
-};
 template<class MemoryTag>
 struct MemoryTraits {
 };
@@ -17,6 +13,13 @@ template<>
 struct MemoryTraits< SharedTag>
 {
     typedef thrust::host_vector<double> host_vector;
+};
+
+template<class Geometry>
+class GeometryTraits
+{
+    typedef typename MemoryTraits< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
+
 };
 
 ///@endcond
@@ -114,8 +117,8 @@ void pushForwardPerp( Functor1 vR, Functor2 vZ,
 {
     typedef typename GeometryTraits< Geometry>::host_vector host_vec;
     host_vec out1 = pullback( vR, g), temp1(out1);
-    host_vec out2 = pullback( vZ, g), temp2(out2);
-    dg::tensor::multiply(g.map(), out1, out2, temp1, temp2);
+    host_vec out2 = pullback( vZ, g);
+    dg::tensor::multiply2d_inplace(g.jacobian(), out1, out2, temp1);
     dg::blas1::transfer( out1, vx);
     dg::blas1::transfer( out2, vy);
 }
@@ -137,7 +140,7 @@ void pushForwardPerp( Functor1 vR, Functor2 vZ,
  * @param g The geometry object
  * @ingroup pullback
  */
-template<class Functor1, class Functor2, class Functor3 class container, class Geometry> 
+template<class Functor1, class Functor2, class Functor3, class container, class Geometry> 
 void pushForward( Functor1 vR, Functor2 vZ, Functor3 vPhi,
         container& vx, container& vy, container& vz,
         const Geometry& g)
@@ -145,8 +148,8 @@ void pushForward( Functor1 vR, Functor2 vZ, Functor3 vPhi,
     typedef typename GeometryTraits< Geometry>::host_vector host_vec;
     host_vec out1 = pullback( vR, g), temp1(out1);
     host_vec out2 = pullback( vZ, g), temp2(out2);
-    host_vec out3 = pullback( vPhi, g), temp3(out3);
-    dg::tensor::multiply(g.map(), out1, out2, out3, temp1, temp2, temp3);
+    host_vec out3 = pullback( vPhi, g);
+    dg::tensor::multiply3d_inplace(g.jacobian(), out1, out2, out3, temp1, temp2);
     dg::blas1::transfer( out1, vx);
     dg::blas1::transfer( out2, vy);
     dg::blas1::transfer( out3, vz);
@@ -197,12 +200,12 @@ void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
     SparseTensor<container> d = jac.dense(); //now we have a dense tensor
     container tmp00(d.getValue(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
     // multiply Chi*t -> tmp
-    dg::tensor::const_multiply( chi, d.getValue(0,0), d.getValue(1,0), tmp00, tmp10);
-    dg::tensor::const_multiply( chi, d.getValue(0,1), d.getValue(1,1), tmp01, tmp11);
+    dg::tensor::multiply2d( chi, d.getValue(0,0), d.getValue(1,0), tmp00, tmp10);
+    dg::tensor::multiply2d( chi, d.getValue(0,1), d.getValue(1,1), tmp01, tmp11);
     // multiply tT * tmp -> Chi
     SparseTensor<container> transpose = jac.transpose();
-    dg::tensor::multiply( transpose, tmp00, tmp01, chixx, chixy);
-    dg::tensor::multiply( transpose, tmp10, tmp11, chixy, chiyy);
+    dg::tensor::multiply2d( transpose, tmp00, tmp01, chixx, chixy);
+    dg::tensor::multiply2d( transpose, tmp10, tmp11, chixy, chiyy);
 }
 
 } //namespace dg

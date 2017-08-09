@@ -28,7 +28,7 @@ typedef EllSparseBlockMat<double> HMatrix; //!< Host Matrix for derivatives
 #ifdef MPI_VERSION
 //typedef MPI_Vector<thrust::device_vector<double> >  MDVec; //!< MPI Device Vector s.a. dg::DVec
 typedef MPI_Vector<DVec >  MDVec; //!< MPI Device Vector s.a. dg::DVec
-typedef MPI_Vector<thrust::host_vector<double>  >   MHVec; //!< MPI Host Vector
+typedef MPI_Vector<thrust::host_vector<double>  >   MHVec; //!< MPI Host Vector s.a. dg::HVec
 
 typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH; //!< host Communicator for the use in an mpi matrix for derivatives
 //typedef NearestNeighborComm<thrust::device_vector<int>, thrust::device_vector<double> > NNCD; //!< device Communicator for the use in an mpi matrix for derivatives

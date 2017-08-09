@@ -14,7 +14,7 @@ namespace tensor
 ///@{
 /**
  * @brief calls sqrt transform function on value
- * @copydoc container
+ * @copydoc hide_container_lvl1
  * @param mu if empty, stays empty, else contains sqrt of input
  */
 template<class container>
@@ -25,7 +25,7 @@ void sqrt( SparseElement<container>& mu){
 
 /**
  * @brief calls invert transform function on value
- * @tparam container container class 
+ * @copydoc hide_container_lvl1
  * @param mu if empty, stays empty, else contains inverse of input
  */
 template<class container>
@@ -38,7 +38,7 @@ void invert(SparseElement<container>& mu){
  * @brief Scale tensor with a container
  *
  * Computes \f$ t^{ij} = \mu t^{ij}\f$ 
- * @tparam container container class 
+ * @copydoc hide_container_lvl1
  * @param t input (contains result on output)
  * @param mu all elements in t are scaled with mu
  */
@@ -61,7 +61,7 @@ void scal( SparseTensor<container>& t, const container& mu)
  * @brief Scale tensor with a form
  *
  * Computes \f$ t^{ij} = \mu t^{ij}\f$ 
- * @tparam container container class 
+ * @copydoc hide_container_lvl1
  * @param t input (contains result on output)
  * @param mu if mu.isEmpty() then nothing happens, else all elements in t are scaled with its value
  */
@@ -75,7 +75,7 @@ void scal( SparseTensor<container>& t, const SparseElement<container>& mu)
 /**
  * @brief Multiply container with form
  *
- * @tparam container container class 
+ * @copydoc hide_container_lvl1
  * @param mu if mu.isEmpty() then out=in, else the input is pointwise multiplied with the value in mu
  * @param in input vector
  * @param out output vector (may alias in)
@@ -92,7 +92,7 @@ void pointwiseDot( const SparseElement<container>& mu, const container& in, cont
 /**
  * @brief Divide container with form
  *
- * @tparam container container class 
+ * @copydoc hide_container_lvl1
  * @param in input vector
  * @param mu if mu.isEmpty() then out=in, else the input is pointwise divided with the value in mu
  * @param out output vector (may alias in)
@@ -110,7 +110,7 @@ void pointwiseDivide( const container& in, const SparseElement<container>& mu, c
  * @brief Multiply a tensor with a vector in 2d
  *
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
- * @tparam container the container class
+ * @copydoc hide_container_lvl1
  * @param t input Tensor
  * @param in0 (input) first component 
  * @param in1 (input) second component
@@ -120,7 +120,7 @@ void pointwiseDivide( const container& in, const SparseElement<container>& mu, c
  * @attention aliasing only allowed if tensor is either lower, or upper triangular 
  */
 template<class container>
-void multiply( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, container& out1)
+void multiply2d( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, container& out1)
 {
     if(!t.isSet(0,1))//lower triangular
     {
@@ -151,7 +151,7 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
  * @brief Multiply a tensor with a vector in 2d inplace
  *
  * Compute \f$ v^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
- * @tparam container the container class
+ * @copydoc hide_container_lvl1
  * @param t input Tensor
  * @param inout0 (input/output) first component 
  * @param inout1 (input/output) second component
@@ -160,7 +160,7 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
  * @attention aliasing not allowed
  */
 template<class container>
-void multiply_inplace( const SparseTensor<container>& t, container& inout0, container& inout1, container& workspace)
+void multiply2d_inplace( const SparseTensor<container>& t, container& inout0, container& inout1, container& workspace)
 {
     if( t.isSet(0,1) ) dg::blas1::pointwiseDot( t.value(0,1), inout1, workspace);
     //compute out1 inplace
@@ -186,7 +186,7 @@ void multiply_inplace( const SparseTensor<container>& t, container& inout0, cont
  * @brief Multiply a tensor with a vector in 2d
  *
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2,3\}\f$
- * @tparam container the container class
+ * @copydoc hide_container_lvl1
  * @param t input Tensor
  * @param in0 (input)  first component 
  * @param in1 (input)  second component
@@ -198,7 +198,7 @@ void multiply_inplace( const SparseTensor<container>& t, container& inout0, cont
  * @attention aliasing only allowed if tensor is either lower, or upper triangular 
  */
 template<class container>
-void multiply( const SparseTensor<container>& t, const container& in0, const container& in1, const container& in2, container& out0, container& out1, container& out2)
+void multiply3d( const SparseTensor<container>& t, const container& in0, const container& in1, const container& in2, container& out0, container& out1, container& out2)
 {
     if( !t.isSet(0,1)&&!t.isSet(0,2)&&!t.isSet(1,2))
     {
@@ -244,7 +244,7 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
  * @brief Multiply a tensor with a vector in 2d inplace
  *
  * Compute \f$ v^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2,3\}\f$
- * @tparam container the container class
+ * @copydoc hide_container_lvl1
  * @param t input Tensor
  * @param inout0 (input/output) first component 
  * @param inout1 (input/output) second component
@@ -255,7 +255,7 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
  * @attention aliasing not allowed
  */
 template<class container>
-void multiply_inplace( const SparseTensor<container>& t, container& inout0, container& inout1, container& inout2, container& workspace0, container& workspace1)
+void multiply3d_inplace( const SparseTensor<container>& t, container& inout0, container& inout1, container& inout2, container& workspace0, container& workspace1)
 {
     //first: store off-diagonals of first two rows
     if( t.isSet(0,1) ) {
@@ -307,7 +307,7 @@ void multiply_inplace( const SparseTensor<container>& t, container& inout0, cont
 
 /**
 * @brief Compute the determinant of a tensor
-* @tparam container the container class
+* @copydoc hide_container_lvl1
 * @param t the input tensor 
 * @return the determinant of t as a SparseElement (unset if t is empty)
 */
@@ -340,18 +340,18 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
 ///@cond
 //alias always allowed
 template<class container>
-void multiply( const CholeskyTensor<container>& ch, const container& in0, const container& in1, container& out0, container& out1)
+void multiply2d( const CholeskyTensor<container>& ch, const container& in0, const container& in1, container& out0, container& out1)
 {
-    multiply(ch.upper(),     in0,  in1,  out0, out1);
-    multiply(ch.diagonal(),  out0, out1, out0, out1);
-    multiply(ch.lower(),     out0, out1, out0, out1);
+    multiply2d(ch.upper(),     in0,  in1,  out0, out1);
+    multiply2d(ch.diagonal(),  out0, out1, out0, out1);
+    multiply2d(ch.lower(),     out0, out1, out0, out1);
 }
 template<class container>
-void multiply( const CholeskyTensor<container>& ch, const container& in0, const container& in1, const container& in2, container& out0, container& out1, container& out2)
+void multiply3d( const CholeskyTensor<container>& ch, const container& in0, const container& in1, const container& in2, container& out0, container& out1, container& out2)
 {
-    multiply(ch.upper(),    in0,  in1, in2,  out0, out1, out2);
-    multiply(ch.diagonal(), out0, out1,out2, out0, out1, out2);
-    multiply(ch.lower(),    out0, out1,out2, out0, out1, out2);
+    multiply3d(ch.upper(),    in0,  in1, in2,  out0, out1, out2);
+    multiply3d(ch.diagonal(), out0, out1,out2, out0, out1, out2);
+    multiply3d(ch.lower(),    out0, out1,out2, out0, out1, out2);
 }
 
 template<class container>

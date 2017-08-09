@@ -9,7 +9,7 @@
 #include "../backend/mpi_evaluation.h"
 #include "../backend/mpi_precon.h"
 #endif//MPI_VERSION
-#include "base.h"
+#include "base_geometry.h"
 //#include "curvilinear.h"
 //#include "cartesianX.h"
 #ifdef MPI_VERSION
@@ -44,7 +44,7 @@ namespace create{
 template< class Geometry>
 typename GeometryTraits<Geometry>::host_vector volume( const Geometry& g)
 {
-    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
+    typedef typename GeometryTraits< Geometry>::host_vector host_vector;
     SparseElement<host_vector> vol = dg::tensor::determinant(g.metric());
     host_vector temp = dg::create::weights( g);
     dg::tensor::pointwiseDot( vol, temp, temp);
@@ -63,7 +63,7 @@ typename GeometryTraits<Geometry>::host_vector volume( const Geometry& g)
 template< class Geometry>
 typename GeometryTraits<Geometry>::host_vector inv_volume( const Geometry& g)
 {
-    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
+    typedef typename GeometryTraits< Geometry>::host_vector host_vector;
     host_vector temp = volume(g);
     dg::blas1::transform(temp,temp,dg::INVERT<double>());
     return temp;

@@ -61,7 +61,7 @@ struct aMPIGeometry3d : public aMPITopology3d
     SparseTensor<host_vector > metric()const { 
         return do_compute_metric(); 
     }
-    std::vector<host_vector > map(){
+    std::vector<host_vector > map()const{
         return do_compute_map();
     }
     ///Geometries are cloneable
