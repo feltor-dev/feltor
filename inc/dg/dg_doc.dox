@@ -117,6 +117,11 @@
 // *
 // */
 
+ /**
+  * @class hide_container
+  * @tparam container A container class that can be used in blas functions
+  */
+
 /**
  * @brief Struct that performs collective scatter and gather operations across processes
  * on distributed vectors using mpi

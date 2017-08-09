@@ -14,7 +14,7 @@ namespace tensor
 ///@{
 /**
  * @brief calls sqrt transform function on value
- * @tparam container container class 
+ * @copydoc container
  * @param mu if empty, stays empty, else contains sqrt of input
  */
 template<class container>
@@ -76,7 +76,7 @@ void scal( SparseTensor<container>& t, const SparseElement<container>& mu)
  * @brief Multiply container with form
  *
  * @tparam container container class 
- * @param mu if mu.isEmpty() then nothing happens, else the input is pointwise multiplied with the value in mu
+ * @param mu if mu.isEmpty() then out=in, else the input is pointwise multiplied with the value in mu
  * @param in input vector
  * @param out output vector (may alias in)
  */
@@ -94,7 +94,7 @@ void pointwiseDot( const SparseElement<container>& mu, const container& in, cont
  *
  * @tparam container container class 
  * @param in input vector
- * @param mu if mu.isEmpty() then nothing happens, else the input is pointwise divided with the value in mu
+ * @param mu if mu.isEmpty() then out=in, else the input is pointwise divided with the value in mu
  * @param out output vector (may alias in)
  */
 template<class container>
@@ -112,10 +112,10 @@ void pointwiseDivide( const container& in, const SparseElement<container>& mu, c
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
  * @tparam container the container class
  * @param t input Tensor
- * @param in0 (input) covariant first component 
- * @param in1 (input) covariant second component
- * @param out0 (output) contravariant first component 
- * @param out1 (output) contravariant second component 
+ * @param in0 (input) first component 
+ * @param in1 (input) second component
+ * @param out0 (output) first component 
+ * @param out1 (output) second component 
  * @note this version keeps the input intact 
  * @attention aliasing only allowed if tensor is either lower, or upper triangular 
  */
@@ -153,8 +153,8 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
  * Compute \f$ v^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
  * @tparam container the container class
  * @param t input Tensor
- * @param inout0 (input/output) covariant first component 
- * @param inout1 (input/output) covariant second component
+ * @param inout0 (input/output) first component 
+ * @param inout1 (input/output) second component
  * @param workspace (write) optional workspace
  * @note this version overwrites the input and the workspace
  * @attention aliasing not allowed
@@ -185,15 +185,15 @@ void multiply_inplace( const SparseTensor<container>& t, container& inout0, cont
 /**
  * @brief Multiply a tensor with a vector in 2d
  *
- * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
+ * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2,3\}\f$
  * @tparam container the container class
  * @param t input Tensor
- * @param in0 (input) covariant first component 
- * @param in1 (input) covariant second component
- * @param in2 (input) covariant third component
- * @param out0 (output) contravariant first component 
- * @param out1 (output) contravariant second component 
- * @param out2 (output) contravariant third component 
+ * @param in0 (input)  first component 
+ * @param in1 (input)  second component
+ * @param in2 (input)  third component
+ * @param out0 (output)  first component 
+ * @param out1 (output)  second component 
+ * @param out2 (output)  third component 
  * @note this version keeps the input intact 
  * @attention aliasing only allowed if tensor is either lower, or upper triangular 
  */
@@ -243,12 +243,12 @@ void multiply( const SparseTensor<container>& t, const container& in0, const con
 /**
  * @brief Multiply a tensor with a vector in 2d inplace
  *
- * Compute \f$ v^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
+ * Compute \f$ v^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2,3\}\f$
  * @tparam container the container class
  * @param t input Tensor
- * @param inout0 (input/output) covariant first component 
- * @param inout1 (input/output) covariant second component
- * @param inout2 (input/output) covariant second component
+ * @param inout0 (input/output) first component 
+ * @param inout1 (input/output) second component
+ * @param inout2 (input/output) second component
  * @param workspace0 (write) optional workspace
  * @param workspace1 (write) optional workspace
  * @note this version overwrites the input and may or may not write into the workspace
