@@ -27,7 +27,7 @@ class GeometryTraits
  * @brief This function pulls back a function defined in some basic coordinates to the curvilinear coordinate system
  *
  * e.g. F(x,y) = f(R(x,y), Z(x,y)) in 2d 
- * @tparam Functor The binary or ternary function object 
+ * @tparam Functor The binary or ternary function class
  * @param f The function defined in cartesian coordinates
  * @param g a two- or three dimensional Geometry
  * @note Template deduction for the Functor will fail if you overload functions with different 
@@ -184,24 +184,24 @@ void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
     host_vec chiRZ_ = pullback( chiRZ, g);
     host_vec chiZZ_ = pullback( chiZZ, g);
     //transfer to device
-    if(g.map().isEmpty())
+    if(g.jacobian().isEmpty())
     {
         chiRR_.swap(chixx);
         chiRZ_.swap(chixy);
         chiZZ_.swap(chiyy);
         return;
     }
-    const dg::SparseTensor<container> jac = g.map();
+    const dg::SparseTensor<container> jac = g.jacobian();
     std::vector<container> values( 3); 
     values[0] = chiRR_, values[1] = chiRZ_, values[2] = chiZZ_;
     SparseTensor<container> chi(values);
     chi(0,0)=0, chi(0,1)=chi(1,0)=1, chi(1,1)=2;
 
     SparseTensor<container> d = jac.dense(); //now we have a dense tensor
-    container tmp00(d.getValue(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
+    container tmp00(d.value(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
     // multiply Chi*t -> tmp
-    dg::tensor::multiply2d( chi, d.getValue(0,0), d.getValue(1,0), tmp00, tmp10);
-    dg::tensor::multiply2d( chi, d.getValue(0,1), d.getValue(1,1), tmp01, tmp11);
+    dg::tensor::multiply2d( chi, d.value(0,0), d.value(1,0), tmp00, tmp10);
+    dg::tensor::multiply2d( chi, d.value(0,1), d.value(1,1), tmp01, tmp11);
     // multiply tT * tmp -> Chi
     SparseTensor<container> transpose = jac.transpose();
     dg::tensor::multiply2d( transpose, tmp00, tmp01, chixx, chixy);
