@@ -88,10 +88,10 @@ struct CylindricalProductGrid3d : public dg::aGeometry3d
         handle_.get().generate( x_vec, y_vec, map_[0], map_[1], jac_.value(0), jac_.value(1), jac_.value(2), jac_.value(3));
         jac_.idx(0,0) = 0, jac_.idx(0,1) = 1, jac_.idx(1,0)=2, jac_.idx(1,1) = 3;
     }
-    virtual SparseTensor<thrust::host_vector> do_compute_jacobian( ) const {
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
         return jac_;
     }
-    virtual SparseTensor<thrust::host_vector> do_compute_metric( ) const
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const
     {
         thrust::host_vector<double> tempxx( size()), tempxy(size()), tempyy(size()), temppp(size());
         for( unsigned i=0; i<size(); i++)
@@ -110,8 +110,9 @@ struct CylindricalProductGrid3d : public dg::aGeometry3d
             metric.idx(0,1) = metric.idx(1,0) = 3; 
             metric.value(3) = tempxy;
         }
+        return metric;
     }
-    virtual std::vector<thrurst::host_vector<double> > do_compute_map()const{return map_;}
+    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
     std::vector<thrust::host_vector<double> > map_;
     SparseTensor<thrust::host_vector<double> > jac_;
     dg::Handle<aGenerator> handle_;
@@ -136,7 +137,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     {
         construct( n,Nx,Ny);
     }
-    CurvilinearGrid2d( CylindricalProductGrid3d<container> g):
+    explicit CurvilinearGrid2d( CylindricalProductGrid3d<container> g):
         dg::aGeometry2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy() ), handle_(g.generator())
     {
         g.set( n(), Nx(), Ny(), 1); //shouldn't trigger 2d grid generator
@@ -161,13 +162,13 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
         map_=g.map();
         metric_=g.metric();
     }
-    virtual SparseTensor<thrust::host_vector> do_compute_jacobian( ) const {
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
         return jac_;
     }
-    virtual SparseTensor<thrust::host_vector> do_compute_metric( ) const {
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const {
         return metric_;
     }
-    virtual std::vector<thrurst::host_vector<double> > do_compute_map()const{return map_;}
+    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
     dg::SparseTensor<thrust::host_vector<double> > jac_, metric_;
     std::vector<thrust::host_vector<double> > map_;
     dg::Handle<aGenerator2d> handle_;

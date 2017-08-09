@@ -61,7 +61,7 @@
  *
  *             High level matrix creation functions
            @defgroup interpolation Interpolation and projection
- *         @defgroup scatter Scatter
+ *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and operations
  *

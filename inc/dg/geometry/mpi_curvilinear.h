@@ -21,184 +21,138 @@ struct CurvilinearMPIGrid2d;
 ///@{
 
 /**
- * This is s 2x1 product space grid
- * @tparam MPIContainer Vector class that holds metric coefficients
+ * This is s 2x1 product space MPI grid
  */
 struct CylindricalProductMPIGrid3d : public dg::aMPIGeometry3d
 {
-    typedef dg::CurvilinearMPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
+    typedef dg::CurvilinearMPIGrid2d perpendicular_grid; //!< the two-dimensional grid
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
-    /**
-     * @copydoc Grid3d::Grid3d()
-     * @param comm a three-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
-    CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): 
-        dg::MPIGrid3d( 0, x1-x0, 0, y1-y0, z0, z1, n, Nx, Ny, Nz, comm),
-        handle_( new ShiftedIdentityGenerator(x0,x1,y0,y1), n,Nx,Ny,local().Nz(), bcx,bcy,bcz)
-     {
-        CylindricalGrid3d<LocalContainer> g(handle_.get(),n,Nx,Ny,this->Nz());
-        divide_and_conquer();
-     }
-
-    /**
-     * @copydoc Grid3d::Grid3d()
-     * @param comm a three-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
-    CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        dg::MPIGrid3d( 0, x1-x0, 0, y1-y0, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
-        handle_( new ShiftedIdentityGenerator(x0,x1,y0,y1))
-     {
-        CylindricalGrid3d<LocalContainer> g(handle_.get(),n,Nx,Ny,this->Nz());
-        divide_and_conquer(g);
-     }
-
-    CylindricalMPIGrid3d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
-        dg::MPIGrid3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
+    CylindricalMPIGrid3d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm): 
+        dg::aMPITopology3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
         handle_( generator)
     {
-        CylindricalGrid3d<LocalContainer> g(generator,n,Nx,Ny,this->Nz());
-        divide_and_conquer(g);
+        map_.resize(3);
+        CurvilinearMPIGrid2d g(generator,n,Nx,Ny, bcx, bcy, get_reduced_comm(comm));
+        constructPerp( g);
+        constructParallel(this->Nz());
     }
 
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
 
-    template<class TernaryOp>
-    dg::MPI_Vector<thrust::host_vector<double> > doPullback(TernaryOp f)const{
-        thrust::host_vector<double> vec( g.size());
-        unsigned size2d = g.n()*g.n()*g.Nx()*g.Ny();
-        for( unsigned k=0; k<g.Nz(); k++)
-            for( unsigned i=0; i<size2d; i++)
-                vec[k*size2d+i] = f( g.r()[i], g.z()[i], g.phi()[k]);
-        MPI_Vector<thrust::host_vector<double> > v( vec, g.communicator());
-        return v;
-    }
-    const dg::MPI_Vector<thrust::host_vector<double> >& xr()const{return xr_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& yz()const{return yz_;}
-    const MPIContainer& g_xx()const{return g_xx_;}
-    const MPIContainer& g_yy()const{return g_yy_;}
-    const MPIContainer& g_xy()const{return g_xy_;}
-    const MPIContainer& g_pp()const{return g_pp_;}
-    const MPIContainer& vol()const{return vol_;}
-    const MPIContainer& perpVol()const{return vol2d_;}
-    const geo::aGenerator& generator() const{return g.generator();}
-    bool isOrthonormal() const { return g.isOrthonormal();}
-    bool isOrthogonal() const { return g.isOrthogonal();}
-    bool isConformal() const { return g.isConformal();}
+    const aGenerator2d& generator() const{return handle_.get();}
     private:
+    MPI_Comm get_reduced_comm( MPI_Comm src)
+    {
+        MPI_Comm planeComm;
+        int remain_dims[] = {true,true,false}; //true true false
+        MPI_Cart_sub( src, remain_dims, &planeComm);
+        return planeComm;
+    }
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)
     {
-        dg::MPIGrid3d::do_set(new_n, new_Nx, new_Ny, new_Nz);
-        dg::CylindricalGrid3d<thrust::host_vector> g( handle_.get(), new_n, new_Nx,new_Ny,Nz());
-        divide_and_conquer(g);//distribute to processes
+        dg::aMPITopology3d::do_set(new_n, new_Nx, new_Ny, new_Nz);
+        if( !( new_n == n() && new_Nx == Nx() && new_Ny == Ny() ) )
+        {
+            CurvilinearMPIGrid2d g(handle.get(),new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), get_reduced_comm(communicator()));
+            constructPerp( g);
+        }
+        constructParallel(this->Nz());
     }
-    void divide_and_conquer( const dg::CylindricalGrid3d<thrust::host_vector<double> & g )
+    void constructPerp( CurvilinearMPIGrid2d& g2d)
     {
-        r_.resize( this->n()*this->n()*this->Nx()*this->Ny());
-        z_ = r_;
-        phi_.resize( this->Nz());
-        xr_=dg::evaluate( dg::one, *this), xz_=xr_, yr_=xr_, yz_=xr_;
-        dg::blas1::transfer( xr_, g_xx_);
-        g_xy_=g_xx_, g_yy_=g_xx_, g_pp_=g_xx_, vol_=g_xx_, vol2d_=g_xx_;
-        thrust::host_vector<double> tempxx(size()), tempxy(size()),tempyy(size()),temppp(size()),tempvol2d(size()),tempvol(size());
-        //divide and conquer
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        init_X_boundaries( g.x0(), g.x1());
-        for( unsigned s=0; s<this->Nz(); s++)
-            //for( unsigned py=0; py<dims[1]; py++)
-                for( unsigned i=0; i<this->n()*this->Ny(); i++)
-                    //for( unsigned px=0; px<dims[0]; px++)
-                        for( unsigned j=0; j<this->n()*this->Nx(); j++)
-                        {
-                            unsigned idx2D1 = i*this->n()*this->Nx() + j;
-                            unsigned idx2D2 = ((coords[1]*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            r_[idx2D1] = g.r()[idx2D2];
-                            z_[idx2D1] = g.z()[idx2D2];
-                            phi_[s] = g.phi()[coords[2]*this->Nz()+s];
-                            unsigned idx1 = (s*this->n()*this->Ny()+i)*this->n()*this->Nx() + j;
-                            unsigned idx2 = (((s*dims[1]+coords[1])*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            xr_.data()[idx1] = g.xr()[idx2];
-                            xz_.data()[idx1] = g.xz()[idx2];
-                            yr_.data()[idx1] = g.yr()[idx2];
-                            yz_.data()[idx1] = g.yz()[idx2];
-
-                            tempxx[idx1] = g.g_xx()[idx2];
-                            tempxy[idx1] = g.g_xy()[idx2];
-                            tempyy[idx1] = g.g_yy()[idx2];
-                            temppp[idx1] = g.g_pp()[idx2];
-                            tempvol[idx1] = g.vol()[idx2];
-                            tempvol2d[idx1] = g.perpVol()[idx2];
-                        }
-        dg::blas1::transfer( tempxx, g_xx_.data());
-        dg::blas1::transfer( tempxy, g_xy_.data());
-        dg::blas1::transfer( tempyy, g_yy_.data());
-        dg::blas1::transfer( temppp, g_pp_.data());
-        dg::blas1::transfer( tempvol, vol_.data());
-        dg::blas1::transfer( tempvol2d, vol2d_.data());
+        jac_=g.jacobian();
+        map_=g.map();
     }
-    thrust::host_vector<double> r_,z_,phi_;
-    dg::MPI_Vector<thrust::host_vector<double> > xr_, xz_, yr_, yz_; //3d vector
-    MPIContainer g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
+    void constructParallel( unsigned localNz )
+    {
+        map_[2]=dg::evaluate(dg::cooZ3d, *this);
+        unsigned size = this->size();
+        unsigned size2d = this->n()*this->n()*this->Nx()*this->Ny();
+        //resize for 3d values
+        for( unsigned r=0; r<4;r++)
+        {
+            jac_.value(r).data().resize(size);
+            jac_.communicator() = communicator();
+        }
+        map_[0].data().resize(size); 
+        map_[0].communicator() = communicator();
+        map_[1].data().resize(size);
+        map_[1].communicator() = communicator();
+        //lift to 3D grid
+        for( unsigned k=1; k<localNz; k++)
+            for( unsigned i=0; i<size2d; i++)
+            {
+                for(unsigned r=0; r<4; r++)
+                    jac_.value(r).data()[k*size2d+i] = jac_.value(r).data()[(k-1)*size2d+i];
+                map_[0].data()[k*size2d+i] = map_[0].data()[(k-1)*size2d+i];
+                map_[1].data()[k*size2d+i] = map_[1].data()[(k-1)*size2d+i];
+            }
+    }
+    virtual SparseTensor<host_vector> do_compute_jacobian( ) const {
+        return jac_;
+    }
+    virtual SparseTensor<host_vector> do_compute_metric( ) const {
+        thrust::host_vector<double> tempxx( size()), tempxy(size()), tempyy(size()), temppp(size());
+        for( unsigned i=0; i<size(); i++)
+        {
+            tempxx[i] = (jac_.value(0,0).data()[i]*jac_.value(0,0).data()[i]+jac_.value(0,1).data()[i]*jac_.value(0,1).data()[i]);
+            tempxy[i] = (jac_.value(0,0).data()[i]*jac_.value(1,0).data()[i]+jac_.value(0,1).data()[i]*jac_.value(1,1).data()[i]);
+            tempyy[i] = (jac_.value(1,0).data()[i]*jac_.value(1,0).data()[i]+jac_.value(1,1).data()[i]*jac_.value(1,1).data()[i]);
+            temppp[i] = 1./map_[2][i]/map_[2][i]; //1/R^2
+        }
+        SparseTensor<thrust::host_vector<double> > metric;
+        metric.idx(0,0) = 0; metric.value(0) = host_vector(tempxx, communicator());
+        metric.idx(1,1) = 1; metric.value(1) = host_vector(tempyy, communicator());
+        metric.idx(2,2) = 2; metric.value(2) = host_vector(temppp, communicator());
+        if( !handle_.get().isOrthogonal())
+        {
+            metric.idx(0,1) = metric.idx(1,0) = 3; 
+            metric.value(3) = host_vector(tempxy, communicator());
+        }
+        return metric;
+    }
+    virtual std::vector<host_vector > do_compute_map()const{return map_;}
+    dg::SparseTensor<host_vector > jac_;
+    std::vector<host_vector > map_;
     Handle<dg::geo::aGenerator> handle_;
 };
 
 /**
- * @tparam MPIContainer Vector class that holds metric coefficients
+ * @brief A two-dimensional MPI grid based on curvilinear coordinates
  */
 struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
 {
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
-
-    CurvilinearMPIGrid2d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
-        dg::aMPIGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER, comm2d),handle_(generator)
+    CurvilinearMPIGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, MPI_Comm comm2d): 
+        dg::aMPIGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, bcy, comm2d), handle_(generator)
     {
+        //generate global 2d grid and then reduce to local 
         dg::CurvilinearGrid2d<thrust::host_vector<double> > g(generator, n, Nx, Ny);
         divide_and_conquer(g);
     }
-    CurvilinearMPIGrid2d( const CylindricalMPIGrid3d<LocalContainer>& g):
+    explicit CurvilinearMPIGrid2d( const CylindricalMPIGrid3d<LocalContainer>& g):
         dg::aMPIGeometry2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
-        xr_(dg::evaluate( dg::one, *this)), xz_(xr_), yr_(xr_), yz_(xr_), 
-        g_xx_(xr_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_),
         handle_(g.generator())
     {
-        r_=g.r(); 
-        z_=g.z(); 
+        map_=g.map();
+        jac_=g.jacobian();
+        metric_=g.metric();
+        //now resize to 2d
         unsigned s = this->size();
-        for( unsigned i=0; i<s; i++)
-        {
-            xr_.data()[i]=g.xr().data()[i]; 
-            xz_.data()[i]=g.xz().data()[i]; 
-            yr_.data()[i]=g.yr().data()[i]; 
-            yz_.data()[i]=g.yz().data()[i];
-        }
-        thrust::copy( g.g_xx().data().begin(), g.g_xx().data().begin()+s, g_xx_.data().begin());
-        thrust::copy( g.g_xy().data().begin(), g.g_xy().data().begin()+s, g_xy_.data().begin());
-        thrust::copy( g.g_yy().data().begin(), g.g_yy().data().begin()+s, g_yy_.data().begin());
-        thrust::copy( g.perpVol().data().begin(), g.perpVol().data().begin()+s, vol2d_.data().begin());
+        for( unsigned i=0; i<jac_.values().size(); i++)
+            jac_.value(i).resize(s);
+        for( unsigned i=0; i<metric_.values().size(); i++)
+            metric_.value(i).resize(s);
+        for( unsigned i=0; i<map_.size(); i++)
+            map_[i].resize(s);
     }
 
-    const thrust::host_vector<double>& r()const{return r_;}
-    const thrust::host_vector<double>& z()const{return z_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& xr()const{return xr_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& yz()const{return yz_;}
-    const MPIContainer& g_xx()const{return g_xx_;}
-    const MPIContainer& g_yy()const{return g_yy_;}
-    const MPIContainer& g_xy()const{return g_xy_;}
-    const MPIContainer& vol()const{return vol2d_;}
-    const geo::aGenerator& generator() const{return g.generator();}
-    bool isOrthonormal() const { return g.isOrthonormal();}
-    bool isOrthogonal() const { return g.isOrthogonal();}
-    bool isConformal() const { return g.isConformal();}
+    const aGenerator2d& generator() const{return g.generator();}
+    virtual CurvilinearMPIGrid2d* clone()const{return new CurvilinearMPIGrid2d(*this);}
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
-        dg::MPIGrid3d::do_set(new_n, new_Nx, new_Ny);
+        dg::aMPITopology2d::do_set(new_n, new_Nx, new_Ny);
         dg::CurvilinearGrid2d<thrust::host_vector<double> > g( handle_.get(), new_n, new_Nx, new_Ny);
         divide_and_conquer(g);//distribute to processes
     }
@@ -211,39 +165,30 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
     }
     void divide_and_conquer(const dg::CurvilinearGrid2d<thrust::host_vector<double> >& g_)
     {
-        r_.resize( size());
-        z_=r_;
-        xr_=dg::evaluate( dg::one, *this), xz_=xr_, yr_=xr_, yz_=xr_;
-        thrust::host_vector<double> tempxx(size()), tempxy(size()),tempyy(size()), tempvol(size());
-        dg::blas1::transfer( xr_, g_xx_);
-        g_xy_=g_xx_, g_yy_=g_xx_, vol2d_=g_xx_;
-        //divide and conquer
-        int dims[2], periods[2], coords[2];
-        MPI_Cart_get( communicator(), 2, dims, periods, coords);
-        //for( unsigned py=0; py<dims[1]; py++)
-            for( unsigned i=0; i<this->n()*this->Ny(); i++)
-                //for( unsigned px=0; px<dims[0]; px++)
-                    for( unsigned j=0; j<this->n()*this->Nx(); j++)
-                    {
-                        unsigned idx1 = i*this->n()*this->Nx() + j;
-                        unsigned idx2 = ((coords[1]*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                        r_[idx1] = g_.r()[idx2];
-                        z_[idx1] = g_.z()[idx2];
-                        xr_.data()[idx1] = g_.xr()[idx2];
-                        xz_.data()[idx1] = g_.xz()[idx2];
-                        yr_.data()[idx1] = g_.yr()[idx2];
-                        yz_.data()[idx1] = g_.yz()[idx2];
-                        tempxx[idx1] = g_.g_xx()[idx2];
-                        tempxy[idx1] = g_.g_xy()[idx2];
-                        tempyy[idx1] = g_.g_yy()[idx2];
-                        tempvol2d[idx1] = g_.perpVol()[idx2];
-                    }
-        dg::blas1::transfer( tempxx, g_xx_.data());
-        dg::blas1::transfer( tempxy, g_xy_.data());
-        dg::blas1::transfer( tempyy, g_yy_.data());
-        dg::blas1::transfer( tempvol, vol2d_.data());
+        dg::SparseTensor<host_vector > jacobian=g_.jacobian(); 
+        dg::SparseTensor<host_vector > metric=g_.metric(); 
+        std::vector<host_vector > map = g_.map();
+        for( unsigned i=0; i<3; i++)
+            for( unsigned j=0; j<3; j++)
+            {
+                metric_(i,j) = metric(i,j)
+                jac_(i,j) = jacobian(i,j)
+            }
+        for( unsigned i=0; i<jacobian.values().size(); i++)
+            jac_.value(i) = global2local( jacobian.value(i), *this);
+        for( unsigned i=0; i<metric.values().size(); i++)
+            metric_.value(i) = global2local( metric.value(i), *this);
+        for( unsigned i=0; i<map.size(); i++)
+            map_[i] = global2local( map[i]);
     }
 
+    virtual SparseTensor<host_vector> do_compute_jacobian( ) const {
+        return jac_;
+    }
+    virtual SparseTensor<host_vector> do_compute_metric( ) const {
+        return metric_;
+    }
+    virtual std::vector<host_vector > do_compute_map()const{return map_;}
     dg::SparseTensor<host_vector > jac_, metric_;
     std::vector<host_vector > map_;
     dg::Handle<dg::geo::aGenerator2d> handle_;
