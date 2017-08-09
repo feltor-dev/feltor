@@ -13,8 +13,6 @@
 
 namespace dg{
 
-///@addtogroup grid
-///@{
 /**
 * @brief 1D grid for X-point topology
 *
@@ -26,6 +24,7 @@ namespace dg{
 * The left boundary is x0 and the right x1, the inner boundaries lie at
 * x0 + f*Lx and x1-f*Lx
 * therefore f must be smaller than 0.5
+* @ingroup grid
 */
 struct GridX1d
 {
@@ -209,7 +208,7 @@ struct GridX1d
     fy*Ly
  @endcode
  *
- * @tparam double scalar value type 
+ * @ingroup basictopology
  */
 struct aTopologyX2d
 {
@@ -501,6 +500,7 @@ struct aTopologyX2d
 };
 /**
  * @brief The simplest implementation of aTopologyX2d
+ * @ingroup grid
  */
 struct GridX2d : public aTopologyX2d
 {
@@ -511,6 +511,5 @@ struct GridX2d : public aTopologyX2d
     explicit GridX2d( const aTopologyX2d& src): aTopologyX2d(src){}
 };
 
-///@}
 
 }// namespace dg

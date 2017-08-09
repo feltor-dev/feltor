@@ -14,10 +14,9 @@
 
 namespace dg{
 
-///@addtogroup grid
-///@{
 /**
 * @brief 1D grid
+* @ingroup grid
 *
 */
 struct Grid1d
@@ -193,6 +192,7 @@ struct Grid1d
 /**
  * @brief An abstract base class for two-dimensional grids
  * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @ingroup basictopology
  */
 struct aTopology2d
 {
@@ -413,6 +413,7 @@ struct aTopology2d
 /**
  * @brief An abstract base class for three-dimensional grids
  * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @ingroup basictopology
  */
 struct aTopology3d
 {
@@ -681,6 +682,7 @@ struct aTopology3d
 
 /**
  * @brief The simplest implementation of aTopology2d
+ * @ingroup grid
  */
 struct Grid2d : public aTopology2d
 {
@@ -701,6 +703,7 @@ struct Grid2d : public aTopology2d
 
 /**
  * @brief The simplest implementation of aTopology3d
+ * @ingroup grid
  */
 struct Grid3d : public aTopology3d
 {
@@ -716,7 +719,6 @@ struct Grid3d : public aTopology3d
         aTopology3d::do_set(n,Nx,Ny,Nz);
     }
 };
-///@}
 //
 ///@cond
 void aTopology2d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)

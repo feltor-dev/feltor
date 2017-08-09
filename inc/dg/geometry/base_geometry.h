@@ -6,7 +6,7 @@
 namespace dg
 {
 
-///@addtogroup geometry
+///@addtogroup basicgeometry
 ///@{
 
 /**
@@ -102,7 +102,7 @@ struct aGeometry3d : public aTopology3d
 
 ///@}
 
-///@addtogroup basicgrids
+///@addtogroup geometry
 ///@{
 
 /**

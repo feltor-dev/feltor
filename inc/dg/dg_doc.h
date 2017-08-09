@@ -44,7 +44,8 @@
  *     Objects that store topological information (which point is neighbour of which other point) 
  *     about the grid. 
  *     @{
- *         @defgroup evaluation evaluate functions
+ *         @defgroup basictopology Topology base classes
+ *         @defgroup evaluation evaluate
  *             
  *             The function discretisation routines compute the DG discretisation
  *             of analytic functions on a given grid. In 1D the discretisation
@@ -60,20 +61,20 @@
  *         @defgroup creation create derivatives 
  *
  *             High level matrix creation functions
-           @defgroup interpolation Interpolation and projection
+ *         @defgroup interpolation Interpolation and projection
  *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and operations
  *
-          These routines form the heart of our geometry free numerical algorithms. 
-          They are called by our geometric operators like the Poisson bracket. 
-      @{
-          @defgroup pullback pullback and pushforward
-          @defgroup metric create metric
-          @defgroup basicgrids basic grids
+ *        These routines form the heart of our geometry free numerical algorithms. 
+ *        They are called by our geometric operators like the Poisson bracket. 
+ *    @{
+ *        @defgroup basicgeometry Geometry base classes
+ *        @defgroup pullback pullback and pushforward
+ *        @defgroup metric create volume
  *        @defgroup utilities Fieldalignment and Averaging
  *            The classes to perform field line integration for DS and averaging classes
-      @}
+ *    @}
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes
  *
@@ -84,37 +85,37 @@
  *     @defgroup fieldaligned Fieldaligned derivatives
  * @}
  * @defgroup templates Level 99: Template models
-   Documentation for template models
+ * Documentation for template models
  * @defgroup misc Level 00: Miscellaneous additions
-   @{
+ * @{
+ *     @defgroup timer Timer class
  *     @defgroup functions Functions and Functors
  * 
  *         The functions are useful mainly in the constructor of Operator objects. 
  *         The functors are useful for either vector transformations or
  *         as init functions in the evaluate routines.
-       @defgroup timer Timer class
  *     @defgroup lowlevel Lowlevel helper functions and classes
  *         Low level helper routines.
-   @}
+ * @}
  * 
  */
-/*! @mainpage
- * Welcome to the DG library. 
- *
- * @par Design principles
- *
- * The DG library is built on top of the <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a> libraries. 
- * Its intention is to provide easy to use
- * functions and objects needed for the integration of 2D and 3D partial differential equations discretized with a
- * discontinuous galerkin method.  
- * Since it is built on top of <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a>, code can run on a CPU as well as a GPU by simply 
- * switching between thrust's host_vector and device_vector. 
- * The DG library uses a design pattern also employed in the cusp library and other modern C++ codes. 
- * It might be referred to as <a href="http://dx.doi.org/10.1063/1.168674">container-free numerical algorithms</a>. 
- *
- *
- *
- */
+//* @mainpage
+// * Welcome to the DG library. 
+// *
+// * @par Design principles
+// *
+// * The DG library is built on top of the <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a> libraries. 
+// * Its intention is to provide easy to use
+// * functions and objects needed for the integration of 2D and 3D partial differential equations discretized with a
+// * discontinuous galerkin method.  
+// * Since it is built on top of <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a>, code can run on a CPU as well as a GPU by simply 
+// * switching between thrust's host_vector and device_vector. 
+// * The DG library uses a design pattern also employed in the cusp library and other modern C++ codes. 
+// * It might be referred to as <a href="http://dx.doi.org/10.1063/1.168674">container-free numerical algorithms</a>. 
+// *
+// *
+// *
+// */
 
 /**
  * @brief Struct that performs collective scatter and gather operations across processes

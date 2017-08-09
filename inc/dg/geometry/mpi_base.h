@@ -6,7 +6,7 @@
 namespace dg
 {
 
-///@addtogroup geometry
+///@addtogroup basicgeometry
 ///@{
 
 /**
@@ -92,7 +92,7 @@ struct aMPIGeometry3d : public aMPITopology3d
 
 ///@}
 
-///@addtogroup basicgrids
+///@addtogroup geometry
 ///@{
 
 /**

@@ -10,8 +10,6 @@
 
 namespace dg
 {
-///@addtogroup grid
-///@{
 
 
 /**
@@ -23,7 +21,7 @@ namespace dg
  * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @attention
  * The boundaries in the constructors are global boundaries, the boundaries returned by the access functions are local boundaries, this is because the grid represents the information given to one process
- *
+ * @ingroup basictopology
  */
 struct aMPITopology2d
 {
@@ -338,6 +336,7 @@ struct aMPITopology2d
  *
  * @note Note that a single cell is never divided across processes.
  * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @ingroup basictopology
  */
 struct aMPITopology3d
 {
@@ -695,6 +694,10 @@ void aMPITopology3d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, u
 }
 ///@endcond
 
+/**
+ * @brief The simplest implementation of aMPITopology2d
+ * @ingroup grid
+ */
 struct MPIGrid2d: public aMPITopology2d
 {
     /**
@@ -720,8 +723,10 @@ struct MPIGrid2d: public aMPITopology2d
     }
 };
 
-
-
+/**
+ * @brief The simplest implementation of aMPITopology3d
+ * @ingroup grid
+ */
 struct MPIGrid3d : public aMPITopology3d
 {
     MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
@@ -743,5 +748,4 @@ struct MPIGrid3d : public aMPITopology3d
 };
 
 
-///@}
 }//namespace dg

@@ -11,7 +11,7 @@
 
 #include "matrix_categories.h"
 
-
+///@cond
 namespace dg{
 
 namespace blas2
@@ -93,5 +93,6 @@ inline void doGemv( Matrix& m,
 } //namespace detail
 } //namespace blas2
 } //namespace dg
+///@endcond
 
 #endif //_DG_BLAS_LAPLACE_CUH
