@@ -78,7 +78,8 @@ struct SparseElement
 if negative the value of the T is assumed to be 1, except for the off-diagonal entries
     in the matrix where it is assumed to be 0.
 * We then only need to store non-trivial and non-repetitive Ts.
-* @tparam T must be default constructible and copyable
+* @tparam T must be default constructible and copyable. If dense is called the dg::blas1::transform function 
+* needs to be callable.
 * @ingroup misc
 */
 template<class T>
@@ -251,8 +252,13 @@ struct SparseTensor
      
      ///construct an empty Tensor
      SparseTensor empty()const{return SparseTensor();}
-     ///Construct a tensor with all unset values filled with explicit 0 or 1
-     /// @note undefined isEmpty() returns true
+     /**
+     * @brief Construct a tensor with all unset values filled with explicit 0 or 1
+     *
+     * T must support the dg::blas1::transform function 
+     * @return a dense tensor
+     * @note undefined if isEmpty() returns true
+     */
      SparseTensor dense()const;
      ///copy and erase all values in the third dimension
      ///@note calls clear_unused_values() to get rid of the elements

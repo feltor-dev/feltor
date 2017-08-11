@@ -21,6 +21,8 @@ struct CurvilinearGrid2d;
 
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
+ * 
+ * The base coordinate system is the cylindrical coordinate system R,Z,phi
  */
 struct CylindricalProductGrid3d : public dg::aGeometry3d
 {

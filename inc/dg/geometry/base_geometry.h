@@ -163,5 +163,8 @@ struct CylindricalGrid3d: public dg::aGeometry3d
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
         aTopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
-}; ///@}
+};
+
+///@}
+
 } //namespace dg
