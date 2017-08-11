@@ -61,6 +61,30 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology
 };
 ///@endcond
 
+/**
+ * @brief Evaluate a function on gaussian abscissas
+ *
+ * Evaluates f(x,y,z) on the given grid
+ * @tparam TernaryOp Model of Ternary Function
+ * @param f The function to evaluate: f = f(x,y,z)
+ * @param g The 3d grid on which to evaluate f
+ *
+ * @return  A dG Host Vector with values
+ * @note Copies the ternary Operator. This function is meant for small function objects, that
+            may be constructed during function call.
+ */
+template< class TernaryOp>
+thrust::host_vector<double> evaluate( TernaryOp f, const aTopologyX3d& g)
+{
+    return evaluate( f, g.grid());
+};
+///@cond
+thrust::host_vector<double> evaluate( double(f)(double, double, double), const aTopologyX3d& g)
+{
+    return evaluate( f, g.grid());
+};
+///@endcond
+
 ///@}
 }//namespace dg
 

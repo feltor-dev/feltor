@@ -49,6 +49,25 @@ thrust::host_vector<double> weights( const aTopologyX2d& g) { return weights( g.
 */
 thrust::host_vector<double> inv_weights( const aTopologyX2d& g) { return inv_weights( g.grid()); }
 
+/**
+* @brief create host_vector containing 3d X-space weight coefficients for integration
+*
+* @param g The grid 
+*
+* @return Host Vector
+*/
+thrust::host_vector<double> weights( const aTopologyX3d& g) { return weights(g.grid()); }
+
+/**
+* @brief create host_vector containing 3d X-space inverse weight coefficients
+*
+* @tparam T value type
+* @param g The grid 
+*
+* @return Host Vector
+*/
+thrust::host_vector<double> inv_weights( const aTopologyX3d& g) { return inv_weights(g.grid()); }
+
 ///@}
 }//namespace create
 }//namespace dg

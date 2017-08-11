@@ -44,6 +44,25 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 }
 
 
+
+/**
+ * @brief Create interpolation matrix
+ *
+ * The matrix, when applied to a vector, interpolates its values to the given coordinates. In z-direction only a nearest neighbor interpolation is used
+ * @param x X-coordinates of interpolation points
+ * @param y Y-coordinates of interpolation points
+ * @param z Z-coordinates of interpolation points
+ * @param g The Grid on which to operate
+ * @param globalbcz determines what to do if values lie exactly on the boundary
+ *
+ * @return interpolation matrix
+ * @note The values of x, y and z must lie within the boundaries of g
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const aTopologyX3d& g, dg::bc globalbcz= dg::NEU)
+{
+    return interpolation( x,y,z, g.grid(), globalbcz);
+}
+
 /**
  * @brief Create interpolation between two grids
  *
@@ -77,6 +96,22 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopologyX
     return interpolation( g_new.grid(), g_old.grid());
 }
 
+/**
+ * @brief Create interpolation between two grids
+ *
+ * This matrix can be applied to vectors defined on the old grid to obtain
+ * its values on the new grid.
+ * 
+ * @param g_new The new points 
+ * @param g_old The old grid
+ *
+ * @return Interpolation matrix
+ * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ */
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopologyX3d& g_new, const aTopologyX3d& g_old)
+{
+    return interpolation( g_new.grid(), g_old.grid());
+}
 ///@}
 
 /**
