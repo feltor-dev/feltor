@@ -103,10 +103,17 @@ As in Step 3 you need to create links to the jsoncpp library include path (and o
  $ # The mpi program will wait for you to type the number of processes in x and y direction before
  $ # running. That is why the echo is there. 
 ```
-A default input file is located in `path/to/feltor/src/toefl/input`. All three programs solve the same equations. For more info and a description of input parameters see [here](https://github.com/feltor-dev/feltor/wiki/The-toefl-project). 
+A default input file is located in `path/to/feltor/src/toefl/input`. All three programs solve the same equations. 
+The technical documentation on what equations are discretized, 
+input/output parameters, etc. can be generated as a pdf with 
+`make doc ` in the `path/to/feltor/src/toefl` directory.
 
 ## 2. Further reading
-Please check out our [Wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information and user oriented documentation. The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) is generated with [Doxygen](http://www.doxygen.org) from source code.
+Please check out our [wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information and user oriented documentation. 
+Moreover, we maintain tex files in every src folder for technical documentation, 
+ which can be compiled with 
+`make doc ` in the respective src folder.
+The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) of the dG library was generated with [Doxygen](http://www.doxygen.org) from source code.
 
 ## 3. Contributions and Acknowledgements
 For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).
