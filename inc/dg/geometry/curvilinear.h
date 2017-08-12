@@ -2,8 +2,7 @@
 
 #include "dg/backend/manage.h"
 #include "dg/blas1.h"
-#include "geometry.h"
-#include "geometry_traits.h"
+#include "base_geometry.h"
 #include "generator.h"
 
 namespace dg
@@ -26,7 +25,7 @@ struct CurvilinearGrid2d;
  */
 struct CylindricalProductGrid3d : public dg::aGeometry3d
 {
-    typedef CurvilinearGrid2d<container> perpendicular_grid;
+    typedef CurvilinearGrid2d perpendicular_grid;
 
     /*!@brief Constructor
     
@@ -40,7 +39,7 @@ struct CylindricalProductGrid3d : public dg::aGeometry3d
      * @param bcy boundary condition in y
      * @param bcz boundary condition in z
      */
-    CylindricalProductGrid3d( const aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
+    CylindricalProductGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
         dg::aGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz)
     { 
         map_.resize(3);
@@ -49,9 +48,10 @@ struct CylindricalProductGrid3d : public dg::aGeometry3d
         constructParallel(Nz);
     }
 
-    perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
+    perpendicular_grid perp_grid() const;// { return perpendicular_grid(*this);}
 
-    const aGenerator2d & generator() const{return handle_.get()}
+    const aGenerator2d & generator() const{return handle_.get();}
+    virtual CylindricalProductGrid3d* clone()const{return new CylindricalProductGrid3d(*this);}
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny,unsigned new_Nz){
         dg::aTopology3d::do_set( new_n, new_Nx, new_Ny,new_Nz);
@@ -117,7 +117,7 @@ struct CylindricalProductGrid3d : public dg::aGeometry3d
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
     std::vector<thrust::host_vector<double> > map_;
     SparseTensor<thrust::host_vector<double> > jac_;
-    dg::Handle<aGenerator> handle_;
+    dg::Handle<aGenerator2d> handle_;
 };
 
 /**
@@ -139,7 +139,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     {
         construct( n,Nx,Ny);
     }
-    explicit CurvilinearGrid2d( CylindricalProductGrid3d<container> g):
+    explicit CurvilinearGrid2d( CylindricalProductGrid3d g):
         dg::aGeometry2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy() ), handle_(g.generator())
     {
         g.set( n(), Nx(), Ny(), 1); //shouldn't trigger 2d grid generator
@@ -159,7 +159,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     }
     void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
-        CurvilinearGrid3d<container> g( handle_.get(), n,Nx,Ny,1,bcx());
+        CylindricalProductGrid3d g( handle_.get(), n,Nx,Ny,1,bcx());
         jac_=g.jacobian();
         map_=g.map();
         metric_=g.metric();
@@ -177,4 +177,8 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
 };
 
 ///@}
+///@cond
+CylindricalProductGrid3d::perpendicular_grid CylindricalProductGrid3d::perp_grid() const { return CylindricalProductGrid3d::perpendicular_grid(*this);}
+///@endcond
+
 }//namespace dg

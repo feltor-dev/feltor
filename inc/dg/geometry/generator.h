@@ -56,12 +56,15 @@ struct aGenerator2d
     *
     * @return a copy of *this on the heap
     */
-    virtual aGridGenerator* clone() const=0;
-    virtual ~aGridGenerator(){}
+    virtual aGenerator2d* clone() const=0;
+    virtual ~aGenerator2d(){}
 
     protected:
-    aGridGenerator(const aGridGenerator& src){}
-    aGridGenerator& operator=(const aGridGenerator& src){}
+    aGenerator2d(){}
+    aGenerator2d(const aGenerator2d& src){}
+    aGenerator2d& operator=(const aGenerator2d& src){
+        return *this;
+    }
     private:
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d, 

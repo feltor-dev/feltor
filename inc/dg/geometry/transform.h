@@ -1,6 +1,7 @@
 #pragma once
 #include "../backend/topological_traits.h"
 #include "multiply.h"
+#include "base_geometry.h"
 
 
 namespace dg
@@ -16,7 +17,7 @@ struct MemoryTraits< SharedTag>
 };
 
 template<class Geometry>
-class GeometryTraits
+struct GeometryTraits
 {
     typedef typename MemoryTraits< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
 
@@ -207,5 +208,51 @@ void pushForwardPerp( FunctorRR chiRR, FunctorRZ chiRZ, FunctorZZ chiZZ,
     dg::tensor::multiply2d( transpose, tmp00, tmp01, chixx, chixy);
     dg::tensor::multiply2d( transpose, tmp10, tmp11, chixy, chiyy);
 }
+
+namespace create{
+///@addtogroup metric
+///@{
+
+
+/**
+ * @brief Create the inverse volume element on the grid (including weights!!)
+ *
+ * This is the same as the inv_weights divided by the volume form \f$ \sqrt{g}\f$
+ * @tparam Geometry any Geometry class
+ * @param g Geometry object
+ *
+ * @return  The inverse volume form
+ */
+template< class Geometry>
+typename GeometryTraits<Geometry>::host_vector inv_volume( const Geometry& g)
+{
+    typedef typename GeometryTraits< Geometry>::host_vector host_vector;
+    SparseElement<host_vector> inv_vol = dg::tensor::determinant(g.metric());
+    dg::tensor::sqrt(inv_vol);
+    host_vector temp = dg::create::inv_weights( g);
+    dg::tensor::pointwiseDot( inv_vol,temp, temp);
+    return temp;
+}
+
+/**
+ * @brief Create the volume element on the grid (including weights!!)
+ *
+ * This is the same as the weights multiplied by the volume form \f$ \sqrt{g}\f$
+ * @tparam Geometry any Geometry class
+ * @param g Geometry object
+ *
+ * @return  The volume form
+ */
+template< class Geometry>
+typename GeometryTraits<Geometry>::host_vector volume( const Geometry& g)
+{
+    typedef typename GeometryTraits< Geometry>::host_vector host_vector;
+    host_vector temp = inv_volume(g);
+    dg::blas1::transform(temp,temp,dg::INVERT<double>());
+    return temp;
+}
+
+///@}
+}//namespace create
 
 } //namespace dg
