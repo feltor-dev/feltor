@@ -337,28 +337,6 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
     return SparseElement<container>(det);
 }
 
-/**
-* @brief Compute the product of a tensor with its transpose
-* @copydoc hide_container_lvl1
-* @param t the input tensor 
-* @return the product of t with its transpose
-*/
-template<class container>
-SparseTensor<container> square( const SparseTensor<container>& t)
-{
-    if(t.isEmpty()) return SparseTensor<container>();
-    SparseTensor<container> tt;
-    container tmp(t.value(0));
-    if(t.isSet(0,0)){
-        tt.idx(0,0) = 0;
-        dg::pointwiseDot( t.value(0,0), t.value(0,0), tmp);
-        tt.value(0) = tmp;
-    }
-    if( t.isSet(0,1) || t.isSet(0,2) ) 
-    {
-        if( tt.isSet(0,0)
-    }
-}
 ///@cond
 //alias always allowed
 template<class container>

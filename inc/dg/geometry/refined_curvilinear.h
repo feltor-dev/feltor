@@ -7,7 +7,6 @@ namespace dg
 {
 
 ///@cond
-template< class container>
 struct CurvilinearRefinedGrid2d; 
 ///@endcond
 
@@ -16,16 +15,13 @@ struct CurvilinearRefinedGrid2d;
 
 /**
  * @brief A curvilinear refined grid
- * @deprecated
  */
-template< class container>
-struct CurvilinearRefinedGrid3d : public dg::RefinedGrid3d
+struct CurvilinearRefinedGrid3d : public dg::aGeometry3d
 {
-    typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
-    typedef CurvilinearRefinedGrid2d<container> perpendicular_grid; //!< the two-dimensional grid type
+    typedef CurvilinearRefinedGrid2d perpendicular_grid; //!< the two-dimensional grid type
 
-    CurvilinearRefinedGrid3d( unsigned multiple_x, unsigned multiple_y, const geo::aGenerator* generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
-        dg::RefinedGrid3d( multiple_x, multiple_y, 0, 1, 0., 2.*M_PI, 0., 2.*M_PI, n, n_old, Nx, Ny, Nz, bcx, dg::PER, dg::PER),
+    CurvilinearRefinedGrid3d( const aRefinement1d& refX, const aRefinement1d& refY, const aRefinement1d& refZ, const aGenerator2d& generator, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx): 
+        dg::aGeometry3d( 0, generator.width(), 0., 2.*M_PI, 0., 2.*M_PI, n, n_old, Nx, Ny, Nz, bcx, dg::PER, dg::PER),
         g_assoc_( generator, n_old, Nx, Ny, Nz, bcx)
     { 
         construct( generator);
