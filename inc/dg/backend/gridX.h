@@ -432,9 +432,6 @@ struct aTopologyX2d
         if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true; 
         return false;
     }
-    void init_X_boundaries( double x0, double x1) {
-        do_init_X_boundaries(x0,x1);
-    }
   protected:
     ///disallow destruction through base class pointer
     ~aTopologyX2d(){}
@@ -480,11 +477,6 @@ struct aTopologyX2d
         n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, bcx_=src.bcx_, bcy_=src.bcy_;
         dlt_=src.dlt_;
         return *this;
-    }
-    virtual void do_init_X_boundaries( double x0, double x1)
-    {
-        x0_ = x0, x1_ = x1;
-        assert( x1 > x0 );
     }
   private:
     double x0_, x1_, y0_, y1_;
@@ -749,9 +741,6 @@ struct aTopologyX3d
             return true; 
         return false;
     }
-    void init_X_boundaries( double x0, double x1) {
-        do_init_X_boundaries(x0,x1);
-    }
   protected:
     ///disallow destruction through base class pointer
     ~aTopologyX3d(){}
@@ -803,11 +792,6 @@ struct aTopologyX3d
         n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, Nz_=src.Nz_,bcx_=src.bcx_, bcy_=src.bcy_, bcz_=src.bcz_;
         dlt_=src.dlt_;
         return *this;
-    }
-    virtual void do_init_X_boundaries( double x0, double x1)
-    {
-        x0_ = x0, x1_ = x1;
-        assert( x1 > x0 );
     }
   private:
     double x0_, x1_, y0_, y1_, z0_, z1_;
