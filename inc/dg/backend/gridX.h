@@ -507,7 +507,7 @@ struct GridX2d : public aTopologyX2d
 };
 
 /**
- * @brief A 3D grid class  for cartesian coordinates
+ * @brief A 3D grid class with X-point topology
  *
  * In the third dimension only 1 polynomial coefficient is used,
  * not n. In 2d it looks like
@@ -520,7 +520,7 @@ struct GridX2d : public aTopologyX2d
     |--- ---------- ---|
     fy*Ly
  @endcode
- * @tparam double scalar value type 
+ * @ingroup basictopology
  */
 struct aTopologyX3d
 {
