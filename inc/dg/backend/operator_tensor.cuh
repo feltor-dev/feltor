@@ -25,7 +25,7 @@ namespace dg
 * @return The  tensor product
 */
 template< class T>
-Operator<T> tensor( const Operator<T>& op1, const Operator<T>& op2)
+Operator<T> tensorproduct( const Operator<T>& op1, const Operator<T>& op2)
 {
 #ifdef DG_DEBUG
     assert( op1.size() == op2.size());
@@ -53,7 +53,7 @@ Operator<T> tensor( const Operator<T>& op1, const Operator<T>& op2)
 * @return A newly allocated cusp matrix
 */
 template< class T>
-cusp::coo_matrix<int,T, cusp::host_memory> tensor( unsigned N, const Operator<T>& op)
+cusp::coo_matrix<int,T, cusp::host_memory> tensorproduct( unsigned N, const Operator<T>& op)
 {
     assert( N>0);
     unsigned n = op.size();
@@ -98,8 +98,8 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  
     typedef cusp::coo_matrix<int, T, cusp::host_memory> Matrix;
     unsigned n = left.size();
     unsigned N = m.num_rows/n;
-    Matrix r = tensor( N, right);
-    Matrix l = tensor( N, left);
+    Matrix r = tensorproduc( N, right);
+    Matrix l = tensorproduc( N, left);
     Matrix mr(m ), lmr(m);
 
     cusp::multiply( m, r, mr);

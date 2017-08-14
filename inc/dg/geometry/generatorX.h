@@ -9,15 +9,15 @@ namespace dg
 A generator is there to construct coordinate transformations from physical coordinates
 \f$ x,y\f$ to the computational domain \f$\zeta, \eta\f$, which
 is a product space. 
-@note the origin of the computational space is assumed to be (0,0)
+ @note the origin of the computational space is assumed to be (0,0)
  @ingroup generators
 */
-struct aGenerator2d
+struct aGeneratorX2d
 {
-    ///@brief length in \f$ \zeta\f$ of the computational space
-    double width()  const{return do_width();}
-    ///@brief length in \f$ \eta\f$ of the computational space
-    double height() const{return do_height();}
+    double zeta0() const{return do_zeta0();}
+    double zeta1() const{return do_zeta1();}
+    double eta0() const{return do_eta0();}
+    double eta1() const{return do_eta1();}
     ///@brief sparsity pattern for metric
     bool isOrthogonal() const { return doIsOrthogonal(); }
 
@@ -26,6 +26,8 @@ struct aGenerator2d
     *
     * @param zeta1d (input) a list of \f$ N_\zeta\f$ points \f$ 0<\zeta_i<\f$width() 
     * @param eta1d (input) a list of \f$ N_\eta\f$ points \f$ 0<\eta_j<\f$height() 
+    * @param nodeX0 is the index of the first point in eta1d  after the first jump in topology in \f$ \eta\f$
+    * @param nodeX1 is the index of the first point in eta1d  after the second jump in topology in \f$ \eta\f$
     * @param x (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ x(\zeta_i, \eta_j)\f$ 
     * @param y (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ y(\zeta_i, \eta_j)\f$ 
     * @param zetaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial x (\zeta_i, \eta_j)\f$ 
@@ -38,6 +40,7 @@ struct aGenerator2d
     void generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
+         const unsigned nodeX0, const unsigned nodeX1, 
          thrust::host_vector<double>& x, 
          thrust::host_vector<double>& y, 
          thrust::host_vector<double>& zetaX, 
@@ -56,28 +59,31 @@ struct aGenerator2d
     *
     * @return a copy of *this on the heap
     */
-    virtual aGenerator2d* clone() const=0;
-    virtual ~aGenerator2d(){}
+    virtual aGeneratorX2d* clone() const=0;
+    virtual ~aGeneratorX2d(){}
 
     protected:
-    aGenerator2d(){}
-    aGenerator2d(const aGenerator2d& src){}
-    aGenerator2d& operator=(const aGenerator2d& src){
+    aGeneratorX2d(){}
+    aGeneratorX2d(const aGeneratorX2d& src){}
+    aGeneratorX2d& operator=(const aGeneratorX2d& src){
         return *this;
     }
     private:
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
+         const unsigned nodeX0, const unsigned nodeX1, 
          thrust::host_vector<double>& x, 
          thrust::host_vector<double>& y, 
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
          thrust::host_vector<double>& etaY) const = 0;
-     virtual double do_width() const =0;
-     virtual double do_height() const =0;
-     virtual bool doIsOrthogonal()const{return false;}
+    virtual bool doIsOrthogonal()const{return false;}
+    virtual double do_zeta0() const=0;
+    virtual double do_zeta1() const=0;
+    virtual double do_eta0() const=0;
+    virtual double do_eta1() const=0;
 
 
 };

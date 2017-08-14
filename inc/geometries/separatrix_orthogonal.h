@@ -4,6 +4,7 @@
 #include "dg/backend/interpolationX.cuh"
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/weightsX.cuh"
+#include "dg/geometry/generatorX.h"
 #include "dg/runge_kutta.h"
 #include "utilitiesX.h"
 
@@ -123,7 +124,7 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
  * @tparam LaplacePsi models aBinaryOperator
  */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-struct SimpleOrthogonalX
+struct SimpleOrthogonalX : public aGeneratorX2d
 {
     SimpleOrthogonalX(): f0_(1), firstline_(0){}
     SimpleOrthogonalX( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
@@ -172,6 +173,10 @@ struct SimpleOrthogonalX
         }
     }
     double laplace(double x, double y) {return f0_*laplacePsi_(x,y);}
+        y_0= -2.*M_PI*fy/(1.-2.*fy); 
+        y_1= 2.*M_PI*(1.+fy/(1.-2.*fy));
+        const double x_0 = generator.f0()*psi_0;
+        const double x_1 = -fx/(1.-fx)*x_0;
     private:
     PsiX psiX_;
     PsiY psiY_;
@@ -188,7 +193,7 @@ struct SimpleOrthogonalX
  * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-struct SeparatrixOrthogonal
+struct SeparatrixOrthogonal : public aGeneratorX2d
 {
     typedef dg::OrthogonalTag metric_category;
     /**

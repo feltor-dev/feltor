@@ -17,17 +17,17 @@ namespace dg
 struct CurvilinearMPIGrid2d; 
 ///@endcond
 //
-///@addtogroup grids
+///@addtogroup geometry
 ///@{
 
 /**
  * This is s 2x1 product space MPI grid
  */
-struct CylindricalProductMPIGrid3d : public dg::aMPIGeometry3d
+struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
 {
     typedef dg::CurvilinearMPIGrid2d perpendicular_grid; //!< the two-dimensional grid
     typedef typename MPIContainer::container_type LocalContainer; //!< the local container type
-    CylindricalMPIGrid3d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm): 
+    CurvilinearMPIGrid3d( const geo::aGenerator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm): 
         dg::aMPITopology3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
         handle_( generator)
     {
@@ -130,7 +130,7 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
         dg::CurvilinearGrid2d<thrust::host_vector<double> > g(generator, n, Nx, Ny);
         divide_and_conquer(g);
     }
-    explicit CurvilinearMPIGrid2d( const CylindricalMPIGrid3d<LocalContainer>& g):
+    explicit CurvilinearMPIGrid2d( const CurvilinearMPIGrid3d<LocalContainer>& g):
         dg::aMPIGeometry2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
         handle_(g.generator())
     {

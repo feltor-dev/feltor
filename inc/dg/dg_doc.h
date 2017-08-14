@@ -72,7 +72,8 @@
  *        @defgroup basicgeometry Geometry base classes
  *        @defgroup pullback pullback and pushforward
  *        @defgroup metric create volume
- *        @defgroup utilities Fieldalignment and Averaging
+ *        @defgroup utilities Averaging
+ *        @defgroup generators Grid Generator classes
  *            The classes to perform field line integration for DS and averaging classes
  *    @}
  * @}
@@ -99,23 +100,6 @@
  * @}
  * 
  */
-//* @mainpage
-// * Welcome to the DG library. 
-// *
-// * @par Design principles
-// *
-// * The DG library is built on top of the <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a> libraries. 
-// * Its intention is to provide easy to use
-// * functions and objects needed for the integration of 2D and 3D partial differential equations discretized with a
-// * discontinuous galerkin method.  
-// * Since it is built on top of <a href="https://thrust.github.io/">thrust</a> and <a href="http://cusplibrary.github.io/index.html">cusp</a>, code can run on a CPU as well as a GPU by simply 
-// * switching between thrust's host_vector and device_vector. 
-// * The DG library uses a design pattern also employed in the cusp library and other modern C++ codes. 
-// * It might be referred to as <a href="http://dx.doi.org/10.1063/1.168674">container-free numerical algorithms</a>. 
-// *
-// *
-// *
-// */
 
  /**
   * @class hide_container_lvl1

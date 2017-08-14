@@ -1,29 +1,23 @@
 #pragma once
 
-#include "dg/geometry/refined_gridX.h"
-#include "orthogonalX.h"
+#include "refined_gridX.h"
 
 namespace dg
 {
 
 ///@cond
-template< class container>
 struct CurvilinearRefinedGridX2d;
 ///@endcond
 
-///@addtogroup grids
+///@addtogroup geometry
 ///@{
 
 /**
  * @brief A three-dimensional refined X-Grid
  */
-template< class container>
-struct CurvilinearRefinedGridX3d : public dg::RefinedGridX3d
+struct CurvilinearRefinedGridX3d : public dg::aGeometryX3d
 {
-    typedef dg::CurvilinearCylindricalTag metric_category;
-    typedef dg::CurvilinearRefinedGridX2d<container> perpendicular_grid;
 
-    template <class Generator>
     CurvilinearRefinedGridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
         dg::RefinedGridX3d( add_x, add_y, howmanyX, howmanyY, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, n_old, Nx, Ny, Nz, bcx, bcy, dg::PER),
         r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
@@ -33,22 +27,7 @@ struct CurvilinearRefinedGridX3d : public dg::RefinedGridX3d
         construct( generator, psi_0, fx);
     }
 
-    perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
-    const dg::CurvilinearGridX3d<container>& associated() const{ return g_assoc_;}
 
-    const thrust::host_vector<double>& r()const{return r_;}
-    const thrust::host_vector<double>& z()const{return z_;}
-    const thrust::host_vector<double>& xr()const{return xr_;}
-    const thrust::host_vector<double>& yr()const{return yr_;}
-    const thrust::host_vector<double>& xz()const{return xz_;}
-    const thrust::host_vector<double>& yz()const{return yz_;}
-
-    const container& g_xx()const{return g_xx_;}
-    const container& g_yy()const{return g_yy_;}
-    const container& g_xy()const{return g_xy_;}
-    const container& g_pp()const{return g_pp_;}
-    const container& vol()const{return vol_;}
-    const container& perpVol()const{return vol2d_;}
     private:
     template<class Generator>
     void construct( Generator generator, double psi_0, double fx)
@@ -112,18 +91,13 @@ struct CurvilinearRefinedGridX3d : public dg::RefinedGridX3d
         dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
         g_pp_=tempxx;
     }
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //3d vector
-    container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
-    dg::CurvilinearGridX3d<container> g_assoc_;
 };
 
 /**
  * @brief A two-dimensional refined X-Grid
  */
-template< class container>
 struct CurvilinearRefinedGridX2d : public dg::RefinedGridX2d
 {
-    typedef dg::CurvilinearCylindricalTag metric_category;
 
     template<class Generator>
     CurvilinearRefinedGridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
