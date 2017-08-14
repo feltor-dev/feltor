@@ -78,8 +78,7 @@ struct SparseElement
 if negative the value of the T is assumed to be 1, except for the off-diagonal entries
     in the matrix where it is assumed to be 0.
 * We then only need to store non-trivial and non-repetitive Ts.
-* @tparam T must be default constructible and copyable. If dense is called the dg::blas1::transform function 
-* needs to be callable.
+* @tparam T must be default constructible and copyable.
 * @ingroup misc
 */
 template<class T>
@@ -252,14 +251,6 @@ struct SparseTensor
      
      ///construct an empty Tensor
      SparseTensor empty()const{return SparseTensor();}
-     /**
-     * @brief Construct a tensor with all unset values filled with explicit 0 or 1
-     *
-     * T must support the dg::blas1::transform function 
-     * @return a dense tensor
-     * @note undefined if isEmpty() returns true
-     */
-     SparseTensor dense()const;
      ///copy and erase all values in the third dimension
      ///@note calls clear_unused_values() to get rid of the elements
      SparseTensor perp()const;
@@ -280,7 +271,48 @@ struct SparseTensor
     void unique_insert(std::vector<int>& indices, int& idx);
 };
 
-
+namespace tensor
+{
+ /**
+ * @brief Construct a tensor with all unset values filled with explicit 0 or 1
+ *
+ * @copydoc hide_container_lvl1
+ * @return a dense tensor
+ * @note undefined if t.isEmpty() returns true
+ */
+template<class container> 
+SparseTensor<container> dense(const SparseTensor<container>& tensor)
+{
+    SparseTensor<container> t(tensor);
+    if( t.isEmpty()) throw Error(Message(_ping_)<< "Can't make an empty tensor dense! ") ;
+    container tmp = t.values()[0];
+    //1. diagonal
+    size_t size= t.values().size();
+    bool diagonalIsSet=true;
+    for(unsigned i=0; i<3; i++)
+        if(!t.isSet(i,i)) diagonalIsSet = false;
+    if (!diagonalIsSet){
+        dg::blas1::transform( tmp, tmp, dg::CONSTANT(1));
+        t.value(size)=tmp;
+        for(unsigned i=0; i<3; i++)
+            if(!t.isSet(i,i)) t.idx(i,i) = size;
+    }
+    //2. off-diagonal
+    size = t.values().size();
+    bool offIsSet=true;
+    for(unsigned i=0; i<3; i++)
+        for(unsigned j=0; j<3; j++)
+            if( !t.isSet(i,j) ) offIsSet=false;
+    if (!offIsSet){
+        dg::blas1::transform( tmp, tmp, dg::CONSTANT(0));
+        t.value(size)=tmp;
+        for(unsigned i=0; i<3; i++)
+            for(unsigned j=0; j<3; j++)
+                if(!t.isSet(i,j) ) t.idx(i,j) = size;
+    }
+    return t;
+}
+}//namespace tensor
 
 /**
  * @brief data structure to hold the LDL^T decomposition of a symmetric positive definite matrix
@@ -321,7 +353,7 @@ struct CholeskyTensor
      */
     void decompose( const SparseTensor<container>& in)
     {
-        SparseTensor<container> denseIn=in.dense();
+        SparseTensor<container> denseIn=dg::tensor::dense(in);
         /*
          * One nice property of positive definite is that the diagonal elements are 
          * greater than zero.
@@ -349,7 +381,7 @@ struct CholeskyTensor
 
         if( q_.isSet(1,0) || in.isSet(1,1))
         {
-            SparseTensor<container> denseL = q_.dense();
+            SparseTensor<container> denseL=dg::tensor::dense(q_);
             container tmp=denseL.value(1,0);
             dg::blas1::pointwiseDot(tmp,tmp,tmp);
             if(diag_.isSet(0,0)) dg::blas1::pointwiseDot(tmp,diag_.value(0,0),tmp);
@@ -360,7 +392,7 @@ struct CholeskyTensor
 
         if( in.isSet(2,1) || (q_.isSet(2,0)&&q_.isSet(1,0)))
         {
-            SparseTensor<container> denseL = q_.dense();
+            SparseTensor<container> denseL=dg::tensor::dense(q_);
             container tmp=denseIn.value(2,1);
             dg::blas1::pointwiseDot(denseL.value(2,0), denseL.value(1,0), tmp);
             if(diag_.isSet(0,0))dg::blas1::pointwiseDot(tmp, diag_.value(0,0), tmp);
@@ -371,7 +403,7 @@ struct CholeskyTensor
         }
         if( in.isSet(2,2) || q_.isSet(2,0) || q_.isSet(2,1))
         {
-            SparseTensor<container> denseL = q_.dense();
+            SparseTensor<container> denseL=dg::tensor::dense(q_);
             container tmp=denseL.value(2,0), tmp1=denseL.value(2,1);
             dg::blas1::pointwiseDot(tmp,tmp,tmp);
             if(diag_.isSet(0,0))dg::blas1::pointwiseDot(diag_.value(0,0),tmp,tmp);
@@ -416,38 +448,6 @@ struct CholeskyTensor
 };
 
 ///@cond
-template<class container>
-SparseTensor<container> SparseTensor<container>::dense() const
-{
-    SparseTensor<container> t(*this);
-    if( isEmpty()) throw Error(Message(_ping_)<< "Can't make an empty tensor dense! ") ;
-    container tmp = t.values_[0];
-    //1. diagonal
-    size_t size= values_.size();
-    bool diagonalIsSet=true;
-    for(unsigned i=0; i<3; i++)
-        if(!t.isSet(i,i)) diagonalIsSet = false;
-    if (!diagonalIsSet){
-        dg::blas1::transform( tmp, tmp, dg::CONSTANT(1));
-        t.values_.push_back(tmp);
-        for(unsigned i=0; i<3; i++)
-            if(!t.isSet(i,i)) t.mat_idx_(i,i) = size;
-    }
-    //2. off-diagonal
-    size = t.values_.size();
-    bool offIsSet=true;
-    for(unsigned i=0; i<3; i++)
-        for(unsigned j=0; j<3; j++)
-            if( !t.isSet(i,j) ) offIsSet=false;
-    if (!offIsSet){
-        dg::blas1::transform( tmp, tmp, dg::CONSTANT(0));
-        t.values_.push_back(tmp);
-        for(unsigned i=0; i<3; i++)
-            for(unsigned j=0; j<3; j++)
-                if(!t.isSet(i,j) ) t.mat_idx_(i,j) = size;
-    }
-    return t;
-}
 
 template<class container>
 void SparseTensor<container>::unique_insert(std::vector<int>& indices, int& idx) 

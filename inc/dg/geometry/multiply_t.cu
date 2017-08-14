@@ -48,6 +48,9 @@ int main()
     std::cout << "Scale with 1/5 \n";print(t);
     dg::tensor::scal(t,two); 
     std::cout << "Scale with container(2) \n";print(t);
+    std::cout << "explicit dense Tensor \n";
+    dg::SparseTensor<thrust::host_vector<double> > dense3d = dg::tensor::dense(t);
+    if(dense3d.isDense())print( dense3d);
 
     std::cout << "Test Element multiplies \n";
     dg::SparseElement<thrust::host_vector<double> > sqr(nine);

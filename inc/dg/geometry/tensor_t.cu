@@ -63,9 +63,6 @@ int main()
     if(!sparse3d.isDiagonal()) print( sparse3d);
     std::cout << "empty Tensor \n";
     if(sparse3d.empty().isDiagonal()) print( sparse3d.empty());
-    std::cout << "explicit dense Tensor \n";
-    dg::SparseTensor<thrust::host_vector<double> > dense3d = sparse3d.dense();
-    if(dense3d.isDense())print( dense3d);
     sparse3d = sparse3d_D;
     std::cout << "original stored on device \n";
     if(!sparse3d.isDense())print( sparse3d);

@@ -315,7 +315,7 @@ template<class container>
 SparseElement<container> determinant( const SparseTensor<container>& t)
 {
     if(t.isEmpty())  return SparseElement<container>();
-    SparseTensor<container> d = t.dense();
+    SparseTensor<container> d = dense(t);
     container det = d.value(0,0);
     std::vector<container> sub_det(3,det);
     dg::blas1::transform( det, det, dg::CONSTANT(0));
@@ -337,6 +337,8 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
     return SparseElement<container>(det);
 }
 
+
+
 ///@cond
 //alias always allowed
 template<class container>
@@ -357,7 +359,7 @@ void multiply3d( const CholeskyTensor<container>& ch, const container& in0, cons
 template<class container>
 SparseElement<container> determinant( const CholeskyTensor<container>& ch)
 {
-    SparseTensor<container> diag = ch.diag().dense();
+    SparseTensor<container> diag = dense(ch.diag() );
     SparseElement<container> det;
     if(diag.isEmpty()) return det;
     else det.value()=diag.value(0,0);
