@@ -75,11 +75,11 @@ struct MemoryTraits< MPITag>
 template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry2d& g)
 {
-    std::vector<MPI_Vector<thrust::host_vector<double> > map = g.map();
+    std::vector<MPI_Vector<thrust::host_vector<double> > > map = g.map();
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
         vec[i] = f( map[0].data()[i], map[1].data()[i]);
-    return vec;
+    return MPI_Vector<thrust::host_vector<double> >( vec, g.communicator());
 }
 
 ///@copydoc pullback(Functor,const aGeometry2d&)
@@ -87,11 +87,11 @@ MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry
 template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( Functor f, const aMPIGeometry3d& g)
 {
-    std::vector<MPI_Vector<thrust::host_vector<double> > map = g.map();
+    std::vector<MPI_Vector<thrust::host_vector<double> > > map = g.map();
     thrust::host_vector<double> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
         vec[i] = f( map[0].data()[i], map[1].data()[i], map[2].data()[i]);
-    return vec;
+    return MPI_Vector<thrust::host_vector<double> >( vec, g.communicator());
 }
 
 #endif //MPI_VERSION

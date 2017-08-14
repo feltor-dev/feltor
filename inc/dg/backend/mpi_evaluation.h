@@ -81,7 +81,7 @@ MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double, dou
  */
 MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector<double>& global, const aMPITopology3d& g)
 {
-    assert( in.size() == g.global().size());
+    assert( global.size() == g.global().size());
     thrust::host_vector<double> temp(g.size());
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( g.communicator(), 3, dims, periods, coords);
@@ -107,7 +107,7 @@ MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector
  */
 MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector<double>& global, const aMPITopology2d& g)
 {
-    assert( in.size() == g.global().size());
+    assert( global.size() == g.global().size());
     thrust::host_vector<double> temp(g.size());
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( g.communicator(), 2, dims, periods, coords);
@@ -116,7 +116,7 @@ MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector
             //for( unsigned px=0; px<dims[0]; px++)
                 for( unsigned j=0; j<g.n()*g.Nx(); j++)
                 {
-                    unsigned idx1 = (i*g.n()*g.Nx() + j;
+                    unsigned idx1 = i*g.n()*g.Nx() + j;
                     unsigned idx2 = ((coords[1]*g.n()*g.Ny()+i)*dims[0] + coords[0])*g.n()*g.Nx() + j;
                     temp[idx1] = global[idx2];
                 }

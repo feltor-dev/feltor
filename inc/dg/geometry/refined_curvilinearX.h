@@ -18,6 +18,7 @@ struct CurvilinearProductRefinedGridX3d : public dg::aGeometryX3d
     /*!@brief Constructor
     
      * the coordinates of the computational space are called x,y,z
+     * @param ref a X-point refinement
      * @param generator must generate a grid
      * @param n number of %Gaussian nodes in x and y
      * @param fx
@@ -121,6 +122,7 @@ struct CurvilinearRefinedGridX2d : public dg::aGeometryX2d
     /*!@brief Constructor
     
      * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
+     * @param ref a X-point refinement
      * @param fx
      * @param fy
      * @param n number of polynomial coefficients

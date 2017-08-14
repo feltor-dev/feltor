@@ -265,13 +265,13 @@ struct aTopologyX2d
      */
     double hy() const {return ly()/(double)Ny_;}
     /**
-     * @brief Factor
+     * @brief partition factor in x
      *
      * @return 
      */
     double fx() const {return fx_;}
     /**
-     * @brief Factor
+     * @brief partition factor in y
      *
      * @return 
      */
@@ -442,8 +442,8 @@ struct aTopologyX2d
      * @param x1 right boundary in x 
      * @param y0 lower boundary in y
      * @param y1 upper boundary in y 
-     * @param fx factor for x-direction (fx*Nx must be a natural number)
-     * @param fy factor for y-direction (fy*Ny must be a natural number)
+     * @param fx factor for the partition in x-direction (fx*Nx will be rounded)
+     * @param fy factor for the partition in y-direction (fy*Ny will be rounded)
      * @param n  # of polynomial coefficients per dimension
      * @param Nx # of points in x 
      * @param Ny # of points in y
@@ -595,13 +595,13 @@ struct aTopologyX3d
      */
     double hz() const {return lz()/(double)Nz_;}
     /**
-     * @brief Factor
+     * @brief partition factor in x
      *
      * @return 
      */
     double fx() const {return fx_;}
     /**
-     * @brief Factor
+     * @brief partition factor in y
      *
      * @return 
      */
@@ -753,8 +753,8 @@ struct aTopologyX3d
      * @param y1 upper boundary in y 
      * @param z0 lower boundary in z
      * @param z1 upper boundary in z 
-     * @param fx factor for x-direction
-     * @param fy factor for y-direction
+     * @param fx factor for the partition in x-direction
+     * @param fy factor for the partition in y-direction
      * @param n  # of polynomial coefficients per (x-,y-) dimension
      * @param Nx # of points in x 
      * @param Ny # of points in y
