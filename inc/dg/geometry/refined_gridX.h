@@ -35,10 +35,10 @@ struct aRefinementX2d
         for( unsigned i=0; i<wy.size(); i++)
             for( unsigned j=0; j<wx.size(); j++)
             {
-                weightsX[0][i*wx.size()+j] = wx[j];
-                weightsY[1][i*wx.size()+j] = wy[i];
-                abscissasX[0][i*wx.size()+j] = ax[j];
-                abscissasY[1][i*wx.size()+j] = ay[i];
+                weightsX[i*wx.size()+j] = wx[j];
+                weightsY[i*wx.size()+j] = wy[i];
+                abscissasX[i*wx.size()+j] = ax[j];
+                abscissasY[i*wx.size()+j] = ay[i];
             }
     }
     /*! @brief the new number of cells

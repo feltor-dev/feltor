@@ -1,149 +1,167 @@
 #pragma once
 
+#include "generatorX.h"
 #include "refined_gridX.h"
 
 namespace dg
 {
-
-///@cond
-struct CurvilinearRefinedGridX2d;
-///@endcond
-
 ///@addtogroup geometry
 ///@{
 
 /**
- * @brief A three-dimensional refined X-Grid
+ * @brief A three-dimensional grid based on curvilinear coordinates
+ * 
+ * The base coordinate system is the cylindrical coordinate system R,Z,phi
  */
-struct CurvilinearRefinedGridX3d : public dg::aGeometryX3d
+struct CurvilinearProductRefinedGridX3d : public dg::aGeometryX3d
 {
-
-    CurvilinearRefinedGridX3d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy): 
-        dg::RefinedGridX3d( add_x, add_y, howmanyX, howmanyY, 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, n_old, Nx, Ny, Nz, bcx, bcy, dg::PER),
-        r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
-        g_assoc_( generator, psi_0, fx, fy, n_old, Nx, Ny, Nz, bcx, bcy)
-    {
-        assert( generator.isCurvilinear());
-        construct( generator, psi_0, fx);
-    }
-
-
-    private:
-    template<class Generator>
-    void construct( Generator generator, double psi_0, double fx)
+    /*!@brief Constructor
+    
+     * the coordinates of the computational space are called x,y,z
+     * @param generator must generate a grid
+     * @param n number of %Gaussian nodes in x and y
+     * @param fx
+     * @param fy
+     * @param Nx number of cells in x
+     * @param Ny number of cells in y 
+     * @param Nz  number of cells z
+     * @param bcx boundary condition in x
+     * @param bcy boundary condition in y
+     * @param bcz boundary condition in z
+     */
+    CurvilinearProductRefinedGridX3d( const aRefinementX2d& ref, const aGeneratorX2d& generator, 
+        double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, double fx, double fy, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
+        dg::aGeometryX3d( generator.zeta0(), generator.zeta1(), generator.eta0(), generator.eta1(), 0., 2.*M_PI, ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), Nz, bcx, bcy, bcz), map_(3)
     { 
-        std::cout << "FIND X FOR PSI_0\n";
-        const double x_0 = generator.f0()*psi_0;
-        const double x_1 = -fx/(1.-fx)*x_0;
-        std::cout << "X0 is "<<x_0<<" and X1 is "<<x_1<<"\n";
-        init_X_boundaries( x_0, x_1);
-        ////////////compute psi(x) for a grid on x 
-        thrust::host_vector<double> x_vec(this->n()*this->Nx()); 
-        for(unsigned i=0; i<x_vec.size(); i++) {
-            x_vec[i] = this->abscissasX()[i];
-        }
-        thrust::host_vector<double> rvec, zvec, xrvec, xzvec, yrvec, yzvec;
-        thrust::host_vector<double> y_vec(this->n()*this->Ny());
-        for(unsigned i=0; i<y_vec.size(); i++) y_vec[i] = this->abscissasY()[i*x_vec.size()];
-        std::cout << "In construct function \n";
-        generator( x_vec, y_vec, 
-                this->n()*this->outer_Ny(), 
-                this->n()*(this->inner_Ny()+this->outer_Ny()), 
-                rvec, zvec, xrvec, xzvec, yrvec, yzvec);
-        std::cout << "In construct function \n";
-        unsigned Mx = this->n()*this->Nx(), My = this->n()*this->Ny();
-        //now lift to 3D grid and multiply with refined weights
-        thrust::host_vector<double> wx = this->weightsX();
-        thrust::host_vector<double> wy = this->weightsY();
-        for( unsigned k=0; k<this->Nz(); k++)
-            for( unsigned i=0; i<Mx*My; i++)
-            {
-                r_[k*Mx*My+i] = rvec[i];
-                z_[k*Mx*My+i] = zvec[i];
-                yr_[k*Mx*My+i] = yrvec[i]*wy[k*Mx*My+i];
-                yz_[k*Mx*My+i] = yzvec[i]*wy[k*Mx*My+i];
-                xr_[k*Mx*My+i] = xrvec[i]*wx[k*Mx*My+i];
-                xz_[k*Mx*My+i] = xzvec[i]*wx[k*Mx*My+i];
-            }
-        construct_metric();
+        handle_ = generator;
+        ref_=ref;
+        constructPerp( fx,fy,n, Nx, Ny);
+        constructParallel(Nz);
     }
-    //compute metric elements from xr, xz, yr, yz, r and z
-    void construct_metric()
+
+    const aGeneratorX2d & generator() const{return handle_.get();}
+    virtual CurvilinearProductRefinedGridX3d* clone()const{return new CurvilinearProductRefinedGridX3d(*this);}
+    private:
+    //construct phi and lift rest to 3d
+    void constructParallel(unsigned Nz)
     {
-        std::cout << "CONSTRUCTING METRIC\n";
-        thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
-        unsigned Nx = this->n()*this->Nx(), Ny = this->n()*this->Ny();
-        for( unsigned k=0; k<this->Nz(); k++)
-            for( unsigned i=0; i<Ny; i++)
-                for( unsigned j=0; j<Nx; j++)
-                {
-                    unsigned idx = k*Ny*Nx+i*Nx+j;
-                    tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
-                    tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
-                    tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
-                    tempvol[idx] = r_[idx]/sqrt(tempxx[idx]*tempyy[idx]-tempxy[idx]*tempxy[idx]);
-                }
-        g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
-        dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
-        vol2d_ = tempvol;
-        thrust::host_vector<double> ones = dg::evaluate( dg::one, *this);
-        dg::blas1::pointwiseDivide( ones, r_, tempxx);
-        dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
-        g_pp_=tempxx;
+        map_[2]=dg::evaluate(dg::cooZ3d, *this);
+        unsigned size = this->size();
+        unsigned size2d = this->n()*this->n()*this->Nx()*this->Ny();
+        //resize for 3d values
+        for( unsigned r=0; r<4;r++)
+            jac_.value(r).resize(size);
+        map_[0].resize(size);
+        map_[1].resize(size);
+        //lift to 3D grid
+        for( unsigned k=1; k<Nz; k++)
+            for( unsigned i=0; i<size2d; i++)
+            {
+                for(unsigned r=0; r<4; r++)
+                    jac_.value(r)[k*size2d+i] = jac_.value(r)[(k-1)*size2d+i];
+                map_[0][k*size2d+i] = map_[0][(k-1)*size2d+i];
+                map_[1][k*size2d+i] = map_[1][(k-1)*size2d+i];
+            }
     }
+    //construct 2d plane
+    void constructPerp( double fx, double fy, unsigned n, unsigned Nx, unsigned Ny)
+    {
+        std::vector<thrust::host_vector<double> > w(2),abs(2);
+        GridX2d g( x0(),x1(),y0(),y1(),fx,fy,n,Nx,Ny,bcx,bcy);
+        ref.generate(g,w[0],w[1],abs[0],abs[1]);
+        thrust::host_vector<double> x_vec(n()*Nx()), y_vec(n()*Ny());
+        for( unsigned i=0; i<x_vec.size(); i++)
+            x_vec[i] = abs[0][i];
+        for( unsigned i=0; i<y_vec.size(); i++)
+            x_vec[i] = abs[1][i*x_vec.size()];
+        handle_.get().generate( x_vec, y_vec, n()*outer_Ny(), n()*(inner_Ny()+outer_Ny()), map_[0], map_[1], jac_.value(0), jac_.value(1), jac_.value(2), jac_.value(3));
+        //multiply by weights
+        dg::blas1::pointwiseDot( jac.value(0), w[0], jac.value(0));
+        dg::blas1::pointwiseDot( jac.value(1), w[0], jac.value(1));
+        dg::blas1::pointwiseDot( jac.value(2), w[1], jac.value(2));
+        dg::blas1::pointwiseDot( jac.value(3), w[1], jac.value(3));
+        jac_.idx(0,0) = 0, jac_.idx(0,1) = 1, jac_.idx(1,0)=2, jac_.idx(1,1) = 3;
+    }
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
+        return jac_;
+    }
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const
+    {
+        thrust::host_vector<double> tempxx( size()), tempxy(size()), tempyy(size()), temppp(size());
+        for( unsigned i=0; i<size(); i++)
+        {
+            tempxx[i] = (jac_.value(0,0)[i]*jac_.value(0,0)[i]+jac_.value(0,1)[i]*jac_.value(0,1)[i]);
+            tempxy[i] = (jac_.value(0,0)[i]*jac_.value(1,0)[i]+jac_.value(0,1)[i]*jac_.value(1,1)[i]);
+            tempyy[i] = (jac_.value(1,0)[i]*jac_.value(1,0)[i]+jac_.value(1,1)[i]*jac_.value(1,1)[i]);
+            temppp[i] = 1./map_[2][i]/map_[2][i]; //1/R^2
+        }
+        SparseTensor<thrust::host_vector<double> > metric;
+        metric.idx(0,0) = 0; metric.value(0) = tempxx;
+        metric.idx(1,1) = 1; metric.value(1) = tempyy;
+        metric.idx(2,2) = 2; metric.value(2) = temppp;
+        if( !handle_.get().isOrthogonal())
+        {
+            metric.idx(0,1) = metric.idx(1,0) = 3; 
+            metric.value(3) = tempxy;
+        }
+        return metric;
+    }
+    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
+    std::vector<thrust::host_vector<double> > map_;
+    SparseTensor<thrust::host_vector<double> > jac_;
+    dg::Handle<aGeneratorX2d> handle_;
+    dg::Handle<aRefinementX2d> ref_;
 };
 
 /**
- * @brief A two-dimensional refined X-Grid
+ * @brief A two-dimensional grid based on curvilinear coordinates
  */
-struct CurvilinearRefinedGridX2d : public dg::RefinedGridX2d
+struct CurvilinearRefinedGridX2d : public dg::aGeometryX2d
 {
+    /*!@brief Constructor
+    
+     * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
+     * @param fx
+     * @param fy
+     * @param n number of polynomial coefficients
+     * @param Nx number of cells in first coordinate
+     * @param Ny number of cells in second coordinate
+     * @param bcx boundary condition in first coordinate
+     * @param bcy boundary condition in second coordinate
+     */
+    CurvilinearRefinedGridX2d( const aRefinementX2d& ref, const aGeneratorX2d& generator, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
+        dg::aGeometryX2d( generator.zeta0(), generator.zeta1(), generator.eta0(), generator.eta1(),ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), bcx, bcy)
+    {
+        handle_ = generator;
+        ref_=ref;
+        construct( double fx,double fy,n,Nx,Ny);
+    }
 
-    template<class Generator>
-    CurvilinearRefinedGridX2d( unsigned add_x, unsigned add_y, unsigned howmanyX, unsigned howmanyY, const Generator& generator, double psi_0, double fx, double fy, unsigned n, unsigned n_old, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy): 
-        dg::RefinedGridX2d( add_x, add_y, howmanyX, howmanyY, 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, n_old, Nx, Ny, bcx, bcy),
-        g_assoc_( generator, psi_0, fx, fy, n_old, Nx, Ny, bcx, bcy) 
-    {
-        dg::CurvilinearRefinedGridX3d<container> g(add_x, add_y, howmanyX, howmanyY, generator, psi_0, fx,fy, n,n_old,Nx,Ny,1,bcx,bcy);
-        init_X_boundaries( g.x0(), g.x1());
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
-        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
-        vol2d_=g.perpVol();
-    }
-    CurvilinearRefinedGridX2d( const CurvilinearRefinedGridX3d<container>& g):
-        dg::RefinedGridX2d(g), g_assoc_(g.associated())
-    {
-        unsigned s = this->size();
-        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
-        g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
-        for( unsigned i=0; i<s; i++)
-        { r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i]; }
-        thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
-        thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
-        thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
-        thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
-    }
-    const dg::CurvilinearGridX2d<container>& associated()const{return g_assoc_;}
-    const thrust::host_vector<double>& r()const{return r_;}
-    const thrust::host_vector<double>& z()const{return z_;}
-    const thrust::host_vector<double>& xr()const{return xr_;}
-    const thrust::host_vector<double>& yr()const{return yr_;}
-    const thrust::host_vector<double>& xz()const{return xz_;}
-    const thrust::host_vector<double>& yz()const{return yz_;}
-    thrust::host_vector<double> x()const{
-        dg::Grid1d gx( x0(), x1(), n(), Nx());
-        return dg::create::abscissas(gx);}
-    const container& g_xx()const{return g_xx_;}
-    const container& g_yy()const{return g_yy_;}
-    const container& g_xy()const{return g_xy_;}
-    const container& vol()const{return vol2d_;}
-    const container& perpVol()const{return vol2d_;}
+    const aGeneratorX2d& generator() const{return handle_.get();}
+    virtual CurvilinearGridX2d* clone()const{return new CurvilinearGridX2d(*this);}
     private:
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_; //2d vector
-    container g_xx_, g_xy_, g_yy_, vol2d_;
-    dg::CurvilinearGridX2d<container> g_assoc_;
+    void construct(double fx, double fy, unsigned n, unsigned Nx, unsigned Ny)
+    {
+        CurvilinearProductRefinedGridX3d g( ref_.get(), handle_.get(),fx,fy,n,Nx,Ny,1,bcx());
+        jac_=g.jacobian();
+        map_=g.map();
+        metric_=g.metric();
+    }
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
+        return jac_;
+    }
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const {
+        return metric_;
+    }
+    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
+    dg::SparseTensor<thrust::host_vector<double> > jac_, metric_;
+    std::vector<thrust::host_vector<double> > map_;
+    dg::Handle<aGeneratorX2d> handle_;
+    dg::Handle<aRefinementX2d> ref_;
 };
+
 ///@}
+
 
 } //namespace dg
 

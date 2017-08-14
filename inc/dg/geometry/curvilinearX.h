@@ -11,10 +11,6 @@ namespace dg
 ///@addtogroup geometry
 ///@{
 
-///@cond
-struct CurvilinearGridX2d; 
-///@endcond
-
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
  * 
