@@ -19,12 +19,11 @@ namespace dg{
  * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
- * @tparam Geometry The geometry you want to use
- * @tparam Matrix The cusp-matrix class you want to use
- * @tparam Vector The Vector class you want to use
+ * @tparam container The container class you want to use
+ * @copydoc hide_matrix_container
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
  */
-template< class Geometry, class Matrix, class Vector> 
+template< class Geometry, class Matrix, class container> 
 struct Helmholtz
 {
     /**
@@ -38,8 +37,8 @@ struct Helmholtz
      */
     Helmholtz( Geometry g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, normed, dir, jfactor), 
-        temp_(dg::evaluate(dg::one, g)), chi_(temp_),
-        alpha_(alpha), isSet(false)
+        temp_(dg::evaluate(dg::one, g)),
+        alpha_(alpha)
     { 
     }
     /**
@@ -55,8 +54,8 @@ struct Helmholtz
      */
     Helmholtz( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
-        temp_(dg::evaluate(dg::one, g)), chi_(temp_),
-        alpha_(alpha), isSet(false)
+        temp_(dg::evaluate(dg::one, g)), 
+        alpha_(alpha)
     { 
     }
     /**
@@ -68,12 +67,9 @@ struct Helmholtz
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
      */
-    void symv( Vector& x, Vector& y) 
+    void symv( container& x, container& y) 
     {
-        if( isSet)
-            blas1::pointwiseDot( chi_, x, temp_);
-        else
-            blas1::transfer( x, temp_);
+        tensor::pointwiseDot( chi_, x, temp_);
         if( alpha_ != 0)
             blas2::symv( laplaceM_, x, y);
 
@@ -86,13 +82,13 @@ struct Helmholtz
      *
      * @return weights
      */
-    const Vector& weights()const {return laplaceM_.weights();}
+    const container& weights()const {return laplaceM_.weights();}
     /**
-     * @brief Vector to use in conjugate gradient solvers
+     * @brief container to use in conjugate gradient solvers
      *
-     * @return Vector
+     * @return container
      */
-    const Vector& precond()const {return laplaceM_.precond();}
+    const container& precond()const {return laplaceM_.precond();}
     /**
      * @brief Change alpha
      *
@@ -108,24 +104,24 @@ struct Helmholtz
     /**
      * @brief Set Chi in the above formula
      *
-     * @param chi new Vector
+     * @param chi new container
      */
-    void set_chi( const Vector& chi) {chi_=chi; isSet =true;}
+    void set_chi( const container& chi) {chi_.value()=chi;}
     /**
      * @brief Sets chi back to one
      */
-    void reset_chi(){isSet = false;}
+    void reset_chi(){chi_.clear();}
     /**
      * @brief Access chi
      *
      * @return chi
      */
-    const Vector& chi() const{return chi_;}
+    const SparseElement<container>& chi() const{return chi_;}
   private:
-    Elliptic<Geometry, Matrix, Vector> laplaceM_;
-    Vector temp_, chi_;
+    Elliptic<Geometry, Matrix, container> laplaceM_;
+    container temp_;
+    SparseElement<container> chi_;
     double alpha_;
-    bool isSet;
 };
 
 /**
@@ -138,13 +134,12 @@ struct Helmholtz
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
  * @tparam Geometry The geometry class you want to use
- * @tparam Matrix The cusp-matrix class you want to use
- * @tparam Vector The Vector class you want to use
+ * @copydoc hide_matrix_container
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
  * @attention It might be better to solve the normal Helmholtz operator twice
  * consecutively than solving the Helmholtz2 operator once. 
  */
-template< class Geometry, class Matrix, class Vector> 
+template< class Geometry, class Matrix, class container> 
 struct Helmholtz2
 {
     /**
@@ -159,7 +154,7 @@ struct Helmholtz2
     Helmholtz2( Geometry g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, normed, dir, jfactor), 
         temp1_(dg::evaluate(dg::one, g)),temp2_(temp1_), chi_(temp1_),
-        alpha_(alpha), isSet(false)
+        alpha_(alpha)
     { 
     }
     /**
@@ -176,7 +171,7 @@ struct Helmholtz2
     Helmholtz2( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
         temp1_(dg::evaluate(dg::one, g)), temp2_(temp1_),chi_(temp1_),
-        alpha_(alpha), isSet(false)
+        alpha_(alpha)
     { 
     }
     /**
@@ -188,18 +183,15 @@ struct Helmholtz2
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
      */
-    void symv( Vector& x, Vector& y) 
+    void symv( container& x, container& y) 
     {
         if( alpha_ != 0)
         {
             blas2::symv( laplaceM_, x, temp1_); // temp1_ = -nabla_perp^2 x
-            blas1::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*W*nabla_perp^2 x
+            tensor::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*W*nabla_perp^2 x
             blas2::symv( laplaceM_, y, temp2_);//temp2_ = nabla_perp^2 *(chi^-1)*nabla_perp^2 x            
         }
-        if( isSet)
-            blas1::pointwiseDot( chi_, x, y); //y = chi*x
-        else 
-            blas1::transfer( x, y);
+        tensor::pointwiseDot( chi_, x, y); //y = chi*x
         blas1::axpby( 1., y, -2.*alpha_, temp1_, y); 
         blas1::axpby( alpha_*alpha_, temp2_, 1., y, y);
         blas1::pointwiseDot( laplaceM_.weights(), y, y);//Helmholtz is never normed
@@ -209,14 +201,14 @@ struct Helmholtz2
      *
      * @return weights
      */
-    const Vector& weights()const {return laplaceM_.weights();}
+    const container& weights()const {return laplaceM_.weights();}
     /**
-     * @brief Vector to use in conjugate gradient solvers
+     * @brief container to use in conjugate gradient solvers
      *
      * multiply result by these coefficients to get the normed result
-     * @return Vector
+     * @return container
      */
-    const Vector& precond()const {return laplaceM_.precond();}
+    const container& precond()const {return laplaceM_.precond();}
     /**
      * @brief Change alpha
      *
@@ -232,24 +224,24 @@ struct Helmholtz2
     /**
      * @brief Set Chi in the above formula
      *
-     * @param chi new Vector
+     * @param chi new container
      */
-    void set_chi( const Vector& chi) {chi_=chi; isSet =true;}
+    void set_chi( const container& chi) {chi_.value()=chi; }
     /**
      * @brief Sets chi back to one
      */
-    void reset_chi(){isSet = false;}
+    void reset_chi(){chi_.clear();}
     /**
      * @brief Access chi
      *
      * @return chi
      */
-    const Vector& chi()const {return chi_;}
+    const SparseElement<container>& chi()const {return chi_;}
   private:
-    Elliptic<Geometry, Matrix, Vector> laplaceM_;
-    Vector temp1_, temp2_, chi_;
+    Elliptic<Geometry, Matrix, container> laplaceM_;
+    container temp1_, temp2_;
+    SparseElement<container> chi_;
     double alpha_;
-    bool isSet;
 };
 ///@cond
 template< class G, class M, class V>
