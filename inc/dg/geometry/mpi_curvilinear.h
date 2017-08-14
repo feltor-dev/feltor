@@ -17,7 +17,7 @@ namespace dg
 struct CurvilinearMPIGrid2d; 
 ///@endcond
 //
-///@addtogroup grids
+///@addtogroup geometry
 ///@{
 
 /**

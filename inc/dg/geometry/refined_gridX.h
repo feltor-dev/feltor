@@ -9,8 +9,10 @@
 
 namespace dg
 {
+///@addtogroup generators
+///@{
 /**
-* @brief Abstract base class for 1d grid refinement that increases the number of grid cells of a fixed basis grid
+* @brief Abstract base class for 2d grid refinement that increases the number of grid cells of a fixed basis grid
 */
 struct aRefinementX2d
 {
@@ -212,11 +214,12 @@ struct ExponentialXRefinement : public aRefinementX2d
         return (fy*(double)Ny + (double)add_y)/(double)(Ny+4.*add_y);
     }
 };
+///@}
 
 
 /**
  * @brief Refined X-point grid 
- * @ingroup grid
+ * @ingroup geometry
  */
 struct CartesianRefinedGridX2d : public dg::aGeometryX2d
 {
@@ -250,9 +253,10 @@ struct CartesianRefinedGridX2d : public dg::aGeometryX2d
         return abs_;
     }
 };
+
 /**
  * @brief Refined X-point grid 
- * @ingroup grid
+ * @ingroup geometry
  */
 struct CartesianRefinedGridX3d : public dg::aGeometryX3d
 {

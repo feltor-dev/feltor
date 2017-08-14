@@ -8,7 +8,7 @@
 
 namespace dg
 {
-///@addtogroup basicgrids
+///@addtogroup geometry
 ///@{
 
 ///@cond

@@ -72,7 +72,7 @@
  *        @defgroup basicgeometry Geometry base classes
  *        @defgroup pullback pullback and pushforward
  *        @defgroup metric create volume
- *        @defgroup utilities Fieldalignment and Averaging
+ *        @defgroup utilities Averaging
  *        @defgroup generators Grid Generator classes
  *            The classes to perform field line integration for DS and averaging classes
  *    @}

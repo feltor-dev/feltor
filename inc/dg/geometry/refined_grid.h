@@ -290,7 +290,7 @@ struct ExponentialRefinement : public aRefinement1d
 
 /**
  * @brief Refined Cartesian grid 
- * @ingroup grid
+ * @ingroup geometry
  */
 struct CartesianRefinedGrid2d : public dg::aGeometry2d
 {
@@ -346,7 +346,7 @@ struct CartesianRefinedGrid2d : public dg::aGeometry2d
 
 /**
  * @brief Refined Cartesian grid 
- * @ingroup grid
+ * @ingroup geometry
  */
 struct CartesianRefinedGrid3d : public dg::aGeometry3d
 {
