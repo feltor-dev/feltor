@@ -133,7 +133,7 @@ namespace ribeiro{
 
 struct FieldRZYT
 {
-    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip)
+    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
@@ -364,7 +364,7 @@ struct HessianRZtau
     void set_norm( bool normed) {norm_ = normed;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double psipRZ = psip_.dfxy(y[0], y[1]);
+        double psipRZ = psip_.dfxy()(y[0], y[1]);
         if( psipRZ == 0)
         {
             if(      quad_ == 0) { yp[0] = 1; yp[1] = 0; }
@@ -374,7 +374,7 @@ struct HessianRZtau
         }
         else
         {
-            double psipRR = psip_.dfxx(y[0], y[1]), psipZZ = psip_.dfyy(y[0],y[1]);
+            double psipRR = psip_.dfxx()(y[0], y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
             double T = psipRR + psipZZ; 
             double D = psipZZ*psipRR - psipRZ*psipRZ;
             double L1 = 0.5*T+sqrt( 0.25*T*T-D); // > 0

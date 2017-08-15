@@ -276,7 +276,7 @@ void construct_rz( Nemov nemov,
  * Psi is the radial coordinate and you can choose various discretizations of the first line
  * @ingroup generators
  */
-struct SimpleOrthogonal : public aGridGenerator
+struct SimpleOrthogonal : public aGenerator2d
 {
     /**
      * @brief Construct a simple orthogonal grid 
@@ -305,31 +305,14 @@ struct SimpleOrthogonal : public aGridGenerator
      * @return f_0 is the grid constant  s.a. width() )
      */
     double f0() const{return f0_;}
-    /**
-     * @brief The length of the zeta-domain
-     *
-     * Call before discretizing the zeta domain
-     * @return length of zeta-domain (f0*(psi_1-psi_0))
-     * @note the length is always positive
-     */
-    virtual double width() const{return lz_;}
-    /**
-     * @brief 2pi (length of the eta domain)
-     *
-     * Always returns 2pi
-     * @return 2pi 
-     */
-    virtual double height() const{return 2.*M_PI;}
-    /**
-     * @brief Indicate orthogonality
-     *
-     * @return true
-     */
-    virtual bool isOrthogonal() const{return true;}
     virtual SimpleOrthogonal* clone() const{return new SimpleOrthogonal(*this);}
 
     private:
-    virtual void generate( 
+     // length of zeta-domain (f0*(psi_1-psi_0))
+    virtual double do_width() const{return lz_;}
+    virtual double do_height() const{return 2.*M_PI;}
+    virtual bool do_isOrthogonal() const{return true;}
+    virtual void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 

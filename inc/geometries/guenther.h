@@ -145,9 +145,9 @@ BinaryFunctorsLvl1 createIpol( GeomParameters gp)
     BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp))
     return ipol;
 }
-MagneticField createMagField( GeomParameters gp)
+TokamakMagneticField createMagField( GeomParameters gp)
 {
-    return MagneticField( gp.R_0, createPsip(gp), createIpol(gp));
+    return TokamakMagneticField( gp.R_0, createPsip(gp), createIpol(gp));
 }
 ///@}
 

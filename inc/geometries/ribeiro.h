@@ -5,12 +5,11 @@
 #include "dg/backend/interpolation.cuh"
 #include "dg/backend/operator.h"
 #include "dg/backend/derivatives.h"
+#include "dg/geometry/geometry.h"
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
-#include "dg/geometry.h"
 #include "utilities.h"
-#include "generator.h"
 
 
 
@@ -28,7 +27,7 @@ namespace detail
 //good as it can, i.e. until machine precision is reached
 struct Fpsi
 {
-    Fpsi( const BinaryFuncotsLvl1& psi_, double x0, double y0, int mode): 
+    Fpsi( const BinaryFunctorsLvl1& psi, double x0, double y0, int mode): 
         psip_(psi), fieldRZYTribeiro_(psi,x0, y0),fieldRZYTequalarc_(psi, x0, y0), fieldRZtau_(psi), mode_(mode)
     {
         R_init = x0; Z_init = y0;
@@ -185,7 +184,7 @@ struct FieldFinv
  * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 (models aGenerator)
  * @ingroup generators
  */
-struct Ribeiro : public aGenerator
+struct Ribeiro : public aGenerator2d
 {
     /**
      * @brief Construct a near-conformal grid generator
@@ -207,6 +206,9 @@ struct Ribeiro : public aGenerator
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
+    virtual Ribeiro* clone() const{return new Ribeiro(*this);}
+
+    private:
     /**
      * @brief The length of the zeta-domain
      *
@@ -214,18 +216,15 @@ struct Ribeiro : public aGenerator
      * @return length of zeta-domain (f0*(psi_1-psi_0))
      * @note the length is always positive
      */
-    virtual double width() const{return lx_;}
+    virtual double do_width() const{return lx_;}
     /**
      * @brief 2pi (length of the eta domain)
      *
      * Always returns 2pi
      * @return 2pi 
      */
-    virtual double height() const{return 2.*M_PI;}
-    virtual Ribeiro* clone() const{return new Ribeiro(*this);}
-
-    private:
-    virtual void generate( 
+    virtual double do_height() const{return 2.*M_PI;}
+    virtual void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -236,7 +235,7 @@ struct Ribeiro : public aGenerator
          thrust::host_vector<double>& etaY) const
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
-        ribeiro::detail::FieldFinv fpsiMinv_(psi_, psiX_, psiY_, x0_,y0_, 500, mode_);
+        ribeiro::detail::FieldFinv fpsiMinv_(psi_, x0_,y0_, 500, mode_);
         thrust::host_vector<double> psi_x, fx_;
         dg::geo::detail::construct_psi_values( fpsiMinv_, psi0_, psi1_, 0., zeta1d, lx_, psi_x, fx_);
 

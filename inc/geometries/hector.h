@@ -304,33 +304,6 @@ struct Hector : public aGenerator
         //dg::blas1::transfer( u, u_);
     }
 
-    /**
-     * @brief The length of the u-domain
-     *
-     * Call before discretizing the u domain
-     * @return length of u-domain
-     * @note the length is always positive
-     */
-    virtual double width() const {return lu_;}
-    /**
-     * @brief 2pi
-     *
-     * Always returns 2pi
-     * @return 2pi 
-     */
-    virtual double height() const {return 2.*M_PI;}
-    /**
-     * @brief True if conformal constructor was used
-     *
-     * @return true if conformal constructor was used
-     */
-    virtual bool isConformal() const {return conformal_;}
-    /**
-     * @brief True if orthogonal constructor was used
-     *
-     * @return true if orthogonal constructor was used
-     */
-    virtual bool isOrthogonal() const {return orthogonal_;}
 
     /**
      * @brief Return the internally used orthogonal grid
@@ -339,8 +312,17 @@ struct Hector : public aGenerator
      */
     const dg::CurvilinearGrid2d<container>& internal_grid() const {return g2d_;}
     virtual Hector* clone() const{return new Hector(*this);}
+    bool isConformal() const {return conformal_;}
     private:
-    virtual void generate( const thrust::host_vector<double>& u1d, 
+    virtual double do_width() const {return lu_;}
+    virtual double do_height() const {return 2.*M_PI;}
+    /**
+     * @brief True if orthogonal constructor was used
+     *
+     * @return true if orthogonal constructor was used
+     */
+    virtual bool do_isOrthogonal() const {return orthogonal_;}
+    virtual void do_generate( const thrust::host_vector<double>& u1d, 
                      const thrust::host_vector<double>& v1d, 
                      thrust::host_vector<double>& x, 
                      thrust::host_vector<double>& y, 
@@ -519,6 +501,7 @@ struct Hector : public aGenerator
         dg::blas1::transfer( etaU, etaU_);
         dg::blas1::transfer( zetaU, zetaU_);
     }
+    private:
     bool conformal_, orthogonal_;
     double c0_, lu_;
     thrust::host_vector<double> u_, ux_, uy_, vx_, vy_;

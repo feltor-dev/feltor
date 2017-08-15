@@ -447,12 +447,12 @@ BinaryFunctorsLvl2 createPsip( GeomParameters gp)
 }
 BinaryFunctorsLvl1 createIpol( GeomParameters gp)
 {
-    BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp))
+    BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
     return ipol;
 }
-MagneticField createMagField( GeomParameters gp)
+TokamakMagneticField createMagField( GeomParameters gp)
 {
-    return MagneticField( gp.R_0, createPsip(gp), createIpol(gp));
+    return TokamakMagneticField( gp.R_0, createPsip(gp), createIpol(gp));
 }
 ///@}
 
@@ -460,7 +460,7 @@ MagneticField createMagField( GeomParameters gp)
 namespace mod
 {
 
-struct Psip: public aCloneableBinaryFunctor
+struct Psip: public aCloneableBinaryFunctor<Psip>
 {
     Psip( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
@@ -486,7 +486,7 @@ struct Psip: public aCloneableBinaryFunctor
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipR: public aCloneableBinaryFunctor
+struct PsipR: public aCloneableBinaryFunctor<PsipR>
 {
     PsipR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
@@ -514,7 +514,7 @@ struct PsipR: public aCloneableBinaryFunctor
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipZ: public aCloneableBinaryFunctor
+struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 {
     PsipZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -543,7 +543,7 @@ struct PsipZ: public aCloneableBinaryFunctor
     dg::Cauchy cauchy_;
 };
 
-struct PsipZZ: public aCloneableBinaryFunctor
+struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 {
     PsipZZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
@@ -572,7 +572,7 @@ struct PsipZZ: public aCloneableBinaryFunctor
     solovev::PsipZZ psipZZ_;
     dg::Cauchy cauchy_;
 };
-struct PsipRR: public aCloneableBinaryFunctor
+struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 {
     PsipRR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)

@@ -5,13 +5,12 @@
 #include "dg/backend/interpolation.cuh"
 #include "dg/backend/operator.h"
 #include "dg/backend/derivatives.h"
+#include "dg/geometry/geometry.h"
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
-#include "dg/geometry.h"
 #include "fluxfunctions.h"
 #include "ribeiro.h"
-#include "generator.h"
 
 
 namespace dg
@@ -126,7 +125,7 @@ struct Fpsi
  * @brief A symmetry flux generator
  * @ingroup generators
  */
-struct FluxGenerator : public aGridGenerator
+struct FluxGenerator : public aGenerator2d
 {
     /**
      * @brief Construct a symmetry flux grid generator
@@ -161,25 +160,13 @@ struct FluxGenerator : public aGridGenerator
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
 
-    /**
-     * @brief The length of the zeta-domain
-     *
-     * Call before discretizing the zeta domain
-     * @return length of zeta-domain (f0*(psi_1-psi_0))
-     * @note the length is always positive
-     */
-    virtual double width() const{return lx_;}
-    /**
-     * @brief 2pi (length of the eta domain)
-     *
-     * Always returns 2pi
-     * @return 2pi 
-     */
-    virtual double height() const{return 2.*M_PI;}
     virtual FluxGenerator* clone() const{return new FluxGenerator(*this);}
 
     private:
-    virtual void generate( 
+    // length of zeta-domain (f0*(psi_1-psi_0))
+    virtual double do_width() const{return lx_;}
+    virtual double do_height() const{return 2.*M_PI;}
+    virtual void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -228,7 +215,7 @@ struct FluxGenerator : public aGridGenerator
  * @brief Same as the Ribeiro class just but uses psi as a flux label directly
  * @ingroup generators
  */
-struct RibeiroFluxGenerator : public aGridGenerator
+struct RibeiroFluxGenerator : public aGenerator2d
 {
     /**
      * @brief Construct a flux aligned grid generator
@@ -241,7 +228,7 @@ struct RibeiroFluxGenerator : public aGridGenerator
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      */
     RibeiroFluxGenerator( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0):
-        psi_(psi), mode_(mode)
+        psip_(psi), mode_(mode)
     {
         psi0_ = psi_0, psi1_ = psi_1;
         assert( psi_1 != psi_0);
@@ -252,25 +239,13 @@ struct RibeiroFluxGenerator : public aGridGenerator
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
-    /**
-     * @brief The length of the zeta-domain
-     *
-     * Call before discretizing the zeta domain
-     * @return length of zeta-domain (f0*(psi_1-psi_0))
-     * @note the length is always positive
-     */
-    virtual double width() const{return lx_;}
-    /**
-     * @brief 2pi (length of the eta domain)
-     *
-     * Always returns 2pi
-     * @return 2pi 
-     */
-    virtual double height() const{return 2.*M_PI;}
     virtual RibeiroFluxGenerator* clone() const{return new RibeiroFluxGenerator(*this);}
 
     private:
-    virtual void generate( 
+    //length of zeta-domain (f0*(psi_1-psi_0))
+    virtual double do_width() const{return lx_;}
+    virtual double do_height() const{return 2.*M_PI;}
+    virtual void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -285,9 +260,9 @@ struct RibeiroFluxGenerator : public aGridGenerator
         for( unsigned i=0; i<psi_x.size(); i++)
             psi_x[i] = zeta1d[i]/f0_ +psi0_;
 
-        ribeiro::detail::Fpsi fpsi(psi_, x0_, y0_, mode_);
-        dg::geo::ribeiro::FieldRZYRYZY fieldRZYRYZYribeiro(psi_);
-        dg::geo::equalarc::FieldRZYRYZY fieldRZYRYZYequalarc(psi_);
+        ribeiro::detail::Fpsi fpsi(psip_, x0_, y0_, mode_);
+        dg::geo::ribeiro::FieldRZYRYZY fieldRZYRYZYribeiro(psip_);
+        dg::geo::equalarc::FieldRZYRYZY fieldRZYRYZYequalarc(psip_);
         thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
         thrust::host_vector<double> f_p(fx_);

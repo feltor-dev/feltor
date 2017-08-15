@@ -19,7 +19,7 @@ struct aGeneratorX2d
     unsigned eta0(double fy) const{return do_eta0(fy);}
     unsigned eta1(double fy) const{return do_eta1(fy);}
     ///@brief sparsity pattern for metric
-    bool isOrthogonal() const { return doIsOrthogonal(); }
+    bool isOrthogonal() const { return do_isOrthogonal(); }
 
     /**
     * @brief Generate grid points and elements of the Jacobian 

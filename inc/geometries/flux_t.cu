@@ -9,7 +9,7 @@
 #include "dg/functors.h"
 
 #include "dg/backend/timer.cuh"
-#include "curvilinear.h"
+#include "dg/geometry/curvilinear.h"
 //#include "guenther.h"
 #include "solovev.h"
 #include "flux.h"
@@ -72,13 +72,12 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing flux grid ... \n";
     t.tic();
-    MagneticField c( gp);
-    dg::geo::FluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ, Ipol, IpolR, IpolZ>
-        flux( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, c.ipol, c.ipolR, c.ipolZ, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearGrid3d<dg::HVec> g3d(&flux, n, Nx, Ny,Nz, dg::DIR);
-    dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    //OrthogonalGrid3d<dg::HVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //OrthogonalGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::geo::TokamakMagneticField c = createMagField( gp);
+    dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
+    dg::CurvilinearGrid2d g2d = g3d.perp_grid();
+    //OrthogonalGrid3d g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
+    //OrthogonalGrid2d g2d = g3d.perp_grid();
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -103,8 +102,8 @@ int main( int argc, char* argv[])
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        X[i] = g2d.r()[i];
-        Y[i] = g2d.z()[i];
+        X[i] = g2d.map()[0][i];
+        Y[i] = g2d.map()[1][i];
     }
 
     dg::HVec temp0( g2d.size()), temp1(temp0);
@@ -115,13 +114,18 @@ int main( int argc, char* argv[])
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     //compute and write deformation into netcdf
-    dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
+    dg::SparseTensor<dg::HVec> metric = g2d.metric();
+    dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
+    dg::SparseElement<dg::HVec> vol_ = dg::tensor::determinant(metric);
+    dg::tensor::invert(vol_);
+    dg::tensor::sqrt(vol_);
+    dg::blas1::pointwiseDivide( g_xy, g_xx, temp0);
     const dg::HVec ones = dg::evaluate( dg::one, g2d);
-    X=g2d.g_yy();
+    X=g_yy;
     err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
     //compute and write conformalratio into netcdf
-    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
-    X=g2d.g_xx();
+    dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
+    X=g_xx;
     err = nc_put_var_double( ncid, confID, periodify(X, g2d_periodic).data());
 
     std::cout << "Construction successful!\n";
@@ -141,20 +145,20 @@ int main( int argc, char* argv[])
     //double error = sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1));
     //std::cout<< "Rel Error in Determinant is "<<error<<"\n";
 
-    dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
-    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
+    dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
+    dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>()); //temp0=1/sqrt(g) = sqrt(g^xx g^yy - g^xy^2)
     dg::blas1::pointwiseDivide( ones, temp0, temp0); //temp0=sqrt(g)
     X=temp0;
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
-    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0); //temp0 = sqrt(g)-vol
-    double error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( g2d.vol(), w3d, g2d.vol()));
+    dg::blas1::axpby( 1., temp0, -1., vol_.value(), temp0); //temp0 = sqrt(g)-vol
+    double error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot(vol_.value(), w3d, vol_.value()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     //dg::blas1::pointwiseDivide(ones,fby,temp1); //=sqrt(g)
-    //dg::blas1::axpby( 1., temp1, -1., g2d.vol(), temp0);
-    //error=sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w3d, g2d.vol()));
+    //dg::blas1::axpby( 1., temp1, -1., vol_, temp0);
+    //error=sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(vol_, w3d, vol_));
     //std::cout << "Rel Error of volume form is "<<error<<"\n";
 
     const dg::HVec vol = dg::create::volume( g3d);
@@ -164,7 +168,7 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    dg::geo::Iris<Psip> iris( c.psip, gp.psipmin, gp.psipmax);
+    dg::geo::Iris<const dg::geo::aBinaryFunctor&> iris( c.psip(), gp.psipmin, gp.psipmax);
     //dg::CylindricalGrid3d<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
     dg::HVec vec  = dg::evaluate( iris, g2dC);

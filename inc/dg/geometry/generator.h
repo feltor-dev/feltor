@@ -19,7 +19,7 @@ struct aGenerator2d
     ///@brief length in \f$ \eta\f$ of the computational space
     double height() const{return do_height();}
     ///@brief sparsity pattern for metric
-    bool isOrthogonal() const { return doIsOrthogonal(); }
+    bool isOrthogonal() const { return do_isOrthogonal(); }
 
     /**
     * @brief Generate grid points and elements of the Jacobian 
@@ -77,7 +77,7 @@ struct aGenerator2d
          thrust::host_vector<double>& etaY) const = 0;
      virtual double do_width() const =0;
      virtual double do_height() const =0;
-     virtual bool doIsOrthogonal()const{return false;}
+     virtual bool do_isOrthogonal()const{return false;}
 
 
 };

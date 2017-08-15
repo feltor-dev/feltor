@@ -320,7 +320,7 @@ BinaryFunctorsLvl1 createIpol( solovev::GeomParameters gp)
     BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp))
     return ipol;
 }
-MagneticField createMagField( solovev::GeomParameters gp)
+TokamakMagneticField createMagField( solovev::GeomParameters gp)
 {
     return MagneticField( gp.R_0, createPsip(gp), createIpol(gp));
 }
