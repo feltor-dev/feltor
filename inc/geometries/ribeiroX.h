@@ -5,6 +5,7 @@
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/weightsX.cuh"
 #include "dg/runge_kutta.h"
+#include "dg/geometry/generatorX.h"
 #include "utilitiesX.h"
 #include "ribeiro.h"
 
@@ -239,7 +240,7 @@ struct XFieldFinv
  * @ingroup generators
  * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
-struct RibeiroX
+struct RibeiroX : public aGeneratorX2d
 {
     RibeiroX( const BinaryFunctorsLvl2& psi, double psi_0, double fx, 
             double xX, double yX, double x0, double y0):
@@ -251,24 +252,10 @@ struct RibeiroX
         zeta1_= -fx/(1.-fx)*zeta0_;
         x0_=x0, y0_=y0, psi0_=psi_0;
     }
+    private:
     bool isConformal()const{return false;}
-    bool isOrthogonal()const{return false;}
+    bool do_isOrthogonal()const{return false;}
     double f0() const{return f0_;}
-    /**
-     * @brief The length of the zeta-domain
-     *
-     * Call before discretizing the zeta domain
-     * @return length of zeta-domain (f0*(psi_1-psi_0))
-     * @note the length is always positive
-     */
-    double width() const{return lx_;}
-    /**
-     * @brief 2pi (length of the eta domain)
-     *
-     * Always returns 2pi
-     * @return 2pi 
-     */
-    double height() const{return 2.*M_PI;}
     /**
      * @brief The vector f(x)
      *
@@ -276,23 +263,7 @@ struct RibeiroX
      */
     thrust::host_vector<double> fx() const{ return fx_;}
     double psi1() const {return psi_1_numerical_;}
-    /**
-    * @brief Generate grid points and elements of the Jacobian 
-    *
-    * @param zeta1d (input) a list of \f$ N_\zeta\f$ points \f$ f_0\psi_0<\zeta_i< -f_\zeta\zeta_0/(1-f_\zeta)\f$
-    * @param eta1d (input) a list of \f$ N_\eta\f$ points \f$ 0<\eta_j<\f$height() 
-    * @param x (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ x(\zeta_i, \eta_j)\f$ 
-    * @param y (output) the list of \f$ N_\eta N_\zeta\f$ coordinates \f$ y(\zeta_i, \eta_j)\f$ 
-    * @param nodeX0 is the index of the first point in eta1d  after the first jump in topology in \f$ \eta\f$
-    * @param nodeX1 is the index of the first point in eta1d  after the second jump in topology in \f$ \eta\f$
-    * @param zetaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial x (\zeta_i, \eta_j)\f$ 
-    * @param zetaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\zeta/\partial y (\zeta_i, \eta_j)\f$ 
-    * @param etaX (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial x (\zeta_i, \eta_j)\f$ 
-    * @param etaY (output) the list of \f$ N_\eta N_\zeta\f$ elements \f$ \partial\eta/\partial y (\zeta_i, \eta_j)\f$ 
-    @note the \f$ \zeta\f$ coordinate is contiguous in memory
-     * @note All the resulting vectors are write-only and get properly resized
-    */
-    void generate( 
+    void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          const unsigned nodeX0, const unsigned nodeX1, 
@@ -331,6 +302,11 @@ struct RibeiroX
             }
         }
     }
+
+    virtual unsigned do_zeta0(double fx) const { return zeta0_; }
+    virtual unsigned do_zeta1(double fx) const { return zeta1_;}
+    virtual unsigned do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
+    virtual unsigned do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
     BinaryFunctorsLvl2 psi_;
     dg::geo::ribeiro::detail::XFieldFinv fpsiMinv_; 

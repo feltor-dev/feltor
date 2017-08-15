@@ -34,7 +34,7 @@ struct CurvilinearProductGridX3d : public dg::aGeometryX3d
      */
     CurvilinearProductGridX3d( const aGeneratorX2d& generator, 
         double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, double fx, double fy, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
-        dg::aGeometryX3d( generator.zeta0(), generator.zeta1(), generator.eta0(), generator.eta1(), 0., 2.*M_PI, fx,fy,n, Nx, Ny, Nz, bcx, bcy, bcz)
+        dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, fx,fy,n, Nx, Ny, Nz, bcx, bcy, bcz)
     { 
         map_.resize(3);
         handle_ = generator;
@@ -123,7 +123,7 @@ struct CurvilinearGridX2d : public dg::aGeometryX2d
      * @param bcy boundary condition in second coordinate
      */
     CurvilinearGridX2d( const aGeneratorX2d& generator, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
-        dg::aGeometryX2d( generator.zeta0(), generator.zeta1(), generator.eta0(), generator.eta1(),fx,fy, n, Nx, Ny, bcx, bcy), handle_(generator)
+        dg::aGeometryX2d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy),fx,fy, n, Nx, Ny, bcx, bcy), handle_(generator)
     {
         construct( n,Nx,Ny);
     }

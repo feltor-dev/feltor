@@ -32,7 +32,7 @@ struct CurvilinearProductRefinedGridX3d : public dg::aGeometryX3d
      */
     CurvilinearProductRefinedGridX3d( const aRefinementX2d& ref, const aGeneratorX2d& generator, 
         double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, double fx, double fy, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
-        dg::aGeometryX3d( generator.zeta0(), generator.zeta1(), generator.eta0(), generator.eta1(), 0., 2.*M_PI, ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), Nz, bcx, bcy, bcz), map_(3)
+        dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), Nz, bcx, bcy, bcz), map_(3)
     { 
         handle_ = generator;
         ref_=ref;
@@ -132,7 +132,7 @@ struct CurvilinearRefinedGridX2d : public dg::aGeometryX2d
      * @param bcy boundary condition in second coordinate
      */
     CurvilinearRefinedGridX2d( const aRefinementX2d& ref, const aGeneratorX2d& generator, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
-        dg::aGeometryX2d( generator.zeta0(), generator.zeta1(), generator.eta0(), generator.eta1(),ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), bcx, bcy)
+        dg::aGeometryX2d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy),ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), bcx, bcy)
     {
         handle_ = generator;
         ref_=ref;

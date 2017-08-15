@@ -14,10 +14,10 @@ is a product space.
 */
 struct aGeneratorX2d
 {
-    double zeta0() const{return do_zeta0();}
-    double zeta1() const{return do_zeta1();}
-    double eta0() const{return do_eta0();}
-    double eta1() const{return do_eta1();}
+    unsigned zeta0(double fx) const{return do_zeta0(fx);}
+    unsigned zeta1(double fx) const{return do_zeta1(fx);}
+    unsigned eta0(double fy) const{return do_eta0(fy);}
+    unsigned eta1(double fy) const{return do_eta1(fy);}
     ///@brief sparsity pattern for metric
     bool isOrthogonal() const { return doIsOrthogonal(); }
 
@@ -79,11 +79,11 @@ struct aGeneratorX2d
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
          thrust::host_vector<double>& etaY) const = 0;
-    virtual bool doIsOrthogonal()const{return false;}
-    virtual double do_zeta0() const=0;
-    virtual double do_zeta1() const=0;
-    virtual double do_eta0() const=0;
-    virtual double do_eta1() const=0;
+    virtual bool do_isOrthogonal()const{return false;}
+    virtual unsigned do_zeta0(double fx) const=0;
+    virtual unsigned do_zeta1(double fx) const=0;
+    virtual unsigned do_eta0(double fy) const=0;
+    virtual unsigned do_eta1(double fy) const=0;
 
 
 };

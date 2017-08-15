@@ -121,9 +121,9 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
 struct SimpleOrthogonalX : public aGeneratorX2d
 {
     SimpleOrthogonalX(): f0_(1), firstline_(0){}
-    SimpleOrthogonalX( const BinaryFunctorsLvl2& psi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
-            double xX, double yX, double x0, double y0, int firstline =0):
-        psi_(psi)
+    ///psi_0 must be the closed surface, 0 the separatrix
+    SimpleOrthogonalX( const BinaryFunctorsLvl2& psi, double psi_0, 
+            double xX, double yX, double x0, double y0, int firstline =0): psi_(psi)
     {
         firstline_ = firstline;
         orthogonal::detail::Fpsi fpsi(psi_, x0, y0, firstline);
@@ -133,10 +133,11 @@ struct SimpleOrthogonalX : public aGeneratorX2d
         dg::geo::orthogonal::detail::InitialX initX(psi_, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
+    private:
     bool isConformal()const{return false;}
-    bool isOrthogonal()const{return true;}
+    bool do_isOrthogonal()const{return true;}
     double f0() const{return f0_;}
-    virtual void generate( //this one doesn't know if the separatrix comes to lie on a cell boundary or not
+    virtual void do_generate( //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          const unsigned nodeX0, const unsigned nodeX1,
@@ -166,12 +167,10 @@ struct SimpleOrthogonalX : public aGeneratorX2d
             etaY[idx] = +h[idx]*psipR;
         }
     }
-    double laplace(double x, double y) {return f0_*laplacePsi_(x,y);}
-        y_0= -2.*M_PI*fy/(1.-2.*fy); 
-        y_1= 2.*M_PI*(1.+fy/(1.-2.*fy));
-        const double x_0 = generator.f0()*psi_0;
-        const double x_1 = -fx/(1.-fx)*x_0;
-    private:
+    unsigned do_zeta0(double fx) const { return zeta0_; }
+    unsigned do_zeta1(double fx) const { return -fx/(1.-fx)*zeta0_;}
+    unsigned do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
+    unsigned do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     BinaryFunctorsLvl2 psi_;
     double R0_[2], Z0_[2];
     double zeta0_, f0_;
@@ -204,11 +203,13 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     {
         firstline_ = firstline;
         f0_ = sep_.get_f();
+        psi_0_=psi_0;
     }
+    private:
     bool isConformal()const{return false;}
-    bool isOrthogonal()const{return true;}
+    bool do_isOrthogonal()const{return true;}
     double f0() const{return sep_.get_f();}
-    virtual void generate(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
+    virtual void do_generate(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          const unsigned nodeX0, const unsigned nodeX1, 
@@ -322,10 +323,13 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
             etaY[idx] = +h[idx]*psipX;
         }
     }
-    double laplace(double x, double y) {return f0_*laplacePsi_(x,y);}
+    virtual unsigned do_zeta0(double fx) const { return f0_*psi_0_; }
+    virtual unsigned do_zeta1(double fx) const { return -fx/(1.-fx)*f0_*psi_0_;}
+    virtual unsigned do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
+    virtual unsigned do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
     double R0_[2], Z0_[2];
-    double f0_;
+    double f0_, psi_0_;
     int firstline_;
     BinaryFunctorsLvl2 psi_;
     dg::geo::detail::SeparatriX sep_;
