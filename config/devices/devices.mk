@@ -28,4 +28,5 @@ CFLAGS+=-Wall -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 CFLAGS+= $(OMPFLAG) -mmic 
 MPICFLAGS+=$(CFLAGS) #includes values in CFLAGS defined later
+OPT+=-xMIC-AVX512 -fma -finline-functions -align
 endif #device=mic
