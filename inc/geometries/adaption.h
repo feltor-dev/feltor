@@ -175,8 +175,7 @@ struct Liseikin_XY: public aCloneableBinaryFunctor<Liseikin_XY>
 
     private:
     double k_, eps_;
-    PsiX psiX_;
-    PsiY psiY_;
+    BinaryFunctorsLvl1 psi_;
 };
 
 /**

@@ -22,11 +22,10 @@ namespace detail
 {
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
-template< class Psi, class PsiX, class PsiY>
 struct FpsiX
 {
-    FpsiX( Psi psi, PsiX psiX, PsiY psiY, double xX, double yX, double x0, double y0): 
-        initX_(psi, psiX, psiY, xX, yX), fieldRZYT_(psiX, psiY, x0, y0), fieldRZYZ_(psiX, psiY)
+    FpsiX( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0): 
+        initX_(psi, xX, yX), fieldRZYT_(psi, x0, y0), fieldRZYZ_(psi)
     { }
     //for a given psi finds the four starting points for the integration in y direction on the perpendicular lines through the X-point
     void find_initial( double psi, double* R_0, double* Z_0) 
@@ -162,18 +161,17 @@ struct FpsiX
         return fprime_old;
     }
     private:
-    dg::geo::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX_;
-    const dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYT_;
-    const dg::geo::ribeiro::FieldRZYZ<PsiX, PsiY> fieldRZYZ_;
+    dg::geo::orthogonal::detail::InitialX initX_;
+    const dg::geo::ribeiro::FieldRZYT fieldRZYT_;
+    const dg::geo::ribeiro::FieldRZYZ fieldRZYZ_;
 
 };
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
-template<class Psi, class PsiX, class PsiY>
 struct XFieldFinv
 {
-    XFieldFinv( Psi psi, PsiX psiX, PsiY psiY, double xX, double yX, double x0, double y0, unsigned N_steps = 500): 
-        fpsi_(psi, psiX, psiY, xX, yX, x0, y0), fieldRZYT_(psiX, psiY, x0, y0), fieldRZYZ_(psiX, psiY) , N_steps(N_steps)
+    XFieldFinv( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0, unsigned N_steps = 500): 
+        fpsi_(psi, xX, yX, x0, y0), fieldRZYT_(psi, x0, y0), fieldRZYZ_(psi) , N_steps(N_steps)
             { xAtOne_ = fpsi_.find_x(0.1); }
     void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
     { 
@@ -225,9 +223,9 @@ struct XFieldFinv
     }
 
     private:
-    FpsiX<Psi, PsiX, PsiY> fpsi_;
-    dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYT_;
-    dg::geo::ribeiro::FieldRZYZ<PsiX, PsiY> fieldRZYZ_;
+    FpsiX fpsi_;
+    dg::geo::ribeiro::FieldRZYT fieldRZYT_;
+    dg::geo::ribeiro::FieldRZYZ fieldRZYZ_;
     thrust::host_vector<double> fpsi_neg_inv;
     unsigned N_steps;
     double xAtOne_;
@@ -241,12 +239,11 @@ struct XFieldFinv
  * @ingroup generators
  * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
-template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
 struct RibeiroX
 {
-    RibeiroX( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi_0, double fx, 
+    RibeiroX( const BinaryFunctorsLvl2& psi, double psi_0, double fx, 
             double xX, double yX, double x0, double y0):
-        psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), fpsi_(psi, psiX, psiY, xX, yX, x0,y0), fpsiMinv_(psi, psiX, psiY, xX, yX, x0,y0, 500)
+        psi_(psi), fpsi_(psi, xX, yX, x0,y0), fpsiMinv_(psi, xX, yX, x0,y0, 500)
     {
         assert( psi_0 < 0 );
         zeta0_ = fpsi_.find_x( psi_0);
@@ -295,7 +292,7 @@ struct RibeiroX
     @note the \f$ \zeta\f$ coordinate is contiguous in memory
      * @note All the resulting vectors are write-only and get properly resized
     */
-    void operator()( 
+    void generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          const unsigned nodeX0, const unsigned nodeX1, 
@@ -314,7 +311,7 @@ struct RibeiroX
         psi_1_numerical_ = dg::geo::detail::construct_psi_values( fpsiMinv_, psi0_, zeta0_, zeta1d, zeta1_, inside, psi_x);
 
         //std::cout << "In grid function:\n";
-        dg::geo::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
+        dg::geo::ribeiro::FieldRZYRYZY fieldRZYRYZYribeiro(psi_);
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
@@ -335,13 +332,9 @@ struct RibeiroX
         }
     }
     private:
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
-    dg::geo::ribeiro::detail::XFieldFinv<Psi, PsiX, PsiY> fpsiMinv_; 
-    dg::geo::ribeiro::detail::FpsiX<Psi, PsiX, PsiY> fpsi_;
+    BinaryFunctorsLvl2 psi_;
+    dg::geo::ribeiro::detail::XFieldFinv fpsiMinv_; 
+    dg::geo::ribeiro::detail::FpsiX fpsi_;
     double f0_, psi_1_numerical_;
     thrust::host_vector<double> fx_;
     double zeta0_, zeta1_;

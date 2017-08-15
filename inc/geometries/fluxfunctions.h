@@ -97,6 +97,10 @@ struct BinaryFunctorAdapter : public dg::geo::aCloneableBinaryFunctor<Adapter>
 temmplate<class BinaryFunctor>
 aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFunctorAdapter<BinaryFunctor>(f);}
 
+///@cond
+struct BinaryFunctorsLvl2;
+///@endcond
+
 /**
 * @brief This struct bundles a function and its first derivatives
 */
@@ -111,11 +115,23 @@ struct BinaryFunctorsLvl1
     * @param fx \f$ \partial f / \partial x \f$ its derivative in the first coordinate
     * @param fy \f$ \partial f / \partial y \f$ its derivative in the second coordinate
     */
-    BinaryFunctorsLvl1( const aBinaryFunctor* f, const aBinaryFunctor* fx, const aBinaryFunctor* fy)
-    {
+    BinaryFunctorsLvl1( const aBinaryFunctor* f, const aBinaryFunctor* fx, const aBinaryFunctor* fy) {
         reset(f,fx,fy);
     }
+    ///clone given functors
+    BinaryFunctorsLvl1( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy) {
+        reset(f,fx,fy);
+    }
+    BinaryFunctorsLvl1( const BinaryFunctorsLvl2& func);
+    ///Take ownership of given pointers
     void reset( const aBinaryFunctor* f, const aBinaryFunctor* fx, const aBinaryFunctor* fy)
+    {
+        p_[0].reset(f);
+        p_[1].reset(fx);
+        p_[2].reset(fy);
+    }
+    ///clone given references
+    void reset( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy)
     {
         p_[0].reset(f);
         p_[1].reset(fx);
@@ -145,7 +161,15 @@ struct BinaryFunctorsLvl2
     */
     BinaryFunctorsLvl2( const aBinaryFunctor* f, const aBinaryFunctor* fx, const aBinaryFunctor* fy, const aBinaryFunctor* fxx, const aBinaryFunctor* fxy, const aBinaryFunctor* fyy): f(f,fx,fy), f1(fxx,fxy,fyy) 
     { }
+    ///clone given Functors
+    BinaryFunctorsLvl2( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy, const aBinaryFunctor& fxx, const aBinaryFunctor& fxy, const aBinaryFunctor& fyy): f(f,fx,fy), f1(fxx,fxy,fyy) 
+    { }
+    ///Take ownership of given pointers
     void reset( const aBinaryFunctor* f, const aBinaryFunctor* fx, const aBinaryFunctor* fy, const aBinaryFunctor* fxx, const aBinaryFunctor* fxy, const aBinaryFunctor* fyy){ 
+        f.reset(f,fx,fy), f1.reset(fxx,fxy,fyy) 
+    }
+    ///clone given pointers
+    void reset( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy, const aBinaryFunctor& fxx, const aBinaryFunctor& fxy, const aBinaryFunctor& fyy){ 
         f.reset(f,fx,fy), f1.reset(fxx,fxy,fyy) 
     }
     operator BinaryFunctorsLvl1 ()const {return f;}
@@ -164,6 +188,12 @@ struct BinaryFunctorsLvl2
     private:
     BinaryFunctorsLvl1 f,f1;
 };
+///@cond
+BinaryFunctorsLvl1::BinaryFunctorsLvl1( const BinaryFunctorsLvl2& func)
+{
+    reset(func.f(),func.dfx(),func.dfy());
+}
+///@endcond
 
 /// A symmetric 2d tensor field and its divergence
 struct BinarySymmTensorLvl1
@@ -183,7 +213,22 @@ struct BinarySymmTensorLvl1
     {
         reset(chi_xx,chi_xy,chi_yy,divChiX,divChiY);
     }
+    ///clone given functors
+    BinarySymmTensorLvl1( const aBinaryFunctor& chi_xx, const aBinaryFunctor& chi_xy, const aBinaryFunctor& chi_yy, const aBinaryFunctor& divChiX, const aBinaryFunctor& divChiY)
+    {
+        reset(chi_xx,chi_xy,chi_yy,divChiX,divChiY);
+    }
+    ///Take ownership of pointers and release any  currently held ones
     void reset( const aBinaryFunctor* chi_xx, const aBinaryFunctor* chi_xy, const aBinaryFunctor* chi_yy, const aBinaryFunctor* divChiX, const aBinaryFunctor* divChiY)
+    {
+        p_[0].reset( chi_xx);
+        p_[1].reset( chi_xy);
+        p_[2].reset( chi_yy);
+        p_[3].reset( divChiX);
+        p_[4].reset( divChiY);
+    }
+    ///clone given references 
+    void reset( const aBinaryFunctor& chi_xx, const aBinaryFunctor& chi_xy, const aBinaryFunctor& chi_yy, const aBinaryFunctor& divChiX, const aBinaryFunctor& divChiY)
     {
         p_[0].reset( chi_xx);
         p_[1].reset( chi_xy);
@@ -209,11 +254,19 @@ struct BinarySymmTensorLvl1
 struct BinaryVectorLvl0
 {
     BinaryVectorLvl0(){}
-    BinaryVectorLvl0( const aBinaryFunctor* v_x, const aBinaryFunctor* v_y, const aBinaryFunctor* v_z)
-    {
-        reset(v_x,v_y,v_z);
-    }
+    ///Take ownership of given pointers
+    BinaryVectorLvl0( const aBinaryFunctor* v_x, const aBinaryFunctor* v_y, const aBinaryFunctor* v_z) { reset(v_x,v_y,v_z); }
+    ///clone given references
+    BinaryVectorLvl0( const aBinaryFunctor& v_x, const aBinaryFunctor& v_y, const aBinaryFunctor& v_z) { reset(v_x,v_y,v_z); }
+    ///Take ownership of given pointers and release any currently held ones
     void reset( const aBinaryFunctor* v_x, const aBinaryFunctor* v_y, const aBinaryFunctor* v_z)
+    {
+        p_[0].reset(v_x);
+        p_[1].reset(v_y);
+        p_[2].reset(v_z);
+    }
+    ///clone given references
+    void reset( const aBinaryFunctor& v_x, const aBinaryFunctor& v_y, const aBinaryFunctor& v_z)
     {
         p_[0].reset(v_x);
         p_[1].reset(v_y);

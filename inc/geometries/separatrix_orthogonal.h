@@ -25,8 +25,7 @@ namespace detail
 
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
-template <class PsiX, class PsiY>
-void computeX_rzy( PsiX psiX, PsiY psiY, 
+void computeX_rzy( const BinaryFunctorsLvl1& psi,
         const thrust::host_vector<double>& y_vec, 
         const unsigned nodeX0, const unsigned nodeX1,
         thrust::host_vector<double>& r, //output r - values
@@ -40,8 +39,8 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
     r.resize( y_vec.size()), z.resize(y_vec.size());
     thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
     begin[0] = R_init[0], begin[1] = Z_init[0];
-    dg::geo::ribeiro::FieldRZY<PsiX, PsiY> fieldRZYconf(psiX, psiY);
-    dg::geo::equalarc::FieldRZY<PsiX, PsiY> fieldRZYequi(psiX, psiY);
+    dg::geo::ribeiro::FieldRZY fieldRZYconf(psi.dfx(), psi.dfy());
+    dg::geo::equalarc::FieldRZY fieldRZYequi(psi.dfx(), psi.dfy());
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
     unsigned steps = 1; double eps = 1e10, eps_old=2e10;
@@ -118,31 +117,26 @@ void computeX_rzy( PsiX psiX, PsiY psiY,
  * @brief Choose points on inside or outside line (models aGeneratorX)
  *
  * @ingroup generators
- * @tparam Psi models aBinaryOperator
- * @tparam PsiX models aBinaryOperator
- * @tparam PsiY models aBinaryOperator
- * @tparam LaplacePsi models aBinaryOperator
  */
-template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SimpleOrthogonalX : public aGeneratorX2d
 {
     SimpleOrthogonalX(): f0_(1), firstline_(0){}
-    SimpleOrthogonalX( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
+    SimpleOrthogonalX( const BinaryFunctorsLvl2& psi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline =0):
-        psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi)
+        psi_(psi)
     {
         firstline_ = firstline;
-        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
+        orthogonal::detail::Fpsi fpsi(psi_, x0, y0, firstline);
         double R0, Z0; 
         f0_ = fpsi.construct_f( psi_0, R0, Z0);
         zeta0_=f0_*psi_0;
-        dg::geo::orthogonal::detail::InitialX<Psi, PsiX, PsiY> initX(psi, psiX, psiY, xX, yX);
+        dg::geo::orthogonal::detail::InitialX initX(psi_, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
     bool isConformal()const{return false;}
     bool isOrthogonal()const{return true;}
     double f0() const{return f0_;}
-    void operator()( //this one doesn't know if the separatrix comes to lie on a cell boundary or not
+    virtual void generate( //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          const unsigned nodeX0, const unsigned nodeX1,
@@ -155,8 +149,8 @@ struct SimpleOrthogonalX : public aGeneratorX2d
     {
 
         thrust::host_vector<double> r_init, z_init;
-        orthogonal::detail::computeX_rzy( psiX_, psiY_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        dg::geo::orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        orthogonal::detail::computeX_rzy( psi_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        dg::geo::orthogonal::detail::Nemov nemov(psi_, f0_, firstline_);
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
@@ -164,8 +158,8 @@ struct SimpleOrthogonalX : public aGeneratorX2d
         etaX.resize(size), etaY.resize(size);
         for( unsigned idx=0; idx<size; idx++)
         {
-            double psipR = psiX_(x[idx], y[idx]);
-            double psipZ = psiY_(x[idx], y[idx]);
+            double psipR = psi_.dfx()(x[idx], y[idx]);
+            double psipZ = psi_.dfy()(x[idx], y[idx]);
             zetaX[idx] = f0_*psipR;
             zetaY[idx] = f0_*psipZ;
             etaX[idx] = -h[idx]*psipZ;
@@ -178,9 +172,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
         const double x_0 = generator.f0()*psi_0;
         const double x_1 = -fx/(1.-fx)*x_0;
     private:
-    PsiX psiX_;
-    PsiY psiY_;
-    LaplacePsi laplacePsi_;
+    BinaryFunctorsLvl2 psi_;
     double R0_[2], Z0_[2];
     double zeta0_, f0_;
     int firstline_;
@@ -190,9 +182,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
  * @brief Choose points on separatrix (models aGeneratorX)
  *
  * @ingroup generators
- * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
-template< class Psi, class PsiX, class PsiY, class LaplacePsi>
 struct SeparatrixOrthogonal : public aGeneratorX2d
 {
     typedef dg::OrthogonalTag metric_category;
@@ -200,9 +190,6 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
      * @brief Construct 
      *
      * @param psi
-     * @param psiX
-     * @param psiY
-     * @param laplacePsi
      * @param psi_0
      * @param xX the X-point
      * @param yX the X-point
@@ -210,10 +197,10 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
      * @param y0
      * @param firstline =0 means conformal, =1 means equalarc discretization
      */
-    SeparatrixOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
+    SeparatrixOrthogonal( const BinaryFunctorsLvl2& psi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline ):
-        psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi),
-        sep_( psi, psiX, psiY, xX, yX, x0, y0, firstline)
+        psi_(psi)
+        sep_( psi, xX, yX, x0, y0, firstline)
     {
         firstline_ = firstline;
         f0_ = sep_.get_f();
@@ -221,7 +208,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     bool isConformal()const{return false;}
     bool isOrthogonal()const{return true;}
     double f0() const{return sep_.get_f();}
-    void operator()(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
+    virtual void generate(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          const unsigned nodeX0, const unsigned nodeX1, 
@@ -235,7 +222,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 
         thrust::host_vector<double> r_init, z_init;
         sep_.compute_rzy( eta1d, nodeX0, nodeX1, r_init, z_init);
-        dg::geo::orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        dg::geo::orthogonal::detail::Nemov nemov(psi_, f0_, firstline_);
 
         //separate integration of inside and outside
         unsigned inside=0;
@@ -327,8 +314,8 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
         etaX.resize(size), etaY.resize(size);
         for( unsigned idx=0; idx<size; idx++)
         {
-            double psipX = psiX_(x[idx], y[idx]);
-            double psipY = psiY_(x[idx], y[idx]);
+            double psipX = psi_.dfx()(x[idx], y[idx]);
+            double psipY = psi_.dfy()(x[idx], y[idx]);
             zetaX[idx] = f0_*psipX;
             zetaY[idx] = f0_*psipY;
             etaX[idx] = -h[idx]*psipY;
@@ -340,10 +327,8 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     double R0_[2], Z0_[2];
     double f0_;
     int firstline_;
-    PsiX psiX_;
-    PsiY psiY_;
-    LaplacePsi laplacePsi_;
-    dg::geo::detail::SeparatriX<Psi, PsiX, PsiY> sep_;
+    BinaryFunctorsLvl2 psi_;
+    dg::geo::detail::SeparatriX sep_;
 };
 
 // /**

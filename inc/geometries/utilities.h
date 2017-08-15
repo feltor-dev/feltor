@@ -358,7 +358,7 @@ struct FieldRZtau
 
 struct HessianRZtau
 {
-    HessianRZtau( const BinaryFunctorsLvl2): norm_(false), quad_(1), psip_(psip){}
+    HessianRZtau( const BinaryFunctorsLvl2& psip): norm_(false), quad_(1), psip_(psip){}
     // if true goes into positive Z - direction and X else
     void set_quadrant( int quadrant) {quad_ = quadrant;}
     void set_norm( bool normed) {norm_ = normed;}
