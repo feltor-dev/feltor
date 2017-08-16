@@ -29,7 +29,7 @@ namespace dg
  * @return  A DG Host Vector with values
  */
 template< class UnaryOp>
-thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d& g)
+thrust::host_vector<double> evaluate( const UnaryOp& f, const Grid1d& g)
 {
     thrust::host_vector<double> abs = create::abscissas( g);
     for( unsigned i=0; i<g.size(); i++)
@@ -39,7 +39,7 @@ thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d& g)
 ///@cond
 thrust::host_vector<double> evaluate( double (f)(double), const Grid1d& g)
 {
-    thrust::host_vector<double> v = evaluate<double (double)>( f, g);
+    thrust::host_vector<double> v = evaluate<double (double)>( *f, g);
     return v;
 };
 ///@endcond
@@ -57,7 +57,7 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d& g)
  * @note if you don't like to copy f then just pass a (const) reference then the type should adapt
  */
 template< class BinaryOp>
-thrust::host_vector<double> evaluate( BinaryOp f, const aTopology2d& g)
+thrust::host_vector<double> evaluate( const BinaryOp& f, const aTopology2d& g)
 {
     unsigned n= g.n();
     Grid1d gx(g.x0(), g.x1(), g.n(), g.Nx());
@@ -79,7 +79,7 @@ thrust::host_vector<double> evaluate( BinaryOp f, const aTopology2d& g)
 thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology2d& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
-    return evaluate<double(double, double)>( f, g);
+    return evaluate<double(double, double)>( *f, g);
 };
 ///@endcond
 
@@ -95,7 +95,7 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology
  * @note if you don't like to copy f then just pass a (const) reference then the type should adapt
  */
 template< class TernaryOp>
-thrust::host_vector<double> evaluate( TernaryOp f, const aTopology3d& g)
+thrust::host_vector<double> evaluate( const TernaryOp& f, const aTopology3d& g)
 {
     unsigned n= g.n();
     Grid1d gx(g.x0(), g.x1(), g.n(), g.Nx());
@@ -119,7 +119,7 @@ thrust::host_vector<double> evaluate( TernaryOp f, const aTopology3d& g)
 thrust::host_vector<double> evaluate( double(f)(double, double, double), const aTopology3d& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
-    return evaluate<double(double, double, double)>( f, g);
+    return evaluate<double(double, double, double)>( *f, g);
 };
 ///@endcond
 

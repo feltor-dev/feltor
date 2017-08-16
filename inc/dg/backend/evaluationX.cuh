@@ -26,14 +26,14 @@ namespace dg
  * @return  A DG Host Vector with values
  */
 template< class UnaryOp>
-thrust::host_vector<double> evaluate( UnaryOp f, const GridX1d& g)
+thrust::host_vector<double> evaluate( const UnaryOp& f, const GridX1d& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
 thrust::host_vector<double> evaluate( double (f)(double), const GridX1d& g)
 {
-    return evaluate( f, g.grid());
+    return evaluate( *f, g.grid());
 };
 ///@endcond
 
@@ -50,14 +50,14 @@ thrust::host_vector<double> evaluate( double (f)(double), const GridX1d& g)
             may be constructed during function call.
  */
 template< class BinaryOp>
-thrust::host_vector<double> evaluate( BinaryOp f, const aTopologyX2d& g)
+thrust::host_vector<double> evaluate( const BinaryOp& f, const aTopologyX2d& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
 thrust::host_vector<double> evaluate( double(f)(double, double), const aTopologyX2d& g)
 {
-    return evaluate( f, g.grid());
+    return evaluate( *f, g.grid());
 };
 ///@endcond
 
@@ -74,14 +74,14 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology
             may be constructed during function call.
  */
 template< class TernaryOp>
-thrust::host_vector<double> evaluate( TernaryOp f, const aTopologyX3d& g)
+thrust::host_vector<double> evaluate( const TernaryOp& f, const aTopologyX3d& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
 thrust::host_vector<double> evaluate( double(f)(double, double, double), const aTopologyX3d& g)
 {
-    return evaluate( f, g.grid());
+    return evaluate( *f, g.grid());
 };
 ///@endcond
 
