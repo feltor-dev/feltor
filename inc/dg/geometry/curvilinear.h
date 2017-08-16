@@ -83,8 +83,8 @@ struct CurvilinearProductGrid3d : public dg::aGeometry3d
     //construct 2d plane
     void constructPerp( unsigned n, unsigned Nx, unsigned Ny)
     {
-        dg::Grid1d gX1d( 0., x0(), n, Nx);
-        dg::Grid1d gY1d( 0., y0(), n, Ny);
+        dg::Grid1d gX1d( x0(), x1(), n, Nx);
+        dg::Grid1d gY1d( y0(), y1(), n, Ny);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
         handle_.get().generate( x_vec, y_vec, map_[0], map_[1], jac_.value(0), jac_.value(1), jac_.value(2), jac_.value(3));
