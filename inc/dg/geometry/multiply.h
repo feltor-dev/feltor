@@ -88,6 +88,19 @@ void pointwiseDot( const SparseElement<container>& mu, const container& in, cont
     else
         out=in;
 }
+/**
+ * @brief Multiply container with form
+ *
+ * @copydoc hide_container_lvl1
+ * @param in input vector
+ * @param mu if mu.isEmpty() then out=in, else the input is pointwise multiplied with the value in mu
+ * @param out output vector (may alias in)
+ */
+template<class container>
+void pointwiseDot( const container& in, const SparseElement<container>& mu, container& out)
+{
+    pointwiseDot( mu, in, out);
+}
 
 /**
  * @brief Divide container with form

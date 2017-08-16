@@ -390,7 +390,7 @@ struct Hector : public aGenerator2d
             dg::blas1::axpby( 1. ,u, -1., u_diff);
             eps = sqrt( dg::blas2::dot( u_diff, vol2d, u_diff) / dg::blas2::dot( u, vol2d, u) );
             if(verbose) std::cout <<" iter "<<number<<" error "<<eps<<"\n";
-            g2d_old = g2d;
+            g2d_old = g2d_;
             u_old = u;
             number++;//get rid of warning
         }
@@ -449,7 +449,7 @@ struct Hector : public aGenerator2d
 
 
         thrust::host_vector<double> chi_ZZ, chi_ZE, chi_EE;
-        dg::geo::pushForwardPerp( chi_XX, chi_XY, chi_YY, chi_ZZ, chi_ZE, chi_EE, g2d_);
+        dg::pushForwardPerp( chi_XX, chi_XY, chi_YY, chi_ZZ, chi_ZE, chi_EE, g2d_);
         container chiZZ, chiZE, chiEE;
         dg::blas1::transfer( chi_ZZ, chiZZ);
         dg::blas1::transfer( chi_ZE, chiZE);
@@ -470,7 +470,10 @@ struct Hector : public aGenerator2d
         //now compute etaV and its inverse
         container etaVinv(u_zeta), etaV(etaVinv);
         dg::blas1::pointwiseDot( etaVinv, chiZZ, etaVinv);
-        dg::geo::multiplyPerpVolume( etaVinv, g2d_);
+        dg::SparseElement<container> perp_vol = dg::tensor::determinant(g2d_.metric());
+        dg::tensor::sqrt(perp_vol);
+        dg::tensor::invert(perp_vol);
+        dg::tensor::pointwiseDot( etaVinv, perp_vol, etaVinv);
         dg::blas1::transform( etaVinv, etaV, dg::INVERT<double>());
         thrust::host_vector<double> etaVinv_h;
         dg::blas1::transfer( etaVinv, etaVinv_h);
@@ -478,8 +481,8 @@ struct Hector : public aGenerator2d
         container v_zeta(u), v_eta(u);
         dg::blas1::axpby( -1., temp_eta, 0.,v_zeta);
         dg::blas1::axpby( +1., temp_zeta, 0.,v_eta);
-        dg::geo::multiplyPerpVolume( v_zeta, g2d_);
-        dg::geo::multiplyPerpVolume(  v_eta, g2d_);
+        dg::tensor::pointwiseDot( v_zeta, perp_vol, v_zeta);
+        dg::tensor::pointwiseDot( v_eta, perp_vol, v_eta);
 
         //construct c0 and scale all vector components with it
         c0_ = fabs( detail::construct_c0( etaVinv_h, g2d_));
