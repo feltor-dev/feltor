@@ -76,73 +76,68 @@ struct TokamakMagneticField
 struct Bmodule : public aCloneableBinaryFunctor<Bmodule>
 {
     Bmodule( const TokamakMagneticField& mag): mag_(mag)  { }
-    /**
-    * @brief \f[   \hat{B} \f]
-    */ 
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         double psipR = mag_.psipR()(R,Z), psipZ = mag_.psipZ()(R,Z), ipol = mag_.ipol()(R,Z);
         return mag_.R0()/R*sqrt(ipol*ipol+psipR*psipR +psipZ*psipZ);
     }
-  private:
     TokamakMagneticField mag_;
 };
 
 /**
  * @brief \f[  |B|^{-1} = R/R_0\sqrt{I^2+(\nabla\psi)^2}    \f]
+
+    \f[   \frac{1}{\hat{B}} = 
+        \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
+        + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
  */ 
 struct InvB : public aCloneableBinaryFunctor<InvB>
 {
     InvB(  const TokamakMagneticField& mag): mag_(mag){ }
-    /**
-    * @brief \f[   \frac{1}{\hat{B}} = 
-        \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
-        + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
-    */ 
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         double psipR = mag_.psipR()(R,Z), psipZ = mag_.psipZ()(R,Z), ipol = mag_.ipol()(R,Z);
         return R/(mag_.R0()*sqrt(ipol*ipol + psipR*psipR +psipZ*psipZ)) ;
     }
-  private:
     TokamakMagneticField mag_;
 };
 
 /**
  * @brief \f[   \ln{|B|}  \f]
+ *
+   \f[   \ln{(   \hat{B})} = \ln{\left[
+          \frac{\hat{R}_0}{\hat{R}} \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
+          + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2} \right] } \f]
  */ 
 struct LnB : public aCloneableBinaryFunctor<LnB>
 {
     LnB(const TokamakMagneticField& mag): mag_(mag) { }
-    /**
-     * @brief \f[   \ln{(   \hat{B})} = \ln{\left[
-          \frac{\hat{R}_0}{\hat{R}} \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
-          + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2} \right] } \f]
-     */ 
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         double psipR = mag_.psipR()(R,Z), psipZ = mag_.psipZ()(R,Z), ipol = mag_.ipol()(R,Z);
         return log(mag_.R0()/R*sqrt(ipol*ipol + psipR*psipR +psipZ*psipZ)) ;
     }
-  private:
     TokamakMagneticField mag_;
 };
 
 /**
  * @brief \f[  \frac{\partial |\hat{B}| }{ \partial \hat{R}}  \f]
- */ 
-struct BR: public aCloneableBinaryFunctor<BR>
-{
-    BR(const TokamakMagneticField& mag): invB_(mag), mag_(mag) { }
-/**
- * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} = 
+ * 
+ \f[  \frac{\partial \hat{B} }{ \partial \hat{R}} = 
       -\frac{1}{\hat B \hat R}   
       +  \frac{\hat I \left(\frac{\partial\hat I}{\partial\hat R} \right) 
       + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\right)
       + \left( \frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)\left( \frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R}^2}\right)}
       {\hat{R}^2 \hat{R}_0^{-2}\hat{B}} \f]
  */ 
-    double operator()(double R, double Z) const
+struct BR: public aCloneableBinaryFunctor<BR>
+{
+    BR(const TokamakMagneticField& mag): invB_(mag), mag_(mag) { }
+  private:
+    double do_compute(double R, double Z) const
     { 
         double Rn;
         Rn = R/mag_.R0();
@@ -150,24 +145,23 @@ struct BR: public aCloneableBinaryFunctor<BR>
         //return -( Rn*Rn/invB_(R,Z)/invB_(R,Z)+ qampl_*qampl_*Rn *A_*psipR_(R,Z) - R  *(psipZ_(R,Z)*psipRZ_(R,Z)+psipR_(R,Z)*psipRR_(R,Z)))/(R*Rn*Rn/invB_(R,Z));
         return -1./R/invB_(R,Z) + invB_(R,Z)/Rn/Rn*(mag_.ipol()(R,Z)*mag_.ipolR()(R,Z) + mag_.psipR()(R,Z)*mag_.psipRR()(R,Z) + mag_.psipZ()(R,Z)*mag_.psipRZ()(R,Z));
     }
-  private:
     InvB invB_;
     TokamakMagneticField mag_;
 };
 
 /**
  * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}}  \f]
+ *
+  \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} = 
+     \frac{ \hat I \left(\frac{\partial \hat I}{\partial\hat Z}    \right)+
+     \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\right)
+          + \left( \frac{\partial \hat{\psi}_p }{ \partial \hat{Z}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2} \right)}{\hat{R}^2 \hat{R}_0^{-2}\hat{B}} \f]
  */ 
 struct BZ: public aCloneableBinaryFunctor<BZ>
 {
     BZ(const TokamakMagneticField& mag ): mag_(mag), invB_(mag) { }
-    /**
-     * @brief \f[  \frac{\partial \hat{B} }{ \partial \hat{Z}} = 
-     \frac{ \hat I \left(\frac{\partial \hat I}{\partial\hat Z}    \right)+
-     \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{R} \partial\hat{Z}}\right)
-          + \left( \frac{\partial \hat{\psi}_p }{ \partial \hat{Z}} \right)\left(\frac{\partial^2  \hat{\psi}_p }{ \partial \hat{Z}^2} \right)}{\hat{R}^2 \hat{R}_0^{-2}\hat{B}} \f]
-     */ 
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     { 
         double Rn;
         Rn = R/mag_.R0();
@@ -175,58 +169,55 @@ struct BZ: public aCloneableBinaryFunctor<BZ>
         //return (-qampl_*qampl_*A_/R_0_*psipZ_(R,Z) + psipR_(R,Z)*psipRZ_(R,Z)+psipZ_(R,Z)*psipZZ_(R,Z))/(Rn*Rn/invB_(R,Z));
         return (invB_(R,Z)/Rn/Rn)*(mag_.ipol()(R,Z)*mag_.ipolZ()(R,Z) + mag_.psipR()(R,Z)*mag_.psipRZ()(R,Z) + mag_.psipZ()(R,Z)*mag_.psipZZ()(R,Z));
     }
-  private:
     TokamakMagneticField mag_;
     InvB invB_; 
 };
 
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} \f]
+ *
+    \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f]
  */ 
 struct CurvatureNablaBR: public aCloneableBinaryFunctor<CurvatureNablaBR>
 {
     CurvatureNablaBR(const TokamakMagneticField& mag): invB_(mag), bZ_(mag) { }
-    /**
-     * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\nabla B} =-\frac{1}{ \hat{B}^2}  \frac{\partial \hat{B}}{\partial \hat{Z}}  \f]
-     */ 
-    double operator()( double R, double Z) const
+    private:    
+    double do_compute( double R, double Z) const
     {
         return -invB_(R,Z)*invB_(R,Z)*bZ_(R,Z); 
     }
-    private:    
     InvB invB_;
     BZ bZ_;    
 };
 
 /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B}  \f]
+ *
+   \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f]
  */ 
 struct CurvatureNablaBZ: public aCloneableBinaryFunctor<CurvatureNablaBZ>
 {
     CurvatureNablaBZ( const TokamakMagneticField& mag): invB_(mag), bR_(mag) { }
-    /**
-     * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\nabla B} =\frac{1}{ \hat{B}^2}   \frac{\partial \hat{B}}{\partial \hat{R}} \f]
-     */    
-    double operator()( double R, double Z) const
+    private:    
+    double do_compute( double R, double Z) const
     {
         return invB_(R,Z)*invB_(R,Z)*bR_(R,Z);
     }
-    private:    
     InvB invB_;
     BR bR_;   
 };
 
 /**
  * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}}=0 \f]
+ *
+ \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} =0  \f]
  */ 
 struct CurvatureKappaR: public aCloneableBinaryFunctor<CurvatureKappaR>
 {
     CurvatureKappaR( ){ }
     CurvatureKappaR( const TokamakMagneticField& mag){ }
-    /**
-     * @brief \f[ \mathcal{\hat{K}}^{\hat{R}}_{\vec{\kappa}} =0  \f]
-     */ 
-    double operator()( double R, double Z) const
+    private:
+    double do_compute( double R, double Z) const
     {
         return  0.;
     }
@@ -234,54 +225,51 @@ struct CurvatureKappaR: public aCloneableBinaryFunctor<CurvatureKappaR>
 
 /**
  * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}}  \f]
+ *
+ * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f]
  */ 
 struct CurvatureKappaZ: public aCloneableBinaryFunctor<CurvatureKappaZ>
 {
     CurvatureKappaZ( const TokamakMagneticField& mag): invB_(mag) { }
-    /**
-     * @brief \f[  \mathcal{\hat{K}}^{\hat{Z}}_{\vec{\kappa}} = - \frac{1}{\hat{R} \hat{B}} \f]
-     */    
-    double operator()( double R, double Z) const
+    private:    
+    double do_compute( double R, double Z) const
     {
         return -invB_(R,Z)/R;
     }
-    private:    
     InvB invB_;
 };
 
 /**
  * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  \f]
+
+     \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  = \frac{1}{\hat{R}  \hat{B}^2 } \partial_{\hat{Z}} \hat{B}\f]
  */ 
 struct DivCurvatureKappa: public aCloneableBinaryFunctor<DivCurvatureKappa>
 {
     DivCurvatureKappa( const TokamakMagneticField& mag): invB_(mag), bZ_(mag){ }
-    /**
-     * @brief \f[  \vec{\hat{\nabla}}\cdot \mathcal{\hat{K}}_{\vec{\kappa}}  = \frac{1}{\hat{R}  \hat{B}^2 } \partial_{\hat{Z}} \hat{B}\f]
-     */    
-    double operator()( double R, double Z) const
+    private:    
+    double do_compute( double R, double Z) const
     {
         return bZ_(R,Z)*invB_(R,Z)*invB_(R,Z)/R;
     }
-    private:    
     InvB invB_;
     BZ bZ_;    
 };
 
 /**
  * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} \f]
+ *
+ *    \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} = \frac{1}{\hat{R}\hat{B}^2 } \left[ \hat{B}, \hat{\psi}_p\right]_{\hat{R}\hat{Z}} \f]
  */ 
 struct GradLnB: public aCloneableBinaryFunctor<GradLnB>
 {
     GradLnB( const TokamakMagneticField& mag): mag_(mag), invB_(mag), bR_(mag), bZ_(mag) { } 
-    /**
-     * @brief \f[  \hat{\nabla}_\parallel \ln{(\hat{B})} = \frac{1}{\hat{R}\hat{B}^2 } \left[ \hat{B}, \hat{\psi}_p\right]_{\hat{R}\hat{Z}} \f]
-     */ 
-    double operator()( double R, double Z) const
+    private:
+    double do_compute( double R, double Z) const
     {
         double invB = invB_(R,Z);
         return mag_.R0()*invB*invB*(bR_(R,Z)*mag_.psipZ()(R,Z)-bZ_(R,Z)*mag_.psipR()(R,Z))/R ;
     }
-    private:
     TokamakMagneticField mag_;
     InvB invB_;
     BR bR_;
@@ -291,15 +279,15 @@ struct GradLnB: public aCloneableBinaryFunctor<GradLnB>
 /**
  * @brief \f[ B_\varphi = R_0I/R^2\f]
 */
-struct FieldP: public aCloneableBinaryFunctor<LnB>
+struct FieldP: public aCloneableBinaryFunctor<FieldP>
 {
     FieldP( const TokamakMagneticField& mag): mag_(mag){}
-    double operator()( double R, double Z, double phi) const
+    private:
+    double do_compute( double R, double Z) const
     {
         return mag_.R0()*mag_.ipol()(R,Z)/R/R;
     }
     
-    private:
     TokamakMagneticField mag_;
 }; 
 
@@ -309,11 +297,11 @@ struct FieldP: public aCloneableBinaryFunctor<LnB>
 struct FieldR: public aCloneableBinaryFunctor<FieldR>
 {
     FieldR( const TokamakMagneticField& mag): mag_(mag){}
-    double operator()( double R, double Z) const
+    private:
+    double do_compute( double R, double Z) const
     {
         return  mag_.R0()/R*mag_.psipZ()(R,Z);
     }
-    private:
     TokamakMagneticField mag_;
    
 };
@@ -324,11 +312,11 @@ struct FieldR: public aCloneableBinaryFunctor<FieldR>
 struct FieldZ: public aCloneableBinaryFunctor<FieldZ>
 {
     FieldZ( const TokamakMagneticField& mag): mag_(mag){}
-    double operator()( double R, double Z) const
+    private:
+    double do_compute( double R, double Z) const
     {
         return -mag_.R0()/R*mag_.psipR()(R,Z);
     }
-    private:
     TokamakMagneticField mag_;
 };
 
@@ -344,12 +332,12 @@ struct FieldT: public aCloneableBinaryFunctor<FieldT>
      * B^R\partial_R\theta + B^Z\partial_Z\theta\f]
      * where \f$ \theta \f$ is the geometrical poloidal angle.
      */ 
-    double operator()(double R, double Z) const
+    private:
+    double do_compute(double R, double Z) const
     { 
         double r2 = (R-R_0_)*(R-R_0_) + Z*Z;
         return fieldR_(R,Z)*(-Z/r2) + fieldZ_(R,Z)*(R-R_0_)/r2;
     }
-    private:
     double R_0_;
     FieldR fieldR_;
     FieldZ fieldZ_;
@@ -361,11 +349,11 @@ struct FieldT: public aCloneableBinaryFunctor<FieldT>
 struct BHatR: public aCloneableBinaryFunctor<BHatR>
 {
     BHatR( const TokamakMagneticField& mag): mag_(mag), invB_(mag){ }
-    double operator()( double R, double Z) const
+    private:
+    double do_compute( double R, double Z) const
     {
         return  invB_(R,Z)*mag_.R0()/R*mag_.psipZ()(R,Z);
     }
-    private:
     TokamakMagneticField mag_;
     InvB invB_;
 
@@ -377,11 +365,11 @@ struct BHatR: public aCloneableBinaryFunctor<BHatR>
 struct BHatZ: public aCloneableBinaryFunctor<BHatZ>
 {
     BHatZ( const TokamakMagneticField& mag): mag_(mag), invB_(mag){ }
-    double operator()( double R, double Z) const
+    private:
+    double do_compute( double R, double Z) const
     {
         return  -invB_(R,Z)*mag_.R0()/R*mag_.psipR()(R,Z);
     }
-    private:
     TokamakMagneticField mag_;
     InvB invB_;
 };
@@ -392,12 +380,11 @@ struct BHatZ: public aCloneableBinaryFunctor<BHatZ>
 struct BHatP: public aCloneableBinaryFunctor<BHatP>
 {
     BHatP( const TokamakMagneticField& mag): mag_(mag), invB_(mag){ }
-    double operator()( double R, double Z) const
+    private:
+    double do_compute( double R, double Z) const
     {
         return invB_(R,Z)*mag_.R0()*mag_.ipol()(R,Z)/R/R;
     }
-    
-    private:
     TokamakMagneticField mag_;
     InvB invB_;
 }; 

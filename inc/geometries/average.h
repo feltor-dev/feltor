@@ -18,7 +18,7 @@ namespace geo
  */
 struct DeltaFunction
 {
-    DeltaFunction(const aTokamakMagneticField& c, double epsilon,double psivalue) :
+    DeltaFunction(const TokamakMagneticField& c, double epsilon,double psivalue) :
         c_(c),
         epsilon_(epsilon),
         psivalue_(psivalue){
@@ -53,7 +53,7 @@ struct DeltaFunction
         return (*this)(R,Z);
     }
     private:
-    aTokamakMagneticField c_;
+    TokamakMagneticField c_;
     double epsilon_;
     double psivalue_;
 };
@@ -65,7 +65,7 @@ struct DeltaFunction
  */
 struct Alpha
 {
-    Alpha( const aTokamakMagneticField& c):c_(c){}
+    Alpha( const TokamakMagneticField& c):c_(c){}
 
     /**
     * @brief \f[ \frac{ I_{pol}(R,Z)}{R \sqrt{\nabla\psi_p}} \f]
@@ -83,7 +83,7 @@ struct Alpha
         return operator()(R,Z);
     }
     private:
-    aTokamakMagneticField c_;
+    TokamakMagneticField c_;
 };
 
 /**
@@ -103,7 +103,7 @@ struct FluxSurfaceAverage
      * @param c contains psip, psipR and psipZ
      * @param f container for global safety factor
      */
-    FluxSurfaceAverage(const dg::Grid2d& g2d, const aTokamakMagneticField& c, const container& f) :
+    FluxSurfaceAverage(const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f) :
     g2d_(g2d),
     f_(f),
     deltaf_(geo::DeltaFunction(c,0.0,0.0)),
@@ -159,7 +159,7 @@ struct SafetyFactor
      * @param c contains psip, psipR and psipZ
      * @param f container for global safety factor
      */
-    SafetyFactor(const dg::Grid2d& g2d, const aTokamakMagneticField& c, const container& f) :
+    SafetyFactor(const dg::Grid2d& g2d, const TokamakMagneticField& c, const container& f) :
     g2d_(g2d),
     f_(f), //why not directly use Alpha??
     deltaf_(geo::DeltaFunction(c,0.0,0.0)),

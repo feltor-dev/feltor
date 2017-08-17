@@ -22,7 +22,11 @@ struct aBinaryFunctor
     *
     * @return f(R,Z)
     */
-    virtual double operator()(double R, double Z) const=0;
+    double operator()(double R, double Z) const
+    {
+        return do_compute(R,Z); //if we didn't make the virtual function have another way
+        //the operator() would hide the 3d version
+    }
     /**
     * @brief Redirects to the 2D version
     *
@@ -53,6 +57,8 @@ struct aBinaryFunctor
     * @brief We do not allow object slicing so the assignment is protected
     */
     aBinaryFunctor& operator=(const aBinaryFunctor&){return *this;}
+    private:
+    double do_compute(double R, double Z) const=0;
 };
 
 /**
@@ -83,8 +89,8 @@ template<class BinaryFunctor>
 struct BinaryFunctorAdapter : public aCloneableBinaryFunctor<BinaryFunctorAdapter<BinaryFunctor> >
 {
     BinaryFunctorAdapter( const BinaryFunctor& f):f_(f){}
-    double operator()(double x, double y)const{return f_(x,y);}
     private:
+    double do_compute(double x, double y)const{return f_(x,y);}
     BinaryFunctor f_;
 };
 /**
@@ -277,8 +283,8 @@ struct BinaryVectorLvl0
 struct Constant: public aCloneableBinaryFunctor<Constant> 
 { 
     Constant(double c):c_(c){}
-    double operator()(double R,double Z)const{return c_;}
     private:
+    double do_compute(double R,double Z)const{return c_;}
     double c_;
 };
 

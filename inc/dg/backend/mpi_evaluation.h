@@ -28,7 +28,7 @@ namespace dg
             may be constructed during function call.
  */
 template< class BinaryOp>
-MPI_Vector<thrust::host_vector<double> > evaluate( const BinaryOp& f, const aMPITopology2d& g)
+MPI_Vector<thrust::host_vector<double> > evaluate( BinaryOp& f, const aMPITopology2d& g)
 {
     thrust::host_vector<double> w = evaluate( f, g.local());
     MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());
@@ -55,7 +55,7 @@ MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double), co
             may be constructed during function call.
  */
 template< class TernaryOp>
-MPI_Vector<thrust::host_vector<double> > evaluate( const TernaryOp& f, const aMPITopology3d& g)
+MPI_Vector<thrust::host_vector<double> > evaluate( TernaryOp& f, const aMPITopology3d& g)
 {
     thrust::host_vector<double> w = evaluate( f, g.local());
     MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());
