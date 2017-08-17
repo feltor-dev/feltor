@@ -38,7 +38,7 @@ struct AbsMax
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    T operator() (const T& x, const T& y)
+    T operator() (const T& x, const T& y) const
     {
         T absx = x>0 ? x : -x;
         T absy = y>0 ? y : -y;
@@ -65,7 +65,7 @@ struct AbsMin
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    T operator() (const T& x, const T& y)
+    T operator() (const T& x, const T& y) const
     {
         T absx = x<0 ? -x : x;
         T absy = y<0 ? -y : y;
@@ -104,7 +104,7 @@ struct Gaussian
      *
      * @return gaussian
      */
-    double operator()(double x, double y)
+    double operator()(double x, double y) const
     {
         return  amplitude*
                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
@@ -121,7 +121,7 @@ struct Gaussian
      *
      * @return gaussian
      */
-    double operator()(double x, double y, double z)
+    double operator()(double x, double y, double z) const
     {
         return  amplitude*cos(kz_*z)*
                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
@@ -236,7 +236,7 @@ struct Gaussian3d
      *
      * @return gaussian
      */
-    double operator()(double x, double y)
+    double operator()(double x, double y) const
     {
         return  amplitude*
                    exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x +
@@ -254,7 +254,7 @@ struct Gaussian3d
      *
      * @return gaussian
      */
-    double operator()(double x, double y, double z)
+    double operator()(double x, double y, double z) const
     {
 //         if (z== z00)
 //         {
@@ -299,7 +299,7 @@ struct GaussianX
      *
      * @return gaussian
      */
-    double operator()(double x, double y)
+    double operator()(double x, double y) const
     {
         return  amplitude* exp( -((x-x00)*(x-x00)/2./sigma_x/sigma_x ));
     }
@@ -335,7 +335,7 @@ struct GaussianY
      *
      * @return gaussian
      */
-    double operator()(double x, double y)
+    double operator()(double x, double y) const
     {
         return  amplitude*exp( -((y-y00)*(y-y00)/2./sigma_y/sigma_y) );
     }
@@ -370,7 +370,7 @@ struct GaussianZ
      *
      * @return gaussian
      */
-    double operator()( double z)
+    double operator()( double z) const
     {
         return  amplitude*exp( -((z-z00)*(z-z00)/2./sigma_z/sigma_z) );
     }
@@ -386,7 +386,7 @@ struct GaussianZ
      *
      * @return gaussian
      */
-    double operator()(double x, double y, double z)
+    double operator()(double x, double y, double z) const
     {
         return  amplitude*exp( -((z-z00)*(z-z00)/2./sigma_z/sigma_z) );
     }
@@ -417,7 +417,7 @@ struct SinXSinY
      
      * @return \f$ f(x,y)\f$
      */
-    double operator()( double x, double y){ return bamp_+amp_*sin(x*kx_)*sin(y*ky_);}
+    double operator()( double x, double y)const{ return bamp_+amp_*sin(x*kx_)*sin(y*ky_);}
   private:
     double amp_,bamp_,kx_,ky_;
 };
@@ -443,7 +443,7 @@ struct SinX
      
      * @return \f$ f(x,y)\f$
      */
-    double operator()( double x, double y){ return bamp_+amp_*sin(x*kx_);}
+    double operator()( double x, double y)const{ return bamp_+amp_*sin(x*kx_);}
   private:
     double amp_,bamp_,kx_;
 };
@@ -470,7 +470,7 @@ struct SinProfX
      
      * @return \f$ f(x,y)\f$
      */
-    double operator()( double x, double y){ return bamp_+amp_*(1.-sin(x*kx_));}
+    double operator()( double x, double y)const{ return bamp_+amp_*(1.-sin(x*kx_));}
   private:
     double amp_,bamp_,kx_;
 };
@@ -496,7 +496,7 @@ struct ExpProfX
      
      * @return result
      */
-    double operator()( double x, double y){ return bamp_+amp_*exp(-x/ln_);}
+    double operator()( double x, double y)const{ return bamp_+amp_*exp(-x/ln_);}
   private:
     double amp_,bamp_,ln_;
 };
@@ -522,7 +522,7 @@ struct LinearX
      
      * @return result
      */
-   double operator()( double x, double y, double z){ return a_*x+b_;}
+   double operator()( double x, double y, double z)const { return a_*x+b_;}
     /**
      * @brief Return linear polynomial in x 
      *
@@ -531,7 +531,7 @@ struct LinearX
      
      * @return result
      */
-   double operator()( double x, double y){ return a_*x+b_;}
+   double operator()( double x, double y)const{ return a_*x+b_;}
     /**
      * @brief Return linear polynomial in x 
      *
@@ -539,7 +539,7 @@ struct LinearX
      
      * @return result
      */
-   double operator()(double x){ return a_*x+b_;}
+   double operator()(double x)const{ return a_*x+b_;}
    private:
     double a_,b_;
 };
@@ -565,7 +565,7 @@ struct LinearY
      
      * @return result
      */
-    double operator()( double x, double y, double z){ return a_*y+b_;}
+    double operator()( double x, double y, double z)const { return a_*y+b_;}
     /**
      * @brief Return linear polynomial in x 
      *
@@ -574,7 +574,7 @@ struct LinearY
      
      * @return result
      */
-    double operator()( double x, double y){ return a_*y+b_;}
+    double operator()( double x, double y)const{ return a_*y+b_;}
   private:
     double a_,b_;
 };
@@ -600,7 +600,7 @@ struct LinearZ
      
      * @return result
      */
-    double operator()( double x, double y, double z){ return a_*z+b_;}
+    double operator()( double x, double y, double z)const{ return a_*z+b_;}
   private:
     double a_,b_;
 };
@@ -630,7 +630,7 @@ struct TanhProfX {
 
      * @return result
      */
-    double operator() (double x, double y)
+    double operator() (double x, double y)const
     {
         return profa_*0.5*(1.+s_*tanh((x-xb_)/w_))+bga_; 
     }
@@ -679,7 +679,7 @@ struct Lamb
      *
      * @return Lamb
      */
-    double operator() (double x, double y)
+    double operator() (double x, double y)const
     {
         double radius = sqrt( (x-x0_)*(x-x0_) + (y-y0_)*(y-y0_));
         double theta = atan2( (y-y0_),(x-x0_));
@@ -766,7 +766,7 @@ struct Vortex
      *
      * @return the above function value
      */
-    double operator()( double x, double y)
+    double operator()( double x, double y)const
     {
         double r = sqrt( (x-x0_)*(x-x0_)+(y-y0_)*(y-y0_));
         double theta = atan2( y-y0_, x-x0_);
@@ -797,7 +797,7 @@ struct Vortex
      *
      * @return the above function value
      */
-    double operator()( double x, double y, double z)
+    double operator()( double x, double y, double z)const
     {
         return this->operator()(x,y)*cos(kz_*z);
     }
@@ -913,7 +913,7 @@ struct BathRZ{
      * @param Z Z - coordinate
      *
      */
-    double operator()(double R, double Z)
+    double operator()(double R, double Z)const
     { 
         double f, RZphasecos, RR, ZZ;
         RR=R-R_min_;
@@ -938,7 +938,7 @@ struct BathRZ{
      * @param phi phi - coordinate
      *
      */
-    double operator()(double R, double Z, double phi) { 
+    double operator()(double R, double Z, double phi)const { 
         double f, RZphasecos;
         double  RR, ZZ;
         RR=R-R_min_;
@@ -1008,7 +1008,7 @@ struct EXP
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    T operator() (const T& x) 
+    T operator() (const T& x) const
     { 
         return amp_*exp(lambda_*x);
     }
@@ -1034,7 +1034,7 @@ struct LN
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    T operator() (const T& x) 
+    T operator() (const T& x) const
     { 
         return log(x);
     }
@@ -1059,7 +1059,7 @@ struct SQRT
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    T operator() (const T& x) 
+    T operator() (const T& x) const
     { 
         return sqrt(x);
     }
@@ -1087,7 +1087,7 @@ struct MinMod
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    T operator() ( T a1, T a2, T a3)
+    T operator() ( T a1, T a2, T a3)const
     {
         if( a1*a2 > 0) 
             if( a1*a3 > 0)
@@ -1142,7 +1142,7 @@ struct PLUS
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-        T operator()(const T& x){ return x + x_;}
+        T operator()(const T& x)const{ return x + x_;}
     private:
     T x_;
 };
@@ -1165,7 +1165,7 @@ struct INVERT
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-        T operator()(const T& x){ return 1./x;}
+        T operator()(const T& x)const{ return 1./x;}
 };
 
 /**
@@ -1194,7 +1194,7 @@ struct MOD
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-        T operator()(const T& x){
+        T operator()(const T& x)const{
             return (fmod(x,x_) < 0 ) ? (x_ + fmod(x,x_)) : fmod(x,x_);
         }
     private:
@@ -1220,7 +1220,7 @@ struct ABS
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-        T operator()(const T& x){ return fabs(x);}
+        T operator()(const T& x)const{ return fabs(x);}
 };
 /**
  * @brief returns positive values
@@ -1241,7 +1241,7 @@ struct POSVALUE
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-        T operator()(const T& x){
+        T operator()(const T& x)const{
             if (x >= 0.0) return x;
             return 0.0;
             }
@@ -1272,7 +1272,7 @@ struct CONSTANT
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    double operator()(double x){return value_;}
+    double operator()(double x)const{return value_;}
     /**
      * @brief constant
      *
@@ -1284,7 +1284,7 @@ struct CONSTANT
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    double operator()(double x, double y){return value_;}
+    double operator()(double x, double y)const{return value_;}
     /**
      * @brief constant
      *
@@ -1297,7 +1297,7 @@ struct CONSTANT
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    double operator()(double x, double y, double z){return value_;}
+    double operator()(double x, double y, double z)const{return value_;}
     private:
     double value_;
 };
@@ -1312,15 +1312,15 @@ struct ONE
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    double operator()(double x){return 1.;}
+    double operator()(double x)const{return 1.;}
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    double operator()(double x, double y){return 1.;}
+    double operator()(double x, double y)const{return 1.;}
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    double operator()(double x, double y, double z){return 1.;}
+    double operator()(double x, double y, double z)const{return 1.;}
 };
 /**
  * @brief Return zero
@@ -1332,15 +1332,15 @@ struct ZERO
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    double operator()(double x){return 0.;}
+    double operator()(double x)const{return 0.;}
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    double operator()(double x, double y){return 0.;}
+    double operator()(double x, double y)const{return 0.;}
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    double operator()(double x, double y, double z){return 0.;}
+    double operator()(double x, double y, double z)const{return 0.;}
 };
 
 /**
@@ -1387,7 +1387,7 @@ struct Histogram
      *
      * @return 
      */
-    double operator()(double x)
+    double operator()(double x)const
     {    
         unsigned bin = floor((x-g1d_.x0())/binwidth_+0.5);
         bin = std::max(bin,(unsigned) 0);
@@ -1450,7 +1450,7 @@ struct Histogram2D
      *
      * @return 
      */
-    double operator()(double x, double y)
+    double operator()(double x, double y)const
     {
         unsigned binx = floor((x-g2d_.x0())/binwidthx_+0.5) ;
         binx = std::max(binx,(unsigned) 0);

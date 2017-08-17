@@ -19,7 +19,7 @@ namespace dg
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x) on the given grid
- * @tparam Function Model of Binary Function
+ * @copydoc hide_binary
  * @param f The function to evaluate: f = f(x,y)
  * @param g The 2d grid on which to evaluate f
  *
@@ -28,7 +28,7 @@ namespace dg
             may be constructed during function call.
  */
 template< class BinaryOp>
-MPI_Vector<thrust::host_vector<double> > evaluate( BinaryOp& f, const aMPITopology2d& g)
+MPI_Vector<thrust::host_vector<double> > evaluate( const BinaryOp& f, const aMPITopology2d& g)
 {
     thrust::host_vector<double> w = evaluate( f, g.local());
     MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());
@@ -46,7 +46,7 @@ MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double), co
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x,y,z) on the given grid
- * @tparam Function Model of Ternary Function
+ * @copydoc hide_ternary
  * @param f The function to evaluate: f = f(x,y,z)
  * @param g The 3d grid on which to evaluate f
  *
@@ -55,7 +55,7 @@ MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double), co
             may be constructed during function call.
  */
 template< class TernaryOp>
-MPI_Vector<thrust::host_vector<double> > evaluate( TernaryOp& f, const aMPITopology3d& g)
+MPI_Vector<thrust::host_vector<double> > evaluate( const TernaryOp& f, const aMPITopology3d& g)
 {
     thrust::host_vector<double> w = evaluate( f, g.local());
     MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());

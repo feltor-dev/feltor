@@ -41,7 +41,7 @@ thrust::host_vector<double> evaluate( double (f)(double), const GridX1d& g)
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x) on the given grid
- * @tparam BinaryOp Model of Binary Function
+ * @copydoc hide_binary
  * @param f The function to evaluate: f = f(x,y)
  * @param g The 2d grid on which to evaluate f
  *
@@ -65,7 +65,7 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x,y,z) on the given grid
- * @tparam TernaryOp Model of Ternary Function
+ * @copydoc hide_ternary
  * @param f The function to evaluate: f = f(x,y,z)
  * @param g The 3d grid on which to evaluate f
  *
