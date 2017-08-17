@@ -45,19 +45,13 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
 { /**
      * @brief Construct from given geometric parameters
      *
-     * @param gp useful geometric parameters
+     * @param gp geometric parameters
      */
     Psip( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    /**
-     * @brief \f$ \hat \psi_p(R,Z) \f$
-     *
-      @param R radius (cylindrical coordinates)
-      @param Z height (cylindrical coordinates)
-      @return \f$ \hat \psi_p(R,Z) \f$
-     */
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         double Rn = R/R0_, Zn = Z/R0_;
         double j1_c12 = boost::math::cyl_bessel_j( 1, c_[11]*Rn);
@@ -78,7 +72,6 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
                + c_[9]*sin(c_[11]*Zn));
 
     }
-  private:
     double R0_, cs_;
     std::vector<double> c_;
 };
@@ -89,23 +82,13 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
  */
 struct PsipR: public aCloneableBinaryFunctor<PsipR>
 {
-    /**
-     * @brief Construct from given geometric parameters
-     *
-     * @param gp useful geometric parameters
-     */
+    ///@copydoc Psip::Psip()
     PsipR( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_=sqrt(c_[11]*c_[11]-c_[10]*c_[10]);
     
     }
-    /**
-     * @brief \f$ \frac{\partial  \hat{\psi}_p }{ \partial \hat{R}}(R,Z)  \f$
-
-          @param R radius (boost::math::cylindrical coordinates)
-          @param Z height (boost::math::cylindrical coordinates)
-        * @return \f$ \frac{\partial  \hat{\psi}_p}{ \partial \hat{R}}(R,Z)  \f$
-     */ 
-    double operator()(double R, double Z) const
+    private:
+    double do_compute(double R, double Z) const
     {    
         double Rn=R/R0_, Zn=Z/R0_;
         double j1_c12R = boost::math::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
@@ -129,7 +112,6 @@ struct PsipR: public aCloneableBinaryFunctor<PsipR>
                + c_[7]*j1_csR*sin(c_[10]*Zn)
                + c_[8]*y1_csR*sin(c_[10]*Zn) );
     }
-  private:
     double R0_, cs_;
     std::vector<double> c_;
 };
@@ -138,15 +120,12 @@ struct PsipR: public aCloneableBinaryFunctor<PsipR>
  */ 
 struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 {
-    /**
-    * @brief Constructor
-    *
-    * @param gp geometric parameters
-    */
+    ///@copydoc Psip::Psip()
     PsipRR( solovev::GeomParameters gp ): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         double Rn=R/R0_, Zn=Z/R0_;
         double j1_c12R = c_[11]*(boost::math::cyl_bessel_j(0, c_[11]*Rn) - Rn*c_[11]*boost::math::cyl_bessel_j(1, c_[11]*Rn));
@@ -166,7 +145,6 @@ struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
                + c_[7]*j1_csR*sin(c_[10]*Zn)
                + c_[8]*y1_csR*sin(c_[10]*Zn) );
     }
-  private:
     double R0_, cs_;
     std::vector<double> c_;
 };
@@ -175,10 +153,12 @@ struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
  */ 
 struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 {
+    ///@copydoc Psip::Psip()
     PsipZ( solovev::GeomParameters gp ): R0_(gp.R_0), c_(gp.c) { 
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    double operator()(double R, double Z) const
+    private:
+    double do_compute(double R, double Z) const
     {    
         double Rn = R/R0_, Zn = Z/R0_;
         double j1_c12 = boost::math::cyl_bessel_j( 1, c_[11]*Rn);
@@ -196,7 +176,6 @@ struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
                + c_[8]*Rn*y1_cs*c_[10]*cos(c_[10]*Zn)
                + c_[9]*c_[11]*cos(c_[11]*Zn));
     }
-  private:
     double R0_,cs_; 
     std::vector<double> c_;
 };
@@ -205,10 +184,12 @@ struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
  */ 
 struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 {
-  PsipZZ( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) { 
+    ///@copydoc Psip::Psip()
+    PsipZZ( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) { 
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    double operator()(double R, double Z) const
+    private:
+    double do_compute(double R, double Z) const
     {    
         double Rn = R/R0_, Zn = Z/R0_;
         double j1_cs = boost::math::cyl_bessel_j( 1, cs_*Rn);
@@ -224,7 +205,6 @@ struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
                - c_[8]*Rn*y1_cs*c_[10]*c_[10]*sin(c_[10]*Zn)
                - c_[9]*c_[11]*c_[11]*sin(c_[11]*Zn));
     }
-  private:
     double R0_, cs_;
     std::vector<double> c_;
 };
@@ -233,10 +213,12 @@ struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
  */ 
 struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 {
+    ///@copydoc Psip::Psip()
     PsipRZ( solovev::GeomParameters gp ): R0_(gp.R_0), c_(gp.c) { 
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         double Rn=R/R0_, Zn=Z/R0_;
         double j1_c12R = boost::math::cyl_bessel_j(1, c_[11]*Rn) + c_[11]/2.*Rn*(
@@ -258,26 +240,25 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
                + c_[7]*j1_csR*c_[10]*cos(c_[10]*Zn)
                + c_[8]*y1_csR*c_[10]*cos(c_[10]*Zn) );
     }
-  private:
     double R0_, cs_;
     std::vector<double> c_;
 };
 
 /**
  * @brief \f[\hat{I} = c_{12}\psi\f] 
+ *
+   \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f] 
  */ 
 struct Ipol: public aCloneableBinaryFunctor<Ipol>
 {
+    ///@copydoc Psip::Psip()
     Ipol(  solovev::GeomParameters gp ): c12_(gp.c[11]), psip_(gp) { }
-    /**
-    * @brief \f[\hat{I}= \sqrt{-2 A \hat{\psi}_p / \hat{R}_0 +1}\f] 
-    */ 
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return c12_*psip_(R,Z);
         
     }
-  private:
     double c12_;
     Psip psip_;
 };
@@ -286,12 +267,13 @@ struct Ipol: public aCloneableBinaryFunctor<Ipol>
  */
 struct IpolR: public aCloneableBinaryFunctor<IpolR>
 {
+    ///@copydoc Psip::Psip()
     IpolR(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipR_(gp) { }
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return c12_*psipR_(R,Z);
     }
-  private:
     double c12_;
     PsipR psipR_;
 };
@@ -300,12 +282,13 @@ struct IpolR: public aCloneableBinaryFunctor<IpolR>
  */
 struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
 {
+    ///@copydoc Psip::Psip()
     IpolZ(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return c12_*psipZ_(R,Z);
     }
-  private:
     double c12_;
     PsipZ psipZ_;
 };

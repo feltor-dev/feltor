@@ -58,7 +58,7 @@ struct aBinaryFunctor
     */
     aBinaryFunctor& operator=(const aBinaryFunctor&){return *this;}
     private:
-    double do_compute(double R, double Z) const=0;
+    virtual double do_compute(double R, double Z) const=0;
 };
 
 /**

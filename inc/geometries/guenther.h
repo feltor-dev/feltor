@@ -34,11 +34,11 @@ namespace guenther
 struct Psip : public aCloneableBinaryFunctor<Psip>
 {
     Psip(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-  private:
     double R_0;
 };
 /**
@@ -47,11 +47,11 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
 struct PsipR : public aCloneableBinaryFunctor<PsipR>
 {
     PsipR(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return -M_PI*0.5*sin(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-  private:
     double R_0;
 };
 /**
@@ -60,11 +60,11 @@ struct PsipR : public aCloneableBinaryFunctor<PsipR>
 struct PsipRR : public aCloneableBinaryFunctor<PsipRR>
 {
     PsipRR(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-  private:
     double R_0;
 };
 /**
@@ -74,11 +74,11 @@ struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
 
 {
     PsipZ(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return -M_PI*0.5*cos(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
-  private:
     double R_0;
 };
 /**
@@ -87,11 +87,11 @@ struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
 struct PsipZZ : public aCloneableBinaryFunctor<PsipZZ>
 {
     PsipZZ(double R_0 ):   R_0(R_0){}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-  private:
     double R_0;
 };
 /**
@@ -100,11 +100,11 @@ struct PsipZZ : public aCloneableBinaryFunctor<PsipZZ>
 struct PsipRZ : public aCloneableBinaryFunctor<PsipRZ>
 {
     PsipRZ(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return M_PI*M_PI*0.25*sin(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
-  private:
     double R_0;
 };
 
@@ -114,8 +114,8 @@ struct PsipRZ : public aCloneableBinaryFunctor<PsipRZ>
 struct Ipol : public aCloneableBinaryFunctor<Ipol>
 {
     Ipol( double I_0):   I_0(I_0) {}
-    double operator()(double R, double Z) const { return I_0; }
-  private:
+    private:
+    double do_compute(double R, double Z) const { return I_0; }
     double I_0;
 };
 /**
@@ -124,7 +124,8 @@ struct Ipol : public aCloneableBinaryFunctor<Ipol>
 struct IpolR : public aCloneableBinaryFunctor<IpolR>
 {
     IpolR(  ) {}
-    double operator()(double R, double Z) const { return 0; }
+    private:
+    double do_compute(double R, double Z) const { return 0; }
 };
 /**
  * @brief \f[0\f]
@@ -132,7 +133,8 @@ struct IpolR : public aCloneableBinaryFunctor<IpolR>
 struct IpolZ : public aCloneableBinaryFunctor<IpolZ>
 {
     IpolZ(  ) {}
-    double operator()(double R, double Z) const { return 0; }
+    private:
+    double do_compute(double R, double Z) const { return 0; }
 };
 
 BinaryFunctorsLvl2 createPsip( GeomParameters gp)
