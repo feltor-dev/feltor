@@ -39,7 +39,7 @@ struct GeometryTraits
  * @ingroup pullback
  */
 template< class Functor>
-thrust::host_vector<double> pullback( const Functor& f, const aGeometry2d& g)
+thrust::host_vector<double> pullback( Functor& f, const aGeometry2d& g)
 {
     std::vector<thrust::host_vector<double> > map = g.map();
     thrust::host_vector<double> vec( g.size());
@@ -48,10 +48,10 @@ thrust::host_vector<double> pullback( const Functor& f, const aGeometry2d& g)
     return vec;
 }
 
-///@copydoc pullback(Functor,const aGeometry2d&)
+///@copydoc pullback(Functor&,const aGeometry2d&)
 ///@ingroup pullback
 template< class Functor>
-thrust::host_vector<double> pullback( const Functor& f, const aGeometry3d& g)
+thrust::host_vector<double> pullback( Functor& f, const aGeometry3d& g)
 {
     std::vector<thrust::host_vector<double> > map = g.map();
     thrust::host_vector<double> vec( g.size());
@@ -70,10 +70,10 @@ struct MemoryTraits< MPITag>
 };
 ///@endcond
 
-///@copydoc pullback(Functor,const aGeometry2d&)
+///@copydoc pullback(Functor&,const aGeometry2d&)
 ///@ingroup pullback
 template< class Functor>
-MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIGeometry2d& g)
+MPI_Vector<thrust::host_vector<double> > pullback( Functor& f, const aMPIGeometry2d& g)
 {
     std::vector<MPI_Vector<thrust::host_vector<double> > > map = g.map();
     thrust::host_vector<double> vec( g.size());
@@ -82,10 +82,10 @@ MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIG
     return MPI_Vector<thrust::host_vector<double> >( vec, g.communicator());
 }
 
-///@copydoc pullback(Functor,const aGeometry2d&)
+///@copydoc pullback(Functor&,const aGeometry2d&)
 ///@ingroup pullback
 template< class Functor>
-MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIGeometry3d& g)
+MPI_Vector<thrust::host_vector<double> > pullback( Functor& f, const aMPIGeometry3d& g)
 {
     std::vector<MPI_Vector<thrust::host_vector<double> > > map = g.map();
     thrust::host_vector<double> vec( g.size());
@@ -113,7 +113,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIG
  * @ingroup pullback
  */
 template<class Functor1, class Functor2, class container, class Geometry> 
-void pushForwardPerp( const Functor1& vR, const Functor2& vZ, 
+void pushForwardPerp( Functor1& vR, Functor2& vZ, 
         container& vx, container& vy,
         const Geometry& g)
 {
@@ -144,7 +144,7 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
  * @ingroup pullback
  */
 template<class Functor1, class Functor2, class Functor3, class container, class Geometry> 
-void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
+void pushForward( Functor1& vR, Functor2& vZ, Functor3& vPhi,
         container& vx, container& vy, container& vz,
         const Geometry& g)
 {
@@ -179,7 +179,7 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
  * @ingroup pullback
  */
 template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry> 
-void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const FunctorZZ& chiZZ,
+void pushForwardPerp( FunctorRR& chiRR, FunctorRZ& chiRZ, FunctorZZ& chiZZ,
         container& chixx, container& chixy, container& chiyy,
         const Geometry& g)
 {
