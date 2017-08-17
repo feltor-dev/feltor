@@ -31,14 +31,14 @@ int main()
     double eps;
     std::cout << "Type epsilon! \n";
     std::cin >> eps;
-    dg::CylindricalGrid3d<dg::DVec> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER);
+    dg::CylindricalGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER);
     dg::DVec w3d = dg::create::weights( grid);
     dg::DVec v3d = dg::create::inv_weights( grid);
     dg::DVec x = dg::evaluate( initial, grid);
 
     std::cout << "Create Laplacian\n";
     t.tic();
-    dg::GeneralElliptic<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::GeneralElliptic<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
     dg::DMatrix DX = dg::create::dx( grid);
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";

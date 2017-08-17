@@ -22,6 +22,7 @@ namespace dg
  * @brief X-space generalized version of Arakawa's scheme
  *
  * @copydoc hide_matrix_container
+ * @copydoc hide_geometry
  * @ingroup arakawa
  */
 template< class Geometry, class Matrix, class container >
@@ -29,17 +30,11 @@ struct ArakawaX
 {
     /**
      * @brief Create Arakawa on a grid
-     *
-     * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
-     * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
      * @param g The grid
      */
     ArakawaX( Geometry g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
-     *
-     * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
-     * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
      * @param g The grid
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y

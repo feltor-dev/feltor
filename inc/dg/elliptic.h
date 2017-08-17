@@ -38,7 +38,7 @@ namespace dg
  numerical diffusion, i.e. for low values numerical oscillations may appear. 
  Also note that a forward discretization has more diffusion than a centered discretization.
 
- * @tparam Geometry The geometry sets the metric of the grid
+ * @copydoc hide_geometry
  * @copydoc hide_matrix_container
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
@@ -56,10 +56,6 @@ class Elliptic
     /**
      * @brief Construct from Grid
      *
-     * @tparam Geometry The Grid class. A call to dg::evaluate( one, g) must return an instance of the container class, 
-     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
-     * must return instances of the container class and 
-     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
      * @param g The Grid, boundary conditions are taken from here
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
@@ -75,11 +71,6 @@ class Elliptic
 
     /**
      * @brief Construct from grid and boundary conditions
-     *
-     * @tparam Geometry The Grid class. A call to dg::evaluate( one, g) must return an instance of the container class, 
-     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
-     * must return instances of the container class and 
-     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
@@ -230,7 +221,7 @@ class Elliptic
  *  \end{align}
  *  \f] 
  * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
- * @tparam Geometry The Geometry class to use
+ * @copydoc geometry
  * @copydoc hide_matrix_container
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
@@ -243,10 +234,6 @@ struct GeneralElliptic
     /**
      * @brief Construct from Grid
      *
-     * @tparam Geometry The Grid class. A call to dg::evaluate( one, g) must return an instance of the container class, 
-     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
-     * must return instances of the container class and 
-     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
      * @param g The Grid, boundary conditions are taken from here
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
@@ -272,10 +259,6 @@ struct GeneralElliptic
     /**
      * @brief Construct from Grid and bc 
      *
-     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the container class, 
-     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
-     * must return instances of the container class and 
-     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
@@ -441,7 +424,7 @@ struct GeneralElliptic
  *  \end{align}
  *  \f] 
  * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
- * @tparam Geometry The Geometry class to use
+ * @copydoc hide_geometry
  * @copydoc hide_matrix_container
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
@@ -454,10 +437,6 @@ struct GeneralEllipticSym
     /**
      * @brief Construct from Grid
      *
-     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the container class, 
-     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
-     * must return instances of the container class and 
-     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
      * @param g The Grid, boundary conditions are taken from here
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
@@ -471,10 +450,6 @@ struct GeneralEllipticSym
         /**
      * @brief Construct from Grid and bc
      *
-     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the container class, 
-     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
-     * must return instances of the container class and 
-     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
@@ -584,7 +559,7 @@ struct GeneralEllipticSym
  * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} v^x ) + \partial_y(\sqrt{g} v^y) \right)
  *  \end{align}
  *  \f] 
- * @tparam Geometry The Geometry class to use
+ * @copydoc hide_geometry
  * @copydoc hide_matrix_container
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
@@ -596,11 +571,6 @@ struct TensorElliptic
 {
     /**
      * @brief Construct from Grid
-     *
-     * @tparam Geometry The Grid class. A call to dg::evaluate( one, g) must return an instance of the container class, 
-     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
-     * must return instances of the container class and 
-     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
      * @param g The Grid, boundary conditions are taken from here
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
@@ -612,11 +582,6 @@ struct TensorElliptic
     }
     /**
      * @brief Construct from Grid and bc 
-     *
-     * @tparam Grid The Grid class. A call to dg::evaluate( one, g) must return an instance of the container class, 
-     * a call to dg::create::weights(g) and dg::create::inv_weights(g)
-     * must return instances of the container class and 
-     * calls to dg::create::dx( g, no, backward) and jump2d( g, bcx, bcy, no) are made.
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y

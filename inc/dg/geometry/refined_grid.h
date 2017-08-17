@@ -59,7 +59,7 @@ struct aRefinement1d
 {
     /*! @brief Generate the grid transformation
      *  
-     * @param g The 1d grid to refine
+     * @param g_old The 1d grid to refine
      * @param weights A 1d vector of size N_new. These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
      * @param abscissas A 1d vector of size N_new. These are the new abscissas \f$ x(\zeta) \f$ of the grid. 
     */

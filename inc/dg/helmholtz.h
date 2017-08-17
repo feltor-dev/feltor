@@ -19,7 +19,7 @@ namespace dg{
  * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
- * @tparam container The container class you want to use
+ * @copydoc hide_geometry
  * @copydoc hide_matrix_container
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
  */
@@ -133,7 +133,7 @@ struct Helmholtz
  * \f[ \left[ \chi +2 \alpha\Delta +  \alpha^2\Delta \left(\chi^{-1}\Delta \right)\right] \f] 
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
- * @tparam Geometry The geometry class you want to use
+ * @copydoc hide_geometry
  * @copydoc hide_matrix_container
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
  * @attention It might be better to solve the normal Helmholtz operator twice

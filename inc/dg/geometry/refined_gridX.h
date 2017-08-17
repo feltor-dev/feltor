@@ -19,9 +19,11 @@ struct aRefinementX2d
 {
     /*! @brief Generate the grid transformation
      *  
-     * @param g The 1d grid to refine
-     * @param weights A 1d vector of size N_new. These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
-     * @param abscissas A 1d vector of size N_new. These are the new abscissas \f$ x(\zeta) \f$ of the grid. 
+     * @param g_old The 1d grid to refine
+     * @param weightsX A 2d vector of size nx_new()*ny_new(). These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
+     * @param weightsY A 2d vector of size nx_new()*ny_new(). These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
+     * @param abscissasX A 2d vector of size nx_new()*ny_new(). These are the new abscissas \f$ x(\zeta) \f$ of the grid. 
+     * @param abscissasY A 2d vector of size nx_new()*ny_new(). These are the new abscissas \f$ x(\zeta) \f$ of the grid. 
     */
     void generate( const GridX2d& g_old, thrust::host_vector<double>& weightsX, thrust::host_vector<double>& weightsY, thrust::host_vector<double>& abscissasX, thrust::host_vector<double>& abscissasY) const
     {
@@ -43,9 +45,10 @@ struct aRefinementX2d
                 abscissasY[i*wx.size()+j] = ay[i];
             }
     }
+
     /*! @brief the new number of cells
-     * @param N_old the old number of cells
-     * @param fx Factor to partition x-axis
+     * @param Nx_old the old number of cells
+     * @param fx_old Factor to partition x-axis
      */
     unsigned nx_new( unsigned Nx_old, double fx_old) const
     {

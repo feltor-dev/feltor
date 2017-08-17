@@ -2,7 +2,7 @@
 #define _DG_POISSON_CUH
 
 #include "blas.h"
-#include "geometry.h"
+#include "geometry/geometry.h"
 #include "enums.h"
 #include "backend/evaluation.cuh"
 #include "backend/derivatives.h"
@@ -23,25 +23,19 @@ namespace dg
  *
  * Equal to the Arakawa class except for the possitility to use mixed boundary conditions
  * @ingroup arakawa
- * @tparam Matrix The Matrix class to use
- * @tparam container The vector class on which to operate on. The blas2 function symv( m, x, y) must be callable and may not change x. 
+ * @copydoc hide_geometry
+ * @copydoc hide_matrix_container
  */
 template< class Geometry, class Matrix, class container >
 struct Poisson
 {
     /**
      * @brief Create Poisson on a grid
-     *
-     * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
-     * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
      * @param g The grid
      */
     Poisson( Geometry g);
     /**
      * @brief Create Poisson on a grid using different boundary conditions
-     *
-     * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
-     * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
      * @param g The grid
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
@@ -49,9 +43,6 @@ struct Poisson
     Poisson( Geometry g, bc bcx, bc bcy);
     /**
      * @brief Create Poisson on a grid using different boundary conditions
-     *
-     * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
-     * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
      * @param g The grid
      * @param bcxlhs The lhs boundary condition in x
      * @param bcxrhs The rhs boundary condition in x
@@ -110,17 +101,16 @@ struct Poisson
     {
         blas2::symv( dxrhs_, phi, dxrhsrhs_);
         blas2::symv( dyrhs_, phi, dyrhsrhs_);
-        blas1::copy( dxrhsrhs_, dxlhslhs_);//save results
-        blas1::copy( dyrhsrhs_, dylhslhs_);
-        geo::raisePerpIndex( dxlhslhs_, dylhslhs_, varphi, helper_, g_); //input gets destroyed
+        tensor::multiply2d( metric_, dxrhsrhs_, dyrhsrhs_, varphi, helper_);
         blas1::pointwiseDot( varphi, dxrhsrhs_, varphi);
         blas1::pointwiseDot( 1., helper_, dyrhsrhs_,1., varphi );
     }
 
   private:
-    container dxlhslhs_,dxrhsrhs_,dylhslhs_,dyrhsrhs_,helper_;
-    Matrix dxlhs_, dylhs_,dxrhs_,dyrhs_;
-    Geometry g_;
+    container dxlhslhs_, dxrhsrhs_, dylhslhs_, dyrhsrhs_, helper_;
+    Matrix dxlhs_, dylhs_, dxrhs_, dyrhs_;
+    SparseElement<container> perp_vol_inv_;
+    SparseTensor<container> metric_;
 };
 
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
@@ -131,8 +121,12 @@ Poisson<Geometry, Matrix, container>::Poisson( Geometry g ):
     dxlhs_(dg::create::dx( g, g.bcx(),dg::centered)),
     dylhs_(dg::create::dy( g, g.bcy(),dg::centered)),
     dxrhs_(dg::create::dx( g, g.bcx(),dg::centered)),
-    dyrhs_(dg::create::dy( g, g.bcy(),dg::centered)),g_(g)
-{ }
+    dyrhs_(dg::create::dy( g, g.bcy(),dg::centered))
+{
+    metric_=g.metric().perp();
+    perp_vol_inv_ = dg::tensor::determinant(metric_);
+    dg::tensor::sqrt(perp_vol_inv_);
+}
 
 template< class Geometry, class Matrix, class container>
 Poisson<Geometry, Matrix, container>::Poisson( Geometry g, bc bcx, bc bcy): 
@@ -140,8 +134,12 @@ Poisson<Geometry, Matrix, container>::Poisson( Geometry g, bc bcx, bc bcy):
     dxlhs_(dg::create::dx( g, bcx,dg::centered)),
     dylhs_(dg::create::dy( g, bcy,dg::centered)),
     dxrhs_(dg::create::dx( g, bcx,dg::centered)),
-    dyrhs_(dg::create::dy( g, bcy,dg::centered)),g_(g)
-{ }
+    dyrhs_(dg::create::dy( g, bcy,dg::centered))
+{ 
+    metric_=g.metric().perp();
+    perp_vol_inv_ = dg::tensor::determinant(metric_);
+    dg::tensor::sqrt(perp_vol_inv_);
+}
 
 template< class Geometry, class Matrix, class container>
 Poisson<Geometry, Matrix, container>::Poisson(  Geometry g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs): 
@@ -149,8 +147,12 @@ Poisson<Geometry, Matrix, container>::Poisson(  Geometry g, bc bcxlhs, bc bcylhs
     dxlhs_(dg::create::dx( g, bcxlhs,dg::centered)),
     dylhs_(dg::create::dy( g, bcylhs,dg::centered)),
     dxrhs_(dg::create::dx( g, bcxrhs,dg::centered)),
-    dyrhs_(dg::create::dy( g, bcyrhs,dg::centered)),g_(g)
-{ }
+    dyrhs_(dg::create::dy( g, bcyrhs,dg::centered))
+{ 
+    metric_=g.metric().perp();
+    perp_vol_inv_ = dg::tensor::determinant(metric_);
+    dg::tensor::sqrt(perp_vol_inv_);
+}
 
 template< class Geometry, class Matrix, class container>
 void Poisson< Geometry, Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
@@ -163,7 +165,7 @@ void Poisson< Geometry, Matrix, container>::operator()( const container& lhs, co
     blas1::pointwiseDot( dxlhslhs_, dyrhsrhs_, result);   //dx_lhs lhs * dy_rhs rhs
     blas1::pointwiseDot( -1., dylhslhs_, dxrhsrhs_, 1., result);    //- dy_lhs lhs * dx_rhs rhs
 
-    geo::dividePerpVolume( result, g_);
+    tensor::pointwiseDot( perp_vol_inv_, result, result);
 }
 
 }//namespace dg

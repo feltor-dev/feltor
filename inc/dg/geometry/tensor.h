@@ -331,19 +331,16 @@ struct CholeskyTensor
      *
      * @param in must be symmetric and positive definite
      */
-    CholeskyTensor( const SparseTensor<container>& in)
-    {
+    CholeskyTensor( const SparseTensor<container>& in) {
         decompose(in);
     }
     /**
      * @brief Type conversion from other value types
      * @tparam OtherContainer dg::blas1::transfer must be callable for container and OtherContainer
-     * @param src the source matrix to convert
+     * @param in the source matrix to convert
      */
     template<class OtherContainer>
-    CholeskyTensor( const CholeskyTensor<OtherContainer>& in):q_(in.lower()),diag_(in.diagonal()),upper_(in.upper())
-    { 
-        }
+    CholeskyTensor( const CholeskyTensor<OtherContainer>& in):q_(in.lower()),diag_(in.diagonal()),upper_(in.upper()) { }
 
     /**
      * @brief decompose given tensor

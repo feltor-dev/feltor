@@ -112,6 +112,14 @@
   *  - double operator()(double, double, double) const
   */
  /**
+  * @class hide_geometry
+  * @tparam Geometry One of the geometry classes. The functions dg::create::dx( g, bcx) and
+  * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. 
+  * Furthermore dg::evaluate( one, g) must return an instance of the container class.
+     as do calls to dg::create::weights(g) and dg::create::inv_weights(g)
+  */
+
+ /**
   * @class hide_container_lvl1
   * @tparam container A data container class for which the blas1 functionality is overloaded. Currently this is one of 
   *   dg::HVec, dg::DVec, dg::MHVec or dg::MDVec
