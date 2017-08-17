@@ -103,6 +103,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIG
                 v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
  * @tparam Functor1 Binary or Ternary functor
+ * @copydoc hide_container_lvl1
  * @tparam Geometry The Geometry class
  * @param vR input R-component in cylindrical coordinates
  * @param vZ input Z-component in cylindrical coordinates
@@ -131,6 +132,7 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
                 v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
  * @tparam Functor1 Binary or Ternary functor
+ * @copydoc hide_container_lvl1
  * @tparam Geometry The Geometry class
  * @param vR input R-component in cartesian or cylindrical coordinates
  * @param vZ input Z-component in cartesian or cylindrical coordinates
@@ -165,6 +167,7 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
  \chi^{yy}(x,y) = y_R y_R \chi^{RR} + 2y_Ry_Z \chi^{RZ} + y_Zy_Z\chi^{ZZ} \\
                \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
+ * @copydoc hide_container_lvl1
  * @tparam Geometry The Geometry class
  * @param chiRR input RR-component in cylindrical coordinates
  * @param chiRZ input RZ-component in cylindrical coordinates
@@ -196,9 +199,9 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
     std::vector<container> values( 3); 
     values[0] = chiRR_, values[1] = chiRZ_, values[2] = chiZZ_;
     SparseTensor<container> chi(values);
-    chi(0,0)=0, chi(0,1)=chi(1,0)=1, chi(1,1)=2;
+    chi.idx(0,0)=0, chi.idx(0,1)=chi.idx(1,0)=1, chi.idx(1,1)=2;
 
-    SparseTensor<container> d = jac.dense(); //now we have a dense tensor
+    SparseTensor<container> d = dg::tensor::dense(jac); //now we have a dense tensor
     container tmp00(d.value(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
     // multiply Chi*t -> tmp
     dg::tensor::multiply2d( chi, d.value(0,0), d.value(1,0), tmp00, tmp10);

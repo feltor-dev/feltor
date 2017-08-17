@@ -1,4 +1,5 @@
 #pragma once
+#include "dg/backend/manage.h"
 
 namespace dg
 {

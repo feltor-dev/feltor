@@ -637,15 +637,11 @@ struct TensorElliptic
      * @param chiYY The new yy component
      * @note Components need to be already transformed into the current coordinate system
      */
-    template<class container2>
-    void set( const container2& chiXX, const container2& chiXY, const container2& chiYY)
+    void set( const container& chiXX, const container& chiXY, const container& chiYY)
     {
-        dg::blas1::transfer( chiXX, chixx_);
-        dg::blas1::transfer( chiXY, chixy_);
-        dg::blas1::transfer( chiYY, chiyy_);
-        dg::tensor::pointwiseDot( vol_, chixx_,chixx_);
-        dg::tensor::pointwiseDot( vol_, chixy_,chixy_);
-        dg::tensor::pointwiseDot( vol_, chiyy_,chiyy_);
+        dg::tensor::pointwiseDot( vol_, chiXX, chixx_);
+        dg::tensor::pointwiseDot( vol_, chiXY, chixy_);
+        dg::tensor::pointwiseDot( vol_, chiYY, chiyy_);
     }
 
     /**
@@ -657,7 +653,10 @@ struct TensorElliptic
     {
         typename GeometryTraits<Geometry>::host_vector chiXX, chiXY, chiYY;
         dg::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_);
-        set( chiXX, chiXY, chiYY);
+        dg::blas1::transfer( chiXX, chixx_);
+        dg::blas1::transfer( chiXY, chixy_);
+        dg::blas1::transfer( chiYY, chiyy_);
+        set( chixx_, chixy_, chiyy_);
     }
 
     /**
@@ -746,7 +745,7 @@ struct TensorElliptic
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
     container weights_, weights_wo_vol, precond_; //contain coeffs for chi multiplication
     container chixx_, chixy_, chiyy_, tempx_, tempy_, gradx_;
-    SparseTensor<container> vol_;
+    SparseElement<container> vol_;
     norm no_;
     Geometry g_;
 };

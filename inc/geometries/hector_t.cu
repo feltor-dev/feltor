@@ -63,8 +63,8 @@ int main( int argc, char* argv[])
     }
     //write parameters from file into variables
     dg::geo::solovev::GeomParameters gp(js);
-    dg::geo::solovev::Psip psip( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp); 
+    std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
@@ -73,7 +73,6 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp); 
     Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>* hector;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     int construction = 0;
@@ -83,16 +82,16 @@ int main( int argc, char* argv[])
     }
     else if( construction == 1)
     {
-        dg::geo::BinaryFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective nc( psip);
+        dg::geo::BinaryFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective( psip);
         hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip, nc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     }
     else
     {
-        dg::geo::BinarySymmTensor lc = dg::geo::make_LiseikinCollective lc( psip, 0.1, 0.001);
+        dg::geo::BinarySymmTensorLvl1 lc = dg::geo::make_LiseikinCollective( psip, 0.1, 0.001);
         hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip,lc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     }
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    dg::CurvilinearGrid3d g3d(hector, n, Nx, Ny,Nz, dg::DIR);
+    dg::CurvilinearProductGrid3d g3d(*hector, n, Nx, Ny,Nz, dg::DIR);
     dg::CurvilinearGrid2d g2d = g3d.perp_grid();
 
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
@@ -114,7 +113,7 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
-    thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
+    thrust::host_vector<double> psi_p = dg::pullback( psip.f(), g2d);
     //g.display();
     err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
@@ -153,18 +152,18 @@ int main( int argc, char* argv[])
     dg::blas1::transfer( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
     dg::SparseElement<dg::HVec> vol = dg::tensor::volume(metric);
-    dg::blas1::axpby( 1., temp0, -1., vol, temp0);
-    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
+    dg::blas1::axpby( 1., temp0, -1., vol.value(), temp0);
+    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol.value(), w2d, vol.value()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";
-    dg::HVec vol = dg::create::volume( g2d);
+    dg::HVec volume = dg::create::volume( g2d);
     dg::HVec ones2d = dg::evaluate( dg::one, g2d);
-    double volumeUV = dg::blas1::dot( vol, ones2d);
+    double volumeUV = dg::blas1::dot( vol.value(), ones2d);
 
-    vol = dg::create::volume( hector->internal_grid());
+    volume = dg::create::volume( hector->internal_grid());
     ones2d = dg::evaluate( dg::one, hector->internal_grid());
-    double volumeZE = dg::blas1::dot( vol, ones2d);
+    double volumeZE = dg::blas1::dot( vol.value(), ones2d);
     std::cout << "volumeUV is "<< volumeUV<<std::endl;
     std::cout << "volumeZE is "<< volumeZE<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeUV - volumeZE)/volumeZE<<std::endl;

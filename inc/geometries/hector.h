@@ -133,7 +133,7 @@ void construct_grid(
         const thrust::host_vector<double>& eta_init, //1d intial values
         thrust::host_vector<double>& zeta, 
         thrust::host_vector<double>& eta, 
-        const dg::aTopology2d& g2d
+        const dg::aGeometry2d& g2d
     )
 {
     Interpolate inter( zetaU, etaU, g2d);
@@ -187,10 +187,11 @@ void transform(
     thrust::host_vector<double> uh_zeta, uh_eta;
     dg::blas1::transfer( u_zeta, uh_zeta);
     dg::blas1::transfer( u_eta, uh_eta);
-    dg::blas1::pointwiseDot( uh_zeta, g2d.xr(), u_x);
-    dg::blas1::pointwiseDot( 1., uh_eta, g2d.yr(), 1., u_x);
-    dg::blas1::pointwiseDot( uh_zeta, g2d.xz(), u_y);
-    dg::blas1::pointwiseDot( 1., uh_eta, g2d.yz(), 1., u_y);
+    dg::SparseTensor<thrust::host_vector<double> > jac = g2d.jacobian();
+    dg::blas1::pointwiseDot( uh_zeta, jac.value(0,0), u_x);
+    dg::blas1::pointwiseDot( 1., uh_eta, jac.value(1,0) , 1., u_x);
+    dg::blas1::pointwiseDot( uh_zeta, jac.value(0,1), u_y);
+    dg::blas1::pointwiseDot( 1., uh_eta, jac.value(1,1), 1., u_y);
 }
 
 }//namespace detail
@@ -222,7 +223,7 @@ struct Hector : public aGenerator2d
      * @param verbose If true convergence details are printed to std::cout
      */
     Hector( const BinaryFunctorsLvl2& psi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(new dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        g2d_(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         //first construct u_
         container u = construct_grid_and_u( dg::geo::Constant(1), dg::geo::detail::LaplacePsi(psi), psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
@@ -253,7 +254,7 @@ struct Hector : public aGenerator2d
      * @param verbose If true convergence details are printed to std::cout
      */
     Hector( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& chi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(new dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        g2d_(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         dg::geo::detail::LaplaceAdaptPsi lapAdaPsi( psi, chi);
         //first construct u_
@@ -287,7 +288,7 @@ struct Hector : public aGenerator2d
      */
     Hector( const BinaryFunctorsLvl2& psi,const BinarySymmTensorLvl1& chi,
             double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(new dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        g2d_(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         //first construct u_
         container u = construct_grid_and_u( psi, chi, 
