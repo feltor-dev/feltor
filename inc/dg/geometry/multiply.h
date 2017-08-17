@@ -350,6 +350,28 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
     return SparseElement<container>(det);
 }
 
+/**
+ * @brief Compute the sqrt of the inverse determinant of a tensor
+ *
+ * This is a convenience function that is the same as
+ * @code
+    SparseElement<container> volume=determinant(g);
+    invert(volume);
+    sqrt(volume);
+    @endcode
+ * @copydoc hide_container_lvl1
+ * @param t the input tensor 
+ * @return the inverse square root of the determinant of t as a SparseElement (unset if t is empty)
+ */
+template<class container>
+SparseElement<container> volume( const SparseTensor<container>& t)
+{
+    SparseElement<container> vol=determinant(t);
+    invert(vol);
+    sqrt(vol);
+    return vol;
+
+}
 
 
 ///@cond

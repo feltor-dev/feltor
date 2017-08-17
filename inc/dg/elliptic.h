@@ -187,9 +187,7 @@ class Elliptic
         dg::blas1::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
         tempx = tempy = gradx = weights_;
         chi_=g.metric();
-        vol_=dg::tensor::determinant(chi_);
-        dg::tensor::invert(vol_);
-        dg::tensor::sqrt(vol_); //now we have volume element
+        vol_=dg::tensor::volume(chi_);
         dg::tensor::scal( chi_, vol_);
         dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
     }
@@ -726,9 +724,7 @@ struct TensorElliptic
         tempx_ = tempy_ = gradx_ = chixx_;
         dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
 
-        vol_=dg::tensor::determinant(g.metric());
-        dg::tensor::invert(vol_);
-        dg::tensor::sqrt(vol_); //now we have volume element
+        vol_=dg::tensor::volume(g.metric());
         dg::tensor::pointwiseDot( vol_, chixx_, chixx_); 
         dg::tensor::pointwiseDot( vol_, chixy_, chixy_); 
         dg::tensor::pointwiseDot( vol_, chiyy_, chiyy_); 

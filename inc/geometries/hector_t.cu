@@ -73,27 +73,27 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
-    dg::geo::solovev::MagneticField c( gp); 
+    dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp); 
     Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>* hector;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     int construction = 0;
     if( construction == 0)
     {
-        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     }
     else if( construction == 1)
     {
-        dg::geo::NablaPsiInvCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> nc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ);
-        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, nc.nablaPsiInv, nc.nablaPsiInvX, nc.nablaPsiInvY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+        dg::geo::BinaryFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective nc( psip);
+        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip, nc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     }
     else
     {
-        dg::geo::LiseikinCollective<solovev::PsipR, solovev::PsipZ, solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> lc( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, 0.1, 0.001);
-        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, lc.chi_XX, lc.chi_XY, lc.chi_YY, lc.divChiX, lc.divChiY, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+        dg::geo::BinarySymmTensor lc = dg::geo::make_LiseikinCollective lc( psip, 0.1, 0.001);
+        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip,lc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     }
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    dg::CurvilinearGrid3d<dg::HVec> g3d(hector, n, Nx, Ny,Nz, dg::DIR);
-    dg::CurvilinearGrid2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::CurvilinearGrid3d g3d(hector, n, Nx, Ny,Nz, dg::DIR);
+    dg::CurvilinearGrid2d g2d = g3d.perp_grid();
 
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
@@ -120,8 +120,8 @@ int main( int argc, char* argv[])
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        X[i] = g2d.r()[i];
-        Y[i] = g2d.z()[i];
+        X[i] = g2d.map()[0][i];
+        Y[i] = g2d.map()[1][i];
     }
 
     dg::HVec temp0( g2d.size()), temp1(temp0);
@@ -132,26 +132,29 @@ int main( int argc, char* argv[])
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     //compute and write deformation into netcdf
-    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    dg::SparseTensor<dg::HVec> metric = g2d.metric();
+    dg::HVec g_xx = metric.value(0,0), g_yy=metric.value(1,1);
+    dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     const dg::HVec ones = dg::evaluate( dg::one, g2d);
     X=temp0;
     err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
     //compute and write conformalratio into netcdf
-    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     X=temp0;
     err = nc_put_var_double( ncid, confID, periodify(X, g2d_periodic).data());
 
     std::cout << "Construction successful!\n";
 
     //compare determinant vs volume form
-    dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
+    dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::transfer( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
-    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
-    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( g2d.vol(), w2d, g2d.vol()));
+    dg::SparseElement<dg::HVec> vol = dg::tensor::volume(metric);
+    dg::blas1::axpby( 1., temp0, -1., vol, temp0);
+    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     std::cout << "TEST VOLUME IS:\n";

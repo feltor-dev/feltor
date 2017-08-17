@@ -33,7 +33,7 @@ struct Iris
         0  \text{ else}
      \end{cases}\f]
      */
-    double operator( )(double R, double Z)
+    double operator( )(double R, double Z)const
     {
         if( psip_(R,Z) > psipmax_) return 0.;
         if( psip_(R,Z) < psipmin_) return 0.;
@@ -42,7 +42,7 @@ struct Iris
     /**
     * @brief == operator()(R,Z)
     */
-    double operator( )(double R, double Z, double phi)
+    double operator( )(double R, double Z, double phi)const
     {
         return (*this)(R,Z);
     }
@@ -69,7 +69,7 @@ struct Pupil
         1  \text{ else}
      \end{cases}\f]
      */
-    double operator( )(double R, double Z)
+    double operator( )(double R, double Z)const
     {
         if( psip_(R,Z) > psipmaxcut_) return 0.;
         return 1.;
@@ -77,7 +77,7 @@ struct Pupil
     /**
     * @brief == operator()(R,Z)
     */
-    double operator( )(double R, double Z, double phi)
+    double operator( )(double R, double Z, double phi)const
     {
         return (*this)(R,Z);
     }
@@ -104,7 +104,7 @@ struct PsiPupil
         \psi_p(R,Z) \text{ else}
      \end{cases}\f]
      */
-    double operator( )(double R, double Z)
+    double operator( )(double R, double Z)const
     {
         if( psip_(R,Z) > psipmax_) return psipmax_;
         return  psip_(R,Z);
@@ -112,7 +112,7 @@ struct PsiPupil
     /**
     * @brief == operator()(R,Z)
     */
-    double operator( )(double R, double Z, double phi)
+    double operator( )(double R, double Z, double phi)const
     {
         return (*this)(R,Z);
     }
@@ -141,7 +141,7 @@ struct PsiLimiter
         0  \text{ else}
      \end{cases}\f]
      */
-    double operator( )(double R, double Z)
+    double operator( )(double R, double Z)const
     {
         if( psip_(R,Z) > psipmaxlim_) return 1.;
         return 0.;
@@ -149,7 +149,7 @@ struct PsiLimiter
     /**
     * @brief == operator()(R,Z)
     */
-    double operator( )(double R, double Z, double phi)
+    double operator( )(double R, double Z, double phi)const
     {
         return (*this)(R,Z);
     }
@@ -186,7 +186,7 @@ struct GaussianDamping
  \end{cases}
    \f]
      */
-    double operator( )(double R, double Z)
+    double operator( )(double R, double Z)const
     {
         if( psip_(R,Z) > psipmaxcut_ + 4.*alpha_) return 0.;
         if( psip_(R,Z) < psipmaxcut_) return 1.;
@@ -195,7 +195,7 @@ struct GaussianDamping
     /**
     * @brief == operator()(R,Z)
     */
-    double operator( )(double R, double Z, double phi)
+    double operator( )(double R, double Z, double phi)const
     {
         return (*this)(R,Z);
     }
@@ -229,7 +229,7 @@ struct GaussianProfDamping
  \end{cases}
    \f]
      */
-    double operator( )(double R, double Z)
+    double operator( )(double R, double Z)const
     {
         if( psip_(R,Z) > psipmax_ ) return 0.;
         if( psip_(R,Z) < (psipmax_-4.*alpha_)) return 1.;
@@ -238,7 +238,7 @@ struct GaussianProfDamping
     /**
     * @brief == operator()(R,Z)
     */
-    double operator( )(double R, double Z, double phi)
+    double operator( )(double R, double Z, double phi)const
     {
         return (*this)(R,Z);
     }
@@ -275,7 +275,7 @@ struct GaussianProfXDamping
  \end{cases}
    \f]
      */
-    double operator( )(double R, double Z)
+    double operator( )(double R, double Z)const
     {
         if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
         if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
@@ -284,7 +284,7 @@ struct GaussianProfXDamping
     /**
     * @brief == operator()(R,Z)
     */
-    double operator( )(double R, double Z, double phi)
+    double operator( )(double R, double Z, double phi)const
     {
         return (*this)(R,Z);
     }
@@ -307,14 +307,14 @@ struct TanhSource
      * @brief \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha}\right)\right)
    \f]
      */
-    double operator( )(double R, double Z)
+    double operator( )(double R, double Z)const
     {
         return 0.5*(1.+tanh(-(psip_(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
     }
     /**
     * @brief == operator()(R,Z)
     */
-    double operator( )(double R, double Z, double phi)
+    double operator( )(double R, double Z, double phi)const
     {
         return 0.5*(1.+tanh(-(psip_(R,Z,phi)-psipmin_ + 3.*alpha_)/alpha_) );
     }
@@ -336,7 +336,7 @@ struct TanhSource
 //         if( psip_(R,Z) < 0.) return p_.nprofileamp+p_.bgprofamp-(gp_.psipmin-psip_(R,Z))*(p_.nprofileamp/gp_.psipmin);
 //         return p_.bgprofamp;
 //     }
-//     double operator( )(double R, double Z, double phi)
+//     double operator( )(double R, double Z, double phi)const
 //     {
 //         return (*this)(R,Z);
 // 
@@ -370,7 +370,7 @@ struct Nprofile
  \end{cases}
    \f]
      */
-   double operator( )(double R, double Z)
+   double operator( )(double R, double Z)const
     {
         if (psip_(R,Z)<gp_.psipmax) return bgamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*namp);
 	if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return bgamp;
@@ -379,7 +379,7 @@ struct Nprofile
     /**
     * @brief == operator()(R,Z)
     */
-    double operator( )(double R, double Z, double phi)
+    double operator( )(double R, double Z, double phi)const
     {
         return (*this)(R,Z);
     }
@@ -411,7 +411,7 @@ struct ZonalFlow
  \end{cases}
    \f]
      */
-    double operator() (double R, double Z)
+    double operator() (double R, double Z)const
     {
       if (psip_(R,Z)<gp_.psipmax) 
           return (amp_*fabs(cos(2.*M_PI*psip_(R,Z)*k_)));
@@ -421,7 +421,7 @@ struct ZonalFlow
     /**
     * @brief == operator()(R,Z)
     */
-    double operator() (double R, double Z,double phi)
+    double operator() (double R, double Z,double phi)const
     {
         return (*this)(R,Z);
     }
