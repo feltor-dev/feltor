@@ -12,9 +12,9 @@
 
 #include "dg/backend/timer.cuh"
 #include "dg/backend/mpi_init.h"
+#include "dg/geometry/mpi_curvilinear.h"
 //#include "guenther.h"
 #include "solovev.h"
-#include "mpi_curvilinear.h"
 #include "ribeiro.h"
 #include "simple_orthogonal.h"
 //#include "ds.h"
@@ -28,8 +28,6 @@ double sineX( double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
 double sineY( double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
-//typedef dg::MPI_FieldAligned< dg::CurvilinearMPIGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
-typedef dg::MPI_FieldAligned< dg::OrthogonalMPIGrid3d<dg::HVec> , dg::IHMatrix, dg::BijectiveComm<dg::iHVec, dg::HVec>, dg::HVec> DFA;
 
 //should be the same as conformal_t.cu, except for the periodify
 int main( int argc, char* argv[])
@@ -53,8 +51,8 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
     }
     GeomParameters gp(js);
-    Psip psip( gp); 
-    if(rank==0)std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    dg::geo::BinaryFunctorsLvl2 psip = createPsip( gp);
+    if(rank==0)std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     if(rank==0)std::cin >> psi_0>> psi_1;
@@ -65,16 +63,9 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     if(rank==0)std::cout << "Constructing grid ... \n";
     t.tic();
-    MagneticField c( gp);
-    dg::geo::Ribeiro<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
-        ribeiro( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearMPIGrid3d<dg::HVec> g3d(&ribeiro, n, Nx, Ny,Nz, dg::DIR,comm);
-    dg::CurvilinearMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    //dg::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
-    //    orthogonal( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
-    //dg::OrthogonalMPIGrid3d<dg::HVec> g3d(orthogonal, n, Nx, Ny,Nz, dg::DIR, comm);
-    //dg::OrthogonalMPIGrid2d<dg::HVec> g2d = g3d.perp_grid();
-    //
+    dg::geo::Ribeiro ribeiro( psip, psi_0, psi_1, gp.R_0, 0., 1);
+    dg::CurvilinearMPIGrid3d g3d(&ribeiro, n, Nx, Ny,Nz, dg::DIR,dg::PER, dg::PER,comm);
+    dg::CurvilinearMPIGrid2d g2d = g3d.perp_grid();
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
@@ -109,8 +100,8 @@ int main( int argc, char* argv[])
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        X[i] = g2d.r()[i];
-        Y[i] = g2d.z()[i];
+        X[i] = g2d.map()[0].data()[i];
+        Y[i] = g2d.map()[0].data()[i];
     }
 
     dg::MHVec temp0( dg::evaluate(dg::zero, g2d)), temp1(temp0);
@@ -118,10 +109,14 @@ int main( int argc, char* argv[])
 
     err = nc_put_vara_double( ncid, coordsID[0], start,count, X.data());
     err = nc_put_vara_double( ncid, coordsID[1], start,count, Y.data());
-    //err = nc_put_vara_double( ncid, coordsID[2], g.z().data());
 
+    dg::SparseTensor<dg::HVec> metric = g2d.metric();
+    dg::MHVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
+    dg::SparseElement<dg::MHVec> vol_ = dg::tensor::volume(metric);
+    dg::MHVec vol = vol_.value();
+    //err = nc_put_vara_double( ncid, coordsID[2], g.z().data());
     //dg::blas1::pointwiseDivide( g2d.g_xy(), g2d.g_xx(), temp0);
-    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     const dg::MHVec ones = dg::evaluate( dg::one, g2d);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     dg::blas1::transfer( temp0.data(), X);
@@ -130,35 +125,35 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Construction successful!\n";
 
     //compute error in volume element
-    dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
-    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
+    dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
+    dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
-    dg::blas1::transfer( g2d.g_xx(),  temp1);
+    dg::blas1::transfer( g_xx,  temp1);
     dg::blas1::pointwiseDot( temp1, temp1, temp1);
     dg::blas1::axpby( 1., temp1, -1., temp0, temp0);
     double error = sqrt( dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( temp1, w2d, temp1));
     if(rank==0)std::cout<< "Rel Error in Determinant is "<<error<<"\n";
 
     //compute error in determinant vs volume form
-    dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
-    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
+    dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
+    dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::transfer( temp0.data(), X);
     err = nc_put_var_double( ncid, volID, X.data());
-    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
-    error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( g2d.vol(), w2d, g2d.vol()));
+    dg::blas1::axpby( 1., temp0, -1., vol, temp0);
+    error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     if(rank==0)std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     //compare g^xx to volume form
-    dg::blas1::transfer( g2d.g_xx(), temp0);
+    dg::blas1::transfer( g_xx, temp0);
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
-    error=sqrt(dg::blas2::dot( temp0, w2d, temp0))/sqrt( dg::blas2::dot(g2d.vol(), w2d, g2d.vol()));
+    dg::blas1::axpby( 1., temp0, -1., vol, temp0);
+    error=sqrt(dg::blas2::dot( temp0, w2d, temp0))/sqrt( dg::blas2::dot(vol, w2d, vol));
     if(rank==0)std::cout << "Rel Error of volume form is "<<error<<"\n";
 
-    const dg::MHVec vol = dg::create::volume( g3d);
+    vol = dg::create::volume( g3d);
     dg::MHVec ones3d = dg::evaluate( dg::one, g3d);
     double volume = dg::blas1::dot( vol, ones3d);
 
@@ -189,8 +184,7 @@ int main( int argc, char* argv[])
     //t.toc();
     //if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     //dg::MHVec B = dg::pullback( dg::geo::InvB(gp), g3d), divB(B);
-    //dg::MHVec lnB = dg::pullback( dg::geo::LnB(gp), g3d), gradB(B);
-    //dg::MHVec gradLnB = dg::pullback( dg::geo::GradLnB(gp), g3d);
+    //dg::MHVec lnB = dg::pullback( dg::geo::LnB(gp), g3d), gradB(B); //dg::MHVec gradLnB = dg::pullback( dg::geo::GradLnB(gp), g3d);
     //dg::blas1::pointwiseDivide( ones3d, B, B);
     //dg::MHVec function = dg::pullback( dg::geo::FuncNeu(gp), g3d), derivative(function);
     //ds( function, derivative);

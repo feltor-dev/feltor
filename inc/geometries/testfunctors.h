@@ -5,7 +5,7 @@
 
 /*!@file
  *
- * aTokamakMagneticField objects 
+ * TokamakMagneticField objects 
  */
 namespace dg
 {
@@ -19,27 +19,27 @@ namespace geo
 
 struct FuncNeu
 {
-    FuncNeu( const aTokamakMagneticField& c):c_(c){}
+    FuncNeu( const TokamakMagneticField& c):c_(c){}
     double operator()(double R, double Z, double phi) const {return -c_.psip()(R,Z)*cos(phi);
     }
     private:
-    aTokamakMagneticField c_;
+    TokamakMagneticField c_;
 };
 
 struct DeriNeu
 {
-    DeriNeu( const aTokamakMagneticField& c, double R0):c_(c), bhat_(c){}
-    double operator()(double R, double Z, double phi) const {return c_.psip()(R,Z)*bhat_(R,Z,phi)*sin(phi);
+    DeriNeu( const TokamakMagneticField& c, double R0):c_(c), bhat_(c){}
+    double operator()(double R, double Z, double phi) const {return c_.psip()(R,Z,phi)*bhat_(R,Z,phi)*sin(phi);
     }
     private:
-    aTokamakMagneticField c_;
-    dg::geo::BHatP<aTokamakMagneticField> bhat_;
+    TokamakMagneticField c_;
+    dg::geo::BHatP bhat_;
 };
 
 //psi * cos(theta)
 struct FuncDirPer
 {
-    FuncDirPer( const aTokamakMagneticField& c, double psi_0, double psi_1, double k):
+    FuncDirPer( const TokamakMagneticField& c, double psi_0, double psi_1, double k):
         R_0_(c.R0()), psi0_(psi_0), psi1_(psi_1), k_(k), c_(c) {}
     double operator()(double R, double Z) const {
         double psip = c_.psip()(R,Z);
@@ -47,7 +47,7 @@ struct FuncDirPer
         return 0.1*result;
     }
     double operator()(double R, double Z, double phi) const {
-        return this->operator()(R,Z);
+        return operator()(R,Z);
     }
     double dR( double R, double Z)const
     {
@@ -105,15 +105,15 @@ struct FuncDirPer
     double thetaZZ( double R, double Z) const { return -thetaRR(R,Z);}
     double R_0_;
     double psi0_, psi1_, k_;
-    const aTokamakMagneticField c_;
+    const TokamakMagneticField c_;
 };
 
 //takes the magnetic field as chi
 struct EllipticDirPerM
 {
-    EllipticDirPerM( const aTokamakMagneticField& c, double psi_0, double psi_1, double k): func_(c, psi_0, psi_1, k), bmod_(c), br_(c), bz_(c) {}
+    EllipticDirPerM( const TokamakMagneticField& c, double psi_0, double psi_1, double k): func_(c, psi_0, psi_1, k), bmod_(c), br_(c), bz_(c) {}
     double operator()(double R, double Z, double phi) const {
-        return this->operator()(R,Z);}
+        return operator()(R,Z);}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
         return -(br*func_.dR(R,Z) + bz*func_.dZ(R,Z) + bmod*(func_.dRR(R,Z) + func_.dZZ(R,Z) ));
@@ -129,12 +129,12 @@ struct EllipticDirPerM
 //Blob function
 struct FuncDirNeu
 {
-    FuncDirNeu( const aTokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
+    FuncDirNeu( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
         psi0_(psi_0), psi1_(psi_1), 
         cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, amp_blob){}
 
     double operator()(double R, double Z, double phi) const {
-        return this->operator()(R,Z);}
+        return operator()(R,Z);}
     double operator()(double R, double Z) const {
         return cauchy_(R,Z);
         //double psip = psip_(R,Z);
@@ -181,9 +181,9 @@ struct FuncDirNeu
 //takes the magnetic field multiplied by (1+0.5sin(theta)) as chi
 struct BmodTheta
 {
-    BmodTheta( const aTokamakMagneticField& c): R_0_(c.R0()), bmod_(c){}
+    BmodTheta( const TokamakMagneticField& c): R_0_(c.R0()), bmod_(c){}
     double operator()(double R,double Z, double phi) const{
-        return this->operator()(R,Z);}
+        return operator()(R,Z);}
     double operator()(double R,double Z) const{
         return bmod_(R,Z)*(1.+0.5*sin(theta(R,Z)));
     }
@@ -203,8 +203,8 @@ struct BmodTheta
 //take BmodTheta as chi
 struct EllipticDirNeuM
 {
-    EllipticDirNeuM( const aTokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(c.R0()), 
-    func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob,amp_blob), bmod_(c, R0), br_(c, R0), bz_(c, R0) {}
+    EllipticDirNeuM( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(c.R0()), 
+    func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob,amp_blob), bmod_(c), br_(c), bz_(c) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z), theta_ = theta(R,Z);
         double chi = bmod*(1.+0.5*sin(theta_));
@@ -214,7 +214,7 @@ struct EllipticDirNeuM
 
     }
     double operator()(double R, double Z, double phi) const {
-        return this->operator()(R,Z);
+        return operator()(R,Z);
     }
     private:
     double theta( double R, double Z) const {
@@ -242,11 +242,11 @@ struct EllipticDirNeuM
 //the psi surfaces
 struct FuncXDirNeu
 {
-    FuncXDirNeu( const aTokamakMagneticField& c, double psi_0, double psi_1):
+    FuncXDirNeu( const TokamakMagneticField& c, double psi_0, double psi_1):
         c_(c), psi0_(psi_0), psi1_(psi_1){}
 
     double operator()(double R, double Z, double phi) const {
-        return this->operator()(R,Z);}
+        return operator()(R,Z);}
     double operator()(double R, double Z) const {
         double psip = c_.psip()(R,Z);
         return (psip-psi0_)*(psip-psi1_);
@@ -275,14 +275,14 @@ struct FuncXDirNeu
         return (2.*(psipZ*psipZ + psip*psipZZ) - (psi0_+psi1_)*psipZZ);
     }
     private:
-    aTokamakMagneticField c_;
+    TokamakMagneticField c_;
     double psi0_, psi1_;
 };
 
 //take Bmod as chi
 struct EllipticXDirNeuM
 {
-    EllipticXDirNeuM( const aTokamakMagneticField& c, double psi_0, double psi_1): R_0_(c.R0()), 
+    EllipticXDirNeuM( const TokamakMagneticField& c, double psi_0, double psi_1): R_0_(c.R0()), 
     func_(c, psi_0, psi_1), bmod_(c), br_(c), bz_(c) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
@@ -295,7 +295,7 @@ struct EllipticXDirNeuM
 
     }
     double operator()(double R, double Z, double phi) const {
-        return this->operator()(R,Z);
+        return operator()(R,Z);
     }
     private:
     double R_0_;
@@ -308,13 +308,13 @@ struct EllipticXDirNeuM
 //take Blob and chi=1
 struct EllipticBlobDirNeuM
 {
-    EllipticBlobDirNeuM( const aTokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): 
+    EllipticBlobDirNeuM( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): 
     func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob){}
     double operator()(double R, double Z) const {
         return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
     }
     double operator()(double R, double Z, double phi) const {
-        return this->operator()(R,Z);
+        return operator()(R,Z);
     }
     private:
     double R_0_;
@@ -323,7 +323,7 @@ struct EllipticBlobDirNeuM
 
 struct EllipticDirSimpleM
 {
-    EllipticDirSimpleM( const aTokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob) {}
+    EllipticDirSimpleM( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob) {}
     double operator()(double R, double Z, double phi) const {
         return -(( 1./R*func_.dR(R,Z) + func_.dRR(R,Z) + func_.dZZ(R,Z) ));
 
@@ -338,7 +338,7 @@ struct EllipticDirSimpleM
  */ 
 struct TestFunction
 {
-    TestFunction( const aTokamakMagneticField& c) :  
+    TestFunction( const TokamakMagneticField& c) :  
         bhatR_(c),
         bhatZ_(c),
         bhatP_(c) {}
@@ -374,7 +374,7 @@ struct TestFunction
  */ 
 struct DeriTestFunction
 {
-    DeriTestFunction( const aTokamakMagneticField& c) :
+    DeriTestFunction( const TokamakMagneticField& c) :
         bhatR_(c),
         bhatZ_(c),
         bhatP_(c) {}

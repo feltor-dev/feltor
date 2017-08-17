@@ -8,9 +8,8 @@
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
-#include "dg/geometry.h"
+#include "dg/geometry/geometry.h"
 #include "utilities.h"
-#include "generator.h"
 
 
 namespace dg
@@ -153,8 +152,7 @@ struct Nemov
 {
     Nemov( const BinaryFunctorsLvl2 psi, double f0, int mode):
         f0_(f0), mode_(mode),
-        psip_(psi), 
-            { }
+        psip_(psi) { }
     void initialize( 
         const thrust::host_vector<double>& r_init, //1d intial values
         const thrust::host_vector<double>& z_init, //1d intial values
@@ -323,7 +321,7 @@ struct SimpleOrthogonal : public aGenerator2d
          thrust::host_vector<double>& etaY) const
     {
         thrust::host_vector<double> r_init, z_init;
-        orthogonal::detail::compute_rzy( psiX_, psiY_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        orthogonal::detail::compute_rzy( psi_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
         orthogonal::detail::Nemov nemov(psi_, f0_, firstline_);
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);

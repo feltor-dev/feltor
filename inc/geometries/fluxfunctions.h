@@ -32,9 +32,9 @@ struct aBinaryFunctor
     *
     * @return f(R,Z)
     */
-    double operator()(double R, double Z, double phi)
+    double operator()(double R, double Z, double phi)const
     {
-        return this->operator()(R,Z);
+        return operator()(R,Z);
     }
     /**
     * @brief abstract copy of a binary functor
