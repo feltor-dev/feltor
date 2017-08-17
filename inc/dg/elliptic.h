@@ -649,7 +649,7 @@ struct TensorElliptic
      *
      */
     template<class ChiRR, class ChiRZ, class ChiZZ>
-    void set( ChiRR& chiRR, ChiRZ& chiRZ, ChiZZ& chiZZ)
+    void transform_and_set( ChiRR& chiRR, ChiRZ& chiRZ, ChiZZ& chiZZ)
     {
         typename GeometryTraits<Geometry>::host_vector chiXX, chiXY, chiYY;
         dg::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_);

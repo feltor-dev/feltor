@@ -406,7 +406,7 @@ struct Hector : public aGenerator2d
         double eps = 1e10, eps_old = 2e10;
         dg::CurvilinearGrid2d g2d_old = g2d_;
         dg::TensorElliptic<dg::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
-        ellipticD_old.set( chi.xx(), chi.xy(), chi.yy());
+        ellipticD_old.transform_and_set( chi.xx(), chi.xy(), chi.yy());
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
         container lapu = dg::pullback( lapChiPsi, g2d_old);
@@ -418,7 +418,7 @@ struct Hector : public aGenerator2d
             g2d_.multiplyCellNumber(2,2);
             if(verbose)std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
             dg::TensorElliptic<dg::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
-            ellipticD.set( chi.xx(), chi.xy(), chi.yy() );
+            ellipticD.transform_and_set( chi.xx(), chi.xy(), chi.yy() );
             lapu = dg::pullback( lapChiPsi, g2d_);
             const container vol2d = dg::create::weights( g2d_);
             const IMatrix Q = dg::create::interpolation( g2d_, g2d_old);
