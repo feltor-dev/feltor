@@ -266,13 +266,13 @@ struct RibeiroX : public aGeneratorX2d
     void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
-         const unsigned nodeX0, const unsigned nodeX1, 
+         unsigned nodeX0, unsigned nodeX1, 
          thrust::host_vector<double>& x, 
          thrust::host_vector<double>& y, 
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         unsigned inside=0;
@@ -303,10 +303,10 @@ struct RibeiroX : public aGeneratorX2d
         }
     }
 
-    virtual unsigned do_zeta0(double fx) const { return zeta0_; }
-    virtual unsigned do_zeta1(double fx) const { return zeta1_;}
-    virtual unsigned do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
-    virtual unsigned do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    virtual double do_zeta0(double fx) const { return zeta0_; }
+    virtual double do_zeta1(double fx) const { return zeta1_;}
+    virtual double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
+    virtual double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
     BinaryFunctorsLvl2 psi_;
     dg::geo::ribeiro::detail::XFieldFinv fpsiMinv_; 

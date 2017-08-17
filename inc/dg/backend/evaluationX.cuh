@@ -26,7 +26,7 @@ namespace dg
  * @return  A DG Host Vector with values
  */
 template< class UnaryOp>
-thrust::host_vector<double> evaluate( const UnaryOp& f, const GridX1d& g)
+thrust::host_vector<double> evaluate( UnaryOp f, const GridX1d& g)
 {
     return evaluate( f, g.grid());
 };

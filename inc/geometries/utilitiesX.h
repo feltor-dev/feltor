@@ -10,11 +10,7 @@ namespace geo
  * @brief This function finds the X-point via Newton iteration applied to the gradient of psi, 
  *
  * The inverse of the Hessian matrix is computed analytically
-    @param psiR \f$ \partial_R \psi(R,Z)\f$, where R, Z are cylindrical coordinates
-    @param psiZ \f$ \partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
-    @param psiRR \f$ \partial_R\partial_R \psi(R,Z)\f$, where R, Z are cylindrical coordinates
-    @param psiRZ \f$ \partial_R\partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
-    @param psiZZ \f$ \partial_Z\partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
  * @param R_X start value on input, X-point on output
  * @param Z_X start value on input, X-point on output
  * @ingroup misc
@@ -345,7 +341,7 @@ struct SeparatriX
     void compute_rzy( const thrust::host_vector<double>& y_vec, 
             const unsigned nodeX0, const unsigned nodeX1,
             thrust::host_vector<double>& r, //same size as y_vec on output
-            thrust::host_vector<double>& z ) 
+            thrust::host_vector<double>& z ) const
     {
         ///////////////////////////find y coordinate line//////////////
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin), end_old(end);

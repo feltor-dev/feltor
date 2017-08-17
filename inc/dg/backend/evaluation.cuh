@@ -29,7 +29,7 @@ namespace dg
  * @return  A DG Host Vector with values
  */
 template< class UnaryOp>
-thrust::host_vector<double> evaluate( const UnaryOp& f, const Grid1d& g)
+thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d& g)
 {
     thrust::host_vector<double> abs = create::abscissas( g);
     for( unsigned i=0; i<g.size(); i++)

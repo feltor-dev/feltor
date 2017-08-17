@@ -11,6 +11,12 @@
 
 namespace dg{
 namespace create{
+///@cond
+thrust::host_vector<double> abscissas( const GridX1d& g)
+{
+    return abscissas(g.grid());
+}
+///@endcond
     
 ///@addtogroup highlevel
 ///@{

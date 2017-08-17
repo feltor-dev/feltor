@@ -4,7 +4,8 @@
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/functions.h"
 #include "dg/blas1.h"
-#include "dg/geometry/geometry_traits.h"
+#include "base_geometryX.h"
+#include "generatorX.h"
 
 namespace dg
 {
@@ -33,7 +34,7 @@ struct CurvilinearProductGridX3d : public dg::aGeometryX3d
      * @param bcz boundary condition in z
      */
     CurvilinearProductGridX3d( const aGeneratorX2d& generator, 
-        double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, double fx, double fy, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
+        double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
         dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, fx,fy,n, Nx, Ny, Nz, bcx, bcy, bcz)
     { 
         map_.resize(3);
@@ -125,15 +126,15 @@ struct CurvilinearGridX2d : public dg::aGeometryX2d
     CurvilinearGridX2d( const aGeneratorX2d& generator, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
         dg::aGeometryX2d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy),fx,fy, n, Nx, Ny, bcx, bcy), handle_(generator)
     {
-        construct( n,Nx,Ny);
+        construct(fx,fy, n,Nx,Ny);
     }
 
     const aGeneratorX2d& generator() const{return handle_.get();}
     virtual CurvilinearGridX2d* clone()const{return new CurvilinearGridX2d(*this);}
     private:
-    void construct( unsigned n, unsigned Nx, unsigned Ny)
+    void construct( double fx, double fy, unsigned n, unsigned Nx, unsigned Ny)
     {
-        CurvilinearProductGridX3d g( handle_.get(), n,Nx,Ny,1,bcx());
+        CurvilinearProductGridX3d g( handle_.get(),fx,fy,n,Nx,Ny,1,bcx());
         jac_=g.jacobian();
         map_=g.map();
         metric_=g.metric();

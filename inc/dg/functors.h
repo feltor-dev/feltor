@@ -803,7 +803,7 @@ struct Vortex
     }
     private:
     // Returns the modified Bessel function K1(x) for positive real x.
-    double bessk1(double x)
+    double bessk1(double x)const
     { 
         double y,ans;
         if (x <= 2.0) 
@@ -823,7 +823,7 @@ struct Vortex
         return ans; 
     }
     //Returns the modified Bessel function I1(x) for any real x. 
-    double bessi1(double x) 
+    double bessi1(double x) const
     {   
         double ax,ans; 
         double y; 
@@ -1105,7 +1105,7 @@ struct MinMod
 #ifdef __CUDACC__
     __host__ __device__
 #endif
-    T min( T a1, T a2, T a3, T sign)
+    T min( T a1, T a2, T a3, T sign)const
     {
         T temp = sign*a1;
         if( sign*a2 < temp)

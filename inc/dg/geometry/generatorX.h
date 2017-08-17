@@ -14,10 +14,10 @@ is a product space.
 */
 struct aGeneratorX2d
 {
-    unsigned zeta0(double fx) const{return do_zeta0(fx);}
-    unsigned zeta1(double fx) const{return do_zeta1(fx);}
-    unsigned eta0(double fy) const{return do_eta0(fy);}
-    unsigned eta1(double fy) const{return do_eta1(fy);}
+    double zeta0(double fx) const{return do_zeta0(fx);}
+    double zeta1(double fx) const{return do_zeta1(fx);}
+    double eta0(double fy) const{return do_eta0(fy);}
+    double eta1(double fy) const{return do_eta1(fy);}
     ///@brief sparsity pattern for metric
     bool isOrthogonal() const { return do_isOrthogonal(); }
 
@@ -40,7 +40,7 @@ struct aGeneratorX2d
     void generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
-         const unsigned nodeX0, const unsigned nodeX1, 
+         unsigned nodeX0, unsigned nodeX1, 
          thrust::host_vector<double>& x, 
          thrust::host_vector<double>& y, 
          thrust::host_vector<double>& zetaX, 
@@ -51,7 +51,7 @@ struct aGeneratorX2d
         unsigned size = zeta1d.size()*eta1d.size();
         x.resize(size), y.resize(size);
         zetaX = zetaY = etaX = etaY =x ;
-        do_generate( zeta1d, eta1d, x,y,zetaX,zetaY,etaX,etaY);
+        do_generate( zeta1d, eta1d,nodeX0,nodeX1,x,y,zetaX,zetaY,etaX,etaY);
     }
 
     /**
@@ -72,7 +72,7 @@ struct aGeneratorX2d
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
-         const unsigned nodeX0, const unsigned nodeX1, 
+         unsigned nodeX0, unsigned nodeX1, 
          thrust::host_vector<double>& x, 
          thrust::host_vector<double>& y, 
          thrust::host_vector<double>& zetaX, 
@@ -80,10 +80,10 @@ struct aGeneratorX2d
          thrust::host_vector<double>& etaX, 
          thrust::host_vector<double>& etaY) const = 0;
     virtual bool do_isOrthogonal()const{return false;}
-    virtual unsigned do_zeta0(double fx) const=0;
-    virtual unsigned do_zeta1(double fx) const=0;
-    virtual unsigned do_eta0(double fy) const=0;
-    virtual unsigned do_eta1(double fy) const=0;
+    virtual double do_zeta0(double fx) const=0;
+    virtual double do_zeta1(double fx) const=0;
+    virtual double do_eta0(double fy) const=0;
+    virtual double do_eta1(double fy) const=0;
 
 
 };

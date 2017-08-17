@@ -157,7 +157,7 @@ struct BinaryFunctorsLvl2
     ///the access functions are undefined as long as the class remains empty
     BinaryFunctorsLvl2(){}
     /**
-    * @copydoc BinaryFunctorsLvl1
+    * @copydoc BinaryFunctorsLvl1::BinaryFunctorsLvl1(aBinaryFunctor*,aBinaryFunctor*,aBinaryFunctor*)
     * @param fxx \f$ \partial^2 f / \partial x^2\f$ second derivative in first coordinate
     * @param fxy \f$ \partial^2 f / \partial x \partial y\f$ second mixed derivative 
     * @param fyy \f$ \partial^2 f / \partial y^2\f$ second derivative in second coordinate

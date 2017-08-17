@@ -118,10 +118,6 @@ struct CartesianGridX2d: public dg::aGeometryX2d
      */
     CartesianGridX2d( const dg::GridX2d& g):dg::aGeometryX2d(g.x0(),g.x1(),g.y0(),g.y1(),g.fx(),g.fy(),g.n(),g.Nx(),g.Ny(),g.bcx(),g.bcy()){}
     virtual CartesianGridX2d* clone()const{return new CartesianGridX2d(*this);}
-    private:
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny){
-        aTopologyX2d::do_set(new_n,new_Nx,new_Ny);
-    }
 };
 
 /**
@@ -137,12 +133,31 @@ struct CartesianGridX3d: public dg::aGeometryX3d
      */
     CartesianGridX3d( const dg::GridX3d& g):dg::aGeometryX3d(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.fx(),g.fy(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
     virtual CartesianGridX3d* clone()const{return new CartesianGridX3d(*this);}
-    private:
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        aTopologyX3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
-    }
 };
 
 ///@}
 
+///@copydoc pullback(const Functor&,const aGeometry2d&)
+///@ingroup pullback
+template< class Functor>
+thrust::host_vector<double> pullback( const Functor& f, const aGeometryX2d& g)
+{
+    std::vector<thrust::host_vector<double> > map = g.map();
+    thrust::host_vector<double> vec( g.size());
+    for( unsigned i=0; i<g.size(); i++)
+        vec[i] = f( map[0][i], map[1][i]);
+    return vec;
+}
+
+///@copydoc pullback(const Functor&,const aGeometry2d&)
+///@ingroup pullback
+template< class Functor>
+thrust::host_vector<double> pullback( const Functor& f, const aGeometryX3d& g)
+{
+    std::vector<thrust::host_vector<double> > map = g.map();
+    thrust::host_vector<double> vec( g.size());
+    for( unsigned i=0; i<g.size(); i++)
+        vec[i] = f( map[0][i], map[1][i], map[2][i]);
+    return vec;
+}
 } //namespace dg

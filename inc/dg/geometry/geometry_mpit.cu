@@ -3,8 +3,8 @@
 #include <cusp/print.h>
 
 #include <mpi.h>
-#include "blas2.h"
 #include "geometry.h"
+#include "../blas2.h"
 
 
 double R_0 = 4.*M_PI;
@@ -43,7 +43,8 @@ int main( int argc, char* argv[] )
 
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
-    dg::CylindricalMPIGrid3d<dg::MDVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::PER, dg::PER, dg::PER, comm);
+    dg::CylindricalMPIGrid3d grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::PER, dg::PER, dg::PER, comm);
+    dg::SparseElement<dg::MDVec> vol = dg::tensor::volume(grid.metric());
 
     dg::MDVec b = dg::evaluate( sine, grid);
     dg::MDVec vol3d = dg::create::volume( grid);
@@ -52,7 +53,7 @@ int main( int argc, char* argv[] )
     if(rank==0)std::cout << "Test of volume:         "<<test<< " sol = "<<sol<<"\t";
     if(rank==0)std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
     dg::MDVec temp = dg::create::weights( grid);
-    dg::geo::multiplyVolume( temp, grid);
+    dg::tensor::pointwiseDot( temp, vol, temp);
     test = dg::blas2::dot( b, temp, b);
     if(rank==0)std::cout << "Test of multiplyVolume: "<<test<< " sol = "<<sol<<"\t";
     if(rank==0)std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
@@ -63,7 +64,7 @@ int main( int argc, char* argv[] )
     if(rank==0)std::cout << "Test of inv_volume:     "<<test<< " sol = "<<sol<<"\t";
     if(rank==0)std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
     temp = dg::create::inv_weights( grid);
-    dg::geo::divideVolume( temp, grid);
+    dg::tensor::pointwiseDivide(temp, vol, temp );
     test = dg::blas2::dot( b, temp, b);
     if(rank==0)std::cout << "Test of divideVolume:   "<<test<< " sol = "<<sol<<"\t";
     if(rank==0)std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";

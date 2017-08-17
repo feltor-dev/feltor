@@ -30,7 +30,7 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
         const unsigned nodeX0, const unsigned nodeX1,
         thrust::host_vector<double>& r, //output r - values
         thrust::host_vector<double>& z, //output z - values
-        double* R_init, double* Z_init,  //2 input coords on perp line
+        const double* R_init, const double* Z_init,  //2 input coords on perp line
         double f_psi,  //input f
         int mode ) 
 {
@@ -39,8 +39,8 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
     r.resize( y_vec.size()), z.resize(y_vec.size());
     thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
     begin[0] = R_init[0], begin[1] = Z_init[0];
-    dg::geo::ribeiro::FieldRZY fieldRZYconf(psi.dfx(), psi.dfy());
-    dg::geo::equalarc::FieldRZY fieldRZYequi(psi.dfx(), psi.dfy());
+    dg::geo::ribeiro::FieldRZY fieldRZYconf(psi);
+    dg::geo::equalarc::FieldRZY fieldRZYequi(psi);
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
     unsigned steps = 1; double eps = 1e10, eps_old=2e10;
@@ -133,6 +133,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
         dg::geo::orthogonal::detail::InitialX initX(psi_, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
+    SimpleOrthogonalX* clone()const{return new SimpleOrthogonalX(*this);}
     private:
     bool isConformal()const{return false;}
     bool do_isOrthogonal()const{return true;}
@@ -140,13 +141,13 @@ struct SimpleOrthogonalX : public aGeneratorX2d
     virtual void do_generate( //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
-         const unsigned nodeX0, const unsigned nodeX1,
+         unsigned nodeX0, unsigned nodeX1,
          thrust::host_vector<double>& x, 
          thrust::host_vector<double>& y, 
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const
     {
 
         thrust::host_vector<double> r_init, z_init;
@@ -167,10 +168,10 @@ struct SimpleOrthogonalX : public aGeneratorX2d
             etaY[idx] = +h[idx]*psipR;
         }
     }
-    unsigned do_zeta0(double fx) const { return zeta0_; }
-    unsigned do_zeta1(double fx) const { return -fx/(1.-fx)*zeta0_;}
-    unsigned do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
-    unsigned do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    double do_zeta0(double fx) const { return zeta0_; }
+    double do_zeta1(double fx) const { return -fx/(1.-fx)*zeta0_;}
+    double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
+    double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     BinaryFunctorsLvl2 psi_;
     double R0_[2], Z0_[2];
     double zeta0_, f0_;
@@ -184,7 +185,6 @@ struct SimpleOrthogonalX : public aGeneratorX2d
  */
 struct SeparatrixOrthogonal : public aGeneratorX2d
 {
-    typedef dg::OrthogonalTag metric_category;
     /**
      * @brief Construct 
      *
@@ -198,13 +198,14 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
      */
     SeparatrixOrthogonal( const BinaryFunctorsLvl2& psi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline ):
-        psi_(psi)
+        psi_(psi),
         sep_( psi, xX, yX, x0, y0, firstline)
     {
         firstline_ = firstline;
         f0_ = sep_.get_f();
         psi_0_=psi_0;
     }
+    SeparatrixOrthogonal* clone()const{return new SeparatrixOrthogonal(*this);}
     private:
     bool isConformal()const{return false;}
     bool do_isOrthogonal()const{return true;}
@@ -212,13 +213,13 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     virtual void do_generate(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
-         const unsigned nodeX0, const unsigned nodeX1, 
+         unsigned nodeX0, unsigned nodeX1, 
          thrust::host_vector<double>& x, 
          thrust::host_vector<double>& y, 
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const
     {
 
         thrust::host_vector<double> r_init, z_init;
@@ -323,10 +324,10 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
             etaY[idx] = +h[idx]*psipX;
         }
     }
-    virtual unsigned do_zeta0(double fx) const { return f0_*psi_0_; }
-    virtual unsigned do_zeta1(double fx) const { return -fx/(1.-fx)*f0_*psi_0_;}
-    virtual unsigned do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
-    virtual unsigned do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    virtual double do_zeta0(double fx) const { return f0_*psi_0_; }
+    virtual double do_zeta1(double fx) const { return -fx/(1.-fx)*f0_*psi_0_;}
+    virtual double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
+    virtual double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
     double R0_[2], Z0_[2];
     double f0_, psi_0_;

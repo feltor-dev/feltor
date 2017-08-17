@@ -48,7 +48,7 @@ thrust::host_vector<double> pullback( const Functor& f, const aGeometry2d& g)
     return vec;
 }
 
-///@copydoc pullback(Functor&,const aGeometry2d&)
+///@copydoc pullback(const Functor&,const aGeometry2d&)
 ///@ingroup pullback
 template< class Functor>
 thrust::host_vector<double> pullback( const Functor& f, const aGeometry3d& g)
@@ -70,7 +70,7 @@ struct MemoryTraits< MPITag>
 };
 ///@endcond
 
-///@copydoc pullback(Functor&,const aGeometry2d&)
+///@copydoc pullback(const Functor&,const aGeometry2d&)
 ///@ingroup pullback
 template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIGeometry2d& g)
@@ -82,7 +82,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIG
     return MPI_Vector<thrust::host_vector<double> >( vec, g.communicator());
 }
 
-///@copydoc pullback(Functor&,const aGeometry2d&)
+///@copydoc pullback(const Functor&,const aGeometry2d&)
 ///@ingroup pullback
 template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIGeometry3d& g)

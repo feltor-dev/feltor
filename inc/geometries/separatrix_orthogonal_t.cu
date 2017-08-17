@@ -12,10 +12,10 @@
 #include "solovev.h"
 #include "taylor.h"
 //#include "guenther.h"
-#include "curilinearX.h"
-#include "refined_orthogonalX.h"
+#include "dg/geometry/transform.h"
+#include "dg/geometry/curvilinearX.h"
+#include "dg/geometry/refined_curvilinearX.h"
 #include "separatrix_orthogonal.h"
-#include "dg/ds.h"
 #include "init.h"
 
 #include "file/nc_utilities.h"
@@ -34,7 +34,7 @@ struct ZCutter
 };
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< dg::CurvilinearGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
+//typedef dg::FieldAligned< dg::CurvilinearGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
 
 //using namespace dg::geo::solovev;
 using namespace dg::geo::taylor;
@@ -116,23 +116,24 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    MagneticField c(gp);
-    std::cout << "Psi min "<<c.psip(gp.R_0, 0)<<"\n";
+    dg::geo::TokamakMagneticField c = dg::geo::taylor::createMagField(gp);
+    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::geo::findXpoint( c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, R_X, Z_X);
+    dg::geo::findXpoint( c.get_psip(), R_X, Z_X);
 
     //solovev::Psip psip( gp); 
     //std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     //solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
     //solovev::LaplacePsip laplacePsip(gp); 
     double R0 = gp.R_0, Z0 = 0;
-    dg::geo::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::geo::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::OrthogonalGridX3d<dg::HVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    //dg::CurvilinearGridX2d<dg::HVec> g2d = g3d.perp_grid();
-    dg::CurvilinearRefinedGridX3d<dg::HVec> g3d(add_x, add_y, 1,1, generator, psi_0, fx_0, fy_0, n, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    dg::CurvilinearRefinedGridX2d<dg::HVec> g2d = g3d.perp_grid();
+    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
+    //dg::OrthogonalGridX3d g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    //dg::CurvilinearGridX2d g2d = g3d.perp_grid();
+    dg::EquidistXRefinement equi(add_x, add_y, 1,1);
+    dg::CurvilinearRefinedProductGridX3d g3d(equi, generator, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    dg::CurvilinearRefinedGridX2d g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -164,15 +165,15 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "volume", NC_DOUBLE, 3, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 3, dim3d, &divBID);
 
-    thrust::host_vector<double> psi_p = dg::pullback( c.psip, g2d);
+    thrust::host_vector<double> psi_p = dg::pullback( c.psip(), g2d);
     g2d.display();
     err = nc_put_var_double( ncid, onesID, periodify(psi_p, g3d_periodic).data());
     //err = nc_put_var_double( ncid, onesID, periodify(g2d.g(), g3d_periodic).data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        X[i] = g2d.r()[i];
-        Y[i] = g2d.z()[i];
+        X[i] = g2d.map()[0][i];
+        Y[i] = g2d.map()[1][i];
     }
 
     dg::HVec ones = dg::evaluate( dg::one, g2d);
@@ -191,35 +192,32 @@ int main( int argc, char* argv[])
     //err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
-    dg::blas1::pointwiseDivide( g2d.g_yy(), g2d.g_xx(), temp0);
+    dg::SparseTensor<dg::HVec> metric = g2d.metric();
+    dg::HVec g_xx = metric.value(0,0), g_yy=metric.value(1,1);
+    dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
+    dg::HVec vol = vol_.value();
+    dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);
     dg::blas1::transfer( temp0, X);
     err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, defID, X.data());
-    dg::blas1::transfer( g2d.vol(), X);
-    dg::blas1::transfer( g2d.g_yy(),Y);
+    dg::blas1::transfer( vol, X);
+    dg::blas1::transfer( g_yy, Y);
     dg::blas1::pointwiseDot( Y, X, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, volID, X.data());
 
     std::cout << "Construction successful!\n";
 
-    //compute error in volume element
-    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
-    double error = sqrt( dg::blas2::dot( temp1, w2d, temp1));
-   // double error = sqrt( dg::blas1::dot( temp1, temp1));
-    std::cout<< "    Error in Off-diagonal is "<<error<<"\n";
-
     //compare determinant vs volume form
-    dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
-    dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
+    dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::transfer( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
-    dg::blas1::axpby( 1., temp0, -1., g2d.vol(), temp0);
-    error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( g2d.vol(), w2d, g2d.vol()));
+    dg::blas1::axpby( 1., temp0, -1., vol, temp0);
+    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     //error = sqrt(dg::blas1::dot( temp0, temp0)/dg::blas1::dot( g2d.vol(), g2d.vol()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
@@ -265,18 +263,18 @@ int main( int argc, char* argv[])
     std::cout << "TEST VOLUME IS:\n";
     dg::CartesianGrid2d g2dC( gp.R_0 -1.2*gp.a, gp.R_0 + 1.2*gp.a, Z_X, 1.2*gp.a*gp.elongation, 1, 5e3, 5e3, dg::PER, dg::PER);
     gp.psipmax = 0., gp.psipmin = psi_0;
-    dg::geo::Iris<Psip> iris( c.psip, gp.psipmin, gp.psipmax);
+    dg::geo::Iris iris( c.psip(), gp.psipmin, gp.psipmax);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = dg::blas1::dot( vec, g2d_weights);
 
-    dg::HVec cutter = dg::pullback( iris, g2d), vol( cutter);
+    dg::HVec cutter = dg::pullback( iris, g2d), vol_cut( cutter);
     ZCutter cut(Z_X);
     dg::HVec zcutter = dg::pullback( cut, g2d); 
     w2d = dg::create::weights( g2d);//make weights w/o refined weights
-    dg::blas1::pointwiseDot(cutter, w2d, vol);
-    dg::blas1::pointwiseDot(zcutter, vol, vol);
-    double volume = dg::blas1::dot( g2d.vol(), vol);
+    dg::blas1::pointwiseDot(cutter, w2d, vol_cut);
+    dg::blas1::pointwiseDot(zcutter, vol_cut, vol_cut);
+    double volume = dg::blas1::dot( vol, vol_cut);
     std::cout << "volumeXYP is "<< volume<<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
