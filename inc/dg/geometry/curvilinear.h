@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dg/backend/manage.h"
+#include "dg/backend/memory.h"
 #include "dg/blas1.h"
 #include "base_geometry.h"
 #include "generator.h"

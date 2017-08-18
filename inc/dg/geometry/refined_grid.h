@@ -1,7 +1,7 @@
 #pragma once
 
 #include "cusp/transpose.h"
-#include "dg/backend/manage.h"
+#include "dg/backend/memory.h"
 #include "dg/backend/grid.h"
 #include "dg/backend/weights.cuh"
 #include "dg/backend/interpolation.cuh"

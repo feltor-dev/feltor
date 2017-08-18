@@ -118,7 +118,7 @@ struct CartesianMPIGrid2d : public aMPIGeometry2d
      * @note the paramateres given in the constructor are global parameters 
      */
     CartesianMPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):dg::aMPIGeometry2d( x0, x1, y0, y1, n, Nx, Ny,bcx, bcy, comm){}
-    CartesianMPIGrid2d( const dg::MPIGrid2d& g): aMPIGeometry2d( g.x0(),g.x1(),g.y0(),g.y1(),g.n(),g.Nx(),g.Ny(),g.bcx(),g.bcy(),g.communicator()){}
+    CartesianMPIGrid2d( const dg::MPIGrid2d& g): aMPIGeometry2d( g.global().x0(),g.global().x1(),g.global().y0(),g.global().y1(),g.global().n(),g.global().Nx(),g.global().Ny(),g.global().bcx(),g.global().bcy(),g.communicator()){}
     virtual CartesianMPIGrid2d* clone()const{return new CartesianMPIGrid2d(*this);}
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny){
@@ -146,7 +146,7 @@ struct CartesianMPIGrid3d : public aMPIGeometry3d
      */
     CartesianMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):aMPIGeometry3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm){}
 
-    CartesianMPIGrid3d( const dg::MPIGrid3d& g): aMPIGeometry3d( g.x0(),g.x1(),g.y0(),g.y1(),g.z0(),g.z1(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz(),g.communicator()){}
+    CartesianMPIGrid3d( const dg::MPIGrid3d& g): aMPIGeometry3d( g.global().x0(),g.global().x1(),g.global().y0(),g.global().y1(),g.global().z0(),g.global().z1(),g.global().n(),g.global().Nx(),g.global().Ny(),g.global().Nz(),g.global().bcx(),g.global().bcy(),g.global().bcz(),g.communicator()){}
     virtual CartesianMPIGrid3d* clone()const{return new CartesianMPIGrid3d(*this);}
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){

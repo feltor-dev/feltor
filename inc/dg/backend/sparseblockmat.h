@@ -1,6 +1,7 @@
 #pragma once
 
 #include <thrust/host_vector.h>
+#include "exceptions.h"
 #include "matrix_traits.h"
 
 namespace dg
@@ -184,8 +185,13 @@ struct CooSparseBlockMat
 template<class value_type>
 void EllSparseBlockMat<value_type>::symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
+
 
     //simplest implementation
     for( int s=0; s<left_size; s++)
@@ -257,8 +263,12 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os) const
 template<class value_type>
 void CooSparseBlockMat<value_type>::symv( value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
     assert( beta == 1);
 
     //simplest implementation

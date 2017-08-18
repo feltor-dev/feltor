@@ -10,7 +10,6 @@
 #include "arakawa.h"
 #include "helmholtz.h"
 #include "cg.h"
-#include "exceptions.h"
 #include "functors.h"
 #include "multistep.h"
 #include "elliptic.h"

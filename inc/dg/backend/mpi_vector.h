@@ -5,7 +5,7 @@
 #include <thrust/gather.h>
 #include "vector_traits.h"
 #include "thrust_vector_blas.cuh"
-#include "manage.h"
+#include "memory.h"
 
 namespace dg
 {

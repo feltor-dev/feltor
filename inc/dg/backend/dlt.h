@@ -5,7 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
-#include "../exceptions.h"
+#include "exceptions.h"
 
 
 namespace dg{

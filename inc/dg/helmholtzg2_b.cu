@@ -3,9 +3,9 @@
 #include "blas.h"
 #include "backend/timer.cuh"
 #include "backend/typedefs.cuh"
+#include "backend/exceptions.h"
 
 #include "helmholtz.h"
-#include "exceptions.h"
 #include "cg.h"
 #include "functors.h"
 

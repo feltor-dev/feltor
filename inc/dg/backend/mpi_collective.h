@@ -10,7 +10,7 @@
 #include <thrust/device_vector.h>
 #include "thrust_vector_blas.cuh"
 #include "dg/blas1.h"
-#include "manage.h"
+#include "memory.h"
 
 namespace dg{
 

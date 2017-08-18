@@ -4,7 +4,7 @@
 #include <cassert>
 #include <vector>
 
-#include "exceptions.h"
+#include "backend/exceptions.h"
 #include "blas1.h"
 
 
