@@ -6,10 +6,11 @@ namespace dg
 //there is probably a better class in boost...
 /*!@brief a manager class that invokes the clone() method on the managed ptr when copied
 *
-*when copied invokes a deep copy using the clone() method 
-* this class is most useful when a class needs to hold a polymorphic, cloneable oject as a variable. 
-@tparam cloneable a type that has the clone() method 
-@ingroup misc
+*When copied invokes a deep copy using the clone() method.
+* This class is most useful when a class needs to hold a polymorphic, cloneable oject as a variable. 
+@tparam cloneable a type that may be uncopyable/unassignable but provides the clone() method with signature
+ - cloneable* clone() const;
+@ingroup lowlevel
 */
 template<class cloneable>
 struct Handle
@@ -42,12 +43,19 @@ struct Handle
         this->swap( src );
         return *this;
     }
-    ///delete managed pointer if not empty
-    ~Handle(){ if(ptr_!=0) delete ptr_; }
+    ///delete managed pointer if not NULL
+    ~Handle(){ clear();}
+
+    ///delete managed pointer if not NULL
+    void clear(){
+        if(ptr_!=0) delete ptr_; 
+        ptr_=0;
+    }
 
     /**
     * @brief Get a constant reference to the object on the heap
     * @return a reference to the cloneable object
+    * @note undefined if the Handle manages a NULL pointer
     */
     const cloneable& get()const {return *ptr_;}
 
@@ -55,6 +63,7 @@ struct Handle
     /**
     * @brief Non constant access to the object on the heap
     * @return a non-const reference to the cloneable object
+    * @note undefined if the Handle manages a NULL pointer
     */
     cloneable& get() {return *ptr_;}
 
@@ -93,7 +102,7 @@ struct Handle
 * some workspace to fulfill their task but do otherwise not change their state. A buffer object
 can be declared const while the data it holds are still writeable.
 * @tparam T must be default constructible and copyable
-* @ingroup misc
+* @ingroup lowlevel
 */
 template< class T>
 struct Buffer
