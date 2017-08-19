@@ -76,8 +76,6 @@ int main( int argc, char* argv[])
     dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     dg::CurvilinearGrid2d g2d = g3d.perp_grid();
-    //OrthogonalGrid3d g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR);
-    //OrthogonalGrid2d g2d = g3d.perp_grid();
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -128,21 +126,6 @@ int main( int argc, char* argv[])
 
     std::cout << "Construction successful!\n";
 
-    ////compute error in volume element
-    //const dg::HVec f_ = g2d.f();
-    //dg::blas1::pointwiseDot( g2d.g_xx(), g2d.g_yy(), temp0);
-    //dg::blas1::pointwiseDot( g2d.g_xy(), g2d.g_xy(), temp1);
-    //dg::blas1::axpby( 1., temp0, -1., temp1, temp0); //temp0=1/g = g^xx g^yy - g^xy^2
-    //solovev::flux::FieldY fieldY(gp);
-    //dg::HVec fby = dg::pullback( fieldY, g2d);//?
-    //dg::blas1::pointwiseDot( f_, fby,fby);
-//  //       dg::blas1::scal( fby, 2.*M_PI);
-
-    //dg::blas1::pointwiseDot( fby, fby, temp1);
-    //dg::blas1::axpby( 1., temp1, -1., temp0, temp0); ////temp0= g_xx g_yy - g_xy^2 - g
-    //double error = sqrt( dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot( temp1, w3d, temp1));
-    //std::cout<< "Rel Error in Determinant is "<<error<<"\n";
-
     dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
     dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
     dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
@@ -154,11 +137,6 @@ int main( int argc, char* argv[])
     double error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot(vol_.value(), w3d, vol_.value()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
-    //dg::blas1::pointwiseDivide(ones,fby,temp1); //=sqrt(g)
-    //dg::blas1::axpby( 1., temp1, -1., vol_, temp0);
-    //error=sqrt(dg::blas2::dot( temp0, w3d, temp0))/sqrt( dg::blas2::dot(vol_, w3d, vol_));
-    //std::cout << "Rel Error of volume form is "<<error<<"\n";
-
     const dg::HVec vol = dg::create::volume( g3d);
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
     double volume = dg::blas1::dot( vol, ones3d);
@@ -167,13 +145,12 @@ int main( int argc, char* argv[])
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
     dg::geo::Iris iris( c.psip(), gp.psipmin, gp.psipmax);
-    //dg::CylindricalGrid3d<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
     double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);
-    std::cout << "volumeXYP is "<< volume<<std::endl;
+    std::cout << "volumeXYP is "<< volume   <<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
     std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably

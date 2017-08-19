@@ -14,8 +14,6 @@
 #include "testfunctors.h"
 
 
-using namespace dg::geo::solovev;
-
 int main(int argc, char**argv)
 {
     std::cout << "Type n, Nx, Ny, Nz\n";
