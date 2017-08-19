@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
         double Rmax=gpR0+1.0*gpa; 
         double Zmax=1.0*gpa*1.00;
         dg::CylindricalMPIGrid3d g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
-        dg::geo::guenther::MagneticField magfield(gpR0, gpI0);
+        dg::geo::TokamakMagneticField magfield = dg::geo::guenther::createMagField(gpR0, gpI0);
         dg::geo::Field<dg::geo::guenther::MagneticField> field(magfield, gpR0);
         dg::MDDS::FieldAligned dsFA( field, g3d, 1e-4, dg::DefaultLimiter(), dg::DIR);
         dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered);
