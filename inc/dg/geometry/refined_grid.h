@@ -115,29 +115,23 @@ struct LinearRefinement : public aRefinement1d
      * @brief Refine every cell in the grid by an integer number of new cells
      * @param multiple multiply every cell
      */
-    LinearRefinement( unsigned multiple): m_(multiple){}
+    LinearRefinement( unsigned multiple): m_(multiple){
+        assert( multiple>= 1);
+    }
     LinearRefinement* clone()const{return new LinearRefinement(*this);}
     private:
     unsigned m_;
     virtual void do_generate( const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const 
     {
-        weights = linear_ref( m_, g.n(), g.N(), g.bcx());
+        thrust::host_vector< double> left( g.n()*g.N()*m_, 1);
+        for( unsigned k=0; k<left.size(); k++)
+            left[k] = (double)m_;
+        weights = left;
         abscissas = dg::detail::normalize_weights_and_compute_abscissas( g, weights);
     }
-    virtual unsigned do_N_new( unsigned N_old, bc bcx) const
-    {
+    virtual unsigned do_N_new( unsigned N_old, bc bcx) const {
         return N_old*m_;
     }
-    thrust::host_vector<double> linear_ref( unsigned multiple_x, unsigned n, unsigned N, dg::bc bcx) const
-    {
-        assert( multiple_x >= 1);
-        //there are add_x+1 finer cells per refined cell ...
-        thrust::host_vector< double> left( n*N*multiple_x, 1);
-        for( unsigned k=0; k<left.size(); k++)
-            left[k] = (double)multiple_x;
-        return left;
-    }
-
 };
 
 /**

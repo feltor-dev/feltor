@@ -74,19 +74,19 @@ int main()
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     {
-    dg::RefinedElliptic<dg::CartesianRefinedGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> pol( grid_coarse, grid_fine, dg::not_normed, dg::centered);
-    pol.set_chi( chiFINE);
-    t.toc();
-    std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
+        dg::RefinedElliptic<dg::CartesianRefinedGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> pol( grid_coarse, grid_fine, dg::not_normed, dg::centered);
+        pol.set_chi( chiFINE);
+        t.toc();
+        std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
 
-    dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
+        dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
 
 
-    std::cout << eps<<" ";
-    t.tic();
-    std::cout << " "<< invert( pol, x, b, w2d,v2d);
-    t.toc();
-    //std::cout << "Took "<<t.diff()<<"s\n";
+        std::cout << eps<<" ";
+        t.tic();
+        std::cout << " "<< invert( pol, x, b);
+        t.toc();
+        //std::cout << "Took "<<t.diff()<<"s\n";
     }
 
     //compute errorFINE
@@ -105,29 +105,29 @@ int main()
     const double norm = dg::blas2::dot( w2dFINE, solutionFINE);
     std::cout << " "<<sqrt( err/norm) << " " <<sqrt(errFINE/norm);
     {
-    dg::RefinedElliptic<dg::CartesianRefinedGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_forward( grid_coarse, grid_fine, dg::not_normed, dg::forward);
-    pol_forward.set_chi( chiFINE);
-    x = temp;
-    dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_fw( pol_forward, x, b);
-    dg::blas2::gemv( Q, x, xFINE);
-    dg::blas1::axpby( 1.,xFINE,-1., solutionFINE, errorFINE);
-    errFINE = dg::blas2::dot( w2dFINE, errorFINE);
-    dg::blas1::axpby( 1.,x,-1., solution, error);
-    err = dg::blas2::dot( w2d, error);
-    std::cout << " "<<sqrt( err/norm) << " " <<sqrt(errFINE/norm);
+        dg::RefinedElliptic<dg::CartesianRefinedGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_forward( grid_coarse, grid_fine, dg::not_normed, dg::forward);
+        pol_forward.set_chi( chiFINE);
+        x = temp;
+        dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
+        std::cout << " "<< invert_fw( pol_forward, x, b);
+        dg::blas2::gemv( Q, x, xFINE);
+        dg::blas1::axpby( 1.,xFINE,-1., solutionFINE, errorFINE);
+        errFINE = dg::blas2::dot( w2dFINE, errorFINE);
+        dg::blas1::axpby( 1.,x,-1., solution, error);
+        err = dg::blas2::dot( w2d, error);
+        std::cout << " "<<sqrt( err/norm) << " " <<sqrt(errFINE/norm);
     }
 
     {
-    dg::RefinedElliptic<dg::CartesianRefinedGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_backward( grid_coarse, grid_fine, dg::not_normed, dg::backward);
-    pol_backward.set_chi( chiFINE);
-    x = temp;
-    dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_bw( pol_backward, x, b);
-    dg::blas2::gemv( Q, x, xFINE);
-    dg::blas1::axpby( 1.,xFINE,-1., solutionFINE, errorFINE);
-    err = dg::blas2::dot( w2dFINE, errorFINE);
-    std::cout << " "<<sqrt( err/norm)<<std::endl;
+        dg::RefinedElliptic<dg::CartesianRefinedGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> pol_backward( grid_coarse, grid_fine, dg::not_normed, dg::backward);
+        pol_backward.set_chi( chiFINE);
+        x = temp;
+        dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
+        std::cout << " "<< invert_bw( pol_backward, x, b);
+        dg::blas2::gemv( Q, x, xFINE);
+        dg::blas1::axpby( 1.,xFINE,-1., solutionFINE, errorFINE);
+        err = dg::blas2::dot( w2dFINE, errorFINE);
+        std::cout << " "<<sqrt( err/norm)<<std::endl;
     }
 
 

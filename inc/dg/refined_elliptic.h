@@ -111,7 +111,7 @@ class RefinedElliptic
     void construct( const Geometry& g_coarse, const Geometry& g_fine, bc bcx, bc bcy, direction dir)
     {
         dg::blas2::transfer( dg::create::interpolation( g_fine, g_coarse), Q_);
-        dg::blas2::transfer( dg::create::interpolationT( g_fine, g_coarse), QT_);
+        dg::blas2::transfer( dg::create::interpolationT( g_coarse, g_fine), QT_);
         dg::blas2::transfer( dg::create::projection( g_coarse, g_fine), P_);
 
         dg::blas1::transfer( dg::evaluate( dg::one, g_fine), temp1_);
