@@ -101,31 +101,26 @@
  * 
  */
 
-/**
-  * @class hide_binary
+/** @class hide_binary
   * @tparam BinaryOp A class or function type with a member/signature equivalent to
   *  - double operator()(double, double) const
   */
-/**
-  * @class hide_ternary
+/** @class hide_ternary
   * @tparam TernaryOp A class or function type with a member/signature equivalent to
   *  - double operator()(double, double, double) const
   */
- /**
-  * @class hide_geometry
+ /** @class hide_geometry
   * @tparam Geometry One of the geometry classes. The functions dg::create::dx( g, bcx) and
   * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. 
   * Furthermore dg::evaluate( one, g) must return an instance of the container class.
      as do calls to dg::create::weights(g) and dg::create::inv_weights(g)
   */
 
- /**
-  * @class hide_container_lvl1
-  * @tparam container A data container class for which the blas1 functionality is overloaded. Currently this is one of 
+ /** @class hide_container_lvl1
+  * @tparam container A data container class for which the blas1 functionality is overloaded. Also we assume that the type is copyable/assignable. Currently this is one of 
   *   dg::HVec, dg::DVec, dg::MHVec or dg::MDVec
   */
- /**
-  * @class hide_matrix_container
+ /** @class hide_matrix_container
   * @tparam Matrix A class for which the blas2 functions are callable in connection with the container class
   *  - dg::HMatrix with dg::HVec
   *  - dg::DMatrix with dg::DVec
@@ -134,6 +129,15 @@
   *
   * @tparam container A data container class for which the blas1 functionality is overloaded. Currently this is one of 
   *   dg::HVec, dg::DVec, dg::MHVec or dg::MDVec
+  */
+
+ /** @class hide_symmetric_op
+ * @tparam SymmetricOp A class for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable 
+ with the container type as argument. Also, The functions %weights() and %precond() 
+ need to be callable and return weights and the preconditioner for the conjugate 
+ gradient method. The Operator is assumed to be linear and symmetric!
+ @note you can make your own SymmetricOp by providing the member function void symv(const container&, container&);
+  and specializing MatrixTraits with the SelfMadeMatrixTag as the matrix_category
   */
 
 /**

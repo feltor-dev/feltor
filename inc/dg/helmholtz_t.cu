@@ -97,8 +97,8 @@ int main()
     dg::DVec laplace_fct_ = dg::evaluate( laplace_fct, g3d);
     dg::DVec helmholtz_fct_ = dg::evaluate( helmholtz_fct, g3d);
     dg::DVec temp_(fct_);
-    dg::Elliptic< dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec > laplaceM( g3d, dg::normed);
-    dg::Helmholtz< dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec > helmholtz( g3d, alpha);
+    dg::Elliptic< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec > laplaceM( g3d, dg::normed);
+    dg::Helmholtz< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec > helmholtz( g3d, alpha);
     dg::blas2::symv( laplaceM, fct_, temp_);
     dg::blas1::axpby( 1., laplace_fct_, -1., temp_);
     std::cout << "error Laplace " << sqrt( dg::blas2::dot( laplaceM.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;

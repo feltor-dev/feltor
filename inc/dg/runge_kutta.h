@@ -305,10 +305,10 @@ const double rk_classic<17>::b[17] = {
 0.0333333333333333333333333333333333333333333333333333333333333
 };
 ///@endcond
-//RHS contains Information about Vector type it uses
+//RHS contains Information about container type it uses
 //k is the order of the method
-// Vector f( const Vector& v)
-// Vector should probably be rvalue assignable
+// container f( const container& v)
+// container should probably be rvalue assignable
 
 /**
 * @brief Struct for Runge-Kutta explicit time-integration
@@ -334,23 +334,23 @@ const double rk_classic<17>::b[17] = {
  *  by ones on the left and \f$ D\f$ its
  *  diagonal part. 
 * @tparam k Order of the method (1, 2, 3 or 4)
-* @tparam Vector The argument type used in the Functor class
+* @copydoc hide_container_lvl1
 */
-template< size_t k, class Vector>
+template< size_t k, class container>
 struct RK
 {
     /**
     * @brief Reserve memory for the integration
     *
-    * @param copyable Vector of size which is used in integration. 
-    * A Vector object must be copy-constructible from copyable.
+    * @param copyable container of size which is used in integration. 
+    * A container object must be copy-constructible from copyable.
     */
-    RK( const Vector& copyable): u_(k-1, Vector(copyable)){ }
+    RK( const container& copyable): u_(k-1, container(copyable)){ }
     /**
     * @brief Advance u0 one timestep
     *
     * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type Vector.
+        Its arguments both have to be of type container.
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
     * @param f right hand side function
@@ -359,17 +359,17 @@ struct RK
     * @param dt The timestep.
     */
     template< class Functor>
-    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt);
+    void operator()( Functor& f, const container& u0, container& u1, double dt);
   private:
-    std::vector<Vector> u_; //TODO std::array is more natural here (but unfortunately not available)
+    std::vector<container> u_; //TODO std::array is more natural here (but unfortunately not available)
 };
 
 //u0 and u1 may not be the same vector
 //TO DO: this might be cured by adding u0 first to u_[0] in the last step
 //f( y, yp) where y is const and yp contains the result
-template< size_t k, class Vector>
+template< size_t k, class container>
 template< class Functor>
-void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+void RK<k, container>::operator()( Functor& f, const container& u0, container& u1, double dt)
 {
     assert( &u0 != &u1);
     u1 = u0;
@@ -409,23 +409,23 @@ void RK<k, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double
 * The coefficients are chosen in the classic form given by Runge and Kutta. 
 * Needs more calls for axpby than our RK class but we implemented higher orders
 * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
-* @tparam Vector The argument type used in the Functor class
+* @copydoc hide_container_lvl1
 */
-template< size_t s, class Vector>
+template< size_t s, class container>
 struct RK_classic
 {
     /**
     * @brief Reserve memory for the integration
     *
-    * @param copyable Vector of size which is used in integration. 
-    * A Vector object must be copy-constructible from copyable.
+    * @param copyable container of size which is used in integration. 
+    * A container object must be copy-constructible from copyable.
     */
-    RK_classic( const Vector& copyable): k_(s, Vector(copyable)), u_(copyable){ }
+    RK_classic( const container& copyable): k_(s, container(copyable)), u_(copyable){ }
     /**
     * @brief Advance u0 one timestep
     *
     * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type Vector.
+        Its arguments both have to be of type container.
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
     * @param f right hand side function
@@ -434,18 +434,18 @@ struct RK_classic
     * @param dt The timestep.
     */
     template< class Functor>
-    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt);
+    void operator()( Functor& f, const container& u0, container& u1, double dt);
   private:
-    std::vector<Vector> k_;
-    Vector u_;
+    std::vector<container> k_;
+    container u_;
 };
 
 //u0 and u1 may not be the same vector
 //TO DO: this might be cured by adding u0 first to u_[0] in the last step
 //f( y, yp) where y is const and yp contains the result
-template< size_t s, class Vector>
+template< size_t s, class container>
 template< class Functor>
-void RK_classic<s, Vector>::operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+void RK_classic<s, container>::operator()( Functor& f, const container& u0, container& u1, double dt)
 {
     assert( &u0 != &u1);
     u1 = u0; //to let u0 const and later for summation
@@ -486,7 +486,7 @@ struct NotANumber : public std::exception
  *
  * @ingroup time 
  * @tparam RHS The right-hand side class
- * @tparam Vector Vector-class (needs to be copyable)
+ * @copydoc hide_container_lvl1
  * @tparam s # of stages (1, 2, 3, 4, 6, 17)
  * @param rhs The right-hand-side
  * @param begin initial condition (size 3)
@@ -495,11 +495,11 @@ struct NotANumber : public std::exception
  * @param T_max final time
  * @param N # of steps to use
  */
-template< class RHS, class Vector, unsigned s>
-void stepperRK(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+template< class RHS, class container, unsigned s>
+void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
-    RK_classic<s, Vector > rk( begin); 
-    Vector temp(begin);
+    RK_classic<s, container > rk( begin); 
+    container temp(begin);
     if( T_max == T_min){ end = begin; return;}
     double dt = (T_max-T_min)/(double)N;
     end = begin;
@@ -510,21 +510,21 @@ void stepperRK(RHS& rhs, const Vector& begin, Vector& end, double T_min, double 
     }
 }
 
-template< class RHS, class Vector>
-void stepperRK1(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+template< class RHS, class container>
+void stepperRK1(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
-    stepperRK<RHS, Vector, 1>( rhs, begin, end, T_min, T_max, N);
+    stepperRK<RHS, container, 1>( rhs, begin, end, T_min, T_max, N);
 }
-template< class RHS, class Vector>
-void stepperRK2(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+template< class RHS, class container>
+void stepperRK2(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
-    stepperRK<RHS, Vector, 2>( rhs, begin, end, T_min, T_max, N);
+    stepperRK<RHS, container, 2>( rhs, begin, end, T_min, T_max, N);
 }
 
-template< class RHS, class Vector>
-void stepperRK3(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+template< class RHS, class container>
+void stepperRK3(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
-    stepperRK<RHS, Vector, 3>( rhs, begin, end, T_min, T_max, N);
+    stepperRK<RHS, container, 3>( rhs, begin, end, T_min, T_max, N);
 }
 
 /**
@@ -532,7 +532,7 @@ void stepperRK3(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
  *
  * @ingroup time 
  * @tparam RHS The right-hand side class
- * @tparam Vector Vector-class (needs to be copyable)
+ * @copydoc hide_container_lvl1
  * @param rhs The right-hand-side
  * @param begin initial condition 
  * @param end (write-only) contains solution on output
@@ -540,17 +540,17 @@ void stepperRK3(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
  * @param T_max final time
  * @param N number of steps 
  */
-template< class RHS, class Vector>
-void stepperRK4(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+template< class RHS, class container>
+void stepperRK4(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
-    stepperRK<RHS, Vector, 4>( rhs, begin, end, T_min, T_max, N);
+    stepperRK<RHS, container, 4>( rhs, begin, end, T_min, T_max, N);
 }
 /**
  * @brief Integrates the differential equation using RK 6 and a fixed number of steps
  *
  * @ingroup time 
  * @tparam RHS The right-hand side class
- * @tparam Vector Vector-class (needs to be copyable)
+ * @copydoc hide_container_lvl1
  * @param rhs The right-hand-side
  * @param begin initial condition 
  * @param end (write-only) contains solution on output
@@ -558,17 +558,17 @@ void stepperRK4(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
  * @param T_max final time
  * @param N number of steps 
  */
-template< class RHS, class Vector>
-void stepperRK6(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+template< class RHS, class container>
+void stepperRK6(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
-    stepperRK<RHS, Vector, 6>( rhs, begin, end, T_min, T_max, N);
+    stepperRK<RHS, container, 6>( rhs, begin, end, T_min, T_max, N);
 }
 /**
  * @brief Integrates the differential equation using RK 17 and a fixed number of steps
  *
  * @ingroup time 
  * @tparam RHS The right-hand side class
- * @tparam Vector Vector-class (needs to be copyable)
+ * @copydoc hide_container_lvl1
  * @param rhs The right-hand-side
  * @param begin initial condition 
  * @param end (write-only) contains solution on output
@@ -576,10 +576,10 @@ void stepperRK6(RHS& rhs, const Vector& begin, Vector& end, double T_min, double
  * @param T_max final time
  * @param N number of steps 
  */
-template< class RHS, class Vector>
-void stepperRK17(RHS& rhs, const Vector& begin, Vector& end, double T_min, double T_max, unsigned N )
+template< class RHS, class container>
+void stepperRK17(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
-    stepperRK<RHS, Vector, 17>( rhs, begin, end, T_min, T_max, N);
+    stepperRK<RHS, container, 17>( rhs, begin, end, T_min, T_max, N);
 }
 
 
@@ -590,20 +590,20 @@ void stepperRK17(RHS& rhs, const Vector& begin, Vector& end, double T_min, doubl
  *
  * Doubles the number of timesteps until the desired accuracy is reached
  *
- * @tparam RHS The right-hand side class. There must be the function bool monitor( const Vector& end); available which is called after every step. Return true if everything is ok and false if the integrator certainly fails.
- * The other function is the double error( const Vector& end0, const Vector& end1); which computes the error norm in which the integrator should converge. 
- * @tparam Vector Vector-class (needs to be copyable)
+ * @tparam RHS The right-hand side class. There must be the function bool monitor( const container& end); available which is called after every step. Return true if everything is ok and false if the integrator certainly fails.
+ * The other function is the double error( const container& end0, const container& end1); which computes the error norm in which the integrator should converge. 
+ * @copydoc hide_container_lvl1
  * @param rhs The right-hand-side
  * @param begin initial condition (size 3)
  * @param end (write-only) contains solution on output
  * @param T_max time difference
  * @param eps_abs desired absolute accuracy
  */
-template< class RHS, class Vector, unsigned s>
-int integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+template< class RHS, class container, unsigned s>
+int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
 {
-    RK_classic<s, Vector > rk( begin); 
-    Vector old_end(begin), temp(begin);
+    RK_classic<s, container > rk( begin); 
+    container old_end(begin), temp(begin);
     end = begin;
     if( T_max == 0) return 0;
     double dt = T_max/10;
@@ -657,34 +657,34 @@ int integrateRK(RHS& rhs, const Vector& begin, Vector& end, double T_max, double
 
 }
 
-template< class RHS, class Vector>
-int integrateRK4(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+template< class RHS, class container>
+int integrateRK4(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
 {
-    return integrateRK<RHS, Vector, 4>( rhs, begin, end, T_max, eps_abs);
+    return integrateRK<RHS, container, 4>( rhs, begin, end, T_max, eps_abs);
 }
 
-template< class RHS, class Vector>
-int integrateRK6(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+template< class RHS, class container>
+int integrateRK6(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
 {
-    return integrateRK<RHS, Vector, 6>( rhs, begin, end, T_max, eps_abs);
+    return integrateRK<RHS, container, 6>( rhs, begin, end, T_max, eps_abs);
 }
-template< class RHS, class Vector>
-int integrateRK17(RHS& rhs, const Vector& begin, Vector& end, double T_max, double eps_abs )
+template< class RHS, class container>
+int integrateRK17(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
 {
-    return integrateRK<RHS, Vector, 17>( rhs, begin, end, T_max, eps_abs);
+    return integrateRK<RHS, container, 17>( rhs, begin, end, T_max, eps_abs);
 }
 
 ///@}
 //
 ///@cond
 //Euler specialisation
-template < class Vector>
-struct RK<1, Vector>
+template < class container>
+struct RK<1, container>
 {
     RK(){}
-    RK( const Vector& copyable){}
+    RK( const container& copyable){}
     template < class Functor>
-    void operator()( Functor& f, const Vector& u0, Vector& u1, double dt)
+    void operator()( Functor& f, const container& u0, container& u1, double dt)
     {
         f( u0, u1);
         blas1::axpby( 1., u0, dt, u1);

@@ -6,7 +6,7 @@
  * @note include <mpi.h> before this header to activate mpi support
  */
 #include "blas.h"
-#include "geometry.h"
+#include "geometry/geometry.h"
 #include "arakawa.h"
 #include "helmholtz.h"
 #include "cg.h"
@@ -14,4 +14,3 @@
 #include "multistep.h"
 #include "elliptic.h"
 #include "runge_kutta.h"
-#include "ds.h"

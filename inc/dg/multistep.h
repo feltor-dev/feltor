@@ -35,18 +35,18 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 * Uses only blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step.
 * @tparam k Order of the method (Currently one of 1, 2, 3, 4 or 5)
-* @tparam Vector The Argument type used in the Functor class
+* @copydoc hide_container_lvl1
 */
-template< size_t k, class Vector>
+template< size_t k, class container>
 struct AB
 {
     /**
     * @brief Reserve memory for the integration
     *
-    * @param copyable Vector of size which is used in integration. 
-    * A Vector object must be copy-constructible from copyable.
+    * @param copyable container of size which is used in integration. 
+    * A container object must be copy-constructible from copyable.
     */
-    AB( const Vector& copyable): f_(k, Vector(copyable)), u_(copyable){ }
+    AB( const container& copyable): f_(k, container(copyable)), u_(copyable){ }
    
     /**
      * @brief Init with initial value
@@ -55,7 +55,7 @@ struct AB
      * backwards with a Euler method. This routine has to be called
      * before the first timestep is made and with the same initial value as the first timestep.
      * @tparam Functor models BinaryFunction with no return type (subroutine).
-        Its arguments both have to be of type Vector.
+        Its arguments both have to be of type container.
         The first argument is the actual argument, the second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
      * @param f The rhs functor
@@ -64,12 +64,12 @@ struct AB
      * @note The class allows Functor to change its first (input) argument, i.e. the first argument need not be const
      */
     template< class Functor>
-    void init( Functor& f, const Vector& u0, double dt);
+    void init( Functor& f, const container& u0, double dt);
     /**
     * @brief Advance u0 one timestep
     *
     * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type Vector.
+        Its arguments both have to be of type container.
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
     * @param f right hand side function or functor
@@ -77,19 +77,19 @@ struct AB
      * @note The class allows Functor to change its first (input) argument, i.e. the first argument need not be const
     */
     template< class Functor>
-    void operator()( Functor& f, Vector& u);
+    void operator()( Functor& f, container& u);
   private:
     double dt_;
-    std::vector<Vector> f_; //TODO std::array is more natural here (but unfortunately not available)
-    Vector u_;
+    std::vector<container> f_; //TODO std::array is more natural here (but unfortunately not available)
+    container u_;
 };
 
-template< size_t k, class Vector>
+template< size_t k, class container>
 template< class Functor>
-void AB<k, Vector>::init( Functor& f, const Vector& u0,  double dt)
+void AB<k, container>::init( Functor& f, const container& u0,  double dt)
 {
     dt_ = dt;
-    Vector u1(u0), u2(u0);
+    container u1(u0), u2(u0);
     blas1::axpby( 1., u0, 0, u_);
     f( u1, f_[0]);
     for( unsigned i=1; i<k; i++)
@@ -100,9 +100,9 @@ void AB<k, Vector>::init( Functor& f, const Vector& u0,  double dt)
     }
 }
 
-template< size_t k, class Vector>
+template< size_t k, class container>
 template< class Functor>
-void AB<k, Vector>::operator()( Functor& f, Vector& u)
+void AB<k, container>::operator()( Functor& f, container& u)
 {
     blas1::axpby( 1., u_, 0, u);
     f( u, f_[0]);
@@ -116,15 +116,15 @@ void AB<k, Vector>::operator()( Functor& f, Vector& u)
 
 ///@cond
 //Euler specialisation
-template < class Vector>
-struct AB<1, Vector>
+template < class container>
+struct AB<1, container>
 {
     AB(){}
-    AB( const Vector& copyable):temp_(2, copyable){}
+    AB( const container& copyable):temp_(2, copyable){}
     template < class Functor>
-    void init( Functor& f, const Vector& u0, double dt){ dt_=dt;}
+    void init( Functor& f, const container& u0, double dt){ dt_=dt;}
     template < class Functor>
-    void operator()( Functor& f, Vector& u)
+    void operator()( Functor& f, container& u)
     {
         blas1::axpby( 1., u, 0, temp_[0]);
         f( u, temp_[1]);
@@ -132,7 +132,7 @@ struct AB<1, Vector>
     }
     private:
     double dt_;
-    std::vector<Vector> temp_;
+    std::vector<container> temp_;
 };
 ///@endcond
 ///@cond
@@ -184,26 +184,33 @@ struct MatrixTraits< detail::Implicit<M, V> >
     \left( 1  - \frac{\Delta t}{\gamma_0}  \hat L\right)  v^{n+1} &= {\bar v}^n  
     \end{align}
     \f]
+
+    with
+    \f[
+    \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
+    \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11} \\
+    \gamma_0 = \frac{11}{6} 
+\f]
 *
 * Uses blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step. 
 * Uses a conjugate gradient method for the implicit operator  
 * @ingroup time
-* @tparam Vector The Argument type used in the Functor class
+* @copydoc hide_container_lvl1
 */
-template<class Vector>
+template<class container>
 struct Karniadakis
 {
 
     /**
     * @brief Reserve memory for the integration
     *
-    * @param copyable Vector of size which is used in integration. 
+    * @param copyable container of size which is used in integration. 
     * @param max_iter parameter for cg
     * @param eps  parameter for cg
-    * A Vector object must be copy-constructible from copyable.
+    * A container object must be copy-constructible from copyable.
     */
-    Karniadakis( const Vector& copyable, unsigned max_iter, double eps): u_(3, Vector(copyable)), f_(3, Vector(copyable)), pcg( copyable, max_iter), eps_(eps){
+    Karniadakis( const container& copyable, unsigned max_iter, double eps): u_(3, container(copyable)), f_(3, container(copyable)), pcg( copyable, max_iter), eps_(eps){
         //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
         //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
         //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
@@ -216,11 +223,11 @@ struct Karniadakis
      * @brief Initialize with initial value
      *
      * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type Vector.
+        Its arguments both have to be of type container.
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
      * @tparam LinearOp models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type Vector. 
+        Its arguments both have to be of type container. 
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = L(y) translates to diff( y, y').
         Furthermore the routines weights() and precond() must be callable
@@ -232,17 +239,17 @@ struct Karniadakis
      * @note Both Functor and LinearOp may change their first (input) argument, i.e. the first argument need not be const
      */
     template< class Functor, class LinearOp>
-    void init( Functor& f, LinearOp& diff, const Vector& u0, double dt);
+    void init( Functor& f, LinearOp& diff, const container& u0, double dt);
 
     /**
     * @brief Advance u for one timestep
     *
     * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type Vector.
+        Its arguments both have to be of type container.
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = f(y) translates to f( y, y').
     * @tparam LinearOp models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type Vector.
+        Its arguments both have to be of type container.
         The first argument is the actual argument, The second contains
         the return value, i.e. y' = L(y) translates to diff( y, y').
         Furthermore the routines weights() and precond() must be callable
@@ -254,7 +261,7 @@ struct Karniadakis
      * @note Both Functor and LinearOp may change their first (input) argument, i.e. the first argument need not be const
     */
     template< class Functor, class LinearOp>
-    void operator()( Functor& f, LinearOp& diff, Vector& u);
+    void operator()( Functor& f, LinearOp& diff, container& u);
 
 
     /**
@@ -262,16 +269,16 @@ struct Karniadakis
      *
      * @return current head
      */
-    const Vector& head()const{return u_[0];}
+    const container& head()const{return u_[0];}
     /**
      * @brief return the last vector for which f was called
      *
      * @return current head^
      */
-    const Vector& last()const{return u_[1];}
+    const container& last()const{return u_[1];}
   private:
-    std::vector<Vector> u_, f_; 
-    CG< Vector> pcg;
+    std::vector<container> u_, f_; 
+    CG< container> pcg;
     double eps_;
     double dt_;
     double a[3];
@@ -280,13 +287,13 @@ struct Karniadakis
 };
 
 ///@cond
-template< class Vector>
+template< class container>
 template< class Functor, class Diffusion>
-void Karniadakis<Vector>::init( Functor& f, Diffusion& diff,  const Vector& u0,  double dt)
+void Karniadakis<container>::init( Functor& f, Diffusion& diff,  const container& u0,  double dt)
 {
     dt_ = dt;
-    Vector temp_(u0);
-    detail::Implicit<Diffusion, Vector> implicit( -dt, diff, temp_);
+    container temp_(u0);
+    detail::Implicit<Diffusion, container> implicit( -dt, diff, temp_);
     blas1::axpby( 1., u0, 0, temp_); //copy u0
     f( temp_, f_[0]);
     blas1::axpby( 1., u0, 0, u_[0]); 
@@ -300,9 +307,9 @@ void Karniadakis<Vector>::init( Functor& f, Diffusion& diff,  const Vector& u0, 
     f( temp_, f_[2]);
 }
 
-template<class Vector>
+template<class container>
 template< class Functor, class Diffusion>
-void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
+void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container& u)
 {
 
     blas1::axpby( 1., u_[0], 0, u); //save u_[0]
@@ -323,7 +330,7 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
     //double alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u_[0]); //extrapolate previous solutions
     blas2::symv( diff.weights(), u, u);
-    detail::Implicit<Diffusion, Vector> implicit( -dt_/11.*6., diff, f_[0]);
+    detail::Implicit<Diffusion, container> implicit( -dt_/11.*6., diff, f_[0]);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
     int rank;
@@ -351,19 +358,19 @@ void Karniadakis<Vector>::operator()( Functor& f, Diffusion& diff, Vector& u)
  * @brief Semi implicit Runge Kutta method after Yoh and Zhong (AIAA 42, 2004)
  *
  * @ingroup time
- * @tparam Vector Vector class to use
+ * @copydoc hide_container_lvl1
  */
-template <class Vector>
+template <class container>
 struct SIRK
 {
     /**
-     * @brief Construct from copyable Vector
+     * @brief Construct from copyable container
      *
-     * @param copyable Vector of right size
+     * @param copyable container of right size
      * @param max_iter maximum iterations for conjugate gradient
      * @param eps error for conjugate gradient
      */
-    SIRK(const Vector& copyable, unsigned max_iter, double eps): k_(3, copyable), f_(copyable), g_(copyable), rhs( f_), pcg( copyable, max_iter), eps_(eps)
+    SIRK(const container& copyable, unsigned max_iter, double eps): k_(3, copyable), f_(copyable), g_(copyable), rhs( f_), pcg( copyable, max_iter), eps_(eps)
     {
         w[0] = 1./8., w[1] = 1./8., w[2] = 3./4.;
         b[1][0] = 8./7., b[2][0] = 71./252., b[2][1] = 7./36.;
@@ -382,10 +389,10 @@ struct SIRK
      * @param dt timestep
      */
     template <class Explicit, class Imp>
-    void operator()( Explicit& f, Imp& g, const Vector& u0, Vector& u1, double dt)
+    void operator()( Explicit& f, Imp& g, const container& u0, container& u1, double dt)
     {
-        Vector u0_ = u0;
-        detail::Implicit<Imp, Vector> implicit( -dt*d[0], g, f_);
+        container u0_ = u0;
+        detail::Implicit<Imp, container> implicit( -dt*d[0], g, f_);
         f(u0_, f_);
         u0_ = u0;
         g(u0_, g_);
@@ -434,9 +441,9 @@ struct SIRK
      * @param tolerance tolerable error
      */
     template <class Explicit, class Imp>
-    void adaptive_step( Explicit& f, Imp& g, const Vector& u0, Vector& u1, double& dt, double tolerance)
+    void adaptive_step( Explicit& f, Imp& g, const container& u0, container& u1, double& dt, double tolerance)
     {
-        Vector temp = u0;
+        container temp = u0;
         this->operator()( f, g, u0, u1, dt/2.);
         this->operator()( f, g, u1, temp, dt/2.);
         this->operator()( f, g, u0, u1, dt);
@@ -449,13 +456,13 @@ struct SIRK
         if( dt < 0.75*dt_old) dt = 0.75*dt_old;
     }
     private:
-    std::vector<Vector> k_;
-    Vector f_, g_, rhs;
+    std::vector<container> k_;
+    container f_, g_, rhs;
     double w[3];
     double b[3][3];
     double d[3];
     double c[3][3];
-    CG<Vector> pcg; 
+    CG<container> pcg; 
     double eps_;
 };
 
