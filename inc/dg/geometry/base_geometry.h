@@ -14,12 +14,41 @@ namespace dg
  */
 struct aGeometry2d : public aTopology2d
 {
+    /**
+    * @brief The Jacobian of the coordinate transformation from physical to computational space
+    *
+    *  The elements of the Tensor are (if x,y are the coordinates in computational space and R,Z are the physical space coordinates)
+    \f[
+    J = \begin{pmatrix} x_R(x,y) & x_Z(x,y) \\ y_R(x,y) & y_Z(x,y) 
+    \end{pmatrix}
+    \f]
+    * @return Jacobian 
+    */
     SparseTensor<thrust::host_vector<double> > jacobian()const{
         return do_compute_jacobian();
     }
+    /**
+    * @brief The Metric tensor of the coordinate system 
+    *
+    *  The elements are the contravariant elements (if x,y are the coordinates) 
+    \f[
+    g = \begin{pmatrix} g^{xx}(x,y) & g^{xy}(x,y) \\  & g^{yy}(x,y) \end{pmatrix}
+    \f]
+    * @return symmetric tensor
+    */
     SparseTensor<thrust::host_vector<double> > metric()const { 
         return do_compute_metric(); 
     }
+    /**
+    * @brief The coordinate map from computational to physical space
+    *
+    *  The elements of the map are (if x,y are the coordinates in computational space and R,Z are the physical space coordinates)
+    \f[
+    R(x,y) \\
+    Z(x,y)
+    \f]
+    * @return a vector of size 2 
+    */
     std::vector<thrust::host_vector<double> > map()const{
         return do_compute_map();
     }
@@ -60,12 +89,46 @@ struct aGeometry2d : public aTopology2d
  */
 struct aGeometry3d : public aTopology3d
 {
+    /**
+    * @brief The Jacobian of the coordinate transformation from physical to computational space
+    *
+    *  The elements of the Tensor are (if x,y,z are the coordinates in computational space and R,Z,P are the physical space coordinates)
+    \f[
+    J = \begin{pmatrix} x_R(x,y,z) & x_Z(x,y,z) & x_\varphi(x,y,z) \\ 
+    y_R(x,y,z) & y_Z(x,y,z) & y_\varphi(x,y,z) \\
+    z_R(x,y,z) & z_Z(x,y,z) & z_\varphi(x,y,z)
+    \end{pmatrix}
+    \f]
+    * @return Jacobian 
+    */
     SparseTensor<thrust::host_vector<double> > jacobian()const{
         return do_compute_jacobian();
     }
+    /**
+    * @brief The Metric tensor of the coordinate system 
+    *
+    *  The elements are the contravariant elements (if x,y,z are the coordinates) 
+    \f[
+    g = \begin{pmatrix} g^{xx}(x,y,z) & g^{xy}(x,y,z) & g^{zz}(x,y,z)\\
+      & g^{yy}(x,y,z) & g^{yz}(x,y,z) \\
+      & & g^{zz}(x,y,z)\end{pmatrix}
+    \f]
+    * @return symmetric tensor
+    */
     SparseTensor<thrust::host_vector<double> > metric()const { 
         return do_compute_metric(); 
     }
+    /**
+    * @brief The coordinate map from computational to physical space
+    *
+    *  The elements of the map are (if x,y,z are the coordinates in computational space and R,Z,P are the physical space coordinates)
+    \f[
+    R(x,y,z) \\
+    Z(x,y,z) \\
+    \varphi(x,y,z)
+    \f]
+    * @return a vector of size 3 
+    */
     std::vector<thrust::host_vector<double> > map()const{
         return do_compute_map();
     }

@@ -15,12 +15,15 @@ namespace dg
 struct aMPIGeometry2d : public aMPITopology2d
 {
     typedef MPI_Vector<thrust::host_vector<double> > host_vector;
+    ///@copydoc aGeometry2d::jacobian()
     SparseTensor<host_vector > jacobian()const {
         return do_compute_jacobian();
     }
+    ///@copydoc aGeometry2d::metric()
     SparseTensor<host_vector > metric()const {
         return do_compute_metric();
     }
+    ///@copydoc aGeometry2d::map()
     std::vector<host_vector > map()const{
         return do_compute_map();
     }
@@ -58,12 +61,15 @@ struct aMPIGeometry2d : public aMPITopology2d
 struct aMPIGeometry3d : public aMPITopology3d
 {
     typedef MPI_Vector<thrust::host_vector<double> > host_vector;
+    ///@copydoc aGeometry3d::jacobian()
     SparseTensor<host_vector > jacobian()const{
         return do_compute_jacobian();
     }
+    ///@copydoc aGeometry3d::metric()
     SparseTensor<host_vector > metric()const { 
         return do_compute_metric(); 
     }
+    ///@copydoc aGeometry3d::map()
     std::vector<host_vector > map()const{
         return do_compute_map();
     }

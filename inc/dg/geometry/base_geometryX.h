@@ -14,12 +14,15 @@ namespace dg
  */
 struct aGeometryX2d : public aTopologyX2d
 {
+    ///@copydoc aGeometry2d::jacobian()
     SparseTensor<thrust::host_vector<double> > jacobian()const{
         return do_compute_jacobian();
     }
+    ///@copydoc aGeometry2d::metric()
     SparseTensor<thrust::host_vector<double> > metric()const { 
         return do_compute_metric(); 
     }
+    ///@copydoc aGeometry2d::map()
     std::vector<thrust::host_vector<double> > map()const{
         return do_compute_map();
     }
@@ -60,12 +63,15 @@ struct aGeometryX2d : public aTopologyX2d
  */
 struct aGeometryX3d : public aTopologyX3d
 {
+    ///@copydoc aGeometry3d::jacobian()
     SparseTensor<thrust::host_vector<double> > jacobian()const{
         return do_compute_jacobian();
     }
+    ///@copydoc aGeometry3d::metric()
     SparseTensor<thrust::host_vector<double> > metric()const { 
         return do_compute_metric(); 
     }
+    ///@copydoc aGeometry3d::map()
     std::vector<thrust::host_vector<double> > map()const{
         return do_compute_map();
     }
