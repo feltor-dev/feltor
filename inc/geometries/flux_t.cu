@@ -79,42 +79,32 @@ int main( int argc, char* argv[])
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
+    //////////////////////////////setup netcdf//////////////////
     int ncid;
     file::NC_Error_Handle err;
     err = nc_create( "flux.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
     err = file::define_dimensions(  ncid, dim2d, g2d_periodic);
-    int coordsID[2], onesID, defID, confID, volID, divBID;
+    int coordsID[2];
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
-    err = nc_def_var( ncid, "psi", NC_DOUBLE, 2, dim2d, &onesID);
-    err = nc_def_var( ncid, "d",    NC_DOUBLE, 2, dim2d, &defID);
-    err = nc_def_var( ncid, "R", NC_DOUBLE, 2, dim2d, &confID);
-    err = nc_def_var( ncid, "vol", NC_DOUBLE, 2, dim2d, &volID);
-    err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim2d, &divBID);
-    std::string coords = "x_XYP y_XYP";
-    err = nc_put_att_text(ncid, onesID, "coordinates", coords.size(), coords.data());
-    err = nc_put_att_text(ncid, defID, "coordinates", coords.size(), coords.data());
-    err = nc_put_att_text(ncid, confID, "coordinates", coords.size(), coords.data());
-    err = nc_put_att_text(ncid, volID, "coordinates", coords.size(), coords.data());
-    err = nc_put_att_text(ncid, divBID, "coordinates", coords.size(), coords.data());
-
-    thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
-    //g.display();
-    err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
-    dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d.size(); i++)
-    {
-        X[i] = g2d.map()[0][i];
-        Y[i] = g2d.map()[1][i];
-    }
-
-    dg::HVec temp0( g2d.size()), temp1(temp0);
-    dg::HVec w3d = dg::create::weights( g2d);
-
+    dg::HVec X=dg::pullback(dg::cooX2d, g2d), Y=dg::pullback(dg::cooY2d, g2d); //P = dg::pullback( dg::coo3, g);
     err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
+
+    std::string names[] = {"psi", "d", "R", "vol", "divB"};
+    unsigned size=5;
+    int varID[size];
+    for( unsigned i=0; i<size; i++)
+        err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 2, dim2d, &varID[i]);
+    ///////////////////////now fill variables///////////////////
+
+    thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
+    //g.display();
+    err = nc_put_var_double( ncid, varID[0], periodify(psi_p, g2d_periodic).data());
+    dg::HVec temp0( g2d.size()), temp1(temp0);
+    dg::HVec w3d = dg::create::weights( g2d);
 
     //compute and write deformation into netcdf
     dg::SparseTensor<dg::HVec> metric = g2d.metric();
@@ -123,11 +113,11 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( g_xy, g_xx, temp0);
     const dg::HVec ones = dg::evaluate( dg::one, g2d);
     X=g_yy;
-    err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
+    err = nc_put_var_double( ncid, varID[1], periodify(X, g2d_periodic).data());
     //compute and write conformalratio into netcdf
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     X=g_xx;
-    err = nc_put_var_double( ncid, confID, periodify(X, g2d_periodic).data());
+    err = nc_put_var_double( ncid, varID[2], periodify(X, g2d_periodic).data());
 
     std::cout << "Construction successful!\n";
 
@@ -137,7 +127,7 @@ int main( int argc, char* argv[])
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>()); //temp0=1/sqrt(g) = sqrt(g^xx g^yy - g^xy^2)
     dg::blas1::pointwiseDivide( ones, temp0, temp0); //temp0=sqrt(g)
     X=temp0;
-    err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
+    err = nc_put_var_double( ncid, varID[3], periodify(X, g2d_periodic).data());
     dg::blas1::axpby( 1., temp0, -1., vol_.value(), temp0); //temp0 = sqrt(g)-vol
     double error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot(vol_.value(), w3d, vol_.value()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
@@ -187,7 +177,7 @@ int main( int argc, char* argv[])
     //std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
     //dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
     //X = divB;
-    //err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
+    //err = nc_put_var_double( ncid, varID[4], periodify(X, g2d_periodic).data());
     //double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
     //std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
     err = nc_close( ncid);
