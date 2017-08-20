@@ -157,7 +157,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
             tempxx[i] = (jac_.value(0,0).data()[i]*jac_.value(0,0).data()[i]+jac_.value(0,1).data()[i]*jac_.value(0,1).data()[i]);
             tempxy[i] = (jac_.value(0,0).data()[i]*jac_.value(1,0).data()[i]+jac_.value(0,1).data()[i]*jac_.value(1,1).data()[i]);
             tempyy[i] = (jac_.value(1,0).data()[i]*jac_.value(1,0).data()[i]+jac_.value(1,1).data()[i]*jac_.value(1,1).data()[i]);
-            temppp[i] = 1./map_[2][i]/map_[2][i]; //1/R^2
+            temppp[i] = 1./map_[0].data()[i]/map_[0].data()[i]; //1/R^2
         }
         SparseTensor<host_vector > metric;
         metric.idx(0,0) = 0; metric.value(0) = host_vector(tempxx, communicator());

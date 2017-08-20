@@ -2,6 +2,7 @@
 
 #include "generatorX.h"
 #include "refined_gridX.h"
+#include "curvilinear.h"
 
 namespace dg
 {
@@ -88,23 +89,8 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const
     {
-        thrust::host_vector<double> tempxx( size()), tempxy(size()), tempyy(size()), temppp(size());
-        for( unsigned i=0; i<size(); i++)
-        {
-            tempxx[i] = (jac_.value(0,0)[i]*jac_.value(0,0)[i]+jac_.value(0,1)[i]*jac_.value(0,1)[i]);
-            tempxy[i] = (jac_.value(0,0)[i]*jac_.value(1,0)[i]+jac_.value(0,1)[i]*jac_.value(1,1)[i]);
-            tempyy[i] = (jac_.value(1,0)[i]*jac_.value(1,0)[i]+jac_.value(1,1)[i]*jac_.value(1,1)[i]);
-            temppp[i] = 1./map_[2][i]/map_[2][i]; //1/R^2
-        }
         SparseTensor<thrust::host_vector<double> > metric;
-        metric.idx(0,0) = 0; metric.value(0) = tempxx;
-        metric.idx(1,1) = 1; metric.value(1) = tempyy;
-        metric.idx(2,2) = 2; metric.value(2) = temppp;
-        if( !handle_.get().isOrthogonal())
-        {
-            metric.idx(0,1) = metric.idx(1,0) = 3; 
-            metric.value(3) = tempxy;
-        }
+        detail::square( jac_, map_[0], metric, handle_.get().isOrthogonal());
         return metric;
     }
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
