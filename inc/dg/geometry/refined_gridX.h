@@ -5,6 +5,7 @@
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/weightsX.cuh"
 #include "dg/backend/gridX.h"
+#include "base_geometryX.h"
 #include "refined_grid.h"
 
 

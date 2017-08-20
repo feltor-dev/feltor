@@ -67,9 +67,6 @@ int main( int argc, char* argv[])
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
-    std::cout << "Type new_n, multiple_x and multiple_y \n";
-    double n_ref, multiple_x, multiple_y;
-    std::cin >> n_ref>>multiple_x >> multiple_y;
     gp.display( std::cout);
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
@@ -116,7 +113,7 @@ int main( int argc, char* argv[])
 
     //compute and write deformation into netcdf
     dg::SparseTensor<dg::HVec> metric = g2d.metric();
-    dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
+    dg::HVec g_xx = metric.value(0,0), g_yy=metric.value(1,1);
     dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
     dg::HVec vol = vol_.value();
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
@@ -130,20 +127,14 @@ int main( int argc, char* argv[])
 
     std::cout << "Construction successful!\n";
 
-    //compute error in volume element
-    dg::blas1::pointwiseDot( g_xy, g_xy, temp1); double error = sqrt( dg::blas2::dot( temp1, w2d, temp1));
-    std::cout<< "    Error in Off-diagonal is "<<error<<"\n";
-
     //compare determinant vs volume form
     dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
-    dg::blas1::pointwiseDot( g_xy, g_xy, temp1);
-    dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
     dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
     dg::blas1::pointwiseDivide( ones, temp0, temp0);
     dg::blas1::transfer( temp0, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g2d_periodic).data());
     dg::blas1::axpby( 1., temp0, -1., vol, temp0);
-    error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
+    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     /*
