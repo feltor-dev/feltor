@@ -103,6 +103,11 @@ inline void symv( typename MatrixTraits<Precon>::value_type alpha,
                   typename MatrixTraits<Precon>::value_type beta, 
                   Vector& y)
 {
+    if(alpha == (typename MatrixTraits<Precon>::value_type)0) 
+    {
+        dg::blas1::scal( y, alpha);
+        return;
+    }
     dg::blas2::detail::doSymv( alpha, P, x, beta, y, 
                        typename dg::MatrixTraits<Precon>::matrix_category(), 
                        typename dg::VectorTraits<Vector>::vector_category() );

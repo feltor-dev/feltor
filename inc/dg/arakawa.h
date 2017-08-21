@@ -144,12 +144,10 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     //blas1::axpby( 1., dxlhs,  -0., helper); //x+ - +x
     //blas1::axpby( 0., result, -1., dylhs);  //+x - x+
 
-    blas2::symv( bdyf, helper_, result);      //dy*(dxl*r - l*dxr) -> result
-    blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
-    //now sum everything up
-    blas1::axpby( 1., dxlhs, 1., result); //result + dxlhs -> result
-    blas1::axpby( 1., dxrhs, 1., result); //result + dyrhs -> result
-    geo::dividePerpVolume( result, grid);
+    blas2::symv( 1., bdyf, helper_, 1., dxrhs);
+    blas2::symv( 1., bdxf, dylhs, 1., dxrhs);
+    geo::dividePerpVolume( dxrhs, grid);
+    result.swap(dxrhs);
 }
 
 }//namespace dg

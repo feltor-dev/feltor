@@ -65,7 +65,15 @@ struct EllSparseBlockMat
     * @param x input
     * @param y output may not equal input
     */
-    void symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const;
+    void symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const;
+    /**
+    * @brief Apply the matrix to a vector
+    *
+    * @param x input
+    * @param y output may not equal input
+    */
+    void symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const {symv( 1., x, 0., y);}
+
     /**
      * @brief Sets ranges from 0 to left_size and 0 to right_size
      */
@@ -182,7 +190,7 @@ struct CooSparseBlockMat
 ///@cond
 
 template<class value_type>
-void EllSparseBlockMat<value_type>::symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const
+void EllSparseBlockMat<value_type>::symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const
 {
     assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
     assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
@@ -194,10 +202,10 @@ void EllSparseBlockMat<value_type>::symv(const thrust::host_vector<value_type>& 
     for( int j=right_range[0]; j<right_range[1]; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right_size+j;
-        y[I] =0;
+        y[I] *= beta;
         for( int d=0; d<blocks_per_line; d++)
         for( int q=0; q<n; q++) //multiplication-loop
-            y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+            y[I] += alpha*data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j];
     }
 }
@@ -259,7 +267,6 @@ void CooSparseBlockMat<value_type>::symv( value_type alpha, const thrust::host_v
 {
     assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
     assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
-    assert( beta == 1);
 
     //simplest implementation
     for( int s=0; s<left_size; s++)
@@ -268,6 +275,7 @@ void CooSparseBlockMat<value_type>::symv( value_type alpha, const thrust::host_v
     for( int j=0; j<right_size; j++)
     {
         int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
+        y[I] *= beta;
         for( int q=0; q<n; q++) //multiplication-loop
             y[I] += alpha*data[ (data_idx[i]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i])*n+q)*right_size+j];
