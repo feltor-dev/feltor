@@ -23,7 +23,7 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
-typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
+typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
 using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
@@ -72,13 +72,13 @@ int main( int argc, char* argv[])
    
     //Make grids: both the dimensions of grid and grid_out must be dividable by the mpi process numbers in that direction
 
-    dg::CylindricalMPIGrid3d<dg::MDVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, comm);  
-    dg::CylindricalMPIGrid3d<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, p.bc, p.bc, dg::PER, comm);  
+    dg::CylindricalMPIGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER, comm);  
+    dg::CylindricalMPIGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, p.bc, p.bc, dg::PER, comm);  
      
     if(rank==0)std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
+    eule::Feltor<dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
     if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    eule::Rolkar< dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
