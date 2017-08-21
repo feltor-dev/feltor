@@ -1,20 +1,20 @@
 #error Documentation only
 /*! 
  * 
- * @defgroup grids 0. New Geometry classes
- * @defgroup generators 1. Grid generators
+ * @defgroup grids 1. New Geometry classes
+ * @defgroup generators 2. Grid generators
  *
       All the grids introduced by this extension can be constructed with 
       generator classes. 
- * @defgroup fluxfunctions 2. New functors based on the magnetic field geometry
+ * @defgroup fluxfunctions 3. New functors based on the magnetic field geometry
 
  All functors in this section model two or three-dimensional functions, i.e. they all overload the operator() like aBinaryOperator
  * @{
-      @defgroup geom 2.1 new flux functions and derivatives
-      @defgroup magnetic 2.2 magnetic field and associated functors
-      @defgroup profiles 2.3 miscellaneous functors based on flux functions
+      @defgroup geom 3.1 new flux functions and derivatives
+      @defgroup magnetic 3.2 magnetic field and associated functors
+      @defgroup profiles 3.3 miscellaneous functors based on flux functions
  * @}
- * @defgroup misc 3. Miscellaneous additions
+ * @defgroup misc 4. Miscellaneous additions
  *
  * Objects that are used to define and integrate the magnetic field lines. 
  * All objects can be used in the evaluation() function.
