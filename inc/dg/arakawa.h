@@ -32,14 +32,14 @@ struct ArakawaX
      * @brief Create Arakawa on a grid
      * @param g The grid
      */
-    ArakawaX( Geometry g);
+    ArakawaX( const Geometry& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
      * @param g The grid
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    ArakawaX( Geometry g, bc bcx, bc bcy);
+    ArakawaX( const Geometry& g, bc bcx, bc bcy);
 
     /**
      * @brief Compute poisson's bracket
@@ -92,7 +92,7 @@ struct ArakawaX
 };
 
 template<class Geometry, class Matrix, class container>
-ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g ): 
+ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs), 
     bdxf( dg::create::dx( g, g.bcx())),
     bdyf( dg::create::dy( g, g.bcy()))
@@ -102,7 +102,7 @@ ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g ):
     dg::tensor::sqrt(perp_vol_inv_);
 }
 template<class Geometry, class Matrix, class container>
-ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g, bc bcx, bc bcy): 
+ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf(dg::create::dx( g, bcx)),
     bdyf(dg::create::dy( g, bcy))

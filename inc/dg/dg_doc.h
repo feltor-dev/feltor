@@ -110,10 +110,10 @@
   *  - double operator()(double, double, double) const
   */
  /** @class hide_geometry
-  * @tparam Geometry One of the geometry classes. The functions dg::create::dx( g, bcx) and
-  * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. 
-  * Furthermore dg::evaluate( one, g) must return an instance of the container class.
-     as do calls to dg::create::weights(g) and dg::create::inv_weights(g)
+  * @tparam Geometry A type that is or derives from one of the abstract geometry base classes (e.g. aGeometry2d, aGeometry3d, aMPIGeometry2d, ...)
+  * The functions dg::create::dx() and dg::create::dy() must be callable and return an instance convertible to the Matrix class. 
+  * Furthermore dg::evaluate() must return an instance of the container class.
+     as do calls to dg::create::weights() and dg::create::inv_weights()
   */
 
  /** @class hide_container_lvl1

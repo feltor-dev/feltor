@@ -35,7 +35,7 @@ struct Helmholtz
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz( Geometry g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
+    Helmholtz( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, normed, dir, jfactor), 
         temp_(dg::evaluate(dg::one, g)),
         alpha_(alpha)
@@ -52,7 +52,7 @@ struct Helmholtz
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
+    Helmholtz( const Geometry& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
         temp_(dg::evaluate(dg::one, g)), 
         alpha_(alpha)
@@ -151,7 +151,7 @@ struct Helmholtz2
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz2( Geometry g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
+    Helmholtz2( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, normed, dir, jfactor), 
         temp1_(dg::evaluate(dg::one, g)),temp2_(temp1_), chi_(temp1_),
         alpha_(alpha)
@@ -168,7 +168,7 @@ struct Helmholtz2
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz2( Geometry g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
+    Helmholtz2( const Geometry& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
         temp1_(dg::evaluate(dg::one, g)), temp2_(temp1_),chi_(temp1_),
         alpha_(alpha)

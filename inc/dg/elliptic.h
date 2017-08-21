@@ -1,14 +1,15 @@
 #pragma once
 
 #include "blas.h"
-#include "geometry/geometry.h"
 #include "enums.h"
+#include "backend/memory.h"
 #include "backend/evaluation.cuh"
 #include "backend/derivatives.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_derivatives.h"
 #include "backend/mpi_evaluation.h"
 #endif
+#include "geometry/geometry.h"
 
 /*! @file 
 
@@ -63,7 +64,7 @@ class Elliptic
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @note chi is assumed 1 per default
      */
-    Elliptic( Geometry g, norm no = not_normed, direction dir = forward, double jfactor=1.): 
+    Elliptic( const Geometry& g, norm no = not_normed, direction dir = forward, double jfactor=1.): 
         no_(no), jfactor_(jfactor)
     { 
         construct( g, g.bcx(), g.bcy(), dir);
@@ -79,7 +80,7 @@ class Elliptic
 
      * @param jfactor scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      */
-    Elliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.): 
+    Elliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.): 
         no_(no), jfactor_(jfactor)
     { 
         construct( g, bcx, bcy, dir);
@@ -238,7 +239,7 @@ struct GeneralElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralElliptic( Geometry g, norm no = not_normed, direction dir = forward): 
+    GeneralElliptic( const Geometry& g, norm no = not_normed, direction dir = forward): 
         leftx ( dg::create::dx( g, inverse( g.bcx()), inverse(dir))),
         lefty ( dg::create::dy( g, inverse( g.bcy()), inverse(dir))),
         leftz ( dg::create::dz( g, inverse( g.bcz()), inverse(dir))),
@@ -250,7 +251,7 @@ struct GeneralElliptic
         weights_(dg::create::volume(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0),
-        no_(no), g_(g)
+        no_(no)
     { 
         vol_=dg::tensor::determinant(g.metric());
         dg::tensor::invert(vol_);
@@ -266,7 +267,7 @@ struct GeneralElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralElliptic( Geometry g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward): 
+    GeneralElliptic( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward): 
         leftx ( dg::create::dx( g, inverse( bcx), inverse(dir))),
         lefty ( dg::create::dy( g, inverse( bcy), inverse(dir))),
         leftz ( dg::create::dz( g, inverse( bcz), inverse(dir))),
@@ -278,7 +279,7 @@ struct GeneralElliptic
         weights_(dg::create::volume(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0),
-        no_(no), g_(g)
+        no_(no)
     { 
         vol_=dg::tensor::determinant(g.metric());
         dg::tensor::invert(vol_);
@@ -405,7 +406,6 @@ struct GeneralElliptic
     container xchi, ychi, zchi, xx, yy, zz, temp0, temp1;
     norm no_;
     SparseElement<container> vol_;
-    Geometry g_;
 };
 
 /**
@@ -441,7 +441,7 @@ struct GeneralEllipticSym
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralEllipticSym( Geometry g, norm no = not_normed, direction dir = forward): 
+    GeneralEllipticSym( const Geometry& g, norm no = not_normed, direction dir = forward): 
         ellipticForward_( g, no, dir), ellipticBackward_(g,no,inverse(dir)),
         weights_(dg::create::volume(g)), precond_(dg::create::inv_weights(g)), 
         temp_( dg::evaluate( one, g) )
@@ -457,7 +457,7 @@ struct GeneralEllipticSym
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralEllipticSym( Geometry g, bc bcx, bc bcy,bc bcz, norm no = not_normed, direction dir = forward): 
+    GeneralEllipticSym( const Geometry& g, bc bcx, bc bcy,bc bcz, norm no = not_normed, direction dir = forward): 
         ellipticForward_( g, bcx, bcy, no, dir), ellipticBackward_(g,bcx,bcy,no,inverse(dir)),
         weights_(dg::create::volume(g)), precond_(dg::create::inv_weights(g)), 
         temp_( dg::evaluate( one, g) )
@@ -575,7 +575,7 @@ struct TensorElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    TensorElliptic( Geometry g, norm no = not_normed, direction dir = forward): 
+    TensorElliptic( const Geometry& g, norm no = not_normed, direction dir = forward): 
         no_(no), g_(g)
     { 
         construct( g, g.bcx(), g.bcy(), dir);
@@ -588,7 +588,7 @@ struct TensorElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    TensorElliptic( Geometry g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
+    TensorElliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
         no_(no), g_(g)
     { 
         construct( g, bcx, bcy, dir);
@@ -616,7 +616,7 @@ struct TensorElliptic
     void transform_and_set( const ChiRR& chiRR, const ChiRZ& chiRZ, const ChiZZ& chiZZ)
     {
         typename GeometryTraits<Geometry>::host_vector chiXX, chiXY, chiYY;
-        dg::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_);
+        dg::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_.get());
         dg::blas1::transfer( chiXX, chixx_);
         dg::blas1::transfer( chiXY, chixy_);
         dg::blas1::transfer( chiYY, chiyy_);
@@ -671,7 +671,7 @@ struct TensorElliptic
             dg::blas2::symv( weights_wo_vol, y, y);
     }
     private:
-    void construct( Geometry g, bc bcx, bc bcy, direction dir)
+    void construct( const Geometry& g, bc bcx, bc bcy, direction dir)
     {
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), leftx);
         dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), lefty);
@@ -711,7 +711,7 @@ struct TensorElliptic
     container chixx_, chixy_, chiyy_, tempx_, tempy_, gradx_;
     SparseElement<container> vol_;
     norm no_;
-    Geometry g_;
+    Handle<Geometry> g_;
 };
 
 ///@cond

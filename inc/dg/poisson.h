@@ -33,14 +33,14 @@ struct Poisson
      * @brief Create Poisson on a grid
      * @param g The grid
      */
-    Poisson( Geometry g);
+    Poisson( const Geometry& g);
     /**
      * @brief Create Poisson on a grid using different boundary conditions
      * @param g The grid
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    Poisson( Geometry g, bc bcx, bc bcy);
+    Poisson( const Geometry& g, bc bcx, bc bcy);
     /**
      * @brief Create Poisson on a grid using different boundary conditions
      * @param g The grid
@@ -49,7 +49,7 @@ struct Poisson
      * @param bcylhs The lhs boundary condition in y
      * @param bcyrhs The rhs boundary condition in y
      */
-    Poisson( Geometry g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs );
+    Poisson( const Geometry& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs );
     /**
      * @brief Compute poisson's bracket
      *
@@ -116,7 +116,7 @@ struct Poisson
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
 template< class Geometry, class Matrix, class container>
-Poisson<Geometry, Matrix, container>::Poisson( Geometry g ): 
+Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g ): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
     dxlhs_(dg::create::dx( g, g.bcx(),dg::centered)),
     dylhs_(dg::create::dy( g, g.bcy(),dg::centered)),
@@ -129,7 +129,7 @@ Poisson<Geometry, Matrix, container>::Poisson( Geometry g ):
 }
 
 template< class Geometry, class Matrix, class container>
-Poisson<Geometry, Matrix, container>::Poisson( Geometry g, bc bcx, bc bcy): 
+Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g, bc bcx, bc bcy): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
     dxlhs_(dg::create::dx( g, bcx,dg::centered)),
     dylhs_(dg::create::dy( g, bcy,dg::centered)),
@@ -142,7 +142,7 @@ Poisson<Geometry, Matrix, container>::Poisson( Geometry g, bc bcx, bc bcy):
 }
 
 template< class Geometry, class Matrix, class container>
-Poisson<Geometry, Matrix, container>::Poisson(  Geometry g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs): 
+Poisson<Geometry, Matrix, container>::Poisson(  const Geometry& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs): 
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
     dxlhs_(dg::create::dx( g, bcxlhs,dg::centered)),
     dylhs_(dg::create::dy( g, bcylhs,dg::centered)),
