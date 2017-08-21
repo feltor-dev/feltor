@@ -6,7 +6,7 @@
 
 namespace dg
 {
-///@addtogroup geometry
+///@addtogroup grids
 ///@{
 
 /**

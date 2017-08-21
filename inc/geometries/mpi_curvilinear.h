@@ -17,7 +17,7 @@ namespace dg
 struct CurvilinearProductMPIGrid3d; 
 ///@endcond
 //
-///@addtogroup geometry
+///@addtogroup grids
 ///@{
 /**
  * @brief A two-dimensional MPI grid based on curvilinear coordinates
