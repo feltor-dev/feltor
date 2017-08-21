@@ -198,12 +198,12 @@ void transform(
 ///@endcond
 
 /**
- * @brief The High PrEcision Conformal grid generaTOR (models aGenerator)
+ * @brief The High PrEcision Conformal grid generaTOR 
  *
  * @ingroup generators
  * @tparam IMatrix The interpolation matrix type
  * @tparam Matrix  The matrix type in the elliptic equation
- * @tparam container models aContainer 
+ * @copydoc hide_container
  */
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>
 struct Hector : public aGenerator2d

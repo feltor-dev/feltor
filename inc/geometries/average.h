@@ -91,7 +91,7 @@ struct Alpha
  \f[ \langle f\rangle(\psi_0) = \frac{1}{A} \int dV \delta(\psi_p(R,Z)-\psi_0) |\nabla\psi_p|f(R,Z) \f]
 
  with \f$ A = \int dV \delta(\psi_p(R,Z)-\psi_0)|\nabla\psi_p|\f$
- * @tparam container  The container class of the vector to average
+ * @copydoc hide_container
  * @ingroup misc
  */
 template <class container = thrust::host_vector<double> >
@@ -146,7 +146,7 @@ struct FluxSurfaceAverage
  * \f[ q(\psi_0) = \frac{1}{2\pi} \int dV |\nabla\psi_p| \delta(\psi_p-\psi_0) \alpha( R,Z) \f]
 
 where \f$ \alpha\f$ is the dg::geo::Alpha functor.
- * @tparam container The container class to use aContainer
+ * @copydoc hide_container
  * @ingroup misc
  *
  */

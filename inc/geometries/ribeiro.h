@@ -181,7 +181,7 @@ struct FieldFinv
 ///@endcond
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 (models aGenerator)
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 
  * @ingroup generators
  */
 struct Ribeiro : public aGenerator2d

@@ -236,7 +236,7 @@ struct XFieldFinv
 ///@endcond
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 (models aGeneratorX)
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 
  * @ingroup generators
  * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */

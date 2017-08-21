@@ -114,7 +114,7 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
 ///@endcond
 
 /**
- * @brief Choose points on inside or outside line (models aGeneratorX)
+ * @brief Choose points on inside or outside line 
  *
  * @ingroup generators
  */
@@ -179,7 +179,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
 };
 
 /**
- * @brief Choose points on separatrix (models aGeneratorX)
+ * @brief Choose points on separatrix 
  *
  * @ingroup generators
  */
