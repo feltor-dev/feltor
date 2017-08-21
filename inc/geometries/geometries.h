@@ -1,15 +1,9 @@
 #pragma once
 
 //include grids
-#include "conformal.h"
-#include "orthogonal.h"
 #include "curvilinear.h"
-#include "refined_conformal.h"
-#include "refined_orthogonal.h"
 #include "refined_curvilinear.h"
 #ifdef MPI_VERSION
-#include "mpi_conformal.h"
-#include "mpi_orthogonal.h"
 #include "mpi_curvilinear.h"
 #endif
 
