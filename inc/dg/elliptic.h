@@ -148,26 +148,23 @@ class Elliptic
     {
         //compute gradient
         dg::blas2::gemv( rightx, x, tempx); //R_x*f 
-        dg::blas2::gemv( righty, x, tempy); //R_y*f
+        dg::blas2::gemv( righty, x, y); //R_y*f
 
-        dg::geo::volRaisePerpIndex( tempx, tempy, gradx, y, g_);
+        dg::geo::volRaisePerpIndex( tempx, y, gradx, tempy, g_);
 
         //multiply with chi 
         dg::blas1::pointwiseDot( xchi, gradx, gradx); //Chi*R_x*x 
-        dg::blas1::pointwiseDot( xchi, y, y); //Chi*R_x*x 
+        dg::blas1::pointwiseDot( xchi, tempy, tempy); //Chi*R_x*x 
 
         //now take divergence
-        dg::blas2::gemv( leftx, gradx, tempx);  
-        dg::blas2::gemv( lefty, y, tempy);  
-        dg::blas1::axpby( -1., tempx, -1., tempy, y); //-D_xx - D_yy 
+        dg::blas2::symv( lefty, tempy, y);  
+        dg::blas2::symv( -1., leftx, gradx, -1., y);  
         if( no_ == normed)
             dg::geo::divideVolume( y, g_);
 
         //add jump terms
-        dg::blas2::symv( jumpX, x, tempx);
-        dg::blas1::axpby( jfactor_, tempx, 1., y, y); 
-        dg::blas2::symv( jumpY, x, tempy);
-        dg::blas1::axpby( jfactor_, tempy, 1., y, y); 
+        dg::blas2::symv( jfactor_, jumpX, x, 1., y);
+        dg::blas2::symv( jfactor_, jumpY, x, 1., y);
         if( no_ == not_normed)//multiply weights without volume
             dg::blas2::symv( weights_wo_vol, y, y);
 
