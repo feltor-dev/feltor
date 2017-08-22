@@ -17,16 +17,16 @@ void pointwiseDot( double alpha, const std::vector<const container* >& x1, const
                    double gamma, std::vector<container* > & z)
 {
     unsigned K=x1.size();
-    //const double * RESTRICT x1_ptr[K]; 
-    //const double * RESTRICT y1_ptr[K]; 
-    //const double * RESTRICT x2_ptr[K]; 
-    //const double * RESTRICT y2_ptr[K]; 
-    //double * RESTRICT z_ptr[K];
-    const double *  x1_ptr[K]; 
-    const double *  y1_ptr[K]; 
-    const double *  x2_ptr[K]; 
-    const double *  y2_ptr[K]; 
-    double *  z_ptr[K];
+    const double * RESTRICT x1_ptr[K]; 
+    const double * RESTRICT y1_ptr[K]; 
+    const double * RESTRICT x2_ptr[K]; 
+    const double * RESTRICT y2_ptr[K]; 
+    double * RESTRICT z_ptr[K];
+    //const double *  x1_ptr[K]; 
+    //const double *  y1_ptr[K]; 
+    //const double *  x2_ptr[K]; 
+    //const double *  y2_ptr[K]; 
+    //double *  z_ptr[K];
     for(unsigned i=0; i<K; i++)
     {
         x1_ptr[i] = thrust::raw_pointer_cast( &(x1[i]->data()[0]));
