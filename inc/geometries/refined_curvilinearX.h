@@ -1,7 +1,7 @@
 #pragma once
 
+#include "dg/geometry/refined_gridX.h"
 #include "generatorX.h"
-#include "refined_gridX.h"
 #include "curvilinear.h"
 
 namespace dg

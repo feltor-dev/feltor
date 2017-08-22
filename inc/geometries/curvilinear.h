@@ -2,7 +2,7 @@
 
 #include "dg/backend/memory.h"
 #include "dg/blas1.h"
-#include "base_geometry.h"
+#include "dg/geometry/base_geometry.h"
 #include "generator.h"
 
 namespace dg

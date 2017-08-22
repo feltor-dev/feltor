@@ -16,6 +16,7 @@
 //#include "ds.h"
 #include "init.h"
 #include "testfunctors.h"
+#include "curvilinear.h"
 
 #include "file/nc_utilities.h"
 using namespace dg::geo::solovev;

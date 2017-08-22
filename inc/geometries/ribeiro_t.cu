@@ -9,7 +9,7 @@
 #include "dg/functors.h"
 
 #include "dg/backend/timer.cuh"
-#include "dg/geometry/curvilinear.h"
+#include "curvilinear.h"
 //#include "guenther.h"
 #include "solovev.h"
 #include "ribeiro.h"

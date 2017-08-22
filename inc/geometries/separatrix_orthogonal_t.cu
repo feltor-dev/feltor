@@ -13,8 +13,8 @@
 #include "taylor.h"
 //#include "guenther.h"
 #include "dg/geometry/transform.h"
-#include "dg/geometry/curvilinearX.h"
-#include "dg/geometry/refined_curvilinearX.h"
+#include "refined_curvilinearX.h"
+#include "curvilinearX.h"
 #include "separatrix_orthogonal.h"
 #include "init.h"
 

@@ -7,7 +7,7 @@
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
-#include "dg/geometry/curvilinear.h"
+#include "curvilinear.h"
 
 #include "dg/backend/timer.cuh"
 //#include "guenther.h"

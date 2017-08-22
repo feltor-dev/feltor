@@ -4,8 +4,8 @@
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/functions.h"
 #include "dg/blas1.h"
-#include "base_geometryX.h"
-#include "generatorX.h"
+#include "dg/geometry/base_geometryX.h"
+#include "dg/geometry/generatorX.h"
 #include "curvilinear.h"
 
 namespace dg

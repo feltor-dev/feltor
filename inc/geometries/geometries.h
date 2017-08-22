@@ -2,7 +2,6 @@
 
 //include grids
 #include "curvilinear.h"
-#include "refined_curvilinear.h"
 #ifdef MPI_VERSION
 #include "mpi_curvilinear.h"
 #endif

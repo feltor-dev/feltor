@@ -14,7 +14,7 @@
 #include "solovev.h"
 #include "taylor.h"
 //#include "ribeiroX.h"
-#include "dg/geometry/curvilinearX.h"
+#include "curvilinearX.h"
 #include "separatrix_orthogonal.h"
 #include "testfunctors.h"
 

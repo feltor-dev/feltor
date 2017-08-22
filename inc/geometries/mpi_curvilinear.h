@@ -5,6 +5,7 @@
 #include "dg/backend/mpi_evaluation.h"
 #include "dg/backend/mpi_grid.h"
 #include "dg/backend/mpi_vector.h"
+#include "dg/geometry/mpi_base.h"
 #include "curvilinear.h"
 #include "generator.h"
 
