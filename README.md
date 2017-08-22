@@ -111,9 +111,11 @@ input/output parameters, etc. can be generated as a pdf with
 ## 2. Further reading
 Please check out our [wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information and user oriented documentation. 
 Moreover, we maintain tex files in every src folder for technical documentation, 
- which can be compiled with 
+ which can be compiled using pdflatex with 
 `make doc ` in the respective src folder.
-The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) of the dG library was generated with [Doxygen](http://www.doxygen.org) from source code.
+The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) of the dG library was generated with [Doxygen](http://www.doxygen.org). 
+You can generate a local version from source code
+by typing `make doc` in the folder `path/to/feltor/inc/doc` and then open `index.html` with your favorite browser.
 
 ## 3. Contributions and Acknowledgements
 For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).

@@ -42,8 +42,8 @@ struct DS
     * @param dir the direction affects both the operator() and the symv function
     @param jumpX determines if a jump matrix is added in X-direction
     */
-    template<class MagneticField, class Geometry>
-    DS(const MagneticField& field, Geometry, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool dependsOnX = true, bool dependsOnY=true, unsigned mx=1, unsigned my=1);
+    template<class Geometry>
+    DS(const dg::geo::TokamakMagneticField& field, const Geometry& g, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool dependsOnX = true, bool dependsOnY=true, bool dependsOnZ=false, unsigned mx=1, unsigned my=1);
 
     /**
     * @brief Apply the forward derivative on a 3d vector
