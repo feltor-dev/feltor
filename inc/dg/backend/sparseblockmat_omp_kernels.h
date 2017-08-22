@@ -65,89 +65,6 @@ void ell_multiply_kernel33( value_type alpha, value_type beta,
         }
     if( trivial)
     {
-<<<<<<< HEAD
-#pragma omp parallel for 
-    for( int s=0; s<left_size; s++)
-    for( int i=0; i<1; i++)
-    for( int k=0; k<3; k++)
-    for( int j=right_range[0]; j<right_range[1]; j++)
-    {
-        value_type temp = 0;
-        int B0 = (data_idx[i*3+0]*3+k)*3;
-        int B1 = (data_idx[i*3+1]*3+k)*3;
-        int B2 = (data_idx[i*3+2]*3+k)*3;
-        int J0 = (s*num_cols+cols_idx[i*3+0])*3;
-        int J1 = (s*num_cols+cols_idx[i*3+1])*3;
-        int J2 = (s*num_cols+cols_idx[i*3+2])*3;
-        temp +=data[ B0+0]* x[(J0+0)*right_size+j];
-        temp +=data[ B0+1]* x[(J0+1)*right_size+j];
-        temp +=data[ B0+2]* x[(J0+2)*right_size+j];
-
-        temp +=data[ B1+0]* x[(J1+0)*right_size+j];
-        temp +=data[ B1+1]* x[(J1+1)*right_size+j];
-        temp +=data[ B1+2]* x[(J1+2)*right_size+j];
-
-        temp +=data[ B2+0]* x[(J2+0)*right_size+j];
-        temp +=data[ B2+1]* x[(J2+1)*right_size+j];
-        temp +=data[ B2+2]* x[(J2+2)*right_size+j];
-        int I = ((s*num_rows + i)*3+k)*right_size+j;
-        y[I]=alpha*temp+beta*y[I];
-    }
-#pragma omp parallel for collapse(2)
-    for( int s=0; s<left_size; s++)
-    for( int i=1; i<num_rows-1; i++)
-    for( int k=0; k<3; k++)
-    for( int j=right_range[0]; j<right_range[1]; j++)
-    {
-        value_type temp = 0;
-        int B0 = (0*3+k)*3;
-        int B1 = (1*3+k)*3;
-        int B2 = (2*3+k)*3;
-        int J0 = (s*num_cols+i+0-1)*3;
-        int J1 = (s*num_cols+i+1-1)*3;
-        int J2 = (s*num_cols+i+2-1)*3;
-        temp +=data[ B0+0]* x[(J0+0)*right_size+j];
-        temp +=data[ B0+1]* x[(J0+1)*right_size+j];
-        temp +=data[ B0+2]* x[(J0+2)*right_size+j];
-
-        temp +=data[ B1+0]* x[(J1+0)*right_size+j];
-        temp +=data[ B1+1]* x[(J1+1)*right_size+j];
-        temp +=data[ B1+2]* x[(J1+2)*right_size+j];
-
-        temp +=data[ B2+0]* x[(J2+0)*right_size+j];
-        temp +=data[ B2+1]* x[(J2+1)*right_size+j];
-        temp +=data[ B2+2]* x[(J2+2)*right_size+j];
-        int I = ((s*num_rows + i)*3+k)*right_size+j;
-        y[I]=alpha*temp+beta*y[I];
-    }
-#pragma omp parallel for 
-    for( int s=0; s<left_size; s++)
-    for( int i=num_rows-1; i<num_rows; i++)
-    for( int k=0; k<3; k++)
-    for( int j=right_range[0]; j<right_range[1]; j++)
-    {
-        value_type temp = 0;
-        int B0 = (data_idx[i*3+0]*3+k)*3;
-        int B1 = (data_idx[i*3+1]*3+k)*3;
-        int B2 = (data_idx[i*3+2]*3+k)*3;
-        int J0 = (s*num_cols+cols_idx[i*3+0])*3;
-        int J1 = (s*num_cols+cols_idx[i*3+1])*3;
-        int J2 = (s*num_cols+cols_idx[i*3+2])*3;
-        temp +=data[ B0+0]* x[(J0+0)*right_size+j];
-        temp +=data[ B0+1]* x[(J0+1)*right_size+j];
-        temp +=data[ B0+2]* x[(J0+2)*right_size+j];
-
-        temp +=data[ B1+0]* x[(J1+0)*right_size+j];
-        temp +=data[ B1+1]* x[(J1+1)*right_size+j];
-        temp +=data[ B1+2]* x[(J1+2)*right_size+j];
-
-        temp +=data[ B2+0]* x[(J2+0)*right_size+j];
-        temp +=data[ B2+1]* x[(J2+1)*right_size+j];
-        temp +=data[ B2+2]* x[(J2+2)*right_size+j];
-        int I = ((s*num_rows + i)*3+k)*right_size+j;
-        y[I]=alpha*temp+beta*y[I];
-    }
-=======
 	#pragma omp parallel for collapse(2)
 	for( int s=0; s<left_size; s++)
 	{
@@ -177,12 +94,11 @@ void ell_multiply_kernel33( value_type alpha, value_type beta,
 				    temp +=data[ B2+1]* x[(J2+1)*right_size+j];
 				    temp +=data[ B2+2]* x[(J2+2)*right_size+j];
 				    int I = ((s*num_rows + i)*3+k)*right_size+j;
-				    y[I]=temp;
+                    y[I]=alpha*temp+beta*y[I];
 				}
 			}
 		}
 	}
->>>>>>> servat
     }
     else 
         ell_multiply_kernel(alpha,beta, data, cols_idx, data_idx, num_rows, num_cols, 3, 3, left_size, right_size, right_range,  x, y);
