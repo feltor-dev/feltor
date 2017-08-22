@@ -26,7 +26,7 @@ endif #device=omp
 ifeq ($(strip $(device)),mic)
 CFLAGS+=-Wall -x c++
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
-CFLAGS+= $(OMPFLAG) -mmic 
+CFLAGS+= $(OMPFLAG) #-mmic 
 MPICFLAGS+=$(CFLAGS) #includes values in CFLAGS defined later
-OPT+=-xMIC-AVX512 -fma -finline-functions -align
+OPT=-O3 -xMIC-AVX512 -fma -finline-functions -align -restrict
 endif #device=mic

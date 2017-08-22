@@ -5,7 +5,7 @@ INCLUDE += -I$(NETCDF_INC) -I$(HDF5_INC)
 GLFLAGS  = -lm
 CC=icc
 MPICC=mpiicc
-OPT=-O3 -xHost -restrict
+OPT=-O3 -xHost -restrict # overwritten for mic in devices.mk
 #MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
 OMPFLAG=-qopenmp
 JSONLIB=-L$(HOME)/include/json/../../src/lib_json -ljsoncpp # json library for input parameters
@@ -22,5 +22,9 @@ endif
 #module load netcdf/4.4.1--intelmpi--2017--binary 
 
 
+###########configure mic jobs with#########################
+#mcdram=cache:numa=quadrant
+#export KMP_AFFINITY=scatter
+#export OM_NUM_THREADS=68
 
 
