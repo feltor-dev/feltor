@@ -1,15 +1,25 @@
 
+#if defined(__INTEL_COMPILER)
+  // On Intel compiler, you need to pass the -restrict compiler flag in addition to your own compiler flags.
+# define RESTRICT restrict
+#elif defined(__GNUG__)
+# define RESTRICT __restrict__
+#else
+# warning Missing restrict keyword for this compiler
+# define RESTRICT
+#endif
+
 namespace dg{
 
 // multiply kernel
 template<class value_type>
 void ell_multiply_kernel(
-         const value_type * restrict data, const int * restrict cols_idx, const int * restrict data_idx, 
+         const value_type * RESTRICT data, const int * RESTRICT cols_idx, const int * RESTRICT data_idx, 
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, 
          const int left_size, const int right_size, 
-         const int * restrict right_range,
-         const value_type * restrict x, value_type * restrict y
+         const int * RESTRICT right_range,
+         const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
     //simplest implementation
@@ -35,11 +45,11 @@ void ell_multiply_kernel(
 // multiply kernel n=3, 3 blocks per line
 template<class value_type>
 void ell_multiply_kernel33(
-         const value_type * restrict data, const int * restrict cols_idx, const int * restrict data_idx, 
+         const value_type * RESTRICT data, const int * RESTRICT cols_idx, const int * RESTRICT data_idx, 
          const int num_rows, const int num_cols, 
          const int left_size, const int right_size, 
          const int* right_range,
-         const value_type * restrict x, value_type * restrict y
+         const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
  // left_size = 1
@@ -97,11 +107,11 @@ void ell_multiply_kernel33(
 // multiply kernel, n=3, 2 blocks per line
 template<class value_type>
 void ell_multiply_kernel32(
-         const value_type * restrict data, const int * restrict cols_idx, const int * restrict data_idx, 
+         const value_type * RESTRICT data, const int * RESTRICT cols_idx, const int * RESTRICT data_idx, 
          const int num_rows, const int num_cols,
          const int left_size, const int right_size, 
-         const int * restrict right_range,
-         const value_type * restrict x, value_type * restrict y
+         const int * RESTRICT right_range,
+         const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
     bool forward = true, backward = true;
@@ -184,10 +194,10 @@ void ell_multiply_kernel32(
 // multiply kernel, n=3, 3 blocks per line, right_size = 1
 template<class value_type>
 void ell_multiply_kernel33x(
-         const value_type * restrict data, const int * restrict cols_idx, const int * restrict data_idx, 
+         const value_type * RESTRICT data, const int * RESTRICT cols_idx, const int * RESTRICT data_idx, 
          const int num_rows, const int num_cols,
          const int left_size,
-         const value_type * restrict x, value_type * restrict y
+         const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
     bool trivial = true;
@@ -286,10 +296,10 @@ void ell_multiply_kernel33x(
 // multiply kernel, n=3, 2 blocks per line, right_size = 1
 template<class value_type>
 void ell_multiply_kernel32x(
-         const value_type * restrict data, const int * restrict cols_idx, const int * restrict data_idx, 
+         const value_type * RESTRICT data, const int * RESTRICT cols_idx, const int * RESTRICT data_idx, 
          const int num_rows, const int num_cols,
          const int left_size, 
-         const value_type * restrict x, value_type * restrict y
+         const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
     bool forward = true, backward = true;
