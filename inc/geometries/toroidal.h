@@ -29,5 +29,10 @@ TokamakMagneticField createMagField( double R0)
 }
 
 }//namespace toroidal
+
+TokamakMagneticField createToroidalField( double R0)
+{
+    return TokamakMagneticField( R0, toiroidal::createPsip(), toiroidal::createIpol());
+}
 }//namespace geo
 }//namespace dg

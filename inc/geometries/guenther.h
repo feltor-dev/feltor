@@ -506,5 +506,9 @@ struct Divb
 };
 ///@endcond
 } //namespace guenther
+TokamakMagneticField createGuentherField( double R_0, double I_0)
+{
+    return TokamakMagneticField( R_0, guenther::createPsip(R_0), guenther::createIpol(I_0));
+}
 } //namespace geo
 }//namespace dg

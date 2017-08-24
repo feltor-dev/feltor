@@ -51,7 +51,7 @@ int main(int argc, char**argv)
     t.tic();
 
     ////////////////construct Generator////////////////////////////////////
-    dg::geo::TokamakMagneticField c = dg::geo::taylor::createMagField(gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R0 = gp.R_0, Z0 = 0;
     //double R_X = gp.R_0-1.4*gp.triangularity*gp.a;

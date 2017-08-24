@@ -37,7 +37,7 @@ int main(int argc, char**argv)
     }
     //write parameters from file into variables
     dg::geo::solovev::GeomParameters gp(js);
-    dg::geo::TokamakMagneticField c = dg::geo::solovev::createMagField(gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
     gp.display( std::cout);
     dg::Timer t;
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";

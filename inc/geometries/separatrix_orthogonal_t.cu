@@ -36,9 +36,6 @@ double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
 //typedef dg::FieldAligned< dg::CurvilinearGridX3d<dg::HVec> , dg::IHMatrix, dg::HVec> HFA;
 
-//using namespace dg::geo::solovev;
-using namespace dg::geo::taylor;
-
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
     assert( g.Nz() == 2);
@@ -102,7 +99,7 @@ int main( int argc, char* argv[])
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    GeomParameters gp(js);
+    dg::geo::taylor::GeomParameters gp(js);
     dg::Timer t;
     std::cout << "Type psi_0 \n";
     double psi_0 = -16;
@@ -116,7 +113,7 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    dg::geo::TokamakMagneticField c = dg::geo::taylor::createMagField(gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;

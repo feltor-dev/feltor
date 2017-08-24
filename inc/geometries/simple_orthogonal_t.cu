@@ -19,7 +19,6 @@
 #include "curvilinear.h"
 
 #include "file/nc_utilities.h"
-using namespace dg::geo::solovev;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
@@ -62,8 +61,8 @@ int main( int argc, char* argv[])
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    GeomParameters gp(js);
-    dg::geo::BinaryFunctorsLvl2 psip=createPsip(gp);
+    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::BinaryFunctorsLvl2 psip=dg::geo::solovev::createPsip(gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
@@ -210,7 +209,7 @@ int main( int argc, char* argv[])
 //     std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
 //     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
      //X = g2d.lapx();
-    dg::geo::TokamakMagneticField c=createMagField(gp);
+    dg::geo::TokamakMagneticField c=dg::geo::createSolovevField(gp);
      X = dg::pullback(dg::geo::FuncDirNeu(c, psi_0, psi_1, 550, -150, 30., 1), g2d);
      err = nc_put_var_double( ncid, divBID, periodify(X, g2d_periodic).data());
 //     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));

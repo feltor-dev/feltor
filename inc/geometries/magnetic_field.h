@@ -15,9 +15,9 @@ namespace geo
 ///@addtogroup magnetic
 ///@{
 /**
-* @brief container class of R, psi and ipol 
+* @brief container class of R, psi and Ipol 
 
- This is the representation of magnetic fields that can be modeled in the form
+ This is the representation of toroidally axisymmetric magnetic fields that can be modeled in the form
  \f[
  \vec B = \frac{R_0}{R} \left( I \hat e_\varphi + \nabla \psi_p \times \hat e_\varphi\right)
  \f]

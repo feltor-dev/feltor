@@ -9,6 +9,7 @@
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
+#include "generator.h"
 #include "utilities.h"
 
 

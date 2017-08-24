@@ -362,6 +362,7 @@ BinaryFunctorsLvl1 createIpol( GeomParameters gp)
     BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
     return ipol;
 }
+
 TokamakMagneticField createMagField( GeomParameters gp)
 {
     return TokamakMagneticField( gp.R_0, createPsip(gp), createIpol(gp));
@@ -552,6 +553,12 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 
 
 } //namespace solovev
+
+TokamakMagneticField createSolovevField( solovev::GeomParameters gp)
+{
+    return TokamakMagneticField( gp.R_0, solovev::createPsip(gp), solovev::createIpol(gp));
+}
+
 } //namespace geo
 } //namespace dg
 

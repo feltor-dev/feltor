@@ -100,7 +100,7 @@ int main(int argc, char**argv)
     //write parameters from file into variables
     GeomParameters gp(js);
     gp.display( std::cout);
-    dg::geo::TokamakMagneticField c = dg::geo::solovev::createMagField( gp); 
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp); 
     const double eps = 1e-10;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "eps\tn\t Nx\t Ny \t # iterations \t error  \t time/iteration (s)\t hx_max\t hy_max\t hx_min\t hy_min \n";

@@ -5,7 +5,7 @@
 #include "dg/backend/functions.h"
 #include "dg/blas1.h"
 #include "dg/geometry/base_geometryX.h"
-#include "dg/geometry/generatorX.h"
+#include "generatorX.h"
 #include "curvilinear.h"
 
 namespace dg

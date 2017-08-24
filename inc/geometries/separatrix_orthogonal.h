@@ -4,8 +4,8 @@
 #include "dg/backend/interpolationX.cuh"
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/weightsX.cuh"
-#include "dg/geometry/generatorX.h"
 #include "dg/runge_kutta.h"
+#include "generatorX.h"
 #include "utilitiesX.h"
 
 #include "simple_orthogonal.h"

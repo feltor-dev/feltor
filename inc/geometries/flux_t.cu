@@ -72,7 +72,7 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing flux grid ... \n";
     t.tic();
-    dg::geo::TokamakMagneticField c = createMagField( gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     dg::CurvilinearGrid2d g2d = g3d.perp_grid();
