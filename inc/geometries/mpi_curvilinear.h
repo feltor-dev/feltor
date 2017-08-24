@@ -65,6 +65,7 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
             jac_.value(i) = global2local( jacobian.value(i), *this);
         for( unsigned i=0; i<metric.values().size(); i++)
             metric_.value(i) = global2local( metric.value(i), *this);
+        map_.resize(map.size());
         for( unsigned i=0; i<map.size(); i++)
             map_[i] = global2local( map[i], *this);
     }

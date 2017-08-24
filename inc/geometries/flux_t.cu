@@ -151,9 +151,9 @@ int main( int argc, char* argv[])
     double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);
     double volumeRZ = dg::blas2::dot( vec, g2d_weights, onesC);
     std::cout << "volumeXYP is "<< volume3d  <<std::endl;
-    std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
+    std::cout << "volumeRZP is "<< volumeRZP <<std::endl;
     std::cout << "volumeXY  is "<< volume2d  <<std::endl;
-    std::cout << "volumeRZ  is "<< volumeRZ<<std::endl;
+    std::cout << "volumeRZ  is "<< volumeRZ  <<std::endl;
     std::cout << "relative difference in volume3d is "<<fabs(volumeRZP - volume3d)/volume3d<<std::endl;
     std::cout << "relative difference in volume2d is "<<fabs(volumeRZ - volume2d)/volume2d<<std::endl;
     std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
