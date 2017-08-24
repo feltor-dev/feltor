@@ -470,8 +470,8 @@ SparseTensor<container> SparseTensor<container>::perp() const
     if( isEmpty()) return t;
     for(unsigned i=0; i<3; i++)
     {
-        if( t.isSet(2,i)) t.mat_idx_(2,i)=-1;
-        if( t.isSet(i,2)) t.mat_idx_(i,2)=-1;
+        t.mat_idx_(2,i)=-1;
+        t.mat_idx_(i,2)=-1;
     }
     t.clear_unused_values();
     return t;

@@ -68,7 +68,7 @@ int main()
     dg::tensor::multiply2d(t, inout0, inout1, work0, work1);
     std::cout << "Result         is ["<<work0[0]<<" "<<work1[0]<<"]\n";
     dg::tensor::multiply2d_inplace(t, inout0, inout1, work1);
-    std::cout << "Result inplace is ["<<inout0[0]<<" "<<inout1[0]<<"]\n";
+    std::cout << "Result inplace is ["<<inout0[0]<<" "<<inout1[0]<<"]\n T is \n";
     t.idx(0,2) = 2; std::swap( t.idx(1,1), t.idx(2,1));  print(t);
     std::cout << "Multiply T with [8,9,2]\n";
     dg::tensor::multiply3d(t, eight, nine,two, work0, work1, work2);
@@ -77,6 +77,7 @@ int main()
     dg::tensor::multiply3d_inplace(t, inout0, inout1,inout2, work1,work2);
     std::cout << "Result inplace is ["<<inout0[0]<<" "<<inout1[0]<<" "<<inout2[0]<<"]\n";
     std::cout << "Determinant of T: "<<dg::tensor::determinant(t).value()[0]<<" (320)\n";
+    std::cout << "Perp Determinant of T: "<<dg::tensor::determinant(t.perp()).value()[0]<<" (-32)\n";
     std::swap(t.idx(2,1), t.idx(2,0)); 
     t.value(0) = five;
     t.idx(1,1) = 0;

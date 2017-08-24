@@ -102,13 +102,12 @@ struct CurvatureDirPer
 };
 
 
-typedef dg::CurvilinearGrid2d Geometry;
 
 int main(int argc, char** argv)
 {
-    std::cout << "Type n, Nx, Ny, Nz\n";
-    unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
+    std::cout << "Type n, Nx, Ny\n";
+    unsigned n, Nx, Ny;
+    std::cin >> n>> Nx>>Ny;   
     Json::Reader reader;
     Json::Value js;
     if( argc==1)
@@ -134,9 +133,10 @@ int main(int argc, char** argv)
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing grid ... \n";
     t.tic();
-    dg::geo::RibeiroFluxGenerator ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    //dg::geo::RibeiroFluxGenerator ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::FluxGenerator ribeiro( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     //dg::geo::SimpleOrthogonal ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
-    Geometry grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
+    dg::CurvilinearGrid2d grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     grid.display();
@@ -159,7 +159,7 @@ int main(int argc, char** argv)
 
     ///////////////////////////////////////////////////////////////////////
     std::cout << "TESTING ARAKAWA\n";
-    dg::ArakawaX<Geometry, dg::DMatrix, dg::DVec> arakawa( grid);
+    dg::ArakawaX<dg::aGeometry2d, dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
     const double norm = dg::blas2::dot( sol, vol, sol);
     std::cout << std::scientific;
@@ -184,7 +184,7 @@ int main(int argc, char** argv)
     std::cout << "Variation rel. distance to solution "<<sqrt( result/normVar)<<std::endl; //don't forget sqrt when comuting errors
     ///////////////////////////////////////////////////////////////////////
     std::cout << "TESTING POISSON\n";
-    dg::Poisson<Geometry, dg::DMatrix, dg::DVec> poisson( grid);
+    dg::Poisson<dg::aGeometry2d, dg::DMatrix, dg::DVec> poisson( grid);
     poisson( lhs, rhs, jac);
     result = dg::blas2::dot( eins, vol, jac);
     std::cout << "Mean     Jacobian is "<<result<<"\n";

@@ -143,8 +143,10 @@ int main( int argc, char* argv[])
     dg::CartesianGrid2d g2dC( gp.R_0 -2.0*gp.a, gp.R_0 + 2.0*gp.a, -2.0*gp.a,2.0*gp.a,1, 2e3, 2e3, dg::PER, dg::PER);
     dg::HVec vec  = dg::evaluate( iris, g2dC);
     dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);
+    dg::HVec onesC = dg::evaluate( dg::one, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
-    double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);
+    //double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);
+    double volumeRZP = dg::blas2::dot( vec, g2d_weights, onesC);
     std::cout << "volumeXYP is "<< volume   <<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
