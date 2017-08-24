@@ -167,9 +167,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     void construct( unsigned n, unsigned Nx, unsigned Ny)
     {
         CurvilinearProductGrid3d g( handle_.get(), n,Nx,Ny,1,bcx());
-        jac_=g.jacobian();
-        map_=g.map();
-        metric_=g.metric();
+        *this = CurvilinearGrid2d(g);
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
         return jac_;

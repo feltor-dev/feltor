@@ -230,7 +230,7 @@ template< class Geometry>
 typename GeometryTraits<Geometry>::host_vector inv_volume( const Geometry& g)
 {
     typedef typename GeometryTraits< Geometry>::host_vector host_vector;
-    SparseElement<host_vector> inv_vol = dg::tensor::determinant(g.metric().perp());
+    SparseElement<host_vector> inv_vol = dg::tensor::determinant(g.metric());
     dg::tensor::sqrt(inv_vol);
     host_vector temp = dg::create::inv_weights( g);
     dg::tensor::pointwiseDot( inv_vol,temp, temp);

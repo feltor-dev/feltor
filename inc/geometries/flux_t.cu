@@ -75,7 +75,7 @@ int main( int argc, char* argv[])
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
-    dg::CurvilinearGrid2d g2d = g3d.perp_grid();
+    dg::CurvilinearGrid2d g2d(flux, n, Nx,Ny, dg::DIR);
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -132,9 +132,12 @@ int main( int argc, char* argv[])
     double error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot(vol_.value(), w3d, vol_.value()));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
-    const dg::HVec vol = dg::create::volume( g3d);
+    const dg::HVec vol3d = dg::create::volume( g3d);
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
-    double volume = dg::blas1::dot( vol, ones3d);
+    double volume3d = dg::blas1::dot( vol3d, ones3d);
+    const dg::HVec vol2d = dg::create::volume( g2d);
+    dg::HVec ones2d = dg::evaluate( dg::one, g2d);
+    double volume2d = dg::blas1::dot( vol2d, ones2d);
 
     std::cout << "TEST VOLUME IS:\n";
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
@@ -145,11 +148,14 @@ int main( int argc, char* argv[])
     dg::HVec R  = dg::evaluate( dg::cooX2d, g2dC);
     dg::HVec onesC = dg::evaluate( dg::one, g2dC);
     dg::HVec g2d_weights = dg::create::volume( g2dC);
-    //double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);
-    double volumeRZP = dg::blas2::dot( vec, g2d_weights, onesC);
-    std::cout << "volumeXYP is "<< volume   <<std::endl;
+    double volumeRZP = 2.*M_PI*dg::blas2::dot( vec, g2d_weights, R);
+    double volumeRZ = dg::blas2::dot( vec, g2d_weights, onesC);
+    std::cout << "volumeXYP is "<< volume3d  <<std::endl;
     std::cout << "volumeRZP is "<< volumeRZP<<std::endl;
-    std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
+    std::cout << "volumeXY  is "<< volume2d  <<std::endl;
+    std::cout << "volumeRZ  is "<< volumeRZ<<std::endl;
+    std::cout << "relative difference in volume3d is "<<fabs(volumeRZP - volume3d)/volume3d<<std::endl;
+    std::cout << "relative difference in volume2d is "<<fabs(volumeRZ - volume2d)/volume2d<<std::endl;
     std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
 
     ///////////////////////////TEST 3d grid//////////////////////////////////////

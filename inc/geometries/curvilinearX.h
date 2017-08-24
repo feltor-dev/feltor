@@ -121,9 +121,10 @@ struct CurvilinearGridX2d : public dg::aGeometryX2d
     void construct( double fx, double fy, unsigned n, unsigned Nx, unsigned Ny)
     {
         CurvilinearProductGridX3d g( handle_.get(),fx,fy,n,Nx,Ny,1,bcx());
-        jac_=g.jacobian();
         map_=g.map();
-        metric_=g.metric();
+        jac_=g.jacobian().perp();
+        metric_=g.metric().perp();
+        map_.pop_back();
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
         return jac_;
