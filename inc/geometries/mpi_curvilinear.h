@@ -100,6 +100,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
     perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
 
     const aGenerator2d& generator() const{return handle_.get();}
+    virtual CurvilinearProductMPIGrid3d* clone()const{return new CurvilinearProductMPIGrid3d(*this);}
     private:
     MPI_Comm get_reduced_comm( MPI_Comm src)
     {

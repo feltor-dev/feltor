@@ -11,6 +11,7 @@
 #include "solovev.h"
 #include "guenther.h"
 #include "simple_orthogonal.h"
+#include "curvilinear.h"
 #include "testfunctors.h"
 
 

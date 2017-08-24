@@ -12,7 +12,7 @@
 
 #include "dg/backend/timer.cuh"
 #include "dg/backend/mpi_init.h"
-#include "dg/geometry/mpi_curvilinear.h"
+#include "mpi_curvilinear.h"
 //#include "guenther.h"
 #include "solovev.h"
 #include "ribeiro.h"
@@ -64,7 +64,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Constructing grid ... \n";
     t.tic();
     dg::geo::Ribeiro ribeiro( psip, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearMPIGrid3d g3d(&ribeiro, n, Nx, Ny,Nz, dg::DIR,dg::PER, dg::PER,comm);
+    dg::CurvilinearProductMPIGrid3d g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR,dg::PER, dg::PER,comm);
     dg::CurvilinearMPIGrid2d g2d = g3d.perp_grid();
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -94,7 +94,7 @@ int main( int argc, char* argv[])
     err = nc_var_par_access( ncid, defID, NC_COLLECTIVE);
     err = nc_var_par_access( ncid, divBID, NC_COLLECTIVE);
 
-    dg::MHVec psi_p = dg::pullback( psip, g2d);
+    dg::MHVec psi_p = dg::pullback( psip.f(), g2d);
     //g.display();
     err = nc_put_vara_double( ncid, onesID, start, count, psi_p.data().data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
@@ -110,7 +110,7 @@ int main( int argc, char* argv[])
     err = nc_put_vara_double( ncid, coordsID[0], start,count, X.data());
     err = nc_put_vara_double( ncid, coordsID[1], start,count, Y.data());
 
-    dg::SparseTensor<dg::HVec> metric = g2d.metric();
+    dg::SparseTensor<dg::MHVec> metric = g2d.metric();
     dg::MHVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
     dg::SparseElement<dg::MHVec> vol_ = dg::tensor::volume(metric);
     dg::MHVec vol = vol_.value();
@@ -160,7 +160,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "TEST VOLUME IS:\n";
     if( psi_0 < psi_1) gp.psipmax = psi_1, gp.psipmin = psi_0;
     else               gp.psipmax = psi_0, gp.psipmin = psi_1;
-    dg::geo::Iris<Psip> iris(c.psip, gp.psipmin, gp.psipmax);
+    dg::geo::Iris iris(psip.f(), gp.psipmin, gp.psipmax);
     //dg::CylindricalGrid3d<dg::HVec> g3d( gp.R_0 -2.*gp.a, gp.R_0 + 2*gp.a, -2*gp.a, 2*gp.a, 0, 2*M_PI, 3, 2200, 2200, 1, dg::PER, dg::PER, dg::PER);
     dg::CartesianMPIGrid2d g2dC( gp.R_0 -2.*gp.a, gp.R_0 + 2.*gp.a, -2.*gp.a, 2.*gp.a, 1, 2e3, 2e3, dg::DIR, dg::PER, g2d.communicator());
     dg::MHVec vec  = dg::evaluate( iris, g2dC);

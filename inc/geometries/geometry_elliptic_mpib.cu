@@ -13,8 +13,7 @@
 
 #include "solovev.h"
 //#include "guenther.h"
-#include "mpi_conformal.h"
-#include "mpi_orthogonal.h"
+#include "mpi_curvilinear.h"
 #include "simple_orthogonal.h"
 #include "testfunctors.h"
 
@@ -85,8 +84,8 @@ int main(int argc, char**argv)
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        X[i] = g2d.map()[0].data().[i];
-        Y[i] = g2d.map()[1].data().[i];
+        X[i] = g2d.map()[0].data()[i];
+        Y[i] = g2d.map()[1].data()[i];
     }
     ncerr = nc_put_vara_double( ncid, coordsID[0], start, count, X.data());
     ncerr = nc_put_vara_double( ncid, coordsID[1], start, count, Y.data());
