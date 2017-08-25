@@ -32,6 +32,6 @@
  */
 
  /** @class hide_container
-  * @tparam container A data container class for which the blas1 functionality is overloaded. Also we assume that the type is copyable/assignable. Currently this is one of 
+  * @tparam container A data container class for which the blas1 functionality is overloaded. Also we assume that the type is copyable/assignable and has a swap member function. Currently this is one of 
   *   dg::HVec, dg::DVec, dg::MHVec or dg::MDVec
   */

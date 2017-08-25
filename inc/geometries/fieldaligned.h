@@ -99,21 +99,16 @@ struct DSField
 {
     DSField( const BinaryVectorLvl0& v, const GeometryPerp& g)
     {
-        thrust::host_vector<double> vx, vy, vz;
         thrust::host_vector<double> b_zeta, b_eta;
-        dg::geo::pushForwardPerp( fieldR, fieldZ, b_zeta, b_eta, g);
+        dg::pushForwardPerp( v.x(), v.y(), b_zeta, b_eta, g);
         FieldP<MagneticField> fieldP(c);
-        thrust::host_vector<double> b_phi = dg::pullback( fieldP, g);
-        thrust::host_vector<double> b_mod = dg::pullback( bmod, g);
-        dg::blas1::pointwiseDivide( b_zeta, b_phi, b_zeta);
-        dg::blas1::pointwiseDivide( b_eta,  b_phi, b_eta);
-        dg::blas1::pointwiseDivide( b_mod,  b_phi, b_mod);
+        thrust::host_vector<double> b_phi = dg::pullback( v.z(), g);
         dxdz_ = dg::forward_transform( b_zeta, g );
         dypz_ = dg::forward_transform( b_eta, g );
-        dsdz_ = dg::forward_transform( b_mod, g );
+        dsdz_ = dg::forward_transform( b_phi, g );
     }
 
-    void operator()(thrust::host_vector<double> y, thrust::host_vector<double>& yp)
+    void operator()(const thrust::host_vector<double>& y, thrust::host_vector<double>& yp)
     {
         g_.shift_topologic( y[0], y[1], y[0], y[1]); //shift points onto domain
         if( !g_.contains( y[0], y[1])) yp[0] = yp[1]= yp[2] = 0;
@@ -328,7 +323,7 @@ struct FieldAligned
         If there is no limiter the boundary condition is periodic.
     */
     template <class Geometry, class Limiter>
-    FieldAligned(const BinaryVectorLvl0& vec, Geometry grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, bool dependsOnX=true, bool dependsOnY=true, double deltaPhi = -1);
+    FieldAligned(const BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, bool dependsOnX=true, bool dependsOnY=true, double deltaPhi = -1);
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -458,7 +453,7 @@ struct FieldAligned
 
 template<class I, class container>
 template <class MagneticField, class Geometry, class Limiter>
-FieldAligned<I, container>::FieldAligned(MagneticField mag, Geometry grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi):
+FieldAligned<I, container>::FieldAligned(const BinaryVectorLvl0& mag, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcz, bool dependsOnX, bool dependsOnY, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         Nz_(grid.Nz()), bcz_(grid.bcz())
 {
@@ -470,11 +465,11 @@ FieldAligned<I, container>::FieldAligned(MagneticField mag, Geometry grid, unsig
     right_ = left_ = dg::evaluate( zero, g2dCoarse);
     ghostM.resize( perp_size_); ghostP.resize( perp_size_);
     //Set starting points
-    typename Geometry::perpendicular_grid g2dFine = g2dCoarse.resize( (double)mX, (double)mY);
+    typename Geometry::perpendicular_grid g2dFine = g2dCoarse.muliplyCellNumbers( (double)mX, (double)mY);
     
-    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::cooX2d, g2dFine)); // x
+    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::cooX2d, g2dFine)); //x
     y[1] = dg::evaluate( dg::cooY2d, g2dFine); //y
-    y[2] = dg::evaluate( dg::zero, g2dFine);
+    y[2] = dg::evaluate( dg::zero, g2dFine); //s
     std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp); 
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);

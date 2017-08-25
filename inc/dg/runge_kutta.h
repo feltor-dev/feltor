@@ -481,19 +481,13 @@ struct NotANumber : public std::exception
     char const* what() const throw(){ return "NaN returned!";}
 };
 
+///@addtogroup time
+///@{
 /**
- * @brief Integrate differential equation with a s-stage RK scheme and a fixed number of steps
+ * @brief Integrate differential equation with a stage s Runge-Kutta scheme and a fixed number of steps
  *
- * @ingroup time 
- * @tparam RHS The right-hand side class
- * @copydoc hide_container_lvl1
  * @tparam s # of stages (1, 2, 3, 4, 6, 17)
- * @param rhs The right-hand-side
- * @param begin initial condition (size 3)
- * @param end (write-only) contains solution on output
- * @param T_min initial time
- * @param T_max final time
- * @param N # of steps to use
+ * @copydetails stepperRK1()
  */
 template< class RHS, class container, unsigned s>
 void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
@@ -510,72 +504,55 @@ void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, d
     }
 }
 
+/**
+ * @brief Integrate differential equation with a stage 1 Runge-Kutta scheme and a fixed number of steps
+ *
+ * @tparam RHS The right-hand side class
+ * @copydoc hide_container_lvl1
+ * @param rhs The right-hand-side
+ * @param begin initial condition 
+ * @param end (write-only) contains solution on output
+ * @param T_min initial time
+ * @param T_max final time
+ * @param N number of steps 
+ */
 template< class RHS, class container>
 void stepperRK1(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
     stepperRK<RHS, container, 1>( rhs, begin, end, T_min, T_max, N);
 }
+///@brief Integrate differential equation with a stage 2 Runge-Kutta scheme and a fixed number of steps
+///@copydetails stepperRK1()
 template< class RHS, class container>
 void stepperRK2(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
     stepperRK<RHS, container, 2>( rhs, begin, end, T_min, T_max, N);
 }
 
+///@brief Integrate differential equation with a stage 3 Runge-Kutta scheme and a fixed number of steps
+///@copydetails stepperRK1()
 template< class RHS, class container>
 void stepperRK3(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
     stepperRK<RHS, container, 3>( rhs, begin, end, T_min, T_max, N);
 }
 
-/**
- * @brief Integrates the differential equation using RK 4 and a fixed number of steps
- *
- * @ingroup time 
- * @tparam RHS The right-hand side class
- * @copydoc hide_container_lvl1
- * @param rhs The right-hand-side
- * @param begin initial condition 
- * @param end (write-only) contains solution on output
- * @param T_min initial time
- * @param T_max final time
- * @param N number of steps 
- */
+///@brief Integrate differential equation with a stage 4 Runge-Kutta scheme and a fixed number of steps
+///@copydetails stepperRK1()
 template< class RHS, class container>
 void stepperRK4(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
     stepperRK<RHS, container, 4>( rhs, begin, end, T_min, T_max, N);
 }
-/**
- * @brief Integrates the differential equation using RK 6 and a fixed number of steps
- *
- * @ingroup time 
- * @tparam RHS The right-hand side class
- * @copydoc hide_container_lvl1
- * @param rhs The right-hand-side
- * @param begin initial condition 
- * @param end (write-only) contains solution on output
- * @param T_min initial time
- * @param T_max final time
- * @param N number of steps 
- */
+///@brief Integrate differential equation with a stage 6 Runge-Kutta scheme and a fixed number of steps
+///@copydetails stepperRK1()
 template< class RHS, class container>
 void stepperRK6(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
     stepperRK<RHS, container, 6>( rhs, begin, end, T_min, T_max, N);
 }
-/**
- * @brief Integrates the differential equation using RK 17 and a fixed number of steps
- *
- * @ingroup time 
- * @tparam RHS The right-hand side class
- * @copydoc hide_container_lvl1
- * @param rhs The right-hand-side
- * @param begin initial condition 
- * @param end (write-only) contains solution on output
- * @param T_min initial time
- * @param T_max final time
- * @param N number of steps 
- */
+///@brief Integrate differential equation with a stage 17 Runge-Kutta scheme and a fixed number of steps
+///@copydetails stepperRK1()
 template< class RHS, class container>
 void stepperRK17(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
@@ -583,10 +560,8 @@ void stepperRK17(RHS& rhs, const container& begin, container& end, double T_min,
 }
 
 
-///@addtogroup time
-///@{
 /**
- * @brief Integrates the differential equation using a s stage RK scheme and a rudimentary stepsize-control
+ * @brief Integrates the differential equation using a stage s Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
  *
  * Doubles the number of timesteps until the desired accuracy is reached
  *
@@ -657,17 +632,23 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
 
 }
 
+/// @brief Integrates the differential equation using a stage 4 Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
+///@copydetails integrateRK()
 template< class RHS, class container>
 int integrateRK4(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
 {
     return integrateRK<RHS, container, 4>( rhs, begin, end, T_max, eps_abs);
 }
 
+/// @brief Integrates the differential equation using a stage 6 Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
+/// @copydetails integrateRK()
 template< class RHS, class container>
 int integrateRK6(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
 {
     return integrateRK<RHS, container, 6>( rhs, begin, end, T_max, eps_abs);
 }
+/// @brief Integrates the differential equation using a stage 17 Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
+///@copydetails integrateRK()
 template< class RHS, class container>
 int integrateRK17(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
 {
