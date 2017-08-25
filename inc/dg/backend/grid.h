@@ -174,7 +174,7 @@ struct Grid1d
      * @note Doesn't check periodicity!!
      * @param x point to check
      *
-     * @return true if x0()<x<x1(), false else
+     * @return true if x0()<=x<=x1(), false else
      */
     bool contains( double x)const
     {
@@ -360,7 +360,7 @@ struct aTopology2d
      * @param x x-coordinate to check
      * @param y y-coordinate to check
      *
-     * @return true if x0()<x<x1() and y0()<y<y1(), false else
+     * @return true if x0()<=x<=x1() and y0()<=y<=y1(), false else
      */
     bool contains( double x, double y)const
     {
@@ -625,7 +625,7 @@ struct aTopology3d
      * @param y y-coordinate to check
      * @param z z-coordinate to check
      *
-     * @return true if x0()<x<x1() and y0()<y<y1() and z0()<z<z1() , false else
+     * @return true if x0()<=x<=x1() and y0()<=y<=y1() and z0()<=z<=z1() , false else
      */
     bool contains( double x, double y, double z)const
     {

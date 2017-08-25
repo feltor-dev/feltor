@@ -179,7 +179,7 @@ struct GridX1d
      * @note doesn't check periodicity!!
      * @param x point to check
      *
-     * @return true if x is between x0 and x1, false else
+     * @return true if x0()<=x<=x1(), false else
      */
     bool contains( double x) const
     {
@@ -425,7 +425,7 @@ struct aTopologyX2d
      * @param x x-point to check
      * @param y y-point to check
      *
-     * @return true if (x,y) is inside the grid, false else
+     * @return true if x0()<=x<=x1() and y0()<=y<=y1(), false else
      */
     bool contains( double x, double y)const
     {
@@ -733,7 +733,7 @@ struct aTopologyX3d
      * @param y y-point to check
      * @param z z-point to check
      *
-     * @return true if x is between x0 and x1, false else
+     * @return true if x0()<=x<=x1() and y0()<=y<=y1() and z0()<=z<=z1() , false else
      */
     bool contains( double x, double y, double z)const
     {

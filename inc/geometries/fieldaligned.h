@@ -54,10 +54,9 @@ struct DefaultField
  * @tparam MagneticField models aTokamakMagneticField
  * @ingroup misc
  */ 
-template<class MagneticField>
-struct Field
+struct DSFieldCylindrical
 {
-    Field( const MagneticField& c):c_(c), invB_(c), R_0_(c.R_0) { }
+    DSFieldCylindrical( const dg::geo::TokamakMagneticField& c):c_(c), invB_(c), R_0_(c.R0()) { }
     /**
      * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
      \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
@@ -65,10 +64,10 @@ struct Field
      */ 
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
-        double ipol = c_.ipol(y[0],y[1]);
+        double ipol = c_.ipol()(y[0],y[1]);
         yp[2] =  y[0]*y[0]/invB_(y[0],y[1])/ipol/R_0_;       //ds/dphi =  R^2 B/I/R_0_hat
-        yp[0] =  y[0]*c_.psipZ(y[0],y[1])/ipol;              //dR/dphi =  R/I Psip_Z
-        yp[1] = -y[0]*c_.psipR(y[0],y[1])/ipol ;             //dZ/dphi = -R/I Psip_R
+        yp[0] =  y[0]*c_.psipZ()(y[0],y[1])/ipol;              //dR/dphi =  R/I Psip_Z
+        yp[1] = -y[0]*c_.psipR()(y[0],y[1])/ipol ;             //dZ/dphi = -R/I Psip_R
 
     }
     double error( const dg::HVec& x0, const dg::HVec& x1)
@@ -89,7 +88,7 @@ struct Field
     }
     
     private:
-    MagneticField c_;
+    dg::geo::TokamakMagneticField c_;
     InvB invB_;
     double R_0_;
 };
@@ -97,7 +96,8 @@ struct Field
 template< class GeometryPerp>
 struct DSField
 {
-    DSField( const BinaryVectorLvl0& v, const GeometryPerp& g)
+    
+    DSField( const dg::geo::BinaryVectorLvl0& v, const GeometryPerp& g)
     {
         thrust::host_vector<double> b_zeta, b_eta;
         dg::pushForwardPerp( v.x(), v.y(), b_zeta, b_eta, g);
@@ -107,7 +107,8 @@ struct DSField
         dypz_ = dg::forward_transform( b_eta, g );
         dsdz_ = dg::forward_transform( b_phi, g );
     }
-
+    //interpolate the vectors given in the constructor on the given point
+    //if point lies outside of grid boundaries zero is returned
     void operator()(const thrust::host_vector<double>& y, thrust::host_vector<double>& yp)
     {
         g_.shift_topologic( y[0], y[1], y[0], y[1]); //shift points onto domain
@@ -131,7 +132,7 @@ struct DSField
             return false;
         }
         //if new integrated point outside domain
-        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        if ((10*g_.x0() > end[0]  ) || (10*g_.x1() < end[0])  ||(10*g_.y0()  > end[1]  ) || (10*g_.y1() < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
         {
             return false;
         }
@@ -143,35 +144,11 @@ struct DSField
 
 };
 
-/**
- * @brief Default Limiter means there is a limiter everywhere
- */
-struct DefaultLimiter
-{
-    /**
-     * @brief return 1
-     *
-     * @param x x value
-     * @param y y value
-     * @return 1
-     */
-    double operator()(double x, double y) { return 1; }
-};
+///@brief Default Limiter means there is a limiter everywhere
+typedef ONE DefaultLimiter;
 
-/**
- * @brief No Limiter 
- */
-struct NoLimiter
-{
-    /**
-     * @brief return 0
-     *
-     * @param x x value
-     * @param y y value
-     * @return 0
-     */
-    double operator()(double x, double y) { return 0.; }
-};
+///@brief No Limiter 
+typedef ZERO NoLimiter;
 
 /**
  * @brief Integrate a field line to find whether the result lies inside or outside of the box
@@ -192,29 +169,19 @@ struct BoxIntegrator
     BoxIntegrator( Field field, const Grid& g, double eps): field_(field), g_(g), coords_(3), coordsp_(3), eps_(eps) {}
     /**
      * @brief Set the starting coordinates for next field line integration
-     *
      * @param coords the new coords (must have size = 3)
      */
     void set_coords( const thrust::host_vector<double>& coords){ coords_ = coords;}
+
     /**
      * @brief Integrate from 0 to deltaPhi
-     *
      * @param deltaPhi upper integration boundary
-     *
-     * @return 1 if point is inside the box, -1 else
+     * @return 1 if result is inside the box, -1 else
      */
     double operator()( double deltaPhi)
     {
-        try{
-            dg::integrateRK4( field_, coords_, coordsp_, deltaPhi, eps_);
-        }
-        catch( dg::NotANumber& exception) { return -1;}
-        if (!(coordsp_[0] >= g_.x0() && coordsp_[0] <= g_.x1())) {
-            return -1;
-        }
-        if (!(coordsp_[1] >= g_.y0() && coordsp_[1] <= g_.y1())) {
-            return -1;
-        }
+        dg::integrateRK4( field_, coords_, coordsp_, deltaPhi, eps_);
+        if( !g_.contains( coordsp_[0], coordsp_[1]) ) return -1;
         return +1;
     }
     private:

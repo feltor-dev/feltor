@@ -463,24 +463,6 @@ void RK_classic<s, container>::operator()( Functor& f, const container& u0, cont
         blas1::axpby( dt*rk_classic<s>::b[i], k_[i],1., u1);
 }
 
-/**
- * @brief Thrown by the integrateRK4 function if the rhs is badly conditioned
- */
-struct NotANumber : public std::exception
-{
-    /**
-     * @brief Construct 
-     *
-     */
-    NotANumber( ) {}
-    /**
-     * @brief What string
-     *
-     * @return string "NaN returned!"
-     */
-    char const* what() const throw(){ return "NaN returned!";}
-};
-
 ///@addtogroup time
 ///@{
 /**
@@ -573,6 +555,7 @@ void stepperRK17(RHS& rhs, const container& begin, container& end, double T_min,
  * @param end (write-only) contains solution on output
  * @param T_max time difference
  * @param eps_abs desired absolute accuracy
+ * @return 0 if converged, -1 and a warning to std::cerr when isnan appears, -2 if failed to reach eps_abs
  */
 template< class RHS, class container, unsigned s>
 int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
