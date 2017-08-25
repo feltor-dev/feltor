@@ -11,9 +11,10 @@
 #include "dg/backend/timer.cuh"
 #include "curvilinear.h"
 //#include "guenther.h"
+#include "testfunctors.h"
 #include "solovev.h"
 #include "flux.h"
-//#include "ds.h"
+#include "fieldaligned.h"
 #include "init.h"
 
 #include "file/nc_utilities.h"
@@ -158,21 +159,25 @@ int main( int argc, char* argv[])
     std::cout << "relative difference in volume2d is "<<fabs(volumeRZ - volume2d)/volume2d<<std::endl;
     std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
 
-    ///////////////////////////TEST 3d grid//////////////////////////////////////
-    //std::cout << "Start DS test!"<<std::endl;
-    //const dg::HVec vol3d = dg::create::volume( g3d);
-    //t.tic();
-    //DFA fieldaligned( flux::Field( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
-    //dg::DS<DFA, dg::DMatrix, dg::HVec> ds( fieldaligned, flux::Field(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
+    /////////////////////////TEST 3d grid//////////////////////////////////////
+    std::cout << "Start DS test!"<<std::endl;
+    t.tic();
+    dg::geo::BHatR bhatR(c);
+    dg::geo::BHatZ bhatZ(c);
+    dg::geo::BHatP bhatP(c);
+    //dg::geo::BinaryVectorLvl0 bhat( dg::geo::BHatR(c), dg::geo::BHatZ(c), dg::geo::BHatP(c));
+    dg::geo::BinaryVectorLvl0 bhat( bhatR, bhatZ, bhatP);
+    dg::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1,1,gp.rk4eps, dg::NoLimiter() ); 
+    //dg::DS<dg::IHMatrix, dg::HMatrix, dg::HVec> ds( fieldaligned, flux::Field(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
 
-    //
-    //t.toc();
-    //std::cout << "Construction took "<<t.diff()<<"s\n";
-    //dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
-    //dg::HVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
-    //dg::HVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
-    //dg::blas1::pointwiseDivide( ones3d, B, B);
-    //dg::HVec function = dg::pullback( solovev::FuncNeu(gp), g3d), derivative(function);
+    
+    t.toc();
+    std::cout << "Construction took "<<t.diff()<<"s\n";
+    dg::HVec B = dg::pullback( dg::geo::InvB(c), g3d), divB(B);
+    dg::HVec lnB = dg::pullback( dg::geo::LnB(c), g3d), gradB(B);
+    dg::HVec gradLnB = dg::pullback( dg::geo::GradLnB(c), g3d);
+    dg::blas1::pointwiseDivide( ones3d, B, B);
+    dg::HVec function = dg::pullback( dg::geo::FuncNeu(c), g3d), derivative(function);
     //ds( function, derivative);
 
     //ds.centeredT( B, divB);
@@ -188,9 +193,7 @@ int main( int argc, char* argv[])
     //err = nc_put_var_double( ncid, varID[4], periodify(X, g2d_periodic).data());
     //double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
     //std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
+
     err = nc_close( ncid);
-
-
-
     return 0;
 }

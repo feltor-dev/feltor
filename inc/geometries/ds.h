@@ -222,7 +222,7 @@ DS< I, M,container>::DS(const BinaryVectorLvl1& vector, Geometry grid, dg::norm 
         tempP( dg::evaluate( dg::zero, grid())), temp0( tempP), tempM( tempP), 
         f(tempP), dsf(tempP),
         vol3d( dg::create::volume( grid)), inv3d( dg::create::inv_volume( grid)),
-        invB(dg::pullback(dg::geo::InvB<MagneticField>(mag),grid)), 
+        invB(dg::pullback(dg::geo::InvB(mag),grid)), 
         no_(no), dir_(dir), apply_jumpX_(jumpX)
 {
     volume_ = dg::evaluate( dg::one, grid);
