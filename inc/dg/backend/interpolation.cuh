@@ -119,13 +119,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param g The Grid on which to operate
- * @param boundary determines what to do when a point
- lies exactly on the boundary:  DIR generates zeroes in the interpolation matrix, NEU and other boundaries interpolate the inner side polynomial.
+ * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix, 
+ NEU and PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
+ * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
  * @attention all points (x,y) must lie within or on the boundaries of g.
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const aTopology2d& g , dg::bc boundary = dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const aTopology2d& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
     assert( x.size() == y.size());
     std::vector<double> gauss_nodes = g.dlt().abscissas(); 
@@ -189,16 +190,15 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
             for(unsigned k=0; k<pyF.size(); k++)
                 for( unsigned l=0; l<pxF.size(); l++)
                     pxy[k*px.size()+l]= pyF[k]*pxF[l];
-            if (boundary == dg::DIR)
+            if (  (x[i] == g.x0() && (bcx==dg::DIR || bcx==dg::DIR_NEU) )
+                ||(x[i] == g.x1() && (bcx==dg::DIR || bcx==dg::NEU_DIR) )
+                ||(y[i] == g.y0() && (bcy==dg::DIR || bcy==dg::DIR_NEU) )
+                ||(y[i] == g.y1() && (bcy==dg::DIR || bcy==dg::NEU_DIR) ))
             {
-                if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
-    //             if ( fabs(x[i]-g.x0())<1e-10 || fabs(x[i]-g.x1())<1e-10  || fabs(y[i]-g.y0())<1e-10  || fabs(y[i]-g.y1())<1e-10)
-                {
-                    //zeroe boundary values 
-                    for(unsigned k=0; k<py.size(); k++)
-                    for( unsigned l=0; l<px.size(); l++)
-                        pxy[k*px.size()+l]= 0; 
-                }
+                //zeroe boundary values 
+                for(unsigned k=0; k<py.size(); k++)
+                for( unsigned l=0; l<px.size(); l++)
+                    pxy[k*px.size()+l]= 0; 
             }
             for( unsigned k=0; k<g.n(); k++)
                 for( unsigned l=0; l<g.n(); l++)
@@ -247,10 +247,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), values.size());
     A.row_indices = row_indices; A.column_indices = column_indices; A.values = values;
 
-    if (boundary == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
-    if (boundary == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
-    if (boundary == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
-    
     return A;
 }
 
@@ -264,13 +260,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
- * @param boundary determines what to do when a point
- lies exactly on the boundary:  DIR generates zeroes in the interpolation matrix, NEU and other boundaries interpolate the inner side polynomial.
+ * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix, 
+ NEU and PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
+ * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
  *
  * @return interpolation matrix
  * @attention all points (x, y, z) must lie within or on the boundaries of g
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const aTopology3d& g, dg::bc boundary= dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const aTopology3d& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
     assert( x.size() == y.size());
     assert( y.size() == z.size());
@@ -341,15 +338,15 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
             for(unsigned k=0; k<pyF.size(); k++)
                 for( unsigned l=0; l<pxF.size(); l++)
                     pxyz[k*g.n()+l]= 1.*pyF[k]*pxF[l];
-            if (boundary == dg::DIR)
+            if (  (x[i] == g.x0() && (bcx==dg::DIR || bcx==dg::DIR_NEU) )
+                ||(x[i] == g.x1() && (bcx==dg::DIR || bcx==dg::NEU_DIR) )
+                ||(y[i] == g.y0() && (bcy==dg::DIR || bcy==dg::DIR_NEU) )
+                ||(y[i] == g.y1() && (bcy==dg::DIR || bcy==dg::NEU_DIR) ))
             {
-                if ( x[i]==g.x0() || x[i]==g.x1()  ||y[i]==g.y0()  || y[i]==g.y1())
-                {
-                    //zeroe boundary values 
-                    for(unsigned k=0; k<g.n(); k++)
-                    for(unsigned l=0; l<g.n(); l++)
-                        pxyz[k*g.n()+l]= 0; 
-                }
+                //zeroe boundary values 
+                for(unsigned k=0; k<g.n(); k++)
+                for(unsigned l=0; l<g.n(); l++)
+                    pxyz[k*g.n()+l]= 0; 
             }
             for( unsigned k=0; k<g.n(); k++)
                 for( unsigned l=0; l<g.n(); l++)
@@ -398,10 +395,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), values.size());
     A.row_indices = row_indices; A.column_indices = column_indices; A.values = values;
 
-    if (boundary == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
-    if (boundary == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
-    if (boundary == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
-    
     return A;
 }
 /**

@@ -198,13 +198,12 @@ struct BoxIntegrator
  * @param coords1 The resulting points (write only) guaranteed to lie inside the grid
  * @param phi1 The angle (read/write) contains maximum phi on input and resulting phi on output
  * @param eps error
- * @param globalbcz boundary condition  (DIR or NEU)
  */
 template< class Field, class Grid>
 void boxintegrator( Field& field, const Grid& grid, 
         const thrust::host_vector<double>& coords0, 
         thrust::host_vector<double>& coords1, 
-        double& phi1, double eps, dg::bc globalbcz)
+        double& phi1, double eps)
 {
     dg::integrateRK4( field, coords0, coords1, phi1, eps); //integration
     //First catch periodic domain
@@ -215,34 +214,29 @@ void boxintegrator( Field& field, const Grid& grid,
         std::cerr << "point "<<coords1[0]<<" "<<coords1[1]<<" is somewhere else!\n";
 #endif //DG_DEBUG
         double deltaS = coords1[2];
-        if( globalbcz == dg::DIR || globalbcz == dg::NEU)
+        BoxIntegrator<Field, Grid> boxy( field, grid, eps);
+        boxy.set_coords( coords0); //nimm alte koordinaten
+        if( phi1 > 0)
         {
-            BoxIntegrator<Field, Grid> boxy( field, grid, eps);
-            boxy.set_coords( coords0); //nimm alte koordinaten
-            if( phi1 > 0)
-            {
-                double dPhiMin = 0, dPhiMax = phi1;
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle 
-                phi1 = (dPhiMin+dPhiMax)/2.;
-                dg::integrateRK4( field, coords0, coords1, dPhiMax, eps); //integriere bis über 0 stelle raus damit unten Wert neu gesetzt wird
-            }
-            else // phi1 < 0 
-            {
-                double dPhiMin = phi1, dPhiMax = 0;
-                dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
-                phi1 = (dPhiMin+dPhiMax)/2.;
-                dg::integrateRK4( field, coords0, coords1, dPhiMin, eps);
-            }
-            if (!(coords1[0] > grid.x0())) { coords1[0]=grid.x0();}
-            if (!(coords1[0] < grid.x1())) { coords1[0]=grid.x1();}
-            if (!(coords1[1] > grid.y0())) { coords1[1]=grid.y0();}
-            if (!(coords1[1] < grid.y1())) { coords1[1]=grid.y1();}
-            //idea: maybe we should take the "wrong" long Delta s instead of the short one to avoid deteriorated CFL condition:
-            coords1[2] = deltaS;
+            double dPhiMin = 0, dPhiMax = phi1;
+            dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle 
+            phi1 = (dPhiMin+dPhiMax)/2.;
+            dg::integrateRK4( field, coords0, coords1, dPhiMax, eps); //integriere bis über 0 stelle raus damit unten Wert neu gesetzt wird
         }
-        else if (globalbcz == DIR_NEU )std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
-        else if (globalbcz == NEU_DIR )std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
-        else if (globalbcz == dg::PER )std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
+        else // phi1 < 0 
+        {
+            double dPhiMin = phi1, dPhiMax = 0;
+            dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
+            phi1 = (dPhiMin+dPhiMax)/2.;
+            dg::integrateRK4( field, coords0, coords1, dPhiMin, eps);
+        }
+        if (!(coords1[0] > grid.x0())) { coords1[0]=grid.x0();}
+        if (!(coords1[0] < grid.x1())) { coords1[0]=grid.x1();}
+        if (!(coords1[1] > grid.y0())) { coords1[1]=grid.y0();}
+        if (!(coords1[1] < grid.y1())) { coords1[1]=grid.y1();}
+        // we should take the "wrong" long Delta s instead of the short one to avoid deteriorated CFL condition:
+        coords1[2] = deltaS;
+        else std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
     }
 }
 //////////////////////////////FieldAlignedCLASS////////////////////////////////////////////
@@ -267,25 +261,23 @@ struct FieldAligned
     /**
     * @brief Construct from a field and a grid
     *
-    * @tparam Field The Fieldlines to be integrated: 
-        Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) 
-        where the first index is R, the second Z and the last s (the length of the field line)
     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
         is a limiter and 0 if there isn't. 
         If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
-    * @param field The field to integrate
+    * @param vec The field to integrate
     * @param grid The grid on which to operate
     * @param eps Desired accuracy of runge kutta
     * @param limit Instance of the limiter class (Default is a limiter everywhere, 
         note that if bcz is periodic it doesn't matter if there is a limiter or not)
-    * @param globalbcz Choose NEU or DIR. Defines BC in parallel on bounding box
+    * @param globalbcx Choose NEU or DIR. Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
+    * @param globalbcy Choose NEU or DIR. Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
     * @param deltaPhi Is either <0 (then it's ignored), may differ from hz() only if Nz() == 1
     * @note If there is a limiter, the boundary condition on the first/last plane is set 
         by the bcz variable from the grid and can be changed by the set_boundaries function. 
         If there is no limiter the boundary condition is periodic.
     */
     template <class Limiter>
-    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, bool dependsOnX=true, bool dependsOnY=true, double deltaPhi = -1);
+    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, bool dependsOnX=true, bool dependsOnY=true, double deltaPhi = -1);
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -304,15 +296,7 @@ struct FieldAligned
         right_ = dg::evaluate( dg::CONSTANT(right),g2d);
     }
 
-    /**
-     * @brief Set boundary conditions in the limiter region
-     *
-     * if Dirichlet boundaries are used the left value is the left function
-     value, if Neumann boundaries are used the left value is the left derivative value
-     * @param bcz boundary condition
-     * @param left left boundary value
-     * @param right right boundary value
-    */
+    ///@copydoc set_boundaries()
     void set_boundaries( dg::bc bcz, const container& left, const container& right)
     {
         bcz_ = bcz;
@@ -418,7 +402,7 @@ struct FieldAligned
 
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
-FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVectorLvl0& mag, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcz, bool dependsOnX, bool dependsOnY, double deltaPhi):
+FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVectorLvl0& mag, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, bool dependsOnX, bool dependsOnY, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         Nz_(grid.Nz()), bcz_(grid.bcz()), g_(grid)
 {
@@ -452,17 +436,17 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
         thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]; //x,y,s
         double phi1 = deltaPhi;
-        boxintegrator( field, g2dFine, coords, coordsP, phi1, eps, globalbcz);
+        boxintegrator( field, g2dFine, coords, coordsP, phi1, eps);
         phi1 =  - deltaPhi;
-        boxintegrator( field, g2dFine, coords, coordsM, phi1, eps, globalbcz);
+        boxintegrator( field, g2dFine, coords, coordsM, phi1, eps);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
     t.toc(); 
     std::cout << "Fieldline integration took "<<t.diff()<<"s\n";
     t.tic();
-    IMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], g2dCoarse, globalbcz);
-    IMatrix minusFine = dg::create::interpolation( ym[0], ym[1], g2dCoarse, globalbcz);
+    IMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], g2dCoarse, globalbcx, globalbcy);
+    IMatrix minusFine = dg::create::interpolation( ym[0], ym[1], g2dCoarse, globalbcx, globalbcy);
     IMatrix interpolation = dg::create::interpolation( g2dFine, g2dCoarse);
     IMatrix projection = dg::create::projection( g2dCoarse, g2dFine);
     t.toc();
@@ -475,8 +459,7 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     //Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
     cusp::transpose( plus, plusT);
     cusp::transpose( minus, minusT);     
-//     copy into h vectors
-    
+    //project h and copy into h vectors
     thrust::host_vector<double> hp( perp_size_), hm(hp);
     dg::blas2::symv( projection, yp[2], hp);
     dg::blas2::symv( projection, ym[2], hm);
