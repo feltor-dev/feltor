@@ -84,7 +84,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
-\title{The toefl project}
+\title{The electron-positron plasma project}
 \maketitle
 
 \begin{abstract}
@@ -120,24 +120,24 @@ where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coord
 radius of the blob.
 We initialize 
 \begin{align}
-    N_s = \Gamma_{1s}^{-1} n \quad \phi = 0 \\
-    \rho = \phi = 0
+    N_s = \Gamma_{1s}^{-1} n \quad \phi = 0 
     \label{}
 \end{align}
 \subsection{Diagnostics}
 \begin{align}
     M(t) = \int n-1 \\
     \Lambda_n = \nu \int \Delta n  \\
+    ...
     \label{}
 \end{align}
 \section{Numerical methods}
-discontinuouos Galerkin on structured grid
+discontinuous Galerkin on structured grid
 \begin{longtable}{ll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
 coordinate system & Cartesian 2D & equidistant discretization of $[0,l_x] \times [0,l_y]$, equal number of Gaussian nodes in x and y \\
 matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-\ExB advection & Arakawa & s.a. \cite{Einkemmer2013} \\
+\ExB advection & Arakawa & - \\
 curvature terms & direct & flux conserving \\
 time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
 \bottomrule
@@ -181,9 +181,9 @@ eps\_pol   & float &1e-6    & - &  accuracy of polarisation solver \\
 eps\_gamma & float &1e-7    & - & accuracy of $\Gamma_1$ (only in gyrofluid model) \\
 eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
 curvature  & float &0.00015& - & magnetic curvature $\kappa$ \\
-tau        & float array &[-1., 1.]  & - & $\tau_s = T_s/Z_s T_e$
-mu         & float array &[-1., 1.]  & - & $\mu_s = m_s/Z_s m_e$
-z          & integer array  & [-1,1]  & - & charge number
+tau        & float array &[-1., 1.]  & - & $\tau_s = T_s/Z_s T_e$\\
+mu         & float array &[-1., 1.]  & - & $\mu_s = m_s/Z_s m_e$\\
+z          & integer array  & [-1,1]  & - & charge number\\
 nu\_perp    & float &5e-3   & - & pependicular viscosity $\nu$ \\
 amplitude  & float &1.0    & - & amplitude $A$ of the blob \\
 sigma      & float &10     & - & blob radius $\sigma$ \\
@@ -193,8 +193,7 @@ lx         & float &200    & - & $l_x$  \\
 ly         & float &200    & - & $l_y$  \\
 bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
 bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-debye  & float & 0 & 0 & debye length parameter
-
+debye  & float & 0 & 0 & debye length parameter\\
 \bottomrule
 \end{longtable}
 
@@ -225,12 +224,12 @@ energy                   & Dataset & 1 (energy\_time) & total energy integral  \
 mass                     & Dataset & 1 (energy\_time) & mass integral   \\
 \bottomrule
 \end{longtable}
-\section{Diagnostics toeflRdiag.cu}
+\section{Diagnostics toeflEPdiag.cu}
 There only is a shared memory version available
 \begin{verbatim}
 cd path/to/feltor/diag
-make toeflRdiag 
-path/to/feltor/diag/toeflRdiag input.nc output.nc
+make toeflEPdiag 
+path/to/feltor/diag/toeflEPdiag input.nc output.nc
 \end{verbatim}
 
 Input file format: netcdf-4/hdf5
@@ -242,7 +241,7 @@ Input file format: netcdf-4/hdf5
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &             text attribute & 1 & verbose input file as a string \\
 electrons                & Dataset & 3 & electon density (time, y, x) \\
-ions                     & Dataset & 3 & ion density (time, y, x) \\
+positrons                & Dataset & 3 & positron density (time, y, x) \\
 potential                & Dataset & 3 & electric potential (time, y, x) \\
 \bottomrule
 \end{longtable}
