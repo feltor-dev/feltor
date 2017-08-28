@@ -67,7 +67,7 @@ int main( int argc, char* argv[])
 	err = nc_get_vara_double( ncid, timeID,     &start0d, &numOut, vt.data());
         //Timestepping
         double timepointexact_min=75.*p.invkappa; //in units omega_ci 
-        double timepointexact_max=500.*p.invkappa; //in units omega_ci 
+        double timepointexact_max=300.*p.invkappa; //in units omega_ci 
 
 
 	std::vector<double>::iterator timepoint_min,timepoint_max;

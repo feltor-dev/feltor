@@ -163,7 +163,7 @@ int main( int argc, char* argv[])
 
         title << std::setprecision(2) << std::scientific;
         //title <<"ne / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
-        title <<"ne-1 / " << colors.scalemin()<<"\t";
+        title <<"ne-1 / " << colors.scalemax()<< " "<< colors.scalemin()<<"\t";
 
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
