@@ -38,8 +38,8 @@ int main( int argc, char* argv[])
     //nc defs
     file::NC_Error_Handle err;
     int ncid;
-    int dataIDs[22];
-    std::string names[22] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm"}; 
+    int dataIDs[25];
+    std::string names[25] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm","Rnnormscal","dfnormscal","Rnffnormscal"}; 
     //input nc files
     for( int i=1; i< argc; i++)
     {
@@ -66,8 +66,9 @@ int main( int argc, char* argv[])
 	
 	err = nc_get_vara_double( ncid, timeID,     &start0d, &numOut, vt.data());
         //Timestepping
-	double timepointexact_min=50.*p.invkappa; //in units omega_ci 
-	double timepointexact_max=100.*p.invkappa; //in units omega_ci 
+        double timepointexact_min=75.*p.invkappa; //in units omega_ci 
+        double timepointexact_max=500.*p.invkappa; //in units omega_ci 
+
 
 	std::vector<double>::iterator timepoint_min,timepoint_max;
 	timepoint_min=std::lower_bound (vt.begin(), vt.end(), timepointexact_min);
@@ -81,7 +82,7 @@ int main( int argc, char* argv[])
     
 	std::cout << p.alpha << " " << p.invkappa;
 	//read and write data
-	for( unsigned m=0; m<22; m++) {
+	for( unsigned m=0; m<25; m++) {
 	    err = nc_inq_varid(ncid, names[m].data(), &dataIDs[m]);
 	    err = nc_get_vara_double( ncid, dataIDs[m], &start0d, &numOut, temp.data());
 

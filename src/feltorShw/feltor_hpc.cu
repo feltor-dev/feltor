@@ -68,8 +68,7 @@ int main( int argc, char* argv[])
         y1[1] = dg::evaluate( init0, grid);
       }
       if (p.initmode == 1) {
-//         dg::SinXSinY init0(p.amp,0.,1.*M_PI/p.lx,p.sigma*2.*M_PI/p.ly);
-        dg::SinXCosY init0(p.amp,0.,1*M_PI/p.lx,p.sigma*2.*M_PI/p.ly);
+        dg::SinXCosY init0(p.amp,0.,2.*M_PI/p.lx,p.sigma*2.*M_PI/p.ly);
         y1[1] = dg::evaluate( init0, grid);
       }
       if (p.initmode == 2) {

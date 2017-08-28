@@ -54,7 +54,7 @@ int main( int argc, char* argv[])
     //output grids
     const double kxmin = 0./p.lx;
     const double kymin = 0./p.ly;    
-    const unsigned Nkx = Nx ; 
+    const unsigned Nkx = Nx; 
     const unsigned Nky = Ny/2+1;       
     const double kxmax = Nkx;//(Nkx/2.+1)/p.lx; //see fftw docu
     const double kymax = Nky;//(Nky)/p.ly; 
@@ -67,16 +67,9 @@ int main( int argc, char* argv[])
     dg::Grid1d g1d_f( kmin, kmax,1., Nk,  p.bc_y);
     dg::Grid1d g1dx_f( kxmin, kxmax,1., Nkx,  p.bc_x);
     dg::Grid1d g1dy_f( kymin, kymax,1., Nky,  p.bc_y);
-
-    
-//     double kx_mode = 1./p.lx;;
-//     double ky_mode = p.sigma/p.ly; 
     
     unsigned i_mode = 0;
     unsigned j_mode = 1*p.sigma;
-//     std::cou
-//     std::cout << kxmax << " " << kymax<< std::endl;
-//     std::cout << i_mode << " " << j_mode<< std::endl;
 
     //2d field netcdf vars of input.nc
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -122,7 +115,7 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> ntilde(2,dg::evaluate(dg::zero,g2d));    
     std::vector<dg::HVec> energies(2,phi); //Se,Si,SE
     std::vector<dg::HVec> energiesequi(2,phi); 
-    dg::HVec k= dg::evaluate(dg::cooX1d,g1d_f);
+    dg::HVec k = dg::evaluate(dg::cooX1d,g1d_f);
     //scatter matrix
     dg::IHMatrix equi = dg::create::backscatter( g2d);
  
@@ -137,15 +130,12 @@ int main( int argc, char* argv[])
     std::vector<unsigned> counter( g1d_f.N());
      
     //FFTW SETUP
-    
     //FFTW_RODFT11 computes an RODFT11 transform, i.e. a DST-IV. (Logical N=2*n, inverse is FFTW_RODFT11.)  -> DIR_NEU
     //FFTW_RODFT10 computes an RODFT10 transform, i.e. a DST-II. (Logical N=2*n, inverse is FFTW_RODFT01.) -> DIR_DIR
     //FFTW_RODFT00 computes an RODFT00 transform, i.e. a DST-I. (Logical N=2*(n+1), inverse is FFTW_RODFT00.) -> DIR_DIR
-//    fftw_r2r_kind kind = FFTW_RODFT10; //DFT & DST 2
+//     fftw_r2r_kind kind = FFTW_RODFT10; //DFT & DST 2
     fftw_r2r_kind kind = FFTW_RODFT00; //DFT & DST 1
-
     spectral::DRT_DFT trafo( Ny, Nx, kind);
-    
     
     //open netcdf files
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
@@ -174,7 +164,12 @@ int main( int argc, char* argv[])
         kspec[mn]=0.;
     }
     double gammakspecavg=0.;
- 
+    
+    double gamma=0.;
+    double gammalog=0.;
+    double phimax=0.;
+    double phimaxold=0.;
+
 //     std::cout<< kxkyspec.cols() << " " << kxkyspec.rows() << std::endl;
 //     std::cout<< g2d_f.Nx() << " " << g2d_f.Ny() << std::endl;
     for( unsigned i=imin; i<imax+1; i++)//timestepping
@@ -194,13 +189,29 @@ int main( int argc, char* argv[])
             dg::blas1::transform( npe[0], npe[0], dg::PLUS<>(p.bgprofamp + p.nprofileamp));
             dg::blas1::transform( npe[1], npe[1], dg::PLUS<>(p.bgprofamp + p.nprofileamp));
 
+            
+            
             //compute tilde_N
             dg::blas1::pointwiseDivide(npe[0],nprof,ntilde[0]);
             dg::blas1::axpby(1.0,ntilde[0],-1.0,one,ntilde[0]);
             dg::blas1::pointwiseDot(one,ntilde[0],energies[0]);
             dg::blas1::pointwiseDot(phi,one,energies[1]);
            
-            //
+            
+            if ( i==0) { 
+                phimax    = *thrust::max_element(energies[1].begin(),energies[1].end()); 
+                gamma     = 0.;
+                gammalog     = 0.;
+                phimaxold = phimax;
+            }
+            if (i>0) { 
+                phimax    = *thrust::max_element(energies[1].begin(),energies[1].end()); 
+                gamma     = (log(phimax)-log(phimaxold))/deltaT;
+                gammalog     = (phimax-phimaxold)/deltaT/phimax;
+                phimaxold = phimax;
+            }
+            std::cout << p.sigma << " " <<  gamma<< " "<< gammalog<< " "  << phimax<<"\n";
+
             for (unsigned j=0;j<2;j++)
             {
                 //Backscatter to equidistant grid
@@ -221,15 +232,14 @@ int main( int argc, char* argv[])
                         //normalise trafo
                          kxkyspec(n,m)/=sqrt((2.*((double)Nx)+1.)*(double)Ny); //for rodft00
 //                        kxkyspec(n,m)/= sqrt((2.*((double)Nx))*(double)Ny); //otherwise
-                        if (i==0) 
                         //grow rate for phi spec with simple forward difference in time \gamma(kx,ky) = |\phi(kx,ky,(t+1))|-|\phi(kx,ky,(t))|/(\Delta t)
                         if (j==1 && i==0) { 
-                            gammakxkyspec(n,m) =kxkyspec(n,m)/deltaT;
-                            kxkyspec_old(n,m) = kxkyspec(n,m);
+                            gammakxkyspec(n,m) = kxkyspec(n,m)/deltaT;
+                            kxkyspec_old(n,m)  = kxkyspec(n,m);
                         }
                         if (j==1 && i>0) { 
                             gammakxkyspec(n,m) =(kxkyspec(n,m) - kxkyspec_old(n,m))/deltaT;
-                            kxkyspec_old(n,m) = kxkyspec(n,m);
+                            kxkyspec_old(n,m)  = kxkyspec(n,m);
                             
                         }
                     }
@@ -280,7 +290,7 @@ int main( int argc, char* argv[])
             time += p.itstp*p.dt;        
     }
 //     std::cout << p.sigma << " " <<  gammakspecavg/imax-<<"\n";
-    std::cout << p.sigma << " " <<  gammakspecavg/(imax-2.)<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" " <<  p.lx << "\n";
+//     std::cout << p.sigma << " " <<  gammakspecavg/(imax-2.)<< " " <<  p.invkappa <<" " <<  p.alpha<<" " <<  p.ly <<" " <<  p.lx << "\n";
 
     err1d_f = nc_close(ncid1d_f);
     err2d_f = nc_close(ncid2d_f);
