@@ -554,7 +554,7 @@ void stepperRK17(RHS& rhs, const container& begin, container& end, double T_min,
  * @param begin initial condition (size 3)
  * @param end (write-only) contains solution on output
  * @param T_max time difference
- * @param eps_abs desired absolute accuracy
+ * @param eps_abs desired accuracy in the error function between end and end_old
  * @return 0 if converged, -1 and a warning to std::cerr when isnan appears, -2 if failed to reach eps_abs
  */
 template< class RHS, class container, unsigned s>
@@ -590,16 +590,7 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
         }  
         error = rhs.error( end, old_end);
         old_end = end;
-#ifdef DG_DEBUG
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if(rank==0)
-#endif //MPI
-        std::cout << "NT "<<NT<<" dt "<<dt<<" error "<<error<<"\n";
-#endif //DG_DEBUG
     }
-
     if( std::isnan( error) )
     {
         std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is NAN! "<<std::endl;

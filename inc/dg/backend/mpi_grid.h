@@ -35,13 +35,13 @@ struct aMPITopology2d
     * @param fx new global number of cells is fx*global().Nx()
     * @param fy new global number of cells is fy*global().Ny()
     */
-    void multiplyCellNumber( double fx, double fy){
+    void multiplyCellNumbers( double fx, double fy){
         set(g.n(), floor(fx*(double)g.Nx()+0.5), floor(fy*(double)g.Ny()+0.5));
     }
     /**
     * @copydoc Grid2d::set(unsigned,unsigned,unsigned)
     * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny()) is NOT(!) what you want
-    *           use the multiplyCellNumber function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny())
+    *           use the multiplyCellNumbers function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny())
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
@@ -342,14 +342,14 @@ struct aMPITopology3d
 {
     typedef MPITag memory_category;
     typedef ThreeDimensionalTag dimensionality;
-    ///@copydoc aMPITopology2d::multiplyCellNumber()
-    void multiplyCellNumber( double fx, double fy){
+    ///@copydoc aMPITopology2d::multiplyCellNumbers()
+    void multiplyCellNumbers( double fx, double fy){
         set(g.n(), round(fx*(double)g.Nx()), round(fy*(double)g.Ny()), g.Nz());
     }
     /**
      * @copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
      * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny(), 2*g.Nz()) is NOT(!) what you want
-     *           use the multiply function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny(), 2*g.global().Nz())
+     *           use the multiplyCellNumbers function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny(), 2*g.global().Nz())
      */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());

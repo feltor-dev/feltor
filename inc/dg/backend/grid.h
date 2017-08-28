@@ -292,7 +292,7 @@ struct aTopology2d
     * @param fx new number of cells is the nearest integer to fx*Nx()
     * @param fy new number of cells is the nearest integer to fy*Ny()
     */
-    void multiplyCellNumber( double fx, double fy){
+    void multiplyCellNumbers( double fx, double fy){
         do_set(n(), round(fx*(double)Nx()), round(fy*(double)Ny()));
     }
     /**
@@ -419,8 +419,8 @@ struct aTopology3d
 {
     typedef SharedTag memory_category;
     typedef ThreeDimensionalTag dimensionality;
-    ///@copydoc aTopology2d::multiplyCellNumber()
-    void multiplyCellNumber( double fx, double fy){
+    ///@copydoc aTopology2d::multiplyCellNumbers()
+    void multiplyCellNumbers( double fx, double fy){
         set(n(), round(fx*(double)Nx()), round(fy*(double)Ny()), Nz());
     }
     /**

@@ -85,45 +85,47 @@ struct DSField
 {
     
     //z component of v may not vanish
-    DSField( const dg::geo::BinaryVectorLvl0& v, const aGeometry2d& g)
+    DSField( const dg::geo::BinaryVectorLvl0& v, const aGeometry2d& g): g_(g)
     {
-        thrust::host_vector<double> b_zeta, b_eta;
-        dg::pushForwardPerp( v.x(), v.y(), b_zeta, b_eta, g);
-        thrust::host_vector<double> b_phi = dg::pullback( v.z(), g);
-        dg::blas1::pointwiseDivide(b_zeta, b_phi, b_zeta);
-        dg::blas1::pointwiseDivide(b_eta, b_phi, b_eta);
-        dg::blas1::transform(b_phi, b_phi, dg::INVERT());
-        dzetadphi_ = dg::create::forward_transform( b_zeta, g );
-        detadphi_ = dg::create::forward_transform( b_eta, g );
-        dsdphi_ = dg::create::forward_transform( b_phi, g );
+        thrust::host_vector<double> v_zeta, v_eta;
+        dg::pushForwardPerp( v.x(), v.y(), v_zeta, v_eta, g);
+        thrust::host_vector<double> v_phi = dg::pullback( v.z(), g);
+        dg::blas1::pointwiseDivide(v_zeta, v_phi, v_zeta);
+        dg::blas1::pointwiseDivide(v_eta, v_phi, v_eta);
+        dg::blas1::transform(v_phi, v_phi, dg::INVERT<double>());
+        dzetadphi_  = dg::create::forward_transform( v_zeta, g );
+        detadphi_   = dg::create::forward_transform( v_eta, g );
+        dsdphi_     = dg::create::forward_transform( v_phi, g );
 
     }
     //interpolate the vectors given in the constructor on the given point
     //if point lies outside of grid boundaries zero is returned
     void operator()(const thrust::host_vector<double>& y, thrust::host_vector<double>& yp) const
     {
-        yp[0] = y[0], yp[1] = y[1];
-        g_.get().shift_topologic( y[0], y[1], yp[0], yp[1]); //shift points onto domain
-        if( !g_.get().contains( y[0], y[1])) yp[0] = yp[1]= yp[2] = 0;
+        double R = y[0], Z = y[1];
+        g_.get().shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
+        if( !g_.get().contains( R, Z)) yp[0] = yp[1]= yp[2] = 0;
         else
         {
             //else interpolate
-            yp[0] = interpolate( y[0], y[1], dzetadphi_, g_.get());
-            yp[1] = interpolate( y[0], y[1], detadphi_, g_.get());
-            yp[2] = interpolate( y[0], y[1], dsdphi_, g_.get());
+            yp[0] = interpolate( R, Z, dzetadphi_, g_.get());
+            yp[1] = interpolate( R, Z, detadphi_,  g_.get());
+            yp[2] = interpolate( R, Z, dsdphi_,    g_.get());
         }
     }
 
+    ///take the sum of the absolute errors perp and parallel
     double error( const dg::HVec& x0, const dg::HVec& x1) const {
-        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
+        //here, we don't need to shift coordinates since x0 and x1 are both end points
+        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1]))+sqrt((x0[2]-x1[2])*(x0[2]-x1[2]));
     }
     bool monitor( const dg::HVec& end)const{ 
         if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) ) 
         {
             return false;
         }
-        //if new integrated point outside domain
-        if ((10*g_.get().x0() > end[0]  ) || (10*g_.get().x1() < end[0])  ||(10*g_.get().y0()  > end[1]  ) || (10*g_.get().y1() < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        //if new integrated point far outside domain
+        if ((end[0] < g_.get().x0()-1e4 ) || (g_.get().x1()+1e4 < end[0])  ||(end[1] < g_.get().y0()-1e4 ) || (g_.get().y1()+1e4 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
         {
             return false;
         }
@@ -184,7 +186,7 @@ struct BoxIntegrator
 /**
  * @brief Integrate one field line in a given box, Result is guaranteed to lie inside the box
  *
- * @tparam Field Must be usable in the integrateRK4 function
+ * @tparam Field Must be usable in the integrateRK function
  * @tparam Grid must provide 2d contains function
  * @param field The field to use
  * @param grid instance of the Grid class 
@@ -230,8 +232,9 @@ void boxintegrator( Field& field, const Grid& grid,
         if (!(coords1[1] < grid.y1())) { coords1[1]=grid.y1();}
         //now assume the rest is purely toroidal
         double deltaS = coords1[2];
-        field(coords1, coords0); //we are just interested in coords0[2]
-        coords1[2] = deltaS + (deltaPhi-phi1)*coords0[2]; // ds + dphi*f[2]
+        thrust::host_vector<double> temp=coords0;
+        field(coords1, temp); //we are just interested in temp[2]
+        coords1[2] = deltaS + (deltaPhi-phi1)*temp[2]; // ds + dphi*f[2]
     }
 }
 
@@ -239,32 +242,37 @@ void boxintegrator( Field& field, const Grid& grid,
 namespace detail{
 
 //used in constructor of FieldAligned
-void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGeometry2d* g2dFine_ptr, std::vector<thrust::host_vector<double>& yp_result, std::vector<thrust::host_vector<double>& ym_result )
+void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGeometry2d* g2dFine_ptr, std::vector<thrust::host_vector<double> >& yp_result, std::vector<thrust::host_vector<double> >& ym_result , double deltaPhi, double eps)
 {
     std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::cooX2d, *g2dFine_ptr)); //x
     y[1] = dg::evaluate( dg::cooY2d, *g2dFine_ptr); //y
     y[2] = dg::evaluate( dg::zero, *g2dFine_ptr); //s
     std::vector<thrust::host_vector<double> > yp( 3, y[0]), ym(yp); 
     //construct field on high polynomial grid, then integrate it
-    aGeometry2d* g2dField_ptr = g2dCoarse_ptr->clone();
-    g2dField_ptr->set( 11, g2dField_ptr->Nx(), g2dField_ptr->Ny());
+    Timer t;
+    t.tic();
+    aGeometry2d* g2dField_ptr = g2dFine_ptr->clone();
+    //initial tests show that higher order polynomial might not be needed...
+    g2dField_ptr->set( g2dField_ptr->n(), g2dField_ptr->Nx(), g2dField_ptr->Ny());
     dg::DSField field( vec, *g2dField_ptr);
+    t.toc();
+    std::cout << "Generation of fine grid took "<<t.diff()<<"s\n";
     //field in case of cartesian grid
     dg::DSFieldCylindrical cyl_field(vec);
 #ifdef _OPENMP
 #pragma omp parallel for shared(field, cyl_field)
 #endif //_OPENMP
-    for( unsigned i=0; i<g2dFine.size(); i++)
+    for( unsigned i=0; i<g2dFine_ptr->size(); i++)
     {
         thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]; //x,y,s
         double phi1 = deltaPhi;
-        if( dynamic_cast<dg::CartesianGrid2d*>( g2dFine_ptr))
+        if( dynamic_cast<const dg::CartesianGrid2d*>( g2dFine_ptr))
             boxintegrator( cyl_field, *g2dFine_ptr, coords, coordsP, phi1, eps);
         else 
             boxintegrator( field, *g2dFine_ptr, coords, coordsP, phi1, eps);
         phi1 =  - deltaPhi;
-        if( dynamic_cast<dg::CartesianGrid2d*>( g2dFine_ptr))
+        if( dynamic_cast<const dg::CartesianGrid2d*>( g2dFine_ptr))
             boxintegrator( cyl_field, *g2dFine_ptr, coords, coordsM, phi1, eps);
         else 
             boxintegrator( field, *g2dFine_ptr, coords, coordsM, phi1, eps);
@@ -273,6 +281,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGe
     }
     yp_result=yp;
     ym_result=ym;
+    delete g2dField_ptr;
 }
 
 }//namespace detail
@@ -311,15 +320,13 @@ struct FieldAligned
         note that if grid.bcz() is periodic it doesn't matter if there is a limiter or not)
     * @param globalbcx Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
     * @param globalbcy Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
-    * @param dependsOnX performance indicator for the fine 2 coarse operations (elements of vec depend on first coordinate yes or no)
-    * @param dependsOnY performance indicator for the fine 2 coarse operations (elements of vec depend on second coordinate yes or no)
     * @param deltaPhi Is either <0 (then it's ignored), may differ from hz() only if Nz() == 1
     * @note If there is a limiter, the boundary condition on the first/last plane is set 
         by the grid.bcz() variable and can be changed by the set_boundaries function. 
         If there is no limiter the boundary condition is periodic.
     */
     template <class Limiter>
-    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = FullLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, bool dependsOnX=true, bool dependsOnY=true, double deltaPhi = -1);
+    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = FullLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, double deltaPhi = -1);
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -434,31 +441,57 @@ struct FieldAligned
 
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
-FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, bool dependsOnX, bool dependsOnY, double deltaPhi):
+FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, double deltaPhi):
         hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
         Nz_(grid.Nz()), bcz_(grid.bcz()), g_(grid)
 {
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
+    const aGeometry3d* grid_ptr = &grid;
+    aGeometry2d* g2dCoarse_ptr;
+    const dg::CartesianGrid3d* grid_cart = dynamic_cast<const dg::CartesianGrid3d*>(grid_ptr);
+    const dg::CylindricalGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalGrid3d*>(grid_ptr);
+    const dg::CurvilinearProductGrid3d*  grid_curvi = dynamic_cast<const dg::CurvilinearProductGrid3d*>(grid_ptr);
+    if( grid_cart) 
+    {
+        dg::CartesianGrid2d cart = grid_cart->perp_grid();
+        g2dCoarse_ptr = cart.clone();
+    }
+    else if( grid_cyl) 
+    {
+        dg::CartesianGrid2d cart = grid_cyl->perp_grid();
+        g2dCoarse_ptr = cart.clone();
+    }
+    else if( grid_curvi) 
+    {
+        dg::CurvilinearGrid2d curv = grid_curvi->perp_grid();
+        g2dCoarse_ptr = curv.clone();
+    }
+    else
+        throw dg::Error( dg::Message(_ping_)<<"Grid class not recognized!");
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //Resize vector to 2D grid size
-    aGeometry2d* g2dCoarse_ptr = grid.perp_grid( );
     perp_size_ = g2dCoarse_ptr->size();
     limiter_ = dg::evaluate( limit, *g2dCoarse_ptr);
     right_ = left_ = dg::evaluate( zero, *g2dCoarse_ptr);
     ghostM.resize( perp_size_); ghostP.resize( perp_size_);
     //Set starting points and integrate field lines
-    aGeometry2d* g2dFine_ptr = g2dCoarse_ptr.clone();
-    g2dFine_ptr->muliplyCellNumbers( (double)mx, (double)my);
+    aGeometry2d* g2dFine_ptr = g2dCoarse_ptr->clone();
+    g2dFine_ptr->multiplyCellNumbers( (double)mx, (double)my);
     std::vector<thrust::host_vector<double> > yp( 3), ym(yp); 
+    std::cout << "Start fieldline integration!\n";
     dg::Timer t;
     t.tic();
-    detail::integrate_all_fieldlines2d( g2dFine_ptr, yp, ym);
+    detail::integrate_all_fieldlines2d( vec, g2dFine_ptr, yp, ym, deltaPhi, eps);
     t.toc(); 
     std::cout << "Fieldline integration took "<<t.diff()<<"s\n";
+    //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
     IMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *g2dCoarse_ptr, globalbcx, globalbcy);
     IMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *g2dCoarse_ptr, globalbcx, globalbcy);
-    IMatrix interpolation = dg::create::interpolation( *g2dFine_ptr, *g2dCoarse_ptr);
+    //IMatrix interpolation = dg::create::interpolation( *g2dFine_ptr, *g2dCoarse_ptr);
     IMatrix projection = dg::create::projection( *g2dCoarse_ptr, *g2dFine_ptr);
     t.toc();
     std::cout <<"Creation of interpolation/projection took "<<t.diff()<<"s\n";
@@ -470,7 +503,7 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     //Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
     cusp::transpose( plus, plusT);
     cusp::transpose( minus, minusT);     
-    //project h and copy into h vectors
+    //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     thrust::host_vector<double> hp( perp_size_), hm(hp);
     dg::blas2::symv( projection, yp[2], hp);
     dg::blas2::symv( projection, ym[2], hm);
@@ -480,7 +513,9 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
         thrust::copy( hm.begin(), hm.end(), hm_.begin() + i*perp_size_);
     }
     dg::blas1::scal( hm_, -1.);
-    dg::blas1::axpby(  1., hp_, +1., hm_, hz_);    //
+    dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
+    delete g2dCoarse_ptr;
+    delete g2dFine_ptr;
  
 }
 

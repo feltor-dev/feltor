@@ -15,6 +15,7 @@
 #include "solovev.h"
 #include "flux.h"
 #include "fieldaligned.h"
+#include "ds.h"
 #include "init.h"
 
 #include "file/nc_utilities.h"
@@ -65,7 +66,7 @@ int main( int argc, char* argv[])
     GeomParameters gp(js);
     Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
-    std::cout << "Type psi_0 and psi_1\n";
+    std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
     gp.display( std::cout);
@@ -167,8 +168,8 @@ int main( int argc, char* argv[])
     dg::geo::BHatP bhatP(c);
     //dg::geo::BinaryVectorLvl0 bhat( dg::geo::BHatR(c), dg::geo::BHatZ(c), dg::geo::BHatP(c));
     dg::geo::BinaryVectorLvl0 bhat( bhatR, bhatZ, bhatP);
-    dg::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1,1,gp.rk4eps, dg::NoLimiter() ); 
-    //dg::DS<dg::IHMatrix, dg::HMatrix, dg::HVec> ds( fieldaligned, flux::Field(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
+    dg::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
+    dg::DS<dg::aGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( c, g3d, dg::normed, dg::centered);
 
     
     t.toc();

@@ -33,9 +33,8 @@ inline void doSymv( Matrix& m,
                     ThrustVectorTag  )
 {
 #ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-    assert( m.num_rows == m.num_cols );
-    assert( m.num_rows == x.size() );
+    assert( m.num_rows == y.size() );
+    assert( m.num_cols == x.size() );
 #endif //DG_DEBUG
     cusp::array1d_view< typename Vector::const_iterator> cx( x.cbegin(), x.cend());
     cusp::array1d_view< typename Vector::iterator> cy( y.begin(), y.end());
@@ -51,9 +50,8 @@ inline void doSymv( Matrix& m,
                     CuspVectorTag  )
 {
 #ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-    assert( m.num_rows == m.num_cols );
-    assert( m.num_rows == x.size() );
+    assert( m.num_rows == y.size() );
+    assert( m.num_cols == x.size() );
 #endif //DG_DEBUG
     cusp::multiply( m, x, y);
 }
