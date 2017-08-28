@@ -38,8 +38,8 @@ int main( int argc, char* argv[])
     //nc defs
     file::NC_Error_Handle err;
     int ncid;
-    int dataIDs[25];
-    std::string names[25] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm","Rnnormscal","dfnormscal","Rnffnormscal"}; 
+    int dataIDs[26];
+    std::string names[26] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm","Rnnormscal","dfnormscal","Rnffnormscal","vyfavgnorm"}; 
     //input nc files
     for( int i=1; i< argc; i++)
     {
@@ -91,9 +91,15 @@ int main( int argc, char* argv[])
 	    double stddev = StdDev(temp, mean, timepos_min, timepos_max); 
 	    std::cout << " " << mean << " " << stddev; // << " " << stddev/mean;
 	}
-        std::cout << " " << vt[timepos_max-1]/p.invkappa;
-        std::cout << "\n";
-        err = nc_close(ncid);
+	//[[vy]]_norm
+    err = nc_inq_varid(ncid, names[25].data(), &dataIDs[25]);
+    err = nc_get_vara_double( ncid, dataIDs[25], &start0d, &numOut, temp.data());
+    std::cout << " " << temp.data();
+    
+    std::cout << " " << vt[timepos_min]/p.invkappa;
+    std::cout << " " << vt[timepos_max]/p.invkappa;
+    std::cout << "\n";
+    err = nc_close(ncid);
         
     }    
     return 0;

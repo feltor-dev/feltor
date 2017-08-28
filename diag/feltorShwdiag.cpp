@@ -152,7 +152,7 @@ int main( int argc, char* argv[])
     //probe netcdf file
     err_out = nc_redef(ncid_out);
     int npe_probesID[num_probes],phi_probesID[num_probes],gamma_probesID[num_probes];
-    int OmegaID, OmegazID, OmegaratioID, TperpzID, TperpID, TperpratioID, Gamma_neID,invkappaavgID,RfxnormID,AnormID,RfnnormID,AnnormID,RxnormID,RnxnormID,GuyxnormID,TxnormID,GuynxnormID,TnxnormID,netnormID,neatnormID,dtfauynormID,RxnormscalID,GuynxnormscalID,TnxnormscalID,AnormscalID,AnnormscalID,RfnnormscalID,neatsupnormID,nuturbnormID,dxfauxnormID,fauxiknormID,difflnnnormID,difffauy1normID,difffauy2normID,SlnnnormID,SfauynormID,RnnormscalID,dfnormscalID,RnffnormscalID;
+    int OmegaID, OmegazID, OmegaratioID, TperpzID, TperpID, TperpratioID, Gamma_neID,invkappaavgID,RfxnormID,AnormID,RfnnormID,AnnormID,RxnormID,RnxnormID,GuyxnormID,TxnormID,GuynxnormID,TnxnormID,netnormID,neatnormID,dtfauynormID,RxnormscalID,GuynxnormscalID,TnxnormscalID,AnormscalID,AnnormscalID,RfnnormscalID,neatsupnormID,nuturbnormID,dxfauxnormID,fauxiknormID,difflnnnormID,difffauy1normID,difffauy2normID,SlnnnormID,SfauynormID,RnnormscalID,dfnormscalID,RnffnormscalID,vyfavgnormID;
     std::string npe_probes_names[num_probes] ;
     std::string phi_probes_names[num_probes] ;
     std::string gamma_probes_names[num_probes];
@@ -212,6 +212,7 @@ int main( int argc, char* argv[])
     err_out = nc_def_var( ncid_out, "Rnnormscal",    NC_DOUBLE, 1, &timeID, &RnnormscalID);
     err_out = nc_def_var( ncid_out, "dfnormscal",    NC_DOUBLE, 1, &timeID, &dfnormscalID);
     err_out = nc_def_var( ncid_out, "Rnffnormscal",    NC_DOUBLE, 1, &timeID, &RnffnormscalID);
+    err_out = nc_def_var( ncid_out, "vyfavgnorm",    NC_DOUBLE, 1, &timeID, &vyfavgnormID);
     
     err_out = nc_enddef(ncid_out);   
     err_out = nc_open( argv[2], NC_WRITE, &ncid_out);
@@ -418,7 +419,7 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot(faux,temp1,temp2); // faux dx ln<n_e>
         dg::blas1::pointwiseDot(fauy,temp2,temp1); // faux fauy dx ln<n_e>
         dg::blas1::scal(temp1,2.0);  // 2 faux fauy dx ln<n_e>
-        dg::blas1::axpby(1.0,temp1,1.0,temp);  
+//         dg::blas1::axpby(1.0,temp1,1.0,temp);  
 	    double Annorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly;
         dg::blas2::gemv(interp,temp1,temp1d); 
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[11],   start1d, count1d, temp1d.data()); //An = 2 faux fauy dx ln<n_e>
@@ -502,6 +503,8 @@ int main( int argc, char* argv[])
         double dfnormscal = dfnorm/sumnorm;
         double Rnffnormscal = Rnffnorm/sumnorm;
         
+        
+        
         dg::blas2::gemv(poisson.dxrhs(),faux,temp1); //dx ||u_x||
         dg::blas1::scal(temp1,-1.0); //temp1 = -dx ||u_x||
         double dxfauxnorm = sqrt(dg::blas2::dot(temp1,w2d,temp1))/p.lx/p.ly; 
@@ -516,6 +519,8 @@ int main( int argc, char* argv[])
         dg::blas2::gemv(interp,temp1,temp1d); 
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[26],   start1d, count1d, temp1d.data()); //fauxik = -||u_x||dx ln<n_e>
         
+        
+        double vyfavgnorm = sqrt(dg::blas2::dot(fauy,w2d,fauy))/p.lx/p.ly; 
         
         //DIFFUSIVE TERMS
         //dt ln(n)
@@ -641,6 +646,7 @@ int main( int argc, char* argv[])
         err_out = nc_put_vara_double( ncid_out, RnnormscalID, start1d, count1d, &Rnnormscal);
         err_out = nc_put_vara_double( ncid_out, dfnormscalID, start1d, count1d, &dfnormscal);
         err_out = nc_put_vara_double( ncid_out, RnffnormscalID, start1d, count1d, &Rnffnormscal);
+        err_out = nc_put_vara_double( ncid_out, vyfavgnormID, start1d, count1d, &vyfavgnorm);
 	    
     }
     err = nc_close(ncid);
