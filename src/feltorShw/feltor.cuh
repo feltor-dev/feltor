@@ -405,7 +405,6 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
         {
             //ExB dynamics
             poisson( y[i], phi[i], yp[i]);  //dt N = 1/B[N_tilde,phi]_RZ
-            dg::blas1::scal(yp[i],0.0);
             //density gradient term
             dg::blas2::gemv( poisson.dyrhs(), phi[i], omega); //lambda = dy psi
             dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt N_tilde += - kappa dy psi    
@@ -509,7 +508,6 @@ void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std
             dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
             dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
         }
-
         if (p.hwmode==1) {
             polavg(logn[0],lambda);       //<ln(ne)> 
             polavg(phi[0],phiavg);        //<phi>
