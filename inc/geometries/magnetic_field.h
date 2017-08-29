@@ -19,9 +19,9 @@ namespace geo
 
  This is the representation of toroidally axisymmetric magnetic fields that can be modeled in the form
  \f[
- \vec B = \frac{R_0}{R} \left( I \hat e_\varphi + \nabla \psi_p \times \hat e_\varphi\right)
+ \vec B = \frac{R_0}{R} \left( I(\psi_p) \hat e_\varphi + \nabla \psi_p \times \hat e_\varphi\right)
  \f]
- where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the current 
+ where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the poloidal current 
  and \f$ \psi_p\f$ the poloidal flux function.
  @note We implicitly also assume the toroidal field line approximation, i.e. all curvature
  and other perpendicular terms created with this field will assume that the perpendicular 

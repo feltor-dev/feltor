@@ -137,6 +137,7 @@ class CG
     NOTE: the same comparison hold for A with the result that A contains 
     significantly more elements than z whence ddot(r,A,r) is far slower than ddot(r,z)
 */
+///@cond
 template< class container>
 template< class Matrix, class Preconditioner>
 unsigned CG< container>::operator()( Matrix& A, container& x, const container& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
@@ -254,6 +255,8 @@ unsigned CG< container>::operator()( Matrix& A, container& x, const container& b
     }
     return max_iter;
 }
+///@endcond
+
 
 
 /**
