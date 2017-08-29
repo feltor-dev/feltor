@@ -35,12 +35,14 @@ struct DS
     /**
     * @brief Construct from a field and a grid
     *
-    * @param mag Take the magnetic field as 
+    * @param mag Take the magnetic field as vector field
+    * @param g  the boundary conditions are also taken from here
     * @param no norm or not_normed affects the behaviour of the symv function
     * @param dir the direction affects both the operator() and the symv function
-    @param jumpX determines if a jump matrix is added in X-direction
-    * @param dependsOnX performance indicator for the fine 2 coarse operations (elements of vec depend on first coordinate yes or no)
+    * @param dependsOnX performance indicator for the fine 2 coarse operations (elements of vec depend on first coordinate yes or no) also determines if a jump matrix is added in the x-direction
     * @param dependsOnY performance indicator for the fine 2 coarse operations (elements of vec depend on second coordinate yes or no)
+    * @param mx Multiplication factor in x
+    * @param my Multiplication factor in y
     */
     DS(const dg::geo::TokamakMagneticField& mag, const Geometry& g, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool dependsOnX = true, bool dependsOnY=true, unsigned mx=1, unsigned my=1);
 
@@ -215,7 +217,7 @@ struct DS
 
 template<class Geometry, class I, class M, class container>
 DS<Geometry, I, M,container>::DS(const dg::geo::TokamakMagneticField& mag, const Geometry& grid, dg::norm no, dg::direction dir, bool jumpX, bool jumpY, unsigned mx, unsigned my):
-        f_( dg::geo::BinaryVectorLvl0( dg::geo::BHatR(mag), dg::geo::BHatZ(mag), dg::geo::BHatP(mag)), grid, mx, my, 1e-5, FullLimiter()),
+        f_( dg::geo::BinaryVectorLvl0( dg::geo::BHatR(mag), dg::geo::BHatZ(mag), dg::geo::BHatP(mag)), grid, mx, my, 1e-5, FullLimiter(), grid.bcx(), grid.bcy()),
         jumpX( dg::create::jumpX( grid)),
         jumpY( dg::create::jumpY( grid)),
         tempP( dg::evaluate( dg::zero, grid)), temp0( tempP), tempM( tempP), 

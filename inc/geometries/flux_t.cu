@@ -77,7 +77,7 @@ int main( int argc, char* argv[])
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
-    dg::CurvilinearGrid2d g2d(flux, n, Nx,Ny, dg::DIR);
+    dg::CurvilinearGrid2d g2d(flux, n, Nx,Ny, dg::NEU);
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -168,8 +168,11 @@ int main( int argc, char* argv[])
     dg::geo::BHatP bhatP(c);
     //dg::geo::BinaryVectorLvl0 bhat( dg::geo::BHatR(c), dg::geo::BHatZ(c), dg::geo::BHatP(c));
     dg::geo::BinaryVectorLvl0 bhat( bhatR, bhatZ, bhatP);
-    dg::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
-    dg::DS<dg::aGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( c, g3d, dg::normed, dg::centered);
+    unsigned mx, my;
+    std::cout << "Type multipleX and multipleY!\n";
+    std::cin >> mx >> my;
+    //dg::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
+    dg::DS<dg::aGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( c, g3d, dg::normed, dg::centered, false, true, mx, my);
 
     
     t.toc();
@@ -179,21 +182,21 @@ int main( int argc, char* argv[])
     dg::HVec gradLnB = dg::pullback( dg::geo::GradLnB(c), g3d);
     dg::blas1::pointwiseDivide( ones3d, B, B);
     dg::HVec function = dg::pullback( dg::geo::FuncNeu(c), g3d), derivative(function);
-    //ds( function, derivative);
+    ds( function, derivative);
 
-    //ds.centeredT( B, divB);
-    //double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    //std::cout << "Divergence of B is "<<norm<<"\n";
+    ds.centeredAdj( B, divB);
+    double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
+    std::cout << "Divergence of B is "<<norm<<"\n";
 
-    //ds.centered( lnB, gradB);
-    //std::cout << "num. norm of gradLnB is "<<sqrt( dg::blas2::dot( gradB,vol3d, gradB))<<"\n";
-    //norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-    //std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
-    //dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-    //X = divB;
-    //err = nc_put_var_double( ncid, varID[4], periodify(X, g2d_periodic).data());
-    //double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
-    //std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
+    ds.centered( lnB, gradB);
+    std::cout << "num. norm of gradLnB is "<<sqrt( dg::blas2::dot( gradB,vol3d, gradB))<<"\n";
+    norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
+    std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
+    dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
+    X = divB;
+    err = nc_put_var_double( ncid, varID[4], periodify(X, g2d_periodic).data());
+    double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d, gradLnB));
+    std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
 
     err = nc_close( ncid);
     return 0;

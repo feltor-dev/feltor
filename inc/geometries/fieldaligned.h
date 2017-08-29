@@ -143,6 +143,19 @@ typedef ONE FullLimiter;
 ///@brief No Limiter 
 typedef ZERO NoLimiter;
 
+namespace detail{
+
+
+void clip_to_boundary( thrust::host_vector<double>& x, const aTopology2d* grid)
+{
+    if (!(x[0] > grid->x0())) { x[0]=grid->x0();}
+    if (!(x[0] < grid->x1())) { x[0]=grid->x1();}
+    if (!(x[1] > grid->y0())) { x[1]=grid->y0();}
+    if (!(x[1] < grid->y1())) { x[1]=grid->y1();}
+
+}
+
+
 /**
  * @brief Integrate a field line to find whether the result lies inside or outside of the box
  * @tparam Field Must be usable in the integrateRK() functions
@@ -226,10 +239,7 @@ void boxintegrator( Field& field, const Grid& grid,
             phi1 = (dPhiMin+dPhiMax)/2.;
             dg::integrateRK4( field, coords0, coords1, dPhiMin, eps);
         }
-        if (!(coords1[0] > grid.x0())) { coords1[0]=grid.x0();}
-        if (!(coords1[0] < grid.x1())) { coords1[0]=grid.x1();}
-        if (!(coords1[1] > grid.y0())) { coords1[1]=grid.y0();}
-        if (!(coords1[1] < grid.y1())) { coords1[1]=grid.y1();}
+        detail::clip_to_boundary( coords1, &grid);
         //now assume the rest is purely toroidal
         double deltaS = coords1[2];
         thrust::host_vector<double> temp=coords0;
@@ -237,9 +247,6 @@ void boxintegrator( Field& field, const Grid& grid,
         coords1[2] = deltaS + (deltaPhi-phi1)*temp[2]; // ds + dphi*f[2]
     }
 }
-
-
-namespace detail{
 
 //used in constructor of FieldAligned
 void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGeometry2d* g2dFine_ptr, std::vector<thrust::host_vector<double> >& yp_result, std::vector<thrust::host_vector<double> >& ym_result , double deltaPhi, double eps)
@@ -256,7 +263,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGe
     g2dField_ptr->set( g2dField_ptr->n(), g2dField_ptr->Nx(), g2dField_ptr->Ny());
     dg::DSField field( vec, *g2dField_ptr);
     t.toc();
-    std::cout << "Generation of fine grid took "<<t.diff()<<"s\n";
+    std::cout << "Generation of interpolate grid took "<<t.diff()<<"s\n";
     //field in case of cartesian grid
     dg::DSFieldCylindrical cyl_field(vec);
 #ifdef _OPENMP
@@ -283,8 +290,9 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGe
     ym_result=ym;
     delete g2dField_ptr;
 }
-
 }//namespace detail
+
+
 
 //////////////////////////////FieldAlignedCLASS////////////////////////////////////////////
 /**
@@ -423,8 +431,8 @@ struct FieldAligned
     */
     const container& hm()const {return hm_;}
     private:
-    void einsPlus( enum whichMatrix which, const container& in, container& out);
-    void einsMinus(enum whichMatrix which, const container& in, container& out);
+    void ePlus( enum whichMatrix which, const container& in, container& out);
+    void eMinus(enum whichMatrix which, const container& in, container& out);
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
     IMatrix plus, minus, plusT, minusT; //interpolation matrices
@@ -478,11 +486,14 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     right_ = left_ = dg::evaluate( zero, *g2dCoarse_ptr);
     ghostM.resize( perp_size_); ghostP.resize( perp_size_);
     //Set starting points and integrate field lines
+    dg::Timer t;
+    t.tic();
     aGeometry2d* g2dFine_ptr = g2dCoarse_ptr->clone();
     g2dFine_ptr->multiplyCellNumbers( (double)mx, (double)my);
+    t.toc();
+    std::cout << "Create fine grid took "<<t.diff()<<"s\n";
     std::vector<thrust::host_vector<double> > yp( 3), ym(yp); 
     std::cout << "Start fieldline integration!\n";
-    dg::Timer t;
     t.tic();
     detail::integrate_all_fieldlines2d( vec, g2dFine_ptr, yp, ym, deltaPhi, eps);
     t.toc(); 
@@ -609,12 +620,12 @@ container FieldAligned<G, I,container>::evaluate( BinaryOp binary, UnaryOp unary
 template<class G, class I, class container>
 void FieldAligned<G, I, container >::operator()(enum whichMatrix which, const container& f, container& fe)
 {
-    if(which == einsPlus || which == einsMinusT) einsPlus( which, f, fe);
-    if(which == einsMinus || which == einsPlusT) einsMinus( which, f, fe);
+    if(which == einsPlus || which == einsMinusT) ePlus( which, f, fe);
+    if(which == einsMinus || which == einsPlusT) eMinus( which, f, fe);
 }
 
 template< class G, class I, class container>
-void FieldAligned<G, I, container>::einsPlus( enum whichMatrix which, const container& f, container& fpe)
+void FieldAligned<G, I, container>::ePlus( enum whichMatrix which, const container& f, container& fpe)
 {
     View ghostPV( ghostP.begin(), ghostP.end());
     View ghostMV( ghostM.begin(), ghostM.end());
@@ -649,7 +660,7 @@ void FieldAligned<G, I, container>::einsPlus( enum whichMatrix which, const cont
 }
 
 template< class G, class I, class container>
-void FieldAligned<G, I, container>::einsMinus( enum whichMatrix which, const container& f, container& fme)
+void FieldAligned<G, I, container>::eMinus( enum whichMatrix which, const container& f, container& fme)
 {
     //note that thrust functions don't work on views
     View ghostPV( ghostP.begin(), ghostP.end());
