@@ -189,7 +189,7 @@ container& Feltor<Grid, Matrix, container>::polarisation( const std::vector<cont
     charge_ = dg::blas2::dot(one,w2d,chi);
 //     dg::blas1::pointwiseDivide(chi,omega,chi);              // B^2(Gamma n_i - n_e )/  (\mu_i n_i )
     polavg(omega,lambda);
-    dg::blas1::pointwiseDivide(chi,lambda,chi);              // (Gamma n_i - n_e )/  (\mu_i <n_i/B^2> )
+    dg::blas1::pointwiseDivide(chi,profNi,chi);              // (Gamma n_i - n_e )/  (\mu_i <n_i/B^2> )
     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
         if(  number == invert_pol.get_max())
             throw dg::Fail( p.eps_pol);
