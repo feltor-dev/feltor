@@ -49,7 +49,11 @@ feltorShwmerger: feltorShwmerger.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
 feltorShwstat: feltorShwstat.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
+feltorShwradstat: feltorShwradstat.cpp
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
+
 .PHONY: clean
 
 clean:
 	rm -f $(TARGETS)
+

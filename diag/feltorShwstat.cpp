@@ -38,8 +38,8 @@ int main( int argc, char* argv[])
     //nc defs
     file::NC_Error_Handle err;
     int ncid;
-    int dataIDs[26];
-    std::string names[26] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm","Rnnormscal","dfnormscal","Rnffnormscal","vyfavgnorm"}; 
+    int dataIDs[29];
+    std::string names[29] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm","Rnnormscal","dfnormscal","Rnffnormscal","difflnnnorm","difffauy2norm","Sfauynorm","vyfavgnorm"}; 
     //input nc files
     for( int i=1; i< argc; i++)
     {
@@ -82,22 +82,21 @@ int main( int argc, char* argv[])
     
 	std::cout << p.alpha << " " << p.invkappa;
 	//read and write data
-	for( unsigned m=0; m<25; m++) {
+	for( unsigned m=0; m<28; m++) {
 	    err = nc_inq_varid(ncid, names[m].data(), &dataIDs[m]);
 	    err = nc_get_vara_double( ncid, dataIDs[m], &start0d, &numOut, temp.data());
 
-            
 	    double mean   = Mean(  temp,      timepos_min, timepos_max);
 	    double stddev = StdDev(temp, mean, timepos_min, timepos_max); 
 	    std::cout << " " << mean << " " << stddev; // << " " << stddev/mean;
 	}
 	//[[vy]]_norm
-    err = nc_inq_varid(ncid, names[25].data(), &dataIDs[25]);
-    err = nc_get_vara_double( ncid, dataIDs[25], &start0d, &numOut, temp.data());
-    std::cout << " " << temp.data();
+    err = nc_inq_varid(ncid, names[28].data(), &dataIDs[28]);
+    err = nc_get_vara_double( ncid, dataIDs[28], &start0d, &numOut, temp.data());
+    std::cout << " " << temp[timepos_max-1]-temp[timepos_min];
     
     std::cout << " " << vt[timepos_min]/p.invkappa;
-    std::cout << " " << vt[timepos_max]/p.invkappa;
+    std::cout << " " << vt[timepos_max-1]/p.invkappa;
     std::cout << "\n";
     err = nc_close(ncid);
         
