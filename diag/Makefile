@@ -56,3 +56,4 @@ feltorShwradstat: feltorShwradstat.cpp
 
 clean:
 	rm -f $(TARGETS)
+

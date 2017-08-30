@@ -54,7 +54,7 @@ int main( int argc, char* argv[])
     //output grids
     const double kxmin = 0./p.lx;
     const double kymin = 0./p.ly;    
-    const unsigned Nkx = Nx ; 
+    const unsigned Nkx = Nx; 
     const unsigned Nky = Ny/2+1;       
     const double kxmax = Nkx;//(Nkx/2.+1)/p.lx; //see fftw docu
     const double kymax = Nky;//(Nky)/p.ly; 
@@ -67,16 +67,9 @@ int main( int argc, char* argv[])
     dg::Grid1d g1d_f( kmin, kmax,1., Nk,  p.bc_y);
     dg::Grid1d g1dx_f( kxmin, kxmax,1., Nkx,  p.bc_x);
     dg::Grid1d g1dy_f( kymin, kymax,1., Nky,  p.bc_y);
-
-    
-//     double kx_mode = 1./p.lx;;
-//     double ky_mode = p.sigma/p.ly; 
     
     unsigned i_mode = 0;
     unsigned j_mode = 1*p.sigma;
-//     std::cou
-//     std::cout << kxmax << " " << kymax<< std::endl;
-//     std::cout << i_mode << " " << j_mode<< std::endl;
 
     //2d field netcdf vars of input.nc
     size_t count2d[3]  = {1, g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
@@ -122,7 +115,7 @@ int main( int argc, char* argv[])
     std::vector<dg::HVec> ntilde(2,dg::evaluate(dg::zero,g2d));    
     std::vector<dg::HVec> energies(2,phi); //Se,Si,SE
     std::vector<dg::HVec> energiesequi(2,phi); 
-    dg::HVec k= dg::evaluate(dg::cooX1d,g1d_f);
+    dg::HVec k = dg::evaluate(dg::cooX1d,g1d_f);
     //scatter matrix
     dg::IHMatrix equi = dg::create::backscatter( g2d);
  
@@ -137,14 +130,12 @@ int main( int argc, char* argv[])
     std::vector<unsigned> counter( g1d_f.N());
      
     //FFTW SETUP
-    
     //FFTW_RODFT11 computes an RODFT11 transform, i.e. a DST-IV. (Logical N=2*n, inverse is FFTW_RODFT11.)  -> DIR_NEU
     //FFTW_RODFT10 computes an RODFT10 transform, i.e. a DST-II. (Logical N=2*n, inverse is FFTW_RODFT01.) -> DIR_DIR
     //FFTW_RODFT00 computes an RODFT00 transform, i.e. a DST-I. (Logical N=2*(n+1), inverse is FFTW_RODFT00.) -> DIR_DIR
-//    fftw_r2r_kind kind = FFTW_RODFT10; //DFT & DST 2
+//     fftw_r2r_kind kind = FFTW_RODFT10; //DFT & DST 2
     fftw_r2r_kind kind = FFTW_RODFT00; //DFT & DST 1
     spectral::DRT_DFT trafo( Ny, Nx, kind);
-    
     
     //open netcdf files
     err = nc_open( argv[1], NC_NOWRITE, &ncid);
@@ -173,6 +164,7 @@ int main( int argc, char* argv[])
         kspec[mn]=0.;
     }
 
+
     for( unsigned i=imin; i<=imax; i++)//timestepping
     {
             start2d[0] = i;
@@ -187,6 +179,7 @@ int main( int argc, char* argv[])
             err = nc_get_vara_double( ncid, dataIDs[1], start2d, count2d, npe[1].data());
             err = nc_inq_varid(ncid, names[2].data(), &dataIDs[2]);
             err = nc_get_vara_double( ncid, dataIDs[2], start2d, count2d, phi.data());
+
             
             //compute tilde_N
 	    if (p.modelmode==0 || p.modelmode==1)
@@ -203,6 +196,7 @@ int main( int argc, char* argv[])
 	    }
 		
             dg::blas1::pointwiseDot(phi,one,energies[1]);
+
 
             for (unsigned j=0;j<2;j++)
             {
@@ -222,6 +216,7 @@ int main( int argc, char* argv[])
                         //transpose absolute of transposed output
                         kxkyspec(n,m) = std::abs(tempkykx(m,n)); //is padded -> Y?
                         //normalise trafo
+
 //                      kxkyspec(n,m)/=sqrt(2.*((double)Nx+1.)*(double)Ny); //for rodft00
 //                      kxkyspec(n,m)/=sqrt(2.*(double)Nx*(double)Ny); //otherwise
 			

@@ -38,8 +38,8 @@ int main( int argc, char* argv[])
     //nc defs
     file::NC_Error_Handle err;
     int ncid;
-    int dataIDs[22];
-    std::string names[22] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm"}; 
+    int dataIDs[29];
+    std::string names[29] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm","Rnnormscal","dfnormscal","Rnffnormscal","difflnnnorm","difffauy2norm","Sfauynorm","vyfavgnorm"}; 
     //input nc files
     for( int i=1; i< argc; i++)
     {
@@ -66,8 +66,9 @@ int main( int argc, char* argv[])
 	
 	err = nc_get_vara_double( ncid, timeID,     &start0d, &numOut, vt.data());
         //Timestepping
-	double timepointexact_min=50.*p.invkappa; //in units omega_ci 
-	double timepointexact_max=100.*p.invkappa; //in units omega_ci 
+        double timepointexact_min=75.*p.invkappa; //in units omega_ci 
+        double timepointexact_max=300.*p.invkappa; //in units omega_ci 
+
 
 	std::vector<double>::iterator timepoint_min,timepoint_max;
 	timepoint_min=std::lower_bound (vt.begin(), vt.end(), timepointexact_min);
@@ -81,18 +82,23 @@ int main( int argc, char* argv[])
     
 	std::cout << p.alpha << " " << p.invkappa;
 	//read and write data
-	for( unsigned m=0; m<22; m++) {
+	for( unsigned m=0; m<28; m++) {
 	    err = nc_inq_varid(ncid, names[m].data(), &dataIDs[m]);
 	    err = nc_get_vara_double( ncid, dataIDs[m], &start0d, &numOut, temp.data());
 
-            
 	    double mean   = Mean(  temp,      timepos_min, timepos_max);
 	    double stddev = StdDev(temp, mean, timepos_min, timepos_max); 
 	    std::cout << " " << mean << " " << stddev; // << " " << stddev/mean;
 	}
-        std::cout << " " << vt[timepos_max-1]/p.invkappa;
-        std::cout << "\n";
-        err = nc_close(ncid);
+	//[[vy]]_norm
+    err = nc_inq_varid(ncid, names[28].data(), &dataIDs[28]);
+    err = nc_get_vara_double( ncid, dataIDs[28], &start0d, &numOut, temp.data());
+    std::cout << " " << temp[timepos_max-1]-temp[timepos_min];
+    
+    std::cout << " " << vt[timepos_min]/p.invkappa;
+    std::cout << " " << vt[timepos_max-1]/p.invkappa;
+    std::cout << "\n";
+    err = nc_close(ncid);
         
     }    
     return 0;
