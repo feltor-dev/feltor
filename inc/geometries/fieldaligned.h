@@ -264,7 +264,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGe
     t.tic();
     aGeometry2d* g2dField_ptr = g2dFine_ptr->clone();
     //initial tests show that higher order polynomial might not be needed...
-    g2dField_ptr->set( 3*g2dField_ptr->n(), g2dField_ptr->Nx(), g2dField_ptr->Ny());
+    g2dField_ptr->set( 1*g2dField_ptr->n(), g2dField_ptr->Nx(), g2dField_ptr->Ny());
     dg::DSField field( vec, *g2dField_ptr);
     t.toc();
     std::cout << "Generation of interpolate grid took "<<t.diff()<<"s\n";
@@ -492,11 +492,6 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     //Set starting points and integrate field lines
     std::cout << "Start fieldline integration!\n";
     dg::Timer t;
-    t.tic();
-    //aGeometry2d* g2dFine_ptr = g2dCoarse_ptr->clone();
-    //g2dFine_ptr->multiplyCellNumbers( (double)mx, (double)my);
-    t.toc();
-    std::cout << "Create fine grid took "<<t.diff()<<"s\n";
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse); 
     t.tic();
     detail::integrate_all_fieldlines2d( vec, g2dCoarse_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
@@ -524,7 +519,6 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     t.tic();
     IMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *g2dCoarse_ptr, globalbcx, globalbcy);
     IMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *g2dCoarse_ptr, globalbcx, globalbcy);
-    //IMatrix interpolation = dg::create::interpolation( *g2dFine_ptr, *g2dCoarse_ptr);
     IMatrix projection = dg::create::projection( *g2dCoarse_ptr, g2dFine);
     t.toc();
     std::cout <<"Creation of interpolation/projection took "<<t.diff()<<"s\n";
@@ -548,8 +542,6 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
     delete g2dCoarse_ptr;
-    //delete g2dFine_ptr;
- 
 }
 
 template<class G, class I, class container>

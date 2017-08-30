@@ -103,22 +103,22 @@ int main( int argc, char* argv[])
 
     MagneticField c(gp);
         
-    dg::geo::Field<MagneticField> field(c, gp.R_0);
-    dg::geo::InvB<MagneticField> invB(c, gp.R_0);
-    dg::geo::LnB<MagneticField> lnB(c, gp.R_0);
-    dg::geo::BR<MagneticField> bR(c, gp.R_0);
-    dg::geo::BZ<MagneticField> bZ(c, gp.R_0);
-    dg::geo::CurvatureNablaBR<MagneticField> curvatureR(c, gp.R_0);
-    dg::geo::CurvatureNablaBZ<MagneticField> curvatureZ(c, gp.R_0);
-    dg::geo::GradLnB<MagneticField> gradLnB(c, gp.R_0);
+    dg::geo::Field> field(c, gp.R_0);
+    dg::geo::InvB> invB(c, gp.R_0);
+    dg::geo::LnB> lnB(c, gp.R_0);
+    dg::geo::BR> bR(c, gp.R_0);
+    dg::geo::BZ> bZ(c, gp.R_0);
+    dg::geo::CurvatureNablaBR> curvatureR(c, gp.R_0);
+    dg::geo::CurvatureNablaBZ> curvatureZ(c, gp.R_0);
+    dg::geo::GradLnB> gradLnB(c, gp.R_0);
     dg::geo::Pupil<Psip> pupil(c.psip, gp.psipmaxcut);
     InvNormR invnormr(gp);
-    dg::geo::FieldR<MagneticField> fieldR(c, gp.R_0);
-    dg::geo::FieldZ<MagneticField> fieldZ(c, gp.R_0);
-    dg::geo::FieldP<MagneticField> fieldP(c, gp.R_0);
-    dg::geo::BHatR<MagneticField> bhatR(c, gp.R_0);
-    dg::geo::BHatZ<MagneticField> bhatZ(c, gp.R_0);
-    dg::geo::BHatP<MagneticField> bhatP(c, gp.R_0);
+    dg::geo::FieldR> fieldR(c, gp.R_0);
+    dg::geo::FieldZ> fieldZ(c, gp.R_0);
+    dg::geo::FieldP> fieldP(c, gp.R_0);
+    dg::geo::BHatR> bhatR(c, gp.R_0);
+    dg::geo::BHatZ> bhatZ(c, gp.R_0);
+    dg::geo::BHatP> bhatP(c, gp.R_0);
     dg::Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,p.n, p.Nx, p.Ny,p.Nz);
     dg::HVec vecR = dg::evaluate( fieldR, grid);
     dg::HVec vecZ = dg::evaluate( fieldZ, grid);
@@ -175,8 +175,8 @@ int main( int argc, char* argv[])
 
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(1a) test with testfunction  (works for DIR)" << "\n";
-                dg::geo::TestFunction<MagneticField> func(c, gp.R_0);
-                dg::geo::DeriTestFunction<MagneticField> derifunc(c, gp.R_0);
+                dg::geo::TestFunction> func(c, gp.R_0);
+                dg::geo::DeriTestFunction> derifunc(c, gp.R_0);
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
