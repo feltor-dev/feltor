@@ -200,7 +200,7 @@ struct BoxIntegrator
 };
 
 /**
- * @brief Integrate one field line in a given box, Result is guaranteed to lie inside the box
+ * @brief Integrate one field line in a given box, Result is guaranteed to lie inside the box modulo periodic boundary conditions
  *
  * @tparam Field Must be usable in the integrateRK function
  * @tparam Grid must provide 2d contains function
@@ -218,9 +218,10 @@ void boxintegrator( Field& field, const Grid& grid,
         double& phi1, double eps)
 {
     dg::integrateRK4( field, coords0, coords1, phi1, eps); //integration
-    //First catch periodic domain
-    grid.shift_topologic( coords0[0], coords0[1], coords1[0], coords1[1]);
-    if ( !grid.contains( coords1[0], coords1[1]))   //Punkt liegt immer noch außerhalb 
+    double R = coords1[0], Z=coords1[1];
+    //First, catch periodic domain
+    grid.shift_topologic( coords0[0], coords0[1], R, Z);
+    if ( !grid.contains( R, Z))   //point still outside domain
     {
 #ifdef DG_DEBUG
         std::cerr << "point "<<coords1[0]<<" "<<coords1[1]<<" is somewhere else!\n";
@@ -510,8 +511,10 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     }
     for( unsigned i=0; i<yp[0].size(); i++)
     {
-        detail::clip_to_boundary( yp[0][i], yp[1][i], &g2dFine);
-        detail::clip_to_boundary( ym[0][i], ym[1][i], &g2dFine);
+        g2dFine.shift_topologic( yp[0][i], yp[1][i], yp[0][i], yp[1][i]);
+        g2dFine.shift_topologic( ym[0][i], ym[1][i], ym[0][i], ym[1][i]);
+        //detail::clip_to_boundary( yp[0][i], yp[1][i], &g2dFine);
+        //detail::clip_to_boundary( ym[0][i], ym[1][i], &g2dFine);
     }
 
 
