@@ -47,7 +47,7 @@ double cosineY( double x, double y) {return sin(x)*cos(y);}
 
 int main( int argc, char* argv[])
 {
-    std::cout << "Type n, Nx, Ny, Nz\n";
+    std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
     Json::Reader reader;

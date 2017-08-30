@@ -146,13 +146,16 @@ typedef ZERO NoLimiter;
 namespace detail{
 
 
+void clip_to_boundary( double& x, double& y, const aTopology2d* grid)
+{
+    if (!(x > grid->x0())) { x=grid->x0();}
+    if (!(x < grid->x1())) { x=grid->x1();}
+    if (!(y > grid->y0())) { y=grid->y0();}
+    if (!(y < grid->y1())) { y=grid->y1();}
+}
 void clip_to_boundary( thrust::host_vector<double>& x, const aTopology2d* grid)
 {
-    if (!(x[0] > grid->x0())) { x[0]=grid->x0();}
-    if (!(x[0] < grid->x1())) { x[0]=grid->x1();}
-    if (!(x[1] > grid->y0())) { x[1]=grid->y0();}
-    if (!(x[1] < grid->y1())) { x[1]=grid->y1();}
-
+    clip_to_boundary(x[0], x[1], grid);
 }
 
 
@@ -260,7 +263,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGe
     t.tic();
     aGeometry2d* g2dField_ptr = g2dFine_ptr->clone();
     //initial tests show that higher order polynomial might not be needed...
-    g2dField_ptr->set( g2dField_ptr->n(), g2dField_ptr->Nx(), g2dField_ptr->Ny());
+    g2dField_ptr->set( 3*g2dField_ptr->n(), g2dField_ptr->Nx(), g2dField_ptr->Ny());
     dg::DSField field( vec, *g2dField_ptr);
     t.toc();
     std::cout << "Generation of interpolate grid took "<<t.diff()<<"s\n";
@@ -486,16 +489,32 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     right_ = left_ = dg::evaluate( zero, *g2dCoarse_ptr);
     ghostM.resize( perp_size_); ghostP.resize( perp_size_);
     //Set starting points and integrate field lines
+    std::cout << "Start fieldline integration!\n";
     dg::Timer t;
     t.tic();
-    aGeometry2d* g2dFine_ptr = g2dCoarse_ptr->clone();
-    g2dFine_ptr->multiplyCellNumbers( (double)mx, (double)my);
+    //aGeometry2d* g2dFine_ptr = g2dCoarse_ptr->clone();
+    //g2dFine_ptr->multiplyCellNumbers( (double)mx, (double)my);
     t.toc();
     std::cout << "Create fine grid took "<<t.diff()<<"s\n";
-    std::vector<thrust::host_vector<double> > yp( 3), ym(yp); 
-    std::cout << "Start fieldline integration!\n";
+    std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse); 
     t.tic();
-    detail::integrate_all_fieldlines2d( vec, g2dFine_ptr, yp, ym, deltaPhi, eps);
+    detail::integrate_all_fieldlines2d( vec, g2dCoarse_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
+    dg::Grid2d g2dFine((dg::Grid2d(*g2dCoarse_ptr)));
+    g2dFine.multiplyCellNumbers((double)mx, (double)my);
+    IMatrix interpolate = dg::create::interpolation( g2dFine, *g2dCoarse_ptr);
+    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp); 
+    for( unsigned i=0; i<3; i++)
+    {
+        dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
+        dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
+    }
+    for( unsigned i=0; i<yp[0].size(); i++)
+    {
+        detail::clip_to_boundary( yp[0][i], yp[1][i], &g2dFine);
+        detail::clip_to_boundary( ym[0][i], ym[1][i], &g2dFine);
+    }
+
+
     t.toc(); 
     std::cout << "Fieldline integration took "<<t.diff()<<"s\n";
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -503,7 +522,7 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     IMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *g2dCoarse_ptr, globalbcx, globalbcy);
     IMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *g2dCoarse_ptr, globalbcx, globalbcy);
     //IMatrix interpolation = dg::create::interpolation( *g2dFine_ptr, *g2dCoarse_ptr);
-    IMatrix projection = dg::create::projection( *g2dCoarse_ptr, *g2dFine_ptr);
+    IMatrix projection = dg::create::projection( *g2dCoarse_ptr, g2dFine);
     t.toc();
     std::cout <<"Creation of interpolation/projection took "<<t.diff()<<"s\n";
     t.tic();
@@ -526,7 +545,7 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
     delete g2dCoarse_ptr;
-    delete g2dFine_ptr;
+    //delete g2dFine_ptr;
  
 }
 
