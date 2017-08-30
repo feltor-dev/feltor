@@ -58,7 +58,6 @@ void pointwiseDot( double alpha, const container& x1, const container& y1,
                    double beta,  const container& x2, const container& y2, 
                    double gamma, container & z)
 {
-    unsigned K=x1.size();
     const double * RESTRICT x1_ptr; 
     const double * RESTRICT y1_ptr; 
     const double * RESTRICT x2_ptr; 
@@ -77,15 +76,23 @@ void pointwiseDot( double alpha, const container& x1, const container& y1,
          z_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
     }
     unsigned size = x1.size();
-#pragma omp parallel
+if(gamma!=0)
 {
-    double temp;
-#pragma omp for simd
+#pragma omp parallel for simd
     for( unsigned i=0; i<size; i++)
     {
         z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
                   +beta*x2_ptr[i]*y2_ptr[i]
                   +gamma*z_ptr[i];
+    }
+}
+else
+{
+#pragma omp parallel for simd
+    for( unsigned i=0; i<size; i++)
+    {
+        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
+                  +beta*x2_ptr[i]*y2_ptr[i];
     }
 }
 }
