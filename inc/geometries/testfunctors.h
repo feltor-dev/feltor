@@ -345,7 +345,7 @@ struct TestFunction
     /**
      * @brief \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
      */ 
-    double operator()( double R, double Z, double phi)
+    double operator()( double R, double Z, double phi)const
     {
 //         return psip_(R,Z,phi)*sin(phi);
 //         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
@@ -381,7 +381,7 @@ struct DeriTestFunction
 /**
  * @brief \f[ \nabla_\parallel f = \frac{\sin(\varphi)}{R}\f]
  */ 
-    double operator()( double R, double Z, double phi)
+    double operator()( double R, double Z, double phi)const 
     {
 //         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
 //         double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;

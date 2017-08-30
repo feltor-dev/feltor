@@ -9,11 +9,13 @@
 #include "dg/backend/projection.cuh"
 #include "dg/backend/functions.h"
 
+#include "dg/geometry/geometry.h"
 #include "dg/functors.h"
 #include "dg/nullstelle.h"
 #include "dg/runge_kutta.h"
 #include "magnetic_field.h"
 #include "fluxfunctions.h"
+#include "curvilinear.h"
 
 namespace dg{
 
