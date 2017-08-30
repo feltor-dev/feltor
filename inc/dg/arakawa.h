@@ -53,6 +53,42 @@ void pointwiseDot( double alpha, const std::vector<const container* >& x1, const
     }
 }
 }
+template<class container>
+void pointwiseDot( double alpha, const container& x1, const container& y1, 
+                   double beta,  const container& x2, const container& y2, 
+                   double gamma, container & z)
+{
+    unsigned K=x1.size();
+    const double * RESTRICT x1_ptr; 
+    const double * RESTRICT y1_ptr; 
+    const double * RESTRICT x2_ptr; 
+    const double * RESTRICT y2_ptr; 
+    double * RESTRICT z_ptr;
+    //const double *  x1_ptr; 
+    //const double *  y1_ptr; 
+    //const double *  x2_ptr; 
+    //const double *  y2_ptr; 
+    //double *  z_ptr;
+    {
+        x1_ptr = thrust::raw_pointer_cast( &(x1.data()[0]));
+        x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
+        y1_ptr = thrust::raw_pointer_cast( &(y1.data()[0]));
+        y2_ptr = thrust::raw_pointer_cast( &(y2.data()[0]));
+         z_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
+    }
+    unsigned size = x1.size();
+#pragma omp parallel
+{
+    double temp;
+#pragma omp for simd
+    for( unsigned i=0; i<size; i++)
+    {
+        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
+                  +beta*x2_ptr[i]*y2_ptr[i]
+                  +gamma*z_ptr[i];
+    }
+}
+}
 
 /*! @file 
   
@@ -163,13 +199,19 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     blas2::symv( bdxf, rhs, dxrhs);
     blas2::symv( bdyf, rhs, dyrhs);
 
-    std::vector<const container* > s0(3), t0(3), s1(3), t1(3); 
-    std::vector<container* > s2(3);
-    s0[0] = &dxlhs, t0[0] = &dyrhs, s1[0] = &dylhs, t1[0] = &dxrhs;
-    s0[1] =   &lhs, t0[1] = &dyrhs, s1[1] = &dylhs, t1[1] =   &rhs;
-    s0[2] = &dxlhs, t0[2] =   &rhs, s1[2] =   &lhs, t1[2] = &dxrhs;
-    s2[0] = &result, s2[1] = &dxlhs, s2[2] = &dxrhs;
-    pointwiseDot( 1./3., s0, t0, -1./3., s1, t1, 0., s2);
+    //std::vector<const container* > s0(3), t0(3), s1(3), t1(3); 
+    //std::vector<container* > s2(3);
+    //s0[0] = &dxlhs, t0[0] = &dyrhs, s1[0] = &dylhs, t1[0] = &dxrhs;
+    //s0[1] =   &lhs, t0[1] = &dyrhs, s1[1] = &dylhs, t1[1] =   &rhs;
+    //s0[2] = &dxlhs, t0[2] =   &rhs, s1[2] =   &lhs, t1[2] = &dxrhs;
+    //s2[0] = &result, s2[1] = &dxlhs, s2[2] = &dxrhs;
+    //pointwiseDot( 1./3., s0, t0, -1./3., s1, t1, 0., s2);
+
+    pointwiseDot( 1./3., dxlhs, dyrhs, -1./3., dylhs, dxrhs, 0., result);
+    pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., helper_);
+    pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dylhs);
+    blas2::symv( 1., bdxf, helper_, 1., result);
+    blas2::symv( 1., bdyf, dylhs, 1., result);
     
     //// order is important now
     //// +x (1) -> result und (2) -> blhs
@@ -195,8 +237,8 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     ////blas1::axpby( 1., dxlhs,  -0., helper); //x+ - +x
     ////blas1::axpby( 0., result, -1., dylhs);  //+x - x+
 
-    blas2::symv( 1., bdxf, dxlhs, 1., result);
-    blas2::symv( 1., bdyf, dxrhs, 1., result);
+    //blas2::symv( 1., bdxf, dxlhs, 1., result);
+    //blas2::symv( 1., bdyf, dxrhs, 1., result);
     geo::dividePerpVolume( result, grid);
 }
 
