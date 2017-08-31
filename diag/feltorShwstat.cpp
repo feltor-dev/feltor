@@ -38,8 +38,8 @@ int main( int argc, char* argv[])
     //nc defs
     file::NC_Error_Handle err;
     int ncid;
-    int dataIDs[29];
-    std::string names[29] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm","Rnnormscal","dfnormscal","Rnffnormscal","difflnnnorm","difffauy2norm","Sfauynorm","vyfavgnorm"}; 
+    int dataIDs[31];
+    std::string names[31] = {"Rfxnorm","Anorm","Rfnnorm","Annorm","dtfauynorm","Rxnorm","invkappaavg","Rnxnorm","Guyxnorm","Txnorm","Guynxnorm","Tnxnorm","neatnorm","Gamma","Rxnormscal","Guynxnormscal","Tnxnormscal","Anormscal","Annormscal","Rfnnormscal","neatsupnorm","nuturbnorm","Rnnormscal","dfnormscal","Rnffnormscal","difflnnnorm","difffauy1norm","difffauy2norm","Slnnnorm","Sfauynorm","vyfavgnorm"}; 
     //input nc files
     for( int i=1; i< argc; i++)
     {
@@ -82,7 +82,7 @@ int main( int argc, char* argv[])
     
 	std::cout << p.alpha << " " << p.invkappa;
 	//read and write data
-	for( unsigned m=0; m<28; m++) {
+	for( unsigned m=0; m<31; m++) {
 	    err = nc_inq_varid(ncid, names[m].data(), &dataIDs[m]);
 	    err = nc_get_vara_double( ncid, dataIDs[m], &start0d, &numOut, temp.data());
 
@@ -91,8 +91,8 @@ int main( int argc, char* argv[])
 	    std::cout << " " << mean << " " << stddev; // << " " << stddev/mean;
 	}
 	//[[vy]]_norm
-    err = nc_inq_varid(ncid, names[28].data(), &dataIDs[28]);
-    err = nc_get_vara_double( ncid, dataIDs[28], &start0d, &numOut, temp.data());
+    err = nc_inq_varid(ncid, names[31].data(), &dataIDs[31]);
+    err = nc_get_vara_double( ncid, dataIDs[31], &start0d, &numOut, temp.data());
     std::cout << " " << temp[timepos_max-1]-temp[timepos_min];
     
     std::cout << " " << vt[timepos_min]/p.invkappa;
