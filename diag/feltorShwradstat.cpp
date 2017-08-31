@@ -23,9 +23,9 @@ int main( int argc, char* argv[])
     //nc defs
     file::NC_Error_Handle err;
     int ncid;
-    int dataIDs[15];
-    std::string names[15] = {"Rx","Guynx","Tnx","A","Rfn","difffauy1","difffauy2","Sfauy",
-      "dxfaux","fauxik","difffauy1","difflnn","Slnn","dtfauy","ln(ne)avg"}; 
+    int dataIDs[14];
+    std::string names[14] = {"Rx","Guynx","Tnx","A","Rfn","difffauy1","difffauy2","Sfauy",
+      "dxfaux","fauxik","difflnn","Slnn","dtfauy","ln(ne)avg"}; 
     //input nc files
     for( int i=1; i< argc; i++)
     {
@@ -64,7 +64,7 @@ int main( int argc, char* argv[])
 	
 	err = nc_get_vara_double( ncid, timeID,     &start0d, &numOut, vt.data());
         //Timestepping
-	double timepointexact_min=50.*p.invkappa; //in units omega_ci 
+	double timepointexact_min=0.*p.invkappa; //in units omega_ci 
 	double timepointexact_max=300.*p.invkappa; //in units omega_ci 
 
 	std::vector<double>::iterator timepoint_min,timepoint_max;
@@ -80,7 +80,7 @@ int main( int argc, char* argv[])
 	std::cout << p.alpha << " " << p.invkappa<< " " ;
 	//read and write data
 	
-	for( unsigned m=0; m<13; m++) 
+	for( unsigned m=0; m<12; m++) 
 	{
 	for (unsigned n=timepos_min; n<timepos_max; n++)
 	{
@@ -102,21 +102,21 @@ int main( int argc, char* argv[])
 	
 	//Write \Delta [[u_y]]
 	start1d[0] = timepos_min;
-	err = nc_inq_varid(ncid, names[13].data(), &dataIDs[13]);
-	err = nc_get_vara_double(ncid, dataIDs[13], start1d, count1d, temp1d_old.data());
+	err = nc_inq_varid(ncid, names[12].data(), &dataIDs[12]);
+	err = nc_get_vara_double(ncid, dataIDs[12], start1d, count1d, temp1d_old.data());
 	start1d[0] = timepos_max-1;
-	err = nc_inq_varid(ncid, names[13].data(), &dataIDs[13]);
-	err = nc_get_vara_double(ncid, dataIDs[13], start1d, count1d, temp1d.data());
+	err = nc_inq_varid(ncid, names[12].data(), &dataIDs[12]);
+	err = nc_get_vara_double(ncid, dataIDs[12], start1d, count1d, temp1d.data());
 	dg::blas1::axpby(1.0,temp1d,-1.0,temp1d_old,temp1d_int);
 	std::cout << sqrt(dg::blas2::dot(temp1d_int,w1d,temp1d_int))/p.lx << " ";
 	
 	//Write \Delta ln<n>
 	start1d[0] = timepos_min;
-	err = nc_inq_varid(ncid, names[14].data(), &dataIDs[14]);
-	err = nc_get_vara_double(ncid, dataIDs[14], start1d, count1d, temp1d_old.data());
+	err = nc_inq_varid(ncid, names[13].data(), &dataIDs[13]);
+	err = nc_get_vara_double(ncid, dataIDs[13], start1d, count1d, temp1d_old.data());
 	start1d[0] = timepos_max-1;
-	err = nc_inq_varid(ncid, names[14].data(), &dataIDs[14]);
-	err = nc_get_vara_double(ncid, dataIDs[14], start1d, count1d, temp1d.data());
+	err = nc_inq_varid(ncid, names[13].data(), &dataIDs[13]);
+	err = nc_get_vara_double(ncid, dataIDs[13], start1d, count1d, temp1d.data());
 	dg::blas1::axpby(1.0,temp1d,-1.0,temp1d_old,temp1d_int);
 	std::cout << sqrt(dg::blas2::dot(temp1d_int,w1d,temp1d_int))/p.lx << " ";
 	
