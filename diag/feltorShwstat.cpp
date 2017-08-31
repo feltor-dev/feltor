@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
 	
 	err = nc_get_vara_double( ncid, timeID,     &start0d, &numOut, vt.data());
         //Timestepping
-        double timepointexact_min=75.*p.invkappa; //in units omega_ci 
+        double timepointexact_min=0.*p.invkappa; //in units omega_ci 
         double timepointexact_max=300.*p.invkappa; //in units omega_ci 
 
 
@@ -82,7 +82,8 @@ int main( int argc, char* argv[])
     
 	std::cout << p.alpha << " " << p.invkappa;
 	//read and write data
-	for( unsigned m=0; m<31; m++) {
+
+	for( unsigned m=0; m<30; m++) {
 	    err = nc_inq_varid(ncid, names[m].data(), &dataIDs[m]);
 	    err = nc_get_vara_double( ncid, dataIDs[m], &start0d, &numOut, temp.data());
 
@@ -91,8 +92,9 @@ int main( int argc, char* argv[])
 	    std::cout << " " << mean << " " << stddev; // << " " << stddev/mean;
 	}
 	//[[vy]]_norm
-    err = nc_inq_varid(ncid, names[31].data(), &dataIDs[31]);
-    err = nc_get_vara_double( ncid, dataIDs[31], &start0d, &numOut, temp.data());
+
+    err = nc_inq_varid(ncid, names[30].data(), &dataIDs[30]);
+    err = nc_get_vara_double( ncid, dataIDs[30], &start0d, &numOut, temp.data());
     std::cout << " " << temp[timepos_max-1]-temp[timepos_min];
     
     std::cout << " " << vt[timepos_min]/p.invkappa;
@@ -103,3 +105,4 @@ int main( int argc, char* argv[])
     }    
     return 0;
 }
+
