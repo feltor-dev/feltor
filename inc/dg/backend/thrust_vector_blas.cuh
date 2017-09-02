@@ -84,6 +84,8 @@ inline void doScal(  Vector& x,
               typename Vector::value_type alpha, 
               ThrustVectorTag)
 {
+    if( alpha == 1.) 
+        return;
     thrust::transform( x.begin(), x.end(), x.begin(), 
             detail::Axpby_Functor<typename Vector::value_type>( 0, alpha));
 }
@@ -108,14 +110,125 @@ inline void doAxpby( typename Vector::value_type alpha,
 #endif //DG_DEBUG
     if( alpha == 0)
     {
-        if( beta == 1) 
-            return;
-        thrust::transform( y.begin(), y.end(), y.begin(), 
-                detail::Axpby_Functor<typename Vector::value_type>( 0, beta));
+        doScal( y, beta, ThrustVectorTag());
         return;
     }
-    thrust::transform( x.begin(), x.end(), y.begin(), y.begin(), 
+    if( &x == &y)
+    {
+        doScal( y, (alpha+beta), ThrustVectorTag());
+        return;
+    }
+    if( alpha==1. && beta == 0) 
+    {
+        thrust::copy( x.begin(), x.end(), y.begin());
+        return; 
+    }
+#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+    const double * RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data()[0]);
+    double * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
+    unsigned size = x.size();
+    if( beta == 1.)
+    {
+#pragma omp parallel for simd
+        for( unsigned i=0; i<size; i++)
+            y_ptr[i] += alpha*x_ptr[i];
+    }
+    else if (beta == 0)
+    {
+#pragma omp parallel for simd
+        for( unsigned i=0; i<size; i++)
+            y_ptr[i] = alpha*x_ptr[i];
+    }
+    else
+    {
+#pragma omp parallel for simd
+        for( unsigned i=0; i<size; i++)
+            y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
+    }
+#else
+    if( beta != 0)
+        thrust::transform( x.begin(), x.end(), y.begin(), y.begin(), 
             detail::Axpby_Functor< typename Vector::value_type>( alpha, beta) );
+    else 
+        thrust::transform( x.begin(), x.end(), y.begin(),
+            detail::Axpby_Functor< typename Vector::value_type>( 0., alpha) );
+#endif
+}
+
+template< class Vector>
+inline void doAxpby( typename Vector::value_type alpha, 
+              const Vector& x, 
+              typename Vector::value_type beta, 
+              const Vector& y, 
+              typename Vector::value_type gamma, 
+              Vector& z, 
+              ThrustVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+    assert( x.size() == z.size() );
+#endif //DG_DEBUG
+    if( alpha == 0)
+    {
+        doAxpby( beta, y, gamma, z, ThrustVectorTag());
+        return;
+    }
+    else if( beta == 0)
+    {
+        doAxpby( alpha, x, gamma, z, ThrustVectorTag());
+        return;
+    }
+    if( &x==&y)
+    {
+        doAxpby( alpha+beta, x, gamma, z);
+        return;
+    }
+    else if( &x==&z)
+    {
+        doAxpby( beta, y, alpha+gamma, z);
+        return;
+    }
+    else if( &y==&z)
+    {
+        doAxpby( alpha, x, beta+gamma, z);
+        return;
+    }
+#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+    const double * RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data()[0]);
+    const double * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
+    double * RESTRICT z_ptr = thrust::raw_pointer_cast( &z.data()[0]);
+    unsigned size = x.size();
+    if( gamma == 1.)
+    {
+#pragma omp parallel for simd
+        for( unsigned i=0; i<size; i++)
+            z_ptr[i] += alpha*x_ptr[i]+beta*y_ptr[i];
+    }
+    else if (gamma == 0)
+    {
+#pragma omp parallel for simd
+        for( unsigned i=0; i<size; i++)
+            z_ptr[i] = alpha*x_ptr[i]+beta*y_ptr[i];
+    }
+    else
+    {
+#pragma omp parallel for simd
+        for( unsigned i=0; i<size; i++)
+            z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
+    }
+#else
+    if( gamma==0)
+    {
+        thrust::transform( x.begin(), x.end(), y.begin(), z.begin(), 
+            detail::Axpby_Functor< typename Vector::value_type>( alpha, beta) );
+    }
+    else 
+    {
+        doAxpby( alpha, x, gamma, z);
+        doAxpby( beta, y, 1., z);
+    }
+
+#endif
 }
 
 template< class Vector>
@@ -126,24 +239,7 @@ inline void doAxpby( typename Vector::value_type alpha,
               Vector& z, 
               ThrustVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-    assert( x.size() == z.size() );
-#endif //DG_DEBUG
-    if( alpha == 0)
-    {
-        thrust::transform( y.begin(), y.end(), z.begin(), 
-                detail::Axpby_Functor<typename Vector::value_type>( 0, beta));
-        return;
-    }
-    if( beta == 0)
-    {
-        thrust::transform( x.begin(), x.end(), z.begin(), 
-                detail::Axpby_Functor<typename Vector::value_type>( 0, alpha));
-        return;
-    }
-    thrust::transform( x.begin(), x.end(), y.begin(), z.begin(), 
-            detail::Axpby_Functor< typename Vector::value_type>( alpha, beta) );
+    doAxpby( alpha, x, beta, y, 0., z, ThrustVectorTag());
 }
 
 template< class Vector>
@@ -188,17 +284,78 @@ inline void doPointwiseDot(
 #endif //DG_DEBUG
     if( alpha == 0)
     {
-        if( beta == 1) 
-            return;
         dg::blas1::detail::doScal(y, beta, dg::ThrustVectorTag());
         return;
     }
+#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+    const double * x1_ptr = thrust::raw_pointer_cast( &(x1.data()[0]));
+    const double * x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
+     double * y_ptr = thrust::raw_pointer_cast( &(y.data()[0]));
+    if( y_ptr != x1_ptr && y_ptr != x2_ptr)
+    {
+        double * RESTRICT yr_ptr = thrust::raw_pointer_cast( &(y.data()[0]));
+        unsigned size = x1.size();
+        if( beta == 0)
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                yr_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i];
+            }
+        }
+        else if ( beta == 1)
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                yr_ptr[i] += alpha*x1_ptr[i]*x2_ptr[i];
+            }
+        }
+        else
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                yr_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*yr_ptr[i];
+            }
+        }
+    }
+    else
+    {
+        unsigned size = x1.size();
+        if( beta == 0)
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i];
+            }
+        }
+        else if ( beta == 1)
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                y_ptr[i] += alpha*x1_ptr[i]*x2_ptr[i];
+            }
+        }
+        else
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*y_ptr[i];
+            }
+        }
+    }
+#else
     thrust::transform( 
         y.begin(), y.end(),
         thrust::make_zip_iterator( thrust::make_tuple( x1.begin(), x2.begin() )),  
         y.begin(),
         detail::ThrustVectorDoSymv<Vector>( alpha, beta)
     ); 
+#endif
 }
 
 template< class Vector>
@@ -213,6 +370,101 @@ inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, Th
 }
 
 
+template<class Vector>
+inline void doPointwiseDot(  
+              typename Vector::value_type alpha, 
+              const Vector& x1,
+              const Vector& y1, 
+              typename Vector::value_type beta, 
+              const Vector& x2,
+              const Vector& y2, 
+              typename Vector::value_type gamma, 
+              Vector& z, 
+              ThrustVectorTag)
+{
+    if( alpha==0){ 
+        doPointwiseDot( beta, x2,y2, gamma, z, ThrustVectorTag());
+        return;
+    }
+    else if( beta==0){
+        doPointwiseDot( alpha, x1,y1, gamma, z, ThrustVectorTag());
+        return;
+    }
+#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+    const double *x1_ptr = thrust::raw_pointer_cast( &(x1.data()[0]));
+    const double *x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
+    const double *y1_ptr = thrust::raw_pointer_cast( &(y1.data()[0]));
+    const double *y2_ptr = thrust::raw_pointer_cast( &(y2.data()[0]));
+        double * z_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
+    unsigned size = x1.size();
+    if( z_ptr != x1_ptr && z_ptr != x2_ptr && z_ptr != y1_ptr && z_ptr != y2_ptr)
+    {
+        double * RESTRICT zr_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
+        if(gamma==0)
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                zr_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
+                            +beta*x2_ptr[i]*y2_ptr[i];
+            }
+        }
+        else if(gamma==1.)
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                zr_ptr[i] += alpha*x1_ptr[i]*y1_ptr[i] 
+                            +beta*x2_ptr[i]*y2_ptr[i];
+            }
+        }
+        else
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                zr_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
+                            +beta*x2_ptr[i]*y2_ptr[i]
+                            +gamma*zr_ptr[i];
+            }
+        }
+    }
+    else
+    {
+        if(gamma==0)
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
+                            +beta*x2_ptr[i]*y2_ptr[i];
+            }
+        }
+        else if(gamma==1.)
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                z_ptr[i] += alpha*x1_ptr[i]*y1_ptr[i] 
+                            +beta*x2_ptr[i]*y2_ptr[i];
+            }
+        }
+        else
+        {
+#pragma omp parallel for simd
+            for( unsigned i=0; i<size; i++)
+            {
+                z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
+                            +beta*x2_ptr[i]*y2_ptr[i]
+                            +gamma*z_ptr[i];
+            }
+        }
+    }
+#else
+    doPointwiseDot( alpha, x1, y1, gamma, z, ThrustVectorTag());
+    doPointwiseDot( beta,  x2, y2, 1., z, ThrustVectorTag());
+#endif
+}
 
 } //namespace detail
 ///@endcond

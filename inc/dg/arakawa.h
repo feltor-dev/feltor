@@ -11,92 +11,6 @@
 #include "backend/mpi_evaluation.h"
 #endif
 
-template<class container>
-void pointwiseDot( double alpha, const std::vector<const container* >& x1, const std::vector<const container* >& y1, 
-                   double beta,  const std::vector<const container* >& x2, const std::vector<const container* >& y2, 
-                   double gamma, std::vector<container* > & z)
-{
-    unsigned K=x1.size();
-    const double * RESTRICT x1_ptr[K]; 
-    const double * RESTRICT y1_ptr[K]; 
-    const double * RESTRICT x2_ptr[K]; 
-    const double * RESTRICT y2_ptr[K]; 
-    double * RESTRICT z_ptr[K];
-    //const double *  x1_ptr[K]; 
-    //const double *  y1_ptr[K]; 
-    //const double *  x2_ptr[K]; 
-    //const double *  y2_ptr[K]; 
-    //double *  z_ptr[K];
-    for(unsigned i=0; i<K; i++)
-    {
-        x1_ptr[i] = thrust::raw_pointer_cast( &(x1[i]->data()[0]));
-        x2_ptr[i] = thrust::raw_pointer_cast( &(x2[i]->data()[0]));
-        y1_ptr[i] = thrust::raw_pointer_cast( &(y1[i]->data()[0]));
-        y2_ptr[i] = thrust::raw_pointer_cast( &(y2[i]->data()[0]));
-         z_ptr[i] = thrust::raw_pointer_cast( &(z[i]->data()[0]));
-    }
-    unsigned size = x1[0]->size();
-#pragma omp parallel
-{
-    double temp[K];
-#pragma omp for simd
-    for( unsigned i=0; i<size; i++)
-    {
-        for( unsigned l=0; l<K; l++)
-        {
-            temp[l] = alpha*x1_ptr[l][i]*y1_ptr[l][i] 
-                      +beta*x2_ptr[l][i]*y2_ptr[l][i]
-                      +gamma*z_ptr[l][i];
-        }
-        for( unsigned l=0; l<K; l++)
-            z_ptr[l][i] = temp[l];
-    }
-}
-}
-template<class container>
-void pointwiseDot( double alpha, const container& x1, const container& y1, 
-                   double beta,  const container& x2, const container& y2, 
-                   double gamma, container & z)
-{
-    const double * RESTRICT x1_ptr; 
-    const double * RESTRICT y1_ptr; 
-    const double * RESTRICT x2_ptr; 
-    const double * RESTRICT y2_ptr; 
-    double * RESTRICT z_ptr;
-    //const double *  x1_ptr; 
-    //const double *  y1_ptr; 
-    //const double *  x2_ptr; 
-    //const double *  y2_ptr; 
-    //double *  z_ptr;
-    {
-        x1_ptr = thrust::raw_pointer_cast( &(x1.data()[0]));
-        x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
-        y1_ptr = thrust::raw_pointer_cast( &(y1.data()[0]));
-        y2_ptr = thrust::raw_pointer_cast( &(y2.data()[0]));
-         z_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
-    }
-    unsigned size = x1.size();
-if(gamma!=0)
-{
-#pragma omp parallel for simd
-    for( unsigned i=0; i<size; i++)
-    {
-        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                  +beta*x2_ptr[i]*y2_ptr[i]
-                  +gamma*z_ptr[i];
-    }
-}
-else
-{
-#pragma omp parallel for simd
-    for( unsigned i=0; i<size; i++)
-    {
-        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                  +beta*x2_ptr[i]*y2_ptr[i];
-    }
-}
-}
-
 /*! @file 
   
   object for computation of Poisson bracket
@@ -206,46 +120,12 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     blas2::symv( bdxf, rhs, dxrhs);
     blas2::symv( bdyf, rhs, dyrhs);
 
-    //std::vector<const container* > s0(3), t0(3), s1(3), t1(3); 
-    //std::vector<container* > s2(3);
-    //s0[0] = &dxlhs, t0[0] = &dyrhs, s1[0] = &dylhs, t1[0] = &dxrhs;
-    //s0[1] =   &lhs, t0[1] = &dyrhs, s1[1] = &dylhs, t1[1] =   &rhs;
-    //s0[2] = &dxlhs, t0[2] =   &rhs, s1[2] =   &lhs, t1[2] = &dxrhs;
-    //s2[0] = &result, s2[1] = &dxlhs, s2[2] = &dxrhs;
-    //pointwiseDot( 1./3., s0, t0, -1./3., s1, t1, 0., s2);
+    blas1::pointwiseDot( 1./3., dxlhs, dyrhs, -1./3., dylhs, dxrhs, 0., result);
+    blas1::pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., helper_);
+    blas1::pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dylhs);
 
-    pointwiseDot( 1./3., dxlhs, dyrhs, -1./3., dylhs, dxrhs, 0., result);
-    pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., helper_);
-    pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dylhs);
     blas2::symv( 1., bdxf, helper_, 1., result);
     blas2::symv( 1., bdyf, dylhs, 1., result);
-    
-    //// order is important now
-    //// +x (1) -> result und (2) -> blhs
-    //blas1::pointwiseDot( lhs, dyrhs, result);
-    //blas1::pointwiseDot( lhs, dxrhs, helper_);
-
-    //// ++ (1) -> dyrhs and (2) -> dxrhs
-    //blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
-    //blas1::pointwiseDot( dylhs, dxrhs, dxrhs);
-
-    //// x+ (1) -> dxlhs and (2) -> dylhs
-    //blas1::pointwiseDot( dxlhs, rhs, dxlhs);
-    //blas1::pointwiseDot( dylhs, rhs, dylhs);
-
-    //blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);  //dxl*dyr - dyl*dxr -> dxrhs
-    ////everything which needs a dx 
-    //blas1::axpby( 1./3., dxlhs, -1./3., helper_);   //dxl*r - l*dxr     -> helper 
-    ////everything which needs a dy
-    //blas1::axpby( 1./3., result, -1./3., dylhs); //l*dyr - dyl*r     -> dylhs
-
-    ////blas1::axpby( 0., dyrhs,  -0., dxrhs); //++
-    //////for testing purposes (note that you need to set criss-cross)
-    ////blas1::axpby( 1., dxlhs,  -0., helper); //x+ - +x
-    ////blas1::axpby( 0., result, -1., dylhs);  //+x - x+
-
-    //blas2::symv( 1., bdxf, dxlhs, 1., result);
-    //blas2::symv( 1., bdyf, dxrhs, 1., result);
     geo::dividePerpVolume( result, grid);
 }
 
