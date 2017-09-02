@@ -83,8 +83,8 @@ int main()
     //thrust::swap(y0, y1);
     for( unsigned i=0; i<NT; i++)
     {
-        //tvb( rhs, diffusion, y0);
-        sirk( rhs, diffusion, y0, y1, dt);
+        tvb( rhs, diffusion, y0);
+        //sirk( rhs, diffusion, y0, y1, dt);
         y0.swap(y1);
     }
     double norm_y0 = dg::blas2::dot( w2d, y0[0]);

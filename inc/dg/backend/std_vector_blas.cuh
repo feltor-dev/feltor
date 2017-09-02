@@ -57,6 +57,24 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
         
 }
 
+template< class Vector>
+inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
+              const std::vector<Vector>& x, 
+              typename VectorTraits<Vector>::value_type beta, 
+              const std::vector<Vector>& y, 
+              typename VectorTraits<Vector>::value_type gamma, 
+              std::vector<Vector>& z, 
+              StdVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( !x.empty());
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
+    for( unsigned i=0; i<x.size(); i++)
+        doAxpby( alpha, x[i], beta, y[i], gamma, z[i], typename VectorTraits<Vector>::vector_category());
+        
+}
+
 template<class container>
 inline void doCopy( const std::vector<container>& x, std::vector<container>& y, StdVectorTag)
 {
@@ -121,6 +139,24 @@ std::vector<Vector>& y, StdVectorTag)
 #endif //DG_DEBUG
     for( unsigned i=0; i<x1.size(); i++)
         doPointwiseDot( alpha, x1[i], x2[i], beta, y[i], typename VectorTraits<Vector>::vector_category() );
+}
+template< class Vector>
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
+const std::vector<Vector>& x1, const std::vector<Vector>& y1, 
+typename VectorTraits<Vector>::value_type beta, 
+const std::vector<Vector>& x2, const std::vector<Vector>& y2, 
+typename VectorTraits<Vector>::value_type gamma, 
+std::vector<Vector>& z, StdVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( !x1.empty());
+    assert( x1.size() == y1.size() );
+    assert( x1.size() == x2.size() );
+    assert( x1.size() == y2.size() );
+    assert( x1.size() == z.size() );
+#endif //DG_DEBUG
+    for( unsigned i=0; i<x1.size(); i++)
+        doPointwiseDot( alpha, x1[i], y1[i], beta, x2[i], y2[i], gamma,z[i], typename VectorTraits<Vector>::vector_category() );
 }
 
 template< class Vector>

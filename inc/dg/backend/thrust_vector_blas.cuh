@@ -180,17 +180,17 @@ inline void doAxpby( typename Vector::value_type alpha,
     }
     if( &x==&y)
     {
-        doAxpby( alpha+beta, x, gamma, z);
+        doAxpby( alpha+beta, x, gamma, z, ThrustVectorTag());
         return;
     }
     else if( &x==&z)
     {
-        doAxpby( beta, y, alpha+gamma, z);
+        doAxpby( beta, y, alpha+gamma, z, ThrustVectorTag());
         return;
     }
     else if( &y==&z)
     {
-        doAxpby( alpha, x, beta+gamma, z);
+        doAxpby( alpha, x, beta+gamma, z, ThrustVectorTag());
         return;
     }
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
@@ -224,8 +224,8 @@ inline void doAxpby( typename Vector::value_type alpha,
     }
     else 
     {
-        doAxpby( alpha, x, gamma, z);
-        doAxpby( beta, y, 1., z);
+        doAxpby( alpha, x, gamma, z, ThrustVectorTag());
+        doAxpby( beta, y, 1., z, ThrustVectorTag());
     }
 
 #endif
