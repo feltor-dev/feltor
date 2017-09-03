@@ -48,7 +48,7 @@ int main()
         norm += dg::blas1::dot( w2d, x);
     t.toc();
     std::cout<<"DOT took                         " <<t.diff()/20.<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
-    Vector y(x);
+    Vector y(x), z(x), u(x), v(x);
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
     t.tic();
@@ -89,13 +89,33 @@ int main()
     for( int i=0; i<20; i++)
         dg::blas1::axpby( 1., y, -1., x);
     t.toc();
-    std::cout<<"AXPBY took                       "<<t.diff()/20<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
+    std::cout<<"AXPBY (1*y-1*x=x)                "<<t.diff()/20<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<20; i++)
+        dg::blas1::axpbygz( 1., x, -1., y, 2., z);
+    t.toc();
+    std::cout<<"AXPBYGZ (1*x-1*y+2*z=z)          "<<t.diff()/20<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<20; i++)
+        dg::blas1::axpbygz( 1., x, -1., y, 3., x);
+    t.toc();
+    std::cout<<"AXPBYGZ (1*x-1.*y+3*x=x)         "<<t.diff()/20<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
 
     t.tic();
     for( int i=0; i<20; i++)
-        dg::blas1::pointwiseDot( y, x, x);
+        dg::blas1::pointwiseDot( 1., y, x, 2., x);
     t.toc();
-    std::cout<<"pointwiseDot took                "<<t.diff()/20<<"s\t" <<gbytes*20/t.diff()<<"GB/s\n";
+    std::cout<<"pointwiseDot (1*yx+2*x=x)        "<<t.diff()/20<<"s\t" <<gbytes*20/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<20; i++)
+        dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  z);
+    t.toc();
+    std::cout<<"pointwiseDot (1*yx+2*uv=z)       "<<t.diff()/20<<"s\t" <<gbytes*20/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<20; i++)
+        dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
+    t.toc();
+    std::cout<<"pointwiseDot (1*yx+2*uv=v)       "<<t.diff()/20<<"s\t" <<gbytes*20/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<20; i++)
         norm += dg::blas2::dot( w2d, y);

@@ -26,7 +26,7 @@ endif
 ###########configure mic jobs with#########################
 #mcdram=cache:numa=quadrant
 #export KMP_AFFINITY=scatter #important
-#export OM_NUM_THREADS=68
-#qsub -I -qxfuaknldebug -A FUA21_FELTOR -l select=1:ncpus=68:mcdram=cach:numa=quadrant -l walltime=0:20:00
+#export OMP_NUM_THREADS=68
+#qsub -I -qxfuaknldebug -A FUA21_FELTOR -l select=1:ncpus=68:mcdram=cache:numa=quadrant -l walltime=0:29:00
 
 
