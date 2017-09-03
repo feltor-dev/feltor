@@ -384,16 +384,16 @@ template<class value_type>
 }
 #endif
 
-template<class Vector>
+template<class value_type>
 inline void doPointwiseDot(  
-              typename Vector::value_type alpha, 
-              const Vector& x1,
-              const Vector& y1, 
-              typename Vector::value_type beta, 
-              const Vector& x2,
-              const Vector& y2, 
-              typename Vector::value_type gamma, 
-              Vector& z, 
+              value_type alpha, 
+              const thrust::device_vector<value_type>& x1,
+              const thrust::device_vector<value_type>& y1, 
+              value_type beta, 
+              const thrust::device_vector<value_type>& x2,
+              const thrust::device_vector<value_type>& y2, 
+              value_type gamma, 
+              thrust::device_vector<value_type>& z, 
               ThrustVectorTag)
 {
     if( alpha==0){ 
@@ -404,16 +404,16 @@ inline void doPointwiseDot(
         doPointwiseDot( alpha, x1,y1, gamma, z, ThrustVectorTag());
         return;
     }
-    const typename Vector::value_type *x1_ptr = thrust::raw_pointer_cast( &(x1.data()[0]));
-    const typename Vector::value_type *x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
-    const typename Vector::value_type *y1_ptr = thrust::raw_pointer_cast( &(y1.data()[0]));
-    const typename Vector::value_type *y2_ptr = thrust::raw_pointer_cast( &(y2.data()[0]));
-        typename Vector::value_type * z_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
+    const value_type *x1_ptr = thrust::raw_pointer_cast( x1.data());
+    const value_type *x2_ptr = thrust::raw_pointer_cast( x2.data());
+    const value_type *y1_ptr = thrust::raw_pointer_cast( y1.data());
+    const value_type *y2_ptr = thrust::raw_pointer_cast( y2.data());
+          value_type * z_ptr = thrust::raw_pointer_cast( z.data());
     unsigned size = x1.size();
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     if( z_ptr != x1_ptr && z_ptr != x2_ptr && z_ptr != y1_ptr && z_ptr != y2_ptr)
     {
-        typename Vector::value_type * RESTRICT zr_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
+        value_type * RESTRICT zr_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
         if(gamma==0)
         {
 #pragma omp parallel for simd
@@ -478,8 +478,28 @@ inline void doPointwiseDot(
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    pointwiseDot_kernel<typename Vector::value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, beta, gamma, x1_ptr, y1_ptr, x2_ptr, y2_ptr, z_ptr, size);
+    pointwiseDot_kernel<value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, beta, gamma, x1_ptr, y1_ptr, x2_ptr, y2_ptr, z_ptr, size);
 #endif
+}
+template<class value_type>
+inline void doPointwiseDot(  
+              value_type alpha, 
+              const thrust::host_vector<value_type>& x1,
+              const thrust::host_vector<value_type>& y1, 
+              value_type beta, 
+              const thrust::host_vector<value_type>& x2,
+              const thrust::host_vector<value_type>& y2, 
+              value_type gamma, 
+              thrust::host_vector<value_type>& z, 
+              ThrustVectorTag)
+{
+    unsigned size=x1.size();
+    for( unsigned i=0; i<size; i++)
+    {
+        z[i] = alpha*x1[i]*y1[i] 
+                    +beta*x2[i]*y2[i]
+                    +gamma*z[i];
+    }
 }
 
 }//namespace detail

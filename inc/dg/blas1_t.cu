@@ -59,6 +59,8 @@ int main()
     std::cout << "2*3 = "<<w3[0][0]<<" (6)\n";
     dg::blas1::pointwiseDot( 2., w1, w2, -4., w3);
     std::cout << "2*2*3 -4*6 = "<<w3[0][0]<<" (-12)\n";
+    dg::blas1::pointwiseDot( 2., w1[0], w2[0], -4., v1, v2, 0., v2);
+    std::cout << "2*2*3 -4*2*3 = "<<v2[0]<<" (-12)\n";
     dg::blas1::axpby( 2., w1, 3., w2);
     std::cout << "2*2+ 3*3 = " << w2[0][0] <<" (13)\n";
     dg::blas1::axpby( 2.5, w1, 0., w2);
