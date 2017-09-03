@@ -145,46 +145,23 @@ void multiply2d_helper( const SparseTensor<container>& t, const container& in0, 
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
  * @copydoc hide_container_lvl1
  * @param t input Tensor
- * @param in0 (input) first component 
- * @param in1 (input) second component
- * @param out0 (output) first component 
- * @param out1 (output) second component 
+ * @param in0 (input) first component    (restricted)
+ * @param in1 (input) second component   (restricted)
+ * @param out0 (output) first component  (restricted)
+ * @param out1 (output) second component (may alias in1)
  * @note this version keeps the input intact 
- * @attention aliasing only allowed if tensor is either lower, or upper triangular 
+ * @attention aliasing only allowed between out1 and in1
  */
 template<class container>
 void multiply2d( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, container& out1)
 {
     int i0[2] = {0,0}, i1[2] = {1,0};
     int i3[2] = {1,1}, i2[2] = {1,0};
+    //order is important because out1 may alias in1
     detail::multiply2d_helper( t, in0, in1, out0, i0, i1);
     detail::multiply2d_helper( t, in1, in0, out1, i3, i2);
-}
-
-/**
- * @brief Multiply a tensor with a vector in 2d inplace
- *
- * Compute \f$ v^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
- * @copydoc hide_container_lvl1
- * @param t input Tensor
- * @param inout0 (input/output) first component 
- * @param inout1 (input/output) second component
- * @param workspace (write) optional workspace
- * @note this version overwrites the input and the workspace
- * @attention aliasing not allowed
- */
-template<class container>
-void multiply2d_inplace( const SparseTensor<container>& t, container& inout0, container& inout1, container& workspace)
-{
-    int i0[2] = {0,0}, i1[2] = {1,0};
-    int i3[2] = {1,1}, i2[2] = {1,0};
-    detail::multiply2d_helper( t, inout0, inout1, workspace, i0, i1);
-    detail::multiply2d_helper( t, inout1, inout0, inout1, i3, i2);
-    workspace.swap( inout0);
-    //needs to load a vector         11 times if every element is set (5 is the optimal symmetric inplace algorithm)
-    //if triangular                  7 (5 optimal)
-    //if diagonal                    4 (optimal)
-    //if unity                       0 (optimal)
+    //needs to load a vector         10 times if every element is set (7 is the optimal algorithm for symmetric t)
+    //(the ideal algorithm also only needs 70% of the time (tested on marconi))
 }
 
 /**
@@ -243,71 +220,6 @@ void multiply3d( const SparseTensor<container>& t, const container& in0, const c
         dg::blas1::pointwiseDot( 1., t.value(2,1), in1, 1., out2);
     if(t.isSet(2,0))
         dg::blas1::pointwiseDot( 1., t.value(2,0), in0, 1., out2);
-}
-
-/**
- * @brief Multiply a tensor with a vector in 2d inplace
- *
- * Compute \f$ v^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2,3\}\f$
- * @copydoc hide_container_lvl1
- * @param t input Tensor
- * @param inout0 (input/output) first component 
- * @param inout1 (input/output) second component
- * @param inout2 (input/output) second component
- * @param workspace0 (write) optional workspace
- * @param workspace1 (write) optional workspace
- * @note this version overwrites the input and may or may not write into the workspace
- * @attention aliasing not allowed
- */
-template<class container>
-void multiply3d_inplace( const SparseTensor<container>& t, container& inout0, container& inout1, container& inout2, container& workspace0, container& workspace1)
-{
-    //first: store off-diagonals of first two rows
-    if( t.isSet(0,1) ) {
-        dg::blas1::pointwiseDot( t.value(0,1), inout1, workspace0);
-        if( t.isSet(0,2) ) dg::blas1::pointwiseDot( 1.,t.value(0,2), inout2, 1.,workspace0);
-    }
-    if(!t.isSet(0,1) && t.isSet(0,2))
-    {
-        dg::blas1::pointwiseDot( t.value(0,2), inout2, workspace0);
-    }
-    //else workspace0 is empty
-    //
-    if( t.isSet(1,0) ) {
-        dg::blas1::pointwiseDot( t.value(1,0), inout0, workspace1);
-        if( t.isSet(1,2) ) dg::blas1::pointwiseDot( 1.,t.value(1,2), inout2, 1.,workspace1);
-    }
-    if(!t.isSet(1,0) && t.isSet(1,2))
-    {
-        dg::blas1::pointwiseDot( t.value(1,2), inout2, workspace1);
-    }
-    //else workspace1 is empty
-    //
-    //second: compute out2 inplace
-    if( t.isSet(2,2)) dg::blas1::pointwiseDot( t.value(2,2), inout2, inout2);
-    if( t.isSet(2,1)) dg::blas1::pointwiseDot( 1., t.value(2,1), inout1, 1., inout2);
-    if( t.isSet(2,0)) dg::blas1::pointwiseDot( 1., t.value(2,0), inout0, 1., inout2);
-
-    //third add values stored in workspaces
-    if(t.isSet(0,1) ||t.isSet(0,2) ) //workspace0 is filled
-    {
-        if( !t.isSet(0,0)) dg::blas1::axpby( 1., inout0, 1., workspace0, workspace0);
-        else dg::blas1::pointwiseDot( 1., t.value(0,0), inout0, 1., workspace0); 
-        workspace0.swap( inout0);
-    }
-    else
-        if( t.isSet(0,0)) dg::blas1::pointwiseDot( t.value(0,0), inout0, inout0); 
-    if(t.isSet(1,0) ||t.isSet(1,2) ) //workspace1 is filled
-    {
-        if( !t.isSet(1,1)) dg::blas1::axpby( 1., inout1, 1., workspace1, workspace1);
-        else dg::blas1::pointwiseDot( 1., t.value(1,1), inout1, 1., workspace1); 
-        workspace1.swap( inout1);
-    }
-    else
-        if( t.isSet(1,1)) dg::blas1::pointwiseDot( t.value(1,1), inout1, inout1); 
-    //if everything is set: 28 loads (12 optimal, 9 optimal symmetric)
-    //if effective 2d:      12 (same as 2d algorithm, 5 optimal symmetric)
-
 }
 
 /**

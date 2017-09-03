@@ -31,7 +31,7 @@ int main()
     std::cout<<"multiply_inplace(g,v_x,v_y,temp) took   "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::tensor::multiply2d( g, v_x, v_y, w_x, w_y);
+        dg::tensor::multiply2d( g, v_x, v_y, w_x, v_y);
     t.toc();
     std::cout<<"multiply2d(g,v_x,v_y,w_x,w_y) took      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     return 0;

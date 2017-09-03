@@ -143,11 +143,11 @@ class Elliptic
     void symv( const container& x, container& y) 
     {
         //compute gradient
-        dg::blas2::gemv( rightx, x, gradx); //R_x*f 
-        dg::blas2::gemv( righty, x, y); //R_y*f
+        dg::blas2::gemv( rightx, x, tempx); //R_x*f 
+        dg::blas2::gemv( righty, x, tempy); //R_y*f
 
-        //multiply with tensor
-        dg::tensor::multiply2d_inplace(chi_, gradx, y, tempx);
+        //multiply with tensor (note the alias)
+        dg::tensor::multiply2d(chi_, tempx, tempy, gradx, tempy);
 
         //now take divergence
         dg::blas2::symv( lefty, tempy, y);  
