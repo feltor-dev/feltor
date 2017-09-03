@@ -6,12 +6,12 @@ namespace dg
 // general multiply kernel
 template<class value_type>
  __global__ void ell_multiply_kernel( value_type alpha, value_type beta,
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, const int size,
          const int right, 
-         const int* right_range,
-         const value_type* x, value_type *y
+         const int* __restrict__  right_range,
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -42,12 +42,12 @@ template<class value_type>
 // multiply kernel, n=3, 3 blocks per line
 template<class value_type>
  __global__ void ell_multiply_kernel33(value_type alpha, value_type beta,
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols,
          const int size,
          const int right, 
-         const int* right_range,
-         const value_type* x, value_type *y
+         const int* __restrict__  right_range,
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -87,12 +87,12 @@ template<class value_type>
 // multiply kernel, n=3, 2 blocks per line
 template<class value_type>
  __global__ void ell_multiply_kernel32(value_type alpha, value_type beta,
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols, 
          const int size,
          const int right, 
-         const int* right_range,
-         const value_type* x, value_type *y
+         const int* __restrict__  right_range,
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     //int size = left*num_rows*n*right;
@@ -128,10 +128,10 @@ template<class value_type>
 // multiply kernel, n=3, 3 blocks per line, right = 1
 template<class value_type>
  __global__ void ell_multiply_kernel33x(value_type alpha, value_type beta,
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const value_type* x, value_type *y
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -167,10 +167,10 @@ template<class value_type>
 // multiply kernel, n=3, 2 blocks per line, right = 1
 template<class value_type>
  __global__ void ell_multiply_kernel32x(value_type alpha, value_type beta,
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const value_type* x, value_type *y
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -203,11 +203,11 @@ template<class value_type>
 // multiply kernel
 template<class value_type>
  __global__ void coo_multiply_kernel(
-         const value_type* data, const int* rows_idx, const int* cols_idx, const int* data_idx, 
+         const value_type* __restrict__  data, const int* __restrict__  rows_idx, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols, const int entry,
          const int n, 
          const int left, const int right, 
-         value_type alpha, const value_type* x, value_type beta, value_type *y
+         value_type alpha, const value_type* __restrict__  x, value_type beta, value_type * __restrict__ y
          )
 {
     int size = left*n*right;

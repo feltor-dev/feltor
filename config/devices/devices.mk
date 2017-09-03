@@ -1,7 +1,7 @@
 ifeq ($(strip $(device)),gpu)
 ccc_:=$(CC)
 CC = nvcc --compiler-bindir $(ccc_)
-OPT=-O2
+OPT=-O3
 CFLAGS+=-D_FORCE_INLINES
 CFLAGS+= --compiler-options -Wall $(NVCCARCH)
 CFLAGS+= -Xcompiler $(OMPFLAG)

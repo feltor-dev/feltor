@@ -42,10 +42,10 @@ int main()
     std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
     value_type gbytes=(value_type)x.size()*sizeof(value_type)/1e9;
     std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
-    unsigned multi=200;
+    int multi=200;
     t.tic();
     value_type norm=0;
-    for( unsigned i=0; i<multi; i++)
+    for( int i=0; i<multi; i++)
         norm += dg::blas1::dot( w2d, x);
     t.toc();
     std::cout<<"DOT took                         " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
