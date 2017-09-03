@@ -366,6 +366,24 @@ inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, Th
 }
 
 
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+template<class value_type>
+ __global__ void pointwiseDot_kernel( value_type alpha, value_type beta, value_type gamma,
+         const value_type*  x1, const value_type* y1, const value_type* x2, 
+         const value_type*  y2, value_type* z,  
+         const int size
+         )
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_rows/grid_size rows
+    for( int row = thread_id; row<size; row += grid_size)
+    {
+        z[row]=alpha*x1[row]*y1[row]+beta*x2[row]*y2[row]+gamma*z[row];
+    }
+}
+#endif
+
 template<class Vector>
 inline void doPointwiseDot(  
               typename Vector::value_type alpha, 
@@ -386,13 +404,13 @@ inline void doPointwiseDot(
         doPointwiseDot( alpha, x1,y1, gamma, z, ThrustVectorTag());
         return;
     }
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     const typename Vector::value_type *x1_ptr = thrust::raw_pointer_cast( &(x1.data()[0]));
     const typename Vector::value_type *x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
     const typename Vector::value_type *y1_ptr = thrust::raw_pointer_cast( &(y1.data()[0]));
     const typename Vector::value_type *y2_ptr = thrust::raw_pointer_cast( &(y2.data()[0]));
         typename Vector::value_type * z_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
     unsigned size = x1.size();
+#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     if( z_ptr != x1_ptr && z_ptr != x2_ptr && z_ptr != y1_ptr && z_ptr != y2_ptr)
     {
         typename Vector::value_type * RESTRICT zr_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
@@ -457,12 +475,15 @@ inline void doPointwiseDot(
         }
     }
 #else
-    doPointwiseDot( alpha, x1, y1, gamma, z, ThrustVectorTag());
-    doPointwiseDot( beta,  x2, y2, 1., z, ThrustVectorTag());
+    //set up kernel parameters
+    const size_t BLOCK_SIZE = 256; 
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    pointwiseDot_kernel<typename Vector::value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, beta, gamma, x1_ptr, y1_ptr, x2_ptr, y2_ptr, z_ptr, size);
 #endif
 }
 
-} //namespace detail
+}//namespace detail
+
 ///@endcond
 } //namespace blas1
 } //namespace dg
