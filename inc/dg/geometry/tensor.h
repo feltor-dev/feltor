@@ -88,14 +88,14 @@ struct SparseTensor
     SparseTensor( ):mat_idx_(3,-1.) {}
 
     /**
-     * @brief reserve space for Ts in the values array
+     * @brief reserve space for value_size Ts in the values array
      * @param value_size reserve space for this number of Ts (default constructor) 
      */
     SparseTensor( unsigned value_size): mat_idx_(3,-1.), values_(value_size){}
 
     /**
     * @brief pass array of Ts
-    * @param values The contained Ts must all have the same size
+    * @param values The contained Ts are stored in the object
     */
     SparseTensor( const std::vector<T>& values ): mat_idx_(3,-1.), values_(values){}
 

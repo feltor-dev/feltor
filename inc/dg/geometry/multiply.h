@@ -119,6 +119,26 @@ void pointwiseDivide( const container& in, const SparseElement<container>& mu, c
         out=in;
 }
 
+///@cond
+namespace detail
+{
+//i0 must be the diagonal index, out0 may alias in0 but not in1
+template<class container>
+void multiply2d_helper( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, int i0[2], int i1[2])
+{
+    if( t.isSet(i0[0],i0[1]) && t.isSet(i1[0],i1[1]) ) 
+        dg::blas1::pointwiseDot( 1. , t.value(i0[0],i0[1]), in0, 1., t.value(i1[0], i1[1]), in1, 0., out0); 
+    else if( t.isSet(i0[0],i0[1]) && !t.isSet(i1[0],i1[1]) ) 
+        dg::blas1::pointwiseDot( t.value(i0[0], i0[1]), in0, out0);
+    else 
+    {
+        out0=in0;
+        if( t.isSet(i1[0], i1[1]))
+            dg::blas1::pointwiseDot( 1.,  t.value(i1[0], i1[1]), in1, 1., out0);
+    }
+}
+}//namespace detail
+///@endcond
 /**
  * @brief Multiply a tensor with a vector in 2d
  *
@@ -135,29 +155,10 @@ void pointwiseDivide( const container& in, const SparseElement<container>& mu, c
 template<class container>
 void multiply2d( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, container& out1)
 {
-    if(!t.isSet(0,1))//lower triangular
-    {
-        if(t.isSet(1,1))  dg::blas1::pointwiseDot( t.value(1,1), in1, out1);
-        else out1=in1;
-        if(t.isSet(1,0)) dg::blas1::pointwiseDot( 1., t.value(1,0), in0, 1., out1);
-        if( t.isSet(0,0)) dg::blas1::pointwiseDot( t.value(0,0), in0, out0);
-        else out0=in0;
-        return;
-    }
-    //upper triangular and default
-    if( t.isSet(0,0) ) 
-        dg::blas1::pointwiseDot( t.value(0,0), in0, out0); 
-    else 
-        out0=in0;
-    if(t.isSet(0,1)) //true
-        dg::blas1::pointwiseDot( 1.,  t.value(0,1), in1, 1., out0);
-
-    if( t.isSet(1,1) )
-        dg::blas1::pointwiseDot( t.value(1,1), in1, out1);
-    else 
-        out1=in1;
-    if(t.isSet(1,0)) //if aliasing happens this is wrong
-        dg::blas1::pointwiseDot( 1.,  t.value(1,0), in0, 1., out1);
+    int i0[2] = {0,0}, i1[2] = {1,0};
+    int i3[2] = {1,1}, i2[2] = {1,0};
+    detail::multiply2d_helper( t, in0, in1, out0, i0, i1);
+    detail::multiply2d_helper( t, in1, in0, out1, i3, i2);
 }
 
 /**
@@ -175,20 +176,11 @@ void multiply2d( const SparseTensor<container>& t, const container& in0, const c
 template<class container>
 void multiply2d_inplace( const SparseTensor<container>& t, container& inout0, container& inout1, container& workspace)
 {
-    if( t.isSet(0,1) ) dg::blas1::pointwiseDot( t.value(0,1), inout1, workspace);
-    //compute out1 inplace
-    if( t.isSet(1,1)) dg::blas1::pointwiseDot( t.value(1,1), inout1, inout1);
-    if( t.isSet(1,0)) dg::blas1::pointwiseDot( 1., t.value(1,0), inout0, 1., inout1);
-
-    if(t.isSet(0,1)) //workspace is filled
-    {
-        if( !t.isSet(0,0)) dg::blas1::axpby( 1., inout0, 1., workspace, workspace);
-        else dg::blas1::pointwiseDot( 1., t.value(0,0), inout0, 1., workspace); 
-        workspace.swap( inout0);
-    }
-    else
-        if( t.isSet(0,0)) dg::blas1::pointwiseDot( t.value(0,0), inout0, inout0); 
-
+    int i0[2] = {0,0}, i1[2] = {1,0};
+    int i3[2] = {1,1}, i2[2] = {1,0};
+    detail::multiply2d_helper( t, inout0, inout1, workspace, i0, i1);
+    detail::multiply2d_helper( t, inout1, inout0, inout1, i3, i2);
+    workspace.swap( inout0);
     //needs to load a vector         11 times if every element is set (5 is the optimal symmetric inplace algorithm)
     //if triangular                  7 (5 optimal)
     //if diagonal                    4 (optimal)
