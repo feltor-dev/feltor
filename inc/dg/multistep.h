@@ -104,14 +104,14 @@ template< size_t k, class container>
 template< class Functor>
 void AB<k, container>::operator()( Functor& f, container& u)
 {
-    blas1::axpby( 1., u_, 0, u);
+    blas1::copy(  u_, u);
     f( u, f_[0]);
     for( unsigned i=0; i<k; i++)
         blas1::axpby( dt_*ab_coeff<k>::b[i], f_[i], 1., u_);
     //permute f_[k-1]  to be the new f_[0]
     for( unsigned i=k-1; i>0; i--)
         f_[i-1].swap( f_[i]);
-    blas1::axpby( 1., u_, 0, u);
+    blas1::copy( u_, u);
 }
 
 ///@cond
@@ -312,25 +312,24 @@ template< class Functor, class Diffusion>
 void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container& u)
 {
 
-    blas1::axpby( 1., u_[0], 0, u); //save u_[0]
+    blas1::copy( u_[0], u); //save u_[0]
     f( u, f_[0]);
-    blas1::axpby( dt_*b[1], f_[1], dt_*b[2], f_[2], f_[2]);
-    blas1::axpby( dt_*b[0], f_[0],       1., f_[2], f_[2]);
-    blas1::axpby( a[1], u_[1], a[2], u_[2], u_[2]);
-    blas1::axpby( a[0], u_[0],   1., u_[2], u_[2]);
-    blas1::axpby( 1., u_[2], 1., f_[2], u);
+    blas1::axpbygz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
+    blas1::axpbygz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
     //permute f_[2], u_[2]  to be the new f_[0], u_[0]
     for( unsigned i=2; i>0; i--)
     {
         f_[i-1].swap( f_[i]);
         u_[i-1].swap( u_[i]);
     }
+    blas1::axpby( 1., f_[0], 1., u_[0]);
+    blas2::symv( diff.weights(), u_[0], u_[0]);
     //compute implicit part
     double alpha[2] = {2., -1.};
     //double alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u_[0]); //extrapolate previous solutions
     blas2::symv( diff.weights(), u, u);
-    detail::Implicit<Diffusion, container> implicit( -dt_/11.*6., diff, f_[0]);
+    detail::Implicit<Diffusion, Vector> implicit( -dt_/11.*6., diff, f_[0]);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
     int rank;
@@ -338,18 +337,16 @@ void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container&
 #endif//MPI
     Timer t;
     t.tic(); 
-    unsigned number = pcg( implicit, u_[0], u, diff.precond(), eps_);
+    unsigned number = pcg( implicit, u, u_[0], diff.precond(), eps_);
     t.toc();
 #ifdef MPI_VERSION
     if(rank==0)
 #endif//MPI
     std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<" took "<<t.diff()<<"s\n";
 #else
-    pcg( implicit, u_[0], u, diff.precond(), eps_);
+    pcg( implicit, u, u_[0], diff.precond(), eps_);
 #endif //BENCHMARK
-    blas1::axpby( 1., u_[0], 0, u); //save u_[0]
-
-
+    blas1::copy( u, u_[0]); //store result
 }
 ///@endcond
 

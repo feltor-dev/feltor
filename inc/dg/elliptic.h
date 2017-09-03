@@ -150,17 +150,14 @@ class Elliptic
         dg::tensor::multiply2d_inplace(chi_, gradx, y, tempx);
 
         //now take divergence
-        dg::blas2::gemv( leftx, gradx, tempx);  
-        dg::blas2::gemv( lefty, y, tempy);  
-        dg::blas1::axpby( -1., tempx, -1., tempy, y); //-D_xx - D_yy 
+        dg::blas2::symv( lefty, tempy, y);  
+        dg::blas2::symv( -1., leftx, gradx, -1., y);  
         if( no_ == normed)
             dg::tensor::pointwiseDivide( y, vol_, y);
 
         //add jump terms
-        dg::blas2::symv( jumpX, x, tempx);
-        dg::blas1::axpby( jfactor_, tempx, 1., y, y); 
-        dg::blas2::symv( jumpY, x, tempy);
-        dg::blas1::axpby( jfactor_, tempy, 1., y, y); 
+        dg::blas2::symv( jfactor_, jumpX, x, 1., y);
+        dg::blas2::symv( jfactor_, jumpY, x, 1., y);
         if( no_ == not_normed)//multiply weights without volume
             dg::blas2::symv( weights_wo_vol, y, y);
 

@@ -162,9 +162,7 @@ void Poisson< Geometry, Matrix, container>::operator()( const container& lhs, co
     blas2::symv(  dxrhs_, rhs,  dxrhsrhs_); //dx_rhs rhs
     blas2::symv(  dyrhs_, rhs,  dyrhsrhs_); //dy_rhs rhs
     
-    blas1::pointwiseDot( dxlhslhs_, dyrhsrhs_, result);   //dx_lhs lhs * dy_rhs rhs
-    blas1::pointwiseDot( -1., dylhslhs_, dxrhsrhs_, 1., result);    //- dy_lhs lhs * dx_rhs rhs
-
+    blas1::pointwiseDot( 1., dxlhslhs_, dyrhsrhs_, -1., dylhslhs_, dxrhsrhs_, 0., result);   
     tensor::pointwiseDot( perp_vol_inv_, result, result);
 }
 

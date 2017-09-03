@@ -116,6 +116,26 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
     dg::blas1::detail::doAxpby( alpha, x, beta, y, result, typename dg::VectorTraits<Vector>::vector_category() );
     return;
 }
+
+/*! @brief Modified BLAS 1 routine axpy
+ *
+ * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f] 
+ * @param alpha Scalar  
+ * @param x Vector x may equal result
+ * @param beta Scalar
+ * @param y Vector y may equal result
+ * @param gamma Scalar
+ * @param z Vector contains solution on output
+ * @note If DG_DEBUG is defined a range check shall be performed
+ * @attention If a thrust::device_vector is used then this routine is NON-BLOCKING!
+ */
+template< class Vector>
+inline void axpbygz( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, const Vector& y, typename VectorTraits<Vector>::value_type gamma, Vector& z)
+{
+    dg::blas1::detail::doAxpby( alpha, x, beta, y, gamma, z, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
+}
+
 /*! @brief "new" BLAS 1 routine transform
  *
  * This routine computes \f[ y_i = op(x_i) \f] 
@@ -173,6 +193,7 @@ inline void pointwiseDot( const Vector& x1, const Vector& x2, Vector& y)
     dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
     return;
 }
+
 /**
 * @brief A 'new' BLAS 1 routine. 
 *
@@ -203,6 +224,28 @@ template< class Vector>
 inline void pointwiseDivide( const Vector& x1, const Vector& x2, Vector& y)
 {
     dg::blas1::detail::doPointwiseDivide( x1, x2, y, typename dg::VectorTraits<Vector>::vector_category() );
+    return;
+}
+
+/**
+* @brief A 'new' fused multiply-add BLAS 1 routine. 
+*
+* Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i]y_{2i} + \gamma z_i\f]
+* @param alpha scalar
+* @param x1 Vector x1  
+* @param y1 Vector y1 
+* @param beta scalar
+* @param x2 Vector x1  
+* @param y2 Vector y1 
+* @param z  Vector z contains result on output 
+* @note aliases are allowed: we perform an alias analysis on the given references to detect possible performance optimizations
+*/
+template<class Vector>
+void pointwiseDot(  typename VectorTraits<Vector>::value_type alpha, const Vector& x1, const Vector& y1, 
+                    typename VectorTraits<Vector>::value_type beta,  const Vector& x2, const Vector& y2, 
+                    typename VectorTraits<Vector>::value_type gamma, Vector & z)
+{
+    dg::blas1::detail::doPointwiseDot( alpha, x1, y1, beta, x2, y2, gamma, z, typename dg::VectorTraits<Vector>::vector_category() );
     return;
 }
 ///@}

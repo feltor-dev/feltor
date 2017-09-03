@@ -121,35 +121,16 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     blas2::symv( bdxf, rhs, dxrhs);
     blas2::symv( bdyf, rhs, dyrhs);
 
-    // order is important now
-    // +x (1) -> result und (2) -> blhs
-    blas1::pointwiseDot( lhs, dyrhs, result);
-    blas1::pointwiseDot( lhs, dxrhs, helper_);
+    blas1::pointwiseDot( 1./3., dxlhs, dyrhs, -1./3., dylhs, dxrhs, 0., result);
+    //blas1::pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., helper_);
+    //blas1::pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dylhs);
+    blas1::pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., dylhs);
+    blas1::pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dxrhs);
 
-    // ++ (1) -> dyrhs and (2) -> dxrhs
-    blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
-    blas1::pointwiseDot( dylhs, dxrhs, dxrhs);
-
-    // x+ (1) -> dxlhs and (2) -> dylhs
-    blas1::pointwiseDot( dxlhs, rhs, dxlhs);
-    blas1::pointwiseDot( dylhs, rhs, dylhs);
-
-    blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);  //dxl*dyr - dyl*dxr -> dxrhs
-    //everything which needs a dx 
-    blas1::axpby( 1./3., dxlhs, -1./3., helper_);   //dxl*r - l*dxr     -> helper 
-    //everything which needs a dy
-    blas1::axpby( 1./3., result, -1./3., dylhs); //l*dyr - dyl*r     -> dylhs
-
-    //blas1::axpby( 0., dyrhs,  -0., dxrhs); //++
-    ////for testing purposes (note that you need to set criss-cross)
-    //blas1::axpby( 1., dxlhs,  -0., helper); //x+ - +x
-    //blas1::axpby( 0., result, -1., dylhs);  //+x - x+
-
-    blas2::symv( bdyf, helper_, result);      //dy*(dxl*r - l*dxr) -> result
-    blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
-    //now sum everything up
-    blas1::axpby( 1., dxlhs, 1., result); //result + dxlhs -> result
-    blas1::axpby( 1., dxrhs, 1., result); //result + dyrhs -> result
+    //blas2::symv( 1., bdxf, helper_, 1., result);
+    //blas2::symv( 1., bdyf, dylhs, 1., result);
+    blas2::symv( 1., bdxf, dylhs, 1., result);
+    blas2::symv( 1., bdyf, dxrhs, 1., result);
     tensor::pointwiseDot( perp_vol_inv_, result, result);
 }
 

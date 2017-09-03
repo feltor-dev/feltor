@@ -22,6 +22,12 @@ inline void doSymv( Matrix& m, Vector1& x, Vector2& y, MPIMatrixTag, MPIVectorTa
     m.symv( x, y);
 }
 
+template< class Matrix, class Vector>
+inline void doSymv( typename MatrixTraits<Matrix>::value_type alpha, const Matrix& m, const Vector& x, typename MatrixTraits<Matrix>::value_type beta, Vector& y, MPIMatrixTag, MPIVectorTag )
+{
+    m.symv( alpha, x, beta, y);
+}
+
 template< class Matrix, class Vector1, class Vector2>
 inline void doGemv( Matrix& m, Vector1&x, Vector2& y, MPIMatrixTag, MPIVectorTag, MPIVectorTag  )
 {

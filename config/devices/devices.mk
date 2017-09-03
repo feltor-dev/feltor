@@ -1,7 +1,7 @@
 ifeq ($(strip $(device)),gpu)
 ccc_:=$(CC)
 CC = nvcc --compiler-bindir $(ccc_)
-OPT=-O2
+OPT=-O3
 CFLAGS+=-D_FORCE_INLINES
 CFLAGS+= --compiler-options -Wall $(NVCCARCH)
 CFLAGS+= -Xcompiler $(OMPFLAG)
@@ -24,9 +24,9 @@ CFLAGS+= $(OMPFLAG)
 MPICFLAGS+=$(CFLAGS) #includes values in CFLAGS defined later
 endif #device=omp
 ifeq ($(strip $(device)),mic)
-CFLAGS+=-Wall -x c++
+CFLAGS+=-Wall -x c++ 
 CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
 CFLAGS+= $(OMPFLAG) #-mmic 
 MPICFLAGS+=$(CFLAGS) #includes values in CFLAGS defined later
-OPT=-O3 -xMIC-AVX512 -fma -finline-functions -align -restrict
+OPT=-O3 -xMIC-AVX512 -fma -finline-functions -align
 endif #device=mic
