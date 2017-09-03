@@ -95,6 +95,19 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
 }
 
 template< class Vector>
+inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
+              const Vector& x, 
+              typename VectorTraits<Vector>::value_type beta, 
+              const Vector& y, 
+              typename VectorTraits<Vector>::value_type gamma, 
+              Vector& z, 
+              MPIVectorTag)
+{
+    typedef typename Vector::container_type container;
+    doAxpby( alpha,x.data(),beta, y.data(), gamma, z.data(), typename VectorTraits<container>::vector_category());
+}
+
+template< class Vector>
 inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, MPIVectorTag)
 {
     typedef typename Vector::container_type container;
@@ -118,6 +131,20 @@ inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, MP
 {
     typedef typename Vector::container_type container;
     doPointwiseDivide( x1.data(), x2.data(), y.data(), typename VectorTraits<container>::vector_category());
+}
+
+template< class Vector>
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
+        const Vector& x1, const Vector& x2, 
+        typename VectorTraits<Vector>::value_type beta,
+        const Vector& y1, const Vector& y2, 
+        typename VectorTraits<Vector>::value_type gamma,
+        Vector& z, 
+        MPIVectorTag)
+{
+    typedef typename Vector::container_type container;
+    doPointwiseDot( alpha, x1.data(), x2.data(), beta, y1.data(), y2.data(), gamma, z.data(), typename VectorTraits<container>::vector_category());
+
 }
         
 

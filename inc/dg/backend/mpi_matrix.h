@@ -116,7 +116,7 @@ struct RowColDistMat
         //if(rank==0)std::cout << "Inner points took "<<t.diff()<<"s\n";
         //2. communicate outer points
         //t.tic();
-        const container& temp = c_.collect( x.data());
+        const container& temp = c_.global_gather( x.data());
         //t.toc();
         //if(rank==0)std::cout << "Collect      took "<<t.diff()<<"s\n";
         //3. compute and add outer points
@@ -259,7 +259,7 @@ struct RowDistMat
             return;
 
         }
-        container temp = c_.collect( x.data());
+        container temp = c_.global_gather( x.data());
         //t.toc();
         //if(rank==0)std::cout << "collect took "<<t.diff()<<"s\n";
         //t.tic();
@@ -372,7 +372,7 @@ struct ColDistMat
         dg::blas2::detail::doSymv( alpha, m_, x.data(), beta, temp, 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
-        c_.send_and_reduce( temp, y.data());
+        c_.global_scatter_reduce( temp, y.data());
     }
     template<class container> 
     void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)

@@ -120,8 +120,8 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
     typedef typename GeometryTraits< Geometry>::host_vector host_vec;
     host_vec out1 = pullback( vR, g), temp1(out1);
     host_vec out2 = pullback( vZ, g);
-    dg::tensor::multiply2d_inplace(g.jacobian(), out1, out2, temp1);
-    dg::blas1::transfer( out1, vx);
+    dg::tensor::multiply2d(g.jacobian(), out1, out2, temp1, out2);
+    dg::blas1::transfer( temp1, vx);
     dg::blas1::transfer( out2, vy);
 }
 
@@ -152,9 +152,9 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
     host_vec out1 = pullback( vR, g), temp1(out1);
     host_vec out2 = pullback( vZ, g), temp2(out2);
     host_vec out3 = pullback( vPhi, g);
-    dg::tensor::multiply3d_inplace(g.jacobian(), out1, out2, out3, temp1, temp2);
-    dg::blas1::transfer( out1, vx);
-    dg::blas1::transfer( out2, vy);
+    dg::tensor::multiply3d(g.jacobian(), out1, out2, out3, temp1, temp2, out3);
+    dg::blas1::transfer( temp1, vx);
+    dg::blas1::transfer( temp2, vy);
     dg::blas1::transfer( out3, vz);
 }
 
