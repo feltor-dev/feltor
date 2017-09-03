@@ -242,16 +242,6 @@ inline void doAxpby( typename Vector::value_type alpha,
     doAxpby( alpha, x, beta, y, 0., z, ThrustVectorTag());
 }
 
-template< class Vector>
-inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x1.size() == x2.size() );
-    assert( x1.size() == y.size() );
-#endif //DG_DEBUG
-    thrust::transform( x1.begin(), x1.end(), x2.begin(), y.begin(), 
-                        thrust::multiplies<typename VectorTraits<Vector>::value_type>());
-}
 
 template < class Vector>
 struct ThrustVectorDoSymv
@@ -325,7 +315,7 @@ inline void doPointwiseDot(
         unsigned size = x1.size();
         if( beta == 0)
         {
-#pragma omp parallel for 
+#pragma omp parallel for simd
             for( unsigned i=0; i<size; i++)
             {
                 y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i];
@@ -333,7 +323,7 @@ inline void doPointwiseDot(
         }
         else if ( beta == 1)
         {
-#pragma omp parallel for 
+#pragma omp parallel for simd
             for( unsigned i=0; i<size; i++)
             {
                 y_ptr[i] += alpha*x1_ptr[i]*x2_ptr[i];
@@ -341,7 +331,7 @@ inline void doPointwiseDot(
         }
         else
         {
-#pragma omp parallel for 
+#pragma omp parallel for simd
             for( unsigned i=0; i<size; i++)
             {
                 y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*y_ptr[i];
@@ -356,6 +346,12 @@ inline void doPointwiseDot(
         detail::ThrustVectorDoSymv<Vector>( alpha, beta)
     ); 
 #endif
+}
+
+template< class Vector>
+inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
+{
+    doPointwiseDot( 1., x1, x2, 0., y, ThrustVectorTag());
 }
 
 template< class Vector>
@@ -433,7 +429,7 @@ inline void doPointwiseDot(
     {
         if(gamma==0)
         {
-#pragma omp parallel for 
+#pragma omp parallel for simd
             for( unsigned i=0; i<size; i++)
             {
                 z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
@@ -442,7 +438,7 @@ inline void doPointwiseDot(
         }
         else if(gamma==1.)
         {
-#pragma omp parallel for 
+#pragma omp parallel for simd
             for( unsigned i=0; i<size; i++)
             {
                 z_ptr[i] += alpha*x1_ptr[i]*y1_ptr[i] 
@@ -451,7 +447,7 @@ inline void doPointwiseDot(
         }
         else
         {
-#pragma omp parallel for 
+#pragma omp parallel for simd
             for( unsigned i=0; i<size; i++)
             {
                 z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
