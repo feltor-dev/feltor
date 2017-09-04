@@ -51,7 +51,7 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const M
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     value_type sum = 0;
     unsigned size=x.size();
-    #pragma omp parallel reduction(+:sum) 
+    #pragma omp parallel for simd reduction(+:sum) 
     for( unsigned i=0; i<size; i++)
         sum += x[i]*m[i]*y[i];
     return sum;
@@ -75,7 +75,7 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const V
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     value_type sum = 0;
     unsigned size=x.size();
-    #pragma omp parallel reduction(+:sum)
+    #pragma omp parallel for simd reduction(+:sum)
     for( unsigned i=0; i<size; i++)
         sum += x[i]*x[i]*m[i];
     return sum;
