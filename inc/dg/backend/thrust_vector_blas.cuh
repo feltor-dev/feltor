@@ -517,7 +517,6 @@ inline void doPointwiseDot(
               ThrustVectorTag)
 {
     unsigned size=x1.size();
-    #pragma omp parallel for simd
     for( unsigned i=0; i<size; i++)
     {
         z[i] = alpha*x1[i]*y1[i] 
