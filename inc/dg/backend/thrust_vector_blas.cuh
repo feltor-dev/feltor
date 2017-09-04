@@ -71,7 +71,7 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVecto
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     value_type sum = 0;
     unsigned size=x.size();
-    #pragma omp parallel reduction(+:sum) 
+    #pragma omp parallel for simd reduction(+:sum) 
     for( unsigned i=0; i<size; i++)
         sum += x[i]*y[i];
     return sum;
@@ -517,7 +517,6 @@ inline void doPointwiseDot(
               ThrustVectorTag)
 {
     unsigned size=x1.size();
-    #pragma omp parallel for simd
     for( unsigned i=0; i<size; i++)
     {
         z[i] = alpha*x1[i]*y1[i] 
