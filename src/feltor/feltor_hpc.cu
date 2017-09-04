@@ -18,7 +18,7 @@
 
 /*
    - reads parameters from input.txt or any other given file, 
-   - Initializes and integrates Feltor and 
+   - Initializes and integrates Explicit and 
    - writes outputs to a given outputfile using netcdf 
         density fields are the real densities in XSPACE ( not logarithmic values)
 
@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( js);
+    const feltor::Parameters p( js);
     const dg::geo::solovev::GeomParameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);
@@ -59,10 +59,10 @@ int main( int argc, char* argv[])
     dg::CylindricalGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER);  
      
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    std::cout << "Constructing Explicit...\n";
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    feltor::Implicit< dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field//////////////////////////////////////////

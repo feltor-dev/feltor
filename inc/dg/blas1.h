@@ -230,7 +230,7 @@ inline void pointwiseDivide( const Vector& x1, const Vector& x2, Vector& y)
 /**
 * @brief A 'new' fused multiply-add BLAS 1 routine. 
 *
-* Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i]y_{2i} + \gamma z_i\f]
+* Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]
 * @param alpha scalar
 * @param x1 Vector x1  
 * @param y1 Vector y1 

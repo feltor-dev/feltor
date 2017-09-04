@@ -14,7 +14,8 @@
       @defgroup magnetic 3.2 magnetic field and associated functors
       @defgroup profiles 3.3 miscellaneous functors based on flux functions
  * @}
- * @defgroup misc 4. Miscellaneous additions
+ * @defgroup fieldaligned 4. Fieldaligned derivatives
+ * @defgroup misc 5. Miscellaneous additions
  *
  * Objects that are used to define and integrate the magnetic field lines. 
  * All objects can be used in the evaluation() function.

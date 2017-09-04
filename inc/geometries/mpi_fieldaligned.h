@@ -88,7 +88,7 @@ struct ZShifter
 /**
  * @brief Class for the evaluation of a parallel derivative (MPI Version)
  *
- * @ingroup utilities
+ * @ingroup fieldaligned
  * @tparam LocalMatrix The matrix class of the interpolation matrix
  * @tparam Communicator The communicator used to exchange data in the RZ planes
  * @tparam LocalContainer The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)

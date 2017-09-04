@@ -83,7 +83,6 @@
  * @{
  *     @defgroup arakawa Discretization of Poisson bracket
  *     @defgroup matrixoperators Elliptic and Helmholtz operators
- *     @defgroup fieldaligned Fieldaligned derivatives
  * @}
  * @defgroup templates Level 99: Template models
  * Documentation for template models

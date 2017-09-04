@@ -20,8 +20,6 @@
 
 #include "file/nc_utilities.h"
 
-using namespace dg::geo::solovev;
-
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
     thrust::host_vector<double> out(g.size());
@@ -63,7 +61,7 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    GeomParameters gp(js);
+    dg::geo::solovev::GeomParameters gp(js);
     Psip psip( gp); 
     std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
@@ -159,44 +157,6 @@ int main( int argc, char* argv[])
     std::cout << "relative difference in volume3d is "<<fabs(volumeRZP - volume3d)/volume3d<<std::endl;
     std::cout << "relative difference in volume2d is "<<fabs(volumeRZ - volume2d)/volume2d<<std::endl;
     std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
-
-    /////////////////////////TEST 3d grid//////////////////////////////////////
-    std::cout << "Start DS test!"<<std::endl;
-    t.tic();
-    dg::geo::BHatR bhatR(c);
-    dg::geo::BHatZ bhatZ(c);
-    dg::geo::BHatP bhatP(c);
-    //dg::geo::BinaryVectorLvl0 bhat( dg::geo::BHatR(c), dg::geo::BHatZ(c), dg::geo::BHatP(c));
-    dg::geo::BinaryVectorLvl0 bhat( bhatR, bhatZ, bhatP);
-    unsigned mx, my;
-    std::cout << "Type multipleX and multipleY!\n";
-    std::cin >> mx >> my;
-    //dg::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
-    dg::DS<dg::aGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( c, g3d, dg::normed, dg::centered, false, true, mx, my);
-
-    
-    t.toc();
-    std::cout << "Construction took "<<t.diff()<<"s\n";
-    dg::HVec B = dg::pullback( dg::geo::InvB(c), g3d), divB(B);
-    dg::HVec lnB = dg::pullback( dg::geo::LnB(c), g3d), gradB(B);
-    dg::HVec gradLnB = dg::pullback( dg::geo::GradLnB(c), g3d);
-    dg::blas1::pointwiseDivide( ones3d, B, B);
-    dg::HVec function = dg::pullback( dg::geo::FuncNeu(c), g3d), derivative(function);
-    ds( function, derivative);
-
-    ds.centeredAdj( B, divB);
-    double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    std::cout << "Divergence of B is "<<norm<<"\n";
-
-    ds.centered( lnB, gradB);
-    std::cout << "num. norm of gradLnB is "<<sqrt( dg::blas2::dot( gradB,vol3d, gradB))<<"\n";
-    norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-    std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
-    dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-    X = divB;
-    err = nc_put_var_double( ncid, varID[4], periodify(X, g2d_periodic).data());
-    double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d, gradLnB));
-    std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
 
     err = nc_close( ncid);
     return 0;
