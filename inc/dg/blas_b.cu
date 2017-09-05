@@ -8,7 +8,7 @@
 #include "blas.h"
 #include "backend/derivatives.h"
 #include "backend/evaluation.cuh"
-#include "backend/projection.cuh"
+#include "backend/fast_interpolation.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -23,7 +23,6 @@ typedef dg::DVec Vector;
 //typedef thrust::device_vector<double> Vector;
 typedef dg::DMatrix Matrix;
 //typedef cusp::array1d<double, cusp::device_memory> Vector;
-typedef dg::IDMatrix IMatrix;
 
 int main()
 {
@@ -32,7 +31,7 @@ int main()
     std::cout << "Type n, Nx, Ny and Nz ( Nx and Ny shall be multiples of 2)\n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d grid(      0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
-    dg::Grid3d grid_half( 0., lx, 0, ly, 0, ly, n, Nx/2, Ny/2, Nz);
+    dg::Grid3d grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
     Vector w2d;
     dg::blas1::transfer( dg::create::weights(grid), w2d);
 
@@ -46,9 +45,9 @@ int main()
     value_type gbytes=(value_type)x.size()*sizeof(value_type)/1e9;
     std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
     std::cout << "Generate interpolation and projection\n";
-    IMatrix inter, project; 
-    dg::blas2::transfer(dg::create::interpolation( grid, grid_half), inter);
-    dg::blas2::transfer(dg::create::projection( grid_half, grid), project);
+    dg::MultiMatrix<Matrix, Vector> inter, project; 
+    dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
+    dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
     std::cout << "Done...\n";
     int multi=200;
     t.tic();

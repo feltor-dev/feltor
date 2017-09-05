@@ -8,6 +8,7 @@
 
 double sine( double x){ return sin(x);}
 double sine( double x, double y){return sin(x)*sin(y);}
+double sine( double x, double y, double z){return sin(x)*sin(y);}
 
 int main()
 {
@@ -36,10 +37,10 @@ int main()
     std::cout << "Interpolated vec "<<dg::blas2::dot( onen, w1dn, w) << "\n";
     std::cout << "Difference       "<<dg::blas2::dot( oneo, w1do, v) - dg::blas2::dot( onen, w1dn, w) << "\n"<<std::endl;
 
-    std::cout << "TEST 2D\n";
+    std::cout << "TEST 2D and 3D\n";
     
-    dg::Grid2d g2o (0, M_PI, 0, M_PI, n_old, N_old, N_old);
-    dg::Grid2d g2n (0, M_PI, 0, M_PI, n_new, N_new, N_new);
+    dg::Grid3d g2o (0, M_PI, 0, M_PI, 0,1, n_old, N_old, N_old, 4);
+    dg::Grid3d g2n (0, M_PI, 0, M_PI, 0,1, n_new, N_new, N_new, 4);
     //cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::transformation( g2n, g2o);
     cusp::coo_matrix<int, double, cusp::host_memory> inte2d = dg::create::interpolation( g2n, g2o);
     dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > proj2d = dg::create::fast_projection( g2o, N_old/N_new, N_old/N_new);
