@@ -4,6 +4,7 @@
 #include "evaluation.cuh"
 #include "blas.h"
 #include "typedefs.cuh"
+#include "fast_interpolation.h"
 
 double sine( double x){ return sin(x);}
 double sine( double x, double y){return sin(x)*sin(y);}
@@ -39,13 +40,15 @@ int main()
     
     dg::Grid2d g2o (0, M_PI, 0, M_PI, n_old, N_old, N_old);
     dg::Grid2d g2n (0, M_PI, 0, M_PI, n_new, N_new, N_new);
-    cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::transformation( g2n, g2o);
+    //cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::transformation( g2n, g2o);
     cusp::coo_matrix<int, double, cusp::host_memory> inte2d = dg::create::interpolation( g2n, g2o);
+    dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > proj2d = dg::create::fast_projection( g2o, N_old/N_new, N_old/N_new);
+    dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > fast_inte2d = dg::create::fast_interpolation( g2n, N_old/N_new, N_old/N_new);
     const dg::HVec sinO = dg::evaluate( sine, g2o), 
                    sinN = dg::evaluate( sine, g2n);
     dg::HVec w2do = dg::create::weights( g2o);
     dg::HVec w2dn = dg::create::weights( g2n);
-    dg::HVec sinP( g2n.size());
+    dg::HVec sinP( g2n.size()), sinI(g2o.size());
     dg::blas2::gemv( proj2d, sinO, sinP);
     std::cout << "Original vector     "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) << "\n";
     std::cout << "Projected vector    "<<sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n";
@@ -56,6 +59,9 @@ int main()
     dg::blas2::gemv( inte2d, sinO, sinP);
     std::cout << "Interpolated vec    "<<sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n";
     std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n" << std::endl;
+    dg::blas2::gemv( fast_inte2d, sinN, sinI);
+    std::cout << "Interpolated vec    "<<sqrt(dg::blas2::dot( sinI, w2do, sinI)) << "\n";
+    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinI, w2do, sinI)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n" << std::endl;
 
     return 0;
 }

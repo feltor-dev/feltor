@@ -83,11 +83,11 @@ struct EllSparseBlockMat
         right_range[1]=right_size;
     }
     
-    thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks
-    IVec cols_idx; //!< is of size num_block_rows*num_blocks_per_line and contains the column indices 
-    IVec data_idx; //!< has the same size as cols_idx and contains indices into the data array
-    int num_rows; //!< number of rows, each row contains blocks
-    int num_cols; //!< number of columns
+    thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks. The first block is contained in the first n*n elements, then comes the next block, etc.
+    IVec cols_idx; //!< is of size num_block_rows*num_blocks_per_line and contains the column indices % n into the vector
+    IVec data_idx; //!< has the same size as cols_idx and contains indices into the data array, i.e. the block number 
+    int num_rows; //!< number of block rows, each row contains blocks ( total number of rows is num_rows*n*left_size*right_size
+    int num_cols; //!< number of block columns (total number of columns is num_cols*n*left_size*right_size
     int blocks_per_line; //!< number of blocks in each line
     int n;  //!< each block has size n*n
     int left_size; //!< size of the left Kronecker delta
