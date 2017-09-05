@@ -8,6 +8,7 @@
 #include "blas.h"
 #include "backend/derivatives.h"
 #include "backend/evaluation.cuh"
+#include "backend/projection.cuh"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -22,14 +23,16 @@ typedef dg::DVec Vector;
 //typedef thrust::device_vector<double> Vector;
 typedef dg::DMatrix Matrix;
 //typedef cusp::array1d<double, cusp::device_memory> Vector;
+typedef dg::IDMatrix IMatrix;
 
 int main()
 {
     dg::Timer t;
     unsigned n, Nx, Ny, Nz; 
-    std::cout << "Type n, Nx, Ny and Nz\n";
+    std::cout << "Type n, Nx, Ny and Nz ( Nx and Ny shall be multiples of 2)\n";
     std::cin >> n >> Nx >> Ny >> Nz;
-    dg::Grid3d grid( 0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
+    dg::Grid3d grid(      0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
+    dg::Grid3d grid_half( 0., lx, 0, ly, 0, ly, n, Nx/2, Ny/2, Nz);
     Vector w2d;
     dg::blas1::transfer( dg::create::weights(grid), w2d);
 
@@ -85,6 +88,21 @@ int main()
         dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    IMatrix inter, project; 
+    dg::blas2::transfer(dg::create::interpolation( grid, grid_half), inter);
+    dg::blas2::transfer(dg::create::projection( grid_half, grid), project);
+    Vector x_half = dg::evaluate( dg::zero, grid_half);
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::gemv( inter, x_half, x);
+    t.toc();
+    std::cout<<"Interpolation on original grid  "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::gemv( project, x, x_half);
+    t.toc();
+    std::cout<<"Projection onto half grid       "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    
 
     t.tic();
     for( int i=0; i<multi; i++)
