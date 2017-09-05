@@ -45,6 +45,11 @@ int main()
     std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
     value_type gbytes=(value_type)x.size()*sizeof(value_type)/1e9;
     std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
+    std::cout << "Generate interpolation and projection\n";
+    IMatrix inter, project; 
+    dg::blas2::transfer(dg::create::interpolation( grid, grid_half), inter);
+    dg::blas2::transfer(dg::create::projection( grid_half, grid), project);
+    std::cout << "Done...\n";
     int multi=200;
     t.tic();
     value_type norm=0;
@@ -88,20 +93,17 @@ int main()
         dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
-    IMatrix inter, project; 
-    dg::blas2::transfer(dg::create::interpolation( grid, grid_half), inter);
-    dg::blas2::transfer(dg::create::projection( grid_half, grid), project);
     Vector x_half = dg::evaluate( dg::zero, grid_half);
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::gemv( inter, x_half, x);
     t.toc();
-    std::cout<<"Interpolation on original grid  "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"Interpolation half to full grid  "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::gemv( project, x, x_half);
     t.toc();
-    std::cout<<"Projection onto half grid       "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"Projection full to half grid     "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     
 
     t.tic();

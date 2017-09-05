@@ -41,14 +41,15 @@ inline void doSymv( Matrix& m,
     value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( &y[0]);
     const index_type* RESTRICT row_ptr = thrust::raw_pointer_cast( &m.row_offsets[0]);
     const index_type* RESTRICT col_ptr = thrust::raw_pointer_cast( &m.column_indices[0]);
-    int size = x.size();
-    #pragma omp parallel for
-    for(int i = 0; i < size; i++)
+    int rows = m.num_rows;
+    #pragma omp parallel for 
+    for(int i = 0; i < rows; i++)
     {
         value_type temp = 0.;
         for (index_type jj = row_ptr[i]; jj < row_ptr[i+1]; jj++)
         {
-            temp += val_ptr[jj]*x_ptr[ col_ptr[jj]];
+            index_type j = col_ptr[jj];
+            temp += val_ptr[jj]*x_ptr[j];
         }
 
         y_ptr[i] = temp;
