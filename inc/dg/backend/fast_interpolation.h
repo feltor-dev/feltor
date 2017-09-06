@@ -11,11 +11,19 @@
 namespace dg
 {
 
+/**
+ * @brief Struct that applies given matrices one after the other
+ * @copydoc hide_matrix_container
+ * @ingroup misc
+ */
 template <class Matrix, class container>
 struct MultiMatrix
 {
     MultiMatrix(){}
-
+    /**
+    * @brief reserve space for dimension matrices  and dimension-1 containers
+    * @param dimension # of matrices to store 
+    */
     MultiMatrix( int dimension): inter_(dimension), temp_(dimension-1 > 0 ? dimension-1 : 0 ){}
     template<class OtherMatrix, class OtherContainer>
     MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src){
@@ -31,6 +39,9 @@ struct MultiMatrix
     }
 
     void symv( const container& x, container& y) const{gemv(x,y);}
+    /**
+    * @brief Applies all stored matrices one after the other
+    */
     void gemv( const container& x, container& y) const
     {
         int dims = inter_.size();

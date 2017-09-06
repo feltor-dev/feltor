@@ -399,6 +399,7 @@ struct Invert
      * @param phi solution (write only)
      * @param rho right-hand-side
      * @note computes inverse weights from the weights 
+     * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
      *
      * @return number of iterations used 
      */
@@ -424,6 +425,7 @@ struct Invert
      * @param w The weights that made the operator symmetric
      * @param p The preconditioner  
      * @note computes inverse weights from the weights 
+     * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
      *
      * @return number of iterations used 
      */
@@ -450,26 +452,23 @@ struct Invert
      * @param p The preconditioner  
      * @param inv_weights The inverse weights used to compute the scalar product in the CG solver
      * @note Calls the most general form of the CG solver with SquareNorm being the container class
+     * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
      *
      * @return number of iterations used 
      */
     template< class SymmetricOp, class Preconditioner >
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const container& w, Preconditioner& p, const container& inv_weights)
     {
-        assert( phi0.size() != 0);
+        assert( phi.size() != 0);
         assert( &rho != &phi);
-        blas1::axpby( alpha[0], phi0, alpha[1], phi1, phi); // 1. phi0 + 0.*phi1 = phi
-        blas1::axpby( alpha[2], phi2, 1., phi); // 0. phi2 + 1. phi0 + 0.*phi1 = phi
-
-        unsigned number;
 #ifdef DG_BENCHMARK
-#ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif //MPI
         Timer t;
         t.tic();
 #endif //DG_BENCHMARK
+        blas1::axpbygz( alpha[0], phi0, alpha[1], phi1, alpha[2], phi2); 
+        phi.swap(phi2);
+
+        unsigned number;
         if( multiplyWeights_ ) 
         {
             dg::blas2::symv( w, rho, phi2);
@@ -477,21 +476,23 @@ struct Invert
         }
         else
             number = cg( op, phi, rho, p, inv_weights, eps_, nrmb_correction_);
-#ifdef DG_BENCHMARK
-#ifdef MPI_VERSION
-        if(rank==0)
-#endif //MPI
-        std::cout << "# of cg iterations \t"<< number << "\t";
-        t.toc();
-#ifdef MPI_VERSION
-        if(rank==0)
-#endif //MPI
-        std::cout<< "took \t"<<t.diff()<<"s\n";
-#endif //DG_BENCHMARK
+
         phi1.swap( phi2);
         phi0.swap( phi1);
         
-        blas1::axpby( 1., phi, 0, phi0);
+        blas1::copy( phi, phi0);
+#ifdef DG_BENCHMARK
+        t.toc();
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
+        {
+            std::cout << "# of cg iterations \t"<< number << "\t";
+            std::cout<< "took \t"<<t.diff()<<"s\n";
+        }
+#endif //DG_BENCHMARK
         return number;
     }
 

@@ -54,6 +54,8 @@ template <class Geometry, class Matrix, class container>
 class Elliptic
 {
     public:
+    ///@brief empty object ( no memory allocation)
+    Elliptic(){}
     /**
      * @brief Construct from Grid
      *
@@ -65,9 +67,14 @@ class Elliptic
      * @note chi is assumed 1 per default
      */
     Elliptic( const Geometry& g, norm no = not_normed, direction dir = forward, double jfactor=1.): 
-        no_(no), jfactor_(jfactor)
     { 
-        construct( g, g.bcx(), g.bcy(), dir);
+        construct( g, g.bcx(), g.bcy(), no, dir, forward, jfactor);
+    }
+
+    ///@copydoc Elliptic::construct()
+    Elliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.): 
+    { 
+        construct( g, bcx, bcy, no, dir, jfactor);
     }
 
     /**
@@ -77,13 +84,25 @@ class Elliptic
      * @param bcy boundary contition in y
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
-
      * @param jfactor scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      */
-    Elliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.): 
-        no_(no), jfactor_(jfactor)
-    { 
-        construct( g, bcx, bcy, dir);
+    void construct( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor = 1.)
+    {
+        no_=no, jfactor_=jfactor;
+        dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), leftx);
+        dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), lefty);
+        dg::blas2::transfer( dg::create::dx( g, bcx, dir), rightx);
+        dg::blas2::transfer( dg::create::dy( g, bcy, dir), righty);
+        dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
+        dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
+
+        dg::blas1::transfer( dg::create::volume(g),        weights_);
+        dg::blas1::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
+        tempx = tempy = gradx = weights_;
+        chi_=g.metric();
+        vol_=dg::tensor::volume(chi_);
+        dg::tensor::scal( chi_, vol_);
+        dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
     }
 
     /**
@@ -162,24 +181,8 @@ class Elliptic
             dg::blas2::symv( weights_wo_vol, y, y);
 
     }
-    private:
-    void construct( const Geometry& g, bc bcx, bc bcy, direction dir)
-    {
-        dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), leftx);
-        dg::blas2::transfer( dg::create::dy( g, inverse( bcy), inverse(dir)), lefty);
-        dg::blas2::transfer( dg::create::dx( g, bcx, dir), rightx);
-        dg::blas2::transfer( dg::create::dy( g, bcy, dir), righty);
-        dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
-        dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
 
-        dg::blas1::transfer( dg::create::volume(g),        weights_);
-        dg::blas1::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
-        tempx = tempy = gradx = weights_;
-        chi_=g.metric();
-        vol_=dg::tensor::volume(chi_);
-        dg::tensor::scal( chi_, vol_);
-        dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
-    }
+    private:
     bc inverse( bc bound)
     {
         if( bound == DIR) return NEU;
