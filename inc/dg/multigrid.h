@@ -14,6 +14,7 @@ template< class Geometry, class Matrix, class container>
 struct MultigridCG2d
 {
     MultigridCG2d( const Geometry& grid, unsigned stages, int extrapolation_type = 2 ) {
+        stages_=stages;
         if( stages < 2 ) throw Error( Message(_ping_)<<" There must be minimum 2 stages in a multigrid solver! You gave " << stages);
         grids_.resize( stages);
         grids_[0].reset( grid);
@@ -26,15 +27,18 @@ struct MultigridCG2d
         project_.resize( stages-1);
         for( unsigned u=0; u<stages-1; u++)
         {
-            project_[u] = dg::create::fast_projection( grids_[u].get(), 2,2);
+            project_[u] = dg::create::fast_projection( grids_[0].get(), pow(2,u+1),pow(2, u+1));
             inter_[u] = dg::create::fast_interpolation(grids_[u+1].get(),2,2);
         }
 
-        cg_.resize( stages);
         dg::blas1::transfer( dg::evaluate( dg::zero, grid), x0_);
         x1_=x0_, x2_=x0_;
-        x_ =  project( x0_), r_ = x_, b_ = x_;
+        x_ =  project( x0_); 
+        r_ = x_, b_ = x_;
         set_extrapolationType(extrapolation_type);
+        cg_.resize( stages);
+        for( unsigned u=0; u<stages; u++)
+            cg_[u].construct( x_[u], x_[u].size());
     }
 
     template<class SymmetricOp>
@@ -43,15 +47,17 @@ struct MultigridCG2d
         dg::blas1::axpbygz( alpha[0], x0_, alpha[1], x1_, alpha[2], x2_); 
         x_[0].swap(x2_);
         project( x_[0], x_);
-        dg::blas1::pointwiseDivide( b, op[0].inv_weights(), b_[0]);
-        project( b_[0], b_);
+        project( b, b_);
         std::vector<unsigned> number(stages_);
-        //for( unsigned u=stages_-1; u>0; u--)
-        //{
-        //    number[u] = cg_[u]( op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps, 1.);
-        //    dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
-        //}
-        number[0] = cg_[0]( op[0], x, b_[0], op[0].precond(), op[0].inv_weights(), eps);
+        for( unsigned u=stages_-1; u>0; u--)
+        {
+            dg::blas1::pointwiseDivide( b_[u], op[u].inv_weights(), b_[u]);
+            number[u] = cg_[u]( op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps, 1.);
+            std::cout << " # iterations grid "<<u<<" "<<number[u] << " \n";
+            dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
+        }
+        number[0] = cg_[0]( op[0], x_[0], b_[0], op[0].precond(), op[0].inv_weights(), eps);
+        x_[0].swap( x);
         x1_.swap( x2_);
         x0_.swap( x1_);
         
@@ -64,7 +70,8 @@ struct MultigridCG2d
     {
         dg::blas1::copy( src, out[0]);
         for( unsigned u=0; u<grids_.size()-1; u++)
-            dg::blas2::gemv( project_[u], out[u], out[u+1]);
+            dg::blas2::gemv( project_[u], src, out[u+1]);
+            //dg::blas2::gemv( project_[u], out[u], out[u+1]);
     }
 
     std::vector<container> project( const container& src)

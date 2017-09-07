@@ -11,8 +11,6 @@
 #include "backend/timer.cuh"
 #include "backend/projection.cuh"
 
-//NOTE: IF DEVICE=CPU THEN THE POLARISATION ASSEMBLY IS NOT PARALLEL AS IT IS NOW 
-
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err
 
@@ -64,10 +62,11 @@ int main()
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     {
-    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, 3);
+    unsigned stages=2;
+    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages);
     std::vector<dg::DVec> chi_ = multigrid.project( chi);
-    std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( 3);
-    for( unsigned u=0; u<3; u++)
+    std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
+    for( unsigned u=0; u<stages; u++)
     {
         multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, jfactor); 
         multi_pol[u].set_chi( chi_[u]);
@@ -78,9 +77,9 @@ int main()
     std::cout << eps<<" \n";
     t.tic();
     std::vector<unsigned> number = multigrid.direct_solve( multi_pol, x, b, eps);
-    std::cout << " # iterations grid 2 "<< number[2] << " \n";
-    std::cout << " # iterations grid 1 "<< number[1] << " \n";
-    std::cout << " # iterations grid 0 "<< number[0] << " \n";
+    for( unsigned u=0; u<number.size(); u++)
+        std::cout << " # iterations grid "<<number.size()-1-u<<" "<<number[number.size()-1-u] << " \n";
+
     t.toc();
     //std::cout << "Took "<<t.diff()<<"s\n";
     }
