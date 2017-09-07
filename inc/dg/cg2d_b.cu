@@ -54,7 +54,7 @@ int main()
     const dg::DVec deriv = dg::evaluate( derivative, grid);
     dg::DVec b = dg::evaluate ( laplace_fct, grid);
     //compute S b
-    dg::blas2::symv( w2d, b, b);
+    dg::blas1::pointwiseDivide( b, lap.inv_weights(), b);
     //////////////////////////////////////////////////////////////////////
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
 

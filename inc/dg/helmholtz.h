@@ -33,7 +33,7 @@ struct Helmholtz
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
-     * @note The default value of \f$\chi\f$ is one
+     * @note The default value of \f$\chi\f$ is one. Helmholtz is never normed
      */
     Helmholtz( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
         laplaceM_(g, normed, dir, jfactor), 
@@ -67,13 +67,14 @@ struct Helmholtz
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
      */
-    void symv( container& x, container& y) 
+    void symv( const container& x, container& y) 
     {
-        tensor::pointwiseDot( chi_, x, temp_);
         if( alpha_ != 0)
             blas2::symv( laplaceM_, x, y);
-
-        blas1::axpby( 1., temp_, -alpha_, y);
+        if( chi_.isSet())
+            dg::blas1::pointwiseDot( 1., chi_.value(), x, -alpha_, y);
+        else
+            blas1::axpby( 1., x, -alpha_, y);
         blas1::pointwiseDivide(y, laplaceM_.inv_weights(), y);
 
     }

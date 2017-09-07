@@ -183,12 +183,24 @@ template<class value_type>
 template<class DeviceContainer>
 inline void EllSparseBlockMatDevice<value_type>::symv( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
     launch_multiply_kernel( alpha, x, beta, y);
 }
 template<class value_type>
 template<class DeviceContainer>
 inline void CooSparseBlockMatDevice<value_type>::symv( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
     launch_multiply_kernel(alpha, x, beta, y);
 }
 

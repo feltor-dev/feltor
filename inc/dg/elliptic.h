@@ -66,13 +66,13 @@ class Elliptic
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @note chi is assumed 1 per default
      */
-    Elliptic( const Geometry& g, norm no = not_normed, direction dir = forward, double jfactor=1.): 
+    Elliptic( const Geometry& g, norm no = not_normed, direction dir = forward, double jfactor=1.)
     { 
-        construct( g, g.bcx(), g.bcy(), no, dir, forward, jfactor);
+        construct( g, g.bcx(), g.bcy(), no, dir, jfactor);
     }
 
     ///@copydoc Elliptic::construct()
-    Elliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.): 
+    Elliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.)
     { 
         construct( g, bcx, bcy, no, dir, jfactor);
     }
@@ -105,6 +105,11 @@ class Elliptic
         dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
     }
 
+    ///@copydoc  Elliptic::Elliptic(const Geometry&,norm,direction,double)
+    void construct( const Geometry& g, norm no = not_normed, direction dir = forward, double jfactor = 1.){
+        construct( g, g.bcx(), g.bcy(), no, dir, jfactor);
+    }
+
     /**
      * @brief Change Chi 
      *
@@ -129,17 +134,16 @@ class Elliptic
     /**
      * @brief Returns the weights used to make the matrix symmetric 
      *
-     * i.e. the volume form 
-     * @return weights (volume form including dG weights)
+     * i.e. the inverse volume form 
+     * @return inverse volume form including weights 
      */
     const container& inv_weights()const {return inv_weights_;}
     /**
      * @brief Returns the default preconditioner to use in conjugate gradient
      *
-     * Currently returns the inverse of the weights without volume elment
-     * @return inverse weights (without volume form)
-     * @note a better preconditioner might be the inverse of \f$\chi\f$ especially 
-     * when \f$ \chi\f$ exhibits large amplitudes or variations
+     * Currently returns the inverse of the weights without volume elment multiplied by the inverse of \f$ \chi\f$. 
+     * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
+     * @return the inverse of \f$\chi\f$.       
      */
     const container& precond()const {return precond_;}
     /**
@@ -288,7 +292,7 @@ struct GeneralElliptic
         dg::tensor::sqrt(vol_); //now we have volume element
     }
     /**
-     * @brief Set x-component of \f$ chi\f$
+     * @brief Set x-component of \f$ \chi\f$
      *
      * @param chi new x-component
      */
@@ -297,7 +301,7 @@ struct GeneralElliptic
         xchi = chi;
     }
     /**
-     * @brief Set y-component of \f$ chi\f$
+     * @brief Set y-component of \f$ \chi\f$
      *
      * @param chi new y-component
      */
@@ -306,7 +310,7 @@ struct GeneralElliptic
         ychi = chi;
     }
     /**
-     * @brief Set z-component of \f$ chi\f$
+     * @brief Set z-component of \f$ \chi\f$
      *
      * @param chi new z-component
      */
@@ -316,7 +320,7 @@ struct GeneralElliptic
     }
 
     /**
-     * @brief Set new components for \f$ chi\f$
+     * @brief Set new components for \f$ \chi\f$
      *
      * @param chi chi[0] is new x-component, chi[1] the new y-component, chi[2] z-component
      */
@@ -327,12 +331,7 @@ struct GeneralElliptic
         zchi = chi[2];
     }
 
-    /**
-     * @brief Returns the weights used to make the matrix symmetric 
-     *
-     * in this case the volume element
-     * @return weights (the volume element including dG weights)
-     */
+    ///@copydoc Elliptic::inv_weights()
     const container& inv_weights()const {return inv_weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
@@ -342,12 +341,7 @@ struct GeneralElliptic
      */
     const container& precond()const {return precond_;}
 
-    /**
-     * @brief Computes the polarisation term
-     *
-     * @param x left-hand-side
-     * @param y result
-     */
+    ///@copydoc Elliptic::symv()
     void symv( container& x, container& y) 
     {
         dg::blas2::gemv( rightx, x, temp0); //R_x*x 
@@ -507,26 +501,12 @@ struct GeneralEllipticSym
         ellipticBackward_.set( chi);
     }
 
-    /**
-     * @brief Returns the weights used to make the matrix symmetric 
-     *
-     * @return weights
-     */
+    ///@copydoc Elliptic::inv_weights()
     const container& inv_weights()const {return inv_weights_;}
-    /**
-     * @brief Returns the preconditioner to use in conjugate gradient
-     *
-     * In this case inverse weights are the best choice
-     * @return inverse weights
-     */
+    ///@copydoc GeneralElliptic::precond()
     const container& precond()const {return precond_;}
 
-    /**
-     * @brief Computes the polarisation term
-     *
-     * @param x left-hand-side
-     * @param y result
-     */
+    ///@copydoc Elliptic::symv()
     void symv( container& x, container& y) 
     {
         ellipticForward_.symv( x,y);
@@ -625,26 +605,12 @@ struct TensorElliptic
         set( chixx_, chixy_, chiyy_);
     }
 
-    /**
-     * @brief Returns the weights used to make the matrix symmetric 
-     *
-     * @return weights
-     */
+    ///@copydoc Elliptic::inv_weights()
     const container& inv_weights()const {return inv_weights_;}
-    /**
-     * @brief Returns the preconditioner to use in conjugate gradient
-     *
-     * In this case inverse weights are the best choice
-     * @return inverse weights
-     */
+    ///@copydoc GeneralElliptic::precond()
     const container& precond()const {return precond_;}
 
-    /**
-     * @brief Computes the polarisation term
-     *
-     * @param x left-hand-side
-     * @param y result
-     */
+    ///@copydoc Elliptic::symv()
     void symv( container& x, container& y) 
     {
         //compute gradient

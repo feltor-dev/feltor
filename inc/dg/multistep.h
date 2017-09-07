@@ -329,7 +329,7 @@ void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container&
     //double alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u_[0]); //extrapolate previous solutions
     blas2::symv( diff.weights(), u, u);
-    detail::Implicit<Diffusion, Vector> implicit( -dt_/11.*6., diff, f_[0]);
+    detail::Implicit<Diffusion, container> implicit( -dt_/11.*6., diff, f_[0]);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
     int rank;

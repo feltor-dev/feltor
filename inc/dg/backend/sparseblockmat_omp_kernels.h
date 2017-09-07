@@ -207,8 +207,8 @@ void ell_multiply_kernel32( value_type alpha, value_type beta,
             //if( cols_idx[i*2+d] != i+d-1) backward = false;
             //if( cols_idx[i*2+d] != i+d) forward = false;
         }
-    int diff = -1;
-    if(forward ) diff = 0;
+    //int diff = -1;
+    //if(forward ) diff = 0;
     if( forward || backward )
     {
 #pragma omp parallel for 
@@ -404,8 +404,8 @@ void ell_multiply_kernel32x( value_type alpha, value_type beta,
             //if( cols_idx[i*2+d] != i+d-1) backward = false;
             //if( cols_idx[i*2+d] != i+d) forward = false;
         }
-    int diff = -1;
-    if(forward ) {diff = 0; }
+    //int diff = -1;
+    //if(forward ) {diff = 0; }
     if( forward || backward )
     {
 #pragma omp parallel for
@@ -434,7 +434,7 @@ void ell_multiply_kernel32x( value_type alpha, value_type beta,
         //int J0 = (s*num_cols+i+0+diff)*3;
         //int J1 = (s*num_cols+i+1+diff)*3;
         int J0 = (s*num_cols+cols_idx[i*2+0])*3;
-        int J1 = (s*num_cols+cols_idx[i*2+0])*3;
+        int J1 = (s*num_cols+cols_idx[i*2+1])*3;
         for( int k=0; k<3; k++)
         {
             value_type temp = 0;
@@ -483,9 +483,6 @@ template<class value_type>
 template<class DeviceContainer>
 void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
-
     const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
@@ -521,8 +518,12 @@ template<class value_type>
 template<class DeviceContainer>
 void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
 
     for( int i=0; i<num_entries; i++)
 #pragma omp parallel for collapse(3)

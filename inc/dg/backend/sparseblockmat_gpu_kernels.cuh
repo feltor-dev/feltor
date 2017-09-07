@@ -234,8 +234,6 @@ template<class value_type>
 template<class DeviceContainer>
 void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel(value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
     const size_t size = (left_size)*(right_range[1]-right_range[0])*num_rows*n; //number of lines
@@ -276,8 +274,6 @@ template<class value_type>
 template<class DeviceContainer>
 void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
     const size_t size = left_size*right_size*n;

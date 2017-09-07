@@ -101,11 +101,13 @@ int main()
     dg::Helmholtz< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec > helmholtz( g3d, alpha);
     dg::blas2::symv( laplaceM, fct_, temp_);
     dg::blas1::axpby( 1., laplace_fct_, -1., temp_);
-    std::cout << "error Laplace " << sqrt( dg::blas2::dot( laplaceM.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;
+    dg::DVec w3d =  laplaceM.inv_weights();
+    dg::blas1::transform(w3d, w3d,dg::INVERT<double>());
+    std::cout << "error Laplace " << sqrt( dg::blas2::dot( w3d, temp_))<<" (Note the supraconvergence!)"<<std::endl;
     dg::blas2::symv( helmholtz, fct_, temp_);
-    dg::blas2::symv( helmholtz.precond(), temp_, temp_);
+    dg::blas1::pointwiseDot( helmholtz.inv_weights(), temp_, temp_);
     dg::blas1::axpby( 1., helmholtz_fct_, -1, temp_);
-    std::cout << "error " << sqrt( dg::blas2::dot( helmholtz.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;
+    std::cout << "error " << sqrt( dg::blas2::dot( w3d, temp_))<<" (Note the supraconvergence!)"<<std::endl;
 
 
 
