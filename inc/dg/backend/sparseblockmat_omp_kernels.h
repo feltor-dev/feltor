@@ -13,6 +13,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
+    std::cout << " standard\n";
     //simplest implementation
 #pragma omp parallel for collapse(2)
     for( int s=0; s<left_size; s++)
@@ -57,22 +58,24 @@ void ell_multiply_kernel3( value_type alpha, value_type beta,
         }
     if (trivial && blocks_per_line == 1)
     {
+        std::cout << " hi3";
         if( right_size==1)
         {
             #pragma omp parallel for 
             for( int s=0; s<left_size; s++)
             for( int i=0; i<num_rows; i++)
-            for( int k=0; k<3; k++)
             {
-                value_type temp = 0;
-                int B = (data_idx[i]*3+k)*3;
                 int J = (s*num_cols+cols_idx[i])*3;
-
-                temp +=data[ B+0]* x[(J+0)*right_size];
-                temp +=data[ B+1]* x[(J+1)*right_size];
-                temp +=data[ B+2]* x[(J+2)*right_size];
-                int I = ((s*num_rows + i)*3+k)*right_size;
-                y[I] = alpha*temp + beta*y[I];
+                for( int k=0; k<3; k++)
+                {
+                    value_type temp = 0;
+                    int B = (data_idx[i]*3+k)*3;
+                    temp +=data[ B+0]* x[(J+0)];
+                    temp +=data[ B+1]* x[(J+1)];
+                    temp +=data[ B+2]* x[(J+2)];
+                    int I = (s*num_rows + i)*3+k;
+                    y[I] = alpha*temp + beta*y[I];
+                }
             }
         }
         else
@@ -81,17 +84,18 @@ void ell_multiply_kernel3( value_type alpha, value_type beta,
             for( int s=0; s<left_size; s++)
             for( int i=0; i<num_rows; i++)
             for( int k=0; k<3; k++)
-            for( int j=right_range[0]; j<right_range[1]; j++)
             {
-                value_type temp = 0;
                 int B = (data_idx[i]*3+k)*3;
                 int J = (s*num_cols+cols_idx[i])*3;
-
-                temp +=data[ B+0]* x[(J+0)*right_size+j];
-                temp +=data[ B+1]* x[(J+1)*right_size+j];
-                temp +=data[ B+2]* x[(J+2)*right_size+j];
-                int I = ((s*num_rows + i)*3+k)*right_size+j;
-                y[I] = alpha*temp + beta*y[I];
+                for( int j=right_range[0]; j<right_range[1]; j++)
+                {
+                    value_type temp = 0;
+                    temp +=data[ B+0]* x[(J+0)*right_size+j];
+                    temp +=data[ B+1]* x[(J+1)*right_size+j];
+                    temp +=data[ B+2]* x[(J+2)*right_size+j];
+                    int I = ((s*num_rows + i)*3+k)*right_size+j;
+                    y[I] = alpha*temp + beta*y[I];
+                }
             }
         }
     }

@@ -62,7 +62,7 @@ int main()
     std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinO, w2do, sinO)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n" << std::endl;
     dg::blas2::gemv( fast_inte2d, sinN, sinI);
     std::cout << "Interpolated vec    "<<sqrt(dg::blas2::dot( sinI, w2do, sinI)) << "\n";
-    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinI, w2do, sinI)) - sqrt(dg::blas2::dot( sinP, w2dn, sinP)) << "\n" << std::endl;
+    std::cout << "Difference in Norms "<<sqrt(dg::blas2::dot( sinI, w2do, sinI)) - sqrt(dg::blas2::dot( sinN, w2dn, sinN)) << "\n" << std::endl;
 
     return 0;
 }

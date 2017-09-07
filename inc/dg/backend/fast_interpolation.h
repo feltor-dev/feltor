@@ -84,17 +84,17 @@ MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_inter
 {
     unsigned n=t.n();
     dg::Grid1d g_old( -1., 1., n, 1);
-    dg::Grid1d g_newX( -1., 1., n, multiply);
-    dg::IHMatrix interpolX = dg::create::interpolation( g_newX, g_old);
+    dg::Grid1d g_new( -1., 1., n, multiply);
+    dg::IHMatrix interpolX = dg::create::interpolation( g_new, g_old);
     EllSparseBlockMat<double> iX( multiply*t.N(), t.N(), 1, multiply, t.n()); 
+    for( unsigned  k=0; k<multiply; k++)
     for( unsigned  i=0; i<n; i++)
     for( unsigned  j=0; j<n; j++)
-    for( unsigned  k=0; k<multiply; k++)
         iX.data[(k*n+i)*n+j] = interpolX.values[(k*n+i)*n+j];
     for( unsigned i=0; i<multiply*t.N(); i++)
     {
         iX.cols_idx[i] = i/multiply;
-        iX.data_idx[i] = 0;
+        iX.data_idx[i] = i%multiply;
     }
     MultiMatrix < EllSparseBlockMat<double>, thrust::host_vector<double> > inter(1);
     inter.get_matrices()[0] = iX;

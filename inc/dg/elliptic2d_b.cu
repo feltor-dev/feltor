@@ -46,26 +46,26 @@ int main()
     std::cout << "Computation on: "<< n <<" x "<<Nx<<" x "<<Ny<<std::endl;
     //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
     dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    dg::DVec w2d = dg::create::weights( grid);
-    dg::DVec v2d = dg::create::inv_weights( grid);
-    dg::DVec one = dg::evaluate( dg::one, grid);
+    dg::HVec w2d = dg::create::weights( grid);
+    dg::HVec v2d = dg::create::inv_weights( grid);
+    dg::HVec one = dg::evaluate( dg::one, grid);
     //create functions A(chi) x = b
-    dg::DVec x =    dg::evaluate( initial, grid);
-    dg::DVec b =    dg::evaluate( rhs, grid);
-    dg::DVec chi =  dg::evaluate( pol, grid);
-    dg::DVec chi_inv(chi); 
+    dg::HVec x =    dg::evaluate( initial, grid);
+    dg::HVec b =    dg::evaluate( rhs, grid);
+    dg::HVec chi =  dg::evaluate( pol, grid);
+    dg::HVec chi_inv(chi); 
     dg::blas1::transform( chi, chi_inv, dg::INVERT<double>());
     dg::blas1::pointwiseDot( chi_inv, v2d, chi_inv);
-    dg::DVec temp = x;
+    dg::HVec temp = x;
 
 
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     {
     unsigned stages=3;
-    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages);
-    std::vector<dg::DVec> chi_ = multigrid.project( chi);
-    std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
+    dg::MultigridCG2d<dg::aGeometry2d, dg::HMatrix, dg::HVec > multigrid( grid, stages);
+    std::vector<dg::HVec> chi_ = multigrid.project( chi);
+    std::vector<dg::Elliptic<dg::aGeometry2d, dg::HMatrix, dg::HVec> > multi_pol( stages);
     for( unsigned u=0; u<stages; u++)
     {
         multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, jfactor); 
@@ -85,9 +85,9 @@ int main()
     }
 
     //compute error
-    const dg::DVec solution = dg::evaluate( sol, grid);
-    const dg::DVec derivati = dg::evaluate( der, grid);
-    dg::DVec error( solution);
+    const dg::HVec solution = dg::evaluate( sol, grid);
+    const dg::HVec derivati = dg::evaluate( der, grid);
+    dg::HVec error( solution);
 
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( w2d, error);
@@ -95,10 +95,10 @@ int main()
     const double norm = dg::blas2::dot( w2d, solution);
     std::cout << " "<<sqrt( err/norm);
     {
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward, jfactor);
+    dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> pol_forward( grid, dg::not_normed, dg::forward, jfactor);
     pol_forward.set_chi( chi);
     x = temp;
-    dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
+    dg::Invert<dg::HVec > invert_fw( x, n*n*Nx*Ny, eps);
     std::cout << " "<< invert_fw( pol_forward, x, b, v2d, chi_inv);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
@@ -106,10 +106,10 @@ int main()
     }
 
     {
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
+    dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
     pol_backward.set_chi( chi);
     x = temp;
-    dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
+    dg::Invert<dg::HVec > invert_bw( x, n*n*Nx*Ny, eps);
     std::cout << " "<< invert_bw( pol_backward, x, b, v2d, chi_inv);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
@@ -117,7 +117,7 @@ int main()
     }
 
 
-    dg::DMatrix DX = dg::create::dx( grid);
+    dg::HMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);
