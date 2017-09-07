@@ -96,9 +96,9 @@ class Elliptic
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
 
-        dg::blas1::transfer( dg::create::volume(g),        weights_);
-        dg::blas1::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
-        tempx = tempy = gradx = weights_;
+        dg::blas1::transfer( dg::create::inv_volume(g),    inv_weights_);
+        dg::blas1::transfer( dg::create::inv_weights(g),   precond_); 
+        tempx = tempy = gradx = inv_weights_;
         chi_=g.metric();
         vol_=dg::tensor::volume(chi_);
         dg::tensor::scal( chi_, vol_);
@@ -116,10 +116,12 @@ class Elliptic
         if( !chi_old_.isSet()) 
         {
             dg::tensor::scal( chi_, chi);
+            dg::blas1::pointwiseDivide( precond_, chi, precond_);
             chi_old_.value() = chi;
             return;
         }
-        dg::blas1::pointwiseDivide(chi, chi_old_.value(), tempx);
+        dg::blas1::pointwiseDivide( chi, chi_old_.value(), tempx);
+        dg::blas1::pointwiseDivide( precond_, tempx, precond_);
         dg::tensor::scal( chi_, tempx);
         chi_old_.value()=chi;
     }
@@ -130,7 +132,7 @@ class Elliptic
      * i.e. the volume form 
      * @return weights (volume form including dG weights)
      */
-    const container& weights()const {return weights_;}
+    const container& inv_weights()const {return inv_weights_;}
     /**
      * @brief Returns the default preconditioner to use in conjugate gradient
      *
@@ -198,7 +200,7 @@ class Elliptic
         return centered;
     }
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
-    container weights_, precond_, weights_wo_vol; 
+    container inv_weights_, precond_, weights_wo_vol; 
     container tempx, tempy, gradx;
     norm no_;
     SparseTensor<container> chi_;
@@ -248,7 +250,7 @@ struct GeneralElliptic
         rightz( dg::create::dz( g, g.bcz(), dir)),
         jumpX ( dg::create::jumpX( g, g.bcx())),
         jumpY ( dg::create::jumpY( g, g.bcy())),
-        weights_(dg::create::volume(g)), precond_(dg::create::inv_weights(g)), 
+        inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0),
         no_(no)
@@ -276,7 +278,7 @@ struct GeneralElliptic
         rightz( dg::create::dz( g, bcz, dir)),
         jumpX ( dg::create::jumpX( g, bcx)),
         jumpY ( dg::create::jumpY( g, bcy)),
-        weights_(dg::create::volume(g)), precond_(dg::create::inv_weights(g)), 
+        inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0),
         no_(no)
@@ -331,7 +333,7 @@ struct GeneralElliptic
      * in this case the volume element
      * @return weights (the volume element including dG weights)
      */
-    const container& weights()const {return weights_;}
+    const container& inv_weights()const {return inv_weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
      *
@@ -383,7 +385,7 @@ struct GeneralElliptic
         if( no_==not_normed)//multiply weights w/o volume
         {
             dg::tensor::pointwiseDivide( y, vol_, y);
-            dg::blas2::symv( weights_, y, y);
+            dg::blas1::pointwiseDivide( y, inv_weights_, y);
         }
     }
     private:
@@ -402,7 +404,7 @@ struct GeneralElliptic
         return centered;
     }
     Matrix leftx, lefty, leftz, rightx, righty, rightz, jumpX, jumpY;
-    container weights_, precond_; //contain coeffs for chi multiplication
+    container inv_weights_, precond_; //contain coeffs for chi multiplication
     container xchi, ychi, zchi, xx, yy, zz, temp0, temp1;
     norm no_;
     SparseElement<container> vol_;
@@ -443,7 +445,7 @@ struct GeneralEllipticSym
      */
     GeneralEllipticSym( const Geometry& g, norm no = not_normed, direction dir = forward): 
         ellipticForward_( g, no, dir), ellipticBackward_(g,no,inverse(dir)),
-        weights_(dg::create::volume(g)), precond_(dg::create::inv_weights(g)), 
+        inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
         temp_( dg::evaluate( one, g) )
     { }
 
@@ -459,7 +461,7 @@ struct GeneralEllipticSym
      */
     GeneralEllipticSym( const Geometry& g, bc bcx, bc bcy,bc bcz, norm no = not_normed, direction dir = forward): 
         ellipticForward_( g, bcx, bcy, no, dir), ellipticBackward_(g,bcx,bcy,no,inverse(dir)),
-        weights_(dg::create::volume(g)), precond_(dg::create::inv_weights(g)), 
+        inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
         temp_( dg::evaluate( one, g) )
     { 
     }
@@ -510,7 +512,7 @@ struct GeneralEllipticSym
      *
      * @return weights
      */
-    const container& weights()const {return weights_;}
+    const container& inv_weights()const {return inv_weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
      *
@@ -539,7 +541,7 @@ struct GeneralEllipticSym
         return centered;
     }
     dg::GeneralElliptic<Geometry, Matrix, container> ellipticForward_, ellipticBackward_;
-    container weights_, precond_; //contain coeffs for chi multiplication
+    container inv_weights_, precond_; //contain coeffs for chi multiplication
     container temp_;
 };
 
@@ -628,7 +630,7 @@ struct TensorElliptic
      *
      * @return weights
      */
-    const container& weights()const {return weights_;}
+    const container& inv_weights()const {return inv_weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
      *
@@ -679,7 +681,7 @@ struct TensorElliptic
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), righty);
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
-        dg::blas1::transfer( dg::create::volume(g),        weights_);
+        dg::blas1::transfer( dg::create::inv_volume(g),    inv_weights_);
         dg::blas1::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
         dg::blas1::transfer( dg::evaluate( dg::one, g),    chixx_);
         dg::blas1::transfer( dg::evaluate( dg::zero,g),    chixy_);
@@ -707,7 +709,7 @@ struct TensorElliptic
         return centered;
     }
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
-    container weights_, weights_wo_vol, precond_; //contain coeffs for chi multiplication
+    container inv_weights_, weights_wo_vol, precond_; //contain coeffs for chi multiplication
     container chixx_, chixy_, chiyy_, tempx_, tempy_, gradx_;
     SparseElement<container> vol_;
     norm no_;

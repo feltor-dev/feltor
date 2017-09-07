@@ -74,7 +74,7 @@ struct Helmholtz
             blas2::symv( laplaceM_, x, y);
 
         blas1::axpby( 1., temp_, -alpha_, y);
-        blas1::pointwiseDot( laplaceM_.weights(), y, y);
+        blas1::pointwiseDivide(y, laplaceM_.inv_weights(), y);
 
     }
     /**
@@ -82,7 +82,7 @@ struct Helmholtz
      *
      * @return weights
      */
-    const container& weights()const {return laplaceM_.weights();}
+    const container& inv_weights()const {return laplaceM_.inv_weights();}
     /**
      * @brief container to use in conjugate gradient solvers
      *
@@ -194,14 +194,14 @@ struct Helmholtz2
         tensor::pointwiseDot( chi_, x, y); //y = chi*x
         blas1::axpby( 1., y, -2.*alpha_, temp1_, y); 
         blas1::axpby( alpha_*alpha_, temp2_, 1., y, y);
-        blas1::pointwiseDot( laplaceM_.weights(), y, y);//Helmholtz is never normed
+        blas1::pointwiseDivide( y, laplaceM_.inv_weights(), y);//Helmholtz is never normed
     }
     /**
      * @brief These are the weights that made the operator symmetric
      *
      * @return weights
      */
-    const container& weights()const {return laplaceM_.weights();}
+    const container& inv_weights()const {return laplaceM_.inv_weights();}
     /**
      * @brief container to use in conjugate gradient solvers
      *

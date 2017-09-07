@@ -140,7 +140,7 @@ int main()
     pol_forward.set_chi( chi);
     x = temp;
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_fw( pol_forward, x, b, w2d, chi_inv, v2d);
+    std::cout << " "<< invert_fw( pol_forward, x, b, v2d, chi_inv);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm);
@@ -151,7 +151,7 @@ int main()
     pol_backward.set_chi( chi);
     x = temp;
     dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
-    std::cout << " "<< invert_bw( pol_backward, x, b, w2d, chi_inv, v2d);
+    std::cout << " "<< invert_bw( pol_backward, x, b, v2d, chi_inv);
     dg::blas1::axpby( 1.,x,-1., solution, error);
     err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm)<<std::endl;
