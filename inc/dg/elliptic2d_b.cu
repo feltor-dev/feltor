@@ -62,7 +62,7 @@ int main()
     std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     {
-    unsigned stages=2;
+    unsigned stages=3;
     dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages);
     std::vector<dg::DVec> chi_ = multigrid.project( chi);
     std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);

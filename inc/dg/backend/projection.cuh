@@ -106,7 +106,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology
  */
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g_new, const Grid1d& g_old)
 {
-    if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!!\n";
+    if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
     //form the adjoint
     thrust::host_vector<double> w_f = dg::create::weights( g_old);
     thrust::host_vector<double> v_c = dg::create::inv_weights( g_new );
@@ -135,8 +135,8 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g_ne
  */
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology2d& g_new, const aTopology2d& g_old)
 {
-    if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!!\n";
-    if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!!\n";
+    if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
+    if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
     //form the adjoint
     thrust::host_vector<double> w_f = dg::create::weights( g_old);
     thrust::host_vector<double> v_c = dg::create::inv_weights( g_new );
@@ -164,8 +164,8 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology2d&
  */
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology3d& g_new, const aTopology3d& g_old)
 {
-    if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!!\n";
-    if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!!\n";
+    if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
+    if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
     //form the adjoint
     thrust::host_vector<double> w_f = dg::create::weights( g_old);
     thrust::host_vector<double> v_c = dg::create::inv_weights( g_new );

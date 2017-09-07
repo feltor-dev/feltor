@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/fast_interpolation.h"
+#include "backend/interpolation.cuh"
 #include "backend/exceptions.h"
 #include "backend/memory.h"
 #include "blas.h"
@@ -18,17 +19,21 @@ struct MultigridCG2d
         if( stages < 2 ) throw Error( Message(_ping_)<<" There must be minimum 2 stages in a multigrid solver! You gave " << stages);
         grids_.resize( stages);
         grids_[0].reset( grid);
+        grids_[0].get().display();
         for( unsigned u=1; u<stages; u++)
         {
             grids_[u] = grids_[u-1]; //deep copy
             grids_[u].get().multiplyCellNumbers(0.5, 0.5);
+            grids_[u].get().display();
         }
         inter_.resize(stages-1);
         project_.resize( stages-1);
         for( unsigned u=0; u<stages-1; u++)
         {
-            project_[u] = dg::create::fast_projection( grids_[0].get(), pow(2,u+1),pow(2, u+1));
-            inter_[u] = dg::create::fast_interpolation(grids_[u+1].get(),2,2);
+            //project_[u] = dg::create::fast_projection( grids_[0].get(), pow(2,u+1),pow(2, u+1));
+            //inter_[u] = dg::create::fast_interpolation(grids_[u+1].get(),2,2);
+            project_[u] = dg::create::projection( grids_[u+1].get(), grids_[0].get());
+            inter_[u] = dg::create::interpolation(grids_[u].get(),grids_[u+1].get());
         }
 
         dg::blas1::transfer( dg::evaluate( dg::zero, grid), x0_);
@@ -53,9 +58,9 @@ struct MultigridCG2d
         {
             dg::blas1::pointwiseDivide( b_[u], op[u].inv_weights(), b_[u]);
             number[u] = cg_[u]( op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps, 1.);
-            std::cout << " # iterations grid "<<u<<" "<<number[u] << " \n";
             dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
         }
+        dg::blas1::pointwiseDivide( b_[0], op[0].inv_weights(), b_[0]);
         number[0] = cg_[0]( op[0], x_[0], b_[0], op[0].precond(), op[0].inv_weights(), eps);
         x_[0].swap( x);
         x1_.swap( x2_);
@@ -111,8 +116,10 @@ struct MultigridCG2d
     private:
     unsigned stages_;
     std::vector< dg::Handle< Geometry> > grids_;
-    std::vector< MultiMatrix<Matrix, container>  >  inter_;
-    std::vector< MultiMatrix<Matrix, container>  >  project_;
+    //std::vector< MultiMatrix<Matrix, container>  >  inter_;
+    //std::vector< MultiMatrix<Matrix, container>  >  project_;
+    std::vector< dg::IDMatrix  >  inter_;
+    std::vector< dg::IDMatrix  >  project_;
     std::vector< CG<container> > cg_;
     std::vector< container> x_, r_, b_; 
     container x0_, x1_, x2_;
