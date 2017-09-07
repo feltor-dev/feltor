@@ -30,12 +30,10 @@ struct MultigridCG2d
         project_.resize( stages-1);
         for( unsigned u=0; u<stages-1; u++)
         {
-            //project_[u] = dg::create::fast_projection( grids_[u].get(), 2,2);
+            //Projecting from one grid to the next is the same as 
+            //projecting from the original grid to the coarse grids
+            project_[u] = dg::create::fast_projection( grids_[u].get(), 2,2);
             inter_[u] = dg::create::fast_interpolation(grids_[u+1].get(),2,2);
-        //Projecting from one grid to the next is the same as 
-        //projecting from the original grid to the coarse grids
-            project_[u] = dg::create::projection( grids_[u+1].get(), grids_[u].get());
-            //inter_[u] = dg::create::interpolation(grids_[u].get(),grids_[u+1].get());
         }
 
         dg::blas1::transfer( dg::evaluate( dg::zero, grid), x0_);
@@ -118,9 +116,7 @@ struct MultigridCG2d
     unsigned stages_;
     std::vector< dg::Handle< Geometry> > grids_;
     std::vector< MultiMatrix<Matrix, container>  >  inter_;
-    //std::vector< MultiMatrix<Matrix, container>  >  project_;
-    //std::vector< dg::IDMatrix  >  inter_;
-    std::vector< dg::IDMatrix  >  project_;
+    std::vector< MultiMatrix<Matrix, container>  >  project_;
     std::vector< CG<container> > cg_;
     std::vector< container> x_, r_, b_; 
     container x0_, x1_, x2_;

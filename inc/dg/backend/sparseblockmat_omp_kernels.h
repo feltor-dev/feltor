@@ -13,7 +13,6 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
-    std::cout << " standard\n";
     //simplest implementation
 #pragma omp parallel for collapse(2)
     for( int s=0; s<left_size; s++)
@@ -50,15 +49,8 @@ void ell_multiply_kernel3( value_type alpha, value_type beta,
          const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
-    bool trivial = true;
-    for( int i=1; i<num_rows; i++)
-        for( int d=0; d<blocks_per_line; d++)
-        {
-            if( data_idx[i*blocks_per_line+d] != data_idx[d]) trivial = false;
-        }
-    if (trivial && blocks_per_line == 1)
+    if (blocks_per_line == 1)
     {
-        std::cout << " hi3";
         if( right_size==1)
         {
             #pragma omp parallel for 
