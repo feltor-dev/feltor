@@ -13,6 +13,9 @@ namespace dg
 
 /**
  * @brief Struct that applies given matrices one after the other
+ *
+ * \f[ y = M_{N-1}(...M_1(M_0x))\f]
+ * where \f$ M_i\f$ is the i-th matrix 
  * @copydoc hide_matrix_container
  * @ingroup misc
  */
@@ -23,6 +26,7 @@ struct MultiMatrix
     /**
     * @brief reserve space for dimension matrices  and dimension-1 containers
     * @param dimension # of matrices to store 
+    * @attention it is the user's reponsibility to allocate memory for the intermediate "temp" vectors
     */
     MultiMatrix( int dimension): inter_(dimension), temp_(dimension-1 > 0 ? dimension-1 : 0 ){}
     template<class OtherMatrix, class OtherContainer>

@@ -19,12 +19,12 @@ struct MultigridCG2d
         if( stages < 2 ) throw Error( Message(_ping_)<<" There must be minimum 2 stages in a multigrid solver! You gave " << stages);
         grids_.resize( stages);
         grids_[0].reset( grid);
-        grids_[0].get().display();
+        //grids_[0].get().display();
         for( unsigned u=1; u<stages; u++)
         {
             grids_[u] = grids_[u-1]; //deep copy
             grids_[u].get().multiplyCellNumbers(0.5, 0.5);
-            grids_[u].get().display();
+            //grids_[u].get().display();
         }
         inter_.resize(stages-1);
         project_.resize( stages-1);
