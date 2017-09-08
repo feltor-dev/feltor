@@ -132,7 +132,7 @@ class Elliptic
     }
 
     /**
-     * @brief Returns the weights used to make the matrix symmetric 
+     * @brief Returns the vector missing in the un-normed symmetric matrix 
      *
      * i.e. the inverse volume form 
      * @return inverse volume form including weights 

@@ -73,7 +73,7 @@ int main()
     }
 
     t.toc();
-    std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
+    //std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
     std::cout << eps<<" \n";
     t.tic();
     std::vector<unsigned> number = multigrid.direct_solve( multi_pol, x, b, eps);
@@ -95,7 +95,7 @@ int main()
     const double norm = dg::blas2::dot( w2d, solution);
     std::cout << " "<<sqrt( err/norm);
     {
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::forward, jfactor);
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::centered, jfactor);
     pol_forward.set_chi( chi);
     x = temp;
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
