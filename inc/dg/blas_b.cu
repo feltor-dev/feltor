@@ -88,14 +88,14 @@ int main()
         dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
-    IMatrix inter; 
-    dg::blas2::transfer(dg::create::interpolation( grid, grid_half), inter);
-    Vector x_half = dg::evaluate( dg::zero, grid_half);
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas2::gemv( inter, x_half, x);
-    t.toc();
-    std::cout<<"Interpolation on original grid  "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    //IMatrix inter; 
+    //dg::blas2::transfer(dg::create::interpolation( grid, grid_half), inter);
+    //Vector x_half = dg::evaluate( dg::zero, grid_half);
+    //t.tic();
+    //for( int i=0; i<multi; i++)
+    //    dg::blas2::gemv( inter, x_half, x);
+    //t.toc();
+    //std::cout<<"Interpolation on original grid  "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     
 
     t.tic();
