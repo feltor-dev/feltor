@@ -30,3 +30,10 @@ CFLAGS+= $(OMPFLAG) #-mmic
 MPICFLAGS+=$(CFLAGS) #includes values in CFLAGS defined later
 OPT=-O3 -xMIC-AVX512 
 endif #device=mic
+ifeq ($(strip $(device)),skl)
+CFLAGS+=-Wall -x c++ 
+CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP
+CFLAGS+= $(OMPFLAG) #-mmic 
+MPICFLAGS+=$(CFLAGS) #includes values in CFLAGS defined later
+OPT=-xCORE-AVX512 -mtune=skylake -O3 
+endif #device=mic
