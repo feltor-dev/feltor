@@ -404,6 +404,11 @@ void ell_multiply_kernel32x( value_type alpha, value_type beta,
     //if(forward ) {diff = 0; }
     if( forward || backward )
     {
+        value_type data_[18];
+        for( int k=0; k<2; k++)
+        for( int i=0; i<3; i++)
+        for( int j=0; j<3; j++)
+            data_[(i*2+k)*3+j] = data[(k*3+i)*3+j];
 #pragma omp parallel for
     for( int s=0; s<left_size; s++)
     for( int i=0; i<1; i++)
@@ -434,14 +439,21 @@ void ell_multiply_kernel32x( value_type alpha, value_type beta,
         for( int k=0; k<3; k++)
         {
             value_type temp = 0;
-            int B0 = (0*3+k)*3;
-            int B1 = (1*3+k)*3;
-            temp +=data[ B0+0]* x[(J0+0)];
-            temp +=data[ B0+1]* x[(J0+1)];
-            temp +=data[ B0+2]* x[(J0+2)];
-            temp +=data[ B1+0]* x[(J1+0)];
-            temp +=data[ B1+1]* x[(J1+1)];
-            temp +=data[ B1+2]* x[(J1+2)];
+            //int B0 = (0*3+k)*3;
+            //int B1 = (1*3+k)*3;
+            //temp +=data[ B0+0]* x[(J0+0)];
+            //temp +=data[ B0+1]* x[(J0+1)];
+            //temp +=data[ B0+2]* x[(J0+2)];
+            //temp +=data[ B1+0]* x[(J1+0)];
+            //temp +=data[ B1+1]* x[(J1+1)];
+            //temp +=data[ B1+2]* x[(J1+2)];
+            int B0 = k*6;
+            temp +=data_[ B0+0]* x[(J0+0)];
+            temp +=data_[ B0+1]* x[(J0+1)];
+            temp +=data_[ B0+2]* x[(J0+2)];
+            temp +=data_[ B0+3]* x[(J0+3)];
+            temp +=data_[ B0+4]* x[(J0+4)];
+            temp +=data_[ B0+5]* x[(J0+5)];
             int I = ((s*num_rows + i)*3+k);
             y[I]=alpha*temp+beta*y[I];
         }
