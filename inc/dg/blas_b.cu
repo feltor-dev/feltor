@@ -23,6 +23,7 @@ typedef dg::DVec Vector;
 //typedef thrust::device_vector<double> Vector;
 typedef dg::DMatrix Matrix;
 //typedef cusp::array1d<double, cusp::device_memory> Vector;
+typedef dg::IDMatrix IMatrix;
 
 int main()
 {

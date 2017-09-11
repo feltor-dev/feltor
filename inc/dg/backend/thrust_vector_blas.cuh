@@ -150,24 +150,9 @@ inline void doAxpby( typename Vector::value_type alpha,
     const typename Vector::value_type * RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data()[0]);
     typename Vector::value_type * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
     unsigned size = x.size();
-    if( beta == 1.)
-    {
-        #pragma omp parallel for simd
-        for( unsigned i=0; i<size; i++)
-            y_ptr[i] += alpha*x_ptr[i];
-    }
-    else if (beta == 0)
-    {
-        #pragma omp parallel for simd
-        for( unsigned i=0; i<size; i++)
-            y_ptr[i] = alpha*x_ptr[i];
-    }
-    else
-    {
-        #pragma omp parallel for simd
-        for( unsigned i=0; i<size; i++)
-            y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
-    }
+    #pragma omp parallel for simd
+    for( unsigned i=0; i<size; i++)
+        y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
 #else
     if( beta != 0)
         thrust::transform( x.begin(), x.end(), y.begin(), y.begin(), 
@@ -221,24 +206,9 @@ inline void doAxpby( typename Vector::value_type alpha,
     const typename Vector::value_type * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
     typename Vector::value_type * RESTRICT z_ptr = thrust::raw_pointer_cast( &z.data()[0]);
     unsigned size = x.size();
-    if( gamma == 1.)
-    {
-        #pragma omp parallel for simd
-        for( unsigned i=0; i<size; i++)
-            z_ptr[i] += alpha*x_ptr[i]+beta*y_ptr[i];
-    }
-    else if (gamma == 0)
-    {
-        #pragma omp parallel for simd
-        for( unsigned i=0; i<size; i++)
-            z_ptr[i] = alpha*x_ptr[i]+beta*y_ptr[i];
-    }
-    else
-    {
-        #pragma omp parallel for simd
-        for( unsigned i=0; i<size; i++)
-            z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
-    }
+    #pragma omp parallel for simd
+    for( unsigned i=0; i<size; i++)
+        z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
 #else
     if( gamma==0)
     {
@@ -304,62 +274,11 @@ inline void doPointwiseDot(
     const typename Vector::value_type * x1_ptr = thrust::raw_pointer_cast( &(x1.data()[0]));
     const typename Vector::value_type * x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
      typename Vector::value_type * y_ptr = thrust::raw_pointer_cast( &(y.data()[0]));
-    if( y_ptr != x1_ptr && y_ptr != x2_ptr)
+    unsigned size = x1.size();
+    #pragma omp parallel for simd
+    for( unsigned i=0; i<size; i++)
     {
-        typename Vector::value_type * RESTRICT yr_ptr = thrust::raw_pointer_cast( &(y.data()[0]));
-        unsigned size = x1.size();
-        if( beta == 0)
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                yr_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i];
-            }
-        }
-        else if ( beta == 1)
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                yr_ptr[i] += alpha*x1_ptr[i]*x2_ptr[i];
-            }
-        }
-        else
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                yr_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*yr_ptr[i];
-            }
-        }
-    }
-    else
-    {
-        unsigned size = x1.size();
-        if( beta == 0)
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i];
-            }
-        }
-        else if ( beta == 1)
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                y_ptr[i] += alpha*x1_ptr[i]*x2_ptr[i];
-            }
-        }
-        else
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*y_ptr[i];
-            }
-        }
+        y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*y_ptr[i];
     }
 #else
     thrust::transform( 
@@ -434,68 +353,12 @@ inline void doPointwiseDot(
           value_type * z_ptr = thrust::raw_pointer_cast( z.data());
     unsigned size = x1.size();
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    if( z_ptr != x1_ptr && z_ptr != x2_ptr && z_ptr != y1_ptr && z_ptr != y2_ptr)
+    #pragma omp parallel for simd
+    for( unsigned i=0; i<size; i++)
     {
-        value_type * RESTRICT zr_ptr = thrust::raw_pointer_cast( &(z.data()[0]));
-        if(gamma==0)
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                zr_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                            +beta*x2_ptr[i]*y2_ptr[i];
-            }
-        }
-        else if(gamma==1.)
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                zr_ptr[i] += alpha*x1_ptr[i]*y1_ptr[i] 
-                            +beta*x2_ptr[i]*y2_ptr[i];
-            }
-        }
-        else
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                zr_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                            +beta*x2_ptr[i]*y2_ptr[i]
-                            +gamma*zr_ptr[i];
-            }
-        }
-    }
-    else
-    {
-        if(gamma==0)
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                            +beta*x2_ptr[i]*y2_ptr[i];
-            }
-        }
-        else if(gamma==1.)
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                z_ptr[i] += alpha*x1_ptr[i]*y1_ptr[i] 
-                            +beta*x2_ptr[i]*y2_ptr[i];
-            }
-        }
-        else
-        {
-            #pragma omp parallel for simd
-            for( unsigned i=0; i<size; i++)
-            {
-                z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                            +beta*x2_ptr[i]*y2_ptr[i]
-                            +gamma*z_ptr[i];
-            }
-        }
+        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
+                    +beta*x2_ptr[i]*y2_ptr[i]
+                    +gamma*z_ptr[i];
     }
 #else
     //set up kernel parameters
