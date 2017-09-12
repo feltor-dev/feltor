@@ -101,7 +101,9 @@ struct MultigridCG2d
 
                 //
                 // transfer residual to the rhs of the coarser grid
-                dg::blas2::symv(project_[u], m_r[u], b_[w]);                
+                dg::blas2::symv(project_[u], m_r[u], b_[w]);
+
+                //dg::blas2::symv(project_[u], x_[u], x_[w]);
             }
             else if (m_schemeLayout[i].m_step < 0)
             {
@@ -110,6 +112,8 @@ struct MultigridCG2d
                 // x[w] = x[w] + P^{-1} x[u]
                 dg::blas2::symv(inter_[w], x_[u], m_r[w]);
                 dg::blas1::axpby(1.0, x_[w], 1.0, m_r[w], x_[w]);
+
+                //dg::blas2::symv(inter_[w], x_[u], x_[w]);
             }
             
             u = w;
@@ -221,7 +225,7 @@ private:
             //m_mode = correctionscheme;
             m_startStage = 0;
             for (unsigned u = 0; u < stages_-1; u++)
-                m_schemeLayout.push_back(stepinfo(1, 5));
+                m_schemeLayout.push_back(stepinfo(1, 50));
             
             m_schemeLayout.push_back(stepinfo(-1, 1000));
 

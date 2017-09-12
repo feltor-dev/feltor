@@ -43,7 +43,7 @@ int main()
     unsigned scheme;
 
 	n = 3;
-	Nx = Ny = 40;
+	Nx = Ny = 64;
 	eps = 1e-6;
 	jfactor = 1;
 	
@@ -74,7 +74,7 @@ int main()
     {
 		t.tic();
 
-		unsigned stages=4;
+		unsigned stages = 2;
 
 		dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages, scheme);
 		
