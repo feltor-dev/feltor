@@ -40,12 +40,16 @@ int main()
     unsigned n, Nx, Ny; 
     double eps;
     double jfactor;
-    
+    unsigned scheme;
+
 	n = 3;
 	Nx = Ny = 40;
-	eps = 1e-4;
+	eps = 1e-6;
 	jfactor = 1;
 	
+    std::cout << "scheme type? \n";
+    std::cin >> scheme;
+
 	/*std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
     std::cin >> eps >> jfactor;*/
@@ -72,7 +76,7 @@ int main()
 
 		unsigned stages=4;
 
-		dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages, 1);
+		dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages, scheme);
 		
 		std::vector<dg::DVec> chi_ = multigrid.project( chi);
 		std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);

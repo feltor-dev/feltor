@@ -46,7 +46,7 @@ struct MultigridCG2d
         dg::blas1::transfer(dg::evaluate(dg::zero, grid), x0_);
         x1_ = x0_, x2_ = x0_;
         x_ = project(x0_); 
-        r_ = x_, 
+        m_r = x_,
 		b_ = x_;        
 		set_extrapolationType(extrapolation_type);
         set_scheme(scheme_type);        
@@ -64,41 +64,56 @@ struct MultigridCG2d
         //
         // define new rhs
         for (unsigned u = 0; u < stages_; u++)
-            dg::blas1::pointwiseDivide(b_[u], op[u].inv_weights(), b_[u]);        
+            dg::blas1::pointwiseDivide(b_[u], op[u].inv_weights(), b_[u]);
         
         unsigned int numStageSteps = m_schemeLayout.size();
 		std::vector<unsigned> number(numStageSteps);
 
         unsigned u = m_startStage;
-
-        //for (unsigned u = stages_ - 1; u>0; u--)
-        for(unsigned i = 0; i < numStageSteps; i++)
-		{
-            /*if (m_schemeLayout[i].m_step > 0)
-            {
-                u += m_schemeLayout[i].m_step;
-                continue;
-            }*/
-
-            cg_[u].set_max(m_schemeLayout[i].m_niter);
-
-			number[i] = cg_[u](op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps);
-
-            std::cout << "pass: " << i << ", stage: " << u << ", max iter: " << m_schemeLayout[i].m_niter << ", iter: " << number[i] << std::endl;
-			
+                        
+        for (unsigned i = 0; i < numStageSteps; i++)
+        {
             unsigned w = u + m_schemeLayout[i].m_step;
-            
-            if(m_schemeLayout[i].m_step < 0)
-                dg::blas2::symv(inter_[w], x_[u], x_[w]);
-            else if(m_schemeLayout[i].m_step > 0)
-                dg::blas2::symv(project_[u], x_[u], x_[w]);
 
-            //u += m_schemeLayout[i].m_step;
+            //
+            // zero initial guess
+            if (m_schemeLayout[i].m_step > 0)
+            {
+                std::cout << "zeroed " << w << ", ";
+                dg::blas1::scal(x_[w], 0.0);
+            }
+
+            //
+            // iterate the solver on the system A x = b, with x = 0 as inital guess
+            cg_[u].set_max(m_schemeLayout[i].m_niter);
+            number[i] = cg_[u](op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps);
+
+            //
+            // debug print
+            std::cout << "pass: " << i << ", stage: " << u << ", max iter: " << m_schemeLayout[i].m_niter << ", iter: " << number[i] << std::endl;
+
+            if (m_schemeLayout[i].m_step > 0)
+            {
+                //
+                // compute residual r = b - A x
+                dg::blas2::symv(op[u], x_[u], m_r[u]);
+                dg::blas1::axpby(-1.0, m_r[u], 1.0, b_[u], m_r[u]);
+
+                //
+                // transfer residual to the rhs of the coarser grid
+                dg::blas2::symv(project_[u], m_r[u], b_[w]);                
+            }
+            else if (m_schemeLayout[i].m_step < 0)
+            {
+                //
+                // correct the solution vector of the finer grid
+                // x[w] = x[w] + P^{-1} x[u]
+                dg::blas2::symv(inter_[w], x_[u], m_r[w]);
+                dg::blas1::axpby(1.0, x_[w], 1.0, m_r[w], x_[w]);
+            }
+            
             u = w;
 		}
-                
-        //dg::blas1::pointwiseDivide(b_[0], op[0].inv_weights(), b_[0]);
-		//number[0] = cg_[0](op[0], x_[0], b_[0], op[0].precond(), op[0].inv_weights(), eps);
 
 		x_[0].swap(x);
 		x1_.swap(x2_);
@@ -206,10 +221,12 @@ private:
             //m_mode = correctionscheme;
             m_startStage = 0;
             for (unsigned u = 0; u < stages_-1; u++)
-                m_schemeLayout.push_back(stepinfo(1, x_[u].size()));
+                m_schemeLayout.push_back(stepinfo(1, 5));
             
-            for (int u = stages_ - 1; u >= 0; u--)
-                m_schemeLayout.push_back(stepinfo(-1, x_[u].size()));
+            m_schemeLayout.push_back(stepinfo(-1, 1000));
+
+            for (int u = stages_ - 2; u >= 0; u--)
+                m_schemeLayout.push_back(stepinfo(-1, 1000));
 
             break;
 
@@ -218,6 +235,7 @@ private:
         }
 
         // there is no step at the last stage so the step must be zero
+        m_schemeLayout.back().m_niter = x_[0].size();
         m_schemeLayout.back().m_step = 0;
 
         PrintScheme();
@@ -253,7 +271,7 @@ private:
     std::vector< MultiMatrix<Matrix, container> >  inter_;
     std::vector< MultiMatrix<Matrix, container> >  project_;
     std::vector< CG<container> > cg_;
-    std::vector< container> x_, r_, b_; 
+    std::vector< container> x_, m_r, b_; 
     container x0_, x1_, x2_;
     double alpha[3];
 
