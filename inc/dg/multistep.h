@@ -144,18 +144,22 @@ struct Implicit
     Implicit( double alpha, LinearOp& f, container& reference): f_(f), alpha_(alpha), temp_(reference){}
     void symv( const container& x, container& y) 
     {
-        blas1::axpby( 1., x, 0, temp_);//f_ might destroy x
         if( alpha_ != 0)
+        {
+            blas1::copy( x, temp_);//f_ might destroy x
             f_( temp_,y);
+        }
         blas1::axpby( 1., x, alpha_, y, y);
-        blas2::symv( f_.weights(), y,  y);
+        blas1::pointwiseDivide( y, f_.inv_weights(),  y);
     }
     //compute without weights
     void operator()( const container& x, container& y) 
     {
-        blas1::axpby( 1., x, 0, temp_);
         if( alpha_ != 0)
+        {
+            blas1::copy( x, temp_);
             f_( temp_,y);
+        }
         blas1::axpby( 1., x, alpha_, y, y);
     }
     double& alpha( ){  return alpha_;}
@@ -323,12 +327,12 @@ void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container&
         u_[i-1].swap( u_[i]);
     }
     blas1::axpby( 1., f_[0], 1., u_[0]);
-    blas2::symv( diff.weights(), u_[0], u_[0]);
+    blas1::pointwiseDivide( u_[0], diff.inv_weights(), u_[0]);
     //compute implicit part
     double alpha[2] = {2., -1.};
     //double alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u_[0]); //extrapolate previous solutions
-    blas2::symv( diff.weights(), u, u);
+    blas1::pointwiseDivide( u, diff.inv_weights(), u);
     detail::Implicit<Diffusion, container> implicit( -dt_/11.*6., diff, f_[0]);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
@@ -394,7 +398,7 @@ struct SIRK
         u0_ = u0;
         g(u0_, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs);
-        blas2::symv( g.weights(), rhs, rhs);
+        blas1::pointwiseDivide( rhs, g.inv_weights(), rhs);
         implicit.alpha() = -dt*d[0];
         pcg( implicit, k_[0], rhs, g.precond(), eps_);
 
@@ -403,7 +407,7 @@ struct SIRK
         dg::blas1::axpby( 1., u0_, c[1][0], k_[0], u1);
         g(u1, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs);
-        blas2::symv( g.weights(), rhs, rhs);
+        blas1::pointwiseDivide( rhs, g.inv_weights(), rhs);
         implicit.alpha() = -dt*d[1];
         pcg( implicit, k_[1], rhs, g.precond(), eps_);
 
@@ -414,7 +418,7 @@ struct SIRK
         dg::blas1::axpby( c[2][1], k_[1], 1., u1);
         g(u1, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs);
-        blas2::symv( g.weights(), rhs, rhs);
+        blas1::pointwiseDivide( rhs, g.inv_weights(), rhs);
         implicit.alpha() = -dt*d[2];
         pcg( implicit, k_[2], rhs, g.precond(), eps_);
         //sum up results
