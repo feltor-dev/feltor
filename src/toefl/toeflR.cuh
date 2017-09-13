@@ -164,10 +164,12 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     arakawa( grid), 
     //invert_pol(      omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     invert_invgamma( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
-    multigrid_pol( grid, 3), multi_chi( multigrid_pol.project( chi)),
+    multigrid_pol( grid, 3), 
     w2d( dg::create::volume(grid)), v2d( dg::create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
-{
+{ 
+    multi_chi= multigrid_pol.project( chi);
+    multi_pol.resize(3);
     for( unsigned u=0; u<3; u++)
         multi_pol[u].construct( multigrid_pol.grids()[u].get(), dg::not_normed, dg::centered, p.jfactor);
 }
@@ -270,7 +272,7 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     //unsigned number = invert_pol( pol, phi[0], omega, w2d, chi, v2d);
     //if(  number == invert_pol.get_max())
     //    throw dg::Fail( eps_pol);
-    std::vector<unsigned> number = multigrid_pol.direct_solve( multi_pol, phi[0], omega, eps_pol);
+    std::vector<unsigned> number = multigrid_pol.solve( multi_pol, phi[0], omega, eps_pol);
     if(  number[0] == invert_invgamma.get_max())
         throw dg::Fail( eps_pol);
     return phi[0];
