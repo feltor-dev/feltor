@@ -297,17 +297,18 @@ void Karniadakis<container>::init( Functor& f, Diffusion& diff,  const container
 {
     dt_ = dt;
     container temp_(u0);
+    //implicit may write into temp
     detail::Implicit<Diffusion, container> implicit( -dt, diff, temp_);
-    blas1::axpby( 1., u0, 0, temp_); //copy u0
+    blas1::copy( u0, temp_); //copy u0
     f( temp_, f_[0]);
-    blas1::axpby( 1., u0, 0, u_[0]); 
+    blas1::copy(  u0, u_[0]); 
     blas1::axpby( 1., u_[0], -dt, f_[0], f_[1]); //Euler step
     implicit( f_[1], u_[1]); //explicit Euler step backwards, might destroy f_[1]
-    blas1::axpby( 1., u_[1], 0, temp_); 
+    blas1::copy( u_[1], temp_); 
     f( temp_, f_[1]);
     blas1::axpby( 1.,u_[1], -dt, f_[1], f_[2]);
     implicit( f_[2], u_[2]);
-    blas1::axpby( 1., u_[2], 0, temp_); 
+    blas1::copy( u_[2], temp_); 
     f( temp_, f_[2]);
 }
 
@@ -327,12 +328,11 @@ void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container&
         u_[i-1].swap( u_[i]);
     }
     blas1::axpby( 1., f_[0], 1., u_[0]);
-    blas1::pointwiseDivide( u_[0], diff.inv_weights(), u_[0]);
     //compute implicit part
     double alpha[2] = {2., -1.};
     //double alpha[2] = {1., 0.};
-    blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u_[0]); //extrapolate previous solutions
-    blas1::pointwiseDivide( u, diff.inv_weights(), u);
+    blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u); //extrapolate previous solutions
+    blas1::pointwiseDivide( u_[0], diff.inv_weights(), u_[0]);
     detail::Implicit<Diffusion, container> implicit( -dt_/11.*6., diff, f_[0]);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION

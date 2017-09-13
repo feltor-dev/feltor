@@ -18,7 +18,7 @@ struct Implicit
 {
     Implicit( const Geometry& g, double nu):
         nu_(nu), 
-        temp( dg::evaluate(dg::zero, g)), inv_weights_(2,temp),
+        temp( dg::create::inv_weights( g) ), inv_weights_(2,temp),
         LaplacianM_perp( g, dg::normed, dg::centered){
     }
     void operator()( std::vector<container>& x, std::vector<container>& y)
@@ -269,9 +269,9 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     dg::blas1::transform( chi, chi, dg::INVERT<double>());
     dg::blas1::pointwiseDot( chi, v2d, chi);
 
-    unsigned number = invert_pol( pol, phi[0], omega, v2d, chi);
-    //std::vector<unsigned> number = multigrid_pol.solve( multi_pol, phi[0], omega, eps_pol);
-    if(  number == invert_pol.get_max())
+    //unsigned number = invert_pol( pol, phi[0], omega, v2d, chi);
+    std::vector<unsigned> number = multigrid_pol.direct_solve( multi_pol, phi[0], omega, eps_pol);
+    if(  number[0] == invert_pol.get_max())
         throw dg::Fail( eps_pol);
     return phi[0];
 }

@@ -22,7 +22,8 @@ template< class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d& g, double nu): nu_(nu),
-        w2d(dg::create::weights( g)), v2d(dg::create::inv_weights(g)),
+        precon( dg::create::inv_weights(g)), 
+        v2d(2, dg::create::inv_weights(g)),
         LaplacianM( g, dg::normed) 
         { }
 
@@ -34,11 +35,12 @@ struct Diffusion
         }
         dg::blas1::axpby( 0.,y, -nu_, y);
     }
-    const container& weights(){return w2d;}
-    const container& precond(){return v2d;}
+    const std::vector<container>& inv_weights(){return v2d;}
+    const container& precond(){return precon;}
   private:
     double nu_;
-    const container w2d, v2d;
+    const container precon;
+    const std::vector<container> v2d;
     dg::Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM;
 };
 
@@ -94,7 +96,7 @@ int main()
     dg::blas1::axpby( -1., y0[0], 1., error);
     std::cout << "Normalized solution is "<<  norm_sol<< std::endl;
     double norm_error = dg::blas2::dot( w2d, error);
-    std::cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000141704)\n";
+    std::cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.0020084 Karniadakis) (0.000148647 SIRK)\n";
     //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
     //n = 2 -> p = 2
     //n = 3 -> p = 3

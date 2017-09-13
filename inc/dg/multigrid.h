@@ -6,6 +6,7 @@
 #include "backend/memory.h"
 #include "blas.h"
 #include "cg.h"
+#include "backend/timer.cuh"
 
 namespace dg
 {
@@ -45,6 +46,7 @@ struct MultigridCG2d
 
         dg::blas1::transfer(dg::evaluate(dg::zero, grid), x0_);
         x1_ = x0_, x2_ = x0_;
+        
         x_ = project(x0_); 
         m_r = x_,
 		b_ = x_;        
@@ -98,10 +100,12 @@ struct MultigridCG2d
                 // compute residual r = b - A x
                 dg::blas2::symv(op[u], x_[u], m_r[u]);
                 dg::blas1::axpby(-1.0, m_r[u], 1.0, b_[u], m_r[u]);
+                dg::blas1::pointwiseDot( m_r[u], op[u].inv_weights(), m_r[u]);
 
                 //
                 // transfer residual to the rhs of the coarser grid
                 dg::blas2::symv(project_[u], m_r[u], b_[w]);
+                dg::blas1::pointwiseDivide( b_[w], op[w].inv_weights(), b_[w]);
 
                 //dg::blas2::symv(project_[u], x_[u], x_[w]);
             }
@@ -127,35 +131,57 @@ struct MultigridCG2d
 		return number;
 	}
 
-    /*template<class SymmetricOp>
+    template<class SymmetricOp>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, container&  x, const container& b, double eps)
     {
+        Timer t;
+        t.tic();
+        //compute initial guess
         dg::blas1::axpbygz( alpha[0], x0_, alpha[1], x1_, alpha[2], x2_); 
         
 		x_[0].swap(x2_);
-        
-		project( x_[0], x_);
-        project( b, b_);
+        dg::blas1::copy( x_[0], x);//save initial guess
 
+        //dg::blas1::scal( x_[0], 0.0);
+		//project( x_[0], x_);
+        project( b, b_);
+        //project( b, b_);
+        // compute residual r = b - A x
+        dg::blas2::symv(op[0], x_[0], m_r[0]);
+        dg::blas1::pointwiseDot( m_r[0], op[0].inv_weights(), m_r[0]);
+        dg::blas1::axpby(-1.0, m_r[0], 1.0, b_[0], b_[0]);
+        project( b_[0], b_);
+        dg::blas1::scal( x_[0], 0.0);
+		project( x_[0], x_);
         std::vector<unsigned> number(stages_);
         
+        //now solve residual equations
 		for( unsigned u=stages_-1; u>0; u--)
         {
+            cg_[u].set_max(grids_[u].get().size());
             dg::blas1::pointwiseDivide( b_[u], op[u].inv_weights(), b_[u]);
-            number[u] = cg_[u]( op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps, 1.);
+            number[u] = cg_[u]( op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
             dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
+            std::cout << "stage: " << u << ", max iter: " << cg_[u].get_max() << ", iter: " << number[u] << std::endl;
         }
-        
+
 		dg::blas1::pointwiseDivide( b_[0], op[0].inv_weights(), b_[0]);
+        cg_[0].set_max(grids_[0].get().size());
         number[0] = cg_[0]( op[0], x_[0], b_[0], op[0].precond(), op[0].inv_weights(), eps);
+        std::cout << "stage: " << 0 << ", max iter: " << cg_[0].get_max() << ", iter: " << number[0] << std::endl;
+        //update initial guess
+        dg::blas1::axpby( 1., x_[0], 1., x);
+
         
-		x_[0].swap( x);
+		//x_[0].swap( x);
         x1_.swap( x2_);
         x0_.swap( x1_);
         
         blas1::copy( x, x0_);
+        t.toc();
+        std::cout<< "Took "<<t.diff()<<"s\n";
         return number;
-    }*/
+    }
 
     ///src may alias first element of out
     void project( const container& src, std::vector<container>& out)
