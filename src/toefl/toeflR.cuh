@@ -132,12 +132,12 @@ struct Explicit
     container gamma_n;
 
     //matrices and solvers
-    dg::Elliptic<Geometry, Matrix, container> laplaceM; //contains normalized laplacian
+    dg::Elliptic<Geometry, Matrix, container> pol, laplaceM; //contains normalized laplacian
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     dg::Helmholtz<Geometry,  Matrix, container> gamma1;
     dg::ArakawaX< Geometry, Matrix, container> arakawa; 
 
-    dg::Invert<container> invert_invgamma;
+    dg::Invert<container> invert_invgamma, invert_pol;
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid_pol; 
     std::vector<container> multi_chi;
 
@@ -158,12 +158,12 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     phi( 2, chi), dyphi( phi), ype(phi),
     dyy(2,chi), lny( dyy), lapy(dyy),
     gamma_n(chi),
-    //pol(     grid, not_normed, dg::centered, p.jfactor), 
+    pol(     grid, dg::not_normed, dg::centered, p.jfactor), 
     laplaceM( grid, dg::normed, dg::centered),
     gamma1(  grid, -0.5*p.tau, dg::centered),
     arakawa( grid), 
-    //invert_pol(      omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     invert_invgamma( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    invert_pol(      omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     multigrid_pol( grid, 3), 
     w2d( dg::create::volume(grid)), v2d( dg::create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
@@ -269,11 +269,9 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     dg::blas1::transform( chi, chi, dg::INVERT<double>());
     dg::blas1::pointwiseDot( chi, v2d, chi);
 
-    //unsigned number = invert_pol( pol, phi[0], omega, w2d, chi, v2d);
-    //if(  number == invert_pol.get_max())
-    //    throw dg::Fail( eps_pol);
-    std::vector<unsigned> number = multigrid_pol.solve( multi_pol, phi[0], omega, eps_pol);
-    if(  number[0] == invert_invgamma.get_max())
+    unsigned number = invert_pol( pol, phi[0], omega, v2d, chi);
+    //std::vector<unsigned> number = multigrid_pol.solve( multi_pol, phi[0], omega, eps_pol);
+    if(  number == invert_pol.get_max())
         throw dg::Fail( eps_pol);
     return phi[0];
 }

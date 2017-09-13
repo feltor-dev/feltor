@@ -94,7 +94,7 @@ class CG
      * @return Number of iterations used to achieve desired precision
      */
     template< class SymmetricOp, class Preconditioner >
-    unsigned operator()( SymmetricOp& A, container& x, const container& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1, bool restart = false);
+    unsigned operator()( SymmetricOp& A, container& x, const container& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
     //version of CG where Preconditioner is not trivial
     /**
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
@@ -115,11 +115,10 @@ class CG
      * @return Number of iterations used to achieve desired precision
      */
     template< class SymmetricOp, class Preconditioner, class SquareNorm >
-    unsigned operator()( SymmetricOp& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1, bool restart = false);
+    unsigned operator()( SymmetricOp& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
     container r, p, ap; 
     unsigned max_iter;
-    value_type m_nrmb, m_alpha, m_nrm2r_old, m_nrm2r_new;
 };
 
 /*
@@ -141,40 +140,38 @@ class CG
 ///@cond
 template< class container>
 template< class Matrix, class Preconditioner>
-unsigned CG< container>::operator()( Matrix& A, container& x, const container& b, Preconditioner& P, value_type eps, value_type nrmb_correction, bool restart)
+unsigned CG< container>::operator()( Matrix& A, container& x, const container& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
 {
-    if( !restart)
-    {
-        m_nrmb = sqrt( blas2::dot( P, b));
+    value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if(rank==0)
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank==0)
 #endif //MPI
-        {
-        std::cout << "Norm of b "<<nrmb <<"\n";
-        std::cout << "Residual errors: \n";
-        }
-#endif //DG_DEBUG
-        if( m_nrmb == 0)
-        {
-            blas1::axpby( 1., b, 0., x);
-            return 0;
-        }
-        blas2::symv( A,x,r);
-        blas1::axpby( 1., b, -1., r);
-        blas2::symv( P, r, p );//<-- compute p_0
-        //note that dot does automatically synchronize
-        m_nrm2r_old = blas2::dot( P,r); //and store the norm of it
-        if( sqrt( m_nrm2r_old ) < eps*(m_nrmb + nrmb_correction)) //if x happens to be the solution
-            return 0;
+    {
+    std::cout << "Norm of b "<<nrmb <<"\n";
+    std::cout << "Residual errors: \n";
     }
+#endif //DG_DEBUG
+    if( nrmb == 0)
+    {
+        blas1::axpby( 1., b, 0., x);
+        return 0;
+    }
+    blas2::symv( A,x,r);
+    blas1::axpby( 1., b, -1., r);
+    blas2::symv( P, r, p );//<-- compute p_0
+    //note that dot does automatically synchronize
+    value_type nrm2r_old = blas2::dot( P,r); //and store the norm of it
+    if( sqrt( nrm2r_old ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
+        return 0;
+    value_type alpha, nrm2r_new;
     for( unsigned i=1; i<max_iter; i++)
     {
         blas2::symv( A, p, ap);
-        m_alpha = m_nrm2r_old /blas1::dot( p, ap);
-        blas1::axpby( m_alpha, p, 1.,x);
+        alpha = nrm2r_old /blas1::dot( p, ap);
+        blas1::axpby( alpha, p, 1.,x);
 	        //here one could add a ifstatement to remove accumulated floating point error
 //             if (i % 100==0) {
 //                   blas2::symv( A,x,r); 
@@ -183,22 +180,22 @@ unsigned CG< container>::operator()( Matrix& A, container& x, const container& b
 //             else {
 //                   blas1::axpby( -alpha, ap, 1., r);
 //             }
-        blas1::axpby( -m_alpha, ap, 1., r);
-        m_nrm2r_new = blas2::dot( P, r); 
+        blas1::axpby( -alpha, ap, 1., r);
+        nrm2r_new = blas2::dot( P, r); 
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     if(rank==0)
 #endif //MPI
     {
-        std::cout << "Absolute "<<sqrt( m_nrm2r_new) <<"\t ";
-        std::cout << " < Critical "<<eps*m_nrmb + eps <<"\t ";
-        std::cout << "(Relative "<<sqrt( m_nrm2r_new)/m_nrmb << ")\n";
+        std::cout << "Absolute "<<sqrt( nrm2r_new) <<"\t ";
+        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "(Relative "<<sqrt( nrm2r_new)/nrmb << ")\n";
     }
 #endif //DG_DEBUG
-        if( sqrt( m_nrm2r_new) < eps*(m_nrmb + nrmb_correction)) 
+        if( sqrt( nrm2r_new) < eps*(nrmb + nrmb_correction)) 
             return i;
-        blas2::symv(1.,P, r, m_nrm2r_new/m_nrm2r_old, p );
-        m_nrm2r_old=m_nrm2r_new;
+        blas2::symv(1.,P, r, nrm2r_new/nrm2r_old, p );
+        nrm2r_old=nrm2r_new;
 
     }
     return max_iter;
@@ -206,57 +203,55 @@ unsigned CG< container>::operator()( Matrix& A, container& x, const container& b
 
 template< class container>
 template< class Matrix, class Preconditioner, class SquareNorm>
-unsigned CG< container>::operator()( Matrix& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction, bool restart)
+unsigned CG< container>::operator()( Matrix& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
-    if( !restart)
-    {
-        m_nrmb = sqrt( blas2::dot( S, b));
+    value_type nrmb = sqrt( blas2::dot( S, b));
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
-        int rank;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if(rank==0)
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank==0)
 #endif //MPI
-        {
-        std::cout << "Norm of S b "<<nrmb <<"\n";
-        std::cout << "Residual errors: \n";
-        }
-#endif //DG_DEBUG
-        if( m_nrmb == 0)
-        {
-            blas1::copy( b, x);
-            return 0;
-        }
-        blas2::symv( A,x,r);
-        blas1::axpby( 1., b, -1., r);
-        //note that dot does automatically synchronize
-        if( sqrt( blas2::dot(S,r) ) < eps*(m_nrmb + nrmb_correction)) //if x happens to be the solution
-            return 0;
-        blas2::symv( P, r, p );//<-- compute p_0
-        m_nrm2r_old = blas1::dot( p,r); //and store the scalar product
+    {
+    std::cout << "Norm of S b "<<nrmb <<"\n";
+    std::cout << "Residual errors: \n";
     }
+#endif //DG_DEBUG
+    if( nrmb == 0)
+    {
+        blas1::copy( b, x);
+        return 0;
+    }
+    blas2::symv( A,x,r);
+    blas1::axpby( 1., b, -1., r);
+    //note that dot does automatically synchronize
+    if( sqrt( blas2::dot(S,r) ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
+        return 0;
+    blas2::symv( P, r, p );//<-- compute p_0
+    value_type nrmzr_old = blas1::dot( p,r); //and store the scalar product
+    value_type alpha, nrmzr_new;
     for( unsigned i=1; i<max_iter; i++)
     {
         blas2::symv( A, p, ap);
-        m_alpha =  m_nrm2r_old/blas1::dot( p, ap);
-        blas1::axpby( m_alpha, p, 1.,x);
-        blas1::axpby( -m_alpha, ap, 1., r);
+        alpha =  nrmzr_old/blas1::dot( p, ap);
+        blas1::axpby( alpha, p, 1.,x);
+        blas1::axpby( -alpha, ap, 1., r);
 #ifdef DG_DEBUG
 #ifdef MPI_VERSION
     if(rank==0)
 #endif //MPI
     {
         std::cout << "Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
-        std::cout << " < Critical "<<eps*m_nrmb + eps <<"\t ";
-        std::cout << "(Relative "<<sqrt( blas2::dot(S,r) )/m_nrmb << ")\n";
+        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
+        std::cout << "(Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
     }
 #endif //DG_DEBUG
-        if( sqrt( blas2::dot(S,r)) < eps*(m_nrmb + nrmb_correction)) 
+        if( sqrt( blas2::dot(S,r)) < eps*(nrmb + nrmb_correction)) 
             return i;
         blas2::symv(P,r,ap);
-        m_nrm2r_new = blas1::dot( ap, r); 
-        blas1::axpby(1.,ap, m_nrm2r_new/m_nrm2r_old, p );
-        m_nrm2r_old=m_nrm2r_new;
+        nrmzr_new = blas1::dot( ap, r); 
+        blas1::axpby(1.,ap, nrmzr_new/nrmzr_old, p );
+        nrmzr_old=nrmzr_new;
     }
     return max_iter;
 }
