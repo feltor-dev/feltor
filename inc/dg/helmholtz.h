@@ -26,20 +26,20 @@ namespace dg{
 template< class Geometry, class Matrix, class container> 
 struct Helmholtz
 {
+    ///@brief empty object ( no memory allocation)
+    Helmholtz() {}
     /**
      * @brief Construct Helmholtz operator
      *
-     * @param g The grid to use
+     * @param g The grid to use (boundary conditions are taken from there)
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one. Helmholtz is never normed
      */
-    Helmholtz( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
-        laplaceM_(g, normed, dir, jfactor), 
-        temp_(dg::evaluate(dg::one, g)),
-        alpha_(alpha)
+    Helmholtz( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
     { 
+        construct( g, alpha, dir, jfactor);
     }
     /**
      * @brief Construct Helmholtz operator
@@ -52,11 +52,23 @@ struct Helmholtz
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
      * @note The default value of \f$\chi\f$ is one
      */
-    Helmholtz( const Geometry& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
-        laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
-        temp_(dg::evaluate(dg::one, g)), 
-        alpha_(alpha)
+    Helmholtz( const Geometry& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
     { 
+        construct( g, bcx, bcy, alpha, dir, jfactor);
+    }
+    ///@copydoc Helmholtz::Helmholtz(const Geometry&,bc,bc,double,direction,double)
+    void construct( const Geometry& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.) 
+    {
+        laplaceM_.construct( g, bcx, bcy, dg::normed, dir, jfactor);
+        dg::blas1::transfer( dg::evaluate( dg::one, g), temp_);
+        alpha_ = alpha; 
+    }
+    ///@copydoc Helmholtz::Helmholtz(const Geometry&,double,direction,double)
+    void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.) 
+    {
+        laplaceM_.construct( g, dg::normed, dir, jfactor);
+        dg::blas1::transfer( dg::evaluate( dg::one, g), temp_);
+        alpha_ = alpha; 
     }
     /**
      * @brief apply operator

@@ -78,7 +78,7 @@ struct Explicit
      *
      * @return Gamma operator
      */
-    dg::Helmholtz<Geometry, Matrix, container >&  gamma() {return gamma1;}
+    dg::Helmholtz<Geometry, Matrix, container >&  gamma() {return multi_gamma1[0];}
 
     /**
      * @brief Compute the right-hand side of the toefl equations
@@ -134,11 +134,11 @@ struct Explicit
     //matrices and solvers
     dg::Elliptic<Geometry, Matrix, container> pol, laplaceM; //contains normalized laplacian
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
-    dg::Helmholtz<Geometry,  Matrix, container> gamma1;
+    std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1;
     dg::ArakawaX< Geometry, Matrix, container> arakawa; 
 
     dg::Invert<container> invert_invgamma, invert_pol;
-    dg::MultigridCG2d<Geometry, Matrix, container> multigrid_pol; 
+    dg::MultigridCG2d<Geometry, Matrix, container> multigrid_pol, multigrid_invgammaPhi, multigrid_invgammaN; 
     std::vector<container> multi_chi;
 
     const container w2d, v2d, one;
@@ -160,18 +160,21 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     gamma_n(chi),
     pol(     grid, dg::not_normed, dg::centered, p.jfactor), 
     laplaceM( grid, dg::normed, dg::centered),
-    gamma1(  grid, -0.5*p.tau, dg::centered),
     arakawa( grid), 
     invert_invgamma( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     invert_pol(      omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
-    multigrid_pol( grid, 3), 
+    multigrid_pol( grid, 3), multigrid_invgammaPhi( grid, 3), multigrid_invgammaN(grid, 3),
     w2d( dg::create::volume(grid)), v2d( dg::create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
 { 
     multi_chi= multigrid_pol.project( chi);
     multi_pol.resize(3);
+    multi_gamma1.resize(3);
     for( unsigned u=0; u<3; u++)
+    {
         multi_pol[u].construct( multigrid_pol.grids()[u].get(), dg::not_normed, dg::centered, p.jfactor);
+        multi_gamma1[u].construct( multigrid_pol.grids()[u].get(), -0.5*p.tau, dg::centered);
+    }
 }
 
 template< class G, class M, class container>
@@ -181,8 +184,9 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
     //in gyrofluid invert Gamma operator
     if( equations == "local" || equations == "global")
     {
-        unsigned number = invert_invgamma( gamma1, phi[1], potential);
-        if(  number == invert_invgamma.get_max())
+        std::vector<unsigned> number = multigrid_invgammaPhi.direct_solve( multi_gamma1, phi[1], potential, eps_gamma);
+        //unsigned number = invert_invgamma( gamma1, phi[1], potential);
+        if(  number[0] == invert_invgamma.get_max())
             throw dg::Fail( eps_gamma);
     }
     //compute (nabla phi)^2
@@ -255,8 +259,9 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     //compute polarisation
     if( equations == "local" || equations == "global")
     {
-        unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
-        if(  number == invert_invgamma.get_max())
+        std::vector<unsigned> number = multigrid_invgammaN.direct_solve( multi_gamma1, gamma_n, y[1], eps_gamma);
+        //unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
+        if(  number[0] == invert_invgamma.get_max())
             throw dg::Fail( eps_gamma);
         dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
     }
