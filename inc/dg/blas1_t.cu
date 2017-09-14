@@ -31,7 +31,7 @@ int main()
     std::cout << "2*2+ 3*3 = " << v2[0] <<" (13)\n";
     dg::blas1::axpby( 2.5, v1, 0., v2);
     std::cout << "2.5*2+ 0 = " << v2[0] <<" (5)\n";
-    dg::blas1::axpbygz( 2.5, v1, 2., v2, 3., v3);
+    dg::blas1::axpbypgz( 2.5, v1, 2., v2, 3., v3);
     std::cout << "2.5*2+ 2.*5-3*12 = " << v3[0] <<" (-21)\n";
     dg::blas1::copy( v2, v1);
     std::cout << "5 = " << v1[0] <<" (5)"<< std::endl;

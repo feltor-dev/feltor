@@ -113,14 +113,14 @@ int main()
     std::cout<<"AXPBY (1*y-1*x=x)                "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas1::axpbygz( 1., x, -1., y, 2., z);
+        dg::blas1::axpbypgz( 1., x, -1., y, 2., z);
     t.toc();
-    std::cout<<"AXPBYGZ (1*x-1*y+2*z=z)          "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"AXPBYPGZ (1*x-1*y+2*z=z)         "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas1::axpbygz( 1., x, -1., y, 3., x);
+        dg::blas1::axpbypgz( 1., x, -1., y, 3., x);
     t.toc();
-    std::cout<<"AXPBYGZ (1*x-1.*y+3*x=x)         "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"AXPBYPGZ (1*x-1.*y+3*x=x)        "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
 
     t.tic();
     for( int i=0; i<multi; i++)

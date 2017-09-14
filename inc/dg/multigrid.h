@@ -40,7 +40,7 @@ struct MultigridCG2d
         {
             // Projecting from one grid to the next is the same as 
             // projecting from the original grid to the coarse grids
-            project_[u] = dg::create::fast_projection(grids_[u].get(), 2, 2);
+            project_[u] = dg::create::fast_projection(grids_[u].get(), 2, 2, dg::not_normed);
             inter_[u] = dg::create::fast_interpolation(grids_[u+1].get(), 2, 2);
         }
 
@@ -57,16 +57,13 @@ struct MultigridCG2d
 	template<class SymmetricOp>
 	std::vector<unsigned> solve(/*const*/ std::vector<SymmetricOp>& op, container& x, const container& b, const double eps)
 	{
-		dg::blas1::axpbygz(alpha[0], x0_, alpha[1], x1_, alpha[2], x2_);
+		dg::blas1::axpbypgz(alpha[0], x0_, alpha[1], x1_, alpha[2], x2_);
 		x_[0].swap(x2_);
 
         project(x_[0], x_);
-		project(b, b_);
+        dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
+		project(b_[0], b_);
 
-        //
-        // define new rhs
-        for (unsigned u = 0; u < stages_; u++)
-            dg::blas1::pointwiseDivide(b_[u], op[u].inv_weights(), b_[u]);
         
         unsigned int numStageSteps = m_schemeLayout.size();
 		std::vector<unsigned> number(numStageSteps);
@@ -77,13 +74,6 @@ struct MultigridCG2d
         {
             unsigned w = u + m_schemeLayout[i].m_step;
 
-            //
-            // zero initial guess
-            if (m_schemeLayout[i].m_step > 0)
-            {
-                std::cout << "zeroed " << w << ", ";
-                dg::blas1::scal(x_[w], 0.0);
-            }
 
             //
             // iterate the solver on the system A x = b, with x = 0 as inital guess
@@ -97,26 +87,22 @@ struct MultigridCG2d
             if (m_schemeLayout[i].m_step > 0)
             {
                 //
-                // compute residual r = b - A x
+                // compute residual r = Wb - A x
                 dg::blas2::symv(op[u], x_[u], m_r[u]);
                 dg::blas1::axpby(-1.0, m_r[u], 1.0, b_[u], m_r[u]);
-                dg::blas1::pointwiseDot( m_r[u], op[u].inv_weights(), m_r[u]);
-
                 //
                 // transfer residual to the rhs of the coarser grid
                 dg::blas2::symv(project_[u], m_r[u], b_[w]);
-                dg::blas1::pointwiseDivide( b_[w], op[w].inv_weights(), b_[w]);
-
                 //dg::blas2::symv(project_[u], x_[u], x_[w]);
+                std::cout << "zeroed " << w << ", ";
+                dg::blas1::scal(x_[w], 0.0);
             }
             else if (m_schemeLayout[i].m_step < 0)
             {
                 //
                 // correct the solution vector of the finer grid
                 // x[w] = x[w] + P^{-1} x[u]
-                dg::blas2::symv(inter_[w], x_[u], m_r[w]);
-                dg::blas1::axpby(1.0, x_[w], 1.0, m_r[w], x_[w]);
-
+                dg::blas2::symv(1., inter_[w], x_[u], 1., x_[w]);
                 //dg::blas2::symv(inter_[w], x_[u], x_[w]);
             }
             
@@ -137,41 +123,39 @@ struct MultigridCG2d
         Timer t;
         t.tic();
         //compute initial guess
-        dg::blas1::axpbygz( alpha[0], x0_, alpha[1], x1_, alpha[2], x2_); 
+        dg::blas1::axpbypgz( alpha[0], x0_, alpha[1], x1_, alpha[2], x2_); 
         
 		x_[0].swap(x2_);
         dg::blas1::copy( x_[0], x);//save initial guess
-
-        //dg::blas1::scal( x_[0], 0.0);
-		//project( x_[0], x_);
-        project( b, b_);
-        //project( b, b_);
+        dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
         // compute residual r = b - A x
         dg::blas2::symv(op[0], x_[0], m_r[0]);
-        dg::blas1::pointwiseDot( m_r[0], op[0].inv_weights(), m_r[0]);
         dg::blas1::axpby(-1.0, m_r[0], 1.0, b_[0], b_[0]);
         project( b_[0], b_);
-        dg::blas1::scal( x_[0], 0.0);
-		project( x_[0], x_);
         std::vector<unsigned> number(stages_);
+        Timer t2;
         
         //now solve residual equations
 		for( unsigned u=stages_-1; u>0; u--)
         {
+            t2.tic();
             cg_[u].set_max(grids_[u].get().size());
-            dg::blas1::pointwiseDivide( b_[u], op[u].inv_weights(), b_[u]);
+            dg::blas1::scal( x_[u], 0.0);
             number[u] = cg_[u]( op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
             dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
-            std::cout << "stage: " << u << ", max iter: " << cg_[u].get_max() << ", iter: " << number[u] << std::endl;
-        }
+            t2.toc();
+            std::cout << "stage: " << u << ", max iter: " << cg_[u].get_max() << ", iter: " << number[u] << ", took "<<t2.diff()<<"s\n";
 
-		dg::blas1::pointwiseDivide( b_[0], op[0].inv_weights(), b_[0]);
+        }
+        t2.tic();
+
         cg_[0].set_max(grids_[0].get().size());
+        dg::blas1::scal( x_[0], 0.0);
         number[0] = cg_[0]( op[0], x_[0], b_[0], op[0].precond(), op[0].inv_weights(), eps);
-        std::cout << "stage: " << 0 << ", max iter: " << cg_[0].get_max() << ", iter: " << number[0] << std::endl;
+        t2.toc();
+        std::cout << "stage: " << 0 << ", max iter: " << cg_[0].get_max() << ", iter: " << number[0] << ", took "<<t2.diff()<<"s\n";
         //update initial guess
         dg::blas1::axpby( 1., x_[0], 1., x);
-
         
 		//x_[0].swap( x);
         x1_.swap( x2_);

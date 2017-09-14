@@ -49,21 +49,23 @@ struct MultiMatrix
     }
 
     void symv( const container& x, container& y) const{gemv(x,y);}
+    void symv( double alpha, const container& x, double beta, container& y) const{gemv(alpha, x,beta,y);}
+    void gemv( const container& x, container& y) const{ gemv( 1., x,0,y);}
     /**
     * @brief Applies all stored matrices one after the other
     */
-    void gemv( const container& x, container& y) const
+    void gemv(double alpha, const container& x, double beta, container& y) const
     {
         int dims = inter_.size();
         if( dims == 1) 
         {
-            dg::blas2::symv( inter_[0], x, y);
+            dg::blas2::symv( alpha, inter_[0], x, beta, y);
             return;
         }
         dg::blas2::symv( inter_[0], x,temp_[0].data());
         for( int i=1; i<dims-1; i++)
             dg::blas2::symv( inter_[i], temp_[i-1].data(), temp_[i].data());
-        dg::blas2::symv( inter_[dims-1], temp_[dims-2].data(), y);
+        dg::blas2::symv( alpha, inter_[dims-1], temp_[dims-2].data(), beta, y);
     }
     std::vector<Buffer<container> >& get_temp(){ return temp_;}
     const std::vector<Buffer<container> >& get_temp()const{ return temp_;}

@@ -130,7 +130,7 @@ inline void axpby( typename VectorTraits<Vector>::value_type alpha, const Vector
  * @attention If a thrust::device_vector is used then this routine is NON-BLOCKING!
  */
 template< class Vector>
-inline void axpbygz( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, const Vector& y, typename VectorTraits<Vector>::value_type gamma, Vector& z)
+inline void axpbypgz( typename VectorTraits<Vector>::value_type alpha, const Vector& x, typename VectorTraits<Vector>::value_type beta, const Vector& y, typename VectorTraits<Vector>::value_type gamma, Vector& z)
 {
     dg::blas1::detail::doAxpby( alpha, x, beta, y, gamma, z, typename dg::VectorTraits<Vector>::vector_category() );
     return;

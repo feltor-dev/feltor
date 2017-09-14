@@ -436,7 +436,7 @@ struct Invert
         Timer t;
         t.tic();
 #endif //DG_BENCHMARK
-        blas1::axpbygz( alpha[0], phi0, alpha[1], phi1, alpha[2], phi2); 
+        blas1::axpbypgz( alpha[0], phi0, alpha[1], phi1, alpha[2], phi2); 
         phi.swap(phi2);
 
         unsigned number;

@@ -319,8 +319,8 @@ void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container&
 
     blas1::copy( u_[0], u); //save u_[0]
     f( u, f_[0]);
-    blas1::axpbygz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
-    blas1::axpbygz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
+    blas1::axpbypgz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
+    blas1::axpbypgz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
     //permute f_[2], u_[2]  to be the new f_[0], u_[0]
     for( unsigned i=2; i>0; i--)
     {
