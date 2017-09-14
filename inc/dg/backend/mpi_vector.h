@@ -182,7 +182,9 @@ struct NearestNeighborComm
     */
     template< class OtherIndex, class OtherVector>
     NearestNeighborComm( const NearestNeighborComm<OtherIndex, OtherVector>& src){
-        construct( src.n(), src.dims(), src.communicator(), src.direction());
+        if( src.size() == 0)  silent_=true;
+        else
+            construct( src.n(), src.dims(), src.communicator(), src.direction());
     }
 
     /**

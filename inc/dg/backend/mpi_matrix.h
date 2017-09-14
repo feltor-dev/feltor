@@ -94,11 +94,6 @@ struct RowColDistMat
     template<class container> 
     void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y) const
     {
-        assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
-        //int rank;
-        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        //dg::Timer t;
         if( c_.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(), 
@@ -107,25 +102,18 @@ struct RowColDistMat
             return;
 
         }
-        //t.tic();
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
         //1. compute inner points
         dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
-        //t.toc();
-        //if(rank==0)std::cout << "Inner points took "<<t.diff()<<"s\n";
         //2. communicate outer points
-        //t.tic();
         const container& temp = c_.global_gather( x.data());
-        //t.toc();
-        //if(rank==0)std::cout << "Collect      took "<<t.diff()<<"s\n";
         //3. compute and add outer points
-        //t.tic();
         dg::blas2::detail::doSymv(alpha, m_o, temp, 1., y.data(), 
                        typename dg::MatrixTraits<LocalMatrixOuter>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
-        //t.toc();
-        //if(rank==0)std::cout << "Outer points took "<<t.diff()<<"s\n";
     }
 
     /**
@@ -141,11 +129,6 @@ struct RowColDistMat
     template<class container> 
     void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y) const
     {
-        assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
-        //int rank;
-        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        //dg::Timer t;
         if( c_.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
@@ -155,26 +138,19 @@ struct RowColDistMat
             return;
 
         }
-        //t.tic();
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
         //1. compute inner points
         dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
-        //t.toc();
-        //if(rank==0)std::cout << "Inner points took "<<t.diff()<<"s\n";
         //2. communicate outer points
-        //t.tic();
         const container& temp = c_.global_gather( x.data());
-        //t.toc();
-        //if(rank==0)std::cout << "Collect      took "<<t.diff()<<"s\n";
         //3. compute and add outer points
-        //t.tic();
         dg::blas2::detail::doSymv(1., m_o, temp, 1., y.data(), 
                        typename dg::MatrixTraits<LocalMatrixOuter>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
-        //t.toc();
-        //if(rank==0)std::cout << "Outer points took "<<t.diff()<<"s\n";
     }
         
     private:
@@ -244,13 +220,6 @@ struct RowDistMat
     template<class container> 
     void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y)
     {
-        assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
-        //int rank;
-        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        //dg::Timer t;
-
-        //t.tic();
         if( c_.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( alpha, m_, x.data(), beta, y.data(), 
@@ -259,26 +228,16 @@ struct RowDistMat
             return;
 
         }
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
         container temp = c_.global_gather( x.data());
-        //t.toc();
-        //if(rank==0)std::cout << "collect took "<<t.diff()<<"s\n";
-        //t.tic();
         dg::blas2::detail::doSymv( alpha, m_, temp, beta, y.data(), 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
-        //t.toc();
-        //if(rank==0)std::cout << "symv    took "<<t.diff()<<"s\n";
     }
     template<class container> 
     void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
     {
-        assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
-        //int rank;
-        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        //dg::Timer t;
-
-        //t.tic();
         if( c_.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( m_, x.data(), y.data(), 
@@ -288,16 +247,13 @@ struct RowDistMat
             return;
 
         }
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
         container temp = c_.global_gather( x.data());
-        //t.toc();
-        //if(rank==0)std::cout << "global_gather took "<<t.diff()<<"s\n";
-        //t.tic();
         dg::blas2::detail::doSymv( m_, temp, y.data(), 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
-        //t.toc();
-        //if(rank==0)std::cout << "symv    took "<<t.diff()<<"s\n";
     }
 
         
@@ -357,8 +313,6 @@ struct ColDistMat
     template<class container> 
     void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y)
     {
-        assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
         if( c_.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( alpha, m_, x.data(), beta, y.data(), 
@@ -368,6 +322,8 @@ struct ColDistMat
             return;
 
         }
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
         container temp( c_.size());
         dg::blas2::detail::doSymv( alpha, m_, x.data(), beta, temp, 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
@@ -377,8 +333,6 @@ struct ColDistMat
     template<class container> 
     void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
     {
-        assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
         if( c_.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( m_, x.data(), y.data(), 
@@ -388,6 +342,8 @@ struct ColDistMat
             return;
 
         }
+        assert( x.communicator() == y.communicator());
+        assert( x.communicator() == c_.communicator());
         container temp( c_.size());
         dg::blas2::detail::doSymv( m_, x.data(), temp, 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 

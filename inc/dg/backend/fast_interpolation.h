@@ -1,12 +1,18 @@
 #pragma once
 
 #include <thrust/host_vector.h>
+#include "../enums.h"
 #include "grid.h"
 #include "interpolation.cuh"
 #include "projection.cuh"
 #include "matrix_traits.h"
 #include "sparseblockmat.h"
 #include "memory.h"
+#ifdef MPI_VERSION
+#include "mpi_grid.h"
+#include "mpi_vector.h"
+#include "mpi_matrix.h"
+#endif //MPI_VERSION
 
 namespace dg
 {
@@ -105,13 +111,17 @@ MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_inter
     return inter;
 }
 
-MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_projection( const Grid1d& t, unsigned divide)
+MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_projection( const Grid1d& t, unsigned divide, enum dg::norm no = normed)
 {
     unsigned n=t.n();
     if( t.N()%divide != 0) throw Error( Message(_ping_)<< "Nx and divide don't match: Nx: " << t.N()<< " divide "<< divide);
     dg::Grid1d g_oldX( -1., 1., n, divide);
     dg::Grid1d g_new(  -1., 1., n, 1);
-    dg::IHMatrix projectX = dg::create::projection( g_new, g_oldX);
+    dg::IHMatrix projectX;
+    if(no == normed)
+        projectX = dg::create::projection( g_new, g_oldX);
+    else
+        projectX = dg::create::interpolationT( g_new, g_oldX);
     EllSparseBlockMat<double> pX( t.N()/divide, t.N(), divide, divide, t.n()); 
     for( unsigned i=0; i<n; i++)
     for( unsigned j=0; j<n; j++)
@@ -147,14 +157,14 @@ MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_inter
     return inter;
 }
 
-MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_projection( const aTopology2d& t, unsigned divideX, unsigned divideY)
+MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_projection( const aTopology2d& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
 {
     dg::Grid1d gx(t.x0(), t.x1(), t.n(), t.Nx());
     dg::Grid1d gy(t.y0(), t.y1(), t.n(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<double>, thrust::host_vector<double> > interX = dg::create::fast_projection( gx, divideX);
+    MultiMatrix < EllSparseBlockMat<double>, thrust::host_vector<double> > interX = dg::create::fast_projection( gx, divideX, no);
     interX.get_matrices()[0].left_size = t.n()*t.Ny();
     interX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<double>, thrust::host_vector<double> > interY = dg::create::fast_projection( gy, divideY);
+    MultiMatrix < EllSparseBlockMat<double>, thrust::host_vector<double> > interY = dg::create::fast_projection( gy, divideY, no);
     interY.get_matrices()[0].right_size = t.n()*t.Nx()/divideX;
     interY.get_matrices()[0].set_default_range();
 
@@ -186,14 +196,14 @@ MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_inter
     return inter;
 }
 
-MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_projection( const aTopology3d& t, unsigned divideX, unsigned divideY)
+MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_projection( const aTopology3d& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
 {
     dg::Grid1d gx(t.x0(), t.x1(), t.n(), t.Nx());
     dg::Grid1d gy(t.y0(), t.y1(), t.n(), t.Ny());
-    MultiMatrix < EllSparseBlockMat<double>, thrust::host_vector<double> > interX = dg::create::fast_projection( gx, divideX);
+    MultiMatrix < EllSparseBlockMat<double>, thrust::host_vector<double> > interX = dg::create::fast_projection( gx, divideX, no);
     interX.get_matrices()[0].left_size = t.n()*t.Ny()*t.Nz();
     interX.get_matrices()[0].set_default_range();
-    MultiMatrix < EllSparseBlockMat<double>, thrust::host_vector<double> > interY = dg::create::fast_projection( gy, divideY);
+    MultiMatrix < EllSparseBlockMat<double>, thrust::host_vector<double> > interY = dg::create::fast_projection( gy, divideY, no);
     interY.get_matrices()[0].right_size = t.n()*t.Nx()/divideX;
     interY.get_matrices()[0].left_size = t.Nz();
     interY.get_matrices()[0].set_default_range();
@@ -206,6 +216,56 @@ MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_proje
     return inter;
 }
 
+#ifdef MPI_VERSION
+//very elaborate way of telling the compiler to just apply the local matrix to the local vector
+MultiMatrix< RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH >, MPI_Vector<thrust::host_vector<double> > > fast_interpolation( const aMPITopology2d& t, unsigned divideX, unsigned divideY)
+{
+    typedef RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> Matrix; 
+    typedef MPI_Vector<thrust::host_vector<double> > Vector; 
+    MultiMatrix<EllSparseBlockMat<double>, thrust::host_vector<double> > temp = dg::create::fast_interpolation( t.local(), divideX, divideY);
+    MultiMatrix< Matrix, Vector > inter(2); 
+    inter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<double>(), NNCH());
+    inter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<double>(), NNCH());
+    inter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
+    return inter;
+}
+MultiMatrix< RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH >, MPI_Vector<thrust::host_vector<double> > > fast_projection( const aMPITopology2d& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
+{
+    typedef RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> Matrix; 
+    typedef MPI_Vector<thrust::host_vector<double> > Vector; 
+    MultiMatrix<EllSparseBlockMat<double>, thrust::host_vector<double> > temp = dg::create::fast_projection( t.local(), divideX, divideY, no);
+    MultiMatrix< Matrix, Vector > inter(2); 
+    inter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<double>(), NNCH());
+    inter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<double>(), NNCH());
+    inter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
+    return inter;
+}
+
+MultiMatrix< RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH >, MPI_Vector<thrust::host_vector<double> > > fast_interpolation( const aMPITopology3d& t, unsigned divideX, unsigned divideY)
+{
+    typedef RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> Matrix; 
+    typedef MPI_Vector<thrust::host_vector<double> > Vector; 
+    MultiMatrix<EllSparseBlockMat<double>, thrust::host_vector<double> > temp = dg::create::fast_interpolation( t.local(), divideX, divideY);
+    MultiMatrix< Matrix, Vector > inter(2); 
+    inter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<double>(), NNCH());
+    inter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<double>(), NNCH());
+    inter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
+    return inter;
+}
+
+MultiMatrix< RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH >, MPI_Vector<thrust::host_vector<double> > > fast_projection( const aMPITopology3d& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
+{
+    typedef RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> Matrix; 
+    typedef MPI_Vector<thrust::host_vector<double> > Vector; 
+    MultiMatrix<EllSparseBlockMat<double>, thrust::host_vector<double> > temp = dg::create::fast_projection( t.local(), divideX, divideY, no);
+    MultiMatrix< Matrix, Vector > inter(2); 
+    inter.get_matrices()[0] = Matrix( temp.get_matrices()[0], CooSparseBlockMat<double>(), NNCH());
+    inter.get_matrices()[1] = Matrix( temp.get_matrices()[1], CooSparseBlockMat<double>(), NNCH());
+    inter.get_temp()[0] = Buffer<Vector> ( Vector( temp.get_temp()[0].data(), t.communicator())  );
+    return inter;
+}
+
+#endif //MPI_VERSION
 }//namespace create
 
 }//namespace dg
