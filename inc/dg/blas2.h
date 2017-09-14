@@ -88,8 +88,6 @@ inline typename MatrixTraits<Matrix>::value_type dot( const Matrix& m, const Vec
  *
  * This routine computes \f[ y = \alpha P x + \beta y \f]
  * where \f$ P\f$ is a symmetric Preconditioner. 
- * P should be diagonal since
- * otherwise a call to symv() followed by axpby() is faster.
  * @param alpha A Scalar
  * @param P The Preconditioner
  * @param x A Vector different from y (except in the case where m is diagonal)
@@ -103,8 +101,7 @@ inline void symv( typename MatrixTraits<Precon>::value_type alpha,
                   typename MatrixTraits<Precon>::value_type beta, 
                   Vector& y)
 {
-    if(alpha == (typename MatrixTraits<Precon>::value_type)0) 
-    {
+    if(alpha == (typename MatrixTraits<Precon>::value_type)0) {
         dg::blas1::scal( y, alpha);
         return;
     }
@@ -135,19 +132,6 @@ inline void symv( Matrix& m,
                        typename dg::VectorTraits<Vector2>::vector_category() );
     return;
 }
-///@cond
-template< class Matrix, class Vector>
-inline void mv(   Matrix& m, 
-                  const Vector& x, 
-                  Vector& y)
-{
-    dg::blas2::detail::doSymv( m, x, y, 
-                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<const Vector>::vector_category(),
-                       typename dg::VectorTraits<Vector>::vector_category() );
-    return;
-}
-///@endcond
 
 /**
  * @brief General Matrix-Vector product
@@ -165,6 +149,31 @@ inline void gemv( Matrix& m,
                        typename dg::MatrixTraits<Matrix>::matrix_category(), 
                        typename dg::VectorTraits<Vector1>::vector_category(),
                        typename dg::VectorTraits<Vector2>::vector_category() );
+    return;
+}
+/**
+ * @brief General Matrix-Vector product
+ *
+ * @param alpha A Scalar
+ * @param P The Matrix
+ * @param x A Vector different from y 
+ * @param beta A Scalar
+ * @param y contains the solution on output
+ */
+template< class Precon, class Vector>
+inline void gemv( typename MatrixTraits<Precon>::value_type alpha, 
+                  const Precon& P, 
+                  const Vector& x, 
+                  typename MatrixTraits<Precon>::value_type beta, 
+                  Vector& y)
+{
+    if(alpha == (typename MatrixTraits<Precon>::value_type)0) {
+        dg::blas1::scal( y, alpha);
+        return;
+    }
+    dg::blas2::detail::doGemv( alpha, P, x, beta, y, 
+                       typename dg::MatrixTraits<Precon>::matrix_category(), 
+                       typename dg::VectorTraits<Vector>::vector_category() );
     return;
 }
 ///@}

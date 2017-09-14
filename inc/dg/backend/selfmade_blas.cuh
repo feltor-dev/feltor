@@ -50,6 +50,19 @@ inline void doSymv(
     m.symv( alpha, x, beta, y);
 }
 
+template< class Matrix, class Vector>
+inline void doGemv(  
+              typename VectorTraits<Vector>::value_type alpha, 
+              const Matrix& m,
+              const Vector& x, 
+              typename VectorTraits<Vector>::value_type beta, 
+              Vector& y, 
+              SelfMadeMatrixTag,
+              AnyVectorTag)
+{
+    m.symv( alpha, x, beta, y);
+}
+
 } //namespace detail
 } //namespace blas2
 } //namespace dg

@@ -154,7 +154,9 @@ void ell_multiply_kernel33( value_type alpha, value_type beta,
 				int B0 = (i==0 || i==num_rows-1)?(data_idx[i*3+0]*3+k)*3:(0*3+k)*3;
                 int B1 = (i==0 || i==num_rows-1)?(data_idx[i*3+1]*3+k)*3:(1*3+k)*3;
                 int B2 = (i==0 || i==num_rows-1)?(data_idx[i*3+2]*3+k)*3:(2*3+k)*3;
+#if defined(__INTEL_COMPILER)
 				#pragma vector nontemporal(y)
+#endif //__INTEL_COMPILER
 				for( int j=right_range[0]; j<right_range[1]; j++)
 				{
 				    value_type temp = 0;

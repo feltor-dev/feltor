@@ -138,7 +138,8 @@ struct Explicit
     dg::ArakawaX< Geometry, Matrix, container> arakawa; 
 
     dg::Invert<container> invert_invgamma, invert_pol;
-    dg::MultigridCG2d<Geometry, Matrix, container> multigrid_pol, multigrid_invgammaPhi, multigrid_invgammaN; 
+    dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
+    dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
     std::vector<container> multi_chi;
 
     const container w2d, v2d, one;
@@ -163,17 +164,18 @@ Explicit< Geometry, M, container>::Explicit( const Geometry& grid, const Paramet
     arakawa( grid), 
     invert_invgamma( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     invert_pol(      omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
-    multigrid_pol( grid, 3), multigrid_invgammaPhi( grid, 3), multigrid_invgammaN(grid, 3),
+    multigrid( grid, 3),
+    old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi), 
     w2d( dg::create::volume(grid)), v2d( dg::create::inv_volume(grid)), one( dg::evaluate(dg::one, grid)),
     eps_pol(p.eps_pol), eps_gamma( p.eps_gamma), kappa(p.kappa), friction(p.friction), nu(p.nu), tau( p.tau), equations( p.equations), boussinesq(p.boussinesq)
 { 
-    multi_chi= multigrid_pol.project( chi);
+    multi_chi= multigrid.project( chi);
     multi_pol.resize(3);
     multi_gamma1.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct( multigrid_pol.grids()[u].get(), dg::not_normed, dg::centered, p.jfactor);
-        multi_gamma1[u].construct( multigrid_pol.grids()[u].get(), -0.5*p.tau, dg::centered);
+        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, p.jfactor);
+        multi_gamma1[u].construct( multigrid.grids()[u].get(), -0.5*p.tau, dg::centered);
     }
 }
 
@@ -184,7 +186,9 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
     //in gyrofluid invert Gamma operator
     if( equations == "local" || equations == "global")
     {
-        std::vector<unsigned> number = multigrid_invgammaPhi.direct_solve( multi_gamma1, phi[1], potential, eps_gamma);
+        old_psi.extrapolate( phi[1]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, eps_gamma);
+        old_psi.update( phi[1]);
         //unsigned number = invert_invgamma( gamma1, phi[1], potential);
         if(  number[0] == invert_invgamma.get_max())
             throw dg::Fail( eps_gamma);
@@ -224,7 +228,7 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
         if( !boussinesq) 
         {
-            multigrid_pol.project( chi, multi_chi);
+            multigrid.project( chi, multi_chi);
             for( unsigned u=0; u<3; u++)
                 multi_pol[u].set_chi( multi_chi[u]);
             //pol.set_chi( chi);
@@ -236,7 +240,7 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
         dg::blas1::plus( chi, 1.); 
         if( !boussinesq) 
         {
-            multigrid_pol.project( chi, multi_chi);
+            multigrid.project( chi, multi_chi);
             for( unsigned u=0; u<3; u++)
                 multi_pol[u].set_chi( multi_chi[u]);
             //pol.set_chi( chi);
@@ -250,7 +254,7 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
         dg::blas1::pointwiseDot( binv, chi, chi); //\chi *= binv^2
         if( !boussinesq) 
         {
-            multigrid_pol.project( chi, multi_chi);
+            multigrid.project( chi, multi_chi);
             for( unsigned u=0; u<3; u++)
                 multi_pol[u].set_chi( multi_chi[u]);
             //pol.set_chi( chi);
@@ -259,7 +263,9 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     //compute polarisation
     if( equations == "local" || equations == "global")
     {
-        std::vector<unsigned> number = multigrid_invgammaN.direct_solve( multi_gamma1, gamma_n, y[1], eps_gamma);
+        old_gammaN.extrapolate( gamma_n);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, gamma_n, y[1], eps_gamma);
+        old_gammaN.update( gamma_n);
         //unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
         if(  number[0] == invert_invgamma.get_max())
             throw dg::Fail( eps_gamma);
@@ -271,11 +277,11 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
         if( boussinesq) 
             dg::blas1::pointwiseDivide( omega, chi, omega);
     //invert 
-    dg::blas1::transform( chi, chi, dg::INVERT<double>());
-    dg::blas1::pointwiseDot( chi, v2d, chi);
 
     //unsigned number = invert_pol( pol, phi[0], omega, v2d, chi);
-    std::vector<unsigned> number = multigrid_pol.direct_solve( multi_pol, phi[0], omega, eps_pol);
+    old_phi.extrapolate( phi[0]);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], omega, eps_pol);
+    old_phi.update( phi[0]);
     if(  number[0] == invert_pol.get_max())
         throw dg::Fail( eps_pol);
     return phi[0];
@@ -354,10 +360,8 @@ void Explicit<G, M, container>::operator()( std::vector<container>& y, std::vect
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
         arakawa(y[0], phi[1], omega);
-        dg::blas1::axpby( 1., omega, 1., yp[1]);
-        dg::blas1::axpby( -friction, y[1], 1., yp[1]);
-        dg::blas2::gemv( arakawa.dy(), y[0], omega);
-        dg::blas1::axpby( -1., omega, 1., yp[1]);
+        dg::blas1::axpbypgz( 1., omega, -friction, y[1], 1., yp[1]);
+        dg::blas2::gemv( 1., arakawa.dy(), y[0], 1., yp[1]);
         return;
     }
     else if( equations == "gravity_local")
@@ -365,8 +369,7 @@ void Explicit<G, M, container>::operator()( std::vector<container>& y, std::vect
         arakawa(y[0], phi[0], yp[0]);
         arakawa(y[1], phi[0], yp[1]);
         dg::blas2::gemv( arakawa.dy(), y[0], dyy[0]);
-        dg::blas1::axpby( -friction, y[1], 1., yp[1]);
-        dg::blas1::axpby( -1., dyy[0], 1., yp[1]);
+        dg::blas1::axpbypgz( -friction, y[1], -1., dyy[0], 1., yp[1]);
         return;
     }
     else if( equations == "drift_global")
@@ -376,21 +379,15 @@ void Explicit<G, M, container>::operator()( std::vector<container>& y, std::vect
         arakawa(y[0], phi[1], omega);
         dg::blas1::pointwiseDot( binv, yp[0], yp[0]);
         dg::blas1::pointwiseDot( binv, yp[1], yp[1]);
-        dg::blas1::pointwiseDot( binv, omega, omega);
-        dg::blas1::axpby( 1., omega, 1., yp[1]);
+        dg::blas1::pointwiseDot( 1., binv, omega, 1., yp[1]);
 
         dg::blas2::gemv( arakawa.dy(), phi[0], dyphi[0]);
         dg::blas2::gemv( arakawa.dy(), phi[1], dyphi[1]);
         //ExB compression
-        dg::blas1::pointwiseDot( dyphi[0], ype[0], omega);
-        dg::blas1::axpby( kappa, omega, 1., yp[0]); 
-        dg::blas1::pointwiseDot( dyphi[0], y[1], omega);
-        dg::blas1::axpby( kappa, omega, 1., yp[1]); 
-        dg::blas1::pointwiseDot( dyphi[1], ype[0], omega);
-        dg::blas1::axpby( kappa, omega, 1., yp[1]); 
+        dg::blas1::pointwiseDot( kappa, dyphi[0], ype[0], 1., yp[0]);
+        dg::blas1::pointwiseDot( kappa, dyphi[0], y[1], kappa, dyphi[1], ype[0], 1.,  yp[1]);
         // diamagnetic compression
-        dg::blas2::gemv( arakawa.dy(), y[0], omega);
-        dg::blas1::axpby( -kappa, omega, 1., yp[1]);
+        dg::blas2::gemv( -kappa, arakawa.dy(), y[0], 1., yp[1]);
         return;
     }
     else
@@ -400,17 +397,15 @@ void Explicit<G, M, container>::operator()( std::vector<container>& y, std::vect
             arakawa( y[i], phi[i], yp[i]);
             if(equations == "global") dg::blas1::pointwiseDot( binv, yp[i], yp[i]);
         }
+        double _tau[2] = {-1., tau};
         //compute derivatives and exb compression
         for( unsigned i=0; i<y.size(); i++)
         {
             dg::blas2::gemv( arakawa.dy(), y[i], dyy[i]);
             dg::blas2::gemv( arakawa.dy(), phi[i], dyphi[i]);
             if(equations == "global") dg::blas1::pointwiseDot( dyphi[i], ype[i], dyphi[i]);
-            dg::blas1::axpby( kappa, dyphi[i], 1., yp[i]);
+            dg::blas1::axpbypgz( kappa, dyphi[i], _tau[i]*kappa, dyy[i], 1., yp[i]);
         }
-        // diamagnetic compression
-        dg::blas1::axpby( -1.*kappa, dyy[0], 1., yp[0]);
-        dg::blas1::axpby( tau*kappa, dyy[1], 1., yp[1]);
     }
 
     return;

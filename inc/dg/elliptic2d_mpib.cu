@@ -62,7 +62,7 @@ int main(int argc, char* argv[] )
     t.tic();
     //dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> pol( grid, dg::not_normed, dg::centered);
     //pol.set_chi( chi);
-    unsigned stages = 2;
+    unsigned stages = 3;
 
     dg::MultigridCG2d<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec > multigrid( grid, stages, 0);
     

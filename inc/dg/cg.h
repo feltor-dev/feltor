@@ -258,6 +258,94 @@ unsigned CG< container>::operator()( Matrix& A, container& x, const container& b
 ///@endcond
 
 
+/**
+* @brief Class that manages the solutions of iterative methods and
+can be used to get initial guesses based on past solutions
+*
+* @copydoc hide_container_lvl1
+*/
+template<class container>
+struct Extrapolation
+{
+    /*! @brief Set extrapolation type without initializing values
+     * @param type number of vectors to use for extrapolation ( 0<=type<=3)
+     * @attention the update function must be used at least type times before the extrapolate function can be called
+     */
+    Extrapolation( unsigned type = 2){ set_type(type); }
+    /*! @brief Set extrapolation type and initialize values
+     * @param type number of vectors to use for extrapolation ( 0<=type<=3)
+     * @param init the vectors are initialized with this value
+     */
+    Extrapolation( unsigned type, const container& init) { 
+        set_type(type, init); 
+    }
+    ///@copydoc Extrapolation(unsigned)
+    void set_type( unsigned new_type)
+    {
+        m_type = new_type;
+        m_x.resize( new_type);
+        assert( m_type <= 3 );
+    }
+    ///@copydoc Extrapolation(unsigned,const container&)
+    void set_type( unsigned new_type, const container& init)
+    {
+        m_x.assign( new_type, init);
+        m_type = new_type;
+        assert( m_type <= 3 );
+    }
+    ///read the current extrapolation type
+    unsigned get_type( ) const{return m_type;}
+
+    /**
+    * @brief Extrapolate values 
+    *
+    * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
+    */
+    void extrapolate( container& new_x) const{
+        switch(m_type)
+        {
+            case(0): 
+                     break;
+            case(1): dg::blas1::copy( m_x[0], new_x);
+                     break;
+            case(2): dg::blas1::axpby( 2., m_x[0], -1., m_x[1], new_x);
+                     break;
+            case(3): dg::blas1::axpby( 1., m_x[2], -3., m_x[1], new_x);
+                     dg::blas1::axpby( 3., m_x[0], 1., new_x);
+                     break;
+            default: dg::blas1::axpby( 2., m_x[0], -1., m_x[1], new_x);
+        }
+    }
+
+    
+    /**
+    * @brief move the all values one step back and copy the given vector as current head
+    *
+    * @param new_head the new head ( may alias the tail)
+    */
+    void update( const container& new_head){
+        if( m_type == 0) return;
+        //push out last value
+        for (unsigned u=m_type-1; u>0; u--)
+            m_x[u].swap( m_x[u-1]);
+        blas1::copy( new_head, m_x[0]);
+    }
+
+    /**
+     * @brief return the current head 
+     * @return current head (undefined if m_type==0)
+     */
+    const container& head()const{return m_x[0];}
+    ///write access to tail value ( the one that will be deleted in the next update
+    container& tail(){return m_x[m_type-1];}
+    ///read access to tail value ( the one that will be deleted in the next update
+    const container& tail()const{return m_x[m_type-1];}
+
+    private:
+    unsigned m_type;
+    std::vector<container> m_x;
+};
+
 
 /**
  * @brief Smart conjugate gradient solver. 
@@ -291,7 +379,7 @@ struct Invert
      * @brief Allocate nothing
      *
      */
-    Invert() { multiplyWeights_ = true; set_extrapolationType(2); nrmb_correction_ = 1.; }
+    Invert() { multiplyWeights_ = true; nrmb_correction_ = 1.; }
 
     /**
      * @brief Constructor
@@ -320,10 +408,10 @@ struct Invert
      */
     void construct( const container& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1.) 
     {
+        m_ex.set_type( extrapolationType);
         set_size( copyable, max_iter);
         set_accuracy( eps, nrmb_correction);
         multiplyWeights_=multiplyWeights;
-        set_extrapolationType( extrapolationType);
     }
 
 
@@ -335,7 +423,7 @@ struct Invert
      */
     void set_size( const container& assignable, unsigned max_iterations) {
         cg.construct(assignable, max_iterations);
-        phi0 = phi1 = phi2 = assignable;
+        m_ex.set_type( m_ex.get_type(), assignable);
     }
 
     /**
@@ -356,19 +444,7 @@ struct Invert
      */
     void set_extrapolationType( int extrapolationType)
     {
-        assert( extrapolationType <= 3 && extrapolationType >= 0);
-        switch(extrapolationType)
-        {
-            case(0): alpha[0] = 0, alpha[1] = 0, alpha[2] = 0;
-                     break;
-            case(1): alpha[0] = 1, alpha[1] = 0, alpha[2] = 0;
-                     break;
-            case(2): alpha[0] = 2, alpha[1] = -1, alpha[2] = 0;
-                     break;
-            case(3): alpha[0] = 3, alpha[1] = -3, alpha[2] = 1;
-                     break;
-            default: alpha[0] = 2, alpha[1] = -1, alpha[2] = 0;
-        }
+        m_ex.set_type( extrapolationType);
     }
     /**
      * @brief Set the maximum number of iterations 
@@ -386,7 +462,7 @@ struct Invert
     /**
     * @brief Return last solution
     */
-    const container& get_last() const { return phi0;}
+    const container& get_last() const { return m_ex.head();}
 
     /**
      * @brief Solve linear problem
@@ -436,22 +512,18 @@ struct Invert
         Timer t;
         t.tic();
 #endif //DG_BENCHMARK
-        blas1::axpbypgz( alpha[0], phi0, alpha[1], phi1, alpha[2], phi2); 
-        phi.swap(phi2);
+        m_ex.extrapolate( phi);
 
         unsigned number;
         if( multiplyWeights_ ) 
         {
-            dg::blas1::pointwiseDivide( rho, inv_weights, phi2);
-            number = cg( op, phi, phi2, p, inv_weights, eps_, nrmb_correction_);
+            dg::blas1::pointwiseDivide( rho, inv_weights, m_ex.tail());
+            number = cg( op, phi, m_ex.tail(), p, inv_weights, eps_, nrmb_correction_);
         }
         else
             number = cg( op, phi, rho, p, inv_weights, eps_, nrmb_correction_);
 
-        phi1.swap( phi2);
-        phi0.swap( phi1);
-        
-        blas1::copy( phi, phi0);
+        m_ex.update(phi);
 #ifdef DG_BENCHMARK
         t.toc();
 #ifdef MPI_VERSION
@@ -469,9 +541,8 @@ struct Invert
 
   private:
     value_type eps_, nrmb_correction_;
-    container phi0, phi1, phi2;
     dg::CG< container > cg;
-    value_type alpha[3];
+    Extrapolation<container> m_ex;
     bool multiplyWeights_; 
 };
 

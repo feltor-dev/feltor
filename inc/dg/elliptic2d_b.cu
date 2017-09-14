@@ -74,7 +74,7 @@ int main()
     {
 		t.tic();
 
-		unsigned stages = 2;
+		unsigned stages = 3;
 
 		dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages, scheme);
 		

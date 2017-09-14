@@ -11,7 +11,6 @@
 namespace dg
 {
 
-
 template< class Geometry, class Matrix, class container> 
 struct MultigridCG2d
 {
@@ -46,23 +45,19 @@ struct MultigridCG2d
             interT_[u] = dg::create::fast_projection(grids_[u].get(), 2, 2, dg::not_normed);
         }
 
-        dg::blas1::transfer(dg::evaluate(dg::zero, grid), x0_);
-        x1_ = x0_, x2_ = x0_;
-        
-        x_ = project(x0_); 
+        container x0;
+        dg::blas1::transfer( dg::evaluate( dg::zero, grid), x0);
+        x_ = project(x0); 
         m_r = x_,
 		b_ = x_;        
-		set_extrapolationType(extrapolation_type);
         set_scheme(scheme_type);        
     }
 
 	template<class SymmetricOp>
 	std::vector<unsigned> solve(/*const*/ std::vector<SymmetricOp>& op, container& x, const container& b, const double eps)
 	{
-		dg::blas1::axpbypgz(alpha[0], x0_, alpha[1], x1_, alpha[2], x2_);
-		x_[0].swap(x2_);
-
-        project(x_[0], x_);
+        //project initial guess down to coarse grid
+        project(x, x_);
         dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
         // project b down to coarse grid
         for( unsigned u=0; u<stages_-1; u++)
@@ -77,8 +72,6 @@ struct MultigridCG2d
         for (unsigned i = 0; i < numStageSteps; i++)
         {
             unsigned w = u + m_schemeLayout[i].m_step;
-
-
             //
             // iterate the solver on the system A x = b, with x = 0 as inital guess
             cg_[u].set_max(m_schemeLayout[i].m_niter);
@@ -114,10 +107,6 @@ struct MultigridCG2d
 		}
 
 		x_[0].swap(x);
-		x1_.swap(x2_);
-		x0_.swap(x1_);
-
-		blas1::copy(x, x0_);
 		return number;
 	}
 
@@ -126,10 +115,6 @@ struct MultigridCG2d
     {
         Timer t;
         t.tic();
-        //compute initial guess
-        dg::blas1::axpbypgz( alpha[0], x0_, alpha[1], x1_, alpha[2], x2_); 
-        
-        dg::blas1::copy( x2_, x);//save initial guess
         dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
         // compute residual r = Wb - A x
         dg::blas2::symv(op[0], x, m_r[0]);
@@ -161,10 +146,6 @@ struct MultigridCG2d
         t2.toc();
         std::cout << "stage: " << 0 << ", max iter: " << cg_[0].get_max() << ", iter: " << number[0] << ", took "<<t2.diff()<<"s\n";
         
-        x1_.swap( x2_);
-        x0_.swap( x1_);
-        
-        blas1::copy( x, x0_);
         t.toc();
         std::cout<< "Took "<<t.diff()<<"s\n";
         return number;
@@ -188,27 +169,6 @@ struct MultigridCG2d
 
     }
     unsigned stages()const{return stages_;}
-    /**
-     * @brief Set the extrapolation Type for following inversions
-     *
-     * @param extrapolationType number of last values to use for next extrapolation of initial guess
-     */
-    void set_extrapolationType( int extrapolationType)
-    {
-        assert( extrapolationType <= 3 && extrapolationType >= 0);
-        switch(extrapolationType)
-        {
-            case(0): alpha[0] = 0, alpha[1] = 0, alpha[2] = 0;
-                     break;
-            case(1): alpha[0] = 1, alpha[1] = 0, alpha[2] = 0;
-                     break;
-            case(2): alpha[0] = 2, alpha[1] = -1, alpha[2] = 0;
-                     break;
-            case(3): alpha[0] = 3, alpha[1] = -3, alpha[2] = 1;
-                     break;
-            default: alpha[0] = 2, alpha[1] = -1, alpha[2] = 0;
-        }
-    }
 
     const std::vector<dg::Handle< Geometry > > grids()const { return grids_; }
 
@@ -262,11 +222,11 @@ private:
         // (1) there can not be more than n-1 interpolations in succession
         
         unsigned u = m_startStage;
-        assert(u >= 0 && u <= stages_ - 1);
+        assert( u <= stages_ - 1);
         for (unsigned i = 0; i < m_schemeLayout.size(); i++)
         {
             u += m_schemeLayout[i].m_step;
-            assert(u >= 0 && u <= stages_ - 1);
+            assert( u <= stages_ - 1);
         }   
         assert(u == 0);
 	}
@@ -290,8 +250,6 @@ private:
     std::vector< MultiMatrix<Matrix, container> >  project_;
     std::vector< CG<container> > cg_;
     std::vector< container> x_, m_r, b_; 
-    container x0_, x1_, x2_;
-    double alpha[3];
 
     struct stepinfo
     {

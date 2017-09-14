@@ -270,7 +270,6 @@ struct Karniadakis
 
     /**
      * @brief return the current head of the computation
-     *
      * @return current head
      */
     const container& head()const{return u_[0];}

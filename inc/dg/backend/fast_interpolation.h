@@ -48,13 +48,8 @@ struct MultiMatrix
 
     }
 
-    void symv( const container& x, container& y) const{gemv(x,y);}
-    void symv( double alpha, const container& x, double beta, container& y) const{gemv(alpha, x,beta,y);}
-    void gemv( const container& x, container& y) const{ gemv( 1., x,0,y);}
-    /**
-    * @brief Applies all stored matrices one after the other
-    */
-    void gemv(double alpha, const container& x, double beta, container& y) const
+    void symv( const container& x, container& y) const{ symv( 1., x,0,y);}
+    void symv(double alpha, const container& x, double beta, container& y) const
     {
         int dims = inter_.size();
         if( dims == 1) 
