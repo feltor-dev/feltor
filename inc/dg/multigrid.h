@@ -129,15 +129,14 @@ struct MultigridCG2d
         //compute initial guess
         dg::blas1::axpbypgz( alpha[0], x0_, alpha[1], x1_, alpha[2], x2_); 
         
-		x_[0].swap(x2_);
-        dg::blas1::copy( x_[0], x);//save initial guess
+        dg::blas1::copy( x2_, x);//save initial guess
         dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
         // compute residual r = Wb - A x
-        dg::blas2::symv(op[0], x_[0], m_r[0]);
-        dg::blas1::axpby(-1.0, m_r[0], 1.0, b_[0], b_[0]);
+        dg::blas2::symv(op[0], x, m_r[0]);
+        dg::blas1::axpby(-1.0, m_r[0], 1.0, b_[0], m_r[0]);
         // project residual down to coarse grid
         for( unsigned u=0; u<stages_-1; u++)
-            dg::blas2::gemv( interT_[u], b_[u], b_[u+1]);
+            dg::blas2::gemv( interT_[u], m_r[u], m_r[u+1]);
         std::vector<unsigned> number(stages_);
         Timer t2;
         
@@ -147,7 +146,7 @@ struct MultigridCG2d
         {
             t2.tic();
             cg_[u].set_max(grids_[u].get().size());
-            number[u] = cg_[u]( op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
+            number[u] = cg_[u]( op[u], x_[u], m_r[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
             dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
             t2.toc();
             std::cout << "stage: " << u << ", max iter: " << cg_[u].get_max() << ", iter: " << number[u] << ", took "<<t2.diff()<<"s\n";
@@ -155,14 +154,13 @@ struct MultigridCG2d
         }
         t2.tic();
 
-        cg_[0].set_max(grids_[0].get().size());
-        number[0] = cg_[0]( op[0], x_[0], b_[0], op[0].precond(), op[0].inv_weights(), eps);
-        t2.toc();
-        std::cout << "stage: " << 0 << ", max iter: " << cg_[0].get_max() << ", iter: " << number[0] << ", took "<<t2.diff()<<"s\n";
         //update initial guess
         dg::blas1::axpby( 1., x_[0], 1., x);
+        cg_[0].set_max(grids_[0].get().size());
+        number[0] = cg_[0]( op[0], x, b_[0], op[0].precond(), op[0].inv_weights(), eps);
+        t2.toc();
+        std::cout << "stage: " << 0 << ", max iter: " << cg_[0].get_max() << ", iter: " << number[0] << ", took "<<t2.diff()<<"s\n";
         
-		//x_[0].swap( x);
         x1_.swap( x2_);
         x0_.swap( x1_);
         
