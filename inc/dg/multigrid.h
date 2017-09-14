@@ -34,14 +34,16 @@ struct MultigridCG2d
         }
         
 		inter_.resize(stages-1);
+		interT_.resize(stages-1);
         project_.resize( stages-1);
         
 		for(unsigned u=0; u<stages-1; u++)
         {
             // Projecting from one grid to the next is the same as 
             // projecting from the original grid to the coarse grids
-            project_[u] = dg::create::fast_projection(grids_[u].get(), 2, 2, dg::not_normed);
+            project_[u] = dg::create::fast_projection(grids_[u].get(), 2, 2, dg::normed);
             inter_[u] = dg::create::fast_interpolation(grids_[u+1].get(), 2, 2);
+            interT_[u] = dg::create::fast_projection(grids_[u].get(), 2, 2, dg::not_normed);
         }
 
         dg::blas1::transfer(dg::evaluate(dg::zero, grid), x0_);
@@ -62,7 +64,9 @@ struct MultigridCG2d
 
         project(x_[0], x_);
         dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
-		project(b_[0], b_);
+        // project b down to coarse grid
+        for( unsigned u=0; u<stages_-1; u++)
+            dg::blas2::gemv( interT_[u], b_[u], b_[u+1]);
 
         
         unsigned int numStageSteps = m_schemeLayout.size();
@@ -92,7 +96,7 @@ struct MultigridCG2d
                 dg::blas1::axpby(-1.0, m_r[u], 1.0, b_[u], m_r[u]);
                 //
                 // transfer residual to the rhs of the coarser grid
-                dg::blas2::symv(project_[u], m_r[u], b_[w]);
+                dg::blas2::symv(interT_[u], m_r[u], b_[w]);
                 //dg::blas2::symv(project_[u], x_[u], x_[w]);
                 std::cout << "zeroed " << w << ", ";
                 dg::blas1::scal(x_[w], 0.0);
@@ -128,19 +132,21 @@ struct MultigridCG2d
 		x_[0].swap(x2_);
         dg::blas1::copy( x_[0], x);//save initial guess
         dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
-        // compute residual r = b - A x
+        // compute residual r = Wb - A x
         dg::blas2::symv(op[0], x_[0], m_r[0]);
         dg::blas1::axpby(-1.0, m_r[0], 1.0, b_[0], b_[0]);
-        project( b_[0], b_);
+        // project residual down to coarse grid
+        for( unsigned u=0; u<stages_-1; u++)
+            dg::blas2::gemv( interT_[u], b_[u], b_[u+1]);
         std::vector<unsigned> number(stages_);
         Timer t2;
         
+        dg::blas1::scal( x_[stages_-1], 0.0);
         //now solve residual equations
 		for( unsigned u=stages_-1; u>0; u--)
         {
             t2.tic();
             cg_[u].set_max(grids_[u].get().size());
-            dg::blas1::scal( x_[u], 0.0);
             number[u] = cg_[u]( op[u], x_[u], b_[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
             dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
             t2.toc();
@@ -150,7 +156,6 @@ struct MultigridCG2d
         t2.tic();
 
         cg_[0].set_max(grids_[0].get().size());
-        dg::blas1::scal( x_[0], 0.0);
         number[0] = cg_[0]( op[0], x_[0], b_[0], op[0].precond(), op[0].inv_weights(), eps);
         t2.toc();
         std::cout << "stage: " << 0 << ", max iter: " << cg_[0].get_max() << ", iter: " << number[0] << ", took "<<t2.diff()<<"s\n";
@@ -235,7 +240,7 @@ private:
             //m_mode = correctionscheme;
             m_startStage = 0;
             for (unsigned u = 0; u < stages_-1; u++)
-                m_schemeLayout.push_back(stepinfo(1, 50));
+                m_schemeLayout.push_back(stepinfo(1, 5));
             
             m_schemeLayout.push_back(stepinfo(-1, 1000));
 
@@ -283,6 +288,7 @@ private:
     unsigned stages_;
     std::vector< dg::Handle< Geometry> > grids_;
     std::vector< MultiMatrix<Matrix, container> >  inter_;
+    std::vector< MultiMatrix<Matrix, container> >  interT_;
     std::vector< MultiMatrix<Matrix, container> >  project_;
     std::vector< CG<container> > cg_;
     std::vector< container> x_, m_r, b_; 
