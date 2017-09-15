@@ -116,7 +116,8 @@
   */
 
  /** @class hide_container_lvl1
-  * @tparam container A data container class for which the blas1 functionality is overloaded.
+  * @tparam container 
+  * A data container class for which the blas1 functionality is overloaded.
   * We assume that container is copyable/assignable and has a swap member function. 
   * Currently this is one of 
   *  - dg::HVec, dg::DVec, dg::MHVec or dg::MDVec  
@@ -124,14 +125,24 @@
   *
   */
  /** @class hide_matrix_container
-  * @tparam Matrix A class for which the blas2 functions are callable in connection with the container class
-  *  - dg::HMatrix with dg::HVec
-  *  - dg::DMatrix with dg::DVec
-  *  - dg::MHMatrix with dg::MHVec
-  *  - dg::MDMatrix with dg::MDVec
+  * @tparam Matrix 
+  * A class for which the blas2 functions are callable in connection with the container class. 
+  * The Matrix type can be one of:
+  *  - container: A container acts as a  diagonal matrix. 
+  *  - dg::HMatrix and dg::IHMatrix with dg::HVec or std::vector<dg::HVec>
+  *  - dg::DMatrix and dg::IDMatrix with dg::DVec or std::vector<dg::DVec>
+  *  - dg::MHMatrix with dg::MHVec or std::vector<dg::MHVec>
+  *  - dg::MDMatrix with dg::MDVec or std::vector<dg::MDVec>
+  *  - Any type that has the SelfMadeMatrixTag. In this case only those blas2 functions 
+  *  that have a corresponding member function in the Matrix class (e.g. symv( const container&, container&); ) can be called.
+  *  If the container is a std::vector, then the Matrix is applied to each of the elements.
   *
-  * @tparam container A data container class for which the blas1 functionality is overloaded. Also we assume that the type is copyable/assignable and has a swap member function. Currently this is one of 
-  *   dg::HVec, dg::DVec, dg::MHVec or dg::MDVec
+  * @tparam container 
+  * A data container class for which the blas1 functionality is overloaded.
+  * We assume that container is copyable/assignable and has a swap member function. 
+  * Currently this is one of 
+  *  - dg::HVec, dg::DVec, dg::MHVec or dg::MDVec  
+  *  - std::vector<dg::HVec>, std::vector<dg::DVec>, std::vector<dg::MHVec> or std::vector<dg::MDVec> . 
   */
 
  /** @class hide_symmetric_op
