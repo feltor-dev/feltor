@@ -13,7 +13,7 @@ namespace geo
     @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
  * @param R_X start value on input, X-point on output
  * @param Z_X start value on input, X-point on output
- * @ingroup misc
+ * @ingroup misc_geo
  */
 void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
 {

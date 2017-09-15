@@ -60,7 +60,7 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
 /*! @brief Euclidean dot product between two containers
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
- * do not match the result is undefined.
+ * do not match, the result is undefined.
  * @copydoc hide_container_lvl1
  * @param x Left container
  * @param y Right container may alias x
@@ -78,7 +78,7 @@ inline typename VectorTraits<container>::value_type dot( const container& x, con
 /*! @brief Modified BLAS 1 routine axpy
  *
  * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
- * do not match the result is undefined.
+ * do not match, the result is undefined.
  * @copydoc hide_container_lvl1
  * @param alpha Scalar  
  * @param x container x may alias y 
@@ -95,7 +95,7 @@ inline void axpby( typename VectorTraits<container>::value_type alpha, const con
 /*! @brief Modified BLAS 1 routine axpy
  *
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
- * do not match the result is undefined.
+ * do not match, the result is undefined.
 
  * @copydoc hide_container_lvl1
  * @param alpha Scalar  
@@ -114,7 +114,7 @@ inline void axpby( typename VectorTraits<container>::value_type alpha, const con
 /*! @brief Modified BLAS 1 routine axpy
  *
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
- * do not match the result is undefined.
+ * do not match, the result is undefined.
 
  * @copydoc hide_container_lvl1
  * @param alpha Scalar  
@@ -180,7 +180,7 @@ inline void plus( container& x, typename VectorTraits<container>::value_type alp
 * @brief A 'new' BLAS 1 routine. 
 *
 * Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
- * do not match the result is undefined.
+ * do not match, the result is undefined.
 
 * @copydoc hide_container_lvl1
 * @param x1 container x1  
@@ -198,7 +198,7 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
 * @brief A 'new' BLAS 1 routine. 
 *
 * Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
- * do not match the result is undefined.
+ * do not match, the result is undefined.
 
 * @copydoc hide_container_lvl1
 * @param alpha scalar
@@ -217,7 +217,7 @@ inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, co
 * @brief A 'new' BLAS 1 routine. 
 *
 * Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
- * do not match the result is undefined.
+ * do not match, the result is undefined.
 
 * @copydoc hide_container_lvl1
 * @param x1 container x1  
@@ -235,7 +235,7 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 * @brief A 'new' fused multiply-add BLAS 1 routine. 
 *
 * Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
- * do not match the result is undefined.
+ * do not match, the result is undefined.
 * @copydoc hide_container_lvl1
 * @param alpha scalar
 * @param x1 container x1  

@@ -40,7 +40,7 @@ geometries:
 
 doc: dg file geometries
 	ln -sf dg/html/modules.html index.html
-	echo "Open with: firefox index.html or on Windows: firefox dg/html/modules.html"
+	#Open with: firefox index.html or on Windows: firefox dg/html/modules.html
 
 
 clean:

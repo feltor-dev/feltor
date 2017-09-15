@@ -92,7 +92,7 @@ struct Alpha
 
  with \f$ A = \int dV \delta(\psi_p(R,Z)-\psi_0)|\nabla\psi_p|\f$
  * @copydoc hide_container
- * @ingroup misc
+ * @ingroup misc_geo
  */
 template <class container = thrust::host_vector<double> >
 struct FluxSurfaceAverage

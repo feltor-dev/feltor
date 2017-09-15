@@ -115,8 +115,8 @@ Moreover, we maintain tex files in every src folder for technical documentation,
 `make doc ` in the respective src folder.
 The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) of the dG library was generated with [Doxygen](http://www.doxygen.org). 
 You can generate a local version from source code.
-On linux you need the `doxygen`, `libjs-mathjax` and `graphviz` packages.
-Then type `make doc` in the folder `path/to/feltor/inc/doc` and open `index.html` (a symbolic link to `dg/html/modules.html`) with your favorite browser. 
+This depends on the `doxygen`, `libjs-mathjax` and `graphviz` packages.
+Type `make doc` in the folder `path/to/feltor/inc/doc` and open `index.html` (a symbolic link to `dg/html/modules.html`) with your favorite browser. 
 
 ## 3. Contributions and Acknowledgements
 For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).
@@ -124,6 +124,7 @@ We gratefully acknowledge contributions from
 - Ralph Kube
 - Eduard Reiter
 - Lukas Einkemmer
+- Jakob Gath
 
 We further acknowledge support on the Knights landing architecture from the High Level Support Team from 
 - Albert Gutiérrez
