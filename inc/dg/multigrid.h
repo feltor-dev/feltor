@@ -150,6 +150,35 @@ struct MultigridCG2d
         std::cout<< "Took "<<t.diff()<<"s\n";
         return number;
     }
+    template<class SymmetricOp>
+    std::vector<unsigned> test_solve( std::vector<SymmetricOp>& op, container&  x, const container& b, double eps)
+    {
+        Timer t;
+        t.tic();
+        dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
+        // compute residual r = Wb - A x
+        std::vector<unsigned> number( 4);
+        dg::blas1::copy( x, x_[0]);//save initial guess
+        cg_[0].set_max(1500);
+
+        number[0] = cg_[0]( op[0], x, b_[0], op[0].precond(), op[0].inv_weights(), eps, 1.);
+        container p = cg_[0].search_direction();
+        dg::blas2::symv( project_[0], p, m_r[1]);
+        dg::blas2::symv( inter_[0], m_r[1], cg_[0].search_direction());
+        dg::blas1::axpby( 1. ,p,-1., cg_[0].search_direction(), p);
+
+
+        cg_[0].set_max(10000);
+        number[1] = cg_[0]( op[0], x, b_[0], op[0].precond(), op[0].inv_weights(), eps, 1., false);
+
+        cg_[0].set_max(1500);
+        number[2] = cg_[0]( op[0], x_[0], b_[0], op[0].precond(), op[0].inv_weights(), eps, 1.);
+        cg_[0].set_max(10000);
+        number[3] = cg_[0]( op[0], x_[0], b_[0], op[0].precond(), op[0].inv_weights(), eps, 1., false);
+        std::cout << "Norm of smoothed p - Pp"<<sqrt( dg::blas1::dot(p,p) ) <<"\n";
+        
+        return number;
+    }
 
     ///src may alias first element of out
     void project( const container& src, std::vector<container>& out)

@@ -94,10 +94,11 @@ int main()
     	
 		t.tic();
 
-		std::vector<unsigned> number = multigrid.solve(multi_pol, x, b, eps);
+		//std::vector<unsigned> number = multigrid.direct_solve(multi_pol, x, b, eps);
+		std::vector<unsigned> number = multigrid.test_solve(multi_pol, x, b, eps);
 		
-		//for( unsigned u=0; u<number.size(); u++)
-		//	std::cout << " # iterations stage "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";
+		for( unsigned u=0; u<number.size(); u++)
+			std::cout << " # iterations stage "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";
 
 		t.toc();
 		std::cout << "Took "<< t.diff() <<"s\n";
@@ -113,28 +114,28 @@ int main()
     //std::cout << "L2 Norm2 of Error is                       " << err << std::endl;
     const double norm = dg::blas2::dot( w2d, solution);
     std::cout << " "<<sqrt( err/norm);
-    {
-		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::centered, jfactor);
-		pol_forward.set_chi( chi);
-		x = temp;
-		dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
-		std::cout << " "<< invert_fw( pol_forward, x, b, v2d, chi_inv);
-		dg::blas1::axpby( 1.,x,-1., solution, error);
-		err = dg::blas2::dot( w2d, error);
-		std::cout << " "<<sqrt( err/norm);
-    }
-
-    {
-		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
-		pol_backward.set_chi( chi);
-		x = temp;
-		dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
-		std::cout << " "<< invert_bw( pol_backward, x, b, v2d, chi_inv);
-		dg::blas1::axpby( 1.,x,-1., solution, error);
-		err = dg::blas2::dot( w2d, error);
-		std::cout << " "<<sqrt( err/norm)<<std::endl;
-    }
-
+//    {
+//		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::centered, jfactor);
+//		pol_forward.set_chi( chi);
+//		x = temp;
+//		dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
+//		std::cout << " "<< invert_fw( pol_forward, x, b, v2d, chi_inv);
+//		dg::blas1::axpby( 1.,x,-1., solution, error);
+//		err = dg::blas2::dot( w2d, error);
+//		std::cout << " "<<sqrt( err/norm);
+//    }
+//
+//    {
+//		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_backward( grid, dg::not_normed, dg::backward, jfactor);
+//		pol_backward.set_chi( chi);
+//		x = temp;
+//		dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
+//		std::cout << " "<< invert_bw( pol_backward, x, b, v2d, chi_inv);
+//		dg::blas1::axpby( 1.,x,-1., solution, error);
+//		err = dg::blas2::dot( w2d, error);
+//		std::cout << " "<<sqrt( err/norm)<<std::endl;
+//    }
+//
 
     dg::DMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
