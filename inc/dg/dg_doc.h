@@ -116,8 +116,12 @@
   */
 
  /** @class hide_container_lvl1
-  * @tparam container A data container class for which the blas1 functionality is overloaded. Also we assume that the type is copyable/assignable and has a swap member function. Currently this is one of 
-  *   dg::HVec, dg::DVec, dg::MHVec or dg::MDVec
+  * @tparam container A data container class for which the blas1 functionality is overloaded.
+  * We assume that container is copyable/assignable and has a swap member function. 
+  * Currently this is one of 
+  *  - dg::HVec, dg::DVec, dg::MHVec or dg::MDVec  
+  *  - std::vector<dg::HVec>, std::vector<dg::DVec>, std::vector<dg::MHVec> or std::vector<dg::MDVec> . 
+  *
   */
  /** @class hide_matrix_container
   * @tparam Matrix A class for which the blas2 functions are callable in connection with the container class
