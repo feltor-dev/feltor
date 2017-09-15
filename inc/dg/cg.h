@@ -64,9 +64,6 @@ class CG
      */
     unsigned get_max() const {return max_iter;}
 
-    container& search_direction(){return p;}
-    const container& search_direction()const {return p;}
-
     /**
      * @brief Set internal storage and maximum number of iterations
      *
@@ -118,7 +115,7 @@ class CG
      * @return Number of iterations used to achieve desired precision
      */
     template< class SymmetricOp, class Preconditioner, class SquareNorm >
-    unsigned operator()( SymmetricOp& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1, bool initialize = true);
+    unsigned operator()( SymmetricOp& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
     container r, p, ap; 
     unsigned max_iter;
@@ -206,7 +203,7 @@ unsigned CG< container>::operator()( Matrix& A, container& x, const container& b
 
 template< class container>
 template< class Matrix, class Preconditioner, class SquareNorm>
-unsigned CG< container>::operator()( Matrix& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction, bool initialize)
+unsigned CG< container>::operator()( Matrix& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( S, b));
 #ifdef DG_DEBUG
@@ -230,8 +227,7 @@ unsigned CG< container>::operator()( Matrix& A, container& x, const container& b
     //note that dot does automatically synchronize
     if( sqrt( blas2::dot(S,r) ) < eps*(nrmb + nrmb_correction)) //if x happens to be the solution
         return 0;
-    if( initialize) 
-        blas2::symv( P, r, p );//<-- compute p_0
+    blas2::symv( P, r, p );//<-- compute p_0
     value_type nrmzr_old = blas1::dot( p,r); //and store the scalar product
     value_type alpha, nrmzr_new;
     for( unsigned i=1; i<max_iter; i++)
@@ -245,8 +241,8 @@ unsigned CG< container>::operator()( Matrix& A, container& x, const container& b
     if(rank==0)
 #endif //MPI
     {
-        std::cout << "Norm: r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
-        std::cout << "Norm p*S*p "<<sqrt( blas1::dot( p, p)) <<"\t ";
+        std::cout << "Absolute r*S*r "<<sqrt( blas2::dot(S,r)) <<"\t ";
+        std::cout << " < Critical "<<eps*nrmb + eps <<"\t ";
         std::cout << "(Relative "<<sqrt( blas2::dot(S,r) )/nrmb << ")\n";
     }
 #endif //DG_DEBUG
