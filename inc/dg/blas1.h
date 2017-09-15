@@ -241,8 +241,9 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 * @param x1 container x1  
 * @param y1 container y1 
 * @param beta scalar
-* @param x2 container x1  
-* @param y2 container y1 
+* @param x2 container x2  
+* @param y2 container y2 
+* @param gamma scalar
 * @param z  container z contains result on output 
 * @note aliases are allowed
 */
