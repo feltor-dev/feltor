@@ -200,9 +200,9 @@ void transform(
 /**
  * @brief The High PrEcision Conformal grid generaTOR 
  *
- * @ingroup generators
+ * @ingroup generators_geo
  * @tparam IMatrix The interpolation matrix type
- * @tparam Matrix  The matrix type in the elliptic equation
+ * @copydoc hide_matrix
  * @copydoc hide_container
  */
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>

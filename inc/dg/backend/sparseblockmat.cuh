@@ -38,15 +38,20 @@ struct EllSparseBlockMatDevice
     
     /**
     * @brief Apply the matrix to a vector
-    *
+    * \f[  y= \alpha M x + \beta y\f]
+    * @tparam deviceContainer one of the containers of the thrust library
+    * @param alpha multiplies input
     * @param x input
-    * @param y output may not equal input
+    * @param beta premultiplies output
+    * @param y output may not alias input
     */
     template <class deviceContainer>
     void symv(value_type alpha, const deviceContainer& x, value_type beta, deviceContainer& y) const;
     /**
     * @brief Apply the matrix to a vector
     *
+    * same as symv( 1., x,0.,y);
+    * @tparam deviceContainer one of the containers of the thrust library
     * @param x input
     * @param y output may not equal input
     */

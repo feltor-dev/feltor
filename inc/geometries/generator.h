@@ -10,7 +10,7 @@ A generator is there to construct coordinate transformations from physical coord
 \f$ x,y\f$ to the computational domain \f$\zeta, \eta\f$, which
 is a product space. 
 @note the origin of the computational space is assumed to be (0,0)
- @ingroup generators
+ @ingroup generators_geo
 */
 struct aGenerator2d
 {

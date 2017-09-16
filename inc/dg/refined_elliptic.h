@@ -7,7 +7,7 @@
 
 /*! @file 
 
-  Contains an elliptic method on a refined grid
+  @brief contains an elliptic method on a refined grid
   */
 namespace dg
 {
@@ -19,7 +19,8 @@ class RefinedElliptic
     /**
      * @brief Construct from Grid
      *
-     * @param g The Grid, boundary conditions are taken from here
+     * @param g_coarse The coarse Grid
+     * @param g_fine The fine Grid, boundary conditions are taken from here
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
@@ -32,7 +33,8 @@ class RefinedElliptic
     /**
      * @brief Construct from grid and boundary conditions
      *
-     * @param g The Grid
+     * @param g_coarse The coarse Grid
+     * @param g_fine The fine Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
      * @param no Not normed for elliptic equations, normed else
@@ -57,11 +59,10 @@ class RefinedElliptic
     }
 
     /**
-     * @brief Returns the weights used to make the matrix symmetric 
-     *
-     * @return weights
+     * @brief Returns the inverse weights used to make the matrix normed
+     * @return inverse weights
      */
-    const container& weights()const {return weights_;}
+    const container& inv_weights()const {return inv_weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
      *

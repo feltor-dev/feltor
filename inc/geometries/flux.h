@@ -123,7 +123,7 @@ struct Fpsi
 
 /**
  * @brief A symmetry flux generator
- * @ingroup generators
+ * @ingroup generators_geo
  */
 struct FluxGenerator : public aGenerator2d
 {
@@ -213,7 +213,7 @@ struct FluxGenerator : public aGenerator2d
 
 /**
  * @brief Same as the Ribeiro class just but uses psi as a flux label directly
- * @ingroup generators
+ * @ingroup generators_geo
  */
 struct RibeiroFluxGenerator : public aGenerator2d
 {

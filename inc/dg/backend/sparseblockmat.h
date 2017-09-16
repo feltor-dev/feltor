@@ -63,15 +63,18 @@ struct EllSparseBlockMat
     /**
     * @brief Apply the matrix to a vector
     *
+    * \f[  y= \alpha M x + \beta y\f]
+    * @param alpha multiplies input
     * @param x input
-    * @param y output may not equal input
+    * @param beta premultiplies output
+    * @param y output may not alias input
     */
     void symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const;
     /**
     * @brief Apply the matrix to a vector
     *
     * @param x input
-    * @param y output may not equal input
+    * @param y output may not alias input
     */
     void symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const {symv( 1., x, 0., y);}
 
@@ -167,7 +170,7 @@ struct CooSparseBlockMat
     * @param alpha multiplies input
     * @param x input
     * @param beta premultiplies output
-    * @param y output may not equal input
+    * @param y output may not alias input
     */
     void symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const;
     /**

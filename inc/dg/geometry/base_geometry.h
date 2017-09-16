@@ -144,7 +144,9 @@ struct aGeometry3d : public aTopology3d
      * @note the default coordinate map will be the identity 
      */
     aGeometry3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    ///@copydoc aTopology3d::aTopology3d(const aTopology3d&)
     aGeometry3d( const aGeometry3d& src):aTopology3d(src){}
+    ///@copydoc aTopology3d::operator=(const aTopology3d&)
     aGeometry3d& operator=( const aGeometry3d& src){
         aTopology3d::operator=(src);
         return *this;

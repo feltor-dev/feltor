@@ -2,7 +2,7 @@
 /*! 
  * 
  * @defgroup grids 1. New Geometry classes
- * @defgroup generators 2. Grid generators
+ * @defgroup generators_geo 2. Grid generators
  *
       All the grids introduced by this extension can be constructed with 
       generator classes. 
@@ -31,8 +31,26 @@
  * - there are some miscellaneous additions like a flux surface average class
  * and one used to integrate the field lines for parallel derivatives all in the dg::geo namespace.
  */
-
  /** @class hide_container
-  * @tparam container A data container class for which the blas1 functionality is overloaded. Also we assume that the type is copyable/assignable and has a swap member function. Currently this is one of 
-  *   dg::HVec, dg::DVec, dg::MHVec or dg::MDVec
+  * @tparam container 
+  * A data container class for which the blas1 functionality is overloaded.
+  * We assume that container is copyable/assignable and has a swap member function. 
+  * Currently this is one of 
+  *  - dg::HVec, dg::DVec, dg::MHVec or dg::MDVec  
+  *  - std::vector<dg::HVec>, std::vector<dg::DVec>, std::vector<dg::MHVec> or std::vector<dg::MDVec> . 
+  *
+  */
+ /** @class hide_matrix
+  * @tparam Matrix 
+  * A class for which the blas2 functions are callable in connection with the container class. 
+  * The Matrix type can be one of:
+  *  - container: A container acts as a  diagonal matrix. 
+  *  - dg::HMatrix and dg::IHMatrix with dg::HVec or std::vector<dg::HVec>
+  *  - dg::DMatrix and dg::IDMatrix with dg::DVec or std::vector<dg::DVec>
+  *  - dg::MHMatrix with dg::MHVec or std::vector<dg::MHVec>
+  *  - dg::MDMatrix with dg::MDVec or std::vector<dg::MDVec>
+  *  - Any type that has the SelfMadeMatrixTag specified in a corresponding 
+  *  MatrixTraits class (e.g. Elliptic). In this case only those blas2 functions 
+  *  that have a corresponding member function in the Matrix class (e.g. symv( const container&, container&); ) can be called.
+  *  If the container is a std::vector, then the Matrix is applied to each of the elements.
   */

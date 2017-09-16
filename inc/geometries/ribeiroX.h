@@ -237,7 +237,7 @@ struct XFieldFinv
 
 /**
  * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 
- * @ingroup generators
+ * @ingroup generators_geo
  * @tparam Psi All the template parameters must model aBinaryOperator i.e. the bracket operator() must be callable with two arguments and return a double. 
  */
 struct RibeiroX : public aGeneratorX2d

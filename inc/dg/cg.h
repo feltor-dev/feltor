@@ -272,17 +272,17 @@ struct Extrapolation
         set_type(type, init); 
     }
     ///@copydoc Extrapolation(unsigned)
-    void set_type( unsigned new_type)
+    void set_type( unsigned type)
     {
-        m_type = new_type;
-        m_x.resize( new_type);
+        m_type = type;
+        m_x.resize( type);
         assert( m_type <= 3 );
     }
     ///@copydoc Extrapolation(unsigned,const container&)
-    void set_type( unsigned new_type, const container& init)
+    void set_type( unsigned type, const container& init)
     {
-        m_x.assign( new_type, init);
-        m_type = new_type;
+        m_x.assign( type, init);
+        m_type = type;
         assert( m_type <= 3 );
     }
     ///read the current extrapolation type

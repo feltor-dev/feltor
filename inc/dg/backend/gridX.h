@@ -9,6 +9,39 @@
   @brief base X-point topology classes
   */
 
+/*!@class hide_gridX_parameters2d
+ * @brief Construct a 2D X-point grid
+ *
+ * @param x0 left boundary in x
+ * @param x1 right boundary in x 
+ * @param y0 lower boundary in y
+ * @param y1 upper boundary in y 
+ * @param fx factor for the partition in x-direction (fx*Nx will be rounded)
+ * @param fy factor for the partition in y-direction (fy*Ny will be rounded)
+ * @param n  # of polynomial coefficients per dimension
+ *   (1<=n<=20, note that the library is optimized for n=3 )
+ * @param Nx # of points in x 
+ * @param Ny # of points in y
+ */
+
+/*!@class hide_gridX_parameters3d
+ * @brief Construct a 3D X-point grid
+ * @param x0 left boundary in x
+ * @param x1 right boundary in x 
+ * @param y0 lower boundary in y
+ * @param y1 upper boundary in y 
+ * @param z0 lower boundary in z
+ * @param z1 upper boundary in z 
+ * @param fx factor for the partition in x-direction
+ * @param fy factor for the partition in y-direction
+ * @param n  # of polynomial coefficients per (x-,y-) dimension
+*   (1<=n<=20, note that the library is optimized for n=3 )
+* @attention # of polynomial coefficients in z direction is always 1
+ * @param Nx # of points in x 
+ * @param Ny # of points in y
+ * @param Nz # of points in z
+ */
+
 
 namespace dg{
 
@@ -434,21 +467,8 @@ struct aTopologyX2d
   protected:
     ///disallow destruction through base class pointer
     ~aTopologyX2d(){}
-    /**
-     * @brief Construct a 2D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param fx factor for the partition in x-direction (fx*Nx will be rounded)
-     * @param fy factor for the partition in y-direction (fy*Ny will be rounded)
-     * @param n  # of polynomial coefficients per dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     */
+    ///@copydoc hide_gridX_parameters2d
+    ///@copydoc hide_bc_parameters2d
     aTopologyX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fy),
         n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
@@ -462,6 +482,7 @@ struct aTopologyX2d
         assert( Nx_ > 0  && Ny > 0 );
         assert( bcy != PER);
     }
+    ///@copydoc aTopology2d::aTopology2d(const aTopology2d&)
     aTopologyX2d(const aTopologyX2d& src){
         x0_=src.x0_, x1_=src.x1_;
         y0_=src.y0_, y1_=src.y1_;
@@ -469,6 +490,7 @@ struct aTopologyX2d
         n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, bcx_=src.bcx_, bcy_=src.bcy_;
         dlt_=src.dlt_;
     }
+    ///@copydoc aTopology2d::operator=(const aTopology2d&)
     aTopologyX2d& operator=(const aTopologyX2d& src){
         x0_=src.x0_, x1_=src.x1_;
         y0_=src.y0_, y1_=src.y1_;
@@ -490,7 +512,8 @@ struct aTopologyX2d
  */
 struct GridX2d : public aTopologyX2d
 {
-    ///@copydoc aTopologyX2d::aTopologyX2d()
+    ///@copydoc hide_gridX_parameters2d
+    ///@copydoc hide_bc_parameters2d
     GridX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx=PER, bc bcy=NEU):
         aTopologyX2d(x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy) { }
     ///allow explicit type conversion from any other topology
@@ -743,26 +766,8 @@ struct aTopologyX3d
   protected:
     ///disallow destruction through base class pointer
     ~aTopologyX3d(){}
-    /**
-     * @brief Construct a 3D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param z0 lower boundary in z
-     * @param z1 upper boundary in z 
-     * @param fx factor for the partition in x-direction
-     * @param fy factor for the partition in y-direction
-     * @param n  # of polynomial coefficients per (x-,y-) dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param Nz # of points in z
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     * @param bcz boundary condition in z
-     * @attention # of polynomial coefficients in z direction is always 1
-     */
+    ///@copydoc hide_gridX_parameters3d
+    ///@copydoc hide_bc_parameters3d
     aTopologyX3d( double x0, double x1, double y0, double y1, double z0, double z1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), fx_(fx), fy_(fy),
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
@@ -775,6 +780,7 @@ struct aTopologyX3d
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
         assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
     }
+    ///@copydoc aTopology3d::aTopology3d(const aTopology3d&)
     aTopologyX3d(const aTopologyX3d& src){
         x0_=src.x0_, x1_=src.x1_;
         y0_=src.y0_, y1_=src.y1_;
@@ -783,6 +789,7 @@ struct aTopologyX3d
         n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, Nz_=src.Nz_,bcx_=src.bcx_, bcy_=src.bcy_, bcz_=src.bcz_;
         dlt_=src.dlt_;
     }
+    ///@copydoc aTopology3d::operator=(const aTopology3d&)
     aTopologyX3d& operator=(const aTopologyX3d& src){
         x0_=src.x0_, x1_=src.x1_;
         y0_=src.y0_, y1_=src.y1_;
@@ -806,7 +813,8 @@ struct aTopologyX3d
  */
 struct GridX3d : public aTopologyX3d
 {
-    ///@copydoc aTopologyX2d::aTopologyX2d()
+    ///@copydoc hide_gridX_parameters3d
+    ///@copydoc hide_bc_parameters3d
     GridX3d( double x0, double x1, double y0, double y1, double z0, double z1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=PER, bc bcy=NEU, bc bcz=PER):
         aTopologyX3d(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
     ///allow explicit type conversion from any other topology

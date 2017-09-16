@@ -273,7 +273,7 @@ void construct_rz( Nemov nemov,
  * @brief Generate a simple orthogonal grid 
  *
  * Psi is the radial coordinate and you can choose various discretizations of the first line
- * @ingroup generators
+ * @ingroup generators_geo
  */
 struct SimpleOrthogonal : public aGenerator2d
 {
