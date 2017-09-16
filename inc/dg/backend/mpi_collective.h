@@ -190,7 +190,7 @@ struct BijectiveComm
         thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.data().begin());
         //senden
         Vector store( p_.store_size());
-        p_.scatter( *values_.data(), store);
+        p_.scatter( values_.data(), store);
         return store;
     }
 
@@ -205,7 +205,7 @@ struct BijectiveComm
     void global_scatter_reduce( const Vector& toScatter, Vector& values) const
     {
         //actually this is a gather but we constructed it invertedly
-        p_.gather( toScatter, *values_.data());
+        p_.gather( toScatter, values_.data());
         //nach PID geordnete Werte wieder umsortieren
         thrust::scatter( values_.data().begin(), values_.data().end(), idx_.begin(), values.begin());
     }
@@ -325,7 +325,7 @@ struct SurjectiveComm
         thrust::gather( gatherMap_.begin(), gatherMap_.end(), values.begin(), store_.data().begin());
         //now gather from store into buffer
         Vector buffer( buffer_size_);
-        bijectiveComm_.global_scatter_reduce( *store_.data(), buffer);
+        bijectiveComm_.global_scatter_reduce( store_.data(), buffer);
         return buffer;
     }
     void global_scatter_reduce( const Vector& toScatter, Vector& values)
@@ -413,7 +413,7 @@ struct GeneralComm
     }
     void global_scatter_reduce( const Vector& toScatter, Vector& values)
     {
-        surjectiveComm_.global_scatter_reduce( toScatter, *store_.data());
+        surjectiveComm_.global_scatter_reduce( toScatter, store_.data());
         thrust::scatter( store_.data().begin(), store_.data().end(), scatterMap_.begin(), values.begin());
     }
 

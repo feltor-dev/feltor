@@ -2,7 +2,7 @@
 
 #include "evaluation.cuh"
 #include "xspacelib.cuh"
-#include "cloneable.h"
+#include "memory.h"
 #include "../blas1.h"
 
 /*! @file 

@@ -194,7 +194,7 @@ struct Helmholtz2
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
      */
-    void symv( container& x, container& y) 
+    void symv(const container& x, container& y) 
     {
         if( alpha_ != 0)
         {

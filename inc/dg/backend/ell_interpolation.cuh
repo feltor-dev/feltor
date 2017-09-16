@@ -201,7 +201,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
  * @note n must be smaller than 5
  * @attention no range check is performed on the input vectors
  */
-cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const aGrid1d& g  )
+cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thrust::device_vector<double>& x, const Grid1d& g  )
 {
     assert( g.n()<=4);
     //allocate ell matrix storage

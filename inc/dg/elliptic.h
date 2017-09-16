@@ -340,7 +340,7 @@ struct GeneralElliptic
     const container& precond()const {return precond_;}
 
     ///@copydoc Elliptic::symv()
-    void symv( container& x, container& y) 
+    void symv( const container& x, container& y) 
     {
         dg::blas2::gemv( rightx, x, temp0); //R_x*x 
         dg::blas1::pointwiseDot( xchi, temp0, xx); //Chi_x*R_x*x 
@@ -504,7 +504,7 @@ struct GeneralEllipticSym
     const container& precond()const {return precond_;}
 
     ///@copydoc Elliptic::symv()
-    void symv( container& x, container& y) 
+    void symv( const container& x, container& y) 
     {
         ellipticForward_.symv( x,y);
         ellipticBackward_.symv( x,temp_);
@@ -607,7 +607,7 @@ struct TensorElliptic
     const container& precond()const {return precond_;}
 
     ///@copydoc Elliptic::symv()
-    void symv( container& x, container& y) 
+    void symv( const container& x, container& y) 
     {
         //compute gradient
         dg::blas2::gemv( rightx, x, tempx_); //R_x*f 

@@ -20,11 +20,18 @@ struct Composite
     Composite& operator=( const Composite<Matrix2>& src){ Composite c(src); 
         *this = c; return *this;}
     template< class container>
-    void symv( const  container& v1, container& v2)
+    void symv( const  container& v1, container& v2) const
     {
-        m1.symv( v1, v2);
+        m1.symv( v1, v2); //computes first part
         if( dual)
-            m2.symv( v1, v2);
+            m2.symv( v1, v2); //computes second part
+    }
+    template< class container>
+    void symv( double alpha, const  container& v1, double beta, container& v2) const
+    {
+        m1.symv( alpha, v1, beta, v2); //computes first part
+        if( dual)
+            m2.symv( alpha, v1, beta, v2); //computes second part
     }
     void display( std::ostream& os = std::cout) const
     {

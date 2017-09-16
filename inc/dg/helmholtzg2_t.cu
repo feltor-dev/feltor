@@ -4,8 +4,8 @@
 
 #include "helmholtz.h"
 #include "backend/xspacelib.cuh"
+#include "backend/exceptions.h"
 #include "multistep.h"
-#include "exceptions.h"
 #include "cg.h"
 #include "functors.h"
 
