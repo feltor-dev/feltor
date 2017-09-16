@@ -147,8 +147,8 @@ struct Helmholtz
  * Can be used by the Invert class
  * @copydoc hide_geometry_matrix_container
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
- * @attention It is better to solve the normal Helmholtz operator twice
- * consecutively than solving the Helmholtz2 operator once. 
+ * @attention It is MUCH better to solve the normal Helmholtz operator twice,
+ * consecutively, than solving the Helmholtz2 operator once. 
  */
 template< class Geometry, class Matrix, class container> 
 struct Helmholtz2

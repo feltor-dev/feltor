@@ -830,6 +830,7 @@ EXCLUDE                = ../dg/backend/creation.cuh \
                          ../dg/backend/sparseblockmat_gpu_kernels.cuh \
                          ../dg/backend/sparseblockmat_omp_kernels.h \
                          ../dg/backend/transpose.h \
+                         ../dg/backend/average.h \
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded

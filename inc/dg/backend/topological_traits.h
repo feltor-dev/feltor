@@ -3,16 +3,14 @@
 namespace dg
 {
 
-///@cond
 template <class Topology>
 struct TopologyTraits{
-    typedef typename Topology::memory_category memory_category; //either shared or distributed
-    typedef typename Topology::dimensionality dimensionality; //either shared or distributed
+    typedef typename Topology::memory_category memory_category; //!<either shared or distributed
+    typedef typename Topology::dimensionality dimensionality; //!< two-dimensional or three-dimensional
 };
-///@endcond
 
 //memory categories
-struct MPITag{}; //!< distributed memory  system
+struct MPITag{}; //!< distributed memory system
 struct SharedTag{}; //!<  shared memory system
 
 //dimensionality 

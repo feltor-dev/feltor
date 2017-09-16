@@ -251,10 +251,14 @@ unsigned CG< container>::operator()( Matrix& A, container& x, const container& b
 
 
 /**
-* @brief Class that stores a number of solutions of iterative methods and
+* @brief Class that stores up to three solutions of iterative methods and
 can be used to get initial guesses based on past solutions
+
+ \f[ x_{init} = \alpha_0 x_0 + \alpha_{-1}x_{-1} + \alpha_{-2} x_{-2}\f]
+ where the indices indicate the current (0) and past (negative) solutions.
 *
 * @copydoc hide_container
+* @ingroup misc
 */
 template<class container>
 struct Extrapolation
