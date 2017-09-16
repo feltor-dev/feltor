@@ -28,6 +28,6 @@ Matrix transpose( const Matrix& src)
 {
     out = doTranspose( src, typename MatrixTraits<Matrix>::matrix_category());
 }
-///@endcond
 
 } //namespace dg
+///@endcond

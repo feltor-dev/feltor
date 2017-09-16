@@ -9,6 +9,11 @@
 #include <thrust/inner_product.h>
 #include <thrust/iterator/zip_iterator.h>
 
+
+
+/**@file
+* @brief a tensor product function between two cusp matrices
+*/
 namespace dg
 {
 

@@ -7,7 +7,7 @@
 
 /*!@file 
   
-  contains creation of projection matrices
+  @brief contains creation of projection matrices
  */
 namespace dg{
 ///@addtogroup interpolation

@@ -3,13 +3,24 @@
 #include <cmath>
 #include "../enums.h"
 #include "grid.h"
+
 /*! @file 
-  
-  MPI Grid objects
+  @brief MPI Grid objects
   */
 
 namespace dg
 {
+
+/*! @class hide_comm_parameters2d
+ * @param comm a two-dimensional Cartesian communicator
+ * @note the paramateres given in the constructor are global parameters 
+ */
+/*! @class hide_comm_parameters3d
+ * @param comm a three-dimensional Cartesian communicator
+ * @note the paramateres given in the constructor are global parameters 
+ */
+
+
 
 
 /**
@@ -285,20 +296,23 @@ struct aMPITopology2d
     ~aMPITopology2d(){}
 
     /**
-     * @copydoc dg::Grid2d::Grid2d()
-     * @param comm a two-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
+     * @copydoc hide_grid_parameters2d
+     * @copydoc hide_bc_parameters2d
+     * @copydoc hide_comm_parameters2d
      */
     aMPITopology2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), comm( comm)
     {
         check_division( Nx, Ny, bcx, bcy);
     }
+    ///copydoc aTopology2d::aTopology2d(const aTopology2d&)
     aMPITopology2d(const aMPITopology2d& src):g(src.g),comm(src.comm){}
+    ///copydoc aTopology2d::operator()(const aTopology2d&)
     aMPITopology2d& operator=(const aMPITopology2d& src){
         g = src.g; comm = src.comm;
         return *this;
     }
+    ///This function has an implementation 
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)=0;
     private:
     void check_division( unsigned Nx, unsigned Ny, bc bcx, bc bcy)
@@ -597,29 +611,27 @@ struct aMPITopology3d
         else
             return false;
     }
-    /**
-     *@copydoc aMPITopology2d::local()const
-     */
+    ///@copydoc aMPITopology2d::local()const
     Grid3d local() const {return Grid3d(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
-    /**
-     *@copydoc aMPITopology2d::global()const
-     */
+     ///@copydoc aMPITopology2d::global()const
     Grid3d global() const {return g;}
     protected:
     ///disallow deletion through base class pointer
     ~aMPITopology3d(){}
 
-    /**
-     * @copydoc Grid3d::Grid3d()
-     * @param comm a three-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
+    ///@copydoc hide_grid_parameters3d
+    ///@copydoc hide_bc_parameters3d
+    ///@copydoc hide_comm_parameters3d
     aMPITopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), comm( comm)
     {
         check_division( Nx, Ny, Nz, bcx, bcy, bcz);
     }
+    ///explicit copy constructor (default)
+    ///@param src source
     aMPITopology3d(const aMPITopology3d& src):g(src.g),comm(src.comm){}
+    ///explicit assignment operator (default)
+    ///@param src source
     aMPITopology3d& operator=(const aMPITopology3d& src){
         g = src.g; comm = src.comm;
         return *this;
@@ -701,18 +713,17 @@ void aMPITopology3d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, u
 struct MPIGrid2d: public aMPITopology2d
 {
     /**
-     * @copydoc dg::Grid2d::Grid2d()
-     * @param comm a two-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
+     * @copydoc hide_grid_parameters2d
+     * @copydoc hide_comm_parameters2d
      */
     MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
         aMPITopology2d( x0,x1,y0,y1,n,Nx,Ny,dg::PER,dg::PER,comm)
     { }
 
     /**
-     * @copydoc dg::Grid2d::Grid2d()
-     * @param comm a two-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
+     * @copydoc hide_grid_parameters2d
+     * @copydoc hide_bc_parameters2d
+     * @copydoc hide_comm_parameters2d
      */
     MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         aMPITopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy,comm)
@@ -729,15 +740,15 @@ struct MPIGrid2d: public aMPITopology2d
  */
 struct MPIGrid3d : public aMPITopology3d
 {
+    ///@copydoc hide_grid_parameters3d
+    ///@copydoc hide_comm_parameters3d
     MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
         aMPITopology3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER,comm )
     { }
 
-    /**
-     * @copydoc Grid3d::Grid3d()
-     * @param comm a three-dimensional Cartesian communicator
-     * @note the paramateres given in the constructor are global parameters 
-     */
+    ///@copydoc hide_grid_parameters3d
+    ///@copydoc hide_bc_parameters3d
+    ///@copydoc hide_comm_parameters3d
     MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         aMPITopology3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm)
     { }

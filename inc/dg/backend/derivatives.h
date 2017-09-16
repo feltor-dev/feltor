@@ -4,9 +4,9 @@
 #include "dx.h"
 
 /*! @file 
-  
-  Convenience functions to create 2D derivatives
+  @brief Convenience functions to create 2D derivatives
   */
+
 namespace dg{
 
 

@@ -11,19 +11,22 @@
 /**
 * @file 
 
-Contains creation function to create an interpolation ell_matrix on the
+@brief contains creation functions to create an interpolation ell_matrix on the
     device
 */
 
 namespace dg
 {
+///@addtogroup typedefs
+///@{
 //interpolation matrices
 typedef cusp::csr_matrix<int, double, cusp::host_memory> IHMatrix; //!< CSR host Matrix
 typedef cusp::csr_matrix<int, double, cusp::device_memory> IDMatrix; //!< CSR device Matrix
+///@}
 
 namespace create
 {
-    ///@cond
+///@cond
 namespace detail
 {
 

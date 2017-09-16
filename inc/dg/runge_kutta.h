@@ -9,9 +9,8 @@
 
 
 /*! @file
-
-  This file contains runge-kutta explicit time-integrators
-  */
+ * @brief contains runge-kutta explicit time-integrators
+ */
 namespace dg{
 
 //namespace detail <--------- ??
@@ -334,7 +333,7 @@ const double rk_classic<17>::b[17] = {
  *  by ones on the left and \f$ D\f$ its
  *  diagonal part. 
 * @tparam k Order of the method (1, 2, 3 or 4)
-* @copydoc hide_container_lvl1
+* @copydoc hide_container
 */
 template< size_t k, class container>
 struct RK
@@ -409,7 +408,7 @@ void RK<k, container>::operator()( Functor& f, const container& u0, container& u
 * The coefficients are chosen in the classic form given by Runge and Kutta. 
 * Needs more calls for axpby than our RK class but we implemented higher orders
 * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
-* @copydoc hide_container_lvl1
+* @copydoc hide_container
 */
 template< size_t s, class container>
 struct RK_classic
@@ -490,7 +489,7 @@ void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, d
  * @brief Integrate differential equation with a stage 1 Runge-Kutta scheme and a fixed number of steps
  *
  * @tparam RHS The right-hand side class
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param rhs The right-hand-side
  * @param begin initial condition 
  * @param end (write-only) contains solution on output
@@ -549,7 +548,7 @@ void stepperRK17(RHS& rhs, const container& begin, container& end, double T_min,
  *
  * @tparam RHS The right-hand side class. There must be the function bool monitor( const container& end); available which is called after every step. Return true if everything is ok and false if the integrator certainly fails.
  * The other function is the double error( const container& end0, const container& end1); which computes the error norm in which the integrator should converge. 
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param rhs The right-hand-side
  * @param begin initial condition (size 3)
  * @param end (write-only) contains solution on output

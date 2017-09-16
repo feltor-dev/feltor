@@ -6,8 +6,7 @@
 #include "../enums.h"
 
 /*! @file 
-  
-  GridX objects
+  @brief base X-point topology classes
   */
 
 

@@ -36,7 +36,7 @@ int main( int argc, char* argv[])
     int rank;
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+    dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     Json::Reader reader;
     Json::Value js;

@@ -13,7 +13,7 @@
 
 /*! @file 
 
-  Contains the general negative elliptic operator
+  @brief General negative elliptic operators
   */
 namespace dg
 {

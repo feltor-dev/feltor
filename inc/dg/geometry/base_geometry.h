@@ -62,7 +62,9 @@ struct aGeometry2d : public aTopology2d
      * @note the default coordinate map will be the identity 
      */
     aGeometry2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aTopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
+    ///@copydoc aTopology2d::aTopology2d(const aTopology2d&)
     aGeometry2d( const aGeometry2d& src):aTopology2d(src){}
+    ///@copydoc aTopology2d::operator=(const aTopology2d&)
     aGeometry2d& operator=( const aGeometry2d& src){
         aTopology2d::operator=(src);
         return *this;
@@ -193,11 +195,12 @@ struct CartesianGrid2d: public dg::aGeometry2d
 struct CartesianGrid3d: public dg::aGeometry3d
 {
     typedef CartesianGrid2d perpendicular_grid;
-    ///@copydoc Grid3d::Grid3d()
+    ///@copydoc hide_grid_parameters3d
+    ///@copydoc hide_bc_parameters3d
     CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     /**
      * @brief Implicit type conversion from Grid3d
-     * @param g existing grid class
+     * @param g existing grid object
      */
     CartesianGrid3d( const dg::Grid3d& g):dg::aGeometry3d(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
     virtual CartesianGrid3d* clone()const{return new CartesianGrid3d(*this);}
@@ -214,7 +217,10 @@ struct CartesianGrid3d: public dg::aGeometry3d
 struct CylindricalGrid3d: public dg::aGeometry3d
 {
     typedef CartesianGrid2d perpendicular_grid;
-    CylindricalGrid3d( double R0, double R1, double Z0, double Z1, double phi0, double phi1, unsigned n, unsigned NR, unsigned NZ, unsigned Nphi, bc bcR, bc bcZ, bc bcphi = PER): dg::aGeometry3d(R0,R1,Z0,Z1,phi0,phi1,n,NR,NZ,Nphi,bcR,bcZ,bcphi){}
+    ///@copydoc hide_grid_parameters3d
+    ///@copydoc hide_bc_parameters3d
+    ///@note x corresponds to R, y to Z and z to phi, the volume element is R
+    CylindricalGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     virtual CylindricalGrid3d* clone()const{return new CylindricalGrid3d(*this);}
     CartesianGrid2d perp_grid() const{ return CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
     private:

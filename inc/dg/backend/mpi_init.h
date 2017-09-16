@@ -1,6 +1,27 @@
 #pragma once
-//enums need to be included before this
 
+
+/*!@file
+@brief convenience mpi init functions
+
+enums need to be included before this
+*/
+
+namespace dg
+{
+
+/**
+* @brief Read in number of processses and grid size and create Cartesian MPI communicator
+*
+* Also sets the GPU a process should use in case THRUST_DEVICE_SYSTEM_CUDA
+* @param bcx if bcx==dg::PER then the communicator is periodic in x 
+* @param bcy if bcy==dg::PER then the communicator is periodic in y 
+* @param n read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
+* @param Nx read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
+* @param Ny read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
+* @param comm (write only) a 2d Cartesian MPI communicator
+* @ingroup misc
+*/
 void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm  )
 {
     int periods[2] = {false,false};
@@ -44,6 +65,20 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
 
 }
 
+/**
+* @brief Read in number of processses and grid size and create Cartesian MPI communicator
+*
+* Also sets the GPU a process should use in case THRUST_DEVICE_SYSTEM_CUDA
+* @param bcx if bcx==dg::PER then the communicator is periodic in x 
+* @param bcy if bcy==dg::PER then the communicator is periodic in y 
+* @param bcz if bcz==dg::PER then the communicator is periodic in z 
+* @param n read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
+* @param Nx read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
+* @param Ny read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
+* @param Nz read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
+* @param comm (write only) a 3d Cartesian MPI communicator
+* @ingroup misc
+*/
 void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm  )
 {
     int periods[3] = {false,false, false};
@@ -87,3 +122,4 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, 
 #endif//cuda
 
 }
+} //namespace dg

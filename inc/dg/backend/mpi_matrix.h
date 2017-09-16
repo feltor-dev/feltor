@@ -2,7 +2,12 @@
 
 #include "mpi_vector.h"
 
-//the corresponding blas file for the Local matrix must be included before this file
+/*!@file
+
+@brief MPI matrix classes
+
+@note the corresponding blas file for the Local matrix must be included before this file
+*/
 namespace dg
 {
 
@@ -88,7 +93,9 @@ struct RowColDistMat
     * the global_gather function of the communication object is called. 
     * Finally the outer elements are added with a call to doSymv for the outer matrix
     * @tparam container container class of the vector elements
+    * @param alpha scalar
     * @param x input
+    * @param beta scalar
     * @param y output
     */
     template<class container> 
@@ -159,6 +166,7 @@ struct RowColDistMat
     Collective c_;
 };
 
+///@cond
 /**
 * @brief Distributed memory matrix class
 *
@@ -210,13 +218,6 @@ struct RowDistMat
     */
     const Collective& collective() const{return c_;}
     
-    /**
-    * @brief Apply the matrix to an MPI_Vector
-    *
-    * @tparam container 
-    * @param x
-    * @param y
-    */
     template<class container> 
     void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y)
     {
@@ -303,13 +304,6 @@ struct ColDistMat
     */
     const Collective& collective() const{return c_;}
     
-    /**
-    * @brief Apply the matrix to an MPI_Vector
-    *
-    * @tparam container 
-    * @param x
-    * @param y
-    */
     template<class container> 
     void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y)
     {
@@ -356,7 +350,6 @@ struct ColDistMat
     Collective c_;
 };
 
-///@cond
 template<class LI, class LO, class C>
 struct MatrixTraits<RowColDistMat<LI,LO, C> >
 {

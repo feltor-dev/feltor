@@ -13,10 +13,10 @@
 namespace dg
 {
 
+///@cond
 namespace detail
 {
 
-///@cond
 /**
  * @brief Normalize the given weights and compute the abscissas of the grid
  *
@@ -45,9 +45,9 @@ thrust::host_vector<double> normalize_weights_and_compute_abscissas( const Grid1
     }
     return abs;
 }
-///@endcond
 
 }//namespace detail
+///@endcond
 
 ///@addtogroup generators
 ///@{

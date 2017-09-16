@@ -276,7 +276,7 @@ namespace tensor
  /**
  * @brief Construct a tensor with all unset values filled with explicit 0 or 1
  *
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @return a dense tensor
  * @note undefined if t.isEmpty() returns true
  */
@@ -318,7 +318,7 @@ SparseTensor<container> dense(const SparseTensor<container>& tensor)
  * @brief data structure to hold the LDL^T decomposition of a symmetric positive definite matrix
  *
  * LDL^T stands for a lower triangular matrix L,  a diagonal matrix D and the transpose L^T
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @attention the tensor in the Elliptic classes actually only need to be positive **semi-definite**
  * and unfortunately the decomposition is unstable for semi-definite matrices.
 * @ingroup misc

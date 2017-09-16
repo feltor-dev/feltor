@@ -127,14 +127,30 @@
   *  - dg::DMatrix and dg::IDMatrix with dg::DVec or std::vector<dg::DVec>
   *  - dg::MHMatrix with dg::MHVec or std::vector<dg::MHVec>
   *  - dg::MDMatrix with dg::MDVec or std::vector<dg::MDVec>
-  *  - Any type that has the SelfMadeMatrixTag specified in a corresponding MatrixTraits class (e.g. Elliptic). In this case only those blas2 functions 
+  *  - Any type that has the SelfMadeMatrixTag specified in a corresponding 
+  *  MatrixTraits class (e.g. Elliptic). In this case only those blas2 functions 
   *  that have a corresponding member function in the Matrix class (e.g. symv( const container&, container&); ) can be called.
   *  If the container is a std::vector, then the Matrix is applied to each of the elements.
+  */
+  /** @class hide_geometry
+  * @tparam Geometry 
+  A type that is or derives from one of the abstract geometry base classes ( aGeometry2d, aGeometry3d, aMPIGeometry2d, ...). 
+  */
+
+  /** @class hide_container_geometry
+  * @tparam container 
+  * A data container class for which the blas1 functionality is overloaded and to which the return type of blas1::evaluate() can be converted. 
+  * We assume that container is copyable/assignable and has a swap member function. 
+  * In connection with Geometry this is one of 
+  *  - dg::HVec, dg::DVec when Geometry is a shared memory geometry
+  *  - dg::MHVec or dg::MDVec when Geometry is one of the MPI geometries
+  * @tparam Geometry 
+  A type that is or derives from one of the abstract geometry base classes ( aGeometry2d, aGeometry3d, aMPIGeometry2d, ...). Geometry determines which container type can be used.
   */
 
   /** @class hide_geometry_matrix_container
   * @tparam Geometry 
-  A type that is or derives from one of the abstract geometry base classes (e.g. aGeometry2d, aGeometry3d, aMPIGeometry2d, ...). Geometry determines which Matrix and container types can be used:
+  A type that is or derives from one of the abstract geometry base classes ( aGeometry2d, aGeometry3d, aMPIGeometry2d, ...). Geometry determines which Matrix and container types can be used:
   * @tparam Matrix 
   * A class for which the blas2 functions are callable in connection with the container class and to which the return type of create::dx() can be converted. 
   * The Matrix type can be one of:
@@ -151,7 +167,8 @@
   */
 
  /** @class hide_symmetric_op
- * @tparam SymmetricOp A class for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable 
+ * @tparam SymmetricOp 
+ A class for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable 
  with the container type as argument. Also, The functions %inv_weights() and %precond() 
  need to be callable and return inverse weights and the preconditioner for the conjugate 
  gradient method. The Operator is assumed to be linear and symmetric!

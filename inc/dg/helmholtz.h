@@ -7,7 +7,7 @@
 
 /*!@file
  *
- * Contains Helmholtz and Maxwell operators
+ * @brief contains Helmholtz and Maxwell operators
  */
 namespace dg{
 

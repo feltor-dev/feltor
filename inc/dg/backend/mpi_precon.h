@@ -4,6 +4,11 @@
 #include "weights.cuh"
 #include "mpi_grid.h"
 
+
+
+/**@file
+* @brief contains MPI weights
+*/
 namespace dg
 {
  

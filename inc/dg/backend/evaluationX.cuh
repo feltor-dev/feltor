@@ -5,8 +5,7 @@
 
 
 /*! @file 
-  
-  Function discretization routines
+  @brief Function discretization routines on X-point topology
   */
 namespace dg
 {

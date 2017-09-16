@@ -8,8 +8,7 @@
 #include "sparseblockmat.h"
 
 /*! @file 
-  
-  Simple 1d derivatives
+  @brief Simple 1d derivatives on X-point topology
   */
 namespace dg
 {

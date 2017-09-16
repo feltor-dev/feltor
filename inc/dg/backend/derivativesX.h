@@ -4,8 +4,7 @@
 #include "dxX.h"
 
 /*! @file 
-  
-  Convenience functions to create 2D derivatives
+  @brief Convenience functions to create 2D derivatives on X-point topology
   */
 namespace dg{
 

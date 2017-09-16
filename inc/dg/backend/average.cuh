@@ -6,9 +6,7 @@
 #include "../blas1.h"
 
 /*! @file 
-
-  Contains classes for poloidal and toroidal average computations.
-
+  @brief contains classes for poloidal and toroidal average computations.
   */
 namespace dg{
 //struct printf_functor

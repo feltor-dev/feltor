@@ -6,8 +6,7 @@
 #include "weights.cuh"
 
 /*! @file 
-  
-  Function discretization routines
+  @brief Function discretization routines
   */
 namespace dg
 {

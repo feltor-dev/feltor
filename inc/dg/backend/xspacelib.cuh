@@ -17,7 +17,7 @@
 
 /*! @file
 
-  * provides some utility functions
+  * @brief provides some utility functions
   */
 
 namespace dg{

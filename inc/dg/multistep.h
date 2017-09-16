@@ -4,8 +4,7 @@
 
 
 /*! @file
-
-  This file contains multistep explicit& implicit time-integrators
+  @brief contains multistep explicit& implicit time-integrators
   */
 namespace dg{
 
@@ -35,7 +34,7 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 * Uses only blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step.
 * @tparam k Order of the method (Currently one of 1, 2, 3, 4 or 5)
-* @copydoc hide_container_lvl1
+* @copydoc hide_container
 */
 template< size_t k, class container>
 struct AB
@@ -200,7 +199,7 @@ struct MatrixTraits< detail::Implicit<M, V> >
 * and only one right-hand-side evaluation per step. 
 * Uses a conjugate gradient method for the implicit operator  
 * @ingroup time
-* @copydoc hide_container_lvl1
+* @copydoc hide_container
 */
 template<class container>
 struct Karniadakis
@@ -358,7 +357,7 @@ void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container&
  * @brief Semi implicit Runge Kutta method after Yoh and Zhong (AIAA 42, 2004)
  *
  * @ingroup time
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  */
 template <class container>
 struct SIRK

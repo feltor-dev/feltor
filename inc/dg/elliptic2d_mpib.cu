@@ -40,7 +40,7 @@ int main(int argc, char* argv[] )
     MPI_Init( &argc, &argv);
     unsigned n, Nx, Ny; 
     MPI_Comm comm;
-    mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
+    dg::mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::Timer t;

@@ -1,15 +1,10 @@
 #ifndef _DG_TYPEDEFS_CUH_
 #define _DG_TYPEDEFS_CUH_
 
-
-#define FELTOR_MAJOR_VERSION 3
-#define FELTOR_MINOR_VERSION 2
-#define FELTOR_SUBMINOR_VERSION 0
-
 /*! @file
-
-  This file contains useful typedefs of commonly used types.
+  @brief This file contains useful typedefs of commonly used types.
   */
+
 namespace dg{
 
 ///@addtogroup typedefs

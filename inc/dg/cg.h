@@ -70,7 +70,7 @@ class CG
     /**
      * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
      *
-     * The iteration stops if \f$ ||Ax|| < \epsilon( ||b|| + C) \f$ where \f$C\f$ is 
+     * The iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + C) \f$ where \f$C\f$ is 
      * a correction factor to the absolute error
      * @copydoc hide_matrix
      * @tparam Preconditioner A class for which the blas2::symv() and 
@@ -475,20 +475,19 @@ struct Invert
      * Solves the Equation \f[ \hat O \phi = W\rho \f] using a preconditioned 
      * conjugate gradient method. The initial guess comes from an extrapolation 
      * of the last solutions.
-     * @copydoc hide_symmetric_op
+     * @copydoc hide_matrix
      * @tparam Preconditioner A type for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable. 
      * @param op symmetric Matrix operator class
      * @param phi solution (write only)
      * @param rho right-hand-side
-     * @param w The weights that made the operator symmetric
+     * @param inv_weights The inverse weights that normalize the symmetric operator
      * @param p The preconditioner  
-     * @note computes inverse weights from the weights 
      * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
      *
      * @return number of iterations used 
      */
-    template< class SymmetricOp, class Preconditioner >
-    unsigned operator()( SymmetricOp& op, container& phi, const container& rho, const container& inv_weights, Preconditioner& p)
+    template< class Matrix, class Preconditioner >
+    unsigned operator()( Matrix& op, container& phi, const container& rho, const container& inv_weights, Preconditioner& p)
     {
         assert( phi.size() != 0);
         assert( &rho != &phi);

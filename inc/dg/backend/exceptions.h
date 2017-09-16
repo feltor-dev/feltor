@@ -9,9 +9,13 @@
 #include <iostream>
 #include <sstream>
 
-/*! for the simplified construction of a Message use this Macro*/
 #define _ping_ __FILE__, __LINE__ 
 
+
+
+/**@file
+* @brief Error classes or the dg library
+*/
 namespace dg
 {
 

@@ -1,5 +1,5 @@
 /*! @file 
- * @brief contains root finding method
+ * @brief Root finding method
  * @author Matthias Wiesenberger
  * @date 12.4.2010
  */

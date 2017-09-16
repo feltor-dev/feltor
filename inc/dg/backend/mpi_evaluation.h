@@ -5,8 +5,7 @@
 #include "evaluation.cuh"
 
 /*! @file 
-  
-  Function discretization routines for mpi vectors
+  @brief Function discretization routines for mpi vectors
   */
 namespace dg
 {

@@ -8,6 +8,9 @@
 #include "exceptions.h"
 
 
+/**@file
+* @brief contains the discrete legendre trafo class
+*/
 namespace dg{
 
 /**
@@ -68,6 +71,7 @@ class DLT
     std::vector<T> a_, w_, forw_, back_, backEQ_;
 };
 
+///@cond
 template<class T>
 DLT<T>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
 {
@@ -194,5 +198,6 @@ DLT<T>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
 }
 
 
+///@endcond
 } //namespace dg
 #endif//_DLT_CUH_

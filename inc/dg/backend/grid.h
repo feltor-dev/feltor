@@ -7,10 +7,47 @@
 #include "../enums.h"
 
 /*! @file 
-  
-  aTopology objects
+  @brief base topology classes
   */
 
+/*!@class hide_grid_parameters2d
+ * @brief Construct a 2D grid
+ *
+ * @param x0 left boundary in x
+ * @param x1 right boundary in x 
+ * @param y0 lower boundary in y
+ * @param y1 upper boundary in y 
+ * @param n  # of polynomial coefficients per dimension
+ *  (1<=n<=20, note that the library is optimized for n=3 )
+ * @param Nx # of points in x 
+ * @param Ny # of points in y
+ */
+/*!@class hide_bc_parameters2d
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ */
+
+/*!@class hide_grid_parameters3d
+ * @brief Construct a 3D topology
+ *
+ * @param x0 left boundary in x
+ * @param x1 right boundary in x 
+ * @param y0 lower boundary in y
+ * @param y1 upper boundary in y 
+ * @param z0 lower boundary in z
+ * @param z1 upper boundary in z 
+ * @param n  # of polynomial coefficients per (x-,y-) dimension
+ *   (1<=n<=20, note that the library is optimized for n=3 )
+ * @attention # of polynomial coefficients in z direction is always 1
+ * @param Nx # of points in x 
+ * @param Ny # of points in y
+ * @param Nz # of points in z
+ */
+/*!@class hide_bc_parameters3d
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ * @param bcz boundary condition in z
+ */
 
 namespace dg{
 
@@ -33,7 +70,8 @@ struct Grid1d
      * 
      * @param x0 left boundary
      * @param x1 right boundary
-     * @param n # of polynomial coefficients
+     * @param n # of polynomial coefficients 
+     *  (1<=n<=20, note that the library is optimized for n=3 )
      * @param N # of cells
      * @param bcx boundary conditions
      */
@@ -371,17 +409,8 @@ struct aTopology2d
     ///disallow destruction through base class pointer
     ~aTopology2d(){}
     /**
-     * @brief Construct a 2D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param n  # of polynomial coefficients per dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
+     *@copydoc hide_grid_parameters2d
+     *@copydoc hide_bc_parameters2d
      */
     aTopology2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
         gx_(x0,x1,n,Nx,bcx), gy_(y0,y1,n,Ny,bcy) { }
@@ -397,7 +426,11 @@ struct aTopology2d
         assert( gx.n() == gy.n() );
     }
 
+    ///explicit copy constructor (default)
+    ///@param src source 
     aTopology2d(const aTopology2d& src){gx_=src.gx_, gy_=src.gy_;}
+    ///explicit assignment operator (default)
+    ///@param src source 
     aTopology2d& operator=(const aTopology2d& src){
         gx_=src.gx_;
         gy_=src.gy_;
@@ -637,22 +670,8 @@ struct aTopology3d
     ///disallow deletion through base class pointer
     ~aTopology3d(){}
     /**
-     * @brief Construct a 3D topology
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param z0 lower boundary in z
-     * @param z1 upper boundary in z 
-     * @param n  # of polynomial coefficients per (x-,y-) dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param Nz # of points in z
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     * @param bcz boundary condition in z
-     * @attention # of polynomial coefficients in z direction is always 1
+    @copydoc hide_grid_parameters3d
+    @copydoc hide_bc_parameters3d
      */
     aTopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): 
         gx_(x0,x1,n,Nx,bcx),
@@ -670,7 +689,11 @@ struct aTopology3d
         assert( gx.n() == gy.n());
         assert( gz.n() == 1);
     }
+    ///explicit copy constructor (default)
+    ///@param src source 
     aTopology3d(const aTopology3d& src):gx_(src.gx_),gy_(src.gy_),gz_(src.gz_){}
+    ///explicit assignment operator (default)
+    ///@param src source 
     aTopology3d& operator=(const aTopology3d& src){ //use default in C++11
         gx_=src.gx_; gy_=src.gy_; gz_=src.gz_;
         return *this;
@@ -687,7 +710,8 @@ struct aTopology3d
 struct Grid2d : public aTopology2d
 {
 
-    ///@copydoc aTopology2d::aTopology2d()
+    ///@copydoc hide_grid_parameters2d
+    ///@copydoc hide_bc_parameters2d
     Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         aTopology2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy) { }
     ///@copydoc aTopology2d::aTopology2d(const Grid1d&,const Grid1d&)
@@ -707,12 +731,14 @@ struct Grid2d : public aTopology2d
  */
 struct Grid3d : public aTopology3d
 {
-    ///@copydoc aTopology3d::aTopology3d()
+    ///@copydoc hide_grid_parameters3d
+    ///@copydoc hide_bc_parameters3d
     Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):
         aTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
     ///@copydoc aTopology3d::aTopology3d(const Grid1d&,const Grid1d&,const Grid1d&)
     Grid3d( const Grid1d& gx, const Grid1d& gy, const Grid1d& gz): aTopology3d(gx,gy,gz){ }
     ///allow explicit type conversion from any other topology
+    ///@param src source
     explicit Grid3d( const aTopology3d& src): aTopology3d(src){ }
     private:
     virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz){ 

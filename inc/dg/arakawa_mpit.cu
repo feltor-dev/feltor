@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     int rank;
     unsigned n, Nx, Ny; 
     MPI_Comm comm;
-    mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
+    dg::mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
     dg::MPIGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 

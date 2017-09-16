@@ -103,8 +103,8 @@ MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIG
                 v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
  * @tparam Functor1 Binary or Ternary functor
- * @copydoc hide_container_lvl1
- * @tparam Geometry The Geometry class
+ * @tparam Functor2 Binary or Ternary functor
+ * @copydoc hide_container_geometry
  * @param vR input R-component in cylindrical coordinates
  * @param vZ input Z-component in cylindrical coordinates
  * @param vx x-component of vector (gets properly resized)
@@ -132,8 +132,9 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
                 v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
  * @tparam Functor1 Binary or Ternary functor
- * @copydoc hide_container_lvl1
- * @tparam Geometry The Geometry class
+ * @tparam Functor2 Binary or Ternary functor
+ * @tparam Functor3 Binary or Ternary functor
+ * @copydoc hide_container_geometry
  * @param vR input R-component in cartesian or cylindrical coordinates
  * @param vZ input Z-component in cartesian or cylindrical coordinates
  * @param vPhi input Z-component in cartesian or cylindrical coordinates
@@ -167,8 +168,10 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
  \chi^{yy}(x,y) = y_R y_R \chi^{RR} + 2y_Ry_Z \chi^{RZ} + y_Zy_Z\chi^{ZZ} \\
                \f]
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
- * @copydoc hide_container_lvl1
- * @tparam Geometry The Geometry class
+ * @tparam FunctorRR Binary or Ternary functor
+ * @tparam FunctorRZ Binary or Ternary functor
+ * @tparam FunctorZZ Binary or Ternary functor
+ * @copydoc hide_container_geometry
  * @param chiRR input RR-component in cylindrical coordinates
  * @param chiRZ input RZ-component in cylindrical coordinates
  * @param chiZZ input ZZ-component in cylindrical coordinates
@@ -221,7 +224,7 @@ namespace create{
  * @brief Create the inverse volume element on the grid (including weights!!)
  *
  * This is the same as the inv_weights divided by the volume form \f$ \sqrt{g}\f$
- * @tparam Geometry any Geometry class
+ * @copydoc hide_geometry
  * @param g Geometry object
  *
  * @return  The inverse volume form
@@ -241,7 +244,7 @@ typename GeometryTraits<Geometry>::host_vector inv_volume( const Geometry& g)
  * @brief Create the volume element on the grid (including weights!!)
  *
  * This is the same as the weights multiplied by the volume form \f$ \sqrt{g}\f$
- * @tparam Geometry any Geometry class
+ * @copydoc hide_geometry
  * @param g Geometry object
  *
  * @return  The volume form

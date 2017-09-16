@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     MPI_Init(&argc, &argv);
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    mpi_init3d( dg::DIR, dg::DIR, dg::NEU, n, Nx, Ny, Nz, comm);
+    dg::mpi_init3d( dg::DIR, dg::DIR, dg::NEU, n, Nx, Ny, Nz, comm);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::CartesianMPIGrid3d g3d( -1, 1, -1, 1, 0.1, M_PI+0.1, n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::NEU, comm);

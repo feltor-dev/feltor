@@ -25,7 +25,7 @@ int main( int argc, char* argv[])
     MPI_Init(&argc, &argv);
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    mpi_init3d( bcx, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+    dg::mpi_init3d( bcx, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     double eps;

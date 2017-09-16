@@ -3,8 +3,7 @@
 #include "backend/exceptions.h"
 
 /*! @file 
-  
-  enums
+  @brief enums
   */
 
 namespace dg

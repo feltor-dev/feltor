@@ -13,7 +13,7 @@
 
 /*! @file 
   
-  object for computation of Poisson bracket
+  @brief object for computation of Poisson bracket
   */
 namespace dg
 {

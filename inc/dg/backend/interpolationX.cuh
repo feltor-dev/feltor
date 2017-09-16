@@ -5,7 +5,7 @@
 
 /*! @file
 
-  Contains 1D, 2D and 3D matrix creation functions
+  @brief contains 1D, 2D and 3D interpolation matrix creation functions on X-point topology
   */
 
 namespace dg{

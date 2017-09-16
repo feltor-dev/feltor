@@ -5,8 +5,7 @@
 
 /*! @file
 
-  * contains creation functions for integration weights 
-  * and their inverse
+  * @brief contains creation functions for integration weights and their inverse
   */
 
 namespace dg{

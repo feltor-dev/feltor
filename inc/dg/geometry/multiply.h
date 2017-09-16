@@ -7,6 +7,7 @@
 
 namespace dg
 {
+///@brief functions used in connection with the SparseElement and SparseTensor classes
 namespace tensor
 {
 
@@ -14,7 +15,7 @@ namespace tensor
 ///@{
 /**
  * @brief calls sqrt transform function on value
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param mu if empty, stays empty, else contains sqrt of input
  */
 template<class container>
@@ -25,7 +26,7 @@ void sqrt( SparseElement<container>& mu){
 
 /**
  * @brief calls invert transform function on value
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param mu if empty, stays empty, else contains inverse of input
  */
 template<class container>
@@ -38,7 +39,7 @@ void invert(SparseElement<container>& mu){
  * @brief Scale tensor with a container
  *
  * Computes \f$ t^{ij} = \mu t^{ij}\f$ 
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param t input (contains result on output)
  * @param mu all elements in t are scaled with mu
  */
@@ -61,7 +62,7 @@ void scal( SparseTensor<container>& t, const container& mu)
  * @brief Scale tensor with a form
  *
  * Computes \f$ t^{ij} = \mu t^{ij}\f$ 
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param t input (contains result on output)
  * @param mu if mu.isEmpty() then nothing happens, else all elements in t are scaled with its value
  */
@@ -75,7 +76,7 @@ void scal( SparseTensor<container>& t, const SparseElement<container>& mu)
 /**
  * @brief Multiply container with form
  *
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param mu if mu.isEmpty() then out=in, else the input is pointwise multiplied with the value in mu
  * @param in input vector
  * @param out output vector (may alias in)
@@ -91,7 +92,7 @@ void pointwiseDot( const SparseElement<container>& mu, const container& in, cont
 /**
  * @brief Multiply container with form
  *
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param in input vector
  * @param mu if mu.isEmpty() then out=in, else the input is pointwise multiplied with the value in mu
  * @param out output vector (may alias in)
@@ -105,7 +106,7 @@ void pointwiseDot( const container& in, const SparseElement<container>& mu, cont
 /**
  * @brief Divide container with form
  *
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param in input vector
  * @param mu if mu.isEmpty() then out=in, else the input is pointwise divided with the value in mu
  * @param out output vector (may alias in)
@@ -143,7 +144,7 @@ void multiply2d_helper( const SparseTensor<container>& t, const container& in0, 
  * @brief Multiply a tensor with a vector in 2d
  *
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param t input Tensor
  * @param in0 (input) first component    (restricted)
  * @param in1 (input) second component   (may alias out1)
@@ -167,7 +168,7 @@ void multiply2d( const SparseTensor<container>& t, const container& in0, const c
  * @brief Multiply a tensor with a vector in 2d
  *
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2,3\}\f$
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param t input Tensor
  * @param in0 (input)  first component  (restricted)
  * @param in1 (input)  second component (restricted)
@@ -193,7 +194,7 @@ void multiply3d( const SparseTensor<container>& t, const container& in0, const c
 
 /**
 * @brief Compute the determinant of a tensor
-* @copydoc hide_container_lvl1
+* @copydoc hide_container
 * @param t the input tensor 
 * @return the determinant of t as a SparseElement (unset if t is empty)
 */
@@ -232,7 +233,7 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
     invert(volume);
     sqrt(volume);
     @endcode
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param t the input tensor 
  * @return the inverse square root of the determinant of t as a SparseElement (unset if t is empty)
  */

@@ -14,6 +14,12 @@
 #include "mpi_matrix.h"
 #endif //MPI_VERSION
 
+
+
+/**@file
+* @brief contains a matrix type for fast interpolations/projections
+*/
+
 namespace dg
 {
 
@@ -22,7 +28,8 @@ namespace dg
  *
  * \f[ y = M_{N-1}(...M_1(M_0x))\f]
  * where \f$ M_i\f$ is the i-th matrix 
- * @copydoc hide_matrix_container
+ * @copydoc hide_matrix
+ * @copydoc hide_container
  * @ingroup misc
  */
 template <class Matrix, class container>
@@ -35,6 +42,7 @@ struct MultiMatrix
     * @attention it is the user's reponsibility to allocate memory for the intermediate "temp" vectors
     */
     MultiMatrix( int dimension): inter_(dimension), temp_(dimension-1 > 0 ? dimension-1 : 0 ){}
+
     template<class OtherMatrix, class OtherContainer>
     MultiMatrix( const MultiMatrix<OtherMatrix, OtherContainer>& src){
         unsigned dimsM = src.get_matrices().size();
@@ -71,6 +79,7 @@ struct MultiMatrix
     std::vector<Buffer<container> > temp_;
 };
 
+///@cond
 template <class M, class V>
 struct MatrixTraits<MultiMatrix<M, V> >
 {
@@ -265,4 +274,5 @@ MultiMatrix< RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>,
 #endif //MPI_VERSION
 }//namespace create
 
+///@endcond
 }//namespace dg

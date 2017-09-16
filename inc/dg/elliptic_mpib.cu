@@ -26,7 +26,7 @@ int main( int argc, char* argv[])
     MPI_Init(&argc, &argv);
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    mpi_init3d( bcx, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+    dg::mpi_init3d( bcx, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
 
     dg::CylindricalMPIGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, comm);
     const dg::MDVec w3d = dg::create::volume( grid);

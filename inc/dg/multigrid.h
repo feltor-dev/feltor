@@ -14,12 +14,21 @@ namespace dg
 /**
 * @brief Class for the solution of symmetric matrix equation discretizeable on multiple grids
 *
+* We use conjugate gradien (CG) at each stage and refine the grids in the first two dimensions (2d / x and y) 
 * @copydoc hide_geometry_matrix_container
 */
 template< class Geometry, class Matrix, class container> 
 struct MultigridCG2d
 {
-    MultigridCG2d( const Geometry& grid, const unsigned stages, const int scheme_type = 0, const int extrapolation_type = 2 )
+    /**
+    * @brief Construct the grids and the interpolation/projection operators
+    *
+    * @param grid the original grid (Nx() and Ny() must be evenly divisable by pow(2, stages-1)
+    * @param stages number of grids in total (The second grid contains half the points of the original grids,  
+    *   The third grid contains half of the second grid ...). Must be > 1
+    * @param scheme_type scheme type in the solve function
+    */
+    MultigridCG2d( const Geometry& grid, const unsigned stages, const int scheme_type = 0 )
     {
         stages_= stages;
         if(stages < 2 ) throw Error( Message(_ping_)<<" There must be minimum 2 stages in a multigrid solver! You gave " << stages);
@@ -115,6 +124,20 @@ struct MultigridCG2d
 		return number;
 	}
 
+    /**
+    * @brief Nested iterations
+    *
+    * - Compute residual with given initial guess. 
+    * - Project residual down to the coarsest grid. 
+    * - Solve equation on the coarse grid 
+    * - interpolate solution up to next finer grid and repeat until the original grid is reached. 
+    * @copydoc hide_symmetric_op
+    * @param op Index 0 is the matrix on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+    * @param x (read/write) contains initial guess on input and the solution on output
+    * @param b The right hand side (will be multiplied by weights)
+    * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$ 
+    * @return the number of iterations in each of the stages
+    */
     template<class SymmetricOp>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, container&  x, const container& b, double eps)
     {
