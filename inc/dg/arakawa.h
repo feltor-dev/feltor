@@ -21,8 +21,9 @@ namespace dg
 /**
  * @brief X-space generalized version of Arakawa's scheme
  *
- * @copydoc hide_matrix_container
- * @copydoc hide_geometry
+ * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
+ * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 
+ * @copydoc hide_geometry_matrix_container
  * @ingroup arakawa
  */
 template< class Geometry, class Matrix, class container >
@@ -90,7 +91,7 @@ struct ArakawaX
     SparseElement<container> perp_vol_inv_;
     SparseTensor<container> metric_;
 };
-
+///@cond
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs), 
@@ -133,6 +134,7 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     blas2::symv( 1., bdyf, dxrhs, 1., result);
     tensor::pointwiseDot( perp_vol_inv_, result, result);
 }
+///@endcond
 
 }//namespace dg
 

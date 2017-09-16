@@ -32,8 +32,8 @@ namespace blas2{
 /**
  * @brief Generic way to copy and/or convert a Matrix type to a different Matrix type (e.g. from CPU to GPU, or double to float, etc.)
  *
- * @tparam Matrix First Matrix type
- * @tparam AnotherMatrix Second Matrix type
+ * @copydoc hide_matrix
+ * @tparam AnotherMatrix Another Matrix type
  * @param x source
  * @param y sink 
  * @note y gets resized properly
@@ -52,7 +52,7 @@ inline void transfer( const Matrix& x, AnotherMatrix& y)
  * precalculate \f$ My\f$ and then call the blas1::dot() routine!
  * @tparam DiagonalMatrix Right now DiagonalMatrix has to be the same as container, except if the container is a std::vector<container_type>, then the DiagonalMatrix has to be the container_type.
  * In the latter case the Matrix is applied to all containers in the std::vector and the sum is returned. 
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param x Left container
  * @param m The diagonal Matrix
  * @param y Right container might equal Left container
@@ -74,7 +74,7 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const container& x
  * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
  * @tparam DiagonalMatrix Right now DiagonalMatrix has to be the same as container, except if the container is a std::vector<container_type>, then the DiagonalMatrix has to be the container_type. 
  * In the latter case the Matrix is applied to all containers in the std::vector and the sum is returned. 
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param m The diagonal Matrix
  * @param x Right container
  * @return Generalized scalar product
@@ -93,7 +93,8 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const DiagonalMatr
  *
  * This routine computes \f[ y = \alpha M x + \beta y \f]
  * where \f$ M\f$ is a matrix.
- * @copydoc hide_matrix_container
+ * @copydoc hide_matrix
+ * @copydoc hide_container
  * @param alpha A Scalar
  * @param M The Matrix
  * @param x A container different from y 
@@ -122,7 +123,8 @@ inline void symv( typename MatrixTraits<Matrix>::value_type alpha,
  *
  * This routine computes \f[ y = M x \f]
  * where \f$ M\f$ is a matrix. 
- * @copydoc hide_matrix_container
+ * @copydoc hide_matrix
+ * @copydoc hide_container
  * @tparam same_or_another_container Currently needs to be the same as container.
  * @param M The Matrix
  * @param x A container different from y 
@@ -146,7 +148,8 @@ inline void symv( Matrix& M,
  * @brief General Matrix-Vector product
  *
  * Does exactly the same as symv. 
- * @copydoc hide_matrix_container
+ * @copydoc hide_matrix
+ * @copydoc hide_container
  * @tparam same_or_another_container Currently needs to be the same as container.
  * @param M The Matrix
  * @param x A container different from y 
@@ -168,7 +171,8 @@ inline void gemv( Matrix& M,
  * @brief General Matrix-Vector product
  *
  * Does exactly the same as symv. 
- * @copydoc hide_matrix_container
+ * @copydoc hide_matrix
+ * @copydoc hide_container
  * @param alpha A Scalar
  * @param M The Matrix
  * @param x A container different from y 

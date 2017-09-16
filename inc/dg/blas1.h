@@ -33,8 +33,8 @@ namespace blas1
 /**
  * @brief Generic way to copy and/or convert a container type to a different container type (e.g. from CPU to GPU, or double to float, etc.)
  *
- * @copydoc hide_container_lvl1
- * @tparam other_container another container class
+ * @copydoc hide_container
+ * @tparam other_container another container type
  * @param x source
  * @param y sink
  * @note y gets resized properly
@@ -61,7 +61,7 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param x Left container
  * @param y Right container may alias x
  * @return Scalar product as defined above
@@ -79,7 +79,7 @@ inline typename VectorTraits<container>::value_type dot( const container& x, con
  *
  * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param alpha Scalar  
  * @param x container x may alias y 
  * @param beta Scalar
@@ -97,7 +97,7 @@ inline void axpby( typename VectorTraits<container>::value_type alpha, const con
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param alpha Scalar  
  * @param x container x may alias result
  * @param beta Scalar
@@ -116,7 +116,7 @@ inline void axpby( typename VectorTraits<container>::value_type alpha, const con
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param alpha Scalar  
  * @param x container x may alias result
  * @param beta Scalar
@@ -135,7 +135,7 @@ inline void axpbypgz( typename VectorTraits<container>::value_type alpha, const 
  *
  * This routine computes \f[ y_i = op(x_i) \f]
  * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @tparam UnaryOp Type with member function: value_type operator()(value_type)  
  * @param x container x may alias y
  * @param y container y contains result, may alias x
@@ -151,7 +151,7 @@ inline void transform( const container& x, container& y, UnaryOp op)
 /*! @brief BLAS 1 routine scal
  *
  * This routine computes \f[ \alpha x_i \f]
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param alpha Scalar  
  * @param x container x 
  */
@@ -165,7 +165,7 @@ inline void scal( container& x, typename VectorTraits<container>::value_type alp
 /*! @brief pointwise add a scalar
  *
  * This routine computes \f[ x_i + \alpha \f] 
- * @copydoc hide_container_lvl1
+ * @copydoc hide_container
  * @param alpha Scalar  
  * @param x container x 
  */
@@ -182,7 +182,7 @@ inline void plus( container& x, typename VectorTraits<container>::value_type alp
 * Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
-* @copydoc hide_container_lvl1
+* @copydoc hide_container
 * @param x1 container x1  
 * @param x2 container x2 may alias x1
 * @param y  container y contains result on output ( may alias x1 or x2)
@@ -200,7 +200,7 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
 * Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
-* @copydoc hide_container_lvl1
+* @copydoc hide_container
 * @param alpha scalar
 * @param x1 container x1  
 * @param x2 container x2 may alias x1
@@ -219,7 +219,7 @@ inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, co
 * Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
-* @copydoc hide_container_lvl1
+* @copydoc hide_container
 * @param x1 container x1  
 * @param x2 container x2 may alias x1
 * @param y  container y contains result on output ( may alias x1 and/or x2)
@@ -236,7 +236,7 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 *
 * Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
-* @copydoc hide_container_lvl1
+* @copydoc hide_container
 * @param alpha scalar
 * @param x1 container x1  
 * @param y1 container y1 

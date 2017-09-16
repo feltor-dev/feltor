@@ -35,12 +35,11 @@ namespace dg
  where \f$\alpha\f$  is a scale factor ( = jfactor). Usually the default \f$ \alpha=1 \f$ is a good choice.
  However, in some cases, e.g. when \f$ \chi \f$ exhibits very large variations
  \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values. 
- In a time dependent problem the value of \f$\alpha\f$ also determines the 
+ In a time dependent problem the value of \f$\alpha\f$ determines the 
  numerical diffusion, i.e. for low values numerical oscillations may appear. 
  Also note that a forward discretization has more diffusion than a centered discretization.
 
- * @copydoc hide_geometry
- * @copydoc hide_matrix_container
+ * @copydoc hide_geometry_matrix_container
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
  * @note The constructors initialize \f$ \chi=1\f$ so that a negative laplacian operator
@@ -228,8 +227,7 @@ class Elliptic
  *  \end{align}
  *  \f] 
  * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
- * @copydoc geometry
- * @copydoc hide_matrix_container
+ * @copydoc hide_geometry_matrix_container
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
  * @note The constructors initialize \f$ b^x = b^y = b^z=1\f$ 
@@ -420,8 +418,7 @@ struct GeneralElliptic
  *  \end{align}
  *  \f] 
  * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
- * @copydoc hide_geometry
- * @copydoc hide_matrix_container
+ * @copydoc hide_geometry_matrix_container
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
  * @note The constructors initialize \f$ \chi_x = \chi_y = \chi_z=1\f$ 
@@ -541,8 +538,7 @@ struct GeneralEllipticSym
  * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} v^x ) + \partial_y(\sqrt{g} v^y) \right)
  *  \end{align}
  *  \f] 
- * @copydoc hide_geometry
- * @copydoc hide_matrix_container
+ * @copydoc hide_geometry_matrix_container
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
  * @note The constructors initialize \f$ \chi = I\f$ 

@@ -108,14 +108,8 @@
   * @tparam TernaryOp A class or function type with a member/signature equivalent to
   *  - double operator()(double, double, double) const
   */
- /** @class hide_geometry
-  * @tparam Geometry A type that is or derives from one of the abstract geometry base classes (e.g. aGeometry2d, aGeometry3d, aMPIGeometry2d, ...)
-  * The functions dg::create::dx() and dg::create::dy() must be callable and return an instance convertible to the Matrix class. 
-  * Furthermore dg::evaluate() must return an instance of the container class.
-     as do calls to dg::create::weights() and dg::create::inv_weights()
-  */
 
- /** @class hide_container_lvl1
+ /** @class hide_container
   * @tparam container 
   * A data container class for which the blas1 functionality is overloaded.
   * We assume that container is copyable/assignable and has a swap member function. 
@@ -124,7 +118,7 @@
   *  - std::vector<dg::HVec>, std::vector<dg::DVec>, std::vector<dg::MHVec> or std::vector<dg::MDVec> . 
   *
   */
- /** @class hide_matrix_container
+ /** @class hide_matrix
   * @tparam Matrix 
   * A class for which the blas2 functions are callable in connection with the container class. 
   * The Matrix type can be one of:
@@ -133,22 +127,33 @@
   *  - dg::DMatrix and dg::IDMatrix with dg::DVec or std::vector<dg::DVec>
   *  - dg::MHMatrix with dg::MHVec or std::vector<dg::MHVec>
   *  - dg::MDMatrix with dg::MDVec or std::vector<dg::MDVec>
-  *  - Any type that has the SelfMadeMatrixTag. In this case only those blas2 functions 
+  *  - Any type that has the SelfMadeMatrixTag specified in a corresponding MatrixTraits class (e.g. Elliptic). In this case only those blas2 functions 
   *  that have a corresponding member function in the Matrix class (e.g. symv( const container&, container&); ) can be called.
   *  If the container is a std::vector, then the Matrix is applied to each of the elements.
-  *
+  */
+
+  /** @class hide_geometry_matrix_container
+  * @tparam Geometry 
+  A type that is or derives from one of the abstract geometry base classes (e.g. aGeometry2d, aGeometry3d, aMPIGeometry2d, ...). Geometry determines which Matrix and container types can be used:
+  * @tparam Matrix 
+  * A class for which the blas2 functions are callable in connection with the container class and to which the return type of create::dx() can be converted. 
+  * The Matrix type can be one of:
+  *  - dg::HMatrix with dg::HVec and one of the shared memory geometries
+  *  - dg::DMatrix with dg::DVec and one of the shared memory geometries
+  *  - dg::MHMatrix with dg::MHVec and one of the MPI geometries
+  *  - dg::MDMatrix with dg::MDVec and one of the MPI geometries
   * @tparam container 
-  * A data container class for which the blas1 functionality is overloaded.
+  * A data container class for which the blas1 functionality is overloaded and to which the return type of blas1::evaluate() can be converted. 
   * We assume that container is copyable/assignable and has a swap member function. 
-  * Currently this is one of 
-  *  - dg::HVec, dg::DVec, dg::MHVec or dg::MDVec  
-  *  - std::vector<dg::HVec>, std::vector<dg::DVec>, std::vector<dg::MHVec> or std::vector<dg::MDVec> . 
+  * In connection with Geometry this is one of 
+  *  - dg::HVec, dg::DVec when Geometry is a shared memory geometry
+  *  - dg::MHVec or dg::MDVec when Geometry is one of the MPI geometries
   */
 
  /** @class hide_symmetric_op
  * @tparam SymmetricOp A class for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable 
- with the container type as argument. Also, The functions %weights() and %precond() 
- need to be callable and return weights and the preconditioner for the conjugate 
+ with the container type as argument. Also, The functions %inv_weights() and %precond() 
+ need to be callable and return inverse weights and the preconditioner for the conjugate 
  gradient method. The Operator is assumed to be linear and symmetric!
  @note you can make your own SymmetricOp by providing the member function void symv(const container&, container&);
   and specializing MatrixTraits with the SelfMadeMatrixTag as the matrix_category

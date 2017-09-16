@@ -11,6 +11,11 @@
 namespace dg
 {
 
+/**
+* @brief Class for the solution of symmetric matrix equation discretizeable on multiple grids
+*
+* @copydoc hide_geometry_matrix_container
+*/
 template< class Geometry, class Matrix, class container> 
 struct MultigridCG2d
 {
@@ -113,8 +118,6 @@ struct MultigridCG2d
     template<class SymmetricOp>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, container&  x, const container& b, double eps)
     {
-        Timer t;
-        t.tic();
         dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
         // compute residual r = Wb - A x
         dg::blas2::symv(op[0], x, m_r[0]);
@@ -123,35 +126,37 @@ struct MultigridCG2d
         for( unsigned u=0; u<stages_-1; u++)
             dg::blas2::gemv( interT_[u], m_r[u], m_r[u+1]);
         std::vector<unsigned> number(stages_);
-        Timer t2;
+        Timer t;
         
         dg::blas1::scal( x_[stages_-1], 0.0);
         //now solve residual equations
 		for( unsigned u=stages_-1; u>0; u--)
         {
-            t2.tic();
+            t.tic();
             cg_[u].set_max(grids_[u].get().size());
             number[u] = cg_[u]( op[u], x_[u], m_r[u], op[u].precond(), op[u].inv_weights(), eps/2, 1.);
             dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
-            t2.toc();
-            std::cout << "stage: " << u << ", max iter: " << cg_[u].get_max() << ", iter: " << number[u] << ", took "<<t2.diff()<<"s\n";
+            t.toc();
+            std::cout << "stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
 
         }
-        t2.tic();
+        t.tic();
 
         //update initial guess
         dg::blas1::axpby( 1., x_[0], 1., x);
         cg_[0].set_max(grids_[0].get().size());
         number[0] = cg_[0]( op[0], x, b_[0], op[0].precond(), op[0].inv_weights(), eps);
-        t2.toc();
-        std::cout << "stage: " << 0 << ", max iter: " << cg_[0].get_max() << ", iter: " << number[0] << ", took "<<t2.diff()<<"s\n";
-        
         t.toc();
-        std::cout<< "Took "<<t.diff()<<"s\n";
+        std::cout << "stage: " << 0 << ", iter: " << number[0] << ", took "<<t.diff()<<"s\n";
+        
         return number;
     }
 
-    ///src may alias first element of out
+    /**
+    * @brief Project vector to all involved grids
+    * @param src the input vector (may alias first element of out)
+    * @param out the input vector projected to all grids ( index 0 contains a copy of src, 1 is the projetion to the first coarse grid, 2 is the next coarser grid, ...)
+    */
     void project( const container& src, std::vector<container>& out)
     {
         dg::blas1::copy( src, out[0]);
@@ -159,6 +164,11 @@ struct MultigridCG2d
             dg::blas2::gemv( project_[u], out[u], out[u+1]);
     }
 
+    /**
+    * @brief Project vector to all involved grids (allocate memory version)
+    * @param src the input vector 
+    * @return the input vector projected to all grids ( index 0 contains a copy of src, 1 is the projetion to the first coarse grid, 2 is the next coarser grid, ...)
+    */
     std::vector<container> project( const container& src)
     {
         std::vector<container> out( grids_.size());
@@ -168,6 +178,7 @@ struct MultigridCG2d
         return out;
 
     }
+    ///@return number of stages 
     unsigned stages()const{return stages_;}
 
     const std::vector<dg::Handle< Geometry > > grids()const { return grids_; }
@@ -231,6 +242,7 @@ private:
         assert(u == 0);
 	}
 
+    ///print scheme information to std::cout
     void PrintScheme(void)
     {
         std::cout << "Scheme: " << std::endl;

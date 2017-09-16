@@ -23,8 +23,7 @@ namespace dg
  *
  * Equal to the Arakawa class except for the possitility to use mixed boundary conditions
  * @ingroup arakawa
- * @copydoc hide_geometry
- * @copydoc hide_matrix_container
+ * @copydoc hide_geometry_matrix_container
  */
 template< class Geometry, class Matrix, class container >
 struct Poisson
@@ -113,6 +112,7 @@ struct Poisson
     SparseTensor<container> metric_;
 };
 
+///@cond
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
 template< class Geometry, class Matrix, class container>
@@ -165,6 +165,7 @@ void Poisson< Geometry, Matrix, container>::operator()( const container& lhs, co
     blas1::pointwiseDot( 1., dxlhslhs_, dyrhsrhs_, -1., dylhslhs_, dxrhsrhs_, 0., result);   
     tensor::pointwiseDot( perp_vol_inv_, result, result);
 }
+///@endcond
 
 }//namespace dg
 
