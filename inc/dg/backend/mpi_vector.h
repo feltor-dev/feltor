@@ -14,23 +14,23 @@ namespace dg
  * @brief mpi Vector class 
  *
  * @ingroup mpi_structures
- * The idea of this Vector class is to simply base it on an existing container class
- * that fully supports the blas functionality. In a computation we use mpi to 
- communicate (e.g. boundary points in matrix-vector multiplications) and use
- the existing blas functions for the local computations. 
- * (At the blas level 1 level communication is needed for scalar products)
- * @note Don't start looking for ghostcells, there aren't any
- * @tparam container underlying local container class
+ *
+ * This class is a simple wrapper around a container object and an MPI_Comm. 
+ * The blas1 and blas2 functionality is available iff it is available for the container type.
+ * We use mpi to communicate (e.g. boundary points in matrix-vector multiplications) 
+ * and use the existing blas functions for the local computations. 
+ * (At the blas level 1 communication is needed only for scalar products)
+ * @tparam container local container type. Must have a size() and a swap() member function.
  */
 template<class container>
 struct MPI_Vector
 {
     typedef container container_type;//!< typedef to acces underlying container
-    MPI_Vector(){}
+    ///no data is allocated, communicator is MPI_COMM_WORLD
+    MPI_Vector(){ comm_ = MPI_COMM_WORLD;}
     /**
      * @brief construct a vector
-     *
-     * @param data internal data
+     * @param data internal data copy 
      * @param comm MPI communicator
      */
     MPI_Vector( const container& data, MPI_Comm comm): 
@@ -40,53 +40,35 @@ struct MPI_Vector
     * @brief Conversion operator
     *
     * uses conversion between compatible containers
-    * @tparam OtherContainer Another container class (container must be copy constructible from OtherContainer)
+    * @tparam OtherContainer another container class (container must be copy constructible from OtherContainer)
     * @param src the source 
     */
     template<class OtherContainer>
     MPI_Vector( const MPI_Vector<OtherContainer>& src){ data_ = src.data(); comm_ = src.communicator();} 
 
-    /**
-     * @brief Set the communicator to which this vector belongs
-     *
-     * @return MPI communicator reference
-     */
+    ///@brief Get underlying data
+    ///@return read access to data
+    const container& data() const {return data_;}
+    ///@brief Set underlying data
+    ///@return write access to data
+    container& data() {return data_;}
+
+    ///@brief Get the communicator to which this vector belongs
+    ///@return read access to MPI communicator
+    MPI_Comm communicator() const{return comm_;}
+    ///@brief Set the communicator to which this vector belongs
+    ///@return write access to MPI communicator
     MPI_Comm& communicator(){return comm_;}
 
-    /**
-     * @brief Set underlying data
-     *
-     * @return 
-     */
-    container& data() {return data_;}
-    /**
-     * @brief Get underlying data
-     *
-     * @return 
-     */
-    const container& data() const {return data_;}
-    /**
-     * @brief Return local size
-     * 
-     * @return local size
-     */
+    ///@brief Return the size of the data object
+    ///@return local size
     unsigned size() const{return data_.size();}
 
-    /**
-     * @brief The communicator to which this vector belongs
-     *
-     * @return MPI communicator
-     */
-    MPI_Comm communicator() const{return comm_;}
-
-    /**
-     * @brief Swap data 
-     *
-     * @param that must have equal sizes and communicator
-     */
-    void swap( MPI_Vector& that){ 
-        assert( comm_ == that.comm_);
-        data_.swap(that.data_);
+    ///@brief Swap data  and communicator
+    ///@param src communicator and data is swapped
+    void swap( MPI_Vector& src){ 
+        std::swap( comm_ == src.comm_);
+        data_.swap(src.data_);
     }
   private:
     container data_; 
