@@ -340,26 +340,26 @@ template<class I, class V>
 const V& NearestNeighborComm<I,V>::global_gather( const V& input) const
 {
     if( silent_) return values.data();
-        //int rank;
-        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        //dg::Timer t;
-        //t.tic();
+    //int rank;
+    //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    //dg::Timer t;
+    //t.tic();
     //gather values from input into sendbuffer
     thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data().begin());
     thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data().begin());
-        //t.toc();
-        //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
-        //t.tic();
+    //t.toc();
+    //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
+    //t.tic();
     //mpi sendrecv
     sendrecv( buffer1.data(), buffer2.data(), rb1.data(), rb2.data());
-        //t.toc();
-        //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
-        //t.tic();
+    //t.toc();
+    //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
+    //t.tic();
     //scatter received values into values array
     thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values.data().begin());
     thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.data().begin());
-        //t.toc();
-        //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
+    //t.toc();
+    //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
     return values.data();
 }
 
@@ -371,7 +371,7 @@ void NearestNeighborComm<I,V>::sendrecv( V& sb1, V& sb2 , V& rb1, V& rb2) const
     //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified 
     MPI_Cart_shift( comm_, direction_, -1, &source, &dest);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    cudaDeviceSynchronize(); //needs to be called 
+    cudaDeviceSynchronize(); //wait until device functions are finished before sending data
 #endif //THRUST_DEVICE_SYSTEM
     MPI_Sendrecv(   thrust::raw_pointer_cast(sb1.data()), buffer_size(), MPI_DOUBLE,  //sender
                     dest, 3,  //destination

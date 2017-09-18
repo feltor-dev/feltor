@@ -14,72 +14,43 @@
 namespace dg{
  
 ///@cond
+namespace detail{
 
-/**
- * @brief Class to shift values in the z - direction 
- */
-struct ZShifter
+///basically a copy across processes
+template<class InputIterator, class OutputIterator>
+void sendForward( InputIterator begin, InputIterator end, OutputIterator result, MPI_Comm comm) //send to next plane
 {
-    ZShifter(){}
-    /**
-     * @brief Constructor
-     *
-     * @param size number of elements to exchange between processes
-     * @param comm the communicator (cartesian)
-     */
-    ZShifter( int size, MPI_Comm comm) 
-    {
-        number_ = size;
-        comm_ = comm;
-        sb_.resize( number_), rb_.resize( number_);
-    }
-    int number() const {return number_;}
-    int size() const {return number_;}
-    MPI_Comm communicator() const {return comm_;}
-    //host and device versions
-    template<class container>
-    void sendForward( const container& sb, container& rb)
-    {
-        dg::blas1::transfer( sb, sb_);
-        sendForward_( sb_, rb_);
-        dg::blas1::transfer( rb_, rb);
-    }
-    template<class container>
-    void sendBackward( const container& sb, container& rb)
-    {
-        dg::blas1::transfer( sb, sb_);
-        sendBackward_( sb_, rb_);
-        dg::blas1::transfer( rb_, rb);
-    }
-    private:
-    void sendForward_( HVec& sb, HVec& rb)const //send to next plane
-    {
-        int source, dest;
-        MPI_Status status;
-        MPI_Cart_shift( comm_, 2, +1, &source, &dest);
-        MPI_Sendrecv(   sb.data(), number_, MPI_DOUBLE,  //sender
-                        dest, 9,  //destination
-                        rb.data(), number_, MPI_DOUBLE, //receiver
-                        source, 9, //source
-                        comm_, &status);
-    }
-    void sendBackward_( HVec& sb, HVec& rb)const //send to previous plane
-    {
-        int source, dest;
-        MPI_Status status;
-        MPI_Cart_shift( comm_, 2, -1, &source, &dest);
-        MPI_Sendrecv(   sb.data(), number_, MPI_DOUBLE,  //sender
-                        dest, 3,  //destination
-                        rb.data(), number_, MPI_DOUBLE, //receiver
-                        source, 3, //source
-                        comm_, &status);
-    }
-    typedef thrust::host_vector<double> HVec;
-    HVec sb_, rb_;
-    int number_; //deepness, dimensions
-    MPI_Comm comm_;
-
-};
+    int source, dest;
+    MPI_Status status;
+    MPI_Cart_shift( comm_, 2, +1, &source, &dest);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    cudaDeviceSynchronize();//wait until device functions are finished before sending data
+#endif //THRUST_DEVICE_SYSTEM
+    unsigned size = thrust::distance( begin, end);
+    MPI_Sendrecv(   thrust::raw_pointer_cast(begin), size, MPI_DOUBLE,  //sender
+                    dest, 9,  //destination
+                    thrust::raw_pointer_cast(result), size, MPI_DOUBLE, //receiver
+                    source, 9, //source
+                    comm, &status);
+}
+///basically a copy across processes
+template<class InputIterator, class OutputIterator>
+void sendBackward( InputIterator begin, InputIterator end, OutputIterator result, MPI_Comm comm) //send to next plane
+{
+    int source, dest;
+    MPI_Status status;
+    MPI_Cart_shift( comm_, 2, -1, &source, &dest);
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+    cudaDeviceSynchronize();//wait until device functions are finished before sending data
+#endif //THRUST_DEVICE_SYSTEM
+    unsigned size = thrust::distance( begin, end);
+    MPI_Sendrecv(   thrust::raw_pointer_cast(begin), size, MPI_DOUBLE,  //sender
+                    dest, 3,  //destination
+                    thrust::raw_pointer_cast(result), size, MPI_DOUBLE, //receiver
+                    source, 3, //source
+                    comm, &status);
+}
+}//namespace detail
 
 ///@endcond
 
@@ -271,9 +242,7 @@ struct FieldAligned< Geometry, RowDistMat<LocalMatrix, Communicator>, MPI_Vector
     LocalContainer left_, right_;
     LocalContainer limiter_;
     std::vector<LocalContainer> tempXYplus_, tempXYminus_, temp_; 
-    LocalContainer tempZ_;
     Communicator commXYplus_, commXYminus_;
-    ZShifter  commZ_;
     LocalMatrix plus, minus; //interpolation matrices
     LocalMatrix plusT, minusT; //interpolation matrices
 };
@@ -371,8 +340,6 @@ FieldAligned<MPIGeometry, RowDistMat<LocalMatrix, CommunicatorXY>, MPI_Vector<Lo
         tempXYminus_[i].resize( commXYminus_.size());
         temp_[i].resize( localsize);
     }
-    commZ_ = ZShifter( localsize, g_.communicator() );
-    tempZ_.resize( commZ_.size());
 }
 
 template<class G, class M, class C, class container>
@@ -504,8 +471,7 @@ void FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::einsPlus( const MP
     }
     if( sizeZ != 1)
     {
-        commZ_.sendBackward( temp_[0], tempZ_);
-        thrust::copy( tempZ_.begin(), tempZ_.end(), out.begin() + (g_.Nz()-1)*size2d);
+        detail::sendBackward( temp_[0].begin(), temp_[0].end(), out.begin() + (g_.Nz()-1)*size2d);
     }
 
     //make ghostcells in last plane
@@ -579,8 +545,7 @@ void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsMinus( const MP
     }
     if( sizeZ != 1)
     {
-        commZ_.sendForward( temp_[g_.Nz()-1], tempZ_);
-        thrust::copy( tempZ_.begin(), tempZ_.end(), out.begin());
+        detail::sendForward( temp_[g_.Nz()-1].begin(), temp_[g_.Nz()-1].end(), out.begin());
     }
     //make ghostcells in first plane
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
@@ -652,8 +617,7 @@ void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsMinusT( const M
     }
     if( sizeZ != 1)
     {
-        commZ_.sendBackward( temp_[0], tempZ_);
-        thrust::copy( tempZ_.begin(), tempZ_.end(), out.begin() + (g_.Nz()-1)*size2d);
+        detail::sendBackward( temp_[0].begin(), temp_[0].end(), out.begin() + ( g_.Nz()-1)*size2d);
     }
     //make ghostcells in last plane
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
@@ -726,8 +690,7 @@ void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsPlusT( const MP
     }
     if( sizeZ != 1)
     {
-        commZ_.sendForward( temp_[g_.Nz()-1], tempZ_);
-        thrust::copy( tempZ_.begin(), tempZ_.end(), out.begin());
+        detail::sendForward( temp_[g_.Nz()-1].begin(), temp_[g_.Nz()-1].end(), out.begin());
     }
     //make ghostcells in first plane
     unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
