@@ -5,6 +5,7 @@
 #include <thrust/gather.h>
 #include "vector_traits.h"
 #include "thrust_vector_blas.cuh"
+#include "mpi_communicator.h"
 #include "memory.h"
 
 namespace dg
@@ -67,7 +68,7 @@ struct MPI_Vector
     ///@brief Swap data  and communicator
     ///@param src communicator and data is swapped
     void swap( MPI_Vector& src){ 
-        std::swap( comm_ == src.comm_);
+        std::swap( comm_ , src.comm_);
         data_.swap(src.data_);
     }
   private:
@@ -102,8 +103,9 @@ struct VectorTraits<const MPI_Vector<container> > {
 * @note models aCommunicator
 */
 template<class Index, class Vector>
-struct NearestNeighborComm
+struct NearestNeighborComm : public aCommunicator<Vector>
 {
+    ///@brief no communication
     NearestNeighborComm(){
         silent_ = true;
     }
@@ -115,7 +117,7 @@ struct NearestNeighborComm
     * @param comm the (cartesian) communicator 
     * @param direction 0 is x, 1 is y, 2 is z
     */
-    NearestNeighborComm( int n, const int vector_dimensions[3], MPI_Comm comm, int direction)
+    NearestNeighborComm( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction)
     {
         construct( n, vector_dimensions, comm, direction);
     }
@@ -137,57 +139,42 @@ struct NearestNeighborComm
     }
 
     /**
-    * @brief Construct a vector containing halo cells of neighboring processes
-    *
-    * No inner points are stored
-    * @param input local input vector
-    *
-    * @return new container
-    */
-    const Vector& global_gather( const Vector& input)const;
-    /**
-    * @brief local size of the output of global_gather
-    *
-    * @return size
-    */
-    int size()const; //size of values is size of input plus ghostcells
-    /**
-    * @brief The communicator used
-    *
-    * @return MPI communicator
-    */
-    MPI_Comm communicator() const {return comm_;}
-    /**
     * @brief halo size
-    *
     * @return  halo size
     */
-    int n() const{return n_;}
+    unsigned n() const{return n_;}
     /**
     * @brief  The dimensionality of the input vector
-    *
-    * @return dimensions
+    * @return dimensions ( 3)
     */
-    const int* dims() const{return dim_;}
+    const unsigned* dims() const{return dim_;}
     /**
     * @brief The direction of communication
     *
     * @return direction
     */
-    int direction() const {return direction_;}
+    unsigned direction() const {return direction_;}
+    NearestNeighborComm* clone()const{return new NearestNeighborComm(*this);}
     private:
-    void construct( int n, const int vector_dimensions[3], MPI_Comm comm, int direction);
+    MPI_Comm do_communicator() const {return comm_;}
+    unsigned do_size()const; //size of values is size of input plus ghostcells
+    Vector do_make_buffer( )const{
+        Vector tmp( do_size());
+        return tmp;
+    }
+    void do_global_gather( const Vector& values, Vector& gather)const;
+    void do_global_scatter_reduce( const Vector& toScatter, Vector& values)const;
+    void construct( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction);
 
-    int n_, dim_[3]; //deepness, dimensions
+    unsigned n_, dim_[3]; //deepness, dimensions
     MPI_Comm comm_;
-    int direction_;
+    unsigned direction_;
     bool silent_;
-    Index gather_map1, gather_map2, scatter_map1, scatter_map2;
-    //dynamically allocate buffer so that global_gather can be const
-    Buffer<Vector> values, buffer1, buffer2, rb1, rb2; 
+    Index gather_map1, gather_map2, scatter_map1, scatter_map2; //buffer_size
+    Buffer<Vector> buffer1, buffer2, rb1, rb2;  //buffer_size
 
     void sendrecv( Vector&, Vector&, Vector& , Vector&)const;
-    int buffer_size() const;
+    unsigned buffer_size() const;
 };
 
 typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH; //!< host Communicator for the use in an mpi matrix for derivatives
@@ -195,27 +182,28 @@ typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double
 ///@cond
 
 template<class I, class V>
-void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Comm comm, int direction)
+void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[3], MPI_Comm comm, unsigned direction)
 {
     silent_=false;
+    n_=n;
+    dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
+    comm_ = comm;
+    direction_ = direction;
+    {
         int ndims;
         MPI_Cartdim_get( comm, &ndims);
         int dims[ndims], periods[ndims], coords[ndims];
         MPI_Cart_get( comm, ndims, dims, periods, coords);
         if( dims[direction] == 1) silent_ = true;
-    n_=n;
-    dim_[0] = dimensions[0], dim_[1] = dimensions[1], dim_[2] = dimensions[2];
-    comm_ = comm;
-    direction_ = direction;
-    assert( 0<=direction);
+    }
     assert( direction <3);
     thrust::host_vector<int> hbgather1(buffer_size()), hbgather2(hbgather1), hbscattr1(buffer_size()), hbscattr2(hbscattr1);
     switch( direction)
     {
         case( 0):
-        for( int i=0; i<dim_[2]*dim_[1]; i++)
+        for( unsigned i=0; i<dim_[2]*dim_[1]; i++)
         {
-            for( int j=0; j<n_; j++)
+            for( unsigned j=0; j<n_; j++)
             {
                 hbgather1[i*n+j] = (i*dim_[0]               + j);
                 hbgather2[i*n+j] = (i*dim_[0] + dim_[0] - n + j);
@@ -225,10 +213,10 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
         }
         break;
         case( 1):
-        for( int i=0; i<dim_[2]; i++)
+        for( unsigned i=0; i<dim_[2]; i++)
         {
-            for( int j=0; j<n; j++)
-                for( int k=0; k<dim_[0]; k++)
+            for( unsigned j=0; j<n; j++)
+                for( unsigned k=0; k<dim_[0]; k++)
                 {
                     hbgather1[(i*n+j)*dim_[0]+k] = 
                         (i*dim_[1] +               j)*dim_[0] + k;
@@ -242,9 +230,9 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
         }
         break;
         case( 2):
-        for( int i=0; i<n; i++)
+        for( unsigned i=0; i<n; i++)
         {
-            for( int j=0; j<dim_[0]*dim_[1]; j++)
+            for( unsigned j=0; j<dim_[0]*dim_[1]; j++)
             {
                 hbgather1[i*dim_[0]*dim_[1]+j] =  i*dim_[0]*dim_[1]            + j;
                 hbgather2[i*dim_[0]*dim_[1]+j] = (i+dim_[2]-n)*dim_[0]*dim_[1] + j;
@@ -256,20 +244,19 @@ void NearestNeighborComm<I,V>::construct( int n, const int dimensions[3], MPI_Co
     }
     gather_map1 =hbgather1, gather_map2 =hbgather2;
     scatter_map1=hbscattr1, scatter_map2=hbscattr2;
-    values.data().resize( size());
     buffer1.data().resize( buffer_size()), buffer2.data().resize( buffer_size());
     rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
 }
 
 template<class I, class V>
-int NearestNeighborComm<I,V>::size() const
+unsigned NearestNeighborComm<I,V>::do_size() const
 {
     if( silent_) return 0;
     return 2*buffer_size();
 }
 
 template<class I, class V>
-int NearestNeighborComm<I,V>::buffer_size() const
+unsigned NearestNeighborComm<I,V>::buffer_size() const
 {
     switch( direction_)
     {
@@ -285,30 +272,30 @@ int NearestNeighborComm<I,V>::buffer_size() const
 }
 
 template<class I, class V>
-const V& NearestNeighborComm<I,V>::global_gather( const V& input) const
+void NearestNeighborComm<I,V>::do_global_gather( const V& input, V& values) const
 {
-    if( silent_) return values.data();
-    //int rank;
-    //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    //dg::Timer t;
-    //t.tic();
+    if( silent_) return;
     //gather values from input into sendbuffer
     thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data().begin());
     thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data().begin());
-    //t.toc();
-    //if(rank==0)std::cout << "Gather       took "<<t.diff()<<"s\n";
-    //t.tic();
     //mpi sendrecv
     sendrecv( buffer1.data(), buffer2.data(), rb1.data(), rb2.data());
-    //t.toc();
-    //if(rank==0)std::cout << "MPI sendrecv took "<<t.diff()<<"s\n";
-    //t.tic();
     //scatter received values into values array
-    thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values.data().begin());
-    thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.data().begin());
-    //t.toc();
-    //if(rank==0)std::cout << "Scatter      took "<<t.diff()<<"s\n";
-    return values.data();
+    thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values.begin());
+    thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.begin());
+}
+template<class I, class V>
+void NearestNeighborComm<I,V>::do_global_scatter_reduce( const V& values, V& input) const
+{
+    if( silent_) return;
+    //scatter received values into values array
+    thrust::gather( scatter_map1.begin(), scatter_map1.end(), values.begin(), rb1.data().begin());
+    thrust::gather( scatter_map2.begin(), scatter_map2.end(), values.begin(), rb2.data().begin());
+    //mpi sendrecv
+    sendrecv( rb1.data(), rb2.data(), buffer1.data(), buffer2.data());
+    //gather values from input into sendbuffer
+    thrust::scatter( buffer1.data().begin(), buffer1.data().end(), gather_map1.begin(), input.begin());
+    thrust::scatter( buffer2.data().begin(), buffer2.data().end(), gather_map2.begin(), input.begin());
 }
 
 template<class I, class V>

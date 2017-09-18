@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mpi_vector.h"
+#include "memory.h"
 
 /*!@file
 
@@ -40,17 +41,19 @@ only the inner matrix is applied.
 template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
 struct RowColDistMat
 {
+    ///@brief no memory allocation
     RowColDistMat(){}
-
 
     /**
     * @brief Constructor 
     *
-    * @param m_inside The local matrix for the inner elements
-    * @param m_outside A local matrix for the elements from other processes
+    * @param inside The local matrix for the inner elements
+    * @param outside A local matrix for the elements from other processes
     * @param c The communication object
     */
-    RowColDistMat( const LocalMatrixInner& m_inside, const LocalMatrixOuter& m_outside, const Collective& c):m_i(m_inside), m_o(m_outside), c_(c) { }
+    RowColDistMat( const LocalMatrixInner& inside, const LocalMatrixOuter& outside, const Collective& c):
+        m_i(inside), m_o(outside), m_c(c), m_buffer( c.allocate_buffer()) { }
+
 
     /**
     * @brief Copy constructor 
@@ -65,8 +68,8 @@ struct RowColDistMat
     * @param src another Matrix
     */
     template< class OtherMatrixInner, class OtherMatrixOuter, class OtherCollective>
-    RowColDistMat( const RowColDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):m_i(src.inner_matrix()), m_o( src.outer_matrix()), c_(src.collective())
-    { }
+    RowColDistMat( const RowColDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):
+        m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_c(src.collective()), m_buffer( m_c.get().allocate_buffer()) { }
     /**
     * @brief Read access to the inner matrix
     *
@@ -84,7 +87,7 @@ struct RowColDistMat
     *
     * @return 
     */
-    const Collective& collective() const{return c_;}
+    const Collective& collective() const{return m_c.get();}
     
     /**
     * @brief Matrix Vector product
@@ -101,7 +104,7 @@ struct RowColDistMat
     template<class container> 
     void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y) const
     {
-        if( c_.size() == 0) //no communication needed
+        if( m_c.get().size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
@@ -110,13 +113,13 @@ struct RowColDistMat
 
         }
         assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
+        assert( x.communicator() == m_c.get().communicator());
         //1. compute inner points
         dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
         //2. communicate outer points
-        const container& temp = c_.global_gather( x.data());
+        const container& temp = m_c.get().global_gather( x.data());
         //3. compute and add outer points
         dg::blas2::detail::doSymv(alpha, m_o, temp, 1., y.data(), 
                        typename dg::MatrixTraits<LocalMatrixOuter>::matrix_category(), 
@@ -136,7 +139,7 @@ struct RowColDistMat
     template<class container> 
     void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y) const
     {
-        if( c_.size() == 0) //no communication needed
+        if( m_c.get().size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
@@ -146,16 +149,16 @@ struct RowColDistMat
 
         }
         assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
+        assert( x.communicator() == m_c.get().communicator());
         //1. compute inner points
         dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
         //2. communicate outer points
-        const container& temp = c_.global_gather( x.data());
+        m_c.get().global_gather( x.data(), m_buffer.data());
         //3. compute and add outer points
-        dg::blas2::detail::doSymv(1., m_o, temp, 1., y.data(), 
+        dg::blas2::detail::doSymv(1., m_o, m_buffer.data(), 1., y.data(), 
                        typename dg::MatrixTraits<LocalMatrixOuter>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
     }
@@ -163,15 +166,16 @@ struct RowColDistMat
     private:
     LocalMatrixInner m_i;
     LocalMatrixOuter m_o;
-    Collective c_;
+    Handle<Collective> m_c;
+    Buffer< typename Collective::container_type>  m_buffer;
 };
 
 
 ///Type of distribution of MPI distributed matrices
 enum dist_type
 {
-    row_dist; //!< Row distributed
-    col_dist; //!< Column distributed
+    row_dist=0, //!< Row distributed
+    col_dist=1 //!< Column distributed
 };
 
 /**
@@ -193,6 +197,7 @@ only the local matrix is applied.
 template<class LocalMatrix, class Collective >
 struct MPIDistMat
 {
+    ///@brief no memory allocation
     MPIDistMat( ) { }
     /**
     * @brief Constructor 
@@ -201,7 +206,8 @@ struct MPIDistMat
     * @param c The communication object
     * @param dist either row or column distributed
     */
-    MPIDistMat( const LocalMatrix& m, const Collective& c, enum dist_type dist = row_dist):m_(m), c_(c), m_dist( dist) { }
+    MPIDistMat( const LocalMatrix& m, const Collective& c, enum dist_type dist = row_dist):
+        m_m(m), m_c(c), m_buffer( c.allocate_buffer()), m_dist( dist) { }
 
     /**
     * @brief Copy Constructor 
@@ -211,20 +217,20 @@ struct MPIDistMat
     * @param src The other matrix
     */
     template< class OtherMatrix, class OtherCollective>
-    MPIDistMat( const MPIDistMat<OtherMatrix, OtherCollective>& src):m_(src.matrix()), c_(src.collective())
-    { }
+    MPIDistMat( const MPIDistMat<OtherMatrix, OtherCollective>& src):
+        m_m(src.matrix()), m_c(src.collective()), m_buffer( m_c.get().allocate_buffer()), m_dist(src.get_dist()) { }
     /**
     * @brief Access to the local matrix
     *
     * @return Reference to the local matrix
     */
-    const LocalMatrix& matrix() const{return m_;}
+    const LocalMatrix& matrix() const{return m_m;}
     /**
     * @brief Access to the communication object
     *
     * @return Reference to the collective object
     */
-    const Collective& collective() const{return c_;}
+    const Collective& collective() const{return m_c.get();}
 
     enum dist_type get_dist() const {return m_dist;}
     void set_dist(enum dist_type dist){m_dist=dist;}
@@ -233,36 +239,35 @@ struct MPIDistMat
     template<class container> 
     void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y)
     {
-        if( c_.size() == 0) //no communication needed
+        if( m_c.size() == 0) //no communication needed
         {
-            dg::blas2::detail::doSymv( alpha, m_, x.data(), beta, y.data(), 
+            dg::blas2::detail::doSymv( alpha, m_m, x.data(), beta, y.data(), 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
             return;
 
         }
         assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
+        assert( x.communicator() == m_c.communicator());
         if( m_dist == row_dist){
-            container temp = c_.global_gather( x.data());
-            dg::blas2::detail::doSymv( alpha, m_, temp, beta, y.data(), 
+            m_c.global_gather( x.data(), m_buffer.data());
+            dg::blas2::detail::doSymv( alpha, m_m, m_buffer.data(), beta, y.data(), 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );
         }
         if( m_dist == col_dist){
-            container temp( c_.size());
-            dg::blas2::detail::doSymv( alpha, m_, x.data(), beta, temp, 
+            dg::blas2::detail::doSymv( alpha, m_m, x.data(), beta, m_buffer.data(), 
                            typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                            typename dg::VectorTraits<container>::vector_category() );
-            c_.global_scatter_reduce( temp, y.data());
+            m_c.get().global_scatter_reduce( m_buffer.data(), y.data());
         }
     }
     template<class container> 
     void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
     {
-        if( c_.size() == 0) //no communication needed
+        if( m_c.get().size() == 0) //no communication needed
         {
-            dg::blas2::detail::doSymv( m_, x.data(), y.data(), 
+            dg::blas2::detail::doSymv( m_m, x.data(), y.data(), 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
@@ -270,29 +275,29 @@ struct MPIDistMat
 
         }
         assert( x.communicator() == y.communicator());
-        assert( x.communicator() == c_.communicator());
+        assert( x.communicator() == m_c.communicator());
         if( m_dist == row_dist){
-            container temp = c_.global_gather( x.data());
-            dg::blas2::detail::doSymv( m_, temp, y.data(), 
+            m_c.get().global_gather( x.data(), m_buffer.data());
+            dg::blas2::detail::doSymv( m_m, m_buffer.data(), y.data(), 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
         }
         if( m_dist == col_dist){
-            container temp( c_.size());
-            dg::blas2::detail::doSymv( m_, x.data(), temp, 
+            dg::blas2::detail::doSymv( m_m, x.data(), m_buffer.data(), 
                        typename dg::MatrixTraits<LocalMatrix>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category(),
                        typename dg::VectorTraits<container>::vector_category() );
-            c_.global_scatter_reduce( temp, y.data());
+            m_c.get().global_scatter_reduce( m_buffer.data(), y.data());
         }
     }
 
         
     private:
+    LocalMatrix m_m;
+    Handle<Collective> m_c;
+    Buffer< typename Collective::container_type> m_buffer;
     enum dist_type m_dist;
-    LocalMatrix m_;
-    Collective c_;
 };
 
 ///@cond
@@ -310,25 +315,13 @@ struct MatrixTraits<const RowColDistMat<LI,LO, C> >
 };
 
 template<class L, class C>
-struct MatrixTraits<RowDistMat<L, C> >
+struct MatrixTraits<MPIDistMat<L, C> >
 {
     typedef typename MatrixTraits<L>::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 
 };
 template<class L, class C>
-struct MatrixTraits<const RowDistMat<L, C> >
-{
-    typedef typename MatrixTraits<L>::value_type value_type;//!< value type
-    typedef MPIMatrixTag matrix_category; //!< 
-};
-template<class L, class C>
-struct MatrixTraits<ColDistMat<L, C> >
-{
-    typedef typename MatrixTraits<L>::value_type value_type;//!< value type
-    typedef MPIMatrixTag matrix_category; //!< 
-};
-template<class L, class C>
-struct MatrixTraits<const ColDistMat<L, C> >
+struct MatrixTraits<const MPIDistMat<L, C> >
 {
     typedef typename MatrixTraits<L>::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 

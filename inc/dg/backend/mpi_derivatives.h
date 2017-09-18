@@ -122,7 +122,7 @@ EllSparseBlockMat<double> distribute_rows( const EllSparseBlockMat<double>& src,
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const aMPITopology2d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dx( g.global(), bcx, dir);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -151,7 +151,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( c
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const aMPITopology2d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dy( g.global(), bcy, dir);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -178,7 +178,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( c
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const aMPITopology2d& g, bc bcx)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpX( g.global(), bcx);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -204,7 +204,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const aMPITopology2d& g, bc bcy)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpY( g.global(), bcy);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), 1}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), 1}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -232,7 +232,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const aMPITopology3d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dx( g.global(), bcx, dir);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), (unsigned)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -259,7 +259,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( c
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const aMPITopology3d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dy( g.global(), bcy, dir);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), (unsigned)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -286,7 +286,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( c
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( const aMPITopology3d& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat<double> matrix = dg::create::dz( g.global(), bcz, dir);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), (unsigned)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -313,7 +313,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( c
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const aMPITopology3d& g, bc bcx)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpX( g.global(), bcx);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), (unsigned)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -340,7 +340,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const aMPITopology3d& g, bc bcy)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpY( g.global(), bcy);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), (unsigned)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
@@ -366,7 +366,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY
 RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ( const aMPITopology3d& g, bc bcz)
 {
     EllSparseBlockMat<double> matrix = dg::create::jumpZ( g.global(), bcz);
-    int vector_dimensions[] = {(int)(g.n()*g.Nx()), (int)(g.n()*g.Ny()), (int)(g.Nz())}; //x, y, z
+    unsigned vector_dimensions[] = {(unsigned)(g.n()*g.Nx()), (unsigned)(g.n()*g.Ny()), (unsigned)(g.Nz())}; //x, y, z
     MPI_Comm comm = g.communicator();
     int ndims;
     MPI_Cartdim_get( comm, &ndims);
