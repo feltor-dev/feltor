@@ -54,7 +54,7 @@ struct aCommunicator
      * @brief Allocate a LocalContainer object of size size()
      * @return an object on the stack
      */
-    LocalContainer make_buffer( )const{
+    LocalContainer allocate_buffer( )const{
         return do_make_buffer();
     }
 
@@ -101,29 +101,23 @@ struct aCommunicator
     * @note we assume that the vector size is always the local size of a dg::MPI_Vector
     * @return buffer size
     */
-    unsigned size() const;
+    unsigned size() const{return do_size();}
     /**
     * @brief The internal MPI communicator used 
     *
     * e.g. used to assert that communicators of matrix and vector are the same
     * @return MPI Communicator
     */
-    MPI_Comm communicator() const{return m_comm;}
+    MPI_Comm communicator() const{return do_communicator();}
     virtual aCommunicator* clone() const =0;
     virtual ~aCommunicator(){}
     protected:
-    /**
-     * @brief default constructor
-     * @param comm defaults to MPI_COMM_WORLD
-     */
-    aCommunicator(MPI_Comm comm = MPI_COMM_WORLD){m_comm = comm;}
-    aCommunicator(const aCommunicator& src){ m_comm = src.m_comm; }
-    aCommunicator& operator=(const aCommunicator& src){
-        m_comm = src.m_comm;
-        return *this 
-    }
+    aCommunicator(){}
+    aCommunicator(const aCommunicator& src){ }
+    aCommunicator& operator=(const aCommunicator& src){ return *this; }
     private:
-    MPI_Comm m_comm;
+    virtual MPI_Comm do_communicator() const=0;
+    virtual unsigned do_size() const=0;
     virtual LocalContainer do_make_buffer( )const=0;
     virtual void do_global_gather( const LocalContainer& values, LocalContainer& gathered)const=0;
     virtual void do_global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const=0;

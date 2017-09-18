@@ -11,10 +11,10 @@ int main( int argc, char * argv[])
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
+    if(size!=4 ){std::cerr <<"You run with "<<size<<" processes. Run with 4 processes!\n"; MPI_Finalize(); return 0;}
 
     if(rank==0)std::cout <<"Nx " <<Nx << " and Ny "<<Ny<<std::endl;
     if(rank==0)std::cout <<"Size =  " <<size <<std::endl;
-    if(size!=4 && rank == 0){std::cerr <<"You run with "<<size<<" processes. Run with 4 processes!\n"; MPI_Finalize(); return -1;}
 
     if(rank==0)std::cout << "Test BijectiveComm: scatter followed by gather leaves the input vector intact\n";
     thrust::host_vector<double> v( Nx*Ny, 3*rank);
