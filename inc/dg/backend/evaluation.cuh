@@ -11,6 +11,7 @@
 namespace dg
 {
 
+//maybe we should consider using boost::function as argument type as a generic function pointer typ
 
 ///@addtogroup evaluation
 ///@{

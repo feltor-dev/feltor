@@ -60,11 +60,12 @@ struct aGenerator2d
     virtual ~aGenerator2d(){}
 
     protected:
+    ///empty
     aGenerator2d(){}
-    aGenerator2d(const aGenerator2d& src){}
-    aGenerator2d& operator=(const aGenerator2d& src){
-        return *this;
-    }
+    ///empty
+    aGenerator2d(const aGenerator2d& ){}
+    ///return *this
+    aGenerator2d& operator=(const aGenerator2d& ){ return *this; }
     private:
     virtual void do_generate(
          const thrust::host_vector<double>& zeta1d, 
