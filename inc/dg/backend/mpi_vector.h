@@ -40,7 +40,7 @@ struct MPI_Vector
     * @brief Conversion operator
     *
     * uses conversion between compatible containers
-    * @tparam OtherContainer Another container class
+    * @tparam OtherContainer Another container class (container must be copy constructible from OtherContainer)
     * @param src the source 
     */
     template<class OtherContainer>
@@ -80,40 +80,6 @@ struct MPI_Vector
     MPI_Comm communicator() const{return comm_;}
 
     /**
-     * @brief Display local data
-     *
-     * @param os outstream
-     */
-    void display( std::ostream& os) const
-    {
-        for( unsigned j=0; j<data_.size(); j++)
-            os << data_[j] << " ";
-        os << "\n";
-    }
-    /**
-    * @brief Access single data points
-    *
-    * @param i index
-    *
-    * @return a value
-    * @attention if the container class is a device vector communication is needed to transfer the value from the device to the host
-    */
-    double operator[](int i) const{return data_[i];}
-    /**
-     * @brief Disply local data
-     *
-     * @param os outstream
-     * @param v a vector
-     *
-     * @return  the outsream
-     */
-    friend std::ostream& operator<<( std::ostream& os, const MPI_Vector& v)
-    {
-        os << "Vector of size  "<<v.size()<<"\n";
-        v.display(os);
-        return os;
-    }
-    /**
      * @brief Swap data 
      *
      * @param that must have equal sizes and communicator
@@ -131,12 +97,12 @@ struct MPI_Vector
 
 template<class container> 
 struct VectorTraits<MPI_Vector<container> > {
-    typedef double value_type;
+    typedef typename container::value_type value_type;
     typedef MPIVectorTag vector_category;
 };
 template<class container> 
 struct VectorTraits<const MPI_Vector<container> > {
-    typedef double value_type;
+    typedef typename container::value_type value_type;
     typedef MPIVectorTag vector_category;
 };
 
@@ -148,8 +114,9 @@ struct VectorTraits<const MPI_Vector<container> > {
 *
 * exchanges a halo of given size among next neighbors in a given direction
 * @ingroup mpi_structures
-* @tparam Index the type of index container
-* @tparam Vector the vector container type
+* @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
+* @tparam Vector the vector container type must have a resize() function and work 
+* in the thrust library functions ( i.e. must a thrust::host_vector or thrust::device_vector)
 * @note models aCommunicator
 */
 template<class Index, class Vector>
@@ -228,7 +195,6 @@ struct NearestNeighborComm
     int direction() const {return direction_;}
     private:
     void construct( int n, const int vector_dimensions[3], MPI_Comm comm, int direction);
-    typedef thrust::host_vector<double> HVec;
 
     int n_, dim_[3]; //deepness, dimensions
     MPI_Comm comm_;

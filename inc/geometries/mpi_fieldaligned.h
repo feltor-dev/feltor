@@ -51,7 +51,6 @@ void sendBackward( InputIterator begin, InputIterator end, OutputIterator result
                     comm, &status);
 }
 }//namespace detail
-
 ///@endcond
 
 
@@ -60,12 +59,12 @@ void sendBackward( InputIterator begin, InputIterator end, OutputIterator result
  * @brief Class for the evaluation of a parallel derivative (MPI Version)
  *
  * @ingroup fieldaligned
- * @tparam LocalMatrix The matrix class of the interpolation matrix
+ * @tparam LocalIMatrix The matrix class of the interpolation matrix
  * @tparam Communicator The communicator used to exchange data in the RZ planes
  * @tparam LocalContainer The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
  */
-template <class Geometry, class LocalMatrix, class Communicator, class LocalContainer>
-struct FieldAligned< Geometry, RowDistMat<LocalMatrix, Communicator>, MPI_Vector<LocalContainer> > 
+template <class Geometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
+struct FieldAligned< Geometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> > 
 {
     /**
     * @brief Construct from a field and a grid
@@ -242,15 +241,15 @@ struct FieldAligned< Geometry, RowDistMat<LocalMatrix, Communicator>, MPI_Vector
     LocalContainer left_, right_;
     LocalContainer limiter_;
     std::vector<LocalContainer> tempXYplus_, tempXYminus_, temp_; 
-    Communicator commXYplus_, commXYminus_;
-    LocalMatrix plus, minus; //interpolation matrices
-    LocalMatrix plusT, minusT; //interpolation matrices
+    CommunicatorXY commXYplus_, commXYminus_;
+    LocalIMatrix plus, minus; //interpolation matrices
+    LocalIMatrix plusT, minusT; //interpolation matrices
 };
 ///@cond
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
-template<class MPIGeometry, class LocalMatrix, class CommunicatorXY, class LocalContainer>
+template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
 template <class Field, class Limiter>
-FieldAligned<MPIGeometry, RowDistMat<LocalMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::FieldAligned(Field field, MPIGeometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
+FieldAligned<MPIGeometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::FieldAligned(Field field, MPIGeometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()), 
     tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()), temp_(g_.Nz())
