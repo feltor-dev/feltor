@@ -571,10 +571,8 @@ struct aMPITopology3d
      * @return pid of a process, or -1 if non of the grids matches
      */
     int pidOf( double x, double y, double z) const;
-    /**
-    * @copydoc aMPITopology2d::local2globalIdx(int,int,int&)
-    */
-    bool local2globalIdx( int localIdx, int PID, int& globalIdx)
+    ///@copydoc aMPITopology2d::local2globalIdx(int,int,int&)const
+    bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
         if( localIdx < 0 || localIdx >= (int)size()) return false;
         int coords[3];
@@ -589,10 +587,8 @@ struct aMPITopology3d
         globalIdx = (gIdx2*g.n()*g.Ny() + gIdx1)*g.n()*g.Nx() + gIdx0;
         return true;
     }
-    /**
-    * @copydoc aMPITopology2d::global2localIdx(int,int&,int&)
-    */
-    bool global2localIdx( int globalIdx, int& localIdx, int& PID)
+    ///@copydoc aMPITopology2d::global2localIdx(int,int&,int&)const
+    bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
     {
         if( globalIdx < 0 || globalIdx >= (int)g.size()) return false;
         int coords[3];

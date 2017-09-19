@@ -128,26 +128,25 @@ void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values
  *
  * @code
  int i = myrank;
- double values[10] = {i,i,i,i, 9,9,9,9};
- thrust::host_vector<double> hvalues( values, values+10);
- int pids[10] =      {0,1,2,3, 0,1,2,3};
- thrust::host_vector<int> hpids( pids, pids+10);
+ double values[8] = {i,i,i,i, 9,9,9,9};
+ thrust::host_vector<double> hvalues( values, values+8);
+ int pids[8] =      {0,1,2,3, 0,1,2,3};
+ thrust::host_vector<int> hpids( pids, pids+8);
  BijectiveComm coll( hpids, MPI_COMM_WORLD);
- thrust::host_vector<double> hrecv = coll.scatter( hvalues);
- //hrecv is now {0,9,1,9,2,9,3,9} e.g. for process 0 
- thrust::host_vector<double> hrecv2( coll.send_size());
- coll.gather( hrecv, hrecv2);
- //hrecv2 now equals hvalues independent of process rank
+ thrust::host_vector<double> hrecv = coll.global_gather( hvalues); //for e.g. process 0 hrecv is now {0,9,1,9,2,9,3,9} 
+ thrust::host_vector<double> hrecv2( hvalues.size());
+ coll.global_scatter_reduce( hrecv, hrecv2); //hrecv2 now equals hvalues independent of process rank
  @endcode
- @tparam Index an integer Vector
- @tparam Vector a Vector (the data type of Vector must be double)
+ * @tparam Index an integer thrust Vector (thrust::host_vector<int> or thrust::device_vector<int>) 
+ * @tparam Vector a thrust Vector (thrust::host_vector<double> or thrust::device_vector<double>)
+ * @note a scatter followed by a gather of the received values restores the original array
+ * @note The order of the received elements is according to their original array index 
+ *   (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
  */
 template< class Index, class Vector>
 struct BijectiveComm : public aCommunicator<Vector>
 {
-    /**
-     * @brief Construct empty class
-     */
+    ///@copydoc GeneralComm::GeneralComm()
     BijectiveComm( ){ }
     /**
      * @brief Construct from a given map with respect to the source/data vector
@@ -175,13 +174,6 @@ struct BijectiveComm : public aCommunicator<Vector>
     virtual BijectiveComm* clone() const {return new BijectiveComm(*this);}
     private:
     MPI_Comm do_communicator() const {return p_.communicator();}
-    /**
-     * @brief compute total # of elements the calling process receives in the scatter process (or sends in the gather process)
-     *
-     * (which might not equal the send size in each process)
-     *
-     * @return # of elements to receive
-     */
     unsigned do_size() const { return p_.store_size();}
     Vector do_make_buffer()const{ 
         Vector tmp( do_size() );
@@ -217,17 +209,6 @@ struct BijectiveComm : public aCommunicator<Vector>
         p_.construct( sendTo, comm);
         values_.data().resize( idx_.size());
     }
-    /**
-     * @brief Globally gathers data into a buffer according to the map given in the Constructor
-     *
-     * The order of the received elements is according to their original array index 
-     * (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
-     * @param values data to send (must have the size given 
-     * by the map in the constructor, s.a. size())
-     *
-     * @return received data from other processes of size size()
-     * @note a scatter followed by a gather of the received values restores the original array
-     */
     void do_global_gather( const Vector& values, Vector& store)const
     {
         //actually this is a scatter but we constructed it invertedly
@@ -239,14 +220,6 @@ struct BijectiveComm : public aCommunicator<Vector>
         p_.scatter( values_.data(), store);
     }
 
-    /**
-     * @brief Scatter data according to the map given in the constructor 
-     *
-     * This method is the inverse of gather
-     * @param toScatter other processes collect data from this vector (has to be of size given by recv_size())
-     * @param values contains values from other processes sent back to the origin (must have the size of the map given in the constructor, or send_size())
-     * @note a scatter followed by a gather of the received values restores the original array
-     */
     void do_global_scatter_reduce( const Vector& toScatter, Vector& values) const
     {
         //actually this is a gather but we constructed it invertedly
@@ -270,8 +243,8 @@ struct BijectiveComm : public aCommunicator<Vector>
  Compared to BijectiveComm in the global_gather function there is an additional 
  gather and in the global_scatter_reduce function a reduction 
  needs to be performed.
- @tparam Index an integer Vector
- @tparam Vector a Vector (the data type of Vector must be double)
+ * @tparam Index an integer thrust Vector (thrust::host_vector<int> or thrust::device_vector<int>) 
+ * @tparam Vector a thrust Vector (thrust::host_vector<double> or thrust::device_vector<double>)
  */
 template< class Index, class Vector>
 struct SurjectiveComm : public aCommunicator<Vector>
@@ -371,8 +344,8 @@ struct SurjectiveComm : public aCommunicator<Vector>
  * This Communicator can perform general global gather and
  scatter operations. Compared to SurjectiveComm the global_scatter_reduce function needs
  to perform an additional scatter as some elements of the source vector might be left empty
- @tparam Index an integer Vector
- @tparam Vector a Vector (the data type of Vector must be double, and the Vector must have size() and resize() function)
+ * @tparam Index an integer thrust Vector (thrust::host_vector<int> or thrust::device_vector<int>) 
+ * @tparam Vector a thrust Vector (thrust::host_vector<double> or thrust::device_vector<double>)
  */
 template< class Index, class Vector>
 struct GeneralComm : public aCommunicator<Vector>
@@ -426,14 +399,11 @@ struct GeneralComm : public aCommunicator<Vector>
         Vector tmp(do_size());
         return tmp;
     }
-
     MPI_Comm do_communicator()const{return surjectiveComm_.communicator();}
-    void do_global_gather( const Vector& values, Vector& sink)const
-    {
+    void do_global_gather( const Vector& values, Vector& sink)const {
         surjectiveComm_.global_gather( values, sink);
     }
-    void do_global_scatter_reduce( const Vector& toScatter, Vector& values)const
-    {
+    void do_global_scatter_reduce( const Vector& toScatter, Vector& values)const {
         surjectiveComm_.global_scatter_reduce( toScatter, store_.data());
         thrust::scatter( store_.data().begin(), store_.data().end(), scatterMap_.begin(), values.begin());
     }

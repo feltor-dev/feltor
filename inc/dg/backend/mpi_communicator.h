@@ -66,19 +66,19 @@ struct aCommunicator
     }
 
     /**
-     * @brief Gather data across processes
-     * @param values data to gather from
-     * @param gather object to hold the gathered data ( must be of size size())
+     * @brief Globally (across processes) gather data into a buffer 
+     * @param values data; other processes collect data from this vector
+     * @param buffer object to hold the gathered data ( must be of size size())
      */
-    void global_gather( const LocalContainer& values, LocalContainer& gather)const
+    void global_gather( const LocalContainer& values, LocalContainer& buffer)const
     {
         do_global_gather( values, gather);
     }
 
     /**
-     * @brief Gather data across processes (memory allocating version)
-     * @param values data to gather from
-     * @return object to hold the gathered data
+     * @brief Globally (across processes) gather data into a buffer (memory allocating version)
+     * @param values data; other processes collect data from this vector
+     * @return object that holds the gathered data
      */
     LocalContainer global_gather( const LocalContainer& values) const
     {
@@ -88,8 +88,8 @@ struct aCommunicator
     }
 
     /**
-     * @brief Scatter data accross processes and reduce on multiple indices
-     * @param toScatter buffer vector (has to be of size given by size())
+     * @brief Globally (across processes) scatter data accross processes and reduce on multiple indices
+     * @param toScatter buffer vector; (has to be of size given by size())
      * @param values contains values from other processes sent back to the origin 
      */
     void global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const{
