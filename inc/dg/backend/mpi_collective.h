@@ -150,7 +150,7 @@ struct BijectiveComm : public aCommunicator<Vector>
      */
     BijectiveComm( ){ }
     /**
-     * @brief Construct from a given map with respect to the data vector
+     * @brief Construct from a given map with respect to the source/data vector
      *
      * @param pids Gives to every point of the values/data vector (not the buffer vector!) 
      *   the rank to which to send this data element. 
@@ -262,39 +262,33 @@ struct BijectiveComm : public aCommunicator<Vector>
 
 /**
  * @ingroup mpi_structures
- * @brief Struct that performs injective collective scatter and gather operations across processes on distributed vectors using mpi
+ * @brief Struct that performs surjective collective scatter and gather operations across processes on distributed vectors using mpi
  *
- * This Communicator performs injective global gather and
+ * This Communicator performs surjective global gather and
  scatter operations, which means that the gather/scatter map
- is injective, i.e. all elements in a vector get gathered. This
- is relevant only in the global_scatter_reduce function, since 
- there is no reduction needed.
+ is surjective, i.e. all elements in a source vector get gathered. 
+ Compared to BijectiveComm in the global_gather function there is an additional 
+ gather and in the global_scatter_reduce function a reduction 
+ needs to be performed.
  @tparam Index an integer Vector
  @tparam Vector a Vector (the data type of Vector must be double)
  */
 template< class Index, class Vector>
-struct InjectiveComm : public aCommunicator<Vector>
+struct SurjectiveComm : public aCommunicator<Vector>
 {
-    ///@brief Construct empty class
-    InjectiveComm(){}
-    /**
-    * @brief Construct from local indices and PIDs
-    *
-    * @param localGatherMap The gather map containing local vector indices
-    * @param pidGatherMap The gather map containing the pids from where to gather the local index.
-    Same size as localGatherMap.
-     *   The rank needs to be element of the given communicator.
-    * @param comm The MPI communicator participating in the scatter/gather operations
-    * @note we assume that the gather map is injective
-    */
-    InjectiveComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
+    ///@copydoc GeneralComm::GeneralComm()
+    SurjectiveComm(){}
+    ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const thrust::host_vector<int>&,MPI_Comm)
+    ///@note we assume that the gather map is surjective
+    SurjectiveComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
     {
         construct( localGatherMap, pidGatherMap, comm);
     }
 
-    ///use global2localIdx of MPI geometries
-    template<class MPIGeometry>
-    InjectiveComm( const thrust::host_vector<int>& globalGatherMap, const MPIGeometry& g)
+    ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const MPITopology&)
+    ///@note we assume that the gather map is surjective
+    template<class MPITopology>
+    SurjectiveComm( const thrust::host_vector<int>& globalGatherMap, const MPITopology& g)
     {
         thrust::host_vector<int> local(globalGatherMap.size()), pids(globalGatherMap.size());
         bool success = true;
@@ -306,15 +300,16 @@ struct InjectiveComm : public aCommunicator<Vector>
     }
 
     template<class OtherIndex, class OtherVector>
-    InjectiveComm( const InjectiveComm<OtherIndex, OtherVector>& src)
+    SurjectiveComm( const SurjectiveComm<OtherIndex, OtherVector>& src)
     {
         construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
     }
 
+    ///@copydoc GeneralComm::getLocalGatherMap
     const thrust::host_vector<int>& getLocalGatherMap() const {return localGatherMap_;}
     const thrust::host_vector<int>& getPidGatherMap() const {return pidGatherMap_;}
     const Index& getSortedGatherMap() const {return sortedGatherMap_;}
-    virtual InjectiveComm* clone() const {return new InjectiveComm(*this);}
+    virtual SurjectiveComm* clone() const {return new SurjectiveComm(*this);}
     private:
     Vector do_make_buffer()const{
         Vector tmp(do_size());
@@ -374,7 +369,8 @@ struct InjectiveComm : public aCommunicator<Vector>
  * @brief Struct that performs general collective scatter and gather operations across processes on distributed vectors using mpi
  *
  * This Communicator can perform general global gather and
- scatter operations. 
+ scatter operations. Compared to SurjectiveComm the global_scatter_reduce function needs
+ to perform an additional scatter as some elements of the source vector might be left empty
  @tparam Index an integer Vector
  @tparam Vector a Vector (the data type of Vector must be double, and the Vector must have size() and resize() function)
  */
@@ -383,6 +379,16 @@ struct GeneralComm : public aCommunicator<Vector>
 {
     ///@brief no memory allocation
     GeneralComm(){}
+    /**
+    * @brief Construct from local indices and PIDs gather map
+    *
+    * The gather map shall be written with respect to the buffer vector (unlike in BijectiveComm, where it is given wrt the source vector) 
+    * @param localGatherMap The gather map containing local vector indices ( local buffer size)
+    * @param pidGatherMap The gather map containing the pids from where to gather the local index.
+    Same size as localGatherMap.
+     *   The rank needs to be element of the given communicator.
+    * @param comm The MPI communicator participating in the scatter/gather operations
+    */
     GeneralComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm) {
         construct( localGatherMap, pidGatherMap, comm);
     }
@@ -390,8 +396,17 @@ struct GeneralComm : public aCommunicator<Vector>
     GeneralComm( const GeneralComm<OtherIndex, OtherVector>& src){
         construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
     }
-    template<class MPIGeometry>
-    GeneralComm( const thrust::host_vector<int>& globalGatherMap, MPIGeometry& g)
+
+    /**
+     * @brief Construct from global indices gather map
+     *
+     * Use the global2localIdx() function to generate localGatherMap and pidGatherMap 
+     * @tparam MPITopology any implementation of an MPI Topology (aMPITopology2d, aMPITopology3d, ...)
+     * @param globalGatherMap The gather map containing global vector indices (local buffer size)
+     * @param g a grid object
+     */
+    template<class MPITopology>
+    GeneralComm( const thrust::host_vector<int>& globalGatherMap, const MPITopology& g)
     {
         thrust::host_vector<int> local(globalGatherMap.size()), pids(globalGatherMap.size());
         bool success = true;
@@ -401,8 +416,10 @@ struct GeneralComm : public aCommunicator<Vector>
         construct( local, pids, g.communicator());
     }
 
-    const thrust::host_vector<int>& getLocalGatherMap() const {return injectiveComm_.getLocalGatherMap();}
-    const thrust::host_vector<int>& getPidGatherMap() const {return injectiveComm_.getPidGatherMap();}
+    ///@brief read access to the local index gather map
+    const thrust::host_vector<int>& getLocalGatherMap() const {return surjectiveComm_.getLocalGatherMap();}
+    ///@brief read access to the pid gather map
+    const thrust::host_vector<int>& getPidGatherMap() const {return surjectiveComm_.getPidGatherMap();}
     virtual GeneralComm* clone() const {return new GeneralComm(*this);}
     private:
     Vector do_make_buffer() const{ 
@@ -410,23 +427,23 @@ struct GeneralComm : public aCommunicator<Vector>
         return tmp;
     }
 
-    MPI_Comm do_communicator()const{return injectiveComm_.communicator();}
+    MPI_Comm do_communicator()const{return surjectiveComm_.communicator();}
     void do_global_gather( const Vector& values, Vector& sink)const
     {
-        injectiveComm_.global_gather( values, sink);
+        surjectiveComm_.global_gather( values, sink);
     }
     void do_global_scatter_reduce( const Vector& toScatter, Vector& values)const
     {
-        injectiveComm_.global_scatter_reduce( toScatter, store_.data());
+        surjectiveComm_.global_scatter_reduce( toScatter, store_.data());
         thrust::scatter( store_.data().begin(), store_.data().end(), scatterMap_.begin(), values.begin());
     }
 
-    unsigned do_size() const{return injectiveComm_.size();}
+    unsigned do_size() const{return surjectiveComm_.size();}
     void construct( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
     {
-        injectiveComm_ = InjectiveComm<Index,Vector>(localGatherMap, pidGatherMap, comm);
+        surjectiveComm_ = SurjectiveComm<Index,Vector>(localGatherMap, pidGatherMap, comm);
 
-        const Index& sortedGatherMap_ = injectiveComm_.getSortedGatherMap();
+        const Index& sortedGatherMap_ = surjectiveComm_.getSortedGatherMap();
         thrust::host_vector<int> gatherMap;
         dg::blas1::transfer( sortedGatherMap_, gatherMap);
         thrust::host_vector<int> one( gatherMap.size(), 1), keys(one), number(one);
@@ -439,7 +456,7 @@ struct GeneralComm : public aCommunicator<Vector>
         scatterMap_.resize(distance);
         thrust::copy( keys.begin(), keys.begin() + distance, scatterMap_.begin());
     }
-    InjectiveComm<Index, Vector> injectiveComm_;
+    SurjectiveComm<Index, Vector> surjectiveComm_;
     Buffer<Vector> store_;
     Index scatterMap_;
 };

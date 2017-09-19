@@ -232,7 +232,7 @@ struct aMPITopology2d
     * @param globalIdx the corresponding global vector Index (contains result on output)
     * @return true if successful, false if localIdx or PID is not part of the grid
     */
-    bool local2globalIdx( int localIdx, int PID, int& globalIdx)
+    bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
         if( localIdx < 0 || localIdx >= (int)size()) return -1;
         int coords[2];
@@ -253,7 +253,7 @@ struct aMPITopology2d
     * @param PID contains corresponding PID in the communicator on output
     * @return true if successful, false if globalIdx is not part of the grid
     */
-    bool global2localIdx( int globalIdx, int& localIdx, int& PID)
+    bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
     {
         if( globalIdx < 0 || globalIdx >= (int)g.size()) return -1;
         int coords[2];

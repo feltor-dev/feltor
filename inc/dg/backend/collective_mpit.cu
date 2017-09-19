@@ -39,9 +39,9 @@ int main( int argc, char * argv[])
     }
     {
         if( equal) 
-            std::cout <<"Rank "<<rank<<" TEST PASSED"<<std::endl;
+            std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
         else
-            std::cerr <<"Rank "<<rank<<" TEST FAILED"<<std::endl;
+            std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
     }
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank==0)std::cout << "Test SurjectiveComm and GeneralComm:\n";
@@ -58,20 +58,21 @@ int main( int argc, char * argv[])
     receive = s.global_gather( vec);
     //for( unsigned i=0; i<(Nx+1)*(Ny+1); i++)
     //    if(rank==0) std::cout << i<<"\t "<< receive[i] << std::endl;
-    s.global_scatter_reduce( receive, vec);
+    thrust::host_vector<double> vec2(vec.size());
+    s.global_scatter_reduce( receive, vec2);
     equal=true;
     for( unsigned i=0; i<(Nx)*(Ny); i++)
     {
         //if(rank==1) std::cout << i<<"\t "<< vec[i] << std::endl;
         result[i] = rank; 
         if( i < (Nx+1)*(Ny+1) - Nx*Ny) result[i] += (rank)%size;
-        if( vec[i] != result[i]) equal = false;
+        if( vec2[i] != result[i]) equal = false;
     }
     {
         if( equal) 
-            std::cout <<"Rank "<<rank<<" TEST PASSED"<<std::endl;
+            std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
         else
-            std::cerr <<"Rank "<<rank<<" TEST FAILED"<<std::endl;
+            std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -84,7 +85,7 @@ int main( int argc, char * argv[])
     dg::NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > nnch( 2, dims, comm, 1);
     thrust::host_vector<double> tmp = nnch.allocate_buffer();
     nnch.global_gather( vec, tmp);
-    thrust::host_vector<double> vec2(vec);
+    vec2=vec;
     nnch.global_scatter_reduce( tmp, vec2);
     for( unsigned i=0; i<(Nx)*(Ny); i++)
     {
@@ -92,9 +93,9 @@ int main( int argc, char * argv[])
     }
     {
         if( equal) 
-            std::cout <<"Rank "<<rank<<" TEST PASSED"<<std::endl;
+            std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
         else
-            std::cerr <<"Rank "<<rank<<" TEST FAILED"<<std::endl;
+            std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
     }
 
 
