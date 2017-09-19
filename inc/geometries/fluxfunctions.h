@@ -8,7 +8,7 @@ namespace geo
 ///@addtogroup fluxfunctions
 ///@{
 //
-//In the next round of updates we should consider using boost::function 
+//In the next round of updates (C++11) we should consider using std::function maybe?
 
 /**
 * @brief This functor represents functions written in cylindrical coordinates

@@ -313,6 +313,7 @@ struct FieldAligned
 {
 
     typedef IMatrix InterpolationMatrix;
+    ///@brief do not allocate memory
     FieldAligned(){}
 
     /**
@@ -388,6 +389,7 @@ struct FieldAligned
      */
     template< class BinaryOp>
     container evaluate( BinaryOp f, unsigned plane=0) const;
+
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
      *
@@ -410,27 +412,20 @@ struct FieldAligned
 
     /**
     * @brief Applies the interpolation 
-    *
     * @param which specify what interpolation should be applied
     * @param in input 
     * @param out output may not equal input
     */
     void operator()(enum whichMatrix which, const container& in, container& out);
 
-    /**
-    * @brief hz is the distance between the plus and minus planes
-    * @return three-dimensional vector
-    */
+    ///@brief hz is the distance between the plus and minus planes
+    ///@return three-dimensional vector
     const container& hz()const {return hz_;}
-    /**
-    * @brief hp is the distance between the plus and current planes
-    * @return three-dimensional vector
-    */
+    ///@brief hp is the distance between the plus and current planes
+    ///@return three-dimensional vector
     const container& hp()const {return hp_;}
-    /**
-    * @brief hm is the distance between the current and minus planes
-    * @return three-dimensional vector
-    */
+    ///@brief hm is the distance between the current and minus planes
+    ///@return three-dimensional vector
     const container& hm()const {return hm_;}
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);

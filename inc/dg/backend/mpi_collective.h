@@ -66,7 +66,7 @@ struct Collective
      *
      * @return Total number of processes
      */
-    unsigned size() const {return sendTo_.size();}
+    unsigned size() const {return values_size();}
     MPI_Comm comm() const {return comm_;}
 
     void transpose(){ sendTo_.swap( recvFrom_);}
@@ -74,8 +74,12 @@ struct Collective
 
     void scatter( const Vector& values, Vector& store) const;
     void gather( const Vector& store, Vector& values) const;
-    unsigned store_size() const{ return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
-    unsigned values_size() const{ return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
+    unsigned store_size() const{ 
+        if( recvFrom_.empty()) return 0;
+        return thrust::reduce( recvFrom_.begin(), recvFrom_.end() );}
+    unsigned values_size() const{ 
+        if( sendTo_.empty()) return 0;
+        return thrust::reduce( sendTo_.begin(), sendTo_.end() );}
     MPI_Comm communicator() const{return comm_;}
     private:
     unsigned sendTo( unsigned pid) const {return sendTo_[pid];}
@@ -161,6 +165,7 @@ struct BijectiveComm : public aCommunicator<Vector>
         construct( pids, comm);
     }
 
+    ///@copydoc GeneralComm::GeneralComm(const GeneralComm<OtherIndex,OtherVector>&)
     template<class OtherIndex, class OtherVector>
     BijectiveComm( const BijectiveComm<OtherIndex, OtherVector>& src) {
         construct( src.get_pids(), src.communicator());
@@ -272,6 +277,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
         construct( local, pids, g.communicator());
     }
 
+    ///@copydoc GeneralComm::GeneralComm(const GeneralComm<OtherIndex,OtherVector>&)
     template<class OtherIndex, class OtherVector>
     SurjectiveComm( const SurjectiveComm<OtherIndex, OtherVector>& src)
     {
@@ -350,7 +356,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
 template< class Index, class Vector>
 struct GeneralComm : public aCommunicator<Vector>
 {
-    ///@brief no memory allocation
+    /// no memory allocation; the size shall be 0
     GeneralComm(){}
     /**
     * @brief Construct from local indices and PIDs gather map
@@ -365,9 +371,11 @@ struct GeneralComm : public aCommunicator<Vector>
     GeneralComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm) {
         construct( localGatherMap, pidGatherMap, comm);
     }
+    ///@brief reconstruct from another type if non-empty; else same as default constructor
     template<class OtherIndex, class OtherVector>
     GeneralComm( const GeneralComm<OtherIndex, OtherVector>& src){
-        construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
+        if( src.size() > 0)
+            construct( src.getLocalGatherMap(), src.getPidGatherMap(), src.communicator());
     }
 
     /**

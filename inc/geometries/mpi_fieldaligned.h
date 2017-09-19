@@ -51,47 +51,14 @@ void sendBackward( InputIterator begin, InputIterator end, OutputIterator result
                     comm, &status);
 }
 }//namespace detail
-///@endcond
 
-
-
-/**
- * @brief Class for the evaluation of a parallel derivative (MPI Version)
- *
- * @ingroup fieldaligned
- * @tparam LocalIMatrix The matrix class of the interpolation matrix
- * @tparam Communicator The communicator used to exchange data in the RZ planes
- * @tparam LocalContainer The container-class to on which the interpolation matrix operates on (does not need to be dg::HVec)
- */
 template <class Geometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
-struct FieldAligned< Geometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> > 
+struct FieldAligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> > 
 {
-    /**
-    * @brief Construct from a field and a grid
-    *
-    * @tparam Field The Fieldlines to be integrated: Has to provide void operator()( const std::vector<dg::HVec>&, std::vector<dg::HVec>&) where the first index is R, the second Z and the last s (the length of the field line)
-    * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
-    is a limiter and 0 if there isn't. If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
-    * @param field The field to integrate
-    * @param grid The grid on which to operate
-    * @param eps Desired accuracy of runge kutta
-    * @param limit Instance of the limiter class (Default is a limiter everywhere, note that if bcz is periodic it doesn't matter if there is a limiter or not)
-    * @param globalbcz Choose NEU or DIR. Defines BC in parallel on box
-    * @param deltaPhi Is either <0 (then it's ignored), may differ from hz() only if Nz() == 1
-    * @note If there is a limiter, the boundary condition is set by the bcz variable from the grid and can be changed by the set_boundaries function. If there is no limiter the boundary condition is periodic.
-    */
-    template <class Field, class Limiter>
-    FieldAligned(Field field, Geometry grid, double eps = 1e-4, Limiter limit = DefaultLimiter(), dg::bc globalbcz = dg::DIR, double deltaPhi = -1 );
+    FieldAligned(){}
+    template <class Limiter>
+    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = FullLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, double deltaPhi = -1);
 
-    /**
-     * @brief Set boundary conditions
-     *
-     * if Dirichlet boundaries are used the left value is the left function
-     value, if Neumann boundaries are used the left value is the left derivative value
-     * @param bcz boundary condition
-     * @param left left boundary value 
-     * @param right right boundary value
-     */
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         bcz_ = bcz; 
@@ -100,15 +67,6 @@ struct FieldAligned< Geometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
         right_ = dg::evaluate( dg::CONSTANT(right),g2d);
     }
 
-    /**
-     * @brief Set boundary conditions
-     *
-     * if Dirichlet boundaries are used the left value is the left function
-     value, if Neumann boundaries are used the left value is the left derivative value
-     * @param bcz boundary condition
-     * @param left left boundary value 
-     * @param right right boundary value
-     */
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& left, const MPI_Vector<LocalContainer>& right)
     {
         bcz_ = bcz; 
@@ -116,16 +74,6 @@ struct FieldAligned< Geometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
         right_ = right.data();
     }
 
-    /**
-     * @brief Set boundary conditions in the limiter region
-     *
-     * if Dirichlet boundaries are used the left value is the left function
-     value, if Neumann boundaries are used the left value is the left derivative value
-     * @param bcz boundary condition
-     * @param global 3D vector containing boundary values
-     * @param scal_left left scaling factor
-     * @param scal_right right scaling factor
-     */
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
     {
         bcz_ = bcz;
@@ -146,97 +94,24 @@ struct FieldAligned< Geometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
         }
     }
 
-    /**
-     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
-     *
-     * Evaluates the given functor on a 2d plane and then follows fieldlines to 
-     * get the values in the 3rd dimension. Uses the grid given in the constructor.
-     * @tparam BinaryOp Binary Functor 
-     * @param f Functor to evaluate
-     * @param plane The number of the plane to start
-     *
-     * @return Returns an instance of container
-     */
     template< class BinaryOp>
     MPI_Vector<LocalContainer> evaluate( BinaryOp f, unsigned plane=0) const;
 
-    /**
-     * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
-     *
-     * Evaluates the given functor on a 2d plane and then follows fieldlines to 
-     * get the values in the 3rd dimension. Uses the grid given in the constructor.
-     * The second functor is used to scale the values along the fieldlines.
-     * The fieldlines are assumed to be periodic.
-     * @tparam BinaryOp Binary Functor 
-     * @tparam UnaryOp Unary Functor 
-     * @param f Functor to evaluate in x-y
-     * @param g Functor to evaluate in z
-     * @param p0 The number of the plane to start
-     * @param rounds The number of rounds to follow a fieldline
-     *
-     * @return Returns an instance of container
-     */
     template< class BinaryOp, class UnaryOp>
     MPI_Vector<LocalContainer> evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const;
 
-    /**
-    * @brief Applies the interpolation to the next planes 
-    *
-    * @param in input 
-    * @param out output may not equal intpu
-    */
-    void einsPlus( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
-    /**
-    * @brief Applies the interpolation to the previous planes
-    *
-    * @param in input 
-    * @param out output may not equal intpu
-    */
-    void einsMinus( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
-    /**
-    * @brief Applies the transposed interpolation to the previous plane 
-    *
-    * @param in input 
-    * @param out output may not equal intpu
-    */
-    void einsPlusT( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
-    /**
-    * @brief Applies the transposed interpolation to the next plane 
-    *
-    * @param in input 
-    * @param out output may not equal intpu
-    */
-    void einsMinusT( const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
-    /**
-    * @brief hz is the distance between the plus and minus planes
-    *
-    * @return three-dimensional vector
-    */
+    void operator()(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
+
     const MPI_Vector<LocalContainer>& hz()const {return hz_;}
-    /**
-    * @brief hp is the distance between the plus and current planes
-    *
-    * @return three-dimensional vector
-    */
     const MPI_Vector<LocalContainer>& hp()const {return hp_;}
-    /**
-    * @brief hm is the distance between the current and minus planes
-    *
-    * @return three-dimensional vector
-    */
     const MPI_Vector<LocalContainer>& hm()const {return hm_;}
-    /**
-    * @brief Access the underlying grid
-    *
-    * @return the grid
-    */
     const Geometry& grid() const{return g_;}
   private:
     typedef cusp::array1d_view< typename LocalContainer::iterator> View;
     typedef cusp::array1d_view< typename LocalContainer::const_iterator> cView;
     MPI_Vector<LocalContainer> hz_, hp_, hm_; 
     LocalContainer ghostM, ghostP;
-    Geometry g_;
+    dg::Handle<Geometry> g_;
     dg::bc bcz_;
     LocalContainer left_, right_;
     LocalContainer limiter_;
@@ -245,11 +120,11 @@ struct FieldAligned< Geometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     LocalIMatrix plus, minus; //interpolation matrices
     LocalIMatrix plusT, minusT; //interpolation matrices
 };
-///@cond
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
-template <class Field, class Limiter>
-FieldAligned<MPIGeometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::FieldAligned(Field field, MPIGeometry grid, double eps, Limiter limit, dg::bc globalbcz, double deltaPhi ): 
+template <class Limiter>
+FieldAligned<MPIGeometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::FieldAligned(
+    const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, double deltaPhi):
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()), 
     tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()), temp_(g_.Nz())

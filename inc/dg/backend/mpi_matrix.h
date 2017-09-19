@@ -29,9 +29,9 @@ namespace dg
  \f$ M_o\f$ is the outer matrix containing all elements which require 
  communication from the Collective object.
 * @tparam LocalMatrixInner The class of the matrix for local computations of the inner points. 
- doSymv(m,x,y) needs to be callable on the container class of the MPI_Vector
+ symv(m,x,y) needs to be callable on the container class of the MPI_Vector
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points. 
- doSymv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
+ symv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
 * @tparam Collective models aCommunicator The Communication class needs to gather values across processes. Only the global_gather and size
 member functions are needed. 
 Gather points from other processes that are necessary for the outer computations.
@@ -187,11 +187,9 @@ enum dist_type
 * @tparam LocalMatrix The class of the matrix for local computations. 
  symv needs to be callable on the container class of the MPI_Vector
 * @tparam Collective models aCommunicator The Communication class needs to scatter and gather values across processes. 
-container global_gather( const container& input);
 Gather all points (including the ones that the process already has) necessary for the local matrix-vector
 product into one vector, such that the local matrix can be applied.
-int size(); 
-should give the size of the vector that global_gather returns. If size()==0 the global_gather() function won't be called and
+If size()==0 the global_gather and global_scatter_reduce functions won't be called and
 only the local matrix is applied.
 */
 template<class LocalMatrix, class Collective >

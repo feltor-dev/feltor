@@ -60,8 +60,10 @@ struct aCommunicator
     /**
      * @brief Allocate a buffer object of size size()
      * @return a buffer object on the stack
+     * @note if size()==0 the default constructor of LocalContainer is called
      */
     LocalContainer allocate_buffer( )const{
+        if( do_size() == 0 ) return LocalContainer();
         return do_make_buffer();
     }
 
@@ -69,9 +71,11 @@ struct aCommunicator
      * @brief Globally (across processes) gather data into a buffer 
      * @param values data; other processes collect data from this vector
      * @param buffer object to hold the gathered data ( must be of size size())
+     * @note if size()==0 nothing happens
      */
     void global_gather( const LocalContainer& values, LocalContainer& buffer)const
     {
+        if( do_size() == 0 ) return;
         do_global_gather( values, gather);
     }
 
@@ -79,6 +83,7 @@ struct aCommunicator
      * @brief Globally (across processes) gather data into a buffer (memory allocating version)
      * @param values data; other processes collect data from this vector
      * @return object that holds the gathered data
+     * @note if size()==0 the default constructor of LocalContainer is called
      */
     LocalContainer global_gather( const LocalContainer& values) const
     {
@@ -91,8 +96,10 @@ struct aCommunicator
      * @brief Globally (across processes) scatter data accross processes and reduce on multiple indices
      * @param toScatter buffer vector; (has to be of size given by size())
      * @param values contains values from other processes sent back to the origin 
+     * @note if size()==0 nothing happens
      */
     void global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const{
+        if( do_size() == 0 ) return;
         do_global_scatter_reduce(toScatter, values);
     }
 
@@ -104,7 +111,7 @@ struct aCommunicator
     * of v is the same for all processes. However the buffer size might be different for each process. 
     * @return buffer size
     * @note may return 0 to indicate that no MPI communication is needed 
-    * @note we assume that the vector size is always the local size of a dg::MPI_Vector
+    * @note we assume that, contrary to size(), the vector size is always the local size of a dg::MPI_Vector
     */
     unsigned size() const{return do_size();}
     /**

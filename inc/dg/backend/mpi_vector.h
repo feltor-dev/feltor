@@ -276,7 +276,6 @@ unsigned NearestNeighborComm<I,V>::buffer_size() const
 template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_gather( const V& input, V& values) const
 {
-    if( silent_) return;
     //gather values from input into sendbuffer
     thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data().begin());
     thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data().begin());
@@ -289,7 +288,6 @@ void NearestNeighborComm<I,V>::do_global_gather( const V& input, V& values) cons
 template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_scatter_reduce( const V& values, V& input) const
 {
-    if( silent_) return;
     //scatter received values into values array
     thrust::gather( scatter_map1.begin(), scatter_map1.end(), values.begin(), rb1.data().begin());
     thrust::gather( scatter_map2.begin(), scatter_map2.end(), values.begin(), rb2.data().begin());
