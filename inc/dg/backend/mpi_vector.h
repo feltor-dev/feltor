@@ -95,7 +95,8 @@ struct VectorTraits<const MPI_Vector<container> > {
 /**
 * @brief Communicator for nearest neighbor communication
 *
-* exchanges a halo of given size among next neighbors in a given direction
+* exchanges a halo of given depth among neighboring processes in a given direction 
+* (the corresponding index map is injective)
 * @ingroup mpi_structures
 * @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
 * @tparam Vector the vector container type must have a resize() function and work 
