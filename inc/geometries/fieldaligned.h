@@ -455,10 +455,10 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
     const aGeometry3d* grid_ptr = &grid;
-    aGeometry2d* g2dCoarse_ptr;
     const dg::CartesianGrid3d* grid_cart = dynamic_cast<const dg::CartesianGrid3d*>(grid_ptr);
     const dg::CylindricalGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalGrid3d*>(grid_ptr);
     const dg::CurvilinearProductGrid3d*  grid_curvi = dynamic_cast<const dg::CurvilinearProductGrid3d*>(grid_ptr);
+    aGeometry2d* g2dCoarse_ptr;
     if( grid_cart) 
     {
         dg::CartesianGrid2d cart = grid_cart->perp_grid();
@@ -645,13 +645,13 @@ void FieldAligned<G, I, container>::ePlus( enum whichMatrix which, const contain
         unsigned ip = (i0==Nz_-1) ? 0:i0+1;
 
         cView fp( f.cbegin() + ip*perp_size_, f.cbegin() + (ip+1)*perp_size_);
-        cView f0( f.cbegin() + i0*perp_size_, f.cbegin() + (i0+1)*perp_size_);
         View fP( fpe.begin() + i0*perp_size_, fpe.begin() + (i0+1)*perp_size_);
         if(which == einsPlus) cusp::multiply( plus, fp, fP);
         else if(which == einsMinusT) cusp::multiply( minusT, fp, fP );
         //make ghostcells i.e. modify fpe in the limiter region
         if( i0==Nz_-1 && bcz_ != dg::PER)
         {
+            cView f0( f.cbegin() + i0*perp_size_, f.cbegin() + (i0+1)*perp_size_);
             if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
             {
                 cusp::blas::axpby( rightV, f0, ghostPV, 2., -1.);
@@ -680,13 +680,13 @@ void FieldAligned<G, I, container>::eMinus( enum whichMatrix which, const contai
     {
         unsigned im = (i0==0) ? Nz_-1:i0-1;
         cView fm( f.cbegin() + im*perp_size_, f.cbegin() + (im+1)*perp_size_);
-        cView f0( f.cbegin() + i0*perp_size_, f.cbegin() + (i0+1)*perp_size_);
         View fM( fme.begin() + i0*perp_size_, fme.begin() + (i0+1)*perp_size_);
         if(which == einsPlusT) cusp::multiply( plusT, fm, fM );
         else if (which == einsMinus) cusp::multiply( minus, fm, fM );
         //make ghostcells
         if( i0==0 && bcz_ != dg::PER)
         {
+            cView f0( f.cbegin() + i0*perp_size_, f.cbegin() + (i0+1)*perp_size_);
             if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
             {
                 cusp::blas::axpby( leftV,  f0, ghostMV, 2., -1.);
