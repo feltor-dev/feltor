@@ -73,7 +73,7 @@ struct MultigridCG2d
 	{
         //project initial guess down to coarse grid
         project(x, x_);
-        dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
+        dg::blas2::symv(op[0].weights(), b, b_[0]);
         // project b down to coarse grid
         for( unsigned u=0; u<stages_-1; u++)
             dg::blas2::gemv( interT_[u], b_[u], b_[u+1]);
@@ -142,7 +142,7 @@ struct MultigridCG2d
     template<class SymmetricOp>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, container&  x, const container& b, double eps)
     {
-        dg::blas1::pointwiseDivide(b, op[0].inv_weights(), b_[0]);
+        dg::blas2::symv(op[0].weights(), b, b_[0]);
         // compute residual r = Wb - A x
         dg::blas2::symv(op[0], x, m_r[0]);
         dg::blas1::axpby(-1.0, m_r[0], 1.0, b_[0], m_r[0]);

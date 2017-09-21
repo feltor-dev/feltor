@@ -33,9 +33,7 @@ class CG
 {
   public:
     typedef typename VectorTraits<container>::value_type value_type;//!< value type of the container class
-    /**
-     * @brief Allocate nothing, 
-     */
+    ///@brief Allocate nothing, 
     CG(){}
       /**
        * @brief Reserve memory for the pcg method
@@ -470,7 +468,7 @@ struct Invert
     template< class SymmetricOp >
     unsigned operator()( SymmetricOp& op, container& phi, const container& rho)
     {
-        return this->operator()(op, phi, rho, op.inv_weights(), op.precond());
+        return this->operator()(op, phi, rho, op.weights(), op.inv_weights(), op.precond());
     }
 
     /**
@@ -484,14 +482,15 @@ struct Invert
      * @param op symmetric Matrix operator class
      * @param phi solution (write only)
      * @param rho right-hand-side
-     * @param inv_weights The inverse weights that normalize the symmetric operator
+     * @param weights The weights that normalize the symmetric operator
+     * @param inv_weights The inverse of the weights that normalize the symmetric operator
      * @param p The preconditioner  
      * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
      *
      * @return number of iterations used 
      */
     template< class Matrix, class Preconditioner >
-    unsigned operator()( Matrix& op, container& phi, const container& rho, const container& inv_weights, Preconditioner& p)
+    unsigned operator()( Matrix& op, container& phi, const container& rho, const container& weights, const container& inv_weights, Preconditioner& p)
     {
         assert( phi.size() != 0);
         assert( &rho != &phi);
@@ -504,7 +503,7 @@ struct Invert
         unsigned number;
         if( multiplyWeights_ ) 
         {
-            dg::blas1::pointwiseDivide( rho, inv_weights, m_ex.tail());
+            dg::blas2::symv( rho, weights, m_ex.tail());
             number = cg( op, phi, m_ex.tail(), p, inv_weights, eps_, nrmb_correction_);
         }
         else

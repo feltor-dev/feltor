@@ -86,19 +86,17 @@ struct Helmholtz
             dg::blas1::pointwiseDot( 1., chi_.value(), x, -alpha_, y);
         else
             blas1::axpby( 1., x, -alpha_, y);
-        blas1::pointwiseDivide(y, laplaceM_.inv_weights(), y);
+        blas2::symv(laplaceM_.weights(), y, y);
 
     }
-    /**
-     * @brief These are the weights that made the operator symmetric
-     *
-     * @return weights
-     */
+    ///@copydoc Elliptic::weights()const
+    const container& weights()const {return laplaceM_.weights();}
+    ///@copydoc Elliptic::inv_weights()const
     const container& inv_weights()const {return laplaceM_.inv_weights();}
     /**
-     * @brief container to use in conjugate gradient solvers
+     * @brief Preconditioner to use in conjugate gradient solvers
      *
-     * @return container
+     * @return inverse weights without volume
      */
     const container& precond()const {return laplaceM_.precond();}
     /**
@@ -205,19 +203,17 @@ struct Helmholtz2
         tensor::pointwiseDot( chi_, x, y); //y = chi*x
         blas1::axpby( 1., y, -2.*alpha_, temp1_, y); 
         blas1::axpby( alpha_*alpha_, temp2_, 1., y, y);
-        blas1::pointwiseDivide( y, laplaceM_.inv_weights(), y);//Helmholtz is never normed
+        blas2::symv( laplaceM_.weights(), y, y);//Helmholtz is never normed
     }
-    /**
-     * @brief These are the weights that made the operator symmetric
-     *
-     * @return weights
-     */
+    ///@copydoc Elliptic::weights()const
+    const container& weights()const {return laplaceM_.weights();}
+    ///@copydoc Elliptic::inv_weights()const
     const container& inv_weights()const {return laplaceM_.inv_weights();}
     /**
-     * @brief container to use in conjugate gradient solvers
+     * @brief Preconditioner to use in conjugate gradient solvers
      *
      * multiply result by these coefficients to get the normed result
-     * @return container
+     * @return the inverse weights without volume
      */
     const container& precond()const {return laplaceM_.precond();}
     /**

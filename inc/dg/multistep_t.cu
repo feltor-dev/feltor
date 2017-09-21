@@ -22,8 +22,8 @@ template< class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d& g, double nu): nu_(nu),
-        precon( dg::create::inv_weights(g)), 
-        v2d(2, dg::create::inv_weights(g)),
+        w2d( dg::create::weights(g)), 
+        v2d( dg::create::inv_weights(g)),
         LaplacianM( g, dg::normed) 
         { }
 
@@ -35,12 +35,12 @@ struct Diffusion
         }
         dg::blas1::axpby( 0.,y, -nu_, y);
     }
-    const std::vector<container>& inv_weights(){return v2d;}
-    const container& precond(){return precon;}
+    const container& inv_weights(){return v2d;}
+    const container& weights(){return w2d;}
+    const container& precond(){return v2d;}
   private:
     double nu_;
-    const container precon;
-    const std::vector<container> v2d;
+    const container w2d, v2d;
     dg::Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM;
 };
 

@@ -96,6 +96,7 @@ class Elliptic
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
 
         dg::blas1::transfer( dg::create::inv_volume(g),    inv_weights_);
+        dg::blas1::transfer( dg::create::volume(g),        weights_);
         dg::blas1::transfer( dg::create::inv_weights(g),   precond_); 
         tempx = tempy = gradx = inv_weights_;
         chi_=g.metric();
@@ -131,14 +132,21 @@ class Elliptic
     }
 
     /**
-     * @brief Returns the vector missing in the un-normed symmetric matrix 
+     * @brief Return the vector missing in the un-normed symmetric matrix 
      *
-     * i.e. the inverse volume form 
-     * @return inverse volume form including weights 
+     * i.e. the inverse of the weights() function
+     * @return inverse volume form including inverse weights 
      */
     const container& inv_weights()const {return inv_weights_;}
     /**
-     * @brief Returns the default preconditioner to use in conjugate gradient
+     * @brief Return the vector making the matrix symmetric
+     *
+     * i.e. the volume form 
+     * @return volume form including weights 
+     */
+    const container& weights()const {return weights_;}
+    /**
+     * @brief Return the default preconditioner to use in conjugate gradient
      *
      * Currently returns the inverse of the weights without volume elment multiplied by the inverse of \f$ \chi\f$. 
      * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
@@ -203,7 +211,7 @@ class Elliptic
         return centered;
     }
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
-    container inv_weights_, precond_, weights_wo_vol; 
+    container weights_, inv_weights_, precond_, weights_wo_vol; 
     container tempx, tempy, gradx;
     norm no_;
     SparseTensor<container> chi_;
@@ -252,7 +260,7 @@ struct GeneralElliptic
         rightz( dg::create::dz( g, g.bcz(), dir)),
         jumpX ( dg::create::jumpX( g, g.bcx())),
         jumpY ( dg::create::jumpY( g, g.bcy())),
-        inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
+        weights_(dg::create::volume(g)), inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0),
         no_(no)
@@ -280,7 +288,7 @@ struct GeneralElliptic
         rightz( dg::create::dz( g, bcz, dir)),
         jumpX ( dg::create::jumpX( g, bcx)),
         jumpY ( dg::create::jumpY( g, bcy)),
-        inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
+        weights_(dg::create::volume(g)), inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
         xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0),
         no_(no)
@@ -343,37 +351,30 @@ struct GeneralElliptic
     void symv( const container& x, container& y) 
     {
         dg::blas2::gemv( rightx, x, temp0); //R_x*x 
-        dg::blas1::pointwiseDot( xchi, temp0, xx); //Chi_x*R_x*x 
+        dg::blas1::pointwiseDot( 1., xchi, temp0, 0., xx);//Chi_x*R_x*x
 
         dg::blas2::gemv( righty, x, temp0);//R_y*x
-        dg::blas1::pointwiseDot( ychi, temp0, yy);//Chi_y*R_y*x
+        dg::blas1::pointwiseDot( 1., ychi, temp0, 1., xx);//Chi_y*R_y*x
 
         dg::blas2::gemv( rightz, x, temp0); // R_z*x
-        dg::blas1::pointwiseDot( zchi, temp0, zz); //Chi_z*R_z*x
+        dg::blas1::pointwiseDot( 1., zchi, temp0, 1., xx);//Chi_z*R_z*x
 
-        dg::blas1::axpby( 1., xx, 1., yy, temp0);
-        dg::blas1::axpby( 1., zz, 1., temp0, temp0); //gradpar x 
-
-        dg::tensor::pointwiseDot( vol_, temp0, temp0);
+        dg::tensor::pointwiseDot( vol_, xx, temp0);
 
         dg::blas1::pointwiseDot( xchi, temp0, temp1); 
-        dg::blas2::gemv( leftx, temp1, xx); 
+        dg::blas2::gemv( -1., leftx, temp1, 0., y); 
 
         dg::blas1::pointwiseDot( ychi, temp0, temp1);
-        dg::blas2::gemv( lefty, temp1, yy);
+        dg::blas2::gemv( -1., lefty, temp1, 1., y);
 
         dg::blas1::pointwiseDot( zchi, temp0, temp1); 
-        dg::blas2::gemv( leftz, temp1, zz); 
+        dg::blas2::gemv( -1., leftz, temp1, 1., y); 
 
-        dg::blas1::axpby( -1., xx, -1., yy, y);
-        dg::blas1::axpby( -1., zz, +1., y, y); 
         if( no_==normed) 
             dg::tensor::pointwiseDivide( temp0, vol_, temp0);
         
-        dg::blas2::symv( jumpX, x, temp0);
-        dg::blas1::axpby( +1., temp0, 1., y, y); 
-        dg::blas2::symv( jumpY, x, temp0);
-        dg::blas1::axpby( +1., temp0, 1., y, y); 
+        dg::blas2::symv( +1., jumpX, x, 1., y);
+        dg::blas2::symv( +1., jumpY, x, 1., y);
         if( no_==not_normed)//multiply weights w/o volume
         {
             dg::tensor::pointwiseDivide( y, vol_, y);
@@ -396,7 +397,7 @@ struct GeneralElliptic
         return centered;
     }
     Matrix leftx, lefty, leftz, rightx, righty, rightz, jumpX, jumpY;
-    container inv_weights_, precond_; //contain coeffs for chi multiplication
+    container weights_, inv_weights_, precond_; //contain coeffs for chi multiplication
     container xchi, ychi, zchi, xx, yy, zz, temp0, temp1;
     norm no_;
     SparseElement<container> vol_;
@@ -436,7 +437,6 @@ struct GeneralEllipticSym
      */
     GeneralEllipticSym( const Geometry& g, norm no = not_normed, direction dir = forward): 
         ellipticForward_( g, no, dir), ellipticBackward_(g,no,inverse(dir)),
-        inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
         temp_( dg::evaluate( one, g) )
     { }
 
@@ -452,7 +452,6 @@ struct GeneralEllipticSym
      */
     GeneralEllipticSym( const Geometry& g, bc bcx, bc bcy,bc bcz, norm no = not_normed, direction dir = forward): 
         ellipticForward_( g, bcx, bcy, no, dir), ellipticBackward_(g,bcx,bcy,no,inverse(dir)),
-        inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
         temp_( dg::evaluate( one, g) )
     { 
     }
@@ -498,10 +497,12 @@ struct GeneralEllipticSym
         ellipticBackward_.set( chi);
     }
 
+    ///@copydoc Elliptic::weights()
+    const container& weights()const {return ellipticForward_.weights();}
     ///@copydoc Elliptic::inv_weights()
-    const container& inv_weights()const {return inv_weights_;}
+    const container& inv_weights()const {return ellipticForward_.inv_weights();}
     ///@copydoc GeneralElliptic::precond()
-    const container& precond()const {return precond_;}
+    const container& precond()const {return ellipticForward_.precond();}
 
     ///@copydoc Elliptic::symv()
     void symv( const container& x, container& y) 
@@ -518,7 +519,6 @@ struct GeneralEllipticSym
         return centered;
     }
     dg::GeneralElliptic<Geometry, Matrix, container> ellipticForward_, ellipticBackward_;
-    container inv_weights_, precond_; //contain coeffs for chi multiplication
     container temp_;
 };
 
@@ -614,23 +614,18 @@ struct TensorElliptic
         dg::blas2::gemv( righty, x, tempy_); //R_y*f
 
         //multiply with chi 
-        dg::blas1::pointwiseDot( chixx_, tempx_, gradx_); //gxx*v_x
-        dg::blas1::pointwiseDot( chixy_, tempx_, y); //gyx*v_x
-        dg::blas1::pointwiseDot( 1., chixy_, tempy_, 1., gradx_);//gxy*v_y
-        dg::blas1::pointwiseDot( 1., chiyy_, tempy_, 1., y); //gyy*v_y
+        dg::blas1::pointwiseDot( 1., chixx_, tempx_, 1., chixy_, tempy_, 0., gradx_);//gxy*v_y
+        dg::blas1::pointwiseDot( 1., chixy_, tempx_, 1., chiyy_, tempy_, 1., tempy_); //gyy*v_y
 
         //now take divergence
-        dg::blas2::gemv( leftx, gradx_, tempx_);  
-        dg::blas2::gemv( lefty, y, tempy_);  
-        dg::blas1::axpby( -1., tempx_, -1., tempy_, y); //-D_xx - D_yy 
+        dg::blas2::gemv( -1., leftx, gradx_, 0., y);  
+        dg::blas2::gemv( -1., lefty, tempy_, 1., y);  
         if( no_ == normed)
             dg::tensor::pointwiseDivide( y, vol_,y);
 
         //add jump terms
-        dg::blas2::symv( jumpX, x, tempx_);
-        dg::blas1::axpby( +1., tempx_, 1., y, y); 
-        dg::blas2::symv( jumpY, x, tempy_);
-        dg::blas1::axpby( +1., tempy_, 1., y, y); 
+        dg::blas2::symv( +1., jumpX, x, 1., y);
+        dg::blas2::symv( +1., jumpY, x, 1., y);
         if( no_ == not_normed)//multiply weights without volume
             dg::blas2::symv( weights_wo_vol, y, y);
     }
@@ -643,6 +638,7 @@ struct TensorElliptic
         dg::blas2::transfer( dg::create::dy( g, bcy, dir), righty);
         dg::blas2::transfer( dg::create::jumpX( g, bcx),   jumpX);
         dg::blas2::transfer( dg::create::jumpY( g, bcy),   jumpY);
+        dg::blas1::transfer( dg::create::volume(g),        weights_);
         dg::blas1::transfer( dg::create::inv_volume(g),    inv_weights_);
         dg::blas1::transfer( dg::create::inv_weights(g),   precond_); //weights are better preconditioners than volume
         dg::blas1::transfer( dg::evaluate( dg::one, g),    chixx_);
@@ -671,7 +667,7 @@ struct TensorElliptic
         return centered;
     }
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
-    container inv_weights_, weights_wo_vol, precond_; //contain coeffs for chi multiplication
+    container weights_, inv_weights_, weights_wo_vol, precond_; //contain coeffs for chi multiplication
     container chixx_, chixy_, chiyy_, tempx_, tempy_, gradx_;
     SparseElement<container> vol_;
     norm no_;

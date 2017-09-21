@@ -17,11 +17,8 @@ template<class Geometry, class Matrix, class container>
 struct Implicit
 {
     Implicit( const Geometry& g, double nu):
-        nu_(nu), 
-        temp( dg::create::inv_weights( g) ), inv_weights_(2,temp),
-        LaplacianM_perp( g, dg::normed, dg::centered){
-    }
-    void operator()( std::vector<container>& x, std::vector<container>& y)
+        nu_(nu), LaplacianM_perp( g, dg::normed, dg::centered){ }
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
          * x[2] := N_i - 1 
@@ -36,13 +33,13 @@ struct Implicit
         }
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
-    const std::vector<container>& inv_weights(){return inv_weights_;}
+    const container& weights(){return LaplacianM_perp.weights();}
+    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
 
   private:
     double nu_;
     container temp;
-    std::vector<container> inv_weights_;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
 };
 
@@ -88,7 +85,7 @@ struct Explicit
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( std::vector<container>& y, std::vector<container>& yp);
+    void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief Return the mass of the last field in operator() in a global computation
@@ -288,7 +285,7 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
 }
 
 template< class G, class M, class container>
-void Explicit<G, M, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+void Explicit<G, M, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
     //y[0] = N_e - 1
     //y[1] = N_i - 1 || y[1] = Omega
