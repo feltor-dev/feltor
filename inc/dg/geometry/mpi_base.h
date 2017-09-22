@@ -141,7 +141,7 @@ struct CartesianMPIGrid2d : public aMPIGeometry2d
  */
 struct CartesianMPIGrid3d : public aMPIGeometry3d
 {
-    typedef CartesianGrid2d perpendicular_grid;
+    typedef CartesianMPIGrid2d perpendicular_grid;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_comm_parameters3d
     CartesianMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm): aMPIGeometry3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, dg::PER,dg::PER,dg::PER, comm){}
@@ -155,7 +155,24 @@ struct CartesianMPIGrid3d : public aMPIGeometry3d
     ///@param g existing grid object
     CartesianMPIGrid3d( const dg::MPIGrid3d& g): aMPIGeometry3d( g.global().x0(),g.global().x1(),g.global().y0(),g.global().y1(),g.global().z0(),g.global().z1(),g.global().n(),g.global().Nx(),g.global().Ny(),g.global().Nz(),g.global().bcx(),g.global().bcy(),g.global().bcz(),g.communicator()){}
     virtual CartesianMPIGrid3d* clone()const{return new CartesianMPIGrid3d(*this);}
+    /*!
+     * @brief The grid made up by the first two dimensions in space and process topology
+     *
+     * This is possible because the 3d grid is a product grid of a 2d perpendicular grid and a 1d parallel grid
+     * @return A newly constructed perpendicular grid with the perpendicular communicator
+     */
+    CartesianMPIGrid2d perp_grid()const{ 
+        return CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( communicator() ));
+    }
+
     private:
+    MPI_Comm get_perp_comm( MPI_Comm src)
+    {
+        MPI_Comm planeComm;
+        int remain_dims[] = {true,true,false}; //true true false
+        MPI_Cart_sub( src, remain_dims, &planeComm);
+        return planeComm;
+    }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
         aMPITopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
@@ -180,6 +197,10 @@ struct CylindricalMPIGrid3d: public aMPIGeometry3d
     CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, MPI_Comm comm):aMPIGeometry3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm){}
 
     virtual CylindricalMPIGrid3d* clone()const{return new CylindricalMPIGrid3d(*this);}
+    ///@copydoc CartesianMPIGrid3d::perp_grid()const
+    CartesianMPIGrid2d perp_grid()const{ 
+        return CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( communicator() ));
+    }
     private:
     virtual SparseTensor<host_vector > do_compute_metric()const{
         SparseTensor<host_vector> metric(1);

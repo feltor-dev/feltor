@@ -7,6 +7,35 @@
 
 namespace dg
 {
+    /*!@class hide_grid_parameters3d
+     * @brief Construct a 3D grid
+     *
+     * the coordinates of the computational space are called x,y,z
+     * @param generator generates the perpendicular grid
+     * @param n number of %Gaussian nodes in x and y
+     *  (1<=n<=20, note that the library is optimized for n=3 )
+     * @attention # of polynomial coefficients in z direction is always 1
+     * @param Nx number of cells in x
+     * @param Ny number of cells in y 
+     * @param Nz  number of cells z
+     * @param bcx boundary condition in x
+     * @param bcy boundary condition in y
+     * @param bcz boundary condition in z
+     */
+    /*!@class hide_grid_parameters2d
+     * @brief Construct a 2D grid
+     *
+     * the coordinates of the computational space are called x,y,z
+     * @param generator generates the grid
+     * @param n number of %Gaussian nodes in x and y
+     *  (1<=n<=20, note that the library is optimized for n=3 )
+     * @param Nx number of cells in x
+     * @param Ny number of cells in y 
+     * @param bcx boundary condition in x
+     * @param bcy boundary condition in y
+     */
+
+
 ///@addtogroup grids
 ///@{
 
@@ -49,18 +78,7 @@ struct CurvilinearProductGrid3d : public dg::aGeometry3d
 {
     typedef CurvilinearGrid2d perpendicular_grid;
 
-    /*!@brief Constructor
-    
-     * the coordinates of the computational space are called x,y,z
-     * @param generator must generate a grid
-     * @param n number of %Gaussian nodes in x and y
-     * @param Nx number of cells in x
-     * @param Ny number of cells in y 
-     * @param Nz  number of cells z
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     * @param bcz boundary condition in z
-     */
+    ///@copydoc hide_grid_parameters3d
     CurvilinearProductGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
         dg::aGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz)
     { 
@@ -70,8 +88,15 @@ struct CurvilinearProductGrid3d : public dg::aGeometry3d
         constructParallel(Nz);
     }
 
+    /*!
+     * @brief The grid made up by the first two dimensions
+     *
+     * This is possible because the 3d grid is a product grid of a 2d perpendicular grid and a 1d parallel grid
+     * @return A newly constructed perpendicular grid
+     */
     perpendicular_grid perp_grid() const;// { return perpendicular_grid(*this);}
 
+    ///@copydoc CurvilinearGrid2d::generator()const
     const aGenerator2d & generator() const{return handle_.get();}
     virtual CurvilinearProductGrid3d* clone()const{return new CurvilinearProductGrid3d(*this);}
     private:
@@ -132,20 +157,17 @@ struct CurvilinearProductGrid3d : public dg::aGeometry3d
  */
 struct CurvilinearGrid2d : public dg::aGeometry2d
 {
-    /*!@brief Constructor
-    
-     * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
-     * @param n number of polynomial coefficients
-     * @param Nx number of cells in first coordinate
-     * @param Ny number of cells in second coordinate
-     * @param bcx boundary condition in first coordinate
-     * @param bcy boundary condition in second coordinate
-     */
+    ///@copydoc hide_grid_parameters2d
     CurvilinearGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
         dg::aGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER), handle_(generator)
     {
         construct( n,Nx,Ny);
     }
+
+    /**
+     * @brief Explicitly convert 3d product grid to the perpendicular grid
+     * @param g 3d product grid
+     */
     explicit CurvilinearGrid2d( CurvilinearProductGrid3d g):
         dg::aGeometry2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy() ), handle_(g.generator())
     {
@@ -156,6 +178,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
         map_.pop_back();
     }
 
+    ///read access to the generator 
     const aGenerator2d& generator() const{return handle_.get();}
     virtual CurvilinearGrid2d* clone()const{return new CurvilinearGrid2d(*this);}
     private:

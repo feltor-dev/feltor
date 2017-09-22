@@ -206,6 +206,12 @@ struct CartesianGrid3d: public dg::aGeometry3d
      */
     CartesianGrid3d( const dg::Grid3d& g):dg::aGeometry3d(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
     virtual CartesianGrid3d* clone()const{return new CartesianGrid3d(*this);}
+    /*!
+     * @brief The grid made up by the first two dimensions
+     *
+     * This is possible because the 3d grid is a product grid of a 2d perpendicular grid and a 1d parallel grid
+     * @return A newly constructed perpendicular grid
+     */
     CartesianGrid2d perp_grid() const{ return CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
@@ -224,6 +230,7 @@ struct CylindricalGrid3d: public dg::aGeometry3d
     ///@note x corresponds to R, y to Z and z to phi, the volume element is R
     CylindricalGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     virtual CylindricalGrid3d* clone()const{return new CylindricalGrid3d(*this);}
+    ///@copydoc  CartesianGrid3d::perp_grid()const
     CartesianGrid2d perp_grid() const{ return CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
     private:
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const{

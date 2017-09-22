@@ -28,7 +28,7 @@
  */
 
 /*!@class hide_grid_parameters3d
- * @brief Construct a 3D topology
+ * @brief Construct a 3D grid
  *
  * @param x0 left boundary in x
  * @param x1 right boundary in x 

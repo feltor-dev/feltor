@@ -292,6 +292,32 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGe
     ym_result=ym;
     delete g2dField_ptr;
 }
+
+aGeometry2d* clone_3d_to_perp( const aGeometry3d* grid_ptr)
+{
+    const dg::CartesianGrid3d* grid_cart = dynamic_cast<const dg::CartesianGrid3d*>(grid_ptr);
+    const dg::CylindricalGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalGrid3d*>(grid_ptr);
+    const dg::CurvilinearProductGrid3d*  grid_curvi = dynamic_cast<const dg::CurvilinearProductGrid3d*>(grid_ptr);
+    aGeometry2d* g2d_ptr;
+    if( grid_cart) 
+    {
+        dg::CartesianGrid2d cart = grid_cart->perp_grid();
+        g2d_ptr = cart.clone();
+    }
+    else if( grid_cyl) 
+    {
+        dg::CartesianGrid2d cart = grid_cyl->perp_grid();
+        g2d_ptr = cart.clone();
+    }
+    else if( grid_curvi) 
+    {
+        dg::CurvilinearGrid2d curv = grid_curvi->perp_grid();
+        g2d_ptr = curv.clone();
+    }
+    else
+        throw dg::Error( dg::Message(_ping_)<<"Grid class not recognized!");
+    return g2d_ptr;
+}
 }//namespace detail
 ///@endcond
 
@@ -443,6 +469,8 @@ struct FieldAligned
 
 ///@cond 
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
+//
+
 
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
@@ -454,28 +482,7 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
-    const aGeometry3d* grid_ptr = &grid;
-    const dg::CartesianGrid3d* grid_cart = dynamic_cast<const dg::CartesianGrid3d*>(grid_ptr);
-    const dg::CylindricalGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalGrid3d*>(grid_ptr);
-    const dg::CurvilinearProductGrid3d*  grid_curvi = dynamic_cast<const dg::CurvilinearProductGrid3d*>(grid_ptr);
-    aGeometry2d* g2dCoarse_ptr;
-    if( grid_cart) 
-    {
-        dg::CartesianGrid2d cart = grid_cart->perp_grid();
-        g2dCoarse_ptr = cart.clone();
-    }
-    else if( grid_cyl) 
-    {
-        dg::CartesianGrid2d cart = grid_cyl->perp_grid();
-        g2dCoarse_ptr = cart.clone();
-    }
-    else if( grid_curvi) 
-    {
-        dg::CurvilinearGrid2d curv = grid_curvi->perp_grid();
-        g2dCoarse_ptr = curv.clone();
-    }
-    else
-        throw dg::Error( dg::Message(_ping_)<<"Grid class not recognized!");
+    const aGeometry2d* g2dCoarse_ptr = detail::clone_3d_to_perp(&grid);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //Resize vector to 2D grid size
     perp_size_ = g2dCoarse_ptr->size();
@@ -704,6 +711,7 @@ void FieldAligned<G, I, container>::eMinus( enum whichMatrix which, const contai
         }
     }
 }
+
 
 ///@endcond 
 
