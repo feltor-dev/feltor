@@ -7,6 +7,8 @@
 
 namespace dg
 {
+namespace geo
+{
     /*!@class hide_grid_parameters3d
      * @brief Construct a 3D grid
      *
@@ -209,4 +211,5 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
 CurvilinearProductGrid3d::perpendicular_grid CurvilinearProductGrid3d::perp_grid() const { return CurvilinearProductGrid3d::perpendicular_grid(*this);}
 ///@endcond
 
+}//namespace geo
 }//namespace dg

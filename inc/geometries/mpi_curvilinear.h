@@ -13,6 +13,8 @@
 
 namespace dg
 {
+namespace geo
+{
 
 ///@cond
 struct CurvilinearProductMPIGrid3d; 
@@ -213,5 +215,6 @@ CurvilinearMPIGrid2d::CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g
 ///@endcond
 
 ///@}
+}//namespace geo
 }//namespace dg
 
