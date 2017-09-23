@@ -1,5 +1,5 @@
 tagfiles="./dg.tag=../../dg/html ./file.tag=../../file/html"
-.PHONY: dg file geometries
+.PHONY: clean doc dg.tag geometries.tag dg file geometries
 
 ###Packages needed on linux:
 ###doxygen
@@ -9,41 +9,53 @@ tagfiles="./dg.tag=../../dg/html ./file.tag=../../file/html"
 
 all: doc
 
-dg:
+dg.tag:
 	(cat ../dg/Doxyfile; \
-    mkdir -p dg; \
+	echo "INPUT = ../dg/"; \
+	echo "OUTPUT_DIRECTORY = ./dg"; \
+	echo "GENERATE_HTML = NO"; \
+	echo "GENERATE_TAGFILE = ./dg.tag" ) | doxygen - ;
+
+geometries.tag: dg.tag
+	(cat ../geometries/Doxyfile; \
+	echo "INPUT = ../geometries/"; \
+	echo "OUTPUT_DIRECTORY = ./geometries"; \
+	echo "GENERATE_HTML = NO"; \
+	echo "GENERATE_TAGFILE = ./geometries.tag"; \
+    echo "TAGFILES = dg.tag=../../dg/html") | doxygen - ; 
+
+dg: geometries.tag
+	(cat ../dg/Doxyfile; \
 	echo "INPUT = ../dg/"; \
 	echo "OUTPUT_DIRECTORY = ./dg"; \
 	echo "HTML_HEADER = header.html"; \
-	echo "MATHJAX_RELPATH = http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";  \
-	echo "GENERATE_TAGFILE = ./dg.tag" ) | doxygen - ;
+    echo "EXTERNAL_GROUPS=NO" ;\
+    echo "EXTERNAL_PAGES=NO" ;\
+    echo "TAGFILES = geometries.tag=../../geometries/html") | doxygen - ; 
 
-
-file:
-	(cat ../file/Doxyfile; \
-    mkdir -p file; \
-	echo "INPUT = ../file/"; \
-	echo "OUTPUT_DIRECTORY = ./file"; \
-	echo "HTML_HEADER = header.html"; \
-	echo "MATHJAX_RELPATH = http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"; \
-	echo "GENERATE_TAGFILE = ./file.tag" ) | doxygen - ; 
-
-geometries:
+geometries: dg.tag
 	(cat ../geometries/Doxyfile; \
 	echo "INPUT = ../geometries/"; \
-    echo "OUTPUT_DIRECTORY = ./geometries/";  \
+	echo "OUTPUT_DIRECTORY = ./geometries"; \
 	echo "HTML_HEADER = header.html"; \
     echo "EXTERNAL_GROUPS=NO" ;\
     echo "EXTERNAL_PAGES=NO" ;\
-	echo "MATHJAX_RELPATH = http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";  \
-    echo "TAGFILES = $(tagfiles)") | doxygen - ; 
+    echo "TAGFILES = dg.tag=../../dg/html") | doxygen - ; 
 
-doc: dg file geometries
+file:
+	(cat ../file/Doxyfile; \
+	echo "INPUT = ../file/"; \
+	echo "OUTPUT_DIRECTORY = ./file"; \
+	echo "HTML_HEADER = header.html"; \
+	echo ) | doxygen - ; 
+
+doc: dg geometries file
 	ln -sf dg/html/modules.html index.html
 	#Open with: firefox index.html or on Windows: firefox dg/html/modules.html
 
 
+
 clean:
-	rm -rf dg file geometries dg.tag file.tag index.html
+	rm -rf dg file geometries dg.tag file.tag geometries.tag index.html
 
 

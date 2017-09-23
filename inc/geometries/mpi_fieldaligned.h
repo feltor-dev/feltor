@@ -50,6 +50,32 @@ void sendBackward( InputIterator begin, InputIterator end, OutputIterator result
                     source, 3, //source
                     comm, &status);
 }
+
+aMPIGeometry2d* clone_MPI3d_to_perp( const aMPIGeometry3d* grid_ptr)
+{
+    const dg::CartesianMPIGrid3d* grid_cart = dynamic_cast<const dg::CartesianMPIGrid3d*>(grid_ptr);
+    const dg::CylindricalMPIGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalMPIGrid3d*>(grid_ptr);
+    const dg::CurvilinearProductMPIGrid3d*  grid_curvi = dynamic_cast<const dg::CurvilinearProductMPIGrid3d*>(grid_ptr);
+    aGeometry2d* g2d_ptr;
+    if( grid_cart) 
+    {
+        dg::CartesianMPIGrid2d cart = grid_cart->perp_grid();
+        g2d_ptr = cart.clone();
+    }
+    else if( grid_cyl) 
+    {
+        dg::CartesianMPIGrid2d cart = grid_cyl->perp_grid();
+        g2d_ptr = cart.clone();
+    }
+    else if( grid_curvi) 
+    {
+        dg::CurvilinearMPIGrid2d curv = grid_curvi->perp_grid();
+        g2d_ptr = curv.clone();
+    }
+    else
+        throw dg::Error( dg::Message(_ping_)<<"Grid class not recognized!");
+    return g2d_ptr;
+}
 }//namespace detail
 
 template <class Geometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>

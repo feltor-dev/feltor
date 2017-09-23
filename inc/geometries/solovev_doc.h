@@ -1,7 +1,7 @@
 #error Documentation only
 /*! 
  * 
- * @defgroup grids 1. New Geometry classes
+ * @defgroup grids 1. New geometric grids
  * @defgroup generators_geo 2. Grid generators
  *
       All the grids introduced by this extension can be constructed with 

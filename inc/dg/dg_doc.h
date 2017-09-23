@@ -84,7 +84,7 @@
  *     @defgroup arakawa Discretization of Poisson bracket
  *     @defgroup matrixoperators Elliptic and Helmholtz operators
  * @}
- * @defgroup misc Level 99: Miscellaneous additions
+ * @defgroup misc Level 00: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
  *     @defgroup functions Functions and Functors
