@@ -482,12 +482,12 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
-    const aGeometry2d* g2dCoarse_ptr = detail::clone_3d_to_perp(&grid);
+    const aGeometry2d* grid2d_ptr = detail::clone_3d_to_perp(&grid);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //Resize vector to 2D grid size
-    perp_size_ = g2dCoarse_ptr->size();
-    limiter_ = dg::evaluate( limit, *g2dCoarse_ptr);
-    right_ = left_ = dg::evaluate( zero, *g2dCoarse_ptr);
+    perp_size_ = grid2d_ptr->size();
+    limiter_ = dg::evaluate( limit, *grid2d_ptr);
+    right_ = left_ = dg::evaluate( zero, *grid2d_ptr);
     ghostM.resize( perp_size_); ghostP.resize( perp_size_);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
     std::cout << "Start fieldline integration!\n";
@@ -495,14 +495,14 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse); 
     t.tic();
     
-    dg::aGeometry2d* g2dField_ptr = g2dCoarse_ptr->clone();//INTEGRATE HIGH ORDER GRID
+    dg::aGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
     g2dField_ptr->set( 7, g2dField_ptr->Nx(), g2dField_ptr->Ny());
     detail::integrate_all_fieldlines2d( vec, g2dField_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
     delete g2dField_ptr;
 
-    dg::Grid2d g2dFine((dg::Grid2d(*g2dCoarse_ptr)));//FINE GRID
+    dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
     g2dFine.multiplyCellNumbers((double)mx, (double)my);
-    IMatrix interpolate = dg::create::interpolation( g2dFine, *g2dCoarse_ptr);  //INTERPOLATE TO FINE GRID
+    IMatrix interpolate = dg::create::interpolation( g2dFine, *grid2d_ptr);  //INTERPOLATE TO FINE GRID
     std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp); 
     for( unsigned i=0; i<3; i++)
     {
@@ -520,9 +520,9 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     std::cout << "Fieldline integration took "<<t.diff()<<"s\n";
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
-    IMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *g2dCoarse_ptr, globalbcx, globalbcy);
-    IMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *g2dCoarse_ptr, globalbcx, globalbcy);
-    IMatrix projection = dg::create::projection( *g2dCoarse_ptr, g2dFine);
+    IMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *grid2d_ptr, globalbcx, globalbcy);
+    IMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *grid2d_ptr, globalbcx, globalbcy);
+    IMatrix projection = dg::create::projection( *grid2d_ptr, g2dFine);
     t.toc();
     std::cout <<"Creation of interpolation/projection took "<<t.diff()<<"s\n";
     t.tic();
@@ -544,7 +544,7 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     }
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
-    delete g2dCoarse_ptr;
+    delete grid2d_ptr;
 }
 
 template<class G, class I, class container>

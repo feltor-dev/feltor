@@ -10,6 +10,8 @@
 
 namespace dg
 {
+namespace geo
+{
 ///@addtogroup grids
 ///@{
 
@@ -140,4 +142,5 @@ struct CurvilinearGridX2d : public dg::aGeometryX2d
 
 ///@}
 
+} //namespace geo
 } //namespace dg

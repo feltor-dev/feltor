@@ -149,50 +149,35 @@ struct FieldAligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
 template <class Limiter>
-FieldAligned<MPIGeometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::FieldAligned(
+FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::FieldAligned(
     const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, double deltaPhi):
     hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
     g_(grid), bcz_(grid.bcz()), 
     tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()), temp_(g_.Nz())
 {
-    //create communicator with all processes in plane
-    typename MPIGeometry::perpendicular_grid g2d = grid.perp_grid();
-    unsigned localsize = g2d.size();
-    limiter_ = dg::evaluate( limit, g2d.local());
-    right_ = left_ = dg::evaluate( zero, g2d.local());
+    if( deltaPhi <=0) deltaPhi = grid.hz();
+    else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
+    const aMPIGeometry2d* g2dCoarse_ptr = detail::clone_MPI3d_to_perp(&grid);
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    unsigned localsize = grid2d_ptr->size();
+    limiter_ = dg::evaluate( limit, grid2d_ptr->local());
+    right_ = left_ = dg::evaluate( zero, grid2d_ptr->local());
     ghostM.resize( localsize); ghostP.resize( localsize);
-    //set up grid points as start for fieldline integrations 
-    std::vector<MPI_Vector<thrust::host_vector<double> > > y( 5, dg::evaluate(dg::zero, g2d));
-    y[0] = dg::evaluate( dg::cooX2d, g2d);
-    y[1] = dg::evaluate( dg::cooY2d, g2d);
-    y[2] = dg::evaluate( dg::zero, g2d);//distance (not angle)
-    y[3] = dg::pullback( dg::cooX2d, g2d);
-    y[4] = dg::pullback( dg::cooY2d, g2d);
-    //integrate to next z-planes
-    std::vector<thrust::host_vector<double> > yp(3, y[0].data()), ym(yp); 
-    if(deltaPhi<=0) deltaPhi = grid.hz();
-    else assert( g_.Nz() == 1 || grid.hz()==deltaPhi);
-#ifdef _OPENMP
-#pragma omp parallel for shared(field)
-#endif //_OPENMP
-    for( unsigned i=0; i<localsize; i++)
-    {
-        thrust::host_vector<double> coords(5), coordsP(5), coordsM(5);
-        coords[0] = y[0].data()[i], coords[1] = y[1].data()[i], coords[2] = y[2].data()[i], coords[3] = y[3].data()[i], coords[4] = y[4].data()[i];
-        double phi1 = deltaPhi;
-        boxintegrator( field, g2d.global(), coords, coordsP, phi1, eps, globalbcz);
-        phi1 = -deltaPhi;
-        boxintegrator( field, g2d.global(), coords, coordsM, phi1, eps, globalbcz);
-        yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
-        ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
-    }
-
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
+    std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse); 
+    
+    dg::aGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
+    g2dField_ptr->set( 7, g2dField_ptr->Nx(), g2dField_ptr->Ny());
+    detail::integrate_all_fieldlines2d( vec, g2dField_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
+    delete g2dField_ptr;
 
     //determine pid of result 
     thrust::host_vector<int> pids( localsize);
     for( unsigned i=0; i<localsize; i++)
     {
-        pids[i]  = g2d.pidOf( yp[0][i], yp[1][i]);
+        pids[i]  = grid2d_ptr.pidOf( yp[0][i], yp[1][i]);
         if( pids[i]  == -1)
         {
             std::cerr << "ERROR: PID NOT FOUND!\n";
@@ -200,31 +185,31 @@ FieldAligned<MPIGeometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
         }
     }
 
-    CommunicatorXY cp( pids, g2d.communicator());
+    CommunicatorXY cp( pids, grid2d_ptr.communicator());
     commXYplus_ = cp;
     thrust::host_vector<double> pX, pY;
     dg::blas1::transfer( cp.global_gather( yp[0]), pX);
     dg::blas1::transfer( cp.global_gather( yp[1]), pY);
 
     //construt interpolation matrix
-    plus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
+    plus = dg::create::interpolation( pX, pY, grid2d_ptr.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( plus, plusT);
 
     //do the same for the minus z-plane
     for( unsigned i=0; i<pids.size(); i++)
     {
-        pids[i]  = g2d.pidOf( ym[0][i], ym[1][i]);
+        pids[i]  = grid2d_ptr.pidOf( ym[0][i], ym[1][i]);
         if( pids[i] == -1)
         {
             std::cerr << "ERROR: PID NOT FOUND!\n";
             return;
         }
     }
-    CommunicatorXY cm( pids, g2d.communicator());
+    CommunicatorXY cm( pids, grid2d_ptr.communicator());
     commXYminus_ = cm;
     dg::blas1::transfer( cm.global_gather( ym[0]), pX);
     dg::blas1::transfer( cm.global_gather( ym[1]), pY);
-    minus = dg::create::interpolation( pX, pY, g2d.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
+    minus = dg::create::interpolation( pX, pY, grid2d_ptr.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( minus, minusT);
     //copy to device
     for( unsigned i=0; i<g_.Nz(); i++)
@@ -240,6 +225,7 @@ FieldAligned<MPIGeometry, RowDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
         tempXYminus_[i].resize( commXYminus_.size());
         temp_[i].resize( localsize);
     }
+    delete grid2d_ptr;
 }
 
 template<class G, class M, class C, class container>
