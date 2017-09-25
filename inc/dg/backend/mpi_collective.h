@@ -356,12 +356,12 @@ struct SurjectiveComm : public aCommunicator<Vector>
 template< class Index, class Vector>
 struct GeneralComm : public aCommunicator<Vector>
 {
-    /// no memory allocation; the size shall be 0
+    /// no memory allocation; size 0
     GeneralComm(){}
     /**
     * @brief Construct from local indices and PIDs gather map
     *
-    * The gather map shall be written with respect to the buffer vector (unlike in BijectiveComm, where it is given wrt the source vector) 
+    * The indices in the gather map is written with respect to the buffer vector (unlike in BijectiveComm, where it is given wrt the source vector) 
     * @param localGatherMap The gather map containing local vector indices ( local buffer size)
     * @param pidGatherMap The gather map containing the pids from where to gather the local index.
     Same size as localGatherMap.

@@ -173,4 +173,3 @@
  @note you can make your own SymmetricOp by providing the member function void symv(const container&, container&);
   and specializing MatrixTraits with the SelfMadeMatrixTag as the matrix_category
   */
-

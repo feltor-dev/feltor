@@ -1,6 +1,3 @@
-tagfiles="./dg.tag=../../dg/html ./file.tag=../../file/html"
-.PHONY: clean doc dg.tag geometries.tag dg file geometries
-
 ###Packages needed on linux:
 ###doxygen
 ###libjs-mathjax
@@ -9,6 +6,8 @@ tagfiles="./dg.tag=../../dg/html ./file.tag=../../file/html"
 
 all: doc
 
+.PHONY: clean doc dg.tag dg file geometries
+
 dg.tag:
 	(cat ../dg/Doxyfile; \
 	echo "INPUT = ../dg/"; \
@@ -16,22 +15,14 @@ dg.tag:
 	echo "GENERATE_HTML = NO"; \
 	echo "GENERATE_TAGFILE = ./dg.tag" ) | doxygen - ;
 
-geometries.tag: dg.tag
-	(cat ../geometries/Doxyfile; \
-	echo "INPUT = ../geometries/"; \
-	echo "OUTPUT_DIRECTORY = ./geometries"; \
-	echo "GENERATE_HTML = NO"; \
-	echo "GENERATE_TAGFILE = ./geometries.tag"; \
-    echo "TAGFILES = dg.tag=../../dg/html") | doxygen - ; 
-
-dg: geometries.tag
+dg:
 	(cat ../dg/Doxyfile; \
 	echo "INPUT = ../dg/"; \
 	echo "OUTPUT_DIRECTORY = ./dg"; \
 	echo "HTML_HEADER = header.html"; \
     echo "EXTERNAL_GROUPS=NO" ;\
     echo "EXTERNAL_PAGES=NO" ;\
-    echo "TAGFILES = geometries.tag=../../geometries/html") | doxygen - ; 
+	echo ) | doxygen - ; 
 
 geometries: dg.tag
 	(cat ../geometries/Doxyfile; \
@@ -40,7 +31,7 @@ geometries: dg.tag
 	echo "HTML_HEADER = header.html"; \
     echo "EXTERNAL_GROUPS=NO" ;\
     echo "EXTERNAL_PAGES=NO" ;\
-    echo "TAGFILES = dg.tag=../../dg/html") | doxygen - ; 
+	echo "TAGFILES = dg.tag=../../dg/html") | doxygen - ; 
 
 file:
 	(cat ../file/Doxyfile; \
@@ -51,11 +42,9 @@ file:
 
 doc: dg geometries file
 	ln -sf dg/html/modules.html index.html
-	#Open with: firefox index.html or on Windows: firefox dg/html/modules.html
-
-
+	#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
+	#Open with: firefox index.html or on Windows: firefox dg/html/modules.html#
+	#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 clean:
 	rm -rf dg file geometries dg.tag file.tag geometries.tag index.html
-
-
