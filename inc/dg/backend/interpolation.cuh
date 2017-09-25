@@ -419,9 +419,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d& g_
     return interpolation( pointsX, g_old);
 
 }
-/**
- * @copydoc interpolation(const Grid1d&,const Grid1d&)
- */
+///@copydoc interpolation(const Grid1d&,const Grid1d&)
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopology2d& g_new, const aTopology2d& g_old)
 {
     //assert both grids are on the same box
@@ -436,9 +434,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopology2
 
 }
 
-/**
- * @copydoc interpolation(const Grid1d&,const Grid1d&)
- */
+///@copydoc interpolation(const Grid1d&,const Grid1d&)
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopology3d& g_new, const aTopology3d& g_old)
 {
     //assert both grids are on the same box

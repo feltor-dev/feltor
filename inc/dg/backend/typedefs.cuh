@@ -2,7 +2,7 @@
 #define _DG_TYPEDEFS_CUH_
 
 /*! @file
-  @brief This file contains useful typedefs of commonly used types.
+  @brief Useful typedefs of commonly used types.
   */
 
 namespace dg{

@@ -66,18 +66,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid1d& g
     cusp::transpose( temp, A);
     return A;
 }
-/**
- * @copydoc interpolationT
- */
+///@copydoc interpolationT(const Grid1d&,const Grid1d&)
 cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology2d& g_new, const aTopology2d& g_old)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
     cusp::transpose( temp, A);
     return A;
 }
-/**
- * @copydoc interpolationT
- */
+///@copydoc interpolationT(const Grid1d&,const Grid1d&)
 cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology3d& g_new, const aTopology3d& g_old)
 {
     cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
@@ -130,9 +126,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g_ne
 }
 
 
-/**
- * @copydoc projection
- */
+///@copydoc projection(const Grid1d&,const Grid1d&)
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology2d& g_new, const aTopology2d& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
@@ -159,9 +153,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology2d&
     return A;
 }
 
-/**
- * @copydoc projection
- */
+///@copydoc projection(const Grid1d&,const Grid1d&)
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology3d& g_new, const aTopology3d& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
@@ -220,9 +212,8 @@ cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopolog
     Y.sort_by_row_and_column();
     return Y;
 }
-/**
- * @copydoc transformation
- */
+
+///@copydoc transformation(const aTopology3d&,const aTopology3d&)
 cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopology2d& g_new, const aTopology2d& g_old)
 {
     Grid2d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), 
@@ -233,9 +224,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopolog
     Y.sort_by_row_and_column();
     return Y;
 }
-/**
- * @copydoc transformation
- */
+///@copydoc transformation(const aTopology3d&,const aTopology3d&)
 cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid1d& g_new, const Grid1d& g_old)
 {
     Grid1d g_lcm(g_new.x0(), g_new.x1(), lcm(g_new.n(), g_old.n()), lcm(g_new.N(), g_old.N()));
