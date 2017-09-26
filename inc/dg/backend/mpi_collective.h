@@ -381,7 +381,7 @@ struct GeneralComm : public aCommunicator<Vector>
     /**
      * @brief Construct from global indices gather map
      *
-     * Use the global2localIdx() function to generate localGatherMap and pidGatherMap 
+     * Uses the global2localIdx() member of MPITopology to generate localGatherMap and pidGatherMap 
      * @tparam MPITopology any implementation of an MPI Topology (aMPITopology2d, aMPITopology3d, ...)
      * @param globalGatherMap The gather map containing global vector indices (local buffer size)
      * @param g a grid object
