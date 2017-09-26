@@ -268,9 +268,6 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGe
     std::cout << "Generation of interpolate grid took "<<t.diff()<<"s\n";
     //field in case of cartesian grid
     dg::detail::DSFieldCylindrical cyl_field(vec);
-#ifdef _OPENMP
-#pragma omp parallel for shared(field, cyl_field)
-#endif //_OPENMP
     for( unsigned i=0; i<g2dField_ptr->size(); i++)
     {
         thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
@@ -297,7 +294,7 @@ aGeometry2d* clone_3d_to_perp( const aGeometry3d* grid_ptr)
 {
     const dg::CartesianGrid3d* grid_cart = dynamic_cast<const dg::CartesianGrid3d*>(grid_ptr);
     const dg::CylindricalGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalGrid3d*>(grid_ptr);
-    const dg::CurvilinearProductGrid3d*  grid_curvi = dynamic_cast<const dg::CurvilinearProductGrid3d*>(grid_ptr);
+    const dg::geo::CurvilinearProductGrid3d*  grid_curvi = dynamic_cast<const dg::geo::CurvilinearProductGrid3d*>(grid_ptr);
     aGeometry2d* g2d_ptr;
     if( grid_cart) 
     {
@@ -311,7 +308,7 @@ aGeometry2d* clone_3d_to_perp( const aGeometry3d* grid_ptr)
     }
     else if( grid_curvi) 
     {
-        dg::CurvilinearGrid2d curv = grid_curvi->perp_grid();
+        dg::geo::CurvilinearGrid2d curv = grid_curvi->perp_grid();
         g2d_ptr = curv.clone();
     }
     else

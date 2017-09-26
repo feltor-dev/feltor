@@ -51,26 +51,29 @@ void sendBackward( InputIterator begin, InputIterator end, OutputIterator result
                     comm, &status);
 }
 
-aMPIGeometry2d* clone_MPI3d_to_perp( const aMPIGeometry3d* grid_ptr)
+aGeometry2d* clone_MPI3d_to_global_perp( const aMPIGeometry3d* grid_ptr)
 {
     const dg::CartesianMPIGrid3d* grid_cart = dynamic_cast<const dg::CartesianMPIGrid3d*>(grid_ptr);
     const dg::CylindricalMPIGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalMPIGrid3d*>(grid_ptr);
     const dg::CurvilinearProductMPIGrid3d*  grid_curvi = dynamic_cast<const dg::CurvilinearProductMPIGrid3d*>(grid_ptr);
-    aMPIGeometry2d* g2d_ptr;
+    aGeometry2d* g2d_ptr;
     if( grid_cart) 
     {
         dg::CartesianMPIGrid2d cart = grid_cart->perp_grid();
-        g2d_ptr = cart.clone();
+        dg::CartesianGrid2d global_cart( cart.global());
+        g2d_ptr = global_cart.clone();
     }
     else if( grid_cyl) 
     {
         dg::CartesianMPIGrid2d cart = grid_cyl->perp_grid();
-        g2d_ptr = cart.clone();
+        dg::CartesianGrid2d global_cart( cart.global());
+        g2d_ptr = global_cart.clone();
     }
     else if( grid_curvi) 
     {
-        dg::CurvilinearMPIGrid2d curv = grid_curvi->perp_grid();
-        g2d_ptr = curv.clone();
+        dg::geo::CurvilinearMPIGrid2d curv = grid_curvi->perp_grid();
+        dg::geo::CurvilinearGrid2d global_curv( curv.generator(), curv.global().n(), curv.global().Nx(), curv.global().Ny(), curv.bcx(), curv.bcy());
+        g2d_ptr = global_curv.clone();
     }
     else
         throw dg::Error( dg::Message(_ping_)<<"Grid class not recognized!");
@@ -159,7 +162,7 @@ FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
-    const aMPIGeometry2d* g2dCoarse_ptr = detail::clone_MPI3d_to_perp(&grid);
+    const aGeometry2d* g2d_ptr = detail::clone_MPI3d_to_global_perp(&grid);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     unsigned localsize = grid2d_ptr->size();
     limiter_ = dg::evaluate( limit, grid2d_ptr->local());
