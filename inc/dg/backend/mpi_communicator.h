@@ -1,7 +1,21 @@
 #pragma once
 
+#include <mpi.h>
+
 namespace dg
 {
+///@cond
+template<class value_type>
+MPI_Datatype getMPIDataType(){ assert( false && "Type not supported!\n" ); return; }
+template<>
+MPI_Datatype getMPIDataType<double>(){ return MPI_DOUBLE;}
+template<>
+MPI_Datatype getMPIDataType<float>(){ return MPI_FLOAT;}
+template<>
+MPI_Datatype getMPIDataType<int>(){ return MPI_INT;} 
+template<>
+MPI_Datatype getMPIDataType<unsigned>(){ return MPI_UNSIGNED;} 
+///@endcond
 
 /**
  * @brief Struct that performs collective scatter and gather operations across processes
@@ -33,10 +47,11 @@ by a matrix. The gather matrix is just a
 (permutation) matrix of 1's and 0's with exactly one "1" in each line.
 In a "coo" formatted sparse matrix format the values array would consist only of "1"s, 
 row array is just the index and column array is the gather map.
-We uniquely define the corresponding scatter matrix as the transpose of the gather matrix. 
+We uniquely define the corresponding <b> scatter matrix </b> as the <b> transpose of the gather matrix</b>. 
 The scatter matrix can have zero, one or more "1"s in each line.
-\f[ w = G v \\
-    v = S w \f]
+\f[ w_1 = G v_1 \\
+    v_2 = S w_2 = G^\mathrm{T} w_2 \f]
+where \f$ v_1\f$ and \f$ v_2\f$ are data vectors and \f$ w_1\f$ and \f$ w_2\f$ are buffer vectors.
 
 This class performs these operations for the case that v and w are distributed across processes.
 We always assume that the source vector v is distributed equally among processes, i.e. 
@@ -49,13 +64,13 @@ In this case the buffer and the vector can swap their roles.
 @note Finally note that when v is filled with its indices, i.e. \f$ v[i] = i \f$, then
 the gather operation will reproduce the index map in the buffer w \f$ w[i] = \text{idx}[i]\f$ .
 
- * @tparam LocalContainer a container on a shared memory system
+ * @tparam LocalContainer a container on a shared memory system (must be default constructible)
  * @ingroup mpi_structures
  */
 template< class LocalContainer>
 struct aCommunicator
 {
-    typedef LocalContainer container_type; //!< typedef to derive container type
+    typedef LocalContainer container_type; //!< reveal local container type
 
     /**
      * @brief Allocate a buffer object of size size()
@@ -69,18 +84,22 @@ struct aCommunicator
 
     /**
      * @brief Globally (across processes) gather data into a buffer 
+     *
+     * This is the transpose operation of global_scatter_reduce()
      * @param values data; other processes collect data from this vector
-     * @param buffer object to hold the gathered data ( must be of size size())
+     * @param buffer on output holds the gathered data ( must be of size size())
      * @note if size()==0 nothing happens
      */
     void global_gather( const LocalContainer& values, LocalContainer& buffer)const
     {
         if( do_size() == 0 ) return;
-        do_global_gather( values, gather);
+        do_global_gather( values, buffer);
     }
 
     /**
      * @brief Globally (across processes) gather data into a buffer (memory allocating version)
+     *
+     * This is the transpose operation of global_scatter_reduce()
      * @param values data; other processes collect data from this vector
      * @return object that holds the gathered data
      * @note if size()==0 the default constructor of LocalContainer is called
@@ -94,8 +113,10 @@ struct aCommunicator
 
     /**
      * @brief Globally (across processes) scatter data accross processes and reduce on multiple indices
+     *
+     * This is the transpose operation of global_gather()
      * @param toScatter buffer vector; (has to be of size given by size())
-     * @param values contains values from other processes sent back to the origin 
+     * @param values on output contains values from other processes sent back to the origin 
      * @note if size()==0 nothing happens
      */
     void global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const{
@@ -143,5 +164,9 @@ struct aCommunicator
     virtual void do_global_gather( const LocalContainer& values, LocalContainer& gathered)const=0;
     virtual void do_global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const=0;
 };
+
+
+
+
 
 }//namespace dg

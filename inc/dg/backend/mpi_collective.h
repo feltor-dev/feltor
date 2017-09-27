@@ -24,7 +24,6 @@ namespace dg{
  * to send (or gather from) and connects it to an intermediate "store"
  * In this way gather and scatter are defined with respect to the buffer and 
  * the store is the vector.
- @note the data type of the Vector class has to be double
  */
 template<class Index, class Vector>
 struct Collective
@@ -99,10 +98,10 @@ void Collective<Index, Device>::scatter( const Device& values, Device& store) co
     MPI_Alltoallv( 
             thrust::raw_pointer_cast( values.data()), 
             thrust::raw_pointer_cast( sendTo_.data()), 
-            thrust::raw_pointer_cast( accS_.data()), MPI_DOUBLE, 
+            thrust::raw_pointer_cast( accS_.data()), getMPIDataType<typename VectorTraits<Device>::value_type>(), 
             thrust::raw_pointer_cast( store.data()),
             thrust::raw_pointer_cast( recvFrom_.data()),
-            thrust::raw_pointer_cast( accR_.data()), MPI_DOUBLE, comm_);
+            thrust::raw_pointer_cast( accR_.data()), getMPIDataType<typename VectorTraits<Device>::value_type>(), comm_);
 }
 
 template< class Index, class Device>
@@ -117,10 +116,10 @@ void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values
     MPI_Alltoallv( 
             thrust::raw_pointer_cast( gatherFrom.data()), 
             thrust::raw_pointer_cast( recvFrom_.data()),
-            thrust::raw_pointer_cast( accR_.data()), MPI_DOUBLE, 
+            thrust::raw_pointer_cast( accR_.data()), getMPIDataType<typename VectorTraits<Device>::value_type>(), 
             thrust::raw_pointer_cast( values.data()), 
             thrust::raw_pointer_cast( sendTo_.data()), 
-            thrust::raw_pointer_cast( accS_.data()), MPI_DOUBLE, comm_);
+            thrust::raw_pointer_cast( accS_.data()), getMPIDataType<typename VectorTraits<Device>::value_type>(), comm_);
 }
 //BijectiveComm ist der Spezialfall, dass jedes Element nur ein einziges Mal gebraucht wird. 
 ///@endcond
@@ -141,8 +140,8 @@ void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values
  thrust::host_vector<double> hrecv2( hvalues.size());
  coll.global_scatter_reduce( hrecv, hrecv2); //hrecv2 now equals hvalues independent of process rank
  @endcode
- * @tparam Index an integer thrust Vector (thrust::host_vector<int> or thrust::device_vector<int>) 
- * @tparam Vector a thrust Vector (thrust::host_vector<double> or thrust::device_vector<double>)
+ * @tparam Index an integer thrust Vector
+ * @tparam Vector a thrust Vector
  * @note a scatter followed by a gather of the received values restores the original array
  * @note The order of the received elements is according to their original array index 
  *   (i.e. a[0] appears before a[1]) and their process rank of origin ( i.e. values from rank 0 appear before values from rank 1)
@@ -248,8 +247,8 @@ struct BijectiveComm : public aCommunicator<Vector>
  Compared to BijectiveComm in the global_gather function there is an additional 
  gather and in the global_scatter_reduce function a reduction 
  needs to be performed.
- * @tparam Index an integer thrust Vector (thrust::host_vector<int> or thrust::device_vector<int>) 
- * @tparam Vector a thrust Vector (thrust::host_vector<double> or thrust::device_vector<double>)
+ * @tparam Index an integer thrust Vector
+ * @tparam Vector a thrust Vector
  */
 template< class Index, class Vector>
 struct SurjectiveComm : public aCommunicator<Vector>
@@ -286,6 +285,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
 
     ///@copydoc GeneralComm::getLocalGatherMap
     const thrust::host_vector<int>& getLocalGatherMap() const {return localGatherMap_;}
+    ///@copydoc GeneralComm::getPidGatherMap
     const thrust::host_vector<int>& getPidGatherMap() const {return pidGatherMap_;}
     const Index& getSortedGatherMap() const {return sortedGatherMap_;}
     virtual SurjectiveComm* clone() const {return new SurjectiveComm(*this);}
@@ -350,8 +350,8 @@ struct SurjectiveComm : public aCommunicator<Vector>
  * This Communicator can perform general global gather and
  scatter operations. Compared to SurjectiveComm the global_scatter_reduce function needs
  to perform an additional scatter as some elements of the source vector might be left empty
- * @tparam Index an integer thrust Vector (thrust::host_vector<int> or thrust::device_vector<int>) 
- * @tparam Vector a thrust Vector (thrust::host_vector<double> or thrust::device_vector<double>)
+ * @tparam Index an integer thrust Vector 
+ * @tparam Vector a thrust Vector 
  */
 template< class Index, class Vector>
 struct GeneralComm : public aCommunicator<Vector>
@@ -371,7 +371,7 @@ struct GeneralComm : public aCommunicator<Vector>
     GeneralComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm) {
         construct( localGatherMap, pidGatherMap, comm);
     }
-    ///@brief reconstruct from another type if non-empty; else same as default constructor
+    ///@brief reconstruct from another type; if src is empty same as default constructor
     template<class OtherIndex, class OtherVector>
     GeneralComm( const GeneralComm<OtherIndex, OtherVector>& src){
         if( src.size() > 0)
