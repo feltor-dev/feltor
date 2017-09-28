@@ -159,6 +159,33 @@ void clip_to_boundary( thrust::host_vector<double>& x, const aTopology2d* grid)
     clip_to_boundary(x[0], x[1], grid);
 }
 
+//grid2d_ptr is global grid topolgy
+void interpolate_and_clip( const aTopolgy2d* grid2d_ptr, unsigned mx, unsigned my, 
+        const std::vector<thrust::host_vector<double> >& yp_coarse,
+        const std::vector<thrust::host_vector<double> >& ym_coarse,
+        std::vector<thrust::host_vector<double> >& yp_,
+        std::vector<thrust::host_vector<double> >& ym_
+        )
+{
+    dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
+    g2dFine.multiplyCellNumbers((double)mx, (double)my);
+
+    dg::IHMatrix interpolate = dg::create::interpolation( g2dFine, *grid2d_ptr);  //INTERPOLATE TO FINE GRID
+    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp); 
+    for( unsigned i=0; i<3; i++)
+    {
+        dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
+        dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
+    }
+    for( unsigned i=0; i<yp[0].size(); i++)
+    {
+        g2dFine.shift_topologic( yp[0][i], yp[1][i], yp[0][i], yp[1][i]);
+        g2dFine.shift_topologic( ym[0][i], ym[1][i], ym[0][i], ym[1][i]);
+        detail::clip_to_boundary( yp[0][i], yp[1][i], &g2dFine);
+        detail::clip_to_boundary( ym[0][i], ym[1][i], &g2dFine);
+    }
+    yp_=yp, ym_=ym;
+}
 
 /**
  * @brief Integrate a field line to find whether the result lies inside or outside of the box
@@ -292,6 +319,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const aGe
 
 aGeometry2d* clone_3d_to_perp( const aGeometry3d* grid_ptr)
 {
+    //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
     const dg::CartesianGrid3d* grid_cart = dynamic_cast<const dg::CartesianGrid3d*>(grid_ptr);
     const dg::CylindricalGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalGrid3d*>(grid_ptr);
     const dg::geo::CurvilinearProductGrid3d*  grid_curvi = dynamic_cast<const dg::geo::CurvilinearProductGrid3d*>(grid_ptr);
@@ -478,7 +506,6 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
     const aGeometry2d* grid2d_ptr = detail::clone_3d_to_perp(&grid);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //Resize vector to 2D grid size
@@ -489,30 +516,14 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
     std::cout << "Start fieldline integration!\n";
     dg::Timer t;
-    std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse); 
+    std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym; 
     t.tic();
     
     dg::aGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
     g2dField_ptr->set( 7, g2dField_ptr->Nx(), g2dField_ptr->Ny());
     detail::integrate_all_fieldlines2d( vec, g2dField_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
     delete g2dField_ptr;
-
-    dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
-    g2dFine.multiplyCellNumbers((double)mx, (double)my);
-    IMatrix interpolate = dg::create::interpolation( g2dFine, *grid2d_ptr);  //INTERPOLATE TO FINE GRID
-    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp); 
-    for( unsigned i=0; i<3; i++)
-    {
-        dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
-        dg::blas2::symv( interpolate, ym_coarse[i], ym[i]);
-    }
-    for( unsigned i=0; i<yp[0].size(); i++)
-    {
-        g2dFine.shift_topologic( yp[0][i], yp[1][i], yp[0][i], yp[1][i]);
-        g2dFine.shift_topologic( ym[0][i], ym[1][i], ym[0][i], ym[1][i]);
-        detail::clip_to_boundary( yp[0][i], yp[1][i], &g2dFine);
-        detail::clip_to_boundary( ym[0][i], ym[1][i], &g2dFine);
-    }
+    interpolate_and_clip( grid2d_ptr, mx, my, yp_coarse, ym_coarse, yp, ym);
     t.toc(); 
     std::cout << "Fieldline integration took "<<t.diff()<<"s\n";
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
