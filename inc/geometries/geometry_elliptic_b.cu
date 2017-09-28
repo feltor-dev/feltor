@@ -44,9 +44,9 @@ int main(int argc, char**argv)
     std::cout << "Constructing grid ... \n";
     t.tic();
     dg::geo::SimpleOrthogonal generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearProductGrid3d g3d( generator, n, Nx, Ny,Nz, dg::DIR);
-    dg::CurvilinearGrid2d g2d = g3d.perp_grid();
-    dg::Elliptic<dg::CurvilinearGrid2d, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+    dg::geo::CurvilinearProductGrid3d g3d( generator, n, Nx, Ny,Nz, dg::DIR);
+    dg::geo::CurvilinearGrid2d g2d = g3d.perp_grid();
+    dg::Elliptic<dg::geo::CurvilinearGrid2d, dg::DMatrix, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////

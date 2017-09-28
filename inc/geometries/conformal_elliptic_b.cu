@@ -108,7 +108,7 @@ int main(int argc, char**argv)
     dg::geo::SimpleOrthogonal generator0(c.get_psip(), psi_0, psi_1, gp.R_0, 0., 0);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::CurvilinearGrid2d g2d(generator0, n, Nx, Ny);
+        dg::geo::CurvilinearGrid2d g2d(generator0, n, Nx, Ny);
         compute_error_elliptic(c, g2d, psi_0, psi_1, eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -120,7 +120,7 @@ int main(int argc, char**argv)
     dg::geo::SimpleOrthogonal generator1(c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::CurvilinearGrid2d g2d(generator1, n, Nx, Ny);
+        dg::geo::CurvilinearGrid2d g2d(generator1, n, Nx, Ny);
         compute_error_elliptic(c, g2d, psi_0, psi_1, eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -132,7 +132,7 @@ int main(int argc, char**argv)
     dg::geo::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorConf( c.get_psip(), psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::CurvilinearGrid2d g2d(hectorConf, n, Nx, Ny);
+        dg::geo::CurvilinearGrid2d g2d(hectorConf, n, Nx, Ny);
         compute_error_elliptic(c, g2d, psi_0, psi_1,eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -145,7 +145,7 @@ int main(int argc, char**argv)
     dg::geo::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorMonitor( c.get_psip(), lc, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::CurvilinearGrid2d g2d(hectorMonitor, n, Nx, Ny);
+        dg::geo::CurvilinearGrid2d g2d(hectorMonitor, n, Nx, Ny);
         compute_error_elliptic(c, g2d, psi_0, psi_1,eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -158,7 +158,7 @@ int main(int argc, char**argv)
     dg::geo::Hector<dg::IHMatrix, dg::HMatrix, dg::HVec> hectorAdapt( c.get_psip(), nc, psi_0, psi_1, gp.R_0, 0., nGrid,NxGrid,NyGrid, 1e-10, true);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::CurvilinearGrid2d g2d(hectorAdapt, n, Nx, Ny);
+        dg::geo::CurvilinearGrid2d g2d(hectorAdapt, n, Nx, Ny);
         compute_error_elliptic(c, g2d, psi_0, psi_1,eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;
@@ -170,7 +170,7 @@ int main(int argc, char**argv)
     dg::geo::Ribeiro ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0.);
     for( unsigned i=0; i<nIter; i++)
     {
-        dg::CurvilinearGrid2d g2d(ribeiro, n, Nx, Ny);
+        dg::geo::CurvilinearGrid2d g2d(ribeiro, n, Nx, Ny);
         compute_error_elliptic(c, g2d, psi_0, psi_1,eps);
         compute_cellsize(g2d);
         std::cout <<std::endl;

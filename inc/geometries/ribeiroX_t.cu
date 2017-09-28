@@ -23,7 +23,7 @@ using namespace dg::geo;
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
-typedef dg::FieldAligned< dg::CurvilinearGridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
+typedef dg::FieldAligned< dg::geo::CurvilinearGridX3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::GridX3d& g)
 {
@@ -110,8 +110,8 @@ int main( int argc, char* argv[])
 
     double R0 = gp.R_0, Z0 = 0;
     dg::geo::RibeiroX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> generator(psip, psipR, psipZ, psipRR, psipRZ, psipZZ, psi_0, fx_0, R_X,Z_X, R0, Z0);
-    dg::CurvilinearGridX3d<dg::DVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    dg::CurvilinearGridX2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::geo::CurvilinearGridX3d<dg::DVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    dg::geo::CurvilinearGridX2d<dg::DVec> g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;

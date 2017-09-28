@@ -64,8 +64,8 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Constructing grid ... \n";
     t.tic();
     dg::geo::Ribeiro ribeiro( psip, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearProductMPIGrid3d g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR,dg::PER, dg::PER,comm);
-    dg::CurvilinearMPIGrid2d g2d = g3d.perp_grid();
+    dg::geo::CurvilinearProductMPIGrid3d g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR,dg::PER, dg::PER,comm);
+    dg::geo::CurvilinearMPIGrid2d g2d = g3d.perp_grid();
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;

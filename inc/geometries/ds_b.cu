@@ -93,7 +93,7 @@ int main()
     std::cin >> mx >> my;
 
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
+    dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     //dg::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
     dg::DS<dg::aGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, dg::normed, dg::centered, false, true, mx, my);
 

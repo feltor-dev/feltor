@@ -62,8 +62,8 @@ int main( int argc, char* argv[])
     }
     //write parameters from file into variables
     dg::geo::solovev::GeomParameters gp(js);
-    Psip psip( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
+    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
@@ -72,10 +72,9 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing flux grid ... \n";
     t.tic();
-    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
-    dg::CurvilinearGrid2d g2d(flux, n, Nx,Ny, dg::NEU);
+    dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
+    dg::geo::CurvilinearGrid2d g2d(flux, n, Nx,Ny, dg::NEU);
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
@@ -100,7 +99,7 @@ int main( int argc, char* argv[])
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 2, dim2d, &varID[i]);
     ///////////////////////now fill variables///////////////////
 
-    thrust::host_vector<double> psi_p = dg::pullback( psip, g2d);
+    thrust::host_vector<double> psi_p = dg::pullback( c.psip(), g2d);
     //g.display();
     err = nc_put_var_double( ncid, varID[0], periodify(psi_p, g2d_periodic).data());
     dg::HVec temp0( g2d.size()), temp1(temp0);

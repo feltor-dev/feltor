@@ -91,8 +91,8 @@ int main( int argc, char* argv[])
         hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip,lc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     }
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    dg::CurvilinearProductGrid3d g3d(*hector, n, Nx, Ny,Nz, dg::DIR);
-    dg::CurvilinearGrid2d g2d = g3d.perp_grid();
+    dg::geo::CurvilinearProductGrid3d g3d(*hector, n, Nx, Ny,Nz, dg::DIR);
+    dg::geo::CurvilinearGrid2d g2d = g3d.perp_grid();
 
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();

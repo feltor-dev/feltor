@@ -123,8 +123,8 @@ int main( int argc, char* argv[])
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
     //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
     dg::EquidistXRefinement equi(add_x, add_y, 1,1);
-    dg::CurvilinearRefinedProductGridX3d g3d(equi, generator, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    dg::CurvilinearRefinedGridX2d g2d(equi, generator, fx_0, fy_0, n, Nx, Ny,dg::DIR, dg::NEU);
+    dg::geo::CurvilinearRefinedProductGridX3d g3d(equi, generator, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    dg::geo::CurvilinearRefinedGridX2d g2d(equi, generator, fx_0, fy_0, n, Nx, Ny,dg::DIR, dg::NEU);
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;

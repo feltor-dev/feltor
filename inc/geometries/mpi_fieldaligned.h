@@ -55,7 +55,7 @@ aGeometry2d* clone_MPI3d_to_global_perp( const aMPIGeometry3d* grid_ptr)
 {
     const dg::CartesianMPIGrid3d* grid_cart = dynamic_cast<const dg::CartesianMPIGrid3d*>(grid_ptr);
     const dg::CylindricalMPIGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalMPIGrid3d*>(grid_ptr);
-    const dg::CurvilinearProductMPIGrid3d*  grid_curvi = dynamic_cast<const dg::CurvilinearProductMPIGrid3d*>(grid_ptr);
+    const dg::geo::CurvilinearProductMPIGrid3d*  grid_curvi = dynamic_cast<const dg::geo::CurvilinearProductMPIGrid3d*>(grid_ptr);
     aGeometry2d* g2d_ptr;
     if( grid_cart) 
     {
