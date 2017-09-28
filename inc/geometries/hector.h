@@ -310,7 +310,7 @@ struct Hector : public aGenerator2d
      *
      * @return  orthogonal zeta, eta grid
      */
-    const dg::CurvilinearGrid2d& internal_grid() const {return g2d_;}
+    const dg::geo::CurvilinearGrid2d& internal_grid() const {return g2d_;}
     virtual Hector* clone() const{return new Hector(*this);}
     bool isConformal() const {return conformal_;}
     private:
@@ -362,9 +362,9 @@ struct Hector : public aGenerator2d
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::CurvilinearGrid2d g2d_old = g2d_;
+        dg::geo::CurvilinearGrid2d g2d_old = g2d_;
         container adapt = dg::pullback(chi, g2d_old);
-        dg::Elliptic<dg::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::Elliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set_chi( adapt);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -374,9 +374,9 @@ struct Hector : public aGenerator2d
         while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
         {
             eps = eps_old;
-            g2d_.multiplyCellNumber(2,2);
+            g2d_.multiplyCellNumbers(2,2);
             if(verbose) std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
-            dg::Elliptic<dg::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::Elliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             adapt = dg::pullback(chi, g2d_);
             ellipticD.set_chi( adapt);
             lapu = dg::pullback( lapChiPsi, g2d_);
@@ -404,8 +404,8 @@ struct Hector : public aGenerator2d
         dg::geo::detail::LaplaceChiPsi lapChiPsi( psi, chi);
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::CurvilinearGrid2d g2d_old = g2d_;
-        dg::TensorElliptic<dg::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::geo::CurvilinearGrid2d g2d_old = g2d_;
+        dg::TensorElliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.transform_and_set( chi.xx(), chi.xy(), chi.yy());
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
@@ -415,9 +415,9 @@ struct Hector : public aGenerator2d
         while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
         {
             eps = eps_old;
-            g2d_.multiplyCellNumber(2,2);
+            g2d_.multiplyCellNumbers(2,2);
             if(verbose)std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
-            dg::TensorElliptic<dg::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            dg::TensorElliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
             ellipticD.transform_and_set( chi.xx(), chi.xy(), chi.yy() );
             lapu = dg::pullback( lapChiPsi, g2d_);
             const container vol2d = dg::create::weights( g2d_);
@@ -509,7 +509,7 @@ struct Hector : public aGenerator2d
     double c0_, lu_;
     thrust::host_vector<double> u_, ux_, uy_, vx_, vy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
-    dg::CurvilinearGrid2d g2d_;
+    dg::geo::CurvilinearGrid2d g2d_;
 
 };
 
