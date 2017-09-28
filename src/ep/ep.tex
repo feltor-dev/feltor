@@ -84,7 +84,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
 
-\title{The toefl project}
+\title{The electron-positron plasma project}
 \maketitle
 
 \begin{abstract}
@@ -92,40 +92,17 @@ This is a program for 2d isothermal blob simulations.
 \end{abstract}
 
 \section{Equations}
-Currently we implemented $5$ slightly different sets of equations. $n$ is the electron density, $N$ is the ion gyrocentre density and $\rho$
-the vorticity density. $\phi$ is the electric potential. We
-use Cartesian coordinates $x$, $y$. 
-\subsection{Models}
+$N_e$ is the electron density, $N_p$ is the positron density. 
+ $\phi$ is the electric potential. We use Cartesian coordinates $x$, $y$. 
 
-"local"
-\begin{subequations}
-\begin{align}
- -\nabla^2 \phi =  \Gamma_1 N -n, \quad
-\psi = \Gamma_1 \phi \quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1} \\
- \frac{\partial n}{\partial t}     = 
-    \{ n, \phi\} 
-  + \kappa \frac{\partial \phi}{\partial y} 
-  -\kappa \frac{\partial n}{\partial y}
-  + \nu \nabla^2 n  \\
-  \frac{\partial N}{\partial t} =
-  \{ N, \psi\} 
-  + \kappa \frac{\partial \psi}{\partial y} 
-  + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla^2N
-\end{align}
-\end{subequations}
+\subsection{Model}
 
 "global"
 \begin{subequations}
 \begin{align}
-B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\\
- -\nabla\cdot \left(\frac{N}{B^2} \nabla \phi\right) = \Gamma_1 N-n, \quad
- \text{Boussinesq:}\quad -\nabla^2 \phi = \frac{B^2}{N} (\Gamma_1 N -n) \\
-\psi = \Gamma_1 \phi - \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
- \frac{\partial n}{\partial t}     = 
-    \frac{1}{B}\{ n, \phi\} 
-  + \kappa n\frac{\partial \phi}{\partial y} 
-  -\kappa \frac{\partial n}{\partial y}
-  + \nu \nabla^2 n  \\
+B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\mu\tau\nabla^2)^{-1}\\
+ -\nabla\cdot \left( \varepsilon + \frac{z_e\mu_e N_e + z_p\mu_pN_p}{B^2} \nabla \phi\right) = z_p \Gamma_{1p} N_p +z_e\Gamma_{1e} N_e, \quad
+\psi = \Gamma_1 \phi - \frac{1}{2} \mu \frac{(\nabla\phi)^2}{B^2}\\
   \frac{\partial N}{\partial t} =
   \frac{1}{B}\{ N, \psi\} 
   + \kappa N\frac{\partial \psi}{\partial y} 
@@ -133,48 +110,8 @@ B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\\
 \end{align}
 \end{subequations}
 
-"gravity local"
-\begin{subequations}
-\begin{align}
- \nabla^2 \phi = \rho \\
- \frac{\partial n}{\partial t} = \{ n, \phi\} + \nu \nabla^2 n  \\
-  \frac{\partial \rho}{\partial t} = \{ \rho, \phi\} - \eta \rho - \frac{\partial n}{\partial y} + \nu \nabla^2 \rho 
-\end{align}
-\end{subequations}
-
-
-"gravity global"
-\begin{subequations}
-\begin{align}
- \nabla \cdot(n \nabla \phi) = \rho \quad\text{ Boussinesq: }\quad \nabla^2 \phi = \rho/n \\
- \frac{\partial n}{\partial t} = \{ n, \phi\} +  \nu \nabla^2 n  \\
-  \frac{\partial \rho}{\partial t} = \{ \rho, \phi\} + \{n, \frac{1}{2} \nabla\phi^2\} - \eta \rho - \frac{\partial n}{\partial y} +\nu\nabla^2\rho 
-\end{align}
-\end{subequations}
-
-"drift global"
-\begin{subequations}
-\begin{align}
-B(x)^{-1} = \kappa x +1-\kappa X\\
- \nabla \cdot \left(\frac{n}{B^2} \nabla \phi\right) = \rho \quad
- \text{Boussinesq:}\quad \nabla^2\phi = \rho \frac{B^2}{n} \quad
-\psi = \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
- \frac{\partial n}{\partial t}     = 
-    \frac{1}{B}\{ n, \phi\} 
-  + \kappa n\frac{\partial \phi}{\partial y} 
-  + \nu \nabla^2 n  \\
-  \frac{\partial \rho}{\partial t} =
-  \frac{1}{B}\{ \rho, \phi\} 
-  + \frac{1}{B}\{n, \psi\}
-  + \kappa \rho\frac{\partial \phi}{\partial y} 
-  + \kappa n\frac{\partial \psi}{\partial y}
-  - \kappa\frac{\partial n}{\partial y} +\nu\nabla^2\rho 
-\end{align}
-\end{subequations}
-
-
 \subsection{Initialization}
-Initialization of $n$ is a Gaussian 
+We define a Gaussian 
 \begin{align}
     n(x,y) = 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right)
     \label{}
@@ -183,8 +120,7 @@ where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coord
 radius of the blob.
 We initialize 
 \begin{align}
-    N = \Gamma_1^{-1} n \quad \phi = 0 \\
-    \rho = \phi = 0
+    N_s = \Gamma_{1s}^{-1} n \quad \phi = 0 
     \label{}
 \end{align}
 \subsection{Diagnostics}
@@ -201,28 +137,27 @@ discontinuous Galerkin on structured grid
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
 coordinate system & Cartesian 2D & equidistant discretization of $[0,l_x] \times [0,l_y]$, equal number of Gaussian nodes in x and y \\
 matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
-\ExB advection & Arakawa & s.a. \cite{Einkemmer2013} \\
+\ExB advection & Arakawa & - \\
 curvature terms & direct & flux conserving \\
 time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
 \bottomrule
 \end{longtable}
 
 \section{Compilation and useage}
-There are three programs toeflR.cu, toefl\_hpc.cu and toefl\_mpi.cu . Compilation with 
+There are two programs toeflR.cu, and toefl\_mpi.cu . Compilation with 
 \begin{verbatim}
 make device = <omp or gpu>
 \end{verbatim}
 Run with
 \begin{verbatim}
-path/to/feltor/src/toefl/toeflR input.json
-path/to/feltor/src/toefl/toefl_hpc input.json output.nc
-echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/toefl/toefl_mpi\
+path/to/feltor/src/ep/toeflR input.json
+echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/ep/toefl_mpi\
     input.json output.nc
 \end{verbatim}
 All programs write performance informations to std::cout.
 The first opens a terminal window with life simulation results the
-other two write the results to disc. The
-second is for shared memory systems. The third for distributed
+other two write the results to disc. 
+The second for distributed
 memory systems, which expects the distribution of processes in the
 x and y directions.
 
@@ -246,7 +181,9 @@ eps\_pol   & float &1e-6    & - &  accuracy of polarisation solver \\
 eps\_gamma & float &1e-7    & - & accuracy of $\Gamma_1$ (only in gyrofluid model) \\
 eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
 curvature  & float &0.00015& - & magnetic curvature $\kappa$ \\
-tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\
+tau        & float array &[-1., 1.]  & - & $\tau_s = T_s/Z_s T_e$\\
+mu         & float array &[-1., 1.]  & - & $\mu_s = m_s/Z_s m_e$\\
+z          & integer array  & [-1,1]  & - & charge number\\
 nu\_perp    & float &5e-3   & - & pependicular viscosity $\nu$ \\
 amplitude  & float &1.0    & - & amplitude $A$ of the blob \\
 sigma      & float &10     & - & blob radius $\sigma$ \\
@@ -254,11 +191,9 @@ posX       & float &0.3    & - & blob x-position in units of $l_x$, i.e. $X = p_
 posY       & float &0.5    & - & blob y-position in units of $l_y$, i.e. $Y = p_y l_y$ \\
 lx         & float &200    & - & $l_x$  \\
 ly         & float &200    & - & $l_y$  \\
-friction   & float & 0     & 0 & friction coefficient $\eta$ in gravity model \\
 bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
 bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
-equations  & char & "global" & "global" &local, global, gravity\_local, gravity\_global, drift\_global \\
-boussinesq & bool & false    & false &boussinesq approximation in global models true or false\\
+debye  & float & 0 & 0 & debye length parameter\\
 \bottomrule
 \end{longtable}
 
@@ -280,7 +215,7 @@ time                     & Dataset & 1 & time at which fields are written \\
 x                        & Dataset & 1 & x-coordinate  \\
 y                        & Dataset & 1 & y-coordinate \\
 electrons                & Dataset & 3 (time, y, x) & electon density $n$ \\
-ions                     & Dataset & 3 (time, y, x) & ion density $N$ or vorticity density $\rho$  \\
+positrons                & Dataset & 3 (time, y, x) & positron density \\
 potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
 vorticity                & Dataset & 3 (time, y, x) & Laplacian of potential $\nabla^2\phi$  \\
 dEdt                     & Dataset & 1 (energy\_time) & change of energy per time  \\
@@ -289,12 +224,12 @@ energy                   & Dataset & 1 (energy\_time) & total energy integral  \
 mass                     & Dataset & 1 (energy\_time) & mass integral   \\
 \bottomrule
 \end{longtable}
-\section{Diagnostics toeflRdiag.cu}
+\section{Diagnostics toeflEPdiag.cu}
 There only is a shared memory version available
 \begin{verbatim}
 cd path/to/feltor/diag
-make toeflRdiag 
-path/to/feltor/diag/toeflRdiag input.nc output.nc
+make toeflEPdiag 
+path/to/feltor/diag/toeflEPdiag input.nc output.nc
 \end{verbatim}
 
 Input file format: netcdf-4/hdf5
@@ -306,7 +241,7 @@ Input file format: netcdf-4/hdf5
 \rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
 inputfile  &             text attribute & 1 & verbose input file as a string \\
 electrons                & Dataset & 3 & electon density (time, y, x) \\
-ions                     & Dataset & 3 & ion density (time, y, x) \\
+positrons                & Dataset & 3 & positron density (time, y, x) \\
 potential                & Dataset & 3 & electric potential (time, y, x) \\
 \bottomrule
 \end{longtable}
@@ -341,14 +276,8 @@ Output file format: netcdf-4/hdf5
 \end{longtable}
 %..................................................................
 \begin{thebibliography}{1}
-    \bibitem{Einkemmer2013}
-    L. Einkemmer, M. Wiesenberger, 
-    \bibitem{Wiesenberger2017}
-    M. Wiesenberger, M. Held, R. Kube and O.E. Garcia, Phys. Plasmas {\bf 24}, 064502 (2017)
-    \bibitem{Kube2016}
-    R. Kube, O.E. Garcia, and M. Wiesenberger, Phys. Plasmas {\bf 23}, 122303 (2016)
-    \bibitem{Wiesenberger2014}
-    M. Wiesenberger, J. Madsen, and A. Kendl, ''Radial convection of finite ion tem\-per\-a\-ture, high amplitude plasma blobs``, Phys. Plasmas {\bf 21}, 092301 (2014) (\mbox{\url{https://doi.org/10.1063/1.4894220}})
+    \bibitem{Kendl2017}
+    A. Kendl, G. Danler, M. Wiesenberger, and M. Held, "Interchange instability in matter-antimatter plasmas" Phys. Rev. Letters (2017) https://arxiv.org/abs/1611.07836
 \end{thebibliography}
 %..................................................................
 
