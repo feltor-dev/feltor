@@ -34,7 +34,7 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
         dg::aMPIGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, bcy, comm2d), handle_(generator)
     {
         //generate global 2d grid and then reduce to local 
-        dg::CurvilinearGrid2d g(generator, n, Nx, Ny);
+        CurvilinearGrid2d g(generator, n, Nx, Ny);
         divide_and_conquer(g);
     }
     ///explicit conversion of 3d product grid to the perpendicular grid
@@ -47,7 +47,7 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
         dg::aMPITopology2d::do_set(new_n, new_Nx, new_Ny);
-        dg::CurvilinearGrid2d g( handle_.get(), new_n, new_Nx, new_Ny);
+        CurvilinearGrid2d g( handle_.get(), new_n, new_Nx, new_Ny);
         divide_and_conquer(g);//distribute to processes
     }
     MPI_Comm get_perp_comm( MPI_Comm src)
@@ -57,7 +57,7 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
         MPI_Cart_sub( src, remain_dims, &planeComm);
         return planeComm;
     }
-    void divide_and_conquer(const dg::CurvilinearGrid2d& g_)
+    void divide_and_conquer(const CurvilinearGrid2d& g_)
     {
         dg::SparseTensor<thrust::host_vector<double> > jacobian=g_.jacobian(); 
         dg::SparseTensor<thrust::host_vector<double> > metric=g_.metric(); 
@@ -94,7 +94,7 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
  */
 struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
 {
-    typedef dg::CurvilinearMPIGrid2d perpendicular_grid; //!< the two-dimensional grid
+    typedef dg::geo::CurvilinearMPIGrid2d perpendicular_grid; //!< the two-dimensional grid
     /// @opydoc hide_grid_parameters3d
     /// @param comm a three-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters 
@@ -193,7 +193,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
     virtual std::vector<host_vector > do_compute_map()const{return map_;}
     dg::SparseTensor<host_vector > jac_;
     std::vector<host_vector > map_;
-    Handle<dg::aGenerator2d> handle_;
+    Handle<dg::geo::aGenerator2d> handle_;
 };
 ///@cond
 CurvilinearMPIGrid2d::CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g):

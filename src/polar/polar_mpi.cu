@@ -22,11 +22,6 @@
 
 using namespace std;
 using namespace dg;
-const unsigned k = 3;
-
-// local container for the grid
-#define Grid OrthogonalMPIGrid2d<DVec>
-
 
 #ifdef LOG_POLAR
     typedef dg::geo::LogPolarGenerator Generator;
@@ -95,9 +90,9 @@ int main(int argc, char* argv[])
 
     //Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     Generator generator(p.r_min, p.r_max); // Generator is defined by the compiler
-    Grid grid( generator, p.n, p.Nx, p.Ny, dg::DIR, comm); // second coordiante is periodic by default
+    dg::geo::CurvilinearMPIGrid2d grid( generator, p.n, p.Nx, p.Ny, dg::DIR, dg::PER, comm); 
 
-    MDVec w2d( create::weights(grid));
+    MDVec w2d( create::volume(grid));
 
     dg::Lamb lamb( p.posX, p.posY, p.R, p.U);
     MHVec omega = evaluate ( lamb, grid);
@@ -109,8 +104,8 @@ int main(int argc, char* argv[])
     MDVec y0( omega ), y1( y0);
 
     //make solver and stepper
-    Shu<Grid, MDMatrix, MDVec> shu( grid, p.eps);
-    Diffusion<Grid, MDMatrix, MDVec> diffusion( grid, p.nu);
+    polar::Explicit<aMPIGeometry2d, MDMatrix, MDVec> shu( grid, p.eps);
+    polar::Diffusion<aMPIGeometry2d, MDMatrix, MDVec> diffusion( grid, p.nu);
     Karniadakis< MDVec > ab( y0, y0.size(), p.eps_time);
 
     t.tic();

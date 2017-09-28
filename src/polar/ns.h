@@ -8,13 +8,13 @@
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 
-namespace dg
+namespace polar
 {
 template< class Geometry, class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const Geometry& g, double nu): nu_(nu),
-        w2d( dg::create::weights( g) ), v2d( dg::create::inv_weights(g) ) ,
+        w2d( dg::create::volume( g) ), v2d( dg::create::inv_volume(g) ) ,
         LaplacianM( g, dg::normed)
     { 
     }
@@ -24,6 +24,7 @@ struct Diffusion
         dg::blas1::scal( y, -nu_);
     }
     const container& weights(){return w2d;}
+    const container& inv_weights(){return v2d;}
     const container& precond(){return v2d;}
   private:
     double nu_;
@@ -32,14 +33,14 @@ struct Diffusion
 };
 
 template< class Geometry, class Matrix, class container >
-struct Shu 
+struct Explicit 
 {
     typedef container Vector;
 
-    Shu( const Geometry& grid, double eps);
+    Explicit( const Geometry& grid, double eps);
 
-    const Elliptic<Matrix, container, container>& lap() const { return laplaceM;}
-    ArakawaX<Geometry, Matrix, container>& arakawa() {return arakawa_;}
+    const dg::Elliptic<Matrix, container, container>& lap() const { return laplaceM;}
+    dg::ArakawaX<Geometry, Matrix, container>& arakawa() {return arakawa_;}
     /**
      * @brief Returns psi that belong to the last y in operator()
      *
@@ -47,30 +48,29 @@ struct Shu
      * @return psi is the potential
      */
     const container& potential( ) {return psi;}
-    void operator()( Vector& y, Vector& yp);
+    void operator()( const Vector& y, Vector& yp);
   private:
-    container psi, w2d, v2d;
-    Elliptic<Geometry, Matrix, container> laplaceM;
-    ArakawaX<Geometry, Matrix, container> arakawa_; 
-    Invert<container> invert;
+    container psi;
+    dg::Elliptic<Geometry, Matrix, container> laplaceM;
+    dg::ArakawaX<Geometry, Matrix, container> arakawa_; 
+    dg::Invert<container> invert;
 };
 
 template<class Geometry, class Matrix, class container>
-Shu< Geometry, Matrix, container>::Shu( const Geometry& g, double eps): 
-    psi( evaluate(dg::zero, g) ),
-    w2d( create::weights( g)), v2d( create::inv_weights(g)),  
-    laplaceM( g, not_normed),
+Explicit< Geometry, Matrix, container>::Explicit( const Geometry& g, double eps): 
+    psi( dg::evaluate(dg::zero, g) ),
+    laplaceM( g, dg::not_normed),
     arakawa_( g), 
     invert( psi, g.size(), eps)
 {
 }
 
 template<class Geometry, class Matrix, class container>
-void Shu<Geometry, Matrix, container>::operator()( Vector& y, Vector& yp)
+void Explicit<Geometry, Matrix, container>::operator()( const Vector& y, Vector& yp)
 {
-    invert( laplaceM, psi, y, w2d, v2d);
+    invert( laplaceM, psi, y);
     arakawa_( y, psi, yp); //A(y,psi)-> yp
 }
 
-}//namespace dg
+}//namespace polar
 
