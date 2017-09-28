@@ -438,4 +438,26 @@ struct GeneralComm : public aCommunicator<Vector>
     Buffer<Vector> store_;
     Index scatterMap_;
 };
+
+
+//given global indices -> make a sorted unique indices vector -> make a gather map into the unique vector
+void global2bufferIdx( const thrust::host_vector<int>& global_idx, thrust::host_vector<int>& idx_in_buffer, thrust::host_vector<int>& unique_global_idx)
+{
+    thrust::host_vector<int> copy(global_idx);
+    thrust::host_vector<int> index(copy);
+    thrust::sequence( index.begin(), index.end());
+    thrust::stable_sort_by_key( copy.begin(), copy.end(), index.begin());//note: this also sorts the pids
+    thrust::host_vector<int> ones( index.size(), 1);
+    thrust::host_vector<int> unique_global( index.size()), howmany( index.size());
+    thrust::pair<int*, int*> new_end;
+    new_end = thrust::reduce_by_key( copy.begin(), copy.end(), ones.begin(), unique_global.begin(), howmany.begin());
+    unique_global_idx.assign( unique_global.begin(), new_end.first);
+    thrust::host_vector<int> gather_map;
+    for( int i=0; i<unique_global_idx.size(); i++)
+        for( int j=0; j<howmany[i]; j++)
+            gather_map.append(i );
+    assert( gather_map.size() == global_idx.size());
+    idx_in_buffer.resize( global_idx.size());
+    thrust::scatter( gather_map.begin(), gather_map.end(), index.begin(), idx_in_buffer.begin());
+}
 }//namespace dg
