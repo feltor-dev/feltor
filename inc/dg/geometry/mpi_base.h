@@ -166,7 +166,7 @@ struct CartesianMPIGrid3d : public aMPIGeometry3d
     }
 
     private:
-    MPI_Comm get_perp_comm( MPI_Comm src)
+    MPI_Comm get_perp_comm( MPI_Comm src) const
     {
         MPI_Comm planeComm;
         int remain_dims[] = {true,true,false}; //true true false
@@ -202,6 +202,13 @@ struct CylindricalMPIGrid3d: public aMPIGeometry3d
         return CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( communicator() ));
     }
     private:
+    MPI_Comm get_perp_comm( MPI_Comm src) const
+    {
+        MPI_Comm planeComm;
+        int remain_dims[] = {true,true,false}; //true true false
+        MPI_Cart_sub( src, remain_dims, &planeComm);
+        return planeComm;
+    }
     virtual SparseTensor<host_vector > do_compute_metric()const{
         SparseTensor<host_vector> metric(1);
         host_vector R = dg::evaluate(dg::cooX3d, *this);
