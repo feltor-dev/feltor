@@ -11,6 +11,7 @@
 #include "ribeiro.h"
 #include "flux.h"
 #include "hector.h"
+#include "polar.h"
 
 //include magnetic field geometries
 #include "solovev.h"
