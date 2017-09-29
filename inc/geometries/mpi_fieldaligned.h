@@ -53,6 +53,7 @@ void sendBackward( InputIterator begin, InputIterator end, OutputIterator result
 
 aGeometry2d* clone_MPI3d_to_global_perp( const aMPIGeometry3d* grid_ptr)
 {
+    //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
     const dg::CartesianMPIGrid3d* grid_cart = dynamic_cast<const dg::CartesianMPIGrid3d*>(grid_ptr);
     const dg::CylindricalMPIGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalMPIGrid3d*>(grid_ptr);
     const dg::geo::CurvilinearProductMPIGrid3d*  grid_curvi = dynamic_cast<const dg::geo::CurvilinearProductMPIGrid3d*>(grid_ptr);
@@ -146,8 +147,8 @@ struct FieldAligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     LocalContainer limiter_;
     std::vector<LocalContainer> tempXYplus_, tempXYminus_, temp_; 
     CommunicatorXY commXYplus_, commXYminus_;
-    LocalIMatrix plus, minus; //interpolation matrices
-    LocalIMatrix plusT, minusT; //interpolation matrices
+    LocalIMatrix m_plus, m_minus; //interpolation matrices
+    LocalIMatrix m_plusT, m_minusT; //interpolation matrices
 };
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
@@ -161,8 +162,7 @@ FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
-    const aGeometry2d* g2d_ptr = detail::clone_MPI3d_to_global_perp(&grid);
+    const aGeometry2d* grid2d_ptr = detail::clone_MPI3d_to_global_perp(&grid);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     unsigned localsize = grid2d_ptr->size();
     limiter_ = dg::evaluate( limit, grid2d_ptr->local());
@@ -172,21 +172,13 @@ FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse); 
     
     dg::aGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
-    g2dField_ptr->set( 7, g2dField_ptr->Nx(), g2dField_ptr->Ny());
+    g2dField_ptr->set( 7, g2dField_ptr->global().Nx(), g2dField_ptr->global().Ny());
     detail::integrate_all_fieldlines2d( vec, g2dField_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
     delete g2dField_ptr;
 
-    //determine pid of result 
-    thrust::host_vector<int> pids( localsize);
-    for( unsigned i=0; i<localsize; i++)
-    {
-        pids[i]  = grid2d_ptr.pidOf( yp[0][i], yp[1][i]);
-        if( pids[i]  == -1)
-        {
-            std::cerr << "ERROR: PID NOT FOUND!\n";
-            return;
-        }
-    }
+    dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
+    g2dFine.multiplyCellNumbers((double)mx, (double)my);
+    interpolate_and_clip( grid2d_ptr, g2dFine, yp_coarse, ym_coarse, yp, ym);
 
     CommunicatorXY cp( pids, grid2d_ptr.communicator());
     commXYplus_ = cp;
@@ -198,16 +190,6 @@ FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     plus = dg::create::interpolation( pX, pY, grid2d_ptr.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( plus, plusT);
 
-    //do the same for the minus z-plane
-    for( unsigned i=0; i<pids.size(); i++)
-    {
-        pids[i]  = grid2d_ptr.pidOf( ym[0][i], ym[1][i]);
-        if( pids[i] == -1)
-        {
-            std::cerr << "ERROR: PID NOT FOUND!\n";
-            return;
-        }
-    }
     CommunicatorXY cm( pids, grid2d_ptr.communicator());
     commXYminus_ = cm;
     dg::blas1::transfer( cm.global_gather( ym[0]), pX);

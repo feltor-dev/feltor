@@ -256,7 +256,7 @@ can be used to get initial guesses based on past solutions
  where the indices indicate the current (0) and past (negative) solutions.
 *
 * @copydoc hide_container
-* @ingroup misc
+* @ingroup invert
 */
 template<class container>
 struct Extrapolation

@@ -43,6 +43,12 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
     ///read access to the generator 
     const aGenerator2d& generator() const{return handle_.get();}
     virtual CurvilinearMPIGrid2d* clone()const{return new CurvilinearMPIGrid2d(*this);}
+    virtual CurvilinearGrid2d* global_geometry()const{
+        return new CurvilinearGrid2d( 
+                handle_.get(),
+                global().n(), global().Nx(), global().Ny(),
+                global().bcx(), global().bcy());
+    }
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
@@ -119,6 +125,12 @@ struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
     ///read access to the generator
     const aGenerator2d& generator() const{return handle_.get();}
     virtual CurvilinearProductMPIGrid3d* clone()const{return new CurvilinearProductMPIGrid3d(*this);}
+    virtual CurvilinearProductGrid3d* global_geometry()const{
+        return new CurvilinearProductGrid3d( 
+                handle_.get(),
+                global().n(), global().Nx(), global().Ny(), global().Nz(), 
+                global().bcx(), global().bcy(), global().bcz());
+    }
     private:
     MPI_Comm get_perp_comm( MPI_Comm src)
     {
@@ -130,7 +142,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)
     {
         dg::aMPITopology3d::do_set(new_n, new_Nx, new_Ny, new_Nz);
-        if( !( new_n == n() && new_Nx == Nx() && new_Ny == Ny() ) )
+        if( !( new_n == n() && new_Nx == global().Nx() && new_Ny == global().Ny() ) )
         {
             CurvilinearMPIGrid2d g(handle_.get(),new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), get_perp_comm(communicator()));
             constructPerp( g);

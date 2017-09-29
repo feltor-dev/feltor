@@ -29,6 +29,8 @@ struct aMPIGeometry2d : public aMPITopology2d
     }
     ///Geometries are cloneable
     virtual aMPIGeometry2d* clone()const=0;
+    ///Construct the global non-MPI geometry
+    virtual aGeometry2d* global_geometry()const =0;
     ///allow deletion through base class pointer
     virtual ~aMPIGeometry2d(){}
     protected:
@@ -78,6 +80,8 @@ struct aMPIGeometry3d : public aMPITopology3d
     }
     ///Geometries are cloneable
     virtual aMPIGeometry3d* clone()const=0;
+    ///Construct the global non-MPI geometry
+    virtual aGeometry3d* global_geometry()const =0;
     ///allow deletion through base class pointer
     virtual ~aMPIGeometry3d(){}
     protected:
@@ -129,6 +133,13 @@ struct CartesianMPIGrid2d : public aMPIGeometry2d
     ///@param g existing grid object
     CartesianMPIGrid2d( const dg::MPIGrid2d& g): aMPIGeometry2d( g.global().x0(),g.global().x1(),g.global().y0(),g.global().y1(),g.global().n(),g.global().Nx(),g.global().Ny(),g.global().bcx(),g.global().bcy(),g.communicator()){}
     virtual CartesianMPIGrid2d* clone()const{return new CartesianMPIGrid2d(*this);}
+    virtual CartesianGrid2d* global_geometry()const{
+        return new CartesianGrid2d( 
+                global().x0(), global().x1(), 
+                global().y0(), global().y1(), 
+                global().n(), global().Nx(), global().Ny(),  
+                global().bcx(), global().bcy());
+    }
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny){
         aMPITopology2d::do_set(new_n,new_Nx,new_Ny);
@@ -155,6 +166,14 @@ struct CartesianMPIGrid3d : public aMPIGeometry3d
     ///@param g existing grid object
     CartesianMPIGrid3d( const dg::MPIGrid3d& g): aMPIGeometry3d( g.global().x0(),g.global().x1(),g.global().y0(),g.global().y1(),g.global().z0(),g.global().z1(),g.global().n(),g.global().Nx(),g.global().Ny(),g.global().Nz(),g.global().bcx(),g.global().bcy(),g.global().bcz(),g.communicator()){}
     virtual CartesianMPIGrid3d* clone()const{return new CartesianMPIGrid3d(*this);}
+    virtual CartesianGrid3d* global_geometry()const{
+        return new CartesianGrid3d( 
+                global().x0(), global().x1(), 
+                global().y0(), global().y1(), 
+                global().z0(), global().z1(), 
+                global().n(), global().Nx(), global().Ny(), global().Nz(), 
+                global().bcx(), global().bcy(), global().bcz());
+    }
     /*!
      * @brief The grid made up by the first two dimensions in space and process topology
      *
@@ -197,6 +216,14 @@ struct CylindricalMPIGrid3d: public aMPIGeometry3d
     CylindricalMPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, MPI_Comm comm):aMPIGeometry3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm){}
 
     virtual CylindricalMPIGrid3d* clone()const{return new CylindricalMPIGrid3d(*this);}
+    virtual CylindricalGrid3d* global_geometry()const{
+        return new CylindricalGrid3d( 
+                global().x0(), global().x1(), 
+                global().y0(), global().y1(), 
+                global().z0(), global().z1(), 
+                global().n(), global().Nx(), global().Ny(), global().Nz(), 
+                global().bcx(), global().bcy(), global().bcz());
+    }
     ///@copydoc CartesianMPIGrid3d::perp_grid()const
     CartesianMPIGrid2d perp_grid()const{ 
         return CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( communicator() ));

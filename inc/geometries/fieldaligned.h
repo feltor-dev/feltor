@@ -8,6 +8,7 @@
 #include "dg/backend/interpolation.cuh"
 #include "dg/backend/projection.cuh"
 #include "dg/backend/functions.h"
+#include "dg/backend/typedefs.cuh"
 
 #include "dg/geometry/geometry.h"
 #include "dg/functors.h"
@@ -160,16 +161,13 @@ void clip_to_boundary( thrust::host_vector<double>& x, const aTopology2d* grid)
 }
 
 //grid2d_ptr is global grid topolgy
-void interpolate_and_clip( const aTopolgy2d* grid2d_ptr, unsigned mx, unsigned my, 
+void interpolate_and_clip( const aTopolgy2d* grid2d_ptr, const aTopology2d* g2dFine, 
         const std::vector<thrust::host_vector<double> >& yp_coarse,
         const std::vector<thrust::host_vector<double> >& ym_coarse,
         std::vector<thrust::host_vector<double> >& yp_,
         std::vector<thrust::host_vector<double> >& ym_
         )
 {
-    dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
-    g2dFine.multiplyCellNumbers((double)mx, (double)my);
-
     dg::IHMatrix interpolate = dg::create::interpolation( g2dFine, *grid2d_ptr);  //INTERPOLATE TO FINE GRID
     std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp); 
     for( unsigned i=0; i<3; i++)
@@ -483,7 +481,7 @@ struct FieldAligned
     void eMinus(enum whichMatrix which, const container& in, container& out);
     typedef cusp::array1d_view< typename container::iterator> View;
     typedef cusp::array1d_view< typename container::const_iterator> cView;
-    IMatrix plus, minus, plusT, minusT; //interpolation matrices
+    IMatrix m_plus, m_minus, m_plusT, m_minusT; //interpolation matrices
     container hz_, hp_,hm_, ghostM, ghostP;
     unsigned Nz_, perp_size_;
     dg::bc bcz_;
@@ -523,14 +521,17 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     g2dField_ptr->set( 7, g2dField_ptr->Nx(), g2dField_ptr->Ny());
     detail::integrate_all_fieldlines2d( vec, g2dField_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
     delete g2dField_ptr;
-    interpolate_and_clip( grid2d_ptr, mx, my, yp_coarse, ym_coarse, yp, ym);
+
+    dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
+    g2dFine.multiplyCellNumbers((double)mx, (double)my);
+    interpolate_and_clip( grid2d_ptr, g2dFine, yp_coarse, ym_coarse, yp, ym);
     t.toc(); 
     std::cout << "Fieldline integration took "<<t.diff()<<"s\n";
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
-    IMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *grid2d_ptr, globalbcx, globalbcy);
-    IMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *grid2d_ptr, globalbcx, globalbcy);
-    IMatrix projection = dg::create::projection( *grid2d_ptr, g2dFine);
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *grid2d_ptr, globalbcx, globalbcy), plus, plusT;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *grid2d_ptr, globalbcx, globalbcy), minus, minusT;
+    dg::IHMatrix projection = dg::create::projection( *grid2d_ptr, g2dFine);
     t.toc();
     std::cout <<"Creation of interpolation/projection took "<<t.diff()<<"s\n";
     t.tic();
@@ -541,6 +542,10 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     //%Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
     cusp::transpose( plus, plusT);
     cusp::transpose( minus, minusT);     
+    dg::blas2::transfer( plus, m_plus);
+    dg::blas2::transfer( plusT, m_plusT);
+    dg::blas2::transfer( minus, m_minus);
+    dg::blas2::transfer( minusT, m_minusT);
     //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     thrust::host_vector<double> hp( perp_size_), hm(hp);
     dg::blas2::symv( projection, yp[2], hp);
