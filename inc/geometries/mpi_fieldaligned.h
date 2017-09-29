@@ -51,30 +51,27 @@ void sendBackward( InputIterator begin, InputIterator end, OutputIterator result
                     comm, &status);
 }
 
-aGeometry2d* clone_MPI3d_to_global_perp( const aMPIGeometry3d* grid_ptr)
+aMPIGeometry2d* clone_MPI3d_to_perp( const aMPIGeometry3d* grid_ptr)
 {
     //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
     const dg::CartesianMPIGrid3d* grid_cart = dynamic_cast<const dg::CartesianMPIGrid3d*>(grid_ptr);
     const dg::CylindricalMPIGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalMPIGrid3d*>(grid_ptr);
     const dg::geo::CurvilinearProductMPIGrid3d*  grid_curvi = dynamic_cast<const dg::geo::CurvilinearProductMPIGrid3d*>(grid_ptr);
-    aGeometry2d* g2d_ptr;
+    aMPIGeometry2d* g2d_ptr;
     if( grid_cart) 
     {
         dg::CartesianMPIGrid2d cart = grid_cart->perp_grid();
-        dg::CartesianGrid2d global_cart( cart.global());
-        g2d_ptr = global_cart.clone();
+        g2d_ptr = cart.clone();
     }
     else if( grid_cyl) 
     {
         dg::CartesianMPIGrid2d cart = grid_cyl->perp_grid();
-        dg::CartesianGrid2d global_cart( cart.global());
-        g2d_ptr = global_cart.clone();
+        g2d_ptr = cart.clone();
     }
     else if( grid_curvi) 
     {
         dg::geo::CurvilinearMPIGrid2d curv = grid_curvi->perp_grid();
-        dg::geo::CurvilinearGrid2d global_curv( curv.generator(), curv.global().n(), curv.global().Nx(), curv.global().Ny(), curv.bcx(), curv.bcy());
-        g2d_ptr = global_curv.clone();
+        g2d_ptr = curv.clone();
     }
     else
         throw dg::Error( dg::Message(_ping_)<<"Grid class not recognized!");
@@ -162,23 +159,59 @@ FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    const aGeometry2d* grid2d_ptr = detail::clone_MPI3d_to_global_perp(&grid);
+    const aMPIGeometry2d* grid2d_ptr = detail::clone_MPI3d_to_global_perp(&grid);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     unsigned localsize = grid2d_ptr->size();
-    limiter_ = dg::evaluate( limit, grid2d_ptr->local());
+    MPI_Vector<dg::HVec> temp = dg::pullback( limit, *grid2d_ptr);
+    dg::blas1::transfer( temp.data(), limiter_);
     right_ = left_ = dg::evaluate( zero, grid2d_ptr->local());
     ghostM.resize( localsize); ghostP.resize( localsize);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse); 
     
-    dg::aGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
+    dg::aMPIGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
     g2dField_ptr->set( 7, g2dField_ptr->global().Nx(), g2dField_ptr->global().Ny());
-    detail::integrate_all_fieldlines2d( vec, g2dField_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
-    delete g2dField_ptr;
+    dg::aGeometry2d* global_g2dField_ptr = g2dField_ptr->global_grid();
+    dg::aGrid2d local_g2dField = g2dField_ptr->local();
+    detail::integrate_all_fieldlines2d( vec, global_g2dField_ptr, &local_g2dField, yp_coarse, ym_coarse, deltaPhi, eps);
 
-    dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
+    dg::MPIGrid2d g2dFine((dg::MPIGrid2d(*grid2d_ptr)));//FINE GRID
     g2dFine.multiplyCellNumbers((double)mx, (double)my);
-    interpolate_and_clip( grid2d_ptr, g2dFine, yp_coarse, ym_coarse, yp, ym);
+    dg::IHMatrix interpolate = dg::create::interpolation( g2dFine.local(), local_g2dField);  //INTERPOLATE TO FINE GRID
+    interpolate_and_clip( interpolate, global_g2dField_ptr, yp_coarse, ym_coarse, yp, ym);
+    delete g2dField_ptr;
+    delete global_g2dField_ptr;
+    //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    t.tic();
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid2d_ptr->global(), globalbcx, globalbcy), plus, plusT;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid2d_ptr->global(), globalbcx, globalbcy), minus, minusT;
+    dg::IHMatrix projection = dg::create::projection( grid2d_ptr->local(), g2dFine->local());
+    t.toc();
+    std::cout <<"Creation of interpolation/projection took "<<t.diff()<<"s\n";
+    t.tic();
+    cusp::multiply( projection, plusFine, plus);
+    cusp::multiply( projection, minusFine, minus);
+    t.toc();
+    std::cout<< "Multiplication of P*I took: "<<t.diff()<<"s\n";
+    //%Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
+    cusp::transpose( plus, plusT);
+    cusp::transpose( minus, minusT);     
+    dg::blas2::transfer( plus, m_plus);
+    dg::blas2::transfer( plusT, m_plusT);
+    dg::blas2::transfer( minus, m_minus);
+    dg::blas2::transfer( minusT, m_minusT);
+    //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    thrust::host_vector<double> hp( perp_size_), hm(hp);
+    dg::blas2::symv( projection, yp[2], hp);
+    dg::blas2::symv( projection, ym[2], hm);
+    for( unsigned i=0; i<grid.Nz(); i++)
+    {
+        thrust::copy( hp.begin(), hp.end(), hp_.data().begin() + i*localsize_);
+        thrust::copy( hm.begin(), hm.end(), hm_.data().begin() + i*localsize_);
+    }
+    dg::blas1::scal( hm_, -1.);
+    dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
+    delete grid2d_ptr;
 
     CommunicatorXY cp( pids, grid2d_ptr.communicator());
     commXYplus_ = cp;
@@ -196,14 +229,6 @@ FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     dg::blas1::transfer( cm.global_gather( ym[1]), pY);
     minus = dg::create::interpolation( pX, pY, grid2d_ptr.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
     cusp::transpose( minus, minusT);
-    //copy to device
-    for( unsigned i=0; i<g_.Nz(); i++)
-    {
-        thrust::copy( yp[2].begin(), yp[2].end(), hp_.data().begin() + i*localsize);
-        thrust::copy( ym[2].begin(), ym[2].end(), hm_.data().begin() + i*localsize);
-    }
-    dg::blas1::scal( hm_, -1.);
-    dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
     for( unsigned i=0; i<g_.Nz(); i++)
     {
         tempXYplus_[i].resize( commXYplus_.size());
