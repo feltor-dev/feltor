@@ -9,9 +9,7 @@ namespace dg
 ///@addtogroup basicgeometry
 ///@{
 
-/**
- * @brief This is the abstract interface class for a two-dimensional Geometry
- */
+///@brief This is the abstract interface class for a two-dimensional Geometry
 struct aGeometry2d : public aTopology2d
 {
     /**
@@ -86,9 +84,7 @@ struct aGeometry2d : public aTopology2d
 
 };
 
-/**
- * @brief This is the abstract interface class for a three-dimensional Geometry
- */
+///@brief This is the abstract interface class for a three-dimensional Geometry
 struct aGeometry3d : public aTopology3d
 {
     /**
@@ -167,6 +163,30 @@ struct aGeometry3d : public aTopology3d
     }
 };
 
+///@brief a 3d product space Geometry
+struct aProductGeometry3d : public aGeometry3d
+{
+    /*!
+     * @brief The grid made up by the first two dimensions
+     *
+     * This is possible because the 3d grid is a product grid of a 2d perpendicular grid and a 1d parallel grid
+     * @return A newly constructed perpendicular grid
+     */
+    aGeometry2d* perp_grid()const{
+        return do_perp_grid();
+    }
+    //default copy, assignment are public but cannot directly be called because of pure virtual functions; 
+    //default deletion is public and virtual
+    protected:
+    /*!
+     * @copydoc aTopology3d::aTopology3d()
+     * @note the default coordinate map will be the identity 
+     */
+    aProductGeometry3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    private:
+    virtual aGeometry2d* do_perp_grid()const=0;
+};
+
 ///@}
 
 ///@addtogroup geometry
@@ -194,26 +214,20 @@ struct CartesianGrid2d: public dg::aGeometry2d
 /**
  * @brief three-dimensional Grid with Cartesian metric
  */
-struct CartesianGrid3d: public dg::aGeometry3d
+struct CartesianGrid3d: public dg::aProductGeometry3d
 {
     typedef CartesianGrid2d perpendicular_grid;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
-    CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aProductGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     /**
      * @brief Implicit type conversion from Grid3d
      * @param g existing grid object
      */
-    CartesianGrid3d( const dg::Grid3d& g):dg::aGeometry3d(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
+    CartesianGrid3d( const dg::Grid3d& g):dg::aProductGeometry3d(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
     virtual CartesianGrid3d* clone()const{return new CartesianGrid3d(*this);}
-    /*!
-     * @brief The grid made up by the first two dimensions
-     *
-     * This is possible because the 3d grid is a product grid of a 2d perpendicular grid and a 1d parallel grid
-     * @return A newly constructed perpendicular grid
-     */
-    CartesianGrid2d perp_grid() const{ return CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
     private:
+    CartesianGrid2d* do_perp_grid() const{ return new CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
         aTopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
@@ -222,17 +236,17 @@ struct CartesianGrid3d: public dg::aGeometry3d
 /**
  * @brief three-dimensional Grid with Cylindrical metric
  */
-struct CylindricalGrid3d: public dg::aGeometry3d
+struct CylindricalGrid3d: public dg::aProductGeometry3d
 {
     typedef CartesianGrid2d perpendicular_grid;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@note x corresponds to R, y to Z and z to phi, the volume element is R
-    CylindricalGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    CylindricalGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aProductGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     virtual CylindricalGrid3d* clone()const{return new CylindricalGrid3d(*this);}
     ///@copydoc  CartesianGrid3d::perp_grid()const
-    CartesianGrid2d perp_grid() const{ return CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
     private:
+    CartesianGrid2d* do_perp_grid() const{ return new CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const{
         SparseTensor<thrust::host_vector<double> > metric(1);
         thrust::host_vector<double> R = dg::evaluate(dg::cooX3d, *this);

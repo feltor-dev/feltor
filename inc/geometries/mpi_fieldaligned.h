@@ -563,9 +563,7 @@ void FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::einsPlusT( const MP
             //first exchange data in XY
             thrust::copy( in.cbegin() + i0*size2d, in.cbegin() + (i0+1)*size2d, temp_[i0].begin());
             tempXYplus_[i0] = commXYplus_.global_gather( temp_[i0]);
-            cView inV( tempXYplus_[i0].cbegin(), tempXYplus_[i0].cend() );
-            View tempV( temp_[i0].begin(), temp_[i0].end() );
-            cusp::multiply( plusT, inV, tempV);
+            dg::blas2::symv( plusT, tempXYplus_[i0], temp_[i0]);
         }
     }
     else //directly compute in temp_
