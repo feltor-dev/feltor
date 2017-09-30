@@ -6,7 +6,7 @@
 
 all: doc
 
-.PHONY: clean doc dg.tag dg file geometries
+.PHONY: clean doc dg.tag geometries.tag dg file geometries
 
 dg.tag:
 	(cat ../dg/Doxyfile; \
@@ -15,6 +15,13 @@ dg.tag:
 	echo "GENERATE_HTML = NO"; \
 	echo "GENERATE_TAGFILE = ./dg.tag" ) | doxygen - ;
 
+geometries.tag:
+	(cat ../geometries/Doxyfile; \
+	echo "INPUT = ../geometries/"; \
+	echo "OUTPUT_DIRECTORY = ./geometries"; \
+	echo "GENERATE_HTML = NO"; \
+	echo "GENERATE_TAGFILE = ./geometries.tag" ) | doxygen - ;
+
 dg:
 	(cat ../dg/Doxyfile; \
 	echo "INPUT = ../dg/"; \
@@ -22,7 +29,8 @@ dg:
 	echo "HTML_HEADER = header.html"; \
     echo "EXTERNAL_GROUPS=NO" ;\
     echo "EXTERNAL_PAGES=NO" ;\
-	echo ) | doxygen - ; 
+	echo "TAGFILES = geometries.tag=../../geometries/html") | doxygen - ; 
+	#echo ) | doxygen - ; 
 
 geometries: dg.tag
 	(cat ../geometries/Doxyfile; \

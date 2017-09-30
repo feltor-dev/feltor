@@ -76,13 +76,13 @@ void square( const dg::SparseTensor<thrust::host_vector<double> >& jac, const th
  * 
  * The base coordinate system is the cylindrical coordinate system R,Z,phi
  */
-struct CurvilinearProductGrid3d : public dg::aGeometry3d
+struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
 {
     typedef CurvilinearGrid2d perpendicular_grid;
 
     ///@copydoc hide_grid_parameters3d
     CurvilinearProductGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
-        dg::aGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz)
+        dg::aProductGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz)
     { 
         map_.resize(3);
         handle_ = generator;

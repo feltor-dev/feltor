@@ -98,14 +98,14 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
 /**
  * This is s 2x1 curvilinear product space MPI grid
  */
-struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
+struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
 {
     typedef dg::geo::CurvilinearMPIGrid2d perpendicular_grid; //!< the two-dimensional grid
     /// @opydoc hide_grid_parameters3d
     /// @param comm a three-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters 
     CurvilinearProductMPIGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm): 
-        dg::aMPIGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
+        dg::aProductMPIGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
         handle_( generator)
     {
         map_.resize(3);
