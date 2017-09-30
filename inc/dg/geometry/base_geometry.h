@@ -175,9 +175,16 @@ struct aProductGeometry3d : public aGeometry3d
     aGeometry2d* perp_grid()const{
         return do_perp_grid();
     }
-    //default copy, assignment are public but cannot directly be called because of pure virtual functions; 
-    //default deletion is public and virtual
+    ///allow deletion through base class pointer
+    virtual ~aProductGeometry3d(){}
     protected:
+    ///@copydoc aTopology3d::aTopology3d(const aTopology3d&)
+    aProductGeometry3d( const aProductGeometry3d& src):aGeometry3d(src){}
+    ///@copydoc aTopology3d::operator=(const aTopology3d&)
+    aProductGeometry3d& operator=( const aProductGeometry3d& src){
+        aGeometry3d::operator=(src);
+        return *this;
+    }
     /*!
      * @copydoc aTopology3d::aTopology3d()
      * @note the default coordinate map will be the identity 

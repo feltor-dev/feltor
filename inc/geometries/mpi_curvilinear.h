@@ -114,13 +114,6 @@ struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
         constructParallel(this->Nz());
     }
 
-    /*!
-     * @brief The grid made up by the first two dimensions in space and process topology
-     *
-     * This is possible because the 3d grid is a product grid of a 2d perpendicular grid and a 1d parallel grid
-     * @return A newly constructed perpendicular grid with the perpendicular communicator
-     */
-    perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
 
     ///read access to the generator
     const aGenerator2d& generator() const{return handle_.get();}
@@ -132,6 +125,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aMPIGeometry3d
                 global().bcx(), global().bcy(), global().bcz());
     }
     private:
+    virtual perpendicular_grid* do_perp_grid() const { return new perpendicular_grid(*this);}
     MPI_Comm get_perp_comm( MPI_Comm src)
     {
         MPI_Comm planeComm;
