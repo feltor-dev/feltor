@@ -14,30 +14,35 @@
 #include "dg/backend/typedefs.cuh"
 #include "dg/functors.h"
 
+#include "geometries/geometries.h"
+
+#ifdef OPENGL_WINDOW
 #include "draw/host_window.h"
+#endif
 
-#include "shu.cuh"
+#include "ns.h"
 #include "parameters.h"
-
-double delta =0.05;
-double rho =M_PI/15.;
-double shearLayer(double x, double y){
-    if( y<= M_PI)
-        return delta*cos(x) - 1./rho/cosh( (y-M_PI/2.)/rho)/cosh( (y-M_PI/2.)/rho);
-    return delta*cos(x) + 1./rho/cosh( (3.*M_PI/2.-y)/rho)/cosh( (3.*M_PI/2.-y)/rho);
-}
 
 using namespace std;
 using namespace dg;
 
-int main( int argc, char* argv[])
+#define Grid OrthogonalGrid2d<DVec>
+
+#ifdef LOG_POLAR
+    typedef dg::geo::LogPolarGenerator Generator;
+#else
+    typedef dg::geo::PolarGenerator Generator;
+#endif
+
+int main(int argc, char* argv[])
 {
+    Timer t;
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
-        std::ifstream is("input/default.json");
+        std::ifstream is("input.json");
         reader.parse(is,js,false);
     }
     else if( argc == 2)
@@ -52,63 +57,68 @@ int main( int argc, char* argv[])
     }
     const Parameters p( js);
     p.display( std::cout);
-    /////////////////////////////////////////////////////////////////
-    Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+
+    //Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    Generator generator(p.r_min, p.r_max); // Generator is defined by the compiler
+    Grid grid( generator, p.n, p.Nx, p.Ny, dg::DIR); // second coordiante is periodic by default
+
     DVec w2d( create::weights(grid));
-    /////////////////////////////////////////////////////////////////
+
+#ifdef OPENGL_WINDOW
+    //create CUDA context that uses OpenGL textures in Glfw window
     std::stringstream title;
     GLFWwindow* w = draw::glfwInitAndCreateWindow(600, 600, "");
     draw::RenderHostData render( 1,1);
-    ////////////////////////////////////////////////////////////
+#endif
 
-    dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
-    dg::HVec omega; 
-    if( p.initial == "lamb")
-        omega = dg::evaluate ( lamb, grid);
-    else if ( p.initial == "shear")
-        omega = dg::evaluate ( shearLayer, grid);
-
+    dg::Lamb lamb( p.posX, p.posY, p.R, p.U);
+    HVec omega = evaluate ( lamb, grid);
+#ifdef LOG_POLAR
     DVec stencil = evaluate( one, grid);
+#else
+    DVec stencil = evaluate( LinearX(1.0, p.r_min), grid);
+#endif
     DVec y0( omega ), y1( y0);
-    //subtract mean mass 
-    if( p.bc_x == dg::PER && p.bc_y == dg::PER)
-    {
-        double meanMass = dg::blas2::dot( y0, w2d, stencil)/(double)(p.lx*p.ly);
-        dg::blas1::axpby( -meanMass, stencil, 1., y0);
-    }
+
     //make solver and stepper
-    Shu<DMatrix, DVec> shu( grid, p.eps);
-    Diffusion<DMatrix, DVec> diffusion( grid, p.D);
+    Shu<Grid, DMatrix, DVec> shu( grid, p.eps);
+    Diffusion<Grid, DMatrix, DVec> diffusion( grid, p.nu);
     Karniadakis< DVec > ab( y0, y0.size(), p.eps_time);
 
-    Timer t;
     t.tic();
     shu( y0, y1);
     t.toc();
     cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
+
     double vorticity = blas2::dot( stencil , w2d, y0);
-    double enstrophy = 0.5*blas2::dot( y0, w2d, y0);
-    double energy =    0.5*blas2::dot( y0, w2d, shu.potential()) ;
-    
-    std::cout << "Total energy:     "<<energy<<"\n";
-    std::cout << "Total enstrophy:  "<<enstrophy<<"\n";
-    std::cout << "Total vorticity:  "<<vorticity<<"\n";
+    DVec ry0(stencil);
+    blas1::pointwiseDot( stencil, y0, ry0);
+    double enstrophy = 0.5*blas2::dot( ry0, w2d, y0);
+    double energy =    0.5*blas2::dot( ry0, w2d, shu.potential()) ;
+    cout << "Total vorticity:  "<<vorticity<<"\n";
+    cout << "Total enstrophy:  "<<enstrophy<<"\n";
+    cout << "Total energy:     "<<energy<<"\n";
 
     double time = 0;
-    ////////////////////////////////glfw//////////////////////////////
+#ifdef OPENGL_WINDOW
     //create visualisation vectors
     DVec visual( grid.size());
     HVec hvisual( grid.size());
     //transform vector to an equidistant grid
     dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
+#endif
+
     ab.init( shu, diffusion, y0, p.dt);
     ab( shu, diffusion, y0); //make potential ready
-    //cout << "Press any key to start!\n";
-    //double x; 
-    //cin >> x;
-    while (!glfwWindowShouldClose(w) && time < p.maxout*p.itstp*p.dt)
+
+    t.tic();
+    while (time < p.maxout*p.itstp*p.dt)
     {
+#ifdef OPENGL_WINDOW
+        if(glfwWindowShouldClose(w))
+            break;
+
         dg::blas2::symv( equidistant, ab.last(), visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
@@ -119,31 +129,32 @@ int main( int argc, char* argv[])
         title.str("");
         glfwPollEvents();
         glfwSwapBuffers(w);
+#endif
+
         //step 
-        t.tic();
         for( unsigned i=0; i<p.itstp; i++)
         {
             ab( shu, diffusion, y0 );
         }
-        t.toc();
-        //cout << "Timer for one step: "<<t.diff()/N<<"s\n";
         time += p.itstp*p.dt;
 
     }
+    t.toc();
+
+#ifdef OPENGL_WINDOW
     glfwTerminate();
-    ////////////////////////////////////////////////////////////////////
-    cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
-    cout << "Analytic formula energy    "<<lamb.energy()<<endl;
-    cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, ab.last()) << "\n";
-    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( w2d, ab.last()) - enstrophy)/enstrophy<<"\n";
-    //shu( y0, y1); //get the potential ready
-    cout << "Relative energy error    is: "<<(0.5*blas2::dot( shu.potential(), w2d, ab.last()) - energy)/energy<<"\n";
+#endif
 
-    //blas1::axpby( 1., y0, -1, sol);
-    //cout << "Distance to solution: "<<sqrt(blas2::dot( w2d, sol ))<<endl;
 
-    //cout << "Press any key to quit!\n";
-    //cin >> x;
+    double vorticity_end = blas2::dot( stencil , w2d, ab.last());
+    blas1::pointwiseDot( stencil, ab.last(), ry0);
+    double enstrophy_end = 0.5*blas2::dot( ry0, w2d, ab.last());
+    double energy_end    = 0.5*blas2::dot( ry0, w2d, shu.potential()) ;
+    cout << "Vorticity error           :  "<<vorticity_end-vorticity<<"\n";
+    cout << "Enstrophy error (relative):  "<<(enstrophy_end-enstrophy)/enstrophy<<"\n";
+    cout << "Energy error    (relative):  "<<(energy_end-energy)/energy<<"\n";
+
+    cout << "Runtime: " << t.diff() << endl;
+
     return 0;
-
 }
