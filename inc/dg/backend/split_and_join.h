@@ -28,13 +28,14 @@ void split( const thrust_vector& in, std::vector<thrust_vector>& out, const aTop
 #ifdef MPI_VERSION
 ///@brief MPI Version of split
 ///@copydetails dg::split()
-///@note every plane in out gets its own 2d Cartesian communicator
+///@note every plane in out holds a 2d Cartesian MPI_Communicator 
+///@note two seperately split vectors have congruent (not identical) MPI_Communicators (Note here the MPI concept of congruent vs. identical communicators)
 template <class thrust_vector>
 void split( const MPI_Vector<thrust_vector>& in, std::vector<MPI_Vector<thrust_vector> >& out, const aMPITopology3d& grid)
 {
     int result;
-    MPI_Comm_compare( x.communicator(), grid.communicator(), &result);
-    assert( result == MPI_IDENT);
+    MPI_Comm_compare( in.communicator(), grid.communicator(), &result);
+    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
     MPI_Comm planeComm;
     int remain_dims[] = {true,true,false}; 
     MPI_Cart_sub( in.communicator(), remain_dims, &planeComm);

@@ -114,9 +114,9 @@ struct RowColDistMat
         }
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-        assert( result == MPI_IDENT);
+        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
-        assert( result == MPI_IDENT);
+        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         //1. compute inner points
         dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
@@ -153,9 +153,9 @@ struct RowColDistMat
         }
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-        assert( result == MPI_IDENT);
+        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
-        assert( result == MPI_IDENT);
+        assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         //1. compute inner points
         dg::blas2::detail::doSymv( m_i, x.data(), y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
@@ -253,9 +253,9 @@ struct MPIDistMat
         }
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-        assert( result == MPI_IDENT);
+        assert( result == MPI_CONGRUENT);
         MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
-        assert( result == MPI_IDENT);
+        assert( result == MPI_CONGRUENT);
         if( m_dist == row_dist){
             m_c.global_gather( x.data(), m_buffer.data());
             dg::blas2::detail::doSymv( alpha, m_m, m_buffer.data(), beta, y.data(), 
@@ -283,9 +283,9 @@ struct MPIDistMat
         }
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-        assert( result == MPI_IDENT);
+        assert( result == MPI_CONGRUENT);
         MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
-        assert( result == MPI_IDENT);
+        assert( result == MPI_CONGRUENT);
         if( m_dist == row_dist){
             m_c.get().global_gather( x.data(), m_buffer.data());
             dg::blas2::detail::doSymv( m_m, m_buffer.data(), y.data(), 

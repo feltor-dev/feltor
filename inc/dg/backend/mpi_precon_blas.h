@@ -16,9 +16,9 @@ inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const P
 #ifdef DG_DEBUG
     int result;
     MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-    assert( result == MPI_IDENT);
+    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
     MPI_Comm_compare( x.communicator(), P.communicator(), &result);
-    assert( result == MPI_IDENT);
+    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 #endif //DG_DEBUG
     //computation
     typename MatrixTraits<Precon>::value_type temp= doDot(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());

@@ -101,8 +101,6 @@ int main( int argc, char* argv[])
     dg::split( chi, chi_split, grid);
     dg::split( x, x_split, grid);
     for( unsigned i=0; i<grid.Nz(); i++)
-        if(rank==0)std::cout << " "<<x_split[i].communicator()<<" "<<b_split[i].communicator()<<" "<<v2d.communicator()<<std::endl;
-    for( unsigned i=0; i<grid.Nz(); i++)
     {
         laplace_split[i].set_chi( chi_split[i]);
         dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
