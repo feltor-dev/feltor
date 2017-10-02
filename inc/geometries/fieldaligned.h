@@ -9,6 +9,7 @@
 #include "dg/backend/projection.cuh"
 #include "dg/backend/functions.h"
 #include "dg/backend/typedefs.cuh"
+#include "dg/backend/split_and_join.h"
 
 #include "dg/geometry/geometry.h"
 #include "dg/functors.h"

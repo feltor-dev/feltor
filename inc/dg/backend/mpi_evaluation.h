@@ -97,11 +97,7 @@ MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector
     return MPI_Vector<thrust::host_vector<double> >(temp, g.communicator()); 
 }
 /**
- * @brief Take the relevant local part of a global vector
- *
- * @param global a vector the size of the global grid 
- * @param g the assumed topology
- * @return an MPI_Vector that is the distributed version of the global vector
+ * @copydoc global2local
  * @ingroup scatter
  */
 MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector<double>& global, const aMPITopology2d& g)

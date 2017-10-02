@@ -10,7 +10,6 @@
 #include "backend/mpi_derivatives.h"
 #include "backend/mpi_init.h"
 #include "backend/fast_interpolation.h"
-#include "backend/split_and_join.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -100,18 +99,6 @@ int main( int argc, char* argv[])
         dg::blas2::gemv( project, x, x_half);
     t.toc();
     if(rank==0)std::cout<<"Projection full to half grid     "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
-    std::vector<Vector> y_split;
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::split( y, y_split, grid);
-    t.toc();
-    if(rank==0)std::cout<<"Split                  took      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::join( y_split, x, grid);
-    t.toc();
-    if(rank==0)std::cout<<"                  Join took      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
-
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpby( 1., y, -1., x);

@@ -9,7 +9,6 @@
 #include "backend/derivatives.h"
 #include "backend/evaluation.cuh"
 #include "backend/fast_interpolation.h"
-#include "backend/split_and_join.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -105,17 +104,6 @@ int main()
         dg::blas2::gemv( project, x, x_half);
     t.toc();
     std::cout<<"Projection full to half grid     "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
-    t.tic();
-    std::vector<Vector> y_split;
-    for( int i=0; i<multi; i++)
-        dg::split( y, y_split, grid);
-    t.toc();
-    std::cout<<"Split                  took      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::join( y_split, x, grid);
-    t.toc();
-    std::cout<<"                  Join took      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpby( 1., y, -1., x);
