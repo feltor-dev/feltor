@@ -33,6 +33,7 @@ struct aGeometry2d : public aTopology2d
     g = \begin{pmatrix} g^{xx}(x,y) & g^{xy}(x,y) \\  & g^{yy}(x,y) \end{pmatrix}
     \f]
     * @return symmetric tensor
+    * @note use the dg::tensor functions to compute the volume element from here
     */
     SparseTensor<thrust::host_vector<double> > metric()const { 
         return do_compute_metric(); 
@@ -112,6 +113,7 @@ struct aGeometry3d : public aTopology3d
       & & g^{zz}(x,y,z)\end{pmatrix}
     \f]
     * @return symmetric tensor
+    * @note use the dg::tensor functions to compute the volume element from here
     */
     SparseTensor<thrust::host_vector<double> > metric()const { 
         return do_compute_metric(); 
@@ -251,7 +253,6 @@ struct CylindricalGrid3d: public dg::aProductGeometry3d
     ///@note x corresponds to R, y to Z and z to phi, the volume element is R
     CylindricalGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aProductGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     virtual CylindricalGrid3d* clone()const{return new CylindricalGrid3d(*this);}
-    ///@copydoc  CartesianGrid3d::perp_grid()const
     private:
     CartesianGrid2d* do_perp_grid() const{ return new CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const{

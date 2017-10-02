@@ -254,7 +254,7 @@ struct CylindricalMPIGrid3d: public aProductMPIGeometry3d
     MPI_Comm get_perp_comm( MPI_Comm src) const
     {
         MPI_Comm planeComm;
-        int remain_dims[] = {true,true,false}; //true true false
+        int remain_dims[] = {true,true,false}; 
         MPI_Cart_sub( src, remain_dims, &planeComm);
         return planeComm;
     }

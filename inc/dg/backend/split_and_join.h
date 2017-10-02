@@ -32,9 +32,11 @@ void split( const thrust_vector& in, std::vector<thrust_vector>& out, const aTop
 template <class thrust_vector>
 void split( const MPI_Vector<thrust_vector>& in, std::vector<MPI_Vector<thrust_vector> >& out, const aMPITopology3d& grid)
 {
-    assert( in.communicator() == grid.communicator());
+    int result;
+    MPI_Comm_compare( x.communicator(), grid.communicator(), &result);
+    assert( result == MPI_IDENT);
     MPI_Comm planeComm;
-    int remain_dims[] = {true,true,false}; //true true false
+    int remain_dims[] = {true,true,false}; 
     MPI_Cart_sub( in.communicator(), remain_dims, &planeComm);
     //local size2d
     unsigned size2d=grid.n()*grid.n()*grid.Nx()*grid.Ny();

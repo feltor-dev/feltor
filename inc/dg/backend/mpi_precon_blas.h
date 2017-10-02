@@ -14,8 +14,11 @@ template< class Precon, class Vector>
 inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    assert( x.communicator() == y.communicator());
-    assert( x.communicator() == P.communicator());
+    int result;
+    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
+    assert( result == MPI_IDENT);
+    MPI_Comm_compare( x.communicator(), P.communicator(), &result);
+    assert( result == MPI_IDENT);
 #endif //DG_DEBUG
     //computation
     typename MatrixTraits<Precon>::value_type temp= doDot(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());

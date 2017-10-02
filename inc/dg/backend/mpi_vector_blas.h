@@ -17,7 +17,9 @@ namespace detail{
 template< class Vector1, class Vector2>
 void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag)
 {
-    out.communicator() = in.communicator();
+    int result;
+    MPI_Comm_compare( in.communicator(), out.communicator(), &result);
+    assert( result == MPI_IDENT);
     //local computation 
     typedef typename Vector1::container_type container1;
     typedef typename Vector2::container_type container2;
@@ -28,7 +30,9 @@ template< class Vector>
 typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& y, MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    assert( x.communicator() == y.communicator());
+    int result;
+    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
+    assert( result == MPI_IDENT);
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
     
@@ -65,7 +69,9 @@ inline void doTransform(  const Vector& x, Vector& y,
                           MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    assert( x.communicator() == y.communicator());
+    int result;
+    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
+    assert( result == MPI_IDENT);
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
     doTransform( x.data(), y.data(), op, typename VectorTraits<container>::vector_category());

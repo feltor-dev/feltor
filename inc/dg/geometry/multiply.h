@@ -229,7 +229,7 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
  *
  * This is a convenience function that is the same as
  * @code
-    SparseElement<container> volume=determinant(g);
+    SparseElement<container> volume=determinant(t);
     invert(volume);
     sqrt(volume);
     @endcode
