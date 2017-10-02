@@ -73,7 +73,7 @@ struct SparseElement
 * This class enables shared access to stored Ts 
 * or not store them at all since the storage of (and computation with) a T is expensive.
 
-* This class contains both a (dense) matrix of integers.
+* This class contains a (dense) 3x3 matrix of integers.
 * If positive or zero, the integer represents a gather index into the stored array of Ts, 
 if negative the value of the T is assumed to be 1, except for the off-diagonal entries
     in the matrix where it is assumed to be 0.
@@ -169,7 +169,7 @@ struct SparseTensor
     //if you're looking for this function: YOU DON'T NEED IT!!ALIASING
     //T& value(size_t i, size_t j);
     /**
-     * @brief Return the T at given position, create one if there isn't one already
+     * @brief Return the T at given position, default construct one if there isn't one already
      * @param i index into the values array
      * @return  always returns a T 
      */
@@ -251,9 +251,11 @@ struct SparseTensor
      
      ///construct an empty Tensor
      SparseTensor empty()const{return SparseTensor();}
-     ///copy and erase all values in the third dimension
+     ///erase all values in the third dimension
      ///@note calls clear_unused_values() to get rid of the elements
      SparseTensor perp()const;
+     ///erase all values in the first two dimensions (leave only (2,2))
+     SparseTensor parallel()const;
 
     /**
      * @brief Return the transpose of the currrent tensor
@@ -474,6 +476,18 @@ SparseTensor<container> SparseTensor<container>::perp() const
         t.mat_idx_(i,2)=-1;
     }
     t.clear_unused_values();
+    return t;
+}
+template<class container>
+SparseTensor<container> SparseTensor<container>::parallel() const
+{
+    SparseTensor<container> t;
+    if( isEmpty()) return t;
+    if( isSet( 2,2) ) 
+    {
+        t.mat_idx_(2,2) = 0;
+        t.values_.assign(1,values_[idx(2,2)] );
+    }
     return t;
 }
 

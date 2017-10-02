@@ -68,6 +68,8 @@ int main()
     if(!sparse3d.isDense())print( sparse3d);
     std::cout << "perp \n";
     if( sparse3d.perp().isPerp()) print( sparse3d.perp());
+    std::cout << "parallel \n";
+    if( sparse3d.parallel().isDiagonal()) print( sparse3d.parallel());
     std::cout << "transpose \n";
     print( sparse3d.transpose());
 
