@@ -24,19 +24,21 @@ namespace dg
  * @ingroup matrixoperators
  *
  * The term discretized is \f[ -\nabla \cdot ( \chi \nabla_\perp ) \f]
- * where \f$ \nabla_\perp \f$ is the perpendicular gradient. In general 
- * coordinates that means 
+ * where \f$ \nabla_\perp \f$ is the perpendicular gradient and \f$\chi\f$ is a spatially dependent function. 
+ * In general coordinates that means 
  * \f[ -\frac{1}{\sqrt{g}}\left( 
  * \partial_x\left(\sqrt{g}\chi \left(g^{xx}\partial_x + g^{xy}\partial_y \right)\right) 
  + \partial_y\left(\sqrt{g}\chi \left(g^{yx}\partial_x + g^{yy}\partial_y \right)\right) \right)\f]
- is discretized. Note that the discontinuous Galerkin discretization adds so-called
- jump terms via a jump matrix 
- \f[ D^\dagger_x \chi D_x + \alpha J \f]
- where \f$\alpha\f$  is a scale factor ( = jfactor). Usually the default \f$ \alpha=1 \f$ is a good choice.
+ is discretized. Note that the local discontinuous Galerkin discretization adds so-called
+ jump terms 
+ \f[ D^\dagger \chi D + \alpha J \f]
+ where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix. 
+ (The symmetric part of \f$J\f$ is added @b before the volume element is divided). The adjoint of a matrix is defined with respect to the volume element including dG weights.
+ Usually the default \f$ \alpha=1 \f$ is a good choice.
  However, in some cases, e.g. when \f$ \chi \f$ exhibits very large variations
  \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values. 
  In a time dependent problem the value of \f$\alpha\f$ determines the 
- numerical diffusion, i.e. for low values numerical oscillations may appear. 
+ numerical diffusion, i.e. for too low values numerical oscillations may appear. 
  Also note that a forward discretization has more diffusion than a centered discretization.
 
  * @copydoc hide_geometry_matrix_container
@@ -44,9 +46,8 @@ namespace dg
  * and thus in a conjugate gradient solver. 
  * @note The constructors initialize \f$ \chi=1\f$ so that a negative laplacian operator
  * results
- * @note The inverse dG weights make a good general purpose preconditioner, but 
- * the inverse of \f$ \chi\f$ should also seriously be considered
- * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion
+ * @note The inverse of \f$ \chi\f$ makes a good general purpose preconditioner
+ * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
  * @attention Pay attention to the negative sign 
  */
 template <class Geometry, class Matrix, class container>
@@ -184,15 +185,14 @@ class Elliptic
         //now take divergence
         dg::blas2::symv( lefty, tempy, y);  
         dg::blas2::symv( -1., leftx, gradx, -1., y);  
-        if( no_ == normed)
-            dg::tensor::pointwiseDivide( y, vol_, y);
 
         //add jump terms
         dg::blas2::symv( jfactor_, jumpX, x, 1., y);
         dg::blas2::symv( jfactor_, jumpY, x, 1., y);
+        if( no_ == normed)
+            dg::tensor::pointwiseDivide( y, vol_, y);
         if( no_ == not_normed)//multiply weights without volume
             dg::blas2::symv( weights_wo_vol, y, y);
-
     }
 
     private:
@@ -337,6 +337,8 @@ struct GeneralElliptic
         zchi = chi[2];
     }
 
+    ///@copydoc Elliptic::weights()
+    const container& weights()const {return weights_;}
     ///@copydoc Elliptic::inv_weights()
     const container& inv_weights()const {return inv_weights_;}
     /**
@@ -370,15 +372,12 @@ struct GeneralElliptic
         dg::blas1::pointwiseDot( zchi, temp0, temp1); 
         dg::blas2::gemv( -1., leftz, temp1, 1., y); 
 
-        if( no_==normed) 
-            dg::tensor::pointwiseDivide( temp0, vol_, temp0);
-        
         dg::blas2::symv( +1., jumpX, x, 1., y);
         dg::blas2::symv( +1., jumpY, x, 1., y);
-        if( no_==not_normed)//multiply weights w/o volume
+        dg::tensor::pointwiseDivide( y, vol_, y);
+        if( no_==not_normed)//multiply weights 
         {
-            dg::tensor::pointwiseDivide( y, vol_, y);
-            dg::blas1::pointwiseDivide( y, inv_weights_, y);
+            dg::blas1::pointwiseDot( y, weights_, y);
         }
     }
     private:
@@ -620,12 +619,12 @@ struct TensorElliptic
         //now take divergence
         dg::blas2::gemv( -1., leftx, gradx_, 0., y);  
         dg::blas2::gemv( -1., lefty, tempy_, 1., y);  
-        if( no_ == normed)
-            dg::tensor::pointwiseDivide( y, vol_,y);
 
         //add jump terms
         dg::blas2::symv( +1., jumpX, x, 1., y);
         dg::blas2::symv( +1., jumpY, x, 1., y);
+        if( no_ == normed)
+            dg::tensor::pointwiseDivide( y, vol_,y);
         if( no_ == not_normed)//multiply weights without volume
             dg::blas2::symv( weights_wo_vol, y, y);
     }

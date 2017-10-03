@@ -667,8 +667,8 @@ void FieldAligned<G, I, container>::ePlus( enum whichMatrix which, const contain
 
         cView fp( f.cbegin() + ip*perp_size_, f.cbegin() + (ip+1)*perp_size_);
         View fP( fpe.begin() + i0*perp_size_, fpe.begin() + (i0+1)*perp_size_);
-        if(which == einsPlus) cusp::multiply( plus, fp, fP);
-        else if(which == einsMinusT) cusp::multiply( minusT, fp, fP );
+        if(which == einsPlus)           cusp::multiply( plus, fp, fP);
+        else if(which == einsMinusT)    cusp::multiply( minusT, fp, fP );
         //make ghostcells i.e. modify fpe in the limiter region
         if( i0==Nz_-1 && bcz_ != dg::PER)
         {
