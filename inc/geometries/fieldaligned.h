@@ -479,15 +479,13 @@ struct FieldAligned
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
-    typedef cusp::array1d_view< typename container::iterator> View;
-    typedef cusp::array1d_view< typename container::const_iterator> cView;
     IMatrix m_plus, m_minus, m_plusT, m_minusT; //interpolation matrices
-    container hz_, hp_,hm_, ghostM, ghostP;
-    unsigned Nz_, perp_size_;
-    dg::bc bcz_;
-    container left_, right_;
-    container limiter_;
-    dg::Handle<Geometry> g_;
+    container m_hz, m_hp, m_hm, m_ghostM, m_ghostP;
+    unsigned m_Nz, m_perp_size;
+    dg::bc m_bcz;
+    container m_left, m_right;
+    container m_limiter;
+    dg::Handle<Geometry> m_g;
 };
 
 ///@cond 
@@ -498,8 +496,8 @@ struct FieldAligned
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
 FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, double deltaPhi):
-        hz_( dg::evaluate( dg::zero, grid)), hp_( hz_), hm_( hz_), 
-        Nz_(grid.Nz()), bcz_(grid.bcz()), g_(grid)
+        m_hz( dg::evaluate( dg::zero, grid)), m_hp( m_hz), m_hm( m_hz), 
+        m_Nz(grid.Nz()), m_bcz(grid.bcz()), m_g(grid)
 {
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
@@ -633,14 +631,14 @@ container FieldAligned<G, I,container>::evaluate( BinaryOp binary, UnaryOp unary
     {
         for( unsigned i0=0; i0<Nz_; i0++)
         {
-            unsigned revi0 = (Nz_ - i0)%Nz_; //reverted index
+            unsigned revi0 = (m_Nz - i0)%m_Nz; //reverted index
             dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
             dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
         }
         dg::blas1::axpby( -1., init2d, 1., result[0]);
-        for(unsigned i0=0; i0<Nz_; i0++)
+        for(unsigned i0=0; i0<m_Nz; i0++)
         {
-            int idx = ((int)i0 -(int)p0 + Nz_)%Nz_; //shift index
+            int idx = ((int)i0 -(int)p0 + m_Nz)%m_Nz; //shift index
             thrust::copy( result[idx].begin(), result[idx].end(), vec3d.begin() + i0*perp_size_);
         }
     }
@@ -658,72 +656,59 @@ void FieldAligned<G, I, container >::operator()(enum whichMatrix which, const co
 template< class G, class I, class container>
 void FieldAligned<G, I, container>::ePlus( enum whichMatrix which, const container& f, container& fpe)
 {
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView rightV( right_.begin(), right_.end());
-    for( unsigned i0=0; i0<Nz_; i0++)
+    dg::spit( f, m_f);
+    //1. compute 2d interpolation in every plane and store in m_temp
+    for( unsigned i0=0; i0<m_Nz; i0++)
     {
-        unsigned ip = (i0==Nz_-1) ? 0:i0+1;
-
-        cView fp( f.cbegin() + ip*perp_size_, f.cbegin() + (ip+1)*perp_size_);
-        View fP( fpe.begin() + i0*perp_size_, fpe.begin() + (i0+1)*perp_size_);
-        if(which == einsPlus)           cusp::multiply( plus, fp, fP);
-        else if(which == einsMinusT)    cusp::multiply( minusT, fp, fP );
-        //make ghostcells i.e. modify fpe in the limiter region
-        if( i0==Nz_-1 && bcz_ != dg::PER)
-        {
-            cView f0( f.cbegin() + i0*perp_size_, f.cbegin() + (i0+1)*perp_size_);
-            if( bcz_ == dg::DIR || bcz_ == dg::NEU_DIR)
-            {
-                cusp::blas::axpby( rightV, f0, ghostPV, 2., -1.);
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::DIR_NEU)
-            {
-                thrust::transform( right_.begin(), right_.end(),  hp_.begin(), ghostM.begin(), thrust::multiplies<double>());
-                cusp::blas::axpby( ghostMV, f0, ghostPV, 1., 1.);
-            }
-            //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
-            cusp::blas::axpby( ghostPV, fP, ghostPV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter_, ghostP, ghostP);
-            cusp::blas::axpby(  ghostPV, fP, fP, 1.,1.);
-        }
+        unsigned ip = (i0==m_Nz-1) ? 0:i0+1;
+        if(which == einsPlus)           dg::blas2::symv( plus,   m_f[ip], m_temp[i0]);
+        else if(which == einsMinusT)    dg::blas2::symv( minusT, m_f[ip], m_temp[i0]);
     }
+    //2. apply right boundary conditions in last plane
+    unsigned i0=m_Nz-1;
+    if( m_bcz != dg::PER)
+    {
+        if( m_bcz == dg::DIR || m_bcz == dg::NEU_DIR)
+            dg::blas1::axpby( 2, m_right, -1., m_f[i0], m_ghostP);
+        if( m_bcz == dg::NEU || m_bcz == dg::DIR_NEU)
+        {
+            dg::blas1::pointwiseDivide( m_right, m_hp_inv[i0], m_ghostP);
+            dg::blas1::axpby( 1., m_ghostP, 1., m_f[i0], m_ghostP);
+        }
+        //interlay ghostcells with periodic cells: L*g + (1-L)*fpe
+        dg::blas1::axpby( 1., m_ghostP, -1., m_temp[i0], m_ghostP);
+        dg::blas1::pointwiseDot( 1., m_limiter, m_ghostP, 1., m_temp[i0]);
+    }
+    dg::join( m_temp, fpe);
 }
 
 template< class G, class I, class container>
 void FieldAligned<G, I, container>::eMinus( enum whichMatrix which, const container& f, container& fme)
 {
-    //note that thrust functions don't work on views
-    View ghostPV( ghostP.begin(), ghostP.end());
-    View ghostMV( ghostM.begin(), ghostM.end());
-    cView leftV( left_.begin(), left_.end());
-    for( unsigned i0=0; i0<Nz_; i0++)
+    dg::split( f, m_f);
+    //1. compute 2d interpolation in every plane and store in m_temp
+    for( unsigned i0=0; i0<m_Nz; i0++)
     {
-        unsigned im = (i0==0) ? Nz_-1:i0-1;
-        cView fm( f.cbegin() + im*perp_size_, f.cbegin() + (im+1)*perp_size_);
-        View fM( fme.begin() + i0*perp_size_, fme.begin() + (i0+1)*perp_size_);
-        if(which == einsPlusT) cusp::multiply( plusT, fm, fM );
-        else if (which == einsMinus) cusp::multiply( minus, fm, fM );
-        //make ghostcells
-        if( i0==0 && bcz_ != dg::PER)
-        {
-            cView f0( f.cbegin() + i0*perp_size_, f.cbegin() + (i0+1)*perp_size_);
-            if( bcz_ == dg::DIR || bcz_ == dg::DIR_NEU)
-            {
-                cusp::blas::axpby( leftV,  f0, ghostMV, 2., -1.);
-            }
-            if( bcz_ == dg::NEU || bcz_ == dg::NEU_DIR)
-            {
-                thrust::transform( left_.begin(), left_.end(),  hm_.begin(), ghostP.begin(), thrust::multiplies<double>());
-                cusp::blas::axpby( ghostPV, f0, ghostMV, -1., 1.);
-            }
-            //interlay ghostcells with periodic cells: L*g + (1-L)*fme
-            cusp::blas::axpby( ghostMV, fM, ghostMV, 1., -1.);
-            dg::blas1::pointwiseDot( limiter_, ghostM, ghostM);
-            cusp::blas::axpby( ghostMV, fM, fM, 1., 1.);
-
-        }
+        unsigned im = (i0==0) ? m_Nz-1:i0-1;
+        if(which == einsPlusT)          dg::blas2::symv( plusT, m_f[im], m_temp[i0]);
+        else if (which == einsMinus)    dg::blas2::symv( minus, m_f[im], m_temp[i0]);
     }
+    //2. apply left boundary conditions in first plane
+    unsigned i0=0;
+    if( m_bcz != dg::PER)
+    {
+        if( m_bcz == dg::DIR || m_bcz == dg::DIR_NEU)
+            dg::blas1::axpby( 2., m_left,  -1., m_f[i0], m_ghostM);
+        if( m_bcz == dg::NEU || m_bcz == dg::NEU_DIR)
+        {
+            dg::blas1::pointwiseDivide( m_left, m_hm_inv[i0], m_ghostM);
+            dg::blas1::axpby( -1., m_ghostM, 1., m_f[i0], m_ghostM);
+        }
+        //interlay ghostcells with periodic cells: L*g + (1-L)*fme
+        dg::blas1::axpby( 1., m_ghostM, -1., m_temp[i0], m_ghostM);
+        dg::blas1::pointwiseDot( 1., m_limiter, m_ghostM, 1., m_temp[i0]);
+    }
+    dg::join( m_temp, fme);
 }
 
 
