@@ -399,18 +399,18 @@ struct FieldAligned
     */
     void set_boundaries( dg::bc bcz, double left, double right)
     {
-        bcz_ = bcz;
-        const dg::Grid1d g2d( 0, 1, 1, perp_size_);
-        left_ = dg::evaluate( dg::CONSTANT(left), g2d);
-        right_ = dg::evaluate( dg::CONSTANT(right),g2d);
+        m_bcz = bcz;
+        const dg::Grid1d g2d( 0, 1, 1, m_perp_size);
+        m_left  = dg::evaluate( dg::CONSTANT(left), g2d);
+        m_right = dg::evaluate( dg::CONSTANT(right),g2d);
     }
 
     ///@copydoc set_boundaries()
     void set_boundaries( dg::bc bcz, const container& left, const container& right)
     {
-        bcz_ = bcz;
-        left_ = left;
-        right_ = right;
+        m_bcz = bcz;
+        m_left = left;
+        m_right = right;
     }
 
     /**
@@ -437,7 +437,7 @@ struct FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp>
-    container evaluate( BinaryOp f, unsigned plane=0) const;
+    container evaluate( const BinaryOp& f, unsigned plane=0) const;
 
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
@@ -457,7 +457,7 @@ struct FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp, class UnaryOp>
-    container evaluate( BinaryOp f, UnaryOp g, unsigned p0, unsigned rounds) const;
+    container evaluate( const BinaryOp& f, const UnaryOp& g, unsigned p0, unsigned rounds) const;
 
     /**
     * @brief Applies the interpolation 
@@ -469,22 +469,23 @@ struct FieldAligned
 
     ///@brief hz is the distance between the plus and minus planes
     ///@return three-dimensional vector
-    const container& hz()const {return hz_;}
+    const container& hz_inv()const {return hz_inv;}
     ///@brief hp is the distance between the plus and current planes
     ///@return three-dimensional vector
-    const container& hp()const {return hp_;}
+    const container& hp_inv()const {return hp_inv;}
     ///@brief hm is the distance between the current and minus planes
     ///@return three-dimensional vector
-    const container& hm()const {return hm_;}
+    const container& hm_inv()const {return hm_inv;}
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
     IMatrix m_plus, m_minus, m_plusT, m_minusT; //interpolation matrices
-    container m_hz, m_hp, m_hm, m_ghostM, m_ghostP;
+    container m_hz_inv, m_hp_inv, m_hm_inv, m_ghostM, m_ghostP;
     unsigned m_Nz, m_perp_size;
     dg::bc m_bcz;
     container m_left, m_right;
     container m_limiter;
+    std::vector<container> m_temp;
     dg::Handle<Geometry> m_g;
 };
 
@@ -496,19 +497,20 @@ struct FieldAligned
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
 FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, double deltaPhi):
-        m_hz( dg::evaluate( dg::zero, grid)), m_hp( m_hz), m_hm( m_hz), 
+        m_hz_inv( dg::evaluate( dg::zero, grid)), m_hp_inv( m_hz), m_hm_inv( m_hz), 
         m_Nz(grid.Nz()), m_bcz(grid.bcz()), m_g(grid)
 {
+    dg::split( m_hz_inv, m_temp);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     const aGeometry2d* grid2d_ptr = detail::clone_3d_to_perp(&grid);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //Resize vector to 2D grid size
-    perp_size_ = grid2d_ptr->size();
-    limiter_ = dg::pullback( limit, *grid2d_ptr);
-    right_ = left_ = dg::evaluate( zero, *grid2d_ptr);
-    ghostM.resize( perp_size_); ghostP.resize( perp_size_);
+    m_perp_size = grid2d_ptr->size();
+    m_limiter = dg::pullback( limit, *grid2d_ptr);
+    m_right = m_left = dg::evaluate( zero, *grid2d_ptr);
+    ghostM.resize( m_perp_size); ghostP.resize( m_perp_size);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
     std::cout << "Start fieldline integration!\n";
     dg::Timer t;
@@ -546,7 +548,7 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     dg::blas2::transfer( minus, m_minus);
     dg::blas2::transfer( minusT, m_minusT);
     //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    thrust::host_vector<double> hp( perp_size_), hm(hp);
+    thrust::host_vector<double> hp( m_perp_size), hm(hp);
     dg::blas2::symv( projection, yp[2], hp);
     dg::blas2::symv( projection, ym[2], hm);
     for( unsigned i=0; i<grid.Nz(); i++)
@@ -562,15 +564,10 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
 template<class G, class I, class container>
 void FieldAligned<G, I,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
 {
-    cView left( global.cbegin(), global.cbegin() + perp_size_);
-    cView right( global.cbegin()+(Nz_-1)*perp_size_, global.cbegin() + Nz_*perp_size_);
-    View leftView( left_.begin(), left_.end());
-    View rightView( right_.begin(), right_.end());
-    cusp::copy( left, leftView);
-    cusp::copy( right, rightView);
-    dg::blas1::scal( left_, scal_left);
-    dg::blas1::scal( right_, scal_right);
-    bcz_ = bcz;
+    dg::split( global, m_temp);
+    dg::blas1::axpby( scal_left,  m_temp[0],      0, m_left);
+    dg::blas1::axpby( scal_right, m_temp[m_Nz-1], 0, m_right);
+    m_bcz = bcz;
 }
 
 template< class G, class I, class container>
@@ -582,22 +579,26 @@ container FieldAligned<G, I,container>::evaluate( BinaryOp binary, unsigned p0) 
 
 template<class G, class I, class container>
 template< class BinaryOp, class UnaryOp>
-container FieldAligned<G, I,container>::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
+container FieldAligned<G, I,container>::evaluate( const BinaryOp& binary, const UnaryOp& unary, unsigned p0, unsigned rounds) const
 {
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
-    assert( g_.get().Nz() > 1);
-    assert( p0 < g_.get().Nz());
-    const typename G::perpendicular_grid g2d = g_.get().perp_grid();
-    assert( g2d.size() == perp_size_ && Nz_== g_.get().Nz());
-    container init2d = dg::pullback( binary, g2d), temp(init2d), tempP(init2d), tempM(init2d);
-    container vec3d = dg::evaluate( dg::zero, g_.get());
-    std::vector<container>  plus2d( g_.get().Nz(), (container)dg::evaluate(dg::zero, g2d) ), minus2d( plus2d), result( plus2d);
+    assert( p0 < m_g.get().Nz());
+    const aGeometry2d* g2d_ptr = m_g.get().perp_grid();
+    container init2d = dg::pullback( binary, *g2d_ptr); 
+    delete g2d_ptr;
+
+    container temp(init2d), tempP(init2d), tempM(init2d);
+    container vec3d = dg::evaluate( dg::zero, m_g.get());
+    std::vector<container>  plus2d, minus2d, result; 
+    dg::split( vec3d, plus2d);
+    dg::split( vec3d, minus2d);
+    dg::split( vec3d, result);
     unsigned turns = rounds; 
     if( turns ==0) turns++;
     //first apply Interpolation many times, scale and store results
     for( unsigned r=0; r<turns; r++)
-        for( unsigned i0=0; i0<Nz_; i0++)
+        for( unsigned i0=0; i0<m_Nz; i0++)
         {
             dg::blas1::copy( init2d, tempP);
             dg::blas1::copy( init2d, tempM);
@@ -609,15 +610,15 @@ container FieldAligned<G, I,container>::evaluate( BinaryOp binary, UnaryOp unary
                 dg::blas2::symv( minus, tempM, temp);
                 temp.swap( tempM);
             }
-            dg::blas1::scal( tempP, unary(  (double)rep*g_.get().hz() ) );
-            dg::blas1::scal( tempM, unary( -(double)rep*g_.get().hz() ) );
+            dg::blas1::scal( tempP, unary(  (double)rep*m_g.get().hz() ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*m_g.get().hz() ) );
             dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
             dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
         }
     //now we have the plus and the minus filaments
     if( rounds == 0) //there is a limiter
     {
-        for( unsigned i0=0; i0<Nz_; i0++)
+        for( unsigned i0=0; i0<m_Nz; i0++)
         {
             int idx = (int)i0 - (int)p0;
             if(idx>=0)
@@ -629,7 +630,7 @@ container FieldAligned<G, I,container>::evaluate( BinaryOp binary, UnaryOp unary
     }
     else //sum up plus2d and minus2d
     {
-        for( unsigned i0=0; i0<Nz_; i0++)
+        for( unsigned i0=0; i0<m_Nz; i0++)
         {
             unsigned revi0 = (m_Nz - i0)%m_Nz; //reverted index
             dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
@@ -649,8 +650,8 @@ container FieldAligned<G, I,container>::evaluate( BinaryOp binary, UnaryOp unary
 template<class G, class I, class container>
 void FieldAligned<G, I, container >::operator()(enum whichMatrix which, const container& f, container& fe)
 {
-    if(which == einsPlus || which == einsMinusT) ePlus( which, f, fe);
-    if(which == einsMinus || which == einsPlusT) eMinus( which, f, fe);
+    if(which == einsPlus  || which == einsMinusT) ePlus(  which, f, fe);
+    if(which == einsMinus || which == einsPlusT ) eMinus( which, f, fe);
 }
 
 template< class G, class I, class container>

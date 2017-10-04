@@ -88,24 +88,24 @@ struct FieldAligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
 
     void set_boundaries( dg::bc bcz, double left, double right)
     {
-        bcz_ = bcz; 
-        const dg::Grid2d g2d( g_.x0(), g_.x1(), g_.y0(), g_.y1(), g_.n(), g_.Nx(), g_.Ny());
-        left_  = dg::evaluate( dg::CONSTANT(left), g2d);
-        right_ = dg::evaluate( dg::CONSTANT(right),g2d);
+        m_bcz = bcz; 
+        const dg::MPIGrid2d g2d( 0., 1., 0., 1., m_g.get().global().n(), m_g.get().global().Nx(), m_g.get().global().Ny(), m_g.get().perp_communicator() );
+        m_left  = dg::evaluate( dg::CONSTANT(left), g2d);
+        m_right = dg::evaluate( dg::CONSTANT(right),g2d);
     }
 
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& left, const MPI_Vector<LocalContainer>& right)
     {
-        bcz_ = bcz; 
-        left_ = left.data();
-        right_ = right.data();
+        m_bcz = bcz; 
+        m_left = left;
+        m_right = right;
     }
 
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
     {
-        bcz_ = bcz;
-        unsigned size = g_.n()*g_.n()*g_.Nx()*g_.Ny();
-        if( g_.z0() == g_.global().z0())
+        m_bcz = bcz;
+        unsigned size = m_g.n()*m_g.n()*m_g.Nx()*m_g.Ny();
+        if( m_g.z0() == m_g.global().z0())
         {
             cView left( global.data().cbegin(), global.data().cbegin() + size);
             View leftView( left_.begin(), left_.end());
