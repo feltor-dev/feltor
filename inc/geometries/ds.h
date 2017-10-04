@@ -3,7 +3,6 @@
 #include "dg/blas.h"
 #include "dg/geometry/geometry.h"
 #include "dg/backend/derivatives.h"
-#include "backend/split_and_join.h"
 #include "fieldaligned.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_derivatives.h"
@@ -55,9 +54,7 @@ struct DS
     * @param dsf contains result on output (write only)
     */
     void forward( double alpha, const container& f, double beta, container& dsf){
-        dg::split( f, m_f);
-        do_forward( alpha, m_f, beta, m_dsf);
-        dg::join( m_dsf, dsf);
+        do_forward( alpha, f, beta, dsf);
     }
     /**
     * @brief Apply the backward derivative on a 3d vector
@@ -67,9 +64,7 @@ struct DS
     * @param dsf contains result on output (write only)
     */
     void backward( double alpha, const container& f, double beta, container& dsf){
-        dg::split( f, m_f);
-        do_backward( alpha, m_f, beta, m_dsf);
-        dg::join( m_dsf, dsf);
+        do_backward( alpha, f, beta, dsf);
     }
     /**
     * @brief Apply the centered derivative on a 3d vector
@@ -79,9 +74,7 @@ struct DS
     * @param dsf contains result on output (write only)
     */
     void centered( double alpha, const container& f, double beta, container& dsf){
-        dg::split( f, m_f);
-        do_centered( alpha, m_f, beta, m_dsf);
-        dg::join( m_dsf, dsf);
+        do_centered( alpha, f, beta, dsf);
     }
 
     /**
@@ -91,9 +84,7 @@ struct DS
     * @param dsf contains result on output (write only)
     */
     void forwardAdj( double alpha, const container& f, double beta, container& dsf){
-        dg::split( m_temp, m_f);
-        do_forwardAdj( alpha, m_f, beta, m_dsf, dg::normed);
-        dg::join( m_dsf, dsf);
+        do_forwardAdj( alpha, f, beta, dsf, dg::normed);
     }
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector
@@ -102,9 +93,7 @@ struct DS
     * @param dsf contains result on output (write only)
     */
     void backwardAdj( double alpha, const container& f, double beta, container& dsf){
-        dg::split( f, m_f);
-        do_backwardAdj( alpha, m_f, beta, m_dsf, dg::normed);
-        dg::join( m_dsf, dsf);
+        do_backwardAdj( alpha, f, beta, dsf, dg::normed);
     }
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector
@@ -113,9 +102,7 @@ struct DS
     * @param dsf contains result on output (write only)
     */
     void centeredAdj(double alpha, const container& f, double beta, container& dsf){
-        dg::split( f, m_f);
-        do_centeredAdj( alpha, m_f, beta, m_dsf, dg::normed);
-        dg::join( m_dsf, dsf);
+        do_centeredAdj( alpha, f, beta, dsf, dg::normed);
     }
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
@@ -126,9 +113,9 @@ struct DS
     */
     void forwardAdjDir( double alpha, const container& f, double beta, container& dsf)
     {
-        dg::blas1::pointwiseDivide( f, m_B, temp);
-        forward( temp, temp);
-        dg::blas1::pointwiseDot( alpha, temp, m_B, beta, dsf);
+        dg::blas1::pointwiseDivide( f, m_B, m_temp);
+        forward( m_temp, m_temp);
+        dg::blas1::pointwiseDot( alpha, m_temp, m_B, beta, dsf);
     }
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
@@ -138,9 +125,9 @@ struct DS
     */
     void backwardAdjDir( double alpha, const container& f, double beta, container& dsf)
     {
-        dg::blas1::pointwiseDivide( f, m_B, temp);
-        backward( temp, temp);
-        dg::blas1::pointwiseDot( alpha, temp, m_B, beta, dsf);
+        dg::blas1::pointwiseDivide( f, m_B, m_temp);
+        backward( 1., m_temp, 0., m_temp);
+        dg::blas1::pointwiseDot( alpha, m_temp, m_B, beta, dsf);
     }
     /**
     * @brief Apply the negative adjoint derivative on a 3d vector with the direct method
@@ -150,9 +137,9 @@ struct DS
     */
     void centeredAdjDir( double alpha, const container& f, double beta, container& dsf)
     {
-        dg::blas1::pointwiseDivide( f, m_B, temp);
-        backward( temp, temp);
-        dg::blas1::pointwiseDot( alpha, temp, m_B, beta, dsf);
+        dg::blas1::pointwiseDivide( f, m_B, m_temp);
+        backward( 1., m_temp, m_temp);
+        dg::blas1::pointwiseDot( alpha, m_temp, m_B, beta, dsf);
     }
 
     /**
@@ -173,10 +160,7 @@ struct DS
      * @param dsTdsf contains result on output (write only)
      * @note if apply_jumpX is false then no jumpy terms will be added in the x-direction
      */
-    void symv( const container& f, container& dsTdsf){ symv( 1., f, 0., dsTdsf);}
-    void symv( double alpha, const container& f, double beta, container& dsTdsf){
-        do_symv( alpha, f, beta, dsTdsf);
-    }
+    void symv( const container& f, container& dsTdsf){ do_symv( f, dsTdsf);}
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -219,21 +203,8 @@ struct DS
         f_.set_boundaries( bcz, global, scal_left, scal_right);
     }
 
-    /**
-     * @brief Returns the weights used to make the matrix symmetric 
-     *
-     * needed by invert class
-     * @return weights
-     */
     const container& weights()const {return vol3d;}
     const container& inv_weights()const {return inv3d;}
-    /**
-     * @brief Returns the preconditioner to use in conjugate gradient
-     *
-     * needed by invert class
-     * In this case inverse weights are the best choice
-     * @return inverse weights
-     */
     const container& precond()const {return inv3d;}
 
     /**
@@ -243,20 +214,19 @@ struct DS
     */
     const FieldAligned<Geometry, IMatrix, container>& fieldaligned() const{return f_;}
     private:
-    void do_forward(double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf);
-    void do_backward(double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf);
-    void do_centered(double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf);
-    void do_forwardAdj(double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf, dg::norm no);
-    void do_backwardAdj(double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf, dg::norm no);
-    void do_centeredAdj(double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf, dg::norm no);
-    void do_symv(double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf);
+    void do_forward(double alpha, const container& f, double beta, container& dsf);
+    void do_backward(double alpha, const container& f, double beta, container& dsf);
+    void do_centered(double alpha, const container& f, double beta, container& dsf);
+    void do_forwardAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
+    void do_backwardAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
+    void do_centeredAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
+    void do_symv(const container& f, container& dsf);
 
     FieldAligned<Geometry,IMatrix,container> m_fa;
     Matrix m_jumpX, m_jumpY;
     container m_temp;
-    std::vector<container> m_tempP, m_temp0, m_tempM;
-    std::vector<container> m_f, m_dsf;
-    std::vector<container> m_vol3d, m_inv3d;
+    container m_tempP, m_temp0, m_tempM;
+    container m_vol3d, m_inv3d, m_weights_wo_vol;
     container m_B;
     //container R_;
     dg::norm m_no;
@@ -270,21 +240,15 @@ struct DS
 template<class Geometry, class I, class M, class container>
 DS<Geometry, I, M,container>::DS(const dg::geo::TokamakMagneticField& mag, const Geometry& grid, dg::norm no, dg::direction dir, bool jumpX, bool jumpY, unsigned mx, unsigned my):
         m_fa( dg::geo::BinaryVectorLvl0( dg::geo::BHatR(mag), dg::geo::BHatZ(mag), dg::geo::BHatP(mag)), grid, mx, my, 1e-5, FullLimiter(), grid.bcx(), grid.bcy()),
-        jumpX( dg::create::jumpX( grid)),
-        jumpY( dg::create::jumpY( grid)),
         m_no(no), m_dir(dir), m_apply_jumpX(jumpX), m_apply_jumpY(jumpY)
 {
     dg::blas1::transfer( dg::pullback( dg::geo::Bmodule(mag), grid), m_B);
-    m_temp = m_B;
-    dg::blas1::transfer( dg::create::volume(     grid), m_temp); 
-    dg::split( m_temp, m_vol3d);
-    dg::blas1::transfer( dg::create::inv_volume( grid), m_temp); 
-    dg::split( m_temp, m_inv3d);
-    dg::split( m_temp, m_tempP);
-    dg::split( m_temp, m_temp0);
-    dg::split( m_temp, m_tempM);
-    dg::split( m_temp, m_f);
-    dg::split( m_temp, m_dsf);
+    m_temp = m_B, m_tempP = m_B, m_temp0 = m_b, m_tempM = m_b;
+    dg::blas1::transfer( dg::create::volume(     grid), m_vol3d); 
+    dg::blas1::transfer( dg::create::weights(    grid), m_weights_wo_vol); 
+    dg::blas1::transfer( dg::create::inv_volume( grid), m_inv3d); 
+    dg::blas2::transfer( dg::create::jumpX( grid), jumpX);
+    dg::blas2::transfer( dg::create::jumpY( grid), jumpY);
 }
 
 template<class G, class I, class M, class container>
@@ -298,7 +262,7 @@ inline void DS<G,I,M,container>::operator()( const container& f, container& dsf)
 }
 
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::do_forward( double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf)
+void DS<G,I,M,container>::do_forward( double alpha, const container& f, double beta, container& dsf)
 {
     //direct
     m_fa(einsPlus, f, m_tempP);
@@ -306,7 +270,7 @@ void DS<G,I,M,container>::do_forward( double alpha, const std::vector<container>
     dg::blas1::pointwiseDot( alpha, m_tempP, m_fa.hp_inv(), beta, dsf);
 }
 template<class G,class I, class M, class container>
-void DS<G,I,M,container>::do_backward( double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf)
+void DS<G,I,M,container>::do_backward( double alpha, const container& f, double beta, container& dsf)
 {
     //direct
     m_fa(einsMinus, f, m_tempM);
@@ -314,7 +278,7 @@ void DS<G,I,M,container>::do_backward( double alpha, const std::vector<container
     dg::blas1::pointwiseDot( alpha, m_tempM, m_fa.hp_inv(), beta, dsf);
 }
 template<class G, class I, class M, class container>
-void DS<G, I,M,container>::do_centered( double alpha, const std::vector<container>& f, double beta, std::vector<container>& dsf)
+void DS<G, I,M,container>::do_centered( double alpha, const container& f, double beta, container& dsf)
 {
     //direct discretisation
     m_fa(einsPlus, f, m_tempP);
@@ -323,65 +287,65 @@ void DS<G, I,M,container>::do_centered( double alpha, const std::vector<containe
     dg::blas1::pointwiseDot( alpha, m_tempM, m_fa.hz_inv(), beta, dsf);
 }
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::do_forwardAdj( double alpha, std::vector<container>& f, double beta, std::vector<container>& dsf, dg::norm no)
+void DS<G,I,M,container>::do_forwardAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {    
     //adjoint discretisation
-    dg::blas1::pointwiseDot( m_vol3d, f, f);
-    dg::blas1::pointwiseDot( f, m_fa.hp_inv(), f);
-    m_fa(einsPlusT, f, m_tempP);
-    dg::blas1::axpby( -1., m_tempP, 1., f, f);
+    dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
+    dg::blas1::pointwiseDot( m_temp0, m_fa.hp_inv(), m_temp0);
+    m_fa(einsPlusT, m_temp0, m_tempP);
+    dg::blas1::axpby( -1., m_tempP, 1., m_temp0, m_temp0);
     if(no == dg::normed) 
-        dg::blas1::pointwiseDot( alpha, m_inv3d, f, beta, dsf); 
+        dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
 }
 template<class G,class I, class M, class container>
-void DS<G,I,M,container>::do_backwardAdj( double alpha, std::vector<container>& f, double beta, std::vector<container>& dsf, dg::norm no)
+void DS<G,I,M,container>::do_backwardAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {    
     //adjoint discretisation
-    dg::blas1::pointwiseDot( m_vol3d, f, f);
-    dg::blas1::pointwiseDot( f, m_fa.hm_inv(), f);
-    m_fa(einsMinusT, f, m_tempM);
-    dg::blas1::axpby( -1., m_tempM, 1., f, f);
+    dg::blas1::pointwiseDot( m_vol3d, m_temp0, m_temp0);
+    dg::blas1::pointwiseDot( m_temp0, m_fa.hm_inv(), m_temp0);
+    m_fa(einsMinusT, m_temp0, m_tempM);
+    dg::blas1::axpby( -1., m_tempM, 1., m_temp0, m_temp0);
     if(no == dg::normed) 
-        dg::blas1::pointwiseDot( alpha, m_inv3d, f, beta, dsf); 
+        dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
 }
 template<class G, class I, class M, class container>
-void DS<G, I,M,container>::do_centeredAdj( double alpha, std::vector<container>& f, double beta, std::vector<container>& dsf, dg::norm no)
+void DS<G, I,M,container>::do_centeredAdj( double alpha, container& f, double beta, container& dsf, dg::norm no)
 {               
     //adjoint discretisation
-    dg::blas1::pointwiseDot( m_vol3d, f, f);
-    dg::blas1::pointwiseDot( f, m_fa.hz_inv(), f);
-    m_fa(einsPlusT,  f, m_tempP);
-    m_fa(einsMinusT, f, m_tempM);
+    dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
+    dg::blas1::pointwiseDot( m_temp0, m_fa.hz_inv(), m_temp0);
+    m_fa(einsPlusT,  m_temp0, m_tempP);
+    m_fa(einsMinusT, m_temp0, m_tempM);
     dg::blas1::axpby( 1., m_tempP, -1., m_tempM);
     if(no == dg::normed) 
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_tempM, beta, dsf); 
 }
 
 template<class G,class I, class M, class container>
-void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta, container& dsTdsf)
+void DS<G,I,M,container>::do_symv( const container& f, container& dsTdsf)
 {
-    dg::split( f, m_f);
     if(m_dir == dg::centered)
     {
-        do_centered( m_f, m_tempP);
-        do_centeredAdj( m_tempP, m_dsf);
+        do_centered( f, m_tempP);
+        do_centeredAdj( m_tempP, dsTdsf, dg::not_normed);
     }
     else 
     {
-        do_forward( m_f, m_tempP);
-        do_forwardAdj( m_tempP, m_dsf);
-        do_backward( m_f, m_tempM);
-        do_backwardAdj( m_tempM, m_temp0);
-        dg::blas1::axpby(0.5,m_temp0,0.5,m_dsf,m_dsf);
+        do_forward( f, m_tempP);
+        do_forwardAdj( m_tempP, m_temp0, dg::not_normed);
+        do_backward( f, m_tempM);
+        do_backwardAdj( m_tempM, dsTdsf, dg::not_normed);
+        dg::blas1::axpby(0.5,m_temp0,0.5,dsTdsf);
     }
-    dg::join( m_dsf, dsTdsf);
+    dg::blas1::pointwiseDivide( dsTdsf, m_weights_wo_vol, dsTdsf);
     //     add jump term 
     if(m_apply_jumpX)
         dg::blas2::symv( -1., jumpX, f, 1., dsTdsf);
     if(m_apply_jumpY)
         dg::blas2::symv( -1., jumpY, f, 1., dsTdsf);
-    if( no_ == not_normed)
-        dg::blas1::pointwiseDot( vol3d, dsTdsf, dsTdsf); //make it symmetric
+    dg::blas1::pointwiseDot( m_weights_wo_vol, dsTdsf, dsTdsf); //make it symmetric
+    if( m_no == dg::normed)
+        dg::blas1::pointwiseDot( m_inv3d, dsTdsf, dsTdsf); //make it symmetric
 }
 
 //enables the use of the dg::blas2::symv function 

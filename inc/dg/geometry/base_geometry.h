@@ -93,7 +93,7 @@ struct aGeometry3d : public aTopology3d
     *
     *  The elements of the Tensor are (if x,y,z are the coordinates in computational space and R,Z,P are the physical space coordinates)
     \f[
-    J = \begin{pmatrix} x_R(x,y,z) & x_Z(x,y,z) & x_\varphi(x,y,z) \\ 
+    J = \begin{pmatrix} x_R(x,y,z) & x_Z(x,y,z) & x_\varphi(x,y,z) \\
     y_R(x,y,z) & y_Z(x,y,z) & y_\varphi(x,y,z) \\
     z_R(x,y,z) & z_Z(x,y,z) & z_\varphi(x,y,z)
     \end{pmatrix}
