@@ -422,7 +422,7 @@ struct SinXSinY
     double amp_,bamp_,kx_,ky_;
 };
 /**
- * @brief Functor for a sin prof in x and y-direction
+ * @brief Functor for a cos prof in x and y-direction
  * \f[ f(x,y) =B+ A cos(k_x x) cos(k_y y) \f]
  */
 struct CosXCosY
@@ -449,8 +449,8 @@ struct CosXCosY
     double amp_,bamp_,kx_,ky_;
 };
 /**
- * @brief Functor for a sin prof in x and y-direction
- * \f[ f(x,y) =B+ A cos(k_x x) cos(k_y y) \f]
+ * @brief Functor for a sin prof in x- and and cos prof in  y-direction
+ * \f[ f(x,y) =B+ A sin(k_x x) cos(k_y y) \f]
  */
 struct SinXCosY
 {
