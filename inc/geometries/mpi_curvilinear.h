@@ -27,11 +27,11 @@ struct CurvilinearProductMPIGrid3d;
  */
 struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
 {
-    /// @opydoc hide_grid_parameters2d
+    /// @copydoc hide_grid_parameters2d
     /// @param comm a two-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters 
-    CurvilinearMPIGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, MPI_Comm comm2d): 
-        dg::aMPIGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, bcy, comm2d), handle_(generator)
+    CurvilinearMPIGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, MPI_Comm comm): 
+        dg::aMPIGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, bcy, comm), handle_(generator)
     {
         //generate global 2d grid and then reduce to local 
         CurvilinearGrid2d g(generator, n, Nx, Ny);
@@ -94,7 +94,7 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
 struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
 {
     typedef dg::geo::CurvilinearMPIGrid2d perpendicular_grid; //!< the two-dimensional grid
-    /// @opydoc hide_grid_parameters3d
+    /// @copydoc hide_grid_parameters3d
     /// @param comm a three-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters 
     CurvilinearProductMPIGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm): 
