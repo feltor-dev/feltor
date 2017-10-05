@@ -56,13 +56,6 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
         CurvilinearGrid2d g( handle_.get(), new_n, new_Nx, new_Ny);
         divide_and_conquer(g);//distribute to processes
     }
-    MPI_Comm get_perp_comm( MPI_Comm src)
-    {
-        MPI_Comm planeComm;
-        int remain_dims[] = {true,true,false}; //true true false
-        MPI_Cart_sub( src, remain_dims, &planeComm);
-        return planeComm;
-    }
     void divide_and_conquer(const CurvilinearGrid2d& g_)
     {
         dg::SparseTensor<thrust::host_vector<double> > jacobian=g_.jacobian(); 
@@ -109,7 +102,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
         handle_( generator)
     {
         map_.resize(3);
-        CurvilinearMPIGrid2d g(generator,n,Nx,Ny, bcx, bcy, get_perp_comm(comm));
+        CurvilinearMPIGrid2d g(generator,n,Nx,Ny, bcx, bcy, get_perp_comm());
         constructPerp( g);
         constructParallel(this->Nz());
     }
@@ -126,19 +119,12 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
     }
     private:
     virtual perpendicular_grid* do_perp_grid() const { return new perpendicular_grid(*this);}
-    MPI_Comm get_perp_comm( MPI_Comm src)
-    {
-        MPI_Comm planeComm;
-        int remain_dims[] = {true,true,false}; //true true false
-        MPI_Cart_sub( src, remain_dims, &planeComm);
-        return planeComm;
-    }
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)
     {
         dg::aMPITopology3d::do_set(new_n, new_Nx, new_Ny, new_Nz);
         if( !( new_n == n() && new_Nx == global().Nx() && new_Ny == global().Ny() ) )
         {
-            CurvilinearMPIGrid2d g(handle_.get(),new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), get_perp_comm(communicator()));
+            CurvilinearMPIGrid2d g(handle_.get(),new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), get_perp_comm());
             constructPerp( g);
         }
         constructParallel(this->Nz());
@@ -203,7 +189,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
 };
 ///@cond
 CurvilinearMPIGrid2d::CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g):
-    dg::aMPIGeometry2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_perp_comm( g.communicator() )),
+    dg::aMPIGeometry2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_perp_comm( )),
     handle_(g.generator())
 {
     map_=g.map();

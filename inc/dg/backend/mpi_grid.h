@@ -184,9 +184,9 @@ struct aMPITopology2d
     MPI_Comm communicator() const{return comm;}
 
     /**
-     * @brief The data of dlt
+     * @brief The Discrete Legendre Transformation 
      *
-     * @return 
+     * @return DLT corresponding to n given in the constructor
      */
     const DLT<double>& dlt() const{return g.dlt();}
 
@@ -530,14 +530,24 @@ struct aMPITopology3d
     bc bcz() const {return g.bcz();}
     /**
      * @brief Return mpi cartesian communicator that is used in this grid
-     *
      * @return Communicator
      */
     MPI_Comm communicator() const{return comm;}
     /**
-     * @brief The data of dlt
+     * @brief MPI Cartesian communicator in the first two dimensions
+     * @return 2d Cartesian Communicator
+     */
+    MPI_Comm get_perp_comm() const
+    {
+        MPI_Comm planeComm;
+        int remain_dims[] = {true,true,false}; //true true false
+        MPI_Cart_sub( comm, remain_dims, &planeComm);
+        return planeComm;
+    }
+    /**
+     * @brief The Discrete Legendre Transformation 
      *
-     * @return 
+     * @return DLT corresponding to n given in the constructor
      */
     const DLT<double>& dlt() const{return g.dlt();}
     /**

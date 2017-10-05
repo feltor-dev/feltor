@@ -602,7 +602,7 @@ container FieldAligned<G, I,container>::evaluate( const BinaryOp& binary, const 
         {
             dg::blas1::copy( init2d, tempP);
             dg::blas1::copy( init2d, tempM);
-            unsigned rep = i0 + r*Nz_;
+            unsigned rep = i0 + r*m_Nz;
             for(unsigned k=0; k<rep; k++)
             {
                 dg::blas2::symv( plus, tempP, temp);
@@ -625,7 +625,7 @@ container FieldAligned<G, I,container>::evaluate( const BinaryOp& binary, const 
                 result[i0] = plus2d[idx];
             else
                 result[i0] = minus2d[abs(idx)];
-            thrust::copy( result[i0].begin(), result[i0].end(), vec3d.begin() + i0*perp_size_);
+            thrust::copy( result[i0].begin(), result[i0].end(), vec3d.begin() + i0*m_perp_size);
         }
     }
     else //sum up plus2d and minus2d
@@ -640,7 +640,7 @@ container FieldAligned<G, I,container>::evaluate( const BinaryOp& binary, const 
         for(unsigned i0=0; i0<m_Nz; i0++)
         {
             int idx = ((int)i0 -(int)p0 + m_Nz)%m_Nz; //shift index
-            thrust::copy( result[idx].begin(), result[idx].end(), vec3d.begin() + i0*perp_size_);
+            thrust::copy( result[idx].begin(), result[idx].end(), vec3d.begin() + i0*m_perp_size);
         }
     }
     return vec3d;

@@ -103,22 +103,10 @@ struct FieldAligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
 
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
     {
+        dg::split( global, m_temp);
+        dg::blas1::axpby( scal_left, m_temp[0],               0., m_left);
+        dg::blas1::axpby( scal_right, m_temp[m_g.get().Nz()], 0., m_left);
         m_bcz = bcz;
-        unsigned size = m_g.n()*m_g.n()*m_g.Nx()*m_g.Ny();
-        if( m_g.z0() == m_g.global().z0())
-        {
-            cView left( global.data().cbegin(), global.data().cbegin() + size);
-            View leftView( left_.begin(), left_.end());
-            cusp::copy( left, leftView);
-            dg::blas1::scal( left_, scal_left);
-        }
-        if( g_.z1() == g_.global().z1())
-        {
-            cView right( global.data().cbegin()+(g_.Nz()-1)*size, global.data().cbegin() + g_.Nz()*size);
-            View rightView( right_.begin(), right_.end());
-            cusp::copy( right, rightView);
-            dg::blas1::scal( right_, scal_right);
-        }
     }
 
     template< class BinaryOp>
@@ -248,76 +236,66 @@ MPI_Vector<container> FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::e
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
     assert( g_.Nz() > 1);
-    assert( p0 < g_.global().Nz());
-    const typename G::perpendicular_grid g2d = g_.perp_grid();
-    MPI_Vector<container> init2d = dg::pullback( binary, g2d); 
-    container temp(init2d.data()), tempP(init2d.data()), tempM(init2d.data());
-    MPI_Vector<container> vec3d = dg::evaluate( dg::zero, g_);
-    std::vector<container>  plus2d( g_.global().Nz(), (container)dg::evaluate(dg::zero, g2d.local()) ), minus2d( plus2d), result( plus2d);
-    container tXYplus( tempXYplus_[0]), tXYminus( tempXYminus_[0]);
+    assert( p0 < m_g.get().global().Nz());
+    const aGeometry2d* g2d_ptr = m_g.get().perp_grid();
+    MPI_Vector<container> init2d = dg::pullback( binary, *g2d_perp); 
+
+    MPI_Vector<container> temp(init2d), tempP(init2d), tempM(init2d);
+    MPI_Vector<container> vec3d = dg::evaluate( dg::zero, m_g.get());
+    std::vector<MPI_Vector<container> >  plus2d, minus2d, result;
+    dg.:split( vec3d, plus2d);
+    dg.:split( vec3d, minus2d);
+    dg.:split( vec3d, result);
     unsigned turns = rounds; 
     if( turns ==0) turns++;
     //first apply Interpolation many times, scale and store results
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( g_.communicator(), 3, dims, periods, coords);
-        int sizeXY = dims[0]*dims[1];
     for( unsigned r=0; r<turns; r++)
-        for( unsigned i0=0; i0<g_.global().Nz(); i0++)
+        for( unsigned i0=0; i0<m_g.get().global().Nz(); i0++)
         {
-            dg::blas1::copy( init2d.data(), tempP);
-            dg::blas1::copy( init2d.data(), tempM);
-            unsigned rep = i0 + r*g_.global().Nz(); 
+            dg::blas1::copy( init2d, tempP);
+            dg::blas1::copy( init2d, tempM);
+            unsigned rep = i0 + r*m_g.get().global().Nz(); 
             for(unsigned k=0; k<rep; k++)
             {
-                if( sizeXY != 1){
-                    dg::blas2::symv( plus, tempP, tXYplus);
-                    commXYplus_.global_scatter_reduce( tXYplus, temp);
-                }
-                else
-                    dg::blas2::symv( plus, tempP, temp);
+                dg::blas2::symv( plus, tempP, temp);
                 temp.swap( tempP);
-                if( sizeXY != 1){
-                    dg::blas2::symv( minus, tempM, tXYminus);
-                    commXYminus_.global_scatter_reduce( tXYminus, temp);
-                }
-                else
-                    dg::blas2::symv( minus, tempM, temp);
+                dg::blas2::symv( minus, tempM, temp);
                 temp.swap( tempM);
             }
-            dg::blas1::scal( tempP, unary(  (double)rep*g_.hz() ) );
-            dg::blas1::scal( tempM, unary( -(double)rep*g_.hz() ) );
+            dg::blas1::scal( tempP, unary(  (double)rep*m_g.get().hz() ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*m_g.get().hz() ) );
             dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
             dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
         }
     //now we have the plus and the minus filaments
     if( rounds == 0) //there is a limiter
     {
-        for( unsigned i0=0; i0<g_.Nz(); i0++)
+        for( unsigned i0=0; i0<m_g.get().global().Nz(); i0++)
         {
-            int idx = (int)(i0+coords[2]*g_.Nz())  - (int)p0;
+            int idx = (int)(i0+coords[2]*m_g.get().Nz())  - (int)p0;
             if(idx>=0)
                 result[i0] = plus2d[idx];
             else
                 result[i0] = minus2d[abs(idx)];
-            thrust::copy( result[i0].begin(), result[i0].end(), vec3d.data().begin() + i0*g2d.size());
+            thrust::copy( result[i0].data().begin(), result[i0].data().end(), vec3d.data().begin() + i0*g2d_ptr->size());
         }
     }
     else //sum up plus2d and minus2d
     {
         for( unsigned i0=0; i0<g_.global().Nz(); i0++)
         {
-            //int idx = (int)(i0+coords[2]*g_.Nz());
-            unsigned revi0 = (g_.global().Nz() - i0)%g_.global().Nz(); //reverted index
+            unsigned revi0 = (m_g.get().global().Nz() - i0)%m_g.get().global().Nz(); //reverted index
             dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
             dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
         }
-        dg::blas1::axpby( -1., init2d.data(), 1., result[0]);
+        dg::blas1::axpby( -1., init2d, 1., result[0]);
         for(unsigned i0=0; i0<g_.Nz(); i0++)
         {
-            int idx = ((int)i0 + coords[2]*g_.Nz() -(int)p0 + g_.global().Nz())%g_.global().Nz(); //shift index
-            thrust::copy( result[idx].begin(), result[idx].end(), vec3d.data().begin() + i0*g2d.size());
+            int idx = ((int)i0 + coords[2]*g_.Nz() -(int)p0 + m_g.get().global().Nz())%m_g.get().global().Nz(); //shift index
+            thrust::copy( result[idx].data().begin(), result[idx].data().end(), vec3d.data().begin() + i0*g2d_ptr->size());
         }
     }
+    delete g2d_ptr;
     return vec3d;
 }
 

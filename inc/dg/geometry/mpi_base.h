@@ -205,15 +205,8 @@ struct CartesianMPIGrid3d : public aProductMPIGeometry3d
     }
 
     private:
-    MPI_Comm get_perp_comm( MPI_Comm src) const
-    {
-        MPI_Comm planeComm;
-        int remain_dims[] = {true,true,false}; //true true false
-        MPI_Cart_sub( src, remain_dims, &planeComm);
-        return planeComm;
-    }
     virtual CartesianMPIGrid2d* do_perp_grid()const{ 
-        return new CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( communicator() ));
+        return new CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( ));
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
         aMPITopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
@@ -249,14 +242,7 @@ struct CylindricalMPIGrid3d: public aProductMPIGeometry3d
     }
     private:
     virtual CartesianMPIGrid2d* do_perp_grid()const{ 
-        return new CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( communicator() ));
-    }
-    MPI_Comm get_perp_comm( MPI_Comm src) const
-    {
-        MPI_Comm planeComm;
-        int remain_dims[] = {true,true,false}; 
-        MPI_Cart_sub( src, remain_dims, &planeComm);
-        return planeComm;
+        return new CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( ));
     }
     virtual SparseTensor<host_vector > do_compute_metric()const{
         SparseTensor<host_vector> metric(1);
