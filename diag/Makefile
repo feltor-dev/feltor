@@ -33,6 +33,8 @@ vmaxnc: vmaxnc.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) 
 fftwdiag: fftwdiag.cpp
 	$(CC) $(OPT) $(CFLAGS) -std=c++0x $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -I$(HOME)/include/spectral -lfftw3  -DTL_DEBUG -g
+growthrate: growthrate.cpp
+	$(CC) $(OPT) $(CFLAGS) -std=c++0x $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -I$(HOME)/include/spectral -lfftw3  -DTL_DEBUG -g
 histdiag: histdiag.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) -DDG_DEBUG -g
 compare: compare.cpp
@@ -47,7 +49,11 @@ feltorShwmerger: feltorShwmerger.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
 feltorShwstat: feltorShwstat.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
+feltorShwradstat: feltorShwradstat.cpp
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
+
 .PHONY: clean
 
 clean:
 	rm -f $(TARGETS)
+
