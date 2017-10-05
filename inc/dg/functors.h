@@ -422,6 +422,60 @@ struct SinXSinY
     double amp_,bamp_,kx_,ky_;
 };
 /**
+ * @brief Functor for a cos prof in x and y-direction
+ * \f[ f(x,y) =B+ A cos(k_x x) cos(k_y y) \f]
+ */
+struct CosXCosY
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     * @param ky  ky
+     */
+    CosXCosY( double amp, double bamp, double kx, double ky):amp_(amp), bamp_(bamp),kx_(kx),ky_(ky){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y){ return bamp_+amp_*cos(x*kx_)*cos(y*ky_);}
+  private:
+    double amp_,bamp_,kx_,ky_;
+};
+/**
+ * @brief Functor for a sin prof in x- and and cos prof in  y-direction
+ * \f[ f(x,y) =B+ A sin(k_x x) cos(k_y y) \f]
+ */
+struct SinXCosY
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     * @param ky  ky
+     */
+    SinXCosY( double amp, double bamp, double kx, double ky):amp_(amp), bamp_(bamp),kx_(kx),ky_(ky){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y){ return bamp_+amp_*sin(x*kx_)*cos(y*ky_);}
+  private:
+    double amp_,bamp_,kx_,ky_;
+};
+/**
  * @brief Functor for a sin prof in x-direction
  * \f[ f(x,y) =B+ A sin(k_x x) \f]
  */
