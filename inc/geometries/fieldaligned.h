@@ -423,7 +423,13 @@ struct FieldAligned
      * @param scal_left left scaling factor
      * @param scal_right right scaling factor
      */
-    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right);
+    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
+    {
+        dg::split( global, m_temp);
+        dg::blas1::axpby( scal_left,  m_temp[0],      0, m_left);
+        dg::blas1::axpby( scal_right, m_temp[m_Nz-1], 0, m_right);
+        m_bcz = bcz;
+    }
 
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
@@ -437,7 +443,10 @@ struct FieldAligned
      * @return Returns an instance of container
      */
     template< class BinaryOp>
-    container evaluate( const BinaryOp& f, unsigned plane=0) const;
+    container evaluate( const BinaryOp& f, unsigned plane=0) const
+    {
+        return evaluate( binary, dg::CONSTANT(1), p0, 0);
+    }
 
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
@@ -559,22 +568,6 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     dg::blas1::scal( hm_, -1.);
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
     delete grid2d_ptr;
-}
-
-template<class G, class I, class container>
-void FieldAligned<G, I,container>::set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
-{
-    dg::split( global, m_temp);
-    dg::blas1::axpby( scal_left,  m_temp[0],      0, m_left);
-    dg::blas1::axpby( scal_right, m_temp[m_Nz-1], 0, m_right);
-    m_bcz = bcz;
-}
-
-template< class G, class I, class container>
-template< class BinaryOp>
-container FieldAligned<G, I,container>::evaluate( BinaryOp binary, unsigned p0) const
-{
-    return evaluate( binary, dg::CONSTANT(1), p0, 0);
 }
 
 template<class G, class I, class container>

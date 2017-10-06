@@ -30,6 +30,10 @@
  *   and profiles are added to the dg::geo namespace
  * - there are some miscellaneous additions like a flux surface average class
  * and one used to integrate the field lines for parallel derivatives all in the dg::geo namespace.
+ * @subsection pdf PDF writeups
+ * 
+ * We have a collection of writeups: 
+ *  - The parallel derivative <a href="./parallel.pdf" target="_blank">parallel derivative</a>
  */
  /** @class hide_container
   * @tparam container 
