@@ -336,6 +336,16 @@ struct MatrixTraits<const MPIDistMat<L, C> >
     typedef typename MatrixTraits<L>::value_type value_type;//!< value type
     typedef MPIMatrixTag matrix_category; //!< 
 };
+namespace detail
+{
+template <class Matrix, class Collective>
+MPIDistMat<Matrix, Collective> doTranspose( const MPIDistMat<Matrix, Collective>& src, MPIMatrixTag)
+{
+    Matrix tr = doTranspose( src.matrix(), typename MatrixTraits<Matrix>::matrix_category());
+    MPIDistMat<Matrix, Collective> out( tr, src.collective());
+    return out;
+}
+} //namespace detail
 ///@endcond
 
 

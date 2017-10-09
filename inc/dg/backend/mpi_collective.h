@@ -361,11 +361,11 @@ struct GeneralComm : public aCommunicator<Vector>
     /**
     * @brief Construct from local indices and PIDs gather map
     *
-    * The indices in the gather map is written with respect to the buffer vector (unlike in BijectiveComm, where it is given wrt the source vector) 
-    * @param localGatherMap The gather map containing local vector indices ( local buffer size)
-    * @param pidGatherMap The gather map containing the pids from where to gather the local index.
-    Same size as localGatherMap.
-     *   The rank needs to be element of the given communicator.
+    * The indices in the gather map are written with respect to the buffer vector (unlike in BijectiveComm, where it is given wrt the source vector).
+    * Each location in the source vector is uniquely specified by a local vector index and the process rank. 
+    * @param localGatherMap Each element localGatherMap[i] represents a local vector index from where to gather the value. There are "local buffer size" elements.
+    * @param pidGatherMap Each element pidGatherMap[i] represents the pid/rank from where to gather the corresponding local index localGatherMap[i].  Same size as localGatherMap.
+     *   The pid/rank needs to be element of the given communicator.
     * @param comm The MPI communicator participating in the scatter/gather operations
     */
     GeneralComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm) {
@@ -383,7 +383,7 @@ struct GeneralComm : public aCommunicator<Vector>
      *
      * Uses the global2localIdx() member of MPITopology to generate localGatherMap and pidGatherMap 
      * @tparam MPITopology any implementation of an MPI Topology (aMPITopology2d, aMPITopology3d, ...)
-     * @param globalGatherMap The gather map containing global vector indices (local buffer size)
+     * @param globalGatherMap Each element globalGatherMap[i] represents a global vector index from where to take the value. There are "local buffer size" elements.
      * @param g a grid object
      */
     template<class MPITopology>
@@ -439,25 +439,4 @@ struct GeneralComm : public aCommunicator<Vector>
     Index scatterMap_;
 };
 
-
-//given global indices -> make a sorted unique indices vector -> make a gather map into the unique vector
-void global2bufferIdx( const thrust::host_vector<int>& global_idx, thrust::host_vector<int>& idx_in_buffer, thrust::host_vector<int>& unique_global_idx)
-{
-    thrust::host_vector<int> copy(global_idx);
-    thrust::host_vector<int> index(copy);
-    thrust::sequence( index.begin(), index.end());
-    thrust::stable_sort_by_key( copy.begin(), copy.end(), index.begin());//note: this also sorts the pids
-    thrust::host_vector<int> ones( index.size(), 1);
-    thrust::host_vector<int> unique_global( index.size()), howmany( index.size());
-    thrust::pair<int*, int*> new_end;
-    new_end = thrust::reduce_by_key( copy.begin(), copy.end(), ones.begin(), unique_global.begin(), howmany.begin());
-    unique_global_idx.assign( unique_global.begin(), new_end.first);
-    thrust::host_vector<int> gather_map;
-    for( int i=0; i<unique_global_idx.size(); i++)
-        for( int j=0; j<howmany[i]; j++)
-            gather_map.append(i );
-    assert( gather_map.size() == global_idx.size());
-    idx_in_buffer.resize( global_idx.size());
-    thrust::scatter( gather_map.begin(), gather_map.end(), index.begin(), idx_in_buffer.begin());
-}
 }//namespace dg
