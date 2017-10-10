@@ -10,6 +10,7 @@
 #include "dg/backend/functions.h"
 #include "dg/backend/typedefs.cuh"
 #include "dg/backend/split_and_join.h"
+#include "dg/backend/transpose.h"
 
 #include "dg/geometry/geometry.h"
 #include "dg/functors.h"
@@ -550,8 +551,8 @@ FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVe
     t.toc();
     std::cout<< "Multiplication of P*I took: "<<t.diff()<<"s\n";
     //%Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
-    cusp::transpose( plus, plusT);
-    cusp::transpose( minus, minusT);     
+    dg::transpose( plus, plusT);
+    dg::transpose( minus, minusT);     
     dg::blas2::transfer( plus, m_plus);
     dg::blas2::transfer( plusT, m_plusT);
     dg::blas2::transfer( minus, m_minus);

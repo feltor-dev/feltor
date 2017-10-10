@@ -452,22 +452,6 @@ struct aTopology3d
 {
     typedef SharedTag memory_category;
     typedef ThreeDimensionalTag dimensionality;
-    ///@copydoc aTopology2d::multiplyCellNumbers()
-    void multiplyCellNumbers( double fx, double fy){
-        set(n(), round(fx*(double)Nx()), round(fy*(double)Ny()), Nz());
-    }
-    /**
-    * @brief Set the number of polynomials and cells
-    *
-    * @param new_n new number of %Gaussian nodes
-    * @param new_Nx new number of cells in x 
-    * @param new_Ny new number of cells in y
-    * @param new_Nz new number of cells in z
-    */
-    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        if(!( new_n==n() && new_Nx ==Nx() && new_Ny == Ny() && new_Nz==Nz())) 
-            do_set(new_n,new_Nx,new_Ny,new_Nz);
-    }
 
     /**
      * @brief left boundary in x
@@ -665,6 +649,22 @@ struct aTopology3d
         if( gx_.contains(x) && gy_.contains(y) && gz_.contains(z)) 
             return true; 
         return false;
+    }
+    ///@copydoc aTopology2d::multiplyCellNumbers()
+    void multiplyCellNumbers( double fx, double fy){
+        set(n(), round(fx*(double)Nx()), round(fy*(double)Ny()), Nz());
+    }
+    /**
+    * @brief Set the number of polynomials and cells
+    *
+    * @param new_n new number of %Gaussian nodes
+    * @param new_Nx new number of cells in x 
+    * @param new_Ny new number of cells in y
+    * @param new_Nz new number of cells in z
+    */
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+        if(!( new_n==n() && new_Nx ==Nx() && new_Ny == Ny() && new_Nz==Nz())) 
+            do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
     protected:
     ///disallow deletion through base class pointer

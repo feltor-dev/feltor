@@ -84,6 +84,10 @@ inline void doSymv( Matrix& m,
                     ThrustVectorTag  )
 {
 #ifdef DG_DEBUG
+    std::cout << "num rows "<<m.num_rows<<std::endl;
+    std::cout << "num rows "<<y.size()<<std::endl;
+    std::cout << "num cols "<<m.num_cols<<std::endl;
+    std::cout << "num cols "<<x.size()<<std::endl;
     assert( m.num_rows == y.size() );
     assert( m.num_cols == x.size() );
 #endif //DG_DEBUG

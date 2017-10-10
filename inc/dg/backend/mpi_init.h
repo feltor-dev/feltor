@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 
 /*!@file
 @brief convenience mpi init functions
@@ -16,13 +17,14 @@ namespace dg
 * Also sets the GPU a process should use in case THRUST_DEVICE_SYSTEM_CUDA
 * @param bcx if bcx==dg::PER then the communicator is periodic in x 
 * @param bcy if bcy==dg::PER then the communicator is periodic in y 
-* @param n read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
-* @param Nx read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
-* @param Ny read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
+* @param n read in from is and broadcasted to all processes in MPI_COMM_WORLD
+* @param Nx read in from is and broadcasted to all processes in MPI_COMM_WORLD
+* @param Ny read in from is and broadcasted to all processes in MPI_COMM_WORLD
 * @param comm (write only) a 2d Cartesian MPI communicator
+* @param is Input stream to read parameters from (npx, npy, n, Nx, Ny)
 * @ingroup misc
 */
-void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm  )
+void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm, std::istream& is = std::cin  )
 {
     int periods[2] = {false,false};
     if( bcx == dg::PER) periods[0] = true;
@@ -35,7 +37,7 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
     if( rank == 0)
     {
         std::cout << "Type npx and npy\n";
-        std::cin >> np[0] >> np[1];
+        is >> np[0] >> np[1];
         std::cout<< "Computing with "<<np[0] <<" x "<<np[1]<<" = "<<size<<" processes! "<<std::endl;
         assert( size == np[0]*np[1]);
     }
@@ -44,7 +46,7 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
     if( rank == 0)
     {
         std::cout << "Type n, Nx and Ny\n";
-        std::cin >> n >> Nx >> Ny;
+        is >> n >> Nx >> Ny;
         std::cout<< "On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, comm);
@@ -72,14 +74,15 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
 * @param bcx if bcx==dg::PER then the communicator is periodic in x 
 * @param bcy if bcy==dg::PER then the communicator is periodic in y 
 * @param bcz if bcz==dg::PER then the communicator is periodic in z 
-* @param n read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
-* @param Nx read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
-* @param Ny read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
-* @param Nz read in from std::cin and broadcasted to all processes in MPI_COMM_WORLD
+* @param n read in from is and broadcasted to all processes in MPI_COMM_WORLD
+* @param Nx read in from is and broadcasted to all processes in MPI_COMM_WORLD
+* @param Ny read in from is and broadcasted to all processes in MPI_COMM_WORLD
+* @param Nz read in from is and broadcasted to all processes in MPI_COMM_WORLD
 * @param comm (write only) a 3d Cartesian MPI communicator
+* @param is Input stream to read parameters from (npx, npy, npz, n, Nx, Ny, Nz)
 * @ingroup misc
 */
-void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm  )
+void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm, std::istream& is = std::cin  )
 {
     int periods[3] = {false,false, false};
     if( bcx == dg::PER) periods[0] = true;
@@ -92,7 +95,7 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, 
     if( rank == 0)
     {
         std::cout << "Type npx and npy and npz\n";
-        std::cin >> np[0] >> np[1]>>np[2];
+        is >> np[0] >> np[1]>>np[2];
         std::cout<< "Computing with "<<np[0] <<" x "<<np[1]<<" x "<<np[2]<<" = "<<size<<" processses! "<<std::endl;
         assert( size == np[0]*np[1]*np[2]);
     }
@@ -101,7 +104,7 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, 
     if( rank == 0)
     {
         std::cout << "Type n, Nx and Ny and Nz\n";
-        std::cin >> n >> Nx >> Ny >> Nz;
+        is >> n >> Nx >> Ny >> Nz;
         std::cout<< "On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);

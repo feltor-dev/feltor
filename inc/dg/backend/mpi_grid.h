@@ -39,26 +39,6 @@ struct aMPITopology2d
     typedef MPITag memory_category;
     typedef TwoDimensionalTag dimensionality;
 
-    /**
-    * @brief Multiply the number of cells with a given factor
-    *
-    * With this function you can resize the grid ignorantly of its current size
-    * @param fx new global number of cells is fx*global().Nx()
-    * @param fy new global number of cells is fy*global().Ny()
-    */
-    void multiplyCellNumbers( double fx, double fy){
-        set(g.n(), floor(fx*(double)g.Nx()+0.5), floor(fy*(double)g.Ny()+0.5));
-    }
-    /**
-    * @copydoc Grid2d::set(unsigned,unsigned,unsigned)
-    * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny()) is NOT(!) what you want
-    *           use the multiplyCellNumbers function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny())
-    */
-    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
-        check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
-        if( new_n == g.n() && new_Nx == g.Nx() && new_Ny == g.Ny()) return;
-        do_set( new_n,new_Nx,new_Ny);
-    }
 
     /**
      * @brief Return local x0
@@ -225,6 +205,27 @@ struct aMPITopology2d
     int pidOf( double x, double y) const;
 
     /**
+    * @brief Multiply the number of cells with a given factor
+    *
+    * With this function you can resize the grid ignorantly of its current size
+    * @param fx new global number of cells is fx*global().Nx()
+    * @param fy new global number of cells is fy*global().Ny()
+    */
+    void multiplyCellNumbers( double fx, double fy){
+        set(g.n(), floor(fx*(double)g.Nx()+0.5), floor(fy*(double)g.Ny()+0.5));
+    }
+    /**
+    * @copydoc Grid2d::set(unsigned,unsigned,unsigned)
+    * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny()) is NOT(!) what you want
+    *           use the multiplyCellNumbers function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny())
+    */
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+        check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
+        if( new_n == g.n() && new_Nx == g.Nx() && new_Ny == g.Ny()) return;
+        do_set( new_n,new_Nx,new_Ny);
+    }
+
+    /**
     * @brief Map a local index plus the PID to a global vector index
     *
     * @param localIdx a local vector index
@@ -356,20 +357,6 @@ struct aMPITopology3d
 {
     typedef MPITag memory_category;
     typedef ThreeDimensionalTag dimensionality;
-    ///@copydoc aMPITopology2d::multiplyCellNumbers()
-    void multiplyCellNumbers( double fx, double fy){
-        set(g.n(), round(fx*(double)g.Nx()), round(fy*(double)g.Ny()), g.Nz());
-    }
-    /**
-     * @copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
-     * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny(), 2*g.Nz()) is NOT(!) what you want
-     *           use the multiplyCellNumbers function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny(), 2*g.global().Nz())
-     */
-    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());
-        if( new_n == g.n() && new_Nx == g.Nx() && new_Ny == g.Ny() && new_Nz == g.Nz()) return;
-        do_set(new_n,new_Nx,new_Ny,new_Nz);
-    }
 
 
     /**
@@ -581,6 +568,20 @@ struct aMPITopology3d
      * @return pid of a process, or -1 if non of the grids matches
      */
     int pidOf( double x, double y, double z) const;
+    ///@copydoc aMPITopology2d::multiplyCellNumbers()
+    void multiplyCellNumbers( double fx, double fy){
+        set(g.n(), round(fx*(double)g.Nx()), round(fy*(double)g.Ny()), g.Nz());
+    }
+    /**
+     * @copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
+     * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny(), 2*g.Nz()) is NOT(!) what you want
+     *           use the multiplyCellNumbers function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny(), 2*g.global().Nz())
+     */
+    void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+        check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());
+        if( new_n == g.n() && new_Nx == g.Nx() && new_Ny == g.Ny() && new_Nz == g.Nz()) return;
+        do_set(new_n,new_Nx,new_Ny,new_Nz);
+    }
     ///@copydoc aMPITopology2d::local2globalIdx(int,int,int&)const
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {

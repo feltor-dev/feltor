@@ -136,6 +136,16 @@ struct aCommunicator
     */
     unsigned size() const{return do_size();}
     /**
+     * @brief True if the gather/scatter operation involves actual MPI communication
+     *
+     * This test can be used to avoid the gather operation alltogether in e.g. the construction of a MPI distributed matrix.
+     * @return False, if the global gather can be done without MPI communication (i.e. the indices are all local to each calling process). True else. 
+     */
+    bool isCommunicating() const{ 
+        if( do_size() == 0) return false;
+        return do_isCommunicating();
+    }
+    /**
     * @brief The internal MPI communicator used 
     *
     * e.g. used to assert that communicators of matrix and vector are the same
@@ -163,6 +173,9 @@ struct aCommunicator
     virtual LocalContainer do_make_buffer( )const=0;
     virtual void do_global_gather( const LocalContainer& values, LocalContainer& gathered)const=0;
     virtual void do_global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const=0;
+    virtual bool do_isCommunicating( ) const {
+        return true;
+    }
 };
 
 

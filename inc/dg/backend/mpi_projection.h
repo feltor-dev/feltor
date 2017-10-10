@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cusp_matrix_blas.cuh"
+#include "mpi_grid.h"
 #include "mpi_matrix.h"
 #include "mpi_vector.h"
 #include "mpi_collective.h"
@@ -23,20 +25,21 @@ namespace detail{
 //given global indices -> make a sorted unique indices vector -> make a gather map into the unique vector
 //buffer_idx -> (gather map/ new column indices) same size as global_idx ( can alias global_idx
 //unique_global_idx -> (idx to be used in a Collective Communication object)
-void global2bufferIdx( cusp::array1d<int, cusp::host_memory>& global_idx, cusp::array1d<int, cusp::host_memory>& buffer_idx, thrust::host_vector<int>& unique_global_idx)
+void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& locally_global_idx, cusp::array1d<int, cusp::host_memory>& buffer_idx, thrust::host_vector<int>& unique_global_idx)
 {
-    thrust::host_vector<int> index(global_idx_begin, global_idx_end);
+    thrust::host_vector<int> index(locally_global_idx.begin(), locally_global_idx.end()), global_idx(index);
     thrust::sequence( index.begin(), index.end());
-    thrust::stable_sort_by_key( global_idx.begin(), global_idx.end(), index.begin());
+    thrust::stable_sort_by_key( global_idx.begin(), global_idx.end(), index.begin());//this changes both global_idx and index
     thrust::host_vector<int> ones( index.size(), 1);
     thrust::host_vector<int> unique_global( index.size()), howmany( index.size());
-    thrust::pair<int*, int*> new_end;
+    typedef typename thrust::host_vector<int>::iterator iterator;
+    thrust::pair<iterator, iterator> new_end;
     new_end = thrust::reduce_by_key( global_idx.begin(), global_idx.end(), ones.begin(), unique_global.begin(), howmany.begin());
     unique_global_idx.assign( unique_global.begin(), new_end.first);
     thrust::host_vector<int> gather_map;
-    for( int i=0; i<unique_global_idx.size(); i++)
+    for( int i=0; i<(int)unique_global_idx.size(); i++)
         for( int j=0; j<howmany[i]; j++)
-            gather_map.append(i );
+            gather_map.push_back(i);
     assert( gather_map.size() == global_idx.size());
     buffer_idx.resize( global_idx.size());
     thrust::scatter( gather_map.begin(), gather_map.end(), index.begin(), buffer_idx.begin());
@@ -84,25 +87,34 @@ dg::MIHMatrix projection( const aMPITopology3d& g_new, const aMPITopology3d& g_o
 }
 
 /**
- * @brief Convert a matrix with global indices to a row distributed MPI matrix
+ * @brief Convert a matrix with local row and global column indices to a row distributed MPI matrix
  *
+ * Checks if communication is actually needed
  * @param global the column indices need to be global, the row indices local
  * @param topology the topology defines how the indices are converted from global to local
  *
- * @return 
+ * @return a row distributed MPI matrix
  */
-dg::MIHMatrix convert( const dg::IHMatrix& global, const aMPITopology2d& topology) 
+dg::MIHMatrix convert_row_dist( const dg::IHMatrix& global, const aMPITopology2d& topology) 
 {
     dg::iHVec unique_global_idx;
     cusp::array1d<int, cusp::host_memory> buffer_idx;
     dg::detail::global2bufferIdx( global.column_indices, buffer_idx, unique_global_idx);
-
-    dg::IHMatrix local( global.num_rows, topology.size(), global.num_values);
+    dg::GeneralComm<dg::iHVec, dg::HVec> comm( unique_global_idx, topology);
+    dg::IHMatrix local( global.num_rows, topology.size(), global.values.size());
     local.row_offsets=global.row_offsets;
     local.column_indices=buffer_idx;
     local.values=global.values;
-
-    dg::GeneralComm<dg::iHVec, dg::HVec> comm( unique_global_idx, topology);
+    if( !comm.isCommunicating() ) 
+    {
+        cusp::array1d<int, cusp::host_memory> local_idx(global.column_indices), pids(local_idx);
+        bool success = true;
+        for(unsigned i=0; i<local_idx.size(); i++)
+            if( !topology.global2localIdx(global.column_indices[i], local_idx[i], pids[i]) ) success = false;
+        assert( success);
+        local.column_indices=local_idx;
+        comm = dg::GeneralComm< dg::iHVec, dg::HVec>();
+    }
     dg::MIHMatrix matrix(   local, comm, dg::row_dist);
     return matrix;
 }
@@ -113,10 +125,10 @@ dg::MIHMatrix convert( const dg::IHMatrix& global, const aMPITopology2d& topolog
  *
  * @copydetails interpolation(const thrust::host_vector<double>&,const thrust::host_vector<double>&,const aTopology2d&,dg::bc,dg::bc)
  */
-dg::MIHMatrix interpolation( const MPI_Vector<dg::HVec>& x, const MPI_Vector<dg::HVec>& y, const aMPITopology2d& grid, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
+dg::MIHMatrix interpolation( const dg::HVec& x, const dg::HVec& y, const aMPITopology2d& grid, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    return convert(  
-            dg::create::interpolation( x.data(), y.data(), grid.global(), bcx, bcy), 
+    return convert_row_dist(  
+            dg::create::interpolation( x, y, grid.global(), bcx, bcy), 
             grid);
 }
 

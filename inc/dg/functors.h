@@ -396,7 +396,7 @@ struct GaussianZ
 };
 /**
  * @brief Functor for a sin prof in x and y-direction
- * \f[ f(x,y) =B+ A sin(k_x x) sin(k_y y) \f]
+ * \f[ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f]
  */
 struct SinXSinY
 {
@@ -423,7 +423,7 @@ struct SinXSinY
 };
 /**
  * @brief Functor for a cos prof in x and y-direction
- * \f[ f(x,y) =B+ A cos(k_x x) cos(k_y y) \f]
+ * \f[ f(x,y) =B+ A \cos(k_x x) \cos(k_y y) \f]
  */
 struct CosXCosY
 {
@@ -450,7 +450,7 @@ struct CosXCosY
 };
 /**
  * @brief Functor for a sin prof in x- and and cos prof in  y-direction
- * \f[ f(x,y) =B+ A sin(k_x x) cos(k_y y) \f]
+ * \f[ f(x,y) =B+ A \sin(k_x x) \cos(k_y y) \f]
  */
 struct SinXCosY
 {
@@ -477,7 +477,7 @@ struct SinXCosY
 };
 /**
  * @brief Functor for a sin prof in x-direction
- * \f[ f(x,y) =B+ A sin(k_x x) \f]
+ * \f[ f(x,y) =B+ A \sin(k_x x) \f]
  */
 struct SinX
 {

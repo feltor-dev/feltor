@@ -178,8 +178,10 @@ FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     t.toc();
     std::cout<< "Multiplication of P*I took: "<<t.diff()<<"s\n";
     //%Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
-    cusp::transpose( plus, plusT);
-    cusp::transpose( minus, minusT);     
+    dg::convert( plus, m_plus, *grid2d_ptr);
+    dg::convert( minus, m_minus, *grid2d_ptr);
+    dg::transpose( m_plus, m_plusT);
+    dg::transpose( m_minus, m_minusT);     
     dg::blas2::transfer( plus, m_plus);
     dg::blas2::transfer( plusT, m_plusT);
     dg::blas2::transfer( minus, m_minus);

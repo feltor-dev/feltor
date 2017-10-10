@@ -152,11 +152,11 @@ struct BijectiveComm : public aCommunicator<Vector>
     ///@copydoc GeneralComm::GeneralComm()
     BijectiveComm( ){ }
     /**
-     * @brief Construct from a given map with respect to the source/data vector
+     * @brief Construct from a given scatter map with respect to the source/data vector
      *
-     * @param pids Gives to every point of the values/data vector (not the buffer vector!) 
-     *   the rank to which to send this data element. 
-     *   The rank needs to be element of the given communicator.
+     * @param pids Gives to every index i of the values/data vector (not the buffer vector!) 
+     *   the rank pids[i] to which to send the data element data[i]. 
+     *   The rank pids[i] needs to be element of the given communicator.
      * @param comm An MPI Communicator that contains the participants of the scatter/gather
      * @note The actual scatter/gather map is constructed from the given map so the result behaves as if pids was the actual scatter/gather map on the buffer
      */
@@ -177,6 +177,15 @@ struct BijectiveComm : public aCommunicator<Vector>
     const thrust::host_vector<int>& get_pids()const{return pids_;}
     virtual BijectiveComm* clone() const {return new BijectiveComm(*this);}
     private:
+    bool do_isCommunicating() const{
+        int rank;
+        MPI_Comm_rank( do_communicator(), &rank);
+        bool communicating = false;
+        for( unsigned i=0; i<pids_.size(); i++)
+            if( pids_[i] != rank) 
+                communicating = true;
+        return communicating;
+    }
     MPI_Comm do_communicator() const {return p_.communicator();}
     unsigned do_size() const { return p_.store_size();}
     Vector do_make_buffer()const{ 
@@ -254,7 +263,9 @@ template< class Index, class Vector>
 struct SurjectiveComm : public aCommunicator<Vector>
 {
     ///@copydoc GeneralComm::GeneralComm()
-    SurjectiveComm(){}
+    SurjectiveComm(){
+        buffer_size_ = store_size_ = 0;
+    }
     ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const thrust::host_vector<int>&,MPI_Comm)
     ///@note we assume that the gather map is surjective
     SurjectiveComm( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
@@ -270,7 +281,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
         thrust::host_vector<int> local(globalGatherMap.size()), pids(globalGatherMap.size());
         bool success = true;
         for(unsigned i=0; i<local.size(); i++)
-            if( !g.global2localIdx(globalGatherMap[i], pids[i], local[i]) ) success = false;
+            if( !g.global2localIdx(globalGatherMap[i], local[i], pids[i]) ) success = false;
 
         assert( success);
         construct( local, pids, g.communicator());
@@ -290,6 +301,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
     const Index& getSortedGatherMap() const {return sortedGatherMap_;}
     virtual SurjectiveComm* clone() const {return new SurjectiveComm(*this);}
     private:
+    bool do_isCommunicating() const{ return bijectiveComm_.isCommunicating();}
     Vector do_make_buffer()const{
         Vector tmp(do_size());
         return tmp;
@@ -392,7 +404,7 @@ struct GeneralComm : public aCommunicator<Vector>
         thrust::host_vector<int> local(globalGatherMap.size()), pids(globalGatherMap.size());
         bool success = true;
         for(unsigned i=0; i<local.size(); i++)
-            if( !g.global2localIdx(globalGatherMap[i], pids[i], local[i]) ) success = false;
+            if( !g.global2localIdx(globalGatherMap[i], local[i], pids[i]) ) success = false;
         assert( success);
         construct( local, pids, g.communicator());
     }
@@ -403,6 +415,7 @@ struct GeneralComm : public aCommunicator<Vector>
     const thrust::host_vector<int>& getPidGatherMap() const {return surjectiveComm_.getPidGatherMap();}
     virtual GeneralComm* clone() const {return new GeneralComm(*this);}
     private:
+    bool do_isCommunicating() const{ return surjectiveComm_.isCommunicating();}
     Vector do_make_buffer() const{ 
         Vector tmp(do_size());
         return tmp;

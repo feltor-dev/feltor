@@ -1,5 +1,9 @@
 #ifndef _DG_TYPEDEFS_CUH_
 #define _DG_TYPEDEFS_CUH_
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include "sparseblockmat.h"
+#include "sparseblockmat.cuh"
 
 /*! @file
   @brief Useful typedefs of commonly used types.
@@ -21,6 +25,8 @@ typedef EllSparseBlockMatDevice<double> DMatrix; //!< Device Matrix for derivati
 typedef EllSparseBlockMat<double> HMatrix; //!< Host Matrix for derivatives
 
 #ifdef MPI_VERSION
+#include "mpi_vector.h"
+#include "mpi_matrix.h"
 //typedef MPI_Vector<thrust::device_vector<double> >  MDVec; //!< MPI Device Vector s.a. dg::DVec
 typedef MPI_Vector<dg::DVec >  MDVec; //!< MPI Device Vector s.a. dg::DVec
 typedef MPI_Vector<dg::HVec >  MHVec; //!< MPI Host Vector s.a. dg::HVec
