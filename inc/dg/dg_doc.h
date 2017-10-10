@@ -50,13 +50,13 @@
  *             The function discretisation routines compute the DG discretisation
  *             of analytic functions on a given grid. In 1D the discretisation
  *             simply consists of n function values per grid cell ( where n is the number
- *             of Legendre coefficients used; currently 1, 2, 3, 4 or 5) evaluated at
+ *             of Legendre coefficients used; currently 1 <= n <= 20 ) evaluated at
  *             the Gaussian abscissas in the respective cell. In 2D and 3D we simply 
  *             use the product space. We choose x to be the contiguous direction.
  *             The first elements of the resulting vector lie in the cell at (x0,y0) and the last
  *             in (x1, y1).
  *         @defgroup highlevel create weights 
- *              overloads for the create::weights and create::inv_weights functions for all
+ *              overloads for the dg::create::weights and dg::create::inv_weights functions for all
  *              available topologies
  *         @defgroup creation create derivatives 
  *

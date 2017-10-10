@@ -8,7 +8,6 @@
 
 double shift = 0.2;
 double function( double x, double y){ return sin(2*M_PI*x)*sin(2*M_PI*y);}
-double shifted_function(double x, double y){return function( x-shift, y-shift);}
 
 int main(int argc, char* argv[])
 {
@@ -28,7 +27,7 @@ int main(int argc, char* argv[])
     ss<< "2 2 3 8 8";
     mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm, ss);
     MPI_Comm_rank( comm, &rank);
-    if(rank==0) std::cout << "Test non-communicating MPI matrix-creation!\n";
+    if(rank==0) std::cout << "Test NON-COMMUNICATING MPI matrix-creation!\n";
     dg::MPIGrid2d g2d( 0,1,0,1, n,Nx,Ny, comm);
     dg::MPIGrid2d g2d_half = g2d;
     g2d_half.multiplyCellNumbers(0.5, 0.5);
@@ -36,7 +35,7 @@ int main(int argc, char* argv[])
     dg::HVec x = dg::evaluate( dg::cooX2d, g2d.local());
     dg::HVec y = dg::evaluate( dg::cooY2d, g2d.local());
     dg::IHMatrix global_projection = dg::create::interpolation( x,y, g2d_half.global());
-    dg::MIHMatrix converted_p = dg::create::convert_row_dist(global_projection, g2d_half);
+    dg::MIHMatrix converted_p = dg::convert_row_dist(global_projection, g2d_half);
 
     //now compare
     bool equal_cols=true, equal_rows=true, equal_values=true;
@@ -54,29 +53,33 @@ int main(int argc, char* argv[])
         std::cout << "SUCCESS from rank "<<rank<<"!\n";
 
     MPI_Barrier(comm);
-    if(rank==0) std::cout << "Now test communicating MPI matrix-creation!\n";
+    if(rank==0) std::cout << "Now test COMMUNICATING MPI matrix-creation!\n";
     x = dg::evaluate( dg::cooX2d, g2d.local());
     y = dg::evaluate( dg::cooY2d, g2d.local());
     for( unsigned i=0; i<x.size(); i++)
     {
-        x[i] -=shift;
-        y[i] -=shift;
+        x[i] +=shift;
+        y[i] +=shift;
         g2d.global().shift_topologic( x[i], y[i], x[i], y[i]);
     }
+    dg::IHMatrix  direct_i = dg::create::interpolation( x,y,g2d.global());
     dg::MIHMatrix converted_i = dg::create::interpolation( x,y,g2d);
     dg::MHVec sine = dg::evaluate( function, g2d); 
     dg::MHVec temp(sine);
-    dg::MHVec shifted_sine = dg::evaluate( shifted_function, g2d);
+    dg::HVec global_sine = dg::evaluate( function, g2d.global()); 
+    dg::HVec g_temp( x.size());
     converted_i.symv( sine, temp);
+    dg::blas2::detail::doSymv( direct_i, global_sine, g_temp, dg::CuspMatrixTag(), dg::ThrustVectorTag(), dg::ThrustVectorTag());
     //now compare
     bool success = true;
     for( unsigned i=0; i<temp.size(); i++)
-        if( temp.data()[i] - shifted_sine.data()[i] > 1e-14) 
+        if( temp.data()[i] - g_temp[i] > 1e-14) 
             success = false; 
     if( !success) 
         std::cout << "FAILED from rank "<<rank<<"!\n";
     else
         std::cout << "SUCCESS from rank "<<rank<<"!\n";
+    //Finally test transpose
 
     MPI_Finalize();
     return 0;
