@@ -58,7 +58,7 @@ void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, 
  *  - global2localIdx(unsigned,unsigned,unsigned) const;
  * where the first parameter is the global index and the 
  * other two are the pair (local idx, rank). 
- *  - MPI_Comm %communicator() const;  returns the communicator to use in the gather
+ *  - MPI_Comm %communicator() const;  returns the communicator to use in the gather/scatter
  * @param global the column indices need to be global, the row indices local
  * @param policy the conversion object
  *
@@ -67,7 +67,7 @@ void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, 
  * @ingroup mpi_structures
  */
 template<class ConversionPolicy>
-dg::MIHMatrix convert_row_dist( const dg::IHMatrix& global, const ConversionPolicy& policy) 
+dg::MIHMatrix convert( const dg::IHMatrix& global, const ConversionPolicy& policy) 
 {
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -139,7 +139,7 @@ dg::MIHMatrix projection( const aMPITopology3d& g_new, const aMPITopology3d& g_o
  */
 dg::MIHMatrix interpolation( const dg::HVec& x, const dg::HVec& y, const aMPITopology2d& grid, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    return convert_row_dist(  
+    return convert(  
             dg::create::interpolation( x, y, grid.global(), bcx, bcy), 
             grid);
 }

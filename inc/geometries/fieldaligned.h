@@ -1,6 +1,5 @@
 #pragma once
 #include <cmath>
-#include <cusp/transpose.h>
 #include <cusp/csr_matrix.h>
 
 #include "dg/backend/grid.h"

@@ -398,7 +398,7 @@ struct GeneralComm : public aCommunicator<Vector>
      *  - global2localIdx(unsigned,unsigned,unsigned) const;
      * where the first parameter is the global index and the 
      * other two are the pair (local idx, rank). 
-     *  - MPI_Comm %communicator() const;  returns the communicator to use in the gather
+     *  - MPI_Comm %communicator() const;  returns the communicator to use in the gather/scatter
      * @param globalGatherMap Each element globalGatherMap[i] represents a global vector index from where to take the value. There are "local buffer size == size()" elements.
      * @param p the conversion object
      * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy

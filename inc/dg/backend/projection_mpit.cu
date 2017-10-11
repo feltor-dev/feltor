@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     dg::HVec x = dg::evaluate( dg::cooX2d, g2d.local());
     dg::HVec y = dg::evaluate( dg::cooY2d, g2d.local());
     dg::IHMatrix global_projection = dg::create::interpolation( x,y, g2d_half.global());
-    dg::MIHMatrix converted_p = dg::convert_row_dist(global_projection, g2d_half);
+    dg::MIHMatrix converted_p = dg::convert(global_projection, g2d_half);
 
     //now compare
     bool equal_cols=true, equal_rows=true, equal_values=true;

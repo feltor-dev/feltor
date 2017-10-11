@@ -7,6 +7,7 @@
 #include "dg/backend/mpi_matrix_blas.h"
 #include "dg/backend/mpi_collective.h"
 #include "dg/backend/mpi_grid.h"
+#include "dg/backend/mpi_projection.h"
 #include "dg/backend/interpolation.cuh"
 #include "dg/backend/functions.h"
 #include "dg/runge_kutta.h"
