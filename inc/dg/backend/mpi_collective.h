@@ -273,18 +273,18 @@ struct SurjectiveComm : public aCommunicator<Vector>
         construct( localGatherMap, pidGatherMap, comm);
     }
 
-    ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const MPITopology&)
+    ///@copydoc GeneralComm::GeneralComm(const thrust::host_vector<int>&,const ConversionPolicy&)
     ///@note we assume that the gather map is surjective
-    template<class MPITopology>
-    SurjectiveComm( const thrust::host_vector<int>& globalGatherMap, const MPITopology& g)
+    template<class ConversionPolicy>
+    SurjectiveComm( const thrust::host_vector<int>& globalGatherMap, const ConversionPolicy& p)
     {
         thrust::host_vector<int> local(globalGatherMap.size()), pids(globalGatherMap.size());
         bool success = true;
         for(unsigned i=0; i<local.size(); i++)
-            if( !g.global2localIdx(globalGatherMap[i], local[i], pids[i]) ) success = false;
+            if( !p.global2localIdx(globalGatherMap[i], local[i], pids[i]) ) success = false;
 
         assert( success);
-        construct( local, pids, g.communicator());
+        construct( local, pids, p.communicator());
     }
 
     ///@copydoc GeneralComm::GeneralComm(const GeneralComm<OtherIndex,OtherVector>&)
@@ -394,19 +394,24 @@ struct GeneralComm : public aCommunicator<Vector>
      * @brief Construct from global indices gather map
      *
      * Uses the global2localIdx() member of MPITopology to generate localGatherMap and pidGatherMap 
-     * @tparam MPITopology any implementation of an MPI Topology (aMPITopology2d, aMPITopology3d, ...)
-     * @param globalGatherMap Each element globalGatherMap[i] represents a global vector index from where to take the value. There are "local buffer size" elements.
-     * @param g a grid object
+     * @tparam ConversionPolicy has to have the members: 
+     *  - global2localIdx(unsigned,unsigned,unsigned) const;
+     * where the first parameter is the global index and the 
+     * other two are the pair (local idx, rank). 
+     *  - MPI_Comm %communicator() const;  returns the communicator to use in the gather
+     * @param globalGatherMap Each element globalGatherMap[i] represents a global vector index from where to take the value. There are "local buffer size == size()" elements.
+     * @param p the conversion object
+     * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
      */
-    template<class MPITopology>
-    GeneralComm( const thrust::host_vector<int>& globalGatherMap, const MPITopology& g)
+    template<class ConversionPolicy>
+    GeneralComm( const thrust::host_vector<int>& globalGatherMap, const ConversionPolicy& p)
     {
         thrust::host_vector<int> local(globalGatherMap.size()), pids(globalGatherMap.size());
         bool success = true;
         for(unsigned i=0; i<local.size(); i++)
-            if( !g.global2localIdx(globalGatherMap[i], local[i], pids[i]) ) success = false;
+            if( !p.global2localIdx(globalGatherMap[i], local[i], pids[i]) ) success = false;
         assert( success);
-        construct( local, pids, g.communicator());
+        construct( local, pids, p.communicator());
     }
 
     ///@brief read access to the local index gather map

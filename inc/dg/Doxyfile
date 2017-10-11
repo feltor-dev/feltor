@@ -829,7 +829,6 @@ EXCLUDE                = ../dg/backend/creation.cuh \
                          ../dg/backend/cusp_thrust_backend.h \
                          ../dg/backend/sparseblockmat_gpu_kernels.cuh \
                          ../dg/backend/sparseblockmat_omp_kernels.h \
-                         ../dg/backend/transpose.h \
                          ../dg/backend/average.h \
                          ../dg/backend/ell_interpolation.cuh \
 

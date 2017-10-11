@@ -54,21 +54,27 @@ void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, 
 /**
  * @brief Convert a matrix with local row and global column indices to a row distributed MPI matrix
  *
- * Checks if communication is actually needed
+ * @tparam ConversionPolicy has to have the members: 
+ *  - global2localIdx(unsigned,unsigned,unsigned) const;
+ * where the first parameter is the global index and the 
+ * other two are the pair (local idx, rank). 
+ *  - MPI_Comm %communicator() const;  returns the communicator to use in the gather
  * @param global the column indices need to be global, the row indices local
- * @param topology the topology defines how the indices are converted from global to local
+ * @param policy the conversion object
  *
- * @return a row distributed MPI matrix
- * @ingroup misc
+ * @return a row distributed MPI matrix. If no MPI communication is needed the collective communicator will have zero size. 
+ * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
+ * @ingroup mpi_structures
  */
-dg::MIHMatrix convert_row_dist( const dg::IHMatrix& global, const aMPITopology2d& topology) 
+template<class ConversionPolicy>
+dg::MIHMatrix convert_row_dist( const dg::IHMatrix& global, const ConversionPolicy& policy) 
 {
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::iHVec unique_global_idx;
     cusp::array1d<int, cusp::host_memory> buffer_idx;
     dg::detail::global2bufferIdx( global.column_indices, buffer_idx, unique_global_idx);
-    dg::GeneralComm<dg::iHVec, dg::HVec> comm( unique_global_idx, topology);
+    dg::GeneralComm<dg::iHVec, dg::HVec> comm( unique_global_idx, policy);
     dg::IHMatrix local( global.num_rows, comm.size(), global.values.size());
     local.row_offsets=global.row_offsets;
     local.column_indices=buffer_idx;
@@ -78,7 +84,7 @@ dg::MIHMatrix convert_row_dist( const dg::IHMatrix& global, const aMPITopology2d
         cusp::array1d<int, cusp::host_memory> local_idx(global.column_indices), pids(local_idx);
         bool success = true;
         for(unsigned i=0; i<local_idx.size(); i++)
-            if( !topology.global2localIdx(global.column_indices[i], local_idx[i], pids[i]) ) success = false;
+            if( !policy.global2localIdx(global.column_indices[i], local_idx[i], pids[i]) ) success = false;
         assert( success);
         local.column_indices=local_idx;
         comm = dg::GeneralComm< dg::iHVec, dg::HVec>();
