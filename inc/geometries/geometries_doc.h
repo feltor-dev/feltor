@@ -33,7 +33,8 @@
  * @subsection pdf PDF writeups
  * 
  * We have a collection of writeups: 
- *  - The parallel derivative <a href="./parallel.pdf" target="_blank">parallel derivative</a>
+ *  - The <a href="./parallel.pdf" target="_blank">parallel derivative</a>
+ *  - The <a href="./hector.pdf" target="_blank">HECTOR algorithm</a>
  */
  /** @class hide_container
   * @tparam container 
