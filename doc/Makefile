@@ -28,6 +28,7 @@ dg: geometries.tag
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../doc/dg"; \
 		echo "HTML_HEADER = ../../doc/header.html"; \
+		echo "HTML_EXTRA_FILES  = ../../doc/related_pages/dg_introduction/dg_introduction.pdf"; \
     	echo "EXTERNAL_GROUPS=NO" ;\
     	echo "EXTERNAL_PAGES=NO" ;\
 		echo "TAGFILES = ../../doc/geometries.tag=../../geometries/html") | doxygen - ; 

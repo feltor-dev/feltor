@@ -1,4 +1,12 @@
 #error Documentation only
+/*! @mainpage
+ * This is the FELTOR core dg library. 
+ *
+ * @subsection pdf PDF writeups
+ * 
+ * We have a collection of writeups: 
+ *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ */
 /*! @namespace dg 
  * @brief This is the namespace for all functions and 
  * classes defined and used by the discontinuous Galerkin solvers.
