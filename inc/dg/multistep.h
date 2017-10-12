@@ -209,6 +209,9 @@ struct MatrixTraits< detail::Implicit<M, V> >
 * Uses blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step. 
 * Uses a conjugate gradient method for the implicit operator  
+@note To our experience the implicit treatment of diffusive or hyperdiffusive 
+terms can significantly reduce the required number of time steps. This
+far outweighs the increased computational cost of the additional matrix inversions.
 * @ingroup time
 * @copydoc hide_container
 */
@@ -336,6 +339,24 @@ void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container&
 /**
  * @brief Semi implicit Runge Kutta method after Yoh and Zhong (AIAA 42, 2004)
  *
+The SIRK algorithm reads
+\f[
+	\vec v^{n+1} = \vec v^n + \sum_{i=0}^2 w_i \vec k_i \\
+	\vec k_i = \Delta t\left[ \vec E\left( \vec v^n + \sum_{j=0}^{i-1} b_{ij}\vec k_j\right) 
+	+\vec I\left( \vec v^n + \sum_{j=0}^{i-1}c_{ij}\vec k_j + d_i \vec k_i\right) \right] 
+  \f]
+with rational coefficients
+\f[
+	w_0 = \frac{1}{8} \quad b_{10} = \frac{8}{7} \quad d_0 = \frac{3}{4}  \quad c_{10} = \frac{5589}{6524}  \\
+	w_1 = \frac{1}{8} \quad b_{20} = \frac{71}{252} \quad d_1 = \frac{75}{233}  \quad c_{20} = \frac{7691}{26096} \\
+	w_2 = \frac{3}{4} \quad b_{21} = \frac{7}{36}   \quad d_2 = \frac{65}{168}  \quad c_{21} = -\frac{26335}{78288}   
+\f]
+We solve the implicit substeps by a conjugate gradient method, which works as long 
+as the implicit part remains symmetric and linear. 
+
+@note To our experience the implicit treatment of diffusive or hyperdiffusive 
+terms can significantly reduce the required number of time steps. This
+far outweighs the increased computational cost of the additional matrix inversions.
  * @ingroup time
  * @copydoc hide_container
  */
