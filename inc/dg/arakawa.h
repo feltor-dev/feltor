@@ -123,13 +123,9 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     blas2::symv( bdyf, rhs, dyrhs);
 
     blas1::pointwiseDot( 1./3., dxlhs, dyrhs, -1./3., dylhs, dxrhs, 0., result);
-    //blas1::pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., helper_);
-    //blas1::pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dylhs);
     blas1::pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., dylhs);
     blas1::pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dxrhs);
 
-    //blas2::symv( 1., bdxf, helper_, 1., result);
-    //blas2::symv( 1., bdyf, dylhs, 1., result);
     blas2::symv( 1., bdxf, dylhs, 1., result);
     blas2::symv( 1., bdyf, dxrhs, 1., result);
     tensor::pointwiseDot( perp_vol_inv_, result, result);
