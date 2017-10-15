@@ -190,7 +190,7 @@ enum dist_type
 *
 * The idea of this mpi matrix is to separate communication and computation in order to reuse existing optimized matrix formats for the computation. 
 * It can be expected that this works particularly well for cases in which the communication to computation ratio is low. 
-* This class assumes that the matrix and vector elements are distributed rowwise among mpi processes.
+* In this class the matrix elements can be distributed rowwise or columnwise among mpi processes.
 * @tparam LocalMatrix The class of the matrix for local computations. 
  symv needs to be callable on the container class of the MPI_Vector
 * @tparam Collective models aCommunicator The Communication class needs to scatter and gather values across processes. 

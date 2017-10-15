@@ -1,10 +1,7 @@
 #error Documentation only
 /*! @mainpage
- * This is the FELTOR core dg library. 
- *
  * @subsection pdf PDF writeups
- * 
- * We have a collection of writeups: 
+ * DON'T PANIC!
  *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  */
 /*! @namespace dg 
@@ -33,8 +30,10 @@
  *     @}
  *     @defgroup sparsematrix Sparse matrix formats
  *     @defgroup mpi_structures MPI backend functionality
- *             The general idea is to separate global communication from local parallelization and thus 
- *             readily reuse the existing, optimized library for the local part
+ *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X 
+ *             is e.g. CPU, GPU, accelerator cards...
+ *             The general idea to achieve this is to separate global communication from local computations and thus 
+ *             readily reuse the existing, optimized library for the local part.
  *     @defgroup typedefs Typedefs
  *          Useful type definitions for easy programming
  * @}
@@ -181,3 +180,67 @@
  @note you can make your own SymmetricOp by providing the member function void symv(const container&, container&);
   and specializing MatrixTraits with the SelfMadeMatrixTag as the matrix_category
   */
+
+/*!@addtogroup mpi_structures
+@{
+@page mpi_matrix MPI Vectors and the blas1 functions
+
+In Feltor each mpi process gets an equally sized chunk of a vector.
+The corresponding structure in FELTOR is the dg::MPI_Vector, which is 
+nothing but a wrapper around any container type object and a MPI_Comm. 
+With this the dg::blas1 functions can readily implemented by just redirecting to the
+implementation for the container type. The only functions that need
+communication are the dg::blas1::dot functions (MPI_Allreduce).
+
+@page mpi_vector Row and column distributed matrices
+
+Contrary to a vector
+a matrix can be distributed in two ways, row-wise and column wise. 
+The structure dg::MPIDistMat is a wrapper around a LocalMatrix type object 
+and an instance of dg::aCommunicator
+In a row-distributed matrix each process gets the complete 
+rows of the matrix that correspond to the indices in the 
+vector it holds. 
+In a column-distributed matrix each process gets the complete 
+columns of the matrix corresponding to the indices in the 
+vector it holds. 
+When we implement a matrix-vector multiplication the order 
+of communication and computation depends on the distribution 
+of the matrix.
+For the row-distributed matrix each process first has to gather 
+all elements of the input vector it needs to be able to compute the elements of the output. In general this requires MPI communication.
+(read the documentation of dg::aCommunicator for more info of how global scatter/gather operations work).
+Formally, the gather operation can be written as a matrix \f$G\f$
+of \f$1'\f$s and \f$0'\f$s.
+After the elements have been gathered into a buffer the local matrix-vector
+multiplications can be executed.
+\f[
+M = R\cdot G
+\f]
+where \f$R\f$ is the row-distributed matrix with modified indices 
+and \f$G\f$ is the gather matrix, in which the MPI-communication takes place.
+The dg::RowColDistMat goes one step further and separates the matrix \f$ R\f$ into 
+a part that can be computed entirely on the local process and a part that needs communication.
+
+\section column 
+
+In a column distributed matrix the local matrix-vector multiplication can be executed first because each processor already
+has all vector elements it needs. 
+However the resuling elements have to be communicated back to 
+the process they belong to. Furthermore, a process has to sum
+all elements it receives from other processes on the same
+index. This is a scatter and reduce operation and
+it can be written as a scatter matrix \f$S\f$ (s.a. dg::aCommunicator). The transpose
+of the scatter matrix is a gather matrix and vice-versa.
+\f[
+M = S\cdot C
+\f]
+where \f$S\f$ is the scatter matrix and \f$C\f$ is the column distributed
+matrix with modified indices. 
+
+It turns out that a row-distributed matrix can be transposed
+by transposition of the local matrices and the gather matrix (s.a. dg::transpose).
+The result is then a column distributed matrix.
+The transpose of a column distributed matrix is a row-distributed matrix and vice-versa.
+@}
+*/
