@@ -444,7 +444,7 @@ struct CosXCosY
      
      * @return \f$ f(x,y)\f$
      */
-    double operator()( double x, double y){ return bamp_+amp_*cos(x*kx_)*cos(y*ky_);}
+    double operator()( double x, double y)const{ return bamp_+amp_*cos(x*kx_)*cos(y*ky_);}
   private:
     double amp_,bamp_,kx_,ky_;
 };
@@ -471,7 +471,7 @@ struct SinXCosY
      
      * @return \f$ f(x,y)\f$
      */
-    double operator()( double x, double y){ return bamp_+amp_*sin(x*kx_)*cos(y*ky_);}
+    double operator()( double x, double y)const{ return bamp_+amp_*sin(x*kx_)*cos(y*ky_);}
   private:
     double amp_,bamp_,kx_,ky_;
 };
