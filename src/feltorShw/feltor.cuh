@@ -35,7 +35,7 @@ struct Rolkar
         LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
     {
     }
-    void operator()( std::vector<container>& x, std::vector<container>& y)
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
@@ -51,6 +51,7 @@ struct Rolkar
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp_phi;}
     const container& weights(){return LaplacianM_perp.weights();}
+    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
@@ -80,7 +81,7 @@ struct Feltor
     const std::vector<container>& potential( ) const { return phi;}
     void initializene( const container& y, container& target);
 
-    void operator()( std::vector<container>& y, std::vector<container>& yp);
+    void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
@@ -247,7 +248,7 @@ void Feltor<Grid, Matrix, container>::initializene( const container& src, contai
 }
 
 template<class Grid, class Matrix, class container>
-void Feltor<Grid, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
 
     dg::Timer t;
