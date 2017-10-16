@@ -23,7 +23,7 @@ geometries.tag:
 		echo "GENERATE_HTML = NO"; \
 		echo "GENERATE_TAGFILE = ../../doc/geometries.tag" ) | doxygen - ;
 
-dg: geometries.tag
+dg: geometries.tag dg_introduction.pdf
 	cd ../inc/dg; \
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../doc/dg"; \

@@ -366,7 +366,8 @@ for our implementations and thus use $\vec f$ rather than $\bar{\vec f}$ to repr
 \end{align}
 to represent the corresponding products.
 
-\subsection{Discretization of elliptic equations} \label{sec:elliptic}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discretization of elliptic equations} \label{sec:elliptic}
 We are now ready to discretize the one-dimensional general elliptic equation 
 \begin{align}
     -\frac{\partial}{\partial x}\left( \chi(x)\frac{\partial \phi}{\partial x}(x)\right) = \rho(x)
@@ -487,6 +488,99 @@ equal results; only
 the equality in the results for forward and 
 backward discretization is broken. 
 To the knowledge of the author this superconvergence has not yet been observed before. 
+
+\section{Interpolation and Projection}
+Eq.~\eqref{eq:dgexpansion} provides a natural way to interpolate any
+dg expanded function $f_h(x)$ on any point in the interval $[a,b]$. 
+The interpolation has the same order $P$ as the expansion and 
+can be formulated as a matrix vector multiplication
+\begin{align}
+f_h(x_0) = \sum_{n=1}^N\sum_{k=0}^{P-1} p_{nk}(x_0) \bar f^{nk} =: \sum_{n=1}^N\sum_{k=0}^{P-1}I_{nk} \bar f^{nk}
+\label{eq:basic_interpolation}
+\end{align}
+where the sparse interpolation matrix $I$ has as many rows as there are 
+points to interpolate. $I$ has $P^d$ entries per line, where $d$ is the dimensionality of the grid. 
+
+
+\subsection{Interpolation and Projection}
+A special case emerges when the list of points to interpolate is made up
+by the Gaussian abscissas of another grid. 
+Suppose we want to divide each cell $C_n$ of the original grid into $M$ equidistant subcells.
+We use the letter $c$ to denote the coarse grid and the letter $f$ to denote
+the fine grid. 
+For ease of discussion we assume that the number of polynomial coefficients
+in the fine and the coarse grid are the same. 
+We denote $q_{ml}(x)$ the polynomials on the fine grid and $y^P_{mj}$ the 
+corresponding Gaussian abscissas. 
+If a vector $\vec f$ is given on the coarse grid, we can simply interpolate
+it onto the fine grid analogous to Eq.~\eqref{eq:basic_interpolation} via
+\begin{subequations}
+\begin{align}
+  f^F_{mj} &= f_h(y^P_{mj}) = p_{nk}(y^P_{mj})F^{ki} f^C_{ni} \\
+  f^F_{mj} &=: {Q_{mj}}^{ni} f^C_{ni}
+  \label{eq:interpolation}
+\end{align}
+\end{subequations}
+where we denote the special interpolation matrix with $Q$ and implicitly assume the sum of repeated indices.
+No information is lost in this process if the cells $C_n$ are divided by an 
+integer number $M$ and the number of polynomials is the same, i.e. 
+$f^F$ and $f^C$ represent exactly the same expansion $f_h(x)$. 
+\begin{align}
+  f^C(x) = \bar f_C^{nk}p_{nk}(x) = f^F(x) = \bar f_F^{ml}q_{ml}(x) 
+  \label{eq:no_loss}
+\end{align}
+
+Vice versa, given a expansion $f^F(x)$ on the fine grid, we can the projection integrals from the fine grid to the coarse grid. 
+It can be shown that
+\begin{align}
+  \bar f_C^{nk} &:= T_C^{ks}\int \dx f^F(x)p_{ns}(x) = T_C^{ks}  W_m^{ij}p_{ns}(y_{mj}) f^F_{mi} \\
+  f^C_{nt} &= B_{tk}\bar f_C^{nk} = V^c_{tk}  {{(Q^T)}^{nk}}_{mj}W_m^{ji} f^F_{mi} =: {P_{nt}}^{mi} f^F_{mi}
+  %\bar f_C^{nk} = T_C^{ks}\int \dx f^F(x)p_{ns}(x) = T_C^{ks} \bar f_F^{ml} \int \dx q_{ml}(x)p_{ns}(x) \\
+  %= T_C^{ks} F^{lo}f^F_{mo} \int \dx q_{ml}(x)p_{ns}(x)  \\
+  %= T_C^{ks} F^{lo}f^F_{mo} W_F^{ij}q_{ml}(y_{mi})p_{ns}(y_{mj})  \\
+  %= T_C^{ks} F^{lo}f^F_{mo} W_m^{ij}B_{il}p_{ns}(y_{mj})  \\
+  %= T_C^{ks} f^F_{mi} W_m^{ij}p_{ns}(y_{mj})  \\
+  %f^C_{nt} = B_{tk}\bar f_C^{nk} = B_{tk} T_C^{ks} W_m^{ij} p_{ns}(y_{mj}) f^F_{mi}\\
+  %= V^c_{tk} F^{sk} W_m^{ij} p_{ns}(y_{mj}) f^F_{mi}\\
+  %= V^c_{tk}  {Q_{mj}}^{nk}W_m^{ji} f^F_{mi}\\
+  %= V^c_{tk}  {{(Q^T)}^{nk}}_{mj}W_m^{ji} f^F_{mi}\\
+  %=: {P_{nt}}^{mi} f^F_{mi}
+  \label{eq:basic_projection}
+\end{align}
+from where we directly conclude that 
+\begin{align}
+  P = Q^\dagger = V^C Q^T W_F
+  \label{eq:projection_adjoint}
+\end{align}
+i.e. the projection matrix is the adjoint of the interpolation matrix.
+We can also proof that
+\begin{align}
+  P\circ Q = 1_C
+  \label{}
+\end{align}
+which is a reformulation of Eq.~\eqref{eq:no_loss}.
+Note that $Q\circ P \neq 1$.
+The projection is not loss-free but it conserves the integral
+value of the function on the fine grid and the error in the 
+$L_2$-norm between the vectors on fine and coarse grid are
+minimal (proof?).
+\subsection{Grid transformations}
+The above transformation Eq.~\eqref{eq:projection_adjoint} is
+valid only if the number of cells in the fine grid is an integer multiple of the number of cells in the coarse grid. 
+If this is not the case, the adjoint of the interpolation matrix
+does not(!) give a valid projection matrix (tried this 
+out in the code).
+However, what we can always do is to find the least common multiple grid (c) of two given grids (a) and (b). Then
+we can interpolate loss-free from the given grid (a) to the 
+common grid (c) and then project back from (c) to (b).
+In this way we get the forward and backward transformation matrices
+\begin{align}
+    \mathcal T &= P_{c2b}Q_{a2c}\\
+    \mathcal T^\dagger &= P_{c2a} Q_{b2c}
+    \label{}
+\end{align}
+If the least common grid reduces to either grid (a) or (b) the
+transformation matrix reduces to either $P_{a2b}$ or $Q_{a2b}$ as expected.
 
 
 \bibliography{../references}

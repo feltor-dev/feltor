@@ -1,6 +1,6 @@
 #error Documentation only
 /*! @mainpage
- * @subsection pdf PDF writeups
+ * @section pdf PDF writeups
  * DON'T PANIC!
  *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  */
