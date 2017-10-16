@@ -89,7 +89,9 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
 };
 
 /**
- * This is s 2x1 curvilinear product space MPI grid
+ * @brief A 2x1 curvilinear product space MPI grid
+
+ * The base coordinate system is the cylindrical coordinate system R,Z,phi
  */
 struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
 {

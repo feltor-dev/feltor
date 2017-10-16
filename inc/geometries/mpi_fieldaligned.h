@@ -13,6 +13,7 @@
 #include "dg/runge_kutta.h"
 
 namespace dg{
+namespace geo{
  
 ///@cond
 namespace detail{
@@ -144,7 +145,7 @@ FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    const aMPIGeometry2d* grid2d_ptr = detail::clone_MPI3d_to_global_perp(&grid);
+    const aMPIGeometry2d* grid2d_ptr = grid->perp_grid();
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     unsigned localsize = grid2d_ptr->size();
     MPI_Vector<dg::HVec> temp = dg::pullback( limit, *grid2d_ptr);
@@ -389,5 +390,7 @@ void FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
 
 
 ///@endcond
+
+}//namespace geo
 }//namespace dg
 

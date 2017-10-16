@@ -20,6 +20,7 @@
 #include "curvilinear.h"
 
 namespace dg{
+namespace geo{
 
 ///@brief Enum for the use in Fieldaligned
 ///@ingroup fieldaligned
@@ -353,11 +354,13 @@ aGeometry2d* clone_3d_to_perp( const aGeometry3d* grid_ptr)
 \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
 cylindrical coordinates
 * @ingroup fieldaligned
-* @tparam Geometry The Geometry class 
-* @tparam IMatrix The matrix class of the interpolation matrix
-* @tparam container The container-class on which the interpolation matrix operates on (does not need to be dg::HVec)
+* @tparam ProductGeometry must be either aProductGeometry3d or aProductMPIGeometry3d or any derivative 
+* @tparam IMatrix The type of the interpolation matrix 
+    -dg::IHMatrix, or dg::IDMatrix, dg::MIHMatrix, or dg::MIDMatrix
+* @tparam container The container-class on which the interpolation matrix operates on
+    -dg::HVec, or dg::DVec, dg::MHVec, or dg::MDVec
 */
-template<class Geometry, class IMatrix, class container >
+template<class ProductGeometry, class IMatrix, class container >
 struct FieldAligned
 {
 
@@ -365,6 +368,12 @@ struct FieldAligned
     ///@brief do not allocate memory
     FieldAligned(){}
 
+    ///@copydoc construct()
+    template <class Limiter>
+    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-5, Limiter limit = FullLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, double deltaPhi = -1);
+    {
+        construct( vec, grid, multiplyX, multiplyY, eps, limit, globalbcx, globalbcy, deltaPhi);
+    }
     /**
     * @brief Construct from a field and a grid
     *
@@ -386,7 +395,7 @@ struct FieldAligned
         If there is no limiter the boundary condition is periodic.
     */
     template <class Limiter>
-    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = FullLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, double deltaPhi = -1);
+    void construct(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-5, Limiter limit = FullLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, double deltaPhi = -1);
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -495,7 +504,7 @@ struct FieldAligned
     container m_left, m_right;
     container m_limiter;
     std::vector<container> m_temp;
-    dg::Handle<Geometry> m_g;
+    dg::Handle<ProductGeometry> m_g;
 };
 
 ///@cond 
@@ -505,15 +514,16 @@ struct FieldAligned
 
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
-FieldAligned<Geometry, IMatrix, container>::FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, double deltaPhi):
-        m_hz_inv( dg::evaluate( dg::zero, grid)), m_hp_inv( m_hz), m_hm_inv( m_hz), 
-        m_Nz(grid.Nz()), m_bcz(grid.bcz()), m_g(grid)
+void FieldAligned<Geometry, IMatrix, container>::construct(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, double deltaPhi):
 {
+    dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
+    m_Nz=grid.Nz(), m_bcz=grid.bcz(); 
+    m_g=grid;
     dg::split( m_hz_inv, m_temp);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    const aGeometry2d* grid2d_ptr = detail::clone_3d_to_perp(&grid);
+    const aGeometry2d* grid2d_ptr = grid->perp_grid();
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //Resize vector to 2D grid size
     m_perp_size = grid2d_ptr->size();
@@ -709,5 +719,6 @@ void FieldAligned<G, I, container>::eMinus( enum whichMatrix which, const contai
 ///@endcond 
 
 
+}//namespace geo
 }//namespace dg
 

@@ -2,12 +2,12 @@
 
 #include <cusp/print.h>
 
-#include "blas.h"
+#include "dg/blas.h"
+#include "dg/functors.h"
+#include "dg/geometry/geometry.h"
 #include "ds.h"
-#include "functors.h"
 #include "solovev.h"
 #include "flux.h"
-#include "geometry.h"
 
 #include "backend/functions.h"
 #include "backend/timer.cuh"
@@ -50,10 +50,9 @@ int main()
     const dg::DVec vol3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
-    dg::geo::BinaryVectorLvl0 bhat( bhatR, bhatZ, bhatP);
-    dg::FieldAligned dsFA( bhat, g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::geo::FieldAligned<dg::aProductGeometry,dg::IDMatrix, dg::DMatrix>  dsFA( bhat, g3d, 2,2,1e-10, dg::NoLimiter(), dg::NEU, dg::NEU);
 
-    dg::DS<dg::aGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( dsFA, g3d, field, dg::not_normed, dg::centered);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, g3d, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 
@@ -94,8 +93,8 @@ int main()
 
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
-    //dg::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
-    dg::DS<dg::aGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, dg::normed, dg::centered, false, true, mx, my);
+    //dg::geo::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
+    dg::geo::DS<dg::aProductGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, mx, my, 1e-8, dg::normed, dg::centered, false, true);
 
     
     t.toc();
