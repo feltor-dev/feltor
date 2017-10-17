@@ -27,7 +27,7 @@ namespace geo
  */
 namespace solovev 
 {
-///@addtogroup geom
+///@addtogroup solovev
 ///@{
 
 /**
@@ -554,6 +554,12 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 
 } //namespace solovev
 
+/**
+ * @brief Create a Solovev Magnetic field
+ * @param gp Solovev parameters
+ * @return A magnetic field object
+ * @ingroup geom
+ */
 TokamakMagneticField createSolovevField( solovev::GeomParameters gp)
 {
     return TokamakMagneticField( gp.R_0, solovev::createPsip(gp), solovev::createIpol(gp));

@@ -52,7 +52,7 @@ int main()
     t.tic();
     dg::geo::FieldAligned<dg::aProductGeometry,dg::IDMatrix, dg::DMatrix>  dsFA( bhat, g3d, 2,2,1e-10, dg::NoLimiter(), dg::NEU, dg::NEU);
 
-    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, g3d, dg::not_normed, dg::centered);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::not_normed, dg::centered);
     t.toc();
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";
 

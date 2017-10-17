@@ -31,7 +31,7 @@ namespace geo
  */
 namespace taylor
 {
-///@addtogroup geom
+///@addtogroup taylor
 ///@{
 typedef dg::geo::solovev::GeomParameters GeomParameters; //!< bring GeomParameters into the taylor namespace 
 
@@ -311,7 +311,13 @@ dg::geo::TokamakMagneticField createMagField( solovev::GeomParameters gp)
 ///@}
 
 } //namespace taylor
-dg::geo::TokamakMagneticField createTaylorField( solovev::GeomParameters gp)
+/**
+ * @brief Create a Taylor Magnetic field
+ * @param gp Solovev parameters
+ * @return A magnetic field object
+ * @ingroup geom
+ */
+TokamakMagneticField createTaylorField( solovev::GeomParameters gp)
 {
     return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
 }

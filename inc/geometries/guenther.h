@@ -24,7 +24,7 @@ namespace geo
  */
 namespace guenther
 {
-///@addtogroup geom
+///@addtogroup guenther
 ///@{
 
    
@@ -506,6 +506,14 @@ struct Divb
 };
 ///@endcond
 } //namespace guenther
+
+/**
+ * @brief Create a Guenther Magnetic field
+ * @param R_0 the major radius
+ * @param I_0 the current
+ * @return A magnetic field object
+ * @ingroup geom
+ */
 TokamakMagneticField createGuentherField( double R_0, double I_0)
 {
     return TokamakMagneticField( R_0, guenther::createPsip(R_0), guenther::createIpol(I_0));
