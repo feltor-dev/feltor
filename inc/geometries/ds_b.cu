@@ -2,16 +2,18 @@
 
 #include <cusp/print.h>
 
+#include "dg/backend/functions.h"
+#include "dg/backend/timer.cuh"
 #include "dg/blas.h"
 #include "dg/functors.h"
 #include "dg/geometry/geometry.h"
 #include "ds.h"
 #include "solovev.h"
 #include "flux.h"
+#include "toroidal.h"
 
-#include "backend/functions.h"
-#include "backend/timer.cuh"
 
+const double R_0 = 10;
 double func(double R, double Z, double phi)
 {
     double r2 = (R-R_0)*(R-R_0)+Z*Z;
@@ -23,7 +25,7 @@ double deri(double R, double Z, double phi)
     return I_0/R/sqrt(I_0*I_0 + r2)* r2*cos(phi);
 }
 
-int main()
+int main(int argc, char * argv[])
 {
     std::cout << "First test the cylindrical version\n";
     std::cout << "Type n, Nx, Ny, Nz\n";
@@ -40,17 +42,14 @@ int main()
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    dg::geo::solovev::GeomParameters gp(js);
-    dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
-    dg::geo::BHatR bhatR(mag);
-    dg::geo::BHatZ bhatZ(mag);
-    dg::geo::BHatP bhatP(mag);
-    dg::geo::BinaryVectorLvl0 bhat( bhatR, bhatZ, bhatP);
+    dg::geo::solovev::Parameters gp(js);
+    dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( gp);
+    dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
     dg::CylindricalGrid3d g3d( gp.R_0 - 1, gp.R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER);
     const dg::DVec vol3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
-    dg::geo::FieldAligned<dg::aProductGeometry,dg::IDMatrix, dg::DMatrix>  dsFA( bhat, g3d, 2,2,1e-10, dg::NoLimiter(), dg::NEU, dg::NEU);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DMatrix>  dsFA( bhat, g3d, 2,2,true,true,1e-10, dg::geo::NoLimiter(), dg::NEU, dg::NEU);
 
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::not_normed, dg::centered);
     t.toc();
@@ -93,7 +92,7 @@ int main()
 
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
-    //dg::geo::FieldAligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
+    //dg::geo::Fieldaligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
     dg::geo::DS<dg::aProductGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, mx, my, 1e-8, dg::normed, dg::centered, false, true);
 
     

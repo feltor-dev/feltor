@@ -64,7 +64,7 @@ struct Psip: public aCloneableBinaryFunctor<Psip>
      *
      * @param gp geometric parameters
      */
-    Psip( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    Psip( Parameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
   private:
     double do_compute(double R, double Z) const
     {
@@ -138,7 +138,7 @@ struct Psip: public aCloneableBinaryFunctor<Psip>
 struct PsipR: public aCloneableBinaryFunctor<PsipR>
 {
     ///@copydoc Psip::Psip()
-    PsipR( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    PsipR( Parameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
   private:
     double do_compute(double R, double Z) const
     {    
@@ -179,7 +179,7 @@ struct PsipR: public aCloneableBinaryFunctor<PsipR>
 struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 {
     ///@copydoc Psip::Psip()
-    PsipRR( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
+    PsipRR( Parameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) {}
   private:
     double do_compute(double R, double Z) const
     {    
@@ -215,7 +215,7 @@ struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
+    PsipZ( Parameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
   private:
     double do_compute(double R, double Z) const
     {
@@ -253,7 +253,7 @@ struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZZ( GeomParameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
+    PsipZZ( Parameters gp): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
   private:
     double do_compute(double R, double Z) const
     {
@@ -283,7 +283,7 @@ struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 {
     ///@copydoc Psip::Psip()
-    PsipRZ( GeomParameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
+    PsipRZ( Parameters gp ): R_0_(gp.R_0), A_(gp.A), c_(gp.c) { }
   private:
     double do_compute(double R, double Z) const
     {
@@ -309,7 +309,7 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 struct Ipol: public aCloneableBinaryFunctor<Ipol>
 {
     ///@copydoc Psip::Psip()
-    Ipol(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp) { }
+    Ipol(  Parameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp) { }
   private:
     double do_compute(double R, double Z) const
     {    
@@ -325,7 +325,7 @@ struct Ipol: public aCloneableBinaryFunctor<Ipol>
 struct IpolR: public aCloneableBinaryFunctor<IpolR>
 {
     ///@copydoc Psip::Psip()
-    IpolR(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipR_(gp) { }
+    IpolR(  Parameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipR_(gp) { }
   private:
     double do_compute(double R, double Z) const
     {    
@@ -341,7 +341,7 @@ struct IpolR: public aCloneableBinaryFunctor<IpolR>
 struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
 {
     ///@copydoc Psip::Psip()
-    IpolZ(  GeomParameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipZ_(gp) { }
+    IpolZ(  Parameters gp ):  R_0_(gp.R_0), A_(gp.A), qampl_(gp.qampl), psip_(gp), psipZ_(gp) { }
   private:
     double do_compute(double R, double Z) const
     {    
@@ -352,18 +352,18 @@ struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
     PsipZ psipZ_;
 };
 
-BinaryFunctorsLvl2 createPsip( GeomParameters gp)
+BinaryFunctorsLvl2 createPsip( Parameters gp)
 {
     BinaryFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
     return psip;
 }
-BinaryFunctorsLvl1 createIpol( GeomParameters gp)
+BinaryFunctorsLvl1 createIpol( Parameters gp)
 {
     BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
     return ipol;
 }
 
-TokamakMagneticField createMagField( GeomParameters gp)
+TokamakMagneticField createMagField( Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, createPsip(gp), createIpol(gp));
 }
@@ -375,7 +375,7 @@ namespace mod
 
 struct Psip: public aCloneableBinaryFunctor<Psip>
 {
-    Psip( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+    Psip( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
     {
         psipZZ_X_ = psipZZ_(R_X, Z_X);
@@ -401,7 +401,7 @@ struct Psip: public aCloneableBinaryFunctor<Psip>
 };
 struct PsipR: public aCloneableBinaryFunctor<PsipR>
 {
-    PsipR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+    PsipR( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50,1.)
     {
         psipZZ_X_ = psipZZ_(R_X, Z_X);
@@ -429,7 +429,7 @@ struct PsipR: public aCloneableBinaryFunctor<PsipR>
 };
 struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 {
-    PsipZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+    PsipZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
     {
         psipZZ_X_ = psipZZ_(R_X, Z_X);
@@ -458,7 +458,7 @@ struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 
 struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 {
-    PsipZZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+    PsipZZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
     {
         psipZZ_X_ = psipZZ_(R_X, Z_X);
@@ -487,7 +487,7 @@ struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 };
 struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 {
-    PsipRR( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+    PsipRR( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
     {
         psipZZ_X_ = psipZZ_(R_X, Z_X);
@@ -516,7 +516,7 @@ struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 };
 struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 {
-    PsipRZ( GeomParameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
+    PsipRZ( Parameters gp): R_X( gp.R_0-1.1*gp.triangularity*gp.a), Z_X(-1.1*gp.elongation*gp.a),
         psip_(gp), psipR_(gp), psipZ_(gp), psipRR_(gp), psipRZ_(gp), psipZZ_(gp), cauchy_( R_X, Z_X, 50, 50, 1)
     {
         psipZZ_X_ = psipZZ_(R_X, Z_X);
@@ -560,7 +560,7 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
  * @return A magnetic field object
  * @ingroup geom
  */
-TokamakMagneticField createSolovevField( solovev::GeomParameters gp)
+TokamakMagneticField createSolovevField( solovev::Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, solovev::createPsip(gp), solovev::createIpol(gp));
 }

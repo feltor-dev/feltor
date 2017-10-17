@@ -1,7 +1,5 @@
 #pragma once
 
-//some thoughts on how to transpose a MPI matrix 
-
 namespace dg
 {
 

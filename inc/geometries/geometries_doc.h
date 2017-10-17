@@ -15,7 +15,8 @@
         @defgroup solovev The solovev magnetic field
         @defgroup taylor The Taylor state magnetic field
         @defgroup guenther The Guenther magnetic field
-        @defgroup toroidal The purely toroidal magnetic field
+        @defgroup toroidal The Purely Toroidal magnetic field
+        @defgroup circular The Circular magnetic field
       @}
       @defgroup magnetic 3.2 magnetic field and associated functors
       @defgroup profiles 3.3 miscellaneous functors based on flux functions

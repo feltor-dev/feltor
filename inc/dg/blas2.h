@@ -30,7 +30,7 @@ namespace blas2{
 ///@{
 
 /**
- * @brief Generic way to copy and/or convert a Matrix type to a different Matrix type (e.g. from CPU to GPU, or double to float, etc.)
+ * @brief \f$ y = x\f$; Generic way to copy and/or convert a Matrix type to a different Matrix type (e.g. from CPU to GPU, or double to float, etc.)
  *
  * @copydoc hide_matrix
  * @tparam AnotherMatrix Another Matrix type
@@ -44,12 +44,12 @@ inline void transfer( const Matrix& x, AnotherMatrix& y)
     dg::blas2::detail::doTransfer( x,y, typename dg::MatrixTraits<Matrix>::matrix_category(), typename dg::MatrixTraits<AnotherMatrix>::matrix_category());
 }
 
-/*! @brief General dot produt
+/*! @brief \f$ x^T M y\f$; General dot produt
  *
  * This routine computes the scalar product defined by the symmetric positive definite 
  * matrix M \f[ x^T M y = \sum_{i,j=0}^{N-1} x_i M_{ij} y_j \f]
  * ( Note that if M is not diagonal it is generally more efficient to 
- * precalculate \f$ My\f$ and then call the blas1::dot() routine!
+ * precalculate \f$ My\f$ and then call the dg::blas1::dot() routine!
  * @tparam DiagonalMatrix Right now DiagonalMatrix has to be the same as container, except if the container is a std::vector<container_type>, then the DiagonalMatrix has to be the container_type.
  * In the latter case the Matrix is applied to all containers in the std::vector and the sum is returned. 
  * @copydoc hide_container
@@ -68,7 +68,7 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const container& x
                        typename dg::VectorTraits<container>::vector_category() );
 }
 
-/*! @brief General dot produt
+/*! @brief \f$ x^T M x\f$; General dot produt
  *
  * This routine is equivalent to the call blas2::dot( x, m, x):
  * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
@@ -89,7 +89,7 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const DiagonalMatr
                        typename dg::VectorTraits<container>::vector_category() );
 }
 
-/*! @brief Matrix Vector product
+/*! @brief \f$ y = \alpha M x + \beta y\f$ 
  *
  * This routine computes \f[ y = \alpha M x + \beta y \f]
  * where \f$ M\f$ is a matrix.
@@ -119,7 +119,7 @@ inline void symv( typename MatrixTraits<Matrix>::value_type alpha,
     return;
 }
 
-/*! @brief Matrix Vector product
+/*! @brief \f$ y = M x\f$ 
  *
  * This routine computes \f[ y = M x \f]
  * where \f$ M\f$ is a matrix. 
@@ -144,8 +144,8 @@ inline void symv( Matrix& M,
     return;
 }
 
-/**
- * @brief General Matrix-Vector product
+/*! @brief \f$ y = M x\f$;
+ * General Matrix-Vector product
  *
  * Does exactly the same as symv. 
  * @copydoc hide_matrix
@@ -167,8 +167,8 @@ inline void gemv( Matrix& M,
                        typename dg::VectorTraits<same_or_another_container>::vector_category() );
     return;
 }
-/**
- * @brief General Matrix-Vector product
+/*! @brief \f$ y = \alpha M x + \beta y \f$;
+ * General Matrix-Vector product
  *
  * Does exactly the same as symv. 
  * @copydoc hide_matrix

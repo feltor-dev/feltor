@@ -52,41 +52,14 @@ void sendBackward( InputIterator begin, InputIterator end, OutputIterator result
                     source, 3, //source
                     comm, &status);
 }
-
-aMPIGeometry2d* clone_MPI3d_to_perp( const aMPIGeometry3d* grid_ptr)
-{
-    //%%%%%%%%%%%downcast grid since we don't have a virtual function perp_grid%%%%%%%%%%%%%
-    const dg::CartesianMPIGrid3d* grid_cart = dynamic_cast<const dg::CartesianMPIGrid3d*>(grid_ptr);
-    const dg::CylindricalMPIGrid3d* grid_cyl = dynamic_cast<const dg::CylindricalMPIGrid3d*>(grid_ptr);
-    const dg::geo::CurvilinearProductMPIGrid3d*  grid_curvi = dynamic_cast<const dg::geo::CurvilinearProductMPIGrid3d*>(grid_ptr);
-    aMPIGeometry2d* g2d_ptr;
-    if( grid_cart) 
-    {
-        dg::CartesianMPIGrid2d cart = grid_cart->perp_grid();
-        g2d_ptr = cart.clone();
-    }
-    else if( grid_cyl) 
-    {
-        dg::CartesianMPIGrid2d cart = grid_cyl->perp_grid();
-        g2d_ptr = cart.clone();
-    }
-    else if( grid_curvi) 
-    {
-        dg::geo::CurvilinearMPIGrid2d curv = grid_curvi->perp_grid();
-        g2d_ptr = curv.clone();
-    }
-    else
-        throw dg::Error( dg::Message(_ping_)<<"Grid class not recognized!");
-    return g2d_ptr;
-}
 }//namespace detail
 
 template <class Geometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
-struct FieldAligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> > 
+struct Fieldaligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> > 
 {
-    FieldAligned(){}
+    Fieldaligned(){}
     template <class Limiter>
-    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
+    Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
     {
         construct( vec, grid, multiplyX, multiplyY, eps, limit, globalbcx, globalbcy, limit, deltaPhi);
     }
@@ -141,7 +114,7 @@ struct FieldAligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
 template <class Limiter>
-void FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::construct(
+void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::construct(
     const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid, unsigned mx, unsigned my, double eps, dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double deltaPhi)
 {
     temp_(g_.Nz())
@@ -172,7 +145,7 @@ void FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::MPIGrid2d g2dFine((dg::MPIGrid2d(*grid2d_ptr)));//FINE GRID
     g2dFine.multiplyCellNumbers((double)mx, (double)my);
     dg::IHMatrix interpolate = dg::create::interpolation( g2dFine.local(), local_g2dField);  //INTERPOLATE TO FINE GRID
-    interpolate_and_clip( interpolate, global_g2dField_ptr, yp_coarse, ym_coarse, yp, ym);
+    dg::geo::detail::interpolate_and_clip( interpolate, g2dFine.local(), global_g2dField_ptr, yp_coarse, ym_coarse, yp, ym);
     delete g2dField_ptr;
     delete global_g2dField_ptr;
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -190,8 +163,8 @@ void FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     //%Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
     dg::convert( plus, m_plus, *grid2d_ptr);
     dg::convert( minus, m_minus, *grid2d_ptr);
-    dg::transpose( m_plus, m_plusT);
-    dg::transpose( m_minus, m_minusT);     
+    m_plusT = dg::transpose( m_plus);
+    m_minusT = dg::transpose( m_minus);
     dg::blas2::transfer( plus, m_plus);
     dg::blas2::transfer( plusT, m_plusT);
     dg::blas2::transfer( minus, m_minus);
@@ -230,14 +203,14 @@ void FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
 
 template<class G, class M, class C, class container>
 template< class BinaryOp>
-MPI_Vector<container> FieldAligned<G,RowDistMat<M,C>,MPI_Vector<container> >::evaluate( BinaryOp binary, unsigned p0) const
+MPI_Vector<container> Fieldaligned<G,RowDistMat<M,C>,MPI_Vector<container> >::evaluate( BinaryOp binary, unsigned p0) const
 {
     return evaluate( binary, dg::CONSTANT(1), p0, 0);
 }
 
 template<class G, class M, class C, class container>
 template< class BinaryOp, class UnaryOp>
-MPI_Vector<container> FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
+MPI_Vector<container> Fieldaligned<G,RowDistMat<M,C>, MPI_Vector<container> >::evaluate( BinaryOp binary, UnaryOp unary, unsigned p0, unsigned rounds) const
 {
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
@@ -306,14 +279,14 @@ MPI_Vector<container> FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::e
 }
 
 template<class G, class M, class C, class container>
-void FieldAligned<G, RowDistMatr<M,C>, MPI_Vector<container> >::operator()(enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fe)
+void Fieldaligned<G, RowDistMatr<M,C>, MPI_Vector<container> >::operator()(enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fe)
 {
     if(which == einsPlus || which == einsMinusT) ePlus( which, f, fe);
     if(which == einsMinus || which == einsPlusT) eMinus( which, f, fe);
 }
 
 template<class G, class M, class C, class container>
-void FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fpe ) 
+void Fieldaligned<G,RowDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fpe ) 
 {
     dg::split( f, m_f);
 
@@ -352,7 +325,7 @@ void FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
 }
 
 template<class G, class M, class C, class container>
-void FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::eMinus( enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fme ) 
+void Fieldaligned<G,RowDistMat<M,C>, MPI_Vector<container> >::eMinus( enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fme ) 
 {
     dg::split( f, m_f);
 

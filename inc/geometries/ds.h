@@ -5,7 +5,7 @@
 #include "dg/backend/derivatives.h"
 #include "fieldaligned.h"
 #ifdef MPI_VERSION
-#include "backend/mpi_derivatives.h"
+#include "dg/backend/mpi_derivatives.h"
 #include "mpi_fieldaligned.h"
 #endif //MPI_VERSION
 #include "magnetic_field.h"
@@ -49,12 +49,12 @@ struct DS
      */
     DS(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid, unsigned multiplyX=1, unsigned multiplyY=1, bool dependsOnX = true, bool dependsOnY=true, double eps = 1e-5, dg::norm no=dg::normed, dg::direction dir = dg::centered)
     {
-        dg::geo::BinaryVectorLvl0 vec( dg::geo::BHatR(mag), dg::geo::BHatZ(mag), dg::geo::BHatP(mag));
-        m_fa.construct( vec, grid, mx, my, dependsOnX, dependsOnY, eps, grid.bcx(), grid.bcy(), FullLimiter());
+        dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
+        m_fa.construct( bhat, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, grid.bcx(), grid.bcy(), FullLimiter());
         construct( m_fa, no, dir);
     }
     /**
-     * @brief Create a FieldAligned object and construct
+     * @brief Create a Fieldaligned object and construct
      *
      * @param vec The vector field to integrate
      * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
@@ -144,57 +144,32 @@ struct DS
      */
     void symv( const container& f, container& dsTdsf){ do_symv( f, dsTdsf);}
 
-    /**
-    * @brief Set boundary conditions in the limiter region
-    *
-    * if Dirichlet boundaries are used the left value is the left function
-    value, if Neumann boundaries are used the left value is the left derivative value
-    * @param bcz boundary condition
-    * @param left left boundary value
-    * @param right right boundary value
-    */
+    ///@copydoc FieldAligned::set_boundaries(dg::bc,double,double)
     void set_boundaries( dg::bc bcz, double left, double right)
     {
-        f_.set_boundaries( bcz, left, right);
+        m_fa.set_boundaries( bcz, left, right);
     }
-    /**
-     * @brief Set boundary conditions in the limiter region
-     *
-     * if Dirichlet boundaries are used the left value is the left function
-     value, if Neumann boundaries are used the left value is the left derivative value
-     * @param bcz boundary condition
-     * @param left left boundary value
-     * @param right right boundary value
-    */
+    ///@copydoc FieldAligned::set_boundaries(dg::bc,const container&,const container&)
     void set_boundaries( dg::bc bcz, const container& left, const container& right)
     {
-        f_.set_boundaries( bcz, left, right);
+        m_fa.set_boundaries( bcz, left, right);
     }
-    /**
-     * @brief Set boundary conditions in the limiter region
-     *
-     * if Dirichlet boundaries are used the left value is the left function
-     value, if Neumann boundaries are used the left value is the left derivative value
-     * @param bcz boundary condition
-     * @param global 3D vector containing boundary values
-     * @param scal_left left scaling factor
-     * @param scal_right right scaling factor
-     */
+    ///@copydoc FieldAligned::set_boundaries(dg::bc,const container&,double,double)
     void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
     {
-        f_.set_boundaries( bcz, global, scal_left, scal_right);
+        m_fa.set_boundaries( bcz, global, scal_left, scal_right);
     }
 
-    const container& weights()const {return vol3d;}
-    const container& inv_weights()const {return inv3d;}
-    const container& precond()const {return inv3d;}
+    const container& weights()const {return m_vol3d;}
+    const container& inv_weights()const {return m_inv3d;}
+    const container& precond()const {return m_inv3d;}
 
     /**
     * @brief access the underlying Fielaligned object for evaluate
     *
     * @return acces to fieldaligned object
     */
-    const dg::geo::FieldAligned<ProductGeometry, IMatrix, container>& fieldaligned() const{return f_;}
+    const Fieldaligned<ProductGeometry, IMatrix, container>& fieldaligned() const{return m_fa;}
     private:
     void do_forward(double alpha, const container& f, double beta, container& dsf);
     void do_backward(double alpha, const container& f, double beta, container& dsf);
@@ -204,7 +179,7 @@ struct DS
     void do_centeredAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
     void do_symv(const container& f, container& dsf);
 
-    FieldAligned<ProductGeometry, IMatrix, container> m_fa;
+    Fieldaligned<ProductGeometry, IMatrix, container> m_fa;
     container m_temp;
     container m_tempP, m_temp0, m_tempM;
     container m_vol3d, m_inv3d, m_weights_wo_vol;
@@ -217,24 +192,24 @@ struct DS
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class Geometry, class I, class M, class container>
-void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, M, container>& fa, dg::norm no, dg::direction dir, bool jumpX, bool jumpY)
+void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, container>& fa, dg::norm no, dg::direction dir)
 {
     m_fa=fa;
-    m_no=no, m_dir=dir, m_apply_jumpX=jumpX, m_apply_jumpY=jumpY;
+    m_no=no, m_dir=dir;
 
     dg::blas1::transfer( dg::create::volume(     fa.grid()), m_vol3d); 
     dg::blas1::transfer( dg::create::weights(    fa.grid()), m_weights_wo_vol); 
     dg::blas1::transfer( dg::create::inv_volume( fa.grid()), m_inv3d); 
-    dg::blas2::transfer( dg::create::jumpX( fa.grid()), jumpX);
-    dg::blas2::transfer( dg::create::jumpY( fa.grid()), jumpY);
+    dg::blas2::transfer( dg::create::jumpX( fa.grid()), m_jumpX);
+    dg::blas2::transfer( dg::create::jumpY( fa.grid()), m_jumpY);
     m_temp = m_vol3d, m_tempP = m_temp, m_temp0 = m_temp, m_tempM = m_temp;
 }
 
 template<class G, class I, class M, class container>
 inline void DS<G,I,M,container>::operator()( const container& f, container& dsf) { 
-    if( dir_ == dg::centered)
+    if( m_dir == dg::centered)
         return centered( 1., f, 0., dsf);
-    else if( dir_ == dg::forward)
+    else if( m_dir == dg::forward)
         return forward( 1., f, 0., dsf);
     else
         return backward( 1., f, 0., dsf);
@@ -288,7 +263,7 @@ void DS<G,I,M,container>::do_backwardAdj( double alpha, const container& f, doub
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
 }
 template<class G, class I, class M, class container>
-void DS<G, I,M,container>::do_centeredAdj( double alpha, container& f, double beta, container& dsf, dg::norm no)
+void DS<G, I,M,container>::do_centeredAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {               
     //adjoint discretisation
     dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
@@ -319,23 +294,24 @@ void DS<G,I,M,container>::do_symv( const container& f, container& dsTdsf)
     dg::blas1::pointwiseDivide( dsTdsf, m_weights_wo_vol, dsTdsf);
     //     add jump term 
     if(m_fa.dependsOnX())
-        dg::blas2::symv( -1., jumpX, f, 1., dsTdsf);
+        dg::blas2::symv( -1., m_jumpX, f, 1., dsTdsf);
     if(m_fa.dependsOnY())
-        dg::blas2::symv( -1., jumpY, f, 1., dsTdsf);
+        dg::blas2::symv( -1., m_jumpY, f, 1., dsTdsf);
     dg::blas1::pointwiseDot( m_weights_wo_vol, dsTdsf, dsTdsf); //make it symmetric
     if( m_no == dg::normed)
         dg::blas1::pointwiseDot( m_inv3d, dsTdsf, dsTdsf); //make it symmetric
 }
+///@endcond
 
-//enables the use of the dg::blas2::symv function 
+
+}//namespace geo
+
+///@cond
 template< class G, class I, class M, class V>
-struct MatrixTraits< DS<G,I,M, V> >
+struct MatrixTraits< geo::DS<G,I,M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
-
 ///@endcond
-
-}//namespace geo
 }//namespace dg

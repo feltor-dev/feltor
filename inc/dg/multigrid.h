@@ -16,7 +16,7 @@ namespace dg
 *
 * We use conjugate gradien (CG) at each stage and refine the grids in the first two dimensions (2d / x and y) 
 * @copydoc hide_geometry_matrix_container
-* @ingroup numerical1
+* @ingroup multigrid
 */
 template< class Geometry, class Matrix, class container> 
 struct MultigridCG2d

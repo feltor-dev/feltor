@@ -31,7 +31,7 @@ namespace blas1
 ///@{
 
 /**
- * @brief Generic way to copy and/or convert a container type to a different container type (e.g. from CPU to GPU, or double to float, etc.)
+ * @brief y=x; Generic way to copy and/or convert a container type to a different container type (e.g. from CPU to GPU, or double to float, etc.)
  *
  * @copydoc hide_container
  * @tparam other_container another container type
@@ -47,7 +47,7 @@ inline void transfer( const container& x, other_container& y)
 
 
 /**
- * @brief Invoke assignment operator
+ * @brief y=x; Invoke assignment operator
  *
  * Same as y=x
  * @tparam Assignable any assignable type
@@ -57,7 +57,7 @@ inline void transfer( const container& x, other_container& y)
 template<class Assignable>
 inline void copy( const Assignable& x, Assignable& y){y=x;}
 
-/*! @brief Euclidean dot product between two containers
+/*! @brief \f$ x^T y\f$; Euclidean dot product between two containers
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
@@ -75,7 +75,7 @@ inline typename VectorTraits<container>::value_type dot( const container& x, con
     return dg::blas1::detail::doDot( x, y, typename dg::VectorTraits<container>::vector_category() );
 }
 
-/*! @brief Modified BLAS 1 routine axpy
+/*! @brief \f$ y = \alpha x + \beta y\f$
  *
  * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
@@ -92,26 +92,26 @@ inline void axpby( typename VectorTraits<container>::value_type alpha, const con
     return;
 }
 
-/*! @brief Modified BLAS 1 routine axpy
+/*! @brief \f$ z = \alpha x + \beta y\f$
  *
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
  * @copydoc hide_container
  * @param alpha Scalar  
- * @param x container x may alias result
+ * @param x container x may alias z
  * @param beta Scalar
- * @param y container y may alias result
- * @param result container contains solution on output
+ * @param y container y may alias z
+ * @param z container z contains solution on output
  */
 template< class container>
-inline void axpby( typename VectorTraits<container>::value_type alpha, const container& x, typename VectorTraits<container>::value_type beta, const container& y, container& result)
+inline void axpby( typename VectorTraits<container>::value_type alpha, const container& x, typename VectorTraits<container>::value_type beta, const container& y, container& z)
 {
-    dg::blas1::detail::doAxpby( alpha, x, beta, y, result, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doAxpby( alpha, x, beta, y, z, typename dg::VectorTraits<container>::vector_category() );
     return;
 }
 
-/*! @brief Modified BLAS 1 routine axpy
+/*! @brief \f$ z = \alpha x + \beta y + \gamma z\f$
  *
  * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
@@ -131,7 +131,7 @@ inline void axpbypgz( typename VectorTraits<container>::value_type alpha, const 
     return;
 }
 
-/*! @brief "new" BLAS 1 routine transform
+/*! @brief \f$ y = op(x)\f$
  *
  * This routine computes \f[ y_i = op(x_i) \f]
  * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
@@ -148,7 +148,7 @@ inline void transform( const container& x, container& y, UnaryOp op)
     return;
 }
 
-/*! @brief BLAS 1 routine scal
+/*! @brief \f$ x = \alpha x\f$
  *
  * This routine computes \f[ \alpha x_i \f]
  * @copydoc hide_container
@@ -162,7 +162,7 @@ inline void scal( container& x, typename VectorTraits<container>::value_type alp
     return;
 }
 
-/*! @brief pointwise add a scalar
+/*! @brief \f$ x = x + \alpha \f$
  *
  * This routine computes \f[ x_i + \alpha \f] 
  * @copydoc hide_container
@@ -176,8 +176,7 @@ inline void plus( container& x, typename VectorTraits<container>::value_type alp
     return;
 }
 
-/**
-* @brief A 'new' BLAS 1 routine. 
+/*! @brief \f$ y = x_1 x_2 \f$
 *
 * Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
@@ -195,7 +194,7 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
 }
 
 /**
-* @brief A 'new' BLAS 1 routine. 
+* @brief \f$ y = \alpha x_1 x_2 + \beta y\f$ 
 *
 * Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
@@ -214,7 +213,7 @@ inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, co
 }
 
 /**
-* @brief A 'new' BLAS 1 routine. 
+* @brief \f$ y = x_1/ x_2\f$ 
 *
 * Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
@@ -232,7 +231,9 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 }
 
 /**
-* @brief A 'new' fused multiply-add BLAS 1 routine. 
+* @brief \f$ z = \alpha x_1x_2 + \beta x_2y_2 + \gamma z\f$
+*
+* A 'new' fused multiply-add BLAS 1 routine. 
 *
 * Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.

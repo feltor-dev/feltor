@@ -13,9 +13,8 @@ namespace guenther
 {
 /**
  * @brief Constructs and display geometric parameters for the guenther field
- * @ingroup geom
  */    
-struct GeomParameters
+struct Parameters
 {
     double I_0, //!< the current
            R_0, //!< central tokamak radius
@@ -29,7 +28,7 @@ struct GeomParameters
            psipmaxcut, //!< for cutting
            psipmaxlim; //!< for limiter
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
-    GeomParameters( const Json::Value& js) {
+    Parameters( const Json::Value& js) {
         I_0  = js["I_0"].asDouble();
         R_0  = js["R_0"].asDouble();
         a  = R_0*js["inverseaspectratio"].asDouble();

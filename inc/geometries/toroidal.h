@@ -23,7 +23,7 @@ BinaryFunctorsLvl2 createPsip( )
  */
 BinaryFunctorsLvl1 createIpol( )
 {
-    BinaryFunctorsLvl1 ipol( new Constant(1), new Constant(0), new Constant(0))
+    BinaryFunctorsLvl1 ipol( new Constant(1), new Constant(0), new Constant(0));
     return ipol;
 }
 
@@ -40,6 +40,71 @@ TokamakMagneticField createMagField( double R0)
 ///@}
 
 }//namespace toroidal
+namespace circular{
+
+///@addtogroup circular
+///@{
+/**
+ * @brief \f[ \psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right) \f]
+ * gives circular flux surfaces
+ */
+struct Psip : public aCloneableBinaryFunctor<Psip>
+{ /**
+     * @brief Construct from major radius
+     * @param R0 the major radius
+     */
+    Psip( double R0): m_R0(R0) { }
+  private:
+    double do_compute(double R, double Z) const
+    {    
+        return 0.5*((R-m_R0)*(R-m_R0) + Z*Z);
+    }
+    double m_R0;
+};
+/// @brief \f[ R-R_0 \f]
+struct PsipR : public aCloneableBinaryFunctor<PsipR>
+{ /**
+     * @brief Construct from major radius
+     * @param R0 the major radius
+     */
+    PsipR( double R0): m_R0(R0) { }
+  private:
+    double do_compute(double R, double Z) const
+    {    
+        return R-m_R0;
+    }
+    double m_R0;
+};
+///@brief \f[ Z \f]
+struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
+{ 
+  private:
+    double do_compute(double R, double Z) const
+    {    
+        return Z;
+    }
+};
+
+/**
+ * @brief circular \f$\psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right)\f$
+ * @return 
+ */
+BinaryFunctorsLvl2 createPsip( double R0 )
+{
+    BinaryFunctorsLvl2 psip( new Psip(R0), new PsipR(R0), new PsipZ(),new Constant(1), new Constant(0), new Constant(1));
+    return psip;
+}
+/**
+ * @brief constant \f$ I = 1\f$
+ * @return 
+ */
+BinaryFunctorsLvl1 createIpol( )
+{
+    BinaryFunctorsLvl1 ipol( new Constant(1), new Constant(0), new Constant(0));
+    return ipol;
+}
+///@}
+}//namespace circular
 
 /**
  * @brief Create a Toroidal Magnetic field
@@ -50,7 +115,18 @@ TokamakMagneticField createMagField( double R0)
  */
 TokamakMagneticField createToroidalField( double R0)
 {
-    return TokamakMagneticField( R0, toiroidal::createPsip(), toiroidal::createIpol());
+    return TokamakMagneticField( R0, toroidal::createPsip(), toroidal::createIpol());
 }
+/**
+ * @brief Create a Magnetic field with circular flux surfaces
+ * @param R0 the major radius
+ * @return A magnetic field object
+ * @ingroup geom
+ */
+TokamakMagneticField createCircularField( double R0)
+{
+    return TokamakMagneticField( R0, circular::createPsip(R0), circular::createIpol());
+}
+
 }//namespace geo
 }//namespace dg

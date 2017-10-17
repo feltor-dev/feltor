@@ -33,7 +33,7 @@ namespace taylor
 {
 ///@addtogroup taylor
 ///@{
-typedef dg::geo::solovev::GeomParameters GeomParameters; //!< bring GeomParameters into the taylor namespace 
+typedef dg::geo::solovev::Parameters Parameters; //!< bring Parameters into the taylor namespace 
 
 /**
  * @brief \f[ \psi \f]
@@ -47,7 +47,7 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
      *
      * @param gp geometric parameters
      */
-    Psip( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
+    Psip( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
   private:
@@ -83,7 +83,7 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
 struct PsipR: public aCloneableBinaryFunctor<PsipR>
 {
     ///@copydoc Psip::Psip()
-    PsipR( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) {
+    PsipR( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) {
         cs_=sqrt(c_[11]*c_[11]-c_[10]*c_[10]);
     
     }
@@ -121,7 +121,7 @@ struct PsipR: public aCloneableBinaryFunctor<PsipR>
 struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 {
     ///@copydoc Psip::Psip()
-    PsipRR( solovev::GeomParameters gp ): R0_(gp.R_0), c_(gp.c) {
+    PsipRR( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) {
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
   private:
@@ -154,7 +154,7 @@ struct PsipRR: public aCloneableBinaryFunctor<PsipRR>
 struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZ( solovev::GeomParameters gp ): R0_(gp.R_0), c_(gp.c) { 
+    PsipZ( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) { 
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
     private:
@@ -185,7 +185,7 @@ struct PsipZ: public aCloneableBinaryFunctor<PsipZ>
 struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 {
     ///@copydoc Psip::Psip()
-    PsipZZ( solovev::GeomParameters gp): R0_(gp.R_0), c_(gp.c) { 
+    PsipZZ( solovev::Parameters gp): R0_(gp.R_0), c_(gp.c) { 
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
     private:
@@ -214,7 +214,7 @@ struct PsipZZ: public aCloneableBinaryFunctor<PsipZZ>
 struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 {
     ///@copydoc Psip::Psip()
-    PsipRZ( solovev::GeomParameters gp ): R0_(gp.R_0), c_(gp.c) { 
+    PsipRZ( solovev::Parameters gp ): R0_(gp.R_0), c_(gp.c) { 
         cs_ = sqrt( c_[11]*c_[11]-c_[10]*c_[10]);
     }
   private:
@@ -252,7 +252,7 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 struct Ipol: public aCloneableBinaryFunctor<Ipol>
 {
     ///@copydoc Psip::Psip()
-    Ipol(  solovev::GeomParameters gp ): c12_(gp.c[11]), psip_(gp) { }
+    Ipol(  solovev::Parameters gp ): c12_(gp.c[11]), psip_(gp) { }
   private:
     double do_compute(double R, double Z) const
     {    
@@ -268,7 +268,7 @@ struct Ipol: public aCloneableBinaryFunctor<Ipol>
 struct IpolR: public aCloneableBinaryFunctor<IpolR>
 {
     ///@copydoc Psip::Psip()
-    IpolR(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipR_(gp) { }
+    IpolR(  solovev::Parameters gp ): c12_(gp.c[11]), psipR_(gp) { }
   private:
     double do_compute(double R, double Z) const
     {    
@@ -283,7 +283,7 @@ struct IpolR: public aCloneableBinaryFunctor<IpolR>
 struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
 {
     ///@copydoc Psip::Psip()
-    IpolZ(  solovev::GeomParameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
+    IpolZ(  solovev::Parameters gp ): c12_(gp.c[11]), psipZ_(gp) { }
   private:
     double do_compute(double R, double Z) const
     {    
@@ -293,17 +293,17 @@ struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
     PsipZ psipZ_;
 };
 
-BinaryFunctorsLvl2 createPsip( solovev::GeomParameters gp)
+BinaryFunctorsLvl2 createPsip( solovev::Parameters gp)
 {
     BinaryFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
     return psip;
 }
-BinaryFunctorsLvl1 createIpol( solovev::GeomParameters gp)
+BinaryFunctorsLvl1 createIpol( solovev::Parameters gp)
 {
     BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
     return ipol;
 }
-dg::geo::TokamakMagneticField createMagField( solovev::GeomParameters gp)
+dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
 }
@@ -317,7 +317,7 @@ dg::geo::TokamakMagneticField createMagField( solovev::GeomParameters gp)
  * @return A magnetic field object
  * @ingroup geom
  */
-TokamakMagneticField createTaylorField( solovev::GeomParameters gp)
+TokamakMagneticField createTaylorField( solovev::Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
 }

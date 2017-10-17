@@ -9,40 +9,42 @@ namespace dg
 {
 namespace geo
 {
-    /*!@class hide_grid_parameters3d
-     * @brief Construct a 3D grid
-     *
-     * the coordinates of the computational space are called x,y,z
-     * @param generator generates the perpendicular grid
-     * @param n number of %Gaussian nodes in x and y
-     *  (1<=n<=20, note that the library is optimized for n=3 )
-     * @attention # of polynomial coefficients in z direction is always 1
-     * @param Nx number of cells in x
-     * @param Ny number of cells in y 
-     * @param Nz  number of cells z
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     * @param bcz boundary condition in z
-     */
-    /*!@class hide_grid_parameters2d
-     * @brief Construct a 2D grid
-     *
-     * the coordinates of the computational space are called x,y,z
-     * @param generator generates the grid
-     * @param n number of %Gaussian nodes in x and y
-     *  (1<=n<=20, note that the library is optimized for n=3 )
-     * @param Nx number of cells in x
-     * @param Ny number of cells in y 
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     */
+
+/*!@class hide_grid_parameters3d
+ * @brief Construct a 3D grid
+ *
+ * the coordinates of the computational space are called x,y,z
+ * @param generator generates the perpendicular grid
+ * @param n number of %Gaussian nodes in x and y
+ *  (1<=n<=20, note that the library is optimized for n=3 )
+ * @attention # of polynomial coefficients in z direction is always 1
+ * @param Nx number of cells in x
+ * @param Ny number of cells in y 
+ * @param Nz  number of cells z
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ * @param bcz boundary condition in z
+ */
+
+/*!@class hide_grid_parameters2d
+ * @brief Construct a 2D grid
+ *
+ * the coordinates of the computational space are called x,y,z
+ * @param generator generates the grid
+ * @param n number of %Gaussian nodes in x and y
+ *  (1<=n<=20, note that the library is optimized for n=3 )
+ * @param Nx number of cells in x
+ * @param Ny number of cells in y 
+ * @param bcx boundary condition in x
+ * @param bcy boundary condition in y
+ */
 
 
 ///@addtogroup grids
 ///@{
 
 ///@cond
-struct CurvilinearGrid2d; 
+struct CurvilinearProductGrid3d;
 namespace detail
 {
 void square( const dg::SparseTensor<thrust::host_vector<double> >& jac, const thrust::host_vector<double>& R, dg::SparseTensor<thrust::host_vector<double> >& metric, bool orthogonal)
@@ -70,6 +72,46 @@ void square( const dg::SparseTensor<thrust::host_vector<double> >& jac, const th
 //when we make a 3d grid with eta and phi swapped the metric structure and the transformation changes 
 //In practise it can only be orthogonal due to the projection tensor in the elliptic operator
 
+/**
+ * @brief A two-dimensional grid based on curvilinear coordinates
+ */
+struct CurvilinearGrid2d : public dg::aGeometry2d
+{
+    ///@copydoc hide_grid_parameters2d
+    CurvilinearGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
+        dg::aGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER), handle_(generator)
+    {
+        construct( n,Nx,Ny);
+    }
+
+    /**
+     * @brief Explicitly convert 3d product grid to the perpendicular grid
+     * @param g 3d product grid
+     */
+    explicit CurvilinearGrid2d( CurvilinearProductGrid3d g);
+
+    ///read access to the generator 
+    const aGenerator2d& generator() const{return handle_.get();}
+    virtual CurvilinearGrid2d* clone()const{return new CurvilinearGrid2d(*this);}
+    private:
+    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
+    {
+        dg::aTopology2d::do_set( new_n, new_Nx, new_Ny);
+        construct( new_n, new_Nx, new_Ny);
+    }
+    void construct( unsigned n, unsigned Nx, unsigned Ny);
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
+        return jac_;
+    }
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const {
+        return metric_;
+    }
+    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
+    dg::SparseTensor<thrust::host_vector<double> > jac_, metric_;
+    std::vector<thrust::host_vector<double> > map_;
+    dg::Handle<aGenerator2d> handle_;
+};
+
 
 /**
  * @brief A 2x1 curvilinear product space grid
@@ -90,18 +132,12 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
         constructParallel(Nz);
     }
 
-    /*!
-     * @brief The grid made up by the first two dimensions
-     *
-     * This is possible because the 3d grid is a product grid of a 2d perpendicular grid and a 1d parallel grid
-     * @return A newly constructed perpendicular grid
-     */
-    perpendicular_grid perp_grid() const;// { return perpendicular_grid(*this);}
 
     ///@copydoc CurvilinearGrid2d::generator()const
     const aGenerator2d & generator() const{return handle_.get();}
     virtual CurvilinearProductGrid3d* clone()const{return new CurvilinearProductGrid3d(*this);}
     private:
+    virtual CurvilinearGrid2d* do_perp_grid() const;
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny,unsigned new_Nz){
         dg::aTopology3d::do_set( new_n, new_Nx, new_Ny,new_Nz);
         if( !( new_n == n() && new_Nx == Nx() && new_Ny == Ny() ) )
@@ -154,61 +190,23 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
     dg::Handle<aGenerator2d> handle_;
 };
 
-/**
- * @brief A two-dimensional grid based on curvilinear coordinates
- */
-struct CurvilinearGrid2d : public dg::aGeometry2d
-{
-    ///@copydoc hide_grid_parameters2d
-    CurvilinearGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
-        dg::aGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER), handle_(generator)
-    {
-        construct( n,Nx,Ny);
-    }
-
-    /**
-     * @brief Explicitly convert 3d product grid to the perpendicular grid
-     * @param g 3d product grid
-     */
-    explicit CurvilinearGrid2d( CurvilinearProductGrid3d g):
-        dg::aGeometry2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy() ), handle_(g.generator())
-    {
-        g.set( n(), Nx(), Ny(), 1); //shouldn't trigger 2d grid generator
-        map_=g.map();
-        jac_=g.jacobian().perp();
-        metric_=g.metric().perp();
-        map_.pop_back();
-    }
-
-    ///read access to the generator 
-    const aGenerator2d& generator() const{return handle_.get();}
-    virtual CurvilinearGrid2d* clone()const{return new CurvilinearGrid2d(*this);}
-    private:
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
-    {
-        dg::aTopology2d::do_set( new_n, new_Nx, new_Ny);
-        construct( new_n, new_Nx, new_Ny);
-    }
-    void construct( unsigned n, unsigned Nx, unsigned Ny)
-    {
-        CurvilinearProductGrid3d g( handle_.get(), n,Nx,Ny,1,bcx());
-        *this = CurvilinearGrid2d(g);
-    }
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
-        return jac_;
-    }
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const {
-        return metric_;
-    }
-    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
-    dg::SparseTensor<thrust::host_vector<double> > jac_, metric_;
-    std::vector<thrust::host_vector<double> > map_;
-    dg::Handle<aGenerator2d> handle_;
-};
-
 ///@}
 ///@cond
-CurvilinearProductGrid3d::perpendicular_grid CurvilinearProductGrid3d::perp_grid() const { return CurvilinearProductGrid3d::perpendicular_grid(*this);}
+CurvilinearGrid2d::CurvilinearGrid2d( CurvilinearProductGrid3d g):
+    dg::aGeometry2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy() ), handle_(g.generator())
+{
+    g.set( n(), Nx(), Ny(), 1); //shouldn't trigger 2d grid generator
+    map_=g.map();
+    jac_=g.jacobian().perp();
+    metric_=g.metric().perp();
+    map_.pop_back();
+}
+void CurvilinearGrid2d::construct( unsigned n, unsigned Nx, unsigned Ny)
+{
+    CurvilinearProductGrid3d g( handle_.get(), n,Nx,Ny,1,bcx());
+    *this = CurvilinearGrid2d(g);
+}
+CurvilinearProductGrid3d::perpendicular_grid* CurvilinearProductGrid3d::do_perp_grid() const { return new CurvilinearProductGrid3d::perpendicular_grid(*this);}
 ///@endcond
 
 }//namespace geo
