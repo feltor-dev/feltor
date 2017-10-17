@@ -17,7 +17,7 @@ ds_geom_t: ds_geom_t.cu solovev.h
 geometry_diag: geometry_diag.cu solovev.h 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(LIBS) $(INCLUDE) $(JSONLIB) -g
 
-%_t: %_t.cu %.h
+%_t: %_t.cu 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g 
 
 %_mpit: %_mpit.cu 

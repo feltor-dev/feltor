@@ -283,15 +283,15 @@ void DS<G,I,M,container>::do_symv( const container& f, container& dsTdsf)
 {
     if(m_dir == dg::centered)
     {
-        do_centered( f, m_tempP);
-        do_centeredAdj( m_tempP, dsTdsf, dg::not_normed);
+        do_centered( 1., f, 0., m_tempP);
+        do_centeredAdj( 1., m_tempP, 0., dsTdsf, dg::not_normed);
     }
     else 
     {
-        do_forward( f, m_tempP);
-        do_forwardAdj( m_tempP, m_temp0, dg::not_normed);
-        do_backward( f, m_tempM);
-        do_backwardAdj( m_tempM, dsTdsf, dg::not_normed);
+        do_forward( 1., f, 0., m_tempP);
+        do_forwardAdj( 1., m_tempP, 0., m_temp0, dg::not_normed);
+        do_backward( 1., f, 0., m_tempM);
+        do_backwardAdj( 1., m_tempM, 0., dsTdsf, dg::not_normed);
         dg::blas1::axpby(0.5,m_temp0,0.5,dsTdsf);
     }
     dg::blas1::pointwiseDivide( dsTdsf, m_weights_wo_vol, dsTdsf);
