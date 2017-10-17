@@ -20,110 +20,106 @@ namespace dg{
 namespace geo{
 
 /**
-* @brief Class for the evaluation of a parallel derivative
+* @brief Class for the evaluation of parallel derivatives
 *
 * This class discretizes the operators 
-\f$ \nabla_\parallel = \mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, 
+\f$ \nabla_\parallel = \mathbf{v}\cdot \nabla = v^\zeta\partial_\zeta + v^\eta\partial_\eta + v^\varphi\partial_\varphi \f$, 
 \f$\nabla_\parallel^\dagger\f$ and 
 \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$
 in arbitrary coordinates
 * @ingroup fieldaligned
-* @tparam ProductGeometry must be either aProductGeometry3d or aProductMPIGeometry3d or any derivative 
+* @tparam ProductGeometry must be either dg::aProductGeometry3d or dg::aProductMPIGeometry3d or any derivative 
 * @tparam IMatrix The type of the interpolation matrix 
-    -dg::IHMatrix, or dg::IDMatrix, dg::MIHMatrix, or dg::MIDMatrix
+    - dg::IHMatrix, or dg::IDMatrix, dg::MIHMatrix, or dg::MIDMatrix
 * @tparam Matrix The matrix class of the jump matrix   
-    -dg::HMatrix, or dg::DMatrix, dg::MHMatrix, or dg::MDMatrix
+    - dg::HMatrix, or dg::DMatrix, dg::MHMatrix, or dg::MDMatrix
 * @tparam container The container-class on which the interpolation matrix operates on
-    -dg::HVec, or dg::DVec, dg::MHVec, or dg::MDVec
+    - dg::HVec, or dg::DVec, dg::MHVec, or dg::MDVec
+* @sa The pdf <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup 
 */
 template< class ProductGeometry, class IMatrix, class Matrix, class container >
 struct DS
 {
+    ///@brief No memory allocation; all member calls except construct are invalid
     DS(){}
-    DS(const dg::geo::TokamakMagneticField& mag, const ProductGeometry& g, unsigned mx=1, unsigned my=1, double eps = 1e-5, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool dependsOnX = true, bool dependsOnY=true)
+    
+    /**
+     * @brief Create the magnetic unit vector field and construct
+     * @copydetails DS(const dg::geo::BinaryVectorLvl0&,const ProductGeometry&,unsigned,unsigned,bool,bool,double,dg::norm,dg::direction)
+     */
+    DS(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid, unsigned multiplyX=1, unsigned multiplyY=1, bool dependsOnX = true, bool dependsOnY=true, double eps = 1e-5, dg::norm no=dg::normed, dg::direction dir = dg::centered)
     {
         dg::geo::BinaryVectorLvl0 vec( dg::geo::BHatR(mag), dg::geo::BHatZ(mag), dg::geo::BHatP(mag));
-        m_fa.construct( vec, grid, mx, my, eps, FullLimiter(), grid.bcx(), grid.bcy());
-        construct( m_fa, g, no, dir, dependsOnX, dependsOnY);
+        m_fa.construct( vec, grid, mx, my, dependsOnX, dependsOnY, eps, grid.bcx(), grid.bcy(), FullLimiter());
+        construct( m_fa, no, dir);
     }
-    DS(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& g, unsigned mx=1, unsigned my=1, double eps = 1e-5, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool dependsOnX = true, bool dependsOnY=true)
+    /**
+     * @brief Create a FieldAligned object and construct
+     *
+     * @param vec The vector field to integrate
+     * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
+     * @param multiplyX defines the resolution in X of the fine grid relative to grid
+     * @param multiplyY defines the resolution in Y of the fine grid relative to grid
+     * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate
+     * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate
+     * @param eps Desired accuracy of the fieldline integrator
+     * @param no indicate if the symv function should be symmetric (not_normed) or not
+     * @param dir indicate the direction in the bracket operator and in symv
+     */
+    DS(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX=1, unsigned multiplyY=1, bool dependsOnX = true, bool dependsOnY=true, double eps = 1e-5, dg::norm no=dg::normed, dg::direction dir = dg::centered)
     {
-        m_fa.construct( vec, grid, mx, my, eps, FullLimiter(), grid.bcx(), grid.bcy());
-        construct( m_fa, g, no, dir, dependsOnX, dependsOnY);
+        m_fa.construct( vec, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, grid.bcx(), grid.bcy(), FullLimiter());
+        construct( m_fa, no, dir);
     }
-    DS(const dg::geo::Fieldaligned<ProductGeometry, I, M, container>& fa, const ProductGeometry& g, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool dependsOnX = true, bool dependsOnY=true)
+    ///@copydoc construct
+    DS(const dg::geo::Fieldaligned<ProductGeometry, IMatrix, container>& fa, dg::norm no=dg::normed, dg::direction dir = dg::centered)
     {
-        construct( fa, g, no, dir, dependsOnX, dependsOnY);
+        construct( fa, no, dir);
     }
-    void construct(const dg::geo::Fieldaligned<ProductGeometry, I, M, container>& fa, const ProductGeometry& g, dg::norm no=dg::normed, dg::direction dir = dg::centered, bool dependsOnX = true, bool dependsOnY=true);
+    /**
+     * @brief Re-construct from a given Fieldaligned object
+     *
+     * @param fa this object will be used in all further member calls
+     * @param no indicate if the symv function should be symmetric (not_normed) or not
+     * @param dir indicate the direction in the bracket operator and in symv
+     */
+    void construct(const dg::geo::Fieldaligned<ProductGeometry, IMatrix, container>& fa, dg::norm no=dg::normed, dg::direction dir = dg::centered);
 
     /**
-    * @brief Apply the forward derivative on a 3d vector
+    * @brief forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
     *
-    * forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
     * @param alpha Scalar
     * @param f The vector to derive
     * @param beta Scalar
     * @param g contains result on output (write only)
+    * @note the vector sizes need to equal the grid size in the constructor
     */
     void forward( double alpha, const container& f, double beta, container& g){
         do_forward( alpha, f, beta, g);
     }
-    /**
-    * @brief Apply the backward derivative on a 3d vector
-    *
-    * backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
-    * @param alpha Scalar
-    * @param f The vector to derive
-    * @param beta Scalar
-    * @param g contains result on output (write only)
-    */
+    ///@brief backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
+    ///@copydetails forward
     void backward( double alpha, const container& f, double beta, container& g){
         do_backward( alpha, f, beta, g);
     }
-    /**
-    * @brief Apply the centered derivative on a 3d vector
-    *
-    * centered derivative \f$ g_i = \alpha \frac{1}{2h_z}(f_{i+1} - f_{i-1}) + \beta g_i\f$
-    * @param alpha Scalar
-    * @param f The vector to derive
-    * @param beta Scalar
-    * @param g contains result on output (write only)
-    */
+    ///@brief centered derivative \f$ g_i = \alpha \frac{1}{2h_z}(f_{i+1} - f_{i-1}) + \beta g_i\f$
+    ///@copydetails forward
     void centered( double alpha, const container& f, double beta, container& g){
         do_centered( alpha, f, beta, g);
     }
 
-    /**
-    * @brief Apply the negative adjoint derivative on a 3d vector
-    *
-    * @param alpha Scalar
-    * @param f The vector to derive
-    * @param beta Scalar
-    * @param g contains result on output (write only)
-    */
+    ///@brief Apply the negative forward adjoint derivative on a 3d vector
+    ///@copydetails forward
     void forwardAdj( double alpha, const container& f, double beta, container& g){
         do_forwardAdj( alpha, f, beta, g, dg::normed);
     }
-    /**
-    * @brief Apply the negative adjoint derivative on a 3d vector
-    *
-    * @param alpha Scalar
-    * @param f The vector to derive
-    * @param beta Scalar
-    * @param g contains result on output (write only)
-    */
+    ///@brief Apply the negative backward adjoint derivative on a 3d vector
+    ///@copydetails forward
     void backwardAdj( double alpha, const container& f, double beta, container& g){
         do_backwardAdj( alpha, f, beta, g, dg::normed);
     }
-    /**
-    * @brief Apply the negative adjoint derivative on a 3d vector
-    *
-    * @param alpha Scalar
-    * @param f The vector to derive
-    * @param beta Scalar
-    * @param g contains result on output (write only)
-    */
+    ///@brief Apply the negative centered adjoint derivative on a 3d vector
+    ///@copydetails forward
     void centeredAdj(double alpha, const container& f, double beta, container& g){
         do_centeredAdj( alpha, f, beta, g, dg::normed);
     }
@@ -139,12 +135,12 @@ struct DS
 
 
     /**
-     * @brief Discretizes the parallel Laplacian as a symmetric matrix
+     * @brief Discretizes \f$ \nabla\cdot ( \vec v \vec v \cdot \nabla . )\f$ as a symmetric matrix
      *
      * if direction is centered then centered followed by centeredAdj and adding jump terms
      * @param f The vector to derive
      * @param dsTdsf contains result on output (write only)
-     * @note if apply_jumpX is false then no jumpy terms will be added in the x-direction
+     * @note if dependsOnX is false then no jump terms will be added in the x-direction and similar in y
      */
     void symv( const container& f, container& dsTdsf){ do_symv( f, dsTdsf);}
 
@@ -208,30 +204,29 @@ struct DS
     void do_centeredAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
     void do_symv(const container& f, container& dsf);
 
-    FieldAligned<ProductGeometry,IMatrix,container> m_fa;
-    Matrix m_jumpX, m_jumpY;
+    FieldAligned<ProductGeometry, IMatrix, container> m_fa;
     container m_temp;
     container m_tempP, m_temp0, m_tempM;
     container m_vol3d, m_inv3d, m_weights_wo_vol;
     dg::norm m_no;
     dg::direction m_dir;
-    bool m_apply_jumpX, m_apply_jumpY;
+    Matrix m_jumpX, m_jumpY;
 };
 
 ///@cond
 ////////////////////////////////////DEFINITIONS////////////////////////////////////////
 
 template<class Geometry, class I, class M, class container>
-void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, M, container>& fa, const Geometry& grid, dg::norm no, dg::direction dir, bool jumpX, bool jumpY)
+void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, M, container>& fa, dg::norm no, dg::direction dir, bool jumpX, bool jumpY)
 {
     m_fa=fa;
     m_no=no, m_dir=dir, m_apply_jumpX=jumpX, m_apply_jumpY=jumpY;
 
-    dg::blas1::transfer( dg::create::volume(     grid), m_vol3d); 
-    dg::blas1::transfer( dg::create::weights(    grid), m_weights_wo_vol); 
-    dg::blas1::transfer( dg::create::inv_volume( grid), m_inv3d); 
-    dg::blas2::transfer( dg::create::jumpX( grid), jumpX);
-    dg::blas2::transfer( dg::create::jumpY( grid), jumpY);
+    dg::blas1::transfer( dg::create::volume(     fa.grid()), m_vol3d); 
+    dg::blas1::transfer( dg::create::weights(    fa.grid()), m_weights_wo_vol); 
+    dg::blas1::transfer( dg::create::inv_volume( fa.grid()), m_inv3d); 
+    dg::blas2::transfer( dg::create::jumpX( fa.grid()), jumpX);
+    dg::blas2::transfer( dg::create::jumpY( fa.grid()), jumpY);
     m_temp = m_vol3d, m_tempP = m_temp, m_temp0 = m_temp, m_tempM = m_temp;
 }
 
@@ -323,9 +318,9 @@ void DS<G,I,M,container>::do_symv( const container& f, container& dsTdsf)
     }
     dg::blas1::pointwiseDivide( dsTdsf, m_weights_wo_vol, dsTdsf);
     //     add jump term 
-    if(m_apply_jumpX)
+    if(m_fa.dependsOnX())
         dg::blas2::symv( -1., jumpX, f, 1., dsTdsf);
-    if(m_apply_jumpY)
+    if(m_fa.dependsOnY())
         dg::blas2::symv( -1., jumpY, f, 1., dsTdsf);
     dg::blas1::pointwiseDot( m_weights_wo_vol, dsTdsf, dsTdsf); //make it symmetric
     if( m_no == dg::normed)
@@ -344,4 +339,3 @@ struct MatrixTraits< DS<G,I,M, V> >
 
 }//namespace geo
 }//namespace dg
-

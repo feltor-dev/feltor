@@ -86,7 +86,12 @@ struct FieldAligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
 {
     FieldAligned(){}
     template <class Limiter>
-    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-4, Limiter limit = FullLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, double deltaPhi = -1);
+    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
+    {
+        construct( vec, grid, multiplyX, multiplyY, eps, limit, globalbcx, globalbcy, limit, deltaPhi);
+    }
+    template <class Limiter>
+    void construct(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1);
 
     void set_boundaries( dg::bc bcz, double left, double right)
     {
@@ -130,18 +135,21 @@ struct FieldAligned< Geometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::bc m_bcz;
     MPI_Vector<LocalContainer> m_left, m_right;
     MPI_Vector<LocalContainer> m_limiter;
-    std::vector<LocalContainer> tempXYplus_, tempXYminus_, m_temp; 
+    std::vector<LocalContainer> m_temp; 
     MPIDistMat<LocalIMatrix, CommunicatorXY> m_plus, m_minus, m_plusT, m_minusT;
 };
 //////////////////////////////////////DEFINITIONS/////////////////////////////////////
 template<class MPIGeometry, class LocalIMatrix, class CommunicatorXY, class LocalContainer>
 template <class Limiter>
-FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::FieldAligned(
-    const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, double deltaPhi):
-    m_hz( dg::evaluate( dg::zero, grid)), m_hp( m_hz), m_hm( m_hz), 
-    m_g(grid), m_bcz(grid.bcz()), 
-    tempXYplus_(g_.Nz()), tempXYminus_(g_.Nz()), temp_(g_.Nz())
+void FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::construct(
+    const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid, unsigned mx, unsigned my, double eps, dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double deltaPhi)
 {
+    temp_(g_.Nz())
+
+    dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
+    m_Nz=grid.Nz(), m_bcz=grid.bcz(); 
+    m_g=grid;
+    dg::split( m_hz_inv, m_temp);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -201,26 +209,20 @@ FieldAligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<L
     dg::blas1::axpby(  1., hp_, +1., hm_, hz_);
     delete grid2d_ptr;
 
-    CommunicatorXY cp( pids, grid2d_ptr.communicator());
-    commXYplus_ = cp;
     thrust::host_vector<double> pX, pY;
     dg::blas1::transfer( cp.global_gather( yp[0]), pX);
     dg::blas1::transfer( cp.global_gather( yp[1]), pY);
 
     //construt interpolation matrix
-    plus = dg::create::interpolation( pX, pY, grid2d_ptr.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
+    plus = dg::create::interpolation( pX, pY, grid2d_ptr.local(), globalbcz);
     cusp::transpose( plus, plusT);
 
-    CommunicatorXY cm( pids, grid2d_ptr.communicator());
-    commXYminus_ = cm;
     dg::blas1::transfer( cm.global_gather( ym[0]), pX);
     dg::blas1::transfer( cm.global_gather( ym[1]), pY);
-    minus = dg::create::interpolation( pX, pY, grid2d_ptr.local(), globalbcz); //inner points hopefully never lie exactly on local boundary
+    minus = dg::create::interpolation( pX, pY, grid2d_ptr.local(), globalbcz);
     cusp::transpose( minus, minusT);
     for( unsigned i=0; i<g_.Nz(); i++)
     {
-        tempXYplus_[i].resize( commXYplus_.size());
-        tempXYminus_[i].resize( commXYminus_.size());
         temp_[i].resize( localsize);
     }
     delete grid2d_ptr;
@@ -393,4 +395,3 @@ void FieldAligned<G,RowDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
 
 }//namespace geo
 }//namespace dg
-

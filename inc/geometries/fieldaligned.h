@@ -348,31 +348,29 @@ aGeometry2d* clone_3d_to_perp( const aGeometry3d* grid_ptr)
 
 //////////////////////////////FieldAlignedCLASS////////////////////////////////////////////
 /**
-* @brief Class for the evaluation of a parallel derivative
+* @brief Create and manage interpolation matrices from fieldline integration
 *
-* This class discretizes the operators \f$ \nabla_\parallel = 
-\mathbf{b}\cdot \nabla = b_R\partial_R + b_Z\partial_Z + b_\phi\partial_\phi \f$, \f$\nabla_\parallel^\dagger\f$ and \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$ in
-cylindrical coordinates
 * @ingroup fieldaligned
 * @tparam ProductGeometry must be either aProductGeometry3d or aProductMPIGeometry3d or any derivative 
 * @tparam IMatrix The type of the interpolation matrix 
-    -dg::IHMatrix, or dg::IDMatrix, dg::MIHMatrix, or dg::MIDMatrix
+    - dg::IHMatrix, or dg::IDMatrix, dg::MIHMatrix, or dg::MIDMatrix
 * @tparam container The container-class on which the interpolation matrix operates on
-    -dg::HVec, or dg::DVec, dg::MHVec, or dg::MDVec
+    - dg::HVec, or dg::DVec, dg::MHVec, or dg::MDVec
+* @sa The pdf <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup 
 */
 template<class ProductGeometry, class IMatrix, class container >
 struct FieldAligned
 {
 
-    typedef IMatrix InterpolationMatrix;
-    ///@brief do not allocate memory
+    typedef IMatrix InterpolationMatrix; //!< typdef to reveal the interpolation matrix
+    ///@brief do not allocate memory; no member call except construct is valid
     FieldAligned(){}
 
     ///@copydoc construct()
     template <class Limiter>
-    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-5, Limiter limit = FullLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, double deltaPhi = -1);
+    FieldAligned(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
     {
-        construct( vec, grid, multiplyX, multiplyY, eps, limit, globalbcx, globalbcy, deltaPhi);
+        construct( vec, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, limit, globalbcx, globalbcy, limit, deltaPhi);
     }
     /**
     * @brief Construct from a field and a grid
@@ -384,18 +382,23 @@ struct FieldAligned
     * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
     * @param multiplyX defines the resolution in X of the fine grid relative to grid
     * @param multiplyY defines the resolution in Y of the fine grid relative to grid
-    * @param eps Desired accuracy of runge kutta
-    * @param limit Instance of the limiter class (Default is a limiter everywhere, 
-        note that if grid.bcz() is periodic it doesn't matter if there is a limiter or not)
+    * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate
+    * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate
+    * @param eps Desired accuracy of the fieldline integrator
     * @param globalbcx Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
     * @param globalbcy Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
-    * @param deltaPhi Is either <0 (then it's ignored), may differ from hz() only if Nz() == 1
+    * @param limit Instance of the limiter class (Default is a limiter everywhere, 
+        note that if grid.bcz() is periodic it doesn't matter if there is a limiter or not)
+    * @param deltaPhi Is either <0 (then it's ignored), or may differ from grid.hz() if grid.Nz() == 1
     * @note If there is a limiter, the boundary condition on the first/last plane is set 
         by the grid.bcz() variable and can be changed by the set_boundaries function. 
-        If there is no limiter the boundary condition is periodic.
+        If there is no limiter, the boundary condition is periodic.
     */
     template <class Limiter>
-    void construct(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, double eps = 1e-5, Limiter limit = FullLimiter(), dg::bc globalbcx = dg::DIR, dg::bc globalbcy = dg::DIR, double deltaPhi = -1);
+    void construct(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1);
+
+    bool dependsOnX()const{return m_dependsOnX;}
+    bool dependsOnY()const{return m_dependsOnY;}
 
     /**
     * @brief Set boundary conditions in the limiter region
@@ -494,6 +497,7 @@ struct FieldAligned
     ///@brief hm is the distance between the current and minus planes
     ///@return three-dimensional vector
     const container& hm_inv()const {return hm_inv;}
+    const ProductGeoemtry& grid()const{return m_g.get();}
     private:
     void ePlus( enum whichMatrix which, const container& in, container& out);
     void eMinus(enum whichMatrix which, const container& in, container& out);
@@ -505,6 +509,7 @@ struct FieldAligned
     container m_limiter;
     std::vector<container> m_temp;
     dg::Handle<ProductGeometry> m_g;
+    bool m_dependsOnX, m_dependsOnY;
 };
 
 ///@cond 
@@ -514,8 +519,9 @@ struct FieldAligned
 
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
-void FieldAligned<Geometry, IMatrix, container>::construct(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, double eps, Limiter limit, dg::bc globalbcx, dg::bc globalbcy, double deltaPhi):
+void FieldAligned<Geometry, IMatrix, container>::construct(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, bool bx, bool by, double eps, dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double deltaPhi):
 {
+    m_dependsOnX=bx, m_dependsOnY=by;
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
     m_Nz=grid.Nz(), m_bcz=grid.bcz(); 
     m_g=grid;
@@ -721,4 +727,3 @@ void FieldAligned<G, I, container>::eMinus( enum whichMatrix which, const contai
 
 }//namespace geo
 }//namespace dg
-
