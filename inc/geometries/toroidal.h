@@ -95,12 +95,12 @@ BinaryFunctorsLvl2 createPsip( double R0 )
     return psip;
 }
 /**
- * @brief constant \f$ I = 1\f$
+ * @brief constant \f$ I = I_0\f$
  * @return 
  */
-BinaryFunctorsLvl1 createIpol( )
+BinaryFunctorsLvl1 createIpol( double I0 )
 {
-    BinaryFunctorsLvl1 ipol( new Constant(1), new Constant(0), new Constant(0));
+    BinaryFunctorsLvl1 ipol( new Constant(I0), new Constant(0), new Constant(0));
     return ipol;
 }
 ///@}
@@ -118,14 +118,15 @@ TokamakMagneticField createToroidalField( double R0)
     return TokamakMagneticField( R0, toroidal::createPsip(), toroidal::createIpol());
 }
 /**
- * @brief Create a Magnetic field with circular flux surfaces
+ * @brief Create a Magnetic field with circular flux surfaces and constant current
  * @param R0 the major radius
+ * @param I0 the current
  * @return A magnetic field object
  * @ingroup geom
  */
-TokamakMagneticField createCircularField( double R0)
+TokamakMagneticField createCircularField( double R0, double I0)
 {
-    return TokamakMagneticField( R0, circular::createPsip(R0), circular::createIpol());
+    return TokamakMagneticField( R0, circular::createPsip(R0), circular::createIpol(I0));
 }
 
 }//namespace geo

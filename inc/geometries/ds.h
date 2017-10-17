@@ -65,6 +65,8 @@ struct DS
      * @param eps Desired accuracy of the fieldline integrator
      * @param no indicate if the symv function should be symmetric (not_normed) or not
      * @param dir indicate the direction in the bracket operator and in symv
+     *@note globalbcx and globalbcy  as well as bcz are taken from grid with full limter 
+     * @sa Fieldaligned
      */
     DS(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX=1, unsigned multiplyY=1, bool dependsOnX = true, bool dependsOnY=true, double eps = 1e-5, dg::norm no=dg::normed, dg::direction dir = dg::centered)
     {
@@ -131,7 +133,8 @@ struct DS
     * @param f The vector to derive
     * @param g contains result on output (write only)
     */
-    void operator()( const container& f, container& g);
+    void operator()( const container& f, container& g){operator()(1., f, 0., g);}
+    void operator()(double alpha, const container& f, double beta, container& g);
 
 
     /**
@@ -206,13 +209,13 @@ void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, con
 }
 
 template<class G, class I, class M, class container>
-inline void DS<G,I,M,container>::operator()( const container& f, container& dsf) { 
+inline void DS<G,I,M,container>::operator()( double alpha, const container& f, double beta, container& dsf) { 
     if( m_dir == dg::centered)
-        return centered( 1., f, 0., dsf);
+        return centered( alpha, f, beta, dsf);
     else if( m_dir == dg::forward)
-        return forward( 1., f, 0., dsf);
+        return forward( alpha, f, beta, dsf);
     else
-        return backward( 1., f, 0., dsf);
+        return backward( alpha, f, beta, dsf);
 }
 
 template<class G, class I, class M, class container>

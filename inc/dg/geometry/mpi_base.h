@@ -125,6 +125,8 @@ struct aProductMPIGeometry3d : public aMPIGeometry3d
     }
     ///allow deletion through base class pointer
     virtual ~aProductMPIGeometry3d(){}
+    ///Geometries are cloneable
+    virtual aProductMPIGeometry3d* clone()const=0;
     protected:
     ///@copydoc aMPITopology3d::aMPITopology3d()
     aProductMPIGeometry3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):

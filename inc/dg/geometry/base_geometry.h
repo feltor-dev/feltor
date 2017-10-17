@@ -179,6 +179,8 @@ struct aProductGeometry3d : public aGeometry3d
     }
     ///allow deletion through base class pointer
     virtual ~aProductGeometry3d(){}
+    ///Geometries are cloneable
+    virtual aProductGeometry3d* clone()const=0;
     protected:
     ///@copydoc aTopology3d::aTopology3d(const aTopology3d&)
     aProductGeometry3d( const aProductGeometry3d& src):aGeometry3d(src){}

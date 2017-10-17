@@ -249,9 +249,6 @@ void boxintegrator( const Field& field, const Topology& grid,
     grid.shift_topologic( coords0[0], coords0[1], R, Z);
     if ( !grid.contains( R, Z))   //point still outside domain
     {
-#ifdef DG_DEBUG
-        std::cerr << "point "<<coords1[0]<<" "<<coords1[1]<<" is somewhere else!\n";
-#endif //DG_DEBUG
         double deltaPhi = phi1;
         BoxIntegrator<Field, Topology> boxy( field, grid, eps);//stores references to field and grid
         boxy.set_coords( coords0); //nimm alte koordinaten
@@ -344,7 +341,7 @@ struct Fieldaligned
     template <class Limiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
     {
-        construct( vec, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, limit, globalbcx, globalbcy, limit, deltaPhi);
+        construct( vec, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, globalbcx, globalbcy, limit, deltaPhi);
     }
     /**
     * @brief Construct from a field and a grid
@@ -507,14 +504,14 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::Binary
 {
     m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.Nz(), m_bcz=grid.bcz(); 
-    m_g=grid;
+    m_g.reset(grid);
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
-    dg::split( m_hz_inv, m_temp);
-    dg::split( m_hz_inv, m_f);
+    dg::split( m_hz_inv, m_temp, grid);
+    dg::split( m_hz_inv, m_f, grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    const dg::aGeometry2d* grid2d_ptr = grid->perp_grid();
+    const dg::aGeometry2d* grid2d_ptr = grid.perp_grid();
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //Resize vector to 2D grid size
     m_perp_size = grid2d_ptr->size();
@@ -522,13 +519,13 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::Binary
     m_right = m_left = dg::evaluate( zero, *grid2d_ptr);
     m_ghostM.resize( m_perp_size); m_ghostP.resize( m_perp_size);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
-    std::cout << "Start fieldline integration!\n";
     dg::Timer t;
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym; 
-    t.tic();
     
     dg::aGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
     g2dField_ptr->set( 7, g2dField_ptr->Nx(), g2dField_ptr->Ny());
+    std::cout << "Start fieldline integration!\n";
+    t.tic();
     detail::integrate_all_fieldlines2d( vec, g2dField_ptr, g2dField_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
 
     dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
@@ -568,9 +565,9 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::Binary
     dg::blas1::transform( hp, hp, dg::INVERT<double>());
     dg::blas1::transform( hm, hm, dg::INVERT<double>());
     dg::blas1::transform( hz, hz, dg::INVERT<double>());
-    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hp), m_hp_inv);
-    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hm), m_hm_inv);
-    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hz), m_hz_inv);
+    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hp), m_hp_inv, grid);
+    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hm), m_hm_inv, grid);
+    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hz), m_hz_inv, grid);
     
     delete grid2d_ptr;
 }
