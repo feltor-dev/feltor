@@ -735,6 +735,8 @@ struct MPIGrid2d: public aMPITopology2d
     MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         aMPITopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy,comm)
     { }
+    ///allow explicit type conversion from any other topology
+    explicit MPIGrid2d( const aMPITopology2d& src): aMPITopology2d(src){}
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny){
         aMPITopology2d::do_set(new_n,new_Nx,new_Ny);
@@ -759,6 +761,9 @@ struct MPIGrid3d : public aMPITopology3d
     MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         aMPITopology3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm)
     { }
+    ///allow explicit type conversion from any other topology
+    ///@param src source
+    explicit MPIGrid3d( const aMPITopology3d& src): aMPITopology3d(src){ }
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
         aMPITopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);

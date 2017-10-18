@@ -1,4 +1,8 @@
 #pragma once
+#include <cusp/transpose.h>
+#ifdef MPI_VERSION
+#include "mpi_matrix.h"
+#endif //MPI_VERSION
 
 namespace dg
 {
@@ -13,6 +17,15 @@ Matrix doTranspose( const Matrix& src, CuspMatrixTag)
     cusp::transpose( src, out);
     return out;
 }
+#ifdef MPI_VERSION
+template <class Matrix, class Collective>
+MPIDistMat<Matrix, Collective> doTranspose( const MPIDistMat<Matrix, Collective>& src, MPIMatrixTag)
+{
+    Matrix tr = doTranspose( src.matrix(), typename MatrixTraits<Matrix>::matrix_category());
+    MPIDistMat<Matrix, Collective> out( tr, src.collective());
+    return out;
+}
+#endif// MPI_VERSION
 }//namespace detail
 ///@endcond
 

@@ -147,17 +147,17 @@ struct DS
      */
     void symv( const container& f, container& dsTdsf){ do_symv( f, dsTdsf);}
 
-    ///@copydoc FieldAligned::set_boundaries(dg::bc,double,double)
+    ///@copydoc Fieldaligned::set_boundaries(dg::bc,double,double)
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         m_fa.set_boundaries( bcz, left, right);
     }
-    ///@copydoc FieldAligned::set_boundaries(dg::bc,const container&,const container&)
+    ///@copydoc Fieldaligned::set_boundaries(dg::bc,const container&,const container&)
     void set_boundaries( dg::bc bcz, const container& left, const container& right)
     {
         m_fa.set_boundaries( bcz, left, right);
     }
-    ///@copydoc FieldAligned::set_boundaries(dg::bc,const container&,double,double)
+    ///@copydoc Fieldaligned::set_boundaries(dg::bc,const container&,double,double)
     void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
     {
         m_fa.set_boundaries( bcz, global, scal_left, scal_right);

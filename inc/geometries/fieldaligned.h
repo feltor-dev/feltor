@@ -162,14 +162,14 @@ void clip_to_boundary( thrust::host_vector<double>& x, const dg::aTopology2d* gr
     clip_to_boundary(x[0], x[1], grid);
 }
 
-void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aTopology2d* g2dFine, const dg::aTopology2d* boundary_ptr, //2 different grid on account of the MPI implementation
+void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aTopology2d& g2dFine, const dg::aTopology2d& boundary_ptr, //2 different grid on account of the MPI implementation
         const std::vector<thrust::host_vector<double> >& yp_coarse,
         const std::vector<thrust::host_vector<double> >& ym_coarse,
         std::vector<thrust::host_vector<double> >& yp_fine,
         std::vector<thrust::host_vector<double> >& ym_fine
         )
 {
-    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, *g2dFine)), ym(yp); 
+    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp); 
     for( unsigned i=0; i<3; i++)
     {
         dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
@@ -177,10 +177,10 @@ void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aTopology2
     }
     for( unsigned i=0; i<yp[0].size(); i++)
     {
-        boundary_ptr->shift_topologic( yp[0][i], yp[1][i], yp[0][i], yp[1][i]);
-        boundary_ptr->shift_topologic( ym[0][i], ym[1][i], ym[0][i], ym[1][i]);
-        detail::clip_to_boundary( yp[0][i], yp[1][i], boundary_ptr);
-        detail::clip_to_boundary( ym[0][i], ym[1][i], boundary_ptr);
+        boundary_ptr.shift_topologic( yp[0][i], yp[1][i], yp[0][i], yp[1][i]);
+        boundary_ptr.shift_topologic( ym[0][i], ym[1][i], ym[0][i], ym[1][i]);
+        detail::clip_to_boundary( yp[0][i], yp[1][i], &boundary_ptr);
+        detail::clip_to_boundary( ym[0][i], ym[1][i], &boundary_ptr);
     }
     yp_fine=yp, ym_fine=ym;
 }
@@ -333,7 +333,6 @@ template<class ProductGeometry, class IMatrix, class container >
 struct Fieldaligned
 {
 
-    typedef IMatrix InterpolationMatrix; //!< typdef to reveal the interpolation matrix
     ///@brief do not allocate memory; no member call except construct is valid
     Fieldaligned(){}
 
@@ -394,8 +393,8 @@ struct Fieldaligned
     * if Dirichlet boundaries are used the left value is the left function
     value, if Neumann boundaries are used the left value is the left derivative value
     * @param bcz boundary condition
-    * @param left spatially variable left boundary value
-    * @param right spatially variable right boundary value
+    * @param left spatially variable left boundary value (2d size)
+    * @param right spatially variable right boundary value (2d size)
     */
     void set_boundaries( dg::bc bcz, const container& left, const container& right)
     {
@@ -515,15 +514,15 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::Binary
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     //Resize vector to 2D grid size
     m_perp_size = grid2d_ptr->size();
-    m_limiter = dg::pullback( limit, *grid2d_ptr);
-    m_right = m_left = dg::evaluate( zero, *grid2d_ptr);
-    m_ghostM.resize( m_perp_size); m_ghostP.resize( m_perp_size);
+    dg::blas1::transfer( dg::pullback(limit, *grid2d_ptr), m_limiter);
+    dg::blas1::transfer( dg::evaluate(zero, *grid2d_ptr), m_left);
+    m_ghostM = m_ghostP = m_right = m_left;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
     dg::Timer t;
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym; 
     
     dg::aGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
-    g2dField_ptr->set( 7, g2dField_ptr->Nx(), g2dField_ptr->Ny());
+    //g2dField_ptr->set( 7, g2dField_ptr->Nx(), g2dField_ptr->Ny());
     std::cout << "Start fieldline integration!\n";
     t.tic();
     detail::integrate_all_fieldlines2d( vec, g2dField_ptr, g2dField_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
@@ -531,7 +530,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::Binary
     dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
     g2dFine.multiplyCellNumbers((double)mx, (double)my);
     dg::IHMatrix interpolate = dg::create::interpolation( g2dFine, *g2dField_ptr);  //INTERPOLATE TO FINE GRID
-    dg::geo::detail::interpolate_and_clip( interpolate, &g2dFine, &g2dFine, yp_coarse, ym_coarse, yp, ym);
+    dg::geo::detail::interpolate_and_clip( interpolate, g2dFine, g2dFine, yp_coarse, ym_coarse, yp, ym);
     delete g2dField_ptr;
     t.toc(); 
     std::cout << "Fieldline integration took "<<t.diff()<<"s\n";

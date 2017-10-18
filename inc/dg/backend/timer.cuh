@@ -1,6 +1,7 @@
 #ifndef _DG_TIMER_
 #define _DG_TIMER_
-//the <thrust/device_vector.h> header must be included before this file for the THRUST_DEVICE_SYSTEM macros to work
+#include "thrust/device_vector.h"
+//the <thrust/device_vector.h> header must be included for the THRUST_DEVICE_SYSTEM macros to work
 namespace dg
 {
 #if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA) //if we don't use a GPU

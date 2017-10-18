@@ -137,11 +137,10 @@ dg::MIHMatrix projection( const aMPITopology3d& g_new, const aMPITopology3d& g_o
  *
  * @copydetails interpolation(const thrust::host_vector<double>&,const thrust::host_vector<double>&,const aTopology2d&,dg::bc,dg::bc)
  */
-dg::MIHMatrix interpolation( const dg::HVec& x, const dg::HVec& y, const aMPITopology2d& grid, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
+dg::MIHMatrix interpolation( const dg::HVec& x, const dg::HVec& y, const aMPITopology2d& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    return convert(  
-            dg::create::interpolation( x, y, grid.global(), bcx, bcy), 
-            grid);
+    dg::IHMatrix mat = dg::create::interpolation( x,y, g.global(), bcx, bcy);
+    return convert(  mat, g);
 }
 
 

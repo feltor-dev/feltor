@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include "../enums.h"
 
 /*!@file
 @brief convenience mpi init functions
