@@ -182,6 +182,19 @@
   and specializing MatrixTraits with the SelfMadeMatrixTag as the matrix_category
   */
 
+/** @class hide_code_evaluate2d
+ * This code snippet demonstrates how to integrate a function discretized with dG
+@code{.cpp}
+double function(double x, double y){return exp(x)*exp(y);}
+//...
+dg::Grid2d g2d( 0, 2, 0, 2, 3, 20, 20);
+const dg::HVec w2d = dg::create::weights( g2d);
+const dg::HVec h_x = dg::evaluate( function, g2d);
+double norm = dg::blas2::dot( h_x, w2d, h_x); // norm is now: (exp(4)-exp(0))/2
+@endcode
+*/
+
+
 /*!@addtogroup mpi_structures
 @{
 @page mpi_matrix MPI Vectors and the blas1 functions

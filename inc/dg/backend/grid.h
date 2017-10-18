@@ -706,6 +706,7 @@ struct aTopology3d
 /**
  * @brief The simplest implementation of aTopology2d
  * @ingroup grid
+ * @copydoc hide_code_evaluate2d
  */
 struct Grid2d : public aTopology2d
 {

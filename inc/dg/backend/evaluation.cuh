@@ -54,7 +54,7 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d& g)
  * @param g The 2d grid on which to evaluate f
  *
  * @return  A dG Host Vector with values
- * @note if you don't like to copy f then just pass a (const) reference then the type should adapt
+ * @copydoc hide_code_evaluate2d
  */
 template< class BinaryOp>
 thrust::host_vector<double> evaluate( const BinaryOp& f, const aTopology2d& g)

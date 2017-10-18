@@ -85,6 +85,7 @@ int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
 * @param g The grid 
 *
 * @return Host Vector
+* @copydoc hide_code_evaluate2d
 */
 thrust::host_vector<double> weights( const aTopology2d& g)
 {

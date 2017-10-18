@@ -59,6 +59,7 @@ inline void transfer( const Matrix& x, AnotherMatrix& y)
  * @return Generalized scalar product
  * @note This routine is always executed synchronously due to the 
     implicit memcpy of the result.
+ * @copydoc hide_code_evaluate2d
  */
 template< class DiagonalMatrix, class container>
 inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const container& x, const DiagonalMatrix& m, const container& y)
