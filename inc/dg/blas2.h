@@ -71,7 +71,6 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const container& x
 
 /*! @brief \f$ x^T M x\f$; General dot produt
  *
- * This routine is equivalent to the call blas2::dot( x, m, x):
  * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
  * @tparam DiagonalMatrix Right now DiagonalMatrix has to be the same as container, except if the container is a std::vector<container_type>, then the DiagonalMatrix has to be the container_type. 
  * In the latter case the Matrix is applied to all containers in the std::vector and the sum is returned. 
@@ -81,6 +80,8 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const container& x
  * @return Generalized scalar product
  * @note This routine is always executed synchronously due to the 
     implicit memcpy of the result.
+ * @note This routine is equivalent to the call dg::blas2::dot( x, m, x);
+     which should be prefered because it looks more explicit
  */
 template< class DiagonalMatrix, class container>
 inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const DiagonalMatrix& m, const container& x)

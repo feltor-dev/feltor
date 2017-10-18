@@ -48,7 +48,7 @@ int main()
     dg::Grid3d g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
 
     //test evaluation functions
-    const HVec h_x = dg::evaluate( function, g1d);
+    const HVec h_x = dg::evaluate( exp, g1d);
     const HVec h_n = dg::evaluate( function, g2d);
     const HVec h_z = dg::evaluate( function, g3d);
     const HVec w1d = dg::create::weights( g1d);

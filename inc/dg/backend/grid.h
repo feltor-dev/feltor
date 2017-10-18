@@ -54,7 +54,7 @@ namespace dg{
 /**
 * @brief 1D grid
 * @ingroup grid
-*
+* @copydoc hide_code_evaluate1d
 */
 struct Grid1d
 {
@@ -729,6 +729,7 @@ struct Grid2d : public aTopology2d
 /**
  * @brief The simplest implementation of aTopology3d
  * @ingroup grid
+ * @copydoc hide_code_evaluate3d
  */
 struct Grid3d : public aTopology3d
 {

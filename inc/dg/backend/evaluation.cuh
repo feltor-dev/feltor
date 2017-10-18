@@ -27,6 +27,8 @@ namespace dg
  * @param g The grid on which to evaluate f
  *
  * @return  A DG Host Vector with values
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @copydoc hide_code_evaluate1d
  */
 template< class UnaryOp>
 thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d& g)
@@ -54,6 +56,7 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d& g)
  * @param g The 2d grid on which to evaluate f
  *
  * @return  A dG Host Vector with values
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @copydoc hide_code_evaluate2d
  */
 template< class BinaryOp>
@@ -92,7 +95,8 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology
  * @param g The 3d grid on which to evaluate f
  *
  * @return  A dG Host Vector with values
- * @note if you don't like to copy f then just pass a (const) reference then the type should adapt
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @copydoc hide_code_evaluate3d
  */
 template< class TernaryOp>
 thrust::host_vector<double> evaluate( const TernaryOp& f, const aTopology3d& g)

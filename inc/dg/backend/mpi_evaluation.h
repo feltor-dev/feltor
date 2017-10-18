@@ -23,8 +23,8 @@ namespace dg
  * @param g The 2d grid on which to evaluate f
  *
  * @return  A MPI Vector with values
- * @note Copies the binary Operator. This function is meant for small function objects, that
-            may be constructed during function call.
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @copydoc hide_code_mpi_evaluate2d
  */
 template< class BinaryOp>
 MPI_Vector<thrust::host_vector<double> > evaluate( const BinaryOp& f, const aMPITopology2d& g)
@@ -50,8 +50,8 @@ MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double), co
  * @param g The 3d grid on which to evaluate f
  *
  * @return  A MPI Vector with values
- * @note Copies the ternary Operator. This function is meant for small function objects, that
-            may be constructed during function call.
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @copydoc hide_code_mpi_evaluate3d
  */
 template< class TernaryOp>
 MPI_Vector<thrust::host_vector<double> > evaluate( const TernaryOp& f, const aMPITopology3d& g)

@@ -1,0 +1,56 @@
+#error Documentation only
+
+/** @class hide_code_evaluate1d
+ * This code snippet demonstrates how to discretize and integrate a function with dG
+@code{.cpp}
+dg::Grid1d g1d( 0, 2, 3, 20);
+const dg::HVec w1d = dg::create::weights( g1d);
+const dg::HVec h_x = dg::evaluate( exp, g1d);
+double norm = dg::blas2::dot( h_x, w1d, h_x); // norm is now: (exp(4)-exp(0))/2
+@endcode
+*/
+/** @class hide_code_evaluate2d
+ * This code snippet demonstrates how to discretize and integrate a function with dG
+@code{.cpp}
+double function(double x, double y){return exp(x)*exp(y);}
+//...
+dg::Grid2d g2d( 0, 2, 0, 2, 3, 20, 20);
+const dg::HVec w2d = dg::create::weights( g2d);
+const dg::HVec h_x = dg::evaluate( function, g2d);
+double norm = dg::blas2::dot( h_x, w2d, h_x); // norm is now: (exp(4)-exp(0))^2/4
+@endcode
+*/
+/** @class hide_code_evaluate3d
+ * This code snippet demonstrates how to discretize and integrate a function with dG
+@code{.cpp}
+double function(double x, double y, double z){return exp(x)*exp(y)*exp(z);}
+//...
+dg::Grid3d g3d( 0, 2, 0, 2, 0, 2, 3, 20, 20, 20);
+const dg::HVec w3d = dg::create::weights( g3d);
+const dg::HVec h_x = dg::evaluate( function, g3d);
+double norm = dg::blas2::dot(h_x, w3d, h_x); // norm is now: (exp(4)-exp(0))^3/8
+@endcode
+*/
+/** @class hide_code_mpi_evaluate2d
+ * This code snippet demonstrates how to discretize and integrate a function with dG
+@code{.cpp}
+double function(double x, double y){return exp(x)*exp(y);}
+//... use MPI_Cart_create to create 2d Cartesian communicator
+dg::MPIGrid2d g2d( 0, 2, 0, 2, 3, 20, 20, comm2d );
+const dg::MHVec w2d = dg::create::weights( g2d);
+const dg::MHVec h_x = dg::evaluate( function, g2d);
+double norm = dg::blas2::dot( h_x, w2d, h_x); // norm is now: (exp(4)-exp(0))^2/4
+@endcode
+@sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+*/
+/** @class hide_code_mpi_evaluate3d
+ * This code snippet demonstrates how to discretize and integrate a function with dG
+@code{.cpp}
+double function(double x, double y, double z){return exp(x)*exp(y)*exp(z);}
+//... use MPI_Cart_create to create 3d Cartesian communicator
+dg::Grid3d g3d( 0, 2, 0, 2, 0, 2, 3, 20, 20, 20, comm3d);
+const dg::MHVec w3d = dg::create::weights( g3d);
+const dg::MHVec h_x = dg::evaluate( function, g3d);
+double norm = dg::blas2::dot(h_x, w3d, h_x); // norm is now: (exp(4)-exp(0))^3/8
+@endcode
+*/

@@ -716,6 +716,7 @@ void aMPITopology3d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, u
 /**
  * @brief The simplest implementation of aMPITopology2d
  * @ingroup grid
+ * @copydoc hide_code_mpi_evaluate2d
  */
 struct MPIGrid2d: public aMPITopology2d
 {
@@ -746,6 +747,7 @@ struct MPIGrid2d: public aMPITopology2d
 /**
  * @brief The simplest implementation of aMPITopology3d
  * @ingroup grid
+ * @copydoc hide_code_mpi_evaluate3d
  */
 struct MPIGrid3d : public aMPITopology3d
 {

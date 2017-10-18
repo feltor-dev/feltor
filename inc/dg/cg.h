@@ -27,6 +27,8 @@ namespace dg{
 
  @note Conjugate gradients might become unstable for positive semidefinite
  matrices arising e.g. in the discretization of the periodic laplacian
+
+ @snippet cg2d_t.cu doxygen
 */
 template< class container>
 class CG

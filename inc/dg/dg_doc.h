@@ -182,31 +182,19 @@
   and specializing MatrixTraits with the SelfMadeMatrixTag as the matrix_category
   */
 
-/** @class hide_code_evaluate2d
- * This code snippet demonstrates how to integrate a function discretized with dG
-@code{.cpp}
-double function(double x, double y){return exp(x)*exp(y);}
-//...
-dg::Grid2d g2d( 0, 2, 0, 2, 3, 20, 20);
-const dg::HVec w2d = dg::create::weights( g2d);
-const dg::HVec h_x = dg::evaluate( function, g2d);
-double norm = dg::blas2::dot( h_x, w2d, h_x); // norm is now: (exp(4)-exp(0))/2
-@endcode
-*/
-
-
 /*!@addtogroup mpi_structures
 @{
-@page mpi_matrix MPI Vectors and the blas1 functions
+@note The mpi backend is activated by including \c mpi.h before any other feltor header file
+@section mpi_vector MPI Vectors and the blas1 functions
 
 In Feltor each mpi process gets an equally sized chunk of a vector.
-The corresponding structure in FELTOR is the dg::MPI_Vector, which is 
+The corresponding structure in FELTOR is the \c dg::MPI_Vector, which is 
 nothing but a wrapper around any container type object and a MPI_Comm. 
 With this the dg::blas1 functions can readily implemented by just redirecting to the
 implementation for the container type. The only functions that need
 communication are the dg::blas1::dot functions (MPI_Allreduce).
 
-@page mpi_vector Row and column distributed matrices
+@section mpi_matrix Row and column distributed matrices
 
 Contrary to a vector
 a matrix can be distributed in two ways, row-wise and column wise. 
@@ -221,6 +209,7 @@ vector it holds.
 When we implement a matrix-vector multiplication the order 
 of communication and computation depends on the distribution 
 of the matrix.
+\subsection row Row distributed
 For the row-distributed matrix each process first has to gather 
 all elements of the input vector it needs to be able to compute the elements of the output. In general this requires MPI communication.
 (read the documentation of dg::aCommunicator for more info of how global scatter/gather operations work).
@@ -236,7 +225,7 @@ and \f$G\f$ is the gather matrix, in which the MPI-communication takes place.
 The dg::RowColDistMat goes one step further and separates the matrix \f$ R\f$ into 
 a part that can be computed entirely on the local process and a part that needs communication.
 
-\section column 
+\subsection column Column distributed
 
 In a column distributed matrix the local matrix-vector multiplication can be executed first because each processor already
 has all vector elements it needs. 

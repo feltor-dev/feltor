@@ -28,16 +28,16 @@ int main()
     std::cout<<"Evaluate initial condition\n";
     dg::HVec x = dg::evaluate( initial, grid);
 
+//! [doxygen]
     std::cout << "Create Laplacian\n";
     dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> A( grid);
     dg::CG<dg::HVec > pcg( x, n*n*Nx*Ny);
     std::cout<<"Evaluate right hand side\n";
     dg::HVec b = dg::evaluate ( laplace_fct, grid);
     const dg::HVec solution = dg::evaluate ( fct, grid);
-    //////////////////////////////////////////////////////////////////////
-    //compute S b
     dg::blas2::symv( w2d, b, b);
     std::cout << "Number of pcg iterations "<< pcg( A, x, b, v2d, eps_)<<std::endl;
+//! [doxygen]
     //std::cout << "Number of cg iterations "<< pcg( A, x, b, dg::Identity<double>(), eps)<<std::endl;
     std::cout << "For a precision of "<< eps_<<std::endl;
     //compute error
