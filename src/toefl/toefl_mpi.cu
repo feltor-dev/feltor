@@ -74,8 +74,8 @@ int main( int argc, char* argv[])
     dg::MPIGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y, comm);
     dg::MPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
-    dg::ToeflR< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > test( grid, p); 
-    dg::Diffusion<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> diffusion( grid, p.nu);
+    toefl::Explicit< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > test( grid, p); 
+    toefl::Implicit<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> diffusion( grid, p.nu);
     //////////////////create initial vector///////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
     std::vector<dg::MDVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
