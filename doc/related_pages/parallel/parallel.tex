@@ -448,5 +448,56 @@ procedures.
 %..................................................................
 
 
+\section{Numerical test programs}
+The essential test programs for the parallel derivative are located in 
+\code{
+path/to/feltor/inc/geometries}.
+\code{ ds\_t.cu} and \code{ ds\_mpit.cu} test the cylindrical grid for shared and distributed memory 
+systems. \code{ ds\_curvilinear\_t.cu} and \code{ ds\_curvilinear\_mpit.cu} test the implementation
+on a flux-aligned grid.
+The magnetic field in FELTOR is given by
+\begin{align}
+  \vec B = \frac{R_0}{R}( I(\psi_p) \hat e_\varphi + \nabla\psi_p \times\hat e_\varphi)
+\end{align}
+This gives rise to a magnetic field strength and components
+\begin{align}
+  B = \frac{R_0}{R} \sqrt{ I^2 + \left( \nabla\psi_p \right)^2} \\
+  B^R = \frac{R_0}{R}\frac{\partial\psi_p}{\partial Z} \quad
+  B^Z = -\frac{R_0}{R}\frac{\partial\psi_p}{\partial R}\quad 
+  B^\varphi = \frac{R_0I}{R^2}
+  \label{}
+\end{align}
+\subsection{Cylindrical grid and circular flux surfaces}
+A very simple non-trivial choice for the poloidal flux is
+\begin{align}
+  \psi_p = \frac{1}{2} \left( (R-R_0)^2 + Z^2 \right) \equiv \frac{1}{2} r^2
+  \label{eq:circular}
+\end{align}
+for which 
+\begin{align}
+  \vec b^p &= \frac{1}{\sqrt{I^2 + r^2}} \begin{pmatrix} Z \\ -(R-R_0)\end{pmatrix} \\
+  b^\varphi &= \frac{1}{\sqrt{I^2 + r^2}} I/R
+  \label{}
+\end{align}
+for the poloidal and toroidal parts of the magnetic unit vector. 
+We choose $R_0 = 10$ and $I=20$ in order to keep the q-factor for the $r=1$ flux surface at $2$.
+We set up a domain 
+$R\in[R_0-1, R_0+1]$,
+$Z\in[-1,1]$ and 
+$\varphi \in [0,2\pi]$ and choose
+\begin{align}
+  f(R,Z,\varphi) = ((R-R_0)^2 + Z^2)\sin(\varphi)\\
+  \bhat \cdot \nabla f= b^\varphi \cos(\varphi)
+  \label{}
+\end{align}
+This is advantageous since the solution is correct even if we modify the $\bhat$ field
+to be toroidal on the boundary of the domain in order to avoid boundary conditions. 
+Also the function is parabolic, which means the dG polynomials of degree greater than $2$ 
+should be exact. 
+\subsection{Curvilinear grid}
+
+
+
+
 \end{document}
 

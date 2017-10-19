@@ -242,7 +242,7 @@ struct MPIDistMat
 
     
     template<class container> 
-    void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y)
+    void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y)const
     {
         if( m_c.size() == 0) //no communication needed
         {
@@ -271,7 +271,7 @@ struct MPIDistMat
         }
     }
     template<class container> 
-    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)
+    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)const
     {
         if( m_c.get().size() == 0) //no communication needed
         {
