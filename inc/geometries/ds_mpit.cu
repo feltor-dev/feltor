@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 
     dg::CylindricalMPIGrid3d g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
     const dg::MDVec vol3d = dg::create::volume( g3d);
-    if(rank==0)std::cout << "Create parallel Derivative!";
+    if(rank==0)std::cout << "Create parallel Derivative!\n";
     dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
     dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, 2,2,true,true,1e-10, dg::NEU, dg::NEU, dg::geo::NoLimiter());
@@ -46,23 +46,25 @@ int main(int argc, char* argv[])
     const dg::MDVec solution = dg::evaluate( deri, g3d);
     ds( function, derivative);
     dg::blas1::axpby( 1., solution, -1., derivative);
-    double norm = dg::blas2::dot( vol3d, solution);
-    if(rank==0)std::cout << "Norm Solution "<<sqrt( norm)<<"\n";
-    double norm2 = sqrt( dg::blas2::dot( derivative, vol3d, derivative)/norm);
-    if(rank==0)std::cout << "Relative Difference Is "<< norm2<<"\n";    
-    if(rank==0)std::cout << "(Since the function is a parabola, the error is from the parallel derivative only if n>2)\n"; 
+    double norm = dg::blas2::dot( derivative, vol3d, derivative);
+    const double sol = dg::blas2::dot( vol3d, solution);
+    if(rank==0)std::cout << "Error centered derivative "<< sqrt( norm/sol )<<"\n";
+    ds.forward( 1., function, 0., derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    if(rank==0)std::cout << "Error Forward  Derivative "<<sqrt( norm/sol)<<"\n";
+    ds.backward( 1., function, 0., derivative);
+    dg::blas1::axpby( 1., solution, -1., derivative);
+    norm = dg::blas2::dot(vol3d, derivative);
+    if(rank==0)std::cout << "Error Backward Derivative "<<sqrt( norm/sol)<<"\n";
+    if(rank==0)std::cout << "(Since the function is a parabola, the error is from the parallel derivative only if n>2/ no interpolation error)\n"; 
+    if(rank==0)std::cout << "TEST FIELDALIGNED EVALUATION of a Gaussian\n";
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
-    dg::GaussianZ modulate(0, M_PI/3., 1);
+    dg::GaussianZ modulate(0., M_PI/3., 1);
     function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 2);
     ds( function, derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    if(rank==0)std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
-    ds.forward(1., function, 0.,  derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    if(rank==0)std::cout << "Norm Forward  Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
-    ds.backward(1., function, 0., derivative);
-    norm = dg::blas2::dot(vol3d, derivative);
-    if(rank==0)std::cout << "Norm Backward Derivative "<<sqrt( norm)<<" (compare with that of ds_b)\n";
+    if(rank==0)std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
     MPI_Finalize();
     return 0;
 }

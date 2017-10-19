@@ -231,8 +231,8 @@ void DS<G,I,M,container>::do_backward( double alpha, const container& f, double 
 {
     //direct
     m_fa(einsMinus, f, m_tempM);
-    dg::blas1::axpby( 1., m_tempM, -1., f, m_tempM);
-    dg::blas1::pointwiseDot( alpha, m_tempM, m_fa.hp_inv(), beta, dsf);
+    dg::blas1::axpby( 1., f, -1., m_tempM, m_tempM);
+    dg::blas1::pointwiseDot( alpha, m_tempM, m_fa.hm_inv(), beta, dsf);
 }
 template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_centered( double alpha, const container& f, double beta, container& dsf)
@@ -261,7 +261,7 @@ void DS<G,I,M,container>::do_backwardAdj( double alpha, const container& f, doub
     dg::blas1::pointwiseDot( m_vol3d, m_temp0, m_temp0);
     dg::blas1::pointwiseDot( m_temp0, m_fa.hm_inv(), m_temp0);
     m_fa(einsMinusT, m_temp0, m_tempM);
-    dg::blas1::axpby( -1., m_tempM, 1., m_temp0, m_temp0);
+    dg::blas1::axpby( -1., m_temp0, 1., m_tempM, m_temp0);
     if(no == dg::normed) 
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
 }
