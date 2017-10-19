@@ -459,14 +459,16 @@ The magnetic field in FELTOR is given by
 \begin{align}
   \vec B = \frac{R_0}{R}( I(\psi_p) \hat e_\varphi + \nabla\psi_p \times\hat e_\varphi)
 \end{align}
-This gives rise to a magnetic field strength and components
+This gives rise to magnetic field strength and components
 \begin{align}
   B = \frac{R_0}{R} \sqrt{ I^2 + \left( \nabla\psi_p \right)^2} \\
   B^R = \frac{R_0}{R}\frac{\partial\psi_p}{\partial Z} \quad
   B^Z = -\frac{R_0}{R}\frac{\partial\psi_p}{\partial R}\quad 
-  B^\varphi = \frac{R_0I}{R^2}
+  B^\varphi = \frac{R_0I}{R^2} \\
+  \nabla \cdot\bhat = -\nabla_\parallel \ln B = -\frac{R_0}{RB^2} [B, \psi_p]  
   \label{}
 \end{align}
+where $[.,.]$ is the Poisson bracket.
 \subsection{Cylindrical grid and circular flux surfaces}
 A very simple non-trivial choice for the poloidal flux is
 \begin{align}
@@ -476,7 +478,8 @@ A very simple non-trivial choice for the poloidal flux is
 for which 
 \begin{align}
   \vec b^p &= \frac{1}{\sqrt{I^2 + r^2}} \begin{pmatrix} Z \\ -(R-R_0)\end{pmatrix} \\
-  b^\varphi &= \frac{1}{\sqrt{I^2 + r^2}} I/R
+  b^\varphi &= \frac{1}{\sqrt{I^2 + r^2}} I/R \\
+  \nabla\cdot \bhat = \frac{Z}{R(I^2 + r^2} 
   \label{}
 \end{align}
 for the poloidal and toroidal parts of the magnetic unit vector. 
