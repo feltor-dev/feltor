@@ -110,17 +110,17 @@ struct DS
         do_centered( alpha, f, beta, g);
     }
 
-    ///@brief Apply the negative forward adjoint derivative on a 3d vector
+    ///@brief forward adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
     void forwardAdj( double alpha, const container& f, double beta, container& g){
         do_forwardAdj( alpha, f, beta, g, dg::normed);
     }
-    ///@brief Apply the negative backward adjoint derivative on a 3d vector
+    ///@brief backward adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
     void backwardAdj( double alpha, const container& f, double beta, container& g){
         do_backwardAdj( alpha, f, beta, g, dg::normed);
     }
-    ///@brief Apply the negative centered adjoint derivative on a 3d vector
+    ///@brief centered adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
     void centeredAdj(double alpha, const container& f, double beta, container& g){
         do_centeredAdj( alpha, f, beta, g, dg::normed);
@@ -250,20 +250,24 @@ void DS<G,I,M,container>::do_forwardAdj( double alpha, const container& f, doubl
     dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
     dg::blas1::pointwiseDot( m_temp0, m_fa.hp_inv(), m_temp0);
     m_fa(einsPlusT, m_temp0, m_tempP);
-    dg::blas1::axpby( -1., m_tempP, 1., m_temp0, m_temp0);
+    dg::blas1::axpby( 1., m_tempP, -1., m_temp0, m_temp0);
     if(no == dg::normed) 
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
+    else
+        dg::blas1::axpby( alpha, m_tempM, beta, dsf);
 }
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_backwardAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {    
     //adjoint discretisation
-    dg::blas1::pointwiseDot( m_vol3d, m_temp0, m_temp0);
+    dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
     dg::blas1::pointwiseDot( m_temp0, m_fa.hm_inv(), m_temp0);
     m_fa(einsMinusT, m_temp0, m_tempM);
-    dg::blas1::axpby( -1., m_temp0, 1., m_tempM, m_temp0);
+    dg::blas1::axpby( 1., m_temp0, -1., m_tempM, m_temp0);
     if(no == dg::normed) 
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
+    else
+        dg::blas1::axpby( alpha, m_tempM, beta, dsf);
 }
 template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_centeredAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
@@ -276,6 +280,9 @@ void DS<G, I,M,container>::do_centeredAdj( double alpha, const container& f, dou
     dg::blas1::axpby( 1., m_tempP, -1., m_tempM);
     if(no == dg::normed) 
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_tempM, beta, dsf); 
+    else
+        dg::blas1::axpby( alpha, m_tempM, beta, dsf);
+
 }
 
 template<class G,class I, class M, class container>
