@@ -141,43 +141,40 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     MPI_Cart_get( m_g.get().communicator(), 3, dims, periods, coords);
     m_coords2 = coords[2], m_sizeZ = dims[2];
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    const aMPIGeometry2d* grid2d_ptr = grid.perp_grid();
+    dg::Handle<aMPIGeometry2d> grid_coarse( grid.perp_grid());
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    m_perp_size = grid2d_ptr->size();
-    dg::blas1::transfer( dg::pullback(limit, *grid2d_ptr), m_limiter);
-    m_right = m_left = dg::evaluate( zero, *grid2d_ptr);
-    dg::blas1::transfer( dg::evaluate(zero, *grid2d_ptr), m_left);
+    m_perp_size = grid_coarse.get().size();
+    dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
+    dg::blas1::transfer( dg::evaluate(zero, grid_coarse.get()), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym; 
     
-    dg::aMPIGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
-    //g2dField_ptr->set( 7, g2dField_ptr->global().Nx(), g2dField_ptr->global().Ny());
-    dg::aGeometry2d* global_g2dField_ptr = g2dField_ptr->global_geometry();
-    dg::Grid2d local_g2dField = g2dField_ptr->local();
-    detail::integrate_all_fieldlines2d( vec, global_g2dField_ptr, &local_g2dField, yp_coarse, ym_coarse, deltaPhi, eps);
+    dg::Handle<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
+    //grid_magnetic->set( 7, grid_magnetic->global().Nx(), grid_magnetic->global().Ny());
+    dg::Handle<dg::aGeometry2d> global_grid_magnetic = grid_magnetic.get().global_geometry();
+    detail::integrate_all_fieldlines2d( vec, global_grid_magnetic.get(), grid_coarse.get().local(), yp_coarse, ym_coarse, deltaPhi, eps);
 
-    dg::MPIGrid2d g2dFine((dg::MPIGrid2d(*grid2d_ptr)));//FINE GRID
-    g2dFine.multiplyCellNumbers((double)mx, (double)my);
-    dg::IHMatrix interpolate = dg::create::interpolation( g2dFine.local(), local_g2dField);  //INTERPOLATE TO FINE GRID
-    dg::geo::detail::interpolate_and_clip( interpolate, g2dFine.local(), *global_g2dField_ptr, yp_coarse, ym_coarse, yp, ym);
-    delete g2dField_ptr;
-    delete global_g2dField_ptr;
+    dg::MPIGrid2d grid_fine( grid_coarse.get() );//FINE GRID
+    grid_fine.multiplyCellNumbers((double)mx, (double)my);
+    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(), grid_coarse.get().local());  //INTERPOLATE TO FINE GRID
+    dg::geo::detail::interpolate_and_clip( interpolate, grid_fine.local(), grid_fine.global(), yp_coarse, ym_coarse, yp, ym);
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid2d_ptr->global(), globalbcx, globalbcy), plus, plusT;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid2d_ptr->global(), globalbcx, globalbcy), minus, minusT;
-    dg::IHMatrix projection = dg::create::projection( grid2d_ptr->local(), g2dFine.local());
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get().global(), globalbcx, globalbcy), plus;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get().global(), globalbcx, globalbcy), minus;
+    dg::IHMatrix projection = dg::create::projection( grid_coarse.get().local(), grid_fine.local());
     cusp::multiply( projection, plusFine, plus);
     cusp::multiply( projection, minusFine, minus);
-    //%Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
-    dg::MIHMatrix temp = dg::convert( plus, *grid2d_ptr);
+    dg::MIHMatrix temp = dg::convert( plus, grid_coarse.get()), tempT;
+    tempT  = dg::transpose( temp);
     dg::blas2::transfer( temp, m_plus);
-    temp = dg::convert( minus, *grid2d_ptr);
+    dg::blas2::transfer( tempT, m_plusT);
+    temp = dg::convert( minus, grid_coarse.get());
+    tempT  = dg::transpose( temp);
     dg::blas2::transfer( temp, m_minus);
-    m_plusT = dg::transpose( m_plus);
-    m_minusT = dg::transpose( m_minus);
+    dg::blas2::transfer( tempT, m_minusT);
     //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    dg::MHVec hp( dg::evaluate( dg::zero, *grid2d_ptr)), hm(hp), hz(hp);
+    dg::MHVec hp( dg::evaluate( dg::zero, grid_coarse.get())), hm(hp), hz(hp);
     dg::blas2::symv( projection, yp[2], hp.data());
     dg::blas2::symv( projection, ym[2], hm.data());
     dg::blas1::scal( hm, -1.);
@@ -190,7 +187,6 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::join( std::vector<dg::MHVec >( m_Nz, hp), m_hp_inv, grid);
     dg::join( std::vector<dg::MHVec >( m_Nz, hm), m_hm_inv, grid);
     dg::join( std::vector<dg::MHVec >( m_Nz, hz), m_hz_inv, grid);
-    delete grid2d_ptr;
 }
 
 template<class G, class M, class C, class container>
@@ -208,9 +204,9 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
     MPI_Vector<container> temp(init2d), tempP(init2d), tempM(init2d);
     MPI_Vector<container> vec3d = dg::evaluate( dg::zero, m_g.get());
     std::vector<MPI_Vector<container> >  plus2d, minus2d, result;
-    dg::split( vec3d, plus2d, m_g.get());
+    dg::split( vec3d, plus2d,  m_g.get());
     dg::split( vec3d, minus2d, m_g.get());
-    dg::split( vec3d, result, m_g.get());
+    dg::split( vec3d, result,  m_g.get());
     unsigned turns = rounds; 
     if( turns ==0) turns++;
     //first apply Interpolation many times, scale and store results

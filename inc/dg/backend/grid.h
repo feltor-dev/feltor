@@ -178,7 +178,7 @@ struct Grid1d
     const DLT<double>& dlt() const {return dlt_;}
     void display( std::ostream& os = std::cout) const
     {
-        os << "aTopology parameters are: \n"
+        os << "Topology parameters are: \n"
             <<"    n  = "<<n_<<"\n"
             <<"    N = "<<Nx_<<"\n"
             <<"    h = "<<h()<<"\n"
@@ -359,7 +359,7 @@ struct aTopology2d
      */
     void display( std::ostream& os = std::cout) const
     {
-        os << "aTopology parameters are: \n"
+        os << "Topology parameters are: \n"
             <<"    n  = "<<n()<<"\n"
             <<"    Nx = "<<Nx()<<"\n"
             <<"    Ny = "<<Ny()<<"\n"
@@ -590,7 +590,7 @@ struct aTopology3d
      */
     void display( std::ostream& os = std::cout) const
     {
-        os << "aTopology parameters are: \n"
+        os << "Topology parameters are: \n"
             <<"    n  = "<<n()<<"\n"
             <<"    Nx = "<<Nx()<<"\n"
             <<"    Ny = "<<Ny()<<"\n"

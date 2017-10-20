@@ -4,12 +4,12 @@ namespace dg
 {
 
 //there is probably a better class in boost...
-/*!@brief a manager class that invokes the clone() method on the managed ptr when copied
+/*!@brief a manager class that invokes the \c clone() method on the managed ptr when copied
 *
-*When copied invokes a deep copy using the clone() method.
+*When copied invokes a deep copy using the \c clone() method.
 * This class is most useful when a class needs to hold a polymorphic, cloneable oject as a variable. 
-@tparam cloneable a type that may be uncopyable/unassignable but provides the clone() method with signature
- - cloneable* clone() const;
+@tparam cloneable a type that may be uncopyable/unassignable but provides the \c clone() method with signature
+ -  \c cloneable* \c clone() \c const;
 @ingroup lowlevel
 */
 template<class cloneable>
@@ -29,14 +29,14 @@ struct Handle
     */
     Handle( const cloneable& src): ptr_(src.clone()){}
     /**
-    * @brief deep copy the given handle
+    * @brief deep copy the given handle using the \c clone() method of \c cloneable
     * @param src an oject to copy, clones the contained object if not empty
     */
     Handle( const Handle& src):ptr_(0) {
         if(src.ptr_!=0) ptr_ = src.ptr_->clone(); //deep copy
     }
     /**
-    * @brief deep copy the given handle
+    * @brief deep copy the given handle using the \c clone() method of \c cloneable
     * @param src an oject to copy and swap
     */
     Handle& operator=( Handle src) {
@@ -107,11 +107,11 @@ can be declared const while the data it holds are still writeable.
 template< class T>
 struct Buffer
 {
-    ///new T
+    ///new \c T
     Buffer(){
         ptr = new T;
     }
-    ///new T(t)
+    ///new \c T(t)
     Buffer( const T& t){
         ptr = new T(t);
     }

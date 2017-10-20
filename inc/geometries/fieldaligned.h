@@ -150,19 +150,19 @@ struct DSField
 
 };
 
-void clip_to_boundary( double& x, double& y, const dg::aTopology2d* grid)
+void clip_to_boundary( double& x, double& y, const dg::aTopology2d& grid)
 {
-    if (!(x > grid->x0())) { x=grid->x0();}
-    if (!(x < grid->x1())) { x=grid->x1();}
-    if (!(y > grid->y0())) { y=grid->y0();}
-    if (!(y < grid->y1())) { y=grid->y1();}
+    if (!(x > grid.x0())) { x=grid.x0();}
+    if (!(x < grid.x1())) { x=grid.x1();}
+    if (!(y > grid.y0())) { y=grid.y0();}
+    if (!(y < grid.y1())) { y=grid.y1();}
 }
-void clip_to_boundary( thrust::host_vector<double>& x, const dg::aTopology2d* grid)
+void clip_to_boundary( thrust::host_vector<double>& x, const dg::aTopology2d& grid)
 {
     clip_to_boundary(x[0], x[1], grid);
 }
 
-void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aTopology2d& g2dFine, const dg::aTopology2d& boundary_ptr, //2 different grid on account of the MPI implementation
+void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aTopology2d& g2dFine, const dg::aTopology2d& boundary, //2 different grid on account of the MPI implementation
         const std::vector<thrust::host_vector<double> >& yp_coarse,
         const std::vector<thrust::host_vector<double> >& ym_coarse,
         std::vector<thrust::host_vector<double> >& yp_fine,
@@ -177,10 +177,10 @@ void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aTopology2
     }
     for( unsigned i=0; i<yp[0].size(); i++)
     {
-        boundary_ptr.shift_topologic( yp[0][i], yp[1][i], yp[0][i], yp[1][i]);
-        boundary_ptr.shift_topologic( ym[0][i], ym[1][i], ym[0][i], ym[1][i]);
-        detail::clip_to_boundary( yp[0][i], yp[1][i], &boundary_ptr);
-        detail::clip_to_boundary( ym[0][i], ym[1][i], &boundary_ptr);
+        boundary.shift_topologic( yp[0][i], yp[1][i], yp[0][i], yp[1][i]);
+        boundary.shift_topologic( ym[0][i], ym[1][i], ym[0][i], ym[1][i]);
+        detail::clip_to_boundary( yp[0][i], yp[1][i], boundary);
+        detail::clip_to_boundary( ym[0][i], ym[1][i], boundary);
     }
     yp_fine=yp, ym_fine=ym;
 }
@@ -266,7 +266,7 @@ void boxintegrator( const Field& field, const Topology& grid,
             phi1 = (dPhiMin+dPhiMax)/2.;
             dg::integrateRK4( field, coords0, coords1, dPhiMin, eps);
         }
-        detail::clip_to_boundary( coords1, &grid);
+        detail::clip_to_boundary( coords1, grid);
         //now assume the rest is purely toroidal
         double deltaS = coords1[2];
         thrust::host_vector<double> temp=coords0;
@@ -276,36 +276,34 @@ void boxintegrator( const Field& field, const Topology& grid,
 }
 
 //used in constructor of Fieldaligned
-void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg::aGeometry2d* g2dField_ptr, const dg::aTopology2d* evaluate_ptr, std::vector<thrust::host_vector<double> >& yp_result, std::vector<thrust::host_vector<double> >& ym_result , double deltaPhi, double eps)
+void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg::aGeometry2d& grid_field, const dg::aTopology2d& grid_evaluate, std::vector<thrust::host_vector<double> >& yp_result, std::vector<thrust::host_vector<double> >& ym_result , double deltaPhi, double eps)
 {
-    //g2dField contains the global geometry 
-    //evaluate_ptr contains the points to actually integrate
-    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::cooX2d, *evaluate_ptr)); //x
-    y[1] = dg::evaluate( dg::cooY2d, *evaluate_ptr); //y
-    y[2] = dg::evaluate( dg::zero, *evaluate_ptr); //s
+    //grid_field contains the global geometry for the field and the boundaries
+    //grid_evaluate contains the points to actually integrate
+    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::cooX2d, grid_evaluate)); //x
+    y[1] = dg::evaluate( dg::cooY2d, grid_evaluate); //y
+    y[2] = dg::evaluate( dg::zero,   grid_evaluate); //s
     std::vector<thrust::host_vector<double> > yp( 3, y[0]), ym(yp); 
     //construct field on high polynomial grid, then integrate it
-    dg::Timer t;
-    t.tic();
-    dg::geo::detail::DSField field( vec, *g2dField_ptr);
-    t.toc();
-    std::cout << "Generation of interpolate grid took "<<t.diff()<<"s\n";
+    dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
     dg::geo::detail::DSFieldCylindrical cyl_field(vec);
-    for( unsigned i=0; i<g2dField_ptr->size(); i++)
+    for( unsigned i=0; i<grid_evaluate.size(); i++)
     {
         thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]; //x,y,s
         double phi1 = deltaPhi;
-        if( dynamic_cast<const dg::CartesianGrid2d*>( g2dField_ptr))
-            boxintegrator( cyl_field, *g2dField_ptr, coords, coordsP, phi1, eps);
+        if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
+        {
+            boxintegrator( cyl_field, grid_field, coords, coordsP, phi1, eps);
+        }
         else 
-            boxintegrator( field, *g2dField_ptr, coords, coordsP, phi1, eps);
+            boxintegrator( field, grid_field, coords, coordsP, phi1, eps);
         phi1 =  - deltaPhi;
-        if( dynamic_cast<const dg::CartesianGrid2d*>( g2dField_ptr))
-            boxintegrator( cyl_field, *g2dField_ptr, coords, coordsM, phi1, eps);
+        if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
+            boxintegrator( cyl_field, grid_field, coords, coordsM, phi1, eps);
         else 
-            boxintegrator( field, *g2dField_ptr, coords, coordsM, phi1, eps);
+            boxintegrator( field, grid_field, coords, coordsM, phi1, eps);
         yp[0][i] = coordsP[0], yp[1][i] = coordsP[1], yp[2][i] = coordsP[2];
         ym[0][i] = coordsM[0], ym[1][i] = coordsM[1], ym[2][i] = coordsM[2];
     }
@@ -510,43 +508,29 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::Binary
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    const dg::aGeometry2d* grid2d_ptr = grid.perp_grid();
+    dg::Handle<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    //Resize vector to 2D grid size
-    m_perp_size = grid2d_ptr->size();
-    dg::blas1::transfer( dg::pullback(limit, *grid2d_ptr), m_limiter);
-    dg::blas1::transfer( dg::evaluate(zero, *grid2d_ptr), m_left);
+    m_perp_size = grid_coarse.get().size();
+    dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
+    dg::blas1::transfer( dg::evaluate(zero, grid_coarse.get()), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
-    dg::Timer t;
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym; 
     
-    dg::aGeometry2d* g2dField_ptr = grid2d_ptr->clone();//INTEGRATE HIGH ORDER GRID
-    //g2dField_ptr->set( 7, g2dField_ptr->Nx(), g2dField_ptr->Ny());
-    std::cout << "Start fieldline integration!\n";
-    t.tic();
-    detail::integrate_all_fieldlines2d( vec, g2dField_ptr, g2dField_ptr, yp_coarse, ym_coarse, deltaPhi, eps);
+    dg::Handle<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
+    //grid_magnetic.set( 7, grid_magnetic.Nx(), grid_magnetic.Ny());
+    detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps);
 
-    dg::Grid2d g2dFine((dg::Grid2d(*grid2d_ptr)));//FINE GRID
-    g2dFine.multiplyCellNumbers((double)mx, (double)my);
-    dg::IHMatrix interpolate = dg::create::interpolation( g2dFine, *g2dField_ptr);  //INTERPOLATE TO FINE GRID
-    dg::geo::detail::interpolate_and_clip( interpolate, g2dFine, g2dFine, yp_coarse, ym_coarse, yp, ym);
-    delete g2dField_ptr;
-    t.toc(); 
-    std::cout << "Fieldline integration took "<<t.diff()<<"s\n";
+    dg::Grid2d grid_fine( grid_coarse.get() );//FINE GRID
+    grid_fine.multiplyCellNumbers((double)mx, (double)my);
+    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, grid_coarse.get());  //INTERPOLATE TO FINE GRID
+    dg::geo::detail::interpolate_and_clip( interpolate, grid_fine, grid_fine, yp_coarse, ym_coarse, yp, ym);
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    t.tic();
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], *grid2d_ptr, globalbcx, globalbcy), plus, plusT;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], *grid2d_ptr, globalbcx, globalbcy), minus, minusT;
-    dg::IHMatrix projection = dg::create::projection( *grid2d_ptr, g2dFine);
-    t.toc();
-    std::cout <<"Creation of interpolation/projection took "<<t.diff()<<"s\n";
-    t.tic();
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get(), globalbcx, globalbcy), plus, plusT;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get(), globalbcx, globalbcy), minus, minusT;
+    dg::IHMatrix projection = dg::create::projection( grid_coarse.get(), grid_fine);
     cusp::multiply( projection, plusFine, plus);
     cusp::multiply( projection, minusFine, minus);
-    t.toc();
-    std::cout<< "Multiplication of P*I took: "<<t.diff()<<"s\n";
-    //%Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
     plusT = dg::transpose( plus);
     minusT = dg::transpose( minus);     
     dg::blas2::transfer( plus, m_plus);
@@ -567,8 +551,6 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::Binary
     dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hp), m_hp_inv, grid);
     dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hm), m_hm_inv, grid);
     dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hz), m_hz_inv, grid);
-    
-    delete grid2d_ptr;
 }
 
 template<class G, class I, class container>

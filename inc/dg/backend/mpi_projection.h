@@ -75,10 +75,6 @@ dg::MIHMatrix convert( const dg::IHMatrix& global, const ConversionPolicy& polic
     cusp::array1d<int, cusp::host_memory> buffer_idx;
     dg::detail::global2bufferIdx( global.column_indices, buffer_idx, unique_global_idx);
     dg::GeneralComm<dg::iHVec, dg::HVec> comm( unique_global_idx, policy);
-    dg::IHMatrix local( global.num_rows, comm.size(), global.values.size());
-    local.row_offsets=global.row_offsets;
-    local.column_indices=buffer_idx;
-    local.values=global.values;
     if( !comm.isCommunicating() ) 
     {
         cusp::array1d<int, cusp::host_memory> local_idx(global.column_indices), pids(local_idx);
@@ -86,9 +82,13 @@ dg::MIHMatrix convert( const dg::IHMatrix& global, const ConversionPolicy& polic
         for(unsigned i=0; i<local_idx.size(); i++)
             if( !policy.global2localIdx(global.column_indices[i], local_idx[i], pids[i]) ) success = false;
         assert( success);
-        local.column_indices=local_idx;
         comm = dg::GeneralComm< dg::iHVec, dg::HVec>();
+        return dg::MIHMatrix( global, comm, dg::row_dist);
     }
+    dg::IHMatrix local( global.num_rows, comm.size(), global.values.size());
+    local.row_offsets=global.row_offsets;
+    local.column_indices=buffer_idx;
+    local.values=global.values;
     dg::MIHMatrix matrix(   local, comm, dg::row_dist);
     return matrix;
 }
