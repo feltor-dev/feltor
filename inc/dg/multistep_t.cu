@@ -69,8 +69,7 @@ int main()
     for( unsigned i=0; i<NT; i++)
     {
         karniadakis( zero<dg::DVec>, diffusion, y0);
-        //sirk( explicit, diffusion, y0, y1, dt);
-        //y0.swap(y1);
+        //sirk( explicit, diffusion, y0, y1, dt); y0.swap(y1);
     }
     //![doxygen]
     dg::DVec w2d = dg::create::weights( grid);
@@ -81,7 +80,7 @@ int main()
     dg::blas1::axpby( -1., y0[0], 1., error);
     std::cout << "Normalized solution is "<<  norm_sol<< std::endl;
     double norm_error = dg::blas2::dot( w2d, error);
-    std::cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.0020084 Karniadakis) (0.000148647 SIRK)\n";
+    std::cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000149144 Karniadakis) (0.000148647 SIRK)\n";
     //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
     //n = 2 -> p = 2
     //n = 3 -> p = 3
