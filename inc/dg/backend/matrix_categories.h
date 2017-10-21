@@ -8,9 +8,8 @@ struct AnyMatrixTag{};
 //normal matrices
 struct CuspMatrixTag: public AnyMatrixTag {};
 
-struct SelfMadeMatrixTag {}; //A selfmade matrix can with any Vector
-
-struct dx_matrixTag: public AnyMatrixTag {}; // Small banded block matrix for derivatives
+/// indicates that the \c Matrix type has the \c void \c symv( const Vector&, Vector& ) member function.
+struct SelfMadeMatrixTag {}; 
 
 struct MPIMatrixTag: public AnyMatrixTag {};
 
