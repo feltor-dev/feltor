@@ -56,12 +56,11 @@ int main()
     dg::blas2::gemv(lapperp,rho,rholap); //lambda = - nabla_perp^2 phi
     dg::blas1::scal(rholap,alpha); // lambda = 0.5*tau_i*nabla_perp^2 phi
     
-//test gamma2    
+    //test gamma2    
     unsigned number = invert( gamma2inv, x_, rholap);
             if(  number == invert.get_max())
             throw dg::Fail( eps);
 
-    //Evaluation
     dg::blas1::axpby( 1., sol, -1., x_);
 
     std::cout << "number of iterations:  "<<number<<std::endl;
@@ -71,35 +70,12 @@ int main()
     number = invert( gamma1inv, x_, rho1);
             if(  number == invert.get_max())
             throw dg::Fail( eps);
-//test gamma 1
-    //Evaluation
+    //test gamma 1
     dg::blas1::axpby( 1., sol1, -1., x_);
 
     std::cout << "number of iterations:  "<<number<<std::endl;
     std::cout << "abs error " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
     std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, x_)/ dg::blas2::dot( w2d, sol1))<<std::endl;
-
-    
-/*    
-    std::cout << "Test 3d cylincdrical norm:\n";
-    dg::Grid3d g3d( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER, dg::cylindrical);
-    dg::DVec fct_ = dg::evaluate(fct, g3d );
-    dg::DVec laplace_fct_ = dg::evaluate( laplace_fct, g3d);
-    dg::DVec helmholtz_fct_ = dg::evaluate( helmholtz_fct, g3d);
-    dg::DVec temp_(fct_);
-    dg::Elliptic< dg::DMatrix, dg::DVec > laplaceM( g3d, dg::normed);
-    dg::Helmholtz< dg::DMatrix, dg::DVec > helmholtz( g3d, alpha);
-    dg::blas2::symv( laplaceM, fct_, temp_);
-    dg::blas1::axpby( 1., laplace_fct_, -1., temp_);
-    std::cout << "error Laplace " << sqrt( dg::blas2::dot( laplaceM.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;
-    dg::blas2::symv( helmholtz, fct_, temp_);
-    dg::blas2::symv( helmholtz.precond(), temp_, temp_);
-    dg::blas1::axpby( 1., helmholtz_fct_, -1, temp_);
-    std::cout << "error " << sqrt( dg::blas2::dot( helmholtz.weights(), temp_))<<" (Note the supraconvergence!)"<<std::endl;*/
-
-
-
-    //Tests GAMMA2
 
     return 0;
 }

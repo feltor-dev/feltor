@@ -18,9 +18,10 @@ namespace dg{
  *
  * Unnormed discretization of \f[ (\chi+\alpha\Delta) \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
- * Can be used by the Invert class
+ * Can be used by the Invert class. The following example shows how the class can be used to act as a \c Helmholtz2 operator:
+ @snippet helmholtzg2_b.cu doxygen
  * @copydoc hide_geometry_matrix_container
- * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
+ * @attention The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
  */
 template< class Geometry, class Matrix, class container> 
 struct Helmholtz
@@ -28,20 +29,20 @@ struct Helmholtz
     ///@brief empty object ( no memory allocation)
     Helmholtz() {}
     /**
-     * @brief Construct Helmholtz operator
+     * @brief Construct \c Helmholtz operator
      *
      * @param g The grid to use (boundary conditions are taken from there)
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
-     * @note The default value of \f$\chi\f$ is one. Helmholtz is never normed
+     * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
      */
     Helmholtz( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
     { 
         construct( g, alpha, dir, jfactor);
     }
     /**
-     * @brief Construct Helmholtz operator
+     * @brief Construct \c Helmholtz operator
      *
      * @param g The grid to use
      * @param bcx boundary condition in x
@@ -144,15 +145,16 @@ struct Helmholtz
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
  * @copydoc hide_geometry_matrix_container
- * @attention The Laplacian in this formula is positive as opposed to the negative sign in the Elliptic operator
- * @attention It is MUCH better to solve the normal Helmholtz operator twice,
- * consecutively, than solving the Helmholtz2 operator once. 
+ * @attention The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
+ * @attention It is MUCH better to solve the normal \c Helmholtz operator twice,
+ * consecutively, than solving the \c Helmholtz2 operator once. The following code snippet shows how to do it:
+ @snippet helmholtzg2_b.cu doxygen
  */
 template< class Geometry, class Matrix, class container> 
 struct Helmholtz2
 {
     /**
-     * @brief Construct Helmholtz operator
+     * @brief Construct \c Helmholtz2 operator
      *
      * @param g The grid to use
      * @param alpha Scalar in the above formula
@@ -167,7 +169,7 @@ struct Helmholtz2
     { 
     }
     /**
-     * @brief Construct Helmholtz operator
+     * @brief Construct \c Helmholtz2 operator
      *
      * @param g The grid to use
      * @param bcx boundary condition in x

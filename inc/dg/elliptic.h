@@ -40,7 +40,8 @@ namespace dg
  In a time dependent problem the value of \f$\alpha\f$ determines the 
  numerical diffusion, i.e. for too low values numerical oscillations may appear. 
  Also note that a forward discretization has more diffusion than a centered discretization.
-
+ The following code snippet demonstrates the use of \c Elliptic in a multigrid algorithm:
+ * @snippet elliptic2d_b.cu multigrid
  * @copydoc hide_geometry_matrix_container
  * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
  * and thus in a conjugate gradient solver. 
@@ -50,7 +51,6 @@ namespace dg
  * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
  * @attention Pay attention to the negative sign 
  * 
- * @snippet elliptic2d_b.cu multigrid
  */
 template <class Geometry, class Matrix, class container>
 class Elliptic

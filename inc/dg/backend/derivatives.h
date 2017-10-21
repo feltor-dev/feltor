@@ -45,6 +45,7 @@ EllSparseBlockMat<double> dx( const aTopology2d& g, bc bcx, direction dir = cent
  * @param dir The direction of the first derivative
  *
  * @return A host matrix
+ * @copydoc hide_code_blas2_symv
  */
 EllSparseBlockMat<double> dx( const aTopology2d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 

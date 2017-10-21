@@ -37,6 +37,7 @@ namespace blas2{
  * @param x source
  * @param y sink 
  * @note y gets resized properly
+ * @copydoc hide_code_blas2_symv
  */
 template<class Matrix, class AnotherMatrix>
 inline void transfer( const Matrix& x, AnotherMatrix& y)
@@ -103,6 +104,7 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const DiagonalMatr
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
  * @attention \p y may never alias \p x
+ * @copydoc hide_code_blas2_symv
  */
 template< class Matrix, class container>
 inline void symv( typename MatrixTraits<Matrix>::value_type alpha, 
@@ -133,6 +135,7 @@ inline void symv( typename MatrixTraits<Matrix>::value_type alpha,
  * @param y contains the solution on output (may not alias \p x)
  * @attention y may never alias x
  * @note Due to the \c SelfMadeMatrixTag, M cannot be declared const
+ * @copydoc hide_code_blas2_symv
  */
 template< class Matrix, class container, class same_or_another_container>
 inline void symv( Matrix& M, 

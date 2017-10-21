@@ -206,10 +206,11 @@ struct MatrixTraits< detail::Implicit<M, V> >
     \gamma_0 = \frac{11}{6} 
 \f]
 *
-* Uses blas1::axpby routines to integrate one step
-* and only one right-hand-side evaluation per step. 
-* Uses a conjugate gradient method for the implicit operator  
+* Uses only one right-hand-side evaluation per step. 
+* Uses a conjugate gradient method for the implicit operator. 
+The following code example demonstrates how to integrate the 2d diffusion equation with the dg library:
 @snippet multistep_t.cu function
+In the main function:
 @snippet multistep_t.cu doxygen
 @note In our experience the implicit treatment of diffusive or hyperdiffusive 
 terms can significantly reduce the required number of time steps. This
@@ -226,7 +227,7 @@ struct Karniadakis
     *
     * @param copyable container of size which is used in integration. 
     * @param max_iter parameter for cg
-    * @param eps  parameter for cg
+    * @param eps  accuracy parameter for cg
     * A container object must be copy-constructible from copyable.
     */
     Karniadakis( const container& copyable, unsigned max_iter, double eps): u_(3, container(copyable)), f_(3, container(copyable)), pcg( copyable, max_iter), eps_(eps){
@@ -356,7 +357,9 @@ with rational coefficients
 We solve the implicit substeps by a conjugate gradient method, which works as long 
 as the implicit part remains symmetric and linear. 
 
+The following code example demonstrates how to integrate the 2d diffusion equation with the dg library:
 @snippet multistep_t.cu function
+In the main function:
 @snippet multistep_t.cu doxygen
 @note To our experience the implicit treatment of diffusive or hyperdiffusive 
 terms can significantly reduce the required number of time steps. This
@@ -372,7 +375,7 @@ struct SIRK
      *
      * @param copyable container of right size
      * @param max_iter maximum iterations for conjugate gradient
-     * @param eps error for conjugate gradient
+     * @param eps accuracy for conjugate gradient
      */
     SIRK(const container& copyable, unsigned max_iter, double eps): k_(3, copyable), f_(copyable), g_(copyable), rhs( f_), pcg( copyable, max_iter), eps_(eps)
     {

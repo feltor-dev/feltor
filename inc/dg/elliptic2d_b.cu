@@ -74,10 +74,9 @@ int main()
     const unsigned stages = 3;
 
     dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages);
-    
     const std::vector<dg::DVec> multi_chi = multigrid.project( chi);
+
     std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
-    
     for(unsigned u=0; u<stages; u++)
     {
         multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, jfactor); 

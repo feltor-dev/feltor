@@ -8,29 +8,6 @@
 
 #include "cg.h"
 
-//template< class container>
-//struct Diffusion
-//{
-//    Diffusion( const dg::Grid2d& g, double nu):
-//        nu_(nu),
-//        w2d( dg::create::weights( g)), v2d( dg::create::inv_weights(g)) { 
-//        dg::Matrix Laplacian_ = dg::create::laplacianM( g, dg::normed); 
-//        cusp::blas::scal( Laplacian_.values, -nu);
-//        Laplacian = Laplacian_;
-//        }
-//    void operator()( const container& x, container& y)
-//    {
-//        //dg::blas1::axpby( 0., x, 0., y);
-//        dg::blas2::gemv( Laplacian, x, y);
-//    }
-//    const container& weights(){return w2d;}
-//    const container& precond(){return v2d;}
-//  private:
-//    double nu_;
-//    const container w2d, v2d;
-//    dg::DMatrix Laplacian;
-//};
-
 const double eps = 1e-4;
 const double alpha = -0.5; 
 double lhs( double x, double y){ return sin(x)*sin(y);}

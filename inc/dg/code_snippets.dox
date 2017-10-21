@@ -54,3 +54,18 @@ const dg::MHVec h_x = dg::evaluate( function, g3d);
 double norm = dg::blas2::dot(h_x, w3d, h_x); // norm is now: (exp(4)-exp(0))^3/8
 @endcode
 */
+/** @class hide_code_blas2_symv
+ * This code snippet demonstrates how to derive a function with dG on a device
+@code{.cpp}
+double function(double x, double y){return exp(x)*exp(y);}
+dg::Grid2d g2d( 0, 2, 0, 2, 3, 20, 20);
+dg::DMatrix dx;
+dg::blas2::transfer( dg::create::dx(g2d), dx);
+const dg::DVec  x, y;
+dg::blas1::transfer( dg::evaluate( function, g2d), x);
+y=x;
+dg::blas2::symv(dx, x,y); 
+//or 
+dg::blas2::symv(1., dx, x, 0., y); 
+@endcode
+*/

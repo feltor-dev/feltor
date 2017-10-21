@@ -21,6 +21,10 @@ namespace dg
 
 ///@brief small class holding a stringstream 
 ///@ingroup misc
+///\code
+///try{ throw Error(Message(_ping_)<<"This is error number "<<number);}
+///catch( Error& m) {std::cerr << m.what();}
+///\endcode
 class Message 
 {
   private:
@@ -32,9 +36,9 @@ class Message
     Message(){}
     /*!@brief Initiate message with the file and line it comes from
 
-     * @param file The file in which the exception is thrown (contained in the predefined Macro __FILE__)
-     * @param line The line in which the exception is thrown (contained in the predefined Macro __LINE__)
-     * \note The Macro _ping_ combines __FILE__, __LINE__ in one. 
+     * @param file The file in which the exception is thrown (contained in the predefined Macro \c \__FILE__)
+     * @param line The line in which the exception is thrown (contained in the predefined Macro \c \__LINE__)
+     * \note The Macro \c \_ping_ expands to \c \__FILE__, \c \__LINE__ 
      */
     Message(const char* file, const int line){
         sstream_ << "\n    Message from file **"<<file<<"** in line **" <<line<<"**:\n    ";
@@ -46,7 +50,7 @@ class Message
     Message( std::string m){ sstream_<<m;}
     ~Message(){}
     ///@brief add values to the message stream
-    /// @note you can't use std::endl or std::flush in here
+    /// @note you can't use \c std::endl or \c std::flush in here
     template<class T>
     Message & operator << (const T& value)
     {
@@ -68,7 +72,7 @@ class Message
 /*! @brief class intended for the use in throw statements
  *
  * The objects of this class store a message (that describes the error when thrown)
- * that can then be displayed in a catch block
+ * that can then be displayed in a \c catch block
  * \code
  * try{ throw Error(Message(_ping_)<<"This is error number "<<number);}
  * catch( Error& m) {std::cerr << m.what();}
@@ -108,13 +112,13 @@ struct Fail : public std::exception
     /**
      * @brief Construct from error limit
      *
-     * @param eps error not reached
+     * @param eps accuracy not reached
      */
     Fail( double eps): eps( eps) {}
     /**
      * @brief Return error limit
      *
-     * @return eps
+     * @return eps 
      */
     double epsilon() const { return eps;}
     /**
