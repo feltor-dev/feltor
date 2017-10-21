@@ -49,6 +49,8 @@ namespace dg
  * @note The inverse of \f$ \chi\f$ makes a good general purpose preconditioner
  * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
  * @attention Pay attention to the negative sign 
+ * 
+ * @snippet elliptic2d_b.cu multigrid
  */
 template <class Geometry, class Matrix, class container>
 class Elliptic

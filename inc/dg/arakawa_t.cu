@@ -24,23 +24,18 @@ double jacobian( double x, double y)
 }
 */
 
-double left( double x, double y) {
-    return sin(x)*cos(y);
-    //return cos(x)*x*x*cos(y);
-}
-double right( double x, double y) {
-    return sin(y)*cos(x);
-    //return cos(x)*exp(0.1*(x+y));
-} 
+//![function]
 const double lx = 2*M_PI;
 const double ly = 2*M_PI;
 dg::bc bcx = dg::PER; 
 dg::bc bcy = dg::PER;
-//double right2( double x, double y) {return sin(y);}
+double left( double x, double y) { return sin(x)*cos(y); }
+double right( double x, double y) { return sin(y)*cos(x); } 
 double jacobian( double x, double y) 
 {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
 }
+//![function]
 double variationRHS( double x, double y) 
 {
     return cos(x)*cos(y)*cos(x)*cos(y) + sin(x)*sin(y)*sin(x)*sin(y); 
@@ -68,20 +63,21 @@ int main()
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    dg::DVec w2d = dg::create::weights( grid);
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
-    std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
-    dg::DVec lhs = dg::evaluate( left, grid), jac(lhs);
-    dg::DVec rhs = dg::evaluate( right, grid);
-    const dg::DVec sol = dg::evaluate ( jacobian, grid);
-    const dg::DVec variation = dg::evaluate ( variationRHS, grid);
-    dg::DVec eins = dg::evaluate( dg::one, grid);
 
-    dg::ArakawaX<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> arakawa( grid);
+    //![doxygen]
+    const dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+    const dg::DVec lhs = dg::evaluate( left, grid);
+    const dg::DVec rhs = dg::evaluate( right, grid);
+    dg::DVec jac(lhs);
+
+    dg::ArakawaX<dg::aGeometry2d, dg::DMatrix, dg::DVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
+    //![doxygen]
 
-    std::cout << std::scientific;
+    dg::DVec w2d = dg::create::weights( grid);
+    dg::DVec eins = dg::evaluate( dg::one, grid);
+    const dg::DVec sol = dg::evaluate ( jacobian, grid);
     std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
     std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
     std::cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
@@ -95,6 +91,7 @@ int main()
     //n = 5 -> p = 5    |
     // quantities are all conserved to 1e-15 for periodic bc
     // for dirichlet bc these are not better conserved than normal jacobian
+    const dg::DVec variation = dg::evaluate ( variationRHS, grid);
     arakawa.variation( rhs, jac);
     dg::blas1::axpby( 1., variation, -1., jac);
     std::cout << "Variation distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors

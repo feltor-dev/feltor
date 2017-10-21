@@ -22,13 +22,13 @@ namespace dg{
 * @brief Functor class for the preconditioned conjugate gradient method to solve
 * \f[ Ax=b\f]
 *
- @ingroup invert
- @copydoc hide_container
-
- @note Conjugate gradients might become unstable for positive semidefinite
- matrices arising e.g. in the discretization of the periodic laplacian
-
- @snippet cg2d_t.cu doxygen
+* @ingroup invert
+* @copydoc hide_container
+*
+* @note Conjugate gradients might become unstable for positive semidefinite
+* matrices arising e.g. in the discretization of the periodic laplacian
+*
+* @snippet cg2d_t.cu doxygen
 */
 template< class container>
 class CG
@@ -355,6 +355,7 @@ struct Extrapolation
  * by appropriate weights \f$W\f$ (s. comment below). 
  * It uses solutions from the last two calls to 
  * extrapolate a solution for the current call.
+ * @snippet elliptic2d_b.cu invert
  * @copydoc hide_container
  * @note A note on weights, inverse weights and preconditioning. 
  * A normalized DG-discretized derivative or operator is normally not symmetric. 
@@ -365,6 +366,7 @@ struct Extrapolation
  * Independent from this, a preconditioner should be used to solve the
  * symmetric matrix equation. The inverse of \f$W\f$ is 
  * a good general purpose preconditioner. 
+ * @sa Extrapolation
  */
 template<class container>
 struct Invert

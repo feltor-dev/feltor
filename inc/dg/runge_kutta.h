@@ -401,7 +401,8 @@ void RK<k, container>::operator()( Functor& f, const container& u0, container& u
     k_j = f\left( u^n + \Delta t \sum_{l=1}^j a_{jl} k_l\right)
  \end{align}
 \f]
-*
+@snippet runge_kutta2d_t.cu function
+@snippet runge_kutta2d_t.cu doxygen
 * @ingroup time 
 *
 * Uses only dg::blas1::axpby() routines to integrate one step.

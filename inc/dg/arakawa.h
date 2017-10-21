@@ -17,12 +17,14 @@
   */
 namespace dg
 {
-
+//citation missing in documentation
 /**
  * @brief X-space generalized version of Arakawa's scheme
  *
  * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
  * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 
+ * @snippet arakawa_t.cu function
+ * @snippet arakawa_t.cu doxygen
  * @copydoc hide_geometry_matrix_container
  * @ingroup arakawa
  */

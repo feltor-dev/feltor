@@ -38,6 +38,12 @@ namespace blas1
  * @param x source
  * @param y sink
  * @note y gets resized properly
+
+ * @code
+ dg::HVec host = dg::evaluate( dg::one, grid);
+ dg::DVec device;
+ dg::blas1::transfer( host, device); //device now equals host
+ * @endcode
  */
 template<class container, class other_container>
 inline void transfer( const container& x, other_container& y)
@@ -66,8 +72,12 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
  * @param y Right container may alias x
  * @return Scalar product as defined above
  * @note This routine is always executed synchronously due to the 
-        implicit memcpy of the result. With mpi the result is broadcasted to all
-        processes
+        implicit memcpy of the result. With mpi the result is broadcasted to all processes
+
+@code
+    dg::DVec two( 100,2), three(100,3);
+    double temp = dg::blas1::dot( two, three); //temp = 30 (5*(2*3))
+@endcode
  */
 template< class container>
 inline typename VectorTraits<container>::value_type dot( const container& x, const container& y)
@@ -84,6 +94,11 @@ inline typename VectorTraits<container>::value_type dot( const container& x, con
  * @param x container x may alias y 
  * @param beta Scalar
  * @param y container y contains solution on output
+
+@code
+    dg::DVec two( 100,2), three(100,3);
+    dg::blas1::axpby( 2, two, 3., three); //three[i] = 13 (2*2+3*3)
+@endcode
  */
 template< class container>
 inline void axpby( typename VectorTraits<container>::value_type alpha, const container& x, typename VectorTraits<container>::value_type beta, container& y)
@@ -103,6 +118,11 @@ inline void axpby( typename VectorTraits<container>::value_type alpha, const con
  * @param beta Scalar
  * @param y container y may alias z
  * @param z container z contains solution on output
+
+@code
+    dg::DVec two( 100,2), three(100,3), result(100);
+    dg::blas1::axpby( 2, two, 3., three, result); //result[i] = 13 (2*2+3*3)
+@endcode
  */
 template< class container>
 inline void axpby( typename VectorTraits<container>::value_type alpha, const container& x, typename VectorTraits<container>::value_type beta, const container& y, container& z)
@@ -123,6 +143,12 @@ inline void axpby( typename VectorTraits<container>::value_type alpha, const con
  * @param y container y may alias result
  * @param gamma Scalar
  * @param z container contains solution on output
+
+@code
+    dg::DVec two(100,2), five(100,5), result(100, 12);
+    dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result); 
+    //result[i] = -21 (2.5*2+2*5-3*12) 
+@endcode
  */
 template< class container>
 inline void axpbypgz( typename VectorTraits<container>::value_type alpha, const container& x, typename VectorTraits<container>::value_type beta, const container& y, typename VectorTraits<container>::value_type gamma, container& z)
@@ -140,6 +166,12 @@ inline void axpbypgz( typename VectorTraits<container>::value_type alpha, const 
  * @param x container x may alias y
  * @param y container y contains result, may alias x
  * @param op unary Operator to use on every element
+
+@code
+    dg::DVec two( 100,2), result(100);
+    dg::blas1::transform( two, result, dg::EXP()); 
+    //result[i] = 7.389056... (e^2)
+@endcode
  */
 template< class container, class UnaryOp>
 inline void transform( const container& x, container& y, UnaryOp op)
@@ -154,6 +186,11 @@ inline void transform( const container& x, container& y, UnaryOp op)
  * @copydoc hide_container
  * @param alpha Scalar  
  * @param x container x 
+
+@code
+    dg::DVec two( 100,2);
+    dg::blas1::scal( two,  0.5 )); //result[i] = 1. 
+@endcode
  */
 template< class container>
 inline void scal( container& x, typename VectorTraits<container>::value_type alpha)
@@ -168,6 +205,11 @@ inline void scal( container& x, typename VectorTraits<container>::value_type alp
  * @copydoc hide_container
  * @param alpha Scalar  
  * @param x container x 
+
+@code
+    dg::DVec two( 100,2);
+    dg::blas1::plus( two,  2. )); //result[i] = 4. 
+@endcode
  */
 template< class container>
 inline void plus( container& x, typename VectorTraits<container>::value_type alpha)
@@ -185,6 +227,11 @@ inline void plus( container& x, typename VectorTraits<container>::value_type alp
 * @param x1 container x1  
 * @param x2 container x2 may alias x1
 * @param y  container y contains result on output ( may alias x1 or x2)
+
+@code
+    dg::DVec two( 100,2), three( 100,3), result(100);
+    dg::blas1::pointwiseDot( two,  three, result ); //result[i] = 6. 
+@endcode
 */
 template< class container>
 inline void pointwiseDot( const container& x1, const container& x2, container& y)
@@ -205,6 +252,12 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
 * @param x2 container x2 may alias x1
 * @param beta scalar
 * @param y  container y contains result on output ( may alias x1 or x2)
+
+@code
+    dg::DVec two( 100,2), three( 100,3), result(100,6);
+    dg::blas1::pointwiseDot(2., two,  three, -4., result ); 
+    //result[i] = -12. (2*2*3-4*6)
+@endcode
 */
 template< class container>
 inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, const container& x1, const container& x2, typename VectorTraits<container>::value_type beta, container& y)
@@ -222,6 +275,12 @@ inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, co
 * @param x1 container x1  
 * @param x2 container x2 may alias x1
 * @param y  container y contains result on output ( may alias x1 and/or x2)
+
+@code
+    dg::DVec two( 100,2), three( 100,3), result(100);
+    dg::blas1::pointwiseDivide( two,  three, result ); 
+    //result[i] = -0.666... (2/3)
+@endcode
 */
 template< class container>
 inline void pointwiseDivide( const container& x1, const container& x2, container& y)
@@ -246,7 +305,13 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 * @param y2 container y2 
 * @param gamma scalar
 * @param z  container z contains result on output 
-* @note aliases are allowed
+* @note all aliases are allowed 
+
+@code
+    dg::DVec two(100,2), three(100,3), four(100,5), five(100,5), result(100,6);
+    dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result ); 
+    //result[i] = -56.
+@endcode
 */
 template<class container>
 void pointwiseDot(  typename VectorTraits<container>::value_type alpha, const container& x1, const container& y1, 

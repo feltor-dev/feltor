@@ -209,7 +209,9 @@ struct MatrixTraits< detail::Implicit<M, V> >
 * Uses blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step. 
 * Uses a conjugate gradient method for the implicit operator  
-@note To our experience the implicit treatment of diffusive or hyperdiffusive 
+@snippet multistep_t.cu function
+@snippet multistep_t.cu doxygen
+@note In our experience the implicit treatment of diffusive or hyperdiffusive 
 terms can significantly reduce the required number of time steps. This
 far outweighs the increased computational cost of the additional matrix inversions.
 * @ingroup time
@@ -354,6 +356,8 @@ with rational coefficients
 We solve the implicit substeps by a conjugate gradient method, which works as long 
 as the implicit part remains symmetric and linear. 
 
+@snippet multistep_t.cu function
+@snippet multistep_t.cu doxygen
 @note To our experience the implicit treatment of diffusive or hyperdiffusive 
 terms can significantly reduce the required number of time steps. This
 far outweighs the increased computational cost of the additional matrix inversions.

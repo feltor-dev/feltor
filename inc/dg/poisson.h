@@ -21,7 +21,8 @@ namespace dg
 /**
  * @brief Poisson bracket scheme
  *
- * Equal to the Arakawa class except for the possitility to use mixed boundary conditions
+ * Has the possitility to use mixed boundary conditions
+ * @snippet poisson_t.cu doxygen
  * @ingroup arakawa
  * @copydoc hide_geometry_matrix_container
  */

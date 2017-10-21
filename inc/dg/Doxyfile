@@ -864,7 +864,11 @@ EXCLUDE_SYMBOLS        = hide_*
 # that contain example code fragments that are included (see the \include
 # command).
 
-EXAMPLE_PATH           = cg2d_t.cu
+EXAMPLE_PATH           = cg2d_t.cu \
+                         arakawa_t.cu poisson_t.cu \
+                         elliptic2d_b.cu runge_kutta2d_t.cu multistep_t.cu
+
+
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp and

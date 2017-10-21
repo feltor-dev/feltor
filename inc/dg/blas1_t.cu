@@ -13,8 +13,7 @@ typedef thrust::device_vector<double>  Vector;
 //typedef cusp::array1d<double, cusp::device_memory>  Vector;
 int main()
 {
-    Vector v1( 5, 2), v2( 5, 3);
-    Vector v3(5);
+    Vector v1( 5, 2), v2( 5, 3), v3(5);
     double temp = dg::blas1::dot(v1,v2);
     std::cout << "5*(2*3) = "<<temp << " (30)\n"; 
     dg::blas1::axpby( 2., v1, 3., v2, v3);

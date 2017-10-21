@@ -36,19 +36,14 @@ double der(double x, double y)  { return cos( x)*sin(y);}
 
 int main()
 {
-    dg::Timer t;
     unsigned n, Nx, Ny; 
     double eps;
     double jfactor;
-    unsigned scheme;
 
 	n = 3;
 	Nx = Ny = 64;
 	eps = 1e-6;
 	jfactor = 1;
-	
-    std::cout << "scheme type? \n";
-    std::cin >> scheme;
 
 	/*std::cout << "Type n, Nx and Ny and epsilon and jfactor (1)! \n";
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
@@ -72,35 +67,33 @@ int main()
 
     //std::cout << "Create Polarisation object and set chi!\n";
     {
-		t.tic();
+    //! [multigrid]
+    dg::Timer t;
+    t.tic();
 
-		unsigned stages = 3;
+    const unsigned stages = 3;
 
-		dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages, scheme);
-		
-		std::vector<dg::DVec> chi_ = multigrid.project( chi);
-		std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
-		
-		for(unsigned u=0; u<stages; u++)
-		{
-			multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, jfactor); 
-			multi_pol[u].set_chi( chi_[u]);
-		}
-
-		t.toc();
+    dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages);
     
-		//std::cout << "Creation of polarisation object took: "<<t.diff()<<"s\n";
-		//std::cout << eps<<" \n";
-    	
-		t.tic();
+    const std::vector<dg::DVec> multi_chi = multigrid.project( chi);
+    std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
+    
+    for(unsigned u=0; u<stages; u++)
+    {
+        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, jfactor); 
+        multi_pol[u].set_chi( multi_chi[u]);
+    }
 
-		std::vector<unsigned> number = multigrid.solve(multi_pol, x, b, eps);
-		
-		//for( unsigned u=0; u<number.size(); u++)
-		//	std::cout << " # iterations stage "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";
+    t.toc();
 
-		t.toc();
-		std::cout << "Took "<< t.diff() <<"s\n";
+    std::cout << "Creation of multigrid took: "<<t.diff()<<"s\n";
+    t.tic();
+    std::vector<unsigned> number = multigrid.direct_solve(multi_pol, x, b, eps);
+    t.toc();
+    std::cout << "Solution took "<< t.diff() <<"s\n";
+    for( unsigned u=0; u<number.size(); u++)
+    	std::cout << " # iterations stage "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";
+    //! [multigrid]
     }
 
     //compute error
@@ -112,16 +105,18 @@ int main()
     double err = dg::blas2::dot( w2d, error);
     //std::cout << "L2 Norm2 of Error is                       " << err << std::endl;
     const double norm = dg::blas2::dot( w2d, solution);
-    std::cout << " "<<sqrt( err/norm);
+    std::cout << " "<<sqrt( err/norm) << "\n";
     {
-		dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::centered, jfactor);
-		pol_forward.set_chi( chi);
-		x = temp;
-		dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
-		std::cout << " "<< invert_fw( pol_forward, x, b, w2d, v2d, chi_inv);
-		dg::blas1::axpby( 1.,x,-1., solution, error);
-		err = dg::blas2::dot( w2d, error);
-		std::cout << " "<<sqrt( err/norm);
+    x = temp;
+    //![invert]
+    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::centered, jfactor);
+    pol_forward.set_chi( chi);
+    dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
+    std::cout << " "<< invert_fw( pol_forward, x, b, w2d, v2d, chi_inv);
+    dg::blas1::axpby( 1.,x,-1., solution, error);
+    err = dg::blas2::dot( w2d, error);
+    std::cout << " "<<sqrt( err/norm) << "\n";
+    //![invert]
     }
 
     {

@@ -127,12 +127,12 @@ inline void symv( typename MatrixTraits<Matrix>::value_type alpha,
  * where \f$ M\f$ is a matrix. 
  * @copydoc hide_matrix
  * @copydoc hide_container
- * @tparam same_or_another_container Currently needs to be the same as container.
+ * @tparam same_or_another_container Currently needs to be the same as \c container.
  * @param M The Matrix
  * @param x A container different from \p y 
  * @param y contains the solution on output (may not alias \p x)
  * @attention y may never alias x
- * @note Due to the SelfMadeMatrixTag, M cannot be declared const
+ * @note Due to the \c SelfMadeMatrixTag, M cannot be declared const
  */
 template< class Matrix, class container, class same_or_another_container>
 inline void symv( Matrix& M, 
@@ -152,7 +152,7 @@ inline void symv( Matrix& M,
  * Does exactly the same as symv. 
  * @copydoc hide_matrix
  * @copydoc hide_container
- * @tparam same_or_another_container Currently needs to be the same as container.
+ * @tparam same_or_another_container Currently needs to be the same as \c container.
  * @param M The Matrix
  * @param x A container different from \p y 
  * @param y contains the solution on output (may not alias \p x)
