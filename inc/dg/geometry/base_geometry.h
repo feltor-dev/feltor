@@ -205,6 +205,7 @@ struct aProductGeometry3d : public aGeometry3d
 
 /**
  * @brief two-dimensional Grid with Cartesian metric
+
  * @snippet arakawa_t.cu doxygen
  */
 struct CartesianGrid2d: public dg::aGeometry2d

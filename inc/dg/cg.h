@@ -37,31 +37,20 @@ class CG
     typedef typename VectorTraits<container>::value_type value_type;//!< value type of the container class
     ///@brief Allocate nothing, 
     CG(){}
-      /**
-       * @brief Reserve memory for the pcg method
-       *
-       * @param copyable A container must be copy-constructible from this
-       * @param max_iter Maximum number of iterations to be used
-       */
-    CG( const container& copyable, unsigned max_iter):r(copyable), p(r), ap(r), max_iter(max_iter){}
-    /**
-     * @brief Set the maximum number of iterations 
-     *
-     * @param new_max New maximum number
-     */
+    ///@copydoc construct()
+    CG( const container& copyable, unsigned max_iterations):r(copyable), p(r), ap(r), max_iter(max_iterations){}
+    ///@brief Set the maximum number of iterations 
+    ///@param new_max New maximum number
     void set_max( unsigned new_max) {max_iter = new_max;}
-    /**
-     * @brief Get the current maximum number of iterations
-     *
-     * @return the current maximum
-     */
+    ///@brief Get the current maximum number of iterations
+    ///@return the current maximum
     unsigned get_max() const {return max_iter;}
 
     /**
-     * @brief Set internal storage and maximum number of iterations
+     * @brief Allocate memory for the pcg method
      *
-     * @param copyable
-     * @param max_iterations
+     * @param copyable A container must be copy-constructible from this
+     * @param max_iter Maximum number of iterations to be used
      */
     void construct( const container& copyable, unsigned max_iterations) { 
         ap = p = r = copyable;
@@ -84,12 +73,13 @@ class CG
      * @attention This version uses the Preconditioner to compute the norm for the error condition (this safes one scalar product)
      *
      * @return Number of iterations used to achieve desired precision
+     * @note Requires (11 + N) memops/iteration, where N is the number of memops for \c A, and \c P is assumed vector
      */
     template< class Matrix, class Preconditioner >
     unsigned operator()( Matrix& A, container& x, const container& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
     //version of CG where Preconditioner is not trivial
     /**
-     * @brief Solve the system A*x = b using a preconditioned conjugate gradient method
+     * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
      *
      * The iteration stops if \f$ ||Ax||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is 
      * a correction factor to the absolute error and \f$ S \f$ defines a square norm
@@ -105,6 +95,7 @@ class CG
      * @param nrmb_correction Correction factor C for norm of b
      *
      * @return Number of iterations used to achieve desired precision
+     * @note Requires (15 + N) memops/iteration, where N is the number of memops for \c A, and \c P and \c S are assumed vectors
      */
     template< class Matrix, class Preconditioner, class SquareNorm >
     unsigned operator()( Matrix& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
@@ -263,42 +254,41 @@ can be used to get initial guesses based on past solutions
 template<class container>
 struct Extrapolation
 {
-    /*! @brief Set extrapolation type without initializing values
-     * @param type number of vectors to use for extrapolation ( 0<=type<=3)
-     * @attention the update function must be used at least type times before the extrapolate function can be called
+    /*! @brief Set extrapolation number without initializing values
+     * @param number number of vectors to use for extrapolation ( 0<=number<=3)
+     * @attention the update function must be used at least \c number times before the extrapolate function can be called
      */
-    Extrapolation( unsigned type = 2){ set_type(type); }
-    /*! @brief Set extrapolation type and initialize values
-     * @param type number of vectors to use for extrapolation ( 0<=type<=3)
+    Extrapolation( unsigned number = 2){ set_number(number); }
+    /*! @brief Set extrapolation number and initialize values
+     * @param number number of vectors to use for extrapolation ( 0<=number<=3)
      * @param init the vectors are initialized with this value
      */
-    Extrapolation( unsigned type, const container& init) { 
-        set_type(type, init); 
+    Extrapolation( unsigned number, const container& init) { 
+        set_number(number, init); 
     }
     ///@copydoc Extrapolation(unsigned)
-    void set_type( unsigned type)
+    void set_number( unsigned number)
     {
-        m_type = type;
-        m_x.resize( type);
-        assert( m_type <= 3 );
+        m_number = number;
+        m_x.resize( number);
+        assert( m_number <= 3 );
     }
     ///@copydoc Extrapolation(unsigned,const container&)
-    void set_type( unsigned type, const container& init)
+    void set_number( unsigned number, const container& init)
     {
-        m_x.assign( type, init);
-        m_type = type;
-        assert( m_type <= 3 );
+        m_x.assign( number, init);
+        m_number = number;
+        assert( m_number <= 3 );
     }
-    ///read the current extrapolation type
-    unsigned get_type( ) const{return m_type;}
+    ///read the current extrapolation number
+    unsigned get_number( ) const{return m_number;}
 
     /**
-    * @brief Extrapolate values 
-    *
+    * @brief Extrapolate values (\c number +1 memops)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
     */
     void extrapolate( container& new_x) const{
-        switch(m_type)
+        switch(m_number)
         {
             case(0): 
                      break;
@@ -316,29 +306,28 @@ struct Extrapolation
     
     /**
     * @brief move the all values one step back and copy the given vector as current head
-    *
     * @param new_head the new head ( may alias the tail)
     */
     void update( const container& new_head){
-        if( m_type == 0) return;
+        if( m_number == 0) return;
         //push out last value
-        for (unsigned u=m_type-1; u>0; u--)
+        for (unsigned u=m_number-1; u>0; u--)
             m_x[u].swap( m_x[u-1]);
         blas1::copy( new_head, m_x[0]);
     }
 
     /**
      * @brief return the current head 
-     * @return current head (undefined if m_type==0)
+     * @return current head (undefined if number==0)
      */
     const container& head()const{return m_x[0];}
     ///write access to tail value ( the one that will be deleted in the next update
-    container& tail(){return m_x[m_type-1];}
+    container& tail(){return m_x[m_number-1];}
     ///read access to tail value ( the one that will be deleted in the next update
-    const container& tail()const{return m_x[m_type-1];}
+    const container& tail()const{return m_x[m_number-1];}
 
     private:
-    unsigned m_type;
+    unsigned m_number;
     std::vector<container> m_x;
 };
 
@@ -376,23 +365,14 @@ struct Invert
     ///@brief Allocate nothing
     Invert() { multiplyWeights_ = true; nrmb_correction_ = 1.; }
 
-    /**
-     * @brief Constructor
-     *
-     * @param copyable Needed to construct the two previous solutions
-     * @param max_iter maximum iteration in conjugate gradient
-     * @param eps relative error in conjugate gradient
-     * @param extrapolationType number of last values to use for extrapolation of the current guess
-     * @param multiplyWeights if true the rhs shall be multiplied by the weights before cg is applied
-     * @param nrmb_correction Correction factor for norm of b (cf. CG)
-     */
+    ///@copydoc construct()
     Invert(const container& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1)
     {
         construct( copyable, max_iter, eps, extrapolationType, multiplyWeights, nrmb_correction);
     }
 
     /**
-     * @brief to be called after default constructor
+     * @brief Allocate memory
      *
      * @param copyable Needed to construct the two previous solutions
      * @param max_iter maximum iteration in conjugate gradient
@@ -403,7 +383,7 @@ struct Invert
      */
     void construct( const container& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1.) 
     {
-        m_ex.set_type( extrapolationType);
+        m_ex.set_number( extrapolationType);
         set_size( copyable, max_iter);
         set_accuracy( eps, nrmb_correction);
         multiplyWeights_=multiplyWeights;
@@ -418,7 +398,7 @@ struct Invert
      */
     void set_size( const container& assignable, unsigned max_iterations) {
         cg.construct(assignable, max_iterations);
-        m_ex.set_type( m_ex.get_type(), assignable);
+        m_ex.set_number( m_ex.get_number(), assignable);
     }
 
     /**
@@ -438,7 +418,7 @@ struct Invert
      * @param extrapolationType number of last values to use for next extrapolation of initial guess
      */
     void set_extrapolationType( int extrapolationType) {
-        m_ex.set_type( extrapolationType);
+        m_ex.set_number( extrapolationType);
     }
     /**
      * @brief Set the maximum number of iterations 
@@ -489,7 +469,8 @@ struct Invert
      * @param weights The weights that normalize the symmetric operator
      * @param inv_weights The inverse of the weights that normalize the symmetric operator
      * @param p The preconditioner  
-     * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
+     * @note (15+N)memops per iteration where N is the memops contained in \c op.
+     *   If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
      *
      * @return number of iterations used 
      */

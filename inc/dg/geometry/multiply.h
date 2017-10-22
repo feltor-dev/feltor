@@ -123,7 +123,8 @@ void pointwiseDivide( const container& in, const SparseElement<container>& mu, c
 ///@cond
 namespace detail
 {
-//i0 must be the diagonal index, out0 may alias in0 but not in1
+//multiply_add given containers with given tensor indices
+//i0 must be the diagonal index, out0 may alias in0 but not in1 
 template<class container>
 void multiply2d_helper( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, int i0[2], int i1[2])
 {
@@ -151,6 +152,11 @@ void multiply2d_helper( const SparseTensor<container>& t, const container& in0, 
  * @param out0 (output) first component  (restricted)
  * @param out1 (output) second component (may alias in1)
  * @attention aliasing only allowed between out1 and in1
+ * @note Currently requires:
+         - 10 memops if all values in t are set; 
+         - 6  memops if t is diagonal; 
+         - 4  memops if t is empty
+         - (-1 memop if alias is used)
  */
 template<class container>
 void multiply2d( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, container& out1)

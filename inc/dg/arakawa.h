@@ -45,7 +45,7 @@ struct ArakawaX
     ArakawaX( const Geometry& g, bc bcx, bc bcy);
 
     /**
-     * @brief Compute poisson's bracket
+     * @brief Compute poisson's bracket (25+2 memops)
      *
      * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
      * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 

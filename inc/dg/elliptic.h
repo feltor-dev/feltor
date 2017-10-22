@@ -174,6 +174,7 @@ class Elliptic
      *
      * @param x left-hand-side
      * @param y result
+     * @note Requires 24 memops if geometry is curvilinear; 20 memops if geometry is orthogonal or chi is set; 16 memops if geometry is Cartesian and chi is not set;
      */
     void symv( const container& x, container& y) 
     {

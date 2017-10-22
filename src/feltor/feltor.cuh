@@ -31,14 +31,6 @@ template<class Geometry, class IMatrix, class Matrix, class container>
 struct Implicit
 {
 
-    /**
-     * @brief Construct from parameters
-     *
-     * @tparam Grid3d three-dimensional grid class 
-     * @param g The grid
-     * @param p the physics parameters
-     * @param gp the geometry parameters
-     */
     Implicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::GeomParameters gp, DS& dsN, DS& dsDIR):
         p(p),
         gp(gp),
@@ -52,13 +44,7 @@ struct Implicit
         dg::blas1::transfer( dg::pullback( dg::geo::GaussianDamping(Psip(gp), gp.psipmaxcut, gp.alpha), g), dampgauss_);
     }
 
-    /**
-     * @brief Return implicit terms
-     *
-     * @param x input vector (x[0] := N_e -1, x[1] := N_i-1, x[2] := U_e, x[3] = U_i)
-     * @param y output vector
-     */
-    void operator()( std::vector<container>& x, std::vector<container>& y)
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
            x[1] := N_i - 1
@@ -96,31 +82,11 @@ struct Implicit
         }
     }
 
-    /**
-     * @brief Return the laplacian with dirichlet BC
-     *
-     * @return 
-     */
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perpDIR;}
 
-    /**
-     * @brief Model function for Inversion
-     *
-     * @return weights for the inversion function in
-     */
     const container& weights(){return LaplacianM_perpDIR.weights();}
-    /**
-     * @brief Model function for Inversion
-     *
-     * @return preconditioner for the inversion function in
-     */
+    const container& inv_weights(){return LaplacianM_perpDIR.inv_weights();}
     const container& precond(){return LaplacianM_perpDIR.precond();}
-    /**
-     * @brief Damping used in the diffusion equations
-     *
-     * @return Vector containing damping 
-     */
-    //const container& damping(){return dampprof_;}
   private:
     const feltor::Parameters p;
     const dg::geo::solovev::GeomParameters gp;
@@ -133,22 +99,9 @@ struct Implicit
 template< class Geometry, class IMatrix, class Matrix, class container >
 struct Explicit
 {
-    /**
-     * @brief Construct from parameters
-     *
-     * @tparam Grid3d three-dimensional grid class 
-     * @param g The grid
-     * @param p the physics parameters
-     * @param gp the geometry parameters
-     */
     Explicit( const Geometry& g, const dg::geo::TokamakMagneticField& mag, feltor::Parameters p, dg::geo::solovev::GeomParameters gp);
 
 
-    /**
-     * @brief Return a ds class for evaluation purposes
-     *
-     * @return 
-     */
     dg::DS<Geometry, IMatrix, Matrix, container>& ds(){return dsN_;}
     dg::DS<Geometry, IMatrix, Matrix, container>& dsDIR(){return dsDIR_;}
 
@@ -168,13 +121,8 @@ struct Explicit
      */
     void initializene( const container& y, container& target);
 
-    /**
-     * @brief Compute explicit rhs of Explicit equations
-     *
-     * @param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := U_e, y[3] := U_i
-     * @param yp Result
-     */
-    void operator()( std::vector<container>& y, std::vector<container>& yp);
+    ///@param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := U_e, y[3] := U_i
+    void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief \f[ M := \int_V (n_e-1) dV \f]
@@ -183,12 +131,6 @@ struct Explicit
      * @note call energies() before use
      */
     double mass( ) {return mass_;}
-    /**
-     * @brief Do not use! Not implemented yet!
-     *
-     * @return 0
-     */
-    double mass_diffusion( ) {return diff_;}
     /**
      * @brief 
      \f[
@@ -237,9 +179,9 @@ struct Explicit
     void vecdotnablaN(const container& x, const container& y, container& z, container& target);
     void vecdotnablaDIR(const container& x, const container& y, container& z, container& target);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
-    container& compute_psi( container& potential);
+    container& compute_psi( const container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
-    double add_parallel_dynamics( std::vector<container>& y, std::vector<container>& yp);
+    double add_parallel_dynamics( const std::vector<container>& y, std::vector<container>& yp);
 
     container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
 
@@ -361,7 +303,7 @@ container& Explicit<Geometry, DS, Matrix, container>::polarisation( const std::v
 }
 
 template< class Geometry, class DS, class Matrix, class container>
-container& Explicit<Geometry, DS, Matrix,container>::compute_psi( container& potential)
+container& Explicit<Geometry, DS, Matrix,container>::compute_psi( const container& potential)
 {
     invert_invgammaPhi(invgammaDIR,chi,potential);                    //chi  Gamma phi
     poissonN.variationRHS(potential, omega);
@@ -379,7 +321,7 @@ void Explicit<Geometry, DS, Matrix, container>::initializene( const container& s
 
 
 template<class G, class DS, class M, class V>
-double Explicit<G, DS, M, V>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
+double Explicit<G, DS, M, V>::add_parallel_dynamics( const std::vector<V>& y, std::vector<V>& yp)
 {
     double z[2]     = {-1.0,1.0};
     double Dpar[4]  = {0.0, 0.0,0.0,0.0};
@@ -498,7 +440,7 @@ double Explicit<G, DS, M, V>::add_parallel_dynamics( std::vector<V>& y, std::vec
 
 
 template<class Geometry, class DS, class Matrix, class container>
-void Explicit<Geometry, DS, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+void Explicit<Geometry, DS, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - 1
        y[1] := N_i - 1
