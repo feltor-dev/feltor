@@ -74,6 +74,8 @@ void square( const dg::SparseTensor<thrust::host_vector<double> >& jac, const th
 
 /**
  * @brief A two-dimensional grid based on curvilinear coordinates
+ *
+ * @snippet hector_t.cu doxygen
  */
 struct CurvilinearGrid2d : public dg::aGeometry2d
 {
@@ -117,6 +119,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
  * @brief A 2x1 curvilinear product space grid
 
  * The base coordinate system is the cylindrical coordinate system R,Z,phi
+ * @snippet hector_t.cu doxygen
  */
 struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
 {

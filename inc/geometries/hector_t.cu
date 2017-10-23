@@ -73,6 +73,7 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
     t.tic();
+    //![doxygen]
     Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>* hector;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     int construction = 0;
@@ -93,6 +94,7 @@ int main( int argc, char* argv[])
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     dg::geo::CurvilinearProductGrid3d g3d(*hector, n, Nx, Ny,Nz, dg::DIR);
     dg::geo::CurvilinearGrid2d g2d = g3d.perp_grid();
+    //![doxygen]
 
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();

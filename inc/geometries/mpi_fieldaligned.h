@@ -196,17 +196,14 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
     assert( p0 < m_g.get().global().Nz());
-    const aMPIGeometry2d* g2d_ptr = m_g.get().perp_grid();
-    MPI_Vector<container> init2d = dg::pullback( binary, *g2d_ptr); 
-    delete g2d_ptr;
+    const dg::Handle<aMPIGeometry2d> g2d = m_g.get().perp_grid();
+    MPI_Vector<container> init2d = dg::pullback( binary, g2d.get()); 
+    MPI_Vector<container> zero2d = dg::evaluate( dg::zero, g2d.get()); 
     unsigned Nz = m_g.get().global().Nz();
 
     MPI_Vector<container> temp(init2d), tempP(init2d), tempM(init2d);
     MPI_Vector<container> vec3d = dg::evaluate( dg::zero, m_g.get());
-    std::vector<MPI_Vector<container> >  plus2d, minus2d, result;
-    dg::split( vec3d, plus2d,  m_g.get());
-    dg::split( vec3d, minus2d, m_g.get());
-    dg::split( vec3d, result,  m_g.get());
+    std::vector<MPI_Vector<container> >  plus2d(Nz, zero2d), minus2d(plus2d), result(plus2d);
     unsigned turns = rounds; 
     if( turns ==0) turns++;
     //first apply Interpolation many times, scale and store results
@@ -215,7 +212,7 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
         {
             dg::blas1::copy( init2d, tempP);
             dg::blas1::copy( init2d, tempM);
-            unsigned rep = i0 + r*Nz; 
+            unsigned rep = r*Nz + i0; 
             for(unsigned k=0; k<rep; k++)
             {
                 dg::blas2::symv( m_plus, tempP, temp);
@@ -231,9 +228,9 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
     //now we have the plus and the minus filaments
     if( rounds == 0) //there is a limiter
     {
-        for( unsigned i0=0; i0<Nz; i0++)
+        for( unsigned i0=0; i0<m_Nz; i0++)
         {
-            int idx = (int)(i0+m_coords2*m_g.get().Nz())  - (int)p0;
+            int idx = (int)(i0+m_coords2*m_Nz)  - (int)p0;
             if(idx>=0)
                 result[i0] = plus2d[idx];
             else
@@ -250,9 +247,9 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
             dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
         }
         dg::blas1::axpby( -1., init2d, 1., result[0]);
-        for(unsigned i0=0; i0<Nz; i0++)
+        for(unsigned i0=0; i0<m_Nz; i0++)
         {
-            int idx = ((int)i0 + m_coords2*m_g.get().Nz() -(int)p0 + Nz)%Nz; //shift index
+            int idx = ((int)i0 + m_coords2*m_Nz -(int)p0 + Nz)%Nz; //shift index
             thrust::copy( result[idx].data().begin(), result[idx].data().end(), vec3d.data().begin() + i0*m_perp_size);
         }
     }

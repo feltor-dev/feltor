@@ -23,6 +23,7 @@ namespace geo
  \f]
  where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the poloidal current 
  and \f$ \psi_p\f$ the poloidal flux function.
+ @snippet ds_t.cu doxygen
  @note We implicitly also assume the toroidal field line approximation, i.e. all curvature
  and other perpendicular terms created with this field will assume that the perpendicular 
  direction lies within the

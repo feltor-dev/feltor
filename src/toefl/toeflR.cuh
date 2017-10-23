@@ -2,7 +2,6 @@
 #include <exception>
 
 #include "dg/algorithm.h"
-#include "dg/backend/typedefs.cuh"
 #include "parameters.h"
 
 #ifdef DG_BENCHMARK

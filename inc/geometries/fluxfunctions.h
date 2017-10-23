@@ -109,6 +109,8 @@ aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFun
 
 /**
 * @brief This struct bundles a function and its first derivatives
+*
+* @snippet hector_t.cu doxygen 
 */
 struct BinaryFunctorsLvl1 
 {
@@ -196,6 +198,7 @@ struct BinaryFunctorsLvl2
 };
 
 /// A symmetric 2d tensor field and its divergence
+///@snippet hector_t.cu doxygen 
 struct BinarySymmTensorLvl1
 {
     BinarySymmTensorLvl1( ){}
@@ -251,6 +254,7 @@ struct BinarySymmTensorLvl1
 };
 
 /// A vector field with three components that depend only on the first two coordinates
+///@snippet ds_t.cu doxygen
 struct BinaryVectorLvl0
 {
     BinaryVectorLvl0(){}
