@@ -31,12 +31,11 @@ struct Implicit
     Implicit( const Geometry& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
-	inv_weights_(2, dg::create::inv_weights( g) ),
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
         LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
     {
     }
-    void operator()( std::vector<container>& x, std::vector<container>& y)
+    void operator()(const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
@@ -52,12 +51,11 @@ struct Implicit
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp_phi;}
     const container& weights(){return LaplacianM_perp.weights();}
-    const std::vector<container>& inv_weights(){return inv_weights_;}
+    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
     container temp;    
-    std::vector<container> inv_weights_;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp,LaplacianM_perp_phi;
 
 };
@@ -83,7 +81,7 @@ struct Explicit
     const std::vector<container>& potential( ) const { return phi;}
     void initializene(const container& y, container& target);
 
-    void operator()( std::vector<container>& y, std::vector<container>& yp);
+    void operator()(const std::vector<container>& y, std::vector<container>& yp);
 
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
@@ -303,7 +301,7 @@ void Explicit<Grid, Matrix, container>::initializene(const container& src, conta
 }
 
 template<class Grid, class Matrix, class container>
-void Explicit<Grid, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>& y, std::vector<container>& yp)
 {
 
     dg::Timer t;
