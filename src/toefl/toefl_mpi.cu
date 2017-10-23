@@ -120,10 +120,10 @@ int main( int argc, char* argv[])
       MPI_Cart_get( comm, 2, dims, periods, coords);
       dg::MDVec transfer( dg::evaluate( dg::zero, grid));
     ///////////////////////////////////first output/////////////////////////
-    size_t start[3] = {0, coords[1]*count[1], coords[0]*count[2]};
     size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
-    size_t Estart[] = {0};
+    size_t start[3] = {0, coords[1]*count[1], coords[0]*count[2]};
     size_t Ecount[] = {1};
+    size_t Estart[] = {0};
     std::vector<dg::DVec> transferD(4, dg::evaluate(dg::zero, grid_out.local()));
     dg::HVec transferH(dg::evaluate(dg::zero, grid_out.local()));
     dg::IDMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
@@ -135,7 +135,7 @@ int main( int argc, char* argv[])
     for( unsigned k=0; k<4; k++)
     {
         dg::blas1::transfer( transferD[k], transferH);
-        err = nc_put_vara_double( ncid, dataIDs[i], start, count, transferH.data() );
+        err = nc_put_vara_double( ncid, dataIDs[k], start, count, transferH.data() );
     }
     err = nc_put_vara_double( ncid, tvarID, start, count, &time);
     //err = nc_close(ncid);
@@ -187,7 +187,8 @@ int main( int argc, char* argv[])
         dg::blas2::symv( interpolate, y1[0].data(), transferD[0]);
         dg::blas2::symv( interpolate, y1[1].data(), transferD[1]);
         dg::blas2::symv( interpolate, test.potential()[0].data(), transferD[2]);
-        dg::blas2::symv( diffusion.laplacianM(), transferD[2], transferD[3]);
+        dg::blas2::symv( diffusion.laplacianM(), test.potential()[0], transfer);
+        dg::blas2::symv( interpolate, transfer.data(), transferD[3]);
         //err = nc_open(argv[2], NC_WRITE, &ncid);
         for( int k=0;k<4; k++)
         {

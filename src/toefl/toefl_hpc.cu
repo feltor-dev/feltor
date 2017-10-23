@@ -79,10 +79,10 @@ int main( int argc, char* argv[])
     err = nc_enddef(ncid);
     dg::DVec transfer( dg::evaluate( dg::zero, grid));
     ///////////////////////////////////first output/////////////////////////
-    size_t start[3] = {0, 0, 0};
     size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
-    size_t Estart[] = {0};
+    size_t start[3] = {0, 0, 0};
     size_t Ecount[] = {1};
+    size_t Estart[] = {0};
     std::vector<dg::DVec> transferD(4, dg::evaluate(dg::zero, grid_out));
     dg::HVec transferH(dg::evaluate(dg::zero, grid_out));
     dg::IDMatrix interpolate = dg::create::interpolation( grid_out, grid); 
