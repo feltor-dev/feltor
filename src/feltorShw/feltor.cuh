@@ -18,7 +18,7 @@ namespace eule
 ///@addtogroup solver
 ///@{
 /**
- * @brief Diffusive terms for Feltor solver
+ * @brief Diffusive terms for Explicit solver
  *
  * @tparam Matrix The Matrix class
  * @tparam container The Vector class 
@@ -26,16 +26,17 @@ namespace eule
  */
 
 template<class Geometry, class Matrix, class container>
-struct Rolkar
+struct Implicit
 {
-    Rolkar( const Geometry& g, eule::Parameters p):
+    Implicit( const Geometry& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
+	inv_weights_(2, dg::create::inv_weights( g) ),
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
         LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
     {
     }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
@@ -51,17 +52,18 @@ struct Rolkar
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp_phi;}
     const container& weights(){return LaplacianM_perp.weights();}
-    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
+    const std::vector<container>& inv_weights(){return inv_weights_;}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
     container temp;    
+    std::vector<container> inv_weights_;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp,LaplacianM_perp_phi;
 
 };
 
 template< class Geometry, class Matrix, class container >
-struct Feltor
+struct Explicit
 {
     //typedef std::vector<container> Vector;
     typedef typename dg::VectorTraits<container>::value_type value_type;
@@ -69,7 +71,7 @@ struct Feltor
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
-    Feltor( const Geometry& g, eule::Parameters p);
+    Explicit( const Geometry& g, eule::Parameters p);
 
 
     /**
@@ -79,9 +81,9 @@ struct Feltor
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
-    void initializene( const container& y, container& target);
+    void initializene(const container& y, container& target);
 
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( std::vector<container>& y, std::vector<container>& yp);
 
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
@@ -107,15 +109,21 @@ struct Feltor
     const container w2d, v2d;
     std::vector<container> phi;
     std::vector<container> npe, logn; 
+    container gamma_n;
 
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
 
     dg::Elliptic< Geometry, Matrix, container > pol,lapperp; 
-    dg::Helmholtz< Geometry, Matrix, container > invgammaPhi,invgammaN;
-
+//     dg::Helmholtz< Geometry, Matrix, container > invgammaPhi,invgammaN;
+    std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
+    std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1;
     
-    dg::Invert<container> invert_invgammaN,invert_invgammaPhi, invert_pol;
+    dg::Invert<container> invert_invgamma, invert_pol;
+    dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
+    dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
+    std::vector<container> multi_chi;
+
     
     dg::PoloidalAverage<container, container > polavg; //device int vectors would be better for cuda
 
@@ -128,7 +136,7 @@ struct Feltor
 };
 
 template<class Grid, class Matrix, class container>
-Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p): 
+Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p): 
     chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),
     phiavg(chi),phitilde(chi),phidelta(chi),    Niavg(chi),
@@ -139,116 +147,163 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N then phi BCC
     pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered, p.jfactor), 
     lapperp ( g,g.bcx(), g.bcy(),       dg::normed,          dg::centered),
-    invgammaPhi( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invgammaN(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
+//     invgammaPhi( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
+//     invgammaN(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
+    gamma_n(chi),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
-    invert_invgammaN(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
-    invert_invgammaPhi( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+//     invert_invgammaPhi( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     polavg(g),
     p(p),
     evec(3),
     //damping and sources
     lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.invkappa),g)),
-    profNi(profne)
+    profNi(profne),
+    multigrid( g, 3),
+    old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi)
 {
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
     initializene(profNi,profne); //ne = Gamma N_i
     dg::blas1::transform(profne,profne, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+    multi_chi= multigrid.project( chi);
+    multi_pol.resize(3);
+    multi_gamma1.resize(3);
+    for( unsigned u=0; u<3; u++)
+    {
+        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, p.jfactor);
+        multi_gamma1[u].construct( multigrid.grids()[u].get(), -0.5*p.tau[1], dg::centered);
+    }
 }
 
 template< class Grid, class Matrix, class container>
-container& Feltor<Grid, Matrix, container>::polarisation( const std::vector<container>& y)
+container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<container>& y)
 {
    if (p.modelmode==0) {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-(bgamp+profamp)) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i n_i
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
-    pol.set_chi( chi);
-
-    dg::blas1::pointwiseDivide(v2d,chi,omega);
-
-    invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
-    dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
-    charge_ = dg::blas2::dot(one,w2d,chi);
-    //= Gamma n_i - n_e
-
-    unsigned number = invert_pol( pol, phi[0], chi, w2d, omega, v2d);     //Gamma n_i -ne = -nabla chi nabla phi
-        if(  number == invert_pol.get_max())
-            throw dg::Fail( p.eps_pol);
-  }
-  if (p.modelmode==1) {
-    dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
-    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp)));
-    dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, omega);       //omega = (\mu_i n_i ) /B^2
-
-    invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-1)    
-    dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) - (n_e-(bgamp+profamp)) = Gamma n_i - n_e
-    charge_ = dg::blas2::dot(one,w2d,chi);
-//     dg::blas1::pointwiseDivide(chi,omega,chi);              // B^2(Gamma n_i - n_e )/  (\mu_i n_i )
-    polavg(omega,lambda);
-    dg::blas1::pointwiseDivide(chi,lambda,chi);              // (Gamma n_i - n_e )/  (\mu_i <n_i/B^2> )
-    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
-        if(  number == invert_pol.get_max())
-            throw dg::Fail( p.eps_pol);
-  }
-  if (p.modelmode==2) {
-    dg::blas1::axpby( p.mu[1], y[1], 0, omega);      //omega =  \mu_i (N_i_tilde)/B_0^2
     
-    invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (N_i_tilde)    
-    dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) - (n_e-(bgamp+profamp)) = Gamma n_i - n_e
-    charge_ = dg::blas2::dot(one,w2d,chi);
+    multigrid.project( chi, multi_chi);
+    for( unsigned u=0; u<3; u++)
+    {
+	multi_pol[u].set_chi( multi_chi[u]);
+    }
+	//pol.set_chi( chi);
+	
+    old_gammaN.extrapolate( gamma_n);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, gamma_n, y[1], p.eps_gamma);
+    old_gammaN.update( gamma_n);
+    //unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
+    if(  number[0] == invert_invgamma.get_max())
+	throw dg::Fail( p.eps_gamma);
+    dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
+ //invert 
 
-    unsigned number = invert_pol( pol, phi[0], chi);            //Gamma N_i_tilde -N_e_tilde = -nabla^2 phi
-        if(  number == invert_pol.get_max())
-            throw dg::Fail( p.eps_pol);
+    //unsigned number = invert_pol( pol, phi[0], omega, v2d, chi);
+    old_phi.extrapolate( phi[0]);
+    number = multigrid.direct_solve( multi_pol, phi[0], omega, p.eps_pol);
+    old_phi.update( phi[0]);
+    if(  number[0] == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);	    
+    
+//     pol.set_chi( chi);
+// 
+//     dg::blas1::pointwiseDivide(v2d,chi,omega);
+// 
+//     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
+//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
+//     charge_ = dg::blas2::dot(one,w2d,chi);
+//     //= Gamma n_i - n_e
+// 
+//     unsigned number = invert_pol( pol, phi[0], chi, w2d, omega, v2d);     //Gamma n_i -ne = -nabla chi nabla phi
+//         if(  number == invert_pol.get_max())
+//             throw dg::Fail( p.eps_pol);
   }
-  if (p.modelmode==3) {
-    dg::blas1::pointwiseDot( npe[1], binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
-    dg::blas1::scal(chi,p.mu[1]);
-    pol.set_chi( chi);
-    dg::blas1::pointwiseDivide(v2d,chi,lambda);
-    dg::blas1::transform( npe[1], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
-    invert_invgammaN(invgammaN,chi,omega); //chi= Gamma (Ni-(bgamp+profamp)) 
-    dg::blas1::transform( npe[0], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
-    dg::blas1::axpby( -1., omega, 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
-    charge_ = dg::blas2::dot(one,w2d,chi);
-    //= Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi, w2d, lambda, v2d);            //Gamma n_i -ne = -nabla chi nabla phi
-        if(  number == invert_pol.get_max())
-            throw dg::Fail( p.eps_pol);
-  }
+//   if (p.modelmode==1) {
+//     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
+//     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp)));
+//     dg::blas1::pointwiseDot( chi, binv, chi);
+//     dg::blas1::pointwiseDot( chi, binv, omega);       //omega = (\mu_i n_i ) /B^2
+// 
+//     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-1)    
+//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) - (n_e-(bgamp+profamp)) = Gamma n_i - n_e
+//     charge_ = dg::blas2::dot(one,w2d,chi);
+// //     dg::blas1::pointwiseDivide(chi,omega,chi);              // B^2(Gamma n_i - n_e )/  (\mu_i n_i )
+//     polavg(omega,lambda);
+//     dg::blas1::pointwiseDivide(chi,lambda,chi);              // (Gamma n_i - n_e )/  (\mu_i <n_i/B^2> )
+//     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
+//         if(  number == invert_pol.get_max())
+//             throw dg::Fail( p.eps_pol);
+//   }
+//   if (p.modelmode==2) {
+//     dg::blas1::axpby( p.mu[1], y[1], 0, omega);      //omega =  \mu_i (N_i_tilde)/B_0^2
+//     
+//     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (N_i_tilde)    
+//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) - (n_e-(bgamp+profamp)) = Gamma n_i - n_e
+//     charge_ = dg::blas2::dot(one,w2d,chi);
+// 
+//     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma N_i_tilde -N_e_tilde = -nabla^2 phi
+//         if(  number == invert_pol.get_max())
+//             throw dg::Fail( p.eps_pol);
+//   }
+//   if (p.modelmode==3) {
+//     dg::blas1::pointwiseDot( npe[1], binv, chi);
+//     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
+//     dg::blas1::scal(chi,p.mu[1]);
+//     pol.set_chi( chi);
+//     dg::blas1::pointwiseDivide(one,chi,lambda);
+//     dg::blas1::transform( npe[1], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
+//     invert_invgammaN(invgammaN,chi,omega); //chi= Gamma (Ni-(bgamp+profamp)) 
+//     dg::blas1::transform( npe[0], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
+//     dg::blas1::axpby( -1., omega, 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
+//     charge_ = dg::blas2::dot(one,w2d,chi);
+//     //= Gamma n_i - n_e
+//     unsigned number = invert_pol( pol, phi[0], chi, w2d, lambda, v2d);            //Gamma n_i -ne = -nabla chi nabla phi
+//         if(  number == invert_pol.get_max())
+//             throw dg::Fail( p.eps_pol);
+//   }
   return phi[0];
 }
 
 template< class Grid, class Matrix, class container>
-container& Feltor<Grid, Matrix, container>::compute_psi( container& potential)
+container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
 {
     if (p.modelmode==0 || p.modelmode==1 || p.modelmode==3)
     {
-        invert_invgammaPhi(invgammaPhi,chi,potential);                 //chi  = Gamma phi
-        poisson.variationRHS(potential, omega);
-        dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
+        old_psi.extrapolate( phi[1]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, p.eps_gamma);
+        old_psi.update( phi[1]);
+	poisson.variationRHS(potential, omega); 
+	 dg::blas1::pointwiseDot( binv, omega, omega);
+        dg::blas1::pointwiseDot( binv, omega, omega);
+
+        dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
+
     }
     if (p.modelmode==2)
     {
-        invert_invgammaPhi(invgammaPhi,phi[1],potential);                 //chi  = Gamma phi
+	old_psi.extrapolate( phi[1]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, p.eps_gamma);
+        old_psi.update( phi[1]);
     }
     return phi[1];    
 }
 
 template<class Grid, class Matrix, class container>
-void Feltor<Grid, Matrix, container>::initializene( const container& src, container& target)
+void Explicit<Grid, Matrix, container>::initializene(const container& src, container& target)
 { 
-    invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
+//     invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
+  dg::blas1::axpby(1.0,src,0.0,target);
+//   	old_psi.extrapolate( src);
+//         std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, src, target, p.eps_gamma);
+//         old_psi.update( src);
 }
 
 template<class Grid, class Matrix, class container>
-void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<Grid, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
 
     dg::Timer t;
@@ -323,9 +378,14 @@ void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& 
         if (p.hwmode==1) {
             polavg(logn[0],lambda);       //<ln(ne)> 
             polavg(phi[0],phiavg);        //<phi>
-            dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi> 
+            dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
+	    
+/*	    dg::blas1::pointwiseDivide(nedelta,neavg,lambda); // delta(phi) = phi - <phi>
+	    polavg(lambda,omega);       //<ln(ne)> 
+	    dg::blas1::axpby(1.,lambda,-1.,omega,nedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>   */      
+	    
             dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
-            dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega =  delta(phi) - delta(lnNe)
+            dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
         }
         if (p.cmode==1) {
             dg::blas1::pointwiseDot(omega,npe[0],omega);  //(coupling)*Ne for constant resi
@@ -351,6 +411,11 @@ void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& 
             dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnNe)
             dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnNe)+phi)
             Dsource[0]=z[0]* p.omega_source*dg::blas2::dot(chi, w2d, omega);
+            //add the FLR term (tanh and postrans before lapl seems to work because of cancelation) (LWL vorticity correction)
+    //         dg::blas1::pointwiseDot(lambda,lhs,lambda);
+    //         dg::blas1::transform(lambda,lambda, dg::POSVALUE<value_type>());   
+    //         dg::blas2::gemv( lapperp, lambda, omega);
+    //         dg::blas1::axpby(-p.omega_source*0.5*p.tau[1]*p.mu[1],omega,1.0,yp[0]); 
 
             //dt Ni without FLR
             dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);  //dtNi += omega_s* P [lhs*(ne0p - <ne>)]
@@ -406,11 +471,10 @@ void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& 
         {
             //ExB dynamics
             poisson( y[i], phi[i], yp[i]);  //dt N = 1/B[N_tilde,phi]_RZ
-
-           //density gradient term
+            
+            //density gradient term
             dg::blas2::gemv( poisson.dyrhs(), phi[i], omega); //lambda = dy psi
             dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt N_tilde += - kappa dy psi    
-   
             
             Dgrad[i] = - z[i]*p.tau[i]/p.invkappa*dg::blas2::dot(y[i], w2d, omega);
             dg::blas1::pointwiseDot(omega,binv,omega); //1/B dy phi
@@ -448,8 +512,8 @@ void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& 
 	        //transform compute n and logn
         for(unsigned i=0; i<2; i++)
         {
-            dg::blas1::transform( y[i], npe[i], dg::EXP<value_type>()); // 1+ \tilde{N}
-            dg::blas1::pointwiseDot(npe[i],profne,npe[i]); //N
+	    dg::blas1::transform( y[i], npe[i], dg::EXP<value_type>()); // 1+ \tilde{N}
+	    dg::blas1::pointwiseDot(npe[i],profne,npe[i]); //N
             dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
         }  
         
@@ -482,7 +546,7 @@ void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& 
             //---------- perp dissipation 
             dg::blas2::gemv( lapperp, y[i], lambda);
             dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
-            dg::blas1::pointwiseDot( npe[i], omega, omega);//nabla_RZ^4 N_e
+	    dg::blas1::pointwiseDot( npe[i], omega, omega);//nabla_RZ^4 N_e
             Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_z(1+lnN)+phi) nabla_RZ^4 \tilde N
         }                
         //compute the radial electron density  transport
@@ -497,9 +561,9 @@ void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& 
             poisson( y[i], phi[i], yp[i]);  //[ln(1+tilde N),phi]_RZ
             dg::blas1::pointwiseDot( yp[i], binv, yp[i]);                        // dt ln(1+tilde N) =1/B [ln(1+tilde N),phi]_RZ                
 	    
-            //density gradient term
+	    //density gradient term
             dg::blas2::gemv( poisson.dyrhs(), phi[i], omega); //lambda = dy psi
-            dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt ln(1+tilde N) += - kappa dy psi   
+	    dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt ln(1+tilde N) += - kappa dy psi   
         }        
         //Coupling term for the electrons
         polavg(npe[0],neavg);
@@ -510,16 +574,23 @@ void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& 
             dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
             dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
         }
+
         if (p.hwmode==1) {
             polavg(logn[0],lambda);       //<ln(ne)> 
             polavg(phi[0],phiavg);        //<phi>
-            dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>   
+            dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
+	    
+/*	    dg::blas1::pointwiseDivide(nedelta,neavg,lambda); // delta(phi) = phi - <phi>
+	    polavg(lambda,omega);       //<ln(ne)> 
+	    dg::blas1::axpby(1.,lambda,-1.,omega,nedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>   */      
+	    
             dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
-            dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = delta(phi) - delta(lnNe)
+            dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
         }
-        if (p.cmode==0) {
-            dg::blas1::pointwiseDivide(omega,npe[0],omega); 
+        if (p.cmode==1) {
+            dg::blas1::pointwiseDot(omega,npe[0],omega);  //(coupling)*Ne for constant resi
         }
+        dg::blas1::pointwiseDivide(omega,npe[0],omega); 
         dg::blas1::axpby(p.alpha,omega,1.0,yp[0]);
         
         //---------- coupling energy
@@ -537,16 +608,14 @@ void Feltor<Grid, Matrix, container>::operator()( const std::vector<container>& 
             //dtN_e
             dg::blas1::pointwiseDot(lambda,lhs,omega); //omega =lhs*(ne0p - <ne>)
             dg::blas1::transform(omega,omega, dg::POSVALUE<value_type>()); //= P [lhs*(n0ep - <ne>) ]
-            dg::blas1::pointwiseDivide(omega,npe[0],chi);
-            dg::blas1::axpby(p.omega_source,chi,1.0,yp[0]);// dt ln(1+tilde ne)+=  omega_s/ne P [lhs*(ne0p - <ne>) ]
+            dg::blas1::axpby(p.omega_source,omega,1.0,yp[0]);// dtne+= - omega_s P [lhs*(ne0p - <ne>) ]
             
             dg::blas1::axpby(1.,one,1., logn[0] ,chi); //chi = (1+lnNe)
             dg::blas1::axpby(1.,phi[0],p.tau[0], chi); //chi = (tau_e(1+lnNe)+phi)
             Dsource[0]=z[0]* p.omega_source*dg::blas2::dot(chi, w2d, omega);
    
             //dt Ni without FLR
-            dg::blas1::pointwiseDivide(omega,npe[1],chi);
-            dg::blas1::axpby(p.omega_source,chi,1.0,yp[1]);  //dt ln(1+tilde Ni) += omega_s/Ni* P [lhs*(ne0p - <ne>)]
+            dg::blas1::axpby(p.omega_source,omega,1.0,yp[1]);  //dtNi += omega_s* P [lhs*(ne0p - <ne>)]
             dg::blas1::axpby(1.,one,1., logn[1] ,chi); //chi = (1+lnNi)
             dg::blas1::axpby(1.,phi[1],p.tau[1], chi); //chi = (tau_i(1+lnNi)+psi)
             Dsource[1]=z[1]* p.omega_source*dg::blas2::dot(chi, w2d, omega);
