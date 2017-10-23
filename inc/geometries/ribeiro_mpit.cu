@@ -172,37 +172,6 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
     if(rank==0)std::cout << "Note that the error might also come from the volume in RZP!\n"; //since integration of jacobian is fairly good probably
 
-    /////////////////////////TEST 3d grid//////////////////////////////////////
-    //if(rank==0)std::cout << "Start DS test!"<<std::endl;
-    //const dg::MHVec vol3d = dg::create::volume( g3d);
-    //t.tic();
-    ////DFA fieldaligned( CurvilinearField( gp, g3d.x(), g3d.f_x()), g3d, gp.rk4eps, dg::NoLimiter()); 
-    //DFA fieldaligned( OrthogonalField( gp, g2d.global(), g2d.f2_xy()), g3d, gp.rk4eps, dg::NoLimiter()); 
-
-    ////dg::DS<DFA, dg::MHMatrix, dg::MHVec> ds( fieldaligned, CurvilinearField(gp, g3d.x(), g3d.f_x()), dg::normed, dg::centered);
-    //dg::DS<DFA, dg::MHMatrix, dg::MHVec> ds( fieldaligned, OrthogonalField(gp, g2d.global(), g2d.f2_xy()), dg::normed, dg::centered);
-    //t.toc();
-    //if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
-    //dg::MHVec B = dg::pullback( dg::geo::InvB(gp), g3d), divB(B);
-    //dg::MHVec lnB = dg::pullback( dg::geo::LnB(gp), g3d), gradB(B); //dg::MHVec gradLnB = dg::pullback( dg::geo::GradLnB(gp), g3d);
-    //dg::blas1::pointwiseDivide( ones3d, B, B);
-    //dg::MHVec function = dg::pullback( dg::geo::FuncNeu(gp), g3d), derivative(function);
-    //ds( function, derivative);
-
-    //ds.centeredT( B, divB);
-    //double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    //if(rank==0)std::cout << "Divergence of B is "<<norm<<"\n";
-
-    //ds.centered( lnB, gradB);
-    //norm = sqrt(dg::blas2::dot(gradB,vol3d,gradB) );
-    //if(rank==0)std::cout << "num. norm of gradLnB is "<<norm<<"\n";
-    //norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-    //if(rank==0)std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
-    //dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-    //X = divB.data();
-    //err = nc_put_vara_double( ncid, divBID, start,count, X.data());
-    //double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d,gradLnB));
-    //if(rank==0)std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
     err = nc_close( ncid);
     MPI_Finalize();
 

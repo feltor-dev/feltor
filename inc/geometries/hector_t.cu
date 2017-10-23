@@ -72,11 +72,11 @@ int main( int argc, char* argv[])
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
+    int construction = 0;
     t.tic();
     //![doxygen]
     Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>* hector;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    int construction = 0;
     if( construction == 0)
     {
         hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
