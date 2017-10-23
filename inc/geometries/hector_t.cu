@@ -79,17 +79,21 @@ int main( int argc, char* argv[])
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if( construction == 0)
     {
-        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( 
+                psip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     }
     else if( construction == 1)
     {
         dg::geo::BinaryFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective( psip);
-        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip, nc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( 
+                psip, nc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     }
     else
     {
-        dg::geo::BinarySymmTensorLvl1 lc = dg::geo::make_LiseikinCollective( psip, 0.1, 0.001);
-        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip,lc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+        dg::geo::BinarySymmTensorLvl1 lc = dg::geo::make_LiseikinCollective( 
+                psip, 0.1, 0.001);
+        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( 
+                psip,lc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
     }
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     dg::geo::CurvilinearProductGrid3d g3d(*hector, n, Nx, Ny,Nz, dg::DIR);
