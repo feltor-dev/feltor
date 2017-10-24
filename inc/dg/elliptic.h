@@ -603,6 +603,8 @@ struct TensorElliptic
         set( chixx_, chixy_, chiyy_);
     }
 
+    ///@copydoc Elliptic::weights()
+    const container& weights()const {return weights_;}
     ///@copydoc Elliptic::inv_weights()
     const container& inv_weights()const {return inv_weights_;}
     ///@copydoc GeneralElliptic::precond()

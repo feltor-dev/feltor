@@ -123,7 +123,9 @@ struct Fpsi
 
 /**
  * @brief A symmetry flux generator
+ *
  * @ingroup generators_geo
+ * @snippet flux_t.cu doxygen
  */
 struct FluxGenerator : public aGenerator2d
 {
@@ -139,7 +141,7 @@ struct FluxGenerator : public aGenerator2d
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      * @note If mode == 1 then this class does the same as the RibeiroFluxGenerator
      */
-    FluxGenerator( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1 ipol, double psi_0, double psi_1, double x0, double y0, int mode=0):
+    FluxGenerator( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& ipol, double psi_0, double psi_1, double x0, double y0, int mode=0):
         psi_(psi), ipol_(ipol), mode_(mode)
     {
         psi0_ = psi_0, psi1_ = psi_1;

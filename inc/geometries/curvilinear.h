@@ -75,7 +75,7 @@ void square( const dg::SparseTensor<thrust::host_vector<double> >& jac, const th
 /**
  * @brief A two-dimensional grid based on curvilinear coordinates
  *
- * @snippet hector_t.cu doxygen
+ * @snippet flux_t.cu doxygen
  */
 struct CurvilinearGrid2d : public dg::aGeometry2d
 {

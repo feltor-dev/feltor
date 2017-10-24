@@ -155,6 +155,8 @@ struct BinaryFunctorsLvl1
 };
 /**
 * @brief This struct bundles a function and its first and second derivatives
+*
+* @snippet hector_t.cu doxygen
 */
 struct BinaryFunctorsLvl2 
 {
