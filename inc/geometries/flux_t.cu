@@ -61,7 +61,7 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";

@@ -108,7 +108,7 @@ int main( int argc, char* argv[])
         reader.parse( geom, geom_js, false);
     }
     const Parameters p(input_js);
-    const dg::geo::solovev::GeomParameters gp(geom_js);
+    const dg::geo::solovev::Parameters gp(geom_js);
     p.display( std::cout);
     gp.display( std::cout);
     std::string input = input_js.toStyledString();

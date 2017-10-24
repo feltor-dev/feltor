@@ -27,7 +27,7 @@ int main( )
     Json::Value js;
     std::ifstream is("guenther_params.js");
     reader.parse(is,js,false);
-    GeomParameters gp(js);
+    Parameters gp(js);
     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////

@@ -15,8 +15,6 @@
 #include "testfunctors.h"
 #include "dg/backend/timer.cuh"
 
-using namespace dg::geo::solovev;
-
 const unsigned nIter=6;
 template<class Geometry>
 void compute_error_elliptic( const dg::geo::TokamakMagneticField& c, const Geometry& g2d, double psi_0, double psi_1, double eps)
@@ -98,7 +96,7 @@ int main(int argc, char**argv)
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    GeomParameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     gp.display( std::cout);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp); 
     const double eps = 1e-10;

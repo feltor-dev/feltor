@@ -4,7 +4,7 @@ INCLUDED=1
 #default machine values
 INCLUDE = -I$(HOME)/include#  # cusp and thrust and the draw libraries
 GLFLAGS =$$(pkg-config --static --libs glfw3) #glfw3 installation
-CC=g++ #C++ compiler
+CC=g++ -std=c++14 #C++ compiler
 MPICC=mpic++  #mpi compiler
 OPT=-O3 # optimization flag
 NVCCARCH=-arch sm_20 #nvcc gpu compute capability
