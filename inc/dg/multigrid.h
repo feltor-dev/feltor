@@ -16,7 +16,7 @@ namespace dg
 /**
 * @brief Class for the solution of symmetric matrix equation discretizeable on multiple grids
 *
-* We use conjugate gradien (CG) at each stage and refine the grids in the first two dimensions (2d / x and y) 
+* We use conjugate gradient (CG) at each stage and refine the grids in the first two dimensions (2d / x and y) 
 * @snippet elliptic2d_b.cu multigrid
 * @copydoc hide_geometry_matrix_container
 * @ingroup multigrid
