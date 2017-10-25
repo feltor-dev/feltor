@@ -13,9 +13,11 @@ namespace dg{
 /**
  * @brief MPI specialized class for y average computations
  *
+ * @snippet backend/average_mpit.cu doxygen
  * @ingroup utilities
- * @tparam container Vector class to be used
- * @tparam IndexContainer Class for scatter maps
+ * @tparam container Currently this is one of 
+ *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec  
+ * @tparam IndexContainer Type of index vectors; May equal \c container
  */
 template< class container, class IndexContainer>
 struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
@@ -25,18 +27,19 @@ struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
      * @param g 2d MPITopology
      */
     PoloidalAverage( const aMPITopology2d& g): 
-        helper1d_( g.n()*g.Nx()), hhelper1d_(g.n()*g.Nx()),
-        recv_(hhelper1d_),dummy( g.n()*g.Nx()), 
-        helper_( g.size()), ly_(g.global().ly())
+        helper1d_( g.n()*g.local().Nx()), hhelper1d_(helper1d_),
+        recv_(helper1d_),dummy( helper1d_), 
+        helper_( g.local().size()), ly_( g.global().ly())
     {
         int remain[] = {false, true};
         MPI_Cart_sub( g.communicator(), remain, &comm1d_);
 
-        invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
-        lines = create::contiguousLineNumbers( g.n()*g.Nx(), g.n()*g.Ny());
-        Grid2d gTr( g.y0(), g.y1(), g.x0(), g.x1(), g.n(), g.Ny(), g.Nx());
+        Grid2d l = g.local();
+        invertxy = create::scatterMapInvertxy( l.n(), l.Nx(), l.Ny());
+        lines = create::contiguousLineNumbers( l.n()*l.Nx(), l.n()*l.Ny());
+        Grid2d gTr( l.y0(), l.y1(), l.x0(), l.x1(), l.n(), l.Ny(), l.Nx());
         w2d = dg::create::weights( gTr);
-        Grid1d g1x( 0, g.lx(), g.n(), g.Nx());
+        Grid1d g1x( l.x0(), l.x1(), l.n(), l.Nx());
         v1d = dg::create::inv_weights( g1x);
     }
     /**

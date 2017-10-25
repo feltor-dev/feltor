@@ -559,9 +559,9 @@ struct aMPITopology3d
         double z1 = g.z0() + g.lz()/(double)dims[2]*(double)(coords[2]+1); 
         if( coords[2] == dims[2]-1) 
             z1 = g.z1();
-        Nx = g.Nx()/dims[0];
-        Ny = g.Ny()/dims[1];
-        Nz = g.Nz()/dims[2];
+        unsigned Nx = g.Nx()/dims[0];
+        unsigned Ny = g.Ny()/dims[1];
+        unsigned Nz = g.Nz()/dims[2];
         
         return Grid3d(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
     }

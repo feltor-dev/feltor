@@ -69,6 +69,7 @@
  *
  *             High level matrix creation functions
  *         @defgroup interpolation Interpolation and projection
+ *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and operations
@@ -79,7 +80,6 @@
  *        @defgroup basicgeometry Geometry base classes
  *        @defgroup pullback pullback and pushforward
  *        @defgroup metric create volume
- *        @defgroup utilities Averaging
  *        @defgroup generators Grid Generator classes
  *            The classes to perform field line integration for DS and averaging classes
  *    @}
