@@ -186,7 +186,7 @@
 /*!@addtogroup mpi_structures
 @{
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
-@section mpi_vector MPI Vectors and the \c blas1 functions
+@section mpi_vector MPI Vectors and the blas1 functions
 
 In Feltor each mpi process gets an equally sized chunk of a vector.
 The corresponding structure in FELTOR is the \c dg::MPI_Vector, which is 
