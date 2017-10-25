@@ -117,7 +117,6 @@ class Elliptic
      * @brief Change Chi 
      *
      * @param chi The new chi (all elements must be >0)
-     * @note There is no get_chi because chi is multiplied with volume elements
      */
     void set_chi( const container& chi)
     {
@@ -151,7 +150,7 @@ class Elliptic
     /**
      * @brief Return the default preconditioner to use in conjugate gradient
      *
-     * Currently returns the inverse of the weights without volume elment multiplied by the inverse of \f$ \chi\f$. 
+     * Currently returns the inverse weights without volume elment divided by the current \f$ \chi\f$. 
      * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
      * @return the inverse of \f$\chi\f$.       
      */
