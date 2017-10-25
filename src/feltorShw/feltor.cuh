@@ -112,10 +112,10 @@ struct Explicit
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
 
-    dg::Elliptic< Geometry, Matrix, container > pol,lapperp; 
+    dg::Elliptic< Geometry, Matrix, container > lapperp; 
 //     dg::Helmholtz< Geometry, Matrix, container > invgammaPhi,invgammaN;
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
-    std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gamma1;
+    std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gammaN,multi_gammaPhi;
     
     dg::Invert<container> invert_invgamma, invert_pol;
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
@@ -143,14 +143,10 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N then phi BCC
-    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered, p.jfactor), 
     lapperp ( g,g.bcx(), g.bcy(),       dg::normed,          dg::centered),
-//     invgammaPhi( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
-//     invgammaN(  g,g.bcx(), g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     gamma_n(chi),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
-//     invert_invgammaPhi( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     polavg(g),
     p(p),
     evec(3),
@@ -167,102 +163,136 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
     multi_chi= multigrid.project( chi);
     multi_pol.resize(3);
-    multi_gamma1.resize(3);
+    multi_gammaN.resize(3);
+    multi_gammaPhi.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, p.jfactor);
-        multi_gamma1[u].construct( multigrid.grids()[u].get(), -0.5*p.tau[1], dg::centered);
+        multi_pol[u].construct( multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), dg::not_normed, dg::centered, p.jfactor);
+        multi_gammaN[u].construct( multigrid.grids()[u].get(),g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+	multi_gammaPhi[u].construct( multigrid.grids()[u].get(),p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
 }
 
 template< class Grid, class Matrix, class container>
 container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<container>& y)
 {
-   if (p.modelmode==0) {
-    dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-(bgamp+profamp)) 
-    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i n_i
+  if (p.modelmode==0) {
+    dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (N_i-(bgamp+profamp)) 
+    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i N_i
     dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
+    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i N_i ) /B^2
     
     multigrid.project( chi, multi_chi);
     for( unsigned u=0; u<3; u++)
     {
 	multi_pol[u].set_chi( multi_chi[u]);
     }
-	//pol.set_chi( chi);
-	
+    
+    //gamma N_i
     old_gammaN.extrapolate( gamma_n);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, gamma_n, y[1], p.eps_gamma);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, gamma_n, y[1], p.eps_gamma);
     old_gammaN.update( gamma_n);
-    //unsigned number = invert_invgamma( gamma1, gamma_n, y[1]);
     if(  number[0] == invert_invgamma.get_max())
 	throw dg::Fail( p.eps_gamma);
-    dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
- //invert 
-
-    //unsigned number = invert_pol( pol, phi[0], omega, v2d, chi);
+    dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma N_i - n_e
+    
+    charge_ = dg::blas2::dot(one,w2d,omega);
+    
+     //invert pol
     old_phi.extrapolate( phi[0]);
     number = multigrid.direct_solve( multi_pol, phi[0], omega, p.eps_pol);
     old_phi.update( phi[0]);
     if(  number[0] == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);	    
-    
-//     pol.set_chi( chi);
-// 
-//     dg::blas1::pointwiseDivide(v2d,chi,omega);
-// 
-//     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
-//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
-//     charge_ = dg::blas2::dot(one,w2d,chi);
-//     //= Gamma n_i - n_e
-// 
-//     unsigned number = invert_pol( pol, phi[0], chi, w2d, omega, v2d);     //Gamma n_i -ne = -nabla chi nabla phi
-//         if(  number == invert_pol.get_max())
-//             throw dg::Fail( p.eps_pol);
   }
-//   if (p.modelmode==1) {
-//     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-1) 
-//     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp)));
-//     dg::blas1::pointwiseDot( chi, binv, chi);
-//     dg::blas1::pointwiseDot( chi, binv, omega);       //omega = (\mu_i n_i ) /B^2
-// 
-//     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (Ni-1)    
-//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) - (n_e-(bgamp+profamp)) = Gamma n_i - n_e
-//     charge_ = dg::blas2::dot(one,w2d,chi);
-// //     dg::blas1::pointwiseDivide(chi,omega,chi);              // B^2(Gamma n_i - n_e )/  (\mu_i n_i )
-//     polavg(omega,lambda);
-//     dg::blas1::pointwiseDivide(chi,lambda,chi);              // (Gamma n_i - n_e )/  (\mu_i <n_i/B^2> )
-//     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma n_i -ne = -nabla chi nabla phi
-//         if(  number == invert_pol.get_max())
-//             throw dg::Fail( p.eps_pol);
-//   }
-//   if (p.modelmode==2) {
-//     dg::blas1::axpby( p.mu[1], y[1], 0, omega);      //omega =  \mu_i (N_i_tilde)/B_0^2
-//     
-//     invert_invgammaN(invgammaN,chi,y[1]); //chi= Gamma (N_i_tilde)    
-//     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) - (n_e-(bgamp+profamp)) = Gamma n_i - n_e
-//     charge_ = dg::blas2::dot(one,w2d,chi);
-// 
-//     unsigned number = invert_pol( pol, phi[0], chi);            //Gamma N_i_tilde -N_e_tilde = -nabla^2 phi
-//         if(  number == invert_pol.get_max())
-//             throw dg::Fail( p.eps_pol);
-//   }
-//   if (p.modelmode==3) {
-//     dg::blas1::pointwiseDot( npe[1], binv, chi);
-//     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
-//     dg::blas1::scal(chi,p.mu[1]);
-//     pol.set_chi( chi);
-//     dg::blas1::pointwiseDivide(one,chi,lambda);
-//     dg::blas1::transform( npe[1], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
-//     invert_invgammaN(invgammaN,chi,omega); //chi= Gamma (Ni-(bgamp+profamp)) 
-//     dg::blas1::transform( npe[0], omega, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
-//     dg::blas1::axpby( -1., omega, 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
-//     charge_ = dg::blas2::dot(one,w2d,chi);
-//     //= Gamma n_i - n_e
-//     unsigned number = invert_pol( pol, phi[0], chi, w2d, lambda, v2d);            //Gamma n_i -ne = -nabla chi nabla phi
-//         if(  number == invert_pol.get_max())
-//             throw dg::Fail( p.eps_pol);
-//   }
+  if (p.modelmode==1) {
+    dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (N_i-(bgamp+profamp)) 
+    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i N_i
+    dg::blas1::pointwiseDot( chi, binv, chi);
+    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i N_i ) /B^2
+    //apply bpussinesq apporximation in chi
+    multigrid.project( one, multi_chi);
+    for( unsigned u=0; u<3; u++)
+    {
+	multi_pol[u].set_chi( multi_chi[u]);
+    }
+    
+    //gamma N_i
+    old_gammaN.extrapolate( gamma_n);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, gamma_n, y[1], p.eps_gamma);
+    old_gammaN.update( gamma_n);
+    if(  number[0] == invert_invgamma.get_max())
+	throw dg::Fail( p.eps_gamma);
+    dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma N_i - n_e
+    
+    
+    charge_ = dg::blas2::dot(one,w2d,omega);
+
+    //apply bpussinesq apporximation on rhs
+    dg::blas1::pointwiseDivide(omega,profNi,omega);              // (Gamma n_i - n_e )/  (\mu_i <n_i/B^2> )
+
+     //invert pol
+    old_phi.extrapolate( phi[0]);
+    number = multigrid.direct_solve( multi_pol, phi[0], omega, p.eps_pol);
+    old_phi.update( phi[0]);
+    if(  number[0] == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);
+  }
+  if (p.modelmode==2) {
+    multigrid.project( one, multi_chi);
+    for( unsigned u=0; u<3; u++)
+    {
+	multi_pol[u].set_chi( multi_chi[u]);
+    }
+    
+    //gamma N_i
+    old_gammaN.extrapolate( gamma_n);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, gamma_n, y[1], p.eps_gamma);
+    old_gammaN.update( gamma_n);
+    if(  number[0] == invert_invgamma.get_max())
+	throw dg::Fail( p.eps_gamma);
+    dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma N_i - n_e
+    
+    charge_ = dg::blas2::dot(one,w2d,omega);
+    
+     //invert pol
+    old_phi.extrapolate( phi[0]);
+    number = multigrid.direct_solve( multi_pol, phi[0], omega, p.eps_pol);
+    old_phi.update( phi[0]);
+    if(  number[0] == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);	
+  }
+  if (p.modelmode==3) {
+    dg::blas1::axpby( p.mu[1], npe[1], 0, chi);      //chi =  \mu_i (N_i-(bgamp+profamp)) 
+    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i N_i
+    dg::blas1::pointwiseDot( chi, binv, chi);
+    dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i N_i ) /B^2
+    
+    multigrid.project( chi, multi_chi);
+    for( unsigned u=0; u<3; u++)
+    {
+	multi_pol[u].set_chi( multi_chi[u]);
+    }
+    
+    //gamma N_i
+    old_gammaN.extrapolate( gamma_n);
+    dg::blas1::transform( npe[1], chi, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, gamma_n, chi, p.eps_gamma);
+    dg::blas1::transform( npe[0], chi, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
+    old_gammaN.update( gamma_n);
+    if(  number[0] == invert_invgamma.get_max())
+	throw dg::Fail( p.eps_gamma);
+    dg::blas1::axpby( -1.,chi, 1., gamma_n, omega); //omega = a_i\Gamma N_i - n_e
+    
+    charge_ = dg::blas2::dot(one,w2d,omega);
+    
+     //invert pol
+    old_phi.extrapolate( phi[0]);
+    number = multigrid.direct_solve( multi_pol, phi[0], omega, p.eps_pol);
+    old_phi.update( phi[0]);
+    if(  number[0] == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);	
+  }
   return phi[0];
 }
 
@@ -272,7 +302,7 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
     if (p.modelmode==0 || p.modelmode==1 || p.modelmode==3)
     {
         old_psi.extrapolate( phi[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, p.eps_gamma);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
         old_psi.update( phi[1]);
 	poisson.variationRHS(potential, omega); 
 	 dg::blas1::pointwiseDot( binv, omega, omega);
@@ -284,7 +314,7 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
     if (p.modelmode==2)
     {
 	old_psi.extrapolate( phi[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, p.eps_gamma);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
         old_psi.update( phi[1]);
     }
     return phi[1];    
@@ -293,11 +323,10 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
 template<class Grid, class Matrix, class container>
 void Explicit<Grid, Matrix, container>::initializene(const container& src, container& target)
 { 
-//     invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
   dg::blas1::axpby(1.0,src,0.0,target);
-//   	old_psi.extrapolate( src);
-//         std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, src, target, p.eps_gamma);
-//         old_psi.update( src);
+//         std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+// 	if(  number[0] == invert_invgamma.get_max())
+// 	  throw dg::Fail( p.eps_gamma);
 }
 
 template<class Grid, class Matrix, class container>
