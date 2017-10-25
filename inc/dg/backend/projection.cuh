@@ -54,6 +54,12 @@ namespace create{
 /**
  * @brief Create the transpose of the interpolation matrix from new to old
  *
+ * Does the equivalent of the following
+ * @code
+   Matrix A = dg::create::interpolation( g_old, g_new);
+   return A.transpose();
+   @endcode
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param g_new The new grid 
  * @param g_old The old grid
  *
@@ -84,21 +90,23 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology
 /**
  * @brief Create a projection between two grids
  *
- * The projection matrix is the adjoint of the interpolation matrix
  * This matrix can be applied to vectors defined on the old (fine) grid to obtain
- * its values on the new (coarse) grid. 
+ * its values projected on the new (coarse) grid. (Projection means that the
+ * projection integrals over the base polynomials are computed).
  * If the fine grid is a multiple of the coarse grid, the integral value
  of the projected vector will be conserved and the difference in the L2 norm 
  between old and new vector small. 
+ * The projection matrix is the adjoint of the interpolation matrix
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * 
  * @param g_new The new (coarse) grid 
  * @param g_old The old (fine) grid
  *
  * @return Projection matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
- * @note also check the transformation matrix, which is the more general solution
- @attention Projection only works if the number of cells in the
- fine grid are multiple of the number of cells in the coarse grid
+ * @note also check \c dg::create::transformation, which is the more general solution
+ * @attention Projection only works if the number of cells in the
+ * fine grid is a multiple of the number of cells in the coarse grid
  */
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g_new, const Grid1d& g_old)
 {
@@ -193,6 +201,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology3d&
  \f] 
  where \f$ Q\f$ is the interpolation matrix and \f$ P \f$ the projection. If either new or
  old grid is already the lcm grid this function reduces to the interpolation/projection function. 
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * 
  * @param g_new The new grid 
  * @param g_old The old grid

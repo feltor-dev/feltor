@@ -70,7 +70,10 @@ std::vector<double> coefficients( double xn, unsigned n)
 /**
  * @brief Create interpolation matrix
  *
- * The matrix, when applied to a vector, interpolates its values to the given coordinates
+ * The created matrix has \c g.size() columns and \c x.size() rows. It uses 
+ * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
+ * When applied to a vector the result contains the interpolated values at the given interpolation points. 
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param g The Grid on which to operate
  *
@@ -115,16 +118,20 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * The matrix, when applied to a vector, interpolates its values to the given coordinates
+ * The created matrix has \c g.size() columns and \c x.size() rows. It uses 
+ * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
+ * When applied to a vector the result contains the interpolated values at the given interpolation points. 
+ * @snippet backend/interpolation_t.cu doxygen
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
- * @param y Y-coordinates of interpolation points
+ * @param y Y-coordinates of interpolation points ( has to have equal size as x)
  * @param g The Grid on which to operate
  * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix, 
  NEU and PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
  * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
- * @attention all points (x,y) must lie within or on the boundaries of g.
  *
  * @return interpolation matrix
+ * @attention all points (x,y) must lie within or on the boundaries of g.
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const aTopology2d& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
@@ -255,7 +262,11 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * The matrix, when applied to a vector, interpolates its values to the given coordinates. In z-direction only a nearest neighbor interpolation is used
+ * The created matrix has \c g.size() columns and \c x.size() rows. It uses 
+ * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
+ * When applied to a vector the result contains the interpolated values at the given interpolation points. 
+ * @snippet backend/interpolation_t.cu doxygen3d
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
@@ -400,13 +411,13 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation between two grids
  *
- * This matrix can be applied to vectors defined on the old grid to obtain
- * its values on the new grid.
+ * This matrix interpolates vectors on the old grid \c g_old to the %Gaussian nodes of the new grid \c g_new. The interpolation is of the order \c g_old.n()
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * 
- * @param g_new The new points 
+ * @param g_new The new grid
  * @param g_old The old grid
  *
- * @return Interpolation matrix
+ * @return Interpolation matrix with \c g_old.size() columns and \c g_new.size() rows
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  * @note also check the transformation matrix, which is the more general solution
  */
@@ -488,7 +499,7 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
  *
  * @ingroup interpolation
  * @return interpolated point
- * @note g.contains(x,y) must return true
+ * @note \c g.contains(x,y) must return true
  */
 double interpolate( double x, double y,  const thrust::host_vector<double>& v, const aTopology2d& g )
 {

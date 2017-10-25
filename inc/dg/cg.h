@@ -50,7 +50,7 @@ class CG
      * @brief Allocate memory for the pcg method
      *
      * @param copyable A container must be copy-constructible from this
-     * @param max_iter Maximum number of iterations to be used
+     * @param max_iterations Maximum number of iterations to be used
      */
     void construct( const container& copyable, unsigned max_iterations) { 
         ap = p = r = copyable;
