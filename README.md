@@ -110,16 +110,19 @@ input/output parameters, etc. can be generated as a pdf with
 
 ##2. Using FELTOR as a library
 
-It is possible to use FELTOR as a library in your own code project. Just include
+It is possible to use FELTOR as a library in your own code project. Note that this library is **header-only**, which means that you just have to include the relevant header and you're good to go:
 
 ```C++
-#include "mpi.h" #optional; activates MPI in FELTOR 
-#define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_OMP # optional; redirect CUDA calls to OpenMP functions; Note that you have to activate OpenMP  
+//optional: activate MPI in FELTOR
+#include "mpi.h"  
+// optional: redirect CUDA calls to OpenMP functions; 
+// Note that you then also have to specify the OpenMP flag when compiling
+#define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_OMP  
 #include "dg/algorithms.h"
 #include "geometries/geometries.h"
 ```
 
-and provide the `path/to/feltor/inc` to the include path of your compiler. Note that you also have to specify the `path/to/thrust/thrust` and `path/to/cusplibrary/cusp`.
+and add `path/to/feltor/inc` as well as  `path/to/thrust/thrust` and  `path/to/cusplibrary/cusp`to the include path of your compiler. 
 
 > If you want to activate the MPI backend of FELTOR you have to include `mpi.h` before any FELTOR header. If you want to use OpenMP instead of CUDA for the device functions you have to define the `THRUST_DEVICE_SYSTEM` macro and activate OpenMP in your compiler (e.g `g++ -fopenmp`).
 
