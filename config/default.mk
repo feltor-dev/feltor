@@ -1,15 +1,15 @@
 ifndef INCLUDED #include guard
 INCLUDED=1
 
-#default compilation values
+#compiler and compiler options
 CC=g++ #C++ compiler
 CFLAGS=-Wall -x c++ -std=c++11 
 MPICC=mpic++  #mpi compiler
 MPICFLAGS=-Wall -x c++ -std=c++11
 NVCC=nvcc #CUDA compiler
 NVCCARCH=-arch sm_20 #nvcc gpu compute capability
-NVCCFLAGS=-std=c++11 #
-OPT=-O3 # optimization flag to be used in Makefile
+NVCCFLAGS= -std=c++11 -Xcompiler -Wall#
+OPT=-O3 # optimization flags for host code
 OMPFLAG=-fopenmp #openmp flag for CC and MPICC
 
 #external libraries

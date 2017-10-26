@@ -42,6 +42,7 @@ It is possible to use FELTOR as a library in your own code project. Note that th
 and add `path/to/feltor/inc` as well as  `path/to/thrust/thrust` and  `path/to/cusplibrary/cusp` to the include path of your compiler. 
 
 > If you want to activate the MPI backend of FELTOR you have to include `mpi.h` before any FELTOR header. If you want to use OpenMP instead of CUDA for the device functions you have to define the `THRUST_DEVICE_SYSTEM` macro and activate OpenMP in your compiler (e.g `g++ -fopenmp`). I you want to use CUDA then you have to compile with nvcc. 
+See `path/to/feltor/config/README.md` for further details on configurating the library and how to compile.
 
 ####  Using FELTOR's code projects
 

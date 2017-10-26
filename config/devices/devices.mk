@@ -1,19 +1,18 @@
 ifeq ($(strip $(device)),gpu)
 ccc_:=$(CC)
 CC = $(NVCC) --compiler-bindir $(ccc_)
-flags_:=$(CFLAGS)
-CFLAGS = -Xcompiler "$(flags_)"
-CFLAGS+= $(NVCCARCH) $(NVCCFLAGS) 
-CFLAGS+=-D_FORCE_INLINES
+CFLAGS = $(NVCCARCH) $(NVCCFLAGS) 
+CFLAGS+=-D_FORCE_INLINES # solves issue with std=c++11
+CFLAGS+=-D_MWAITXINTRIN_H_INCLUDED # solves issue with std=c++11
 ############################################
 mpiccc_:=$(MPICC)
 MPICC=nvcc --compiler-bindir $(mpiccc_)
-mpiflags_:=$(MPICFLAGS)
-MPICFLAGS = -Xcompiler "$(mpiflags_)" $(NVCCARCH) $(NVCCFLAGS)
-MPICFLAGS+= -D_FORCE_INLINES
+MPICFLAGS = $(NVCCARCH) $(NVCCFLAGS)
+MPICFLAGS+=-D_FORCE_INLINES # solves issue with std=c++11
+MPICFLAGS+=-D_MWAITXINTRIN_H_INCLUDED # solves issue with std=c++11
 else
-CFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP $(OMPFLAG)
-MPICFLAGS+= -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP $(OMPFLAG)
+CFLAGS+=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP $(OMPFLAG)
+MPICFLAGS+=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP $(OMPFLAG)
 endif #device=gpu
 ifeq ($(strip $(device)),omp)
 endif #device=omp

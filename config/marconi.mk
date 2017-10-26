@@ -3,12 +3,12 @@ ifeq ($(strip $(HPC_SYSTEM)),marconi)
 INCLUDE += -I$(HOME)/include # cusp, thrust
 INCLUDE += -I$(NETCDF_INC) -I$(HDF5_INC)
 GLFLAGS  = -lm 
-CC=icc -std=c++14
+CC=icc
 MPICC=mpiicc
 OPT=-O3 -xHost  # overwritten for mic in devices.mk
 #MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
 OMPFLAG=-qopenmp
-CFLAGS=-restrict
+CFLAGS=-std=c++11 -Wall -restrict
 JSONLIB=-L$(HOME)/include/json/../../src/lib_json -ljsoncpp # json library for input parameters
 LIBS    +=-L$(HDF5_LIB) -lhdf5 -lhdf5_hl
 LIBS    +=-L$(NETCDF_LIB) -lnetcdf -lcurl
