@@ -12,16 +12,16 @@ The machine specific config files (e.g. vsc3.mk) should have an include guard an
 
 | variable  | default value                            | description                              |
 | :-------: | :--------------------------------------- | :--------------------------------------- |
-|    CC     | g++                                      | C++ compiler                             |
+|    CC     | g++                                      | C++ compiler                             |+
+|   MPICC   | mpic++                                   | the corresponding mpi wrapper for the c++ compiler     |
 |  CFLAGS   | -std=c++11 -Wall -x c++                  | flags for the C++ compiler               |
-|   MPICC   | mpic++                                   | the mpi wrapper for the c++ compiler     |
-| MPICFLAGS | -std=c++11 -Wall -x c++                  | flags for MPI compilation                |
+| MPICFLAGS |                  | flags specific to the MPI compilation                |
    OPT    | -O3                                      | optimization flags for the **host** code (can be overwritten on the command line, CUDA kernel code is always compiled with -O3) |
 |  OMPFLAG  | -fopenmp                                 | The compiler flag activating the OpenMP support |
 |   NVCC    | nvcc                                     | CUDA compiler                            |
 | NVCCFLAGS | -std=c++11  -Xcompiler -Wall                             | flags for nvcc                           |
 | NVCCARCH  | -arch sm_20                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (can be overwritten on the command line) |
-        |                                          |                                          |
+|                                          |                                          |     |
 |  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, json and the draw libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
 |   LIBS    | -lnetcdf -lhdf5 -ldhf5_hl                | netcdf library                           |
 |  JSONLIB  | -L$(HOME)/include/json/../../src/lib_json -ljsoncpp | the JSONCPP library                      |
@@ -32,7 +32,7 @@ The main purpose of the file `feltor/config/devices/devices.mk` is to configure 
 
 | value | description                              | flags                                    |
 | ----- | ---------------------------------------- | ---------------------------------------- |
-| gpu   | replaces the CC and CFLAGS variables with the nvcc versions and analogously MPICC and MPICFLAGS  | `CC = $(NVCC) --compiler-bindir $(CC)` `CFLAGS = $(NVCCARCH) $(NVCCFLAGS)` `MPICC = $(NVCC) --compiler-bindir $(MPICC)` `MPICFLAGS = $(NVCCARCH) $(NVCCFLAGS)` |
+| gpu   | replaces the CC and CFLAGS variables with the nvcc versions and analogously MPICC and MPICFLAGS  | `CC = $(NVCC) --compiler-bindir $(CC)` `CFLAGS = $(NVCCARCH) $(NVCCFLAGS)` `MPICC = $(NVCC) --compiler-bindir $(MPICC)` `MPICFLAGS+= $(NVCCARCH) $(NVCCFLAGS)` |
 | !gpu  | if device != gpu all thrust device calls redirect to OpenMP using the THRUST_DEVICE_SYSTEM macro | `-x c++` `-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` and `$(OMPFLAG)` added to both CFLAGS and MPICFLAGS |
 | omp  | specify OPT for OpenMP | OPT = -O3                   |
 | mic   | specify OPT for Intel Xeon Phi architecture | OPT = -O3 -xMIC-AVX512                   |
