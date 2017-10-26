@@ -23,7 +23,30 @@ $ git clone https://www.github.com/cusplibrary/cusplibrary
 ```
 > Our code only depends on external libraries that are themselves openly available. We note here that we do not distribute copies of these libraries.
 
-Now you need to tell the feltor configuration where these external libraries are located on your computer. The default way to do this is to go in your `HOME` directory, make an include directory and link the paths in this directory:
+####  Using FELTOR as a library
+
+It is possible to use FELTOR as a library in your own code project. Note that the library is **header-only**, which means that you just have to include the relevant header(s) and you're good to go:
+
+```C++
+//optional: activate MPI in FELTOR
+#include "mpi.h"  
+// optional: redirect CUDA calls to OpenMP functions; 
+// note that you then also have to specify an OpenMP flag when compiling
+#define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_OMP 
+//include the basic dg-library
+#include "dg/algorithms.h"
+//include the geometries expansion
+#include "geometries/geometries.h"
+```
+
+and add `path/to/feltor/inc` as well as  `path/to/thrust/thrust` and  `path/to/cusplibrary/cusp` to the include path of your compiler. 
+
+> If you want to activate the MPI backend of FELTOR you have to include `mpi.h` before any FELTOR header. If you want to use OpenMP instead of CUDA for the device functions you have to define the `THRUST_DEVICE_SYSTEM` macro and activate OpenMP in your compiler (e.g `g++ -fopenmp`). I you want to use CUDA then you have to compile with nvcc. 
+
+####  Using FELTOR's code projects
+
+In order to compile one of the many codes inside FELTOR you need to tell the feltor configuration where the external libraries are located on your computer. The default way to do this is to go in your `HOME` directory, make an include directory and link the paths in this directory:
+
  ```sh
  $ cd ~
  $ mkdir include
@@ -108,25 +131,7 @@ The technical documentation on what equations are discretized,
 input/output parameters, etc. can be generated as a pdf with 
 `make doc ` in the `path/to/feltor/src/toefl` directory.
 
-##2. Using FELTOR as a library
-
-It is possible to use FELTOR as a library in your own code project. Note that this library is **header-only**, which means that you just have to include the relevant header and you're good to go:
-
-```C++
-//optional: activate MPI in FELTOR
-#include "mpi.h"  
-// optional: redirect CUDA calls to OpenMP functions; 
-// Note that you then also have to specify the OpenMP flag when compiling
-#define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_OMP  
-#include "dg/algorithms.h"
-#include "geometries/geometries.h"
-```
-
-and add `path/to/feltor/inc` as well as  `path/to/thrust/thrust` and  `path/to/cusplibrary/cusp`to the include path of your compiler. 
-
-> If you want to activate the MPI backend of FELTOR you have to include `mpi.h` before any FELTOR header. If you want to use OpenMP instead of CUDA for the device functions you have to define the `THRUST_DEVICE_SYSTEM` macro and activate OpenMP in your compiler (e.g `g++ -fopenmp`).
-
-## 3. Further reading
+## 2. Further reading
 Please check out our [wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information, user oriented documentation and Troubleshooting. 
 Moreover, we maintain tex files in every src folder for technical documentation, 
  which can be compiled using pdflatex with 
@@ -136,7 +141,7 @@ You can generate a local version from source code.
 This depends on the `doxygen`, `libjs-mathjax` and `graphviz` packages.
 Type `make doc` in the folder `path/to/feltor/doc` and open `index.html` (a symbolic link to `dg/html/modules.html`) with your favorite browser. 
 
-## 4. Contributions and Acknowledgements
+## 3. Contributions and Acknowledgements
 For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).
 We gratefully acknowledge contributions from 
 - Ralph Kube
@@ -150,7 +155,7 @@ We further acknowledge support on the Knights landing architecture from the High
 
 and from Intel Barcelona
 - Harald Servat
-## 5. License 
+## 4. License 
 FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
 
 ## Official releases 
