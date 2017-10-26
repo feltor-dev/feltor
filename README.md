@@ -30,11 +30,11 @@ Now you need to tell the feltor configuration where these external libraries are
  $ cd include
  $ ln -s path/to/thrust/thrust thrust
  $ ln -s path/to/cusplibrary/cusp cusp
-```
+ ```
 > If you do not like this, you can also create your own config file as discribed [here](https://github.com/feltor-dev/feltor/wiki/Configuration).
 
 Now let us compile the first benchmark program. 
- 
+
 
  ```sh
  $ cd path/to/feltor/inc/dg
@@ -58,7 +58,7 @@ and when prompted for input vector sizes type for example
 `3 100 100 10`
 which makes a grid with 3 polynomial coefficients, 100 cells in x, 100 cells in y and 10 in z. If you compiled for OpenMP, you can set the number of threads with e.g. `export OMP_NUM_THREADS=4`.
 > This is a benchmark program to benchmark various elemental functions the library is built on. Go ahead and vary the input parameters and
-see how your hardware performs. You can compile and run any other program that ends in `_t.cu` (test programs) or `_b.cu` (benchmark programs) in `feltor/inc/dg` in this way. 
+> see how your hardware performs. You can compile and run any other program that ends in `_t.cu` (test programs) or `_b.cu` (benchmark programs) in `feltor/inc/dg` in this way. 
 
 Now, let us test the mpi setup 
 > You can of course skip this if you don't have mpi installed on your computer.
@@ -70,7 +70,7 @@ Now, let us test the mpi setup
  $ make blas_mpib device=omp  # (for MPI+OpenMP)
  # or
  $ make blas_mpib device=gpu # (for MPI+GPU)
- ```
+```
 Run the code with
 `$ mpirun -n '# of procs' ./blas_mpib `
 then tell how many process you want to use in the x-, y- and z- direction, for example:
@@ -84,7 +84,7 @@ For data output we use the [NetCDF](http://www.unidata.ucar.edu/software/netcdf/
 Our JSON input files are parsed by [JsonCpp](https://www.github.com/open-source-parsers/jsoncpp) distributed under the MIT license (the 0.y.x branch to avoid C++-11 support).     
 > Some desktop applications in FELTOR use the [draw library]( https://github.com/mwiesenberger/draw) (developed by us also under MIT), which depends on OpenGL (s.a. [installation guide](http://en.wikibooks.org/wiki/OpenGL_Programming)) and [glfw](http://www.glfw.org), an OpenGL development library under a BSD-like license. You don't need these when you are on a cluster. 
 
- 
+
 As in Step 3 you need to create links to the jsoncpp library include path (and optionally the draw library) in your include folder or provide the paths in your config file. We are ready to compile now
 
 ```sh
@@ -98,7 +98,7 @@ As in Step 3 you need to create links to the jsoncpp library include path (and o
  # or
  $ make toefl_mpi device=omp  # (compile on gpu or omp)
  $ export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI) 
- $ echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.json>
+ $ echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.nc>
  $ # (a multi node simulation with now in total 8 threads with output stored in a file)
  $ # The mpi program will wait for you to type the number of processes in x and y direction before
  $ # running. That is why the echo is there. 
@@ -108,7 +108,22 @@ The technical documentation on what equations are discretized,
 input/output parameters, etc. can be generated as a pdf with 
 `make doc ` in the `path/to/feltor/src/toefl` directory.
 
-## 2. Further reading
+##2. Using FELTOR as a library
+
+It is possible to use FELTOR as a library in your own code project. Just include
+
+```C++
+#include "mpi.h" #optional; activates MPI in FELTOR 
+#define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_OMP # optional; redirect CUDA calls to OpenMP functions; Note that you have to activate OpenMP  
+#include "dg/algorithms.h"
+#include "geometries/geometries.h"
+```
+
+and provide the `path/to/feltor/inc` to the include path of your compiler. Note that you also have to specify the `path/to/thrust/thrust` and `path/to/cusplibrary/cusp`.
+
+> If you want to activate the MPI backend of FELTOR you have to include `mpi.h` before any FELTOR header. If you want to use OpenMP instead of CUDA for the device functions you have to define the `THRUST_DEVICE_SYSTEM` macro and activate OpenMP in your compiler (e.g `g++ -fopenmp`).
+
+## 3. Further reading
 Please check out our [wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information, user oriented documentation and Troubleshooting. 
 Moreover, we maintain tex files in every src folder for technical documentation, 
  which can be compiled using pdflatex with 
@@ -118,7 +133,7 @@ You can generate a local version from source code.
 This depends on the `doxygen`, `libjs-mathjax` and `graphviz` packages.
 Type `make doc` in the folder `path/to/feltor/doc` and open `index.html` (a symbolic link to `dg/html/modules.html`) with your favorite browser. 
 
-## 3. Contributions and Acknowledgements
+## 4. Contributions and Acknowledgements
 For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).
 We gratefully acknowledge contributions from 
 - Ralph Kube
@@ -132,7 +147,7 @@ We further acknowledge support on the Knights landing architecture from the High
 
 and from Intel Barcelona
 - Harald Servat
-## 4. License 
+## 5. License 
 FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
 
 ## Official releases 

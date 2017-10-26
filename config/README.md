@@ -1,4 +1,4 @@
-###Configuration
+### Configuration
 
 The Makefiles for programs in FELTOR are configured by hardware specific *.mk files in the config folder. Every Makefile includes these files in the order  
 
