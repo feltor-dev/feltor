@@ -1,6 +1,6 @@
 ### Configuration
 
-The Makefiles for programs in FELTOR are configured by hardware specific *.mk files in the config folder. Every Makefile includes these files in the order  
+The Makefiles for programs in FELTOR are configured by hardware specific *.mk files in the config folder. Every Makefile includes these files in the order
 
 ```shell
 feltor/config/default.mk            #Defines the default variables
@@ -33,7 +33,7 @@ The main purpose of the file `feltor/config/devices/devices.mk` is to configure 
 | value | description                              | flags                                    |
 | ----- | ---------------------------------------- | ---------------------------------------- |
 | gpu   | replaces the CC and CFLAGS variables with the nvcc versions and analogously MPICC and MPICFLAGS  | `CC = $(NVCC) --compiler-bindir $(CC)` `CFLAGS = $(NVCCARCH) $(NVCCFLAGS)` `MPICC = $(NVCC) --compiler-bindir $(MPICC)` `MPICFLAGS = $(NVCCARCH) $(NVCCFLAGS)` |
-| !gpu  | if device != gpu all thrust device calls redirect to OpenMP using the THRUST_DEVICE_SYSTEM macro | `-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP $(OMPFLAG)` added to both CFLAGS and MPICFLAGS |
+| !gpu  | if device != gpu all thrust device calls redirect to OpenMP using the THRUST_DEVICE_SYSTEM macro | `-x c++` `-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` and `$(OMPFLAG)` added to both CFLAGS and MPICFLAGS |
 | omp  | specify OPT for OpenMP | OPT = -O3                   |
 | mic   | specify OPT for Intel Xeon Phi architecture | OPT = -O3 -xMIC-AVX512                   |
 | skl   | specify OPT for Intel Skylake processors (icc only) | OPT = -xCORE-AVX512 -mtune=skylake -O3   |
@@ -58,6 +58,6 @@ make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
 
 ### General Remarks
  - If MPI is used in connection with the gpu backend, the mpi installation needs to be **cuda-aware**
- - when `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
+ - if `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
  
 

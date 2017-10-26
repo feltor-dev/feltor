@@ -7,12 +7,12 @@ CFLAGS+=-D_MWAITXINTRIN_H_INCLUDED # solves issue with std=c++11
 ############################################
 mpiccc_:=$(MPICC)
 MPICC=nvcc --compiler-bindir $(mpiccc_)
-MPICFLAGS = $(NVCCARCH) $(NVCCFLAGS)
+MPICFLAGS+= $(NVCCARCH) $(NVCCFLAGS)
 MPICFLAGS+=-D_FORCE_INLINES # solves issue with std=c++11
 MPICFLAGS+=-D_MWAITXINTRIN_H_INCLUDED # solves issue with std=c++11
 else
-CFLAGS+=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP $(OMPFLAG)
-MPICFLAGS+=-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP $(OMPFLAG)
+CFLAGS+=-x c++ -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP $(OMPFLAG)
+MPICFLAGS+=$(CFLAGS)
 endif #device=gpu
 ifeq ($(strip $(device)),omp)
 endif #device=omp
