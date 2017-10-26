@@ -118,18 +118,18 @@ use Cartesian coordinates $x$, $y$.
 \begin{subequations}
 \begin{align}
 B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\\
- -\nabla\cdot \left(\frac{N}{B^2} \nabla \phi\right) = \Gamma_1 N-n, \quad
- \text{Boussinesq:}\quad -\nabla^2 \phi = \frac{B^2}{N} (\Gamma_1 N -n) \\
+ -\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp \phi\right) = \Gamma_1 N-n, \quad
+ \text{Boussinesq:}\quad -\nabla_\perp^2 \phi = \frac{B^2}{N} (\Gamma_1 N -n) \\
 \psi = \Gamma_1 \phi - \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
  \frac{\partial n}{\partial t}     = 
     \frac{1}{B}\{ n, \phi\} 
   + \kappa n\frac{\partial \phi}{\partial y} 
   -\kappa \frac{\partial n}{\partial y}
-  + \nu \nabla^2 n  \\
+  + \nu \nabla_\perp^2 n  \\
   \frac{\partial N}{\partial t} =
   \frac{1}{B}\{ N, \psi\} 
   + \kappa N\frac{\partial \psi}{\partial y} 
-  + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla^2N
+  + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla_\perp^2N
 \end{align}
 \end{subequations}
 
