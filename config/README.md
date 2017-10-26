@@ -1,7 +1,9 @@
-The Makefiles in FELTOR are configured by hardware specific *.mk files in the config folder. Every Makefile includes these files in the order  
+###Configuration
+
+The Makefiles for programs in FELTOR are configured by hardware specific *.mk files in the config folder. Every Makefile includes these files in the order  
 
 ```shell
-feltor/config/default.mk #Sets the default variables
+feltor/config/default.mk #Defines the default variables
 feltor/config/*.mk       #overwrite variables if machine is recognized
 feltor/config/devices/devices.mk    #recombine variables depending on device
 ```
@@ -40,11 +42,18 @@ The file `feltor/config/devices/devices.mk` defines device specific configuratio
 The **device** variable should be, the **OPT** and the **NVCCARCH** variables are intended to be specified on the command line: 
 
 ```shell
-make blas_b device=gpu NVCCARCH=-arch sm_35 #Compile using nvcc for a Tesla K40
-make blas_b device=omp OPT=-O2              #Compile for OpenMP using -O2 
+#Compile using nvcc for a Tesla K40:
+make blas_b device=gpu NVCCARCH='-arch sm_35'
+
+#Compile for OpenMP using -O2:
+make blas_b device=omp OPT=-O2     
+
+#Hybrid MPI+OpenMP program for the Xeon Phi architecture:
+make blas_mpib device=mic 
+
+#Hybrid MPI+GPU program for the Tesla P100 GPU, host code with -O2:
+make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
 ```
 
-```shell
-make blas_mpib device=mic #Compile an MPI program for the Xeon Phi architecture 
-```
+ 
 
