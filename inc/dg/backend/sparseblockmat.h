@@ -197,10 +197,10 @@ template<class value_type>
 void EllSparseBlockMat<value_type>::symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const
 {
     if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+        throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
     }
     if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+        throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
     }
 
 
@@ -275,10 +275,10 @@ template<class value_type>
 void CooSparseBlockMat<value_type>::symv( value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const
 {
     if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+        throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
     }
     if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+        throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
     }
 
     //simplest implementation
