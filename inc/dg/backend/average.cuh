@@ -9,20 +9,15 @@
   @brief contains classes for poloidal and toroidal average computations.
   */
 namespace dg{
-//struct printf_functor
-//{
-//__host__ __device__
-//void operator()(double x)
-//{
-//    printf("%f\n",x);
-//}
-//};
+
 /**
  * @brief Class for y average computations
  *
+ * @snippet backend/average_t.cu doxygen
  * @ingroup utilities
- * @tparam container Vector class to be used
- * @tparam IndexContainer Class for scatter maps
+ * @tparam container Currently this is one of 
+ *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec  
+ * @tparam IndexContainer Type of index vectors; May equal \c container
  */
 template< class container, class IndexContainer>
 struct PoloidalAverage

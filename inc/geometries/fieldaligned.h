@@ -320,6 +320,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg:
 * @brief Create and manage interpolation matrices from fieldline integration
 *
 * @ingroup fieldaligned
+* @snippet ds_t.cu doxygen
 * @tparam ProductGeometry must be either aProductGeometry3d or aProductMPIGeometry3d or any derivative 
 * @tparam IMatrix The type of the interpolation matrix 
     - dg::IHMatrix, or dg::IDMatrix, dg::MIHMatrix, or dg::MIDMatrix
@@ -426,7 +427,7 @@ struct Fieldaligned
      * get the values in the 3rd dimension. Uses the grid given in the constructor.
      * @tparam BinaryOp Binary Functor
      * @param binary Functor to evaluate
-     * @param p0 The number of the plane to start
+     * @param p0 The index of the plane to start
      *
      * @return Returns an instance of container
      */
@@ -439,16 +440,19 @@ struct Fieldaligned
     /**
      * @brief Evaluate a 2d functor and transform to all planes along the fieldlines
      *
-     * Evaluates the given functor on a 2d plane and then follows fieldlines to
-     * get the values in the 3rd dimension. Uses the grid given in the constructor.
-     * The second functor is used to scale the values along the fieldlines.
-     * The fieldlines are assumed to be periodic.
+     * The algorithm does the equivalent of the following: 
+     *  - Evaluate the given \c BinaryOp on a 2d plane 
+     *  - Apply the plus and minus transformation each \f$ r N_z\f$ times where \f$ N_z\f$ is the number of planes in the global 3d grid and \f$ r\f$ is the number of rounds.  
+     *  - Scale the transformations with \f$ u ( \pm (iN_z + j)h_z) \f$, where \c u is the given \c UnarayOp, \c i is the round index and \c j is the plane index. 
+     *  - Sum all transformations with the same plane index \c j , where the minus transformations get the inverted index \f$ N_z - j\f$.
+     *  - Shift the index by \f$ p_0\f$
+     *  .
      * @tparam BinaryOp Binary Functor
      * @tparam UnaryOp Unary Functor
      * @param binary Functor to evaluate in x-y
      * @param unary Functor to evaluate in z
-     * @param p0 The number of the plane to start
-     * @param rounds The number of rounds to follow a fieldline
+     * @param p0 The index of the plane to start
+     * @param rounds The number of rounds \c r to follow a fieldline; can be zero, then the fieldlines are only followed within the current box ( no periodicity) 
      * @note g is evaluated such that p0 corresponds to z=0, p0+1 corresponds to z=hz, p0-1 to z=-hz, ...
      *
      * @return Returns an instance of container
@@ -560,16 +564,13 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
     assert( p0 < m_g.get().Nz());
-    const dg::aGeometry2d* g2d_ptr = m_g.get().perp_grid();
-    container init2d = dg::pullback( binary, *g2d_ptr); 
-    delete g2d_ptr;
+    const dg::Handle<aGeometry2d> g2d = m_g.get().perp_grid();
+    container init2d = dg::pullback( binary, g2d.get()); 
+    container zero2d = dg::evaluate( dg::zero, g2d.get()); 
 
     container temp(init2d), tempP(init2d), tempM(init2d);
     container vec3d = dg::evaluate( dg::zero, m_g.get());
-    std::vector<container>  plus2d, minus2d, result; 
-    dg::split( vec3d, plus2d, m_g.get());
-    dg::split( vec3d, minus2d, m_g.get());
-    dg::split( vec3d, result, m_g.get());
+    std::vector<container>  plus2d(m_Nz, zero2d), minus2d(plus2d), result(plus2d); 
     unsigned turns = rounds; 
     if( turns ==0) turns++;
     //first apply Interpolation many times, scale and store results
@@ -578,7 +579,7 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
         {
             dg::blas1::copy( init2d, tempP);
             dg::blas1::copy( init2d, tempM);
-            unsigned rep = i0 + r*m_Nz;
+            unsigned rep = r*m_Nz + i0;
             for(unsigned k=0; k<rep; k++)
             {
                 dg::blas2::symv( m_plus, tempP, temp);

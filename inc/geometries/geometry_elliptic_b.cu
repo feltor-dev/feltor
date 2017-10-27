@@ -36,7 +36,7 @@ int main(int argc, char**argv)
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
     gp.display( std::cout);
     dg::Timer t;

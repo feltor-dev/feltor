@@ -20,16 +20,16 @@ int main()
 {
 
     {
-    dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
     std::cout << "First test grid set functions: \n";
+    dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
     g.display( std::cout);
     g.set(2,2,3);
     g.display( std::cout);
     g.set(n, Nx, Ny);
     g.display( std::cout);
-    Matrix A = dg::create::backscatter( g);
-    //A.sort_by_row_and_column();
 
+    //![doxygen]
+    //create equidistant values
     thrust::host_vector<double> x( g.size()), y(x);
     for( unsigned i=0; i<g.Ny()*g.n(); i++)
         for( unsigned j=0; j<g.Nx()*g.n(); j++)
@@ -39,13 +39,24 @@ int main()
             y[i*g.Nx()*g.n() + j] = 
                     g.y0() + (i+0.5)*g.hy()/(double)(g.n());
         }
+    //typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
     Matrix B = dg::create::interpolation( x, y, g);
-    thrust::host_vector<double> vec = dg::evaluate( function, g), inter1(vec), inter2(vec);
+
+    const thrust::host_vector<double> vec = dg::evaluate( function, g); 
+    thrust::host_vector<double> inter(vec);
+    dg::blas2::symv( B, vec, inter);
+    //inter now contains the values of vec interpolated at equidistant points
+    //![doxygen]
+    Matrix A = dg::create::backscatter( g);
+    thrust::host_vector<double> inter1(vec);
     dg::blas2::symv( A, vec, inter1);
-    dg::blas2::symv( B, vec, inter2);
-    dg::blas1::axpby( 1., inter1, -1., inter2, vec);
-    double error = dg::blas1::dot( vec, vec);
+    dg::blas1::axpby( 1., inter1, -1., inter, inter1);
+    double error = dg::blas1::dot( inter1, inter1);
     std::cout << "Error is "<<error<<" (should be small)!\n";
+    if( error > 1e-14) 
+        std::cout<< "2D TEST FAILED!\n";
+    else
+        std::cout << "2D TEST PASSED!\n";
     //cusp::print(A);
     //cusp::print(B);
     //ATTENTION: backscatter might delete zeroes in matrices
@@ -62,10 +73,6 @@ int main()
     //    std::cerr << "Number of entries not equal!\n";
     //    passed = false;
     //}
-    if( error > 1e-14) 
-        std::cout<< "2D TEST FAILED!\n";
-    else
-        std::cout << "2D TEST PASSED!\n";
 
 
     bool passed = true;
@@ -99,6 +106,8 @@ int main()
     Matrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 
+    //![doxygen3d]
+    //create equidistant values
     std::vector<double> x( g.size()), y(x), z(x);
     for( unsigned k=0; k<g.Nz(); k++)
         for( unsigned i=0; i<g.Ny()*g.n(); i++)
@@ -111,12 +120,16 @@ int main()
                 z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
                         g.z0() + (k+0.5)*g.hz();
             }
+    //typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
     Matrix B = dg::create::interpolation( x, y, z, g);
-    thrust::host_vector<double> vec = dg::evaluate( function, g), inter1(vec), inter2(vec);
+    const thrust::host_vector<double> vec = dg::evaluate( function, g); 
+    thrust::host_vector<double> inter(vec);
+    dg::blas2::symv( B, vec, inter);
+    //![doxygen3d]
+    thrust::host_vector<double> inter1(vec);
     dg::blas2::symv( A, vec, inter1);
-    dg::blas2::symv( B, vec, inter2);
-    dg::blas1::axpby( 1., inter1, -1., inter2, vec);
-    double error = dg::blas1::dot( vec, vec);
+    dg::blas1::axpby( 1., inter1, -1., inter, inter1);
+    double error = dg::blas1::dot( inter1, inter1);
     std::cout << "Error is "<<error<<" (should be small)!\n";
     if( error > 1e-14) 
         std::cout<< "3D TEST FAILED!\n";

@@ -27,6 +27,7 @@ namespace geo{
 \f$\nabla_\parallel^\dagger\f$ and 
 \f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$
 in arbitrary coordinates
+@snippet ds_t.cu doxygen
 * @ingroup fieldaligned
 * @tparam ProductGeometry must be either dg::aProductGeometry3d or dg::aProductMPIGeometry3d or any derivative 
 * @tparam IMatrix The type of the interpolation matrix 

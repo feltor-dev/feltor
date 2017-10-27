@@ -120,7 +120,7 @@ MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_inter
 MultiMatrix< EllSparseBlockMat<double>, thrust::host_vector<double> > fast_projection( const Grid1d& t, unsigned divide, enum dg::norm no = normed)
 {
     unsigned n=t.n();
-    if( t.N()%divide != 0) throw Error( Message(_ping_)<< "Nx and divide don't match: Nx: " << t.N()<< " divide "<< divide);
+    if( t.N()%divide != 0) throw Error( Message(_ping_)<< "Nx and divide don't match: Nx: " << t.N()<< " divide "<< (unsigned)divide);
     dg::Grid1d g_oldX( -1., 1., n, divide);
     dg::Grid1d g_new(  -1., 1., n, 1);
     dg::IHMatrix projectX;

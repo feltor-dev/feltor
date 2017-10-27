@@ -19,7 +19,9 @@ namespace dg
 //interpolation matrices
 typedef MPIDistMat< dg::IHMatrix, GeneralComm< dg::iHVec, dg::HVec > > MIHMatrix; //!< MPI distributed CSR host Matrix
 typedef MPIDistMat< dg::IDMatrix, GeneralComm< dg::iDVec, dg::DVec > > MIDMatrix; //!< MPI distributed CSR device Matrix
+///@}
 
+///@cond
 namespace detail{
 //given global indices -> make a sorted unique indices vector -> make a gather map into the unique vector
 //buffer_idx -> (gather map/ new column indices) same size as global_idx ( can alias global_idx, index into unique_global_idx
@@ -49,7 +51,7 @@ void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, 
     thrust::scatter( gather_map.begin(), gather_map.end(), index.begin(), buffer_idx.begin());
 }
 }//namespace detail
-///@}
+///@endcond
 
 /**
  * @brief Convert a matrix with local row and global column indices to a row distributed MPI matrix

@@ -23,18 +23,42 @@ $ git clone https://www.github.com/cusplibrary/cusplibrary
 ```
 > Our code only depends on external libraries that are themselves openly available. We note here that we do not distribute copies of these libraries.
 
-Now you need to tell the feltor configuration where these external libraries are located on your computer. The default way to do this is to go in your `HOME` directory, make an include directory and link the paths in this directory:
+### Using FELTOR as a library
+
+It is possible to use FELTOR as a library in your own code project. Note that the library is **header-only**, which means that you just have to include the relevant header(s) and you're good to go:
+
+```C++
+//optional: activate MPI in FELTOR
+#include "mpi.h"  
+// optional: redirect CUDA calls to OpenMP functions; 
+// note that you then also have to specify an OpenMP flag when compiling
+#define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_OMP 
+//include the basic dg-library
+#include "dg/algorithms.h"
+//include the geometries expansion
+#include "geometries/geometries.h"
+```
+
+and add `path/to/feltor/inc` as well as  `path/to/thrust/thrust` and  `path/to/cusplibrary/cusp` to the include path of your compiler. 
+
+> If you want to activate the MPI backend of FELTOR you have to include `mpi.h` before any FELTOR header. If you want to use OpenMP instead of CUDA for the device functions you have to define the `THRUST_DEVICE_SYSTEM` macro and activate OpenMP in your compiler (e.g `g++ -fopenmp`). I you want to use CUDA then you have to compile with nvcc. 
+See `path/to/feltor/config/README.md` for further details on configurating the library and how to compile.
+
+### Using FELTOR's code projects
+
+In order to compile one of the many codes inside FELTOR you need to tell the feltor configuration where the external libraries are located on your computer. The default way to do this is to go in your `HOME` directory, make an include directory and link the paths in this directory:
+
  ```sh
  $ cd ~
  $ mkdir include
  $ cd include
  $ ln -s path/to/thrust/thrust thrust
  $ ln -s path/to/cusplibrary/cusp cusp
-```
+ ```
 > If you do not like this, you can also create your own config file as discribed [here](https://github.com/feltor-dev/feltor/wiki/Configuration).
 
 Now let us compile the first benchmark program. 
- 
+
 
  ```sh
  $ cd path/to/feltor/inc/dg
@@ -58,7 +82,7 @@ and when prompted for input vector sizes type for example
 `3 100 100 10`
 which makes a grid with 3 polynomial coefficients, 100 cells in x, 100 cells in y and 10 in z. If you compiled for OpenMP, you can set the number of threads with e.g. `export OMP_NUM_THREADS=4`.
 > This is a benchmark program to benchmark various elemental functions the library is built on. Go ahead and vary the input parameters and
-see how your hardware performs. You can compile and run any other program that ends in `_t.cu` (test programs) or `_b.cu` (benchmark programs) in `feltor/inc/dg` in this way. 
+> see how your hardware performs. You can compile and run any other program that ends in `_t.cu` (test programs) or `_b.cu` (benchmark programs) in `feltor/inc/dg` in this way. 
 
 Now, let us test the mpi setup 
 > You can of course skip this if you don't have mpi installed on your computer.
@@ -70,7 +94,7 @@ Now, let us test the mpi setup
  $ make blas_mpib device=omp  # (for MPI+OpenMP)
  # or
  $ make blas_mpib device=gpu # (for MPI+GPU)
- ```
+```
 Run the code with
 `$ mpirun -n '# of procs' ./blas_mpib `
 then tell how many process you want to use in the x-, y- and z- direction, for example:
@@ -84,7 +108,7 @@ For data output we use the [NetCDF](http://www.unidata.ucar.edu/software/netcdf/
 Our JSON input files are parsed by [JsonCpp](https://www.github.com/open-source-parsers/jsoncpp) distributed under the MIT license (the 0.y.x branch to avoid C++-11 support).     
 > Some desktop applications in FELTOR use the [draw library]( https://github.com/mwiesenberger/draw) (developed by us also under MIT), which depends on OpenGL (s.a. [installation guide](http://en.wikibooks.org/wiki/OpenGL_Programming)) and [glfw](http://www.glfw.org), an OpenGL development library under a BSD-like license. You don't need these when you are on a cluster. 
 
- 
+
 As in Step 3 you need to create links to the jsoncpp library include path (and optionally the draw library) in your include folder or provide the paths in your config file. We are ready to compile now
 
 ```sh
@@ -98,7 +122,7 @@ As in Step 3 you need to create links to the jsoncpp library include path (and o
  # or
  $ make toefl_mpi device=omp  # (compile on gpu or omp)
  $ export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI) 
- $ echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.json>
+ $ echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.nc>
  $ # (a multi node simulation with now in total 8 threads with output stored in a file)
  $ # The mpi program will wait for you to type the number of processes in x and y direction before
  $ # running. That is why the echo is there. 

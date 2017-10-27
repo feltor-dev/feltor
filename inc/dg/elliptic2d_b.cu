@@ -73,7 +73,9 @@ int main()
 
     const unsigned stages = 3;
 
+    const dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages);
+    const dg::DVec chi =  dg::evaluate( pol, grid);
     const std::vector<dg::DVec> multi_chi = multigrid.project( chi);
 
     std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
@@ -86,6 +88,8 @@ int main()
     t.toc();
 
     std::cout << "Creation of multigrid took: "<<t.diff()<<"s\n";
+    const dg::DVec b =    dg::evaluate( rhs,     grid);
+    dg::DVec x       =    dg::evaluate( initial, grid);
     t.tic();
     std::vector<unsigned> number = multigrid.direct_solve(multi_pol, x, b, eps);
     t.toc();

@@ -253,8 +253,8 @@ struct BijectiveComm : public aCommunicator<Vector>
  * This Communicator performs surjective global gather and
  scatter operations, which means that the gather/scatter map
  is surjective, i.e. all elements in a source vector get gathered. 
- Compared to BijectiveComm in the global_gather function there is an additional 
- gather and in the global_scatter_reduce function a reduction 
+ Compared to \c BijectiveComm in the \c global_gather function there is an additional 
+ gather and in the \c global_scatter_reduce function a reduction 
  needs to be performed.
  * @tparam Index an integer thrust Vector
  * @tparam Vector a thrust Vector
@@ -360,7 +360,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
  * @brief Struct that performs general collective scatter and gather operations across processes on distributed vectors using mpi
  *
  * This Communicator can perform general global gather and
- scatter operations. Compared to SurjectiveComm the global_scatter_reduce function needs
+ scatter operations. Compared to \c SurjectiveComm the \c global_scatter_reduce function needs
  to perform an additional scatter as some elements of the source vector might be left empty
  * @tparam Index an integer thrust Vector 
  * @tparam Vector a thrust Vector 
@@ -373,10 +373,10 @@ struct GeneralComm : public aCommunicator<Vector>
     /**
     * @brief Construct from local indices and PIDs gather map
     *
-    * The indices in the gather map are written with respect to the buffer vector (unlike in BijectiveComm, where it is given wrt the source vector).
+    * The indices in the gather map are written with respect to the buffer vector (unlike in \c BijectiveComm, where it is given wrt the source vector).
     * Each location in the source vector is uniquely specified by a local vector index and the process rank. 
-    * @param localGatherMap Each element localGatherMap[i] represents a local vector index from where to gather the value. There are "local buffer size" elements.
-    * @param pidGatherMap Each element pidGatherMap[i] represents the pid/rank from where to gather the corresponding local index localGatherMap[i].  Same size as localGatherMap.
+    * @param localGatherMap Each element \c localGatherMap[i] represents a local vector index from where to gather the value. There are "local buffer size" elements.
+    * @param pidGatherMap Each element \c pidGatherMap[i] represents the pid/rank from where to gather the corresponding local index \c localGatherMap[i].  Same size as localGatherMap.
      *   The pid/rank needs to be element of the given communicator.
     * @param comm The MPI communicator participating in the scatter/gather operations
     */
@@ -393,13 +393,13 @@ struct GeneralComm : public aCommunicator<Vector>
     /**
      * @brief Construct from global indices gather map
      *
-     * Uses the global2localIdx() member of MPITopology to generate localGatherMap and pidGatherMap 
+     * Uses the \c global2localIdx() member of MPITopology to generate localGatherMap and pidGatherMap 
      * @tparam ConversionPolicy has to have the members: 
-     *  - global2localIdx(unsigned,unsigned,unsigned) const;
+     *  - \c global2localIdx(unsigned,unsigned,unsigned) \c const;
      * where the first parameter is the global index and the 
      * other two are the pair (local idx, rank). 
-     *  - MPI_Comm %communicator() const;  returns the communicator to use in the gather/scatter
-     * @param globalGatherMap Each element globalGatherMap[i] represents a global vector index from where to take the value. There are "local buffer size == size()" elements.
+     *  - \c MPI_Comm \c %communicator() \c const;  returns the communicator to use in the gather/scatter
+     * @param globalGatherMap Each element \c globalGatherMap[i] represents a global vector index from where to take the value. There are "local buffer size == size()" elements.
      * @param p the conversion object
      * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
      */

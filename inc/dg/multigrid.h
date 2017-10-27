@@ -14,25 +14,26 @@ namespace dg
 {
 
 /**
-* @brief Class for the solution of symmetric matrix equation discretizeable on multiple grids
+* @brief Class for the solution of a symmetric matrix equation discretizeable on multiple grids
 *
-* We use conjugate gradien (CG) at each stage and refine the grids in the first two dimensions (2d / x and y) 
 * @snippet elliptic2d_b.cu multigrid
+* We use conjugate gradient (CG) at each stage and refine the grids in the first two dimensions (2d / x and y) 
+* @note The preconditioner for the CG solver is taken from the \c precond() method in the \c SymmetricOp class
 * @copydoc hide_geometry_matrix_container
 * @ingroup multigrid
-* @sa Extrapolation  to generate an initial guess
+* @sa \c Extrapolation  to generate an initial guess
 * 
 */
 template< class Geometry, class Matrix, class container> 
 struct MultigridCG2d
 {
     /**
-    * @brief Construct the grids and the interpolation/projection operators
-    *
-    * @param grid the original grid (Nx() and Ny() must be evenly divisable by pow(2, stages-1)
-    * @param stages number of grids in total (The second grid contains half the points of the original grids,  
-    *   The third grid contains half of the second grid ...). Must be > 1
-    * @param scheme_type scheme type in the solve function
+     * @brief Construct the grids and the interpolation/projection operators
+     *
+     * @param grid the original grid (Nx() and Ny() must be evenly divisable by pow(2, stages-1)
+     * @param stages number of grids in total (The second grid contains half the points of the original grids,  
+     *   The third grid contains half of the second grid ...). Must be > 1
+     * @param scheme_type scheme type in the solve function (irrelevant for \c direct_solve method)
     */
     MultigridCG2d( const Geometry& grid, const unsigned stages, const int scheme_type = 0 )
     {
@@ -131,19 +132,20 @@ struct MultigridCG2d
 	}
 
     /**
-    * @brief Nested iterations
-    *
-    * - Compute residual with given initial guess. 
-    * - Project residual down to the coarsest grid. 
-    * - Solve equation on the coarse grid 
-    * - interpolate solution up to next finer grid and repeat until the original grid is reached. 
-    * @copydoc hide_symmetric_op
-    * @param op Index 0 is the matrix on the original grid, 1 on the half grid, 2 on the quarter grid, ...
-    * @param x (read/write) contains initial guess on input and the solution on output
-    * @param b The right hand side (will be multiplied by weights)
-    * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$ 
-    * @return the number of iterations in each of the stages
-     * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
+     * @brief Nested iterations
+     *
+     * - Compute residual with given initial guess. 
+     * - Project residual down to the coarsest grid. 
+     * - Solve equation on the coarse grid 
+     * - interpolate solution up to next finer grid and repeat until the original grid is reached. 
+     * @note The preconditioner for the CG solver is taken from the \c precond() method in the \c SymmetricOp class
+     * @copydoc hide_symmetric_op
+     * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
+     * @param x (read/write) contains initial guess on input and the solution on output
+     * @param b The right hand side (will be multiplied by \c weights)
+     * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$ 
+     * @return the number of iterations in each of the stages
+     * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
     */
     template<class SymmetricOp>
     std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, container&  x, const container& b, double eps)
@@ -221,7 +223,13 @@ struct MultigridCG2d
     ///@return number of stages 
     unsigned stages()const{return stages_;}
 
+    ///observe the grids at all stages
     const std::vector<dg::Handle< Geometry > > grids()const { return grids_; }
+
+    
+    ///After a call to a solution method returns the maximum number of iterations allowed at stage  0
+    ///(if the solution method returns this number, failure is indicated)
+    unsigned max_iter() const{return cg_[0].get_max();} //could this be a problem in MPI?
 
 private:
 
@@ -282,7 +290,6 @@ private:
         assert(u == 0);
 	}
 
-    ///print scheme information to std::cout
     void PrintScheme(void)
     {
         std::cout << "Scheme: " << std::endl;

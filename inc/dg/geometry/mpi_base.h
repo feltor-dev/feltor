@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dg/backend/mpi_grid.h"
+#include "base_geometry.h"
 #include "tensor.h"
 
 namespace dg

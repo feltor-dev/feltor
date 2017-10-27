@@ -34,7 +34,7 @@ class Operator
      *
      * @param n size
      */
-    Operator( const unsigned n): n_(n), data_(n_*n_){}
+    explicit Operator( const unsigned n): n_(n), data_(n_*n_){}
     /**
     * @brief Initialize elements.
     *

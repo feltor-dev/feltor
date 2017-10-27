@@ -15,15 +15,16 @@ namespace dg
 * @tparam thrust_vector1 either thrust::host_vector or thrust::device_vector
 * @tparam thrust_vector2 either thrust::host_vector or thrust::device_vector
 * @param in contiguous 3d vector (must be of size grid.size())
-* @param out contains grid.Nz() 2d vectors of 2d size on output (gets resized if necessary)
+* @param out contains \c grid.Nz() 2d vectors of 2d size on output (gets resized if necessary)
 * @param grid provide dimensions in 3rd and first two dimensions
 */
 template<class thrust_vector1, class thrust_vector2>
 void split( const thrust_vector1& in, std::vector<thrust_vector2>& out, const aTopology3d& grid)
 {
-    unsigned size2d=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-    out.resize( grid.Nz());
-    for(unsigned i=0; i<grid.Nz(); i++)
+    Grid3d l( grid);
+    unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
+    out.resize( l.Nz());
+    for(unsigned i=0; i<l.Nz(); i++)
         out[i].assign( in.begin() + i*size2d, in.begin()+(i+1)*size2d);
 }
 #ifdef MPI_VERSION
@@ -41,9 +42,10 @@ void split( const MPI_Vector<thrust_vector1>& in, std::vector<MPI_Vector<thrust_
     int remain_dims[] = {true,true,false}; 
     MPI_Cart_sub( in.communicator(), remain_dims, &planeComm);
     //local size2d
-    unsigned size2d=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-    out.resize( grid.Nz());
-    for(unsigned i=0; i<grid.Nz(); i++)
+    Grid3d l = grid.local();
+    unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
+    out.resize( l.Nz());
+    for(unsigned i=0; i<l.Nz(); i++)
     {
         out[i].data().assign( in.data().begin() + i*size2d, in.data().begin()+(i+1)*size2d);
         out[i].communicator() = planeComm;
@@ -55,7 +57,7 @@ void split( const MPI_Vector<thrust_vector1>& in, std::vector<MPI_Vector<thrust_
 *
 * @tparam thrust_vector1 either thrust::host_vector or thrust::device_vector
 * @tparam thrust_vector2 either thrust::host_vector or thrust::device_vector
-* @param in grid.Nz() 2d vectors of 2d size 
+* @param in \c grid.Nz() 2d vectors of 2d size 
 * @param out contiguous 3d vector (gets resized if necessary) 
 * @param grid provide dimensions in 3rd and first two dimensions
 * @note split followed by join restores the original vector
@@ -75,10 +77,11 @@ void join( const std::vector<thrust_vector1>& in, thrust_vector2& out, const aTo
 template<class thrust_vector1, class thrust_vector2>
 void join( const std::vector<MPI_Vector<thrust_vector1> >& in, MPI_Vector<thrust_vector2 >& out, const aMPITopology3d& grid)
 {
-    unsigned size2d=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-    out.data().resize( size2d*grid.Nz());
+    Grid2d l(grid);
+    unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
+    out.data().resize( size2d*l.Nz());
     out.communicator() = grid.communicator();
-    for(unsigned i=0; i<grid.Nz(); i++)
+    for(unsigned i=0; i<l.Nz(); i++)
         thrust::copy( in[i].data().begin(), in[i].data().end(), out.data().begin()+i*size2d);
 }
 #endif //MPI_VERSION

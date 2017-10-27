@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     function = ds.fieldaligned().evaluate( init0, modulate, Nz/2, 2);
     ds( function, derivative);
     norm = dg::blas2::dot(vol3d, derivative);
-    if(rank==0)std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_mpib)\n";
+    if(rank==0)std::cout << "Norm Centered Derivative "<<sqrt( norm)<<" (compare with that of ds_t)\n";
     MPI_Finalize();
     return 0;
 }

@@ -26,12 +26,12 @@ namespace dg
 /**
  * @brief 2D MPI abstract grid class 
  *
- * Represents the local grid coordinates and the process topology. 
+ * Represents the global grid coordinates and the process topology. 
  * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
  * @note a single cell is never divided across processes.
- * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @note although it is abstract objects, are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @attention
- * The boundaries in the constructors are global boundaries, the boundaries returned by the access functions are local boundaries, this is because the grid represents the information given to one process
+ * The access functions \c n() \c Nx() ,... all return the global parameters. If you want to have the local ones call the \c local() function.
  * @ingroup basictopology
  */
 struct aMPITopology2d
@@ -39,147 +39,106 @@ struct aMPITopology2d
     typedef MPITag memory_category;
     typedef TwoDimensionalTag dimensionality;
 
-
     /**
-     * @brief Return local x0
+     * @brief Return global x0
      *
-     * @return local left boundary
+     * @return global left boundary
      */
-    double x0() const {
-        int dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.x0() + g.lx()/(double)dims[0]*(double)coords[0]; 
-    }
-
+    double x0() const { return g.x0();}
     /**
-     * @brief Return local x1
+     * @brief Return global x1
      *
-     * @return local right boundary
+     * @return global right boundary
      */
-    double x1() const {
-        int dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
-    }
-
+    double x1() const { return g.x1(); }
     /**
-     * @brief Return local y0
+     * @brief Return global y0
      *
-     * @return local left boundary
+     * @return global left boundary
      */
-    double y0() const {
-        int dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.y0() + g.ly()/(double)dims[1]*(double)coords[1]; 
-    }
-
+    double y0() const { return g.y0();}
     /**
-     * @brief Return local y1
+     * @brief Return global y1
      *
-     * @return local right boundary
+     * @return global right boundary
      */
-    double y1() const {
-        int dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
-    }
-
+    double y1() const { return g.y1();}
     /**
-     * @brief Return local lx
+     * @brief Return global lx
      *
-     * @return local length
+     * @return global length
      */
-    double lx() const {return x1()-x0();}
-
+    double lx() const {return g.lx();}
     /**
-     * @brief Return local ly
+     * @brief Return global ly
      *
-     * @return local length
+     * @return global length
      */
-    double ly() const {return y1()-y0();}
-
+    double ly() const {return g.ly();}
     /**
-     * @brief Return local hx
+     * @brief Return global hx
      *
-     * @return local grid constant
+     * @return global grid constant
      */
     double hx() const {return g.hx();}
-
     /**
-     * @brief Return local hy
+     * @brief Return global hy
      *
-     * @return local grid constant
+     * @return global grid constant
      */
     double hy() const {return g.hy();}
-
     /**
      * @brief Return n
      *
      * @return number of polynomial coefficients
      */
     unsigned n() const {return g.n();}
-
     /**
-     * @brief Return the local number of cells 
+     * @brief Return the global number of cells 
      *
      * @return number of cells
      */
-    unsigned Nx() const {
-        int dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.Nx()/dims[0];
-    }
-
+    unsigned Nx() const { return g.Nx();}
     /**
-     * @brief Return the local number of cells 
+     * @brief Return the global number of cells 
      *
      * Not the one given in the constructor
      * @return number of cells
      */
-    unsigned Ny() const {
-        int dims[2], periods[2], coords[2];
-        MPI_Cart_get( comm, 2, dims, periods, coords);
-        return g.Ny()/dims[1];
-    }
-
+    unsigned Ny() const { return g.Ny();}
     /**
      * @brief global x boundary
      *
      * @return boundary condition
      */
     bc bcx() const {return g.bcx();}
-
     /**
      * @brief global y boundary
      *
      * @return boundary condition
      */
     bc bcy() const {return g.bcy();}
-
     /**
      * @brief Return mpi cartesian communicator that is used in this grid
      *
      * @return Communicator
      */
     MPI_Comm communicator() const{return comm;}
-
     /**
      * @brief The Discrete Legendre Transformation 
      *
      * @return DLT corresponding to n given in the constructor
      */
     const DLT<double>& dlt() const{return g.dlt();}
-
     /**
-     * @brief The total local number of points
+     * @brief The total global number of points
      *
-     * @note for the total global number of points call grid.global().size()
-     * @return n*n*Nx*Ny
+     * @note for the total local number of points call grid.local().size()
+     * @return n()*n()*Nx()*Ny()
      */
-    unsigned size() const { return n()*n()*Nx()*Ny();}
-
+    unsigned size() const { return g.size();}
     /**
-     * @brief Display 
+     * @brief Display global and local grid
      *
      * @param os output stream
      */
@@ -203,7 +162,6 @@ struct aMPITopology2d
      * @return pid of a process, or -1 if non of the grids matches
      */
     int pidOf( double x, double y) const;
-
     /**
     * @brief Multiply the number of cells with a given factor
     *
@@ -216,15 +174,12 @@ struct aMPITopology2d
     }
     /**
     * @copydoc Grid2d::set(unsigned,unsigned,unsigned)
-    * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny()) is NOT(!) what you want
-    *           use the multiplyCellNumbers function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny())
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
         check_division( new_Nx, new_Ny, g.bcx(), g.bcy());
         if( new_n == g.n() && new_Nx == g.Nx() && new_Ny == g.Ny()) return;
         do_set( new_n,new_Nx,new_Ny);
     }
-
     /**
     * @brief Map a local index plus the PID to a global vector index
     *
@@ -235,14 +190,15 @@ struct aMPITopology2d
     */
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
+        Grid2d l = local();
         if( localIdx < 0 || localIdx >= (int)size()) return -1;
         int coords[2];
         if( MPI_Cart_coords( comm, PID, 2, coords) != MPI_SUCCESS)
             return false;
-        int lIdx0 = localIdx %(n()*Nx());
-        int lIdx1 = localIdx /(n()*Nx());
-        int gIdx0 = coords[0]*n()*Nx()+lIdx0;
-        int gIdx1 = coords[1]*n()*Ny()+lIdx1;
+        int lIdx0 = localIdx %(l.n()*l.Nx());
+        int lIdx1 = localIdx /(l.n()*l.Nx());
+        int gIdx0 = coords[0]*l.n()*l.Nx()+lIdx0;
+        int gIdx1 = coords[1]*l.n()*l.Ny()+lIdx1;
         globalIdx = gIdx1*g.n()*g.Nx() + gIdx0;
         return true;
     }
@@ -256,15 +212,16 @@ struct aMPITopology2d
     */
     bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
     {
+        Grid2d l = local();
         if( globalIdx < 0 || globalIdx >= (int)g.size()) return -1;
         int coords[2];
         int gIdx0 = globalIdx%(g.n()*g.Nx());
         int gIdx1 = globalIdx/(g.n()*g.Nx());
-        coords[0] = gIdx0/(n()*Nx());
-        coords[1] = gIdx1/(n()*Ny());
-        int lIdx0 = gIdx0%(n()*Nx());
-        int lIdx1 = gIdx1%(n()*Ny());
-        localIdx = lIdx1*n()*Nx() + lIdx0;
+        coords[0] = gIdx0/(l.n()*l.Nx());
+        coords[1] = gIdx1/(l.n()*l.Ny());
+        int lIdx0 = gIdx0%(l.n()*l.Nx());
+        int lIdx1 = gIdx1%(l.n()*l.Ny());
+        localIdx = lIdx1*l.n()*l.Nx() + lIdx0;
         if( MPI_Cart_rank( comm, coords, &PID) == MPI_SUCCESS ) 
             return true;
         else
@@ -273,22 +230,35 @@ struct aMPITopology2d
             return false;
         }
     }
-
     /**
      * @brief Return a non-MPI grid local for the calling process
      *
-     * The local grid returns the same values for x0(), x1(), ..., Nx(), Ny(), ... as the grid
-     * class itself 
+     * The local grid contains the boundaries and cell numbers the calling process sees and is in charge of. 
      * @return Grid object
      * @note the boundary conditions in the local grid are not well defined since there might not actually be any boundaries
      */
-    Grid2d local() const {return Grid2d(x0(), x1(), y0(), y1(), n(), Nx(), Ny(), bcx(), bcy());}
-
+    Grid2d local() const {
+        int dims[2], periods[2], coords[2];
+        MPI_Cart_get( comm, 2, dims, periods, coords);
+        double x0 = g.x0() + g.lx()/(double)dims[0]*(double)coords[0]; 
+        double x1 = g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
+        if( coords[0] == dims[0]-1) 
+            x1 = g.x1();
+        double y0 = g.y0() + g.ly()/(double)dims[1]*(double)coords[1]; 
+        double y1 = g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
+        if( coords[1] == dims[1]-1) 
+            y1 = g.y1();
+        unsigned Nx = g.Nx()/dims[0];
+        unsigned Ny = g.Ny()/dims[1];
+        return Grid2d(x0, x1, y0, y1, g.n(), Nx, Ny, g.bcx(), g.bcy());
+    }
     /**
      * @brief Return the global non-MPI grid 
      *
      * The global grid contains the global boundaries and cell numbers. 
      * This is the grid that we would have to use in a non-MPI implementation.
+     * The global grid returns the same values for x0(), x1(), ..., Nx(), Ny(), ... as the grid
+     * class itself 
      * @return non-MPI Grid object
      */
     Grid2d global() const {return g;}
@@ -337,20 +307,13 @@ struct aMPITopology2d
     }
     Grid2d g; //global grid
     MPI_Comm comm; //just an integer...
-
 };
 
 
 /**
  * @brief 3D MPI Grid class 
  *
- * Represents the local grid coordinates and the process topology. 
- * It just divides the given box into nonoverlapping subboxes that are attributed to each process
- * @attention
- * The boundaries in the constructors are global boundaries, the boundaries returned by the access functions are local boundaries, this is because the grid represents the information given to one process
- *
- * @note Note that a single cell is never divided across processes.
- * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
+ * @copydetails aMPITopology2d
  * @ingroup basictopology
  */
 struct aMPITopology3d
@@ -358,104 +321,76 @@ struct aMPITopology3d
     typedef MPITag memory_category;
     typedef ThreeDimensionalTag dimensionality;
 
-
     /**
-     * @brief Return local x0
+     * @brief Return global x0
      *
-     * @return local left boundary
+     * @return global left boundary
      */
-    double x0() const {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.x0() + g.lx()/(double)dims[0]*(double)coords[0]; 
-    }
+    double x0() const { return g.x0();}
     /**
-     * @brief Return local x1
+     * @brief Return global x1
      *
-     * @return local right boundary
+     * @return global right boundary
      */
-    double x1() const {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        if( coords[0] == dims[0]-1) return g.x1();
-        return g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
-    }
+    double x1() const { return g.x1();}
     /**
-     * @brief Return local y0
+     * @brief Return global y0
      *
-     * @return local left boundary
+     * @return global left boundary
      */
-    double y0() const {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.y0() + g.ly()/(double)dims[1]*(double)coords[1]; 
-    }
+    double y0() const { return g.y0();}
     /**
-     * @brief Return local y1
+     * @brief Return global y1
      *
-     * @return local right boundary
+     * @return global right boundary
      */
-    double y1() const {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        if( coords[1] == dims[1]-1) return g.y1();
-        return g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
-    }
+    double y1() const { return g.y1();}
     /**
-     * @brief Return local z0
+     * @brief Return global z0
      *
-     * @return local left boundary
+     * @return global left boundary
      */
-    double z0() const {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.z0() + g.lz()/(double)dims[2]*(double)coords[2]; 
-    }
+    double z0() const { return g.z0();}
     /**
-     * @brief Return local z1
+     * @brief Return global z1
      *
-     * @return local right boundary
+     * @return global right boundary
      */
-    double z1() const {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        if( coords[2] == dims[2]-1) return g.z1();
-        return g.z0() + g.lz()/(double)dims[2]*(double)(coords[2]+1); 
-    }
+    double z1() const { return g.z1();}
     /**
-     * @brief Return local lx
+     * @brief Return global lx
      *
-     * @return local length
+     * @return global length
      */
-    double lx() const {return x1()-x0();}
+    double lx() const {return g.lx();}
     /**
-     * @brief Return local ly
+     * @brief Return global ly
      *
-     * @return local length
+     * @return global length
      */
-    double ly() const {return y1()-y0();}
+    double ly() const {return g.ly();}
     /**
-     * @brief Return local lz
+     * @brief Return global lz
      *
-     * @return local length
+     * @return global length
      */
-    double lz() const {return z1()-z0();}
+    double lz() const {return g.lz();}
     /**
-     * @brief Return local hx
+     * @brief Return global hx
      *
-     * @return local grid constant
+     * @return global grid constant
      */
     double hx() const {return g.hx();}
     /**
-     * @brief Return local hy
+     * @brief Return global hy
      *
-     * @return local grid constant
+     * @return global grid constant
      */
     double hy() const {return g.hy();}
     /**
-     * @brief Return local hz
+     * @brief Return global hz
      *
-     * @return local grid constant
+     * @return global grid constant
      */
     double hz() const {return g.hz();}
     /**
@@ -465,38 +400,26 @@ struct aMPITopology3d
      */
     unsigned n() const {return g.n();}
     /**
-     * @brief Return the local number of cells 
+     * @brief Return the global number of cells 
      *
      * Not the one given in the constructor
      * @return number of cells
      */
-    unsigned Nx() const {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.Nx()/dims[0];
-    }
+    unsigned Nx() const { return g.Nx();}
     /**
-     * @brief Return the local number of cells 
+     * @brief Return the global number of cells 
      *
      * Not the one given in the constructor
      * @return number of cells
      */
-    unsigned Ny() const {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.Ny()/dims[1];
-    }
+    unsigned Ny() const { return g.Ny();}
     /**
-     * @brief Return the local number of cells 
+     * @brief Return the global number of cells 
      *
      * Not the one given in the constructor
      * @return number of cells
      */
-    unsigned Nz() const {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        return g.Nz()/dims[2];
-    }
+    unsigned Nz() const { return g.Nz();}
     /**
      * @brief global x boundary
      *
@@ -538,13 +461,13 @@ struct aMPITopology3d
      */
     const DLT<double>& dlt() const{return g.dlt();}
     /**
-     * @brief The total local number of points
+     * @brief The total global number of points
      *
-     * @return n*n*Nx*Ny*Nz
+     * @return n()*n()*Nx()*Ny()*Nz()
      */
-    unsigned size() const { return n()*n()*Nx()*Ny()*Nz();}
+    unsigned size() const { return g.size();}
     /**
-     * @brief Display 
+     * @brief Display global and local grid paramters 
      *
      * @param os output stream
      */
@@ -574,8 +497,6 @@ struct aMPITopology3d
     }
     /**
      * @copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
-     * @attention these are global parameters, i.e. set( g.n(), 2*g.Nx(), 2*g.Ny(), 2*g.Nz()) is NOT(!) what you want
-     *           use the multiplyCellNumbers function instead, or set( g.n(), 2*g.global().Nx(), 2*g.global().Ny(), 2*g.global().Nz())
      */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
         check_division( new_Nx,new_Ny,new_Nz,g.bcx(),g.bcy(),g.bcz());
@@ -585,41 +506,65 @@ struct aMPITopology3d
     ///@copydoc aMPITopology2d::local2globalIdx(int,int,int&)const
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
+        Grid3d l = local();
         if( localIdx < 0 || localIdx >= (int)size()) return false;
         int coords[3];
         if( MPI_Cart_coords( comm, PID, 3, coords) != MPI_SUCCESS)
             return false;
-        int lIdx0 = localIdx %(n()*Nx());
-        int lIdx1 = (localIdx /(n()*Nx())) % (n()*Ny());
-        int lIdx2 = localIdx / (n()*n()*Nx()*Ny());
-        int gIdx0 = coords[0]*n()*Nx()+lIdx0;
-        int gIdx1 = coords[1]*n()*Ny()+lIdx1;
-        int gIdx2 = coords[2]*Nz()  + lIdx2;
+        int lIdx0 = localIdx %(l.n()*l.Nx());
+        int lIdx1 = (localIdx /(l.n()*l.Nx())) % (l.n()*l.Ny());
+        int lIdx2 = localIdx / (l.n()*l.n()*l.Nx()*l.Ny());
+        int gIdx0 = coords[0]*l.n()*l.Nx()+lIdx0;
+        int gIdx1 = coords[1]*l.n()*l.Ny()+lIdx1;
+        int gIdx2 = coords[2]*l.Nz()  + lIdx2;
         globalIdx = (gIdx2*g.n()*g.Ny() + gIdx1)*g.n()*g.Nx() + gIdx0;
         return true;
     }
     ///@copydoc aMPITopology2d::global2localIdx(int,int&,int&)const
     bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
     {
+        Grid3d l = local();
         if( globalIdx < 0 || globalIdx >= (int)g.size()) return false;
         int coords[3];
         int gIdx0 = globalIdx%(g.n()*g.Nx());
         int gIdx1 = (globalIdx/(g.n()*g.Nx())) % (g.n()*g.Ny());
         int gIdx2 = globalIdx/(g.n()*g.n()*g.Nx()*g.Ny());
-        coords[0] = gIdx0/(n()*Nx());
-        coords[1] = gIdx1/(n()*Ny());
-        coords[2] = gIdx2/Nz();
-        int lIdx0 = gIdx0%(n()*Nx());
-        int lIdx1 = gIdx1%(n()*Ny());
-        int lIdx2 = gIdx2%Nz();
-        localIdx = (lIdx2*n()*Ny() + lIdx1)*n()*Nx() + lIdx0;
+        coords[0] = gIdx0/(l.n()*l.Nx());
+        coords[1] = gIdx1/(l.n()*l.Ny());
+        coords[2] = gIdx2/l.Nz();
+        int lIdx0 = gIdx0%(l.n()*l.Nx());
+        int lIdx1 = gIdx1%(l.n()*l.Ny());
+        int lIdx2 = gIdx2%l.Nz();
+        localIdx = (lIdx2*l.n()*l.Ny() + lIdx1)*l.n()*l.Nx() + lIdx0;
         if( MPI_Cart_rank( comm, coords, &PID) == MPI_SUCCESS ) 
             return true;
         else
             return false;
     }
     ///@copydoc aMPITopology2d::local()const
-    Grid3d local() const {return Grid3d(x0(), x1(), y0(), y1(), z0(), z1(), n(), Nx(), Ny(), Nz(), bcx(), bcy(), bcz());}
+    Grid3d local() const {
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        double x0 = g.x0() + g.lx()/(double)dims[0]*(double)coords[0]; 
+        double x1 = g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
+        if( coords[0] == dims[0]-1) 
+            x1 = g.x1();
+
+        double y0 = g.y0() + g.ly()/(double)dims[1]*(double)coords[1]; 
+        double y1 = g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
+        if( coords[1] == dims[1]-1) 
+            y1 = g.y1();
+
+        double z0 = g.z0() + g.lz()/(double)dims[2]*(double)coords[2]; 
+        double z1 = g.z0() + g.lz()/(double)dims[2]*(double)(coords[2]+1); 
+        if( coords[2] == dims[2]-1) 
+            z1 = g.z1();
+        unsigned Nx = g.Nx()/dims[0];
+        unsigned Ny = g.Ny()/dims[1];
+        unsigned Nz = g.Nz()/dims[2];
+        
+        return Grid3d(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
+    }
      ///@copydoc aMPITopology2d::global()const
     Grid3d global() const {return g;}
     protected:

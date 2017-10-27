@@ -18,7 +18,6 @@
 
 #include "file/nc_utilities.h"
 
-using namespace dg::geo::solovev;
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
     thrust::host_vector<double> out(g.size());
@@ -60,7 +59,7 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     std::cout << "Type psi_0 and psi_1\n";

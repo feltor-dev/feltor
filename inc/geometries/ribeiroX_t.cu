@@ -18,8 +18,6 @@
 #include "dg/ds.h"
 #include "init.h"
 
-using namespace dg::geo;
-
 //typedef dg::FieldAligned< solovev::ConformalXGrid3d<dg::DVec> , dg::IDMatrix, dg::DVec> DFA;
 double sine( double x) {return sin(x);}
 double cosine( double x) {return cos(x);}
@@ -89,7 +87,7 @@ int main( int argc, char* argv[])
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    solovev::GeomParameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     dg::Timer t;
     std::cout << "Type psi_0 \n";
     double psi_0 = -16;
@@ -100,18 +98,16 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    solovev::Psip psip( gp); 
-    std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
-    solovev::PsipR psipR(gp); solovev::PsipZ psipZ(gp);
-    solovev::PsipRR psipRR(gp); solovev::PsipRZ psipRZ(gp); solovev::PsipZZ psipZZ(gp);
+    dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip(gp);
+    std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     dg::geo::findXpoint( psipR, psipZ, psipRR, psipRZ, psipZZ, R_X, Z_X);
 
     double R0 = gp.R_0, Z0 = 0;
-    dg::geo::RibeiroX<solovev::Psip,solovev::PsipR,solovev::PsipZ,solovev::PsipRR, solovev::PsipRZ, solovev::PsipZZ> generator(psip, psipR, psipZ, psipRR, psipRZ, psipZZ, psi_0, fx_0, R_X,Z_X, R0, Z0);
-    dg::geo::CurvilinearGridX3d<dg::DVec> g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
-    dg::geo::CurvilinearGridX2d<dg::DVec> g2d = g3d.perp_grid();
+    dg::geo::RibeiroX generator(psip, psi_0, fx_0, R_X,Z_X, R0, Z0);
+    dg::geo::CurvilinearGridX3d g3d(generator, psi_0, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
+    dg::geo::CurvilinearGridX2d g2d = g3d.perp_grid();
     t.toc();
     dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;

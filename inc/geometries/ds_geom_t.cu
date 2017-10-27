@@ -55,7 +55,7 @@ struct Parameters
 
 struct InvNormR
 {
-    InvNormR( dg::geo::solovev::GeomParameters gp): R_0(gp.R_0){}
+    InvNormR( dg::geo::solovev::Parameters gp): R_0(gp.R_0){}
     double operator()( double R, double Z, double phi)const
     {
         return R_0/R;
@@ -86,7 +86,7 @@ int main( int argc, char* argv[])
         reader.parse( isG, geom_js, false);
     }
     const Parameters p(input_js);
-    const dg::geo::solovev::GeomParameters gp(geom_js);
+    const dg::geo::solovev::Parameters gp(geom_js);
     p.display( std::cout);
     gp.display( std::cout);
 

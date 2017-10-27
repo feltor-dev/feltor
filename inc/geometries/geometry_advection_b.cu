@@ -120,7 +120,7 @@ int main(int argc, char** argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
 
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";

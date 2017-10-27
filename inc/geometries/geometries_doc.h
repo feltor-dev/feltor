@@ -1,11 +1,11 @@
 #error Documentation only
 /*! 
  * 
- * @defgroup grids 1. New geometric grids
- * @defgroup generators_geo 2. Grid generators
+ * @defgroup generators_geo 1. Grid generators
  *
       All the grids introduced by this extension can be constructed with 
       generator classes. 
+ * @defgroup grids 2. New geometric grids
  * @defgroup fluxfunctions 3. New functors based on the magnetic field geometry
 
  All functors in this section model two or three-dimensional functions, i.e. they all overload the operator() like aBinaryOperator

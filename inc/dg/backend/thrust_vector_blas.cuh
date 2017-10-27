@@ -71,7 +71,7 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVecto
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     value_type sum = 0;
     unsigned size=x.size();
-    #pragma omp parallel for simd reduction(+:sum) 
+    #pragma omp parallel for SIMD reduction(+:sum)
     for( unsigned i=0; i<size; i++)
         sum += x[i]*y[i];
     return sum;
@@ -97,7 +97,7 @@ inline void doScal(  Vector& x,
         return;
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     unsigned size=x.size();
-    #pragma omp parallel for simd
+    #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
         x[i]*=alpha;
 #else
@@ -112,7 +112,7 @@ inline void doPlus(  Vector& x,
 {
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     unsigned size=x.size();
-    #pragma omp parallel for simd
+    #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
         x[i]+=alpha;
 #else
@@ -150,7 +150,7 @@ inline void doAxpby( typename Vector::value_type alpha,
     const typename Vector::value_type * RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data()[0]);
     typename Vector::value_type * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
     unsigned size = x.size();
-    #pragma omp parallel for simd
+    #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
         y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
 #else
@@ -206,7 +206,7 @@ inline void doAxpby( typename Vector::value_type alpha,
     const typename Vector::value_type * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
     typename Vector::value_type * RESTRICT z_ptr = thrust::raw_pointer_cast( &z.data()[0]);
     unsigned size = x.size();
-    #pragma omp parallel for simd
+    #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
         z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
 #else
@@ -275,7 +275,7 @@ inline void doPointwiseDot(
     const typename Vector::value_type * x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
      typename Vector::value_type * y_ptr = thrust::raw_pointer_cast( &(y.data()[0]));
     unsigned size = x1.size();
-    #pragma omp parallel for simd
+    #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
     {
         y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*y_ptr[i];
@@ -353,7 +353,7 @@ inline void doPointwiseDot(
           value_type * z_ptr = thrust::raw_pointer_cast( z.data());
     unsigned size = x1.size();
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    #pragma omp parallel for simd
+    #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
     {
         z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
