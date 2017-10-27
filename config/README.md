@@ -33,7 +33,7 @@ The main purpose of the file `feltor/config/devices/devices.mk` is to configure 
 | value | description                              | flags                                    |
 | ----- | ---------------------------------------- | ---------------------------------------- |
 | gpu   | replaces the CC and CFLAGS variables with the nvcc versions and analogously MPICC and MPICFLAGS  | `CC = $(NVCC) --compiler-bindir $(CC)` `CFLAGS = $(NVCCARCH) $(NVCCFLAGS)` `MPICC = $(NVCC) --compiler-bindir $(MPICC)` `MPICFLAGS+= $(NVCCARCH) $(NVCCFLAGS)` |
-| !gpu  | if device != gpu all thrust device calls redirect to OpenMP using the THRUST_DEVICE_SYSTEM macro | `-x c++` `-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` and `$(OMPFLAG)` added to both CFLAGS and MPICFLAGS |
+| !gpu  | if device != gpu all thrust device calls redirect to OpenMP using the THRUST_DEVICE_SYSTEM macro | `-x c++` `-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` and `$(OMPFLAG)` added to CFLAGS, `MPICFLAGS+=$(CFLAGS)` |
 | omp  | specify OPT for OpenMP | OPT = -O3                   |
 | mic   | specify OPT for Intel Xeon Phi architecture | OPT = -O3 -xMIC-AVX512                   |
 | skl   | specify OPT for Intel Skylake processors (icc only) | OPT = -xCORE-AVX512 -mtune=skylake -O3   |
