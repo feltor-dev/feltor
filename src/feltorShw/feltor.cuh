@@ -107,20 +107,19 @@ struct Explicit
     const container w2d, v2d;
     std::vector<container> phi;
     std::vector<container> npe, logn; 
-    container gamma_n;
+    container gamma_n,lhs,profne,profNi;
 
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
 
     dg::Elliptic< Geometry, Matrix, container > lapperp; 
-//     dg::Helmholtz< Geometry, Matrix, container > invgammaPhi,invgammaN;
+    std::vector<container> multi_chi;
     std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
     std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gammaN,multi_gammaPhi;
     
-    dg::Invert<container> invert_invgamma, invert_pol;
+    dg::Invert<container> invert_pol,invert_invgamma;
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
     dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
-    std::vector<container> multi_chi;
 
     
     dg::PoloidalAverage<container, container > polavg; //device int vectors would be better for cuda
@@ -130,7 +129,6 @@ struct Explicit
     double mass_, energy_, diff_, ediff_,gammanex_,coupling_,charge_;
     std::vector<double> evec;
     
-    container lhs,profne,profNi;
 };
 
 template<class Grid, class Matrix, class container>
@@ -142,35 +140,58 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
-    poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N then phi BCC
-    lapperp ( g,g.bcx(), g.bcy(),       dg::normed,          dg::centered),
     gamma_n(chi),
-    invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
-    invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
-    polavg(g),
-    p(p),
-    evec(3),
-    //damping and sources
     lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.invkappa),g)),
     profNi(profne),
+    poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N then phi BCC
+    lapperp ( g,g.bcx(), g.bcy(),       dg::normed,          dg::centered),
+    invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
+    invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     multigrid( g, 3),
-    old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi)
+    old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
+    polavg(g),
+    p(p),
+    evec(3)
 {
-    dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
-    initializene(profNi,profne); //ne = Gamma N_i
-    dg::blas1::transform(profne,profne, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
-    dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
     multi_chi= multigrid.project( chi);
     multi_pol.resize(3);
     multi_gammaN.resize(3);
     multi_gammaPhi.resize(3);
     for( unsigned u=0; u<3; u++)
     {
-        multi_pol[u].construct( multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), dg::not_normed, dg::centered, p.jfactor);
-        multi_gammaN[u].construct( multigrid.grids()[u].get(),g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
-	multi_gammaPhi[u].construct( multigrid.grids()[u].get(),p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_pol[u].construct(      multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), dg::not_normed, dg::centered, p.jfactor);
+        multi_gammaN[u].construct(   multigrid.grids()[u].get(), g.bcx(),    g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+	multi_gammaPhi[u].construct( multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
+    dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
+    initializene(profNi,profne); //ne = Gamma N_i
+    dg::blas1::transform(profne,profne, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+    dg::blas1::transform(profNi,profNi, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
+}
+
+template< class Grid, class Matrix, class container>
+container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
+{
+    if (p.modelmode==0 || p.modelmode==1 || p.modelmode==3)
+    {
+        old_psi.extrapolate( phi[1]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
+        old_psi.update( phi[1]);
+	poisson.variationRHS(potential, omega); 
+	 dg::blas1::pointwiseDot( binv, omega, omega);
+        dg::blas1::pointwiseDot( binv, omega, omega);
+
+        dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
+
+    }
+    if (p.modelmode==2)
+    {
+	old_psi.extrapolate( phi[1]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
+        old_psi.update( phi[1]);
+    }
+    return phi[1];    
 }
 
 template< class Grid, class Matrix, class container>
@@ -296,37 +317,12 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
   return phi[0];
 }
 
-template< class Grid, class Matrix, class container>
-container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
-{
-    if (p.modelmode==0 || p.modelmode==1 || p.modelmode==3)
-    {
-        old_psi.extrapolate( phi[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
-        old_psi.update( phi[1]);
-	poisson.variationRHS(potential, omega); 
-	 dg::blas1::pointwiseDot( binv, omega, omega);
-        dg::blas1::pointwiseDot( binv, omega, omega);
-
-        dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
-
-    }
-    if (p.modelmode==2)
-    {
-	old_psi.extrapolate( phi[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
-        old_psi.update( phi[1]);
-    }
-    return phi[1];    
-}
-
 template<class Grid, class Matrix, class container>
 void Explicit<Grid, Matrix, container>::initializene(const container& src, container& target)
 { 
-  dg::blas1::axpby(1.0,src,0.0,target);
-//         std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
-// 	if(  number[0] == invert_invgamma.get_max())
-// 	  throw dg::Fail( p.eps_gamma);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+    if(  number[0] == invert_invgamma.get_max())
+      throw dg::Fail( p.eps_gamma);
 }
 
 template<class Grid, class Matrix, class container>
