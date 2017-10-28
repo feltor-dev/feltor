@@ -44,7 +44,9 @@ int main(int argc, char * argv[])
     unsigned mx=1, my=10;
     double psi_0 = -20, psi_1 = -4;
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
+    std::cout << "Constructing Grid...\n";
     dg::geo::CurvilinearProductMPIGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR, dg::PER, dg::PER, comm);
+    std::cout << "Constructing Fieldlines...\n";
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIHMatrix, dg::MHMatrix, dg::MHVec> ds( mag, g3d, mx, my, false, true, 1e-8, dg::normed, dg::centered);
     
     t.toc();

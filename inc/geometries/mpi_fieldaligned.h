@@ -92,9 +92,9 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
 
     void set_boundaries( dg::bc bcz, const MPI_Vector<LocalContainer>& global, double scal_left, double scal_right)
     {
-        dg::split( global, m_temp);
+        dg::split( global, m_temp, m_g.get());
         dg::blas1::axpby( scal_left, m_temp[0],               0., m_left);
-        dg::blas1::axpby( scal_right, m_temp[m_g.get().Nz()], 0., m_left);
+        dg::blas1::axpby( scal_right, m_temp[m_g.get().local().Nz()], 0., m_left);
         m_bcz = bcz;
     }
 
@@ -149,7 +149,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     dg::Handle<aMPIGeometry2d> grid_coarse( grid.perp_grid());
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    m_perp_size = grid_coarse.get().size();
+    m_perp_size = grid_coarse.get().local().size();
     dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
     dg::blas1::transfer( dg::evaluate(zero, grid_coarse.get()), m_left);
     m_ghostM = m_ghostP = m_right = m_left;
@@ -205,61 +205,60 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
     const dg::Handle<aMPIGeometry2d> g2d = m_g.get().perp_grid();
     MPI_Vector<container> init2d = dg::pullback( binary, g2d.get()); 
     MPI_Vector<container> zero2d = dg::evaluate( dg::zero, g2d.get()); 
-    unsigned Nz = m_g.get().global().Nz();
+    unsigned globalNz = m_g.get().global().Nz();
 
     MPI_Vector<container> temp(init2d), tempP(init2d), tempM(init2d);
     MPI_Vector<container> vec3d = dg::evaluate( dg::zero, m_g.get());
-    //std::vector<MPI_Vector<container> >  plus2d(Nz, zero2d); 
-    //std::vector<MPI_Vector<container> >  minus2d(plus2d), result(plus2d);
-    //unsigned turns = rounds; 
-    //if( turns ==0) turns++;
-    ////first apply Interpolation many times, scale and store results
-    //for( unsigned r=0; r<turns; r++)
-    //    for( unsigned i0=0; i0<Nz; i0++)
-    //    {
-    //        dg::blas1::copy( init2d, tempP);
-    //        dg::blas1::copy( init2d, tempM);
-    //        unsigned rep = r*Nz + i0; 
-    //        for(unsigned k=0; k<rep; k++)
-    //        {
-    //            dg::blas2::symv( m_plus, tempP, temp);
-    //            temp.swap( tempP);
-    //            dg::blas2::symv( m_minus, tempM, temp);
-    //            temp.swap( tempM);
-    //        }
-    //        dg::blas1::scal( tempP, unary(  (double)rep*m_g.get().hz() ) );
-    //        dg::blas1::scal( tempM, unary( -(double)rep*m_g.get().hz() ) );
-    //        dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
-    //        dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
-    //    }
-    ////now we have the plus and the minus filaments
-    //if( rounds == 0) //there is a limiter
-    //{
-    //    for( unsigned i0=0; i0<m_Nz; i0++)
-    //    {
-    //        int idx = (int)(i0+m_coords2*m_Nz)  - (int)p0;
-    //        if(idx>=0)
-    //            result[i0] = plus2d[idx];
-    //        else
-    //            result[i0] = minus2d[abs(idx)];
-    //        thrust::copy( result[i0].data().begin(), result[i0].data().end(), vec3d.data().begin() + i0*m_perp_size);
-    //    }
-    //}
-    //else //sum up plus2d and minus2d
-    //{
-    //    for( unsigned i0=0; i0<Nz; i0++)
-    //    {
-    //        unsigned revi0 = (Nz - i0)%Nz; //reverted index
-    //        dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
-    //        dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
-    //    }
-    //    dg::blas1::axpby( -1., init2d, 1., result[0]);
-    //    for(unsigned i0=0; i0<m_Nz; i0++)
-    //    {
-    //        int idx = ((int)i0 + m_coords2*m_Nz -(int)p0 + Nz)%Nz; //shift index
-    //        thrust::copy( result[idx].data().begin(), result[idx].data().end(), vec3d.data().begin() + i0*m_perp_size);
-    //    }
-    //}
+    std::vector<MPI_Vector<container> >  plus2d(globalNz, zero2d), minus2d(plus2d), result(plus2d); 
+    unsigned turns = rounds; 
+    if( turns ==0) turns++;
+    //first apply Interpolation many times, scale and store results
+    for( unsigned r=0; r<turns; r++)
+        for( unsigned i0=0; i0<globalNz; i0++)
+        {
+            dg::blas1::copy( init2d, tempP);
+            dg::blas1::copy( init2d, tempM);
+            unsigned rep = r*globalNz + i0; 
+            for(unsigned k=0; k<rep; k++)
+            {
+                dg::blas2::symv( m_plus, tempP, temp);
+                temp.swap( tempP);
+                dg::blas2::symv( m_minus, tempM, temp);
+                temp.swap( tempM);
+            }
+            dg::blas1::scal( tempP, unary(  (double)rep*m_g.get().hz() ) );
+            dg::blas1::scal( tempM, unary( -(double)rep*m_g.get().hz() ) );
+            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
+            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
+        }
+    //now we have the plus and the minus filaments
+    if( rounds == 0) //there is a limiter
+    {
+        for( unsigned i0=0; i0<m_Nz; i0++)
+        {
+            int idx = (int)(i0+m_coords2*m_Nz)  - (int)p0;
+            if(idx>=0)
+                result[i0] = plus2d[idx];
+            else
+                result[i0] = minus2d[abs(idx)];
+            thrust::copy( result[i0].data().begin(), result[i0].data().end(), vec3d.data().begin() + i0*m_perp_size);
+        }
+    }
+    else //sum up plus2d and minus2d
+    {
+        for( unsigned i0=0; i0<globalNz; i0++)
+        {
+            unsigned revi0 = (globalNz - i0)%globalNz; //reverted index
+            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
+            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
+        }
+        dg::blas1::axpby( -1., init2d, 1., result[0]);
+        for(unsigned i0=0; i0<m_Nz; i0++)
+        {
+            int idx = ((int)i0 + m_coords2*m_Nz -(int)p0 + globalNz)%globalNz; //shift index
+            thrust::copy( result[idx].data().begin(), result[idx].data().end(), vec3d.data().begin() + i0*m_perp_size);
+        }
+    }
     return vec3d;
 }
 

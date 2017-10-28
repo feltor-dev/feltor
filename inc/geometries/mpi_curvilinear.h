@@ -138,6 +138,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
     }
     void constructParallel( unsigned localNz )
     {
+        map_.resize(3);
         map_[2]=dg::evaluate(dg::cooZ3d, *this);
         unsigned size = this->local().size();
         unsigned size2d = this->n()*this->n()*this->local().Nx()*this->local().Ny();
@@ -198,6 +199,7 @@ CurvilinearMPIGrid2d::CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g
     jac_=g.jacobian();
     metric_=g.metric();
     //now resize to 2d
+    map_.pop_back();
     unsigned s = this->local().size();
     for( unsigned i=0; i<jac_.values().size(); i++)
         jac_.value(i).data().resize(s);
