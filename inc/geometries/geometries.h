@@ -15,11 +15,15 @@
 
 //include magnetic field geometries
 #include "solovev.h"
-#include "solovev_parameters.h"
+#include "guenther.h"
+#include "toroidal.h"
 
 #include "init.h"
+#include "fluxfunctions.h"
 #include "magnetic_field.h"
 #include "adaption.h"
 
 //include average
 #include "average.h"
+//include ds and fieldaligned
+#include "ds.h"

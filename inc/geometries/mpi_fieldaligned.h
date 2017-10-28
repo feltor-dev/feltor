@@ -58,12 +58,18 @@ template <class ProductMPIGeometry, class LocalIMatrix, class CommunicatorXY, cl
 struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> > 
 {
     Fieldaligned(){}
-    template <class Limiter>
+    template <class Limiter = FullLimiter>
+    Fieldaligned(const dg::geo::TokamakMagneticField& vec, const ProductMPIGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
+    {
+        dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
+        construct( bhat, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, globalbcx, globalbcy, limit, deltaPhi);
+    }
+    template <class Limiter = FullLimiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, const ProductMPIGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
     {
         construct( vec, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, globalbcx, globalbcy, limit, deltaPhi);
     }
-    template <class Limiter>
+    template <class Limiter = FullLimiter>
     void construct(const dg::geo::BinaryVectorLvl0& vec, const ProductMPIGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1);
 
     bool dependsOnX()const{return m_dependsOnX;}

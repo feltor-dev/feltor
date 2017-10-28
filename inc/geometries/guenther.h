@@ -509,6 +509,8 @@ struct Divb
 
 /**
  * @brief Create a Guenther Magnetic field
+
+ * \f[\psi_p(R,Z) = \cos(\pi(R-R_0)/2)\cos(\pi Z/2),\quad I(\psi_p) = I_0\f]
  * @param R_0 the major radius
  * @param I_0 the current
  * @return A magnetic field object

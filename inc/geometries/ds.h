@@ -24,8 +24,8 @@ namespace geo{
 *
 * This class discretizes the operators 
 \f$ \nabla_\parallel = \mathbf{v}\cdot \nabla = v^\zeta\partial_\zeta + v^\eta\partial_\eta + v^\varphi\partial_\varphi \f$, 
-\f$\nabla_\parallel^\dagger\f$ and 
-\f$\Delta_\parallel=\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$
+\f$\nabla_\parallel^\dagger = -\nabla\cdot(\vec v .)\f$ and 
+\f$\Delta_\parallel=-\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$
 in arbitrary coordinates
 @snippet ds_t.cu doxygen
 * @ingroup fieldaligned
@@ -41,6 +41,7 @@ in arbitrary coordinates
 template< class ProductGeometry, class IMatrix, class Matrix, class container >
 struct DS
 {
+    typedef dg::geo::Fieldaligned<ProductGeometry, IMatrix, container> FA; //!< conveniently abbreviates underlying \c Fieldaligned type
     ///@brief No memory allocation; all member calls except construct are invalid
     DS(){}
     
@@ -55,7 +56,7 @@ struct DS
         construct( m_fa, no, dir);
     }
     /**
-     * @brief Create a Fieldaligned object and construct
+     * @brief Create a \c Fieldaligned object and construct
      *
      * @param vec The vector field to integrate
      * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
@@ -67,7 +68,7 @@ struct DS
      * @param no indicate if the symv function should be symmetric (not_normed) or not
      * @param dir indicate the direction in the bracket operator and in symv
      *@note globalbcx and globalbcy  as well as bcz are taken from grid with full limter 
-     * @sa Fieldaligned
+     * @sa \c Fieldaligned
      */
     DS(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX=1, unsigned multiplyY=1, bool dependsOnX = true, bool dependsOnY=true, double eps = 1e-5, dg::norm no=dg::normed, dg::direction dir = dg::centered)
     {
@@ -75,18 +76,18 @@ struct DS
         construct( m_fa, no, dir);
     }
     ///@copydoc construct
-    DS(const dg::geo::Fieldaligned<ProductGeometry, IMatrix, container>& fa, dg::norm no=dg::normed, dg::direction dir = dg::centered)
+    DS(const FA& fieldaligned, dg::norm no=dg::normed, dg::direction dir = dg::centered)
     {
-        construct( fa, no, dir);
+        construct( fieldaligned, no, dir);
     }
     /**
-     * @brief Re-construct from a given Fieldaligned object
+     * @brief Re-construct from a given \c Fieldaligned object
      *
-     * @param fa this object will be used in all further member calls
+     * @param fieldaligned this object will be used in all further member calls
      * @param no indicate if the symv function should be symmetric (not_normed) or not
      * @param dir indicate the direction in the bracket operator and in symv
      */
-    void construct(const dg::geo::Fieldaligned<ProductGeometry, IMatrix, container>& fa, dg::norm no=dg::normed, dg::direction dir = dg::centered);
+    void construct(const FA& fieldaligned, dg::norm no=dg::normed, dg::direction dir = dg::centered);
 
     /**
     * @brief forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
@@ -169,11 +170,11 @@ struct DS
     const container& precond()const {return m_inv3d;}
 
     /**
-    * @brief access the underlying Fielaligned object for evaluate
+    * @brief access the underlying Fieldaligned object for evaluate
     *
     * @return acces to fieldaligned object
     */
-    const Fieldaligned<ProductGeometry, IMatrix, container>& fieldaligned() const{return m_fa;}
+    const FA& fieldaligned() const{return m_fa;}
     private:
     void do_forward(double alpha, const container& f, double beta, container& dsf);
     void do_backward(double alpha, const container& f, double beta, container& dsf);

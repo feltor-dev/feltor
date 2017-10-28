@@ -108,6 +108,8 @@ BinaryFunctorsLvl1 createIpol( double I0 )
 
 /**
  * @brief Create a Toroidal Magnetic field
+ *
+ * \f[ \psi_p(R,Z) = 1, \quad I(\psi_p) = 1\f]
  * @param R0 the major radius
  * @return A magnetic field object
  * @ingroup geom
@@ -119,6 +121,8 @@ TokamakMagneticField createToroidalField( double R0)
 }
 /**
  * @brief Create a Magnetic field with circular flux surfaces and constant current
+
+ * \f[ \psi_p(R,Z) = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right), \quad I(\psi_p) = I_0 \f]
  * @param R0 the major radius
  * @param I0 the current
  * @return A magnetic field object

@@ -334,9 +334,16 @@ struct Fieldaligned
 
     ///@brief do not allocate memory; no member call except construct is valid
     Fieldaligned(){}
+    ///@copydoc construct()
+    template <class Limiter = FullLimiter>
+    Fieldaligned(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
+    {
+        dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
+        construct( bhat, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, globalbcx, globalbcy, limit, deltaPhi);
+    }
 
     ///@copydoc construct()
-    template <class Limiter>
+    template <class Limiter = FullLimiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
     {
         construct( vec, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, globalbcx, globalbcy, limit, deltaPhi);
@@ -363,7 +370,7 @@ struct Fieldaligned
         by the grid.bcz() variable and can be changed by the set_boundaries function. 
         If there is no limiter, the boundary condition is periodic.
     */
-    template <class Limiter>
+    template <class Limiter = FullLimiter>
     void construct(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1);
 
     bool dependsOnX()const{return m_dependsOnX;}
@@ -504,7 +511,7 @@ template <class Limiter>
 void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, bool bx, bool by, double eps, dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double deltaPhi)
 {
     m_dependsOnX=bx, m_dependsOnY=by;
-    m_Nz=grid.Nz(), m_bcz=grid.bcz(); 
+    m_Nz=grid.local().Nz(), m_bcz=grid.bcz(); 
     m_g.reset(grid);
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
     dg::split( m_hz_inv, m_temp, grid);
