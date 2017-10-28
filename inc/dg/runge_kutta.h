@@ -555,23 +555,22 @@ void stepperRK17(RHS& rhs, const container& begin, container& end, double T_min,
  * @param end (write-only) contains solution on output
  * @param T_max time difference
  * @param eps_abs desired accuracy in the error function between end and end_old
- * @return 0 if converged, -1 and a warning to std::cerr when isnan appears, -2 if failed to reach eps_abs
+ * @param NT_init initial number of steps
+ * @return number of iterations if converged, -1 and a warning to std::cerr when isnan appears, -2 if failed to reach eps_abs
  */
 template< class RHS, class container, unsigned s>
-int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
+int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs, unsigned NT_init = 2 )
 {
     RK_classic<s, container > rk( begin); 
     container old_end(begin), temp(begin);
     end = begin;
     if( T_max == 0) return 0;
-    double dt = T_max/2;
-    int NT = 2;
+    int NT = NT_init;
+    double dt = T_max/(double)NT;
     double error = 1e10;
  
     while( error > eps_abs && NT < pow( 2, 18) )
     {
-        dt /= 2.;
-        NT *= 2;
         end = begin;
 
         int i=0;
@@ -590,6 +589,8 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
         }  
         error = rhs.error( end, old_end);
         old_end = end;
+        dt /= 2.;
+        NT *= 2;
     }
     if( std::isnan( error) )
     {
@@ -601,7 +602,7 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
         std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<std::endl;
         return -2;
     }
-    return 0;
+    return NT;
 
 
 }
@@ -609,24 +610,24 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
 /// @brief Integrates the differential equation using a stage 4 Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
 ///@copydetails integrateRK()
 template< class RHS, class container>
-int integrateRK4(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
+int integrateRK4(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs, unsigned NT_init = 2 )
 {
-    return integrateRK<RHS, container, 4>( rhs, begin, end, T_max, eps_abs);
+    return integrateRK<RHS, container, 4>( rhs, begin, end, T_max, eps_abs, NT_init);
 }
 
 /// @brief Integrates the differential equation using a stage 6 Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
 /// @copydetails integrateRK()
 template< class RHS, class container>
-int integrateRK6(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
+int integrateRK6(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs, unsigned NT_init = 2 )
 {
-    return integrateRK<RHS, container, 6>( rhs, begin, end, T_max, eps_abs);
+    return integrateRK<RHS, container, 6>( rhs, begin, end, T_max, eps_abs, NT_init);
 }
 /// @brief Integrates the differential equation using a stage 17 Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
 ///@copydetails integrateRK()
 template< class RHS, class container>
-int integrateRK17(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs )
+int integrateRK17(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs, unsigned NT_init = 2 )
 {
-    return integrateRK<RHS, container, 17>( rhs, begin, end, T_max, eps_abs);
+    return integrateRK<RHS, container, 17>( rhs, begin, end, T_max, eps_abs, NT_init);
 }
 
 ///@}

@@ -20,6 +20,7 @@ namespace blas1
     ///@cond
 namespace detail
 {
+const unsigned MIN_SIZE=100;//don't parallelize if work is too small 
 
 
 template< typename value_type>
@@ -71,6 +72,12 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVecto
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     value_type sum = 0;
     unsigned size=x.size();
+    if(size<MIN_SIZE)
+    {
+        for( unsigned i=0; i<size; i++)
+            sum += x[i]*y[i];
+        return sum;
+    }
     #pragma omp parallel for SIMD reduction(+:sum)
     for( unsigned i=0; i<size; i++)
         sum += x[i]*y[i];
@@ -97,6 +104,12 @@ inline void doScal(  Vector& x,
         return;
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     unsigned size=x.size();
+    if(size<MIN_SIZE)
+    {
+        for( unsigned i=0; i<size; i++)
+            x[i]*=alpha;
+        return;
+    }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
         x[i]*=alpha;
@@ -112,6 +125,12 @@ inline void doPlus(  Vector& x,
 {
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     unsigned size=x.size();
+    if(size<MIN_SIZE)
+    {
+        for( unsigned i=0; i<size; i++)
+            x[i]+=alpha;
+        return;
+    }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
         x[i]+=alpha;
@@ -150,6 +169,12 @@ inline void doAxpby( typename Vector::value_type alpha,
     const typename Vector::value_type * RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data()[0]);
     typename Vector::value_type * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
     unsigned size = x.size();
+    if(size<MIN_SIZE) 
+    {
+        for( unsigned i=0; i<size; i++)
+            y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
+        return;
+    }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
         y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
@@ -206,6 +231,12 @@ inline void doAxpby( typename Vector::value_type alpha,
     const typename Vector::value_type * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
     typename Vector::value_type * RESTRICT z_ptr = thrust::raw_pointer_cast( &z.data()[0]);
     unsigned size = x.size();
+    if(size<MIN_SIZE)
+    {
+        for( unsigned i=0; i<size; i++)
+            z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
+        return;
+    }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
         z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
@@ -275,6 +306,12 @@ inline void doPointwiseDot(
     const typename Vector::value_type * x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
      typename Vector::value_type * y_ptr = thrust::raw_pointer_cast( &(y.data()[0]));
     unsigned size = x1.size();
+    if(size<MIN_SIZE)
+    {
+        for( unsigned i=0; i<size; i++)
+            y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*y_ptr[i];
+        return;
+    }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
     {

@@ -44,10 +44,10 @@ int main(int argc, char * argv[])
     unsigned mx=1, my=10;
     double psi_0 = -20, psi_1 = -4;
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
-    std::cout << "Constructing Grid...\n";
+    if(rank==0)std::cout << "Constructing Grid...\n";
     dg::geo::CurvilinearProductMPIGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR, dg::PER, dg::PER, comm);
-    std::cout << "Constructing Fieldlines...\n";
-    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIHMatrix, dg::MHMatrix, dg::HVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::FullLimiter(), 1e-8, mx, my, false, true, dg::normed, dg::centered);
+    if(rank==0)std::cout << "Constructing Fieldlines...\n";
+    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIHMatrix, dg::MHMatrix, dg::MHVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my, false, true);
     
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
@@ -65,9 +65,7 @@ int main(int argc, char * argv[])
     if(rank==0)std::cout << "Divergence of B is "<<norm<<"\n";
 
     ds.centered( 1., lnB, 0., gradB);
-    if(rank==0)std::cout << "num. norm of gradLnB is "<<sqrt( dg::blas2::dot( gradB,vol3d, gradB))<<"\n";
     norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-    if(rank==0)std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d, gradLnB));
     if(rank==0)std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";

@@ -196,7 +196,7 @@ struct BoxIntegrator
     double operator()( double deltaPhi)
     {
         double delta = deltaPhi - m_deltaPhi0;
-        dg::integrateRK4( m_field, m_coords0, m_coords1, delta, m_eps);
+        dg::integrateRK4( m_field, m_coords0, m_coords1, delta, m_eps, 2);
         m_deltaPhi0 = deltaPhi;
         m_coords0 = m_coords1;
         if( !m_g.contains( m_coords1[0], m_coords1[1]) ) return -1;
@@ -228,7 +228,7 @@ void boxintegrator( const Field& field, const Topology& grid,
         thrust::host_vector<double>& coords1, 
         double& phi1, double eps)
 {
-    dg::integrateRK4( field, coords0, coords1, phi1, eps); //integration
+    dg::integrateRK6( field, coords0, coords1, phi1, eps, 2); //integration
     double R = coords1[0], Z=coords1[1];
     //First, catch periodic domain
     grid.shift_topologic( coords0[0], coords0[1], R, Z);
@@ -544,7 +544,8 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     
     t.tic();
     dg::Handle<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
-    //grid_magnetic.set( 7, grid_magnetic.Nx(), grid_magnetic.Ny());
+    grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
+    std::cout << "Integrating fieldlines...\n";
     detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps);
     t.toc();
     std::cout << "Fieldline integration took: "<<t.diff()<<"\n";

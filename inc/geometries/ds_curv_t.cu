@@ -62,9 +62,7 @@ int main(int argc, char * argv[])
     std::cout << "Divergence of B is "<<norm<<"\n";
 
     ds.centered( 1., lnB, 0., gradB);
-    std::cout << "num. norm of gradLnB is "<<sqrt( dg::blas2::dot( gradB,vol3d, gradB))<<"\n";
     norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-    std::cout << "ana. norm of gradLnB is "<<norm<<"\n";
     dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
     double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d, gradLnB));
     std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
