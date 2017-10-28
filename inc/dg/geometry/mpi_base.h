@@ -250,7 +250,7 @@ struct CylindricalMPIGrid3d: public aProductMPIGeometry3d
     virtual SparseTensor<host_vector > do_compute_metric()const{
         SparseTensor<host_vector> metric(1);
         host_vector R = dg::evaluate(dg::cooX3d, *this);
-        for( unsigned i = 0; i<size(); i++)
+        for( unsigned i = 0; i<local().size(); i++)
             R.data()[i] = 1./R.data()[i]/R.data()[i];
         metric.idx(2,2)=0;
         metric.value(0) = R;

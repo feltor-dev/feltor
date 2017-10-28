@@ -106,7 +106,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
         map_.resize(3);
         CurvilinearMPIGrid2d g(generator,n,Nx,Ny, bcx, bcy, get_perp_comm());
         constructPerp( g);
-        constructParallel(this->Nz());
+        constructParallel(this->local().Nz());
     }
 
 
@@ -129,7 +129,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
             CurvilinearMPIGrid2d g(handle_.get(),new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), get_perp_comm());
             constructPerp( g);
         }
-        constructParallel(this->Nz());
+        constructParallel(this->local().Nz());
     }
     void constructPerp( CurvilinearMPIGrid2d& g2d)
     {
@@ -139,8 +139,8 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
     void constructParallel( unsigned localNz )
     {
         map_[2]=dg::evaluate(dg::cooZ3d, *this);
-        unsigned size = this->size();
-        unsigned size2d = this->n()*this->n()*this->Nx()*this->Ny();
+        unsigned size = this->local().size();
+        unsigned size2d = this->n()*this->n()*this->local().Nx()*this->local().Ny();
         //resize for 3d values
         for( unsigned r=0; r<4;r++)
         {
@@ -165,8 +165,8 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
         return jac_;
     }
     virtual SparseTensor<host_vector> do_compute_metric( ) const {
-        thrust::host_vector<double> tempxx( size()), tempxy(size()), tempyy(size()), temppp(size());
-        for( unsigned i=0; i<size(); i++)
+        thrust::host_vector<double> tempxx( local().size()), tempxy(local().size()), tempyy(local().size()), temppp(local().size());
+        for( unsigned i=0; i<local().size(); i++)
         {
             tempxx[i] = (jac_.value(0,0).data()[i]*jac_.value(0,0).data()[i]+jac_.value(0,1).data()[i]*jac_.value(0,1).data()[i]);
             tempxy[i] = (jac_.value(0,0).data()[i]*jac_.value(1,0).data()[i]+jac_.value(0,1).data()[i]*jac_.value(1,1).data()[i]);
@@ -198,7 +198,7 @@ CurvilinearMPIGrid2d::CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g
     jac_=g.jacobian();
     metric_=g.metric();
     //now resize to 2d
-    unsigned s = this->size();
+    unsigned s = this->local().size();
     for( unsigned i=0; i<jac_.values().size(); i++)
         jac_.value(i).data().resize(s);
     for( unsigned i=0; i<metric_.values().size(); i++)

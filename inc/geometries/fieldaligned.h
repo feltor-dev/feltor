@@ -511,7 +511,7 @@ template <class Limiter>
 void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, bool bx, bool by, double eps, dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double deltaPhi)
 {
     m_dependsOnX=bx, m_dependsOnY=by;
-    m_Nz=grid.local().Nz(), m_bcz=grid.bcz(); 
+    m_Nz=grid.Nz(), m_bcz=grid.bcz(); 
     m_g.reset(grid);
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
     dg::split( m_hz_inv, m_temp, grid);

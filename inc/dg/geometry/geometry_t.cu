@@ -22,9 +22,7 @@ int main()
     //std::cin >> n>> Nx>>Ny>>Nz;
     //dg::CylindricalGrid3d<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
     dg::CylindricalGrid3d grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::DIR, dg::DIR, dg::PER);
-    dg::SparseElement<dg::DVec> vol = dg::tensor::determinant(grid.metric());
-    dg::tensor::sqrt(vol);
-    dg::tensor::invert(vol);
+    dg::SparseElement<dg::DVec> vol = dg::tensor::volume(grid.metric());
 
     dg::DVec b = dg::evaluate( sine, grid);
     dg::DVec vol3d = dg::create::volume( grid);

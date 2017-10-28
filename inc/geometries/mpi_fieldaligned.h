@@ -136,7 +136,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid, unsigned mx, unsigned my, bool bx, bool by, double eps, dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double deltaPhi)
 {
     m_dependsOnX=bx, m_dependsOnY=by;
-    m_Nz=grid.Nz(), m_bcz=grid.bcz(); 
+    m_Nz=grid.local().Nz(), m_bcz=grid.bcz(); 
     m_g.reset(grid);
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
     dg::split( m_hz_inv, m_temp, grid);
@@ -209,56 +209,57 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
 
     MPI_Vector<container> temp(init2d), tempP(init2d), tempM(init2d);
     MPI_Vector<container> vec3d = dg::evaluate( dg::zero, m_g.get());
-    std::vector<MPI_Vector<container> >  plus2d(Nz, zero2d), minus2d(plus2d), result(plus2d);
-    unsigned turns = rounds; 
-    if( turns ==0) turns++;
-    //first apply Interpolation many times, scale and store results
-    for( unsigned r=0; r<turns; r++)
-        for( unsigned i0=0; i0<Nz; i0++)
-        {
-            dg::blas1::copy( init2d, tempP);
-            dg::blas1::copy( init2d, tempM);
-            unsigned rep = r*Nz + i0; 
-            for(unsigned k=0; k<rep; k++)
-            {
-                dg::blas2::symv( m_plus, tempP, temp);
-                temp.swap( tempP);
-                dg::blas2::symv( m_minus, tempM, temp);
-                temp.swap( tempM);
-            }
-            dg::blas1::scal( tempP, unary(  (double)rep*m_g.get().hz() ) );
-            dg::blas1::scal( tempM, unary( -(double)rep*m_g.get().hz() ) );
-            dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
-            dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
-        }
-    //now we have the plus and the minus filaments
-    if( rounds == 0) //there is a limiter
-    {
-        for( unsigned i0=0; i0<m_Nz; i0++)
-        {
-            int idx = (int)(i0+m_coords2*m_Nz)  - (int)p0;
-            if(idx>=0)
-                result[i0] = plus2d[idx];
-            else
-                result[i0] = minus2d[abs(idx)];
-            thrust::copy( result[i0].data().begin(), result[i0].data().end(), vec3d.data().begin() + i0*m_perp_size);
-        }
-    }
-    else //sum up plus2d and minus2d
-    {
-        for( unsigned i0=0; i0<Nz; i0++)
-        {
-            unsigned revi0 = (Nz - i0)%Nz; //reverted index
-            dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
-            dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
-        }
-        dg::blas1::axpby( -1., init2d, 1., result[0]);
-        for(unsigned i0=0; i0<m_Nz; i0++)
-        {
-            int idx = ((int)i0 + m_coords2*m_Nz -(int)p0 + Nz)%Nz; //shift index
-            thrust::copy( result[idx].data().begin(), result[idx].data().end(), vec3d.data().begin() + i0*m_perp_size);
-        }
-    }
+    //std::vector<MPI_Vector<container> >  plus2d(Nz, zero2d); 
+    //std::vector<MPI_Vector<container> >  minus2d(plus2d), result(plus2d);
+    //unsigned turns = rounds; 
+    //if( turns ==0) turns++;
+    ////first apply Interpolation many times, scale and store results
+    //for( unsigned r=0; r<turns; r++)
+    //    for( unsigned i0=0; i0<Nz; i0++)
+    //    {
+    //        dg::blas1::copy( init2d, tempP);
+    //        dg::blas1::copy( init2d, tempM);
+    //        unsigned rep = r*Nz + i0; 
+    //        for(unsigned k=0; k<rep; k++)
+    //        {
+    //            dg::blas2::symv( m_plus, tempP, temp);
+    //            temp.swap( tempP);
+    //            dg::blas2::symv( m_minus, tempM, temp);
+    //            temp.swap( tempM);
+    //        }
+    //        dg::blas1::scal( tempP, unary(  (double)rep*m_g.get().hz() ) );
+    //        dg::blas1::scal( tempM, unary( -(double)rep*m_g.get().hz() ) );
+    //        dg::blas1::axpby( 1., tempP, 1., plus2d[i0]);
+    //        dg::blas1::axpby( 1., tempM, 1., minus2d[i0]);
+    //    }
+    ////now we have the plus and the minus filaments
+    //if( rounds == 0) //there is a limiter
+    //{
+    //    for( unsigned i0=0; i0<m_Nz; i0++)
+    //    {
+    //        int idx = (int)(i0+m_coords2*m_Nz)  - (int)p0;
+    //        if(idx>=0)
+    //            result[i0] = plus2d[idx];
+    //        else
+    //            result[i0] = minus2d[abs(idx)];
+    //        thrust::copy( result[i0].data().begin(), result[i0].data().end(), vec3d.data().begin() + i0*m_perp_size);
+    //    }
+    //}
+    //else //sum up plus2d and minus2d
+    //{
+    //    for( unsigned i0=0; i0<Nz; i0++)
+    //    {
+    //        unsigned revi0 = (Nz - i0)%Nz; //reverted index
+    //        dg::blas1::axpby( 1., plus2d[i0], 0., result[i0]);
+    //        dg::blas1::axpby( 1., minus2d[revi0], 1., result[i0]);
+    //    }
+    //    dg::blas1::axpby( -1., init2d, 1., result[0]);
+    //    for(unsigned i0=0; i0<m_Nz; i0++)
+    //    {
+    //        int idx = ((int)i0 + m_coords2*m_Nz -(int)p0 + Nz)%Nz; //shift index
+    //        thrust::copy( result[idx].data().begin(), result[idx].data().end(), vec3d.data().begin() + i0*m_perp_size);
+    //    }
+    //}
     return vec3d;
 }
 
