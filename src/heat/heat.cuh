@@ -12,35 +12,22 @@
   Contains the solvers 
   */
 
-namespace eule
+namespace heat
 {
 ///@addtogroup solver
 ///@{
-/**
- * @brief Diffusive terms for Feltor solver
- *
- * @tparam Matrix The Matrix class
- * @tparam container The Vector class 
- * @tparam container The container class
- */
-template< class Geometry, class DS, class Matrix, class container>
-struct Rolkar
+template< class Geometry, class IMatrix, class Matrix, class container>
+struct Implicit
 {
-    Rolkar( const Geometry& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp):
+    Implicit( const Geometry& g, Parameters p, dg::geo::solovev::Parameters gp, dg::geo::Fieldaligned<Geometry, IMatrix, Matrix, container>& fa):
         p(p),
         gp(gp),
-        dsNU_( typename DS::FieldAligned(
-                dg::geo::Field<dg::geo::solovev::MagneticField>(
-                    dg::geo::solovev::MagneticField(gp), gp.R_0), 
-                g, gp.rk4eps, 
-                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(
-                    dg::geo::solovev::Psip(gp), gp.psipmaxlim
+        dsNU_( fa, dg::geo::createSolovevField( gp), g, 1,1, true, true, gp.rk4eps, g.bcx(), g.bcy() 
+                dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim
                     ), 
                 g.bcx()
                 ), 
-            dg::geo::Field<dg::geo::solovev::MagneticField>(
-              dg::geo::solovev::MagneticField(gp), gp.R_0
-              ), dg::normed, dg::forward ),
+              , dg::normed, dg::forward ),
         elliptic( g, dg::normed, dg::forward)
     {
         using namespace dg::geo::solovev;
@@ -68,18 +55,20 @@ struct Rolkar
     }
     const container& damping(){return dampprof_;}
     const container& weights(){return elliptic.weights();}
+    const container& inv_weights(){return elliptic.inv_weights();}
     const container& precond(){return elliptic.precond();}
   private:
     const eule::Parameters p;
     const dg::geo::solovev::GeomParameters gp;
     container dampprof_;
-    DS dsNU_;
+    dg::geo::Fieldaligned<Geometry, IMatrix, Matrix, container> dsNU_;
+    dg::geo::DS<Geometry, IMatrix, Matrix, container> dsNU_;
     dg::GeneralEllipticSym<Geometry, Matrix, container> elliptic;
 
 };
 
 template< class DS, class Matrix, class container >
-struct Feltor
+struct Explicit
 {
     //typedef std::vector<container> Vector;
     typedef typename dg::VectorTraits<container>::value_type value_type;
@@ -88,7 +77,7 @@ struct Feltor
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
     template<class Grid3d>
-    Feltor( const Grid3d& g, eule::Parameters p,dg::geo::solovev::GeomParameters gp);
+    Explicit( const Grid3d& g, eule::Parameters p,dg::geo::solovev::GeomParameters gp);
 
     const DS ds(){return dsNU_;}
 
@@ -126,7 +115,7 @@ struct Feltor
 
 template<class DS, class Matrix, class container>
 template<class Grid>
-Feltor<DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp): 
+Explicit<DS, Matrix, container>::Explicit( const Grid& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp): 
     chi( dg::evaluate( dg::one, g)), omega(chi),  lambda(chi), tmo(chi),
     one( dg::evaluate( dg::one, g)),    
     w3d( dg::create::volume(g)), v3d( dg::create::inv_volume(g)),      
@@ -170,16 +159,15 @@ Feltor<DS, Matrix, container>::Feltor( const Grid& g, eule::Parameters p, dg::ge
 //         bfield = dg::evaluate( solovev::bPhi( gp.R_0, gp.I_0),g);
 //         elliptic.set_z( bfield);
     //////////////////////////////init fields /////////////////////
-    using namespace dg::geo::solovev;
-    MagneticField mf(gp);
-    dg::blas1::transfer(  dg::pullback(dg::geo::Field<MagneticField>(mf, gp.R_0),                     g), binv);
-    dg::blas1::transfer(  dg::pullback(dg::geo::GradLnB<MagneticField>(mf, gp.R_0),                   g), gradlnB);
+    TokamakMagneticField mf = dg::geo::createSolovevField(gp);
+    dg::blas1::transfer(  dg::pullback(dg::geo::InvB(mf),    g), binv);
+    dg::blas1::transfer(  dg::pullback(dg::geo::GradLnB(mf), g), gradlnB);
 }
 
 
 
 template<class DS, class M, class V>
-void Feltor<DS, M, V>::energies( std::vector<V>& y)
+void Explicit<DS, M, V>::energies( std::vector<V>& y)
 {
     double S[1]    = {0.0};    
     double Dpar[1] = {0.0};
@@ -254,7 +242,7 @@ void Feltor<DS, M, V>::energies( std::vector<V>& y)
 
 //do not overwrite y
 template<class DS, class Matrix, class container>
-void Feltor<DS, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+void Explicit<DS, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := T - 1 or T
     */

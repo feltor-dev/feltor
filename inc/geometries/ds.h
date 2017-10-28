@@ -49,30 +49,48 @@ struct DS
      * @brief Create the magnetic unit vector field and construct
      * @copydetails DS(const dg::geo::BinaryVectorLvl0&,const ProductGeometry&,unsigned,unsigned,bool,bool,double,dg::norm,dg::direction)
      */
-    DS(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid, unsigned multiplyX=1, unsigned multiplyY=1, bool dependsOnX = true, bool dependsOnY=true, double eps = 1e-5, dg::norm no=dg::normed, dg::direction dir = dg::centered)
+    template <class Limiter = FullLimiter>
+    DS(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid, 
+        dg::bc bcx = dg::NEU, 
+        dg::bc bcy = dg::NEU, 
+        Limiter limit = FullLimiter(), 
+        dg::norm no=dg::normed, dg::direction dir = dg::centered, 
+        double eps = 1e-5, unsigned multiplyX=5, unsigned multiplyY=5, bool dependsOnX = true, bool dependsOnY=true)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        m_fa.construct( bhat, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, grid.bcx(), grid.bcy(), FullLimiter());
+        m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY);
         construct( m_fa, no, dir);
     }
     /**
      * @brief Create a \c Fieldaligned object and construct
      *
+     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
+        is a limiter and 0 if there isn't. 
+        If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
      * @param vec The vector field to integrate
      * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
+     * @param bcx Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
+     * @param bcy Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
+     * @param limit Instance of the limiter class (Default is a limiter everywhere, 
+        note that if grid.bcz() is periodic it doesn't matter if there is a limiter or not)
+     * @param no indicate if the symv function should be symmetric (not_normed) or not
+     * @param dir indicate the direction in the bracket operator and in symv
+     * @param eps Desired accuracy of the fieldline integrator
      * @param multiplyX defines the resolution in X of the fine grid relative to grid
      * @param multiplyY defines the resolution in Y of the fine grid relative to grid
      * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate
      * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate
-     * @param eps Desired accuracy of the fieldline integrator
-     * @param no indicate if the symv function should be symmetric (not_normed) or not
-     * @param dir indicate the direction in the bracket operator and in symv
-     *@note globalbcx and globalbcy  as well as bcz are taken from grid with full limter 
      * @sa \c Fieldaligned
      */
-    DS(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX=1, unsigned multiplyY=1, bool dependsOnX = true, bool dependsOnY=true, double eps = 1e-5, dg::norm no=dg::normed, dg::direction dir = dg::centered)
+    template<class Limiter>
+    DS(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, 
+        dg::bc bcx = dg::NEU, 
+        dg::bc bcy = dg::NEU, 
+        Limiter limit = FullLimiter(), 
+        dg::norm no=dg::normed, dg::direction dir = dg::centered, 
+        double eps = 1e-5, unsigned multiplyX=5, unsigned multiplyY=5, bool dependsOnX = true, bool dependsOnY=true)
     {
-        m_fa.construct( vec, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, grid.bcx(), grid.bcy(), FullLimiter());
+        m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY);
         construct( m_fa, no, dir);
     }
     ///@copydoc construct

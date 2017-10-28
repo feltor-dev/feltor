@@ -40,11 +40,11 @@ int main(int argc, char * argv[])
     dg::Timer t;
     t.tic();
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
-    std::cout << "Constructing Grid...\n";
+    std::cout << "Constructing Grid..."<<std::endl;
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     //dg::geo::Fieldaligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
-    std::cout << "Constructing Fieldlines...\n";
-    dg::geo::DS<dg::aProductGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, mx, my, false, true, 1e-8, dg::normed, dg::centered);
+    std::cout << "Constructing Fieldlines..."<<std::endl;
+    dg::geo::DS<dg::aProductGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my, false, true);
     
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";

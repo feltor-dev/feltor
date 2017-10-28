@@ -29,6 +29,7 @@ double deri(double R, double Z, double phi)
 int main(int argc, char * argv[])
 {
     std::cout << "First test the cylindrical version\n";
+    std::cout << "Note that it's faster to compute with OMP_NUM_THREADS=1\n";
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
@@ -45,7 +46,7 @@ int main(int argc, char * argv[])
     const dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     const dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
     //create Fieldaligned object and construct DS from it
-    const dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, mx, my, true,true, 1e-6, dg::NEU, dg::NEU, dg::geo::NoLimiter());
+    const dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-6, mx, my, true,true);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::not_normed, dg::centered);
     ///##########################################################///
     //apply to function 

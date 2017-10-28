@@ -564,8 +564,8 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
     container old_end(begin), temp(begin);
     end = begin;
     if( T_max == 0) return 0;
-    double dt = T_max/10;
-    int NT = 10;
+    double dt = T_max/2;
+    int NT = 2;
     double error = 1e10;
  
     while( error > eps_abs && NT < pow( 2, 18) )

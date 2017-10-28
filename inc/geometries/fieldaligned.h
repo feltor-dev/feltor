@@ -42,29 +42,6 @@ typedef ZERO NoLimiter;
 ///@cond
 namespace detail{
 
-struct DZField
-{
-    void operator()( const dg::HVec& y, dg::HVec& yp)
-    {
-        yp[0] = yp[1] = 0;
-        yp[2] = 1.;
-    }
-    double error( const dg::HVec& x0, const dg::HVec& x1)
-    {
-        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
-    }
-    bool monitor( const dg::HVec& end){ return true;}
-    double operator()( double x, double y) //1/B
-    {
-        return 1.;
-    }
-    double operator()( double x, double y, double z)
-    {
-        return 1.;
-    }
-
-};
-
 struct DSFieldCylindrical
 {
     DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v):v_(v) { }
@@ -200,29 +177,37 @@ struct BoxIntegrator
      * @param g The 2d or 3d grid
      * @param eps the accuracy of the runge kutta integrator
      */
-    BoxIntegrator( const Field& field, const Topology& g, double eps): field_(field), g_(g), coords_(3), coordsp_(3), eps_(eps) {}
+    BoxIntegrator( const Field& field, const Topology& g, double eps): m_field(field), m_g(g), m_coords0(3), m_coords1(3), m_deltaPhi0(0), m_eps(eps) {}
     /**
      * @brief Set the starting coordinates for next field line integration
      * @param coords the new coords (must have size = 3)
      */
-    void set_coords( const thrust::host_vector<double>& coords){ coords_ = coords;}
+    void set_coords( const thrust::host_vector<double>& coords){ 
+        m_coords0 = coords;
+        m_deltaPhi0 = 0;
+    }
 
     /**
      * @brief Integrate from 0 to deltaPhi
      * @param deltaPhi upper integration boundary
-     * @return 1 if result is inside the box, -1 else
+     * @return >0 if result is inside the box, <0 else
+     * @note changes starting coords!
      */
     double operator()( double deltaPhi)
     {
-        dg::integrateRK4( field_, coords_, coordsp_, deltaPhi, eps_);
-        if( !g_.contains( coordsp_[0], coordsp_[1]) ) return -1;
+        double delta = deltaPhi - m_deltaPhi0;
+        dg::integrateRK4( m_field, m_coords0, m_coords1, delta, m_eps);
+        m_deltaPhi0 = deltaPhi;
+        m_coords0 = m_coords1;
+        if( !m_g.contains( m_coords1[0], m_coords1[1]) ) return -1;
         return +1;
     }
     private:
-    const Field& field_;
-    const Topology& g_;
-    thrust::host_vector<double> coords_, coordsp_;
-    double eps_;
+    const Field& m_field;
+    const Topology& m_g;
+    thrust::host_vector<double> m_coords0, m_coords1;
+    double m_deltaPhi0;
+    double m_eps;
 };
 
 /**
@@ -288,7 +273,8 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg:
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
     dg::geo::detail::DSFieldCylindrical cyl_field(vec);
-    for( unsigned i=0; i<grid_evaluate.size(); i++)
+    unsigned size = grid_evaluate.size();
+    for( unsigned i=0; i<size; i++)
     {
         thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]; //x,y,s
@@ -336,17 +322,33 @@ struct Fieldaligned
     Fieldaligned(){}
     ///@copydoc construct()
     template <class Limiter = FullLimiter>
-    Fieldaligned(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
+    Fieldaligned(const dg::geo::TokamakMagneticField& vec, 
+        const ProductGeometry& grid, 
+        dg::bc globalbcx = dg::NEU, 
+        dg::bc globalbcy = dg::NEU, 
+        Limiter limit = FullLimiter(), 
+        double eps = 1e-5,
+        unsigned multiplyX=5, unsigned multiplyY=5, 
+        bool dependsOnX=true, bool dependsOnY=true, 
+        double deltaPhi = -1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        construct( bhat, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, globalbcx, globalbcy, limit, deltaPhi);
+        construct( bhat, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
     }
 
     ///@copydoc construct()
     template <class Limiter = FullLimiter>
-    Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1)
+    Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, 
+        const ProductGeometry& grid, 
+        dg::bc globalbcx = dg::NEU, 
+        dg::bc globalbcy = dg::NEU, 
+        Limiter limit = FullLimiter(), 
+        double eps = 1e-5,
+        unsigned multiplyX=5, unsigned multiplyY=5, 
+        bool dependsOnX=true, bool dependsOnY=true, 
+        double deltaPhi = -1)
     {
-        construct( vec, grid, multiplyX, multiplyY, dependsOnX, dependsOnY, eps, globalbcx, globalbcy, limit, deltaPhi);
+        construct( vec, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
     }
     /**
     * @brief Construct from a field and a grid
@@ -356,22 +358,30 @@ struct Fieldaligned
         If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
     * @param vec The field to integrate
     * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
-    * @param multiplyX defines the resolution in X of the fine grid relative to grid
-    * @param multiplyY defines the resolution in Y of the fine grid relative to grid
-    * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate
-    * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate
-    * @param eps Desired accuracy of the fieldline integrator
     * @param globalbcx Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
     * @param globalbcy Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
     * @param limit Instance of the limiter class (Default is a limiter everywhere, 
         note that if grid.bcz() is periodic it doesn't matter if there is a limiter or not)
+    * @param eps Desired accuracy of the fieldline integrator
+    * @param multiplyX defines the resolution in X of the fine grid relative to grid
+    * @param multiplyY defines the resolution in Y of the fine grid relative to grid
+    * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate
+    * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate
     * @param deltaPhi Is either <0 (then it's ignored), or may differ from grid.hz() if grid.Nz() == 1
     * @note If there is a limiter, the boundary condition on the first/last plane is set 
         by the grid.bcz() variable and can be changed by the set_boundaries function. 
         If there is no limiter, the boundary condition is periodic.
     */
     template <class Limiter = FullLimiter>
-    void construct(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, unsigned multiplyX, unsigned multiplyY, bool dependsOnX, bool dependsOnY, double eps = 1e-5, dg::bc globalbcx = dg::NEU, dg::bc globalbcy = dg::NEU, Limiter limit = FullLimiter(), double deltaPhi = -1);
+    void construct(const dg::geo::BinaryVectorLvl0& vec, 
+        const ProductGeometry& grid, 
+        dg::bc globalbcx = dg::NEU, 
+        dg::bc globalbcy = dg::NEU, 
+        Limiter limit = FullLimiter(), 
+        double eps = 1e-5, 
+        unsigned multiplyX=5, unsigned multiplyY=5, 
+        bool dependsOnX=true, bool dependsOnY=true, 
+        double deltaPhi = -1);
 
     bool dependsOnX()const{return m_dependsOnX;}
     bool dependsOnY()const{return m_dependsOnY;}
@@ -508,8 +518,12 @@ struct Fieldaligned
 
 template<class Geometry, class IMatrix, class container>
 template <class Limiter>
-void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, unsigned mx, unsigned my, bool bx, bool by, double eps, dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double deltaPhi)
+void Fieldaligned<Geometry, IMatrix, container>::construct(
+    const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, 
+    dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double eps, 
+    unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
 {
+    dg::Timer t;
     m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.Nz(), m_bcz=grid.bcz(); 
     m_g.reset(grid);
@@ -528,20 +542,26 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(const dg::geo::Binary
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym; 
     
+    t.tic();
     dg::Handle<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     //grid_magnetic.set( 7, grid_magnetic.Nx(), grid_magnetic.Ny());
     detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps);
+    t.toc();
+    std::cout << "Fieldline integration took: "<<t.diff()<<"\n";
 
+    //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    t.tic();
     dg::Grid2d grid_fine( grid_coarse.get() );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, grid_coarse.get());  //INTERPOLATE TO FINE GRID
     dg::geo::detail::interpolate_and_clip( interpolate, grid_fine, grid_fine, yp_coarse, ym_coarse, yp, ym);
-    //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get(), globalbcx, globalbcy), plus, plusT;
     dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get(), globalbcx, globalbcy), minus, minusT;
     dg::IHMatrix projection = dg::create::projection( grid_coarse.get(), grid_fine);
     cusp::multiply( projection, plusFine, plus);
     cusp::multiply( projection, minusFine, minus);
+    t.toc();
+    std::cout << "Multiplication        took: "<<t.diff()<<"\n";
     plusT = dg::transpose( plus);
     minusT = dg::transpose( minus);     
     dg::blas2::transfer( plus, m_plus);
