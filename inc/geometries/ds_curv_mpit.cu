@@ -57,8 +57,8 @@ int main(int argc, char * argv[])
     dg::MHVec ones3d = dg::evaluate( dg::one, g3d);
     dg::MHVec vol3d = dg::create::volume( g3d);
     dg::blas1::pointwiseDivide( ones3d, B, B);
-    dg::MHVec function = dg::pullback( dg::geo::FuncNeu(mag), g3d), derivative(function);
-    ds( function, derivative);
+    //dg::MHVec function = dg::pullback( dg::geo::FuncNeu(mag), g3d), derivative(function);
+    //ds( function, derivative);
 
     ds.centeredAdj( 1., B, 0., divB);
     double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));

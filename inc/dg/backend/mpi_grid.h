@@ -132,11 +132,14 @@ struct aMPITopology2d
     const DLT<double>& dlt() const{return g.dlt();}
     /**
      * @brief The total global number of points
-     *
-     * @note for the total local number of points call grid.local().size()
-     * @return n()*n()*Nx()*Ny()
+     * @return equivalent of \c n()*n()*Nx()*Ny()
      */
     unsigned size() const { return g.size();}
+    /**
+     * @brief The total local number of points
+     * @return equivalent of \c local.size()
+     */
+    unsigned local_size() const { return l.size();}
     /**
      * @brief Display global and local grid
      *
@@ -459,10 +462,14 @@ struct aMPITopology3d
     const DLT<double>& dlt() const{return g.dlt();}
     /**
      * @brief The total global number of points
-     *
-     * @return n()*n()*Nx()*Ny()*Nz()
+     * @return equivalent of \c n()*n()*Nx()*Ny()*Nz()
      */
     unsigned size() const { return g.size();}
+    /**
+     * @brief The total local number of points
+     * @return equivalent of \c local.size()
+     */
+    unsigned local_size() const { return l.size();}
     /**
      * @brief Display global and local grid paramters 
      *
