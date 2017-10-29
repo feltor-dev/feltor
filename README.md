@@ -135,7 +135,7 @@ int main()
     //compute the square L2 norm on the device
     double norm = dg::blas2::dot( x, vol2d, x);
     // norm is now: (exp(4)-exp(0))^2/4
-    std::cou << norm <<std::endl;
+    std::cout << norm <<std::endl;
     return 0;
 }
 ```
@@ -189,6 +189,7 @@ Compile e.g. for a hybrid MPI + OpenMP hardware platform with
 
 ```shell
 mpic++ -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
+export OMP_NUM_THREADS=2
 mpirun -n 4 ./test
 ```
 
@@ -197,7 +198,7 @@ Note the striking similarity to the previous program. Especially the line callin
 ## 2. Further reading
 
 Please check out our [wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information, user oriented documentation and Troubleshooting. Moreover, we maintain tex files in every src folder for technical documentation, which can be compiled using pdflatex with `make doc ` in the respective src folder.
-The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) of the dG library was generated with [Doxygen](http://www.doxygen.org). You can generate a local version from source code. This depends on the `doxygen`, `libjs-mathjax` and `graphviz` packages. Type `make doc` in the folder `path/to/feltor/doc` and open `index.html` (a symbolic link to `dg/html/modules.html`) with your favorite browser. 
+The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) of the dG library was generated with [Doxygen](http://www.doxygen.org) and LateX. You can generate a local version including informative pdf writeups on implemented numerical methods directly from source code. This depends on the `doxygen`, `libjs-mathjax` and `graphviz` packages and LateX. Type `make doc` in the folder `path/to/feltor/doc` and open `index.html` (a symbolic link to `dg/html/modules.html`) with your favorite browser. Links to the pdf writeups can be found among other places on the Mainpage. 
 
 ## 3. Contributions and Acknowledgements
 For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).
