@@ -523,7 +523,6 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double eps, 
     unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
 {
-    dg::Timer t;
     m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.Nz(), m_bcz=grid.bcz(); 
     m_g.reset(grid);
@@ -542,16 +541,26 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym; 
     
+#ifdef DG_BENCHMARK
+    dg::Timer t;
     t.tic();
+    std::cout << "Generate high order grid...\n";
+#endif
     dg::Handle<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
-    std::cout << "Integrating fieldlines...\n";
+#ifdef DG_BENCHMARK
+    t.toc();
+     std::cout << "High order grid gen   took: "<<t.diff()<<"\n";
+    t.tic();
+#endif
     detail::integrate_all_fieldlines2d( vec, grid_magnetic.get(), grid_coarse.get(), yp_coarse, ym_coarse, deltaPhi, eps);
+#ifdef DG_BENCHMARK
     t.toc();
     std::cout << "Fieldline integration took: "<<t.diff()<<"\n";
 
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
+#endif
     dg::Grid2d grid_fine( grid_coarse.get() );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine, grid_coarse.get());  //INTERPOLATE TO FINE GRID
@@ -561,8 +570,10 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::IHMatrix projection = dg::create::projection( grid_coarse.get(), grid_fine);
     cusp::multiply( projection, plusFine, plus);
     cusp::multiply( projection, minusFine, minus);
+#ifdef DG_BENCHMARK
     t.toc();
     std::cout << "Multiplication        took: "<<t.diff()<<"\n";
+#endif
     plusT = dg::transpose( plus);
     minusT = dg::transpose( minus);     
     dg::blas2::transfer( plus, m_plus);

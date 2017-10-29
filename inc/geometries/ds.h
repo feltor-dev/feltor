@@ -119,16 +119,31 @@ struct DS
     void forward( double alpha, const container& f, double beta, container& g){
         do_forward( alpha, f, beta, g);
     }
+    /**
+    * @brief forward derivative \f$ g_i = \frac{1}{h_z^+}(f_{i+1} - f_{i}) \f$
+    *
+    * @param f The vector to derive
+    * @param g contains result on output (write only)
+    * @note the vector sizes need to equal the grid size in the constructor
+    */
+    void forward( const container& f, container& g){do_forward(1.,f,0.,g);}
+
     ///@brief backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
     ///@copydetails forward
     void backward( double alpha, const container& f, double beta, container& g){
         do_backward( alpha, f, beta, g);
     }
+    ///@brief backward derivative \f$ g_i = \frac{1}{2h_z^-}(f_{i} - f_{i-1}) \f$
+    ///@copydetails forward
+    void backward( const container& f, container& g){do_backward(1.,f,0.,g);}
     ///@brief centered derivative \f$ g_i = \alpha \frac{1}{2h_z}(f_{i+1} - f_{i-1}) + \beta g_i\f$
     ///@copydetails forward
     void centered( double alpha, const container& f, double beta, container& g){
         do_centered( alpha, f, beta, g);
     }
+    ///@brief centered derivative \f$ g_i = \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
+    ///@copydetails forward
+    void centered( const container& f, container& g){do_centered(1.,f,0.,g);}
 
     ///@brief forward adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
@@ -144,6 +159,15 @@ struct DS
     ///@copydetails forward
     void centeredAdj(double alpha, const container& f, double beta, container& g){
         do_centeredAdj( alpha, f, beta, g, dg::normed);
+    }
+    void forwardAdj(const container& f, container& g){
+        do_forwardAdj( 1.,f,0.,g, dg::normed);
+    }
+    void backwardAdj(const container& f, container& g){
+        do_backwardAdj( 1.,f,0.,g, dg::normed);
+    }
+    void centeredAdj(const container& f, container& g){
+        do_centeredAdj( 1.,f,0.,g, dg::normed);
     }
 
     /**
@@ -306,7 +330,7 @@ void DS<G, I,M,container>::do_centeredAdj( double alpha, const container& f, dou
 }
 
 template<class G,class I, class M, class container>
-void DS<G,I,M,container>::do_symv( const container& f, container& dsTdsf)
+void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta, container& dsTdsf)
 {
     if(m_dir == dg::centered)
     {

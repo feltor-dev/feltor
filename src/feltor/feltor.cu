@@ -46,7 +46,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     const feltor::Parameters p( js);
-    const dg::geo::solovev::GeomParameters gp(gs);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////

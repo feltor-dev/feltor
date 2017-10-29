@@ -1,17 +1,8 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
 #include "parameters.h"
 #include "geometries/geometries.h"
-
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif //DG_BENCHMARK
-/*!@file
-
-  Contains the solvers 
-  */
 
 namespace feltor
 {
@@ -31,7 +22,7 @@ template<class Geometry, class IMatrix, class Matrix, class container>
 struct Implicit
 {
 
-    Implicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::GeomParameters gp, DS& dsN, DS& dsDIR):
+    Implicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::Parameters gp, DS& dsN, DS& dsDIR):
         p(p),
         gp(gp),
         LaplacianM_perpN  ( g, g.bcx(), g.bcy(), dg::normed, dg::centered),
@@ -89,7 +80,7 @@ struct Implicit
     const container& precond(){return LaplacianM_perpDIR.precond();}
   private:
     const feltor::Parameters p;
-    const dg::geo::solovev::GeomParameters gp;
+    const dg::geo::solovev::Parameters gp;
     container temp;
     container dampgauss_;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perpN,LaplacianM_perpDIR;
@@ -99,7 +90,7 @@ struct Implicit
 template< class Geometry, class IMatrix, class Matrix, class container >
 struct Explicit
 {
-    Explicit( const Geometry& g, const dg::geo::TokamakMagneticField& mag, feltor::Parameters p, dg::geo::solovev::GeomParameters gp);
+    Explicit( const Geometry& g, const dg::geo::TokamakMagneticField& mag, feltor::Parameters p, dg::geo::solovev::Parameters gp);
 
 
     dg::DS<Geometry, IMatrix, Matrix, container>& ds(){return dsN_;}
@@ -198,14 +189,14 @@ struct Explicit
 
     //matrices and solvers
     dg::DS<Geometry, IMatrix, Matrix, container> dsDIR_, dsN_;
-    dg::Poisson<   Geometry, Matrix, container> poissonN,poissonDIR; 
-    dg::Elliptic<  Geometry, Matrix, container > pol,lapperpN,lapperpDIR;
+    dg::Poisson<    Geometry, Matrix, container> poissonN,poissonDIR; 
+    dg::Elliptic<   Geometry, Matrix, container> pol,lapperpN,lapperpDIR;
     dg::Helmholtz< Geometry, Matrix, container > invgammaDIR, invgammaN;
 
     dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
 
     const feltor::Parameters p;
-    const dg::geo::solovev::GeomParameters gp;
+    const dg::geo::solovev::Parameters gp;
 
     double mass_, energy_, diff_, ediff_, aligned_;
     std::vector<double> evec;
@@ -214,7 +205,7 @@ struct Explicit
 
 ///@cond
 template<class Grid, class IMatrix, class Matrix, class container>
-Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, const TokamakMagneticField& mag, feltor::Parameters p, dg::geo::solovev::GeomParameters gp): 
+Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, const TokamakMagneticField& mag, feltor::Parameters p, dg::geo::solovev::Parameters gp): 
     dsDIR_( dg::FieldAligned<Grid, IMatrix, container>( mag, g, gp.rk4eps, 
                 dg::geo::PsiLimiter(mag.psip(), gp.psipmaxlim), 
                 dg::DIR, (2*M_PI)/((double)p.Nz)

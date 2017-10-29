@@ -7,21 +7,11 @@
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/runge_kutta.h"
-#include "dg/multistep.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
-
+#include "dg/algorithm.h"
 #include "geometries/geometries.h"
-#include "heat/parameters.h"
 
-
+#include "parameters.h"
 #include "heat.cuh"
-
-typedef dg::FieldAligned< dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> DFA;
-using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
@@ -48,8 +38,8 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-    const eule::Parameters p( js); p.display( std::cout);
-    const GeomParameters gp(gs); gp.display( std::cout);
+    const heat::Parameters p( js); p.display( std::cout);
+    const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::ifstream is( "window_params.js");
     reader.parse( is, js, false);
@@ -113,9 +103,9 @@ int main( int argc, char* argv[])
     
     //create RHS     
     std::cout << "initialize feltor" << std::endl;
-    eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p,gp); //initialize before rolkar!
+    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p,gp); //initialize before rolkar!
     std::cout << "initialize rolkar" << std::endl;
-    eule::Rolkar<dg::CylindricalGrid3d , dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
+    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////
  //initial perturbation
@@ -130,7 +120,7 @@ int main( int argc, char* argv[])
     
     //background profile
     std::cout << "T background" << std::endl;
-    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     
 //     //field aligning

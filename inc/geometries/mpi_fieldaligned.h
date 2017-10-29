@@ -11,6 +11,9 @@
 #include "dg/backend/interpolation.cuh"
 #include "dg/backend/functions.h"
 #include "dg/runge_kutta.h"
+#ifdef DG_BENCHMARK
+#include "dg/backend/timer.cuh"
+#endif 
 
 namespace dg{
 namespace geo{
@@ -161,9 +164,6 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double eps, 
     unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
 {
-    dg::Timer t;
-    int rank;
-    MPI_Comm_rank( grid.communicator(), &rank);
     m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.local().Nz(), m_bcz=grid.bcz(); 
     m_g.reset(grid);
@@ -185,16 +185,29 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     //%%%%%%%%%%%%%%%%%%%%%%%%%%Set starting points and integrate field lines%%%%%%%%%%%%%%
     std::vector<thrust::host_vector<double> > yp_coarse( 3), ym_coarse(yp_coarse), yp, ym; 
     
+#ifdef DG_BENCHMARK
+    dg::Timer t;
+    int rank;
+    MPI_Comm_rank( grid.communicator(), &rank);
+    t.tic();
+    if(rank==0)std::cout << "Generate high order grid...\n";
+#endif
     dg::Handle<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
     dg::Handle<dg::aGeometry2d> global_grid_magnetic = grid_magnetic.get().global_geometry();
+#ifdef DG_BENCHMARK
+    t.toc();
+    if(rank==0) std::cout << "High order grid gen   took: "<<t.diff()<<"\n";
     t.tic();
+#endif
     detail::integrate_all_fieldlines2d( vec, global_grid_magnetic.get(), grid_coarse.get().local(), yp_coarse, ym_coarse, deltaPhi, eps);
+#ifdef DG_BENCHMARK
     t.toc();
     if(rank==0) std::cout << "Fieldline integration took: "<<t.diff()<<"\n";
 
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
+#endif
     dg::MPIGrid2d grid_fine( grid_coarse.get() );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
     dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(), grid_coarse.get().local());  //INTERPOLATE TO FINE GRID
@@ -204,9 +217,11 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::IHMatrix projection = dg::create::projection( grid_coarse.get().local(), grid_fine.local());
     cusp::multiply( projection, plusFine, plus);
     cusp::multiply( projection, minusFine, minus);
+#ifdef DG_BENCHMARK
     t.toc();
     if(rank==0) std::cout << "Multiplication        took: "<<t.diff()<<"\n";
     t.tic();
+#endif
     dg::MIHMatrix temp = dg::convert( plus, grid_coarse.get()), tempT;
     tempT  = dg::transpose( temp);
     dg::blas2::transfer( temp, m_plus);
@@ -215,8 +230,10 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     tempT  = dg::transpose( temp);
     dg::blas2::transfer( temp, m_minus);
     dg::blas2::transfer( tempT, m_minusT);
+#ifdef DG_BENCHMARK
     t.toc();
     if(rank==0) std::cout << "Conversion            took: "<<t.diff()<<"\n";
+#endif
     //%%%%%%%%%%%%%%%%%%%%%%%project h and copy into h vectors%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     dg::MHVec hp( dg::evaluate( dg::zero, grid_coarse.get())), hm(hp), hz(hp);
     dg::blas2::symv( projection, yp[2], hp.data());

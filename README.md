@@ -82,10 +82,12 @@ then tell how many process you want to use in the x-, y- and z- direction, for e
 when prompted for input vector sizes type for example
 `3 100 100 10` (number of cells divided by number of procs must be an integer number). If you compiled for MPI+OpenMP, you can set the number of OpenMP threads with e.g. `export OMP_NUM_THREADS=2`.
 
-Now, we want to compile a simulation program. First, we have to download and install some libraries for I/O-operations.
+### Running a simulation
 
-For data output we use the [NetCDF](http://www.unidata.ucar.edu/software/netcdf/) library under an MIT - like license. The underlying [HDF5](https://www.hdfgroup.org/HDF5/) library also uses a very permissive license. Note that for the mpi versions of applications you need to build hdf5 and netcdf with the --enable-parallel flag. Do NOT use the pnetcdf library, which uses the classic netcdf file format.  
-Our JSON input files are parsed by [JsonCpp](https://www.github.com/open-source-parsers/jsoncpp) distributed under the MIT license (the 0.y.x branch to avoid C++-11 support).     
+Now, we want to compile and run a simulation program. First, we have to download and install some libraries for I/O-operations.
+
+For data output we use the [NetCDF](http://www.unidata.ucar.edu/software/netcdf/) library under an MIT - like license. The underlying [HDF5](https://www.hdfgroup.org/HDF5/) library also uses a very permissive license. Note that for the mpi versions of applications you need to build hdf5 and netcdf with the --enable-parallel flag. Do NOT use the pnetcdf library, which uses the classic netcdf file format. 
+Our JSON input files are parsed by [JsonCpp](https://www.github.com/open-source-parsers/jsoncpp) distributed under the MIT license (use the 0.y.x branch to avoid C++-11 support).     
 > Some desktop applications in FELTOR use the [draw library]( https://github.com/mwiesenberger/draw) (developed by us also under MIT), which depends on OpenGL (s.a. [installation guide](http://en.wikibooks.org/wiki/OpenGL_Programming)) and [glfw](http://www.glfw.org), an OpenGL development library under a BSD-like license. You don't need these when you are on a cluster. 
 
 
@@ -126,7 +128,7 @@ It is possible to use FELTOR as a library in your own code project. Note that th
 double function(double x, double y){return exp(x)*exp(y);}
 int main()
 { 
-    //create a 2d grid with 3 polynomial coefficients
+    //create a 2d discretization of [0,2]x[0,2] with 3 polynomial coefficients
     dg::CartesianGrid2d g2d( 0, 2, 0, 2, 3, 20, 20);
     //discretize a function on this grid
     const dg::DVec x = dg::evaluate( function, g2d);
@@ -170,7 +172,7 @@ int main(int argc, char* argv[])
     int periods[2] = {true, true}, np[2] = {2,2};
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
-    //create a 2d grid with 3 polynomial coefficients
+    //create a 2d discretization of [0,2]x[0,2] with 3 polynomial coefficients
     dg::CartesianMPIGrid2d g2d( 0, 2, 0, 2, 3, 20, 20, comm);
     //discretize a function on this grid
     const dg::MDVec x = dg::evaluate( function, g2d);

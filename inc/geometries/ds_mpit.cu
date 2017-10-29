@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include <mpi.h>
-
+#define DG_BENCHMARK
 #include "dg/backend/timer.cuh"
 #include "dg/backend/mpi_evaluation.h"
 #include "dg/backend/mpi_init.h"

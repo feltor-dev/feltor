@@ -44,7 +44,7 @@ int main( int argc, char* argv[])
         reader.parse(ks,gs,false);
     }
     const feltor::Parameters p( js);
-    const dg::geo::solovev::GeomParameters gp(gs);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);
     std::string input = js.toStyledString(), geom = gs.toStyledString();
