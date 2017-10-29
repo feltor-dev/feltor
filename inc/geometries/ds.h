@@ -15,7 +15,6 @@
  * This file includes the appropriate headers for parallel derivatives
  */
 
-//TODO: use buffers to make symv const
 namespace dg{
 namespace geo{
 
@@ -171,7 +170,7 @@ struct DS
     }
 
     /**
-    * @brief compute parallel derivative
+    * @brief \f$ \vec v\cdot \nabla f \f$
     *
     * dependent on dir redirects to either forward(), backward() or centered()
     * @param f The vector to derive
@@ -189,7 +188,17 @@ struct DS
      * @param dsTdsf contains result on output (write only)
      * @note if dependsOnX is false then no jump terms will be added in the x-direction and similar in y
      */
-    void symv( const container& f, container& dsTdsf){ do_symv( f, dsTdsf);}
+    void symv( const container& f, container& dsTdsf){ do_symv( 1., f, 0., dsTdsf);}
+    void symv( double alpha, const container& f, double beta, container& dsTdsf){ do_symv( alpha, f, beta, dsTdsf);}
+    /**
+     * @brief Discretizes \f$ \nabla_\parallel^2 f \f$ 
+     *
+     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h^+h^0} - \frac{f^0}{h^+h^-} + \frac{f^-}{h^-h^0}\right)
+     * @param f The vector to derive
+     * @param dsTdsf contains result on output (write only)
+     */
+    void dss( const container& f, container& dsTdsf){ do_dss( 1., f, 0., dsTdsf);}
+    void dss( double alpha, const container& f, double beta, container& dsTdsf){ do_symv( alpha, f, beta, dsTdsf);}
 
     ///@copydoc Fieldaligned::set_boundaries(dg::bc,double,double)
     void set_boundaries( dg::bc bcz, double left, double right)
@@ -224,7 +233,8 @@ struct DS
     void do_forwardAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
     void do_backwardAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
     void do_centeredAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
-    void do_symv(const container& f, container& dsf);
+    void do_symv(double alpha, const container& f, double beta, container& dsf);
+    void do_dss(double alpha, const container& f, double beta, container& dsf);
 
     Fieldaligned<ProductGeometry, IMatrix, container> m_fa;
     container m_temp;
@@ -294,11 +304,13 @@ void DS<G,I,M,container>::do_forwardAdj( double alpha, const container& f, doubl
     dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
     dg::blas1::pointwiseDot( m_temp0, m_fa.hp_inv(), m_temp0);
     m_fa(einsPlusT, m_temp0, m_tempP);
-    dg::blas1::axpby( 1., m_tempP, -1., m_temp0, m_temp0);
     if(no == dg::normed) 
+    {
+        dg::blas1::axpby( 1., m_tempP, -1., m_temp0, m_temp0);
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
+    }
     else
-        dg::blas1::axpby( alpha, m_tempM, beta, dsf);
+        dg::blas1::axpbypgz( alpha, m_tempP, -alpha, m_temp0, beta, dsf);
 }
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_backwardAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
@@ -307,11 +319,13 @@ void DS<G,I,M,container>::do_backwardAdj( double alpha, const container& f, doub
     dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
     dg::blas1::pointwiseDot( m_temp0, m_fa.hm_inv(), m_temp0);
     m_fa(einsMinusT, m_temp0, m_tempM);
-    dg::blas1::axpby( 1., m_temp0, -1., m_tempM, m_temp0);
     if(no == dg::normed) 
+    {
+        dg::blas1::axpby( 1., m_temp0, -1., m_tempM, m_temp0);
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
+    }
     else
-        dg::blas1::axpby( alpha, m_tempM, beta, dsf);
+        dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempM, beta, dsf);
 }
 template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_centeredAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
@@ -321,11 +335,13 @@ void DS<G, I,M,container>::do_centeredAdj( double alpha, const container& f, dou
     dg::blas1::pointwiseDot( m_temp0, m_fa.hz_inv(), m_temp0);
     m_fa(einsPlusT,  m_temp0, m_tempP);
     m_fa(einsMinusT, m_temp0, m_tempM);
-    dg::blas1::axpby( 1., m_tempP, -1., m_tempM);
     if(no == dg::normed) 
+    {
+        dg::blas1::axpby( 1., m_tempP, -1., m_tempM);
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_tempM, beta, dsf); 
+    }
     else
-        dg::blas1::axpby( alpha, m_tempM, beta, dsf);
+        dg::blas1::axpbypgz( alpha, m_tempP, -alpha, m_tempM, beta, dsf);
 
 }
 
@@ -335,25 +351,41 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     if(m_dir == dg::centered)
     {
         do_centered( 1., f, 0., m_tempP);
-        do_centeredAdj( 1., m_tempP, 0., dsTdsf, dg::not_normed);
+        do_centeredAdj( 1., m_tempP, 0., m_temp, dg::not_normed);
     }
     else 
     {
         do_forward( 1., f, 0., m_tempP);
         do_forwardAdj( 1., m_tempP, 0., m_temp0, dg::not_normed);
         do_backward( 1., f, 0., m_tempM);
-        do_backwardAdj( 1., m_tempM, 0., dsTdsf, dg::not_normed);
-        dg::blas1::axpby(0.5,m_temp0,0.5,dsTdsf);
+        do_backwardAdj( 1., m_tempM, 0., m_temp, dg::not_normed);
+        dg::blas1::axpby(0.5,m_temp0,0.5,m_temp);
     }
-    dg::blas1::pointwiseDivide( dsTdsf, m_weights_wo_vol, dsTdsf);
+    dg::blas1::pointwiseDivide( m_temp, m_weights_wo_vol, m_temp);
     //     add jump term 
     if(m_fa.dependsOnX())
-        dg::blas2::symv( -1., m_jumpX, f, 1., dsTdsf);
+        dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
     if(m_fa.dependsOnY())
-        dg::blas2::symv( -1., m_jumpY, f, 1., dsTdsf);
-    dg::blas1::pointwiseDot( m_weights_wo_vol, dsTdsf, dsTdsf); //make it symmetric
+        dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);
+
     if( m_no == dg::normed)
-        dg::blas1::pointwiseDot( m_inv3d, dsTdsf, dsTdsf); //make it symmetric
+    {
+        dg::blas1::pointwiseDot( m_weights_wo_vol, m_temp, m_temp);
+        dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp, beta, dsTdsf); 
+    }
+    else
+        dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, dsTdsf);
+}
+
+template<class G,class I, class M, class container>
+void DS<G,I,M,container>::do_dss( double alpha, const container& f, double beta, container& dssf)
+{
+    m_fa(einsPlus,  f, m_tempP);
+    m_fa(einsMinus, f, m_tempM);
+    dg::blas1::pointwiseDot( 1., m_tempP, m_fa.hp_inv(), 1., m_tempM, m_fa.hm_inv(), 0., m_tempM);
+    dg::blas1::pointwiseDot( f,  m_fa.hp_inv(), m_temp0);
+    dg::blas1::pointwiseDot( 2.*alpha, m_fa.hz_inv(), m_tempM, -2.*alpha, m_fa.hm_inv(), m_temp0, beta, dssf);
+
 }
 ///@endcond
 

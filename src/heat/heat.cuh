@@ -22,14 +22,14 @@ struct Implicit
     Implicit( const Geometry& g, Parameters p, dg::geo::solovev::Parameters gp):
         p(p),
         gp(gp),
-        dsNU_(dg::geo::createSolovevField( gp), g g.bcx(), g.bcy(),
-              dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), 
+        dsNU_(dg::geo::createSolovevField( gp), g, g.bcx(), g.bcy(),
+              dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), 
               dg::normed, dg::forward,
-              gp.psipmaxlim),gp.rk4eps, 1,1, true, true), 
+              gp.rk4eps, 1,1, true, true), 
         elliptic( g, dg::normed, dg::forward)
     {
         using namespace dg::geo::solovev;
-        MagneticField c(gp);
+        dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
         container bfield = dg::pullback( dg::geo::FieldR(c),g);
         elliptic.set_x( bfield);
         bfield = dg::pullback( dg::geo::FieldZ(c),g);
@@ -179,11 +179,15 @@ void Explicit<G,I,M,V>::energies( std::vector<V>& y)
     if (p.p_diff ==3)    {
         // (D) nonadjoint with direct method
         dsNU_.forward( y[0], omega); 
-        dsNU_.forwardTD(omega,lambda);
+        dg::blas1::pointwiseDot(omega, m_invB, omega);
+        dsNU_.backward(omega,lambda);
+        dg::blas1::pointwiseDivide(lambda, m_invB, lambda);
         dg::blas1::axpby( 0.5, lambda, 0.,chi,chi); 
 
         dsNU_.backward( y[0], omega); 
-        dsNU_.backwardTD(omega,lambda);
+        dg::blas1::pointwiseDot(omega, m_invB, omega);
+        dsNU_.forward(omega,lambda);
+        dg::blas1::pointwiseDivide(lambda, m_invB, lambda);
         dg::blas1::axpby( 0.5, lambda, 1., chi,chi); 
 //         Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, chi); 
         Dpar[0]= p.nu_parallel*dg::blas2::dot(y[0], w3d, chi); 
