@@ -49,7 +49,7 @@ struct DS
      * @brief Create the magnetic unit vector field and construct
      * @copydetails DS(const dg::geo::BinaryVectorLvl0&,const ProductGeometry&,unsigned,unsigned,bool,bool,double,dg::norm,dg::direction)
      */
-    template <class Limiter = FullLimiter>
+    template <class Limiter>
     DS(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid, 
         dg::bc bcx = dg::NEU, 
         dg::bc bcy = dg::NEU, 

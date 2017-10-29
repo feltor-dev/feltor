@@ -321,7 +321,7 @@ struct Fieldaligned
     ///@brief do not allocate memory; no member call except construct is valid
     Fieldaligned(){}
     ///@copydoc construct()
-    template <class Limiter = FullLimiter>
+    template <class Limiter>
     Fieldaligned(const dg::geo::TokamakMagneticField& vec, 
         const ProductGeometry& grid, 
         dg::bc globalbcx = dg::NEU, 
@@ -337,7 +337,7 @@ struct Fieldaligned
     }
 
     ///@copydoc construct()
-    template <class Limiter = FullLimiter>
+    template <class Limiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, 
         const ProductGeometry& grid, 
         dg::bc globalbcx = dg::NEU, 
@@ -372,7 +372,7 @@ struct Fieldaligned
         by the grid.bcz() variable and can be changed by the set_boundaries function. 
         If there is no limiter, the boundary condition is periodic.
     */
-    template <class Limiter = FullLimiter>
+    template <class Limiter>
     void construct(const dg::geo::BinaryVectorLvl0& vec, 
         const ProductGeometry& grid, 
         dg::bc globalbcx = dg::NEU, 

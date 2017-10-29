@@ -58,7 +58,7 @@ template <class ProductMPIGeometry, class LocalIMatrix, class CommunicatorXY, cl
 struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> > 
 {
     Fieldaligned(){}
-    template <class Limiter = FullLimiter>
+    template <class Limiter>
     Fieldaligned(const dg::geo::TokamakMagneticField& vec, 
         const ProductMPIGeometry& grid, 
         dg::bc globalbcx = dg::NEU, 
@@ -72,7 +72,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
         construct( bhat, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
     }
-    template <class Limiter = FullLimiter>
+    template <class Limiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, 
         const ProductMPIGeometry& grid, 
         dg::bc globalbcx = dg::NEU, 
@@ -85,7 +85,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     {
         construct( vec, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
     }
-    template <class Limiter = FullLimiter>
+    template <class Limiter>
     void construct(const dg::geo::BinaryVectorLvl0& vec, 
         const ProductMPIGeometry& grid, 
         dg::bc globalbcx = dg::NEU, 

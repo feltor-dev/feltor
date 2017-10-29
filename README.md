@@ -14,46 +14,26 @@ Our core level functions are parallelized for a variety of hardware from multi-c
 ## 1. Quick start guide
 Go ahead and clone our library into any folder you like 
 ```sh
-$ git clone https://www.github.com/feltor-dev/feltor
+git clone https://www.github.com/feltor-dev/feltor
 ```
 You also need to clone  [thrust]( https://github.com/thrust/thrust) and [cusp](https://github.com/cusplibrary/cusplibrary) distributed under the Apache-2.0 license. So again in a folder of your choice
 ```sh
-$ git clone https://www.github.com/thrust/thrust
-$ git clone https://www.github.com/cusplibrary/cusplibrary
+git clone https://www.github.com/thrust/thrust
+git clone https://www.github.com/cusplibrary/cusplibrary
 ```
 > Our code only depends on external libraries that are themselves openly available. We note here that we do not distribute copies of these libraries.
 
-### Using FELTOR as a library
-
-It is possible to use FELTOR as a library in your own code project. Note that the library is **header-only**, which means that you just have to include the relevant header(s) and you're good to go:
-
-```C++
-//optional: activate MPI in FELTOR
-#include "mpi.h"  
-// optional: redirect CUDA calls to OpenMP functions; 
-// note that you then also have to specify an OpenMP flag when compiling
-#define THRUST_DEVICE_SYSTEM THRUST_DEVICE_SYSTEM_OMP 
-//include the basic dg-library
-#include "dg/algorithms.h"
-//include the geometries expansion
-#include "geometries/geometries.h"
-```
-
-and add `path/to/feltor/inc` as well as  `path/to/thrust/thrust` and  `path/to/cusplibrary/cusp` to the include path of your compiler. 
-
-> If you want to activate the MPI backend of FELTOR you have to include `mpi.h` before any FELTOR header. If you want to use OpenMP instead of CUDA for the device functions you have to define the `THRUST_DEVICE_SYSTEM` macro and activate OpenMP in your compiler (e.g `g++ -fopenmp`). I you want to use CUDA then you have to compile with nvcc. 
-See `path/to/feltor/config/README.md` for further details on configurating the library and how to compile.
 
 ### Using FELTOR's code projects
 
 In order to compile one of the many codes inside FELTOR you need to tell the feltor configuration where the external libraries are located on your computer. The default way to do this is to go in your `HOME` directory, make an include directory and link the paths in this directory:
 
  ```sh
- $ cd ~
- $ mkdir include
- $ cd include
- $ ln -s path/to/thrust/thrust thrust
- $ ln -s path/to/cusplibrary/cusp cusp
+cd ~
+mkdir include
+cd include
+ln -s path/to/thrust/thrust thrust
+ln -s path/to/cusplibrary/cusp cusp
  ```
 > If you do not like this, you can also create your own config file as discribed [here](https://github.com/feltor-dev/feltor/wiki/Configuration).
 
@@ -61,11 +41,11 @@ Now let us compile the first benchmark program.
 
 
  ```sh
- $ cd path/to/feltor/inc/dg
+cd path/to/feltor/inc/dg
  
- $ make blas_b device=omp #(for an OpenMP version)
+make blas_b device=omp #(for an OpenMP version)
  #or
- $ make blas_b device=gpu #(if you have a gpu and nvcc )
+make blas_b device=gpu #(if you have a gpu and nvcc )
  ```
 > The minimum requirement to compile and run an application is a working C++ compiler (g++ per default) and a CPU. 
 > To simplify the compilation process we use the GNU Make utility, a standard build automation tool that automatically builds the executable program. 
@@ -76,7 +56,7 @@ Now let us compile the first benchmark program.
 
 Run the code with 
 ```sh
-$ ./blas_b 
+./blas_b 
 ```
 and when prompted for input vector sizes type for example
 `3 100 100 10`
@@ -89,11 +69,11 @@ Now, let us test the mpi setup
 > If you intend to use the MPI backend, an implementation library of the mpi standard is required. Per default `mpic++` is used for compilation.
 
 ```sh
- $ cd path/to/feltor/inc/dg
+cd path/to/feltor/inc/dg
  
- $ make blas_mpib device=omp  # (for MPI+OpenMP)
- # or
- $ make blas_mpib device=gpu # (for MPI+GPU)
+make blas_mpib device=omp  # (for MPI+OpenMP)
+# or
+make blas_mpib device=gpu # (for MPI+GPU)
 ```
 Run the code with
 `$ mpirun -n '# of procs' ./blas_mpib `
@@ -112,35 +92,112 @@ Our JSON input files are parsed by [JsonCpp](https://www.github.com/open-source-
 As in Step 3 you need to create links to the jsoncpp library include path (and optionally the draw library) in your include folder or provide the paths in your config file. We are ready to compile now
 
 ```sh
- $ cd path/to/feltor/src/toefl # or any other project in the src folder
+cd path/to/feltor/src/toefl # or any other project in the src folder
  
- $ make toeflR device=gpu     # (compile on gpu or omp)
- $ ./toeflR <inputfile.json>  # (behold a live simulation with glfw output on screen)
- # or
- $ make toefl_hpc device=gpu  # (compile on gpu or omp)
- $ ./toefl_hpc <inputfile.json> <outputfile.nc> # (a single node simulation with output stored in a file)
- # or
- $ make toefl_mpi device=omp  # (compile on gpu or omp)
- $ export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI) 
- $ echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.nc>
- $ # (a multi node simulation with now in total 8 threads with output stored in a file)
- $ # The mpi program will wait for you to type the number of processes in x and y direction before
- $ # running. That is why the echo is there. 
+make toeflR device=gpu     # (compile on gpu or omp)
+./toeflR <inputfile.json>  # (behold a live simulation with glfw output on screen)
+# or
+make toefl_hpc device=gpu  # (compile on gpu or omp)
+./toefl_hpc <inputfile.json> <outputfile.nc> # (a single node simulation with output stored in a file)
+# or
+make toefl_mpi device=omp  # (compile on gpu or omp)
+export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI) 
+echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.nc>
+# (a multi node simulation with now in total 8 threads with output stored in a file)
+# The mpi program will wait for you to type the number of processes in x and y direction before
+# running. That is why the echo is there. 
 ```
 A default input file is located in `path/to/feltor/src/toefl/input`. All three programs solve the same equations. 
 The technical documentation on what equations are discretized, 
 input/output parameters, etc. can be generated as a pdf with 
 `make doc ` in the `path/to/feltor/src/toefl` directory.
 
+### Using FELTOR as a library
+
+It is possible to use FELTOR as a library in your own code project. Note that the library is **header-only**, which means that you just have to include the relevant header(s) and you're good to go. For example in the following program "test.cpp" we compute the square L2 norm of a function:
+
+```C++
+#include <iostream>
+//include the basic dg-library
+#include "dg/algorithm.h"
+//optional: include the geometries expansion
+#include "geometries/geometries.h"
+
+double function(double x, double y){return exp(x)*exp(y);}
+int main()
+{ 
+    //create a 2d grid with 3 polynomial coefficients
+    dg::CartesianGrid2d g2d( 0, 2, 0, 2, 3, 20, 20);
+    //discretize a function on this grid
+    const dg::DVec x = dg::evaluate( function, g2d);
+    //create the volume element
+    const dg::DVec vol2d = dg::create::volume( g2d); 
+    //compute the square L2 norm on the device
+    double norm = dg::blas2::dot( x, vol2d, x);
+    // norm is now: (exp(4)-exp(0))^2/4
+    std::cou << norm <<std::endl;
+    return 0;
+}
+```
+
+To compile and run this code for a GPU use
+```sh
+nvcc -x cu -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
+./test
+```
+
+Or if you want to use OpenMP and gcc instead of CUDA for the device functions you can also use
+
+```shell
+g++ -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
+export OMP_NUM_THREADS=4
+./test
+```
+
+If you want to use mpi, just include the MPI header before any other FELTOR header and use our convenient typedefs like so:
+
+```C++
+#include <iostream>
+//activate MPI in FELTOR
+#include "mpi.h" 
+#include "dg/algorithm.h"
+
+double function(double x, double y){return exp(x)*exp(y);}
+int main(int argc, char* argv[])
+{ 
+    //init MPI and create a 2d Cartesian Communicator assuming 4 MPI threads
+    MPI_Init( &argc, &argv);
+    int periods[2] = {true, true}, np[2] = {2,2};
+    MPI_Comm comm;
+    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
+    //create a 2d grid with 3 polynomial coefficients
+    dg::CartesianMPIGrid2d g2d( 0, 2, 0, 2, 3, 20, 20, comm);
+    //discretize a function on this grid
+    const dg::MDVec x = dg::evaluate( function, g2d);
+    //create the volume element
+    const dg::MDVec vol2d = dg::create::volume( g2d); 
+    //compute the square L2 norm 
+    double norm = dg::blas2::dot( x, vol2d, x);
+    //on every thread norm is now: (exp(4)-exp(0))^2/4 
+    //be a good MPI citizen and clean up
+    MPI_Finalize();
+    return 0;
+}
+```
+
+Compile e.g. for a hybrid MPI + OpenMP hardware platform with 
+
+```shell
+mpic++ -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
+mpirun -n 4 ./test
+```
+
+Note the striking similarity to the previous program. Especially the line calling the dot function did not change at all. The compiler chooses the correct implementation for you! This is a first example of a *container free numerical algorithm*.
+
 ## 2. Further reading
-Please check out our [wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information, user oriented documentation and Troubleshooting. 
-Moreover, we maintain tex files in every src folder for technical documentation, 
- which can be compiled using pdflatex with 
-`make doc ` in the respective src folder.
-The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) of the dG library was generated with [Doxygen](http://www.doxygen.org). 
-You can generate a local version from source code.
-This depends on the `doxygen`, `libjs-mathjax` and `graphviz` packages.
-Type `make doc` in the folder `path/to/feltor/doc` and open `index.html` (a symbolic link to `dg/html/modules.html`) with your favorite browser. 
+
+Please check out our [wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information, user oriented documentation and Troubleshooting. Moreover, we maintain tex files in every src folder for technical documentation, which can be compiled using pdflatex with `make doc ` in the respective src folder.
+The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) of the dG library was generated with [Doxygen](http://www.doxygen.org). You can generate a local version from source code. This depends on the `doxygen`, `libjs-mathjax` and `graphviz` packages. Type `make doc` in the folder `path/to/feltor/doc` and open `index.html` (a symbolic link to `dg/html/modules.html`) with your favorite browser. 
 
 ## 3. Contributions and Acknowledgements
 For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).
