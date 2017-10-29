@@ -35,7 +35,7 @@ cd include
 ln -s path/to/thrust/thrust thrust
 ln -s path/to/cusplibrary/cusp cusp
  ```
-> If you do not like this, you can also create your own config file as discribed [here](https://github.com/feltor-dev/feltor/wiki/Configuration).
+> If you do not like this, you can also create your own config file as discribed [here](config/README.md).
 
 Now let us compile the first benchmark program. 
 

@@ -12,7 +12,7 @@ The machine specific config files (e.g. vsc3.mk) should have an include guard an
 
 | variable  | default value                            | description                              |
 | :-------: | :--------------------------------------- | :--------------------------------------- |
-|    CC     | g++                                      | C++ compiler                             |+
+|    CC     | g++                                      | C++ compiler                             |
 |   MPICC   | mpic++                                   | the corresponding mpi wrapper for the c++ compiler     |
 |  CFLAGS   | -std=c++11 -Wall -x c++                  | flags for the C++ compiler               |
 | MPICFLAGS |                  | flags specific to the MPI compilation                |
