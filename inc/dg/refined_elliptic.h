@@ -63,6 +63,7 @@ class RefinedElliptic
      * @return inverse weights
      */
     const container& inv_weights()const {return inv_weights_;}
+    const container& weights()const {return weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
      *
