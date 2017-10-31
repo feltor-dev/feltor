@@ -11,7 +11,16 @@ Our core level functions are parallelized for a variety of hardware from multi-c
 [![DOI](https://zenodo.org/badge/14143578.svg)](https://zenodo.org/badge/latestdoi/14143578)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[TOC]
+## Table of contents
+
+* [1. Quick start guide](#1-quick-start-guide)
+    * [Using FELTOR's code projects](#using-feltors-code-projects)
+    * [Running a FELTOR simulation](#running-a-feltor-simulation)
+    * [Using FELTOR as a library](#using-feltor-as-a-library)
+* [2. Further Reading](#2-further-reading)
+* [3. Contributions and Acknowledgements](#3-contributions-and-acknowledgements)
+* [4. License](#4-license)
+* [5. Official Releases](#5-official-releases)
 
 ## 1. Quick start guide
 
@@ -85,7 +94,7 @@ then tell how many process you want to use in the x-, y- and z- direction, for e
 when prompted for input vector sizes type for example
 `3 100 100 10` (number of cells divided by number of procs must be an integer number). If you compiled for MPI+OpenMP, you can set the number of OpenMP threads with e.g. `export OMP_NUM_THREADS=2`.
 
-### Running a simulation
+### Running a FELTOR simulation
 
 Now, we want to compile and run a simulation program. First, we have to download and install some libraries for I/O-operations.
 
@@ -222,7 +231,7 @@ and from Intel Barcelona
 ## 4. License 
 FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
 
-## Official releases 
+## 5. Official releases 
 Our latest code release has a shiny DOI badge from zenodo
 
 [![DOI](https://zenodo.org/badge/14143578.svg)](https://zenodo.org/badge/latestdoi/14143578)
