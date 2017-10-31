@@ -58,7 +58,8 @@ make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
 
 ### General Remarks
  - If MPI is used in connection with the gpu backend, the mpi installation needs to be **cuda-aware**
- - if `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
- - support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
+ - If `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
+ - Support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
+ - The library headers are compliant with the c++98 standard but we reserve the right to change that in future updates
  
 
