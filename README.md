@@ -18,8 +18,8 @@ Our core level functions are parallelized for a variety of hardware from multi-c
     * [Running a FELTOR simulation](#running-a-feltor-simulation)
     * [Using FELTOR as a library](#using-feltor-as-a-library)
 * [2. Further Reading](#2-further-reading)
-* [3. Contributions and Acknowledgements](#3-contributions-and-acknowledgements)
-* [4. License](#4-license)
+* [3. Acknowledgements](#3-acknowledgements)
+* [4. Terms of use](#4-terms-of-use)
 * [5. Official Releases](#5-official-releases)
 
 ## 1. Quick start guide
@@ -214,9 +214,10 @@ Note the striking similarity to the previous program. Especially the line callin
 Please check out our [wiki pages](https://github.com/feltor-dev/feltor/wiki) for some general information, user oriented documentation and Troubleshooting. Moreover, we maintain tex files in every src folder for technical documentation, which can be compiled using pdflatex with `make doc ` in the respective src folder.
 The [developer oriented documentation](http://feltor-dev.github.io/feltor/inc/dg/html/modules.html) of the dG library was generated with [Doxygen](http://www.doxygen.org) and LateX. You can generate a local version including informative pdf writeups on implemented numerical methods directly from source code. This depends on the `doxygen`, `libjs-mathjax` and `graphviz` packages and LateX. Type `make doc` in the folder `path/to/feltor/doc` and open `index.html` (a symbolic link to `dg/html/modules.html`) with your favorite browser. Links to the pdf writeups can be found among other places on the Mainpage. 
 
-## 3. Contributions and Acknowledgements
-For instructions on how to contribute read the [wiki page](https://github.com/feltor-dev/feltor/wiki/Contributions).
-We gratefully acknowledge contributions from 
+## 3. Acknowledgements
+
+FELTOR is developed by Matthias Wiesenberger and Markus Held and includes contributions from an increasing number of people.
+We gratefully acknowledge fruitful discussions and code contribution from 
 - Ralph Kube
 - Eduard Reiter
 - Lukas Einkemmer
@@ -228,10 +229,13 @@ We further acknowledge support on the Knights landing architecture from the High
 
 and from Intel Barcelona
 - Harald Servat
-## 4. License 
-FELTOR is free software and licensed under the very permissive MIT license. It was originally developed by Matthias Wiesenberger and Markus Held.
+
+## 4. Terms of use
+
+FELTOR is [fair](https://www.force11.org/fairprinciples) software and licensed under the very permissive [MIT license](LICENSE).  The MIT License gives you great freedom in what you do with the code. It basically allows you to do anything you like as long as you name us (Matthias Wiesenberger and Markus Held) as creators, in particular in publications that use FELTOR to produce results. In this case we suggest to take a snapshot of the used code and create and cite a DOI via e.g. [Zenodo](http://www.zenodo.org) or to cite one of the existing DOIs if you did not alter the contained code in any way. We are happy if you cite our papers, but you don't have to just because you used our code and we certainly do not demand to be coauthors when we do not contribute directly to your results. 
 
 ## 5. Official releases 
+
 Our latest code release has a shiny DOI badge from zenodo
 
 [![DOI](https://zenodo.org/badge/14143578.svg)](https://zenodo.org/badge/latestdoi/14143578)
