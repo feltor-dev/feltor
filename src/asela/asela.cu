@@ -25,8 +25,6 @@
 */
 typedef dg::FieldAligned< dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> DFA;
 
-using namespace dg::geo::solovev;
-
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
@@ -51,8 +49,8 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-    const eule::Parameters p( js);
-    const dg::geo::solovev::GeomParameters gp(gs);
+    const asela::Parameters p( js);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
@@ -72,9 +70,9 @@ int main( int argc, char* argv[])
 
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);      //create RHS 
     std::cout << "Constructing Asela...\n";
-    eule::Asela<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> asela( grid, p,gp); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar(  grid, p, gp, asela.ds(), asela.dsDIR());
+    asela::Asela<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> asela( grid, p,gp); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    asela::Implicit<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar(  grid, p, gp, asela.ds(), asela.dsDIR());
     std::cout << "Done!\n";
 
    /////////////////////The initial field///////////////////////////////////////////

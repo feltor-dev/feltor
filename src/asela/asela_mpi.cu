@@ -72,8 +72,8 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( js);
-    const dg::geo::solovev::GeomParameters gp(gs);
+    const asela::Parameters p( js);
+    const dg::geo::solovev::Parameters gp(gs);
     if(rank==0)p.display( std::cout);
     if(rank==0)gp.display( std::cout);
     std::string input = js.toStyledString(), geom = gs.toStyledString();
@@ -90,9 +90,9 @@ int main( int argc, char* argv[])
      
     //create RHS 
     if(rank==0)std::cout << "Constructing Asela...\n";
-    eule::Asela<dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> asela( grid, p, gp); //initialize before rolkar!
-    if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
+    asela::Asela<dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> asela( grid, p, gp); //initialize before rolkar!
+    if(rank==0)std::cout << "Constructing Implicit...\n";
+    asela::Implicit< dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field/////////////////////////////////////////

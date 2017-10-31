@@ -42,8 +42,8 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( js);
-    const dg::geo::solovev::GeomParameters gp(gs);
+    const feltor::Parameters p( js);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);
     std::string input = js.toStyledString(), geom = gs.toStyledString();
@@ -58,14 +58,14 @@ int main( int argc, char* argv[])
     dg::CylindricalGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1,p.bc, p.bc, dg::PER);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > feltor( grid, p, gp); //initialize before implicit!
+    std::cout << "Constructing Implicit...\n";
+    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> implicit( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //initial perturbation
     if (p.mode == 0  || p.mode ==1) 
@@ -97,7 +97,7 @@ int main( int argc, char* argv[])
     
     std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, implicit, y0, p.dt);
 //     feltor.energies(y0); //now energies and potential are at time 0
     std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
@@ -196,7 +196,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis( feltor, implicit, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

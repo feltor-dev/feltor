@@ -76,9 +76,9 @@ int main( int argc, char* argv[])
     dg::CylindricalMPIGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, p.bc, p.bc, dg::PER, comm);  
      
     if(rank==0)std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
-    if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    feltor::Explicit<dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before implicit!
+    if(rank==0)std::cout << "Constructing implicit...\n";
+    feltor::Implicit< dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > implicit( grid, p, gp, feltor.ds(), feltor.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -112,7 +112,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, implicit, y0, p.dt);
     //feltor.energies(y0); //now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////
     file::NC_Error_Handle err;
@@ -229,7 +229,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis( feltor, implicit, y0);}
             catch( dg::Fail& fail) { 
                 if(rank==0)std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 if(rank==0)std::cerr << "Does Simulation respect CFL condition?\n";

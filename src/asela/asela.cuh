@@ -11,7 +11,7 @@
 #endif //DG_BENCHMARK
 
 // #define APAR
-namespace eule
+namespace asela
 {
 ///@addtogroup solver
 ///@{
@@ -31,7 +31,7 @@ namespace eule
  * @tparam container The container class
  */
 template<class Geometry, class DS, class Matrix, class container>
-struct Rolkar
+struct Implicit
 {
         /**
      * @brief Construct from parameters
@@ -41,7 +41,7 @@ struct Rolkar
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    Rolkar( const Geometry& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp, DS& dsN, DS& dsDIR):
+    Implicit( const Geometry& g, eule::Parameters p, dg::geo::solovev::Parameters gp, DS& dsN, DS& dsDIR):
         p(p),
         gp(gp),
         LaplacianM_perpN  ( g, g.bcx(), g.bcy(), dg::normed, dg::centered),
@@ -119,7 +119,7 @@ struct Rolkar
      */
   private:
     const eule::Parameters p;
-    const dg::geo::solovev::GeomParameters gp;
+    const dg::geo::solovev::Parameters gp;
     container temp;
     container dampgauss_;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perpN,LaplacianM_perpDIR;
@@ -145,7 +145,7 @@ struct Asela
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    Asela( const Geometry& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp);
+    Asela( const Geometry& g, eule::Parameters p, dg::geo::solovev::Parameters gp);
     /**
      * @brief Return a ds class for evaluation purposes
      *
@@ -272,7 +272,7 @@ struct Asela
     dg::Invert<container> invert_maxwell, invert_pol, invert_invgammaN,invert_invgammaNW,invert_invgammaA, invert_invgammaPhi;
 
     const eule::Parameters p;
-    const dg::geo::solovev::GeomParameters gp;
+    const dg::geo::solovev::Parameters gp;
 
     double mass_, energy_, diff_, ediff_, aligned_;
     std::vector<double> evec;
@@ -281,7 +281,7 @@ struct Asela
 ///@}
 
 template<class Grid, class DS, class Matrix, class container>
-Asela<Grid, DS, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo::solovev::GeomParameters gp): 
+Asela<Grid, DS, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo::solovev::Parameters gp): 
     dsDIR_( typename DS::FieldAligned( 
                 dg::geo::Field<dg::geo::solovev::MagneticField>(
                     dg::geo::solovev::MagneticField(gp), gp.R_0

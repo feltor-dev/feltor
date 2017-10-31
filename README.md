@@ -11,7 +11,10 @@ Our core level functions are parallelized for a variety of hardware from multi-c
 [![DOI](https://zenodo.org/badge/14143578.svg)](https://zenodo.org/badge/latestdoi/14143578)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+[TOC]
+
 ## 1. Quick start guide
+
 Go ahead and clone our library into any folder you like 
 ```sh
 git clone https://www.github.com/feltor-dev/feltor
