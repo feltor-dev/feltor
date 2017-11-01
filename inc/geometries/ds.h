@@ -144,18 +144,21 @@ struct DS
     ///@copydetails forward
     void centered( const container& f, container& g){do_centered(1.,f,0.,g);}
 
-    ///@brief forward adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
+    ///@brief forward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
+    ///@note forwardDiv is the negative adjoint of backward
     void forwardDiv( double alpha, const container& f, double beta, container& g){
         do_forwardDiv( alpha, f, beta, g, dg::normed);
     }
-    ///@brief backward adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
+    ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
+    ///@note backwardDiv is the negative adjoint of forward
     void backwardDiv( double alpha, const container& f, double beta, container& g){
         do_backwardDiv( alpha, f, beta, g, dg::normed);
     }
-    ///@brief centered adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
+    ///@brief centered divergence \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
+    ///@note centeredDiv is the negative adjoint of centered
     void centeredDiv(double alpha, const container& f, double beta, container& g){
         do_centeredDiv( alpha, f, beta, g, dg::normed);
     }
@@ -190,15 +193,15 @@ struct DS
      */
     void symv( const container& f, container& dsTdsf){ do_symv( 1., f, 0., dsTdsf);}
     void symv( double alpha, const container& f, double beta, container& dsTdsf){ do_symv( alpha, f, beta, dsTdsf);}
+    void dss( const container& f, container& g){ do_dss( 1., f, 0., g);}
     /**
-     * @brief Discretizes \f$ \nabla_\parallel^2 f \f$ 
+     * @brief Discretizes \f$ g = \alpha \nabla_\parallel^2 f + \beta g \f$ 
      *
      * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h^+h^0} - \frac{f^0}{h^+h^-} + \frac{f^-}{h^-h^0}\right)
      * @param f The vector to derive
      * @param dsTdsf contains result on output (write only)
      */
-    void dss( const container& f, container& dsTdsf){ do_dss( 1., f, 0., dsTdsf);}
-    void dss( double alpha, const container& f, double beta, container& dsTdsf){ do_symv( alpha, f, beta, dsTdsf);}
+    void dss( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
 
     ///@copydoc Fieldaligned::set_boundaries(dg::bc,double,double)
     void set_boundaries( dg::bc bcz, double left, double right)
@@ -301,8 +304,7 @@ template<class G, class I, class M, class container>
 void DS<G,I,M,container>::do_backwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {    
     //adjoint discretisation
-    dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
-    dg::blas1::pointwiseDot( m_temp0, m_fa.hp_inv(), m_temp0);
+    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hp_inv(), 0., m_temp0);
     m_fa(einsPlusT, m_temp0, m_tempP);
     if(no == dg::normed) 
     {
@@ -316,32 +318,30 @@ template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_forwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {    
     //adjoint discretisation
-    dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
-    dg::blas1::pointwiseDot( m_temp0, m_fa.hm_inv(), m_temp0);
+    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hm_inv(),0., m_temp0);
     m_fa(einsMinusT, m_temp0, m_tempM);
     if(no == dg::normed) 
     {
-        dg::blas1::axpby( 1., m_temp0, -1., m_tempM, m_temp0);
+        dg::blas1::axpby( 1., m_tempM, -1., m_temp0, m_temp0);
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
     }
     else
-        dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempM, beta, dsf);
+        dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_temp0, beta, dsf);
 }
 template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_centeredDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {               
     //adjoint discretisation
-    dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
-    dg::blas1::pointwiseDot( m_temp0, m_fa.hz_inv(), m_temp0);
+    dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hz_inv(), 0.,m_temp0);
     m_fa(einsPlusT,  m_temp0, m_tempP);
     m_fa(einsMinusT, m_temp0, m_tempM);
     if(no == dg::normed) 
     {
-        dg::blas1::axpby( 1., m_tempP, -1., m_tempM);
-        dg::blas1::pointwiseDot( alpha, m_inv3d, m_tempM, beta, dsf); 
+        dg::blas1::axpby( 1., m_tempM, -1., m_tempP);
+        dg::blas1::pointwiseDot( alpha, m_inv3d, m_tempP, beta, dsf); 
     }
     else
-        dg::blas1::axpbypgz( alpha, m_tempP, -alpha, m_tempM, beta, dsf);
+        dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_tempP, beta, dsf);
 
 }
 
@@ -356,9 +356,9 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     else 
     {
         do_forward( 1., f, 0., m_tempP);
-        do_forwardDiv( 1., m_tempP, 0., m_temp0, dg::not_normed);
+        do_backwardDiv( 1., m_tempP, 0., m_temp0, dg::not_normed);
         do_backward( 1., f, 0., m_tempM);
-        do_backwardDiv( 1., m_tempM, 0., m_temp, dg::not_normed);
+        do_forwardDiv( 1., m_tempM, 0., m_temp, dg::not_normed);
         dg::blas1::axpby(0.5,m_temp0,0.5,m_temp);
     }
     dg::blas1::pointwiseDivide( m_temp, m_weights_wo_vol, m_temp);
@@ -369,10 +369,7 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
         dg::blas2::symv( -1., m_jumpY, f, 1., m_temp);
 
     if( m_no == dg::normed)
-    {
-        dg::blas1::pointwiseDot( m_weights_wo_vol, m_temp, m_temp);
-        dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp, beta, dsTdsf); 
-    }
+        dg::blas1::pointwiseDot( alpha, m_inv3d, m_weights_wo_vol, m_temp, beta, dsTdsf);
     else
         dg::blas1::pointwiseDot( alpha, m_weights_wo_vol, m_temp, beta, dsTdsf);
 }
@@ -383,8 +380,8 @@ void DS<G,I,M,container>::do_dss( double alpha, const container& f, double beta,
     m_fa(einsPlus,  f, m_tempP);
     m_fa(einsMinus, f, m_tempM);
     dg::blas1::pointwiseDot( 1., m_tempP, m_fa.hp_inv(), 1., m_tempM, m_fa.hm_inv(), 0., m_tempM);
-    dg::blas1::pointwiseDot( f,  m_fa.hp_inv(), m_temp0);
-    dg::blas1::pointwiseDot( 2.*alpha, m_fa.hz_inv(), m_tempM, -2.*alpha, m_fa.hm_inv(), m_temp0, beta, dssf);
+    dg::blas1::pointwiseDot( -2., alpha, f,  m_fa.hp_inv(), m_fa.hm_inv(), beta, dssf);
+    dg::blas1::pointwiseDot( 2.*alpha, m_fa.hz_inv(), m_tempM, 1., dssf);
 
 }
 ///@endcond

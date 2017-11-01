@@ -50,21 +50,30 @@ int main(int argc, char * argv[])
     std::cout << "Construction took "<<t.diff()<<"s\n";
     dg::HVec B = dg::pullback( dg::geo::InvB(mag), g3d), divB(B);
     dg::HVec lnB = dg::pullback( dg::geo::LnB(mag), g3d), gradB(B);
-    dg::HVec gradLnB = dg::pullback( dg::geo::GradLnB(mag), g3d);
+    const dg::HVec gradLnB = dg::pullback( dg::geo::GradLnB(mag), g3d);
     dg::HVec ones3d = dg::evaluate( dg::one, g3d);
     dg::HVec vol3d = dg::create::volume( g3d);
     dg::blas1::pointwiseDivide( ones3d, B, B);
-    dg::HVec function = dg::pullback( dg::geo::FuncNeu(mag), g3d), derivative(function);
-    ds( function, derivative);
+    //dg::HVec function = dg::pullback( dg::geo::FuncNeu(mag), g3d), derivative(function);
+    //ds( function, derivative);
 
-    ds.centeredAdj( 1., B, 0., divB);
+    ds.centeredDiv( 1., ones3d, 0., divB);
+    dg::blas1::axpby( 1., gradLnB, 1, divB);
     double norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
-    std::cout << "Divergence of B is "<<norm<<"\n";
+    std::cout << "Centered Divergence of b is "<<norm<<"\n";
+    ds.forwardDiv( 1., ones3d, 0., divB);
+    dg::blas1::axpby( 1., gradLnB, 1, divB);
+    norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
+    std::cout << "Forward  Divergence of b is "<<norm<<"\n";
+    ds.backwardDiv( 1., ones3d, 0., divB);
+    dg::blas1::axpby( 1., gradLnB, 1, divB);
+    norm =  sqrt( dg::blas2::dot(divB, vol3d, divB));
+    std::cout << "Backward Divergence of b is "<<norm<<"\n";
 
     ds.centered( 1., lnB, 0., gradB);
     norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-    dg::blas1::axpby( 1., gradB, -1., gradLnB, gradLnB);
-    double norm2 = sqrt(dg::blas2::dot(gradLnB, vol3d, gradLnB));
+    dg::blas1::axpby( 1., gradLnB, -1., gradB);
+    double norm2 = sqrt(dg::blas2::dot(gradB, vol3d, gradB));
     std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
     
     return 0;
