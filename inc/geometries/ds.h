@@ -146,27 +146,27 @@ struct DS
 
     ///@brief forward adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
-    void forwardAdj( double alpha, const container& f, double beta, container& g){
-        do_forwardAdj( alpha, f, beta, g, dg::normed);
+    void forwardDiv( double alpha, const container& f, double beta, container& g){
+        do_forwardDiv( alpha, f, beta, g, dg::normed);
     }
     ///@brief backward adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
-    void backwardAdj( double alpha, const container& f, double beta, container& g){
-        do_backwardAdj( alpha, f, beta, g, dg::normed);
+    void backwardDiv( double alpha, const container& f, double beta, container& g){
+        do_backwardDiv( alpha, f, beta, g, dg::normed);
     }
     ///@brief centered adjoint \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
     ///@copydetails forward
-    void centeredAdj(double alpha, const container& f, double beta, container& g){
-        do_centeredAdj( alpha, f, beta, g, dg::normed);
+    void centeredDiv(double alpha, const container& f, double beta, container& g){
+        do_centeredDiv( alpha, f, beta, g, dg::normed);
     }
-    void forwardAdj(const container& f, container& g){
-        do_forwardAdj( 1.,f,0.,g, dg::normed);
+    void forwardDiv(const container& f, container& g){
+        do_forwardDiv( 1.,f,0.,g, dg::normed);
     }
-    void backwardAdj(const container& f, container& g){
-        do_backwardAdj( 1.,f,0.,g, dg::normed);
+    void backwardDiv(const container& f, container& g){
+        do_backwardDiv( 1.,f,0.,g, dg::normed);
     }
-    void centeredAdj(const container& f, container& g){
-        do_centeredAdj( 1.,f,0.,g, dg::normed);
+    void centeredDiv(const container& f, container& g){
+        do_centeredDiv( 1.,f,0.,g, dg::normed);
     }
 
     /**
@@ -183,7 +183,7 @@ struct DS
     /**
      * @brief Discretizes \f$ \nabla\cdot ( \vec v \vec v \cdot \nabla . )\f$ as a symmetric matrix
      *
-     * if direction is centered then centered followed by centeredAdj and adding jump terms
+     * if direction is centered then centered followed by centeredDiv and adding jump terms
      * @param f The vector to derive
      * @param dsTdsf contains result on output (write only)
      * @note if dependsOnX is false then no jump terms will be added in the x-direction and similar in y
@@ -230,9 +230,9 @@ struct DS
     void do_forward(double alpha, const container& f, double beta, container& dsf);
     void do_backward(double alpha, const container& f, double beta, container& dsf);
     void do_centered(double alpha, const container& f, double beta, container& dsf);
-    void do_forwardAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
-    void do_backwardAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
-    void do_centeredAdj(double alpha, const container& f, double beta, container& dsf, dg::norm no);
+    void do_forwardDiv(double alpha, const container& f, double beta, container& dsf, dg::norm no);
+    void do_backwardDiv(double alpha, const container& f, double beta, container& dsf, dg::norm no);
+    void do_centeredDiv(double alpha, const container& f, double beta, container& dsf, dg::norm no);
     void do_symv(double alpha, const container& f, double beta, container& dsf);
     void do_dss(double alpha, const container& f, double beta, container& dsf);
 
@@ -298,7 +298,7 @@ void DS<G, I,M,container>::do_centered( double alpha, const container& f, double
     dg::blas1::pointwiseDot( alpha, m_tempM, m_fa.hz_inv(), beta, dsf);
 }
 template<class G, class I, class M, class container>
-void DS<G,I,M,container>::do_forwardAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
+void DS<G,I,M,container>::do_backwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {    
     //adjoint discretisation
     dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
@@ -306,14 +306,14 @@ void DS<G,I,M,container>::do_forwardAdj( double alpha, const container& f, doubl
     m_fa(einsPlusT, m_temp0, m_tempP);
     if(no == dg::normed) 
     {
-        dg::blas1::axpby( 1., m_tempP, -1., m_temp0, m_temp0);
+        dg::blas1::axpby( 1., m_temp0, -1., m_tempP, m_temp0);
         dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
     }
     else
-        dg::blas1::axpbypgz( alpha, m_tempP, -alpha, m_temp0, beta, dsf);
+        dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempP, beta, dsf);
 }
 template<class G,class I, class M, class container>
-void DS<G,I,M,container>::do_backwardAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
+void DS<G,I,M,container>::do_forwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {    
     //adjoint discretisation
     dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
@@ -328,7 +328,7 @@ void DS<G,I,M,container>::do_backwardAdj( double alpha, const container& f, doub
         dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempM, beta, dsf);
 }
 template<class G, class I, class M, class container>
-void DS<G, I,M,container>::do_centeredAdj( double alpha, const container& f, double beta, container& dsf, dg::norm no)
+void DS<G, I,M,container>::do_centeredDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
 {               
     //adjoint discretisation
     dg::blas1::pointwiseDot( m_vol3d, f, m_temp0);
@@ -351,14 +351,14 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     if(m_dir == dg::centered)
     {
         do_centered( 1., f, 0., m_tempP);
-        do_centeredAdj( 1., m_tempP, 0., m_temp, dg::not_normed);
+        do_centeredDiv( 1., m_tempP, 0., m_temp, dg::not_normed);
     }
     else 
     {
         do_forward( 1., f, 0., m_tempP);
-        do_forwardAdj( 1., m_tempP, 0., m_temp0, dg::not_normed);
+        do_forwardDiv( 1., m_tempP, 0., m_temp0, dg::not_normed);
         do_backward( 1., f, 0., m_tempM);
-        do_backwardAdj( 1., m_tempM, 0., m_temp, dg::not_normed);
+        do_backwardDiv( 1., m_tempM, 0., m_temp, dg::not_normed);
         dg::blas1::axpby(0.5,m_temp0,0.5,m_temp);
     }
     dg::blas1::pointwiseDivide( m_temp, m_weights_wo_vol, m_temp);

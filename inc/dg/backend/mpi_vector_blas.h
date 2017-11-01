@@ -129,6 +129,16 @@ inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
     doPointwiseDot( alpha, x1.data(), x2.data(), beta, y.data(), typename VectorTraits<container>::vector_category());
 
 }
+template< class Vector>
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
+        const Vector& x1, const Vector& x2, const Vector& x3,
+        typename VectorTraits<Vector>::value_type beta,
+        Vector& y, 
+        MPIVectorTag)
+{
+    typedef typename Vector::container_type container;
+    doPointwiseDot( alpha, x1.data(), x2.data(), x3.data(), beta, y.data(), typename VectorTraits<container>::vector_category());
+}
 
 template< class Vector>
 inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, MPIVectorTag)

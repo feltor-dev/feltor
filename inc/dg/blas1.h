@@ -266,6 +266,32 @@ inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, co
 }
 
 /**
+* @brief \f$ y = \alpha x_1 x_2 x_3 + \beta y\f$ 
+*
+* Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * do not match, the result is undefined.
+
+* @copydoc hide_container
+* @param alpha scalar
+* @param x1 container x1  
+* @param x2 container x2 may alias x1
+* @param x3 container x2 may alias x1 and/or x2
+* @param beta scalar
+* @param y  container y contains result on output ( may alias x1,x2 or x3)
+
+@code
+    dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
+    dg::blas1::pointwiseDot(2., two,  three, four, -4., result ); 
+    //result[i] = 24. (2*2*3*4-4*6)
+@endcode
+*/
+template< class container>
+inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, const container& x1, const container& x2, const container& x3, typename VectorTraits<container>::value_type beta, container& y)
+{
+    dg::blas1::detail::doPointwiseDot( alpha, x1, x2, x3, beta, y, typename dg::VectorTraits<container>::vector_category() );
+}
+
+/**
 * @brief \f$ y = x_1/ x_2\f$ 
 *
 * Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes

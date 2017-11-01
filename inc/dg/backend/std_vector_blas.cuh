@@ -142,6 +142,21 @@ std::vector<Vector>& y, StdVectorTag)
 }
 template< class Vector>
 inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
+const std::vector<Vector>& x1, const std::vector<Vector>& x2, const std::vector<Vector>& x3,
+typename VectorTraits<Vector>::value_type beta, 
+std::vector<Vector>& y, StdVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( !x1.empty());
+    assert( x1.size() == x2.size() );
+    assert( x1.size() == x3.size() );
+    assert( x1.size() == y.size() );
+#endif //DG_DEBUG
+    for( unsigned i=0; i<x1.size(); i++)
+        doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], typename VectorTraits<Vector>::vector_category() );
+}
+template< class Vector>
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
 const std::vector<Vector>& x1, const std::vector<Vector>& y1, 
 typename VectorTraits<Vector>::value_type beta, 
 const std::vector<Vector>& x2, const std::vector<Vector>& y2, 
