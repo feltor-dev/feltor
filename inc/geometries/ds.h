@@ -107,11 +107,17 @@ struct DS
     void construct(const FA& fieldaligned, dg::norm no=dg::normed, dg::direction dir = dg::centered);
 
     ///@copydoc Fieldaligned::set_boundaries(dg::bc,double,double)
-    void set_boundaries( dg::bc bcz, double left, double right){m_fa.set_boundaries( bcz, left, right);}
+    void set_boundaries( dg::bc bcz, double left, double right){
+        m_fa.set_boundaries( bcz, left, right);
+    }
     ///@copydoc Fieldaligned::set_boundaries(dg::bc,const container&,const container&)
-    void set_boundaries( dg::bc bcz, const container& left, const container& right){m_fa.set_boundaries( bcz, left, right);}
+    void set_boundaries( dg::bc bcz, const container& left, const container& right){
+        m_fa.set_boundaries( bcz, left, right);
+    }
     ///@copydoc Fieldaligned::set_boundaries(dg::bc,const container&,double,double)
-    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right){m_fa.set_boundaries( bcz, global, scal_left, scal_right);}
+    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right){
+        m_fa.set_boundaries( bcz, global, scal_left, scal_right);
+    }
 
     /**
     * @brief forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
@@ -234,22 +240,6 @@ struct DS
      * @copydetails forward(double,const container&,double,container&)
      */
     void dss( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
-
-    ///@copydoc Fieldaligned::set_boundaries(dg::bc,double,double)
-    void set_boundaries( dg::bc bcz, double left, double right)
-    {
-        m_fa.set_boundaries( bcz, left, right);
-    }
-    ///@copydoc Fieldaligned::set_boundaries(dg::bc,const container&,const container&)
-    void set_boundaries( dg::bc bcz, const container& left, const container& right)
-    {
-        m_fa.set_boundaries( bcz, left, right);
-    }
-    ///@copydoc Fieldaligned::set_boundaries(dg::bc,const container&,double,double)
-    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
-    {
-        m_fa.set_boundaries( bcz, global, scal_left, scal_right);
-    }
 
     const container& weights()const {return m_vol3d;}
     const container& inv_weights()const {return m_inv3d;}

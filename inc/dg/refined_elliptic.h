@@ -16,12 +16,19 @@
 namespace dg
 {
 
+ /*!@brief The refined version of \c Elliptic 
+ 
+ * Holds an \c Elliptic object on the fine grid and brackets every call to symv with %interpolation and %projection matrices
+ * @copydoc hide_geometry_matrix_container
+ * @ingroup matrixoperators
+ * @attention This class is still under construction!
+ */
 template < class Geometry,class IMatrix, class Matrix, class container>
 class RefinedElliptic
 {
     public:
     /**
-     * @brief Construct from Grid
+     * @brief Construct from a coarse and a fine grid
      *
      * @param g_coarse The coarse Grid
      * @param g_fine The fine Grid, boundary conditions are taken from here
@@ -70,8 +77,6 @@ class RefinedElliptic
     const container& weights()const {return weights_;}
     /**
      * @brief Returns the preconditioner to use in conjugate gradient
-     *
-     * In this case inverse weights are the best choice
      * @return inverse weights
      */
     const container& precond()const {return inv_weights_;}

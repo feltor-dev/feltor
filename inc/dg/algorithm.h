@@ -22,6 +22,7 @@
 #include "backend/evaluationX.cuh"
 #include "backend/derivativesX.h"
 #include "backend/weightsX.cuh"
+#include "backend/interpolationX.cuh"
 #ifdef MPI_VERSION
 #include "arakawa.h"
 #include "backend/mpi_init.h"
