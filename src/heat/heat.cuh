@@ -148,14 +148,12 @@ void Explicit<G,I,M,V>::energies( std::vector<V>& y)
     if (p.p_diff ==0)    {
     //     (A) adjoint
 //         dsNU_( y[0], omega); 
-//         dsNU_.centeredAdj(omega,lambda);
+//         dsNU_.centeredDiv(omega,lambda);
         dsNU_.forward( y[0], omega); 
-        dsNU_.forwardAdj(omega,lambda);
-        dg::blas1::axpby( 0.5, lambda, 0.,chi,chi); 
+        dsNU_.backwardDiv(0.5, omega,0., chi);
 // 
         dsNU_.backward( y[0], omega); 
-        dsNU_.backwardAdj(omega,lambda);
-        dg::blas1::axpby( 0.5, lambda, 1., chi,chi); 
+        dsNU_.forwardDiv(0.5, omega,1., chi);
         Dpar[0]= p.nu_parallel*dg::blas2::dot(y[0], w3d, chi);
     }  
     if (p.p_diff ==1)    {
@@ -164,16 +162,15 @@ void Explicit<G,I,M,V>::energies( std::vector<V>& y)
         dg::blas1::pointwiseDivide(lambda,  m_invB, lambda); //-ds lnB
         dsNU_(y[0],omega); //ds T
         dg::blas1::pointwiseDot(omega, lambda, omega);            // -ds lnB ds T
-        dsNU_.dss(y[0],lambda);                                          //ds^2 T 
+        dsNU_.dss(y[0],lambda);                                   //ds^2 T 
         dg::blas1::axpby( 1., omega,  1.,lambda );    
         Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);  
     }
     if (p.p_diff ==2)    {
         // (C) oldnonadjoint
-        dsNU_.dss(y[0],omega);                                          //ds^2 N 
         dsNU_(y[0],lambda);       
         dg::blas1::pointwiseDot(gradlnB, lambda, lambda);            // ds lnB ds N
-        dg::blas1::axpby( 1., omega, -1., lambda);       
+        dsNU_.dss(1., y[0], -1., lambda);                            // ds^2 N 
         Dpar[0]= p.nu_parallel*dg::blas2::dot(one, w3d, lambda);  
     }
     if (p.p_diff ==3)    {
@@ -226,30 +223,30 @@ void Explicit<G,I,Matrix,container>::operator()(const std::vector<container>& y,
 //         // (A) adjoint
 //         //U=v_parallel gradlnB
 //     //     dg::blas1::pointwiseDot(y[0], gradlnB, lambda);
-//     //     dsNU_.centeredAdj(lambda,omega);    
+//     //     dsNU_.centeredDiv(lambda,omega);    
 //     //     dg::blas1::axpby( p.nu_parallel, omega, 1., yp[0]); 
 // 
 //         //U=1.  
 //         //centered
 //         dg::blas1::pointwiseDot(y[0],pupil,lambda);    //U*T  
-//         dsNU_.centeredAdj(lambda,omega);    // dsT UT
-// //         dsNU_.backwardAdj(lambda,omega);
-// //         dsNU_.forwardAdj(lambda,omega);   
+//         dsNU_.centeredDiv(lambda,omega);    // dsT UT
+// //         dsNU_.forwardDiv(lambda,omega);
+// //         dsNU_.backwardDiv(lambda,omega);   
 //         dg::blas1::axpby( -1.0, omega, 1., yp[0]); //dsT (UT)
 // 
 //         //corr(1): div(UB) 
 // //         dg::blas1::pointwiseDivide(pupil,m_invB,omega); //= U B
-// //         dsNU_.centeredAdj(omega,lambda);     //div UB
+// //         dsNU_.centeredDiv(omega,lambda);     //div UB
 // //         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
 //         
 //         //corr(2): div(B) 
 // //         dg::blas1::pointwiseDivide(one,m_invB,omega); //= U B
-// //         dsNU_.centeredAdj(omega,lambda);     //div UB
+// //         dsNU_.centeredDiv(omega,lambda);     //div UB
 // //         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+div UB
 //         
 //         //corr(3): UT/B divB 
 //     //     dg::blas1::pointwiseDivide(one,m_invB,omega); //=  B
-//     //     dsNU_.centeredAdj(omega,lambda);     //div B
+//     //     dsNU_.centeredDiv(omega,lambda);     //div B
 //     //     dg::blas1::pointwiseDot(y[0],m_invB,omega); //T/B
 //     //     dg::blas1::pointwiseDot(omega,pupil,omega); // U T/B
 //     //     dg::blas1::pointwiseDot(omega,lambda,lambda); //  UT/B divB
@@ -257,7 +254,7 @@ void Explicit<G,I,Matrix,container>::operator()(const std::vector<container>& y,
 // 
 //         //corr(4): U  divB
 // //         dg::blas1::pointwiseDivide(one,m_invB,omega); //=  B
-// //         dsNU_.centeredAdj(omega,lambda);     //div B
+// //         dsNU_.centeredDiv(omega,lambda);     //div B
 // //         dg::blas1::pointwiseDot(pupil,lambda,lambda); //  U divB
 // //         dg::blas1::axpby( 1.0, lambda, 1., yp[0]); //+ U div UB
 //     }
@@ -284,16 +281,16 @@ void Explicit<G,I,Matrix,container>::operator()(const std::vector<container>& y,
     if (p.p_diff ==0)    {
 // //         centered
 // //         dsNU_( y[0], omega); 
-// //         dsNU_.centeredAdj(omega,lambda);
+// //         dsNU_.centeredDiv(omega,lambda);
 // //         dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 // 
         //forward, backward (stegi) without jump
 //         dsNU_.forward( y[0], omega); 
-//         dsNU_.forwardAdj(omega,lambda);
+//         dsNU_.backwardDiv(omega,lambda);
 //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
 // 
 //         dsNU_.backward( y[0], omega); 
-//         dsNU_.backwardAdj(omega,lambda);
+//         dsNU_.forwardDiv(omega,lambda);
 //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
 //         //with jump
 //        dsNU_.symv(y[0],lambda);
@@ -301,7 +298,7 @@ void Explicit<G,I,Matrix,container>::operator()(const std::vector<container>& y,
 //        dg::blas1::axpby( p.nu_parallel, lambda, 1., yp[0]); 
 // 
 //         dsNU_.backward( y[0], omega); 
-//         dsNU_.backwardAdj(omega,lambda);
+//         dsNU_.forwardDiv(omega,lambda);
 //         dg::blas1::axpby( 0.5*p.nu_parallel, lambda, 1., yp[0]); 
         //with jump
 //        dsNU_.symv(y[0],lambda);

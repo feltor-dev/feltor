@@ -104,7 +104,7 @@ int main( int argc, char* argv[])
     //create RHS     
     std::cout << "initialize feltor" << std::endl;
     heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p,gp); //initialize before rolkar!
-    std::cout << "initialize rolkar" << std::endl;
+    std::cout << "initialize implicit" << std::endl;
     heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
 
     ////////////////////////////////The initial field////////////////////////////////

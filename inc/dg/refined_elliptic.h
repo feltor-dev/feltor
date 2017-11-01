@@ -4,6 +4,10 @@
 #include "backend/projection.cuh"
 #include "elliptic.h"
 #include "geometry/refined_grid.h"
+#ifdef MPI_VERSION
+#include "backend/mpi_projection.h"
+#include "backend/mpi_projection.h"
+#endif
 
 /*! @file 
 

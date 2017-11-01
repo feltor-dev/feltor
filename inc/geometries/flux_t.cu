@@ -5,10 +5,8 @@
 #include <sstream>
 #include <cmath>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
+#include "dg/algorithm.h"
 
-#include "dg/backend/timer.cuh"
 #include "curvilinear.h"
 //#include "guenther.h"
 #include "testfunctors.h"

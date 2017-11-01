@@ -10,6 +10,8 @@
 #include "../backend/mpi_precon.h"
 #endif//MPI_VERSION
 #include "base_geometry.h"
+#include "base_geometryX.h"
+#include "refined_gridX.h"
 //#include "cartesianX.h"
 #ifdef MPI_VERSION
 #include "mpi_base.h"

@@ -2,13 +2,9 @@
 
 #include <cusp/print.h>
 
-#include "blas.h"
-#include "ds.h"
-#include "functors.h"
+#include "dg/algorithm.h"
 
-#include "backend/functions.h"
-#include "backend/timer.cuh"
-#include "geometry.h"
+#include "ds.h"
 
 double sine(double x, double y, double z){return sin(z);}
 double cosine(double x, double y, double z){return cos(z);}
@@ -38,9 +34,9 @@ int main()
     const dg::DVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
-    dg::DDS::FieldAligned dsFA( dg::DefaultField(), g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::geo::BinaryVectorLvl0 vec( dg::geo::Constant(0), dg::geo::Constant(0), dg::geo::Constant(1));
 
-    dg::DDS ds ( dsFA, dg::DefaultField(), dg::not_normed, dg::centered);
+    dg::geo::DS<dg::CartesianGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( vec, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), dg::not_normed, dg::centered);
     t.toc();
     std::cout << "TEST STRAIGHT FIELD LINES AND BOUNDARIES IN Z\n";
     std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";

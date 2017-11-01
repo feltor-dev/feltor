@@ -2,11 +2,7 @@
 
 #include <mpi.h>
 #define DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#include "dg/backend/mpi_evaluation.h"
-#include "dg/backend/mpi_init.h"
-#include "dg/backend/functions.h"
-#include "dg/geometry/geometry.h"
+#include "dg/algorithm.h"
 #include "ds.h"
 #include "toroidal.h"
 

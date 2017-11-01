@@ -5,7 +5,7 @@
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/weightsX.cuh"
 #include "dg/runge_kutta.h"
-#include "dg/geometry/generatorX.h"
+#include "generatorX.h"
 #include "utilitiesX.h"
 #include "ribeiro.h"
 
@@ -248,21 +248,12 @@ struct RibeiroX : public aGeneratorX2d
     {
         assert( psi_0 < 0 );
         zeta0_ = fpsi_.find_x( psi_0);
-        f0_=zeta0_/psi_0;
         zeta1_= -fx/(1.-fx)*zeta0_;
         x0_=x0, y0_=y0, psi0_=psi_0;
     }
     private:
     bool isConformal()const{return false;}
     bool do_isOrthogonal()const{return false;}
-    double f0() const{return f0_;}
-    /**
-     * @brief The vector f(x)
-     *
-     * @return f(x)
-     */
-    thrust::host_vector<double> fx() const{ return fx_;}
-    double psi1() const {return psi_1_numerical_;}
     void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
@@ -278,8 +269,8 @@ struct RibeiroX : public aGeneratorX2d
         unsigned inside=0;
         for(unsigned i=0; i<zeta1d.size(); i++)
             if( zeta1d[i]< 0) inside++;//how many points are inside
-        thrust::host_vector<double> psi_x;
-        psi_1_numerical_ = dg::geo::detail::construct_psi_values( fpsiMinv_, psi0_, zeta0_, zeta1d, zeta1_, inside, psi_x);
+        thrust::host_vector<double> psi_x, fx_;
+        dg::geo::detail::construct_psi_values( fpsiMinv_, psi0_, zeta0_, zeta1d, zeta1_, inside, psi_x);
 
         //std::cout << "In grid function:\n";
         dg::geo::ribeiro::FieldRZYRYZY fieldRZYRYZYribeiro(psi_);
@@ -309,10 +300,8 @@ struct RibeiroX : public aGeneratorX2d
     virtual double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     private:
     BinaryFunctorsLvl2 psi_;
-    dg::geo::ribeiro::detail::XFieldFinv fpsiMinv_; 
     dg::geo::ribeiro::detail::FpsiX fpsi_;
-    double f0_, psi_1_numerical_;
-    thrust::host_vector<double> fx_;
+    dg::geo::ribeiro::detail::XFieldFinv fpsiMinv_; 
     double zeta0_, zeta1_;
     double lx_, x0_, y0_, psi0_, psi1_;
     int mode_; //0 = ribeiro, 1 = equalarc

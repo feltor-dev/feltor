@@ -106,6 +106,13 @@ struct DS
      */
     void construct(const FA& fieldaligned, dg::norm no=dg::normed, dg::direction dir = dg::centered);
 
+    ///@copydoc Fieldaligned::set_boundaries(dg::bc,double,double)
+    void set_boundaries( dg::bc bcz, double left, double right){m_fa.set_boundaries( bcz, left, right);}
+    ///@copydoc Fieldaligned::set_boundaries(dg::bc,const container&,const container&)
+    void set_boundaries( dg::bc bcz, const container& left, const container& right){m_fa.set_boundaries( bcz, left, right);}
+    ///@copydoc Fieldaligned::set_boundaries(dg::bc,const container&,double,double)
+    void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right){m_fa.set_boundaries( bcz, global, scal_left, scal_right);}
+
     /**
     * @brief forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
     *
@@ -128,78 +135,103 @@ struct DS
     void forward( const container& f, container& g){do_forward(1.,f,0.,g);}
 
     ///@brief backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
-    ///@copydetails forward
+    ///@copydetails forward(double,const container&,double,container&)
     void backward( double alpha, const container& f, double beta, container& g){
         do_backward( alpha, f, beta, g);
     }
     ///@brief backward derivative \f$ g_i = \frac{1}{2h_z^-}(f_{i} - f_{i-1}) \f$
-    ///@copydetails forward
+    ///@copydetails forward(const container&,container&)
     void backward( const container& f, container& g){do_backward(1.,f,0.,g);}
     ///@brief centered derivative \f$ g_i = \alpha \frac{1}{2h_z}(f_{i+1} - f_{i-1}) + \beta g_i\f$
-    ///@copydetails forward
+    ///@copydetails forward(double,const container&,double,container&)
     void centered( double alpha, const container& f, double beta, container& g){
         do_centered( alpha, f, beta, g);
     }
     ///@brief centered derivative \f$ g_i = \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
-    ///@copydetails forward
+    ///@copydetails forward(const container&,container&)
     void centered( const container& f, container& g){do_centered(1.,f,0.,g);}
 
     ///@brief forward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
-    ///@copydetails forward
+    ///@copydetails forward(double,const container&,double,container&)
     ///@note forwardDiv is the negative adjoint of backward
     void forwardDiv( double alpha, const container& f, double beta, container& g){
         do_forwardDiv( alpha, f, beta, g, dg::normed);
     }
     ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
-    ///@copydetails forward
+    ///@copydetails forward(double,const container&,double,container&)
     ///@note backwardDiv is the negative adjoint of forward
     void backwardDiv( double alpha, const container& f, double beta, container& g){
         do_backwardDiv( alpha, f, beta, g, dg::normed);
     }
     ///@brief centered divergence \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
-    ///@copydetails forward
+    ///@copydetails forward(double,const container&,double,container&)
     ///@note centeredDiv is the negative adjoint of centered
     void centeredDiv(double alpha, const container& f, double beta, container& g){
         do_centeredDiv( alpha, f, beta, g, dg::normed);
     }
+    ///@brief forward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
+    ///@copydetails forward(const container&,container&)
+    ///@note forwardDiv is the negative adjoint of backward
     void forwardDiv(const container& f, container& g){
         do_forwardDiv( 1.,f,0.,g, dg::normed);
     }
+    ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
+    ///@copydetails forward(const container&,container&)
+    ///@note backwardDiv is the negative adjoint of forward
     void backwardDiv(const container& f, container& g){
         do_backwardDiv( 1.,f,0.,g, dg::normed);
     }
+    ///@brief centered divergence \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
+    ///@copydetails forward(const container&,container&)
+    ///@note centeredDiv is the negative adjoint of centered
     void centeredDiv(const container& f, container& g){
         do_centeredDiv( 1.,f,0.,g, dg::normed);
     }
 
     /**
-    * @brief \f$ \vec v\cdot \nabla f \f$
+    * @brief Discretizes \f$ \vec v\cdot \nabla f \f$
     *
     * dependent on dir redirects to either forward(), backward() or centered()
-    * @param f The vector to derive
-    * @param g contains result on output (write only)
+    * @copydetails forward(const container&,container&)
     */
     void operator()( const container& f, container& g){operator()(1., f, 0., g);}
+    /**
+    * @brief Discretizes \f$ g = \alpha \vec v\cdot \nabla f + \beta g \f$
+    *
+    * dependent on dir redirects to either forward(), backward() or centered()
+    * @copydetails forward(double,const container&,double,container&)
+    */
     void operator()(double alpha, const container& f, double beta, container& g);
 
 
     /**
-     * @brief Discretizes \f$ \nabla\cdot ( \vec v \vec v \cdot \nabla . )\f$ as a symmetric matrix
+     * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$ as a symmetric matrix
      *
-     * if direction is centered then centered followed by centeredDiv and adding jump terms
-     * @param f The vector to derive
-     * @param dsTdsf contains result on output (write only)
-     * @note if dependsOnX is false then no jump terms will be added in the x-direction and similar in y
+     * if direction is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
+     * @copydetails forward(const container&,container&)
+     * @note if dependsOnX is false then no jump terms will be added in the x-direction; analogous in y
      */
-    void symv( const container& f, container& dsTdsf){ do_symv( 1., f, 0., dsTdsf);}
+    void symv( const container& f, container& g){ do_symv( 1., f, 0., dsTdsf);}
+    /**
+     * @brief Discretizes \f$ g = \alpha \nabla\cdot ( \vec v \vec v \cdot \nabla f ) + \beta g\f$ as a symmetric matrix
+     *
+     * if direction is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
+     * @copydetails forward(double,const container&,double,container&)
+     * @note if dependsOnX is false then no jump terms will be added in the x-direction; analogous in y
+     */
     void symv( double alpha, const container& f, double beta, container& dsTdsf){ do_symv( alpha, f, beta, dsTdsf);}
+    /**
+     * @brief Discretizes \f$ g = \nabla_\parallel^2 f \f$ 
+     *
+     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h^+h^0} - \frac{f^0}{h^+h^-} + \frac{f^-}{h^-h^0}\right) \f]
+     * @copydetails forward(const container&,container&)
+     */
     void dss( const container& f, container& g){ do_dss( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha \nabla_\parallel^2 f + \beta g \f$ 
      *
-     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h^+h^0} - \frac{f^0}{h^+h^-} + \frac{f^-}{h^-h^0}\right)
-     * @param f The vector to derive
-     * @param dsTdsf contains result on output (write only)
+     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h^+h^0} - \frac{f^0}{h^+h^-} + \frac{f^-}{h^-h^0}\right) \f]
+     * @copydetails forward(double,const container&,double,container&)
      */
     void dss( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
 
@@ -356,10 +388,9 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
     else 
     {
         do_forward( 1., f, 0., m_tempP);
-        do_backwardDiv( 1., m_tempP, 0., m_temp0, dg::not_normed);
+        do_backwardDiv( 1., m_tempP, 0., m_temp, dg::not_normed);
         do_backward( 1., f, 0., m_tempM);
-        do_forwardDiv( 1., m_tempM, 0., m_temp, dg::not_normed);
-        dg::blas1::axpby(0.5,m_temp0,0.5,m_temp);
+        do_forwardDiv( 0.5, m_tempM, 0.5, m_temp, dg::not_normed);
     }
     dg::blas1::pointwiseDivide( m_temp, m_weights_wo_vol, m_temp);
     //     add jump term 
@@ -380,7 +411,7 @@ void DS<G,I,M,container>::do_dss( double alpha, const container& f, double beta,
     m_fa(einsPlus,  f, m_tempP);
     m_fa(einsMinus, f, m_tempM);
     dg::blas1::pointwiseDot( 1., m_tempP, m_fa.hp_inv(), 1., m_tempM, m_fa.hm_inv(), 0., m_tempM);
-    dg::blas1::pointwiseDot( -2., alpha, f,  m_fa.hp_inv(), m_fa.hm_inv(), beta, dssf);
+    dg::blas1::pointwiseDot( -2.*alpha, f,  m_fa.hp_inv(), m_fa.hm_inv(), beta, dssf);
     dg::blas1::pointwiseDot( 2.*alpha, m_fa.hz_inv(), m_tempM, 1., dssf);
 
 }

@@ -2,11 +2,7 @@
 
 #include <cusp/print.h>
 #define DG_BENCHMARK
-#include "dg/backend/functions.h"
-#include "dg/backend/timer.cuh"
-#include "dg/blas.h"
-#include "dg/functors.h"
-#include "dg/geometry/geometry.h"
+#include "dg/algorithm.h"
 #include "magnetic_field.h"
 #include "ds.h"
 #include "toroidal.h"

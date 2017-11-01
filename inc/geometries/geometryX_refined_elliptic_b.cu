@@ -2,23 +2,11 @@
 
 #include "file/nc_utilities.h"
 
-#include "dg/geometry/refined_gridX.h"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/grid.h"
-#include "dg/backend/gridX.h"
-#include "dg/backend/derivativesX.h"
-#include "dg/backend/evaluationX.cuh"
-#include "dg/refined_elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
 
-#include "solovev.h"
-#include "taylor.h"
-//#include "ribeiroX.h"
-#include "refined_orthogonalX.h"
-#include "separatrix_orthogonal.h"
+#include "geometries.h"
 #include "testfunctors.h"
 
-using namespace dg::geo::taylor;
 const char* parameters = "geometry_params_Xpoint_taylor.js";
 //using namespace dg::geo::solovev;
 //const char* parameters = "geometry_params_Xpoint.js";
@@ -46,7 +34,7 @@ int main(int argc, char**argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    GeomParameters gp(js);
+    dg::geo::taylor::Parameters gp(js);
     gp.display( std::cout);
     dg::Timer t;
     std::cout << "Constructing grid ... \n";
@@ -70,10 +58,10 @@ int main(int argc, char**argv)
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
     //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
     //dg::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
-    dg::EquidistRefinementX equi(add_x, add_y, howmanyX, howmanyY)
-    dg::OrthogonalRefinedGridX2d g2d( equi, generator, 0.25, 1./22., n_ref, n, Nx, Ny, dg::DIR, dg::NEU);
-    dg::Elliptic<dg::OrthogonalRefinedGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
-    dg::RefinedElliptic<dg::OrthogonalRefinedGridX2d, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g2d, dg::not_normed, dg::forward);
+    dg::EquidistXRefinement equi(add_x, add_y, howmanyX, howmanyY);
+    dg::geo::CurvilinearRefinedGridX2d g2d( equi, generator, 0.25, 1./22., n_ref, n, Nx, Ny, dg::DIR, dg::NEU);
+    dg::Elliptic<dg::geo::CurvilinearRefinedGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+    dg::RefinedElliptic<dg::geo::CurvilinearRefinedGridX2d, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g2d, dg::not_normed, dg::forward);
     double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi 1 is          "<<psi_1<<"\n";
