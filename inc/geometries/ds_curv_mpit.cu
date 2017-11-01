@@ -41,7 +41,7 @@ int main(int argc, char * argv[])
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
     dg::Timer t;
     t.tic();
-    unsigned mx=1, my=10;
+    unsigned mx=1, my=100;
     double psi_0 = -20, psi_1 = -4;
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     if(rank==0)std::cout << "Constructing Grid...\n";

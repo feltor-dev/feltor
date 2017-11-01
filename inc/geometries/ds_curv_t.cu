@@ -32,7 +32,7 @@ int main(int argc, char * argv[])
     std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
     unsigned n,Nx,Ny,Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
-    std::cout << "Type multipleX (1) and multipleY (10)!\n";
+    std::cout << "Type multipleX (1) and multipleY (100)!\n";
     unsigned mx, my;
     std::cin >> mx >> my;
 
