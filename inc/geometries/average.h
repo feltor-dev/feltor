@@ -147,7 +147,7 @@ struct FluxSurfaceAverage
 
 where \f$ \alpha\f$ is the dg::geo::Alpha functor.
  * @copydoc hide_container
- * @ingroup misc
+ * @ingroup misc_geo
  *
  */
 template <class container = thrust::host_vector<double> >

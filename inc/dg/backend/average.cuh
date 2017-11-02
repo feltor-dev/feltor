@@ -4,6 +4,7 @@
 #include "xspacelib.cuh"
 #include "memory.h"
 #include "../blas1.h"
+#include "split_and_join.h"
 
 /*! @file 
   @brief contains classes for poloidal and toroidal average computations.
@@ -76,41 +77,23 @@ struct PoloidalAverage
 };
 
 /**
- * @brief Class for phi average computations
+ * @brief Compute the average in the 3rd direction
  *
+ * @tparam container must be either \c dg::HVec or \c dg::DVec
+ * @param src 3d Source vector 
+ * @param res contains the 2d result on output (may not equal src, gets resized properly)
+ * @param t Contains the grid sizes 
  * @ingroup utilities
- * @tparam container Vector class to be used
  */
-template< class container = thrust::host_vector<double> >
-struct ToroidalAverage
+template<class container>
+void toroidal_average( const container& src, container& res, const aTopology3d& t)
 {
-    /**
-     * @brief Construct from grid object
-     *
-     * @param g3d 3d Grid
-     */
-    ToroidalAverage(const dg::aTopology3d& g3d):
-        g3d_(g3d),
-        sizeg2d_(g3d_.get().size()/g3d_.get().Nz())
-    {        
-    }
-    /**
-     * @brief Compute the average in phi-direction
-     *
-     * @param src 3d Source vector 
-     * @param res contains the 2d result on output (may not equal src)
-     */
-    void operator()(const container& src, container& res)
-    {
-        for( unsigned k=0; k<g3d_.get().Nz(); k++)
-        {
-            container data2d(src.begin() + k*sizeg2d_,src.begin() + (k+1)*sizeg2d_);
-            dg::blas1::axpby(1.0,data2d,1.0,res); 
-        }
-        dg::blas1::scal(res,1./g3d_.get().Nz()); //scale avg
-    }
-    private:
-    Handle<dg::aTopology3d> g3d_;
-    unsigned sizeg2d_;
-};
+    std::vector<container> split_src;
+    dg::split( src, split_src, t);
+    res = split_src[0];
+    for( unsigned k=1; k<t.Nz(); k++)
+        dg::blas1::axpby(1.0,split_src[k],1.0,res); 
+    dg::blas1::scal(res,1./(double)t.Nz()); //scale avg
+}
+
 }//namespace dg
