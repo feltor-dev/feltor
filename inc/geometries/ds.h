@@ -217,7 +217,7 @@ struct DS
      * @copydetails forward(const container&,container&)
      * @note if dependsOnX is false then no jump terms will be added in the x-direction; analogous in y
      */
-    void symv( const container& f, container& g){ do_symv( 1., f, 0., dsTdsf);}
+    void symv( const container& f, container& g){ do_symv( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha \nabla\cdot ( \vec v \vec v \cdot \nabla f ) + \beta g\f$ as a symmetric matrix
      *
@@ -225,7 +225,7 @@ struct DS
      * @copydetails forward(double,const container&,double,container&)
      * @note if dependsOnX is false then no jump terms will be added in the x-direction; analogous in y
      */
-    void symv( double alpha, const container& f, double beta, container& dsTdsf){ do_symv( alpha, f, beta, dsTdsf);}
+    void symv( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
     /**
      * @brief Discretizes \f$ g = \nabla_\parallel^2 f \f$ 
      *
