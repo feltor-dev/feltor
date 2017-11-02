@@ -9,7 +9,7 @@
 #include "backend/sparseblockmat.cuh"
 #include "backend/selfmade_blas.cuh"
 #ifdef MPI_VERSION
-#include "backend/mpi_matrix.h"
+#include "backend/mpi_matrix_blas.h"
 #include "backend/mpi_precon_blas.h"
 #endif //MPI_VERSION
 #include "backend/std_matrix_blas.cuh"

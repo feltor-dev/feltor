@@ -1,6 +1,7 @@
 #pragma once
 
 #include "matrix_traits.h"
+#include "mpi_matrix.h"
 
 ///@cond
 namespace dg

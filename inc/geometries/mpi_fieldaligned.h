@@ -68,7 +68,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc globalbcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
-        unsigned multiplyX=5, unsigned multiplyY=5, 
+        unsigned multiplyX=20, unsigned multiplyY=20, 
         bool dependsOnX=true, bool dependsOnY=true, 
         double deltaPhi = -1)
     {
@@ -82,7 +82,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc globalbcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
-        unsigned multiplyX=5, unsigned multiplyY=5, 
+        unsigned multiplyX=20, unsigned multiplyY=20, 
         bool dependsOnX=true, bool dependsOnY=true, 
         double deltaPhi = -1)
     {
@@ -95,7 +95,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc globalbcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5, 
-        unsigned multiplyX=5, unsigned multiplyY=5, 
+        unsigned multiplyX=20, unsigned multiplyY=20, 
         bool dependsOnX=true, bool dependsOnY=true, 
         double deltaPhi = -1);
 
@@ -105,7 +105,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     void set_boundaries( dg::bc bcz, double left, double right)
     {
         m_bcz = bcz; 
-        const dg::MPIGrid2d g2d( 0., 1., 0., 1., m_g.get().global().n(), m_g.get().global().Nx(), m_g.get().global().Ny(), m_g.get().perp_communicator() );
+        const dg::MPIGrid2d g2d( 0., 1., 0., 1., m_g.get().global().n(), m_g.get().global().Nx(), m_g.get().global().Ny(), m_g.get().get_perp_comm() );
         m_left  = dg::evaluate( dg::CONSTANT(left), g2d);
         m_right = dg::evaluate( dg::CONSTANT(right),g2d);
     }

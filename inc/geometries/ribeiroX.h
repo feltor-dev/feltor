@@ -251,6 +251,8 @@ struct RibeiroX : public aGeneratorX2d
         zeta1_= -fx/(1.-fx)*zeta0_;
         x0_=x0, y0_=y0, psi0_=psi_0;
     }
+
+    virtual RibeiroX* clone() const{return new RibeiroX(*this);}
     private:
     bool isConformal()const{return false;}
     bool do_isOrthogonal()const{return false;}

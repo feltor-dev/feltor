@@ -3,11 +3,7 @@
 
 #include "file/nc_utilities.h"
 
-#include "dg/backend/timer.cuh"
-#include "dg/backend/grid.h"
-#include "dg/geometry/geometry.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
 
 #include "solovev.h"
 #include "guenther.h"

@@ -7,7 +7,6 @@
  */
 #include "backend/timer.cuh"
 #include "backend/split_and_join.h"
-#include "backend/transpose.h"
 #include "backend/xspacelib.cuh"
 #include "backend/evaluationX.cuh"
 #include "backend/derivativesX.h"
@@ -15,6 +14,7 @@
 #include "backend/interpolationX.cuh"
 #include "backend/projectionX.h"
 #include "blas.h"
+#include "backend/transpose.h"
 #include "geometry/geometry.h"
 #include "helmholtz.h"
 #include "cg.h"
@@ -24,7 +24,10 @@
 #include "runge_kutta.h"
 #include "multigrid.h"
 #include "refined_elliptic.h"
-#ifdef MPI_VERSION
 #include "arakawa.h"
+#include "poisson.h"
+#include "backend/average.cuh"
+#ifdef MPI_VERSION
+#include "backend/average.h"
 #include "backend/mpi_init.h"
 #endif

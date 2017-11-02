@@ -1,9 +1,6 @@
 #include <iostream>
 
-#include <cusp/print.h>
-
 #include "dg/algorithm.h"
-
 #include "ds.h"
 
 double sine(double x, double y, double z){return sin(z);}

@@ -13,6 +13,11 @@ CUFILES=$(wildcard *.cu)
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
+%_t: %_t.cu
+	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@  -g
+
+%_b: %_b.cu 
+	$(CC) $(OPT) $(CFLAGS) -DDG_BENCHMARK $< -o $@ $(INCLUDE) -g 
 
 %_mpit: %_mpit.cu 
 	$(MPICC) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
@@ -20,14 +25,8 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 %_mpib: %_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) -g
 
-%_t: %_t.cu
-	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ 
-
-%_b: %_b.cu 
-	$(CC) $(OPT) $(CFLAGS) -DDG_BENCHMARK $< -o $@ $(INCLUDE) -g 
-
 bathRZ_t: bathRZ_t.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)  -g
 	
 .PHONY: clean doc
 

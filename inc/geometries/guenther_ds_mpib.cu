@@ -4,23 +4,13 @@
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/evaluation.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/blas.h"
-#include "dg/ds.h"
-#include "dg/backend/functions.h"
-#include "dg/functors.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/typedefs.cuh"
+#include "dg/algorithm.h"
+#include "ds.h"
 // #include "draw/host_window.h"
 #include "guenther.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 
-using namespace dg::geo::guenther;
 
 int main( int argc, char* argv[])
 {
@@ -46,7 +36,7 @@ int main( int argc, char* argv[])
     Json::Value js;
     std::ifstream is("guenther_params.js");
     reader.parse(is,js,false);
-    GeomParameters gp(js);
+    dg::geo::guenther::Parameters gp(js);
 //     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
@@ -57,21 +47,21 @@ int main( int argc, char* argv[])
     double Zmax=1.0*gp.a*gp.elongation;
     /////////////////////////////////////////////initialze fields /////////////////////
     
-    Field field(gp.R_0, gp.I_0);
-    InvB invb(gp.R_0, gp.I_0);
-    GradLnB gradlnB(gp.R_0, gp.I_0);
-    LnB lnB(gp.R_0, gp.I_0);
-    FieldR bR_(gp.R_0, gp.I_0);
-    FieldZ bZ_(gp.R_0, gp.I_0);
-    FieldP bPhi_(gp.R_0, gp.I_0);
-    FuncNeu funcNEU(gp.R_0,gp.I_0);
-    FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    DeriNeu deriNEU(gp.R_0,gp.I_0);
-    DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    Divb divb(gp.R_0,gp.I_0);
-    B Bfield(gp.R_0, gp.I_0);
+    dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(gp.R_0, gp.I_0);
+    dg::geo::InvB invb(mag);
+    dg::geo::GradLnB gradlnB(mag);
+    dg::geo::LnB lnB(mag);
+    dg::geo::FieldR bR_(mag);
+    dg::geo::FieldZ bZ_(mag);
+    dg::geo::FieldP bPhi_(mag);
+    dg::geo::Divb divb(mag);
+    dg::geo::Bmodule B(mag);
+    dg::geo::guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
+    dg::geo::guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
     
     //std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
@@ -93,7 +83,7 @@ int main( int argc, char* argv[])
 
 
 
-        dg::CylindricalMPIGrid3d<dg::MDVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER, comm);
+        dg::CylindricalMPIGrid3d g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER, comm);
         dg::MPIGrid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn, dg::DIR, dg::DIR, comm);
 
         if(rank==0)std::cout << "NR = " << Nxn << std::endl;
@@ -109,13 +99,12 @@ int main( int argc, char* argv[])
     const dg::MDVec v3d = dg::create::inv_volume( g3d);
 
     if(rank==0)std::cout << "computing dsDIR" << std::endl;
-    dg::MDDS::FieldAligned dsFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
+    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDVec>  dsFA( mag, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), rk4eps, 50, 50);
     if(rank==0)std::cout << "computing dsNEU" << std::endl;
-    dg::MDDS::FieldAligned dsNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
+    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDVec> dsNUFA( mag, g3d,dg::NEU, dg::NEU, dg::geo::FullLimiter(), rk4eps, 50, 50);
 
-
-    dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered), 
-         dsNU ( dsNUFA, field, dg::not_normed, dg::centered);
+    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds ( dsFA, dg::not_normed, dg::centered), 
+        dsNU ( dsNUFA, dg::not_normed, dg::centered);
 
 //     dg::DS<dg::DMatrix, dg::MDVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
@@ -224,15 +213,15 @@ int main( int argc, char* argv[])
 
 //     
 //     
-//     ds.centeredT(function, derivativeT); //ds(f)
+//     ds.centeredDiv(function, derivativeT); //ds(f)
 // 
 //     //divB
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
-//     ds.centeredT(temp2, divBT); // dsT B
+//     ds.centeredDiv(temp2, divBT); // dsT B
 // 
 //     
-//     ds.centeredT( function2, derivativeT2); //ds(f)
-//     ds.centeredT( ones, derivativeTones); //ds(f)
+//     ds.centeredDiv( function2, derivativeT2); //ds(f)
+//     ds.centeredDiv( ones, derivativeTones); //ds(f)
     //B ds f/B
 //     dg::blas1::pointwiseDot( inverseB, function, temp);
 //     ds( temp, derivativeTds);
@@ -246,13 +235,13 @@ int main( int argc, char* argv[])
     
     //     dg::blas1::pointwiseDivide( derivativeTds, inverseB, derivativeTds);
 //     
-//     ds.centeredT( derivative, dsTds); //dsT(ds(f))
+//     ds.centeredDiv( derivative, dsTds); //dsT(ds(f))
 //     
 //     //overwrite with sym from adjoint dg
 //     ellipticsym.symv(function,dsTds);
 //     dg::blas1::scal(dsTds,-1.0);
-// //     ds.centeredT(ones,divbT);
-    ds.forwardT( derivativef, dsTdsf);  //dsT(ds(f))
+// //     ds.centeredDiv(ones,divbT);
+    ds.forwardDiv( derivativef, dsTdsf);  //dsT(ds(f))
 //     ds.backwardT( derivativeb, dsTdsb); //dsT(ds(f))
 
 //     //centered
@@ -265,15 +254,15 @@ int main( int argc, char* argv[])
 //     dg::blas1::axpby(0.5,dsTdsbd,0.5,dsTdsfd,dsTdsfbd); 
     ds.symv(function,dsTdsfb);
     dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
-//     ds.centeredT( derivative2, dsTds2); //dsT(ds(f))
+//     ds.centeredDiv( derivative2, dsTds2); //dsT(ds(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
-//     ds.centeredT( ones, divbT);
+    ds.centeredDiv( ones, divbT);
 //     
 //     double normdsds =dg::blas2::dot(derivative2, w3d,derivative2);
 //     double normds1ds =dg::blas2::dot(derivativeones, w3d,derivative2);
 //     double normdivBT =dg::blas2::dot(divBT, w3d,divBT);
-//     double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-//     double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
+    double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+    double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
 //     double normdsTf = dg::blas2::dot(derivativeT2, w3d, function2);
 //     double normdsT_1 = dg::blas2::dot(derivativeT2, w3d, ones);
 //     double normdsT1 = dg::blas2::dot(derivativeTones, w3d, function2);
@@ -303,14 +292,14 @@ int main( int argc, char* argv[])
 //     errRZPhi =dg::blas2::dot( w3d, derivativeRZPhi);    
 //     std::cout << "Relative Difference in DS is "<< sqrt( errRZPhi/norm )<<"\n"; 
 //     
-//     std::cout << "--------------------testing dsT" << std::endl;
-//     std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
-//     std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
-//     dg::blas1::axpby( 1., divbsol, -1., divbT);
-//     normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-//     std::cout << "Relative Difference in DST is   "<<sqrt( normdivbT)<<"\n";
-//     std::cout << "-------------------- " << std::endl;
-//     std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
+     if(rank==0)std::cout << "--------------------testing dsT" << std::endl;
+     if(rank==0)std::cout << "|| divbsol ||  "<<sqrt( normdivb)<<"\n";
+     if(rank==0)std::cout << "|| divbT  ||   "<<sqrt( normdivbT)<<"\n";
+     dg::blas1::axpby( 1., divbsol, -1., divbT);
+     normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+     if(rank==0)std::cout << "Relative Difference in DST is   "<<sqrt( normdivbT)<<"\n";
+     if(rank==0)std::cout << "-------------------- " << std::endl;
+     //std::cout << "|| divB || "<<sqrt( normdivBT)<<"\n";
 // 
 //     
 //     std::cout << "-------------------- " << std::endl;
@@ -352,8 +341,10 @@ int main( int argc, char* argv[])
     
     if(rank==0)std::cout << "--------------------testing dsTdsfb " << std::endl;
     if(rank==0)std::cout << "|| SolutionT ||      "<<sqrt( normdsTds)<<"\n";
+    double remainder =dg::blas1::dot( w3d,dsTdsfb);
     double errdsTdsfb =dg::blas2::dot( w3d,dsTdsfb);
     if(rank==0)std::cout << "|| DerivativeTds ||  "<<sqrt( errdsTdsfb)<<"\n";
+    if(rank==0)std::cout << "   Integral          "<<remainder<<"\n";
     dg::blas1::axpby( 1., solutiondsTds, -1., dsTdsfb);
     errdsTdsfb =dg::blas2::dot( w3d, dsTdsfb);
     if(rank==0)std::cout << "Relative Difference in DST is "<< sqrt( errdsTdsfb/normdsTds )<<"\n";
@@ -417,8 +408,8 @@ int main( int argc, char* argv[])
     
     
     double eps =1e-8;   
-    dg::Invert< dg::MDVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
-    if(rank==0)std::cout << "MAX # iterations = " << w3d.size() << std::endl;
+    dg::Invert< dg::MDVec> invert( dg::evaluate(dg::zero,g3d), g3d.size(), eps );  
+    if(rank==0)std::cout << "MAX # iterations = " << g3d.size() << std::endl;
 // 
 //    const dg::MDVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
 // // 

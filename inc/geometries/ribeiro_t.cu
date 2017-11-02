@@ -70,8 +70,8 @@ int main( int argc, char* argv[])
     t.tic();
     dg::geo::Ribeiro ribeiro( psip, psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::CurvilinearProductGrid3d g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR);
-    dg::geo::CurvilinearGrid2d g2d = g3d.perp_grid();
-    dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
+    std::unique_ptr<dg::aGeometry2d> g2d( g3d.perp_grid());
+    dg::Grid2d g2d_periodic(g2d->x0(), g2d->x1(), g2d->y0(), g2d->y1(), g2d->n(), g2d->Nx(), g2d->Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
@@ -89,30 +89,30 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "volume", NC_DOUBLE, 2, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 2, dim3d, &divBID);
 
-    thrust::host_vector<double> psi_p = dg::pullback( psip.f(), g2d);
+    thrust::host_vector<double> psi_p = dg::pullback( psip.f(), *g2d);
     //g.display();
     err = nc_put_var_double( ncid, onesID, periodify(psi_p, g2d_periodic).data());
-    dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d.size(); i++)
+    dg::HVec X( g2d->size()), Y(X); //P = dg::pullback( dg::coo3, g);
+    for( unsigned i=0; i<g2d->size(); i++)
     {
-        X[i] = g2d.map()[0][i];
-        Y[i] = g2d.map()[1][i];
+        X[i] = g2d->map()[0][i];
+        Y[i] = g2d->map()[1][i];
     }
 
-    dg::HVec temp0( g2d.size()), temp1(temp0);
-    dg::HVec w2d = dg::create::weights( g2d);
+    dg::HVec temp0( g2d->size()), temp1(temp0);
+    dg::HVec w2d = dg::create::weights( *g2d);
 
     err = nc_put_var_double( ncid, coordsID[0], periodify(X, g2d_periodic).data());
     err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g2d_periodic).data());
 
-    dg::SparseTensor<dg::HVec> metric = g2d.metric();
+    dg::SparseTensor<dg::HVec> metric = g2d->metric();
     dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
     dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
     dg::HVec vol = vol_.value();
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
     //compute and write deformation into netcdf
     dg::blas1::pointwiseDivide( g_xy, g_xx, temp0);
-    const dg::HVec ones = dg::evaluate( dg::one, g2d);
+    const dg::HVec ones = dg::evaluate( dg::one, *g2d);
     X=g_yy;
     err = nc_put_var_double( ncid, defID, periodify(X, g2d_periodic).data());
     //compute and write ribeiroratio into netcdf

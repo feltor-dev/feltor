@@ -46,7 +46,7 @@ int main( )
     dg::geo::guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
     dg::geo::guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
     
-    std::cout << "Type n, Nx, Ny, Nz\n";
+    //std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n=3, Nx=5, Ny=5, Nz=5;
     //std::cin >> n>> Nx>>Ny>>Nz;
@@ -82,9 +82,9 @@ int main( )
     const dg::DVec v3d = dg::create::inv_volume( g3d);
 
     std::cout << "computing dsDIR" << std::endl;
-    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec>  dsFA( mag, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), rk4eps);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec>  dsFA( mag, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), rk4eps, 50, 50);
     std::cout << "computing dsNEU" << std::endl;
-    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec> dsNUFA( mag, g3d,dg::NEU, dg::NEU, dg::geo::FullLimiter(), rk4eps);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec> dsNUFA( mag, g3d,dg::NEU, dg::NEU, dg::geo::FullLimiter(), rk4eps, 50, 50);
 
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( dsFA, dg::not_normed, dg::centered), 
         dsNU ( dsNUFA, dg::not_normed, dg::centered);
@@ -236,19 +236,15 @@ int main( )
 //     dg::blas1::axpby(0.5,dsTdsbd,0.5,dsTdsfd,dsTdsfbd); 
     ds.symv(function,dsTdsfb);
     dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
-        //ds( function, temp);
-        //dg::blas1::pointwiseDot( temp, inverseB, temp);
-        //ds(temp, dsTdsfb);
-        //dg::blas1::pointwiseDivide( dsTdsfb, inverseB, dsTdsfb);
 //     ds.centeredT( derivative2, dsTds2); //dsT(ds(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
-     ds.centeredDiv( ones, divbT);
+    ds.centeredDiv( ones, divbT);
 //     
 //     double normdsds =dg::blas2::dot(derivative2, w3d,derivative2);
 //     double normds1ds =dg::blas2::dot(derivativeones, w3d,derivative2);
 //     double normdivBT =dg::blas2::dot(divBT, w3d,divBT);
-     double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-     double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
+    double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+    double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
 //     double normdsTf = dg::blas2::dot(derivativeT2, w3d, function2);
 //     double normdsT_1 = dg::blas2::dot(derivativeT2, w3d, ones);
 //     double normdsT1 = dg::blas2::dot(derivativeTones, w3d, function2);
@@ -394,8 +390,8 @@ int main( )
     
     
     double eps =1e-8;   
-    dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
-    std::cout << "MAX # iterations = " << w3d.size() << std::endl;
+    dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), g3d.size(), eps );  
+    std::cout << "MAX # iterations = " << g3d.size() << std::endl;
 // 
 //    const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
 // // 

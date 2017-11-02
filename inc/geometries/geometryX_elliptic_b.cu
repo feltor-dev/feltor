@@ -2,14 +2,7 @@
 
 #include "file/nc_utilities.h"
 
-#include "dg/geometry/refined_gridX.h"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/grid.h"
-#include "dg/backend/gridX.h"
-#include "dg/backend/derivativesX.h"
-#include "dg/backend/evaluationX.cuh"
-#include "dg/cg.h"
-#include "dg/elliptic.h"
+#include "dg/algorithm.h"
 
 #include "solovev.h"
 #include "taylor.h"

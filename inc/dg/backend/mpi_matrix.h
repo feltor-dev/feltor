@@ -2,7 +2,6 @@
 
 #include "mpi_vector.h"
 #include "memory.h"
-#include "mpi_matrix_blas.h"
 
 /*!@file
 

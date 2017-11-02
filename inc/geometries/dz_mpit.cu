@@ -1,18 +1,8 @@
 #include <iostream>
 
-#include <cusp/print.h>
-
 #include <mpi.h>
-#include "blas.h"
+#include "dg/algorithm.h"
 #include "ds.h"
-#include "functors.h"
-
-#include "backend/functions.h"
-#include "backend/timer.cuh"
-#include "backend/mpi_evaluation.h"
-#include "backend/mpi_derivatives.h"
-#include "backend/mpi_init.h"
-#include "geometry.h"
 
 double sine(double x, double y, double z){return sin(z);}
 double cosine(double x, double y, double z){return cos(z);}
@@ -44,9 +34,9 @@ int main(int argc, char **argv)
     const dg::MDVec w3d = dg::create::volume( g3d);
     dg::Timer t;
     t.tic();
-    dg::MDDS::FieldAligned dsFA( dg::DefaultField(), g3d, 1e-10, dg::DefaultLimiter(), dg::NEU);
+    dg::geo::BinaryVectorLvl0 vec( dg::geo::Constant(0), dg::geo::Constant(0), dg::geo::Constant(1));
 
-    dg::MDDS ds ( dsFA, dg::DefaultField(), dg::not_normed, dg::centered);
+    dg::geo::DS<dg::CartesianMPIGrid3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds ( vec, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), dg::not_normed, dg::centered);
     t.toc();
     if(rank==0)std::cout << "TEST STRAIGHT FIELD LINES AND BOUNDARIES IN Z\n";
     if(rank==0)std::cout << "Creation of parallel Derivative took     "<<t.diff()<<"s\n";

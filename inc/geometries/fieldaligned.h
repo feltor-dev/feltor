@@ -328,7 +328,7 @@ struct Fieldaligned
         dg::bc globalbcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
-        unsigned multiplyX=5, unsigned multiplyY=5, 
+        unsigned multiplyX=20, unsigned multiplyY=20, 
         bool dependsOnX=true, bool dependsOnY=true, 
         double deltaPhi = -1)
     {
@@ -344,7 +344,7 @@ struct Fieldaligned
         dg::bc globalbcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
-        unsigned multiplyX=5, unsigned multiplyY=5, 
+        unsigned multiplyX=20, unsigned multiplyY=20, 
         bool dependsOnX=true, bool dependsOnY=true, 
         double deltaPhi = -1)
     {
@@ -379,7 +379,7 @@ struct Fieldaligned
         dg::bc globalbcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5, 
-        unsigned multiplyX=5, unsigned multiplyY=5, 
+        unsigned multiplyX=20, unsigned multiplyY=20, 
         bool dependsOnX=true, bool dependsOnY=true, 
         double deltaPhi = -1);
 
@@ -431,7 +431,7 @@ struct Fieldaligned
      */
     void set_boundaries( dg::bc bcz, const container& global, double scal_left, double scal_right)
     {
-        dg::split( global, m_temp);
+        dg::split( global, m_temp, m_g.get());
         dg::blas1::axpby( scal_left,  m_temp[0],      0, m_left);
         dg::blas1::axpby( scal_right, m_temp[m_Nz-1], 0, m_right);
         m_bcz = bcz;

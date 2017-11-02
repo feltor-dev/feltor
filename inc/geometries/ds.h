@@ -54,7 +54,7 @@ struct DS
         dg::bc bcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         dg::norm no=dg::normed, dg::direction dir = dg::centered, 
-        double eps = 1e-5, unsigned multiplyX=5, unsigned multiplyY=5, bool dependsOnX = true, bool dependsOnY=true)
+        double eps = 1e-5, unsigned multiplyX=20, unsigned multiplyY=20, bool dependsOnX = true, bool dependsOnY=true)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
         m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY);
@@ -87,7 +87,7 @@ struct DS
         dg::bc bcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         dg::norm no=dg::normed, dg::direction dir = dg::centered, 
-        double eps = 1e-5, unsigned multiplyX=5, unsigned multiplyY=5, bool dependsOnX = true, bool dependsOnY=true)
+        double eps = 1e-5, unsigned multiplyX=20, unsigned multiplyY=20, bool dependsOnX = true, bool dependsOnY=true)
     {
         m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY);
         construct( m_fa, no, dir);
