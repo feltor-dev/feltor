@@ -332,18 +332,19 @@ struct SurjectiveComm : public aCommunicator<Vector>
         //now gather the localGatherMap from the buffer to the store to get the final gather map 
         Vector localGatherMap_d;
         dg::blas1::transfer( localGatherMap, localGatherMap_d);
-        Index gatherMap = bijectiveComm_.global_gather( localGatherMap_d);
-        dg::blas1::transfer(gatherMap, gatherMap_);
+        Vector gatherMap_V = bijectiveComm_.global_gather( localGatherMap_d);
+        Index gatherMap_I;
+        dg::blas1::transfer(gatherMap_V, gatherMap_I);
+        gatherMap_ = gatherMap_I;
         store_size_ = gatherMap_.size();
         store_.data().resize( store_size_);
         keys_.data().resize( store_size_);
 
         //now prepare a reduction map and a scatter map
-        thrust::host_vector<int> sortMap(gatherMap);
-        thrust::sequence( sortMap.begin(), sortMap.end());
-        thrust::stable_sort_by_key( gatherMap.begin(), gatherMap.end(), sortMap.begin());//note: this also sorts the gatherMap
-        dg::blas1::transfer( sortMap, sortMap_);
-        dg::blas1::transfer( gatherMap, sortedGatherMap_);
+        sortMap_ = gatherMap_I;
+        thrust::sequence( sortMap_.begin(), sortMap_.end());
+        thrust::stable_sort_by_key( gatherMap_I.begin(), gatherMap_I.end(), sortMap_.begin());//note: this also sorts the gatherMap
+        dg::blas1::transfer( gatherMap_I, sortedGatherMap_);
         //now we can repeat/invert the sort by a gather/scatter operation with sortMap as map 
     }
     unsigned buffer_size_, store_size_;

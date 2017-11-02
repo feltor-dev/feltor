@@ -6,11 +6,7 @@
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
 
-#include "asela.cuh"
-
-#include "dg/runge_kutta.h"
-#include "dg/multistep.h"
-#include "dg/backend/timer.cuh"
+#include "reconnection.cuh"
 #include "parameters.h"
 
 /*
@@ -44,7 +40,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const eule::Parameters p( js);
+    const reco::Parameters p( js);
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
@@ -57,8 +53,8 @@ int main( int argc, char* argv[])
 
     dg::Grid2d grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    eule::Asela< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > asela( grid, p); 
-    eule::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu, 1., 1. );
+    reco::Explicit< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > reconnection( grid, p); 
+    reco::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu, 1., 1. );
     //create initial vector
     std::vector<dg::DVec> y0(4, dg::evaluate( dg::one, grid)), y1(y0); // n_e' = gaussian
     y0[2] = y0[3] = dg::evaluate( aparallel, grid);
@@ -79,9 +75,9 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    //ab.init( asela, y0, p.dt);
-    ab.init( asela, diffusion, y0, p.dt);
-    //ab( asela, y0, y1, p.dt);
+    //ab.init( reconnection, y0, p.dt);
+    ab.init( reconnection, diffusion, y0, p.dt);
+    //ab( reconnection, y0, y1, p.dt);
     //y0.swap( y1); 
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
@@ -113,7 +109,7 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
 
-        dvisual = asela.potential()[0];
+        dvisual = reconnection.potential()[0];
         dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
@@ -124,7 +120,7 @@ int main( int argc, char* argv[])
 
 
         //transform phi
-        dg::blas2::gemv(laplaceM, asela.potential()[0], dvisual);
+        dg::blas2::gemv(laplaceM, reconnection.potential()[0], dvisual);
         dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
@@ -135,7 +131,7 @@ int main( int argc, char* argv[])
 
 
         //transform Aparallel
-        dvisual = asela.aparallel();
+        dvisual = reconnection.aparallel();
         dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
@@ -146,7 +142,7 @@ int main( int argc, char* argv[])
 
 
         //transform Aparallel
-        dg::blas2::gemv( laplaceM, asela.aparallel(), dvisual);
+        dg::blas2::gemv( laplaceM, reconnection.aparallel(), dvisual);
         dg::blas1::transfer(dvisual, hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         //compute the color scale
@@ -170,7 +166,7 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
-            try{ ab( asela, diffusion, y0);}
+            try{ ab( reconnection, diffusion, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

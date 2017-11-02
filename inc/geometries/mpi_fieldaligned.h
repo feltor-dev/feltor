@@ -68,7 +68,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc globalbcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
-        unsigned multiplyX=20, unsigned multiplyY=20, 
+        unsigned multiplyX=10, unsigned multiplyY=10, 
         bool dependsOnX=true, bool dependsOnY=true, 
         double deltaPhi = -1)
     {
@@ -82,7 +82,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc globalbcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
-        unsigned multiplyX=20, unsigned multiplyY=20, 
+        unsigned multiplyX=10, unsigned multiplyY=10, 
         bool dependsOnX=true, bool dependsOnY=true, 
         double deltaPhi = -1)
     {
@@ -95,7 +95,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         dg::bc globalbcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5, 
-        unsigned multiplyX=20, unsigned multiplyY=20, 
+        unsigned multiplyX=10, unsigned multiplyY=10, 
         bool dependsOnX=true, bool dependsOnY=true, 
         double deltaPhi = -1);
 
