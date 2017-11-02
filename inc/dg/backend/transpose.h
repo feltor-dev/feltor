@@ -1,5 +1,7 @@
 #pragma once
 #include <cusp/transpose.h>
+#include "cusp_matrix_blas.cuh"
+#include "matrix_traits.h"
 #ifdef MPI_VERSION
 #include "mpi_matrix.h"
 #endif //MPI_VERSION

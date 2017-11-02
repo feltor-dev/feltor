@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mpi_matrix.h"
+#include "matrix_traits.h"
 
 ///@cond
 namespace dg

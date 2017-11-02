@@ -15,14 +15,14 @@ namespace dg
 /**
 * @brief Read in number of processses and grid size and create Cartesian MPI communicator
 *
-* Also sets the GPU a process should use in case THRUST_DEVICE_SYSTEM_CUDA
-* @param bcx if bcx==dg::PER then the communicator is periodic in x 
-* @param bcy if bcy==dg::PER then the communicator is periodic in y 
-* @param n read in from is and broadcasted to all processes in MPI_COMM_WORLD
-* @param Nx read in from is and broadcasted to all processes in MPI_COMM_WORLD
-* @param Ny read in from is and broadcasted to all processes in MPI_COMM_WORLD
+* Also sets the GPU via \c rank\% num_devices_per_node a process should use if \c THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+* @param bcx if \c bcx==dg::PER then the communicator is periodic in x 
+* @param bcy if \c bcy==dg::PER then the communicator is periodic in y 
+* @param n  rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
+* @param Nx rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
+* @param Ny rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
 * @param comm (write only) a 2d Cartesian MPI communicator
-* @param is Input stream to read parameters from (npx, npy, n, Nx, Ny)
+* @param is Input stream rank 0 reads parameters (\c npx, \c npy, \c n, \c Nx, \c Ny)
 * @ingroup misc
 */
 void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm, std::istream& is = std::cin  )
@@ -71,16 +71,16 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
 /**
 * @brief Read in number of processses and grid size and create Cartesian MPI communicator
 *
-* Also sets the GPU a process should use in case THRUST_DEVICE_SYSTEM_CUDA
-* @param bcx if bcx==dg::PER then the communicator is periodic in x 
-* @param bcy if bcy==dg::PER then the communicator is periodic in y 
-* @param bcz if bcz==dg::PER then the communicator is periodic in z 
-* @param n read in from is and broadcasted to all processes in MPI_COMM_WORLD
-* @param Nx read in from is and broadcasted to all processes in MPI_COMM_WORLD
-* @param Ny read in from is and broadcasted to all processes in MPI_COMM_WORLD
-* @param Nz read in from is and broadcasted to all processes in MPI_COMM_WORLD
+* Also sets the GPU via \c rank\% num_devices_per_node a process should use if \c THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+* @param bcx if \c bcx==dg::PER then the communicator is periodic in x 
+* @param bcy if \c bcy==dg::PER then the communicator is periodic in y 
+* @param bcz if \c bcz==dg::PER then the communicator is periodic in z 
+* @param n  rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
+* @param Nx rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
+* @param Ny rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
+* @param Nz rank 0 reads in from \c is and broadcasts to all processes in \c MPI_COMM_WORLD
 * @param comm (write only) a 3d Cartesian MPI communicator
-* @param is Input stream to read parameters from (npx, npy, npz, n, Nx, Ny, Nz)
+* @param is Input stream rank 0 reads parameters (\c npx, \c npy, \c npz, \c n, \c Nx, \c Ny, \c Nz)
 * @ingroup misc
 */
 void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm, std::istream& is = std::cin  )

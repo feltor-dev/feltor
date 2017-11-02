@@ -18,7 +18,6 @@
 #include "separatrix_orthogonal.h"
 #include "testfunctors.h"
 
-using namespace dg::geo::taylor;
 const char* parameters = "geometry_params_Xpoint_taylor.js";
 
 //using namespace dg::geo::solovev;
@@ -44,7 +43,7 @@ int main(int argc, char**argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    GeomParameters gp(js);
+    dg::geo::taylor::Parameters gp(js);
     gp.display( std::cout);
     dg::Timer t;
     std::cout << "Constructing grid ... \n";
@@ -60,8 +59,8 @@ int main(int argc, char**argv)
     double Z_X = -1.1*gp.elongation*gp.a;
     std::cout << "X-point at "<<R_X <<" "<<Z_X<<"\n";
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
-    dg::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
-    dg::Elliptic<dg::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+    dg::geo::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
+    dg::Elliptic<dg::geo::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
     double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi 1 is          "<<psi_1<<"\n";
@@ -123,7 +122,7 @@ int main(int argc, char**argv)
     t.tic();
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);
     //unsigned number = invert(pol, x,b, vol2d, inv_vol2d );
-    unsigned number = invert(pol, x,b, vol2d, v2d ); //inv weights are better preconditioners
+    unsigned number = invert(pol, x,b, vol2d, v2d, v2d ); //inv weights are better preconditioners
     std::cout <<number<<"\t";
     t.toc();
     dg::blas1::axpby( 1.,x,-1., solution, error);

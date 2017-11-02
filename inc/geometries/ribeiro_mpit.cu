@@ -7,11 +7,7 @@
 
 #include <mpi.h>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
-
-#include "dg/backend/timer.cuh"
-#include "dg/backend/mpi_init.h"
+#include "dg/algorithm.h"
 #include "mpi_curvilinear.h"
 //#include "guenther.h"
 #include "solovev.h"

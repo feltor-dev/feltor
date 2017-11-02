@@ -150,8 +150,8 @@ int main(int argc, char**argv)
     dg::Invert<dg::DVec > invert2( x_fine_di,  n*n*Nx*Ny, eps);
     dg::DVec bmod(b);
     pol_refined.compute_rhs( bFINE, bmod);
-    unsigned number_sw = invert1(pol_refined, x_sandwich, bmod, w3d, v3d );
-    unsigned number_di = invert2(pol        , x_fine_di, bFINE, vol3dFINE,v3dFINE);
+    unsigned number_sw = invert1(pol_refined, x_sandwich, bmod, w3d, v3d, v3d );
+    unsigned number_di = invert2(pol        , x_fine_di, bFINE, vol3dFINE,v3dFINE, v3dFINE);
     //unsigned number_di = invert2(pol        , x_direct, bmod, w3d,v3d);
     dg::blas2::gemv( Q, x_sandwich, x_fine_sw);
     //dg::blas2::gemv( Q, x_direct,   x_fine_di);
@@ -188,7 +188,7 @@ int main(int argc, char**argv)
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout << hxX << "\t";
     std::cout << hyX << "\t";
-    std::cout<<t.diff()/(double)number<<"s"<<std::endl;
+    std::cout<<t.diff()/(double)number_di<<"s"<<std::endl;
 
     dg::blas1::transfer( error_direct, X);
     ncerr = nc_put_var_double( ncid, psiID, X.data());

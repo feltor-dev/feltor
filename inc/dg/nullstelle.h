@@ -13,7 +13,7 @@ namespace dg{
 
 /*! @brief Exception class, that stores boundaries for 1D root finding
  *
- * @ingroup numerical0
+ * @ingroup root
  */
 class NoRoot1d: public std::exception
 {
@@ -78,30 +78,6 @@ int bisection1d (UnaryOp& op, double& x_min, double& x_max, const double eps)
     throw std::runtime_error("Too many steps in root finding!");
 }
 
-template <typename UnaryOp>           
-int false_position (UnaryOp& op, double& x_min, double& x_max, const double eps) 
-{
-    double  mitte;
-    double wert_max, wert_mitte, wert_min;
-    wert_max=op(x_max);
-    wert_min=op(x_min);
-
-    if(wert_max*wert_min>=0) 
-        throw NoRoot1d(x_min, x_max);
-    
-    int j_max = 60;
-    for(int j=0; j<j_max; j++)
-    {
-        wert_mitte = op( mitte = (x_min*wert_max - x_max*wert_min)/(wert_max-wert_min) );
-        if(wert_mitte==0) 			    {x_min=x_max=mitte; return j+3;}
-        else if(wert_mitte*wert_max>0) 	{x_max = mitte; wert_max = wert_mitte;}
-        else 				            {x_min = mitte; wert_min = wert_mitte;}
-        if((x_max-x_min)<eps)           return j+3; 
-    }
-    throw std::runtime_error("Too many steps in root finding!");
-}
-
-      
 //@}
 }//namespace dg
 #endif //_NULLSTELLE_  

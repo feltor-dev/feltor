@@ -3,21 +3,13 @@
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/evaluation.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/blas.h"
-#include "dg/ds.h"
-#include "dg/backend/functions.h"
-#include "dg/functors.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
+#include "ds.h"
 // #include "draw/host_window.h"
 #include "guenther.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 
-using namespace dg::geo::guenther;
 
 int main( )
 {
@@ -27,7 +19,7 @@ int main( )
     Json::Value js;
     std::ifstream is("guenther_params.js");
     reader.parse(is,js,false);
-    Parameters gp(js);
+    dg::geo::guenther::Parameters gp(js);
     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
@@ -38,21 +30,21 @@ int main( )
     double Zmax=1.0*gp.a*gp.elongation;
     /////////////////////////////////////////////initialze fields /////////////////////
     
-    Field field(gp.R_0, gp.I_0);
-    InvB invb(gp.R_0, gp.I_0);
-    GradLnB gradlnB(gp.R_0, gp.I_0);
-    LnB lnB(gp.R_0, gp.I_0);
-    FieldR bR_(gp.R_0, gp.I_0);
-    FieldZ bZ_(gp.R_0, gp.I_0);
-    FieldP bPhi_(gp.R_0, gp.I_0);
-    FuncNeu funcNEU(gp.R_0,gp.I_0);
-    FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    DeriNeu deriNEU(gp.R_0,gp.I_0);
-    DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    Divb divb(gp.R_0,gp.I_0);
-    B Bfield(gp.R_0, gp.I_0);
+    dg::geo::guenther::Field field(gp.R_0, gp.I_0);
+    dg::geo::guenther::InvB invb(gp.R_0, gp.I_0);
+    dg::geo::guenther::GradLnB gradlnB(gp.R_0, gp.I_0);
+    dg::geo::guenther::LnB lnB(gp.R_0, gp.I_0);
+    dg::geo::guenther::FieldR bR_(gp.R_0, gp.I_0);
+    dg::geo::guenther::FieldZ bZ_(gp.R_0, gp.I_0);
+    dg::geo::guenther::FieldP bPhi_(gp.R_0, gp.I_0);
+    dg::geo::guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
+    dg::geo::guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
+    dg::geo::guenther::Divb divb(gp.R_0,gp.I_0);
+    dg::geo::guenther::B Bfield(gp.R_0, gp.I_0);
     
     std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
@@ -90,11 +82,11 @@ int main( )
     const dg::DVec v3d = dg::create::inv_volume( g3d);
 
     std::cout << "computing dsDIR" << std::endl;
-    dg::DDS::FieldAligned dsFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
+    dg::geo::FieldAligned dsFA( field, g3d, dg::DefaultLimiter(), dg::DIR, rk4eps);
     std::cout << "computing dsNEU" << std::endl;
-    dg::DDS::FieldAligned dsNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
+    dg::geo::FieldAligned dsNUFA( field, g3d,dg::DefaultLimiter(), dg::NEU, rk4eps);
 
-    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered), 
+    dg::geo::DS< ds ( dsFA, field, dg::not_normed, dg::centered), 
         dsNU ( dsNUFA, field, dg::not_normed, dg::centered);
 
 //     dg::DS<dg::DMatrix, dg::DVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
