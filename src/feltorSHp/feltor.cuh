@@ -1,12 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
 #include "parameters.h"
-#include <cusp/multiply.h>
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif //DG_BENCHMARK
 /*!@file
 
   Contains the solvers 
@@ -425,11 +420,6 @@ void Feltor<G, Matrix, container>::operator()( const std::vector<container>& y, 
     t.tic();
     assert( y.size() == 4);
     assert( y.size() == yp.size());
-    
-    if (p.iso == 1)    {
-        dg::blas1::axpby((p.bgprofamp + p.nprofileamp),y[0],0., y[2],y[2] );
-        dg::blas1::axpby((p.bgprofamp + p.nprofileamp),y[1],0., y[3],y[3] ); 
-    } //see same place in feltorSH  (MW)
     
     for(unsigned i=0; i<2; i++)
     {

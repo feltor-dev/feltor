@@ -1,12 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
 #include "parameters.h"
-#include <cusp/multiply.h>
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif //DG_BENCHMARK
 /*!@file
 
   Contains the solvers 
@@ -406,10 +401,6 @@ void Feltor<G, Matrix, container>::operator()( const std::vector<container>& y, 
     assert( y.size() == 4);
     assert( y.size() == yp.size());
     //transform compute n and logn and energies
-    if (p.iso == 1)    {
-        dg::blas1::scal( y[2], 0.0);
-        dg::blas1::scal( y[3], 0.0); 
-    } //it's not safe to change the input since this is hold by the time integrator, if you really need to do this you could copy y into your own variable and set that to zero (MW)
     
     for(unsigned i=0; i<4; i++)
     {
