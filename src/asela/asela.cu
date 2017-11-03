@@ -7,11 +7,7 @@
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/sparseblockmat.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/average.cuh"
-#include "dg/backend/typedefs.cuh"
+#include "dg/algorithm.h"
 #include "geometries/geometries.h"
 
 #include "asela.cuh"
@@ -23,7 +19,6 @@
    - integrates the ToeflR - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
-typedef dg::FieldAligned< dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> DFA;
 
 int main( int argc, char* argv[])
 {
@@ -70,14 +65,14 @@ int main( int argc, char* argv[])
 
     dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);      //create RHS 
     std::cout << "Constructing Asela...\n";
-    asela::Asela<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> asela( grid, p,gp); //initialize before rolkar!
+    asela::Asela<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> asela( grid, p,gp); //initialize before rolkar!
     std::cout << "Constructing Implicit...\n";
-    asela::Implicit<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar(  grid, p, gp, asela.ds(), asela.dsDIR());
+    asela::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> rolkar(  grid, p, gp, asela.ds(), asela.dsDIR());
     std::cout << "Done!\n";
 
    /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //perturbation 
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
@@ -96,14 +91,14 @@ int main( int argc, char* argv[])
     }
     if( p.mode == 3)
     {
-        dg::geo::ZonalFlow<Psip> init0(p.amp, p.k_psi, gp, Psip(gp));
+        dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
         y1[1] = asela.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
     }
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //sum up background and perturbation
     dg::blas1::plus(y0[1], -1); //initialize ni-1
     if( p.mode == 2 || p.mode == 3)
     {
-        dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping<Psip>(Psip(gp), gp), grid);
+        dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(dg::geo::solovev::Psip(gp), gp), grid);
         dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     }
     std::cout << "intiialize ne" << std::endl;
@@ -124,7 +119,6 @@ int main( int argc, char* argv[])
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
-    dg::ToroidalAverage<dg::HVec> toravg(grid);
 
     //create timer
     dg::Timer t;
@@ -151,7 +145,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         dg::blas1::transfer( y0[1], hvisual);
@@ -167,7 +161,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw Potential
         dg::blas1::transfer( asela.potential()[0], hvisual);
@@ -187,7 +181,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw U_e
@@ -203,7 +197,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw U_i
         dg::blas1::transfer( asela.uparallel()[1], hvisual);
@@ -218,7 +212,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw a parallel
         dg::blas1::transfer(asela.aparallel(), hvisual);
@@ -233,7 +227,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
  
         
