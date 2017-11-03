@@ -299,20 +299,15 @@ Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p, dg:
     ////////////////////////////transform curvature components////////
     dg::pushForwardPerp(dg::geo::CurvatureNablaBR(mf), dg::geo::CurvatureNablaBZ(mf), curvX, curvY, g);
     dg::blas1::transfer(  dg::pullback(dg::geo::DivCurvatureKappa(mf), g), divCurvKappa);
-    if (p.curvmode==1) 
-    {
-        dg::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ(mf), curvKappaX, curvKappaY, g);
-        dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
-        dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
-    }
+    dg::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ(mf), curvKappaX, curvKappaY, g);
     if (p.curvmode==0) 
     {
-        dg::blas1::transfer(  tempX, curvKappaX);
-        dg::blas1::transfer(  tempY, curvKappaY);
-        dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
-        dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
+        dg::blas1::transfer(  curvX, curvKappaX);
+        dg::blas1::transfer(  curvY, curvKappaY);
         dg::blas1::scal(divCurvKappa,0.);
     }
+    dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
+    dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
     ///////////////////init densities//////////////////////////////
     dg::blas1::transfer( dg::pullback(dg::geo::Nprofile(p.bgprofamp, p.nprofileamp, gp, mf.psip()),g), profne);
     dg::blas1::transfer(  profne ,profNi);

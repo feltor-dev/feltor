@@ -22,7 +22,7 @@ template<class Geometry, class IMatrix, class Matrix, class container>
 struct Implicit
 {
 
-    Implicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::Parameters gp, DS& dsN, DS& dsDIR):
+    Implicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::Parameters gp, dg::geo::DS<Geometry, IMatrix, Matrix, container>& dsN, dg::geo::DS<Geometry, IMatrix, Matrix,  container>& dsDIR):
         p(p),
         gp(gp),
         LaplacianM_perpN  ( g, g.bcx(), g.bcy(), dg::normed, dg::centered),
@@ -84,17 +84,17 @@ struct Implicit
     container temp;
     container dampgauss_;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perpN,LaplacianM_perpDIR;
-    DS& dsN_,dsDIR_;
+    dg::geo::DS<Geometry, IMatrix, Matrix, container> dsN_,dsDIR_;
 };
 
 template< class Geometry, class IMatrix, class Matrix, class container >
 struct Explicit
 {
-    Explicit( const Geometry& g, const dg::geo::TokamakMagneticField& mag, feltor::Parameters p, dg::geo::solovev::Parameters gp);
+    Explicit( const Geometry& g, feltor::Parameters p, dg::geo::solovev::Parameters gp);
 
 
-    dg::DS<Geometry, IMatrix, Matrix, container>& ds(){return dsN_;}
-    dg::DS<Geometry, IMatrix, Matrix, container>& dsDIR(){return dsDIR_;}
+    dg::geo::DS<Geometry, IMatrix, Matrix, container>& ds(){return dsN_;}
+    dg::geo::DS<Geometry, IMatrix, Matrix, container>& dsDIR(){return dsDIR_;}
 
     /**
      * @brief Returns phi and psi that belong to the last solve of the polarization equation
@@ -167,8 +167,8 @@ struct Explicit
     double fieldalignment() { return aligned_;}
 
   private:
-    void vecdotnablaN(const container& x, const container& y, container& z, container& target);
-    void vecdotnablaDIR(const container& x, const container& y, container& z, container& target);
+    void vecdotnablaN(const container& x, const container& y, const container& z, container& target);
+    void vecdotnablaDIR(const container& x, const container& y, const container& z, container& target);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     container& compute_psi( const container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
@@ -188,7 +188,7 @@ struct Explicit
     std::vector<container> dsy, curvy,curvkappay; 
 
     //matrices and solvers
-    dg::DS<Geometry, IMatrix, Matrix, container> dsDIR_, dsN_;
+    dg::geo::DS<Geometry, IMatrix, Matrix, container> dsDIR_, dsN_;
     dg::Poisson<    Geometry, Matrix, container> poissonN,poissonDIR; 
     dg::Elliptic<   Geometry, Matrix, container> pol,lapperpN,lapperpDIR;
     dg::Helmholtz< Geometry, Matrix, container > invgammaDIR, invgammaN;
@@ -205,19 +205,9 @@ struct Explicit
 
 ///@cond
 template<class Grid, class IMatrix, class Matrix, class container>
-Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, const TokamakMagneticField& mag, feltor::Parameters p, dg::geo::solovev::Parameters gp): 
-    dsDIR_( dg::FieldAligned<Grid, IMatrix, container>( mag, g, gp.rk4eps, 
-                dg::geo::PsiLimiter(mag.psip(), gp.psipmaxlim), 
-                dg::DIR, (2*M_PI)/((double)p.Nz)
-                ), 
-            dg::geo::InvB(mag), 
-            dg::normed, dg::forward ),
-    dsN_( dg::FieldAligned<Grid, IMatrix, container>( mag, g, gp.rk4eps, 
-                dg::geo::PsiLimiter(mag.psip(), gp.psipmaxlim), 
-                g.bcx(), (2*M_PI)/((double)p.Nz)
-                ), 
-            dg::geo::InvB(mag), 
-            dg::normed, dg::forward ),
+Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Parameters p, dg::geo::solovev::Parameters gp): 
+    dsDIR_( dg::geo::createSolovevField(gp), g, dg::DIR, dg::DIR, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps),
+    dsN_( dg::geo::createSolovevField(gp), g, dg::NEU, dg::NEU, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps),
     //////////the poisson operators ////////////////////////////////////////
     poissonN(  g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
@@ -243,29 +233,25 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, const Tokam
     invert_invgammaN.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
     invert_invgammaPhi.construct( omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
     //////////////////////////////init fields /////////////////////
-    dg::blas1::transfer(  dg::pullback(dg::geo::InvB(mag),                                         g), binv);
-    dg::blas1::transfer(  dg::pullback(dg::geo::GradLnB(mag),                                      g), gradlnB);
-    dg::blas1::transfer(  dg::pullback(dg::geo::TanhSource(mf.psip, gp.psipmin, gp.alpha),         g), source);
-    dg::blas1::transfer(  dg::pullback(dg::geo::GaussianDamping(mag.psip(), gp.psipmax, gp.alpha), g), damping);
+    dg::geo::TokamakMagneticField mf = dg::geo::createSolovevField(gp);
+    dg::blas1::transfer(  dg::pullback(dg::geo::InvB(mf),      g), binv);
+    dg::blas1::transfer(  dg::pullback(dg::geo::GradLnB(mf),   g), gradlnB);
+    dg::blas1::transfer(  dg::pullback(dg::geo::TanhSource(mf.psip(), gp.psipmin, gp.alpha),         g), source);
+    dg::blas1::transfer(  dg::pullback(dg::geo::GaussianDamping(mf.psip(), gp.psipmax, gp.alpha), g), damping);
     ////////////////////////////transform curvature components////////
-    dg::geo::pushForwardPerp(dg::geo::CurvatureNablaBR(mag), dg::geo::CurvatureNablaBZ(mag), curvX, curvY, g);
-    dg::blas1::transfer(  dg::pullback(dg::geo::DivCurvatureKappa(mag), g), divCurvKappa);
-    if (p.curvmode==1) 
-    {
-        dg::geo::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ(mag), curvKappaX, curvKappaY, g);
-        dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
-        dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
-    }
+    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(mf), dg::geo::CurvatureNablaBZ(mf), curvX, curvY, g);
+    dg::blas1::transfer(  dg::pullback(dg::geo::DivCurvatureKappa(mf), g), divCurvKappa);
+    dg::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ(mf), curvKappaX, curvKappaY, g);
     if (p.curvmode==0) 
     {
-        dg::blas1::transfer(  tempX, curvKappaX);
-        dg::blas1::transfer(  tempY, curvKappaY);
-        dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
-        dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
+        dg::blas1::transfer(  curvX, curvKappaX);
+        dg::blas1::transfer(  curvY, curvKappaY);
         dg::blas1::scal(divCurvKappa,0.);
     }
+    dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
+    dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
     ///////////////////init densities//////////////////////////////
-    dg::blas1::transfer( dg::pullback(dg::geo::Nprofile(p.bgprofamp, p.nprofileamp, gp, mag.psip()),g), profne);
+    dg::blas1::transfer( dg::pullback(dg::geo::Nprofile(p.bgprofamp, p.nprofileamp, gp, mf.psip()),g), profne);
     dg::blas1::transfer(  profne ,profNi);
     dg::blas1::plus( profNi, -1); 
     initializene(profNi, profne); //ne = Gamma N_i (needs Invert object)
@@ -276,8 +262,8 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, const Tokam
     dg::blas1::transfer( dg::create::inv_volume(g), v3d);
 }
 
-template<class Geometry, class DS, class Matrix, class container>
-container& Explicit<Geometry, DS, Matrix, container>::polarisation( const std::vector<container>& y)
+template<class Geometry, class IMatrix, class Matrix, class container>
+container& Explicit<Geometry, IMatrix, Matrix, container>::polarisation( const std::vector<container>& y)
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);       //chi =  \mu_i (n_i-1) 
     dg::blas1::plus( chi, p.mu[1]);
@@ -293,8 +279,8 @@ container& Explicit<Geometry, DS, Matrix, container>::polarisation( const std::v
     return phi[0];
 }
 
-template< class Geometry, class DS, class Matrix, class container>
-container& Explicit<Geometry, DS, Matrix,container>::compute_psi( const container& potential)
+template< class Geometry, class IMatrix, class Matrix, class container>
+container& Explicit<Geometry, IMatrix, Matrix,container>::compute_psi( const container& potential)
 {
     invert_invgammaPhi(invgammaDIR,chi,potential);                    //chi  Gamma phi
     poissonN.variationRHS(potential, omega);
@@ -304,15 +290,15 @@ container& Explicit<Geometry, DS, Matrix,container>::compute_psi( const containe
     return phi[1];    
 }
 
-template<class Geometry, class DS, class Matrix, class container>
-void Explicit<Geometry, DS, Matrix, container>::initializene( const container& src, container& target)
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Explicit<Geometry, IMatrix, Matrix, container>::initializene( const container& src, container& target)
 { 
     invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
 }
 
 
-template<class G, class DS, class M, class V>
-double Explicit<G, DS, M, V>::add_parallel_dynamics( const std::vector<V>& y, std::vector<V>& yp)
+template<class G, class IMatrix, class M, class V>
+double Explicit<G, IMatrix, M, V>::add_parallel_dynamics( const std::vector<V>& y, std::vector<V>& yp)
 {
     double z[2]     = {-1.0,1.0};
     double Dpar[4]  = {0.0, 0.0,0.0,0.0};
@@ -373,10 +359,14 @@ double Explicit<G, DS, M, V>::add_parallel_dynamics( const std::vector<V>& y, st
         if (p.pardiss==1)
         {
             dsN_.forward( y[i], omega); 
-            dsN_.forwardTD(omega,lambda);
-            dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 0., lambda,lambda);  //lambda = 0.5 nu_parallel ds^2_f N
+            dg::blas1::pointwiseDot( omega, binv, omega);
+            dsN_.backwardDiv(omega,lambda);
+            dg::blas1::pointwiseDivide( lambda, binv, lambda);
+            dg::blas1::scal( lambda, 0.5*nu_parallel[i]);  //lambda = 0.5 nu_parallel ds^2_f N
             dsN_.backward( y[i], omega); 
-            dsN_.backwardTD(omega,chi);
+            dg::blas1::pointwiseDot( omega, binv, omega);
+            dsN_.forwardDiv(omega,chi);
+            dg::blas1::pointwiseDivide( chi, binv, chi);
             dg::blas1::axpby( 0.5*nu_parallel[i],chi, 1., lambda,lambda);    //lambda = 0.5 nu_parallel ds^2_f N + 0.5 nu_parallel ds^2_b N
             dg::blas1::axpby( 1., lambda, 1., yp[i]);  //add to yp //dtN += 0.5 nu_parallel ds^2_f N + 0.5 nu_parallel ds^2_b N
         }           
@@ -408,10 +398,14 @@ double Explicit<G, DS, M, V>::add_parallel_dynamics( const std::vector<V>& y, st
         if (p.pardiss==1)
         {
             dsDIR_.forward( y[i+2], omega); 
-            dsDIR_.forwardTD(omega,lambda);
-            dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 0., lambda,lambda); //lambda = 0.5 nu_parallel ds^2_f U
+            dg::blas1::pointwiseDot( omega, binv, omega);
+            dsDIR_.backwardDiv(omega,lambda);
+            dg::blas1::pointwiseDivide( lambda, binv, lambda);
+            dg::blas1::scal( lambda, 0.5*nu_parallel[i+2]); //lambda = 0.5 nu_parallel ds^2_f U
             dsDIR_.backward( y[i+2], omega); 
-            dsDIR_.backwardTD(omega,chi);
+            dg::blas1::pointwiseDot( omega, binv, omega);
+            dsDIR_.forwardDiv(omega,chi);
+            dg::blas1::pointwiseDivide( chi, binv, chi);
             dg::blas1::axpby( 0.5*nu_parallel[i+2], chi, 1., lambda,lambda);  //lambda = 0.5 nu_parallel ds^2_f U + 0.5 nu_parallel ds^2_b U
             dg::blas1::axpby( 1., lambda, 1., yp[i+2]); //0.5 nu_parallel ds^2_f U + 0.5 nu_parallel ds^2_b U
         }   
@@ -430,8 +424,8 @@ double Explicit<G, DS, M, V>::add_parallel_dynamics( const std::vector<V>& y, st
 }
 
 
-template<class Geometry, class DS, class Matrix, class container>
-void Explicit<Geometry, DS, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Explicit<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - 1
        y[1] := N_i - 1
@@ -602,22 +596,22 @@ void Explicit<Geometry, DS, Matrix, container>::operator()( const std::vector<co
 
 
 //Computes curvature operator
-template<class Geometry, class DS, class Matrix, class container>
-void Explicit<Geometry, DS, Matrix, container>::vecdotnablaN(const container& vecX, const container& vecY, container& src, container& target)
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Explicit<Geometry, IMatrix, Matrix, container>::vecdotnablaN(const container& vecX, const container& vecY, const container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxlhs(), src, target); //d_R src
     dg::blas2::gemv( poissonN.dylhs(), src, temp1);  //d_Z src
-    dg::blas1::pointwiseDot( 1., vecY, temp1, 1., vecX, target, 0, target);   // C^Z d_Z src + C^R d_R src
+    dg::blas1::pointwiseDot( 1., vecX, target, 1., vecY, temp1, 0., target);   // C^Z d_Z src + C^R d_R src
 }
 
-template<class Geometry, class DS, class Matrix, class container>
-void Explicit<Geometry, DS, Matrix, container>::vecdotnablaDIR(const container& vecX, const container& vecY,  container& src, container& target)
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Explicit<Geometry, IMatrix, Matrix, container>::vecdotnablaDIR(const container& vecX, const container& vecY,  const container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonDIR.dxrhs(), src, target); //d_R src
     dg::blas2::gemv( poissonDIR.dyrhs(), src, temp1);  //d_Z src
-    dg::blas1::pointwiseDot( 1., vecY, temp1, 1., vecX, target, 0, target);   // C^Z d_Z src + C^R d_R src
+    dg::blas1::pointwiseDot( 1., vecX, target, 1., vecY, temp1, 0., target);   // C^Z d_Z src + C^R d_R src
 }
 
 ///@endcond

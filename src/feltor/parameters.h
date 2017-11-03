@@ -2,7 +2,7 @@
 #include "dg/enums.h"
 #include "json/json.h"
 
-namespace eule{
+namespace feltor{
 /**
  * @brief Provide a mapping between input file and named parameters
  */
@@ -168,7 +168,7 @@ struct Parameters
     }
 };
 
-}//namespace eule
+}//namespace feltor
 
 
     
