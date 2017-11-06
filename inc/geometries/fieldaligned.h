@@ -47,7 +47,7 @@ struct DSFieldCylindrical
     DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
     void operator()( const dg::HVec& y, dg::HVec& yp) const {
         double R = y[0], Z = y[1];
-        //m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
+        m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
         double vz = v_.z()(R, Z);
         yp[0] = v_.x()(R, Z)/vz; 
         yp[1] = v_.y()(R, Z)/vz;
@@ -119,11 +119,11 @@ struct DSField
         {
             return false;
         }
-        //if new integrated point far outside domain
-        if ((end[0] < g_.get().x0()-1e4 ) || (g_.get().x1()+1e4 < end[0])  ||(end[1] < g_.get().y0()-1e4 ) || (g_.get().y1()+1e4 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-        {
-            return false;
-        }
+        ////if new integrated point far outside domain (How could it end up there??)
+        //if ((end[0] < g_.get().x0()-1e4 ) || (g_.get().x1()+1e4 < end[0])  ||(end[1] < g_.get().y0()-1e4 ) || (g_.get().y1()+1e4 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        //{
+        //    return false;
+        //}
         return true;
     }
     private:
@@ -260,6 +260,7 @@ void boxintegrator( const Field& field, const Topology& grid,
         //now assume the rest is purely toroidal
         double deltaS = coords1[2];
         thrust::host_vector<double> temp=coords0;
+        //compute the vector value on the boundary point
         field(coords1, temp); //we are just interested in temp[2]
         coords1[2] = deltaS + (deltaPhi-phi1)*temp[2]; // ds + dphi*f[2]
     }
