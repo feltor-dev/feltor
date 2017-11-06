@@ -44,12 +44,16 @@ namespace detail{
 
 struct DSFieldCylindrical
 {
-    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v):v_(v) { }
+    DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
     void operator()( const dg::HVec& y, dg::HVec& yp) const {
-        double vz = v_.z()(y[0], y[1]);
-        yp[0] = v_.x()(y[0], y[1])/vz; 
-        yp[1] = v_.y()(y[0], y[1])/vz;
+        double R = y[0], Z = y[1];
+        //m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
+        double vz = v_.z()(R, Z);
+        yp[0] = v_.x()(R, Z)/vz; 
+        yp[1] = v_.y()(R, Z)/vz;
         yp[2] = 1./vz;
+        if( !m_b.contains( yp[0], yp[1])) 
+            yp[0] = yp[1] = 0;
     }
 
     double error( const dg::HVec& x0, const dg::HVec& x1)const {
@@ -60,16 +64,17 @@ struct DSFieldCylindrical
         {
             return false;
         }
-        //if new integrated point outside domain
-        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-        {
-            return false;
-        }
+        ////if new integrated point outside domain
+        //if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
+        //{
+        //    return false;
+        //}
         return true;
     }
     
     private:
     dg::geo::BinaryVectorLvl0 v_;
+    dg::Grid2d m_b;
 };
 
 struct DSField
@@ -272,7 +277,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg:
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
-    dg::geo::detail::DSFieldCylindrical cyl_field(vec);
+    dg::geo::detail::DSFieldCylindrical cyl_field(vec, (dg::Grid2d)grid_field);
     unsigned size = grid_evaluate.size();
     for( unsigned i=0; i<size; i++)
     {
