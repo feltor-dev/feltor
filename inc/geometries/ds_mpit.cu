@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Create parallel Derivative!\n";
     dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
-    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-6, 5,5,true,true);
+    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds( dsFA, dg::not_normed, dg::centered);
     if(rank==0)std::cout << "Ready!\n";
 

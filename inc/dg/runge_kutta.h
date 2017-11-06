@@ -599,7 +599,7 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
     }
     if( error > eps_abs )
     {
-        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<std::endl;
+        std::cerr << "ATTENTION: Runge Kutta failed to converge. Error is "<<error<<" with "<<NT<<" steps"<<std::endl;
         return -2;
     }
     return NT;

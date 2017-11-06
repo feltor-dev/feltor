@@ -30,7 +30,7 @@ int main(int argc, char * argv[])
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "You typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<std::endl;
-    std::cout << "Type mx (5) and my (5)\n";
+    std::cout << "Type mx (10) and my (10)\n";
     unsigned mx, my;
     std::cin >> mx>> my;
     std::cout << "You typed "<<mx<<" "<<my<<std::endl;
@@ -42,7 +42,7 @@ int main(int argc, char * argv[])
     const dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     const dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
     //create Fieldaligned object and construct DS from it
-    const dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-6, mx, my, true,true);
+    const dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my, true,true,true);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::not_normed, dg::centered);
     ///##########################################################///
     //apply to function 

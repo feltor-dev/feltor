@@ -69,11 +69,11 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10, 
-        bool dependsOnX=true, bool dependsOnY=true, 
+        bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
         double deltaPhi = -1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        construct( bhat, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
+        construct( bhat, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
     }
     template <class Limiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, 
@@ -83,10 +83,10 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10, 
-        bool dependsOnX=true, bool dependsOnY=true, 
+        bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
         double deltaPhi = -1)
     {
-        construct( vec, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, deltaPhi);
+        construct( vec, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
     }
     template <class Limiter>
     void construct(const dg::geo::BinaryVectorLvl0& vec, 
@@ -96,7 +96,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
         Limiter limit = FullLimiter(), 
         double eps = 1e-5, 
         unsigned multiplyX=10, unsigned multiplyY=10, 
-        bool dependsOnX=true, bool dependsOnY=true, 
+        bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
         double deltaPhi = -1);
 
     bool dependsOnX()const{return m_dependsOnX;}
@@ -162,7 +162,7 @@ template <class Limiter>
 void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vector<LocalContainer> >::construct(
     const dg::geo::BinaryVectorLvl0& vec, const MPIGeometry& grid, 
     dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double eps, 
-    unsigned mx, unsigned my, bool bx, bool by, double deltaPhi)
+    unsigned mx, unsigned my, bool bx, bool by, bool integrateAll, double deltaPhi)
 {
     m_dependsOnX=bx, m_dependsOnY=by;
     m_Nz=grid.local().Nz(), m_bcz=grid.bcz(); 
@@ -195,12 +195,21 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::Handle<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
     dg::Handle<dg::aGeometry2d> global_grid_magnetic = grid_magnetic.get().global_geometry();
+    dg::MPIGrid2d grid_fine( grid_coarse.get() );//FINE GRID
+    grid_fine.multiplyCellNumbers((double)mx, (double)my);
 #ifdef DG_BENCHMARK
     t.toc();
     if(rank==0) std::cout << "High order grid gen   took: "<<t.diff()<<"\n";
     t.tic();
 #endif
-    detail::integrate_all_fieldlines2d( vec, global_grid_magnetic.get(), grid_coarse.get().local(), yp_coarse, ym_coarse, deltaPhi, eps);
+    if(integrateAll)
+        detail::integrate_all_fieldlines2d( vec, global_grid_magnetic.get(), grid_fine.local(), yp, ym, deltaPhi, eps);
+    else
+    {
+        detail::integrate_all_fieldlines2d( vec, global_grid_magnetic.get(), grid_coarse.get().local(), yp_coarse, ym_coarse, deltaPhi, eps);
+        dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(), grid_coarse.get().local());  //INTERPOLATE TO FINE GRID
+        dg::geo::detail::interpolate_and_clip( interpolate, grid_fine.local(), grid_fine.global(), yp_coarse, ym_coarse, yp, ym);
+    }
 #ifdef DG_BENCHMARK
     t.toc();
     if(rank==0) std::cout << "Fieldline integration took: "<<t.diff()<<"\n";
@@ -208,10 +217,6 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
 #endif
-    dg::MPIGrid2d grid_fine( grid_coarse.get() );//FINE GRID
-    grid_fine.multiplyCellNumbers((double)mx, (double)my);
-    dg::IHMatrix interpolate = dg::create::interpolation( grid_fine.local(), grid_coarse.get().local());  //INTERPOLATE TO FINE GRID
-    dg::geo::detail::interpolate_and_clip( interpolate, grid_fine.local(), grid_fine.global(), yp_coarse, ym_coarse, yp, ym);
     dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get().global(), globalbcx, globalbcy), plus;
     dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get().global(), globalbcx, globalbcy), minus;
     dg::IHMatrix projection = dg::create::projection( grid_coarse.get().local(), grid_fine.local());

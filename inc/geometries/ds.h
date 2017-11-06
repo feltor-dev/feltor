@@ -54,10 +54,10 @@ struct DS
         dg::bc bcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         dg::norm no=dg::normed, dg::direction dir = dg::centered, 
-        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true)
+        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, bool integrateAll=true)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY);
+        m_fa.construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY,integrateAll);
         construct( m_fa, no, dir);
     }
     /**
@@ -77,8 +77,10 @@ struct DS
      * @param eps Desired accuracy of the fieldline integrator
      * @param multiplyX defines the resolution in X of the fine grid relative to grid
      * @param multiplyY defines the resolution in Y of the fine grid relative to grid
-     * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate
-     * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate
+     * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate (jump terms are added in symv)
+     * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate (jump terms are added in symv)
+     * @param integrateAll indicates, that all fieldlines of the fine grid should be integrated instead of interpolating it from the coarse grid. 
+     *  Should be true if the streamlines of the vector field cross the domain boudary. 
      * @sa \c Fieldaligned
      */
     template<class Limiter>
@@ -87,9 +89,9 @@ struct DS
         dg::bc bcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         dg::norm no=dg::normed, dg::direction dir = dg::centered, 
-        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true)
+        double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, bool integrateAll=true)
     {
-        m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY);
+        m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll);
         construct( m_fa, no, dir);
     }
     ///@copydoc construct

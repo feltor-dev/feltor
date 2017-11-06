@@ -47,7 +47,7 @@ int main(int argc, char * argv[])
     if(rank==0)std::cout << "Constructing Grid...\n";
     dg::geo::CurvilinearProductMPIGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR, dg::PER, dg::PER, comm);
     if(rank==0)std::cout << "Constructing Fieldlines...\n";
-    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIHMatrix, dg::MHMatrix, dg::MHVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my, false, true);
+    dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIHMatrix, dg::MHMatrix, dg::MHVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my, false, true,false);
     
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
