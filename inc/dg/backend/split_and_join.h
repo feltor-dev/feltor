@@ -38,9 +38,7 @@ void split( const MPI_Vector<thrust_vector1>& in, std::vector<MPI_Vector<thrust_
     int result;
     MPI_Comm_compare( in.communicator(), grid.communicator(), &result);
     assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-    MPI_Comm planeComm;
-    int remain_dims[] = {true,true,false}; 
-    MPI_Cart_sub( in.communicator(), remain_dims, &planeComm);
+    MPI_Comm planeComm = grid.get_perp_comm();
     //local size2d
     Grid3d l = grid.local();
     unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
