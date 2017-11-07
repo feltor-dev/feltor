@@ -306,6 +306,30 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg:
 ///@endcond
 
 
+    /*!@class hide_fieldaligned_physics_parameters
+    * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
+        is a limiter and 0 if there isn't. 
+        If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
+    * @param vec The vector field to integrate
+    * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
+    * @param bcx Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
+    * @param bcy Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
+    * @param limit Instance of the limiter class (Default is a limiter everywhere, 
+        note that if \c grid.bcz() is periodic it doesn't matter if there is a limiter or not)
+    */
+    /*!@class hide_fieldaligned_numerics_parameters
+    * @param eps Desired accuracy of the fieldline integrator
+    * @param multiplyX defines the resolution in X of the fine grid relative to grid
+    * @param multiplyY defines the resolution in Y of the fine grid relative to grid
+    * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate 
+    * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate 
+    * @param integrateAll indicates, that all fieldlines of the fine grid should be integrated instead of interpolating it from the coarse grid. 
+    *  Should be true if the streamlines of the vector field cross the domain boudary. 
+    * @param deltaPhi Is either <0 (then it's ignored), or may differ from grid.hz() if grid.Nz() == 1
+    * @note If there is a limiter, the boundary condition on the first/last plane is set 
+        by the \c grid.bcz() variable and can be changed by the set_boundaries function. 
+        If there is no limiter, the boundary condition is periodic.
+    */
 //////////////////////////////FieldalignedCLASS////////////////////////////////////////////
 /**
 * @brief Create and manage interpolation matrices from fieldline integration
@@ -325,12 +349,14 @@ struct Fieldaligned
 
     ///@brief do not allocate memory; no member call except construct is valid
     Fieldaligned(){}
-    ///@copydoc construct()
+   ///@brief Construct from a magnetic field and a grid
+   ///@copydoc hide_fieldaligned_physics_parameters
+   ///@copydoc hide_fieldaligned_numerics_parameters
     template <class Limiter>
     Fieldaligned(const dg::geo::TokamakMagneticField& vec, 
         const ProductGeometry& grid, 
-        dg::bc globalbcx = dg::NEU, 
-        dg::bc globalbcy = dg::NEU, 
+        dg::bc bcx = dg::NEU, 
+        dg::bc bcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10, 
@@ -338,52 +364,33 @@ struct Fieldaligned
         double deltaPhi = -1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
-        construct( bhat, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
+        construct( bhat, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
     }
 
-    ///@copydoc construct()
+    ///@brief Construct from a vector field and a grid
+    ///@copydoc hide_fieldaligned_physics_parameters
+    ///@copydoc hide_fieldaligned_numerics_parameters
     template <class Limiter>
     Fieldaligned(const dg::geo::BinaryVectorLvl0& vec, 
         const ProductGeometry& grid, 
-        dg::bc globalbcx = dg::NEU, 
-        dg::bc globalbcy = dg::NEU, 
+        dg::bc bcx = dg::NEU, 
+        dg::bc bcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5,
         unsigned multiplyX=10, unsigned multiplyY=10, 
         bool dependsOnX=true, bool dependsOnY=true, bool integrateAll = true,
         double deltaPhi = -1)
     {
-        construct( vec, grid, globalbcx, globalbcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
+        construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll, deltaPhi);
     }
-    /**
-    * @brief Construct from a field and a grid
-    *
-    * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
-        is a limiter and 0 if there isn't. 
-        If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
-    * @param vec The field to integrate
-    * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
-    * @param globalbcx Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
-    * @param globalbcy Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
-    * @param limit Instance of the limiter class (Default is a limiter everywhere, 
-        note that if \c grid.bcz() is periodic it doesn't matter if there is a limiter or not)
-    * @param eps Desired accuracy of the fieldline integrator
-    * @param multiplyX defines the resolution in X of the fine grid relative to grid
-    * @param multiplyY defines the resolution in Y of the fine grid relative to grid
-    * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate 
-    * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate 
-    * @param integrateAll indicates, that all fieldlines of the fine grid should be integrated instead of interpolating it from the coarse grid. 
-    *  Should be true if the streamlines of the vector field cross the domain boudary. 
-    * @param deltaPhi Is either <0 (then it's ignored), or may differ from grid.hz() if grid.Nz() == 1
-    * @note If there is a limiter, the boundary condition on the first/last plane is set 
-        by the \c grid.bcz() variable and can be changed by the set_boundaries function. 
-        If there is no limiter, the boundary condition is periodic.
-    */
+    ///@brief Construct from a field and a grid
+    ///@copydoc hide_fieldaligned_physics_parameters
+    ///@copydoc hide_fieldaligned_numerics_parameters
     template <class Limiter>
     void construct(const dg::geo::BinaryVectorLvl0& vec, 
         const ProductGeometry& grid, 
-        dg::bc globalbcx = dg::NEU, 
-        dg::bc globalbcy = dg::NEU, 
+        dg::bc bcx = dg::NEU, 
+        dg::bc bcy = dg::NEU, 
         Limiter limit = FullLimiter(), 
         double eps = 1e-5, 
         unsigned multiplyX=10, unsigned multiplyY=10, 
@@ -527,7 +534,7 @@ template<class Geometry, class IMatrix, class container>
 template <class Limiter>
 void Fieldaligned<Geometry, IMatrix, container>::construct(
     const dg::geo::BinaryVectorLvl0& vec, const Geometry& grid, 
-    dg::bc globalbcx, dg::bc globalbcy, Limiter limit, double eps, 
+    dg::bc bcx, dg::bc bcy, Limiter limit, double eps, 
     unsigned mx, unsigned my, bool bx, bool by, bool integrateAll, double deltaPhi)
 {
     m_dependsOnX=bx, m_dependsOnY=by;
@@ -577,8 +584,8 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     //%%%%%%%%%%%%%%%%%%Create interpolation and projection%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     t.tic();
 #endif
-    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get(), globalbcx, globalbcy), plus, plusT;
-    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get(), globalbcx, globalbcy), minus, minusT;
+    dg::IHMatrix plusFine  = dg::create::interpolation( yp[0], yp[1], grid_coarse.get(), bcx, bcy), plus, plusT;
+    dg::IHMatrix minusFine = dg::create::interpolation( ym[0], ym[1], grid_coarse.get(), bcx, bcy), minus, minusT;
     dg::IHMatrix projection = dg::create::projection( grid_coarse.get(), grid_fine);
     cusp::multiply( projection, plusFine, plus);
     cusp::multiply( projection, minusFine, minus);
