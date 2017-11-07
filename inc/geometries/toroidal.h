@@ -115,7 +115,7 @@ BinaryFunctorsLvl1 createIpol( double I0 )
  * @ingroup geom
  * @note The solovev field can also be made to model a todoidal slab field
  */
-TokamakMagneticField createToroidalField( double R0)
+dg::geo::TokamakMagneticField createToroidalField( double R0)
 {
     return TokamakMagneticField( R0, toroidal::createPsip(), toroidal::createIpol());
 }
@@ -128,7 +128,7 @@ TokamakMagneticField createToroidalField( double R0)
  * @return A magnetic field object
  * @ingroup geom
  */
-TokamakMagneticField createCircularField( double R0, double I0)
+dg::geo::TokamakMagneticField createCircularField( double R0, double I0)
 {
     return TokamakMagneticField( R0, circular::createPsip(R0), circular::createIpol(I0));
 }
