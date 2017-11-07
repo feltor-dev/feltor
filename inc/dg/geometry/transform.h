@@ -76,8 +76,8 @@ template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIGeometry2d& g)
 {
     std::vector<MPI_Vector<thrust::host_vector<double> > > map = g.map();
-    thrust::host_vector<double> vec( g.size());
-    for( unsigned i=0; i<g.size(); i++)
+    thrust::host_vector<double> vec( g.local().size());
+    for( unsigned i=0; i<g.local().size(); i++)
         vec[i] = f( map[0].data()[i], map[1].data()[i]);
     return MPI_Vector<thrust::host_vector<double> >( vec, g.communicator());
 }
@@ -88,8 +88,8 @@ template< class Functor>
 MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIGeometry3d& g)
 {
     std::vector<MPI_Vector<thrust::host_vector<double> > > map = g.map();
-    thrust::host_vector<double> vec( g.size());
-    for( unsigned i=0; i<g.size(); i++)
+    thrust::host_vector<double> vec( g.local().size());
+    for( unsigned i=0; i<g.local().size(); i++)
         vec[i] = f( map[0].data()[i], map[1].data()[i], map[2].data()[i]);
     return MPI_Vector<thrust::host_vector<double> >( vec, g.communicator());
 }

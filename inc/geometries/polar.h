@@ -4,6 +4,14 @@
 namespace dg {
 namespace geo {
 
+/**
+* @brief Polar coordinates
+
+ \f[ x = r \cos(\eta) \\
+     y = r \sin(\eta) \f]
+     with \f$ r = \zeta + r_{min}\f$ 
+ * @ingroup generators_geo
+*/
 struct PolarGenerator : public aGenerator2d
 {
     private:
@@ -11,6 +19,12 @@ struct PolarGenerator : public aGenerator2d
 
     public:
 
+    /**
+    * @brief Construct a ring with minimal and maximal radius
+    *
+    * @param _r_min minimum radius
+    * @param _r_max maximum radius
+    */
     PolarGenerator(double _r_min, double _r_max) : r_min(_r_min), r_max(_r_max) {}
     virtual PolarGenerator* clone() const{return new PolarGenerator(*this); }
 
@@ -56,6 +70,14 @@ struct PolarGenerator : public aGenerator2d
 };
 
 
+/**
+* @brief Log Polar coordinates (conformal) 
+
+ \f[ x = \exp(l) \cos(\eta) \\
+     y = \exp(l) \sin(\eta) \f]
+     with \f$ l = \zeta + \log (r_{min})\f$ 
+ * @ingroup generators_geo
+*/
 struct LogPolarGenerator : public aGenerator2d
 {
     private:
@@ -63,6 +85,12 @@ struct LogPolarGenerator : public aGenerator2d
 
     public:
 
+    /**
+    * @brief Construct a ring with minimal and maximal radius
+    *
+    * @param _r_min minimum radius
+    * @param _r_max maximum radius
+    */
     LogPolarGenerator(double _r_min, double _r_max) : r_min(_r_min), r_max(_r_max) {}
     virtual LogPolarGenerator* clone() const{return new LogPolarGenerator(*this); }
 

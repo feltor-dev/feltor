@@ -190,16 +190,12 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
     //compute psi
     if(equations == "global")
     {
-        dg::blas1::pointwiseDot( binv, omega, omega);
-        dg::blas1::pointwiseDot( binv, omega, omega);
 
-        dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
+        dg::blas1::pointwiseDot( -0.5, binv, binv, omega, 1., phi[1]);
     }
     else if ( equations == "drift_global")
     {
-        dg::blas1::pointwiseDot( binv, omega, omega);
-        dg::blas1::pointwiseDot( binv, omega, omega);
-        dg::blas1::axpby( 0.5, omega, 0., phi[1]);
+        dg::blas1::pointwiseDot( 0.5, binv, binv, omega, 0., phi[1]);
     }
     else if( equations == "gravity_global" ) 
         dg::blas1::axpby( 0.5, omega, 0., phi[1]);

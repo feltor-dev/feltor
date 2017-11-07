@@ -2,6 +2,7 @@
 //#include <iomanip>
 
 #include "interpolation.cuh"
+#include "gridX.h"
 
 /*! @file
 

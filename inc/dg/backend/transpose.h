@@ -1,7 +1,9 @@
 #pragma once
 #include <cusp/transpose.h>
+#include "cusp_matrix_blas.cuh"
+#include "matrix_traits.h"
 #ifdef MPI_VERSION
-#include "mpi_matrix.h"
+#include "mpi_matrix_blas.h"
 #endif //MPI_VERSION
 
 namespace dg
@@ -23,6 +25,8 @@ MPIDistMat<LocalMatrix, Collective> doTranspose( const MPIDistMat<LocalMatrix, C
 {
     LocalMatrix tr = doTranspose( src.matrix(), typename MatrixTraits<LocalMatrix>::matrix_category());
     MPIDistMat<LocalMatrix, Collective> out( tr, src.collective());
+    if( src.get_dist() == dg::row_dist) out.set_dist( dg::col_dist);
+    if( src.get_dist() == dg::col_dist) out.set_dist( dg::row_dist);
     return out;
 }
 #endif// MPI_VERSION

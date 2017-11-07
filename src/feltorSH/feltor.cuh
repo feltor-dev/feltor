@@ -1,12 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
 #include "parameters.h"
-#include <cusp/multiply.h>
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif //DG_BENCHMARK
 /*!@file
 
   Contains the solvers 
@@ -32,7 +27,7 @@ struct Rolkar
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
     {
     }
-    void operator()( std::vector<container>& x, std::vector<container>& y)
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
@@ -53,6 +48,7 @@ struct Rolkar
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
     const container& weights(){return LaplacianM_perp.weights();}
+    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const eule::Parameters p;
@@ -82,7 +78,7 @@ struct Feltor
     void initializene( const container& y, const container& helper, container& target);
     void initializepi( const container& y, const container& helper, container& target);
 
-    void operator()( std::vector<container>& y, std::vector<container>& yp);
+    void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
@@ -393,7 +389,7 @@ void Feltor<G, Matrix, container>::initializepi( const container& src, const con
 }
 
 template<class G, class Matrix, class container>
-void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+void Feltor<G, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
  /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
        y[1] := N_i - (p.bgprofamp + p.nprofileamp)
@@ -405,10 +401,6 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     assert( y.size() == 4);
     assert( y.size() == yp.size());
     //transform compute n and logn and energies
-    if (p.iso == 1)    {
-        dg::blas1::scal( y[2], 0.0);
-        dg::blas1::scal( y[3], 0.0); 
-    }
     
     for(unsigned i=0; i<4; i++)
     {

@@ -2,7 +2,6 @@
 
 #include "mpi_vector.h"
 #include "memory.h"
-#include "matrix_traits.h"
 
 /*!@file
 
@@ -12,6 +11,7 @@
 */
 namespace dg
 {
+    
 
 ///@addtogroup mpi_structures
 ///@{

@@ -2,6 +2,8 @@
 
 namespace dg
 {
+namespace geo
+{
 
 /**
 * @brief The abstract generator base class 
@@ -88,4 +90,5 @@ struct aGeneratorX2d
 
 };
 
+}//namespace geo
 }//namespace dg

@@ -3,21 +3,13 @@
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/evaluation.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/blas.h"
-#include "dg/ds.h"
-#include "dg/backend/functions.h"
-#include "dg/functors.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
+#include "ds.h"
 // #include "draw/host_window.h"
 #include "guenther.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
 
-using namespace dg::geo::guenther;
 
 int main( )
 {
@@ -27,7 +19,7 @@ int main( )
     Json::Value js;
     std::ifstream is("guenther_params.js");
     reader.parse(is,js,false);
-    Parameters gp(js);
+    dg::geo::guenther::Parameters gp(js);
     gp.display( std::cout);
 
     //////////////////////////////////////////////////////////////////////////
@@ -38,23 +30,23 @@ int main( )
     double Zmax=1.0*gp.a*gp.elongation;
     /////////////////////////////////////////////initialze fields /////////////////////
     
-    Field field(gp.R_0, gp.I_0);
-    InvB invb(gp.R_0, gp.I_0);
-    GradLnB gradlnB(gp.R_0, gp.I_0);
-    LnB lnB(gp.R_0, gp.I_0);
-    FieldR bR_(gp.R_0, gp.I_0);
-    FieldZ bZ_(gp.R_0, gp.I_0);
-    FieldP bPhi_(gp.R_0, gp.I_0);
-    FuncNeu funcNEU(gp.R_0,gp.I_0);
-    FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
-    DeriNeu deriNEU(gp.R_0,gp.I_0);
-    DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
-    DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
-    DeriNeuT deriNEUT(gp.R_0,gp.I_0);
-    Divb divb(gp.R_0,gp.I_0);
-    B Bfield(gp.R_0, gp.I_0);
+    dg::geo::TokamakMagneticField mag = dg::geo::createGuentherField(gp.R_0, gp.I_0);
+    dg::geo::InvB invb(mag);
+    dg::geo::GradLnB gradlnB(mag);
+    dg::geo::LnB lnB(mag);
+    dg::geo::FieldR bR_(mag);
+    dg::geo::FieldZ bZ_(mag);
+    dg::geo::FieldP bPhi_(mag);
+    dg::geo::Divb divb(mag);
+    dg::geo::Bmodule B(mag);
+    dg::geo::guenther::FuncNeu funcNEU(gp.R_0,gp.I_0);
+    dg::geo::guenther::FuncNeu2 funcNEU2(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeu deriNEU(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeu2 deriNEU2(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeuT2 deriNEUT2(gp.R_0,gp.I_0);
+    dg::geo::guenther::DeriNeuT deriNEUT(gp.R_0,gp.I_0);
     
-    std::cout << "Type n, Nx, Ny, Nz\n";
+    //std::cout << "Type n, Nx, Ny, Nz\n";
     //std::cout << "Note, that function is resolved exactly in R,Z for n > 2\n";
     unsigned n=3, Nx=5, Ny=5, Nz=5;
     //std::cin >> n>> Nx>>Ny>>Nz;
@@ -74,7 +66,7 @@ int main( )
 
 
 
-        dg::CylindricalGrid3d<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
+        dg::CylindricalGrid3d g3d( Rmin,Rmax, Zmin,Zmax, z0, z1,  n,Nxn ,Nyn, Nzn,dg::DIR, dg::DIR, dg::PER);
         dg::Grid2d g2d( Rmin,Rmax, Zmin,Zmax,  n, Nxn ,Nyn);
 
         std::cout << "NR = " << Nxn << std::endl;
@@ -90,12 +82,12 @@ int main( )
     const dg::DVec v3d = dg::create::inv_volume( g3d);
 
     std::cout << "computing dsDIR" << std::endl;
-    dg::DDS::FieldAligned dsFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::DIR);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec>  dsFA( mag, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), rk4eps, 50, 50);
     std::cout << "computing dsNEU" << std::endl;
-    dg::DDS::FieldAligned dsNUFA( field, g3d, rk4eps, dg::DefaultLimiter(), dg::NEU);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec> dsNUFA( mag, g3d,dg::NEU, dg::NEU, dg::geo::FullLimiter(), rk4eps, 50, 50);
 
-    dg::DDS ds ( dsFA, field, dg::not_normed, dg::centered), 
-        dsNU ( dsNUFA, field, dg::not_normed, dg::centered);
+    dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( dsFA, dg::not_normed, dg::centered), 
+        dsNU ( dsNUFA, dg::not_normed, dg::centered);
 
 //     dg::DS<dg::DMatrix, dg::DVec> dsNEU( field, g3d, g3d.hz(), rk4eps, dg::DefaultLimiter(), dg::NEU);
     
@@ -231,7 +223,7 @@ int main( )
 //     ellipticsym.symv(function,dsTds);
 //     dg::blas1::scal(dsTds,-1.0);
 // //     ds.centeredT(ones,divbT);
-    ds.forwardT( derivativef, dsTdsf);  //dsT(ds(f))
+    ds.forwardDiv( derivativef, dsTdsf);  //dsT(ds(f))
 //     ds.backwardT( derivativeb, dsTdsb); //dsT(ds(f))
 
 //     //centered
@@ -244,19 +236,15 @@ int main( )
 //     dg::blas1::axpby(0.5,dsTdsbd,0.5,dsTdsfd,dsTdsfbd); 
     ds.symv(function,dsTdsfb);
     dg::blas1::pointwiseDot(v3d,dsTdsfb,dsTdsfb);
-        //ds( function, temp);
-        //dg::blas1::pointwiseDot( temp, inverseB, temp);
-        //ds(temp, dsTdsfb);
-        //dg::blas1::pointwiseDivide( dsTdsfb, inverseB, dsTdsfb);
 //     ds.centeredT( derivative2, dsTds2); //dsT(ds(f))
 //     dg::blas1::pointwiseDivide(ones,  inverseB, temp2); //B
-     ds.centeredT( ones, divbT);
+    ds.centeredDiv( ones, divbT);
 //     
 //     double normdsds =dg::blas2::dot(derivative2, w3d,derivative2);
 //     double normds1ds =dg::blas2::dot(derivativeones, w3d,derivative2);
 //     double normdivBT =dg::blas2::dot(divBT, w3d,divBT);
-     double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
-     double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
+    double normdivbT =dg::blas2::dot(divbT, w3d,divbT);
+    double normdivb =dg::blas2::dot(divbsol, w3d,divbsol); 
 //     double normdsTf = dg::blas2::dot(derivativeT2, w3d, function2);
 //     double normdsT_1 = dg::blas2::dot(derivativeT2, w3d, ones);
 //     double normdsT1 = dg::blas2::dot(derivativeTones, w3d, function2);
@@ -402,8 +390,8 @@ int main( )
     
     
     double eps =1e-8;   
-    dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), w3d.size(), eps );  
-    std::cout << "MAX # iterations = " << w3d.size() << std::endl;
+    dg::Invert< dg::DVec> invert( dg::evaluate(dg::zero,g3d), g3d.size(), eps );  
+    std::cout << "MAX # iterations = " << g3d.size() << std::endl;
 // 
 //    const dg::DVec rhs = dg::evaluate( solovev::DeriNeuT2( gp.R_0, gp.I_0), g3d);
 // // 

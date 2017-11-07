@@ -77,7 +77,7 @@ void join( const std::vector<thrust_vector1>& in, thrust_vector2& out, const aTo
 template<class thrust_vector1, class thrust_vector2>
 void join( const std::vector<MPI_Vector<thrust_vector1> >& in, MPI_Vector<thrust_vector2 >& out, const aMPITopology3d& grid)
 {
-    Grid2d l(grid);
+    Grid3d l(grid.local());
     unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
     out.data().resize( size2d*l.Nz());
     out.communicator() = grid.communicator();

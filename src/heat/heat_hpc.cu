@@ -8,22 +8,12 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/print.h>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/interpolation.cuh"
-// #include "dg/backend/ell_interpolation.h"
 #include "file/nc_utilities.h"
-#include "dg/runge_kutta.h"
-#include "dg/multistep.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
 #include "geometries/geometries.h"
-#include "heat/parameters.h"
 
+#include "parameters.h"
 #include "heat.cuh"
-
-typedef dg::FieldAligned< dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> DFA;
-using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
@@ -44,8 +34,8 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( js); p.display( std::cout);
-    const GeomParameters gp(gs); gp.display( std::cout);
+    const heat::Parameters p( js); p.display( std::cout);
+    const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
@@ -86,8 +76,8 @@ int main( int argc, char* argv[])
         std::cout << "geome in"<<geomin <<std::endl;
         reader.parse(inputin,js,false);
         reader.parse(geomin,gs,false);
-        const eule::Parameters pin(js);
-        const dg::geo::solovev::GeomParameters gpin(gs);
+        const heat::Parameters pin(js);
+        const dg::geo::solovev::Parameters gpin(gs);
         double Rminin = gpin.R_0 - pin.boxscaleRm*gpin.a;
         double Zminin =-pin.boxscaleZm*gpin.a*gpin.elongation;
         double Rmaxin = gpin.R_0 + pin.boxscaleRp*gpin.a; 
@@ -104,9 +94,9 @@ int main( int argc, char* argv[])
     }
     // /////////////////////create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p,gp); 
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
+    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p,gp); //initialize before rolkar!
+    std::cout << "initialize implicit" << std::endl;
+    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -118,7 +108,7 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT init0( 0.);
 
     //background profile
-    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);

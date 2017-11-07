@@ -1,12 +1,8 @@
 #include <iostream>
 
 #include <mpi.h>
-
-#include "dg/backend/timer.cuh"
-#include "dg/backend/mpi_evaluation.h"
-#include "dg/backend/mpi_init.h"
-#include "dg/backend/functions.h"
-#include "dg/geometry/geometry.h"
+#define DG_BENCHMARK
+#include "dg/algorithm.h"
 #include "ds.h"
 #include "toroidal.h"
 
@@ -34,13 +30,15 @@ int main(int argc, char* argv[])
     dg::mpi_init3d( dg::NEU, dg::NEU, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
-    dg::CylindricalMPIGrid3d g3d( R_0 - 1, R_0+1, -1, 1, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
+    dg::CylindricalMPIGrid3d g3d( R_0 - a, R_0+a, -a, a, 0, 2.*M_PI, n, Nx, Ny, Nz, dg::NEU, dg::NEU, dg::PER, comm);
     const dg::MDVec vol3d = dg::create::volume( g3d);
+    if(rank==0)std::cout << "Note that it's faster to compute with OMP_NUM_THREADS=1\n";
     if(rank==0)std::cout << "Create parallel Derivative!\n";
     dg::geo::TokamakMagneticField mag = dg::geo::createCircularField( R_0, I_0);
     dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(mag), (dg::geo::BHatZ)(mag), (dg::geo::BHatP)(mag));
-    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, 2,2,true,true,1e-10, dg::NEU, dg::NEU, dg::geo::NoLimiter());
+    dg::geo::Fieldaligned<dg::aProductMPIGeometry3d,dg::MIDMatrix,dg::MDVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8);
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> ds( dsFA, dg::not_normed, dg::centered);
+    if(rank==0)std::cout << "Ready!\n";
 
     dg::MDVec function = dg::evaluate( func, g3d), derivative(function);
     const dg::MDVec solution = dg::evaluate( deri, g3d);

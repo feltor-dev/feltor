@@ -7,11 +7,8 @@
 
 
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/interpolation.cuh"
 #include "file/nc_utilities.h"
-#include "geometries/solovev.h"
+#include "dg/algorithm.h"
 
 #include "asela/asela.cuh"
 #include "asela/parameters.h"
@@ -23,8 +20,6 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
-typedef dg::FieldAligned< dg::CylindricalGrid3d, dg::IDMatrix, dg::DVec> DFA;
-using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
@@ -42,8 +37,8 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( js);
-    const dg::geo::solovev::GeomParameters gp(gs);
+    const asela::Parameters p( js);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);
     std::string input = js.toStyledString(), geom = gs.toStyledString();
@@ -58,14 +53,14 @@ int main( int argc, char* argv[])
     dg::CylindricalGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1,p.bc, p.bc, dg::PER);  
     //create RHS 
     std::cout << "Constructing Asela...\n";
-    eule::Asela<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > asela( grid, p, gp); //initialize before rolkar!
+    asela::Asela<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> asela( grid, p,gp); //initialize before rolkar!
     std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid3d, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
+    asela::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> rolkar(  grid, p, gp, asela.ds(), asela.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //initial perturbation
     if (p.mode == 0  || p.mode ==1) 
@@ -80,13 +75,13 @@ int main( int argc, char* argv[])
     }
     if (p.mode == 3) 
     { 
-        dg::geo::ZonalFlow<Psip> init0(p.amp, p.k_psi, gp, Psip(gp));
+        dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
         y1[1] = dg::evaluate( init0, grid);
     }
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping<Psip>(Psip(gp), gp), grid);
+    dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(dg::geo::solovev::Psip(gp), gp), grid);
     dg::blas1::pointwiseDot( damping, y0[1], y0[1]); //damp with gaussprofdamp
     std::cout << "initialize ne" << std::endl;
     asela.initializene( y0[1], y0[0]);    
@@ -108,10 +103,10 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-    MagneticField c(gp);
-    dg::geo::FieldR<MagneticField> fieldR(c, gp.R_0);
-    dg::geo::FieldZ<MagneticField> fieldZ(c, gp.R_0);
-    dg::geo::FieldP<MagneticField> fieldP(c, gp.R_0);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
+    dg::geo::FieldR fieldR(c);
+    dg::geo::FieldZ fieldZ(c);
+    dg::geo::FieldP fieldP(c);
     dg::HVec vecR = dg::evaluate( fieldR, grid_out);
     dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
     dg::HVec vecP = dg::evaluate( fieldP, grid_out);

@@ -6,12 +6,7 @@
 
 #include "draw/host_window.h"
 
-#include "dg/functors.h"
-#include "dg/backend/evaluation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/runge_kutta.h"
-#include "dg/multistep.h"
-#include "dg/helmholtz.h"
+#include "dg/algorithm.h"
 
 #include "shu.cuh"
 
@@ -75,7 +70,7 @@ int main()
         cout << "Total vorticity is: "<<blas2::dot( stencil, w2d, y0) << "\n";
         cout << "Total enstrophy is: "<<blas2::dot( w2d, y0)<<"\n";
         //compute the color scale
-        dg::blas2::mv( equidistant, y0, visual );
+        dg::blas2::symv( equidistant, y0, visual );
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<float>() );
         std::cout << "Color scale " << colors.scale() <<"\n";
         //draw and swap buffers

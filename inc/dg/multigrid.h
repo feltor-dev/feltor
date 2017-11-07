@@ -9,6 +9,9 @@
 #ifdef DG_BENCHMARK
 #include "backend/timer.cuh"
 #endif //DG_BENCHMARK
+#ifdef MPI_VERSION
+#include "backend/mpi_projection.h"
+#endif
 
 namespace dg
 {
@@ -229,7 +232,7 @@ struct MultigridCG2d
     
     ///After a call to a solution method returns the maximum number of iterations allowed at stage  0
     ///(if the solution method returns this number, failure is indicated)
-    unsigned max_iter() const{return cg_[0].get_max();} //could this be a problem in MPI?
+    unsigned max_iter() const{return cg_[0].get_max();} 
 
 private:
 

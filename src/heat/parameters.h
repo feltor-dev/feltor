@@ -1,11 +1,8 @@
 #pragma once
 #include "dg/enums.h"
-#include "json.h"
+#include "json/json.h"
 
-namespace eule{
-/**
- * @brief Provide a mapping between input file and named parameters
- */
+namespace heat{
 struct Parameters
 {
     unsigned n, Nx, Ny, Nz; 

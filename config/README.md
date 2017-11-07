@@ -12,7 +12,7 @@ The machine specific config files (e.g. vsc3.mk) should have an include guard an
 
 | variable  | default value                            | description                              |
 | :-------: | :--------------------------------------- | :--------------------------------------- |
-|    CC     | g++                                      | C++ compiler                             |+
+|    CC     | g++                                      | C++ compiler                             |
 |   MPICC   | mpic++                                   | the corresponding mpi wrapper for the c++ compiler     |
 |  CFLAGS   | -std=c++11 -Wall -x c++                  | flags for the C++ compiler               |
 | MPICFLAGS |                  | flags specific to the MPI compilation                |
@@ -33,7 +33,7 @@ The main purpose of the file `feltor/config/devices/devices.mk` is to configure 
 | value | description                              | flags                                    |
 | ----- | ---------------------------------------- | ---------------------------------------- |
 | gpu   | replaces the CC and CFLAGS variables with the nvcc versions and analogously MPICC and MPICFLAGS  | `CC = $(NVCC) --compiler-bindir $(CC)` `CFLAGS = $(NVCCARCH) $(NVCCFLAGS)` `MPICC = $(NVCC) --compiler-bindir $(MPICC)` `MPICFLAGS+= $(NVCCARCH) $(NVCCFLAGS)` |
-| !gpu  | if device != gpu all thrust device calls redirect to OpenMP using the THRUST_DEVICE_SYSTEM macro | `-x c++` `-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` and `$(OMPFLAG)` added to both CFLAGS and MPICFLAGS |
+| !gpu  | if device != gpu all thrust device calls redirect to OpenMP using the THRUST_DEVICE_SYSTEM macro | `-x c++` `-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` and `$(OMPFLAG)` added to CFLAGS, `MPICFLAGS+=$(CFLAGS)` |
 | omp  | specify OPT for OpenMP | OPT = -O3                   |
 | mic   | specify OPT for Intel Xeon Phi architecture | OPT = -O3 -xMIC-AVX512                   |
 | skl   | specify OPT for Intel Skylake processors (icc only) | OPT = -xCORE-AVX512 -mtune=skylake -O3   |
@@ -58,7 +58,8 @@ make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
 
 ### General Remarks
  - If MPI is used in connection with the gpu backend, the mpi installation needs to be **cuda-aware**
- - if `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
- - support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
+ - If `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
+ - Support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
+ - The library headers are compliant with the c++98 standard but we reserve the right to change that in future updates
  
 

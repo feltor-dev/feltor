@@ -556,6 +556,8 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 
 /**
  * @brief Create a Solovev Magnetic field
+ *
+ * Based on \c dg::geo::solovev::Psip(gp) and \c dg::geo::solovev::Ipol(gp)
  * @param gp Solovev parameters
  * @return A magnetic field object
  * @ingroup geom

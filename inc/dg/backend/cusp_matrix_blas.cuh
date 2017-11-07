@@ -6,6 +6,7 @@
 #endif //DG_DEBUG
 
 #include <typeinfo>
+#include <limits.h>
 #include <cusp/multiply.h>
 #include <cusp/convert.h>
 #include <cusp/array1d.h>

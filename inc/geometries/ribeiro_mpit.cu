@@ -7,11 +7,7 @@
 
 #include <mpi.h>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
-
-#include "dg/backend/timer.cuh"
-#include "dg/backend/mpi_init.h"
+#include "dg/algorithm.h"
 #include "mpi_curvilinear.h"
 //#include "guenther.h"
 #include "solovev.h"
@@ -85,7 +81,7 @@ int main( int argc, char* argv[])
 
     int dims[2], periods[2],  coords[2];
     MPI_Cart_get( g2d.get().communicator(), 2, dims, periods, coords);
-    size_t count[2] = {g2d.get().n()*g2d.get().Ny(), g2d.get().n()*g2d.get().Nx()};
+    size_t count[2] = {g2d.get().local().n()*g2d.get().local().Ny(), g2d.get().local().n()*g2d.get().local().Nx()};
     size_t start[2] = {coords[1]*count[0], coords[0]*count[1]};
     err = nc_var_par_access( ncid, coordsID[0], NC_COLLECTIVE);
     err = nc_var_par_access( ncid, coordsID[1], NC_COLLECTIVE);
@@ -96,8 +92,8 @@ int main( int argc, char* argv[])
     dg::MHVec psi_p = dg::pullback( psip.f(), g2d.get());
     //g.display();
     err = nc_put_vara_double( ncid, onesID, start, count, psi_p.data().data());
-    dg::HVec X( g2d.get().size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d.get().size(); i++)
+    dg::HVec X( g2d.get().local().size()), Y(X); //P = dg::pullback( dg::coo3, g);
+    for( unsigned i=0; i<g2d.get().local().size(); i++)
     {
         X[i] = g2d.get().map()[0].data()[i];
         Y[i] = g2d.get().map()[0].data()[i];
