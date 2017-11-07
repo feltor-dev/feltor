@@ -1,17 +1,11 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
 #include "parameters.h"
-
 #include "geometries/geometries.h"
 
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif //DG_BENCHMARK
-
 // #define APAR
-namespace eule
+namespace asela
 {
 ///@addtogroup solver
 ///@{
@@ -30,8 +24,8 @@ namespace eule
  * @tparam container The Vector class 
  * @tparam container The container class
  */
-template<class Geometry, class DS, class Matrix, class container>
-struct Rolkar
+template<class Geometry, class IMatrix, class Matrix, class container>
+struct Implicit
 {
         /**
      * @brief Construct from parameters
@@ -41,7 +35,7 @@ struct Rolkar
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    Rolkar( const Geometry& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp, DS& dsN, DS& dsDIR):
+    Implicit( const Geometry& g, asela::Parameters p, dg::geo::solovev::Parameters gp, dg::geo::DS<Geometry, IMatrix, Matrix, container>& dsN, dg::geo::DS<Geometry, IMatrix, Matrix,  container>& dsDIR):
         p(p),
         gp(gp),
         LaplacianM_perpN  ( g, g.bcx(), g.bcy(), dg::normed, dg::centered),
@@ -51,7 +45,7 @@ struct Rolkar
     {
         using dg::geo::solovev::Psip;
         dg::blas1::transfer( dg::evaluate( dg::zero, g), temp);
-        dg::blas1::transfer( dg::pullback( dg::geo::GaussianDamping<Psip>(Psip(gp), gp.psipmaxcut, gp.alpha), g), dampgauss_);
+        dg::blas1::transfer( dg::pullback( dg::geo::GaussianDamping(Psip(gp), gp.psipmaxcut, gp.alpha), g), dampgauss_);
     }
         /**
      * @brief Return implicit terms
@@ -59,7 +53,7 @@ struct Rolkar
      * @param x input vector (x[0] := N_e -1, x[1] := N_i-1, x[2] := w_e, x[3] = w_i)
      * @param y output vector
      */
-    void operator()( std::vector<container>& x, std::vector<container>& y)
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
            x[1] := N_i - 1
@@ -100,30 +94,16 @@ struct Rolkar
      */
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perpDIR;}
 
-    /**
-     * @brief Model function for Inversion
-     *
-     * @return weights for the inversion function in
-     */
     const container& weights(){return LaplacianM_perpDIR.weights();}
-    /**
-     * @brief Model function for Inversion
-     *
-     * @return preconditioner for the inversion function in
-     */
+    const container& inv_weights(){return LaplacianM_perpDIR.inv_weights();}
     const container& precond(){return LaplacianM_perpDIR.precond();}
-    /**
-     * @brief Damping used in the diffusion equations
-     *
-     * @return Vector containing damping 
-     */
   private:
-    const eule::Parameters p;
-    const dg::geo::solovev::GeomParameters gp;
+    const asela::Parameters p;
+    const dg::geo::solovev::Parameters gp;
     container temp;
     container dampgauss_;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perpN,LaplacianM_perpDIR;
-    DS& dsN_,dsDIR_;
+    dg::geo::DS<Geometry, IMatrix, Matrix, container> dsN_,dsDIR_;
 
 };
 
@@ -134,7 +114,7 @@ struct Rolkar
  * @tparam container main container to hold the vectors
  * @tparam container class of the weights
  */
-template< class Geometry, class DS, class Matrix, class container >
+template< class Geometry, class IMatrix, class Matrix, class container >
 struct Asela
 {
     /**
@@ -145,15 +125,10 @@ struct Asela
      * @param p the physics parameters
      * @param gp the geometry parameters
      */
-    Asela( const Geometry& g, eule::Parameters p, dg::geo::solovev::GeomParameters gp);
+    Asela( const Geometry& g, asela::Parameters p, dg::geo::solovev::Parameters gp);
+    dg::geo::DS<Geometry, IMatrix, Matrix, container>& ds(){return dsN_;}
+    dg::geo::DS<Geometry, IMatrix, Matrix, container>& dsDIR(){return dsDIR_;}
     /**
-     * @brief Return a ds class for evaluation purposes
-     *
-     * @return 
-     */
-    DS& ds(){return dsN_;}
-    DS& dsDIR(){return dsDIR_;}
-        /**
      * @brief Returns phi and psi that belong to the last solve of the polarization equation
      *
      * In a multistep scheme this corresponds to the point HEAD-1
@@ -187,7 +162,7 @@ struct Asela
      * @param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := w_e, y[3] := w_i
      * @param yp Result
      */
-    void operator()( std::vector<container>& y, std::vector<container>& yp);
+    void operator()( const std::vector<container>& y, std::vector<container>& yp);
     
     /**
      * @brief \f[ M := \int_V (n_e-1) dV \f]
@@ -245,13 +220,13 @@ struct Asela
     double fieldalignment() { return aligned_;}
     
   private:
-    void vecdotnablaN(const container& x, const container& y, container& z, container& target);
-    void vecdotnablaDIR(const container& x, const container& y, container& z, container& target);
+    void vecdotnablaN(const container& x, const container& y, const container& z, container& target);
+    void vecdotnablaDIR(const container& x, const container& y, const container& z, container& target);
     //extrapolates and solves for phi[1], then adds square velocity ( omega)
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
     container& induct(const std::vector<container>& y);//solves induction equation
-    double add_parallel_dynamics( std::vector<container>& y, std::vector<container>& yp);
+    double add_parallel_dynamics( const std::vector<container>& y, std::vector<container>& yp);
 
     container chi, omega,lambda;//1d container
 
@@ -265,14 +240,14 @@ struct Asela
     std::vector<container> dsy, curvy,curvkappay;  //4d container
 
     //matrices and solvers
-    DS dsDIR_,dsN_;
+    dg::geo::DS<Geometry, IMatrix, Matrix, container> dsDIR_,dsN_;
     dg::Poisson< Geometry, Matrix, container > poissonN,poissonDIR; 
     dg::Elliptic<  Geometry, Matrix, container  > pol,lapperpN,lapperpDIR; //note the host vector
     dg::Helmholtz< Geometry, Matrix, container  > maxwell, invgammaDIR, invgammaN;
     dg::Invert<container> invert_maxwell, invert_pol, invert_invgammaN,invert_invgammaNW,invert_invgammaA, invert_invgammaPhi;
 
-    const eule::Parameters p;
-    const dg::geo::solovev::GeomParameters gp;
+    const asela::Parameters p;
+    const dg::geo::solovev::Parameters gp;
 
     double mass_, energy_, diff_, ediff_, aligned_;
     std::vector<double> evec;
@@ -280,35 +255,10 @@ struct Asela
 };
 ///@}
 
-template<class Grid, class DS, class Matrix, class container>
-Asela<Grid, DS, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo::solovev::GeomParameters gp): 
-    dsDIR_( typename DS::FieldAligned( 
-                dg::geo::Field<dg::geo::solovev::MagneticField>(
-                    dg::geo::solovev::MagneticField(gp), gp.R_0
-                    ), 
-                g, gp.rk4eps, 
-                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(
-                    dg::geo::solovev::Psip(gp), gp.psipmaxlim
-                    ), 
-                dg::DIR, (2*M_PI)/((double)p.Nz)
-                ), 
-            dg::geo::Field<dg::geo::solovev::MagneticField>(
-                dg::geo::solovev::MagneticField(gp), gp.R_0
-                ), 
-            dg::normed, dg::forward ),
-    dsN_( typename DS::FieldAligned(
-                dg::geo::Field<dg::geo::solovev::MagneticField>(
-                    dg::geo::solovev::MagneticField(gp), gp.R_0), 
-                g, gp.rk4eps, 
-                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(
-                    dg::geo::solovev::Psip(gp), gp.psipmaxlim
-                    ), 
-                g.bcx(), (2*M_PI)/((double)p.Nz)
-                ), 
-          dg::geo::Field<dg::geo::solovev::MagneticField>(
-              dg::geo::solovev::MagneticField(gp), gp.R_0
-              ), 
-          dg::normed, dg::forward ),
+template<class Grid, class IMatrix, class Matrix, class container>
+Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo::solovev::Parameters gp): 
+    dsDIR_( dg::geo::createSolovevField(gp), g, dg::DIR, dg::DIR, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps),
+    dsN_( dg::geo::createSolovevField(gp), g, dg::NEU, dg::NEU, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps),
     //////////the poisson operators ////////////////////////////////////////
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
@@ -341,36 +291,25 @@ Asela<Grid, DS, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo:
     invert_invgammaA.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
     invert_invgammaPhi.construct( omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
     //////////////////////////////init fields /////////////////////
-    using namespace dg::geo::solovev;
-    MagneticField mf(gp);
-    dg::blas1::transfer(  dg::pullback(dg::geo::Field<MagneticField>(mf, gp.R_0),                     g), binv);
-    dg::blas1::transfer(  dg::pullback(dg::geo::GradLnB<MagneticField>(mf, gp.R_0),                   g), dslnB);
-    dg::blas1::transfer(  dg::pullback(dg::geo::TanhSource<Psip>(mf.psip, gp.psipmin, gp.alpha),      g), source);
-    dg::blas1::transfer(  dg::pullback(dg::geo::GaussianDamping<Psip>(mf.psip, gp.psipmax, gp.alpha), g), damping);
+    dg::geo::TokamakMagneticField mf = dg::geo::createSolovevField(gp);
+    dg::blas1::transfer(  dg::pullback(dg::geo::InvB(mf),            g), binv);
+    dg::blas1::transfer(  dg::pullback(dg::geo::GradLnB(mf),         g), dslnB);
+    dg::blas1::transfer(  dg::pullback(dg::geo::TanhSource(mf.psip(), gp.psipmin, gp.alpha),      g), source);
+    dg::blas1::transfer(  dg::pullback(dg::geo::GaussianDamping(mf.psip(), gp.psipmax, gp.alpha), g), damping);
     ////////////////////////////transform curvature components////////
-    typename dg::HostVec< typename dg::GeometryTraits<Grid>::memory_category>::host_vector tempX, tempY;
-    dg::geo::pushForwardPerp(dg::geo::CurvatureNablaBR<MagneticField>(mf, gp.R_0), dg::geo::CurvatureNablaBZ<MagneticField>(mf, gp.R_0), tempX, tempY, g);
-    dg::blas1::transfer(  tempX, curvX);
-    dg::blas1::transfer(  tempY, curvY);
-    dg::blas1::transfer(  dg::pullback(dg::geo::DivCurvatureKappa<MagneticField>(mf, gp.R_0), g), divCurvKappa);
-    if (p.curvmode==1) 
-    {
-        dg::geo::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ<MagneticField>(mf, gp.R_0), tempX, tempY, g);
-        dg::blas1::transfer(  tempX, curvKappaX);
-        dg::blas1::transfer(  tempY, curvKappaY);
-        dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
-        dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
-    }
+    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(mf), dg::geo::CurvatureNablaBZ(mf), curvX, curvY, g);
+    dg::blas1::transfer(  dg::pullback(dg::geo::DivCurvatureKappa(mf), g), divCurvKappa);
+    dg::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ(mf), curvKappaX, curvKappaY, g);
     if (p.curvmode==0) 
     {
-        dg::blas1::transfer(  tempX, curvKappaX);
-        dg::blas1::transfer(  tempY, curvKappaY);
-        dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
-        dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
+        dg::blas1::transfer(  curvX, curvKappaX);
+        dg::blas1::transfer(  curvY, curvKappaY);
         dg::blas1::scal(divCurvKappa,0.);
     }
+    dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
+    dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
     ///////////////////init densities//////////////////////////////
-    dg::blas1::transfer( dg::pullback(dg::geo::Nprofile<Psip>(p.bgprofamp, p.nprofileamp, gp, mf.psip),g), profne);
+    dg::blas1::transfer( dg::pullback(dg::geo::Nprofile(p.bgprofamp, p.nprofileamp, gp, mf.psip()),g), profne);
     dg::blas1::transfer(  profne ,profNi);
     dg::blas1::plus( profNi, -1); 
     initializene(profNi, profne); //ne = Gamma N_i (needs Invert object)
@@ -384,8 +323,8 @@ Asela<Grid, DS, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo:
 
 
 //computes and modifies expy!!
-template<class Geometry, class DS, class Matrix, class container>
-container& Asela<Geometry, DS, Matrix, container>::polarisation( const std::vector<container>& y)
+template<class Geometry, class IMatrix, class Matrix, class container>
+container& Asela<Geometry, IMatrix, Matrix, container>::polarisation( const std::vector<container>& y)
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);        //chi =  \mu_i (n_i-1) 
     dg::blas1::plus( chi, p.mu[1]);
@@ -402,8 +341,8 @@ container& Asela<Geometry, DS, Matrix, container>::polarisation( const std::vect
     return phi[0];
 }
 
-template<class Geometry, class DS, class Matrix, class container>
-container& Asela<Geometry, DS, Matrix, container>::induct(const std::vector<container>& y)
+template<class Geometry, class IMatrix, class Matrix, class container>
+container& Asela<Geometry, IMatrix, Matrix, container>::induct(const std::vector<container>& y)
 {
     if (p.flrmode == 0)
     {
@@ -437,8 +376,8 @@ container& Asela<Geometry, DS, Matrix, container>::induct(const std::vector<cont
     }
     return apar[0];
 }
-template<class Geometry, class DS, class Matrix, class container>
-container& Asela<Geometry, DS, Matrix,container>::compute_psi( container& potential)
+template<class Geometry, class IMatrix, class Matrix, class container>
+container& Asela<Geometry, IMatrix, Matrix,container>::compute_psi( container& potential)
 {
     invert_invgammaPhi(invgammaDIR,chi,potential);                    //chi  Gamma phi
     poissonN.variationRHS(potential, omega);
@@ -448,14 +387,14 @@ container& Asela<Geometry, DS, Matrix,container>::compute_psi( container& potent
     return phi[1];    
 }
 
-template<class Geometry, class DS, class Matrix, class container>
-void Asela<Geometry, DS, Matrix, container>::initializene( const container& src, container& target)
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Asela<Geometry, IMatrix, Matrix, container>::initializene( const container& src, container& target)
 { 
     invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
 }
 
-template<class G, class DS, class M, class V>
-double Asela<G, DS, M, V>::add_parallel_dynamics( std::vector<V>& y, std::vector<V>& yp)
+template<class G, class IMatrix, class M, class V>
+double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, std::vector<V>& yp)
 {
     double z[2]     = {-1.0,1.0};
     double Dpar[4]  = {0.0, 0.0,0.0,0.0};
@@ -528,10 +467,14 @@ double Asela<G, DS, M, V>::add_parallel_dynamics( std::vector<V>& y, std::vector
         if (p.pardiss==1)
         {
             dsN_.forward( y[i], omega); 
-            dsN_.forwardTD(omega,lambda);
-            dg::blas1::axpby( 0.5*nu_parallel[i], lambda, 0., lambda,lambda);  //lambda = 0.5 nu_parallel ds^2_f N
+            dg::blas1::pointwiseDot( omega, binv, omega);
+            dsN_.backwardDiv(omega,lambda);
+            dg::blas1::pointwiseDivide( lambda, binv, lambda);
+            dg::blas1::scal( lambda, 0.5*nu_parallel[i]);  //lambda = 0.5 nu_parallel ds^2_f N
             dsN_.backward( y[i], omega); 
-            dsN_.backwardTD(omega,chi);
+            dg::blas1::pointwiseDot( omega, binv, omega);
+            dsN_.forwardDiv(omega,chi);
+            dg::blas1::pointwiseDivide( chi, binv, chi);
             dg::blas1::axpby( 0.5*nu_parallel[i],chi, 1., lambda,lambda);    //lambda = 0.5 nu_parallel ds^2_f N + 0.5 nu_parallel ds^2_b N
             dg::blas1::axpby( 1., lambda, 1., yp[i]);  //add to yp //dtN += 0.5 nu_parallel ds^2_f N + 0.5 nu_parallel ds^2_b N
         }           
@@ -562,10 +505,14 @@ double Asela<G, DS, M, V>::add_parallel_dynamics( std::vector<V>& y, std::vector
         if (p.pardiss==1)
         {
             dsDIR_.forward( u[i], omega); 
-            dsDIR_.forwardTD(omega,lambda);
-            dg::blas1::axpby( 0.5*nu_parallel[i+2], lambda, 0., lambda,lambda); //lambda = 0.5 nu_parallel ds^2_f U
+            dg::blas1::pointwiseDot( omega, binv, omega);
+            dsDIR_.backwardDiv(omega,lambda);
+            dg::blas1::pointwiseDivide( lambda, binv, lambda);
+            dg::blas1::scal( lambda, 0.5*nu_parallel[i+2]); //lambda = 0.5 nu_parallel ds^2_f U
             dsDIR_.backward( u[i], omega); 
-            dsDIR_.backwardTD(omega,chi);
+            dg::blas1::pointwiseDot( omega, binv, omega);
+            dsDIR_.forwardDiv(omega,chi);
+            dg::blas1::pointwiseDivide( chi, binv, chi);
             dg::blas1::axpby( 0.5*nu_parallel[i+2], chi, 1., lambda,lambda);  //lambda = 0.5 nu_parallel ds^2_f U + 0.5 nu_parallel ds^2_b U
             dg::blas1::axpby( 1., lambda, 1., yp[i+2]); //0.5 nu_parallel ds^2_f U + 0.5 nu_parallel ds^2_b U
         }   
@@ -583,8 +530,8 @@ double Asela<G, DS, M, V>::add_parallel_dynamics( std::vector<V>& y, std::vector
 }
 
 // #endif
-template<class Geometry, class DS, class Matrix, class container>
-void Asela<Geometry, DS, Matrix, container>::operator()( std::vector<container>& y, std::vector<container>& yp)
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {   
     /*  y[0] := N_e - 1
         y[1] := N_i - 1
@@ -778,26 +725,24 @@ void Asela<Geometry, DS, Matrix, container>::operator()( std::vector<container>&
 }
 
 //Computes curvature operator
-template<class Geometry, class DS, class Matrix, class container>
-void Asela<Geometry, DS, Matrix, container>::vecdotnablaN(const container& vecX, const container& vecY, container& src, container& target)
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Asela<Geometry, IMatrix, Matrix, container>::vecdotnablaN(const container& vecX, const container& vecY, const container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonN.dxlhs(), src, target); //d_R src
-    dg::blas1::pointwiseDot( vecX, target, target); // C^R d_R src
     dg::blas2::gemv( poissonN.dylhs(), src, temp1);  //d_Z src
-    dg::blas1::pointwiseDot( 1., vecY, temp1, 1., target);   // C^Z d_Z src + C^R d_R src
+    dg::blas1::pointwiseDot( 1., vecX, target, 1., vecY, temp1, 0., target);   // C^Z d_Z src + C^R d_R src
 }
 
-template<class Geometry, class DS, class Matrix, class container>
-void Asela<Geometry, DS, Matrix, container>::vecdotnablaDIR(const container& vecX, const container& vecY,  container& src, container& target)
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Asela<Geometry, IMatrix, Matrix, container>::vecdotnablaDIR(const container& vecX, const container& vecY,  const container& src, container& target)
 {
     container temp1(src);
     dg::blas2::gemv( poissonDIR.dxrhs(), src, target); //d_R src
-    dg::blas1::pointwiseDot( vecX, target, target); // C^R d_R src
     dg::blas2::gemv( poissonDIR.dyrhs(), src, temp1);  //d_Z src
-    dg::blas1::pointwiseDot( 1., vecY, temp1, 1., target);// C^Z d_Z src + C^R d_R src
+    dg::blas1::pointwiseDot( 1., vecX, target, 1., vecY, temp1, 0., target);   // C^Z d_Z src + C^R d_R src
 }
 
 ///@endcond
 
-} //namespace eule
+} //namespace asela

@@ -17,7 +17,7 @@ toefl_hpc: toefl_hpc.cu toeflR.cuh
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK  -g
 
 toefl_mpi: toefl_mpi.cu toeflR.cuh 
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK -g
 
 doc: 
 	mkdir -p doc; \

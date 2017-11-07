@@ -1,3 +1,11 @@
+#include <iostream>
+#ifndef __NVCC__
+#warning "This program has to be compiled with nvcc!"
+int main(){
+    std::cout << "This program has to be compiled with nvcc!\n";
+    return 0;
+}
+#else
 //#include <cusp/coo_matrix.h>
 //#include <cusp/print.h>
 #include "xspacelib.cuh"
@@ -91,3 +99,4 @@ int main()
     
     return 0;
 }
+#endif //__NVCC__

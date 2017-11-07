@@ -16,7 +16,7 @@ namespace solovev
  * @brief Constructs and display geometric parameters for the solovev and taylor fields
  * @ingroup geom
  */    
-struct GeomParameters
+struct Parameters
 {
     double A, //!< A
            R_0, //!< central tokamak radius
@@ -32,7 +32,7 @@ struct GeomParameters
            qampl; //scales grad-shafranov q factor
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
     std::string equilibrium;
-    GeomParameters( const Json::Value& js) {
+    Parameters( const Json::Value& js) {
         A  = js.get("A", 0).asDouble();
         c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
         for (unsigned i=0;i<12;i++) c[i] = js["c"][i].asDouble();

@@ -1,0 +1,11 @@
+\begin{longtable}{ccccccc}
+  \toprule
+ & \multicolumn{ 2}{c}{$D_x^+$ (forward)} & \multicolumn{ 2}{c}{$D_x^-$ (backward)} & \multicolumn{ 2}{c}{ $D_x^0$ (centered)} \\ 
+ & left & right & left  & right & left  & right \\ 
+periodic & $-(M+L)^\mathrm{T}$ & $-(M+L)^\mathrm{T}$ & $(M+L)$ & $(M+L)$ & $\frac{1}{2}(M-M^\mathrm{T})$ & $\frac{1}{2}(M-M^\mathrm{T})$ \\ 
+Dirichlet & $-M^\mathrm{T}$ & $-(M+L)^\mathrm{T}$ & $(M+L)$ & $-M^\mathrm{T}$ & $\frac{1}{2}(M-M^\mathrm{T}+L)$ & $\frac{1}{2}(M-M^\mathrm{T}-R)$ \\ 
+Neumann & $-(M+L)^\mathrm{T}$ & $M$ & $M$ & $(M+L)$ & $\frac{1}{2}(M-M^\mathrm{T}-L)$ & $\frac{1}{2}(M-M^\mathrm{T}+R)$ \\ 
+\bottomrule
+\caption{Upper left and lower right matrix entries for various boundary conditions. For Dirichlet and von Neumann BC the upper right and lower left entries are zero.}
+\label{tab:boundary_terms}
+\end{longtable}

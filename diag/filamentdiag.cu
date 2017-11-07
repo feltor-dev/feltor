@@ -5,18 +5,10 @@
 #include <string>
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
-
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/average.cuh"
-#include "dg/functors.h"
-
+#include "geometries/geometries.h"
 #include "file/nc_utilities.h"
 
-#include "dg/geometry.h"
 #include "feltor/parameters.h"
-#include "geometries/geometries.h"
 
 int main( int argc, char* argv[])
 {
@@ -48,7 +40,7 @@ int main( int argc, char* argv[])
     reader.parse( input, js, false);
     const eule::Parameters p(js);
     reader.parse( geom, gs, false);
-    const dg::geo::solovev::GeomParameters gp(gs);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display();
     gp.display();
     /////////////////////////////create Grids and weights//////////////////////////////////
@@ -58,7 +50,7 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Grids
-    dg::CylindricalGrid3d<dg::DVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER);  
+    dg::CylindricalGrid3d g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER);  
     dg::CartesianGrid2d  g2d_out( Rmin,Rmax, Zmin,Zmax, p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
     //--------generate nc file and define dimensions----------------
     int ncidout; 
@@ -93,22 +85,18 @@ int main( int argc, char* argv[])
     double time=0.;
 
     ///////////////////////Define helper variables for computations////////
-    dg::geo::solovev::MagneticField c(gp);
-    dg::DDS dsN( typename dg::DDS::FieldAligned(
-                dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0), 
-                g3d_out, gp.rk4eps, 
-                dg::geo::PsiLimiter<dg::geo::solovev::Psip>(c.psip, gp.psipmaxlim), 
-                dg::NEU,(2*M_PI)/((double)p.Nz)), 
-            dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0), dg::normed, dg::centered );
+    dg::geo::TokamakMagneticField c= dg::geo::createSolovevField(gp);
+    dg::geo::DS<dg::aProductGeometry3d,dg::IDMatrix, dg::DMatrix, dg::DVec> dsN( 
+            c, g3d_out, dg::NEU, dg::NEU, dg::geo::FullLimiter(), dg::normed, dg::centered, gp.rk4eps);
     dg::DVec vor3d    = dg::evaluate( dg::zero, g3d_out);
     dg::HVec transfer = dg::evaluate( dg::zero, g3d_out);
-    dg::Elliptic<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    dg::Elliptic<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
     const dg::DVec w3d = dg::create::weights( g3d_out);   
     const dg::DVec w2d = dg::create::weights( g2d_out);   
-    const dg::DVec curvR = dg::evaluate( dg::geo::CurvatureNablaBR<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
-    const dg::DVec curvZ = dg::evaluate( dg::geo::CurvatureNablaBZ<dg::geo::solovev::MagneticField>(c, gp.R_0), g3d_out);
-    dg::Poisson<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
-    const dg::DVec binv = dg::evaluate( dg::geo::Field<dg::geo::solovev::MagneticField>(c, gp.R_0) , g3d_out) ;
+    const dg::DVec curvR = dg::evaluate( dg::geo::CurvatureNablaBR(c), g3d_out);
+    const dg::DVec curvZ = dg::evaluate( dg::geo::CurvatureNablaBZ(c), g3d_out);
+    dg::Poisson<dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
+    const dg::DVec binv = dg::evaluate( dg::geo::InvB(c) , g3d_out) ;
     const dg::DVec one3d    =  dg::evaluate(dg::one,g3d_out);
     const dg::DVec one2d    =  dg::evaluate(dg::one,g2d_out);
     dg::DVec temp1 = dg::evaluate(dg::zero , g3d_out) ;

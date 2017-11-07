@@ -8,10 +8,6 @@
 #endif
 
 
-// TODO es wäre besser, wenn ToeflI auch einen Zeitschritt berechnen würde
-// dann wäre die Rückgabe der Felder (Potential vs. Masse vs. exp( y)) konsistenter
-// (nur das Objekt weiß welches Feld zu welchem Zeitschritt gehört)
-
 namespace dg
 {
 template<class Geometry, class Matrix, class container>
@@ -23,7 +19,7 @@ struct Diffusion
         LaplacianM_perp ( g, g.bcx(), g.bcy(), dg::normed, dg::centered)
     {
     }
-    void operator()( std::vector<container>& x, std::vector<container>& y)
+    void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
            x[1] := N_i - 1
@@ -43,6 +39,7 @@ struct Diffusion
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
     const container& weights(){return LaplacianM_perp.weights();}
+    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
     const container& precond(){return LaplacianM_perp.precond();}
   private:
     const imp::Parameters p;
@@ -85,7 +82,7 @@ struct ToeflI
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( std::vector<container>& y, std::vector<container>& yp);
+    void operator()( const std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief Return the mass of the last field in operator() in a global computation
@@ -199,7 +196,7 @@ const container& ToeflI<G, Matrix, container>::polarization( const std::vector<c
 }
 
 template< class G, class M, class container>
-void ToeflI< G, M, container>::operator()(std::vector<container>& y, std::vector<container>& yp)
+void ToeflI< G, M, container>::operator()(const std::vector<container>& y, std::vector<container>& yp)
 {
     //y[0] = N_e - 1
     //y[1] = N_i - 1

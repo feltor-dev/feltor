@@ -48,10 +48,10 @@ int main( int argc, char* argv[])
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
     /////////////////////////////////////////////////////////////////////////
-    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     bool mhw = (p.equations == "modified");
-    dg::HW<dg::DMatrix, dg::DVec > test( grid, p.kappa, p.tau, p.nu, p.eps_pol, mhw); 
+    hw::HW<dg::DMatrix, dg::DVec > test( grid, p.kappa, p.tau, p.nu, p.eps_pol, mhw); 
     dg::DVec one( grid.size(), 1.);
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
@@ -69,7 +69,7 @@ int main( int argc, char* argv[])
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
     //dg::TVB< std::vector<dg::DVec> > ab( y0);
     dg::Karniadakis<std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
-    dg::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
+    hw::Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -81,8 +81,8 @@ int main( int argc, char* argv[])
     ab.init( test, diffusion, y0, p.dt);
     //ab( test, y0, y1, p.dt);
     //y0.swap( y1); 
-    double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
-    double Ezf0 = test.zonal_flow_energy(), energyzf0 = Ezf0, Ezf1 = 0, diffzf = 0;
+    double E0 = test.energy(), E1 = 0, diff = 0; //energy0 = E0;
+    double Ezf0 = test.zonal_flow_energy(), Ezf1 = 0, diffzf = 0; //energyzf0 = Ezf0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;

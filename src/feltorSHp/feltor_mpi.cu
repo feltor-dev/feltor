@@ -130,10 +130,10 @@ int main( int argc, char* argv[])
 //     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);//MPI OFF
     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version", NC_INT, 1, &version[0]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
+    //const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version", NC_INT, 1, &version[0]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
     dg::Grid2d global_grid_out ( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
     err = file::define_dimensions( ncid, dim_ids, &tvarID, global_grid_out);
@@ -175,7 +175,7 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << "First output ... \n";
     int dims[2],  coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
-    size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    size_t count[3] = {1, grid_out.n()*grid_out.local().Ny(), grid_out.n()*grid_out.local().Nx()};
     size_t start[3] = {0, coords[1]*count[1],          coords[0]*count[2]}; 
     dg::MDVec transfer( dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));

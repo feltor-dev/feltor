@@ -1,6 +1,6 @@
 %\documentclass[12pt]{article}
 %\documentclass[12pt]{scrartcl}
-\documentclass{hitec}
+\documentclass{hitec} % contained in texlive-latex-extra 
 \settextfraction{0.9} % indent text
 \usepackage{csquotes}
 \usepackage[hidelinks]{hyperref} % doi links are short and usefull?
@@ -118,18 +118,18 @@ use Cartesian coordinates $x$, $y$.
 \begin{subequations}
 \begin{align}
 B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\tau\nabla^2)^{-1}\\
- -\nabla\cdot \left(\frac{N}{B^2} \nabla \phi\right) = \Gamma_1 N-n, \quad
- \text{Boussinesq:}\quad -\nabla^2 \phi = \frac{B^2}{N} (\Gamma_1 N -n) \\
+ -\nabla\cdot \left(\frac{N}{B^2} \nabla_\perp \phi\right) = \Gamma_1 N-n, \quad
+ \text{Boussinesq:}\quad -\nabla_\perp^2 \phi = \frac{B^2}{N} (\Gamma_1 N -n) \\
 \psi = \Gamma_1 \phi - \frac{1}{2} \frac{(\nabla\phi)^2}{B^2}\\
  \frac{\partial n}{\partial t}     = 
     \frac{1}{B}\{ n, \phi\} 
   + \kappa n\frac{\partial \phi}{\partial y} 
   -\kappa \frac{\partial n}{\partial y}
-  + \nu \nabla^2 n  \\
+  + \nu \nabla_\perp^2 n  \\
   \frac{\partial N}{\partial t} =
   \frac{1}{B}\{ N, \psi\} 
   + \kappa N\frac{\partial \psi}{\partial y} 
-  + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla^2N
+  + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla_\perp^2N
 \end{align}
 \end{subequations}
 
@@ -191,10 +191,11 @@ We initialize
 \begin{align}
     M(t) = \int n-1 \\
     \Lambda_n = \nu \int \Delta n  \\
+    ...
     \label{}
 \end{align}
 \section{Numerical methods}
-discontinuouos Galerkin on structured grid
+discontinuous Galerkin on structured grid
 \begin{longtable}{ll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
@@ -289,9 +290,13 @@ mass                     & Dataset & 1 (energy\_time) & mass integral   \\
 \bottomrule
 \end{longtable}
 \section{Diagnostics toeflRdiag.cu}
+There only is a shared memory version available
 \begin{verbatim}
+cd path/to/feltor/diag
+make toeflRdiag 
 path/to/feltor/diag/toeflRdiag input.nc output.nc
 \end{verbatim}
+
 Input file format: netcdf-4/hdf5
 %
 %Name | Type | Dimensionality | Description
