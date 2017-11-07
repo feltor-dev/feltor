@@ -162,7 +162,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     {
         multi_pol[u].construct(      multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), dg::not_normed, dg::centered, p.jfactor);
         multi_gammaN[u].construct(   multigrid.grids()[u].get(), g.bcx(),    g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
-	multi_gammaPhi[u].construct( multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_gammaPhi[u].construct( multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
     initializene(profNi,profne); //ne = Gamma N_i
@@ -178,8 +178,8 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
         old_psi.extrapolate( phi[1]);
         std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
         old_psi.update( phi[1]);
-	poisson.variationRHS(potential, omega); 
-	 dg::blas1::pointwiseDot( binv, omega, omega);
+	    poisson.variationRHS(potential, omega); 
+        dg::blas1::pointwiseDot( binv, omega, omega);
         dg::blas1::pointwiseDot( binv, omega, omega);
 
         dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
@@ -187,7 +187,7 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
     }
     if (p.modelmode==2)
     {
-	old_psi.extrapolate( phi[1]);
+        old_psi.extrapolate( phi[1]);
         std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
         old_psi.update( phi[1]);
     }
@@ -284,9 +284,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
         throw dg::Fail( p.eps_pol);	
   }
   if (p.modelmode==3) {
-    dg::blas1::axpby( p.mu[1], npe[1], 0, chi);      //chi =  \mu_i (N_i-(bgamp+profamp)) 
-    dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i N_i
-    dg::blas1::pointwiseDot( chi, binv, chi);
+    dg::blas1::pointwiseDot( npe[1], binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i N_i ) /B^2
     
     multigrid.project( chi, multi_chi);
@@ -535,8 +533,8 @@ void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>&
 	        //transform compute n and logn
         for(unsigned i=0; i<2; i++)
         {
-	    dg::blas1::transform( y[i], npe[i], dg::EXP<value_type>()); // 1+ \tilde{N}
-	    dg::blas1::pointwiseDot(npe[i],profne,npe[i]); //N
+            dg::blas1::transform( y[i], npe[i], dg::EXP<value_type>()); // 1+ \tilde{N}
+            dg::blas1::pointwiseDot(npe[i],profne,npe[i]); //N
             dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
         }  
         
@@ -586,7 +584,7 @@ void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>&
 	    
 	    //density gradient term
             dg::blas2::gemv( poisson.dyrhs(), phi[i], omega); //lambda = dy psi
-	    dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt ln(1+tilde N) += - kappa dy psi   
+            dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt ln(1+tilde N) += - kappa dy psi   
         }        
         //Coupling term for the electrons
         polavg(npe[0],neavg);

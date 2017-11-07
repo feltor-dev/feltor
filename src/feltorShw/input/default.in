@@ -2,11 +2,11 @@
 with the JSON standard but are allowed only with some specifig JSON parsers. So remove them when you automate the process */
 {
 
-    "n" :  3,        //# x-y-polynomials
+    "n" :  1,        //# x-y-polynomials
     "Nx" : 64,      //# grid points in x
     "Ny" : 64,      //# grid points in y
     "dt" : 0.1,       //time step in units of c_s/rho_s
-    "n_out"  :3,    //# x-y polynomials in output
+    "n_out"  :1,    //# x-y polynomials in output
     "Nx_out" : 64,  //# grid points in x in output fields
     "Ny_out" : 64,  //# grid points in y in output fields
     "itstp"  :10,   //steps between outputs
@@ -17,9 +17,9 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "eps_time"  : 1e-14,  //accuracy of implicit time-stepper
     "mu_e"      : -0.000272121, // -m_e/m_i 
     "tau"       : 0,         //Ti/Te
-    "modelmode" : 0,         //Full-F/Full-F-boussinesq/delta-f (0/1/2)
+    "modelmode" : 3,         //Full-F/Full-F-boussinesq/delta-f (0/1/2)
     "cmode" : 0,             //dyn/const collisionality (0/1)  
-    "hwmode": 1,             // ordinary/modified HW (0/1)
+    "hwmode": 0,             // ordinary/modified HW (0/1)
     "nu_perp"   : 1e-3,      //pependicular viscosity
     "alpha"         : 0.005, //adiabaticity 
     "initmode"      : 0,     // (0) blob, (1) Wave in x and y (2) bath
@@ -29,11 +29,11 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "posY"  : 0.5,           //blob y-position in units of ly
     "prof_amp": 1.0,         //Profile amplitude
     "bg_prof_amp" : 0.0,     //Background Prof amplitude 
-    "invkappa": 16,          //gradient length Ln (in rho_s) 
+    "invkappa": 64,          //gradient length Ln (in rho_s) 
     "lx"  : 64,              //lx=L_perp in units of rho_s
     "ly"  : 64,              //ly in units of rho_s
     "bc_x"  : "DIR_NEU",     //boundary condition in x
-    "bc_x_phi"  : "DIR",     //boundary condition in x for phi
+    "bc_x_phi"  : "DIR_NEU",     //boundary condition in x for phi
     "bc_y"  : "PER",         //boundary condition in y
     "prof_source_rate" : 0.1,     //profile source rate in units c_s/rho_s
     "source_b" : 0.2,             //source dampingb in u of lx (<1 no Source)
