@@ -147,7 +147,7 @@ struct MultigridCG2d
      * @param x (read/write) contains initial guess on input and the solution on output
      * @param b The right hand side (will be multiplied by \c weights)
      * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$ 
-     * @return the number of iterations in each of the stages
+     * @return the number of iterations in each of the stages beginning with the finest grid
      * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
     */
     template<class SymmetricOp>
@@ -177,6 +177,11 @@ struct MultigridCG2d
             dg::blas2::symv( inter_[u-1], x_[u], x_[u-1]);
 #ifdef DG_BENCHMARK
             t.toc();
+#ifdef MPI_VERSION
+            int rank;
+            MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+            if(rank==0)
+#endif //MPI
             std::cout << "stage: " << u << ", iter: " << number[u] << ", took "<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
 
@@ -191,6 +196,11 @@ struct MultigridCG2d
         number[0] = cg_[0]( op[0], x, b_[0], op[0].precond(), op[0].inv_weights(), eps);
 #ifdef DG_BENCHMARK
         t.toc();
+#ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if(rank==0)
+#endif //MPI
         std::cout << "stage: " << 0 << ", iter: " << number[0] << ", took "<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
         

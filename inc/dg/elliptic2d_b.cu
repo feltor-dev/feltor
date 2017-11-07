@@ -63,7 +63,11 @@ int main()
     dg::blas1::transform( chi, chi_inv, dg::INVERT<double>());
     dg::blas1::pointwiseDot( chi_inv, v2d, chi_inv);
     dg::DVec temp = x;
-
+    //compute error
+    const dg::DVec solution = dg::evaluate( sol, grid);
+    const dg::DVec derivati = dg::evaluate( der, grid);
+    const double norm = dg::blas2::dot( w2d, solution);
+    dg::DVec error( solution);
 
     //std::cout << "Create Polarisation object and set chi!\n";
     {
@@ -97,18 +101,12 @@ int main()
     for( unsigned u=0; u<number.size(); u++)
     	std::cout << " # iterations stage "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";
     //! [multigrid]
-    }
-
-    //compute error
-    const dg::DVec solution = dg::evaluate( sol, grid);
-    const dg::DVec derivati = dg::evaluate( der, grid);
-    dg::DVec error( solution);
-
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( w2d, error);
-    //std::cout << "L2 Norm2 of Error is                       " << err << std::endl;
-    const double norm = dg::blas2::dot( w2d, solution);
     std::cout << " "<<sqrt( err/norm) << "\n";
+    }
+
+
     {
     x = temp;
     //![invert]
@@ -117,7 +115,7 @@ int main()
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
     std::cout << " "<< invert_fw( pol_forward, x, b, w2d, v2d, chi_inv);
     dg::blas1::axpby( 1.,x,-1., solution, error);
-    err = dg::blas2::dot( w2d, error);
+    double err = dg::blas2::dot( w2d, error);
     std::cout << " "<<sqrt( err/norm) << "\n";
     //![invert]
     }
@@ -129,7 +127,7 @@ int main()
 		dg::Invert<dg::DVec > invert_bw( x, n*n*Nx*Ny, eps);
 		std::cout << " "<< invert_bw( pol_backward, x, b, w2d, v2d, chi_inv);
 		dg::blas1::axpby( 1.,x,-1., solution, error);
-		err = dg::blas2::dot( w2d, error);
+		double err = dg::blas2::dot( w2d, error);
 		std::cout << " "<<sqrt( err/norm)<<std::endl;
     }
 
@@ -137,8 +135,7 @@ int main()
     dg::DMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
-    err = dg::blas2::dot( w2d, error);
-    //std::cout << "L2 Norm2 of Error in derivative is         " << err << std::endl;
+    double err = dg::blas2::dot( w2d, error);
     const double norm_der = dg::blas2::dot( w2d, derivati);
     std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm_der)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
