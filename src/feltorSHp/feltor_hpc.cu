@@ -47,10 +47,10 @@ int main( int argc, char* argv[])
      dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
      dg::Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> feltor( grid, p); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> rolkar( grid, p);
+    std::cout << "Constructing Explicit...\n";
+    eule::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> feltor( grid, p); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    eule::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> rolkar( grid, p);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
