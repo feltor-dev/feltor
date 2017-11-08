@@ -102,7 +102,7 @@ struct CurvatureDirPer
 };
 
 
-typedef  dg::CurvilinearMPIGrid2d Geometry;
+typedef  dg::geo::CurvilinearMPIGrid2d Geometry;
 
 int main(int argc, char** argv)
 {
@@ -124,7 +124,7 @@ int main(int argc, char** argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     if(rank==0)std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
@@ -140,8 +140,8 @@ int main(int argc, char** argv)
         MPI_Comm planeComm;
         int remain_dims[] = {true,true,false}; //true true false
         MPI_Cart_sub( comm, remain_dims, &planeComm);
-    dg::geo::RibeiroFluxGenerator generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
-    //dg::geo::SimpleOrthogonal generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    //dg::geo::RibeiroFluxGenerator generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::SimpleOrthogonal generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
     Geometry grid(generator, n, Nx, Ny, dg::DIR, dg::PER, planeComm); //2d
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";

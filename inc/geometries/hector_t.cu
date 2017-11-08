@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
+#include <memory>
 
 #include "dg/backend/xspacelib.cuh"
 #include "dg/functors.h"
@@ -17,8 +18,6 @@
 #include "init.h"
 
 #include "file/nc_utilities.h"
-
-using namespace dg::geo;
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {
@@ -62,9 +61,9 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    dg::geo::solovev::GeomParameters gp(js);
-    dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp); 
-    std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
+    dg::geo::solovev::Parameters gp(js);
+    {const dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp); 
+    std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";}
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
@@ -72,27 +71,35 @@ int main( int argc, char* argv[])
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing conformal grid ... \n";
-    t.tic();
-    Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>* hector;
-    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     int construction = 0;
+    t.tic();
+    //![doxygen]
+    std::unique_ptr< dg::geo::aGenerator2d > hector;
+    const dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp); 
+    //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if( construction == 0)
     {
-        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+        hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( 
+                psip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
     }
     else if( construction == 1)
     {
         dg::geo::BinaryFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective( psip);
-        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip, nc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+        hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( 
+                psip, nc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
     }
     else
     {
-        dg::geo::BinarySymmTensorLvl1 lc = dg::geo::make_LiseikinCollective( psip, 0.1, 0.001);
-        hector = new Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( psip,lc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true);
+        dg::geo::BinarySymmTensorLvl1 lc = dg::geo::make_LiseikinCollective( 
+                psip, 0.1, 0.001);
+        hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( 
+                psip,lc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
     }
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     dg::geo::CurvilinearProductGrid3d g3d(*hector, n, Nx, Ny,Nz, dg::DIR);
-    dg::geo::CurvilinearGrid2d g2d = g3d.perp_grid();
+    std::unique_ptr<const dg::aGeometry2d> g2d_ptr( g3d.perp_grid());
+    //![doxygen]
+    const dg::aGeometry2d& g2d = *g2d_ptr;
 
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
@@ -161,13 +168,12 @@ int main( int argc, char* argv[])
     dg::HVec ones2d = dg::evaluate( dg::one, g2d);
     double volumeUV = dg::blas1::dot( vol.value(), ones2d);
 
-    volume = dg::create::volume( hector->internal_grid());
-    ones2d = dg::evaluate( dg::one, hector->internal_grid());
+    volume = dg::create::volume( dynamic_cast<dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>*>( hector.get())->internal_grid());
+    ones2d = dg::evaluate( dg::one, dynamic_cast<dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>*>( hector.get())->internal_grid());
     double volumeZE = dg::blas1::dot( vol.value(), ones2d);
     std::cout << "volumeUV is "<< volumeUV<<std::endl;
     std::cout << "volumeZE is "<< volumeZE<<std::endl;
     std::cout << "relative difference in volume is "<<fabs(volumeUV - volumeZE)/volumeZE<<std::endl;
     err = nc_close( ncid);
-    delete hector;
     return 0;
 }

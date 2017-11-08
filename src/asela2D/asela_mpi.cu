@@ -7,9 +7,6 @@
 #include <mpi.h> //activate mpi
 
 #include "dg/algorithm.h"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/interpolation.cuh"
 
 #include "netcdf_par.h" //exclude if par netcdf=OFF
 #include "file/nc_utilities.h"
@@ -23,8 +20,6 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
-typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
-using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
     ////////////////////////////////setup MPI///////////////////////////////
@@ -58,8 +53,8 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( js);
-    const dg::geo::solovev::GeomParameters gp(gs);
+    const asela::Parameters p( js);
+    const dg::geo::solovev::Parameters gp(gs);
     if(rank==0)p.display( std::cout);
     if(rank==0)gp.display( std::cout);
     std::string input = js.toStyledString(), geom = gs.toStyledString();
@@ -76,14 +71,14 @@ int main( int argc, char* argv[])
     dg::CylindricalMPIGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, 1, p.bc, p.bc, dg::PER, comm);  
      
     if(rank==0)std::cout << "Constructing Asela...\n";
-    eule::Asela<dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> asela( grid, p, gp); //initialize before rolkar!
+    asela::Asela<dg::CylindricalMPIGrid3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec> asela( grid, p, gp); //initialize before rolkar!
     if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalMPIGrid3d, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
+    asela::Implicit< dg::CylindricalMPIGrid3d, dg::MIDMatrix, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, asela.ds(), asela.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
     std::vector<dg::MDVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //initial perturbation
     if (p.mode == 0  || p.mode ==1) 
@@ -98,13 +93,13 @@ int main( int argc, char* argv[])
     }
     if (p.mode == 3) 
     { 
-        dg::geo::ZonalFlow<Psip> init0(p.amp, p.k_psi, gp, Psip(gp));
+        dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
         y1[1] = dg::evaluate( init0, grid);
     }
 
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::MDVec damping = dg::evaluate( dg::geo::GaussianProfXDamping<Psip>(Psip(gp), gp), grid);
+    dg::MDVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(dg::geo::solovev::Psip(gp), gp), grid);
     dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     asela.initializene(y0[1],y0[0]);    
 
@@ -128,10 +123,10 @@ int main( int argc, char* argv[])
         err = file::define_dimensions( ncid, dimids, &tvarID, global_grid_out);
 
 
-        MagneticField c(gp);
-        dg::geo::FieldR<MagneticField> fieldR(c, gp.R_0);
-        dg::geo::FieldZ<MagneticField> fieldZ(c, gp.R_0);
-        dg::geo::FieldP<MagneticField> fieldP(c, gp.R_0);
+        dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
+        dg::geo::FieldR fieldR(c);
+        dg::geo::FieldZ fieldZ(c);
+        dg::geo::FieldP fieldP(c);
         dg::HVec vecR = dg::evaluate( fieldR, global_grid_out);
         dg::HVec vecZ = dg::evaluate( fieldZ, global_grid_out);
         dg::HVec vecP = dg::evaluate( fieldP, global_grid_out);
@@ -180,7 +175,7 @@ int main( int argc, char* argv[])
     ///////////////////////////////////first output/////////////////////////////////
     int dims[3],  coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    size_t count[4] = {1, grid_out.Nz(), grid_out.n()*(grid_out.Ny()), grid_out.n()*(grid_out.Nx())};
+    size_t count[4] = {1, grid_out.local().Nz(), grid_out.n()*(grid_out.local().Ny()), grid_out.n()*(grid_out.local().Nx())};
     size_t start[4] = {0, coords[2]*count[1], coords[1]*count[2], coords[0]*count[3]};
     dg::MDVec transfer( dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));

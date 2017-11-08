@@ -24,7 +24,7 @@ struct Heaviside2d
     Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
 //     Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
     void set_origin( double x0, double y0){ x_=x0, y_=y0;}
-    double operator()(double x, double y)
+    double operator()(double x, double y)const
     {
         double r2 = (x-x_)*(x-x_)+(y-y_)*(y-y_);
         if( r2 >= sigma2_)

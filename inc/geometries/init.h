@@ -168,7 +168,7 @@ struct GaussianProfDamping : public aCloneableBinaryFunctor<GaussianProfDamping>
  */ 
 struct GaussianProfXDamping : public aCloneableBinaryFunctor<GaussianProfXDamping>
 {
-    GaussianProfXDamping( const aBinaryFunctor& psi, dg::geo::solovev::GeomParameters gp):
+    GaussianProfXDamping( const aBinaryFunctor& psi, dg::geo::solovev::Parameters gp):
         gp_(gp),
         psip_(psi) { }
     private:
@@ -178,7 +178,7 @@ struct GaussianProfXDamping : public aCloneableBinaryFunctor<GaussianProfXDampin
         if( psip_.get()(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
         return exp( -( psip_.get()(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_.get()(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
     }
-    dg::geo::solovev::GeomParameters gp_;
+    dg::geo::solovev::Parameters gp_;
     Handle<aBinaryFunctor> psip_;
 };
 
@@ -202,7 +202,7 @@ struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
 
 // struct Gradient : public aCloneableBinaryFunctor<Gradient>
 // {
-//     Gradient(  eule::Parameters p, GeomParameters gp):
+//     Gradient(  eule::Parameters p, Parameters gp):
 //         p_(p),
 //         gp_(gp),
 //         psip_(gp) {
@@ -215,7 +215,7 @@ struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
 //         return p_.bgprofamp;
 //     }
 //     eule::Parameters p_;
-//     GeomParameters gp_;
+//     Parameters gp_;
 //     Handle<aBinaryFunctor> psip_;
 // };
 
@@ -229,7 +229,7 @@ struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
  */ 
 struct Nprofile : public aCloneableBinaryFunctor<Nprofile>
 {
-     Nprofile( double bgprofamp, double peakamp, dg::geo::solovev::GeomParameters gp, const aBinaryFunctor& psi):
+     Nprofile( double bgprofamp, double peakamp, dg::geo::solovev::Parameters gp, const aBinaryFunctor& psi):
          bgamp(bgprofamp), namp( peakamp),
          gp_(gp),
          psip_(psi) { }
@@ -241,7 +241,7 @@ struct Nprofile : public aCloneableBinaryFunctor<Nprofile>
         return bgamp;
     }
     double bgamp, namp;
-    dg::geo::solovev::GeomParameters gp_;
+    dg::geo::solovev::Parameters gp_;
     Handle<aBinaryFunctor> psip_;
 };
 
@@ -255,7 +255,7 @@ struct Nprofile : public aCloneableBinaryFunctor<Nprofile>
  */ 
 struct ZonalFlow : public aCloneableBinaryFunctor<ZonalFlow>
 {
-    ZonalFlow(  double amplitude, double k_psi, dg::geo::solovev::GeomParameters gp, const aBinaryFunctor& psi):
+    ZonalFlow(  double amplitude, double k_psi, dg::geo::solovev::Parameters gp, const aBinaryFunctor& psi):
         amp_(amplitude), k_(k_psi),
         gp_(gp),
         psip_(psi) { }
@@ -268,7 +268,7 @@ struct ZonalFlow : public aCloneableBinaryFunctor<ZonalFlow>
 
     }
     double amp_, k_;
-    dg::geo::solovev::GeomParameters gp_;
+    dg::geo::solovev::Parameters gp_;
     Handle<aBinaryFunctor> psip_;
 };
 

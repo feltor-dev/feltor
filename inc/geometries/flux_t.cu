@@ -5,10 +5,8 @@
 #include <sstream>
 #include <cmath>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
+#include "dg/algorithm.h"
 
-#include "dg/backend/timer.cuh"
 #include "curvilinear.h"
 //#include "guenther.h"
 #include "testfunctors.h"
@@ -38,9 +36,9 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     return out;
 }
 
-double sineX( double x, double y) {return sin(x)*sin(y);}
+double sineX(   double x, double y) {return sin(x)*sin(y);}
 double cosineX( double x, double y) {return cos(x)*sin(y);}
-double sineY( double x, double y) {return sin(x)*sin(y);}
+double sineY(   double x, double y) {return sin(x)*sin(y);}
 double cosineY( double x, double y) {return sin(x)*cos(y);}
 
 int main( int argc, char* argv[])
@@ -61,9 +59,9 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
     }
     //write parameters from file into variables
-    dg::geo::solovev::GeomParameters gp(js);
-    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
-    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
+    dg::geo::solovev::Parameters gp(js);
+    {dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
+    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";}
     std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
@@ -72,9 +70,15 @@ int main( int argc, char* argv[])
     //solovev::detail::Fpsi fpsi( gp, -10);
     std::cout << "Constructing flux grid ... \n";
     t.tic();
+    //![doxygen]
+    //create the magnetic field
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
+    //create a grid generator
     dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
-    dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
+    //create a grid 
     dg::geo::CurvilinearGrid2d g2d(flux, n, Nx,Ny, dg::NEU);
+    //![doxygen]
+    dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
     dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;

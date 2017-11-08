@@ -49,10 +49,10 @@ int main( int argc, char* argv[])
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
     /////////////////////////////////////////////////////////////////////////
 
-    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
-    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
+    ep::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
+    ep::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
     //create initial vector
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     dg::DVec gauss = dg::evaluate( g, grid);

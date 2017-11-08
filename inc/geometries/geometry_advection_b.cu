@@ -1,9 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "dg/arakawa.h"
-#include "dg/poisson.h"
-#include "dg/geometry/geometry.h"
+#include "dg/algorithm.h"
 
 #include "curvilinear.h"
 
@@ -13,7 +11,6 @@
 #include "solovev.h"
 #include "magnetic_field.h"
 #include "testfunctors.h"
-#include "dg/backend/timer.cuh"
 
 struct FuncDirPer2
 {
@@ -120,7 +117,7 @@ int main(int argc, char** argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
 
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
@@ -136,7 +133,7 @@ int main(int argc, char** argv)
     //dg::geo::RibeiroFluxGenerator ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::FluxGenerator ribeiro( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     //dg::geo::SimpleOrthogonal ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
-    dg::CurvilinearGrid2d grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
+    dg::geo::CurvilinearGrid2d grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     grid.display();

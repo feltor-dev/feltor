@@ -404,7 +404,10 @@ EllSparseBlockMat<double> dx_normed( int n, int N, double h, bc bcx, direction d
         return create::dx_minus(n, N, h, bcx);
     return EllSparseBlockMat<double>();
 }
+///@}
 
+///@addtogroup creation
+///@{
 /**
 * @brief Create and assemble a host Matrix for the derivative in 1d
 *
@@ -461,9 +464,9 @@ EllSparseBlockMat<double> jump( const Grid1d& g)
 {
     return jump( g, g.bcx());
 }
-
-
 ///@}
+
+
 } //namespace create
 } //namespace dg
 

@@ -23,6 +23,7 @@ namespace geo
  \f]
  where \f$ R_0\f$ is a normalization constant, \f$ I\f$ the poloidal current 
  and \f$ \psi_p\f$ the poloidal flux function.
+ @snippet ds_t.cu doxygen
  @note We implicitly also assume the toroidal field line approximation, i.e. all curvature
  and other perpendicular terms created with this field will assume that the perpendicular 
  direction lies within the
@@ -275,10 +276,26 @@ struct GradLnB: public aCloneableBinaryFunctor<GradLnB>
     BR bR_;
     BZ bZ_;   
 };
+/**
+ * @brief \f[  \nabla \cdot \vec b \f]
+ *
+ *\f[  \nabla\cdot \vec b = -\nabla_\parallel \ln B \f]
+ *@sa \c GradLnB
+ */ 
+struct Divb: public aCloneableBinaryFunctor<GradLnB>
+{
+    Divb( const TokamakMagneticField& mag): m_gradLnB(mag) { } 
+    private:
+    double do_compute( double R, double Z) const
+    {
+        return -m_gradLnB(R,Z);
+    }
+    GradLnB m_gradLnB;
+};
 
 /**
  * @brief \f[ B_\varphi = R_0I/R^2\f]
-*/
+ */
 struct FieldP: public aCloneableBinaryFunctor<FieldP>
 {
     FieldP( const TokamakMagneticField& mag): mag_(mag){}

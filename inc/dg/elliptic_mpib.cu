@@ -90,17 +90,17 @@ int main( int argc, char* argv[])
     dg::tensor::pointwiseDot( chi, g_parallel, chi);
     //create split Laplacian
     std::vector< dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > laplace_split( 
-            grid.Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(grid_perp.get(), dg::not_normed, dg::centered));
+            grid.local().Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(grid_perp.get(), dg::not_normed, dg::centered));
     // create split  vectors and solve
     std::vector<dg::MDVec> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());
-    std::vector<unsigned>  number(grid.Nz());
+    std::vector<unsigned>  number(grid.local().Nz());
     t.tic();
     dg::tensor::pointwiseDot( b, g_parallel, b);
     dg::split( b, b_split, grid);
     dg::split( chi, chi_split, grid);
     dg::split( x, x_split, grid);
-    for( unsigned i=0; i<grid.Nz(); i++)
+    for( unsigned i=0; i<grid.local().Nz(); i++)
     {
         laplace_split[i].set_chi( chi_split[i]);
         dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);

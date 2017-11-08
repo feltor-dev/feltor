@@ -10,12 +10,7 @@
 
 #include "file/nc_utilities.h"
 #include "draw/host_window.h"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/xspacelib.cuh"
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
-#include "dg/backend/functions.h"
-#include "dg/backend/interpolation.cuh"
 
 #include "solovev.h"
 #include "init.h"
@@ -55,7 +50,7 @@ struct Parameters
 
 struct InvNormR
 {
-    InvNormR( dg::geo::solovev::GeomParameters gp): R_0(gp.R_0){}
+    InvNormR( dg::geo::solovev::Parameters gp): R_0(gp.R_0){}
     double operator()( double R, double Z, double phi)const
     {
         return R_0/R;
@@ -86,7 +81,7 @@ int main( int argc, char* argv[])
         reader.parse( isG, geom_js, false);
     }
     const Parameters p(input_js);
-    const dg::geo::solovev::GeomParameters gp(geom_js);
+    const dg::geo::solovev::Parameters gp(geom_js);
     p.display( std::cout);
     gp.display( std::cout);
 
@@ -114,8 +109,8 @@ int main( int argc, char* argv[])
     dg::geo::BHatR bhatR(c);
     dg::geo::BHatZ bhatZ(c);
     dg::geo::BHatP bhatP(c);
-    dg::DSFieldCylindrical field(dg::geo::BinaryVectorLvl0(bhatR, bhatZ, bhatP));
-    dg::Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,p.n, p.Nx, p.Ny,p.Nz);
+    dg::geo::BinaryVectorLvl0 vec(bhatR, bhatZ, bhatP);
+    dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,p.n, p.Nx, p.Ny,p.Nz);
     dg::HVec vecR = dg::evaluate( fieldR, grid);
     dg::HVec vecZ = dg::evaluate( fieldZ, grid);
     dg::HVec vecP = dg::evaluate( fieldP, grid);
@@ -135,16 +130,16 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, vecID[1], vecZ.data());
     err = nc_put_var_double( ncid, vecID[2], vecP.data());
     nc_close(ncid);
-    std::cout << "-----(0) Check single field by integrating from 0 to 2pi (psi=0 surface)" << "\n";
-    thrust::host_vector<double>  in(3);
-    thrust::host_vector<double>  out(3);
-    in[0]=gp.R_0+gp.a*0.6; 
-    in[1]=0.0;
-    in[2]=0.0;
-    dg::integrateRK4( field, in, out,  2*M_PI, gp.rk4eps);
-    
-    std::cout <<"Rin =  "<< in[0] <<" Zin =  "<<in[1] <<" sin  = "<<in[2]<<"\n";
-    std::cout <<"Rout = "<< out[0]<<" Zout = "<<out[1]<<" sout = "<<out[2]<<"\n";
+    //std::cout << "-----(0) Check single field by integrating from 0 to 2pi (psi=0 surface)" << "\n";
+    //thrust::host_vector<double>  in(3);
+    //thrust::host_vector<double>  out(3);
+    //in[0]=gp.R_0+gp.a*0.6; 
+    //in[1]=0.0;
+    //in[2]=0.0;
+    //dg::integrateRK4( field, in, out,  2*M_PI, gp.rk4eps);
+    //
+    //std::cout <<"Rin =  "<< in[0] <<" Zin =  "<<in[1] <<" sin  = "<<in[2]<<"\n";
+    //std::cout <<"Rout = "<< out[0]<<" Zout = "<<out[1]<<" sout = "<<out[2]<<"\n";
 
 
     
@@ -176,8 +171,8 @@ int main( int argc, char* argv[])
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
-                dg::FieldAligned<dg::aGeometry3d, dg::IDMatrix, dg::DVec > dsFA( field, g3d, gp.rk4eps, dg::geo::PsiLimiter(c.psip(), gp.psipmaxlim), g3d.bcx()); 
-                dg::DS<dg::aGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>  ds( dsFA, field, dg::normed, dg::centered); //choose bc of grid
+                dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec > dsFA( vec, g3d, dg::NEU, dg::NEU, dg::geo::PsiLimiter(c.psip(), gp.psipmaxlim), gp.rk4eps); 
+                dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>  ds( dsFA, dg::normed, dg::centered); //choose bc of grid
                 t.toc();
                 std::cout << "-----> Creation of parallel Derivative took"<<t.diff()<<"s\n";
 

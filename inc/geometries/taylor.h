@@ -17,7 +17,7 @@
 /*!@file
  *
  * MagneticField objects 
- * @attention When the taylor field is used we need the boost library for special functions
+ * @attention When the taylor field is used we need the <a href="http://www.boost.org"> boost</a> library for special functions
  */
 namespace dg
 {
@@ -27,7 +27,7 @@ namespace geo
  * @brief Contains the Cerfon Taylor state type flux functions (using boost)
  *
  * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
- * @attention When the taylor field is used we need the boost library for special functions
+ * @attention When the taylor field is used we need the <a href="http://www.boost.org"> boost</a> library for special functions
  */
 namespace taylor
 {
@@ -39,7 +39,7 @@ typedef dg::geo::solovev::Parameters Parameters; //!< bring Parameters into the 
  * @brief \f[ \psi \f]
  *
  * This is taken from A. J. Cerfon and M. O'Neil: Exact axisymmetric Taylor states for shaped plasmas, Physics of Plasmas 21, 064501 (2014)
- * @attention When the taylor field is used we need the boost library for special functions
+ * @attention When the taylor field is used we need the <a href="http://www.boost.org"> boost</a> library for special functions
  */
 struct Psip : public aCloneableBinaryFunctor<Psip>
 { /**
@@ -313,11 +313,14 @@ dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)
 } //namespace taylor
 /**
  * @brief Create a Taylor Magnetic field
+
+ * Based on \c dg::geo::taylor::Psip(gp) and \c dg::geo::taylor::Ipol(gp)
  * @param gp Solovev parameters
  * @return A magnetic field object
  * @ingroup geom
+ * @attention The header \c taylor.h needs to be included seperately and depends on <a href="http://www.boost.org">boost</a>
  */
-TokamakMagneticField createTaylorField( solovev::Parameters gp)
+dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
 }

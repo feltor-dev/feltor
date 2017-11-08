@@ -99,7 +99,7 @@ int main( int argc, char* argv[])
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    dg::geo::taylor::GeomParameters gp(js);
+    dg::geo::taylor::Parameters gp(js);
     dg::Timer t;
     std::cout << "Type psi_0 \n";
     double psi_0 = -16;

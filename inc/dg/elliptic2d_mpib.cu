@@ -81,9 +81,10 @@ int main(int argc, char* argv[] )
     //dg::Invert<dg::MDVec > invert( x, n*n*Nx*Ny, eps);
     t.tic();
     //unsigned number = invert( pol, x, b);
-    std::vector<unsigned> number = multigrid.solve( multi_pol, x, b, eps);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, x, b, eps);
     t.toc();
-    if(rank==0)std::cout << "Number of pcg iterations "<< number[0]<<std::endl;
+    for( unsigned u=0; u<number.size(); u++)
+    	if(rank==0)std::cout << " # iterations stage "<< number.size()-1-u << " " << number[number.size()-1-u] << " \n";
     if(rank==0)std::cout << "For a precision of "<< eps<<std::endl;
     if(rank==0)std::cout << " took "<<t.diff()<<"s\n";
 
@@ -94,14 +95,12 @@ int main(int argc, char* argv[] )
     dg::blas1::axpby( 1.,x,-1., error);
 
     double err = dg::blas2::dot( w2d, error);
-    if(rank==0)std::cout << "L2 Norm2 of Error is " <<std::setprecision(16)<< err << std::endl;
     double norm = dg::blas2::dot( w2d, solution);
     if(rank==0)std::cout << "L2 Norm of relative error is               "<<std::setprecision(16)<<sqrt( err/norm)<<std::endl;
     dg::MDMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);
-    if(rank==0)std::cout << "L2 Norm2 of Error in derivative is " << std::setprecision(16)<<err << std::endl;
     norm = dg::blas2::dot( w2d, derivati);
     if(rank==0)std::cout << "L2 Norm of relative error in derivative is "<<std::setprecision(16)<<sqrt( err/norm)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2

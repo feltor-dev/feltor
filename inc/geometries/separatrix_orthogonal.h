@@ -341,7 +341,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 // */ 
 //struct XField
 //{
-//    XField( dg::geo::solovev::GeomParameters gp,const dg::GridX2d& gXY, const thrust::host_vector<double>& g):
+//    XField( dg::geo::solovev::Parameters gp,const dg::GridX2d& gXY, const thrust::host_vector<double>& g):
 //        gp_(gp),
 //        psipR_(gp), psipZ_(gp),
 //        ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(g, gXY)) 

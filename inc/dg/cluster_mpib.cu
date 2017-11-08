@@ -6,10 +6,7 @@
 #include <omp.h>
 #endif//_OPENMP
 #include "algorithm.h"
-
-#include "backend/timer.cuh"
-#include "../geometries/guenther.h"
-#include "../geometries/magnetic_field.h"
+#include "../geometries/geometries.h"
 
 
 const double lx = 2*M_PI;
@@ -34,6 +31,7 @@ double laplace_fct( double x, double y, double z) { return -1./x*cos(x-R_0)*sin(
 double initial( double x, double y, double z) {return sin(0);}
 
 typedef dg::MDMatrix Matrix;
+typedef dg::MIDMatrix IMatrix;
 typedef dg::MDVec Vector;
 
 
@@ -181,10 +179,9 @@ int main(int argc, char* argv[])
         double Rmax=gpR0+1.0*gpa; 
         double Zmax=1.0*gpa*1.00;
         dg::CylindricalMPIGrid3d g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
-        dg::geo::TokamakMagneticField magfield = dg::geo::guenther::createMagField(gpR0, gpI0);
-        dg::geo::Field<dg::geo::guenther::MagneticField> field(magfield, gpR0);
-        dg::MDDS::FieldAligned dsFA( field, g3d, 1e-4, dg::DefaultLimiter(), dg::DIR);
-        dg::MDDS ds ( dsFA, field, dg::not_normed, dg::centered);
+        dg::geo::TokamakMagneticField magfield = dg::geo::createGuentherField(gpR0, gpI0);
+        dg::geo::Fieldaligned<dg::aProductMPIGeometry3d, IMatrix, Vector> dsFA( magfield, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter());
+        dg::geo::DS<dg::aProductMPIGeometry3d, IMatrix, Matrix, Vector>  ds ( dsFA, dg::not_normed, dg::centered);
         dg::geo::guenther::FuncNeu funcNEU(gpR0,gpI0);
         Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
 

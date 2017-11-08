@@ -19,7 +19,9 @@ namespace dg
 //interpolation matrices
 typedef MPIDistMat< dg::IHMatrix, GeneralComm< dg::iHVec, dg::HVec > > MIHMatrix; //!< MPI distributed CSR host Matrix
 typedef MPIDistMat< dg::IDMatrix, GeneralComm< dg::iDVec, dg::DVec > > MIDMatrix; //!< MPI distributed CSR device Matrix
+///@}
 
+///@cond
 namespace detail{
 //given global indices -> make a sorted unique indices vector -> make a gather map into the unique vector
 //buffer_idx -> (gather map/ new column indices) same size as global_idx ( can alias global_idx, index into unique_global_idx
@@ -49,17 +51,18 @@ void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, 
     thrust::scatter( gather_map.begin(), gather_map.end(), index.begin(), buffer_idx.begin());
 }
 }//namespace detail
-///@}
+///@endcond
 
 /**
  * @brief Convert a matrix with local row and global column indices to a row distributed MPI matrix
  *
  * @tparam ConversionPolicy has to have the members: 
- *  - global2localIdx(unsigned,unsigned,unsigned) const;
+ *  - \c global2localIdx(unsigned,unsigned,unsigned) \c const;
  * where the first parameter is the global index and the 
  * other two are the pair (local idx, rank). 
- *  - MPI_Comm %communicator() const;  returns the communicator to use in the gather/scatter
- * @param global the column indices need to be global, the row indices local
+ *  - \c MPI_Comm \c %communicator() \c const;  returns the communicator to use in the gather/scatter
+ *  - \c local_size(); return the local vector size
+ * @param global the column indices and num_cols need to be global, the row indices and num_rows local
  * @param policy the conversion object
  *
  * @return a row distributed MPI matrix. If no MPI communication is needed the collective communicator will have zero size. 
@@ -82,8 +85,12 @@ dg::MIHMatrix convert( const dg::IHMatrix& global, const ConversionPolicy& polic
         for(unsigned i=0; i<local_idx.size(); i++)
             if( !policy.global2localIdx(global.column_indices[i], local_idx[i], pids[i]) ) success = false;
         assert( success);
+        dg::IHMatrix local( global.num_rows, policy.local_size(), global.values.size());
         comm = dg::GeneralComm< dg::iHVec, dg::HVec>();
-        return dg::MIHMatrix( global, comm, dg::row_dist);
+        local.row_offsets=global.row_offsets;
+        local.column_indices=local_idx;
+        local.values=global.values;
+        return dg::MIHMatrix( local, comm, dg::row_dist);
     }
     dg::IHMatrix local( global.num_rows, comm.size(), global.values.size());
     local.row_offsets=global.row_offsets;

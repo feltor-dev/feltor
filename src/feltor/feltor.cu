@@ -7,11 +7,6 @@
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/sparseblockmat.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/average.cuh"
-#include "dg/backend/typedefs.cuh"
 
 #include "feltor.cuh"
 
@@ -46,7 +41,7 @@ int main( int argc, char* argv[])
         return -1;
     }
     const feltor::Parameters p( js);
-    const dg::geo::solovev::GeomParameters gp(gs);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
@@ -67,14 +62,14 @@ int main( int argc, char* argv[])
 
     //create RHS 
     std::cout << "Constructing Explicit...\n";
-    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, mag, p, gp); //initialize before rolkar!
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
     std::cout << "Constructing Implicit...\n";
     feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    dg::geo::Nprofile<Psip> prof(p.bgprofamp, p.nprofileamp, gp, Psip(gp)); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //perturbation 
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
@@ -93,14 +88,14 @@ int main( int argc, char* argv[])
     }
     if( p.mode == 3)
     {
-        dg::geo::ZonalFlow<Psip> init0(p.amp, p.k_psi, gp, Psip(gp));
+        dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
         y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
     }
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //sum up background and perturbation
     dg::blas1::plus(y0[1], -1); //initialize ni-1
     if( p.mode == 2 || p.mode == 3)
     {
-        dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping<Psip>(Psip(gp), gp), grid);
+        dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(dg::geo::solovev::Psip(gp), gp), grid);
         dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     }
     std::cout << "intiialize ne" << std::endl;
@@ -121,7 +116,6 @@ int main( int argc, char* argv[])
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
-    dg::ToroidalAverage<dg::HVec> toravg(grid);
     //create timer
     dg::Timer t;
     double time = 0;
@@ -159,7 +153,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
@@ -180,7 +174,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw potential
@@ -202,7 +196,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw U_e
@@ -220,7 +214,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);      
         
         //draw U_i
@@ -238,7 +232,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         title << std::fixed; 

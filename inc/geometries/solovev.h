@@ -352,18 +352,18 @@ struct IpolZ: public aCloneableBinaryFunctor<IpolZ>
     PsipZ psipZ_;
 };
 
-BinaryFunctorsLvl2 createPsip( Parameters gp)
+dg::geo::BinaryFunctorsLvl2 createPsip( Parameters gp)
 {
     BinaryFunctorsLvl2 psip( new Psip(gp), new PsipR(gp), new PsipZ(gp),new PsipRR(gp), new PsipRZ(gp), new PsipZZ(gp));
     return psip;
 }
-BinaryFunctorsLvl1 createIpol( Parameters gp)
+dg::geo::BinaryFunctorsLvl1 createIpol( Parameters gp)
 {
     BinaryFunctorsLvl1 ipol( new Ipol(gp), new IpolR(gp), new IpolZ(gp));
     return ipol;
 }
 
-TokamakMagneticField createMagField( Parameters gp)
+dg::geo::TokamakMagneticField createMagField( Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, createPsip(gp), createIpol(gp));
 }
@@ -556,11 +556,13 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
 
 /**
  * @brief Create a Solovev Magnetic field
+ *
+ * Based on \c dg::geo::solovev::Psip(gp) and \c dg::geo::solovev::Ipol(gp)
  * @param gp Solovev parameters
  * @return A magnetic field object
  * @ingroup geom
  */
-TokamakMagneticField createSolovevField( solovev::Parameters gp)
+dg::geo::TokamakMagneticField createSolovevField( dg::geo::solovev::Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, solovev::createPsip(gp), solovev::createIpol(gp));
 }

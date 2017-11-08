@@ -1,15 +1,12 @@
 #include <iostream>
+#include <memory>
 #include <mpi.h>
 
 #include <netcdf_par.h>
 
 #include "file/nc_utilities.h"
 
-#include "dg/backend/timer.cuh"
-#include "dg/backend/mpi_init.h"
-#include "dg/backend/grid.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
 
 #include "solovev.h"
 //#include "guenther.h"
@@ -38,7 +35,7 @@ int main(int argc, char**argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::solovev::createMagField(gp);
     if(rank==0)std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
@@ -52,8 +49,8 @@ int main(int argc, char**argv)
     t.tic();
     dg::geo::SimpleOrthogonal generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::CurvilinearProductMPIGrid3d g3d( generator, n, Nx, Ny,Nz, dg::DIR, dg::PER, dg::PER, comm);
-    dg::geo::CurvilinearMPIGrid2d g2d = g3d.perp_grid();
-    dg::Elliptic<dg::geo::CurvilinearMPIGrid2d, dg::MDMatrix, dg::MDVec> pol( g2d, dg::not_normed, dg::forward);
+    std::unique_ptr<dg::aMPIGeometry2d> g2d(g3d.perp_grid());
+    dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> pol( *g2d, dg::not_normed, dg::forward);
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -62,7 +59,7 @@ int main(int argc, char**argv)
     MPI_Info info = MPI_INFO_NULL;
     ncerr = nc_create_par( "testE_mpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     int dim2d[2];
-    ncerr = file::define_dimensions(  ncid, dim2d, g2d.global());
+    ncerr = file::define_dimensions(  ncid, dim2d, g2d->global());
     int coordsID[2], psiID, functionID, function2ID;
     ncerr = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 2, dim2d, &coordsID[0]);
     ncerr = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 2, dim2d, &coordsID[1]);
@@ -71,8 +68,8 @@ int main(int argc, char**argv)
     ncerr = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 2, dim2d, &function2ID);
 
     int dims[2], periods[2],  coords[2];
-    MPI_Cart_get( g2d.communicator(), 2, dims, periods, coords);
-    size_t count[2] = {g2d.n()*g2d.Ny(), g2d.n()*g2d.Nx()};
+    MPI_Cart_get( g2d->communicator(), 2, dims, periods, coords);
+    size_t count[2] = {g2d->local().n()*g2d->local().Ny(), g2d->local().n()*g2d->local().Nx()};
     size_t start[2] = {coords[1]*count[0], coords[0]*count[1]};
 
     ncerr = nc_var_par_access( ncid, coordsID[0], NC_COLLECTIVE);
@@ -81,20 +78,20 @@ int main(int argc, char**argv)
     ncerr = nc_var_par_access( ncid, functionID, NC_COLLECTIVE);
     ncerr = nc_var_par_access( ncid, function2ID, NC_COLLECTIVE);
 
-    dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
-    for( unsigned i=0; i<g2d.size(); i++)
+    dg::HVec X( g2d->local().size()), Y(X); //P = dg::pullback( dg::coo3, g);
+    for( unsigned i=0; i<g2d->local().size(); i++)
     {
-        X[i] = g2d.map()[0].data()[i];
-        Y[i] = g2d.map()[1].data()[i];
+        X[i] = g2d->map()[0].data()[i];
+        Y[i] = g2d->map()[1].data()[i];
     }
     ncerr = nc_put_vara_double( ncid, coordsID[0], start, count, X.data());
     ncerr = nc_put_vara_double( ncid, coordsID[1], start, count, Y.data());
     ///////////////////////////////////////////////////////////////////////////
-    dg::MDVec x =    dg::evaluate( dg::zero, g2d);
-    const dg::MDVec b =    dg::pullback( dg::geo::EllipticDirPerM(c, psi_0, psi_1, 4), g2d);
-    const dg::MDVec chi =  dg::pullback( dg::geo::Bmodule(c), g2d);
-    const dg::MDVec solution = dg::pullback( dg::geo::FuncDirPer(c, psi_0, psi_1, 4), g2d);
-    const dg::MDVec vol3d = dg::create::volume( g2d);
+    dg::MDVec x =    dg::evaluate( dg::zero, *g2d);
+    const dg::MDVec b =    dg::pullback( dg::geo::EllipticDirPerM(c, psi_0, psi_1, 4), *g2d);
+    const dg::MDVec chi =  dg::pullback( dg::geo::Bmodule(c), *g2d);
+    const dg::MDVec solution = dg::pullback( dg::geo::FuncDirPer(c, psi_0, psi_1, 4), *g2d);
+    const dg::MDVec vol3d = dg::create::volume( *g2d);
     pol.set_chi( chi);
     //compute error
     dg::MDVec error( solution);
@@ -111,14 +108,14 @@ int main(int argc, char**argv)
     const double norm = dg::blas2::dot( vol3d, solution);
     if(rank==0)std::cout << sqrt( err/norm) << "\t";
 
-    dg::SparseTensor<dg::MDVec> metric = g2d.metric();
+    dg::SparseTensor<dg::MDVec> metric = g2d->metric();
     dg::MDVec gyy = metric.value(1,1), gxx=metric.value(0,0), vol = dg::tensor::volume(metric).value();
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);
     dg::blas1::pointwiseDot( gyy, vol, gyy);
-    dg::blas1::scal( gxx, g2d.hx());
-    dg::blas1::scal( gyy, g2d.hy());
+    dg::blas1::scal( gxx, g2d->hx());
+    dg::blas1::scal( gyy, g2d->hy());
     if(rank==0)std::cout << "(Max elements on first process)\t";
     if(rank==0)std::cout << *thrust::max_element( gxx.data().begin(), gxx.data().end()) << "\t";
     if(rank==0)std::cout << *thrust::max_element( gyy.data().begin(), gyy.data().end()) << "\t";

@@ -69,6 +69,7 @@
  *
  *             High level matrix creation functions
  *         @defgroup interpolation Interpolation and projection
+ *         @defgroup utilities Averaging
  *         @defgroup scatter Scatter and Gather
  *     @}
  *     @defgroup geometry Geometric grids and operations
@@ -79,7 +80,6 @@
  *        @defgroup basicgeometry Geometry base classes
  *        @defgroup pullback pullback and pushforward
  *        @defgroup metric create volume
- *        @defgroup utilities Averaging
  *        @defgroup generators Grid Generator classes
  *            The classes to perform field line integration for DS and averaging classes
  *    @}
@@ -186,30 +186,32 @@
 /*!@addtogroup mpi_structures
 @{
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
-@section mpi_vector MPI Vectors and the \c blas1 functions
+@section mpi_vector MPI Vectors and the blas1 functions
 
 In Feltor each mpi process gets an equally sized chunk of a vector.
 The corresponding structure in FELTOR is the \c dg::MPI_Vector, which is 
-nothing but a wrapper around any container type object and a MPI_Comm. 
+nothing but a wrapper around any container type object and a \c MPI_Comm. 
 With this the \c dg::blas1 functions can readily implemented by just redirecting to the
 implementation for the container type. The only functions that need
-communication are the \c dg::blas1::dot functions (MPI_Allreduce).
+communication are the \c dg::blas1::dot functions (\c MPI_Allreduce).
 
 @section mpi_matrix Row and column distributed matrices
 
 Contrary to a vector
-a matrix can be distributed in two ways, row-wise and column wise. 
-The structure \c dg::MPIDistMat is a wrapper around a LocalMatrix type object 
-and an instance of \c dg::aCommunicator
-In a row-distributed matrix each process gets the complete 
+a matrix can be distributed among processes in two ways: 
+\a row-distributed and \a column-distributed. 
+In a row-distributed matrix each process gets the 
 rows of the matrix that correspond to the indices in the 
 vector it holds. 
-In a column-distributed matrix each process gets the complete 
-columns of the matrix corresponding to the indices in the 
+In a column-distributed matrix each process gets the
+columns of the matrix that correspond to the indices in the 
 vector it holds. 
 When we implement a matrix-vector multiplication the order 
 of communication and computation depends on the distribution 
 of the matrix.
+First, we define the structure \c dg::MPIDistMat as a simple a wrapper around a 
+LocalMatrix type object 
+and an instance of a \c dg::aCommunicator.
 \subsection row Row distributed
 For the row-distributed matrix each process first has to gather 
 all elements of the input vector it needs to be able to compute the elements of the output. In general this requires MPI communication.
@@ -246,5 +248,6 @@ It turns out that a row-distributed matrix can be transposed
 by transposition of the local matrices and the gather matrix (s.a. \c dg::transpose).
 The result is then a column distributed matrix.
 The transpose of a column distributed matrix is a row-distributed matrix and vice-versa.
+You can create an MPI row-distributed matrix if you know the global column indices by our \c dg::convert function.
 @}
 */
