@@ -14,7 +14,12 @@ toefl_mpi: toefl_mpi.cu toeflR.cuh
 toeflR: toeflR.cu toeflR.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DDG_BENCHMARK  -g
 
-.PHONY: clean
+doc: 
+	mkdir -p doc; \
+	cd doc; \
+	pdflatex ../ep.tex;
+
+.PHONY: clean doc
 
 clean:
-	rm -f toefl_mpi
+	rm -rf toeflR toefl_mpi doc

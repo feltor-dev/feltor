@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <limits.h>  // UINT_MAX is needed in cusp (v0.5.1) but limits.h is not included
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 

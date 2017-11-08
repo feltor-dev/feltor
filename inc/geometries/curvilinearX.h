@@ -4,145 +4,143 @@
 #include "dg/backend/evaluationX.cuh"
 #include "dg/backend/functions.h"
 #include "dg/blas1.h"
-#include "dg/geometry/geometry_traits.h"
+#include "dg/geometry/base_geometryX.h"
+#include "generatorX.h"
+#include "curvilinear.h"
 
 namespace dg
 {
-
-///@cond
-template< class container>
-struct CurvilinearGridX2d; 
-///@endcond
+namespace geo
+{
+///@addtogroup grids
+///@{
 
 /**
- * A curvilinear grid for X-point geometry in three dimensions
- * @ingroup grids
+ * @brief A three-dimensional grid based on curvilinear coordinates
+ * 
+ * The base coordinate system is the cylindrical coordinate system R,Z,phi
  */
-template< class container>
-struct CurvilinearGridX3d : public dg::GridX3d
+struct CurvilinearProductGridX3d : public dg::aGeometryX3d
 {
-    typedef dg::CurvilinearCylindricalTag metric_category;
-    typedef CurvilinearGridX2d<container> perpendicular_grid;
-
-    template< class Generator>
-    CurvilinearGridX3d( Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, dg::bc bcy):
-        dg::GridX3d( 0,1, -2.*M_PI*fy/(1.-2.*fy), 2.*M_PI*(1.+fy/(1.-2.*fy)), 0., 2*M_PI, fx, fy, n, Nx, Ny, Nz, bcx, bcy, dg::PER),
-        r_(this->size()), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_)
-    {
-        construct( generator, psi_0, fx, n, Nx, Ny);
+    /*!@brief Constructor
+    
+     * the coordinates of the computational space are called x,y,z
+     * @param generator must generate a grid
+     * @param n number of %Gaussian nodes in x and y
+     * @param fx
+     * @param fy
+     * @param Nx number of cells in x
+     * @param Ny number of cells in y 
+     * @param Nz  number of cells z
+     * @param bcx boundary condition in x
+     * @param bcy boundary condition in y
+     * @param bcz boundary condition in z
+     */
+    CurvilinearProductGridX3d( const aGeneratorX2d& generator, 
+        double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
+        dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, fx,fy,n, Nx, Ny, Nz, bcx, bcy, bcz)
+    { 
+        map_.resize(3);
+        handle_ = generator;
+        constructPerp( n, Nx, Ny);
+        constructParallel(Nz);
     }
 
-    const thrust::host_vector<double>& r()const{return r_;}
-    const thrust::host_vector<double>& z()const{return z_;}
-    const thrust::host_vector<double>& xr()const{return xr_;}
-    const thrust::host_vector<double>& yr()const{return yr_;}
-    const thrust::host_vector<double>& xz()const{return xz_;}
-    const thrust::host_vector<double>& yz()const{return yz_;}
-    const container& g_xx()const{return g_xx_;}
-    const container& g_yy()const{return g_yy_;}
-    const container& g_xy()const{return g_xy_;}
-    const container& g_pp()const{return g_pp_;}
-    const container& vol()const{return vol_;}
-    const container& perpVol()const{return vol2d_;}
-    perpendicular_grid perp_grid() const { return CurvilinearGridX2d<container>(*this);}
+    const aGeneratorX2d & generator() const{return handle_.get();}
+    virtual CurvilinearProductGridX3d* clone()const{return new CurvilinearProductGridX3d(*this);}
     private:
-    template<class Generator>
-    void construct( Generator generator, double psi_0, double fx, unsigned n, unsigned Nx, unsigned Ny )
+    //construct phi and lift rest to 3d
+    void constructParallel(unsigned Nz)
     {
-        const double x_0 = generator.f0()*psi_0;
-        const double x_1 = -fx/(1.-fx)*x_0;
-        init_X_boundaries( x_0, x_1);
-        dg::Grid1d gX1d( this->x0(), this->x1(), n, Nx, dg::DIR);
-        thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
-        dg::GridX1d gY1d( -this->fy()*2.*M_PI/(1.-2.*this->fy()), 2*M_PI+this->fy()*2.*M_PI/(1.-2.*this->fy()), this->fy(), this->n(), this->Ny(), dg::DIR);
-        thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
-        thrust::host_vector<double> rvec, zvec, yrvec, yzvec, xrvec, xzvec;
-        generator( x_vec, y_vec, gY1d.n()*gY1d.outer_N(), gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), rvec, zvec, xrvec, xzvec, yrvec, yzvec);
-
-        unsigned Mx = this->n()*this->Nx(), My = this->n()*this->Ny();
-        //now lift to 3D grid
-        for( unsigned k=0; k<this->Nz(); k++)
-            for( unsigned i=0; i<Mx*My; i++)
+        map_[2]=dg::evaluate(dg::cooZ3d, *this);
+        unsigned size = this->size();
+        unsigned size2d = this->n()*this->n()*this->Nx()*this->Ny();
+        //resize for 3d values
+        for( unsigned r=0; r<4;r++)
+            jac_.value(r).resize(size);
+        map_[0].resize(size);
+        map_[1].resize(size);
+        //lift to 3D grid
+        for( unsigned k=1; k<Nz; k++)
+            for( unsigned i=0; i<size2d; i++)
             {
-                r_[k*Mx*My+i] = rvec[i];
-                z_[k*Mx*My+i] = zvec[i];
-                yr_[k*Mx*My+i] = yrvec[i];
-                yz_[k*Mx*My+i] = yzvec[i];
-                xr_[k*Mx*My+i] = xrvec[i];
-                xz_[k*Mx*My+i] = xzvec[i];
+                for(unsigned r=0; r<4; r++)
+                    jac_.value(r)[k*size2d+i] = jac_.value(r)[(k-1)*size2d+i];
+                map_[0][k*size2d+i] = map_[0][(k-1)*size2d+i];
+                map_[1][k*size2d+i] = map_[1][(k-1)*size2d+i];
             }
-        construct_metric();
     }
-    //compute metric elements from xr, xz, yr, yz, r and z
-    void construct_metric()
+    //construct 2d plane
+    void constructPerp( unsigned n, unsigned Nx, unsigned Ny)
     {
-        //std::cout << "CONSTRUCTING METRIC\n";
-        thrust::host_vector<double> tempxx( r_), tempxy(r_), tempyy(r_), tempvol(r_);
-        for( unsigned idx=0; idx<this->size(); idx++)
-        {
-            tempxx[idx] = (xr_[idx]*xr_[idx]+xz_[idx]*xz_[idx]);
-            tempxy[idx] = (yr_[idx]*xr_[idx]+yz_[idx]*xz_[idx]);
-            tempyy[idx] = (yr_[idx]*yr_[idx]+yz_[idx]*yz_[idx]);
-            tempvol[idx] = r_[idx]/sqrt(tempxx[idx]*tempyy[idx]-tempxy[idx]*tempxy[idx]);
-        }
-        g_xx_=tempxx, g_xy_=tempxy, g_yy_=tempyy, vol_=tempvol;
-        dg::blas1::pointwiseDivide( tempvol, r_, tempvol);
-        vol2d_ = tempvol;
-        thrust::host_vector<double> ones = dg::evaluate( dg::one, *this);
-        dg::blas1::pointwiseDivide( ones, r_, tempxx);
-        dg::blas1::pointwiseDivide( tempxx, r_, tempxx); //1/R^2
-        g_pp_=tempxx;
+        dg::Grid1d gX1d( x0(), x1(), n, Nx);
+        dg::GridX1d gY1d( y0(), y1(), fy(), n, Ny);
+        thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
+        thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
+        handle_.get().generate( x_vec, y_vec, gY1d.n()*gY1d.outer_N(), gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), map_[0], map_[1], jac_.value(0), jac_.value(1), jac_.value(2), jac_.value(3));
+        jac_.idx(0,0) = 0, jac_.idx(0,1) = 1, jac_.idx(1,0)=2, jac_.idx(1,1) = 3;
     }
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
-    container g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
+        return jac_;
+    }
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const
+    {
+        SparseTensor<thrust::host_vector<double> > metric;
+        detail::square( jac_, map_[0], metric, handle_.get().isOrthogonal());
+        return metric;
+    }
+    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
+    std::vector<thrust::host_vector<double> > map_;
+    SparseTensor<thrust::host_vector<double> > jac_;
+    dg::Handle<aGeneratorX2d> handle_;
 };
 
 /**
- * A curvilinear grid for X-point geometry in two dimensions
- * @ingroup grids
+ * @brief A two-dimensional grid based on curvilinear coordinates
  */
-template< class container>
-struct CurvilinearGridX2d : public dg::GridX2d
+struct CurvilinearGridX2d : public dg::aGeometryX2d
 {
-    typedef dg::CurvilinearTag metric_category;
-    template<class Generator>
-    CurvilinearGridX2d(Generator generator, double psi_0, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy):
-        dg::GridX2d( 0, 1,-fy*2.*M_PI/(1.-2.*fy), 2*M_PI+fy*2.*M_PI/(1.-2.*fy), fx, fy, n, Nx, Ny, bcx, bcy)
+    /*!@brief Constructor
+    
+     * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
+     * @param fx
+     * @param fy
+     * @param n number of polynomial coefficients
+     * @param Nx number of cells in first coordinate
+     * @param Ny number of cells in second coordinate
+     * @param bcx boundary condition in first coordinate
+     * @param bcy boundary condition in second coordinate
+     */
+    CurvilinearGridX2d( const aGeneratorX2d& generator, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
+        dg::aGeometryX2d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy),fx,fy, n, Nx, Ny, bcx, bcy), handle_(generator)
     {
-        CurvilinearGridX3d<container> g( generator, psi_0, fx,fy, n,Nx,Ny,1,bcx,bcy);
-        init_X_boundaries( g.x0(),g.x1());
-        r_=g.r(), z_=g.z(), xr_=g.xr(), xz_=g.xz(), yr_=g.yr(), yz_=g.yz();
-        g_xx_=g.g_xx(), g_xy_=g.g_xy(), g_yy_=g.g_yy();
-        vol2d_=g.perpVol();
+        construct(fx,fy, n,Nx,Ny);
     }
-    CurvilinearGridX2d( const CurvilinearGridX3d<container>& g):
-        dg::GridX2d( g.x0(), g.x1(), g.y0(), g.y1(), g.fx(), g.fy(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy())
-    {
-        unsigned s = this->size();
-        r_.resize( s), z_.resize(s), xr_.resize(s), xz_.resize(s), yr_.resize(s), yz_.resize(s);
-        g_xx_.resize( s), g_xy_.resize(s), g_yy_.resize(s), vol2d_.resize(s);
-        for( unsigned i=0; i<s; i++)
-        { r_[i]=g.r()[i], z_[i]=g.z()[i], xr_[i]=g.xr()[i], xz_[i]=g.xz()[i], yr_[i]=g.yr()[i], yz_[i]=g.yz()[i];}
-        thrust::copy( g.g_xx().begin(), g.g_xx().begin()+s, g_xx_.begin());
-        thrust::copy( g.g_xy().begin(), g.g_xy().begin()+s, g_xy_.begin());
-        thrust::copy( g.g_yy().begin(), g.g_yy().begin()+s, g_yy_.begin());
-        thrust::copy( g.perpVol().begin(), g.perpVol().begin()+s, vol2d_.begin());
-    }
-    const thrust::host_vector<double>& r()const{return r_;}
-    const thrust::host_vector<double>& z()const{return z_;}
-    const thrust::host_vector<double>& xr()const{return xr_;}
-    const thrust::host_vector<double>& yr()const{return yr_;}
-    const thrust::host_vector<double>& xz()const{return xz_;}
-    const thrust::host_vector<double>& yz()const{return yz_;}
 
-    const container& g_xx()const{return g_xx_;}
-    const container& g_yy()const{return g_yy_;}
-    const container& g_xy()const{return g_xy_;}
-    const container& vol()const{return vol2d_;}
-    const container& perpVol()const{return vol2d_;}
+    const aGeneratorX2d& generator() const{return handle_.get();}
+    virtual CurvilinearGridX2d* clone()const{return new CurvilinearGridX2d(*this);}
     private:
-    thrust::host_vector<double> r_, z_, xr_, xz_, yr_, yz_;
-    container g_xx_, g_xy_, g_yy_, vol2d_;
+    void construct( double fx, double fy, unsigned n, unsigned Nx, unsigned Ny)
+    {
+        CurvilinearProductGridX3d g( handle_.get(),fx,fy,n,Nx,Ny,1,bcx());
+        map_=g.map();
+        jac_=g.jacobian().perp();
+        metric_=g.metric().perp();
+        map_.pop_back();
+    }
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
+        return jac_;
+    }
+    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const {
+        return metric_;
+    }
+    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
+    dg::SparseTensor<thrust::host_vector<double> > jac_, metric_;
+    std::vector<thrust::host_vector<double> > map_;
+    dg::Handle<aGeneratorX2d> handle_;
 };
 
+///@}
+
+} //namespace geo
 } //namespace dg

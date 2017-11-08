@@ -1,5 +1,6 @@
 #pragma once
 //#include "solovev.h"
+#include "fluxfunctions.h"
 #include "solovev_parameters.h"
 
 /*!@file
@@ -12,42 +13,26 @@ namespace geo
 {
 ///@addtogroup profiles
 ///@{
+//
 /**
  * @brief Returns zero outside psipmax and inside psipmin, otherwise 1
      \f[ \begin{cases}
         1  \text{ if } \psi_{p,min} < \psi_p(R,Z) < \psi_{p,max}\\
         0  \text{ else}
      \end{cases}\f]
-     @tparam Psi models aBinaryOperator
  */ 
-template<class Psi>
-struct Iris
+struct Iris : public aCloneableBinaryFunctor<Iris>
 {
-    Iris( Psi psi, double psi_min, double psi_max ): 
+    Iris( const aBinaryFunctor& psi, double psi_min, double psi_max ): 
         psip_(psi), psipmin_(psi_min), psipmax_(psi_max) { }
-
-    /**
-     * @brief 
-     \f[ \begin{cases}
-        1  \text{ if } \psi_{p,min} < \psi_p(R,Z) < \psi_{p,max}\\
-        0  \text{ else}
-     \end{cases}\f]
-     */
-    double operator( )(double R, double Z)
+    private:
+    double do_compute(double R, double Z)const
     {
-        if( psip_(R,Z) > psipmax_) return 0.;
-        if( psip_(R,Z) < psipmin_) return 0.;
+        if( psip_.get()(R,Z) > psipmax_) return 0.;
+        if( psip_.get()(R,Z) < psipmin_) return 0.;
         return 1.;
     }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator( )(double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
-    private:
-    Psi psip_;
+    Handle<aBinaryFunctor> psip_;
     double psipmin_, psipmax_;
 };
 /**
@@ -57,32 +42,17 @@ struct Iris
         1  \text{ else}
      \end{cases}\f]
  */ 
-template<class Psi>
-struct Pupil
+struct Pupil : public aCloneableBinaryFunctor<Pupil>
 {
-    Pupil( Psi psi, double psipmaxcut): 
+    Pupil( const aBinaryFunctor& psi, double psipmaxcut): 
         psip_(psi), psipmaxcut_(psipmaxcut) { }
-    /**
-     * @brief 
-     \f[ \begin{cases}
-        0  \text{ if } \psi_p(R,Z) > \psi_{p,maxcut} \\
-        1  \text{ else}
-     \end{cases}\f]
-     */
-    double operator( )(double R, double Z)
+    private:
+    double do_compute(double R, double Z)const
     {
-        if( psip_(R,Z) > psipmaxcut_) return 0.;
+        if( psip_.get()(R,Z) > psipmaxcut_) return 0.;
         return 1.;
     }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator( )(double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
-    private:
-    Psi psip_;
+    Handle<aBinaryFunctor> psip_;
     double psipmaxcut_;
 };
 /**
@@ -92,33 +62,18 @@ struct Pupil
         \psi_p(R,Z) \text{ else}
      \end{cases}\f]
  */ 
-template<class Psi>
-struct PsiPupil
+struct PsiPupil : public aCloneableBinaryFunctor<PsiPupil>
 {
-    PsiPupil( Psi psi, double psipmax): 
+    PsiPupil(const aBinaryFunctor& psi, double psipmax): 
         psipmax_(psipmax), psip_(psi) { } 
-    /**
-     * @brief 
-     \f[ \begin{cases}
-        \psi_{p,max}  \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
-        \psi_p(R,Z) \text{ else}
-     \end{cases}\f]
-     */
-    double operator( )(double R, double Z)
-    {
-        if( psip_(R,Z) > psipmax_) return psipmax_;
-        return  psip_(R,Z);
-    }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator( )(double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
     private:
+    double do_compute(double R, double Z)const
+    {
+        if( psip_.get()(R,Z) > psipmax_) return psipmax_;
+        return  psip_.get()(R,Z);
+    }
     double psipmax_;
-    Psi psip_;
+    Handle<aBinaryFunctor> psip_;
 };
 /**
  * @brief Sets values to one outside psipmaxcut, zero else
@@ -128,34 +83,19 @@ struct PsiPupil
      \end{cases}\f]
  *
  */ 
-template<class Psi>
-struct PsiLimiter
+struct PsiLimiter : public aCloneableBinaryFunctor<PsiLimiter>
 {
-    PsiLimiter( Psi psi, double psipmaxlim): 
+    PsiLimiter( const aBinaryFunctor& psi, double psipmaxlim): 
         psipmaxlim_(psipmaxlim), psip_(psi) { }
 
-    /**
-     * @brief 
-     \f[ \begin{cases}
-        1  \text{ if } \psi_p(R,Z) > \psi_{p,maxlim} \\
-        0  \text{ else}
-     \end{cases}\f]
-     */
-    double operator( )(double R, double Z)
+    private:
+    double do_compute(double R, double Z)const
     {
-        if( psip_(R,Z) > psipmaxlim_) return 1.;
+        if( psip_.get()(R,Z) > psipmaxlim_) return 1.;
         return 0.;
     }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator( )(double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
-    private:
     double psipmaxlim_;
-    Psi psip_;
+    Handle<aBinaryFunctor> psip_;
 };
 
 
@@ -172,37 +112,21 @@ struct PsiLimiter
    \f]
  *
  */ 
-template< class Psi>
-struct GaussianDamping
+struct GaussianDamping : public aCloneableBinaryFunctor<GaussianDamping>
 {
-    GaussianDamping( Psi psi, double psipmaxcut, double alpha):
+    GaussianDamping( const aBinaryFunctor& psi, double psipmaxcut, double alpha):
         psip_(psi), psipmaxcut_(psipmaxcut), alpha_(alpha) { }
-    /**
-     * @brief 
-     \f[ \begin{cases}
- 1 \text{ if } \psi_p(R,Z) < \psi_{p,max,cut}\\
- 0 \text{ if } \psi_p(R,Z) > (\psi_{p,max,cut} + 4\alpha) \\
- \exp\left( - \frac{(\psi_p - \psi_{p,max,cut})^2}{2\alpha^2}\right), \text{ else}
- \end{cases}
-   \f]
-     */
-    double operator( )(double R, double Z)
-    {
-        if( psip_(R,Z) > psipmaxcut_ + 4.*alpha_) return 0.;
-        if( psip_(R,Z) < psipmaxcut_) return 1.;
-        return exp( -( psip_(R,Z)-psipmaxcut_)*( psip_(R,Z)-psipmaxcut_)/2./alpha_/alpha_);
-    }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator( )(double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
     private:
-    Psi psip_;
+    double do_compute(double R, double Z)const
+    {
+        if( psip_.get()(R,Z) > psipmaxcut_ + 4.*alpha_) return 0.;
+        if( psip_.get()(R,Z) < psipmaxcut_) return 1.;
+        return exp( -( psip_.get()(R,Z)-psipmaxcut_)*( psip_.get()(R,Z)-psipmaxcut_)/2./alpha_/alpha_);
+    }
+    Handle<aBinaryFunctor> psip_;
     double psipmaxcut_, alpha_;
 };
+
 /**
  * @brief Damps the inner boundary in a zone 
  * from psipmax to psipmax+ 4*alpha with a normal distribution
@@ -215,35 +139,18 @@ struct GaussianDamping
    \f]
  *
  */ 
-template< class Psi>
-struct GaussianProfDamping
+struct GaussianProfDamping : public aCloneableBinaryFunctor<GaussianProfDamping>
 {
-    GaussianProfDamping( Psi psi, double psipmax, double alpha):
+    GaussianProfDamping( const aBinaryFunctor& psi, double psipmax, double alpha):
         psip_(psi), psipmax_(psipmax), alpha_(alpha) { }
-    /**
-     * @brief 
-     \f[ \begin{cases}
- 1 \text{ if } \psi_p(R,Z) < (\psi_{p,max} - 4\alpha)\\
- 0 \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
- \exp\left( - \frac{(\psi_p - \psi_{p,max} + 4\alpha)^2}{2\alpha^2}\right), \text{ else}
- \end{cases}
-   \f]
-     */
-    double operator( )(double R, double Z)
-    {
-        if( psip_(R,Z) > psipmax_ ) return 0.;
-        if( psip_(R,Z) < (psipmax_-4.*alpha_)) return 1.;
-        return exp( -( psip_(R,Z)-(psipmax_-4.*alpha_))*( psip_(R,Z)-(psipmax_-4.*alpha_))/2./alpha_/alpha_);
-    }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator( )(double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
     private:
-    Psi psip_;
+    double do_compute(double R, double Z)const
+    {
+        if( psip_.get()(R,Z) > psipmax_ ) return 0.;
+        if( psip_.get()(R,Z) < (psipmax_-4.*alpha_)) return 1.;
+        return exp( -( psip_.get()(R,Z)-(psipmax_-4.*alpha_))*( psip_.get()(R,Z)-(psipmax_-4.*alpha_))/2./alpha_/alpha_);
+    }
+    Handle<aBinaryFunctor> psip_;
     double psipmax_, alpha_;
 };
 /**
@@ -259,38 +166,20 @@ struct GaussianProfDamping
    \f]
  *
  */ 
-template <class Psi>
-struct GaussianProfXDamping
+struct GaussianProfXDamping : public aCloneableBinaryFunctor<GaussianProfXDamping>
 {
-    GaussianProfXDamping( Psi psi, dg::geo::solovev::GeomParameters gp):
+    GaussianProfXDamping( const aBinaryFunctor& psi, dg::geo::solovev::GeomParameters gp):
         gp_(gp),
-        psip_(psi) {
-        }
-    /**
-     * @brief 
-     \f[ \begin{cases}
- 1 \text{ if } \psi_p(R,Z) < (\psi_{p,max} - 4\alpha) \\
- 0 \text{ if } \psi_p(R,Z) > \psi_{p,max} \text{ or } Z < -1.1\varepsilon a  \\
- \exp\left( - \frac{(\psi_p - \psi_{p,max})^2}{2\alpha^2}\right), \text{ else}
- \end{cases}
-   \f]
-     */
-    double operator( )(double R, double Z)
-    {
-        if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
-        if( psip_(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
-        return exp( -( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
-    }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator( )(double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
+        psip_(psi) { }
     private:
+    double do_compute(double R, double Z)const
+    {
+        if( psip_.get()(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return 0.;
+        if( psip_.get()(R,Z) < (gp_.psipmax-4.*gp_.alpha)) return 1.;
+        return exp( -( psip_.get()(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_.get()(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
+    }
     dg::geo::solovev::GeomParameters gp_;
-    Psi psip_;
+    Handle<aBinaryFunctor> psip_;
 };
 
 /**
@@ -298,53 +187,36 @@ struct GaussianProfXDamping
  * Returns a tanh profile shifted to \f$ \psi_{p,min}-3\alpha\f$
  \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha}\right)\right) \f]
  */
-template<class Psi>
-struct TanhSource
+struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
 {
-        TanhSource(Psi psi, double psipmin, double alpha):
+    TanhSource(const aBinaryFunctor& psi, double psipmin, double alpha):
             psipmin_(psipmin), alpha_(alpha), psip_(psi) { }
-    /**
-     * @brief \f[ 0.5\left( 1 + \tanh\left( -\frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha}\right)\right)
-   \f]
-     */
-    double operator( )(double R, double Z)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
-    }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator( )(double R, double Z, double phi)
-    {
-        return 0.5*(1.+tanh(-(psip_(R,Z,phi)-psipmin_ + 3.*alpha_)/alpha_) );
-    }
     private:
+    double do_compute(double R, double Z)const
+    {
+        return 0.5*(1.+tanh(-(psip_.get()(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
+    }
     double psipmin_, alpha_; 
-    Psi psip_;
+    Handle<aBinaryFunctor> psip_;
 };
 
-// struct Gradient
+// struct Gradient : public aCloneableBinaryFunctor<Gradient>
 // {
 //     Gradient(  eule::Parameters p, GeomParameters gp):
 //         p_(p),
 //         gp_(gp),
 //         psip_(gp) {
 //     }
-//     double operator( )(double R, double Z)
+//     private:
+//     double do_compute(double R, double Z)
 //     {
-//         if( psip_(R,Z) < (gp_.psipmin)) return p_.nprofileamp+p_.bgprofamp;
-//         if( psip_(R,Z) < 0.) return p_.nprofileamp+p_.bgprofamp-(gp_.psipmin-psip_(R,Z))*(p_.nprofileamp/gp_.psipmin);
+//         if( psip_.get()(R,Z) < (gp_.psipmin)) return p_.nprofileamp+p_.bgprofamp;
+//         if( psip_.get()(R,Z) < 0.) return p_.nprofileamp+p_.bgprofamp-(gp_.psipmin-psip_.get()(R,Z))*(p_.nprofileamp/gp_.psipmin);
 //         return p_.bgprofamp;
 //     }
-//     double operator( )(double R, double Z, double phi)
-//     {
-//         return (*this)(R,Z);
-// 
-//     }
-//     private:
 //     eule::Parameters p_;
 //     GeomParameters gp_;
-//     Psi psip_;
+//     Handle<aBinaryFunctor> psip_;
 // };
 
 /**
@@ -354,39 +226,23 @@ struct TanhSource
  A_{bg} \text{ else } 
  \end{cases}
    \f]
-   @tparam Psi models aBinaryOperator
  */ 
-template<class Psi>
-struct Nprofile
+struct Nprofile : public aCloneableBinaryFunctor<Nprofile>
 {
-     Nprofile( double bgprofamp, double peakamp, dg::geo::solovev::GeomParameters gp, Psi psi):
+     Nprofile( double bgprofamp, double peakamp, dg::geo::solovev::GeomParameters gp, const aBinaryFunctor& psi):
          bgamp(bgprofamp), namp( peakamp),
          gp_(gp),
          psip_(psi) { }
-    /**
-     * @brief \f[ N(R,Z)=\begin{cases}
- A_{bg} + A_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
- A_{bg} \text{ else } 
- \end{cases}
-   \f]
-     */
-   double operator( )(double R, double Z)
+    private:
+    double do_compute(double R, double Z)const
     {
-        if (psip_(R,Z)<gp_.psipmax) return bgamp +(psip_(R,Z)/psip_(gp_.R_0,0.0)*namp);
-	if( psip_(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return bgamp;
+        if (psip_.get()(R,Z)<gp_.psipmax) return bgamp +(psip_.get()(R,Z)/psip_.get()(gp_.R_0,0.0)*namp);
+	if( psip_.get()(R,Z) > gp_.psipmax || Z<-1.1*gp_.elongation*gp_.a) return bgamp;
         return bgamp;
     }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator( )(double R, double Z, double phi)
-    {
-        return (*this)(R,Z);
-    }
-    private:
     double bgamp, namp;
     dg::geo::solovev::GeomParameters gp_;
-    Psi psip_;
+    Handle<aBinaryFunctor> psip_;
 };
 
 /**
@@ -397,38 +253,23 @@ struct Nprofile
  \end{cases}
    \f]
  */ 
-template<class Psi>
-struct ZonalFlow
+struct ZonalFlow : public aCloneableBinaryFunctor<ZonalFlow>
 {
-    ZonalFlow(  double amplitude, double k_psi, dg::geo::solovev::GeomParameters gp, Psi psi):
+    ZonalFlow(  double amplitude, double k_psi, dg::geo::solovev::GeomParameters gp, const aBinaryFunctor& psi):
         amp_(amplitude), k_(k_psi),
         gp_(gp),
         psip_(psi) { }
-    /**
-     * @brief \f[ N(R,Z)=\begin{cases}
- A_{bg} |\cos(2\pi\psi_p(R,Z) k_\psi)| \text{ if }\psi_p < \psi_{p,max} \\
-  0 \text{ else } 
- \end{cases}
-   \f]
-     */
-    double operator() (double R, double Z)
+    private:
+    double do_compute(double R, double Z)const
     {
-      if (psip_(R,Z)<gp_.psipmax) 
-          return (amp_*fabs(cos(2.*M_PI*psip_(R,Z)*k_)));
+      if (psip_.get()(R,Z)<gp_.psipmax) 
+          return (amp_*fabs(cos(2.*M_PI*psip_.get()(R,Z)*k_)));
       return 0.;
 
     }
-    /**
-    * @brief == operator()(R,Z)
-    */
-    double operator() (double R, double Z,double phi)
-    {
-        return (*this)(R,Z);
-    }
-    private:
     double amp_, k_;
     dg::geo::solovev::GeomParameters gp_;
-    Psi psip_;
+    Handle<aBinaryFunctor> psip_;
 };
 
 

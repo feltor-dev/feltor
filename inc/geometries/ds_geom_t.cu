@@ -8,9 +8,6 @@
 
 #include <cusp/print.h>
 
-// #define DG_DEBUG
-
-
 #include "file/nc_utilities.h"
 #include "draw/host_window.h"
 #include "dg/backend/timer.cuh"
@@ -24,8 +21,7 @@
 #include "init.h"
 #include "testfunctors.h"
 #include "magnetic_field.h"
-
-using namespace dg::geo::solovev;
+#include "ds.h"
 
 struct Parameters
 {
@@ -59,8 +55,8 @@ struct Parameters
 
 struct InvNormR
 {
-    InvNormR( GeomParameters gp): R_0(gp.R_0){}
-    double operator()( double R, double Z, double phi)
+    InvNormR( dg::geo::solovev::GeomParameters gp): R_0(gp.R_0){}
+    double operator()( double R, double Z, double phi)const
     {
         return R_0/R;
     }
@@ -90,7 +86,7 @@ int main( int argc, char* argv[])
         reader.parse( isG, geom_js, false);
     }
     const Parameters p(input_js);
-    const GeomParameters gp(geom_js);
+    const dg::geo::solovev::GeomParameters gp(geom_js);
     p.display( std::cout);
     gp.display( std::cout);
 
@@ -101,24 +97,24 @@ int main( int argc, char* argv[])
     std::cout << "The grid parameters" <<"\n";
     std::cout  << Rmin<<" rho_s " << Rmax <<" rho_s " << Zmin <<" rho_s " <<Zmax <<" rho_s " <<"\n";
 
-    MagneticField c(gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
         
-    dg::geo::Field<MagneticField> field(c, gp.R_0);
-    dg::geo::InvB<MagneticField> invB(c, gp.R_0);
-    dg::geo::LnB<MagneticField> lnB(c, gp.R_0);
-    dg::geo::BR<MagneticField> bR(c, gp.R_0);
-    dg::geo::BZ<MagneticField> bZ(c, gp.R_0);
-    dg::geo::CurvatureNablaBR<MagneticField> curvatureR(c, gp.R_0);
-    dg::geo::CurvatureNablaBZ<MagneticField> curvatureZ(c, gp.R_0);
-    dg::geo::GradLnB<MagneticField> gradLnB(c, gp.R_0);
-    dg::geo::Pupil<Psip> pupil(c.psip, gp.psipmaxcut);
+    dg::geo::InvB invB(c);
+    dg::geo::LnB lnB(c);
+    dg::geo::BR bR(c);
+    dg::geo::BZ bZ(c);
+    dg::geo::CurvatureNablaBR curvatureR(c);
+    dg::geo::CurvatureNablaBZ curvatureZ(c);
+    dg::geo::GradLnB gradLnB(c);
+    dg::geo::Pupil pupil(c.psip(), gp.psipmaxcut);
     InvNormR invnormr(gp);
-    dg::geo::FieldR<MagneticField> fieldR(c, gp.R_0);
-    dg::geo::FieldZ<MagneticField> fieldZ(c, gp.R_0);
-    dg::geo::FieldP<MagneticField> fieldP(c, gp.R_0);
-    dg::geo::BHatR<MagneticField> bhatR(c, gp.R_0);
-    dg::geo::BHatZ<MagneticField> bhatZ(c, gp.R_0);
-    dg::geo::BHatP<MagneticField> bhatP(c, gp.R_0);
+    dg::geo::FieldR fieldR(c);
+    dg::geo::FieldZ fieldZ(c);
+    dg::geo::FieldP fieldP(c);
+    dg::geo::BHatR bhatR(c);
+    dg::geo::BHatZ bhatZ(c);
+    dg::geo::BHatP bhatP(c);
+    dg::DSFieldCylindrical field(dg::geo::BinaryVectorLvl0(bhatR, bhatZ, bhatP));
     dg::Grid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,p.n, p.Nx, p.Ny,p.Nz);
     dg::HVec vecR = dg::evaluate( fieldR, grid);
     dg::HVec vecZ = dg::evaluate( fieldZ, grid);
@@ -169,19 +165,19 @@ int main( int argc, char* argv[])
             {
                 std::cout << "n = " << k*n << " Nx = " <<pow(2,i)* Nx << " Ny = " <<pow(2,i)* Ny << " Nz = "<<pow(2,zz)* Nz <<"\n";
                 //Similar to feltor grid
-                dg::CylindricalGrid3d<dg::DVec> g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER);
+                dg::CylindricalGrid3d g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI,k*n,pow(2,i)* Nx,pow(2,i)* Ny, pow(2,zz)*Nz,dg::NEU, dg::NEU, dg::PER);
                 const dg::DVec w3d = dg::create::volume( g3d);
                 dg::DVec pupilongrid = dg::evaluate( pupil, g3d);
 
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(1a) test with testfunction  (works for DIR)" << "\n";
-                dg::geo::TestFunction<MagneticField> func(c, gp.R_0);
-                dg::geo::DeriTestFunction<MagneticField> derifunc(c, gp.R_0);
+                dg::geo::TestFunction func(c);
+                dg::geo::DeriTestFunction derifunc(c);
                 std::cout << "Construct parallel  derivative\n";
                 dg::Timer t;
                 t.tic();
-                dg::DDS::FieldAligned dsFA( field, g3d, gp.rk4eps, dg::geo::PsiLimiter<Psip>(c.psip, gp.psipmaxlim), g3d.bcx()); 
-                dg::DDS ds( dsFA, field, dg::normed, dg::centered); //choose bc of grid
+                dg::FieldAligned<dg::aGeometry3d, dg::IDMatrix, dg::DVec > dsFA( field, g3d, gp.rk4eps, dg::geo::PsiLimiter(c.psip(), gp.psipmaxlim), g3d.bcx()); 
+                dg::DS<dg::aGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec>  ds( dsFA, field, dg::normed, dg::centered); //choose bc of grid
                 t.toc();
                 std::cout << "-----> Creation of parallel Derivative took"<<t.diff()<<"s\n";
 
@@ -304,10 +300,10 @@ int main( int argc, char* argv[])
                 std::cout << "Rel Diff = "<<reldiff2b <<"\n";
                 std::cout <<"---------------------------------------------------------------------------------------------" << "\n";
                 std::cout <<"-----(3) test with gradlnb and with (a) Arakawa and (b) Poisson discretization" << "\n";    
-                dg::ArakawaX< dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec>    arakawa(g3d); 
-                dg::Poisson< dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec>     poiss(g3d);
+                dg::ArakawaX< dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> arakawa(g3d); 
+                dg::Poisson<  dg::CylindricalGrid3d, dg::DMatrix, dg::DVec> poiss(g3d);
                 dg::DVec invBongrid = dg::evaluate( invB, g3d);
-                dg::DVec psipongrid = dg::evaluate( c.psip, g3d);
+                dg::DVec psipongrid = dg::evaluate( c.psip(), g3d);
                 dg::DVec invnormrongrid = dg::evaluate( invnormr, g3d);
                 dg::DVec arakawasolution(g3d.size());
                 dg::DVec poisssolution(g3d.size());

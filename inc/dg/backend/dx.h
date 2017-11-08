@@ -10,8 +10,7 @@
 
 //What happens for N=1?
 /*! @file 
-  
-  Simple 1d derivatives
+  @brief Simple 1d derivatives
   */
 namespace dg
 {

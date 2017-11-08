@@ -32,7 +32,7 @@ class Operator
     /**
      * @brief allocate storage for nxn matrix
      *
-     * @param n
+     * @param n size
      */
     Operator( const unsigned n): n_(n), data_(n_*n_){}
     /**
@@ -55,7 +55,7 @@ class Operator
         unsigned n = std::distance( first, last);
         n_ = (unsigned)sqrt( (value_type)n);
 #ifdef DG_DEBUG
-        assert( n_*n_ == n);
+        if( n_*n_!=n) throw Error( Message(_ping_)<<"Too few elements "<<n<<" need "<<n_*n_<<"\n");
 #endif
     }
     /**
@@ -68,7 +68,7 @@ class Operator
         unsigned n = src.size();
         n_ = (unsigned)sqrt( (value_type)n);
 #ifdef DG_DEBUG
-        assert( n_*n_ == n);
+        if( n_*n_!=n) throw Error( Message(_ping_)<<"Wrong number of elements "<<n<<" need "<<n_*n_<<"\n");
 #endif
     }
 
@@ -89,7 +89,7 @@ class Operator
      */
     T& operator()(const size_t i, const size_t j){
 #ifdef DG_DEBUG
-        assert( i<n_ && j < n_);
+        if(!(i<n_&&j<n_)) throw Error( Message(_ping_) << "You tried to access out of range "<<i<<" "<<j<<" size is "<<n_<<"\n");
 #endif
         return data_[ i*n_+j];
     }
@@ -101,15 +101,15 @@ class Operator
      */
     const T& operator()(const size_t i, const size_t j) const {
 #ifdef DG_DEBUG
-        assert( i<n_ && j < n_);
+        if(!(i<n_&&j<n_)) throw Error( Message(_ping_) << "You tried to access out of range "<<i<<" "<<j<<" size is "<<n_<<"\n");
 #endif
         return data_[ i*n_+j];
     }
 
     /**
-     * @brief Size of the Operator
+     * @brief Size n of the Operator
      *
-     * @return 
+     * @return n
      */
     unsigned size() const { return n_;}
     /**
@@ -134,7 +134,7 @@ class Operator
      */
     void swap_lines( const size_t i, const size_t k)
     {
-        assert( i< n_ && k<n_);
+        if(!( i< n_ && k<n_)) throw Error( Message(_ping_) << "Out of range "<<i<<" "<<k<<" range is "<<n_<<"\n");
         for( size_t j = 0; j<n_; j++)
         {
             std::swap( data_[i*n_+j], data_[k*n_+j]);
@@ -363,17 +363,10 @@ namespace create
 namespace detail
 {
 
-struct Message : public std::exception
-{
-    Message( const char * m) : message(m){}
-    char const*  what() const throw(){return message;}
-    private:
-    const char * message;
-};
-
 /*! @brief LU Decomposition with partial pivoting
  *
  * @tparam T value type
+ * @throw std::runtime_error if the matrix is singular
  */
 template< class T>
 T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
@@ -417,7 +410,7 @@ T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
 
         }
         else 
-            throw Message( "Matrix is singular!!");
+            throw std::runtime_error( "Matrix is singular!!");
     }
     if( numberOfSwaps % 2 != 0)
         determinant*=-1.;
@@ -470,7 +463,7 @@ void lr_solve( const dg::Operator<T>& lr, const std::vector<unsigned>& p, std::v
  * @param in input matrix
  *
  * @return the inverse of in if it exists
- * @note throws a message if in is singular
+ * @throw std::runtime_error if in is singular
  */
 template<class T>
 dg::Operator<T> invert( const dg::Operator<T>& in)
@@ -481,7 +474,7 @@ dg::Operator<T> invert( const dg::Operator<T>& in)
     dg::Operator<T> lr(in);
     T determinant = detail::lr_pivot( lr, pivot);
     if( fabs(determinant ) < 1e-14) 
-        throw detail::Message( "Determinant zero!!");
+        throw std::runtime_error( "Determinant zero!");
     for( unsigned i=0; i<n; i++)
     {
         std::vector<T> unit(n, 0);

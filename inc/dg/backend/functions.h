@@ -2,7 +2,7 @@
 #pragma once
 /*! @file
  *
- * Contains some utility functions for the evaluation() routines
+ * @brief contains some utility functions for the evaluation() routines
  */
 
 namespace dg{

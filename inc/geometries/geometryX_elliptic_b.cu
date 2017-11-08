@@ -14,7 +14,7 @@
 #include "solovev.h"
 #include "taylor.h"
 //#include "ribeiroX.h"
-#include "orthogonalX.h"
+#include "curvilinearX.h"
 #include "separatrix_orthogonal.h"
 #include "testfunctors.h"
 
@@ -51,18 +51,17 @@ int main(int argc, char**argv)
     t.tic();
 
     ////////////////construct Generator////////////////////////////////////
-    MagneticField c(gp);
-    std::cout << "Psi min "<<c.psip(gp.R_0, 0)<<"\n";
+    dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
+    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R0 = gp.R_0, Z0 = 0;
     //double R_X = gp.R_0-1.4*gp.triangularity*gp.a;
     //double Z_X = -1.0*gp.elongation*gp.a;
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     std::cout << "X-point at "<<R_X <<" "<<Z_X<<"\n";
-    dg::geo::SeparatrixOrthogonal<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    //dg::geo::SimpleOrthogonalX<Psip,PsipR,PsipZ,LaplacePsip> generator(c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, R_X,Z_X, R0, Z0,0);
-    dg::OrthogonalGridX2d<dg::DVec> g2d( generator, psi_0, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
-    dg::Elliptic<dg::OrthogonalGridX2d<dg::DVec>, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
+    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
+    dg::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
+    dg::Elliptic<dg::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
     double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi 1 is          "<<psi_1<<"\n";
@@ -86,8 +85,8 @@ int main(int argc, char**argv)
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        X[i] = g2d.r()[i];
-        Y[i] = g2d.z()[i];
+        X[i] = g2d.map()[0][i];
+        Y[i] = g2d.map()[1][i];
     }
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
@@ -105,11 +104,11 @@ int main(int argc, char**argv)
     //const dg::DVec chi =      dg::evaluate( dg::one, g2d);
     //const dg::DVec solution =     dg::pullback( c.psip, g2d);
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
-    const dg::DVec b =    dg::pullback( dg::geo::EllipticXDirNeuM<MagneticField>(c, gp.R_0, psi_0, psi_1), g2d);
-    dg::DVec chi  =  dg::pullback( dg::geo::Bmodule<MagneticField>(c, gp.R_0), g2d);
+    const dg::DVec b =    dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d);
+    dg::DVec chi  =  dg::pullback( dg::geo::Bmodule(c), g2d);
     dg::blas1::plus( chi, 1e4);
     //const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
-    const dg::DVec solution = dg::pullback( dg::geo::FuncXDirNeu<MagneticField>(c, psi_0, psi_1 ), g2d);
+    const dg::DVec solution = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d);
     ////////////////////////////////////////////////////////////////////////////
 
     const dg::DVec vol2d = dg::create::volume( g2d);
@@ -131,10 +130,9 @@ int main(int argc, char**argv)
     double err = dg::blas2::dot( vol2d, error);
     const double norm = dg::blas2::dot( vol2d, solution);
     std::cout << sqrt( err/norm) << "\t";
-    dg::HVec gyy, gxx, vol; 
-    dg::blas1::transfer( g2d.g_xx(), gyy);
-    dg::blas1::transfer( g2d.g_yy(), gxx); 
-    dg::blas1::transfer( g2d.vol() , vol);
+    ///////////////////////////////////metric//////////////////////
+    dg::SparseTensor<dg::DVec> metric = g2d.metric();
+    dg::DVec gyy = metric.value(1,1), gxx = metric.value(0,0), vol = dg::tensor::volume(metric).value(); 
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);

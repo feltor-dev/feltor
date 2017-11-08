@@ -1,5 +1,6 @@
 #pragma once
 
+#include "fluxfunctions.h"
 
 /*!@file 
  *
@@ -14,62 +15,41 @@ namespace geo
 ///@cond
 namespace detail{
 
-template<class PsiX, class PsiY, class LaplacePsi, class Chi, class ChiX, class ChiY>
-struct LaplaceAdaptPsi
+struct LaplaceAdaptPsi: public aCloneableBinaryFunctor<LaplaceAdaptPsi>
 {
-    LaplaceAdaptPsi( const PsiX& psiX, const PsiY& psiY, 
-    const LaplacePsi& laplacePsi,
-    const Chi& chi, const ChiX& chiX, const ChiY& chiY):
-        psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi),
-        chi_(chi), chiX_(chiX), chiY_(chiY){}
-    double operator()(double x, double y)
-    {
-        return psiX_(x,y)*chiX_(x,y)+psiY_(x,y)*chiY_(x,y)+chi_(x,y)*laplacePsi_(x,y);
-    }
+    LaplaceAdaptPsi( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& chi) : psi_(psi), chi_(chi){}
     private:
-    PsiX psiX_;
-    PsiY psiY_;
-    LaplacePsi laplacePsi_;
-    Chi chi_;
-    ChiX chiX_;
-    ChiY chiY_;
+    double do_compute(double x, double y)const
+    {
+        return  psi_.dfx()(x,y)*chi_.dfx()(x,y) +
+                psi_.dfy()(x,y)*chi_.dfy()(x,y) +
+                chi_.f()(x,y)*( psi_.dfxx()(x,y) + psi_.dfyy()(x,y));
+    }
+    BinaryFunctorsLvl2 psi_;
+    BinaryFunctorsLvl1 chi_;
 };
 
-template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class ChiXX, class ChiXY, class ChiYY, class DivChiX, class DivChiY>
-struct LaplaceChiPsi
+struct LaplaceChiPsi: public aCloneableBinaryFunctor<LaplaceChiPsi>
 {
-    LaplaceChiPsi( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX,
-    const PsiXY& psiXY, const PsiYY& psiYY, const ChiXX& chiXX, const ChiXY& chiXY,
-    const ChiYY& chiYY, const DivChiX& divChiX, const DivChiY& divChiY):
-        psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY),
-        chiXX_(chiXX), chiXY_(chiXY), chiYY_(chiYY), divChiX_(divChiX), divChiY_(divChiY){}
-    double operator()(double x, double y)
+    LaplaceChiPsi( const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi):
+        psi_(psi), chi_(chi){}
+    private:
+    double do_compute(double x, double y)const
     {
-        return psiXX_(x,y)*chiXX_(x,y)+2.*psiXY_(x,y)*chiXY_(x,y)+psiYY_(x,y)*chiYY_(x,y)
-            + divChiX_(x,y)*psiX_(x,y) + divChiY_(x,y)*psiY_(x,y);
+        return psi_.dfxx()(x,y)*chi_.xx()(x,y)+2.*psi_.dfxy()(x,y)*chi_.xy()(x,y)+psi_.dfyy()(x,y)*chi_.yy()(x,y)
+            + chi_.divX()(x,y)*psi_.dfx()(x,y) + chi_.divY()(x,y)*psi_.dfy()(x,y);
     }
 
-    private:
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
-    ChiXX chiXX_;
-    ChiXY chiXY_;
-    ChiYY chiYY_; 
-    DivChiX divChiX_;
-    DivChiY divChiY_;
+    BinaryFunctorsLvl2 psi_;
+    BinarySymmTensorLvl1 chi_;
 };
 
-template <class PsiXX, class PsiYY>
-struct LaplacePsi
+struct LaplacePsi: public aCloneableBinaryFunctor<LaplacePsi>
 {
-    LaplacePsi( const PsiXX& psiXX, const PsiYY& psiYY):psiXX_(psiXX), psiYY_(psiYY){}
-    double operator()(double x, double y){return psiXX_(x,y)+psiYY_(x,y);}
+    LaplacePsi( const BinaryFunctorsLvl2& psi): psi_(psi){}
     private:
-        PsiXX psiXX_;
-        PsiYY psiYY_;
+    double do_compute(double x, double y)const{return psi_.dfxx()(x,y)+psi_.dfyy()(x,y);}
+    BinaryFunctorsLvl2 psi_;
 };
 
 }//namespace detail
@@ -81,96 +61,71 @@ struct LaplacePsi
 /**
  * @brief  A weight function for the Hector algorithm
  *\f[ |\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
- @tparam PsiX models aBinaryOperator
- @tparam PsiY models aBinaryOperator
  */
-template<class PsiX, class PsiY>
-struct NablaPsiInv
+struct NablaPsiInv: public aCloneableBinaryFunctor<NablaPsiInv>
 {
     /**
-     * @brief Construct with derivatives
+     * @brief Construct with function container
      *
-     @param psiX \f$ \psi_x\f$ derivative in x
-     @param psiY \f$ \psi_y\f$ derivative in y
+     * @param psi \f$ \psi(x,y)\f$ and its first derivatives
      */
-    NablaPsiInv( const PsiX& psiX, const PsiY& psiY): psiX_(psiX), psiY_(psiY){}
-    /**
-     * @brief  A weight function for the Hector algorithm
-     * \f[ |\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
-     */
-    double operator()(double x, double y)
+    NablaPsiInv( const BinaryFunctorsLvl1& psi): psi_(psi){}
+    private:
+    virtual double do_compute(double x, double y)const
     {
-        double psiX = psiX_(x,y), psiY = psiY_(x,y);
+        double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
         return 1./sqrt(psiX*psiX+psiY*psiY);
     }
-    private:
-    PsiX psiX_;
-    PsiY psiY_;
+    BinaryFunctorsLvl1 psi_;
 };
 
 /**
  * @brief Derivative of the weight function
  *\f[\partial_x|\nabla\psi|^{-1} \f]
  */
-template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct NablaPsiInvX
+struct NablaPsiInvX: public aCloneableBinaryFunctor<NablaPsiInvX>
 {
-    NablaPsiInvX( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX, const PsiXY& psiXY, const PsiYY& psiYY):
-    psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY)
-    {}
-    double operator()(double x, double y)
+    NablaPsiInvX( const BinaryFunctorsLvl2& psi):psi_(psi) {}
+    private:
+    virtual double do_compute(double x, double y)const
     {
-        double psiX = psiX_(x,y), psiY = psiY_(x,y);
-        double psiXX = psiXX_(x,y), psiXY = psiXY_(x,y);
+        double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
+        double psiXX = psi_.dfxx()(x,y), psiXY = psi_.dfxy()(x,y);
         double psip = sqrt( psiX*psiX+psiY*psiY);
         return -(psiX*psiXX+psiY*psiXY)/psip/psip/psip;
     }
     
-    private:
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
+    BinaryFunctorsLvl2 psi_;
 };
 
 /**
  * @brief Derivative of the weight function
  *\f[ \partial_y|\nabla\psi|^{-1} \f]
  */
-template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct NablaPsiInvY
+struct NablaPsiInvY: public aCloneableBinaryFunctor<NablaPsiInvY>
 {
-    NablaPsiInvY( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX, const PsiXY& psiXY, const PsiYY& psiYY):
-    psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY)
-    {}
-    double operator()(double x, double y)
+    NablaPsiInvY( const BinaryFunctorsLvl2& psi):psi_(psi) {}
+    private:
+    double do_compute(double x, double y)const
     {
-        double psiX = psiX_(x,y), psiY = psiY_(x,y);
-        double psiYY = psiYY_(x,y), psiXY = psiXY_(x,y);
+        double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y);
+        double psiYY = psi_.dfyy()(x,y), psiXY = psi_.dfxy()(x,y);
         double psip = sqrt( psiX*psiX+psiY*psiY);
         return -(psiX*psiXY+psiY*psiYY)/psip/psip/psip;
     }
     
-    private:
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
+    BinaryFunctorsLvl2 psi_;
 };
 
 /**
  * @brief A container class that contains all NablaPsiInv functors
  */
-template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct NablaPsiInvCollective
+BinaryFunctorsLvl1 make_NablaPsiInvCollective( const BinaryFunctorsLvl2& psi)
 {
-    NablaPsiInvCollective( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX, const PsiXY& psiXY, const PsiYY& psiYY):nablaPsiInv(psiX, psiY), nablaPsiInvX(psiX, psiY, psiXX, psiXY, psiYY), nablaPsiInvY( psiX, psiY, psiXX, psiXY, psiYY){}
-    NablaPsiInv<PsiX, PsiY> nablaPsiInv; //!< inverse of nabla psi
-    NablaPsiInvX<PsiX, PsiY, PsiXX, PsiXY, PsiYY> nablaPsiInvX; //!< derivative of nabla psi
-    NablaPsiInvY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> nablaPsiInvY; //!< derivative of nabla psi
-};
+    BinaryFunctorsLvl1 temp( new NablaPsiInv(psi), new NablaPsiInvX(psi), new NablaPsiInvY( psi));
+    return temp;
+}
+
 
 
 /**
@@ -180,22 +135,20 @@ struct NablaPsiInvCollective
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
-template<class PsiX, class PsiY>
-struct Liseikin_XX
+struct Liseikin_XX: public aCloneableBinaryFunctor<Liseikin_XX>
 {
-    Liseikin_XX(PsiX psiX, PsiY psiY, double k, double eps):k_(k), eps_(eps), psiX_(psiX), psiY_(psiY){}
-    double operator()(double x, double y)
+    Liseikin_XX(const BinaryFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
+    private:
+    double do_compute(double x, double y)const
     {
-        double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
+        double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
         return (psiY*psiY+k2*psiX*psiX + eps_)/sqrtG;
     }
 
-    private:
     double k_, eps_;
-    PsiX psiX_;
-    PsiY psiY_;
+    BinaryFunctorsLvl1 psi_;
 };
 
 /**
@@ -205,22 +158,20 @@ struct Liseikin_XX
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
-template<class PsiX, class PsiY>
-struct Liseikin_XY
+struct Liseikin_XY: public aCloneableBinaryFunctor<Liseikin_XY>
 {
-    Liseikin_XY(PsiX psiX, PsiY psiY, double k, double eps):k_(k), eps_(eps), psiX_(psiX), psiY_(psiY){}
-    double operator()(double x, double y)
+    Liseikin_XY(const BinaryFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
+    private:
+    double do_compute(double x, double y)const
     {
-        double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
+        double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
         return (-psiX*psiY+k2*psiX*psiY)/sqrtG;
     }
 
-    private:
     double k_, eps_;
-    PsiX psiX_;
-    PsiY psiY_;
+    BinaryFunctorsLvl1 psi_;
 };
 
 /**
@@ -230,36 +181,34 @@ struct Liseikin_XY
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
  */
-template<class PsiX, class PsiY>
-struct Liseikin_YY
+struct Liseikin_YY: public aCloneableBinaryFunctor<Liseikin_YY>
 {
-    Liseikin_YY(PsiX psiX, PsiY psiY, double k, double eps):k_(k), eps_(eps), psiX_(psiX), psiY_(psiY){}
-    double operator()(double x, double y)
+    Liseikin_YY(const BinaryFunctorsLvl1& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
+    private:
+    double do_compute(double x, double y)const
     {
-        double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
+        double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
         return (eps_+psiX*psiX+k2*psiY*psiY)/sqrtG;
     }
 
-    private:
     double k_, eps_;
-    PsiX psiX_;
-    PsiY psiY_;
+    BinaryFunctorsLvl1 psi_;
 };
 
 /**
  * @brief The x-component of the divergence of the Liseikin monitor metric
  * \f[ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f]
  */
-template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct DivLiseikinX
+struct DivLiseikinX: public aCloneableBinaryFunctor<DivLiseikinX>
 {
-    DivLiseikinX(PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double k, double eps):k_(k), eps_(eps), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY){}
-    double operator()(double x, double y)
+    DivLiseikinX(const BinaryFunctorsLvl2& psi, double k, double eps): k_(k), eps_(eps), psi_(psi){}
+    private:
+    double do_compute(double x, double y)const
     {
-        double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
-        double psiXX = psiXX_(x,y), psiXY = psiXY_(x,y), psiYY=psiYY_(x,y);
+        double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
+        double psiXX = psi_.dfxx()(x,y), psiXY = psi_.dfxy()(x,y), psiYY=psi_.dfyy()(x,y);
         double psiY2 = psiY*psiY, psiY3=psiY*psiY2, psiY4=psiY2*psiY2, psiY5=psiY4*psiY;
         double psiX2 = psiX*psiX, psiX4=psiX2*psiX2;
         double psip2 = psiX*psiX+psiY*psiY;
@@ -271,27 +220,22 @@ struct DivLiseikinX
                     psiY3*(eps_*(1.+k2)*psiXY-(eps_+2.*k2*psiX2)*psiXY))/sqrtG/sqrtG/sqrtG;
     }
 
-    private:
     double k_, eps_;
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
+    BinaryFunctorsLvl2 psi_;
 };
 
 /**
  * @brief The y-component of the divergence of the Liseikin monitor metric
  * \f[ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f]
  */
-template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct DivLiseikinY
+struct DivLiseikinY : public aCloneableBinaryFunctor<DivLiseikinY>
 {
-    DivLiseikinY(PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double k, double eps):k_(k), eps_(eps), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY){}
-    double operator()(double x, double y)
+    DivLiseikinY(const BinaryFunctorsLvl2& psi, double k, double eps):k_(k), eps_(eps), psi_(psi){}
+    private:
+    double do_compute(double x, double y)const
     {
-        double psiX = psiX_(x,y), psiY = psiY_(x,y), k2 = k_*k_;
-        double psiXX = psiXX_(x,y), psiXY = psiXY_(x,y), psiYY=psiYY_(x,y);
+        double psiX = psi_.dfx()(x,y), psiY = psi_.dfy()(x,y), k2 = k_*k_;
+        double psiXX = psi_.dfxx()(x,y), psiXY = psi_.dfxy()(x,y), psiYY=psi_.dfyy()(x,y);
         double psiX2 = psiX*psiX, psiX3=psiX*psiX2, psiX4=psiX2*psiX2, psiX5=psiX4*psiX;
         double psiY2 = psiY*psiY, psiY4 = psiY2*psiY2;
         double psip2 = psiX*psiX+psiY*psiY;
@@ -303,34 +247,15 @@ struct DivLiseikinY
                 psiX*(-(eps_+2.*psiY2)*(eps_+k2*psiY2)*psiXY + (eps_*eps_-k2*psiY4)*psiXY))/sqrtG/sqrtG/sqrtG;
     }
 
-    private:
     double k_, eps_;
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
+    BinaryFunctorsLvl2 psi_;
 };
 
-/**
- * @brief A structure that contains all functors of the Liseikin monitor metric
- */
-template<class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct LiseikinCollective
+BinarySymmTensorLvl1 make_LiseikinCollective( const BinaryFunctorsLvl2& psi, double k, double eps)
 {
-    LiseikinCollective( const PsiX& psiX, const PsiY& psiY, const PsiXX& psiXX, const PsiXY& psiXY, const PsiYY& psiYY, double k, double eps):
-        chi_XX(psiX, psiY, k, eps), 
-        chi_XY(psiX, psiY, k, eps), 
-        chi_YY(psiX, psiY, k, eps), 
-        divChiX(psiX, psiY, psiXX, psiXY, psiYY, k, eps), 
-        divChiY(psiX, psiY, psiXX, psiXY, psiYY, k, eps){}
-    Liseikin_XX<PsiX, PsiY> chi_XX; //!< a metric tensor component
-    Liseikin_XY<PsiX, PsiY> chi_XY; //!< a metric tensor component
-    Liseikin_YY<PsiX, PsiY> chi_YY; //!< a metric tensor component
-    DivLiseikinX<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiX; //!< divergence of metric
-    DivLiseikinY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> divChiY; //!< divergence of metric
-};
-
+    BinarySymmTensorLvl1 temp( new Liseikin_XX(psi,k,eps), new Liseikin_XY(psi,k,eps), new Liseikin_YY(psi,k,eps), new DivLiseikinX(psi,k,eps), new DivLiseikinY(psi,k,eps));
+    return temp;
+}
 ///@}
 
 }//namespace geo

@@ -30,7 +30,7 @@ int main()
     dg::HVec visual( grid.size());
     //transform vector to an equidistant grid
     dg::Matrix equidistant = dg::create::backscatter( grid);
-    dg::blas2::mv( equidistant, vector, visual );
+    dg::blas2::gemv( equidistant, vector, visual );
 
     //create a colormap
     draw::ColorMapRedBlueExt colors( 1.);

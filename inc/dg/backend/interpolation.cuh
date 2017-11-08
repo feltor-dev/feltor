@@ -7,12 +7,12 @@
 #include "evaluation.cuh"
 #include "functions.h"
 #include "creation.cuh"
-#include "tensor.cuh"
+#include "dgtensor.cuh"
 #include "operator_tensor.cuh"
 
 /*! @file
 
-  Contains 1D, 2D and 3D matrix creation functions
+  @brief contains 1D, 2D and 3D interpolation matrix creation functions
   */
 
 namespace dg{
@@ -65,7 +65,7 @@ std::vector<double> coefficients( double xn, unsigned n)
 
 }//namespace detail
 ///@endcond
-///@addtogroup utilities
+///@addtogroup interpolation
 ///@{
 /**
  * @brief Create interpolation matrix
@@ -119,11 +119,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param g The Grid on which to operate
- * @param globalbcz NEU for common interpolation. DIR for zeros at Box
+ * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix, 
+ NEU and PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
+ * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
+ * @attention all points (x,y) must lie within or on the boundaries of g.
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const Grid2d& g , dg::bc globalbcz = dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const aTopology2d& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
     assert( x.size() == y.size());
     std::vector<double> gauss_nodes = g.dlt().abscissas(); 
@@ -187,16 +190,15 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
             for(unsigned k=0; k<pyF.size(); k++)
                 for( unsigned l=0; l<pxF.size(); l++)
                     pxy[k*px.size()+l]= pyF[k]*pxF[l];
-            if (globalbcz == dg::DIR)
+            if (  (x[i] == g.x0() && (bcx==dg::DIR || bcx==dg::DIR_NEU) )
+                ||(x[i] == g.x1() && (bcx==dg::DIR || bcx==dg::NEU_DIR) )
+                ||(y[i] == g.y0() && (bcy==dg::DIR || bcy==dg::DIR_NEU) )
+                ||(y[i] == g.y1() && (bcy==dg::DIR || bcy==dg::NEU_DIR) ))
             {
-                if ( x[i]==g.x0() || x[i]==g.x1()  || y[i]==g.y0()  || y[i]==g.y1())
-    //             if ( fabs(x[i]-g.x0())<1e-10 || fabs(x[i]-g.x1())<1e-10  || fabs(y[i]-g.y0())<1e-10  || fabs(y[i]-g.y1())<1e-10)
-                {
-                    //zeroe boundary values 
-                    for(unsigned k=0; k<py.size(); k++)
-                    for( unsigned l=0; l<px.size(); l++)
-                        pxy[k*px.size()+l]= 0; 
-                }
+                //zeroe boundary values 
+                for(unsigned k=0; k<py.size(); k++)
+                for( unsigned l=0; l<px.size(); l++)
+                    pxy[k*px.size()+l]= 0; 
             }
             for( unsigned k=0; k<g.n(); k++)
                 for( unsigned l=0; l<g.n(); l++)
@@ -245,10 +247,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), values.size());
     A.row_indices = row_indices; A.column_indices = column_indices; A.values = values;
 
-    if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
-    if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
-    if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
-    
     return A;
 }
 
@@ -262,12 +260,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
- * @param globalbcz determines what to do if values lie exactly on the boundary
+ * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix, 
+ NEU and PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
+ * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
  *
  * @return interpolation matrix
- * @note The values of x, y and z must lie within the boundaries of g
+ * @attention all points (x, y, z) must lie within or on the boundaries of g
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const Grid3d& g, dg::bc globalbcz= dg::NEU)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const aTopology3d& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
     assert( x.size() == y.size());
     assert( y.size() == z.size());
@@ -338,15 +338,15 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
             for(unsigned k=0; k<pyF.size(); k++)
                 for( unsigned l=0; l<pxF.size(); l++)
                     pxyz[k*g.n()+l]= 1.*pyF[k]*pxF[l];
-            if (globalbcz == dg::DIR)
+            if (  (x[i] == g.x0() && (bcx==dg::DIR || bcx==dg::DIR_NEU) )
+                ||(x[i] == g.x1() && (bcx==dg::DIR || bcx==dg::NEU_DIR) )
+                ||(y[i] == g.y0() && (bcy==dg::DIR || bcy==dg::DIR_NEU) )
+                ||(y[i] == g.y1() && (bcy==dg::DIR || bcy==dg::NEU_DIR) ))
             {
-                if ( x[i]==g.x0() || x[i]==g.x1()  ||y[i]==g.y0()  || y[i]==g.y1())
-                {
-                    //zeroe boundary values 
-                    for(unsigned k=0; k<g.n(); k++)
-                    for(unsigned l=0; l<g.n(); l++)
-                        pxyz[k*g.n()+l]= 0; 
-                }
+                //zeroe boundary values 
+                for(unsigned k=0; k<g.n(); k++)
+                for(unsigned l=0; l<g.n(); l++)
+                    pxyz[k*g.n()+l]= 0; 
             }
             for( unsigned k=0; k<g.n(); k++)
                 for( unsigned l=0; l<g.n(); l++)
@@ -395,10 +395,6 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
     cusp::coo_matrix<int, double, cusp::host_memory> A( x.size(), g.size(), values.size());
     A.row_indices = row_indices; A.column_indices = column_indices; A.values = values;
 
-    if (globalbcz == DIR_NEU ) std::cerr << "DIR_NEU NOT IMPLEMENTED "<<std::endl;
-    if (globalbcz == NEU_DIR ) std::cerr << "NEU_DIR NOT IMPLEMENTED "<<std::endl;
-    if (globalbcz == dg::PER ) std::cerr << "PER NOT IMPLEMENTED "<<std::endl;
-    
     return A;
 }
 /**
@@ -412,6 +408,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  *
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
+ * @note also check the transformation matrix, which is the more general solution
  */
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d& g_new, const Grid1d& g_old)
 {
@@ -422,19 +419,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid1d& g_
     return interpolation( pointsX, g_old);
 
 }
-/**
- * @brief Create interpolation between two grids
- *
- * This matrix can be applied to vectors defined on the old grid to obtain
- * its values on the new grid.
- * 
- * @param g_new The new points 
- * @param g_old The old grid
- *
- * @return Interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d& g_new, const Grid2d& g_old)
+///@copydoc interpolation(const Grid1d&,const Grid1d&)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopology2d& g_new, const aTopology2d& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -448,19 +434,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid2d& g_
 
 }
 
-/**
- * @brief Create interpolation between two grids
- *
- * This matrix can be applied to vectors defined on the old grid to obtain
- * its values on the new grid.
- * 
- * @param g_new The new points 
- * @param g_old The old grid
- *
- * @return Interpolation matrix
- * @note The boundaries of the old grid must lie within the boundaries of the new grid
- */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d& g_new, const Grid3d& g_old)
+///@copydoc interpolation(const Grid1d&,const Grid1d&)
+cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopology3d& g_new, const aTopology3d& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -484,9 +459,10 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const Grid3d& g_
  * @param in input
  * @param g grid
  *
+ * @ingroup misc
  * @return the vector in LSPACE
  */
-thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const Grid2d& g)
+thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const aTopology2d& g)
 {
     thrust::host_vector<double> out(in.size(), 0);
     dg::Operator<double> forward( g.dlt().forward());
@@ -507,12 +483,14 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
  *
  * @param x X-coordinate of interpolation point
  * @param y Y-coordinate of interpolation point
- * @param v The vector to interpolate in LSPACE
+ * @param v The vector to interpolate in LSPACE, s.a. dg::forward_transform( )
  * @param g The Grid on which to operate
  *
+ * @ingroup interpolation
  * @return interpolated point
+ * @note g.contains(x,y) must return true
  */
-double interpolate( double x, double y,  const thrust::host_vector<double>& v, const Grid2d& g )
+double interpolate( double x, double y,  const thrust::host_vector<double>& v, const aTopology2d& g )
 {
     assert( v.size() == g.size());
 

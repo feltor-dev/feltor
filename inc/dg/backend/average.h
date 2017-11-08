@@ -6,9 +6,7 @@
 #include "../blas1.h"
 
 /*! @file 
-
-  Contains classes for poloidal and toroidal average computations.
-
+  @brief contains classes for poloidal and toroidal average computations.
   */
 namespace dg{
 
@@ -24,14 +22,12 @@ struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
 {
     /**
      * @brief Construct from grid mpi object
-     *
-     * @param g 2d MPIGrid
+     * @param g 2d MPITopology
      */
-    PoloidalAverage( const MPIGrid2d& g): 
+    PoloidalAverage( const aMPITopology2d& g): 
         helper1d_( g.n()*g.Nx()), hhelper1d_(g.n()*g.Nx()),
-        recv_(hhelper1d_), ly_(g.global().ly()),
-        dummy( g.n()*g.Nx()), 
-        helper_( g.size()) 
+        recv_(hhelper1d_),dummy( g.n()*g.Nx()), 
+        helper_( g.size()), ly_(g.global().ly())
     {
         int remain[] = {false, true};
         MPI_Cart_sub( g.communicator(), remain, &comm1d_);

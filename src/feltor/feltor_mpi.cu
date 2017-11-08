@@ -24,7 +24,7 @@
         output dimensions must be divisible by the mpi process numbers
 */
 
-typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
+typedef dg::MPI_FieldAligned< dg::CylindricalMPIGrid3d, dg::IDMatrix,dg::BijectiveComm< dg::iDVec, dg::DVec >, dg::DVec> DFA;
 using namespace dg::geo::solovev;
 int main( int argc, char* argv[])
 {
@@ -72,7 +72,7 @@ int main( int argc, char* argv[])
         reader.parse(is,js,false);
         reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( js);
+    const feltor::Parameters p( js);
     const dg::geo::solovev::GeomParameters gp(gs);
     if(rank==0)p.display( std::cout);
     if(rank==0)gp.display( std::cout);
@@ -84,14 +84,14 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-     dg::CylindricalMPIGrid3d<dg::MDVec> grid(     Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n,     p.Nx,     p.Ny,     p.Nz,     p.bc, p.bc, dg::PER, comm);  
-     dg::CylindricalMPIGrid3d<dg::MDVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
+     dg::CylindricalMPIGrid3d grid(     Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n,     p.Nx,     p.Ny,     p.Nz,     p.bc, p.bc, dg::PER, comm);  
+     dg::CylindricalMPIGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, p.bc, p.bc, dg::PER, comm);  
      
     //create RHS 
-    if(rank==0)std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
-    if(rank==0)std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar< dg::CylindricalMPIGrid3d<dg::MDVec>, dg::DS<DFA, dg::MDMatrix, dg::MDVec>, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    if(rank==0)std::cout << "Constructing Explicit...\n";
+    feltor::Explicit<dg::CylindricalMPIGrid3d, dg::IDMatrix, dg::MDMatrix, dg::MDVec> feltor( grid, p, gp); //initialize before rolkar!
+    if(rank==0)std::cout << "Constructing Implicit...\n";
+    feltor::Implicit< dg::CylindricalMPIGrid3d, dg::IDMatrix, dg::MDMatrix, dg::MDVec > rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     if(rank==0)std::cout << "Done!\n";
 
     /////////////////////The initial field/////////////////////////////////////////

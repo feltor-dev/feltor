@@ -1,6 +1,7 @@
 #pragma once
 
 #include <thrust/host_vector.h>
+#include "exceptions.h"
 #include "matrix_traits.h"
 
 namespace dg
@@ -62,10 +63,21 @@ struct EllSparseBlockMat
     /**
     * @brief Apply the matrix to a vector
     *
+    * \f[  y= \alpha M x + \beta y\f]
+    * @param alpha multiplies input
     * @param x input
-    * @param y output may not equal input
+    * @param beta premultiplies output
+    * @param y output may not alias input
     */
-    void symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const;
+    void symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const;
+    /**
+    * @brief Apply the matrix to a vector
+    *
+    * @param x input
+    * @param y output may not alias input
+    */
+    void symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const {symv( 1., x, 0., y);}
+
     /**
      * @brief Sets ranges from 0 to left_size and 0 to right_size
      */
@@ -74,11 +86,11 @@ struct EllSparseBlockMat
         right_range[1]=right_size;
     }
     
-    thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks
-    IVec cols_idx; //!< is of size num_block_rows*num_blocks_per_line and contains the column indices 
-    IVec data_idx; //!< has the same size as cols_idx and contains indices into the data array
-    int num_rows; //!< number of rows, each row contains blocks
-    int num_cols; //!< number of columns
+    thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks. The first block is contained in the first n*n elements, then comes the next block, etc.
+    IVec cols_idx; //!< is of size num_block_rows*num_blocks_per_line and contains the column indices % n into the vector
+    IVec data_idx; //!< has the same size as cols_idx and contains indices into the data array, i.e. the block number 
+    int num_rows; //!< number of block rows, each row contains blocks ( total number of rows is num_rows*n*left_size*right_size
+    int num_cols; //!< number of block columns (total number of columns is num_cols*n*left_size*right_size
     int blocks_per_line; //!< number of blocks in each line
     int n;  //!< each block has size n*n
     int left_size; //!< size of the left Kronecker delta
@@ -158,7 +170,7 @@ struct CooSparseBlockMat
     * @param alpha multiplies input
     * @param x input
     * @param beta premultiplies output
-    * @param y output may not equal input
+    * @param y output may not alias input
     */
     void symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const;
     /**
@@ -182,10 +194,15 @@ struct CooSparseBlockMat
 ///@cond
 
 template<class value_type>
-void EllSparseBlockMat<value_type>::symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const
+void EllSparseBlockMat<value_type>::symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
+
 
     //simplest implementation
     for( int s=0; s<left_size; s++)
@@ -194,10 +211,10 @@ void EllSparseBlockMat<value_type>::symv(const thrust::host_vector<value_type>& 
     for( int j=right_range[0]; j<right_range[1]; j++)
     {
         int I = ((s*num_rows + i)*n+k)*right_size+j;
-        y[I] =0;
+        y[I] *= beta;
         for( int d=0; d<blocks_per_line; d++)
         for( int q=0; q<n; q++) //multiplication-loop
-            y[I] += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+            y[I] += alpha*data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j];
     }
 }
@@ -257,9 +274,12 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os) const
 template<class value_type>
 void CooSparseBlockMat<value_type>::symv( value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
-    assert( beta == 1);
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
 
     //simplest implementation
     for( int s=0; s<left_size; s++)
@@ -268,6 +288,7 @@ void CooSparseBlockMat<value_type>::symv( value_type alpha, const thrust::host_v
     for( int j=0; j<right_size; j++)
     {
         int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
+        y[I] *= beta;
         for( int q=0; q<n; q++) //multiplication-loop
             y[I] += alpha*data[ (data_idx[i]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i])*n+q)*right_size+j];

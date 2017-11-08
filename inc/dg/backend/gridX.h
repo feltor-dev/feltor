@@ -6,15 +6,45 @@
 #include "../enums.h"
 
 /*! @file 
-  
-  Grid objects
+  @brief base X-point topology classes
   */
+
+/*!@class hide_gridX_parameters2d
+ * @brief Construct a 2D X-point grid
+ *
+ * @param x0 left boundary in x
+ * @param x1 right boundary in x 
+ * @param y0 lower boundary in y
+ * @param y1 upper boundary in y 
+ * @param fx factor for the partition in x-direction (fx*Nx will be rounded)
+ * @param fy factor for the partition in y-direction (fy*Ny will be rounded)
+ * @param n  # of polynomial coefficients per dimension
+ *   (1<=n<=20, note that the library is optimized for n=3 )
+ * @param Nx # of points in x 
+ * @param Ny # of points in y
+ */
+
+/*!@class hide_gridX_parameters3d
+ * @brief Construct a 3D X-point grid
+ * @param x0 left boundary in x
+ * @param x1 right boundary in x 
+ * @param y0 lower boundary in y
+ * @param y1 upper boundary in y 
+ * @param z0 lower boundary in z
+ * @param z1 upper boundary in z 
+ * @param fx factor for the partition in x-direction
+ * @param fy factor for the partition in y-direction
+ * @param n  # of polynomial coefficients per (x-,y-) dimension
+*   (1<=n<=20, note that the library is optimized for n=3 )
+* @attention # of polynomial coefficients in z direction is always 1
+ * @param Nx # of points in x 
+ * @param Ny # of points in y
+ * @param Nz # of points in z
+ */
 
 
 namespace dg{
 
-///@addtogroup grid
-///@{
 /**
 * @brief 1D grid for X-point topology
 *
@@ -26,20 +56,21 @@ namespace dg{
 * The left boundary is x0 and the right x1, the inner boundaries lie at
 * x0 + f*Lx and x1-f*Lx
 * therefore f must be smaller than 0.5
+* @ingroup grid
 */
 struct GridX1d
 {
     typedef SharedTag memory_category;
     typedef OneDimensionalTag dimensionality;
     /**
-     * @brief 1D grid
+     * @brief 1D X-point grid
      * 
-     @param x0 left boundary
-     @param x1 right boundary
-     @param f factor 0<f<0.5 divides the domain
-     @param n # of polynomial coefficients
-     @param N # of cells
-     @param bcx boundary conditions
+     * @param x0 left boundary
+     * @param x1 right boundary
+     * @param f factor 0<f<0.5 divides the domain
+     * @param n # of polynomial coefficients
+     * @param N # of cells
+     * @param bcx boundary conditions
      */
     GridX1d( double x0, double x1, double f, unsigned n, unsigned N, bc bcx = NEU):
         x0_(x0), x1_(x1), f_(f),
@@ -51,8 +82,6 @@ struct GridX1d
         assert( N > 0  );
         assert( n != 0 );
         assert( bcx != PER);
-        lx_ = (x1-x0);
-        hx_ = lx_/(double)Nx_;
     }
     /**
      * @brief left boundary
@@ -77,13 +106,13 @@ struct GridX1d
      *
      * @return 
      */
-    double lx() const {return lx_;}
+    double lx() const {return x1_-x0_;}
     /**
      * @brief cell size
      *
      * @return 
      */
-    double h() const {return hx_;}
+    double h() const {return lx()/(double)Nx_;}
     /**
      * @brief number of cells
      *
@@ -95,7 +124,7 @@ struct GridX1d
      *
      * @return 
      */
-    unsigned outer_N() const {return (unsigned)(floor(f_*(double)Nx_+0.5));}
+    unsigned outer_N() const {return (unsigned)(round(f_*(double)Nx_));}
     /**
      * @brief number of cells in the inner region
      *
@@ -137,10 +166,10 @@ struct GridX1d
             <<"    N  = "<<Nx_<<"\n"
             <<"    inner N = "<<inner_N()<<"\n"
             <<"    outer N = "<<outer_N()<<"\n"
-            <<"    h  = "<<hx_<<"\n"
+            <<"    h  = "<<h()<<"\n"
             <<"    x0 = "<<x0_<<"\n"
             <<"    x1 = "<<x1_<<"\n"
-            <<"    lx = "<<lx_<<"\n"
+            <<"    lx = "<<lx()<<"\n"
             <<"Boundary conditions in x are: \n"
             <<"    "<<bc2str(bcx_)<<"\n";
     }
@@ -159,15 +188,15 @@ struct GridX1d
     {
         assert( contains(x0));
         double deltaX;
-        double xleft = x0_ + f_*lx_;
-        double xright = x1_ - f_*lx_;
+        double xleft = x0_ + f_*lx();
+        double xright = x1_ - f_*lx();
         if( x0 >= xleft && x0<xright)
         {
             if( x1 > xleft) deltaX = (x1 -xleft);
             else deltaX = xright - x1;
             unsigned N = floor(deltaX/(xright-xleft));
-            if( x1  > xright ) x1 -= N*lx_;
-            if( x1  < xleft ) x1 += N*lx_;
+            if( x1  > xright ) x1 -= N*lx();
+            if( x1  < xleft ) x1 += N*lx();
         }
         else if( x0 < xleft && x1 >=xleft)
             x1 += (xright-xleft);
@@ -182,7 +211,7 @@ struct GridX1d
      * @note doesn't check periodicity!!
      * @param x point to check
      *
-     * @return true if x is between x0 and x1, false else
+     * @return true if x0()<=x<=x1(), false else
      */
     bool contains( double x) const
     {
@@ -191,14 +220,12 @@ struct GridX1d
     }
   private:
     double x0_, x1_, f_;
-    double lx_;
     unsigned n_, Nx_;
-    double hx_;
     bc bcx_;
     DLT<double> dlt_;
 };
 
-struct GridX3d; //forward declare 3d version
+struct aTopologyX3d; //forward declare 3d version
 
 /**
  * @brief A 2D grid class with X-point topology
@@ -214,51 +241,12 @@ struct GridX3d; //forward declare 3d version
     fy*Ly
  @endcode
  *
- * @tparam double scalar value type 
+ * @ingroup basictopology
  */
-struct GridX2d
+struct aTopologyX2d
 {
-    typedef SharedTag memory_category;
+    typedef SharedTag memory_category; //!< tag for choosing default host vector type
     typedef TwoDimensionalTag dimensionality;
-    /**
-     * @brief Construct a 2D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param fx factor for x-direction (fx*Nx must be a natural number)
-     * @param fy factor for y-direction (fy*Ny must be a natural number)
-     * @param n  # of polynomial coefficients per dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     */
-    GridX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = NEU):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fy),
-        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
-    {
-        assert( (fy_ >= 0.) && (fy_ < 0.5) );
-        assert( (fx_ >= 0.) && (fx_ < 1.) );
-        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
-        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
-        assert( n != 0);
-        assert( x1 > x0 && y1 > y0);
-        assert( Nx_ > 0  && Ny > 0 );
-        assert( bcy != PER);
-        lx_ = (x1_-x0_), ly_ = (y1_-y0_);
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_;
-    }
-    /**
-     * @brief Reduce from a 3d grid
-     *
-     * This takes the x and y dimension from the 3d grid.
-     * Note that this is possible because all our grids are product space grids  and only the first two dimensions are dG discretized.
-     *
-     * @param g The 3d counterpart
-     */
-    GridX2d( const GridX3d& g);
 
     /**
      * @brief Left boundary in x
@@ -289,33 +277,33 @@ struct GridX2d
      *
      * @return 
      */
-    double lx() const {return lx_;}
+    double lx() const {return x1_-x0_;}
     /**
      * @brief length of y
      *
      * @return 
      */
-    double ly() const {return ly_;}
+    double ly() const {return y1_-y0_;}
     /**
      * @brief cell size in x 
      *
      * @return 
      */
-    double hx() const {return hx_;}
+    double hx() const {return lx()/(double)Nx_;}
     /**
      * @brief cell size in y
      *
      * @return 
      */
-    double hy() const {return hy_;}
+    double hy() const {return ly()/(double)Ny_;}
     /**
-     * @brief Factor
+     * @brief partition factor in x
      *
      * @return 
      */
     double fx() const {return fx_;}
     /**
-     * @brief Factor
+     * @brief partition factor in y
      *
      * @return 
      */
@@ -343,7 +331,7 @@ struct GridX2d
      *
      * @return 
      */
-    unsigned outer_Nx() const {return (unsigned)floor(fx_*(double)Nx_+0.5);}
+    unsigned outer_Nx() const {return (unsigned)round(fx_*(double)Nx_);}
     /**
      * @brief number of cells in y
      *
@@ -361,7 +349,7 @@ struct GridX2d
      *
      * @return 
      */
-    unsigned outer_Ny() const {return (unsigned)floor(fy_*(double)Ny_+0.5);}
+    unsigned outer_Ny() const {return (unsigned)round(fy_*(double)Ny_);}
     /**
      * @brief boundary conditions in x
      *
@@ -374,12 +362,6 @@ struct GridX2d
      * @return 
      */
     bc bcy() const {return bcy_;}
-    /**
-     * @brief Return a copy
-     *
-     * @return 
-     */
-    GridX2d local_grid() const {return *this;}
     /**
      * @brief Return a copy without topology
      *
@@ -413,14 +395,14 @@ struct GridX2d
             <<"    Ny = "<<Ny_<<"\n"
             <<"    inner Ny = "<<inner_Ny()<<"\n"
             <<"    outer Ny = "<<outer_Ny()<<"\n"
-            <<"    hx = "<<hx_<<"\n"
-            <<"    hy = "<<hy_<<"\n"
+            <<"    hx = "<<hx()<<"\n"
+            <<"    hy = "<<hy()<<"\n"
             <<"    x0 = "<<x0_<<"\n"
             <<"    x1 = "<<x1_<<"\n"
             <<"    y0 = "<<y0_<<"\n"
             <<"    y1 = "<<y1_<<"\n"
-            <<"    lx = "<<lx_<<"\n"
-            <<"    ly = "<<ly_<<"\n"
+            <<"    lx = "<<lx()<<"\n"
+            <<"    ly = "<<ly()<<"\n"
             <<"Boundary conditions in x are: \n"
             <<"    "<<bc2str(bcx_)<<"\n"
             <<"Boundary conditions in y are: \n"
@@ -443,22 +425,22 @@ struct GridX2d
         double deltaX;
         if( x1 > x0_) deltaX = (x1 -x0_);
         else deltaX = x1_ - x1;
-        unsigned N = floor(deltaX/lx_);
-        if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx_;
-        if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx_;
+        unsigned N = floor(deltaX/lx());
+        if( x1  > x1_ && bcx_ == dg::PER) x1 -= N*lx();
+        if( x1  < x0_ && bcx_ == dg::PER) x1 += N*lx();
 
         if( x0 < x1_ - fx_*(x1_-x0_) ) //if x0 is  one of the inner points
         {
             double deltaY;
-            double yleft = y0_ + fy_*ly_;
-            double yright = y1_ - fy_*ly_;
+            double yleft = y0_ + fy_*ly();
+            double yright = y1_ - fy_*ly();
             if( y0 >= yleft && y0<yright)
             {
                 if( y1 > yleft) deltaY = (y1 -yleft);
                 else deltaY = yright - y1;
                 unsigned N = floor(deltaY/(yright-yleft));
-                if( y1  > yright ) y1 -= N*ly_;
-                if( y1  < yleft ) y1 += N*ly_;
+                if( y1  > yright ) y1 -= N*ly();
+                if( y1  < yleft ) y1 += N*ly();
             }
             else if( y0 < yleft && y1 >=yleft)
                 y1 += (yright-yleft);
@@ -475,7 +457,7 @@ struct GridX2d
      * @param x x-point to check
      * @param y y-point to check
      *
-     * @return true if (x,y) is inside the grid, false else
+     * @return true if x0()<=x<=x1() and y0()<=y<=y1(), false else
      */
     bool contains( double x, double y)const
     {
@@ -483,25 +465,63 @@ struct GridX2d
         return false;
     }
   protected:
-    virtual void init_X_boundaries( double x0, double x1)
+    ///disallow destruction through base class pointer
+    ~aTopologyX2d(){}
+    ///@copydoc hide_gridX_parameters2d
+    ///@copydoc hide_bc_parameters2d
+    aTopologyX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fy),
+        n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
-        x0_ = x0, x1_ = x1;
-        assert( x1 > x0 );
-        lx_ = (x1_-x0_);
-        hx_ = lx_/(double)Nx_;
+        assert( (fy_ >= 0.) && (fy_ < 0.5) );
+        assert( (fx_ >= 0.) && (fx_ < 1.) );
+        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
+        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
+        assert( n != 0);
+        assert( x1 > x0 && y1 > y0);
+        assert( Nx_ > 0  && Ny > 0 );
+        assert( bcy != PER);
+    }
+    ///@copydoc aTopology2d::aTopology2d(const aTopology2d&)
+    aTopologyX2d(const aTopologyX2d& src){
+        x0_=src.x0_, x1_=src.x1_;
+        y0_=src.y0_, y1_=src.y1_;
+        fx_=src.fx_, fy_=src.fy_;
+        n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, bcx_=src.bcx_, bcy_=src.bcy_;
+        dlt_=src.dlt_;
+    }
+    ///@copydoc aTopology2d::operator=(const aTopology2d&)
+    aTopologyX2d& operator=(const aTopologyX2d& src){
+        x0_=src.x0_, x1_=src.x1_;
+        y0_=src.y0_, y1_=src.y1_;
+        fx_=src.fx_, fy_=src.fy_;
+        n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, bcx_=src.bcx_, bcy_=src.bcy_;
+        dlt_=src.dlt_;
+        return *this;
     }
   private:
     double x0_, x1_, y0_, y1_;
     double fx_, fy_;
-    double lx_, ly_;
     unsigned n_, Nx_, Ny_;
-    double hx_, hy_;
     bc bcx_, bcy_;
     DLT<double> dlt_;
 };
+/**
+ * @brief The simplest implementation of aTopologyX2d
+ * @ingroup grid
+ */
+struct GridX2d : public aTopologyX2d
+{
+    ///@copydoc hide_gridX_parameters2d
+    ///@copydoc hide_bc_parameters2d
+    GridX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx=PER, bc bcy=NEU):
+        aTopologyX2d(x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy) { }
+    ///allow explicit type conversion from any other topology
+    explicit GridX2d( const aTopologyX2d& src): aTopologyX2d(src){}
+};
 
 /**
- * @brief A 3D grid class  for cartesian coordinates
+ * @brief A 3D grid class with X-point topology
  *
  * In the third dimension only 1 polynomial coefficient is used,
  * not n. In 2d it looks like
@@ -514,46 +534,12 @@ struct GridX2d
     |--- ---------- ---|
     fy*Ly
  @endcode
- * @tparam double scalar value type 
+ * @ingroup basictopology
  */
-struct GridX3d
+struct aTopologyX3d
 {
     typedef SharedTag memory_category;
     typedef ThreeDimensionalTag dimensionality;
-    /**
-     * @brief Construct a 3D grid
-     *
-     * @param x0 left boundary in x
-     * @param x1 right boundary in x 
-     * @param y0 lower boundary in y
-     * @param y1 upper boundary in y 
-     * @param z0 lower boundary in z
-     * @param z1 upper boundary in z 
-     * @param fx factor for x-direction
-     * @param fy factor for y-direction
-     * @param n  # of polynomial coefficients per (x-,y-) dimension
-     * @param Nx # of points in x 
-     * @param Ny # of points in y
-     * @param Nz # of points in z
-     * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
-     * @param bcz boundary condition in z
-     * @attention # of polynomial coefficients in z direction is always 1
-     */
-    GridX3d( double x0, double x1, double y0, double y1, double z0, double z1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = NEU, bc bcz = PER):
-        x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), fx_(fx), fy_(fy),
-        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
-    {
-        assert( (fy_ >= 0.) && (fy_ < 0.5) );
-        assert( (fx_ >= 0.) && (fx_ < 1.) );
-        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
-        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
-        assert( n != 0);
-        assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
-        assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
-        lx_ = (x1-x0), ly_ = (y1-y0), lz_ = (z1-z0);
-        hx_ = lx_/(double)Nx_, hy_ = ly_/(double)Ny_, hz_ = lz_/(double)Nz_;
-    }
     /**
      * @brief left boundary in x
      *
@@ -598,46 +584,46 @@ struct GridX3d
      *
      * @return 
      */
-    double lx() const {return lx_;}
+    double lx() const {return x1_-x0_;}
     /**
      * @brief length in y
      *
      * @return 
      */
-    double ly() const {return ly_;}
+    double ly() const {return y1_-y0_;}
     /**
      * @brief length in z
      *
      * @return 
      */
-    double lz() const {return lz_;}
+    double lz() const {return z1_-z0_;}
     
     /**
      * @brief cell size in x
      *
      * @return 
      */
-    double hx() const {return hx_;}
+    double hx() const {return lx()/(double)Nx_;}
     /**
      * @brief cell size in y
      *
      * @return 
      */
-    double hy() const {return hy_;}
+    double hy() const {return ly()/(double)Ny_;}
     /**
      * @brief cell size in z
      *
      * @return 
      */
-    double hz() const {return hz_;}
+    double hz() const {return lz()/(double)Nz_;}
     /**
-     * @brief Factor
+     * @brief partition factor in x
      *
      * @return 
      */
     double fx() const {return fx_;}
     /**
-     * @brief Factor
+     * @brief partition factor in y
      *
      * @return 
      */
@@ -665,7 +651,7 @@ struct GridX3d
      *
      * @return 
      */
-    unsigned outer_Nx() const {return (unsigned)floor(fx_*(double)Nx_+0.5);}
+    unsigned outer_Nx() const {return (unsigned)round(fx_*(double)Nx_);}
     /**
      * @brief number of cells in y
      *
@@ -683,7 +669,7 @@ struct GridX3d
      *
      * @return 
      */
-    unsigned outer_Ny() const {return (unsigned)floor(fy_*(double)Ny_+0.5);}
+    unsigned outer_Ny() const {return (unsigned)round(fy_*(double)Ny_);}
     /**
      * @brief number of points in z
      *
@@ -742,18 +728,18 @@ struct GridX3d
             <<"    inner Ny = "<<inner_Ny()<<"\n"
             <<"    outer Ny = "<<outer_Ny()<<"\n"
             <<"    Nz = "<<Nz_<<"\n"
-            <<"    hx = "<<hx_<<"\n"
-            <<"    hy = "<<hy_<<"\n"
-            <<"    hz = "<<hz_<<"\n"
+            <<"    hx = "<<hx()<<"\n"
+            <<"    hy = "<<hy()<<"\n"
+            <<"    hz = "<<hz()<<"\n"
             <<"    x0 = "<<x0_<<"\n"
             <<"    x1 = "<<x1_<<"\n"
             <<"    y0 = "<<y0_<<"\n"
             <<"    y1 = "<<y1_<<"\n"
             <<"    z0 = "<<z0_<<"\n"
             <<"    z1 = "<<z1_<<"\n"
-            <<"    lx = "<<lx_<<"\n"
-            <<"    ly = "<<ly_<<"\n"
-            <<"    lz = "<<lz_<<"\n"
+            <<"    lx = "<<lx()<<"\n"
+            <<"    ly = "<<ly()<<"\n"
+            <<"    lz = "<<lz()<<"\n"
             <<"Boundary conditions in x are: \n"
             <<"    "<<bc2str(bcx_)<<"\n"
             <<"Boundary conditions in y are: \n"
@@ -769,7 +755,7 @@ struct GridX3d
      * @param y y-point to check
      * @param z z-point to check
      *
-     * @return true if x is between x0 and x1, false else
+     * @return true if x0()<=x<=x1() and y0()<=y<=y1() and z0()<=z<=z1() , false else
      */
     bool contains( double x, double y, double z)const
     {
@@ -778,27 +764,62 @@ struct GridX3d
         return false;
     }
   protected:
-    virtual void init_X_boundaries( double x0, double x1)
+    ///disallow destruction through base class pointer
+    ~aTopologyX3d(){}
+    ///@copydoc hide_gridX_parameters3d
+    ///@copydoc hide_bc_parameters3d
+    aTopologyX3d( double x0, double x1, double y0, double y1, double z0, double z1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
+        x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), fx_(fx), fy_(fy),
+        n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
     {
-        x0_ = x0, x1_ = x1;
-        assert( x1 > x0 );
-        lx_ = (x1_-x0_);
-        hx_ = lx_/(double)Nx_;
+        assert( (fy_ >= 0.) && (fy_ < 0.5) );
+        assert( (fx_ >= 0.) && (fx_ < 1.) );
+        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
+        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
+        assert( n != 0);
+        assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
+        assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
+    }
+    ///@copydoc aTopology3d::aTopology3d(const aTopology3d&)
+    aTopologyX3d(const aTopologyX3d& src){
+        x0_=src.x0_, x1_=src.x1_;
+        y0_=src.y0_, y1_=src.y1_;
+        z0_=src.z0_, z1_=src.z1_;
+        fx_=src.fx_, fy_=src.fy_;
+        n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, Nz_=src.Nz_,bcx_=src.bcx_, bcy_=src.bcy_, bcz_=src.bcz_;
+        dlt_=src.dlt_;
+    }
+    ///@copydoc aTopology3d::operator=(const aTopology3d&)
+    aTopologyX3d& operator=(const aTopologyX3d& src){
+        x0_=src.x0_, x1_=src.x1_;
+        y0_=src.y0_, y1_=src.y1_;
+        z0_=src.z0_, z1_=src.z1_;
+        fx_=src.fx_, fy_=src.fy_;
+        n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, Nz_=src.Nz_,bcx_=src.bcx_, bcy_=src.bcy_, bcz_=src.bcz_;
+        dlt_=src.dlt_;
+        return *this;
     }
   private:
     double x0_, x1_, y0_, y1_, z0_, z1_;
     double fx_,fy_;
-    double lx_, ly_, lz_;
     unsigned n_, Nx_, Ny_, Nz_;
-    double hx_, hy_, hz_;
     bc bcx_, bcy_, bcz_;
     DLT<double> dlt_;
 };
-///@}
 
-///@cond
-GridX2d::GridX2d( const GridX3d& g) : x0_(g.x0()), x1_(g.x1()), y0_(g.y0()), y1_(g.y1()), fx_(g.fx()), fy_(g.fy()), n_(g.n()), Nx_(g.Nx()), Ny_(g.Ny()), bcx_(g.bcx()), bcy_(g.bcy()), dlt_(g.n())
-{}
-///@endcond
+/**
+ * @brief The simplest implementation of aTopologyX3d
+ * @ingroup grid
+ */
+struct GridX3d : public aTopologyX3d
+{
+    ///@copydoc hide_gridX_parameters3d
+    ///@copydoc hide_bc_parameters3d
+    GridX3d( double x0, double x1, double y0, double y1, double z0, double z1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=PER, bc bcy=NEU, bc bcz=PER):
+        aTopologyX3d(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
+    ///allow explicit type conversion from any other topology
+    explicit GridX3d( const aTopologyX3d& src): aTopologyX3d(src){}
+};
+
 
 }// namespace dg

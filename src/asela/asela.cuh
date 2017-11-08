@@ -348,16 +348,11 @@ Asela<Grid, DS, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo:
     dg::blas1::transfer(  dg::pullback(dg::geo::TanhSource<Psip>(mf.psip, gp.psipmin, gp.alpha),      g), source);
     dg::blas1::transfer(  dg::pullback(dg::geo::GaussianDamping<Psip>(mf.psip, gp.psipmax, gp.alpha), g), damping);
     ////////////////////////////transform curvature components////////
-    typename dg::HostVec< typename dg::GeometryTraits<Grid>::memory_category>::host_vector tempX, tempY;
-    dg::geo::pushForwardPerp(dg::geo::CurvatureNablaBR<MagneticField>(mf, gp.R_0), dg::geo::CurvatureNablaBZ<MagneticField>(mf, gp.R_0), tempX, tempY, g);
-    dg::blas1::transfer(  tempX, curvX);
-    dg::blas1::transfer(  tempY, curvY);
+    dg::geo::pushForwardPerp(dg::geo::CurvatureNablaBR<MagneticField>(mf, gp.R_0), dg::geo::CurvatureNablaBZ<MagneticField>(mf, gp.R_0), curvX, curvY, g);
     dg::blas1::transfer(  dg::pullback(dg::geo::DivCurvatureKappa<MagneticField>(mf, gp.R_0), g), divCurvKappa);
     if (p.curvmode==1) 
     {
-        dg::geo::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ<MagneticField>(mf, gp.R_0), tempX, tempY, g);
-        dg::blas1::transfer(  tempX, curvKappaX);
-        dg::blas1::transfer(  tempY, curvKappaY);
+        dg::geo::pushForwardPerp(dg::geo::CurvatureKappaR(), dg::geo::CurvatureKappaZ<MagneticField>(mf, gp.R_0), curvKappaX, curvKappaY, g);
         dg::blas1::axpby( 1.,curvX,1.,curvKappaX,curvX);
         dg::blas1::axpby( 1.,curvY,1.,curvKappaY,curvY);
     }

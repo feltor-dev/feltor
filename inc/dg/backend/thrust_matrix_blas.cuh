@@ -48,13 +48,23 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const M
     assert( x.size() == y.size() && x.size() == m.size() );
 #endif //DG_DEBUG
     typedef typename MatrixTraits<Matrix>::value_type value_type;
+#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+    value_type sum = 0;
+    unsigned size=x.size();
+    #pragma omp parallel for simd reduction(+:sum) 
+    for( unsigned i=0; i<size; i++)
+        sum += x[i]*m[i]*y[i];
+    return sum;
+#else
     return thrust::inner_product(  x.begin(), x.end(), 
                             thrust::make_zip_iterator( thrust::make_tuple( y.begin(), m.begin())  ), 
                             value_type(0),
                             thrust::plus<value_type>(),
                             detail::ThrustVectorDoDot<Matrix>()
                             );
+#endif
 }
+
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::ThrustMatrixTag, dg::ThrustVectorTag)
 {
@@ -62,30 +72,22 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const V
     assert( m.size() == x.size());
 #endif //DG_DEBUG
     typedef typename MatrixTraits<Matrix>::value_type value_type;
+#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+    value_type sum = 0;
+    unsigned size=x.size();
+    #pragma omp parallel for simd reduction(+:sum)
+    for( unsigned i=0; i<size; i++)
+        sum += x[i]*x[i]*m[i];
+    return sum;
+#else
     return thrust::inner_product( x.begin(), x.end(),
                                   m.begin(),
                                   value_type(0),
                                   thrust::plus<value_type>(),
                                   detail::ThrustVectorDoDot<Matrix>()
             ); //very fast
+#endif
 }
-
-template < class Vector>
-struct ThrustVectorDoSymv
-{
-    typedef typename VectorTraits<Vector>::value_type value_type;
-    typedef thrust::tuple< value_type, value_type> Pair; 
-    __host__ __device__
-        ThrustVectorDoSymv( value_type alpha, value_type beta): alpha_(alpha), beta_(beta){}
-
-    __host__ __device__
-        value_type operator()(const value_type& x, const Pair& p) 
-        {
-            return alpha_*thrust::get<0>(p)*x + beta_*thrust::get<1>(p);
-        }
-  private:
-    value_type alpha_, beta_;
-};
 
 template< class Matrix, class Vector>
 inline void doSymv(  
@@ -97,21 +99,7 @@ inline void doSymv(
               ThrustMatrixTag,
               ThrustVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() && x.size() == m.size() );
-#endif //DG_DEBUG
-    if( alpha == 0)
-    {
-        if( beta == 1) 
-            return;
-        dg::blas1::detail::doAxpby( 0., x, beta, y, dg::ThrustVectorTag());
-        return;
-    }
-    thrust::transform( x.begin(), x.end(), 
-                       thrust::make_zip_iterator( thrust::make_tuple( m.begin(), y.begin() )),  
-                       y.begin(),
-                       detail::ThrustVectorDoSymv<Matrix>( alpha, beta)
-                      ); 
+    dg::blas1::detail::doPointwiseDot( alpha, m, x, beta, y, ThrustVectorTag());
 }
 
 template< class Matrix, class Vector>

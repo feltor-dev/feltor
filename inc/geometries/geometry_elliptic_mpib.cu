@@ -13,13 +13,10 @@
 
 #include "solovev.h"
 //#include "guenther.h"
-#include "mpi_conformal.h"
-#include "mpi_orthogonal.h"
+#include "mpi_curvilinear.h"
 #include "simple_orthogonal.h"
 #include "testfunctors.h"
 
-
-using namespace dg::geo::solovev;
 
 int main(int argc, char**argv)
 {
@@ -27,7 +24,7 @@ int main(int argc, char**argv)
     int rank;
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+    dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     Json::Reader reader;
     Json::Value js;
@@ -41,10 +38,9 @@ int main(int argc, char**argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    GeomParameters gp(js);
-    MagneticField c(gp);
-    Psip psip( gp); 
-    if(rank==0)std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::TokamakMagneticField c = dg::geo::solovev::createMagField(gp);
+    if(rank==0)std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     if(rank==0)std::cin >> psi_0>> psi_1;
@@ -54,14 +50,10 @@ int main(int argc, char**argv)
     if(rank==0)std::cout << "Constructing grid ... \n";
     dg::Timer t;
     t.tic();
-    //ConformalMPIGrid3d<dg::DVec> g3d(gp, psi_0, psi_1, n, Nx, Ny,Nz, dg::DIR, comm);
-    //ConformalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    //dg::Elliptic<ConformalMPIGrid3d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g3d, dg::not_normed, dg::centered);
-    dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
-        generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
-    dg::OrthogonalMPIGrid3d<dg::DVec> g3d(generator, n, Nx, Ny,Nz,dg::DIR, comm); 
-    dg::OrthogonalMPIGrid2d<dg::DVec> g2d = g3d.perp_grid();
-    dg::Elliptic<dg::OrthogonalMPIGrid2d<dg::DVec>, dg::MDMatrix, dg::MDVec> pol( g2d, dg::not_normed, dg::forward); //something is wrong if g3d is used here
+    dg::geo::SimpleOrthogonal generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::CurvilinearProductMPIGrid3d g3d( generator, n, Nx, Ny,Nz, dg::DIR, dg::PER, dg::PER, comm);
+    dg::geo::CurvilinearMPIGrid2d g2d = g3d.perp_grid();
+    dg::Elliptic<dg::geo::CurvilinearMPIGrid2d, dg::MDMatrix, dg::MDVec> pol( g2d, dg::not_normed, dg::forward);
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
@@ -92,16 +84,16 @@ int main(int argc, char**argv)
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
     {
-        X[i] = g2d.r()[i];
-        Y[i] = g2d.z()[i];
+        X[i] = g2d.map()[0].data()[i];
+        Y[i] = g2d.map()[1].data()[i];
     }
     ncerr = nc_put_vara_double( ncid, coordsID[0], start, count, X.data());
     ncerr = nc_put_vara_double( ncid, coordsID[1], start, count, Y.data());
     ///////////////////////////////////////////////////////////////////////////
     dg::MDVec x =    dg::evaluate( dg::zero, g2d);
-    const dg::MDVec b =    dg::pullback( dg::geo::EllipticDirPerM<MagneticField>(c, gp.R_0, psi_0, psi_1, 4), g2d);
-    const dg::MDVec chi =  dg::pullback( dg::geo::Bmodule<MagneticField>(c, gp.R_0), g2d);
-    const dg::MDVec solution = dg::pullback( dg::geo::FuncDirPer<MagneticField>(c, gp.R_0, psi_0, psi_1, 4), g2d);
+    const dg::MDVec b =    dg::pullback( dg::geo::EllipticDirPerM(c, psi_0, psi_1, 4), g2d);
+    const dg::MDVec chi =  dg::pullback( dg::geo::Bmodule(c), g2d);
+    const dg::MDVec solution = dg::pullback( dg::geo::FuncDirPer(c, psi_0, psi_1, 4), g2d);
     const dg::MDVec vol3d = dg::create::volume( g2d);
     pol.set_chi( chi);
     //compute error
@@ -118,7 +110,9 @@ int main(int argc, char**argv)
     double err = dg::blas2::dot( vol3d, error);
     const double norm = dg::blas2::dot( vol3d, solution);
     if(rank==0)std::cout << sqrt( err/norm) << "\t";
-    dg::MDVec gyy = g2d.g_xx(), gxx=g2d.g_yy(), vol = g2d.vol();
+
+    dg::SparseTensor<dg::MDVec> metric = g2d.metric();
+    dg::MDVec gyy = metric.value(1,1), gxx=metric.value(0,0), vol = dg::tensor::volume(metric).value();
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);

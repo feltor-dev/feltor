@@ -10,24 +10,14 @@ namespace geo
  * @brief This function finds the X-point via Newton iteration applied to the gradient of psi, 
  *
  * The inverse of the Hessian matrix is computed analytically
- * @tparam PsiR models aBinaryOperator
- * @tparam PsiZ models aBinaryOperator
- * @tparam PsiRR models aBinaryOperator
- * @tparam PsiRZ models aBinaryOperator
- * @tparam PsiZZ models aBinaryOperator
-    @param psiR \f$ \partial_R \psi(R,Z)\f$, where R, Z are cylindrical coordinates
-    @param psiZ \f$ \partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
-    @param psiRR \f$ \partial_R\partial_R \psi(R,Z)\f$, where R, Z are cylindrical coordinates
-    @param psiRZ \f$ \partial_R\partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
-    @param psiZZ \f$ \partial_Z\partial_Z \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+    @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
  * @param R_X start value on input, X-point on output
  * @param Z_X start value on input, X-point on output
- * @ingroup misc
+ * @ingroup misc_geo
  */
-template<class PsiR, class PsiZ, class PsiRR, class PsiRZ, class PsiZZ>
-void findXpoint( const PsiR& psiR, const PsiZ& psiZ, const PsiRR& psiRR, const PsiRZ& psiRZ, const PsiZZ& psiZZ, double& R_X, double& Z_X)
+void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
-    dg::geo::HessianRZtau<PsiR, PsiZ, PsiRR, PsiRZ, PsiZZ> hessianRZtau(  psiR, psiZ, psiRR, psiRZ, psiZZ);
+    dg::geo::HessianRZtau hessianRZtau(  psi);
     thrust::host_vector<double> X(2,0), XN(X), X_OLD(X);
     X[0] = R_X, X[1] = Z_X;
     double eps = 1e10, eps_old= 2e10;
@@ -49,11 +39,10 @@ namespace detail
 /**
  * @brief This struct finds and stores the X-point and can act in a root finding routine to find points on the perpendicular line through the X-point 
  */
-template<class Psi, class PsiR, class PsiZ>
 struct XCross
 {
     
-    XCross( Psi psi, PsiR psiR, PsiZ psiZ, double R_X, double Z_X, double distance=1): fieldRZtau_(psiR, psiZ), psip_(psi), dist_(distance)
+    XCross( const BinaryFunctorsLvl1& psi, double R_X, double Z_X, double distance=1): fieldRZtau_(psi), psip_(psi), dist_(distance)
     {
         R_X_ = R_X, Z_X_ = Z_X;
         //std::cout << "X-point set at "<<R_X_<<" "<<Z_X_<<"\n";
@@ -77,7 +66,7 @@ struct XCross
         if( quad_ == 0 || quad_ == 2) { begin[1] += x;}
         else if( quad_ == 1 || quad_ == 3) { begin[0] += x;}
 
-        double psi0 = psip_(begin[0], begin[1]);
+        double psi0 = psip_.f()(begin[0], begin[1]);
         while( (eps < eps_old || eps > 1e-4 ) && eps > 1e-10)
         {
             eps_old = eps; end_old = end;
@@ -105,8 +94,8 @@ struct XCross
 
     private:
     int quad_;
-    dg::geo::FieldRZtau<PsiR, PsiZ> fieldRZtau_;
-    Psi psip_;
+    dg::geo::FieldRZtau fieldRZtau_;
+    BinaryFunctorsLvl1 psip_;
     double R_X_, Z_X_;
     double R_i[4], Z_i[4];
     double dist_;
@@ -274,32 +263,30 @@ double construct_psi_values( XFieldFinv fpsiMinv,
 
 
 //!ATTENTION: choosing h on separatrix is a mistake if LaplacePsi does not vanish at X-point
-template< class Psi>
 struct PsipSep
 {
-    PsipSep( Psi psi): psip_(psi), Z_(0){}
+    PsipSep( const aBinaryFunctor& psi): psip_(psi), Z_(0){}
     void set_Z( double z){ Z_=z;}
-    double operator()(double R) { return psip_(R, Z_);}
+    double operator()(double R) { return psip_.get()(R, Z_);}
     private:
-    Psi psip_;
+    Handle<aBinaryFunctor> psip_;
     double Z_;
 };
 
 //!ATTENTION: choosing h on separatrix is a mistake if LaplacePsi does not vanish at X-point
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached (like FpsiX just for separatrix)
-template< class Psi, class PsiX, class PsiY>
 struct SeparatriX
 {
-    SeparatriX( Psi psi, PsiX psiX, PsiY psiY, double xX, double yX, double x0, double y0, int firstline): 
+    SeparatriX( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0, int firstline): 
         mode_(firstline),
-        fieldRZYequi_(psiX, psiY), fieldRZYTequi_(psiX, psiY, x0, y0), fieldRZYZequi_(psiX, psiY),
-        fieldRZYconf_(psiX, psiY), fieldRZYTconf_(psiX, psiY, x0, y0), fieldRZYZconf_(psiX, psiY)
+        fieldRZYequi_(psi), fieldRZYTequi_(psi, x0, y0), fieldRZYZequi_(psi),
+        fieldRZYconf_(psi), fieldRZYTconf_(psi, x0, y0), fieldRZYZconf_(psi)
     {
         //find four points on the separatrix and construct y coordinate at those points and at last construct f 
         //////////////////////////////////////////////
         double R_X = xX; double Z_X = yX;
-        PsipSep<Psi> psip_sep( psi);
+        PsipSep psip_sep( psi.f());
         psip_sep.set_Z( Z_X + 1.);
         double R_min = R_X, R_max = R_X + 10;
         dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
@@ -354,7 +341,7 @@ struct SeparatriX
     void compute_rzy( const thrust::host_vector<double>& y_vec, 
             const unsigned nodeX0, const unsigned nodeX1,
             thrust::host_vector<double>& r, //same size as y_vec on output
-            thrust::host_vector<double>& z ) 
+            thrust::host_vector<double>& z ) const
     {
         ///////////////////////////find y coordinate line//////////////
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin), end_old(end);
@@ -467,12 +454,12 @@ struct SeparatriX
         return f_psi_;
     }
     int mode_;
-    dg::geo::equalarc::FieldRZY<PsiX, PsiY>   fieldRZYequi_;
-    dg::geo::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequi_;
-    dg::geo::equalarc::FieldRZYZ<PsiX, PsiY> fieldRZYZequi_;
-    dg::geo::ribeiro::FieldRZY<PsiX, PsiY>    fieldRZYconf_;
-    dg::geo::ribeiro::FieldRZYT<PsiX, PsiY>  fieldRZYTconf_;
-    dg::geo::ribeiro::FieldRZYZ<PsiX, PsiY>  fieldRZYZconf_;
+    dg::geo::equalarc::FieldRZY  fieldRZYequi_;
+    dg::geo::equalarc::FieldRZYT fieldRZYTequi_;
+    dg::geo::equalarc::FieldRZYZ fieldRZYZequi_;
+    dg::geo::ribeiro::FieldRZY   fieldRZYconf_;
+    dg::geo::ribeiro::FieldRZYT  fieldRZYTconf_;
+    dg::geo::ribeiro::FieldRZYZ  fieldRZYZconf_;
     unsigned N_steps_;
     double R_i[4], Z_i[4], y_i[4];
     double f_psi_;
@@ -484,16 +471,15 @@ namespace orthogonal
 namespace detail
 {
 //find points on the perp line through the X-point
-template< class Psi, class PsiX, class PsiY>
 struct InitialX
 {
 
-    InitialX( Psi psi, PsiX psiX, PsiY psiY, double xX, double yX): 
-        psip_(psi), fieldRZtau_(psiX, psiY), 
-        xpointer_(psi, psiX, psiY, xX, yX, 1e-4)
+    InitialX( const BinaryFunctorsLvl1& psi, double xX, double yX): 
+        psip_(psi), fieldRZtau_(psi), 
+        xpointer_(psi, xX, yX, 1e-4)
     {
         //constructor finds four points around X-point and integrates them a bit away from it
-        dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_(psiX, psiY);
+        dg::geo::FieldRZtau fieldRZtau_(psi);
         thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin), end_old(end);
         double eps[] = {1e-11, 1e-12, 1e-11, 1e-12};
         for( unsigned i=0; i<4; i++)
@@ -507,7 +493,7 @@ struct InitialX
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             double eps = 1e10, eps_old = 2e10;
             unsigned N=10;
-            double psi0 = psip_(begin[0], begin[1]), psi1 = 1e3*psi0; 
+            double psi0 = psip_.f()(begin[0], begin[1]), psi1 = 1e3*psi0; 
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
                 eps_old = eps; end_old = end;
@@ -520,7 +506,7 @@ struct InitialX
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             eps = 1e10, eps_old = 2e10; N=10;
-            psi0 = psip_(begin[0], begin[1]), psi1 = -0.01; 
+            psi0 = psip_.f()(begin[0], begin[1]), psi1 = -0.01; 
             if( i==0||i==2)psi1*=-1.;
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
@@ -532,7 +518,7 @@ struct InitialX
                 //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
-            std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_(R_i_[i], Z_i_[i])<<"\n";
+            std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_.f()(R_i_[i], Z_i_[i])<<"\n";
 
         }
     }
@@ -561,7 +547,7 @@ struct InitialX
             while( (eps < eps_old||eps > 1e-7) && eps > 1e-11)
             {
                 eps_old = eps; end_old = end;
-                dg::stepperRK17( fieldRZtau_, begin, end, psip_(begin[0], begin[1]), psi, steps);
+                dg::stepperRK17( fieldRZtau_, begin, end, psip_.f()(begin[0], begin[1]), psi, steps);
                 eps = sqrt( (end[0]-end_old[0])*(end[0]- end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
                 //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
                 if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
@@ -582,9 +568,9 @@ struct InitialX
 
 
     private:
-    Psi psip_;
-    const dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
-    dg::geo::detail::XCross<Psi, PsiX, PsiY> xpointer_;
+    BinaryFunctorsLvl1 psip_;
+    const dg::geo::FieldRZtau fieldRZtau_;
+    dg::geo::detail::XCross xpointer_;
     double R_i_[4], Z_i_[4];
 
 };

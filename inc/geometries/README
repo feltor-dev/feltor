@@ -1,26 +1,16 @@
 
 #grids
-    conformal.h
-    orthogonal.h
-    curvilinear.h
-    mpi_conformal.h
-    mpi_orthogonal.h
-    mpi_curvilinear.h
-    refined_conformal.h
-    refined_orthogonal.h
-    refined_curvilinear.h
-
-    orthogonalX.h
     curvilinearX.h
-    refined_orthogonalX.h
+    refined_curvilinearX.h
 
 #generators
     simple_orthogonal.h
-    separatrix_orthogonal.h
     ribeiro.h
-    ribeiroX.h
     flux.h
     hector.h
+
+    separatrix_orthogonal.h
+    ribeiroX.h
 
     #utilities
         utilities.h
@@ -32,6 +22,7 @@
     taylor.h
     guenther.h
     guenther_parameters.h
+    toroidal.h
 
     testfunctors.h 
     init.h
@@ -39,4 +30,7 @@
     adaption.h
 
 #miscellaneous
+    ds.h
+    fieldaligned.h
+    mpi_fieldaligned.h
     average.h

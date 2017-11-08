@@ -19,7 +19,12 @@ toefl_hpc: toefl_hpc.cu toeflR.cuh
 toefl_mpi: toefl_mpi.cu toeflR.cuh 
 	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
 
-.PHONY: clean
+doc: 
+	mkdir -p doc; \
+	cd doc; \
+	pdflatex ../toefl.tex;
+
+.PHONY: clean doc
 
 clean:
-	rm -f toeflR toefl_hpc toefl_mpi
+	rm -rf toeflR toefl_hpc toefl_mpi doc

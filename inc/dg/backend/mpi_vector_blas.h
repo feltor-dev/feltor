@@ -18,17 +18,19 @@ template< class Vector1, class Vector2>
 void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag)
 {
     out.communicator() = in.communicator();
-    //local computation 
     typedef typename Vector1::container_type container1;
     typedef typename Vector2::container_type container2;
     doTransfer( in.data(), out.data(), typename VectorTraits<container1>::vector_category(), typename VectorTraits<container2>::vector_category());
+
 }
 
 template< class Vector>
 typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& y, MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    assert( x.communicator() == y.communicator());
+    int result;
+    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
+    assert( result == MPI_CONGRUENT || result == MPI_IDENT); 
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
     
@@ -65,7 +67,9 @@ inline void doTransform(  const Vector& x, Vector& y,
                           MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    assert( x.communicator() == y.communicator());
+    int result;
+    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
+    assert( result == MPI_CONGRUENT || result == MPI_IDENT); 
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
     doTransform( x.data(), y.data(), op, typename VectorTraits<container>::vector_category());
@@ -95,6 +99,19 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
 }
 
 template< class Vector>
+inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
+              const Vector& x, 
+              typename VectorTraits<Vector>::value_type beta, 
+              const Vector& y, 
+              typename VectorTraits<Vector>::value_type gamma, 
+              Vector& z, 
+              MPIVectorTag)
+{
+    typedef typename Vector::container_type container;
+    doAxpby( alpha,x.data(),beta, y.data(), gamma, z.data(), typename VectorTraits<container>::vector_category());
+}
+
+template< class Vector>
 inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, MPIVectorTag)
 {
     typedef typename Vector::container_type container;
@@ -118,6 +135,20 @@ inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, MP
 {
     typedef typename Vector::container_type container;
     doPointwiseDivide( x1.data(), x2.data(), y.data(), typename VectorTraits<container>::vector_category());
+}
+
+template< class Vector>
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
+        const Vector& x1, const Vector& x2, 
+        typename VectorTraits<Vector>::value_type beta,
+        const Vector& y1, const Vector& y2, 
+        typename VectorTraits<Vector>::value_type gamma,
+        Vector& z, 
+        MPIVectorTag)
+{
+    typedef typename Vector::container_type container;
+    doPointwiseDot( alpha, x1.data(), x2.data(), beta, y1.data(), y2.data(), gamma, z.data(), typename VectorTraits<container>::vector_category());
+
 }
         
 

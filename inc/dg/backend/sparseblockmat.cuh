@@ -38,12 +38,26 @@ struct EllSparseBlockMatDevice
     
     /**
     * @brief Apply the matrix to a vector
+    * \f[  y= \alpha M x + \beta y\f]
+    * @tparam deviceContainer one of the containers of the thrust library
+    * @param alpha multiplies input
+    * @param x input
+    * @param beta premultiplies output
+    * @param y output may not alias input
+    */
+    template <class deviceContainer>
+    void symv(value_type alpha, const deviceContainer& x, value_type beta, deviceContainer& y) const;
+    /**
+    * @brief Apply the matrix to a vector
     *
+    * same as symv( 1., x,0.,y);
+    * @tparam deviceContainer one of the containers of the thrust library
     * @param x input
     * @param y output may not equal input
     */
     template <class deviceContainer>
-    void symv(const deviceContainer& x, deviceContainer& y) const;
+    void symv( const deviceContainer& x, deviceContainer& y) const{symv(1., x, 0., y);}
+
     /**
     * @brief Display internal data to a stream
     *
@@ -53,7 +67,7 @@ struct EllSparseBlockMatDevice
     private:
     typedef thrust::device_vector<int> IVec;
     template <class deviceContainer>
-    void launch_multiply_kernel(const deviceContainer& x, deviceContainer& y) const;
+    void launch_multiply_kernel(value_type alpha, const deviceContainer& x, value_type beta, deviceContainer& y) const;
     
     thrust::device_vector<value_type> data;
     IVec cols_idx, data_idx; 
@@ -172,14 +186,26 @@ void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
 }
 template<class value_type>
 template<class DeviceContainer>
-inline void EllSparseBlockMatDevice<value_type>::symv( const DeviceContainer& x, DeviceContainer& y) const
+inline void EllSparseBlockMatDevice<value_type>::symv( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
-    launch_multiply_kernel( x,y);
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
+    launch_multiply_kernel( alpha, x, beta, y);
 }
 template<class value_type>
 template<class DeviceContainer>
 inline void CooSparseBlockMatDevice<value_type>::symv( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
     launch_multiply_kernel(alpha, x, beta, y);
 }
 

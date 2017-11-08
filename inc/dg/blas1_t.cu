@@ -1,4 +1,4 @@
-#define CUSP_DEVICE_BLAS_SYSTEM CUSP_DEVICE_BLAS_CUBLAS
+//#define CUSP_DEVICE_BLAS_SYSTEM CUSP_DEVICE_BLAS_CUBLAS
 #include <iostream>
 #include <vector>
 
@@ -9,12 +9,11 @@ struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 
 //test program that (should ) call every blas1 function for every specialization
 
-//typedef thrust::host_vector<double>  Vector;
-typedef cusp::array1d<double, cusp::device_memory>  Vector;
+typedef thrust::device_vector<double>  Vector;
+//typedef cusp::array1d<double, cusp::device_memory>  Vector;
 int main()
 {
-    Vector v1( 5, 2), v2( 5, 3);
-    Vector v3(5);
+    Vector v1( 5, 2), v2( 5, 3), v3(5);
     double temp = dg::blas1::dot(v1,v2);
     std::cout << "5*(2*3) = "<<temp << " (30)\n"; 
     dg::blas1::axpby( 2., v1, 3., v2, v3);
@@ -31,6 +30,8 @@ int main()
     std::cout << "2*2+ 3*3 = " << v2[0] <<" (13)\n";
     dg::blas1::axpby( 2.5, v1, 0., v2);
     std::cout << "2.5*2+ 0 = " << v2[0] <<" (5)\n";
+    dg::blas1::axpbypgz( 2.5, v1, 2., v2, 3., v3);
+    std::cout << "2.5*2+ 2.*5-3*12 = " << v3[0] <<" (-21)\n";
     dg::blas1::copy( v2, v1);
     std::cout << "5 = " << v1[0] <<" (5)"<< std::endl;
     dg::blas1::scal( v1, 0.4);
@@ -57,6 +58,8 @@ int main()
     std::cout << "2*3 = "<<w3[0][0]<<" (6)\n";
     dg::blas1::pointwiseDot( 2., w1, w2, -4., w3);
     std::cout << "2*2*3 -4*6 = "<<w3[0][0]<<" (-12)\n";
+    dg::blas1::pointwiseDot( 2., w1[0], w2[0], -4., v1, v2, 0., v2);
+    std::cout << "2*2*3 -4*2*3 = "<<v2[0]<<" (-12)\n";
     dg::blas1::axpby( 2., w1, 3., w2);
     std::cout << "2*2+ 3*3 = " << w2[0][0] <<" (13)\n";
     dg::blas1::axpby( 2.5, w1, 0., w2);

@@ -9,6 +9,7 @@
 #include "backend/derivativesX.h"
 #include "backend/gridX.h"
 #include "backend/evaluationX.cuh"
+#include "geometry/base_geometryX.h"
 #include "elliptic.h"
 #include "cg.h"
 #include "backend/timer.cuh"

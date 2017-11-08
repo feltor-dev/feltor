@@ -5,7 +5,7 @@
 
 #include "dg/arakawa.h"
 #include "dg/poisson.h"
-#include "dg/geometry.h"
+#include "dg/geometry/geometry.h"
 #include "dg/backend/mpi_init.h"
 #include "dg/backend/timer.cuh"
 
@@ -14,30 +14,27 @@
 #include "flux.h"
 #include "simple_orthogonal.h"
 #include "mpi_curvilinear.h"
-#include "mpi_orthogonal.h"
 
-using namespace dg::geo::solovev;
-template< class MagneticField>
 struct FuncDirPer2
 {
-    FuncDirPer2( MagneticField c, double R0, double psi_0, double psi_1):
-        R_0_(R0), psi0_(psi_0), psi1_(psi_1), psip_(c.psip), psipR_(c.psipR), psipZ_(c.psipZ){}
+    FuncDirPer2( dg::geo::TokamakMagneticField c, double psi_0, double psi_1):
+        R_0_(c.R0()), psi0_(psi_0), psi1_(psi_1), psip_(c.psip()), psipR_(c.psipR()), psipZ_(c.psipZ()){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
     }
     double operator()(double R, double Z) const {
-        double psip = psip_(R,Z);
+        double psip = psip_.get()(R,Z);
         return (psip-psi0_)*(psip-psi1_)*cos(theta(R,Z));
     }
     double dR( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipR = psipR_(R,Z), theta_ = theta(R,Z);
+        double psip = psip_.get()(R,Z), psipR = psipR_.get()(R,Z), theta_ = theta(R,Z);
         return (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos(theta_) 
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*thetaR(R,Z);
     }
     double dZ( double R, double Z)const
     {
-        double psip = psip_(R,Z), psipZ = psipZ_(R,Z), theta_=theta(R,Z);
+        double psip = psip_.get()(R,Z), psipZ = psipZ_.get()(R,Z), theta_=theta(R,Z);
         return (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos(theta_) 
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*thetaZ(R,Z);
     }
@@ -59,16 +56,13 @@ struct FuncDirPer2
     }
     double R_0_;
     double psi0_, psi1_;
-    Psip psip_;
-    PsipR psipR_;
-    PsipZ psipZ_;
+    dg::Handle<dg::geo::aBinaryFunctor> psip_, psipR_,  psipZ_;
 };
 
-template<class MagneticField>
 struct ArakawaDirPer
 {
-    ArakawaDirPer( MagneticField c, double R0, double psi_0, double psi_1): 
-        f_(c, R0, psi_0, psi_1, 4), g_(c, R0, psi_0, psi_1){}
+    ArakawaDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): 
+        f_(c, psi_0, psi_1, 4), g_(c, psi_0, psi_1){ }
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
     }
@@ -76,14 +70,13 @@ struct ArakawaDirPer
         return f_.dR( R,Z)*g_.dZ(R,Z) - f_.dZ(R,Z)*g_.dR(R,Z);
     }
     private:
-    dg::geo::FuncDirPer<MagneticField> f_;
-    FuncDirPer2<MagneticField> g_;
+    dg::geo::FuncDirPer f_;
+    FuncDirPer2 g_;
 };
 
-template<class MagneticField>
 struct VariationDirPer
 {
-    VariationDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,4. ){}
+    VariationDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4. ){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
 
@@ -91,26 +84,25 @@ struct VariationDirPer
         return f_.dR( R,Z)*f_.dR(R,Z) + f_.dZ(R,Z)*f_.dZ(R,Z);
     }
     private:
-    dg::geo::FuncDirPer<MagneticField> f_;
+    dg::geo::FuncDirPer f_;
 };
 
-template< class MagneticField>
 struct CurvatureDirPer
 {
-    CurvatureDirPer( MagneticField c, double R0, double psi_0, double psi_1): f_(c, R0, psi_0, psi_1,4.), curvR(c, R0), curvZ(c, R0){}
+    CurvatureDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): f_(c, psi_0, psi_1,4.), curvR(c), curvZ(c){}
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);}
     double operator()(double R, double Z) const {
         return curvR( R,Z)*f_.dR(R,Z) + curvZ(R,Z)*f_.dZ(R,Z);
     }
     private:
-    dg::geo::FuncDirPer<MagneticField> f_;
-    dg::geo::CurvatureNablaBR<MagneticField> curvR;
-    dg::geo::CurvatureNablaBZ<MagneticField> curvZ;
+    dg::geo::FuncDirPer f_;
+    dg::geo::CurvatureNablaBR curvR;
+    dg::geo::CurvatureNablaBZ curvZ;
 };
 
 
-typedef  dg::CurvilinearMPIGrid2d<dg::DVec> Geometry;
+typedef  dg::CurvilinearMPIGrid2d Geometry;
 
 int main(int argc, char** argv)
 {
@@ -118,7 +110,7 @@ int main(int argc, char** argv)
     int rank;
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+    dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     Json::Reader reader;
     Json::Value js;
@@ -132,9 +124,9 @@ int main(int argc, char** argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    GeomParameters gp(js);
-    Psip psip( gp); 
-    if(rank==0)std::cout << "Psi min "<<psip(gp.R_0, 0)<<"\n";
+    dg::geo::solovev::GeomParameters gp(js);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
+    if(rank==0)std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     if(rank==0)std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     if(rank==0)std::cin >> psi_0>> psi_1;
@@ -148,22 +140,19 @@ int main(int argc, char** argv)
         MPI_Comm planeComm;
         int remain_dims[] = {true,true,false}; //true true false
         MPI_Cart_sub( comm, remain_dims, &planeComm);
-    MagneticField c( gp);
-    dg::geo::RibeiroFluxGenerator<Psip, PsipR, PsipZ, PsipRR, PsipRZ, PsipZZ>
-        generator( c.psip, c.psipR, c.psipZ, c.psipRR, c.psipRZ, c.psipZZ, psi_0, psi_1, gp.R_0, 0., 1);
-    //dg::geo::SimpleOrthogonal<Psip, PsipR, PsipZ, LaplacePsip> 
-        //generator( c.psip, c.psipR, c.psipZ, c.laplacePsip, psi_0, psi_1, gp.R_0, 0., 1);
-    Geometry grid(generator, n, Nx, Ny,dg::DIR, planeComm); //2d
+    dg::geo::RibeiroFluxGenerator generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    //dg::geo::SimpleOrthogonal generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    Geometry grid(generator, n, Nx, Ny, dg::DIR, dg::PER, planeComm); //2d
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
 
     dg::MDVec vol = dg::create::volume( grid);
     if(rank==0)std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
 
-    dg::geo::FuncDirPer<MagneticField> left(c, gp.R_0, psi_0, psi_1, 4);
-    FuncDirPer2<MagneticField> right( c, gp.R_0, psi_0, psi_1);
-    ArakawaDirPer<MagneticField> jacobian( c, gp.R_0, psi_0, psi_1);
-    VariationDirPer<MagneticField> variationLHS(c, gp.R_0, psi_0, psi_1);
+    dg::geo::FuncDirPer left(c, psi_0, psi_1, 4);
+    FuncDirPer2 right( c, psi_0, psi_1);
+    ArakawaDirPer jacobian( c, psi_0, psi_1);
+    VariationDirPer variationLHS(c, psi_0, psi_1);
 
     const dg::MDVec lhs = dg::pullback( left, grid);
     dg::MDVec jac(lhs);
@@ -216,7 +205,7 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "TESTING CURVATURE 3D\n";
     dg::MDVec curvX, curvY;
     dg::MHVec tempX, tempY;
-    dg::geo::pushForwardPerp(dg::geo::CurvatureNablaBR<MagneticField>(c, gp.R_0), dg::geo::CurvatureNablaBZ<MagneticField>(c, gp.R_0), tempX, tempY, grid);
+    dg::pushForwardPerp(dg::geo::CurvatureNablaBR(c), dg::geo::CurvatureNablaBZ(c), tempX, tempY, grid);
     dg::blas1::transfer(  tempX, curvX);
     dg::blas1::transfer(  tempY, curvY);
     dg::MDMatrix dx, dy;
@@ -229,7 +218,7 @@ int main(int argc, char** argv)
     dg::blas1::pointwiseDot( 1., tempy, curvY, 1.,  tempx);
     norm = dg::blas2::dot( tempx, vol, tempx);
 
-    CurvatureDirPer<MagneticField> curv(c, gp.R_0, psi_0, psi_1);
+    CurvatureDirPer curv(c, psi_0, psi_1);
     dg::MDVec curvature;
     dg::blas1::transfer( dg::pullback(curv, grid), curvature);
 

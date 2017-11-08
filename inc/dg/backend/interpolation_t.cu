@@ -21,6 +21,12 @@ int main()
 
     {
     dg::Grid2d g( -10, 10, -5, 5, n, Nx, Ny);
+    std::cout << "First test grid set functions: \n";
+    g.display( std::cout);
+    g.set(2,2,3);
+    g.display( std::cout);
+    g.set(n, Nx, Ny);
+    g.display( std::cout);
     Matrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 
@@ -88,6 +94,8 @@ int main()
     ////////////////////////////////////////////////////////////////////////////
     {
     dg::Grid3d g( -10, 10, -5, 5, -7, -3, n, Nx, Ny, Nz);
+    g.set( 2,2,2,3);
+    g.set( n, Nx,Ny,Nz);
     Matrix A = dg::create::backscatter( g);
     //A.sort_by_row_and_column();
 

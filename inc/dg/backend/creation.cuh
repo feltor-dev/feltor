@@ -77,7 +77,6 @@ void add_line( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
 } //namespace detail
 } //namespace create
 } //namespace dg 
-
 ///@endcond
 
 #endif // _DG_CREATION_CUH

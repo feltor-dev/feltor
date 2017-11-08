@@ -17,12 +17,9 @@
 
 /*
    - reads parameters from input.txt or any other given file, 
-   - integrates the Feltor - functor and 
+   - integrates the Explicit - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
-typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
-
-using namespace dg::geo::solovev;
 
 int main( int argc, char* argv[])
 {
@@ -48,7 +45,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-    const eule::Parameters p( js);
+    const feltor::Parameters p( js);
     const dg::geo::solovev::GeomParameters gp(gs);
     p.display( std::cout);
     gp.display( std::cout);
@@ -66,13 +63,13 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
-    dg::CylindricalGrid3d<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+    dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
 
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    std::cout << "Constructing Explicit...\n";
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, mag, p, gp); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////

@@ -3,12 +3,11 @@
 #include <vector>
 #include "dg/backend/grid.h"
 #include "dg/backend/interpolation.cuh"
+#include "dg/geometry/geometry.h"
 #include "dg/elliptic.h"
+#include "fluxfunctions.h"
 #include "dg/cg.h"
 #include "flux.h"
-#include "conformal.h"
-#include "orthogonal.h"
-#include "curvilinear.h"
 #include "adaption.h"
 
 
@@ -27,7 +26,7 @@ struct Interpolate
 {
     Interpolate( const thrust::host_vector<double>& fZeta, 
                  const thrust::host_vector<double>& fEta, 
-                 const dg::Grid2d& g2d ): 
+                 const dg::aTopology2d& g2d ): 
         iter0_( dg::create::forward_transform( fZeta, g2d) ), 
         iter1_( dg::create::forward_transform(  fEta, g2d) ), 
         g_(g2d), zeta1_(g2d.x1()), eta1_(g2d.y1()){}
@@ -54,7 +53,7 @@ struct Interpolate
 };
 
 //compute c_0 
-double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::Grid2d& g2d) 
+double construct_c0( const thrust::host_vector<double>& etaVinv, const dg::aTopology2d& g2d) 
 {
     //this is a normal integration:
     thrust::host_vector<double> etaVinvL( dg::create::forward_transform(  etaVinv, g2d) );
@@ -94,7 +93,7 @@ void compute_zev(
         const thrust::host_vector<double>& etaV,
         const thrust::host_vector<double>& v_vec,
         thrust::host_vector<double>& eta, 
-        const dg::Grid2d& g2d
+        const dg::aTopology2d& g2d
         ) 
 {
     Interpolate iter( thrust::host_vector<double>( etaV.size(), 0), etaV, g2d);
@@ -134,7 +133,7 @@ void construct_grid(
         const thrust::host_vector<double>& eta_init, //1d intial values
         thrust::host_vector<double>& zeta, 
         thrust::host_vector<double>& eta, 
-        const dg::Grid2d& g2d
+        const dg::aGeometry2d& g2d
     )
 {
     Interpolate inter( zetaU, etaU, g2d);
@@ -188,41 +187,31 @@ void transform(
     thrust::host_vector<double> uh_zeta, uh_eta;
     dg::blas1::transfer( u_zeta, uh_zeta);
     dg::blas1::transfer( u_eta, uh_eta);
-    dg::blas1::pointwiseDot( uh_zeta, g2d.xr(), u_x);
-    dg::blas1::pointwiseDot( 1., uh_eta, g2d.yr(), 1., u_x);
-    dg::blas1::pointwiseDot( uh_zeta, g2d.xz(), u_y);
-    dg::blas1::pointwiseDot( 1., uh_eta, g2d.yz(), 1., u_y);
+    dg::SparseTensor<thrust::host_vector<double> > jac = g2d.jacobian();
+    dg::blas1::pointwiseDot( uh_zeta, jac.value(0,0), u_x);
+    dg::blas1::pointwiseDot( 1., uh_eta, jac.value(1,0) , 1., u_x);
+    dg::blas1::pointwiseDot( uh_zeta, jac.value(0,1), u_y);
+    dg::blas1::pointwiseDot( 1., uh_eta, jac.value(1,1), 1., u_y);
 }
 
 }//namespace detail
 ///@endcond
 
 /**
- * @brief The High PrEcision Conformal grid generaTOR (models aGenerator)
+ * @brief The High PrEcision Conformal grid generaTOR 
  *
- * @ingroup generators
+ * @ingroup generators_geo
  * @tparam IMatrix The interpolation matrix type
- * @tparam Matrix  The matrix type in the elliptic equation
- * @tparam container models aContainer 
+ * @copydoc hide_matrix
+ * @copydoc hide_container
  */
 template <class IMatrix = dg::IHMatrix, class Matrix = dg::HMatrix, class container = dg::HVec>
-struct Hector
+struct Hector : public aGenerator2d
 {
     /**
      * @brief Construct a conformal grid 
      *
-     * @tparam Psi models aBinaryOperator 
-     * @tparam PsiX models aBinaryOperator 
-     * @tparam PsiY models aBinaryOperator 
-     * @tparam PsiXX models aBinaryOperator 
-     * @tparam PsiXY models aBinaryOperator 
-     * @tparam PsiYY models aBinaryOperator 
-     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
-     @param psiX \f$ \psi_x\f$ its derivative in x
-     @param psiY \f$ \psi_y\f$ its derivative in y
-     @param psiXX \f$ \psi_{xx}\f$ second derivative
-     @param psiXY \f$ \psi_{xy}\f$ second derivative
-     @param psiYY \f$ \psi_{yy}\f$ second derivative
+     * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param psi0 first boundary 
      * @param psi1 second boundary
      * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -233,13 +222,12 @@ struct Hector
      * @param eps_u the accuracy of u
      * @param verbose If true convergence details are printed to std::cout
      */
-    template< class Psi, class PsiX, class PsiY, class PsiXX ,class PsiXY, class PsiYY >
-    Hector( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+    Hector( const BinaryFunctorsLvl2& psi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
+        g2d_(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
         //first construct u_
-        container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, dg::ONE(), dg::geo::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
-        construct( u, psi0, psi1, dg::ONE(), dg::ZERO(), dg::ONE() );
+        container u = construct_grid_and_u( dg::geo::Constant(1), dg::geo::detail::LaplacePsi(psi), psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
+        construct( u, psi0, psi1, dg::geo::Constant(1.), dg::geo::Constant(0.), dg::geo::Constant(1.) );
         conformal_=orthogonal_=true;
         ////we actually don't need u_ but it makes a good testcase 
         //container psi__;
@@ -253,24 +241,8 @@ struct Hector
     /**
      * @brief Construct an orthogonal grid with adaption
      *
-     * @tparam Psi  models aBinaryOperator 
-     * @tparam PsiX models aBinaryOperator 
-     * @tparam PsiY models aBinaryOperator 
-     * @tparam PsiXX models aBinaryOperator 
-     * @tparam PsiXY models aBinaryOperator 
-     * @tparam PsiYY models aBinaryOperator 
-     * @tparam Chi  models aBinaryOperator 
-     * @tparam ChiX models aBinaryOperator 
-     * @tparam ChiY models aBinaryOperator 
-     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
-     @param psiX \f$ \psi_x\f$ its derivative in x
-     @param psiY \f$ \psi_y\f$ its derivative in y
-     @param psiXX \f$ \psi_{xx}\f$ second derivative
-     @param psiXY \f$ \psi_{xy}\f$ second derivative
-     @param psiYY \f$ \psi_{yy}\f$ second derivative
-     * @param chi \f$ \chi(x,y)\f$  is the adaption function in Cartesian coordinates (x,y)
-     @param chiX \f$ \chi_x\f$ its derivative in x 
-     @param chiY \f$ \chi_y\f$ its derivative in y 
+     * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
+     * @param chi \f$ \chi(x,y)\f$  the adaption function and its derivatives in Cartesian coordinates (x,y)
      * @param psi0 first boundary 
      * @param psi1 second boundary
      * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -281,14 +253,13 @@ struct Hector
      * @param eps_u the accuracy of u
      * @param verbose If true convergence details are printed to std::cout
      */
-    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi, class ChiX, class ChiY>
-    Hector( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Chi chi, ChiX chiX, ChiY chiY, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY>(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+    Hector( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& chi, double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
+        g2d_(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
-        dg::geo::detail::LaplaceAdaptPsi<PsiX, PsiY, dg::geo::detail::LaplacePsi<PsiXX, PsiYY>, Chi, ChiX, ChiY> lapAdaPsi( psiX, psiY, dg::geo::detail::LaplacePsi<PsiXX, PsiYY>(psiXX, psiYY), chi, chiX, chiY);
+        dg::geo::detail::LaplaceAdaptPsi lapAdaPsi( psi, chi);
         //first construct u_
-        container u = construct_grid_and_u( psi, psiX, psiY, psiXX, psiXY, psiYY, chi, lapAdaPsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
-        construct( u, psi0, psi1, chi, dg::ZERO(), chi );
+        container u = construct_grid_and_u( chi.f(), lapAdaPsi, psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
+        construct( u, psi0, psi1, chi.f(),dg::geo::Constant(0), chi.f() );
         orthogonal_=true;
         conformal_=false;
         ////we actually don't need u_ but it makes a good testcase 
@@ -303,26 +274,8 @@ struct Hector
     /**
      * @brief Construct a curvilinear grid with monitor metric
      *
-     * @tparam Psi   models aBinaryOperator 
-     * @tparam PsiX  models aBinaryOperator 
-     * @tparam PsiY  models aBinaryOperator 
-     * @tparam PsiXX models aBinaryOperator 
-     * @tparam PsiXY models aBinaryOperator 
-     * @tparam PsiYY models aBinaryOperator 
-     * @tparam Chi   models aBinaryOperator 
-     * @tparam ChiX  models aBinaryOperator 
-     * @tparam ChiY  models aBinaryOperator 
-     * @param psi \f$ \psi(x,y)\f$ the flux function in Cartesian coordinates (x,y)
-     @param psiX \f$ \psi_x\f$ its derivative in x
-     @param psiY \f$ \psi_y\f$ its derivative in y
-     @param psiXX \f$ \psi_{xx}\f$ second derivative
-     @param psiXY \f$ \psi_{xy}\f$ second derivative
-     @param psiYY \f$ \psi_{yy}\f$ second derivative
-      @param chi_XX \f$  \chi^{xx}(x,y)\f$  is the contravariant xx-component of the adaption tensor in Cartesian coordinates (x,y)
-      @param chi_XY \f$  \chi^{xy}(x,y)\f$  is the contravariant xy-component of the adaption tensor in Cartesian coordinates (x,y)
-      @param chi_YY \f$  \chi^{yy}(x,y)\f$  is the contravariant yy-component of the adaption tensor in Cartesian coordinates (x,y)
-     * @param divChiX \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
-     * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
+     * @param psi the flux function \f$ \psi(x,y)\f$ and its derivatives in Cartesian coordinates (x,y)
+      @param chi the symmetric adaption tensor \f$\chi(x,y)\f$ and its divergence in Cartesian coordinates (x,y)
      * @param psi0 first boundary 
      * @param psi1 second boundary
      * @param X0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -333,25 +286,14 @@ struct Hector
      * @param eps_u the accuracy of u
      * @param verbose If true convergence details are printed to std::cout
      */
-    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi_XX, class Chi_XY, class Chi_YY, class DivChiX, class DivChiY>
-    Hector( Psi psi, PsiX psiX, PsiY psiY, 
-            PsiXX psiXX, PsiXY psiXY, PsiYY psiYY,  
-            Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY, 
-            DivChiX divChiX, DivChiY divChiY,
+    Hector( const BinaryFunctorsLvl2& psi,const BinarySymmTensorLvl1& chi,
             double psi0, double psi1, double X0, double Y0, unsigned n = 13, unsigned Nx = 2, unsigned Ny = 10, double eps_u = 1e-10, bool verbose=false) : 
-        g2d_(dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX,PsiXY,PsiYY> (
-                    psi, psiX, psiY, psiXX,psiXY,psiYY, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
+        g2d_(dg::geo::RibeiroFluxGenerator(psi, psi0, psi1, X0, Y0,1), n, Nx, Ny, dg::DIR)
     {
-        dg::geo::detail::LaplaceChiPsi<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Chi_XX, Chi_XY, Chi_YY, DivChiX, DivChiY>
-            lapChiPsi( psiX, psiY, psiXX, psiXY, psiYY, 
-                chi_XX, chi_XY, chi_YY, divChiX, divChiY);
         //first construct u_
-        container u = construct_grid_and_u( 
-                psi, psiX, psiY, 
-                psiXX, psiXY, psiYY,
-                chi_XX, chi_XY, chi_YY, lapChiPsi, 
+        container u = construct_grid_and_u( psi, chi, 
                 psi0, psi1, X0, Y0, n, Nx, Ny, eps_u , verbose);
-        construct( u, psi0, psi1, chi_XX, chi_XY, chi_YY);
+        construct( u, psi0, psi1, chi.xx(), chi.xy(), chi.yy());
         orthogonal_=conformal_=false;
         ////we actually don't need u_ but it makes a good testcase 
         //container psi__;
@@ -362,50 +304,25 @@ struct Hector
         //dg::blas1::transfer( u, u_);
     }
 
+
     /**
-     * @brief The length of the u-domain
+     * @brief Return the internally used orthogonal grid
      *
-     * Call before discretizing the u domain
-     * @return length of u-domain
-     * @note the length is always positive
+     * @return  orthogonal zeta, eta grid
      */
-    double width() const {return lu_;}
-    /**
-     * @brief 2pi
-     *
-     * Always returns 2pi
-     * @return 2pi 
-     */
-    double height() const {return 2.*M_PI;}
-    /**
-     * @brief True if conformal constructor was used
-     *
-     * @return true if conformal constructor was used
-     */
+    const dg::geo::CurvilinearGrid2d& internal_grid() const {return g2d_;}
+    virtual Hector* clone() const{return new Hector(*this);}
     bool isConformal() const {return conformal_;}
+    private:
+    virtual double do_width() const {return lu_;}
+    virtual double do_height() const {return 2.*M_PI;}
     /**
      * @brief True if orthogonal constructor was used
      *
      * @return true if orthogonal constructor was used
      */
-    bool isOrthogonal() const {return orthogonal_;}
-
-    /**
-     * @brief Generate the points and the elements of the Jacobian
-     *
-     * Call the width() and height() function before calling this function!
-     * @param u1d one-dimensional list of points inside the u-domain (0<u<width())
-     * @param v1d one-dimensional list of points inside the v-domain (0<v<height())
-     * @param x  \f$= x(u,v)\f$
-     * @param y  \f$= y(u,v)\f$
-     * @param ux \f$= u_x(u,v)\f$
-     * @param uy \f$= u_y(u,v)\f$
-     * @param vx \f$= v_x(u,v)\f$
-     * @param vy \f$= v_y(u,v)\f$
-     * @note All the resulting vectors are write-only and get properly resized
-     * @note The \f$ u\f$ direction is continuous in memory
-     */
-    void operator()( const thrust::host_vector<double>& u1d, 
+    virtual bool do_isOrthogonal() const {return orthogonal_;}
+    virtual void do_generate( const thrust::host_vector<double>& u1d, 
                      const thrust::host_vector<double>& v1d, 
                      thrust::host_vector<double>& x, 
                      thrust::host_vector<double>& y, 
@@ -423,15 +340,14 @@ struct Hector
             eta[i] = fmod(eta[i]+2.*M_PI, 2.*M_PI); 
         dg::IHMatrix Q = dg::create::interpolation( zeta, eta, g2d_);
 
-        thrust::host_vector<double> u(u1d.size()*v1d.size());
-        x = y = ux = uy = vx = vy = u;  //resize 
-        dg::blas2::symv( Q, g2d_.r(), x);
-        dg::blas2::symv( Q, g2d_.z(), y);
+        dg::blas2::symv( Q, g2d_.map()[0], x);
+        dg::blas2::symv( Q, g2d_.map()[1], y);
         dg::blas2::symv( Q, ux_, ux);
         dg::blas2::symv( Q, uy_, uy);
         dg::blas2::symv( Q, vx_, vx);
         dg::blas2::symv( Q, vy_, vy);
         ////Test if u1d is u
+        //thrust::host_vector<double> u(u1d.size()*v1d.size());
         //dg::blas2::symv( Q, u_, u);
         //dg::HVec u2d(u1d.size()*v1d.size());
         //for( unsigned i=0; i<v1d.size(); i++)
@@ -442,41 +358,31 @@ struct Hector
         //std::cout << "Error in u is "<<eps<<std::endl;
     }
 
-    /**
-     * @brief Return the internally used orthogonal grid
-     *
-     * @return  orthogonal zeta, eta grid
-     */
-    const dg::CurvilinearGrid2d<container>& internal_grid() const {return g2d_;}
-    private:
-    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi, class LaplaceChiPsi>
-    container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Chi chi, LaplaceChiPsi lapCP, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u , bool verbose) 
+    container construct_grid_and_u( const aBinaryFunctor& chi, const aBinaryFunctor& lapChiPsi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u , bool verbose) 
     {
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
-        dg::CurvilinearGrid2d<container> g2d_old = g2d_;
+        dg::geo::CurvilinearGrid2d g2d_old = g2d_;
         container adapt = dg::pullback(chi, g2d_old);
-        dg::Elliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        dg::Elliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
         ellipticD_old.set_chi( adapt);
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
-        container lapu = dg::pullback( lapCP, g2d_old);
+        container lapu = dg::pullback( lapChiPsi, g2d_old);
         dg::Invert<container > invert_old( u_old, n*n*Nx*Ny, eps_u);
         unsigned number = invert_old( ellipticD_old, u_old, lapu);
         while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
         {
             eps = eps_old;
-            Nx*=2, Ny*=2;
-            dg::CurvilinearGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            g2d_.multiplyCellNumbers(2,2);
             if(verbose) std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
-            dg::Elliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
-            adapt = dg::pullback(chi, g2d);
+            dg::Elliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            adapt = dg::pullback(chi, g2d_);
             ellipticD.set_chi( adapt);
-            lapu = dg::pullback( lapCP, g2d);
-            const container vol2d = dg::create::weights( g2d);
-            const IMatrix Q = dg::create::interpolation( g2d, g2d_old);
-            u = dg::evaluate( dg::zero, g2d);
+            lapu = dg::pullback( lapChiPsi, g2d_);
+            const container vol2d = dg::create::weights( g2d_);
+            const IMatrix Q = dg::create::interpolation( g2d_, g2d_old);
+            u = dg::evaluate( dg::zero, g2d_);
             container u_diff( u);
             dg::blas2::gemv( Q, u_old, u_diff);
 
@@ -485,41 +391,38 @@ struct Hector
             dg::blas1::axpby( 1. ,u, -1., u_diff);
             eps = sqrt( dg::blas2::dot( u_diff, vol2d, u_diff) / dg::blas2::dot( u, vol2d, u) );
             if(verbose) std::cout <<" iter "<<number<<" error "<<eps<<"\n";
-            g2d_old = g2d;
+            g2d_old = g2d_;
             u_old = u;
-            g2d_ = g2d;
             number++;//get rid of warning
         }
         return u;
     }
 
-    template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Chi_XX, class Chi_XY, class Chi_YY, class LaplaceChiPsi>
-    container construct_grid_and_u( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, 
-            Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY, LaplaceChiPsi lapCP, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u, bool verbose ) 
+    container construct_grid_and_u( const BinaryFunctorsLvl2& psi, 
+            const BinarySymmTensorLvl1& chi, double psi0, double psi1, double X0, double Y0, unsigned n, unsigned Nx, unsigned Ny, double eps_u, bool verbose ) 
     {
+        dg::geo::detail::LaplaceChiPsi lapChiPsi( psi, chi);
         //first find u( \zeta, \eta)
         double eps = 1e10, eps_old = 2e10;
-        dg::geo::RibeiroFluxGenerator<Psi,PsiX,PsiY,PsiXX, PsiXY, PsiYY> generator(psi, psiX, psiY, psiXX, psiXY, psiYY, psi0, psi1, X0, Y0,1);
-        dg::CurvilinearGrid2d<container> g2d_old = g2d_;
-        dg::TensorElliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
-        ellipticD_old.set( chi_XX, chi_XY, chi_YY);
+        dg::geo::CurvilinearGrid2d g2d_old = g2d_;
+        dg::TensorElliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD_old( g2d_old, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+        ellipticD_old.transform_and_set( chi.xx(), chi.xy(), chi.yy());
 
         container u_old = dg::evaluate( dg::zero, g2d_old), u(u_old);
-        container lapu = dg::pullback( lapCP, g2d_old);
+        container lapu = dg::pullback( lapChiPsi, g2d_old);
         dg::Invert<container > invert_old( u_old, n*n*Nx*Ny, eps_u);
         unsigned number = invert_old( ellipticD_old, u_old, lapu);
         while( (eps < eps_old||eps > 1e-7) && eps > eps_u)
         {
             eps = eps_old;
-            Nx*=2, Ny*=2;
-            dg::CurvilinearGrid2d<container> g2d(generator, n, Nx, Ny, dg::DIR);
+            g2d_.multiplyCellNumbers(2,2);
             if(verbose)std::cout << "Nx "<<Nx<<" Ny "<<Ny<<std::flush;
-            dg::TensorElliptic<dg::CurvilinearGrid2d<container>, Matrix, container> ellipticD( g2d, dg::DIR, dg::PER, dg::not_normed, dg::centered);
-            ellipticD.set( chi_XX, chi_XY, chi_YY );
-            lapu = dg::pullback( lapCP, g2d);
-            const container vol2d = dg::create::weights( g2d);
-            const IMatrix Q = dg::create::interpolation( g2d, g2d_old);
-            u = dg::evaluate( dg::zero, g2d);
+            dg::TensorElliptic<dg::geo::CurvilinearGrid2d, Matrix, container> ellipticD( g2d_, dg::DIR, dg::PER, dg::not_normed, dg::centered);
+            ellipticD.transform_and_set( chi.xx(), chi.xy(), chi.yy() );
+            lapu = dg::pullback( lapChiPsi, g2d_);
+            const container vol2d = dg::create::weights( g2d_);
+            const IMatrix Q = dg::create::interpolation( g2d_, g2d_old);
+            u = dg::evaluate( dg::zero, g2d_);
             container u_diff( u);
             dg::blas2::gemv( Q, u_old, u_diff);
 
@@ -528,16 +431,14 @@ struct Hector
             dg::blas1::axpby( 1. ,u, -1., u_diff);
             eps = sqrt( dg::blas2::dot( u_diff, vol2d, u_diff) / dg::blas2::dot( u, vol2d, u) );
             if(verbose) std::cout <<" iter "<<number<<" error "<<eps<<"\n";
-            g2d_old = g2d;
+            g2d_old = g2d_;
             u_old = u;
-            g2d_ = g2d;
             number++;//get rid of warning
         }
         return u;
     }
 
-    template< class Chi_XX, class Chi_XY, class Chi_YY>
-    void construct(const container& u, double psi0, double psi1, Chi_XX chi_XX, Chi_XY chi_XY, Chi_YY chi_YY)
+    void construct(const container& u, double psi0, double psi1, const aBinaryFunctor& chi_XX, const aBinaryFunctor& chi_XY, const aBinaryFunctor& chi_YY)
     {
         //now compute u_zeta and u_eta 
         Matrix dzeta = dg::create::dx( g2d_, dg::DIR);
@@ -549,7 +450,7 @@ struct Hector
 
 
         thrust::host_vector<double> chi_ZZ, chi_ZE, chi_EE;
-        dg::geo::pushForwardPerp( chi_XX, chi_XY, chi_YY, chi_ZZ, chi_ZE, chi_EE, g2d_);
+        dg::pushForwardPerp( chi_XX, chi_XY, chi_YY, chi_ZZ, chi_ZE, chi_EE, g2d_);
         container chiZZ, chiZE, chiEE;
         dg::blas1::transfer( chi_ZZ, chiZZ);
         dg::blas1::transfer( chi_ZE, chiZE);
@@ -570,7 +471,10 @@ struct Hector
         //now compute etaV and its inverse
         container etaVinv(u_zeta), etaV(etaVinv);
         dg::blas1::pointwiseDot( etaVinv, chiZZ, etaVinv);
-        dg::geo::multiplyPerpVolume( etaVinv, g2d_);
+        dg::SparseElement<container> perp_vol = dg::tensor::determinant(g2d_.metric());
+        dg::tensor::sqrt(perp_vol);
+        dg::tensor::invert(perp_vol);
+        dg::tensor::pointwiseDot( etaVinv, perp_vol, etaVinv);
         dg::blas1::transform( etaVinv, etaV, dg::INVERT<double>());
         thrust::host_vector<double> etaVinv_h;
         dg::blas1::transfer( etaVinv, etaVinv_h);
@@ -578,8 +482,8 @@ struct Hector
         container v_zeta(u), v_eta(u);
         dg::blas1::axpby( -1., temp_eta, 0.,v_zeta);
         dg::blas1::axpby( +1., temp_zeta, 0.,v_eta);
-        dg::geo::multiplyPerpVolume( v_zeta, g2d_);
-        dg::geo::multiplyPerpVolume(  v_eta, g2d_);
+        dg::tensor::pointwiseDot( v_zeta, perp_vol, v_zeta);
+        dg::tensor::pointwiseDot( v_eta, perp_vol, v_eta);
 
         //construct c0 and scale all vector components with it
         c0_ = fabs( detail::construct_c0( etaVinv_h, g2d_));
@@ -600,11 +504,12 @@ struct Hector
         dg::blas1::transfer( etaU, etaU_);
         dg::blas1::transfer( zetaU, zetaU_);
     }
+    private:
     bool conformal_, orthogonal_;
     double c0_, lu_;
     thrust::host_vector<double> u_, ux_, uy_, vx_, vy_;
     thrust::host_vector<double> etaV_, zetaU_, etaU_;
-    dg::CurvilinearGrid2d<container> g2d_;
+    dg::geo::CurvilinearGrid2d g2d_;
 
 };
 

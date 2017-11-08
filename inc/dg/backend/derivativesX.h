@@ -4,8 +4,7 @@
 #include "dxX.h"
 
 /*! @file 
-  
-  Convenience functions to create 2D derivatives
+  @brief Convenience functions to create 2D derivatives on X-point topology
   */
 namespace dg{
 
@@ -21,11 +20,18 @@ struct Composite
     Composite& operator=( const Composite<Matrix2>& src){ Composite c(src); 
         *this = c; return *this;}
     template< class container>
-    void symv( const  container& v1, container& v2)
+    void symv( const  container& v1, container& v2) const
     {
-        m1.symv( v1, v2);
+        m1.symv( v1, v2); //computes first part
         if( dual)
-            m2.symv( v1, v2);
+            m2.symv( v1, v2); //computes second part
+    }
+    template< class container>
+    void symv( double alpha, const  container& v1, double beta, container& v2) const
+    {
+        m1.symv( alpha, v1, beta, v2); //computes first part
+        if( dual)
+            m2.symv( alpha, v1, beta, v2); //computes second part
     }
     void display( std::ostream& os = std::cout) const
     {
@@ -81,7 +87,7 @@ namespace create{
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > dx( const GridX2d& g, bc bcx, direction dir = centered)
+Composite<EllSparseBlockMat<double> > dx( const aTopologyX2d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<double>  dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -98,7 +104,7 @@ Composite<EllSparseBlockMat<double> > dx( const GridX2d& g, bc bcx, direction di
  *
  * @return A host matrix
  */
-Composite<EllSparseBlockMat<double> > dx( const GridX2d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+Composite<EllSparseBlockMat<double> > dx( const aTopologyX2d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 2d derivative in y-direction
@@ -109,7 +115,7 @@ Composite<EllSparseBlockMat<double> > dx( const GridX2d& g, direction dir = cent
  *
  * @return A host matrix
  */
-Composite<EllSparseBlockMat<double> > dy( const GridX2d& g, bc bcy, direction dir = centered)
+Composite<EllSparseBlockMat<double> > dy( const aTopologyX2d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<double>  dy_inner, dy_outer;
     GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
@@ -135,7 +141,7 @@ Composite<EllSparseBlockMat<double> > dy( const GridX2d& g, bc bcy, direction di
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > dy( const GridX2d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+Composite<EllSparseBlockMat<double> > dy( const aTopologyX2d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Matrix that contains 2d jump terms in X direction
@@ -145,7 +151,7 @@ Composite<EllSparseBlockMat<double> > dy( const GridX2d& g, direction dir = cent
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > jumpX( const GridX2d& g, bc bcx)
+Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX2d& g, bc bcx)
 {
     EllSparseBlockMat<double>  jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
@@ -162,7 +168,7 @@ Composite<EllSparseBlockMat<double> > jumpX( const GridX2d& g, bc bcx)
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > jumpY( const GridX2d& g, bc bcy)
+Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX2d& g, bc bcy)
 {
     EllSparseBlockMat<double>  jy_inner, jy_outer;
     GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
@@ -187,7 +193,7 @@ Composite<EllSparseBlockMat<double> > jumpY( const GridX2d& g, bc bcy)
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > jumpX( const GridX2d& g)
+Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX2d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -199,7 +205,7 @@ Composite<EllSparseBlockMat<double> > jumpX( const GridX2d& g)
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > jumpY( const GridX2d& g)
+Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX2d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -214,7 +220,7 @@ Composite<EllSparseBlockMat<double> > jumpY( const GridX2d& g)
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > jumpX( const GridX3d& g, bc bcx)
+Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX3d& g, bc bcx)
 {
     EllSparseBlockMat<double>  jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
@@ -231,7 +237,7 @@ Composite<EllSparseBlockMat<double> > jumpX( const GridX3d& g, bc bcx)
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > jumpY( const GridX3d& g, bc bcy)
+Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX3d& g, bc bcy)
 {
     EllSparseBlockMat<double>  jy_inner, jy_outer;
     GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
@@ -259,7 +265,7 @@ Composite<EllSparseBlockMat<double> > jumpY( const GridX3d& g, bc bcy)
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > jumpZ( const GridX3d& g, bc bcz)
+Composite<EllSparseBlockMat<double> > jumpZ( const aTopologyX3d& g, bc bcz)
 {
     EllSparseBlockMat<double>  jz;
     jz = jump( 1, g.Nz(), g.hz(), bcz);
@@ -275,7 +281,7 @@ Composite<EllSparseBlockMat<double> > jumpZ( const GridX3d& g, bc bcz)
  *
  * @return A host matrix
  */
-Composite<EllSparseBlockMat<double> > jumpX( const GridX3d& g)
+Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX3d& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -287,7 +293,7 @@ Composite<EllSparseBlockMat<double> > jumpX( const GridX3d& g)
  *
  * @return A host matrix
  */
-Composite<EllSparseBlockMat<double> > jumpY( const GridX3d& g)
+Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX3d& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -299,7 +305,7 @@ Composite<EllSparseBlockMat<double> > jumpY( const GridX3d& g)
  *
  * @return A host matrix
  */
-Composite<EllSparseBlockMat<double> > jumpZ( const GridX3d& g)
+Composite<EllSparseBlockMat<double> > jumpZ( const aTopologyX3d& g)
 {
     return jumpZ( g, g.bcz());
 }
@@ -314,7 +320,7 @@ Composite<EllSparseBlockMat<double> > jumpZ( const GridX3d& g)
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > dx( const GridX3d& g, bc bcx, direction dir = centered)
+Composite<EllSparseBlockMat<double> > dx( const aTopologyX3d& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<double>  dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -331,7 +337,7 @@ Composite<EllSparseBlockMat<double> > dx( const GridX3d& g, bc bcx, direction di
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > dx( const GridX3d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+Composite<EllSparseBlockMat<double> > dx( const aTopologyX3d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 3d derivative in y-direction
@@ -342,7 +348,7 @@ Composite<EllSparseBlockMat<double> > dx( const GridX3d& g, direction dir = cent
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > dy( const GridX3d& g, bc bcy, direction dir = centered)
+Composite<EllSparseBlockMat<double> > dy( const aTopologyX3d& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<double>  dy_inner, dy_outer;
     GridX1d g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
@@ -370,7 +376,7 @@ Composite<EllSparseBlockMat<double> > dy( const GridX3d& g, bc bcy, direction di
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > dy( const GridX3d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+Composite<EllSparseBlockMat<double> > dy( const aTopologyX3d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Create 3d derivative in z-direction
@@ -381,7 +387,7 @@ Composite<EllSparseBlockMat<double> > dy( const GridX3d& g, direction dir = cent
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > dz( const GridX3d& g, bc bcz, direction dir = centered)
+Composite<EllSparseBlockMat<double> > dz( const aTopologyX3d& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat<double>  dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
@@ -399,7 +405,7 @@ Composite<EllSparseBlockMat<double> > dz( const GridX3d& g, bc bcz, direction di
  *
  * @return A host matrix 
  */
-Composite<EllSparseBlockMat<double> > dz( const GridX3d& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
+Composite<EllSparseBlockMat<double> > dz( const aTopologyX3d& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 
 
 

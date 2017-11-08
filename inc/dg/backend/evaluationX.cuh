@@ -5,8 +5,7 @@
 
 
 /*! @file 
-  
-  Function discretization routines
+  @brief Function discretization routines on X-point topology
   */
 namespace dg
 {
@@ -33,7 +32,7 @@ thrust::host_vector<double> evaluate( UnaryOp f, const GridX1d& g)
 ///@cond
 thrust::host_vector<double> evaluate( double (f)(double), const GridX1d& g)
 {
-    return evaluate( f, g.grid());
+    return evaluate( *f, g.grid());
 };
 ///@endcond
 
@@ -41,7 +40,7 @@ thrust::host_vector<double> evaluate( double (f)(double), const GridX1d& g)
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x) on the given grid
- * @tparam BinaryOp Model of Binary Function
+ * @copydoc hide_binary
  * @param f The function to evaluate: f = f(x,y)
  * @param g The 2d grid on which to evaluate f
  *
@@ -50,14 +49,14 @@ thrust::host_vector<double> evaluate( double (f)(double), const GridX1d& g)
             may be constructed during function call.
  */
 template< class BinaryOp>
-thrust::host_vector<double> evaluate( BinaryOp f, const GridX2d& g)
+thrust::host_vector<double> evaluate( const BinaryOp& f, const aTopologyX2d& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double), const GridX2d& g)
+thrust::host_vector<double> evaluate( double(f)(double, double), const aTopologyX2d& g)
 {
-    return evaluate( f, g.grid());
+    return evaluate( *f, g.grid());
 };
 ///@endcond
 
@@ -65,7 +64,7 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const GridX2d& 
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x,y,z) on the given grid
- * @tparam TernaryOp Model of Ternary Function
+ * @copydoc hide_ternary
  * @param f The function to evaluate: f = f(x,y,z)
  * @param g The 3d grid on which to evaluate f
  *
@@ -74,14 +73,14 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const GridX2d& 
             may be constructed during function call.
  */
 template< class TernaryOp>
-thrust::host_vector<double> evaluate( TernaryOp f, const GridX3d& g)
+thrust::host_vector<double> evaluate( const TernaryOp& f, const aTopologyX3d& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double, double), const GridX3d& g)
+thrust::host_vector<double> evaluate( double(f)(double, double, double), const aTopologyX3d& g)
 {
-    return evaluate( f, g.grid());
+    return evaluate( *f, g.grid());
 };
 ///@endcond
 

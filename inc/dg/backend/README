@@ -4,11 +4,6 @@ well as additional utility functions
 Performance hints
 ===========================================
 FIRST: (Small things to do)
-0. Remove the permanent ghostcells in the MPI_Vector class and replace it by copying 
-   values to a vector with ghostcells on demand (e.g. in a matrix - vector multiplication)
-
-   ATTENTION: This might affect *all* current mpi files but only slightly
-   AIM: vectors are easier to handle, less bookkeeping, less error prone
 1. Implement transposition of mpi interpolation for dz.h (explanation further below)
    - transpose interpolation matrices locally
    - first apply collective.gather()
@@ -16,25 +11,9 @@ FIRST: (Small things to do)
 
 2. Implement an mpi version of create::dz and the application of it in mpi_matrix.h (if needed in general_elliptic.h)
 
-SECOND: (memory efficient gpu sparse matrix format)
-0. Change gpu matrix format to something self-made like the current mpi_matrix format (i.e. store blocks only once)
-    AIM: huge memory advantage, should be at least as fast as the current cusp formats, if not faster
-    - it might pay off to improve the data structure and algorithm in mpi_matrix.h a bit first,
-        especially the handling of the boundary terms is a bit messy and the long term approach should be 
-        to separate the  mpi communication from the local matrix-vector multiplication
-    - the mpi_matrix.h and mpi_derivatives.h show the ideas to implement
-        the format and how to then actually create the matrices,
-        also have a look at ell_interpolation.cuh to get an idea of how to implement the gpu kernels
-
 THIRD: (road to MPI + X, where X is all we already have, i.e. OpenMP, MIC, or GPU)
 The general idea is to separate global communication from local parallelization and thus 
 readily reuse the existing, optimized library for the local part
-0. make mpi_vector a template accepting a container class as parameter and generalize the mpi_vector_blas functions falling back to existing local code.
-    AIM: this way e.g. also a thrust::device_vector can be used
-1. replace mpi_precon by mpi_vector 
-    IDEA: the performance gain is not worth the effort, also for gpus manually written kernels would have to be written
-    - rewrite the create::weights function using existing create::weights functions
-    - rewrite the blas2 preconditioner function using existing code
 
 2. implement a general sparse mpi matrix format (unifying the existing mpi_matrix and the mpi-interpolation )
 The idea is that the mpi matrix takes care of the communication and then defers the actual computation 
@@ -44,13 +23,13 @@ to an existing local matrix format.
     column distributed (CD). In the first each node gets the same rows as the vector it holds, in the
     second it gets the same columns as the vector it holds.
     IDEA how to then implement gemv(input, output) algorithm:
-    RD: 1. create a local send buffer and locally gather values from input vector (c) into a send buffer (am Besten nach PID geordnet)
-        2. globally scatter these values into recv buffer (b) 
+    RD: 1. create a local send buffer and locally gather values from input vector (c) into a send buffer (am Besten nach PID geordnet, note that a given value can be sent to several processes -> that's why it's a gather)
+        2. globally scatter these values into recv buffer (b)  (The first two points are a global gather)
         3. then apply the local matrix to that buffer and store result in output vector (a)
 
     CD: 1. apply the local matrix on the input vector and store result in a local send buffer,  (a)
-        2. globally scatter the values in this buffer to a recv buffer and  (b)
-        3. then permute and reduce the recv buffer on double indices and store result in output vector (c)
+        2. globally scatter the values in this buffer to a recv buffer (b) (every value in the result belongs to exactly one line/process)
+        3. then permute and reduce the recv buffer on double indices and store result in output vector (c) 
     
         Transposition is easy: if a RD matrix is transposed you get a CD matrix, also transpose the Collective object (swap scatter and gather maps)
 
@@ -65,8 +44,8 @@ to an existing local matrix format.
     c) A local index map, to map the local buffer indices to local row/col indices
     
     IDEA: how to create such a matrix:
-    If you can, manually create (a), (b), (c) and construct the matrix. This shouldn't be too difficult for 
-    the existing interpolation in dz.h. The current mpi matrix is a row distributed matrix and the communication 
+    If you can, manually create (a), (b), (c) and construct the matrix. 
+    The current mpi matrix is a row distributed matrix and the communication 
     is done by manual MPI_SendRecv calls. This has to (maybe even should) be replaced by a Collective object, which
     internally uses MPI_Alltoallv (If need be, the MPI_Alltoallv might be replaced by MPI_Neighbor_alltoallv in MPI 3)
 

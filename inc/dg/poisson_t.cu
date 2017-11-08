@@ -47,19 +47,21 @@ int main()
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
-    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny);
-    dg::DVec w2d = dg::create::weights( grid);
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
-    std::cout <<std::fixed<< std::setprecision(2)<<std::endl;
-    dg::DVec lhs = dg::evaluate( left, grid), jac(lhs);
-    dg::DVec rhs = dg::evaluate( right, grid);
+    //![doxygen]
+    const dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny);
+    const dg::DVec lhs = dg::evaluate( left, grid);
+    const dg::DVec rhs = dg::evaluate( right, grid);
+    dg::DVec jac(lhs);
+
+    dg::Poisson<dg::aGeometry2d, dg::DMatrix, dg::DVec> poisson( grid, bcxlhs, bcylhs,bcxrhs, bcyrhs );
+    poisson( lhs, rhs, jac);
+    //![doxygen]
+
+    const dg::DVec w2d = dg::create::weights( grid);
+    const dg::DVec eins = dg::evaluate( dg::one, grid);
     const dg::DVec sol = dg::evaluate ( jacobian, grid);
     const dg::DVec variation = dg::evaluate ( variationRHS, grid);
-    dg::DVec eins = dg::evaluate( dg::one, grid);
-
-    dg::Poisson<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> poisson( grid, bcxlhs, bcylhs,bcxrhs, bcyrhs );
-    poisson( lhs, rhs, jac);
-
     std::cout << std::scientific;
     std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
     std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";

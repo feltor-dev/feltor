@@ -8,5 +8,5 @@
 
 /*!@file 
  *
- * This file includes the appropriate headers for parallel derivatives
+ * @brief This file includes the appropriate headers for parallel derivatives
  */
