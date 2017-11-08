@@ -19,16 +19,16 @@ namespace eule
 ///@addtogroup solver
 ///@{
 /**
- * @brief Diffusive terms for Feltor solver
+ * @brief Diffusive terms for Explicit solver
  *
  * @tparam Matrix The Matrix class
  * @tparam container The Vector class 
  */
 
 template<class Geometry, class Matrix, class container>
-struct Rolkar
+struct Implicit
 {
-    Rolkar( const Geometry& g, eule::Parameters p):
+    Implicit( const Geometry& g, eule::Parameters p):
         p(p),
         temp( dg::evaluate(dg::zero, g)),
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered),
@@ -61,7 +61,7 @@ struct Rolkar
 };
 
 template< class Geometry, class Matrix, class container>
-struct Feltor
+struct Explicit
 {
     //typedef std::vector<container> Vector;
     typedef typename dg::VectorTraits<container>::value_type value_type;
@@ -69,7 +69,7 @@ struct Feltor
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 
 
-    Feltor( const Geometry& g, eule::Parameters p);
+    Explicit( const Geometry& g, eule::Parameters p);
 
 
     /**
@@ -98,7 +98,7 @@ struct Feltor
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
-    container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
+    container chi, omega, lambda,gamma_n; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
     container neavg,netilde,nedelta,lognedelta,phiavg,phitilde,phidelta,Niavg; //dont use them as helper
     const container binv;
     const container one;
@@ -109,10 +109,14 @@ struct Feltor
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
 
-    dg::Elliptic< Geometry, Matrix, container > pol,lapperpM; 
-    dg::Helmholtz< Geometry, Matrix, container > invgammaPot,invgammaNU;
-
-    dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
+    dg::Elliptic< Geometry, Matrix, container > lapperpM; 
+    std::vector<container> multi_chi;
+    std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
+    std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_gammaN,multi_gammaPhi;
+    
+    dg::Invert<container> invert_pol,invert_invgamma;
+    dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
+    dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
     
     dg::PoloidalAverage<container, container > polavg; //device int vectors would be better for cuda
 
@@ -125,8 +129,8 @@ struct Feltor
 };
 
 template<class Grid, class Matrix, class container>
-Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p): 
-    chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
+Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p): 
+    chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), gamma_n(chi),
     neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),
     phiavg(chi),phitilde(chi),phidelta(chi),    Niavg(chi),
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
@@ -134,13 +138,11 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
     poisson(g, g.bcx(), g.bcy(), p.bc_x_phi, g.bcy()), //first N/U then phi BCC
-    pol(    g, p.bc_x_phi, g.bcy(), dg::not_normed,          dg::centered, p.jfactor), 
     lapperpM ( g,g.bcx(), g.bcy(),       dg::normed,         dg::centered),
-    invgammaPot( g,p.bc_x_phi, g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
-    invgammaNU(  g,g.bcx(),    g.bcy(),-0.5*p.tau[1]*p.mu[1],dg::centered),
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
-    invert_invgammaN(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
-    invert_invgammaPhi( omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
+    multigrid( g, 3),
+    old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
     polavg(g),
     p(p),
     evec(3),
@@ -153,6 +155,16 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
     profNi(profne)
 {
+    multi_chi= multigrid.project( chi);
+    multi_pol.resize(3);
+    multi_gammaN.resize(3);
+    multi_gammaPhi.resize(3);
+    for( unsigned u=0; u<3; u++)
+    {
+        multi_pol[u].construct(      multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), dg::not_normed, dg::centered, p.jfactor);
+        multi_gammaN[u].construct(   multigrid.grids()[u].get(), g.bcx(),    g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+	multi_gammaPhi[u].construct( multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+    }
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
     initializene(profNi,profne); //ne = Gamma N_i
     dg::blas1::transform(profne,profne, dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); 
@@ -160,43 +172,57 @@ Feltor<Grid, Matrix, container>::Feltor( const Grid& g, eule::Parameters p):
 }
 
 template<class G, class Matrix, class container>
-container& Feltor<G, Matrix, container>::polarisation( const std::vector<container>& y)
+container& Explicit<G, Matrix, container>::polarisation( const std::vector<container>& y)
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (n_i-(bgamp+profamp)) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i n_i
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i n_i ) /B^2
-    pol.set_chi( chi);
-    dg::blas1::pointwiseDivide(v2d,chi,omega);
+    multigrid.project( chi, multi_chi);
+    for( unsigned u=0; u<3; u++)
+    {
+	multi_pol[u].set_chi( multi_chi[u]);
+    }
 
-    invert_invgammaN(invgammaNU,chi,y[1]); //chi= Gamma (Ni-(bgamp+profamp))    
+    old_gammaN.extrapolate( gamma_n);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
+    old_gammaN.update(gamma_n);
+    if(  number[0] == invert_invgamma.get_max())
+	throw dg::Fail( p.eps_gamma);
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi, w2d, omega, v2d);            //Gamma n_i -ne = -nabla chi nabla phi
-        if(  number == invert_pol.get_max())
-            throw dg::Fail( p.eps_pol);
+    old_phi.extrapolate( phi[0]);
+    number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
+    old_phi.update( phi[0]);
+    if(  number[0] == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);
     return phi[0];
 }
 
 template< class G, class Matrix, class container>
-container& Feltor<G, Matrix,container>::compute_psi( container& potential)
+container& Explicit<G, Matrix,container>::compute_psi( container& potential)
 {
-    invert_invgammaPhi(invgammaPot,chi,potential);                 //chi  = Gamma phi
+    old_psi.extrapolate( phi[1]);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
+    old_psi.update( phi[1]);    
+    if(  number[0] == invert_invgamma.get_max())
+	throw dg::Fail( p.eps_gamma);
     poisson.variationRHS(potential, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
+    dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }
 
 template<class G, class Matrix, class container>
-void Feltor<G, Matrix, container>::initializene( const container& src, container& target)
+void Explicit<G, Matrix, container>::initializene( const container& src, container& target)
 { 
-    invert_invgammaN(invgammaNU,target,src); //=ne-1 = Gamma (ni-1)    
-}
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+    if(  number[0] == invert_invgamma.get_max())
+      throw dg::Fail( p.eps_gamma);}
 
 template<class G, class Matrix, class container>
-void Feltor<G, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<G, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
        y[1] := N_i - (p.bgprofamp + p.nprofileamp)
