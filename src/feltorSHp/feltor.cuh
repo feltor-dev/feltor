@@ -426,6 +426,9 @@ void Feltor<G, Matrix, container>::operator()( const std::vector<container>& y, 
         dg::blas1::transform( y[i], n[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //N = N_tilde +(p.bgprofamp + p.nprofileamp)
         dg::blas1::transform(n[i], logn[i], dg::LN<value_type>()); //log(ype)
         dg::blas1::transform(y[i+2], pr[i], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //P = P_tilde +(p.bgprofamp + p.nprofileamp)^2
+	if (p.iso == 1 )    {
+	  dg::blas1::axpby(1.0,n[i],0.0,pr[i]);
+	}
         dg::blas1::transform(pr[i], logpr[i], dg::LN<value_type>()); //log(ype)
         dg::blas1::pointwiseDivide(pr[i], n[i], te[i]);
         dg::blas1::transform(te[i], logte[i], dg::LN<value_type>()); //log(ype)
@@ -503,9 +506,14 @@ void Feltor<G, Matrix, container>::operator()( const std::vector<container>& y, 
         dg::blas1::pointwiseDot(lambda,n[i],omega); // omega = N dy (T-a)
         dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]);  //dt N += tau*mcv*N dy (T-a)     */   
         // K(T N) terms
-        dg::blas2::gemv( poisson.dyrhs(), y[i+2], omega); //lambda = dy (P-a^2)
-        dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]); //dt N += tau*mcv*dy (P-a^2)
- 
+	if (p.iso == 0) {
+	  dg::blas2::gemv( poisson.dyrhs(), y[i+2], omega); //lambda = dy (P-a^2)
+	  dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]); //dt N += tau*mcv*dy (P-a^2)
+	}
+	if (p.iso == 1) {
+	  dg::blas2::gemv( poisson.dyrhs(), y[i], omega); //lambda = dy (P-a^2)
+	  dg::blas1::axpby(p.tau[i]*p.mcv,omega,1.0,yp[i]); //dt N += tau*mcv*dy (P-a^2)
+	}
         // K(T P) terms
         dg::blas2::gemv( poisson.dyrhs(), y[i+2], lambda); //lambda = dy (P-a^2)
         dg::blas1::pointwiseDot(lambda,te[i],omega); //omega =  T dy (P-a^2)
@@ -568,6 +576,12 @@ void Feltor<G, Matrix, container>::operator()( const std::vector<container>& y, 
     dg::blas1::pointwiseDot(lambda,pr[1],omega); // omega = Pi dy(-2 ln(Ti)+ln(Pi))
     dg::blas1::pointwiseDot(omega,chii,omega); //omega =  Pi  chii dy(-2 ln(Ti)+ln(Pi))
     dg::blas1::axpby(2.*p.mcv,omega,1.0,yp[3]);   // dtPi += 2.* mcv* Pi  chii dy(-2 ln(Ti)+ln(Pi))  
+    
+     if (p.iso == 1) {
+        dg::blas1::scal( yp[2], 0.0);
+        dg::blas1::scal( yp[3], 0.0); 
+     }
+     
     t.toc();
 #ifdef MPI_VERSION
     int rank;
