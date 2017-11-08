@@ -134,7 +134,7 @@ struct Explicit
     
     dg::Invert<container> invert_pol,invert_invgamma;
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
-    dg::Extrapolation<container> old_phi, old_psi, old_gammaN, old_chii;
+    dg::Extrapolation<container> old_phi, old_psi, old_gammaN, old_chiia, oldchiib;
     
     const eule::Parameters p;
 
@@ -156,7 +156,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     invert_pol(         omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol),
     invert_invgamma(    omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     multigrid( g, 3),
-    old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi), old_chii( 2, chi),
+    old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi), old_chiia( 2, chi), old_chiib( 2, chi),
     p(p),
     evec(3)
 {
@@ -276,14 +276,14 @@ container& Explicit<G, Matrix,container>::compute_chii(const container& ti,conta
 	//  set up the lhs
         dg::blas2::gemv(lapperpM,potential,lambda); //lambda = - nabla_perp^2 phi
         dg::blas1::scal(lambda,-0.5*p.tau[1]*p.mu[1]); // lambda = 0.5*tau_i*nabla_perp^2 phi 
-	old_chii.extrapolate( chii);
+	old_chiia.extrapolate( chii);
         std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chii, lambda, p.eps_gamma);
-        old_chii.update( chii);
+        old_chiia.update( chii);
         dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
         dg::blas1::pointwiseDot(chii,lambda,lambda);
-	old_chii.extrapolate( chii);
+	old_chiib.extrapolate( chii);
 	number = multigrid.direct_solve( multi_invgamma1, chii, lambda, p.eps_gamma);
-	old_chii.update( chii);
+	old_chiib.update( chii);
     }
     return chii;
 }
