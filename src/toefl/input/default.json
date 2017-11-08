@@ -16,7 +16,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "curvature"  : 0.00015, //magnetic curvature
     "tau"  : 1,        //Ti/Te (only in gyrofluid models)
     "nu_perp"  : 5e-3, //pependicular viscosity
-    "amplitude"  : 1.0,//amplitude of the blob
+    "amplitude"  : 10.0,//amplitude of the blob
     "sigma"  : 10,     //blob variance in units of rho_s
     "posX"  : 0.3,     //blob x-position in units of lx
     "posY"  : 0.5,     //blob y-position in units of ly

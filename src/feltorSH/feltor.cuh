@@ -405,10 +405,10 @@ void Feltor<G, Matrix, container>::operator()( std::vector<container>& y, std::v
     assert( y.size() == 4);
     assert( y.size() == yp.size());
     //transform compute n and logn and energies
-    if (p.iso == 1)    {
-        dg::blas1::scal( y[2], 0.0);
-        dg::blas1::scal( y[3], 0.0); 
-    }
+//     if (p.iso == 1)    {
+//         dg::blas1::scal( y[2], 0.0);
+//         dg::blas1::scal( y[3], 0.0); 
+//     }
     
     for(unsigned i=0; i<4; i++)
     {
