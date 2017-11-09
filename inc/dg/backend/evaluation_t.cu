@@ -27,8 +27,8 @@ const double lx = 2;
 const double ly = 2;
 const double lz = 2;
 
-typedef thrust::device_vector< double>   DVec;
-typedef thrust::host_vector< double>     HVec;
+typedef thrust::device_vector< double>   HVec;
+//typedef thrust::host_vector< double>     HVec;
 
 int main()
 {

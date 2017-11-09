@@ -11,7 +11,10 @@
 
 #include "vector_categories.h"
 #include "vector_traits.h"
-#include "exblas/exblas.fpe.cu"
+
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+#include "exblas/exdot.fpe.cu"
+#endif
 
 
 namespace dg

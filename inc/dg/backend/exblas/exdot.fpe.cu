@@ -2,6 +2,7 @@
  *  Copyright (c) 2016 Inria and University Pierre and Marie Curie 
  *  All rights reserved.
  */
+#include "thrust/device_vector.h"
 
 namespace exblas{
 
@@ -11,6 +12,7 @@ static constexpr uint DIGITS         =  56;
 static constexpr double DELTASCALE   =  72057594037927936.0;  // Assumes K>0
 static constexpr uint F_WORDS        =  20;
 static constexpr uint TSAFE          =  0;
+static constexpr uint NBFPE          =  3;
 
 //Kernel paramters for EXDOT
 static constexpr uint WARP_COUNT               = 16 ;
@@ -19,22 +21,20 @@ static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# t
 static constexpr uint PARTIAL_SUPERACCS_COUNT  = 512; //# of groups; each has a partial SuperAcc
 //Kernel paramters for EXDOTComplete
 static constexpr uint MERGE_SUPERACCS_SIZE     = 128;
-static constexpr uint PARTIAL_WORKGORUP_SIZE   = 39;
 static constexpr uint MERGE_WORKGROUP_SIZE     = 64;
-static constexpr uint MERGE_SUPERACCS_SIZE     = 128;
 
 
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 ////////////////////////////////////////////////////////////////////////////////
-__host__ __device__ 
+__device__ 
 double TwoProductFMA(double a, double b, double *d) {
     double p = a * b;
     *d = fma(a, b, -p);
     return p;
 }
 
-__host__ __device__ 
+__device__ 
 double KnuthTwoSum(double a, double b, double *s) {
     double r = a + b;
     double z = r - a;
@@ -42,13 +42,13 @@ double KnuthTwoSum(double a, double b, double *s) {
     return r;
 }
 // signedcarry in {-1, 0, 1}
-__host__ __device__ 
-long xadd(__shared__ volatile long *sa, long x, uchar *of) {
+__device__ 
+long xadd( long *sa, long x, unsigned char *of) {
     // OF and SF  -> carry=1
     // OF and !SF -> carry=-1
     // !OF        -> carry=0
     //long y = atom_add(sa, x);
-    long y = atomicAdd(sa, x); //not sure if this is the correct CUDA function
+    long y = atomicAdd((int*)sa, (int)x); //not sure if this is the correct CUDA function
     long z = y + x; // since the value sa->superacc[i] can be changed by another work item
 
     // TODO: cover also underflow
@@ -65,7 +65,7 @@ long xadd(__shared__ volatile long *sa, long x, uchar *of) {
 ////////////////////////////////////////////////////////////////////////////////
 // Rounding functions
 ////////////////////////////////////////////////////////////////////////////////
-__host__ __device__
+__device__
 double OddRoundSumNonnegative(double th, double tl) {
     union {
         double d;
@@ -80,8 +80,8 @@ double OddRoundSumNonnegative(double th, double tl) {
     return thdb.d;
 }
 
-__host__ __device__
-int Normalize(__device__ long *accumulator, int *imin, int *imax) {
+__device__
+int Normalize( long *accumulator, int *imin, int *imax) {
     long carry_in = accumulator[*imin] >> DIGITS;
     accumulator[*imin] -= carry_in << DIGITS;
     int i;
@@ -100,8 +100,8 @@ int Normalize(__device__ long *accumulator, int *imin, int *imax) {
     return carry_in < 0;
 }
 
-__host__ __device__
-double Round(__device__ long *accumulator) {
+__device__
+double Round( long *accumulator) {
     int imin = 0;
     int imax = 38;
     int negative = Normalize(accumulator, &imin, &imax);
@@ -150,13 +150,13 @@ double Round(__device__ long *accumulator) {
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
-__host__ __device__
-void AccumulateWord(__shared__ volatile long *sa, int i, long x) {
+__device__
+void AccumulateWord( long *sa, int i, long x) {
     // With atomic superacc updates
     // accumulation and carry propagation can happen in any order,
     // as long as addition is atomic
     // only constraint is: never forget an overflow bit
-    uchar overflow;
+    unsigned char overflow;
     long carry = x;
     long carrybit;
     long oldword = xadd(&sa[i * WARP_COUNT], x, &overflow);
@@ -186,8 +186,8 @@ void AccumulateWord(__shared__ volatile long *sa, int i, long x) {
     }
 }
 
-__host__ __device__
-void Accumulate(__shared__ volatile long *sa, double x) {
+__device__
+void Accumulate( long *sa, double x) {
     if (x == 0)
         return;
 
@@ -211,29 +211,28 @@ void Accumulate(__shared__ volatile long *sa, double x) {
 }
 
 
-template<size_t BLOCK_SIZE>
-__launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
-__global__ //__attribute__((reqd_work_group_size(WORKGROUP_SIZE, 1, 1)))
-void ExDOT(
-    __device__ long *d_PartialSuperaccs,
-    __device__ double *d_a,
+//template<size_t BLOCK_SIZE>
+//__launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
+__global__ void ExDOT(
+    long *d_PartialSuperaccs,
+    const double *d_a,
     const uint inca,
     const uint offseta,
-    __device__ double *d_b,
+    const double *d_b,
     const uint incb,
     const uint offsetb,
     const uint NbElements
 ) {
     __shared__ long l_sa[WARP_COUNT * BIN_COUNT] __attribute__((aligned(8)));
-    __shared__ long *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1));
+    long *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1));
     __shared__ bool l_sa_check[WARP_COUNT];
-    __shared__ bool *l_workingBase_check = l_sa_check + (threadIdx.x & (WARP_COUNT - 1));
+    bool *l_workingBase_check = l_sa_check + (threadIdx.x & (WARP_COUNT - 1));
 
     //Initialize superaccs
     for (uint i = 0; i < BIN_COUNT; i++)
         l_workingBase[i * WARP_COUNT] = 0;
     *l_workingBase_check = false;
-    __synchthreads();
+    __syncthreads();
 
     //Read data from global memory and scatter it to sub-superaccs
     double a[NBFPE] = {0.0};
@@ -338,7 +337,7 @@ void ExDOT(
     #endif
     for(uint i = 0; i != NBFPE; ++i)
         Accumulate(l_workingBase, a[i]);
-    __synchthreads();
+    __syncthreads();
 
     //Merge sub-superaccs into work-group partial-accumulator
     uint pos = threadIdx.x;
@@ -351,7 +350,7 @@ void ExDOT(
         d_PartialSuperaccs[blockIdx.x * BIN_COUNT + pos] = sum;
     }
 
-    __synchthreads();
+    __syncthreads();
     if (pos == 0) {
         int imin = 0;
         int imax = 38;
@@ -366,8 +365,8 @@ template<size_t BLOCK_SIZE>
 __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
 __global__
 void ExDOTComplete(
-    __device__ double *d_Res,
-    __device__ long *d_PartialSuperaccs
+     double *d_Res,
+     long *d_PartialSuperaccs
 ) {
     uint lid = threadIdx.x;
     uint gid = blockIdx.x;
@@ -381,14 +380,14 @@ void ExDOTComplete(
         d_PartialSuperaccs[gid * BIN_COUNT + lid] = sum;
     }
 
-    __synchthreads();
+    __syncthreads();
     if (lid == 0) {
         int imin = 0;
         int imax = 38;
         Normalize(&d_PartialSuperaccs[gid * BIN_COUNT], &imin, &imax);
     }
 
-    __synchthreads();
+    __syncthreads();
     if ((lid < BIN_COUNT) && (gid == 0)) {
         long sum = 0;
 
@@ -397,7 +396,7 @@ void ExDOTComplete(
 
         d_PartialSuperaccs[lid] = sum;
 
-        __synchthreads();
+        __syncthreads();
         if (lid == 0)
             d_Res[0] = Round(d_PartialSuperaccs);
     }
@@ -409,9 +408,11 @@ double exdot(const thrust::device_vector<double>& x1, const thrust::device_vecto
     static long *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
 
     const double *x1_ptr = thrust::raw_pointer_cast( x1.data());
-    EXDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperAccs, x1_ptr, 1,0, x2_ptr,1,0,x1.size());
+    const double *x2_ptr = thrust::raw_pointer_cast( x2.data());
+    //ExDOT<WORKGROUP_SIZE><<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, 1,0, x2_ptr,1,0,x1.size());
+    ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, 1,0, x2_ptr,1,0,x1.size());
     double result;
-    ExDOTComplete<<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( &result, d_PartialSuperAccs );
+    ExDOTComplete<MERGE_WORKGROUP_SIZE><<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( &result, d_PartialSuperaccs );
     return result;
 }
 }//namespace exblas
