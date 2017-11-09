@@ -562,7 +562,7 @@ struct PsipRZ: public aCloneableBinaryFunctor<PsipRZ>
  * @return A magnetic field object
  * @ingroup geom
  */
-TokamakMagneticField createSolovevField( solovev::Parameters gp)
+dg::geo::TokamakMagneticField createSolovevField( dg::geo::solovev::Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, solovev::createPsip(gp), solovev::createIpol(gp));
 }

@@ -18,11 +18,24 @@
 namespace dg{
 namespace geo{
 
+    /*!@class hide_ds_parameters2
+    * @param f The vector to derive
+    * @param g contains result on output (write only)
+    * @note the vector sizes need to equal the grid size in the constructor
+    */
+    /*!@class hide_ds_parameters4
+    * @param alpha Scalar
+    * @param f The vector to derive
+    * @param beta Scalar
+    * @param g contains result on output (write only)
+    * @note the vector sizes need to equal the grid size in the constructor
+    */
+
 /**
 * @brief Class for the evaluation of parallel derivatives
 *
 * This class discretizes the operators 
-\f$ \nabla_\parallel = \mathbf{v}\cdot \nabla = v^\zeta\partial_\zeta + v^\eta\partial_\eta + v^\varphi\partial_\varphi \f$, 
+\f$ \nabla_\parallel = \vec{v}\cdot \nabla = v^\zeta\partial_\zeta + v^\eta\partial_\eta + v^\varphi\partial_\varphi \f$, 
 \f$\nabla_\parallel^\dagger = -\nabla\cdot(\vec v .)\f$ and 
 \f$\Delta_\parallel=-\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$
 in arbitrary coordinates
@@ -46,7 +59,12 @@ struct DS
     
     /**
      * @brief Create the magnetic unit vector field and construct
-     * @copydetails DS(const dg::geo::BinaryVectorLvl0&,const ProductGeometry&,dg::bc,dg::bc,Limiter,dg::norm,dg::direction,double,unsigned,unsigned,bool,bool)
+
+     * @copydoc hide_fieldaligned_physics_parameters
+     * @param no indicate if the symv function should be symmetric (not_normed) or not
+     * @param dir indicate the direction in the bracket operator and in symv
+     * @copydoc hide_fieldaligned_numerics_parameters
+     * @sa \c Fieldaligned
      */
     template <class Limiter>
     DS(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid, 
@@ -61,26 +79,12 @@ struct DS
         construct( m_fa, no, dir);
     }
     /**
-     * @brief Create a \c Fieldaligned object and construct
+     * @brief Use the given vector field to construct
      *
-     * @tparam Limiter Class that can be evaluated on a 2d grid, returns 1 if there
-        is a limiter and 0 if there isn't. 
-        If a field line crosses the limiter in the plane \f$ \phi=0\f$ then the limiter boundary conditions apply. 
-     * @param vec The vector field to integrate
-     * @param grid The grid on which to operate defines the parallel boundary condition in case there is a limiter.
-     * @param bcx Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
-     * @param bcy Defines the interpolation behaviour when a fieldline intersects the boundary box in the perpendicular direction
-     * @param limit Instance of the limiter class (Default is a limiter everywhere, 
-        note that if grid.bcz() is periodic it doesn't matter if there is a limiter or not)
+     * @copydoc hide_fieldaligned_physics_parameters
      * @param no indicate if the symv function should be symmetric (not_normed) or not
      * @param dir indicate the direction in the bracket operator and in symv
-     * @param eps Desired accuracy of the fieldline integrator
-     * @param multiplyX defines the resolution in X of the fine grid relative to grid
-     * @param multiplyY defines the resolution in Y of the fine grid relative to grid
-     * @param dependsOnX indicates, whether the given vector field vec depends on the first coordinate (jump terms are added in symv)
-     * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate (jump terms are added in symv)
-     * @param integrateAll indicates, that all fieldlines of the fine grid should be integrated instead of interpolating it from the coarse grid. 
-     *  Should be true if the streamlines of the vector field cross the domain boudary. 
+     * @copydoc hide_fieldaligned_numerics_parameters
      * @sa \c Fieldaligned
      */
     template<class Limiter>
@@ -122,92 +126,109 @@ struct DS
     }
 
     /**
-    * @brief forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
+    * @brief forward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
     *
-    * @param alpha Scalar
-    * @param f The vector to derive
-    * @param beta Scalar
-    * @param g contains result on output (write only)
-    * @note the vector sizes need to equal the grid size in the constructor
+    * forward derivative \f$ g_i = \alpha \frac{1}{h_z^+}(f_{i+1} - f_{i}) + \beta g_i\f$
+    * @copydoc hide_ds_parameters4
     */
     void forward( double alpha, const container& f, double beta, container& g){
         do_forward( alpha, f, beta, g);
     }
     /**
-    * @brief forward derivative \f$ g_i = \frac{1}{h_z^+}(f_{i+1} - f_{i}) \f$
+    * @brief backward derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
     *
-    * @param f The vector to derive
-    * @param g contains result on output (write only)
-    * @note the vector sizes need to equal the grid size in the constructor
+    * backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
+    * @copydoc hide_ds_parameters4
     */
-    void forward( const container& f, container& g){do_forward(1.,f,0.,g);}
-
-    ///@brief backward derivative \f$ g_i = \alpha \frac{1}{2h_z^-}(f_{i} - f_{i-1}) + \beta g_i \f$
-    ///@copydetails forward(double,const container&,double,container&)
     void backward( double alpha, const container& f, double beta, container& g){
         do_backward( alpha, f, beta, g);
     }
-    ///@brief backward derivative \f$ g_i = \frac{1}{2h_z^-}(f_{i} - f_{i-1}) \f$
-    ///@copydetails forward(const container&,container&)
-    void backward( const container& f, container& g){do_backward(1.,f,0.,g);}
-    ///@brief centered derivative \f$ g_i = \alpha \frac{1}{2h_z}(f_{i+1} - f_{i-1}) + \beta g_i\f$
-    ///@copydetails forward(double,const container&,double,container&)
+    /**
+    * @brief centered derivative \f$ g = \alpha \vec v \cdot \nabla f + \beta g\f$
+    *
+    * centered derivative \f$ g_i = \alpha \frac{1}{2h_z^0}(f_{i+1} - f_{i-1}) + \beta g_i\f$
+    * @copydoc hide_ds_parameters4
+    */
     void centered( double alpha, const container& f, double beta, container& g){
         do_centered( alpha, f, beta, g);
     }
-    ///@brief centered derivative \f$ g_i = \frac{1}{2h_z}(f_{i+1} - f_{i-1})\f$
-    ///@copydetails forward(const container&,container&)
-    void centered( const container& f, container& g){do_centered(1.,f,0.,g);}
+    /**
+    * @brief backward derivative \f$ g = \vec v \cdot \nabla f \f$
+    *
+    * backward derivative \f$ g_i = \frac{1}{2h_z^-}(f_{i} - f_{i-1}) \f$
+    * @copydoc hide_ds_parameters2
+    */
+    void backward( const container& f, container& g){
+        do_backward(1.,f,0.,g);
+    }
+    /**
+    * @brief forward derivative \f$ g = \vec v \cdot \nabla f \f$
+    *
+    * forward derivative \f$ g_i = \frac{1}{h_z^+}(f_{i+1} - f_{i})\f$
+    * @copydoc hide_ds_parameters2
+    */
+    void forward( const container& f, container& g){
+        do_forward(1.,f,0.,g);
+    }
+    /**
+    * @brief centered derivative \f$ g = \vec v \cdot \nabla f \f$
+    *
+    * centered derivative \f$ g_i = \frac{1}{2h_z^0}(f_{i+1} - f_{i-1})\f$
+    * @copydoc hide_ds_parameters2
+    */
+    void centered( const container& f, container& g){
+        do_centered(1.,f,0.,g);
+    }
 
     ///@brief forward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
-    ///@copydetails forward(double,const container&,double,container&)
+    ///@copydoc hide_ds_parameters4
     ///@note forwardDiv is the negative adjoint of backward
     void forwardDiv( double alpha, const container& f, double beta, container& g){
         do_forwardDiv( alpha, f, beta, g, dg::normed);
     }
     ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
-    ///@copydetails forward(double,const container&,double,container&)
+    ///@copydoc hide_ds_parameters4
     ///@note backwardDiv is the negative adjoint of forward
     void backwardDiv( double alpha, const container& f, double beta, container& g){
         do_backwardDiv( alpha, f, beta, g, dg::normed);
     }
-    ///@brief centered divergence \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
-    ///@copydetails forward(double,const container&,double,container&)
+    ///@brief centered divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
+    ///@copydoc hide_ds_parameters4
     ///@note centeredDiv is the negative adjoint of centered
     void centeredDiv(double alpha, const container& f, double beta, container& g){
         do_centeredDiv( alpha, f, beta, g, dg::normed);
     }
-    ///@brief forward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
-    ///@copydetails forward(const container&,container&)
+    ///@brief forward divergence \f$ g = \nabla\cdot(\vec v f)\f$
+    ///@copydoc hide_ds_parameters2
     ///@note forwardDiv is the negative adjoint of backward
     void forwardDiv(const container& f, container& g){
         do_forwardDiv( 1.,f,0.,g, dg::normed);
     }
-    ///@brief backward divergence \f$ g = \alpha \nabla\cdot(\vec v f) + \beta g\f$
-    ///@copydetails forward(const container&,container&)
+    ///@brief backward divergence \f$ g = \nabla\cdot(\vec v f)\f$
+    ///@copydoc hide_ds_parameters2
     ///@note backwardDiv is the negative adjoint of forward
     void backwardDiv(const container& f, container& g){
         do_backwardDiv( 1.,f,0.,g, dg::normed);
     }
-    ///@brief centered divergence \f$ g = -\alpha \nabla\cdot(\vec v f) + \beta g\f$
-    ///@copydetails forward(const container&,container&)
+    ///@brief centered divergence \f$ g = \nabla\cdot(\vec v f) g\f$
+    ///@copydoc hide_ds_parameters2
     ///@note centeredDiv is the negative adjoint of centered
     void centeredDiv(const container& f, container& g){
         do_centeredDiv( 1.,f,0.,g, dg::normed);
     }
 
     /**
-    * @brief Discretizes \f$ \vec v\cdot \nabla f \f$
+    * @brief Discretizes \f$ g = \vec v\cdot \nabla f \f$
     *
-    * dependent on dir redirects to either forward(), backward() or centered()
-    * @copydetails forward(const container&,container&)
+    * dependent on dir given in constructor redirects to either \c forward(), \c backward() or \c centered()
+    * @copydoc hide_ds_parameters2
     */
     void operator()( const container& f, container& g){operator()(1., f, 0., g);}
     /**
     * @brief Discretizes \f$ g = \alpha \vec v\cdot \nabla f + \beta g \f$
     *
-    * dependent on dir redirects to either forward(), backward() or centered()
-    * @copydetails forward(double,const container&,double,container&)
+    * dependent on dir given in constructor redirects to either \c forward(), \c backward() or \c centered()
+    * @copydoc hide_ds_parameters2
     */
     void operator()(double alpha, const container& f, double beta, container& g);
 
@@ -215,31 +236,31 @@ struct DS
     /**
      * @brief Discretizes \f$ g = \nabla\cdot ( \vec v \vec v \cdot \nabla f )\f$ as a symmetric matrix
      *
-     * if direction is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
-     * @copydetails forward(const container&,container&)
+     * if direction given in constructor is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
+     * @copydoc hide_ds_parameters2
      * @note if dependsOnX is false then no jump terms will be added in the x-direction; analogous in y
      */
     void symv( const container& f, container& g){ do_symv( 1., f, 0., g);}
     /**
      * @brief Discretizes \f$ g = \alpha \nabla\cdot ( \vec v \vec v \cdot \nabla f ) + \beta g\f$ as a symmetric matrix
      *
-     * if direction is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
-     * @copydetails forward(double,const container&,double,container&)
+     * if direction given in constructor is centered then centered followed by centeredDiv and adding jump terms is called, else a symmetric forward/backward discretization is chosen.
+     * @copydoc hide_ds_parameters4
      * @note if dependsOnX is false then no jump terms will be added in the x-direction; analogous in y
      */
     void symv( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
     /**
-     * @brief Discretizes \f$ g = \nabla_\parallel^2 f \f$ 
+     * @brief Discretizes \f$ g = (\vec v\cdot \nabla)^2 f \f$ 
      *
-     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h^+h^0} - \frac{f^0}{h^+h^-} + \frac{f^-}{h^-h^0}\right) \f]
-     * @copydetails forward(const container&,container&)
+     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+h_z^0} - \frac{f^0}{h_z^+h_z^-} + \frac{f^-}{h_z^-h_z^0}\right) \f]
+     * @copydoc hide_ds_parameters2
      */
     void dss( const container& f, container& g){ do_dss( 1., f, 0., g);}
     /**
-     * @brief Discretizes \f$ g = \alpha \nabla_\parallel^2 f + \beta g \f$ 
+     * @brief Discretizes \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$ 
      *
-     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h^+h^0} - \frac{f^0}{h^+h^-} + \frac{f^-}{h^-h^0}\right) \f]
-     * @copydetails forward(double,const container&,double,container&)
+     * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+h_z^0} - \frac{f^0}{h_z^+h_z^-} + \frac{f^-}{h_z^-h_z^0}\right) \f]
+     * @copydoc hide_ds_parameters4
      */
     void dss( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
 

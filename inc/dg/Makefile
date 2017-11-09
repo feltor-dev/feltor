@@ -23,7 +23,7 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 	$(MPICC) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
 
 %_mpib: %_mpib.cu
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) -g
+	$(MPICC) $(OPT) $(MPICFLAGS) -DDG_BENCHMARK $< -o $@ $(INCLUDE) -g
 
 bathRZ_t: bathRZ_t.cu 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE)  -g

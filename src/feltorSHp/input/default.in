@@ -4,11 +4,11 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "n" :  3,       //# x-y-polynomials
     "Nx" : 100,     //# grid points in x
     "Ny" : 100,     //# grid points in y
-    "dt" : 3.0,     //time step in units of c_s/rho_s
+    "dt" : 1.0,     //time step in units of c_s/rho_s
     "n_out"  : 3,   //# x-y polynomials in output
     "Nx_out" : 100, //# grid points in x in output fields
     "Ny_out" : 100, //# grid points in y in output fields
-    "itstp"  : 2,   //steps between outputs
+    "itstp"  : 20,   //steps between outputs
     "maxout" : 100, //# outputs excluding first
     "eps_pol"   : 1e-6,   //accuracy of polarisation solver
     "eps_gamma" : 1e-7,   //accuracy of Gamma 

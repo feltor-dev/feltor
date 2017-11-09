@@ -309,6 +309,8 @@ methods directly from source code. This depends on the `doxygen`,
 the folder `path/to/feltor/doc` and open `index.html` (a symbolic link
 to `dg/html/modules.html`) with your favorite browser. Links to the pdf
 writeups can be found, among other places, on the Mainpage.
+Finally, also note the documentations of https://thrust.github.io/doc/modules.html[thrust]
+and https://cusplibrary.github.io/[cusp].
 
 == 3. Acknowledgements
 

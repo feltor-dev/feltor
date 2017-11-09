@@ -320,7 +320,7 @@ dg::geo::TokamakMagneticField createMagField( solovev::Parameters gp)
  * @ingroup geom
  * @attention The header \c taylor.h needs to be included seperately and depends on <a href="http://www.boost.org">boost</a>
  */
-TokamakMagneticField createTaylorField( solovev::Parameters gp)
+dg::geo::TokamakMagneticField createTaylorField( dg::geo::solovev::Parameters gp)
 {
     return TokamakMagneticField( gp.R_0, dg::geo::taylor::createPsip(gp), dg::geo::taylor::createIpol(gp));
 }

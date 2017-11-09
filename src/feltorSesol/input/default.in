@@ -1,9 +1,9 @@
 /* This is a comment: Remember that comments are not conformal 
 with the JSON standard but are allowed only with some specifig JSON parsers. So remove them when you automate the process */
 {
-    "n" :  1,       //# x-y-polynomials
-    "Nx" : 200,     //# grid points in x
-    "Ny" : 200,     //# grid points in y
+    "n" :  3,       //# x-y-polynomials
+    "Nx" : 100,     //# grid points in x
+    "Ny" : 100,     //# grid points in y
     "dt" : 0.5,     //time step in units of c_s/rho_s
     "n_out"  : 1,   //# x-y polynomials in output
     "Nx_out" : 200, //# grid points in x in output fields

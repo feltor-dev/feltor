@@ -444,16 +444,10 @@ struct aMPITopology3d
      */
     MPI_Comm communicator() const{return comm;}
     /**
-     * @brief MPI Cartesian communicator in the first two dimensions
+     * @brief MPI Cartesian communicator in the first two dimensions (x and y)
      * @return 2d Cartesian Communicator
      */
-    MPI_Comm get_perp_comm() const
-    {
-        MPI_Comm planeComm;
-        int remain_dims[] = {true,true,false}; //true true false
-        MPI_Cart_sub( comm, remain_dims, &planeComm);
-        return planeComm;
-    }
+    MPI_Comm get_perp_comm() const {return planeComm;}
     /**
      * @brief The Discrete Legendre Transformation 
      *
@@ -556,14 +550,16 @@ struct aMPITopology3d
     {
         update_local();
         check_division( Nx, Ny, Nz, bcx, bcy, bcz);
+        int remain_dims[] = {true,true,false}; //true true false
+        MPI_Cart_sub( comm, remain_dims, &planeComm);
     }
     ///explicit copy constructor (default)
     ///@param src source
-    aMPITopology3d(const aMPITopology3d& src):g(src.g),l(src.l),comm(src.comm){ }
+    aMPITopology3d(const aMPITopology3d& src):g(src.g),l(src.l),comm(src.comm),planeComm(src.planeComm){ }
     ///explicit assignment operator (default)
     ///@param src source
     aMPITopology3d& operator=(const aMPITopology3d& src){
-        g = src.g; l = src.l; comm = src.comm;
+        g = src.g; l = src.l; comm = src.comm; planeComm = src.planeComm;
         return *this;
     }
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)=0; 
@@ -616,7 +612,7 @@ struct aMPITopology3d
         l = Grid3d(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
     }
     Grid3d g, l; //global grid
-    MPI_Comm comm; //just an integer...
+    MPI_Comm comm, planeComm; //just an integer...
 };
 ///@cond
 int aMPITopology2d::pidOf( double x, double y) const

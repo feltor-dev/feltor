@@ -175,7 +175,7 @@ struct SparseTensor
      */
     T& value( size_t i)
     {
-        if(i>=values_.size() ) values_.resize(i+1);
+        if(i>=values_.size() ) values_.resize(i+1, T());
         return values_[i];
     }
     /**

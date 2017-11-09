@@ -320,7 +320,7 @@ struct Divb
  * @return A magnetic field object
  * @ingroup geom
  */
-TokamakMagneticField createGuentherField( double R_0, double I_0)
+dg::geo::TokamakMagneticField createGuentherField( double R_0, double I_0)
 {
     return TokamakMagneticField( R_0, guenther::createPsip(R_0), guenther::createIpol(I_0));
 }

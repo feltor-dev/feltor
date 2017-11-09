@@ -230,6 +230,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);      //chi =  \mu_i (N_i-(bgamp+profamp)) 
     dg::blas1::transform( chi, chi, dg::PLUS<>( p.mu[1]*(p.bgprofamp + p.nprofileamp))); //mu_i N_i
     dg::blas1::pointwiseDot( chi, binv, chi);
+
     dg::blas1::pointwiseDot( chi, binv, chi);       //(\mu_i N_i ) /B^2
     //apply bpussinesq apporximation in chi
     multigrid.project( one, multi_chi);
