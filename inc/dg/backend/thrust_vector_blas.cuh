@@ -88,7 +88,9 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVecto
     return sum;
 #else
     //return thrust::inner_product( x.begin(), x.end(),  y.begin(), value_type(0));
-    return exblas::exdot( x,y);
+    double sum =  exblas::exdot( x,y);
+    std::cout << " doDOT after\n";
+    return sum;
 #endif
 }
 

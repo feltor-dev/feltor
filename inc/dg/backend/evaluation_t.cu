@@ -56,20 +56,21 @@ int main()
     const HVec w3d = dg::create::weights( g3d);
 
     //test preconditioners
+    std::cout << "Square normalized 1DXnorm ";
     double normX = dg::blas2::dot( h_x, w1d, h_x);
-    double norm2X = dg::blas2::dot( w2d, h_n);
-    double norm3X = dg::blas2::dot( h_z, w3d, h_z);
-
-    std::cout << "Square normalized 1DXnorm "<< normX <<"\n";
+    std::cout << "Hello\n";
+    std::cout << normX<<"\n";
     double solution = (exp(4.) -exp(0))/2.;
     std::cout << "Correct square norm is    "<<solution<<std::endl;
     std::cout << "Relative 1d error is      "<<(normX-solution)/solution<<"\n\n";
 
+    double norm2X = dg::blas2::dot( w2d, h_n);
     std::cout << "Square normalized 2DXnorm "<< norm2X<<"\n";
     double solution2 = (exp(4.)-exp(0))/2.*(exp(4.) -exp(0))/2.;
     std::cout << "Correct square norm is    "<<solution2<<std::endl;
     std::cout << "Relative 2d error is      "<<(norm2X-solution2)/solution2<<"\n\n";
 
+    double norm3X = dg::blas2::dot( h_z, w3d, h_z);
     std::cout << "Square normalized 3DXnorm "<< norm3X<<"\n";
     double solution3 = solution2*solution;
     std::cout << "Correct square norm is    "<<solution3<<std::endl;
