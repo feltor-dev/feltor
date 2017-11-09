@@ -163,7 +163,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     {
         multi_pol[u].construct(      multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), dg::not_normed, dg::centered, p.jfactor);
         multi_gammaN[u].construct(   multigrid.grids()[u].get(), g.bcx(),    g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
-	multi_gammaPhi[u].construct( multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_gammaPhi[u].construct( multigrid.grids()[u].get(), p.bc_x_phi, g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
     dg::blas1::transform(profNi,profNi, dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); 
     initializene(profNi,profne); //ne = Gamma N_i
@@ -181,14 +181,14 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     multigrid.project( chi, multi_chi);
     for( unsigned u=0; u<3; u++)
     {
-	multi_pol[u].set_chi( multi_chi[u]);
+        multi_pol[u].set_chi( multi_chi[u]);
     }
 
     old_gammaN.extrapolate( gamma_n);
     std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
     old_gammaN.update(gamma_n);
     if(  number[0] == invert_invgamma.get_max())
-	throw dg::Fail( p.eps_gamma);
+        throw dg::Fail( p.eps_gamma);
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
     //= Gamma n_i - n_e
     old_phi.extrapolate( phi[0]);
@@ -206,7 +206,7 @@ container& Explicit<G, Matrix,container>::compute_psi( container& potential)
     std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
     old_psi.update( phi[1]);    
     if(  number[0] == invert_invgamma.get_max())
-	throw dg::Fail( p.eps_gamma);
+        throw dg::Fail( p.eps_gamma);
     poisson.variationRHS(potential, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
