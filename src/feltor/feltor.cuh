@@ -182,6 +182,7 @@ struct Explicit
     container source, damping, one;
     container profne, profNi;
     container w3d, v3d;
+    container gamma_n;
 
     std::vector<container> phi, curvphi,curvkappaphi;
     std::vector<container> npe, logn;
@@ -190,11 +191,15 @@ struct Explicit
     //matrices and solvers
     dg::geo::DS<Geometry, IMatrix, Matrix, container> dsDIR_, dsN_;
     dg::Poisson<    Geometry, Matrix, container> poissonN,poissonDIR; 
-    dg::Elliptic<   Geometry, Matrix, container> pol,lapperpN,lapperpDIR;
-    dg::Helmholtz< Geometry, Matrix, container > invgammaDIR, invgammaN;
+    dg::Elliptic<   Geometry, Matrix, container> lapperpN,lapperpDIR;
+    std::vector<container> multi_chi;
+    std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
+    std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_invgammaDIR, multi_invgammaN;
 
-    dg::Invert<container> invert_pol,invert_invgammaN,invert_invgammaPhi;
-
+    dg::Invert<container> invert_pol,invert_invgamma;
+    dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
+    dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
+    
     const feltor::Parameters p;
     const dg::geo::solovev::Parameters gp;
 
@@ -212,26 +217,36 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     poissonN(  g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     //////////the elliptic and Helmholtz operators//////////////////////////
-    pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered, p.jfactor), 
     lapperpN (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     lapperpDIR (   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
-    invgammaDIR(   g, dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered),
-    invgammaN(     g, g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered),
+    multigrid( g, 3),
+    old_phi( 2, dg::evaluate( dg::zero, g)),old_psi( 2, dg::evaluate( dg::zero, g)),old_gammaN( 2, dg::evaluate( dg::zero, g)),
     p(p), gp(gp), evec(5)
 {
     ////////////////////////////init temporaries///////////////////
     dg::blas1::transfer( dg::evaluate( dg::zero, g), chi ); 
     dg::blas1::transfer( dg::evaluate( dg::zero, g), omega ); 
     dg::blas1::transfer( dg::evaluate( dg::zero, g), lambda ); 
+    dg::blas1::transfer( dg::evaluate( dg::zero, g), gamma_n ); 
     dg::blas1::transfer( dg::evaluate( dg::one,  g), one);
     phi.resize(2); phi[0] = phi[1] = chi;
-    curvphi = curvkappaphi = npe = logn = phi;
+    curvphi = curvkappaphi = npe = logn =  phi;
     dsy.resize(4); dsy[0] = dsy[1] = dsy[2] = dsy[3] = chi;
     curvy = curvkappay =dsy;
     //////////////////////////init invert objects///////////////////
     invert_pol.construct(         omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_pol  ); 
-    invert_invgammaN.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
-    invert_invgammaPhi.construct( omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
+    invert_invgamma.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
+    //////////////////////////////init elliptic and helmholtz operators////////////
+    multi_chi = multigrid.project( chi);
+    multi_pol.resize(3);
+    multi_invgammaDIR.resize(3);
+    multi_invgammaN.resize(3);
+    for( unsigned u=0; u<3; u++)
+    {
+        multi_pol[u].construct(           multigrid.grids()[u].get(), dg::DIR, dg::DIR, dg::not_normed, dg::centered, p.jfactor);
+        multi_invgammaDIR[u].construct(   multigrid.grids()[u].get(), dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_invgammaN[u].construct(     multigrid.grids()[u].get(), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+    }
     //////////////////////////////init fields /////////////////////
     dg::geo::TokamakMagneticField mf = dg::geo::createSolovevField(gp);
     dg::blas1::transfer(  dg::pullback(dg::geo::InvB(mf),      g), binv);
@@ -269,31 +284,47 @@ container& Explicit<Geometry, IMatrix, Matrix, container>::polarisation( const s
     dg::blas1::plus( chi, p.mu[1]);
     dg::blas1::pointwiseDot( chi, binv, chi);
     dg::blas1::pointwiseDot( chi, binv, chi);       //chi = (\mu_i n_i ) /B^2
-    pol.set_chi( chi);
-    dg::blas1::pointwiseDivide(v3d,chi,omega);
-    invert_invgammaN(invgammaN,chi,y[1]);           //chi= Gamma (Ni-1)    
-    dg::blas1::axpby( -1., y[0], 1.,chi,chi);       //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi, w3d, omega, v3d);//Gamma n_i -ne = -nabla (chi nabla phi)
-    if(  number == invert_pol.get_max())
-        throw dg::Fail( p.eps_pol);
+    multigrid.project( chi, multi_chi);
+    for( unsigned u=0; u<3; u++)
+    {
+        multi_pol[u].set_chi( multi_chi[u]);
+    }
+    //gamma_n
+    old_gammaN.extrapolate( gamma_n);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaN, gamma_n, y[1], p.eps_gamma);
+    old_gammaN.update( gamma_n);
+    if(  number[0] == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma);
+    //rhs
+    dg::blas1::axpby( -1., y[0], 1.,gamma_n,chi);       //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
+    //polarisation
+    old_phi.extrapolate( phi[0]);
+    number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
+    old_phi.update( phi[0]);
+    if(  number[0] == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);     
     return phi[0];
 }
 
 template< class Geometry, class IMatrix, class Matrix, class container>
 container& Explicit<Geometry, IMatrix, Matrix,container>::compute_psi( const container& potential)
 {
-    invert_invgammaPhi(invgammaDIR,chi,potential);                    //chi  Gamma phi
+    old_psi.extrapolate( phi[1]);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, phi[1], potential, p.eps_gamma);
+    old_psi.update( phi[1]);
     poissonN.variationRHS(potential, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
     dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);                   //psi  Gamma phi - 0.5 u_E^2
+    dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);                   //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::initializene( const container& src, container& target)
 { 
-    invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
+    std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+    if(  number[0] == invert_invgamma.get_max())
+      throw dg::Fail( p.eps_gamma); 
 }
 
 
@@ -311,12 +342,12 @@ double Explicit<G, IMatrix, M, V>::add_parallel_dynamics( const std::vector<V>& 
         if (p.bc==dg::DIR)
         {
             dg::blas1::pointwiseDot(npe[i], y[i+2],chi);      // NU
-        //with analytic expression
-        dsDIR_.centered(chi, omega);                      //ds NU
-        dg::blas1::axpby( -1., omega, 1., yp[i]);         // dtN = dtN - ds U N
-        dg::blas1::pointwiseDot(chi, gradlnB, omega);     // U N ds ln B
-        dg::blas1::axpby( 1., omega, 1., yp[i]);          // dtN = dtN + U N ds ln B
-        //direct with adjoint derivative
+            //with analytic expression
+            dsDIR_.centered(chi, omega);                      //ds NU
+            dg::blas1::axpby( -1., omega, 1., yp[i]);         // dtN = dtN - ds U N
+            dg::blas1::pointwiseDot(chi, gradlnB, omega);     // U N ds ln B
+            dg::blas1::axpby( 1., omega, 1., yp[i]);          // dtN = dtN + U N ds ln B
+            //direct with adjoint derivative
 //             dsDIR_.centeredTD(chi, omega);                      //ds^dagger NU
 //             dg::blas1::axpby( -1., omega, 1., yp[i]);         // dtN = dtN - ds^dagger U N
         }

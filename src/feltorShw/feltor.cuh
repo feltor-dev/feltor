@@ -206,7 +206,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     multigrid.project( chi, multi_chi);
     for( unsigned u=0; u<3; u++)
     {
-	multi_pol[u].set_chi( multi_chi[u]);
+        multi_pol[u].set_chi( multi_chi[u]);
     }
     
     //gamma N_i
@@ -214,7 +214,7 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, gamma_n, y[1], p.eps_gamma);
     old_gammaN.update( gamma_n);
     if(  number[0] == invert_invgamma.get_max())
-	throw dg::Fail( p.eps_gamma);
+        throw dg::Fail( p.eps_gamma);
     dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma N_i - n_e
     
     charge_ = dg::blas2::dot(one,w2d,omega);

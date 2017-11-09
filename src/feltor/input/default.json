@@ -4,14 +4,14 @@
 {
     //----------------------------Space and Time discretization------------
     "n"  : 3,   //(# of x,y-polynomials)
-    "Nx" : 50,  //(grid points in x)
-    "Ny" : 50,  //(grid points in y)
+    "Nx" : 52,  //(grid points in x)
+    "Ny" : 52,  //(grid points in y)
     "Nz" : 16,  //(grid points in z)
     "dt" : 1e-2,//(time step in units c_s/rho_s)
     //-------------------------------Output parameters--------------------
     "n_out" : 3,    //(# of x-y polynomials in output)
-    "Nx_out" : 50,  //(# grid points in output field)
-    "Ny_out" : 50,  //(# grid points in output field)
+    "Nx_out" : 52,  //(# grid points in output field)
+    "Ny_out" : 52,  //(# grid points in output field)
     "Nz_out" : 16,  //(# grid points in output field)
     "itstp"  : 2,   //(steps between outputs)
     "maxout" : 10,  //total # of outputs (excluding first)
@@ -26,7 +26,7 @@
     "tau"         : 0,      //T_i/T_e
     "beta"        : 0,      //Plasma beta
     "nu_perp"     : 1e-2,   //  (perpendicular viscosity)
-    "nu_parallel" : 1,     //  (parallel viscosity)
+    "nu_parallel" : 0.1,     //  (parallel viscosity)
     "resistivity" : 1e-4,   //parallel resistivity
     //---------------------Initial perturbation parameters---------------------
     "amplitude" : 0.01, // (blob amplitude)
