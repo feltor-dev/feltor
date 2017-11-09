@@ -11,6 +11,7 @@
 
 #include "vector_categories.h"
 #include "vector_traits.h"
+#include "exblas/exblas.fpe.cu"
 
 
 namespace dg
@@ -83,7 +84,8 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVecto
         sum += x[i]*y[i];
     return sum;
 #else
-    return thrust::inner_product( x.begin(), x.end(),  y.begin(), value_type(0));
+    //return thrust::inner_product( x.begin(), x.end(),  y.begin(), value_type(0));
+    return exblas::exdot( x,y);
 #endif
 }
 
