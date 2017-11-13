@@ -82,9 +82,9 @@ int main( )
     const dg::DVec v3d = dg::create::inv_volume( g3d);
 
     std::cout << "computing dsDIR" << std::endl;
-    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec>  dsFA( mag, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), rk4eps, 10, 10);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec>  dsFA( mag, g3d, dg::DIR, dg::DIR, dg::geo::FullLimiter(), rk4eps, 50, 50);
     std::cout << "computing dsNEU" << std::endl;
-    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec> dsNUFA( mag, g3d,dg::NEU, dg::NEU, dg::geo::FullLimiter(), rk4eps, 10, 10);
+    dg::geo::Fieldaligned<dg::aProductGeometry3d, dg::IDMatrix, dg::DVec> dsNUFA( mag, g3d,dg::NEU, dg::NEU, dg::geo::FullLimiter(), rk4eps, 50, 50);
 
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds ( dsFA, dg::not_normed, dg::centered), 
         dsNU ( dsNUFA, dg::not_normed, dg::centered);
