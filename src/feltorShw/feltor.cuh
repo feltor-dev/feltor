@@ -177,12 +177,9 @@ container& Explicit<Grid, Matrix, container>::compute_psi( container& potential)
         old_psi.extrapolate( phi[1]);
         std::vector<unsigned> number = multigrid.direct_solve( multi_gammaPhi, phi[1], potential, p.eps_gamma);
         old_psi.update( phi[1]);
-	    poisson.variationRHS(potential, omega); 
-        dg::blas1::pointwiseDot( binv, omega, omega);
-        dg::blas1::pointwiseDot( binv, omega, omega);
-
+        poisson.variationRHS(potential, omega); 
+        dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, omega);        // omega = u_E^2
         dg::blas1::axpby( 1., phi[1], -0.5, omega, phi[1]);   //psi  Gamma phi - 0.5 u_E^2
-
     }
     if (p.modelmode==2)
     {

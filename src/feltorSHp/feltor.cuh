@@ -256,8 +256,7 @@ container& Explicit<G, Matrix,container>::compute_psi(const container& ti,contai
         old_psi.update( phi[1]);
     }
     poisson.variationRHS(potential, omega); // (nabla_perp phi)^2
-    dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::pointwiseDot( binv, omega, uE2);// (nabla_perp phi)^2/B^2
+    dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, uE2);           //  u_E^2
     dg::blas1::axpby( 1., phi[1], -0.5, uE2,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }

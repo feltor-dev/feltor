@@ -208,8 +208,7 @@ container& Explicit<G, Matrix,container>::compute_psi( container& potential)
     if(  number[0] == invert_invgamma.get_max())
         throw dg::Fail( p.eps_gamma);
     poisson.variationRHS(potential, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
+    dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, omega);        // omega = u_E^2
     dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
     return phi[1];    
 }

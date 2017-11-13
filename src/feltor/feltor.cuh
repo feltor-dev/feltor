@@ -67,9 +67,8 @@ struct Implicit
         //Resistivity (consistent density dependency, parallel momentum conserving, quadratic current energy conservation dependency)
         dg::blas1::axpby( 1., x[3], -1, x[2], temp); //U_i - U_e        
         dg::blas1::transform( x[0],temp1, dg::PLUS<>(1.0));
-        dg::blas1::pointwiseDot(temp,temp1,temp); // ne (U_i - U_e)
-        dg::blas1::axpby( -p.c/p.mu[0],temp, 1., y[2]);  //- C/mu_e ne (U_i - U_e)
-        dg::blas1::pointwiseDot(temp,temp1,temp); // ne  ne (U_i - U_e)
+        dg::blas1::pointwiseDot(-p.c/p.mu[0], temp, temp1, 1.0, y[2]); //dt Ue += - C/mu_e ne (U_i - U_e)
+        dg::blas1::pointwiseDot(1.0, temp1, temp1, temp, 0.0, temp); // ne  ne (U_i - U_e)
         dg::blas1::transform( x[1],temp1, dg::PLUS<>(1.0));
         dg::blas1::pointwiseDivide(temp,temp1,temp); //  ne ne/Ni (U_i - U_e)
         dg::blas1::axpby( -p.c/p.mu[1], temp, 1., y[3]);  //- C/mu_i  ne ne/Ni (U_i - U_e)
@@ -286,8 +285,7 @@ container& Explicit<Geometry, IMatrix, Matrix, container>::polarisation( const s
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);       //chi =  \mu_i (n_i-1) 
     dg::blas1::plus( chi, p.mu[1]);
-    dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, chi);       //chi = (\mu_i n_i ) /B^2
+    dg::blas1::pointwiseDot( 1.0, chi, binv, binv, 0.0,chi); //chi = (\mu_i n_i ) /B^2
     multigrid.project( chi, multi_chi);
     for( unsigned u=0; u<3; u++)
     {
@@ -316,10 +314,9 @@ container& Explicit<Geometry, IMatrix, Matrix,container>::compute_psi( const con
     old_psi.extrapolate( phi[1]);
     std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, phi[1], potential, p.eps_gamma);
     old_psi.update( phi[1]);
-    poissonN.variationRHS(potential, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);                   //psi  Gamma phi - 0.5 u_E^2
+    poissonN.variationRHS(potential, omega); 
+    dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, omega);        // omega = u_E^2 
+    dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);        
     return phi[1];    
 }
 
@@ -348,12 +345,11 @@ double Explicit<G, IMatrix, M, V>::add_parallel_dynamics( const std::vector<V>& 
             dg::blas1::pointwiseDot(npe[i], y[i+2],chi);      // NU
             //with analytic expression
             dsDIR_.centered(chi, omega);                      //ds NU
-            dg::blas1::axpby( -1., omega, 1., yp[i]);         // dtN = dtN - ds U N
-            dg::blas1::pointwiseDot(chi, gradlnB, omega);     // U N ds ln B
-            dg::blas1::axpby( 1., omega, 1., yp[i]);          // dtN = dtN + U N ds ln B
-            //direct with adjoint derivative
-//             dsDIR_.centeredTD(chi, omega);                      //ds^dagger NU
-//             dg::blas1::axpby( -1., omega, 1., yp[i]);         // dtN = dtN - ds^dagger U N
+            dg::blas1::pointwiseDot(chi, gradlnB, chi);     // U N ds ln B
+            dg::blas1::axpbypgz(-1., omega, 1., chi, 1., yp[i]);  // dtN += - ds U N +  U N ds ln B
+            //Alternative: direct with adjoint derivative
+//             dsDIR_.centeredDiv(-1, chi, 1., yp[i]);     // dtN+= - ds^dagger U N
+
         }
         if (p.bc==dg::NEU)
         {
@@ -361,24 +357,15 @@ double Explicit<G, IMatrix, M, V>::add_parallel_dynamics( const std::vector<V>& 
             dg::blas1::pointwiseDot(y[i+2], chi, omega);        // U ds N
             dsDIR_.centered(y[i+2], chi);  
             dg::blas1::pointwiseDot(npe[i], chi,chi);           // N ds U
-            dg::blas1::axpby(1.0,chi,1.0,omega,chi);            //ds U N
-            dg::blas1::axpby( -1., chi, 1., yp[i]);             // dtN = dtN - ds U N
-            dg::blas1::pointwiseDot(npe[i], y[i+2], omega);     // U N
-            dg::blas1::pointwiseDot(omega, gradlnB, omega);     // U N ds ln B
-            dg::blas1::axpby( 1., omega, 1., yp[i]);            // dtN = dtN + U N ds ln B
+            dg::blas1::axpbypgz(-1.0, chi, -1.0, omega, 1.0, yp[i]); // dtN += - ds U N
+            dg::blas1::pointwiseDot(1.0, npe[i], y[i+2], gradlnB, 1.0, yp[i]); // dtN += + U N ds ln B
         }
-
-
-        dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);      //U^2
-        dsDIR_.centered(omega, chi);                                 //ds U^2
-        dg::blas1::axpby( -0.5, chi, 1., yp[2+i]);          //dtU = dtU - 0.5 ds U^2
+        //Burgers term
+        dg::blas1::pointwiseDot(y[i+2], y[i+2], omega);      //U^2
+        dsDIR_.centered(-0.5, omega, 1., yp[2+i]);          //dtU += - 0.5 ds U^2
         //parallel force terms
-        dsN_.centered(logn[i], omega);                                                //ds lnN
-        dg::blas1::axpby( -p.tau[i]/p.mu[i], omega, 1., yp[2+i]); //dtU = dtU - tau/(hat(mu))*ds lnN
-
-        dsDIR_.centered(phi[i], omega);                                             //ds psi
-        dg::blas1::axpby( -1./p.mu[i], omega, 1., yp[2+i]);   //dtU = dtU - 1/(hat(mu))  *ds psi  
-
+        dsN_.centered(-p.tau[i]/p.mu[i], logn[i], 1.0, yp[2+i]);   //dtU += - tau/(hat(mu))*ds lnN  
+        dsDIR_.centered(-1./p.mu[i], phi[i], 1.0, yp[2+i]);      //dtU +=  - 1/(hat(mu))  *ds psi  
     }
     //Parallel dissipation
 //     double nu_parallel[] = {-p.mu[0]/p.c, -p.mu[0]/p.c, p.nu_parallel, p.nu_parallel};
@@ -393,10 +380,10 @@ double Explicit<G, IMatrix, M, V>::add_parallel_dynamics( const std::vector<V>& 
         }
         if (p.pardiss==1)
         {
-            dsN_.forward( y[i], omega); 
-            dg::blas1::pointwiseDot( omega, binv, omega);
-            dsN_.backwardDiv(omega,lambda);
-            dg::blas1::pointwiseDivide( lambda, binv, lambda);
+            dsN_.forward( y[i], omega);                         //ds N
+            dg::blas1::pointwiseDot( omega, binv, omega);       //1/B ds N
+            dsN_.backwardDiv(omega,lambda);                     //ds^dagger  1/B ds N
+            dg::blas1::pointwiseDivide( lambda, binv, lambda);  //B ds^dagger  1/B ds N
             dg::blas1::scal( lambda, 0.5*nu_parallel[i]);  //lambda = 0.5 nu_parallel ds^2_f N
             dsN_.backward( y[i], omega); 
             dg::blas1::pointwiseDot( omega, binv, omega);
@@ -408,10 +395,8 @@ double Explicit<G, IMatrix, M, V>::add_parallel_dynamics( const std::vector<V>& 
 
         //compute chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
-        dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
-        dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);  
-        dg::blas1::axpby(0.5*p.mu[i], omega,1., chi); //chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
-
+        dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);  //U^2
+        dg::blas1::axpbypgz(0.5*p.mu[i], omega, 1.0, phi[i], p.tau[i], chi); //chi = (tau (1+lnN_e) + psi + 0.5 mu U^2)
         Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(ds^2 N -ds lnB ds N)
         if( i==0) //only electrons
         {
@@ -533,7 +518,6 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( const std::vect
 
                 dg::blas1::axpby( -p.mu[i],   lambda, 1., yp[i]);       //dtN = dtN - (hat(mu))  K_kappa(N U^2)
                 dg::blas1::axpby( -p.mu[i]/3., omega, 1., yp[2+i]);     //dtU = dtU -  (hat(mu))/3 K_kappa(U^3)
-
             }
             if (p.bc==dg::NEU)
             {
@@ -546,23 +530,17 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( const std::vect
             }                
             vecdotnablaN(curvKappaX, curvKappaY, logn[i], omega);         //K_kappa(ln N)
             dg::blas1::pointwiseDot(y[i+2], omega, omega);                //U K_kappa(ln N)
-            dg::blas1::axpby( -2.*p.tau[i], omega, 1., yp[2+i]);          //dtU = dtU - 2.*tau U K_kappa(lnN)
-                
-            dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);         //dtN = dtN - tau K(N)
-            dg::blas1::axpby( -p.tau[i], curvy[2+i], 1., yp[2+i]);     //dtU = dtU - tau K(U)
+            dg::blas1::axpbypgz( -2.*p.tau[i], omega, -p.tau[i], curvy[2+i], 1., yp[2+i]);    //dtU += - 2.*tau U K_kappa(lnN)- tau K(U)
+            
             dg::blas1::pointwiseDot(npe[i],curvphi[i], omega);         //N K(psi)
-            dg::blas1::axpby( -1., omega, 1., yp[i]);                  //dtN= dtN - N K(psi)
+            dg::blas1::axpbypgz(-p.tau[i], curvy[i], -1., omega, 1., yp[i]);                  //dtN+= - tau K(N) - N K(psi)
                 
             dg::blas1::pointwiseDot( y[i+2], curvkappaphi[i], omega);  //U K_kappa(psi)
-            dg::blas1::axpby( -1., omega, 1., yp[2+i]);               //dtU = dtU -U K_kappa(psi)
-            
-            dg::blas1::axpby( -2.*p.tau[i], curvkappay[2+i], 1., yp[2+i]); // dtU = dtU -2.*tau K_kappa(U)
+            dg::blas1::axpbypgz(-1., omega, -2.*p.tau[i], curvkappay[2+i], 1., yp[2+i]); // dtU += - U K_kappa(psi) -2.*tau K_kappa(U)
             //         div(K_kappa) terms
             dg::blas1::pointwiseDot(y[i+2],divCurvKappa,omega);              // U div(K_kappa)
-            dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);                //dtU = dtU -tau U div(K_kappa)
-            dg::blas1::pointwiseDot(y[i+2],omega,omega);                     // U^2 div(K_kappa)
-            dg::blas1::pointwiseDot(npe[i],omega,omega);                     // N U^2 div(K_kappa)
-            dg::blas1::axpby( -p.mu[i], omega, 1., yp[i]);                //dtN = dtN -hat(mu) N U^2 div(K_kappa)
+            dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);                //dtU += -tau U div(K_kappa)
+            dg::blas1::pointwiseDot(-p.mu[i], y[i+2], npe[i], omega, 1., yp[i]); //dtN += -hat(mu) N U^2 div(K_kappa)
         }
         if (p.curvmode==0)
         {
@@ -570,28 +548,19 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( const std::vect
             vecdotnablaDIR(curvX, curvY,  y[i+2], curvy[2+i]);            //K(U) = K(U)
             vecdotnablaDIR(curvX, curvY, phi[i], curvphi[i]);             //K(phi)
             
-            dg::blas1::pointwiseDot( y[i+2], curvy[2+i], omega);          //U K(U) 
-            dg::blas1::pointwiseDot( y[i+2], omega, chi);                 //U^2 K(U)
-            dg::blas1::pointwiseDot( npe[i], omega, omega);               //N U K(U)
-            
-            dg::blas1::axpby( -p.mu[i], omega, 1., yp[i]);                //dtN = dtN - (hat(mu)) N U K(U)
-            dg::blas1::axpby( -0.5*p.mu[i], chi, 1., yp[2+i]);            //dtU = dtU - 0.5 (hat(mu)) U^2 K(U)
+            dg::blas1::pointwiseDot(-0.5*p.mu[i], y[i+2], y[i+2], curvy[2+i],1., yp[2+i]); //dtU +=- 0.5 (hat(mu)) U^2 K(U)
+            dg::blas1::pointwiseDot(-p.mu[i], npe[i], y[i+2], curvy[2+i], 1., yp[i]); //dtN += - (hat(mu)) N U K(U)
 
             vecdotnablaN(curvX, curvY, logn[i], omega);                   //K(ln N) 
-            dg::blas1::pointwiseDot(y[i+2], omega, omega);                //U K(ln N)
-            dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);             //dtU = dtU - tau U K(lnN)
+            dg::blas1::pointwiseDot(-p.tau[i], y[i+2], omega, 1., yp[2+i]); //dtU += - tau U K(lnN)
             
-            dg::blas1::pointwiseDot( y[i+2], curvy[i], omega);            //U K( N)
-            dg::blas1::pointwiseDot( y[i+2], omega, chi);                 //U^2K( N)
-            dg::blas1::axpby( -0.5*p.mu[i], chi, 1., yp[i]);              //dtN = dtN - 0.5 mu U^2 K(N)
+            dg::blas1::pointwiseDot(-0.5*p.mu[i],  y[i+2], y[i+2], curvy[i], 1., yp[i]);  //dtN += - 0.5 mu U^2 K(N)
 
-            dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);            //dtN = dtN - tau K(N)
-            dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);     //dtU = dtU - 2 tau K(U)
             dg::blas1::pointwiseDot(npe[i],curvphi[i], omega);            //N K(psi)
-            dg::blas1::axpby( -1., omega, 1., yp[i]);                     //dtN= dtN - N K(psi)
+            dg::blas1::axpbypgz( -p.tau[i], curvy[i], -1., omega, 1., yp[i]); //dtN+= - tau K(N) - N K(psi)
 
             dg::blas1::pointwiseDot( y[i+2], curvphi[i], omega);          //U K(phi)
-            dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                  //dtU = dtU -0.5 U K(psi)
+            dg::blas1::axpbypgz(-2.*p.tau[i], curvy[2+i], -0.5, omega, 1., yp[2+i]);   //dtU += - 2 tau K(U) -0.5 U K(psi)
         }
     }
     //parallel dynamics
