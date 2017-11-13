@@ -32,6 +32,7 @@ struct Implicit
     {
         using dg::geo::solovev::Psip;
         dg::blas1::transfer( dg::evaluate( dg::zero, g), temp);
+        dg::blas1::transfer( dg::evaluate( dg::zero, g), temp1);
         dg::blas1::transfer( dg::pullback( dg::geo::GaussianDamping(Psip(gp), gp.psipmaxcut, gp.alpha), g), dampgauss_);
     }
 
@@ -63,10 +64,15 @@ struct Implicit
                 dg::blas1::axpby( nu_parallel[i+2], temp, 1., y[i+2]); 
             }
         }
-        //Resistivity
-        dg::blas1::axpby( 1., x[3], -1, x[2], temp); //U_i - U_e
-        dg::blas1::axpby( -p.c/p.mu[0],temp, 1., y[2]);  //- C/mu_e (U_i - U_e)
-        dg::blas1::axpby( -p.c/p.mu[1], temp, 1., y[3]);  //- C/mu_i (U_i - U_e)
+        //Resistivity (consistent density dependency, parallel momentum conserving, quadratic current energy conservation dependency)
+        dg::blas1::axpby( 1., x[3], -1, x[2], temp); //U_i - U_e        
+        dg::blas1::transform( x[0],temp1, dg::PLUS<>(1.0));
+        dg::blas1::pointwiseDot(temp,temp1,temp); // ne (U_i - U_e)
+        dg::blas1::axpby( -p.c/p.mu[0],temp, 1., y[2]);  //- C/mu_e ne (U_i - U_e)
+        dg::blas1::pointwiseDot(temp,temp1,temp); // ne  ne (U_i - U_e)
+        dg::blas1::transform( x[1],temp1, dg::PLUS<>(1.0));
+        dg::blas1::pointwiseDivide(temp,temp1,temp); //  ne ne/Ni (U_i - U_e)
+        dg::blas1::axpby( -p.c/p.mu[1], temp, 1., y[3]);  //- C/mu_i  ne ne/Ni (U_i - U_e)
         //damping
         for( unsigned i=0; i<y.size(); i++){
            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);
@@ -81,7 +87,7 @@ struct Implicit
   private:
     const feltor::Parameters p;
     const dg::geo::solovev::Parameters gp;
-    container temp;
+    container temp,temp1;
     container dampgauss_;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perpN,LaplacianM_perpDIR;
     dg::geo::DS<Geometry, IMatrix, Matrix, container> dsN_,dsDIR_;
@@ -493,12 +499,10 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( const std::vect
     double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w3d, omega);   //= 0.5 mu_i N_i u_E^2
     energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1]; 
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1];
-    //// the resistive dissipative energy
-    dg::blas1::pointwiseDot( npe[0], y[2], chi); //N_e U_e 
-    dg::blas1::pointwiseDot( 1., npe[1], y[3], -1., chi);  //N_i U_i - N_e U_e
+    //// resistive energy (consistent density, momentum conservation, quadratic current in energy)
     dg::blas1::axpby( -1., y[2], 1., y[3], omega); //omega  = - U_e + U_i   
-    double Dres = -p.c*dg::blas2::dot(omega, w3d, chi); //- C*(N_i U_i + N_e U_e)(U_i - U_e)
-    
+    dg::blas1::pointwiseDivide(omega,npe[0],omega); // omega = N_e (U_i - U_e)
+    double Dres = -p.c*dg::blas2::dot(omega, w3d, omega); //- C*(N_e (U_i - U_e))^2
     for( unsigned i=0; i<2; i++)
     {
         //ExB dynamics
