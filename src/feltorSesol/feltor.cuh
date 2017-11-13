@@ -98,7 +98,7 @@ struct Explicit
     container& compute_psi( container& potential);
     container& polarisation( const std::vector<container>& y); //solves polarisation equation
 
-    container chi, omega, lambda,gamma_n; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
+    container chi, omega, lambda; //!!Attention: chi and omega are helper variables and may be changed at any time and by any method!!
     container neavg,netilde,nedelta,lognedelta,phiavg,phitilde,phidelta,Niavg; //dont use them as helper
     const container binv;
     const container one;
@@ -130,7 +130,7 @@ struct Explicit
 
 template<class Grid, class Matrix, class container>
 Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p): 
-    chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), gamma_n(chi),
+    chi( dg::evaluate( dg::zero, g)), omega(chi),  lambda(chi), 
     neavg(chi),netilde(chi),nedelta(chi),lognedelta(chi),
     phiavg(chi),phitilde(chi),phidelta(chi),    Niavg(chi),
     binv( dg::evaluate( dg::LinearX( p.mcv, 1.), g) ),
@@ -184,9 +184,9 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
         multi_pol[u].set_chi( multi_chi[u]);
     }
 
-    old_gammaN.extrapolate( gamma_n);
+    old_gammaN.extrapolate( chi);
     std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
-    old_gammaN.update(gamma_n);
+    old_gammaN.update(chi);
     if(  number[0] == invert_invgamma.get_max())
         throw dg::Fail( p.eps_gamma);
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);               //chi=  Gamma (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))

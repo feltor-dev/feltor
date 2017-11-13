@@ -107,7 +107,7 @@ struct Explicit
     const container w2d, v2d;
     std::vector<container> phi;
     std::vector<container> npe, logn; 
-    container gamma_n,lhs,profne,profNi;
+    container lhs,profne,profNi;
 
     //matrices and solvers
     dg::Poisson< Geometry, Matrix, container> poisson; 
@@ -140,7 +140,6 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     one( dg::evaluate( dg::one, g)),    
     w2d( dg::create::weights(g)), v2d( dg::create::inv_weights(g)), 
     phi( 2, chi), npe(phi), logn(phi),
-    gamma_n(chi),
     lhs(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.sourcew,-1.0,0.0,1.0),g)),
     profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.invkappa),g)),
     profNi(profne),
@@ -210,12 +209,12 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     }
     
     //gamma N_i
-    old_gammaN.extrapolate( gamma_n);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, gamma_n, y[1], p.eps_gamma);
-    old_gammaN.update( gamma_n);
+    old_gammaN.extrapolate( chi);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
+    old_gammaN.update( chi);
     if(  number[0] == invert_invgamma.get_max())
         throw dg::Fail( p.eps_gamma);
-    dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma N_i - n_e
+    dg::blas1::axpby( -1., y[0], 1.,chi, omega); //omega = a_i\Gamma N_i - n_e
     
     charge_ = dg::blas2::dot(one,w2d,omega);
     
@@ -240,12 +239,12 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     }
     
     //gamma N_i
-    old_gammaN.extrapolate( gamma_n);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, gamma_n, y[1], p.eps_gamma);
-    old_gammaN.update( gamma_n);
+    old_gammaN.extrapolate( chi);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
+    old_gammaN.update( chi);
     if(  number[0] == invert_invgamma.get_max())
 	throw dg::Fail( p.eps_gamma);
-    dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma N_i - n_e
+    dg::blas1::axpby( -1., y[0], 1., chi, omega); //omega = a_i\Gamma N_i - n_e
     
     
     charge_ = dg::blas2::dot(one,w2d,omega);
@@ -268,12 +267,12 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     }
     
     //gamma N_i
-    old_gammaN.extrapolate( gamma_n);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, gamma_n, y[1], p.eps_gamma);
-    old_gammaN.update( gamma_n);
+    old_gammaN.extrapolate( chi);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, chi, y[1], p.eps_gamma);
+    old_gammaN.update( chi);
     if(  number[0] == invert_invgamma.get_max())
 	throw dg::Fail( p.eps_gamma);
-    dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma N_i - n_e
+    dg::blas1::axpby( -1., y[0], 1., chi, omega); //omega = a_i\Gamma N_i - n_e
     
     charge_ = dg::blas2::dot(one,w2d,omega);
     
@@ -295,14 +294,14 @@ container& Explicit<Grid, Matrix, container>::polarisation( const std::vector<co
     }
     
     //gamma N_i
-    old_gammaN.extrapolate( gamma_n);
+    old_gammaN.extrapolate( omega);
     dg::blas1::transform( npe[1], chi, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
-    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, gamma_n, chi, p.eps_gamma);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_gammaN, omega, chi, p.eps_gamma);
     dg::blas1::transform( npe[0], chi, dg::PLUS<>( -(p.bgprofamp + p.nprofileamp)));
-    old_gammaN.update( gamma_n);
+    old_gammaN.update( omega);
     if(  number[0] == invert_invgamma.get_max())
 	throw dg::Fail( p.eps_gamma);
-    dg::blas1::axpby( -1.,chi, 1., gamma_n, omega); //omega = a_i\Gamma N_i - n_e
+    dg::blas1::axpby( -1.,chi, 1., omega, omega); //omega = a_i\Gamma N_i - n_e
     
     charge_ = dg::blas2::dot(one,w2d,omega);
     
