@@ -18,13 +18,11 @@
     //-------------------------------Algorithmic parameters---------------------
     "eps_pol"    : 1e-5, //( stop for polarisation)   
     "jumpfactor" : 1, //jumpfactor € [0.01,1]
-    "eps_maxwell": 1e-6, //( stop for induction equ.) 
     "eps_gamma"  : 1e-6, //( stop for Gamme operator) 
     "eps_time"   : 1e-9, //( stop for time inversion) 
     //----------------------Physical parameters----------------------------
     "mu"          : -0.00272121, //(-m_e/m_i) -0.000544617, -0.000272121, -0.000181372
     "tau"         : 0,      //T_i/T_e
-    "beta"        : 0,      //Plasma beta
     "nu_perp"     : 1e-2,   //  (perpendicular viscosity)
     "nu_parallel" : 0.1,     //  (parallel viscosity)
     "resistivity" : 1e-4,   //parallel resistivity

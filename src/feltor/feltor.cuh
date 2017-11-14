@@ -236,7 +236,7 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     dsy.resize(4); dsy[0] = dsy[1] = dsy[2] = dsy[3] = chi;
     curvy = curvkappay =dsy;
     //////////////////////////init invert objects///////////////////
-    invert_pol.construct(         omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_pol  ); 
+    invert_pol.construct(        omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_pol  ); 
     invert_invgamma.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
     //////////////////////////////init elliptic and helmholtz operators////////////
     multi_chi = multigrid.project( chi);
