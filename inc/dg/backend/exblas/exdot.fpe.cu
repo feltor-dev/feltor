@@ -6,7 +6,7 @@
 
 namespace exblas{
 
-typedef long INTEGER;
+typedef long long int INTEGER;
 
 static constexpr uint BIN_COUNT      =  39;
 static constexpr uint KRX            =  8;                 // High-radix carry-save bits
@@ -43,14 +43,24 @@ double KnuthTwoSum(double a, double b, double *s) {
     *s = (a - (r - z)) + (b - z);
     return r;
 }
+__device__ INTEGER atomicAdd( INTEGER* address, INTEGER val)
+{
+    unsigned long long int* address_as_ull =
+        (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull;
+
+    old = atomicCAS(address_as_ull, old,
+                      (unsigned long long int)(val + (INTEGER)old));
+    //assume that bit patterns don't change when casting
+    return (INTEGER)(old);
+}
 // signedcarry in {-1, 0, 1}
-__device__ 
-INTEGER xadd( INTEGER *sa, INTEGER x, unsigned char *of) {
+__device__ INTEGER xadd( INTEGER *sa, INTEGER x, unsigned char *of) {
     // OF and SF  -> carry=1
     // OF and !SF -> carry=-1
     // !OF        -> carry=0
     //INTEGER y = atom_add(sa, x);
-    INTEGER y = atomicAdd((unsigned long long*)sa, (unsigned long long)x); //not sure if this is the correct CUDA function
+    INTEGER y = atomicAdd(sa, x); 
     INTEGER z = y + x; // since the value sa->superacc[i] can be changed by another work item
 
     // TODO: cover also underflow
@@ -425,7 +435,8 @@ double exdot(const thrust::device_vector<double>& x1, const thrust::device_vecto
     for( unsigned i=0; i<10; i++)
         std::cout << d_PartialSuperaccsV[i]<<" ";
     cudaDeviceSynchronize();
-    return result[0];
+    double sum = result[0];
+    return sum;
 }
 }//namespace exblas
 
