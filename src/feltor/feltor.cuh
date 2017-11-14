@@ -70,7 +70,7 @@ struct Implicit
         dg::blas1::pointwiseDot(1.0, temp1, temp1, temp, 0.0, temp); // ne  ne (U_i - U_e)
         dg::blas1::transform( x[1],temp1, dg::PLUS<>(1.0));
         dg::blas1::pointwiseDivide(temp,temp1,temp); //  ne ne/Ni (U_i - U_e)
-        dg::blas1::axpby( -p.c/p.mu[1], temp, 1., y[3]);  //- C/mu_i  ne ne/Ni (U_i - U_e)
+        dg::blas1::axpby( -p.c/p.mu[1], temp, 1., y[3]);  //dt Ui  += - C/mu_i  ne ne/Ni (U_i - U_e)
         //damping
         for( unsigned i=0; i<y.size(); i++){
            dg::blas1::pointwiseDot( dampgauss_, y[i], y[i]);

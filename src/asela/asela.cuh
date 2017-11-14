@@ -546,12 +546,10 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
     double Uapar = 0.5*p.beta*dg::blas2::dot( one, w3d, omega); // Uapar = 0.5 beta |nabla_\perp Aparallel|^2
     energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1]; 
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1]; evec[5] = Uapar;
-    //// the resistive dissipative energy
-    dg::blas1::pointwiseDot( npe[0], u[0], chi); //N_e U_e 
-    dg::blas1::pointwiseDot( 1., npe[1], u[1], -1., chi);  //N_i U_i - N_e U_e
+    // resistive energy (consistent density, momentum conservation, quadratic current in energy)
     dg::blas1::axpby( -1., u[0], 1., u[1], omega); //omega  = - U_e + U_i   
-    double Dres = -p.c*dg::blas2::dot(omega, w3d, chi); //- C*(N_i U_i + N_e U_e)(U_i - U_e)
-
+    dg::blas1::pointwiseDivide(omega,npe[0],omega); // omega = N_e (U_i - U_e)
+    double Dres = -p.c*dg::blas2::dot(omega, w3d, omega); //- C*(N_e (U_i - U_e))^2
     for( unsigned i=0; i<2; i++)
     {
         //Here we use K(Apar) instead of K_nablaB (Apar) (?)
@@ -651,12 +649,15 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
     double Dpar_plus_perp = add_parallel_dynamics( y, yp); 
     ediff_= Dpar_plus_perp + Dres;
 
+    //Resistivity (consistent density dependency, parallel momentum conserving, quadratic current energy conservation dependency)
+    dg::blas1::axpby( 1., u[1], -1, u[0], omega); //U_i - U_e
+    dg::blas1::pointwiseDot(-p.c/p.mu[0], npe[0], omega, 1.0, yp[2]); //dt we += - C/mu_e ne (U_i - U_e)    
+    dg::blas1::pointwiseDivide(omega,npe[1],omega);
+    dg::blas1::pointwiseDot(-p.c/p.mu[1], npe[0], npe[0], omega, 1.0, yp[3]); //dt wi += - C/mu_i  ne ne/Ni (U_i - U_e)
+    
+    
     for( unsigned i=0; i<2; i++)
     {
-        //Resistivity (explicit)
-        dg::blas1::axpby( 1., u[1], -1, u[0], omega); //U_i - U_e
-        dg::blas1::axpby( -p.c/p.mu[i], omega, 1., yp[i+2]);  //- C/mu_e (U_i - U_e)
-        
         //damping 
         dg::blas1::pointwiseDot( damping, yp[i], yp[i]);
         dg::blas1::pointwiseDot( damping, yp[i+2], yp[i+2]); 
