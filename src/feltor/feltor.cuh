@@ -313,6 +313,8 @@ container& Explicit<Geometry, IMatrix, Matrix,container>::compute_psi( const con
     old_psi.extrapolate( phi[1]);
     std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, phi[1], potential, p.eps_gamma);
     old_psi.update( phi[1]);
+    if(  number[0] == invert_invgamma.get_max())
+      throw dg::Fail( p.eps_gamma); 
     poissonN.variationRHS(potential, omega); 
     dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, omega);        // omega = u_E^2 
     dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);        
@@ -449,7 +451,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( const std::vect
     double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w3d, omega);   //= 0.5 mu_i N_i u_E^2
     energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1]; 
     evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1];
-    //// resistive energy (consistent density, momentum conservation, quadratic current in energy)
+    // resistive energy (consistent density, momentum conservation, quadratic current in energy)
     dg::blas1::axpby( -1., y[2], 1., y[3], omega); //omega  = - U_e + U_i   
     dg::blas1::pointwiseDivide(omega,npe[0],omega); // omega = N_e (U_i - U_e)
     double Dres = -p.c*dg::blas2::dot(omega, w3d, omega); //- C*(N_e (U_i - U_e))^2

@@ -240,10 +240,16 @@ struct Asela
     //matrices and solvers
     dg::geo::DS<Geometry, IMatrix, Matrix, container> dsDIR_,dsN_;
     dg::Poisson< Geometry, Matrix, container > poissonN,poissonDIR; 
-    dg::Elliptic<  Geometry, Matrix, container  > pol,lapperpN,lapperpDIR; //note the host vector
-    dg::Helmholtz< Geometry, Matrix, container  > maxwell, invgammaDIR, invgammaN;
-    dg::Invert<container> invert_maxwell, invert_pol, invert_invgammaN,invert_invgammaNW,invert_invgammaA, invert_invgammaPhi;
-
+    dg::Elliptic<  Geometry, Matrix, container  > lapperpN,lapperpDIR; //note the host vector    
+    
+    std::vector<container> multi_chi;
+    std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
+    std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_maxwell, multi_invgammaDIR, multi_invgammaN; 
+    
+    dg::Invert<container> invert_maxwell, invert_pol, invert_invgamma;
+    dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
+    dg::Extrapolation<container> old_phi, old_psi, old_gammaN, old_gammaNW, old_Apar, old_gammaApar;
+    
     const asela::Parameters p;
     const dg::geo::solovev::Parameters gp;
 
@@ -255,18 +261,20 @@ struct Asela
 
 template<class Grid, class IMatrix, class Matrix, class container>
 Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo::solovev::Parameters gp): 
-    dsDIR_( dg::geo::createSolovevField(gp), g, dg::DIR, dg::DIR, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, 10, 10, true, true, true, 2.*M_PI/(double)p.Nz ),
-    dsN_( dg::geo::createSolovevField(gp), g, g.bcx(), g.bcy(), dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, 10, 10, true, true, true, 2.*M_PI/(double)p.Nz),
+    dsDIR_( dg::geo::createSolovevField(gp), g, dg::DIR, dg::DIR, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, 10, 10, true, true, false, 2.*M_PI/(double)p.Nz ),
+    dsN_( dg::geo::createSolovevField(gp), g, g.bcx(), g.bcy(), dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, 10, 10, true, true, false, 2.*M_PI/(double)p.Nz),
     //////////the poisson operators ////////////////////////////////////////
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     //////////the elliptic and Helmholtz operators//////////////////////////
-    pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered, p.jfactor), 
+//     pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered, p.jfactor), 
     lapperpN (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     lapperpDIR (   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
-    maxwell(       g, dg::DIR, dg::DIR, 1., dg::centered), //sign is already correct!
-    invgammaDIR(   g, dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered),
-    invgammaN(     g, g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered),
+//     maxwell(       g, dg::DIR, dg::DIR, 1., dg::centered), //sign is already correct!
+//     invgammaDIR(   g, dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered),
+//     invgammaN(     g, g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered),
+    multigrid( g, 3),
+    old_phi( 2, dg::evaluate( dg::zero, g)),old_psi( 2, dg::evaluate( dg::zero, g)), old_gammaN( 2, dg::evaluate( dg::zero, g)), old_gammaNW( 2, dg::evaluate( dg::zero, g)), old_Apar( 2, dg::evaluate( dg::zero, g)), old_gammaApar( 2, dg::evaluate( dg::zero, g)), 
     p(p), gp(gp), evec(6)
 { 
     ////////////////////////////init temporaries///////////////////
@@ -282,12 +290,22 @@ Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p, dg:
     dsy.resize(4); dsy[0] = dsy[1] = dsy[2] = dsy[3] = chi;
     curvy = curvkappay =dsy;
     //////////////////////////init invert objects///////////////////
-    invert_pol.construct(         omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_pol  ); 
-    invert_maxwell.construct(     omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_maxwell ); 
-    invert_invgammaN.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
-    invert_invgammaNW.construct(  omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
-    invert_invgammaA.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
-    invert_invgammaPhi.construct( omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
+    invert_pol.construct(        omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_pol  ); 
+    invert_maxwell.construct(    omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_maxwell ); 
+    invert_invgamma.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma); 
+    //////////////////////////////init elliptic and helmholtz operators////////////
+    multi_chi = multigrid.project( chi);
+    multi_pol.resize(3);
+    multi_maxwell.resize(3);
+    multi_invgammaDIR.resize(3);
+    multi_invgammaN.resize(3);
+    for( unsigned u=0; u<3; u++)
+    {
+        multi_pol[u].construct(           multigrid.grids()[u].get(), dg::DIR, dg::DIR, dg::not_normed, dg::centered, p.jfactor);
+        multi_maxwell[u].construct(       multigrid.grids()[u].get(), dg::DIR, dg::DIR, 1., dg::centered);
+        multi_invgammaDIR[u].construct(   multigrid.grids()[u].get(), dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered);
+        multi_invgammaN[u].construct(     multigrid.grids()[u].get(), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
+    }
     //////////////////////////////init fields /////////////////////
     dg::geo::TokamakMagneticField mf = dg::geo::createSolovevField(gp);
     dg::blas1::transfer(  dg::pullback(dg::geo::InvB(mf),            g), binv);
@@ -326,16 +344,28 @@ container& Asela<Geometry, IMatrix, Matrix, container>::polarisation( const std:
 {
     dg::blas1::axpby( p.mu[1], y[1], 0, chi);        //chi =  \mu_i (n_i-1) 
     dg::blas1::plus( chi, p.mu[1]);
-    dg::blas1::pointwiseDot( chi, binv, chi);
-    dg::blas1::pointwiseDot( chi, binv, chi);        //chi = (\mu_i n_i ) /B^2
-    pol.set_chi( chi);
-    dg::blas1::pointwiseDivide(v3d,chi,omega);
+    dg::blas1::pointwiseDot( 1.0, chi, binv, binv, 0.0,chi); //chi = (\mu_i n_i ) /B^2
 
-    invert_invgammaN(invgammaN,chi,y[1]);             //chi= Gamma (Ni-1)
+    multigrid.project( chi, multi_chi);
+    for( unsigned u=0; u<3; u++)
+    {
+        multi_pol[u].set_chi( multi_chi[u]);
+    }
+
+    
+    old_gammaN.extrapolate( chi);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaN, chi, y[1], p.eps_gamma); //chi= Gamma (Ni-1)
+    old_gammaN.update( chi);
+    if(  number[0] == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma);
+    //rhs
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);        //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
-    unsigned number = invert_pol( pol, phi[0], chi, w3d, omega, v3d); //Gamma n_i -ne = -nabla (chi nabla phi)
-    if(  number == invert_pol.get_max())
-        throw dg::Fail( p.eps_pol);
+    //polarisation
+    old_phi.extrapolate( phi[0]);
+    number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
+    old_phi.update( phi[0]);
+    if(  number[0] == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);   
     return phi[0];
 }
 
@@ -346,49 +376,73 @@ container& Asela<Geometry, IMatrix, Matrix, container>::induct(const std::vector
     {
         dg::blas1::axpby( p.beta/p.mu[0], npe[0], 0., chi); //chi = beta/mu_e N_e
         dg::blas1::axpby(- p.beta/p.mu[1],  npe[1], 1., chi); //chi =beta/mu_e N_e-beta/mu_i  N_i
-        maxwell.set_chi(chi);
+        multigrid.project( chi, multi_chi);
+        for( unsigned u=0; u<3; u++)
+        {
+            multi_maxwell[u].set_chi( multi_chi[u]);
+        }
 
         dg::blas1::pointwiseDot( npe[0], y[2], chi);                 //chi     = n_e w_e
         dg::blas1::pointwiseDot( npe[1], y[3], lambda);               //lambda = n_i w_i
         dg::blas1::axpby( -1.,lambda , 1., chi);  //chi = -n_i w_i + n_e w_e
         //maxwell = (lap_per - beta*(N_i/mu_i - n_e/mu_e)) A_parallel 
         //chi=n_e w_e -N_i w_i
-        unsigned number = invert_maxwell( maxwell, apar[0], chi); //omega equals a_parallel
-        if( number == invert_maxwell.get_max())
-            throw dg::Fail( p.eps_maxwell);
+        
+        //induction
+        old_Apar.extrapolate( apar[0]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_maxwell, apar[0], chi, p.eps_maxwell);
+        old_Apar.update( apar[0]);
+        if(  number[0] == invert_maxwell.get_max())
+            throw dg::Fail( p.eps_maxwell);  
     }
     if (p.flrmode == 1)
     {
         dg::blas1::axpby( p.beta/p.mu[0], npe[0], 0., chi); //chi = beta/mu_e N_e
-        maxwell.set_chi(chi);
+        multigrid.project( chi, multi_chi);
+        for( unsigned u=0; u<3; u++)
+        {
+            multi_maxwell[u].set_chi( multi_chi[u]);
+        }
 
-        dg::blas1::pointwiseDot( npe[1], y[3], chi);               //lambda = N_i w_i
-        invert_invgammaNW(invgammaDIR,lambda,chi);             //chi= Gamma (Ni wi)
+        dg::blas1::pointwiseDot( npe[1], y[3], chi);               //chi = N_i w_i
+        old_gammaNW.extrapolate( lambda);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, lambda,chi, p.eps_gamma); //lambda= Gamma (Ni wi)
+        old_gammaNW.update( lambda);
+        if(  number[0] == invert_invgamma.get_max())
+            throw dg::Fail( p.eps_gamma);
         dg::blas1::pointwiseDot( npe[0], y[2], chi);                 //chi     = n_e w_e
         dg::blas1::axpby( -1.,lambda , 1., chi);  //chi = - Gamma (n_i w_i) + n_e w_e
         //maxwell = (lap_per + beta*( n_e/mu_e)) A_parallel 
         //chi=n_e w_e -Gamma (N_i w_i )
-        unsigned number = invert_maxwell( maxwell, apar[0], chi); //omega equals a_parallel
-        if( number == invert_maxwell.get_max())
-            throw dg::Fail( p.eps_maxwell);
+        //induction
+        old_Apar.extrapolate( apar[0]);
+        number = multigrid.direct_solve( multi_maxwell, apar[0], chi, p.eps_maxwell);
+        old_Apar.update( apar[0]);
+        if(  number[0] == invert_maxwell.get_max())
+            throw dg::Fail( p.eps_maxwell);  
     }
     return apar[0];
 }
 template<class Geometry, class IMatrix, class Matrix, class container>
 container& Asela<Geometry, IMatrix, Matrix,container>::compute_psi( container& potential)
 {
-    invert_invgammaPhi(invgammaDIR,chi,potential);                    //chi  Gamma phi
-    poissonN.variationRHS(potential, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::pointwiseDot( binv, omega, omega);
-    dg::blas1::axpby( 1., chi, -0.5, omega,phi[1]);             //psi  Gamma phi - 0.5 u_E^2
-    return phi[1];    
+    old_psi.extrapolate( phi[1]);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, phi[1], potential, p.eps_gamma);
+    old_psi.update( phi[1]);
+    if(  number[0] == invert_invgamma.get_max())
+      throw dg::Fail( p.eps_gamma); 
+    poissonN.variationRHS(potential, omega); 
+    dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, omega);        // omega = u_E^2 
+    dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);        
+    return phi[1];  
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Asela<Geometry, IMatrix, Matrix, container>::initializene( const container& src, container& target)
 { 
-    invert_invgammaN(invgammaN,target,src); //=ne-1 = Gamma (ni-1)    
+    std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+    if(  number[0] == invert_invgamma.get_max())
+      throw dg::Fail( p.eps_gamma);
 }
 
 template<class G, class IMatrix, class M, class V>
@@ -523,7 +577,14 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
     }
     //compute A_parallel via induction and compute U_e and U_i from it
     if (p.beta!=0.) apar[0] = induct(y); //computes a_par and needs correct npe
-    if (p.flrmode==1) invert_invgammaA(invgammaDIR,apar[1] ,apar[0] );             //chi= Gamma (Ni-1)
+//     if (p.flrmode==1) invert_invgammaA(invgammaDIR,apar[1] ,apar[0] );             //chi= Gamma (Ni-1)
+    if (p.flrmode==1) {
+        old_gammaApar.extrapolate( apar[1]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, apar[1], apar[0] , p.eps_gamma);
+        old_gammaApar.update( apar[1]);
+        if(  number[0] == invert_invgamma.get_max())
+            throw dg::Fail( p.eps_gamma); 
+    }
     if (p.flrmode==0) dg::blas1::axpby(1.0,apar[0],0.,apar[1]);
 
     //calculate U from Apar and w
