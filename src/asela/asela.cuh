@@ -68,18 +68,16 @@ struct Implicit
             dg::blas2::gemv( LaplacianM_perpN, x[i], temp);
             dg::blas2::gemv( LaplacianM_perpN, temp, y[i]);
             dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
-            //dissipation acts not on u!
+            //dissipation acts on w!
             dg::blas2::gemv( LaplacianM_perpDIR, x[i+2], temp);
             dg::blas2::gemv( LaplacianM_perpDIR, temp, y[i+2]);
-            dg::blas1::scal( y[i+2], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
-            //dissipation acts not on u!
-            if (p.pardiss==0) 
-            {
-                dg::blas2::symv(dsN_, x[i],temp);
-                dg::blas1::axpby( nu_parallel[i], temp, 1., y[i]); 
-                dg::blas2::symv(dsDIR_, x[i+2],temp);
-                dg::blas1::axpby( nu_parallel[i+2], temp, 1., y[i+2]); 
-            }
+            dg::blas1::scal( y[i+2], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ w) 
+            
+            dg::blas2::symv(dsN_, x[i],temp);
+            dg::blas1::axpby( nu_parallel[i], temp, 1., y[i]); 
+            //dissipation acts not on w!
+            dg::blas2::symv(dsDIR_, x[i+2],temp);
+            dg::blas1::axpby( nu_parallel[i+2], temp, 1., y[i+2]); 
         }
         //cut contributions to boundary now with damping on all 4 quantities
         for( unsigned i=0; i<y.size(); i++)
@@ -459,25 +457,8 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         //Parallel dissipation
         double nu_parallel[] = {p.nu_parallel, p.nu_parallel, p.nu_parallel, p.nu_parallel};
         //Compute parallel dissipation and dissipative energy for N///////////////
-        if (p.pardiss==0)
-        {
-            dg::blas2::symv(dsN_,y[i],lambda); // lambda= ds^2 N
-            dg::blas1::axpby( nu_parallel[i], lambda,  0., lambda,lambda);  //lambda = nu_parallel ds^2 N
-        }
-        if (p.pardiss==1)
-        {
-            dsN_.forward( y[i], omega); 
-            dg::blas1::pointwiseDot( omega, binv, omega);
-            dsN_.backwardDiv(omega,lambda);
-            dg::blas1::pointwiseDivide( lambda, binv, lambda);
-            dg::blas1::scal( lambda, 0.5*nu_parallel[i]);  //lambda = 0.5 nu_parallel ds^2_f N
-            dsN_.backward( y[i], omega); 
-            dg::blas1::pointwiseDot( omega, binv, omega);
-            dsN_.forwardDiv(omega,chi);
-            dg::blas1::pointwiseDivide( chi, binv, chi);
-            dg::blas1::axpby( 0.5*nu_parallel[i],chi, 1., lambda,lambda);    //lambda = 0.5 nu_parallel ds^2_f N + 0.5 nu_parallel ds^2_b N
-            dg::blas1::axpby( 1., lambda, 1., yp[i]);  //add to yp //dtN += 0.5 nu_parallel ds^2_f N + 0.5 nu_parallel ds^2_b N
-        }           
+        dg::blas2::symv(dsN_,y[i],lambda); // lambda= ds^2 N
+        dg::blas1::axpby( nu_parallel[i], lambda,  0., lambda,lambda);  //lambda = nu_parallel ds^2 N
         //compute chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
@@ -497,25 +478,8 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         dg::blas2::gemv( lapperpN, lambda, omega);//nabla_RZ^4 N_e
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w3d, omega);  
 
-        if (p.pardiss==0)
-        {
-            dg::blas2::symv(dsDIR_, y[i+2],lambda);
-            dg::blas1::axpby( nu_parallel[i+2], lambda,  0., lambda,lambda); 
-        }
-        if (p.pardiss==1)
-        {
-            dsDIR_.forward( u[i], omega); 
-            dg::blas1::pointwiseDot( omega, binv, omega);
-            dsDIR_.backwardDiv(omega,lambda);
-            dg::blas1::pointwiseDivide( lambda, binv, lambda);
-            dg::blas1::scal( lambda, 0.5*nu_parallel[i+2]); //lambda = 0.5 nu_parallel ds^2_f U
-            dsDIR_.backward( u[i], omega); 
-            dg::blas1::pointwiseDot( omega, binv, omega);
-            dsDIR_.forwardDiv(omega,chi);
-            dg::blas1::pointwiseDivide( chi, binv, chi);
-            dg::blas1::axpby( 0.5*nu_parallel[i+2], chi, 1., lambda,lambda);  //lambda = 0.5 nu_parallel ds^2_f U + 0.5 nu_parallel ds^2_b U
-            dg::blas1::axpby( 1., lambda, 1., yp[i+2]); //0.5 nu_parallel ds^2_f U + 0.5 nu_parallel ds^2_b U
-        }   
+        dg::blas2::symv(dsDIR_, y[i+2],lambda);
+        dg::blas1::axpby( nu_parallel[i+2], lambda,  0., lambda,lambda); 
 
         //compute omega = NU
         Dpar[i+2] = z[i]*p.mu[i]*dg::blas2::dot(un[i], w3d, lambda);      //Z*N*U nu_para *(ds^2 U ) or Z*N*U nu_para *(ds^2 w )
