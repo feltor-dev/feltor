@@ -478,7 +478,7 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         dg::blas1::pointwiseDot(poissonu2[i],binv,poissonu2[i]);       //-1/B [Apar,U^2]_RZ
 
         //Parallel dynamics (compute ds UN, ds U^2, ds psi, ds ln N) 
-        if (p.bc==dg::NEU)
+    if (p.bc==dg::NEU)
 	{
 	  dsN_.centered(y[i], dsun[i]);                                                 // ds N
 	  dg::blas1::pointwiseDot(dsun[i],u[i], dsun[i]);                               // U ds N
@@ -496,17 +496,16 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         dsDIR_.centered(phi[i], dsphi[i]);                                               // ds psi
         
         //add em Poisson bracket terms to the parallel derivatives to obtain ds^b   
-        dg::blas1::axpby(p.beta,poissonlogn[i],1.,dslogn[i]);// ds^b logN = ds logN -beta/B [Apar,logN ]
-        dg::blas1::axpby(p.beta,poissonun[i]  ,1.,dsun[i]);  // ds^b UN   = ds UN   -beta/B [Apar,UN ]
+//         dg::blas1::axpby(p.beta,poissonlogn[i],1.,dslogn[i]);// ds^b logN = ds logN -beta/B [Apar,logN ]
+//         dg::blas1::axpby(p.beta,poissonun[i]  ,1.,dsun[i]);  // ds^b UN   = ds UN   -beta/B [Apar,UN ]
         dg::blas1::axpby(p.beta,poissonu2[i]  ,1.,dsu2[i]);  // ds^b U^2  = ds U^2  -beta/B [Apar,U^2 ] 
 
         //Add terms  ds^b terms       
-        dg::blas1::pointwiseDot(un[i], dsblnB[i], omega);                   // U N ds^b ln B
-        dg::blas1::axpby(  1. , omega, 1., yp[i]);                          // dtN = dtN + U N ds^b ln B
-        dg::blas1::axpby( -1., dsun[i], 1., yp[i]);                         // dtN = dtN - ds^b U N
-        dg::blas1::axpby( -p.tau[i]/p.mu[i], dslogn[i], 1., yp[2+i]);       // dtw = dtw - tau/(hat(mu))*ds^b lnN
-        dg::blas1::axpby( -1./p.mu[i],dsphi[i], 1., yp[2+i]);               // dtw = dtw - 1/(hat(mu))  *ds^b psi  
-        dg::blas1::axpby( -0.5, dsu2[i], 1., yp[2+i]);                      // dtw = dtw - 0.5 ds U^2
+        dg::blas1::pointwiseDot(1., un[i], dsblnB[i], 1., yp[i]);                    // dtN += U N ds^b ln B
+        dg::blas1::axpbypgz( -1., dsun[i],-p.beta, poissonun[i] ,1., yp[i]);         // dtN += - ds^b U N = -(ds UN   -beta/B [Apar,UN ])
+        dg::blas1::axpbypgz( -p.tau[i]/p.mu[i], dslogn[i], -p.tau[i]/p.mu[i]*p.beta, poissonlogn[i], 1., yp[2+i]); // dtw += -tau/hat(mu)*ds^b lnN = -tau/hat(mu)*(ds logN-beta/B [Apar,logN])
+        dg::blas1::axpby( -1./p.mu[i],dsphi[i], 1., yp[2+i]);                        // dtw = dtw - 1/(hat(mu))  *ds^b psi  
+        dg::blas1::axpbypgz( -0.5, dsu2[i], -0.5*p.beta,poissonu2[i], 1., yp[2+i]);  // dtw +=- 0.5 ds U^2 - 0.5*(ds U^2  -beta/B [Apar,U^2 ])
 
         //Parallel dissipation
         double nu_parallel[] = {p.nu_parallel, p.nu_parallel, p.nu_parallel, p.nu_parallel};
@@ -515,10 +514,9 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         dg::blas1::axpby( nu_parallel[i], lambda,  0., lambda,lambda);  //lambda = nu_parallel ds^2 N
         //compute chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
-        dg::blas1::axpby(1.,phi[i],p.tau[i], chi); //chi = (tau_e(1+lnN_e)+phi)
-        dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);  
-        dg::blas1::axpby(0.5*p.mu[i], omega,1., chi); //chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
-        Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi) nu_para *(ds^2 N -ds lnB ds N)
+        dg::blas1::pointwiseDot(u[i],u[i], omega);  
+        dg::blas1::axpbypgz(1.5*p.mu[i], omega, 1.0, phi[i], p.tau[i], chi); //chi = (tau (1+lnN_e) + psi + 1.5 mu U^2)
+        Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi + 1.5 mu U^2) nu_para *(ds^2 N -ds lnB ds N)
         
         if( i==0) //only electrons
         {
@@ -614,8 +612,8 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
     for( unsigned i=0; i<2; i++)
     {
         //Here we use K(Apar) instead of K_nablaB (Apar) (?)
-        vecdotnablaDIR(curvX, curvY,  apar[i], dsblnB[i]);     //K(apar) = K(apar)
-        dg::blas1::axpby(  1.,  dslnB,p.beta,  dsblnB[i],dsblnB[i]);  // ds ln B + beta K(apar) 
+        vecdotnablaDIR(curvX, curvY,  apar[i], dsblnB[i]);              // = [ln B , apar] = K_nablaB(apar) = K(apar)
+        dg::blas1::axpby(  1.,  dslnB, p.beta,  dsblnB[i], dsblnB[i]);  // ds^b ln B = ds ln B + beta K(apar) 
         
         //ExB dynamics
         poissonN( y[i],   phi[i], yp[i]);                           //[N-1,phi]_RZ
@@ -645,9 +643,9 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
             }
             if (p.bc==dg::NEU)
             {        
-		dg::blas1::pointwiseDot( u[i], curvkappay[2+i], omega);         //U K_kappa(U)
-		dg::blas1::pointwiseDot( u[i], omega, chi);                     //chi = U^2 K_kappa(U)
-		dg::blas1::pointwiseDot( npe[i], omega, omega);                 //omega = N U K_kappa(U) 
+                dg::blas1::pointwiseDot( u[i], curvkappay[2+i], omega);         //U K_kappa(U)
+                dg::blas1::pointwiseDot( u[i], omega, chi);                     //chi = U^2 K_kappa(U)
+                dg::blas1::pointwiseDot( npe[i], omega, omega);                 //omega = N U K_kappa(U) 
                 dg::blas1::axpby( -2.*p.mu[i], omega, 1., yp[i]);              // dtN = dtN - 2 (hat(mu)) N U K_kappa(U)
                 dg::blas1::axpby( -p.mu[i], chi, 1., yp[2+i]);                 // dtU = dtU -  (hat(mu)) U^2 K_kappa(U)
                 

@@ -23,7 +23,7 @@
     "eps_time"   : 1e-9, //( stop for time inversion) 
     //----------------------Physical parameters----------------------------
     "mu"          : -0.000544617, //(-m_e/m_i) -0.000544617, -0.000272121, -0.000181372
-    "tau"         : 1,      //T_i/T_e
+    "tau"         : 0,      //T_i/T_e
     "beta"        : 5e-6,      //Plasma beta 5e-6 tjk, 4e-3 compass
     "nu_perp"     : 1e-3,   //  (perpendicular viscosity)
     "nu_parallel" : 1,     //  (parallel viscosity)

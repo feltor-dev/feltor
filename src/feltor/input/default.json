@@ -23,7 +23,7 @@
     //----------------------Physical parameters----------------------------
     "mu"          : -0.00272121, //(-m_e/m_i) -0.000544617, -0.000272121, -0.000181372
     "tau"         : 0,      //T_i/T_e
-    "nu_perp"     : 1e-2,   //  (perpendicular viscosity)
+    "nu_perp"     : 1e-3,   //  (perpendicular viscosity)
     "nu_parallel" : 0.1,     //  (parallel viscosity)
     "resistivity" : 1e-4,   //parallel resistivity
     //---------------------Initial perturbation parameters---------------------
