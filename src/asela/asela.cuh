@@ -267,12 +267,8 @@ Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p, dg:
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
     //////////the elliptic and Helmholtz operators//////////////////////////
-//     pol(           g, dg::DIR, dg::DIR,   dg::not_normed,    dg::centered, p.jfactor), 
     lapperpN (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     lapperpDIR (   g, dg::DIR, dg::DIR,   dg::normed,        dg::centered),
-//     maxwell(       g, dg::DIR, dg::DIR, 1., dg::centered), //sign is already correct!
-//     invgammaDIR(   g, dg::DIR, dg::DIR, -0.5*p.tau[1]*p.mu[1], dg::centered),
-//     invgammaN(     g, g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered),
     multigrid( g, 3),
     old_phi( 2, dg::evaluate( dg::zero, g)),old_psi( 2, dg::evaluate( dg::zero, g)), old_gammaN( 2, dg::evaluate( dg::zero, g)), old_gammaNW( 2, dg::evaluate( dg::zero, g)), old_Apar( 2, dg::evaluate( dg::zero, g)), old_gammaApar( 2, dg::evaluate( dg::zero, g)), 
     p(p), gp(gp), evec(6)
