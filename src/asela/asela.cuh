@@ -505,8 +505,8 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         //compute chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::pointwiseDot(u[i],u[i], omega);  
-        dg::blas1::axpbypgz(1.5*p.mu[i], omega, 1.0, phi[i], p.tau[i], chi); //chi = (tau (1+lnN_e) + psi + 1.5 mu U^2)
-        Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi + 1.5 mu U^2) nu_para ds^2 N 
+        dg::blas1::axpbypgz(0.5*p.mu[i], omega, 1.0, phi[i], p.tau[i], chi); //chi = (tau (1+lnN_e) + psi + 0.5 mu U^2)
+        Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi + 0.5 mu U^2) nu_para ds^2 N 
         
         if( i==0) //only electrons
         {
@@ -624,45 +624,30 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
             if (p.bc==dg::DIR)
             {
                 dg::blas1::pointwiseDot(u2[i],npe[i],chi); // N U^2
-                vecdotnablaN(curvKappaX, curvKappaY, chi, lambda);      //K_kappa( N U^2)
+                vecdotnablaN(curvKappaX, curvKappaY, chi, lambda);     //K_kappa( N U^2)
                 dg::blas1::pointwiseDot(u2[i],u[i],chi); // U^3
                 vecdotnablaN(curvKappaX, curvKappaY, chi, omega);      //K_kappa( U^3)
 
-                dg::blas1::axpby( -p.mu[i], lambda, 1., yp[i]);               //dtN = dtN - (hat(mu))  K_kappa(N U^2)
-                dg::blas1::axpby( -p.mu[i]/3., omega, 1., yp[2+i]);           //dtw = dtw -  (hat(mu))/3 K_kappa(U^3)
+                dg::blas1::axpby( -p.mu[i],   lambda, 1., yp[i]);             //dtN += - (hat(mu))   K_kappa(N U^2)
+                dg::blas1::axpby( -p.mu[i]/3., omega, 1., yp[2+i]);           //dtw += - (hat(mu))/3 K_kappa(U^3)
             }
             if (p.bc==dg::NEU)
             {        
-                dg::blas1::pointwiseDot( u[i], curvkappay[2+i], omega);         //U K_kappa(U)
-                dg::blas1::pointwiseDot( u[i], omega, chi);                     //chi = U^2 K_kappa(U)
-                dg::blas1::pointwiseDot( npe[i], omega, omega);                 //omega = N U K_kappa(U) 
-                dg::blas1::axpby( -2.*p.mu[i], omega, 1., yp[i]);              // dtN = dtN - 2 (hat(mu)) N U K_kappa(U)
-                dg::blas1::axpby( -p.mu[i], chi, 1., yp[2+i]);                 // dtU = dtU -  (hat(mu)) U^2 K_kappa(U)
-                
-                dg::blas1::pointwiseDot( y[i+2], curvkappay[i], omega);        // U K_kappa( N)
-                dg::blas1::pointwiseDot( y[i+2], omega, chi);                  // U^2 K_kappa( N)
-                dg::blas1::axpby( -p.mu[i], chi, 1., yp[i]);                   // dtN = dtN - mu U^2 K_kappa(N)
+                dg::blas1::pointwiseDot( -2.*p.mu[i], u[i], npe[i],curvkappay[2+i], 1., yp[i]);  // dtN += - 2 (hat(mu)) N U K_kappa(U)
+                dg::blas1::pointwiseDot( -p.mu[i], u2[i], curvkappay[i],   1., yp[i]);           // dtN += - mu U^2 K_kappa(N)
+                dg::blas1::pointwiseDot( -p.mu[i], u2[i], curvkappay[2+i], 1., yp[2+i]);         // dtw += -  (hat(mu)) U^2 K_kappa(U)                
             }
-            vecdotnablaN(curvKappaX, curvKappaY, logn[i], omega);   //K_kappa(ln N)
-            dg::blas1::pointwiseDot(u[i], omega, omega);            //U K_kappa(ln N)
-            dg::blas1::axpby( -2.*p.tau[i], omega, 1., yp[2+i]);    //dtw = dtw - 2.*tau U K_kappa(lnN)
+            vecdotnablaN(curvKappaX, curvKappaY, logn[i], omega);         //K_kappa(ln N)
+            dg::blas1::pointwiseDot( -2.*p.tau[i], u[i], omega, 1., yp[2+i]);    //dtw += - 2.*tau U K_kappa(lnN)
                 
-            dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);         //dtN = dtN - tau K(N)
-            dg::blas1::axpby( -p.tau[i], curvy[2+i], 1., yp[2+i]);     //dtw = dtw - tau K(U)
-            dg::blas1::pointwiseDot(npe[i],curvphi[i], omega);         //N K(psi)
-            dg::blas1::axpby( -1., omega, 1., yp[i]);                  //dtN= dtN - N K(psi)
-                
-            dg::blas1::pointwiseDot( u[i], curvkappaphi[i], omega);  //U K_kappa(psi)
-            dg::blas1::axpby( -1., omega, 1., yp[2+i]);               //dtw = dtw -U K(psi)
+            dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);                 //dtN += - tau K(N)
+            dg::blas1::axpbypgz( -p.tau[i], curvy[2+i],  -2.*p.tau[i], curvkappay[2+i], 1., yp[2+i]); //dtw += - tau K(U) -2.*tau K_kappa(U)
+            dg::blas1::pointwiseDot( -1., npe[i], curvphi[i], 1., yp[i]);      //dtN +=  - N K(psi)                
+            dg::blas1::pointwiseDot( -1., u[i], curvkappaphi[i], 1., yp[2+i]); //dtw +=  - U K(psi)            
             
-            dg::blas1::axpby( -2.*p.tau[i], curvkappay[2+i], 1., yp[2+i]); // dtw = dtw -2.*tau K_kappa(U)
-            
-            //  div(K_kappa) terms
-            dg::blas1::pointwiseDot(u[i],divCurvKappa,omega);              // U div(K_kappa)
-            dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);                //dtw = dtw -tau U div(K_kappa)
-            dg::blas1::pointwiseDot(u[i],omega,omega);                     // U^2 div(K_kappa)
-            dg::blas1::pointwiseDot(npe[i],omega,omega);                     // N U^2 div(K_kappa)
-            dg::blas1::axpby( -p.mu[i], omega, 1., yp[i]);                //dtw = dtw -hat(mu) N U^2 div(K_kappa)
+            // div(K_kappa) terms
+            dg::blas1::pointwiseDot( -p.tau[i],u[i], divCurvKappa, 1., yp[2+i]);       // dtw += - tau U div(K_kappa)            
+            dg::blas1::pointwiseDot( -p.mu[i], u2[i],npe[i],divCurvKappa, 1., yp[i]);  // dtw += - hat(mu) N U^2 div(K_kappa)
         }
         if (p.curvmode==0) 
         {
@@ -702,8 +687,7 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
     dg::blas1::axpby( 1., u[1], -1, u[0], omega); //U_i - U_e
     dg::blas1::pointwiseDot(-p.c/p.mu[0], npe[0], omega, 1.0, yp[2]); //dt we += - C/mu_e ne (U_i - U_e)    
     dg::blas1::pointwiseDivide(omega,npe[1],omega);
-    dg::blas1::pointwiseDot(-p.c/p.mu[1], npe[0], npe[0], omega, 1.0, yp[3]); //dt wi += - C/mu_i  ne ne/Ni (U_i - U_e)
-    
+    dg::blas1::pointwiseDot(-p.c/p.mu[1], npe[0], npe[0], omega, 1.0, yp[3]); //dt wi += - C/mu_i  ne ne/Ni (U_i - U_e)    
     
     for( unsigned i=0; i<2; i++)
     {

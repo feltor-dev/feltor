@@ -381,8 +381,8 @@ double Explicit<G, IMatrix, M, V>::add_parallel_dynamics( const std::vector<V>& 
         //compute chi = (tau_e(1+lnN_e)+phi + 0.5 mu U^2)
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::pointwiseDot(y[i+2],y[i+2], omega);  //U^2
-        dg::blas1::axpbypgz(1.5*p.mu[i], omega, 1.0, phi[i], p.tau[i], chi); //chi = (tau (1+lnN_e) + psi + 1.5 mu U^2)
-        Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi + 1.5 mu U^2) nu_para *(ds^2 N -ds lnB ds N)
+        dg::blas1::axpbypgz(0.5*p.mu[i], omega, 1.0, phi[i], p.tau[i], chi); //chi = (tau (1+lnN_e) + psi + 0.5 mu U^2)
+        Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi + 0.5 mu U^2) nu_para *(ds^2 N -ds lnB ds N)
         if( i==0) //only electrons
         {
             //do not write into chi 
