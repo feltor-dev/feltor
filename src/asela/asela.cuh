@@ -261,8 +261,8 @@ struct Asela
 
 template<class Grid, class IMatrix, class Matrix, class container>
 Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p, dg::geo::solovev::Parameters gp): 
-    dsDIR_( dg::geo::createSolovevField(gp), g, dg::DIR, dg::DIR, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, 10, 10, true, true, false, 2.*M_PI/(double)p.Nz ),
-    dsN_( dg::geo::createSolovevField(gp), g, g.bcx(), g.bcy(), dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, 10, 10, true, true, false, 2.*M_PI/(double)p.Nz),
+    dsDIR_( dg::geo::createSolovevField(gp), g, dg::DIR, dg::DIR, dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, 10, 10, true, true, true, 2.*M_PI/(double)p.Nz ),
+    dsN_( dg::geo::createSolovevField(gp), g, g.bcx(), g.bcy(), dg::geo::PsiLimiter( dg::geo::solovev::Psip(gp), gp.psipmaxlim), dg::normed, dg::forward, gp.rk4eps, 10, 10, true, true, true, 2.*M_PI/(double)p.Nz),
     //////////the poisson operators ////////////////////////////////////////
     poissonN(g, g.bcx(), g.bcy(), dg::DIR, dg::DIR), //first N/U then phi BCC
     poissonDIR(g, dg::DIR, dg::DIR, dg::DIR, dg::DIR), //first N/U then phi BCC
@@ -637,45 +637,32 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
                 dg::blas1::pointwiseDot( -p.mu[i], u2[i], curvkappay[i],   1., yp[i]);           // dtN += - mu U^2 K_kappa(N)
                 dg::blas1::pointwiseDot( -p.mu[i], u2[i], curvkappay[2+i], 1., yp[2+i]);         // dtw += -  (hat(mu)) U^2 K_kappa(U)                
             }
-            vecdotnablaN(curvKappaX, curvKappaY, logn[i], omega);         //K_kappa(ln N)
-            dg::blas1::pointwiseDot( -2.*p.tau[i], u[i], omega, 1., yp[2+i]);    //dtw += - 2.*tau U K_kappa(lnN)
-                
+              
             dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);                 //dtN += - tau K(N)
-            dg::blas1::axpbypgz( -p.tau[i], curvy[2+i],  -2.*p.tau[i], curvkappay[2+i], 1., yp[2+i]); //dtw += - tau K(U) -2.*tau K_kappa(U)
             dg::blas1::pointwiseDot( -1., npe[i], curvphi[i], 1., yp[i]);      //dtN +=  - N K(psi)                
-            dg::blas1::pointwiseDot( -1., u[i], curvkappaphi[i], 1., yp[2+i]); //dtw +=  - U K(psi)            
-            
+            vecdotnablaN(curvKappaX, curvKappaY, logn[i], omega);         //K_kappa(ln N)
+            dg::blas1::pointwiseDot( -2.*p.tau[i], u[i], omega, 1., yp[2+i]);                            //dtw += - 2.*tau U K_kappa(lnN)
+            dg::blas1::pointwiseDot( -1., u[i], curvkappaphi[i], 1., yp[2+i]);                           //dtw +=  - U K(psi)            
+            dg::blas1::axpbypgz( -p.tau[i], curvy[2+i],  -2.*p.tau[i], curvkappay[2+i], 1., yp[2+i]);    //dtw += - tau K(U) -2.*tau K_kappa(U)            
             // div(K_kappa) terms
             dg::blas1::pointwiseDot( -p.tau[i],u[i], divCurvKappa, 1., yp[2+i]);       // dtw += - tau U div(K_kappa)            
             dg::blas1::pointwiseDot( -p.mu[i], u2[i],npe[i],divCurvKappa, 1., yp[i]);  // dtw += - hat(mu) N U^2 div(K_kappa)
         }
         if (p.curvmode==0) 
-        {
-          
+        {          
             vecdotnablaN(curvX, curvY, y[i], curvy[i]);                          //K(N) = K(N-1)
             vecdotnablaDIR(curvX, curvY,  u[i], curvy[2+i]);                     //K(U) = K(U)
             vecdotnablaDIR(curvX, curvY, phi[i], curvphi[i]);                    //K(phi)
-           
-            dg::blas1::pointwiseDot( u2[i],curvy[2+i], chi);                //U^2 K(U)
-            dg::blas1::pointwiseDot( un[i],curvy[2+i], omega);              //N U K(U)
-            
-            dg::blas1::axpby( -p.mu[i], omega, 1., yp[i]);                  //dtN = dtN - (hat(mu)) N U K(U)
-            dg::blas1::axpby( -0.5*p.mu[i], chi, 1., yp[2+i]);              //dtw = dtw - 0.5 (hat(mu)) U^2 K(U)
+        
+            vecdotnablaN(curvX, curvY,  logn[i], omega);                          //K(ln N) = K(ln N)
+            dg::blas1::pointwiseDot( -0.5*p.mu[i], un[i],curvy[2+i], -p.tau[i],u[i], omega,  1., yp[2+i]); //dtw += - 0.5 (hat(mu)) U^2 K(U) - tau U K(lnN)
+         
+            dg::blas1::pointwiseDot(npe[i],curvphi[i], omega);                 //N K(psi)
+            dg::blas1::axpbypgz( -p.tau[i], curvy[i], -1., omega,1.0, yp[i]);                              //dtN +=  - tau K(N) - N K(psi)
+            dg::blas1::pointwiseDot( -p.mu[i], u2[i],curvy[2+i], -0.5*p.mu[i],u2[i], curvy[i], 1., yp[i]); //dtN += - (hat(mu)) N U K(U) - 0.5 mu U^2 K(N)
 
-            vecdotnablaN(curvX, curvY,  logn[i], omega);                          //K(N) = K(N-1)
-            dg::blas1::pointwiseDot(u[i], omega, omega);                    //U K(ln N)
-            dg::blas1::axpby( -p.tau[i], omega, 1., yp[2+i]);               //dtw = dtw - tau U K(lnN)
-            
-            dg::blas1::pointwiseDot( u2[i], curvy[i], omega);                //U^2 K( N)        
-            dg::blas1::axpby( -0.5*p.mu[i],omega, 1., yp[i]);                //dtN = dtN - 0.5 mu U^2 K(N)
-
-            dg::blas1::axpby( -p.tau[i], curvy[i], 1., yp[i]);              //dtN = dtN - tau K(N)
-            dg::blas1::axpby( -2.*p.tau[i], curvy[2+i], 1., yp[2+i]);       //dtw = dtw - 2 tau K(U)
-            dg::blas1::pointwiseDot(npe[i],curvphi[i], omega);              //N K(psi)
-            dg::blas1::axpby( -1., omega, 1., yp[i]);                       //dtN= dtN - N K(psi)
-
-            dg::blas1::pointwiseDot( u[i], curvphi[i], omega);              //U K(phi)
-            dg::blas1::axpby( -0.5, omega, 1., yp[2+i]);                    //dtw = dtw -0.5 U K(psi)
+            dg::blas1::pointwiseDot( u[i], curvphi[i], omega);                       //U K(phi)
+            dg::blas1::axpbypgz( -2.*p.tau[i], curvy[2+i],-0.5, omega, 1., yp[2+i]); //dtw+= - 2 tau K(U) -0.5 U K(psi)
         }
     }    
    
