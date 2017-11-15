@@ -234,7 +234,7 @@ struct Asela
     container w3d, v3d;
     
     std::vector<container> phi,apar,dsblnB, u, u2, npe, logn,un,curvphi,curvkappaphi, dsphi, dslogn,dsun,dsu2; //2d container
-    std::vector<container> poissonn,poissonu,poissonw,poissonun,poissonlogn,poissonphi,poissonu2; //2d container
+    std::vector<container> poissonn,poissonu,poissonun,poissonlogn,poissonphi,poissonu2; //2d container
     std::vector<container> dsy, curvy,curvkappay;  //4d container
 
     //matrices and solvers
@@ -286,7 +286,7 @@ Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p, dg:
     dsblnB.resize(2); dsblnB[0] = dsblnB[1] = chi;
     curvphi = curvkappaphi = npe = logn = u = u2 = un =  phi;
     dsphi = dslogn = dsun = dsu2 = poissonn = poissonu =  phi;
-    poissonu2 =poissonw = poissonun = poissonlogn =poissonphi  = phi;
+    poissonu2  = poissonun = poissonlogn =poissonphi  = phi;
     dsy.resize(4); dsy[0] = dsy[1] = dsy[2] = dsy[3] = chi;
     curvy = curvkappay =dsy;
     //////////////////////////init invert objects///////////////////
@@ -457,55 +457,45 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
     for(unsigned i=0; i<2; i++)
     {
         //compute em Poisson bracket of ds_b
-        poissonN( y[i],    apar[i],poissonn[i]);                            //- [Apar,N]_RZ (for dissi)
-        poissonDIR( y[i+2],  apar[i],poissonw[i]);                          //- [Apar,w]_RZ (for dissi)
         poissonN( logn[i], apar[i],poissonlogn[i]);                         // -[Apar,logN]_RZ
-        poissonDIR( u[i],   apar[i],poissonu[i]);                           // -[Apar,U]_RZ
         poissonDIR( u2[i],   apar[i],poissonu2[i]);                         // -[Apar,U^2]_RZ 
-	if (p.bc==dg::NEU)
-	{
-	  dg::blas1::pointwiseDot(poissonu[i],npe[i],poissonu[i]);         // -N[Apar,U]_RZ 
-	  dg::blas1::pointwiseDot(poissonn[i],  u[i],poissonun[i]);        //- U[Apar,N]_RZ 
-	  dg::blas1::axpby(1.0,poissonu[i],1.0,poissonun[i],poissonun[i]); //- N[Apar,U]_RZ  - U[Apar,N]_RZ
-	}
-	if (p.bc==dg::DIR)
-	{
-	  poissonDIR( un[i],   apar[i],poissonun[i]);                         // -[Apar,U N]_RZ 
-	}
-	//multiply em Poisson bracket by 1/B
-        dg::blas1::pointwiseDot(poissonlogn[i],binv, poissonlogn[i]);  //-1/B [Apar,logN]_RZ
-        dg::blas1::pointwiseDot(poissonun[i],binv,poissonun[i]);       //-1/B [Apar,UN]_RZ
-        dg::blas1::pointwiseDot(poissonu2[i],binv,poissonu2[i]);       //-1/B [Apar,U^2]_RZ
+        if (p.bc==dg::NEU)
+        {
+            poissonN(  y[i],  apar[i], poissonn[i]);                           // -[Apar,N]_RZ 
+            poissonDIR( u[i], apar[i], poissonu[i]);                           // -[Apar,U]_RZ
+            dg::blas1::pointwiseDot( 1.0, poissonu[i], npe[i], 1.0, poissonn[i],  u[i], 0.0, poissonun[i]); //- N[Apar,U]_RZ  - U[Apar,N]_RZ
+        }
+        if (p.bc==dg::DIR)
+        {
+            poissonDIR(un[i], apar[i], poissonun[i]);                         // -[Apar,U N]_RZ 
+        }
+        //multiply em Poisson bracket by 1/B
+        dg::blas1::pointwiseDot(poissonlogn[i], binv, poissonlogn[i]);  //-1/B [Apar,logN]_RZ
+        dg::blas1::pointwiseDot(poissonun[i]  , binv, poissonun[i]);    //-1/B [Apar,UN]_RZ
+        dg::blas1::pointwiseDot(poissonu2[i]  , binv, poissonu2[i]);    //-1/B [Apar,U^2]_RZ
 
         //Parallel dynamics (compute ds UN, ds U^2, ds psi, ds ln N) 
-    if (p.bc==dg::NEU)
-	{
-	  dsN_.centered(y[i], dsun[i]);                                                 // ds N
-	  dg::blas1::pointwiseDot(dsun[i],u[i], dsun[i]);                               // U ds N
-	  dsN_.centered(logn[i], dslogn[i]);                                            // ds log N
-	  dsDIR_.centered(u[i], poissonu[i]);                                           // ds u
-	  dg::blas1::pointwiseDot(poissonu[i],npe[i],poissonu[i]);                      // N ds U
-	  dg::blas1::axpby(1.0, poissonu[i], 1.0, dsun[i],dsun[i]);                     // ds UN = N ds U +   U ds N 
-	}
-	if (p.bc==dg::DIR)
-	{
-	    dsN_.centered(logn[i], dslogn[i]);                                           // ds log N
-	    dsN_.centered(un[i], dsun[i]);                                               // ds U N
-	}
+        if (p.bc==dg::NEU)
+        {
+            dsN_.centered(y[i],   chi);                                             // ds N
+            dsDIR_.centered(u[i], omega);                                           // ds u
+            dg::blas1::pointwiseDot(1.0, chi, u[i], 1.0, omega, npe[i], 0.0, dsun[i]);  // ds UN = N ds U +   U ds N 
+            dsN_.centered(logn[i], dslogn[i]);                                            // ds log N
+        }
+        if (p.bc==dg::DIR)
+        {
+            dsDIR_.centered(logn[i], dslogn[i]);                                           // ds log N
+            dsDIR_.centered(un[i], dsun[i]);                                               // ds U N
+        }
         dsDIR_.centered(u2[i],dsu2[i]);                                                  // ds U^2
         dsDIR_.centered(phi[i], dsphi[i]);                                               // ds psi
-        
-        //add em Poisson bracket terms to the parallel derivatives to obtain ds^b   
-//         dg::blas1::axpby(p.beta,poissonlogn[i],1.,dslogn[i]);// ds^b logN = ds logN -beta/B [Apar,logN ]
-//         dg::blas1::axpby(p.beta,poissonun[i]  ,1.,dsun[i]);  // ds^b UN   = ds UN   -beta/B [Apar,UN ]
-        dg::blas1::axpby(p.beta,poissonu2[i]  ,1.,dsu2[i]);  // ds^b U^2  = ds U^2  -beta/B [Apar,U^2 ] 
 
-        //Add terms  ds^b terms       
+        //Add terms  ds^b f = ds f-beta/B [Apar,f] terms (Note:  [Apar,phi] term is in ExB contribution  )
         dg::blas1::pointwiseDot(1., un[i], dsblnB[i], 1., yp[i]);                    // dtN += U N ds^b ln B
-        dg::blas1::axpbypgz( -1., dsun[i],-p.beta, poissonun[i] ,1., yp[i]);         // dtN += - ds^b U N = -(ds UN   -beta/B [Apar,UN ])
-        dg::blas1::axpbypgz( -p.tau[i]/p.mu[i], dslogn[i], -p.tau[i]/p.mu[i]*p.beta, poissonlogn[i], 1., yp[2+i]); // dtw += -tau/hat(mu)*ds^b lnN = -tau/hat(mu)*(ds logN-beta/B [Apar,logN])
-        dg::blas1::axpby( -1./p.mu[i],dsphi[i], 1., yp[2+i]);                        // dtw = dtw - 1/(hat(mu))  *ds^b psi  
-        dg::blas1::axpbypgz( -0.5, dsu2[i], -0.5*p.beta,poissonu2[i], 1., yp[2+i]);  // dtw +=- 0.5 ds U^2 - 0.5*(ds U^2  -beta/B [Apar,U^2 ])
+        dg::blas1::axpbypgz( -1., dsun[i],-p.beta, poissonun[i] ,1., yp[i]);         // dtN += - ds^b U N 
+        dg::blas1::axpbypgz( -p.tau[i]/p.mu[i], dslogn[i], -p.tau[i]/p.mu[i]*p.beta, poissonlogn[i], 1., yp[2+i]); // dtw += -tau/hat(mu)*ds^b lnN 
+        dg::blas1::axpby( -1./p.mu[i], dsphi[i], 1., yp[2+i]); // dtw += - 1/(hat(mu))  *ds psi   
+        dg::blas1::axpbypgz( -0.5, dsu2[i], -0.5*p.beta, poissonu2[i], 1., yp[2+i]); // dtw += - 0.5 ds U^2
 
         //Parallel dissipation
         double nu_parallel[] = {p.nu_parallel, p.nu_parallel, p.nu_parallel, p.nu_parallel};
@@ -516,7 +506,7 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
         dg::blas1::pointwiseDot(u[i],u[i], omega);  
         dg::blas1::axpbypgz(1.5*p.mu[i], omega, 1.0, phi[i], p.tau[i], chi); //chi = (tau (1+lnN_e) + psi + 1.5 mu U^2)
-        Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi + 1.5 mu U^2) nu_para *(ds^2 N -ds lnB ds N)
+        Dpar[i] = z[i]*dg::blas2::dot(chi, w3d, lambda); //Z*(tau (1+lnN )+psi + 1.5 mu U^2) nu_para ds^2 N 
         
         if( i==0) //only electrons
         {
@@ -531,10 +521,10 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w3d, omega);  
 
         dg::blas2::symv(dsDIR_, y[i+2],lambda);
-        dg::blas1::axpby( nu_parallel[i+2], lambda,  0., lambda,lambda); 
+        dg::blas1::axpby( nu_parallel[i+2], lambda,  0., lambda); //nu_para *(ds^2 w )
 
         //compute omega = NU
-        Dpar[i+2] = z[i]*p.mu[i]*dg::blas2::dot(un[i], w3d, lambda);      //Z*N*U nu_para *(ds^2 U ) or Z*N*U nu_para *(ds^2 w )
+        Dpar[i+2] = z[i]*p.mu[i]*dg::blas2::dot(un[i], w3d, lambda); // Z*N*U nu_para *(ds^2 w )
 
         //Compute perp dissipation  for U
         dg::blas2::gemv( lapperpDIR, y[i+2], lambda);
