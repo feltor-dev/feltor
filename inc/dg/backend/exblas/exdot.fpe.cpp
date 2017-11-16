@@ -2,6 +2,8 @@
  *  Copyright (c) 2016 Inria and University Pierre and Marie Curie 
  *  All rights reserved.
  */
+#include <omp.h>
+#include <cmath>
 #include "thrust/device_vector.h"
 
 namespace exblas{
@@ -17,10 +19,10 @@ static constexpr uint TSAFE          =  0;
 static constexpr uint NBFPE          =  3;
 
 //Kernel paramters for EXDOT
-static constexpr uint WARP_COUNT               = 16 ; //# of sub superaccs
+static constexpr uint WARP_COUNT               = 16 ; // # of sub-superaccs
 static constexpr uint WARP_SIZE                = 16 ;
 static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per group
-static constexpr uint PARTIAL_SUPERACCS_COUNT  = 512; //# of groups; each has a partial SuperAcc
+static constexpr uint PARTIAL_SUPERACCS_COUNT  = 128; //# of groups; each has a partial SuperAcc
 //Kernel paramters for EXDOTComplete
 static constexpr uint MERGE_SUPERACCS_SIZE     = 128;
 static constexpr uint MERGE_WORKGROUP_SIZE     = 64;
@@ -29,38 +31,31 @@ static constexpr uint MERGE_WORKGROUP_SIZE     = 64;
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 ////////////////////////////////////////////////////////////////////////////////
-__device__ 
 double TwoProductFMA(double a, double b, double *d) {
     double p = a * b;
-    *d = fma(a, b, -p);
+    *d = std::fma(a, b, -p);
     return p;
 }
 
-__device__ 
 double KnuthTwoSum(double a, double b, double *s) {
     double r = a + b;
     double z = r - a;
     *s = (a - (r - z)) + (b - z);
     return r;
 }
-__device__ INTEGER atomicAdd( INTEGER* address, INTEGER val)
-{
-    unsigned long long int* address_as_ull =
-        (unsigned long long int*)address;
-    unsigned long long int old = *address_as_ull;
-
-    old = atomicCAS(address_as_ull, old,
-                      (unsigned long long int)(val + (INTEGER)old));
-    //assume that bit patterns don't change when casting
-    return (INTEGER)(old);
-}
 // signedcarry in {-1, 0, 1}
-__device__ INTEGER xadd( INTEGER *sa, INTEGER x, unsigned char *of) {
+INTEGER xadd( INTEGER *sa, INTEGER x, unsigned char *of) {
     // OF and SF  -> carry=1
     // OF and !SF -> carry=-1
     // !OF        -> carry=0
     //INTEGER y = atom_add(sa, x);
-    INTEGER y = atomicAdd(sa, x); 
+    INTEGER y;
+#pragma omp atomic
+    {
+        *sa+=x;
+        y = *sa;
+    }
+
     INTEGER z = y + x; // since the value sa->superacc[i] can be changed by another work item
 
     // TODO: cover also underflow
@@ -77,7 +72,6 @@ __device__ INTEGER xadd( INTEGER *sa, INTEGER x, unsigned char *of) {
 ////////////////////////////////////////////////////////////////////////////////
 // Rounding functions
 ////////////////////////////////////////////////////////////////////////////////
-__device__
 double OddRoundSumNonnegative(double th, double tl) {
     union {
         double d;
@@ -92,7 +86,6 @@ double OddRoundSumNonnegative(double th, double tl) {
     return thdb.d;
 }
 
-__device__
 int Normalize( INTEGER *accumulator, int *imin, int *imax) {
     INTEGER carry_in = accumulator[*imin] >> DIGITS;
     accumulator[*imin] -= carry_in << DIGITS;
@@ -112,7 +105,6 @@ int Normalize( INTEGER *accumulator, int *imin, int *imax) {
     return carry_in < 0;
 }
 
-__device__
 double Round( INTEGER *accumulator) {
     int imin = 0;
     int imax = 38;
@@ -162,7 +154,6 @@ double Round( INTEGER *accumulator) {
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
-__device__
 void AccumulateWord( INTEGER *sa, int i, INTEGER x) {
     // With atomic superacc updates
     // accumulation and carry propagation can happen in any order,
@@ -198,7 +189,6 @@ void AccumulateWord( INTEGER *sa, int i, INTEGER x) {
     }
 }
 
-__device__
 void Accumulate( INTEGER *sa, double x) {
     if (x == 0)
         return;
@@ -223,34 +213,34 @@ void Accumulate( INTEGER *sa, double x) {
 }
 
 
-template<size_t BLOCK_SIZE>
-__launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
-__global__ void ExDOT(
+void ExDOT(
     INTEGER *d_PartialSuperaccs,
     const double *d_a,
+    const uint inca,
+    const uint offseta,
     const double *d_b,
+    const uint incb,
+    const uint offsetb,
     const uint NbElements
 ) {
-    __shared__ INTEGER l_sa[WARP_COUNT * BIN_COUNT] __attribute__((aligned(8)));
+#pragma omp parallel
+    {
+    INTEGER l_sa[WARP_COUNT * BIN_COUNT];
     INTEGER *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1));
-    __shared__ bool l_sa_check[WARP_COUNT];
-    bool *l_workingBase_check = l_sa_check + (threadIdx.x & (WARP_COUNT - 1));
 
     //Initialize superaccs
     for (uint i = 0; i < BIN_COUNT; i++)
         l_workingBase[i * WARP_COUNT] = 0;
-    *l_workingBase_check = false;
-    __syncthreads();
+    #pragma omp barrier
 
     //Read data from global memory and scatter it to sub-superaccs
     double a[NBFPE] = {0.0};
-    for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
+#pragma omp for
+    for(uint pos = 0; pos < NbElements; pos ++) {
         double r = 0.0;
         double x = TwoProductFMA(d_a[pos], d_b[pos], &r);
 
-        #ifdef NVIDIA
-            #pragma unroll
-        #endif
+        //Algorithm 2
         for(uint i = 0; i != NBFPE; ++i) {
             double s;
             a[i] = KnuthTwoSum(a[i], x, &s);
@@ -259,9 +249,6 @@ __global__ void ExDOT(
         if (x != 0.0) {
             Accumulate(l_workingBase, x);
             // Flush FPEs to superaccs
-            #ifdef NVIDIA
-                #pragma unroll
-            #endif
             for(uint i = 0; i != NBFPE; ++i) {
                 Accumulate(l_workingBase, a[i]);
                 a[i] = 0.0;
@@ -269,9 +256,6 @@ __global__ void ExDOT(
         }
 
         if (r != 0.0) {
-            #ifdef NVIDIA
-                #pragma unroll
-            #endif
             for(uint i = NBFPE-3; i != NBFPE; ++i) {
                 double s;
                 a[i] = KnuthTwoSum(a[i], r, &s);
@@ -280,9 +264,6 @@ __global__ void ExDOT(
             if (r != 0.0) {
                 Accumulate(l_workingBase, r);
                 // Flush FPEs to superaccs
-                #ifdef NVIDIA
-                    #pragma unroll
-                #endif
                 for(uint i = 0; i != NBFPE; ++i) {
                     Accumulate(l_workingBase, a[i]);
                     a[i] = 0.0;
@@ -291,12 +272,9 @@ __global__ void ExDOT(
         }
     }
 	//Flush FPEs to superaccs
-    #ifdef NVIDIA
-        #pragma unroll
-    #endif
     for(uint i = 0; i != NBFPE; ++i)
         Accumulate(l_workingBase, a[i]);
-    __syncthreads();
+    #pragma omp barrier
 
     //Merge sub-superaccs into work-group partial-accumulator
     uint pos = threadIdx.x;
@@ -309,7 +287,7 @@ __global__ void ExDOT(
         d_PartialSuperaccs[blockIdx.x * BIN_COUNT + pos] = sum;
     }
 
-    __syncthreads();
+    #pragma omp barrier
     if (pos == 0) {
         int imin = 0;
         int imax = 38;
@@ -320,48 +298,26 @@ __global__ void ExDOT(
 ////////////////////////////////////////////////////////////////////////////////
 // Merging
 ////////////////////////////////////////////////////////////////////////////////
-template<size_t BLOCK_SIZE>
-__launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
-__global__
 void ExDOTComplete(
      double *d_Res,
      INTEGER *d_PartialSuperaccs
 ) {
-    uint lid = threadIdx.x;
-    uint gid = blockIdx.x;
 
-    if (lid < BIN_COUNT) {
-        INTEGER sum = 0;
+#pragma omp parallel for
+        for( uint lid=0; lid<BIN_COUNT; lid++){
+            INTEGER sum = 0;
 
-        for(uint i = 0; i < MERGE_SUPERACCS_SIZE; i++)
-            sum += d_PartialSuperaccs[(gid * MERGE_SUPERACCS_SIZE + i) * BIN_COUNT + lid];
+            for(uint i = 0; i < MERGE_SUPERACCS_SIZE; i++)
+                sum += d_PartialSuperaccs[i * BIN_COUNT + lid];
 
-        d_PartialSuperaccs[gid * BIN_COUNT + lid] = sum;
-    }
-
-    __syncthreads();
-    if (lid == 0) {
+            d_PartialSuperaccs[lid] = sum; 
+        }
         int imin = 0;
         int imax = 38;
-        Normalize(&d_PartialSuperaccs[gid * BIN_COUNT], &imin, &imax);
-    }
-
-    __syncthreads();
-    if ((lid < BIN_COUNT) && (gid == 0)) {
-        INTEGER sum = 0;
-
-        for(uint i = 0; i < gridDim.x; i++)
-            sum += d_PartialSuperaccs[i * BIN_COUNT + lid];
-
-        d_PartialSuperaccs[lid] = sum;
-
-        __syncthreads();
-        if (lid == 0)
-            d_Res[0] = Round(d_PartialSuperaccs);
-    }
+        Normalize(&d_PartialSuperaccs[0], &imin, &imax);
+        d_Res[0] = Round(d_PartialSuperaccs);
 }
 
-__host__
 double exdot(const thrust::device_vector<double>& x1, const thrust::device_vector<double>& x2)
 {
     thrust::device_vector<INTEGER> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0);
@@ -373,15 +329,12 @@ double exdot(const thrust::device_vector<double>& x1, const thrust::device_vecto
     const double *x1_ptr = thrust::raw_pointer_cast( x1.data());
     const double *x2_ptr = thrust::raw_pointer_cast( x2.data());
     double *r_ptr = thrust::raw_pointer_cast( result.data());
-    cudaDeviceSynchronize();
-    ExDOT<WORKGROUP_SIZE><<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,x1.size());
-    cudaDeviceSynchronize();
+    ExDOT( d_PartialSuperaccs, x1_ptr, 1,0, x2_ptr,1,0,x1.size());
     for( unsigned i=0; i<10; i++)
         std::cout << d_PartialSuperaccsV[i]<<" ";
-    ExDOTComplete<MERGE_WORKGROUP_SIZE><<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( r_ptr, d_PartialSuperaccs );
+    ExDOTComplete( r_ptr, d_PartialSuperaccs );
     for( unsigned i=0; i<10; i++)
         std::cout << d_PartialSuperaccsV[i]<<" ";
-    cudaDeviceSynchronize();
     double sum = result[0];
     return sum;
 }
