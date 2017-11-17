@@ -1,0 +1,209 @@
+%\documentclass[12pt]{article}
+%\documentclass[12pt]{scrartcl}
+\documentclass{hitec} % contained in texlive-latex-extra 
+\settextfraction{0.9} % indent text
+\usepackage{csquotes}
+\usepackage[hidelinks]{hyperref} % doi links are short and usefull?
+\hypersetup{%
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=magenta
+}
+\urlstyle{rm}
+\usepackage[english]{babel}
+\usepackage{mathtools} % loads and extends amsmath
+\usepackage{amssymb}
+% packages not used
+%\usepackage{graphicx}
+%\usepackage{amsthm}
+%\usepackage{subfig}
+\usepackage{bm}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{ragged2e} % maybe use \RaggedRight for tables and literature?
+\usepackage[table]{xcolor} % for alternating colors
+\rowcolors{2}{gray!25}{white}
+\renewcommand\arraystretch{1.3}
+
+%%% reset bibliography distances %%%
+\let\oldthebibliography\thebibliography
+\let\endoldthebibliography\endthebibliography
+\renewenvironment{thebibliography}[1]{
+  \begin{oldthebibliography}{#1}
+    \RaggedRight % remove if justification is desired
+    \setlength{\itemsep}{0em}
+    \setlength{\parskip}{0em}
+}
+{
+  \end{oldthebibliography}
+}
+%%% --- %%%
+
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\T}{\mathrm{T}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+
+\newcommand{\dx}{\,\mathrm{d}x}
+%\newcommand{\dA}{\,\mathrm{d}(x,y)}
+%\newcommand{\dV}{\mathrm{d}^3{x}\,}
+\newcommand{\dA}{\,\mathrm{dA}}
+\newcommand{\dV}{\mathrm{dV}\,}
+\newcommand{\Eins}{\mathbf{1}}
+\newcommand{\ExB}{$\bm{E}\times\bm{B} \,$}
+\newcommand{\GKI}{\int d^6 \bm{Z} \BSP}
+\newcommand{\GKIV}{\int dv_{\|} d \mu d \theta \BSP}
+\newcommand{\BSP}{B_{\|}^*}
+\newcommand{\GA}[1]{\langle #1   \rangle}
+\newcommand{\Abar}{\langle A_\parallel \rangle}
+%Vectors
+\newcommand{\bhat}{\bm{\hat{b}}}
+\newcommand{\bbar}{\overline{\bm{b}}}
+\newcommand{\chat}{\bm{\hat{c}}}
+\newcommand{\ahat}{\bm{\hat{a}}}
+\newcommand{\xhat}{\bm{\hat{x}}}
+\newcommand{\yhat}{\bm{\hat{y}}}
+\newcommand{\zhat}{\bm{\hat{z}}}
+\newcommand{\Xbar}{\bar{\vec{X}}}
+\newcommand{\phat}{\bm{\hat{\perp}}}
+\newcommand{\that}{\bm{\hat{\theta}}}
+\newcommand{\eI}{\bm{\hat{e}}_1}
+\newcommand{\eII}{\bm{\hat{e}}_2}
+\newcommand{\ud}{\mathrm{d}}
+%Derivatives etc.
+\newcommand{\pfrac}[2]{\frac{\partial#1}{\partial#2}}
+\newcommand{\ffrac}[2]{\frac{\delta#1}{\delta#2}}
+\newcommand{\fixd}[1]{\Big{\arrowvert}_{#1}}
+\newcommand{\curl}[1]{\nabla \times #1}
+\newcommand{\np}{\nabla_{\perp}}
+\newcommand{\npc}{\nabla_{\perp} \cdot }
+\newcommand{\nc}{\nabla\cdot }
+\newcommand{\GAI}{\Gamma_{1}^{\dagger}}
+\newcommand{\GAII}{\Gamma_{1}^{\dagger -1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The feltorSHp project}
+\maketitle
+
+\begin{abstract}
+This is a program for 2d thermal electrostatic full-F gyro-fluid simulations for blob studies.
+\end{abstract}
+
+\section{Equations}
+The four-field model evolves electron density 
+\(n_e\), ion gyro-center density \(N_i\), (perpendicular) electron pressure \(p_e\) and (perpendicular) ion gyro-center pressure \(P_i\)
+\begin{align}
+\label{eq:dtne}
+\frac{\partial}{\partial t} n_e =&-
+\frac{1}{B} \left[\phi,n_e \right]_{x y} - n_e \mathcal{K}\left(\phi \right) + \frac{1}{e} \mathcal{K}\left(t_{e} n_e \right) +  \Lambda_{n_e}, 
+ \\
+\label{eq:dtNi}
+\frac{\partial}{\partial t} N_i =&
+-\frac{1}{B} \left[\psi_i,N_i \right]_{x y} 
++\frac{1}{B} \left[\ln T_{i},N_i \chi_i \right]_{x y} - N_i \mathcal{K}\left(\psi_i + \chi_i\right) 
++ N_i \chi_i \mathcal{K}\left(\ln T_{i} -  \ln N_i \right) \nonumber \\ 
+&
+- \frac{1}{e} \mathcal{K}\left(T_{i} N_i \right) 
++  \Lambda_{N_i} , \\
+\label{eq:dtpe}
+     \frac{\partial }{\partial t}   p_e  =&
+          -  \frac{1}{B} \left[\phi ,p_e\right]_{xy}  
+          - 2 p_e \mathcal{K}(\phi ) 
+          + \frac{2 }{e}\mathcal{K}(p_e t_e )\
+          + \Lambda_{p_e}  ,
+   \\
+   \label{eq:dtPi}
+     \frac{\partial }{\partial t}   P_i  =&
+          -  \frac{1}{B} \left[\psi_i + \chi_i,P_i\right]_{xy} 
+          + \frac{2}{B} \left[\ln T_i, P_i \chi_i \right]_{xy}  - 2 P_i \mathcal{K}(\psi_i + 2\chi_i) 
+          - \frac{2 }{e}\mathcal{K}(P_i T_i )\nonumber \\ 
+         &+2 P_i \chi_i \mathcal{K}(2\ln T_i - \ln P_i )   
+          + \Lambda_{P_i}  .
+\end{align}
+The latter equations are coupled by the thermal version of the nonlinear polarisation equation, which reads:
+\begin{align}
+  n_e -\Gamma_{1,i}^\dagger N_i &= \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right).
+\end{align}
+The generlized electric potential, its FLR due to a dynamic gyro-radius and the ExB drift velocity are defined by
+\begin{align}
+ \psi_i  = \Gamma_{1} \phi - \frac{m u_E^2 }{2 q}, \\ 
+ \chi_i := \Gamma_{2,i} \phi \\
+ \vec{u}_E = \frac{1}{B} \vec{\hat{b}} \times \vec{\nabla} \phi .
+\end{align}
+The gyro-averaging operators read:
+\begin{align}\label{eq:gamma1def} 
+ \Gamma_{1,i} f&:= \frac{1}{1-\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2} f. & 
+  \Gamma_{1,i}^\dagger f&:= \frac{1}{1-\vec{\nabla}_\perp^2\frac{\rho_i^2}{2}} f.
+\end{align}
+\begin{align}\label{eq:gamma2def}
+ \Gamma_{2,i} f&: = \frac{\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2}{\left(1-\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2\right)^2} f.&
+ \Gamma_{2,i}^\dagger f&: = \frac{\vec{\nabla}_\perp^2\frac{\rho_i^2}{2}}{\left(1-\vec{\nabla}_\perp^2\frac{\rho_i^2}{2}\right)^2} f. 
+\end{align}
+\subsection{Perpendicular dissipation}
+The perpendicular diffusive terms are given by
+\begin{align}\label{eq:perpdiffNT}
+ \Lambda_{n_e} &=  -\nu_\perp \vec{\nabla}_\perp^4 n_e, &
+ \Lambda_{N_i} &=  -\nu_\perp \vec{\nabla}_\perp^4 N_i, &
+ \Lambda_{p_e} &=  -\nu_\perp \vec{\nabla}_\perp^4 p_e, &
+ \Lambda_{P_i} &=  -\nu_\perp \vec{\nabla}_\perp^4 P_i.
+\end{align}
+\subsection{Energy theorem}
+The energy of our system is \(\frac{d}{d t}\mathcal{E}=\Lambda\)
+\begin{align}
+ \mathcal{E} &= \int d^2 \vec{x} \left( p_e + P_i + \frac{m_i N_i u_E^2}{2} \right)\\
+ \Lambda &= \int d^2 \vec{x} \left[- e \phi \Lambda_{n_e} + e\left( \psi -\chi_i\right) \Lambda_{N_i} + \Lambda_{p_e} + \left(1+ \frac{e}{T_i}\chi_i\right)\Lambda_{P_i} \right].
+\end{align}
+\subsection{Slab magnetic field}\label{sec:slabapprox}
+The here presented slab approximation employs Cartesian coordinates \((x,y,z)\) with a slab magnetic field unit vector \(\vec{\hat{b}} = \vec{\hat{e}}_z\). The inverse magnetic field magnitude is 
+radially varying 
+\begin{align}
+ \frac{1}{B}&= \frac{1}{B_0} \left( 1+x/R_0\right) .
+\end{align}
+with \(R_0\) the distance to the outboard mid-plane and \(B_0\) the reference magnetic field magnitude. 
+For a slab magnetic field the curvature \(\vec{\kappa} = 0\) vanishes and the curvature operator \(\mathcal{K} (f)\) reduces to
+\begin{align}
+  \mathcal{K} (f) &=\mathcal{K}_{\vec{\nabla}  B} (f) =-\frac{1}{B_0 R_0 } \frac{\partial }{\partial y }f.
+\end{align}
+We note here that no factor of two arises, as is the case in the low beta approximation. In slab approximation the following relations hold
+\begin{align}
+   \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} &=   \vec{\nabla} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} =  \vec{\nabla} \cdot \vec{ \mathcal{K}} =   \vec{\nabla} \cdot \vec{\hat{b}} =  0,     
+    &  \vec{\kappa} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
+\end{align}
+and energetic consistency is assured in the curvature parts.
+\section{Initialization}
+\subsection{\(\phi=0\) initialization}
+\begin{align}
+  n_e  =\Gamma_{1,i}^\dagger N_i, \\ 
+ p_{i} = \left(\Gamma_{1,i}^{\dagger} + \Gamma_{2,i}^{\dagger} \right)P_{i} .
+\end{align}
+For the ion gyro-centre density and perpendicular temperature we mimic an initial blob by a Gaussian of the form
+\begin{eqnarray}
+%  \qquad 
+ N_{i}\left(\vec{x},0\right) =   n_{e0}\left[1+A \exp{\left(-\frac{\left(\vec{x}-\vec{x}_0\right)^2}{2\sigma^2}\right)}\right],  \\
+%  \qquad 
+ T_{i}\left(\vec{x},0\right) =   t_{i0}\left[1+A \exp{\left(-\frac{\left(\vec{x}-\vec{x}_0\right)^2}{2\sigma^2}\right)} \right],
+\end{eqnarray}
+\section{Numerical methods}
+discontinuous Galerkin on structured grid 
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
+coordinate system & cartesian 2D & equidistant discretization of $[0,l_x] \times [0,l_y]$, equal number of Gaussian nodes in x and y \\
+matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
+\ExB advection & Poisson & \\
+curvature terms & direct & cf. slab approximations \\
+time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
+\bottomrule
+\end{longtable}
+%..................................................................
+\begin{thebibliography}{1}
+ \bibitem{held16b}
+  M. Held, M. Wiesenberger, J. Madsen, A. Kendl,  Nuclear Fusion 56, 126005 (2016)
+\end{thebibliography}
+%..................................................................
+
+
+\end{document}

@@ -1,0 +1,228 @@
+%\documentclass[12pt]{article}
+%\documentclass[12pt]{scrartcl}
+\documentclass{hitec} % contained in texlive-latex-extra 
+\settextfraction{0.9} % indent text
+\usepackage{csquotes}
+\usepackage[hidelinks]{hyperref} % doi links are short and usefull?
+\hypersetup{%
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=magenta
+}
+\urlstyle{rm}
+\usepackage[english]{babel}
+\usepackage{mathtools} % loads and extends amsmath
+\usepackage{amssymb}
+% packages not used
+%\usepackage{graphicx}
+%\usepackage{amsthm}
+%\usepackage{subfig}
+\usepackage{bm}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{ragged2e} % maybe use \RaggedRight for tables and literature?
+\usepackage[table]{xcolor} % for alternating colors
+\rowcolors{2}{gray!25}{white}
+\renewcommand\arraystretch{1.3}
+
+%%% reset bibliography distances %%%
+\let\oldthebibliography\thebibliography
+\let\endoldthebibliography\endthebibliography
+\renewenvironment{thebibliography}[1]{
+  \begin{oldthebibliography}{#1}
+    \RaggedRight % remove if justification is desired
+    \setlength{\itemsep}{0em}
+    \setlength{\parskip}{0em}
+}
+{
+  \end{oldthebibliography}
+}
+%%% --- %%%
+
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\T}{\mathrm{T}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+
+\newcommand{\dx}{\,\mathrm{d}x}
+%\newcommand{\dA}{\,\mathrm{d}(x,y)}
+%\newcommand{\dV}{\mathrm{d}^3{x}\,}
+\newcommand{\dA}{\,\mathrm{dA}}
+\newcommand{\dV}{\mathrm{dV}\,}
+\newcommand{\Eins}{\mathbf{1}}
+\newcommand{\ExB}{$\bm{E}\times\bm{B} \,$}
+\newcommand{\GKI}{\int d^6 \bm{Z} \BSP}
+\newcommand{\GKIV}{\int dv_{\|} d \mu d \theta \BSP}
+\newcommand{\BSP}{B_{\|}^*}
+\newcommand{\GA}[1]{\langle #1   \rangle}
+\newcommand{\Abar}{\langle A_\parallel \rangle}
+%Vectors
+\newcommand{\bhat}{\bm{\hat{b}}}
+\newcommand{\bbar}{\overline{\bm{b}}}
+\newcommand{\chat}{\bm{\hat{c}}}
+\newcommand{\ahat}{\bm{\hat{a}}}
+\newcommand{\xhat}{\bm{\hat{x}}}
+\newcommand{\yhat}{\bm{\hat{y}}}
+\newcommand{\zhat}{\bm{\hat{z}}}
+\newcommand{\Xbar}{\bar{\vec{X}}}
+\newcommand{\phat}{\bm{\hat{\perp}}}
+\newcommand{\that}{\bm{\hat{\theta}}}
+\newcommand{\eI}{\bm{\hat{e}}_1}
+\newcommand{\eII}{\bm{\hat{e}}_2}
+\newcommand{\ud}{\mathrm{d}}
+%Derivatives etc.
+\newcommand{\pfrac}[2]{\frac{\partial#1}{\partial#2}}
+\newcommand{\ffrac}[2]{\frac{\delta#1}{\delta#2}}
+\newcommand{\fixd}[1]{\Big{\arrowvert}_{#1}}
+\newcommand{\curl}[1]{\nabla \times #1}
+\newcommand{\np}{\nabla_{\perp}}
+\newcommand{\npc}{\nabla_{\perp} \cdot }
+\newcommand{\nc}{\nabla\cdot }
+\newcommand{\GAI}{\Gamma_{1}^{\dagger}}
+\newcommand{\GAII}{\Gamma_{1}^{\dagger -1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The feltorSesol project}
+\maketitle
+
+\begin{abstract}
+This is a program for 2d isothermal electrostatic full-F gyro-fluid simulations for drift-wave turbulence and blob studies around the separatrix.
+\end{abstract}
+
+\section{Equations}
+The two-field model evolves electron density 
+\(n_e\), ion gyro-center density \(N_i\)
+% In the following we derive an isothermal coupled edge-scrape-off layer model in slab geometry (cf.~\ref{sec:slabapprox}). The magnetic field varies now in radial direction \(\vec{B} = B(x) \vec{\hat{e}}_z\), which introduces
+% the interchange instability. Since the model is derived in slab geometry, parallel closure terms are applied in order to derive a 2D model. 
+% In the edge we assume that a single \(k_\parallel \neq 0 \) mode drives the drift wave (universal) instability, 
+% whereby zonal components of the fluctuations do not contribute to the parallel current. 
+% In the SOL only a single  \(k_\parallel = 0 \) mode is kept and the Bohm-sheath boundary condition enters due to
+% the parallel closure term. The boundary between the edge and SOL is defined by \(x_B = \alpha L_x\), with \(\alpha\) the parameter \(\alpha \in \left[0,1\right]\) and \(L_x\) the radial length of the simulation box.
+The considered species are again electrons and ions. The gyro-fluid moment equations read 
+\begin{align}\label{eq:2Desolne}
+\frac{\partial}{\partial t} n_e =&-
+\frac{1}{B} \left[\phi,n_e \right]_{\perp} - n_e \mathcal{K}\left(\phi \right) + \frac{t_{e\perp}}{e} \mathcal{K}\left( n_e \right) 
+-\nabla_\parallel \left(n_e u_e\right)
++  \Lambda_{n_e}  ,
+% + \Lambda_{n_e,\parallel} 
+\\
+\label{eq:2DesolNi}
+\frac{\partial}{\partial t} N_i =&
+-\frac{1}{B} \left[\psi_i,N_i \right]_{\perp}- N_i \mathcal{K}\left(\psi_i \right) 
+- \frac{T_{i\perp}}{e} \mathcal{K}\left( N_i \right) 
+-\nabla_\parallel \left(N_i U_i\right)
++  \Lambda_{N_i}  ,
+% + \Lambda_{N_i,\parallel} 
+\end{align}
+which are coupled via the nonlinear polarisation equation:
+\begin{align}\label{eq:hwpol}
+  n_e -\Gamma_{1,i} N_i &= \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right).
+\end{align}.
+The perpendicular diffusive terms are given by Equations~\eqref{eq:perpdiffn}.
+\subsection{Edge closure}\label{sec:edgeclosure}
+In the edge we use the modified Hasegawa-Wakatani closure 
+\begin{align}\label{eq:modhw}
+\nabla_\parallel \left(n_e u_e\right) &= n_{e,0} \Omega_{i,0} \alpha  h_{e}(x)
+\left[ \ln (n_e) - \langle  \ln (n_e)\rangle_y  - \frac{e}{t_{e,\parallel}} \left(\phi - \langle \phi\rangle_y\right)
+\right].
+\end{align}
+for the electron continuity Equation~\eqref{eq:2Desolne} and \(\nabla_\parallel \left(N_i U_i\right) = 0\) for the ion continuity Equation~\eqref{eq:2DesolNi}.
+The adiabaticity parameter is given by 
+\begin{align}
+ \alpha:= \frac{ t_{e,\parallel}  k_\parallel^2 }{ \eta_\parallel e^2   n_{e,0} \Omega_{i,0} }
+\end{align}
+The damping function is 
+\begin{align}
+ h_{e}(x) &=\frac{1}{2}\left[1- \tanh{\left(\frac{(x-x_e)}{\sigma_e}\right)}\right], & 
+\end{align}
+\subsection{SOL closure}\label{sec:solclosure}
+We write down the Bohm sheath boundary condition, which are 
+\begin{align}
+ n_e \Big|_{se} &= n_e, &
+ u_e \Big|_{se} &= \pm c_{s0} \exp{\left(\Lambda-\frac{e \phi}{t_e}\right)},&
+ u_i \Big|_{se} &= \pm c_{s}.
+\end{align}
+Here, we introduced the cold ion acoustic speed \(c_{s0} \equiv \sqrt{\frac{t_{e0} }{ m_i}}\), the ion acoustic speed \(c_{s} = \sqrt{\frac{t_{e0} + t_{i0} }{ m_i}}\) and the constant \(\Lambda = \ln{\sqrt{ \frac{m_i}{2 \pi m_e} }}\). 
+The subscript \(se\) denotes the position at the presheath entrance.
+In the  SOL we average the Equations~\eqref{eq:2Desolne} and~\eqref{eq:2DesolNi} over the parallel coordinate 
+according to \(\langle f\rangle_\parallel =  \frac{1}{L_\parallel} \int_{0}^{L_\parallel} f d z \) and retain only modes with \(k_\parallel = 0\). 
+For the parallel closure terms we apply the fundamental theorem of calculus and insert the Bohm-sheath boundary conditions
+\begin{align}\label{eq:sheathneclosure}
+ \langle \nabla_\parallel (u_e n_e)  \rangle_\parallel 
+ &=
+		       h_{s}(x)  n_e c_{s0} \frac{2}{L_\parallel}\exp{\left(\Lambda-\frac{e \phi}{t_e}\right)}, \\
+		        \label{eq:sheathNiclosure}
+   \langle \nabla_\parallel (U_i N_i)   \rangle_\parallel
+		      &= h_{s}(x) c_{s} \frac{2}{L_\parallel}  \Gamma_1^{-1}  n_e .
+\end{align}
+The damping function is 
+\begin{align}
+ h_{s}(x) &=\frac{1}{2}\left[1+ \tanh{\left(\frac{(x-x_s)}{\sigma_s}\right)}\right] ,
+\end{align}
+With the help of the Bohm sheath closures of Equations~\eqref{eq:sheathneclosure} and~\eqref{eq:sheathNiclosure} the parallel derivative of the total parallel current 
+\(J_\parallel = -e  \left[u_e n_e - \Gamma_1 (U_i N_i)\right] \) is derived to
+\begin{align}
+ \langle \nabla_\parallel  J_\parallel \rangle_\parallel &= - e h_{s}(x)  n_e  \frac{2}{L_\parallel}c_{s}  \left[1-\frac{c_{s0}}{ c_{s} } \exp{\left(\Lambda-\frac{e \phi}{t_e}\right)} \right].
+\end{align}
+This term appears explicitly in the LWL gyro-fluid vorticity equation. We note here that in the isothermal case the constant \(\Lambda\) can be dropped by renormalisation of the electric potential \(\phi\).
+\subsection{Perpendicular dissipation}
+Dissipation in the perpendicular plane is approached via hyperviscosity \(\nu_\perp(-1)^{m+1}\vec{\nabla}_\perp^{2m}\) of order \(m\), which replaces the usual viscous term 
+\(\nu_\perp \vec{\nabla}_\perp^2\) of direct numerical simulations. In contrast to the common dissipation, the hyperviscous treatment causes the dissipation range to be narrower, 
+requiring fewer modes to resolve.
+In our simulations the dissipative term is replaced by a second order hyperviscous term \(\nu_\perp \vec{\nabla}_\perp^2 \rightarrow -\nu_\perp \vec{\nabla}_\perp^4 \). The diffusive terms are
+\begin{align}\label{eq:perpdiffn}
+ \Lambda_{n_e} &=  -\nu_\perp \vec{\nabla}_\perp^4 n_e, &
+ \Lambda_{N_i} &=  -\nu_\perp \vec{\nabla}_\perp^4 N_i.
+\end{align}
+\subsection{Sources and Sinks}
+\subsection{Energy theorem}
+The energy theorem is in general stated by
+\begin{align}\label{eq:energytheorem}
+ \frac{\partial \mathcal{E} }{\partial t} &= \Lambda,
+\end{align}
+The energy is 
+The explicit expressions are
+\begin{align}\label{eq:energyhw}
+  \mathcal{E} =& \int d\vec{x} \left(n_e t_{e} \ln (n_e) +N_i T_{i} \ln (N_i)  + \frac{m_i N_i u_E^2}{2} \right) 
+  \end{align}
+  In the edge the right hand side is
+  \begin{align}
+\label{eq:dissipationhw}
+\Lambda = &
+ \int d\vec{x} \bigg\{\left[t_{e} (1+\ln (n_e))  - e \phi \right] \left(\Lambda_{n_e}-\nabla_\parallel \left(n_e u_e\right)\right)  +\left(T_{i}  (1+\ln (N_i))+ e \psi_i \right) \Lambda_{N_i}  \bigg\}.
+\end{align}
+whereas in the SOL we use
+\begin{align}
+\Lambda = &
+ \int d\vec{x} \bigg\{\left[t_{e} (1+\ln (n_e))  - e \phi \right] \left(\Lambda_{n_e}- \langle \nabla_\parallel (u_e n_e)  \rangle_\parallel 
+\right)  
+\nonumber \\ &
++\left(T_{i}  (1+\ln (N_i))+ e \psi_i \right) \left(\Lambda_{N_i}-   \langle \nabla_\parallel (U_i N_i)   \rangle_\parallel
+  \right)\bigg\}.
+\end{align}
+In the edge we can still employ the expression given by Equation~\eqref{eq:dissipationhw}. \\
+Numerical solutions of the isothermal edge-SOL model are discussed in Section~\ref{sec:esolsim}. The discussion covers the impact of finite ion background temperature on the mean \(\vec{E}\times\vec{B}\) flow and
+the blob and structure formation in the edge and SOL.\section{Numerical methods}
+discontinuous Galerkin on structured grid 
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
+coordinate system & cartesian 2D & equidistant discretization of $[0,l_x] \times [0,l_y]$, equal number of Gaussian nodes in x and y \\
+matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
+\ExB advection & Poisson & \\
+curvature terms & direct & cf. slab approximations \\
+time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
+\bottomrule
+\end{longtable}
+%..................................................................
+\begin{thebibliography}{1}
+ \bibitem{held:phd17}
+  M. Held, Full-F gyro-fluid modelling of the tokamak edge and scrape-off, Universit{\"a}t Innsbruck (2017)
+\end{thebibliography}
+%..................................................................
+
+
+\end{document}

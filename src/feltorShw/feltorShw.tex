@@ -1,0 +1,243 @@
+%\documentclass[12pt]{article}
+%\documentclass[12pt]{scrartcl}
+\documentclass{hitec} % contained in texlive-latex-extra 
+\settextfraction{0.9} % indent text
+\usepackage{csquotes}
+\usepackage[hidelinks]{hyperref} % doi links are short and usefull?
+\hypersetup{%
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=magenta
+}
+\urlstyle{rm}
+\usepackage[english]{babel}
+\usepackage{mathtools} % loads and extends amsmath
+\usepackage{amssymb}
+% packages not used
+%\usepackage{graphicx}
+%\usepackage{amsthm}
+%\usepackage{subfig}
+\usepackage{bm}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{ragged2e} % maybe use \RaggedRight for tables and literature?
+\usepackage[table]{xcolor} % for alternating colors
+\rowcolors{2}{gray!25}{white}
+\renewcommand\arraystretch{1.3}
+
+%%% reset bibliography distances %%%
+\let\oldthebibliography\thebibliography
+\let\endoldthebibliography\endthebibliography
+\renewenvironment{thebibliography}[1]{
+  \begin{oldthebibliography}{#1}
+    \RaggedRight % remove if justification is desired
+    \setlength{\itemsep}{0em}
+    \setlength{\parskip}{0em}
+}
+{
+  \end{oldthebibliography}
+}
+%%% --- %%%
+
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\T}{\mathrm{T}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+
+\newcommand{\dx}{\,\mathrm{d}x}
+%\newcommand{\dA}{\,\mathrm{d}(x,y)}
+%\newcommand{\dV}{\mathrm{d}^3{x}\,}
+\newcommand{\dA}{\,\mathrm{dA}}
+\newcommand{\dV}{\mathrm{dV}\,}
+\newcommand{\Eins}{\mathbf{1}}
+\newcommand{\ExB}{$\bm{E}\times\bm{B} \,$}
+\newcommand{\GKI}{\int d^6 \bm{Z} \BSP}
+\newcommand{\GKIV}{\int dv_{\|} d \mu d \theta \BSP}
+\newcommand{\BSP}{B_{\|}^*}
+\newcommand{\GA}[1]{\langle #1   \rangle}
+\newcommand{\Abar}{\langle A_\parallel \rangle}
+%Vectors
+\newcommand{\bhat}{\bm{\hat{b}}}
+\newcommand{\bbar}{\overline{\bm{b}}}
+\newcommand{\chat}{\bm{\hat{c}}}
+\newcommand{\ahat}{\bm{\hat{a}}}
+\newcommand{\xhat}{\bm{\hat{x}}}
+\newcommand{\yhat}{\bm{\hat{y}}}
+\newcommand{\zhat}{\bm{\hat{z}}}
+\newcommand{\Xbar}{\bar{\vec{X}}}
+\newcommand{\phat}{\bm{\hat{\perp}}}
+\newcommand{\that}{\bm{\hat{\theta}}}
+\newcommand{\eI}{\bm{\hat{e}}_1}
+\newcommand{\eII}{\bm{\hat{e}}_2}
+\newcommand{\ud}{\mathrm{d}}
+%Derivatives etc.
+\newcommand{\pfrac}[2]{\frac{\partial#1}{\partial#2}}
+\newcommand{\ffrac}[2]{\frac{\delta#1}{\delta#2}}
+\newcommand{\fixd}[1]{\Big{\arrowvert}_{#1}}
+\newcommand{\curl}[1]{\nabla \times #1}
+\newcommand{\np}{\nabla_{\perp}}
+\newcommand{\npc}{\nabla_{\perp} \cdot }
+\newcommand{\nc}{\nabla\cdot }
+\newcommand{\GAI}{\Gamma_{1}^{\dagger}}
+\newcommand{\GAII}{\Gamma_{1}^{\dagger -1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The feltorShw project}
+\maketitle
+
+\begin{abstract}
+This is a program for 2d isothermal electrostatic \(\delta\)f and full-F simulations for resistive drift-wave turbulence.
+\end{abstract}
+\section{Equations}
+\subsection{\(\delta\)f Hasegawa-Wakatani models}
+The continuity equations for relative electron density fluctuations \(\delta n_e\) and relative ion gyro-centre density fluctuations  \(\delta N_i\) and the \(\delta\)f polarisation equation read:
+\begin{align}
+ \frac{\partial}{\partial t }\delta n_e + \frac{1}{B_0} \left[\phi,\delta n_e\right]_{\perp}  +\frac{1}{L_n B_0}  \frac{\partial }{\partial y} \phi  &= \Lambda_\delta + \Lambda_{\nu_\perp,\delta n_e}
+,\\
+ \frac{\partial}{\partial t }\delta N_i +\frac{1}{B_0} \left[\Gamma_{i,1}\phi,\delta N_i \right]_{\perp}   +\frac{1}{L_n B_0}  \frac{\partial }{\partial y}\phi  &= \Lambda_{\nu_\perp,\delta N_i},\\
+ \vec{\nabla} \cdot \left(\frac{1}{\Omega_{i,0}} \frac{\vec{\nabla}_\perp \phi}{B_0}\right)= \delta n_e - \Gamma_{i,1}\delta N_i,
+\end{align}
+Note that polarisation effects are taken in the long wavelength limit in order to be consistent with the full-F model.
+\subsection{Full-f Hasegawa-Wakatani models}
+The continuity equations for electron density \(n_e\) and ion gyro-centre density \(N_i\) and the polarisation equatio read:
+\begin{align}
+ \frac{\partial}{\partial t }n_e  + \frac{1}{B_0} \left[\phi, n_e\right]_{\perp} &=\Lambda + \Lambda_{\nu_\perp, n_e} +  \Lambda_{S, n_e}
+,\\
+\frac{\partial}{\partial t } N_i+\frac{1}{B_0} \left[\psi_i, N_i\right]_{\perp} &=\Lambda_{\nu_\perp, N_i} + \Lambda_{S, N_i} , \\
+ \vec{\nabla} \cdot \left(\frac{N_i}{\Omega_{i,0}} \frac{\vec{\nabla}_\perp \phi}{B_0}\right)= n_e - \Gamma_{i,1} N_i, 
+ \end{align}
+with generalized potential, \(\vec{E} \times \vec{B}\) drift velocity and Pade approximated gyro-average operator
+\begin{align}
+  \psi_i&:= \Gamma_{1,i} \phi - \frac{m u_E^2}{2 q}, \\
+  \vec{u}_E &:= \frac{1}{B} \vec{\hat{b}} \times \vec{\nabla} \phi \\
+  \Gamma_{1,i} f&:= \frac{1}{1-\frac{\rho_i^2}{2}\vec{\nabla}_\perp^2} f. 
+\end{align}
+Note that the \(\delta\)f densities are related to the full-F quantities according to \(n_e = n_G (1+\delta n_e)\), etc.
+\subsubsection{Thin layer approximation}
+The thin layer approximation appears in three terms in the full-F model
+\begin{align}
+ \Lambda &\approx n_e \Lambda_\delta \\ 
+ \psi_i &\approx \Gamma_{i,1}\phi \\
+ \vec{\nabla} \cdot \left(\frac{N_i}{\Omega_{i,0}} \frac{\vec{\nabla}_\perp \phi}{B_0}\right) &\approx   \frac{n_G}{\Omega_{i,0}} \frac{\vec{\nabla}_\perp^2 \phi}{B_0}
+\end{align}
+
+\subsection{\(\delta\)f and full-F Hasegawa-Wakatani closures}
+The closures are given in Table~\ref{table:hwmhwtable}.
+\begin{table}[!htp]
+\centering
+ \caption{Ordinary and modified HW closures for \(\delta\)f and full-F models.}
+ \label{table:hwmhwtable}
+\begin{tabular}{ l  l  l }
+   & ordinary HW &  modified HW \\
+%      \vspace{+1 mm}
+     \hline			
+  \(\Lambda_\delta/(\alpha_\delta \Omega_{i,0})\) & \( \frac{e}{t_{e0}}\phi-\delta n_e \) & \(  \frac{e}{t_{e0}}\widetilde{\phi}- \widetilde{ \delta n_e}\)\\
+ \({\Lambda}/(\alpha n_{e,0} \Omega_{i,0})\) & \( \frac{e}{t_{e0}}\phi -\ln\left(n_e/\langle{  n_e }\rangle\right)  \)          & \( \frac{e}{t_{e0}} \widetilde{\phi}-\widetilde{\ln\left(n_e\right)}\)  \\
+\end{tabular}
+\end{table}
+Here, we introduced the delta-f and full-F adiabaticity parameters according to
+\begin{align}
+\alpha:= \frac{ t_{e}  k_\parallel^2 }{ \eta_\parallel e^2   n_{e,0} \Omega_{i,0} } \\
+ \alpha_\delta := \frac{t_e k_\parallel^2 }{0.51 m_e \nu_{e0} \Omega_{i,0}} 
+\end{align}
+\subsection{Dissipative terms}
+\subsubsection{\(\delta\)f model}
+\begin{align}\label{eq:perpdiffn}
+ \Lambda_{\nu_\perp,\delta n_e} &=  -\nu_\perp \vec{\nabla}_\perp^4 \delta n_e, &
+ \Lambda_{\nu_\perp,\delta N_i} &=  -\nu_\perp \vec{\nabla}_\perp^4 \delta  N_i.
+\end{align}
+\subsubsection{Full-F model}
+\begin{align}\label{eq:perpdiffn}
+ \Lambda_{\nu_\perp,n_e} &=  -\nu_\perp \vec{\nabla}_\perp^4 n_e, &
+ \Lambda_{\nu_\perp,N_i} &=  -\nu_\perp \vec{\nabla}_\perp^4 N_i.
+\end{align}
+\subsection{Energy theorem}
+\subsubsection{\(\delta\)f model}
+\begin{eqnarray}
+ \frac{\partial}{\partial t}  \mathcal{E}_{\delta } = \mathcal{D}_{L_n}+ \mathcal{D}_{\parallel,\delta } + \mathcal{D}_{\nu_\perp,\delta }
+\end{eqnarray}
+with the energy
+\begin{eqnarray}
+%  \qquad
+ \mathcal{E}_{\delta f} =  \int dA n_{e0}\left[\frac{t_e}{2} \delta{n}_e^2  +  \frac{T_i}{2} \delta{N}_i^2    + \frac{1}{2} m_i  u_E^2\right]
+%  \mathcal{E}_{\delta f} =  \int dA n_{e0}\left[\frac{t_e}{2} \tilde{n}_e^2   + \frac{1}{2} m_i  u_E^2\right]
+\end{eqnarray}
+and 
+\begin{align}
+ \mathcal{D}_{L_n}                  &= - \frac{1}{L_n}\int dA \left( t_e \delta{n}_e \frac{\partial \phi }{\partial y}  - T_i \delta{N}_i \frac{\partial \Gamma_{i,1} \phi }{\partial y} \right) \\
+\mathcal{D}_{\parallel,\delta } &=  \int dA \left(t_e \delta{n}_e - e \phi \right) \Lambda_\delta \\
+\mathcal{D}_{\nu_\perp,\delta } &=  \int dA \left[ \left(t_e \delta{n}_e - e \phi \right) \Lambda_{\nu_\perp,\delta n_e} +  \left(T_i \delta{N}_i + e \Gamma_{1,i} \phi \right) \Lambda_{\nu_\perp,\delta N_i}\right]
+\end{align}
+
+\subsubsection{Full-F model}
+The energytheorem reads
+\begin{eqnarray}
+ \frac{\partial}{\partial t}  \mathcal{E} = \mathcal{D}_\parallel + \mathcal{D}_{\nu_\perp} + \mathcal{D}_{S}
+\end{eqnarray}
+with energy density
+\begin{eqnarray}
+ \mathcal{E} = \int dA \left[ n_e t_e   \ln{\left(n_e\right)} + N_i T_i   \ln{\left(N_i\right)}+ \frac{1}{2} m_i N_i u_E^2\right]
+\end{eqnarray}
+and source term
+\begin{align}
+\mathcal{D}_\parallel  &= \int dA \left(t_e \left(1+\ln{n_e}\right) -e \phi\right)  \Lambda \\
+\mathcal{D}_{\nu_\perp} &= \int dA \left[t_{e} (1+\ln (n_e))  - e \phi \right]\Lambda_{\nu_\perp,n_e} +\left[T_{i}  (1+\ln (N_i))+ e \psi_i \right] \Lambda_{\nu_\perp,N_i} \\
+\mathcal{D}_{S} &= \int dA \left[t_{e} (1+\ln (n_e))  - e \phi \right]\Lambda_{S,n_e} +\left[T_{i}  (1+\ln (N_i))+ e \psi_i \right] \Lambda_{S,N_i} 
+\end{align}
+\subsection{Sources and Sinks}
+We choose particle sources, which do not contribute to the polarisation charge density. They read
+\begin{align}
+ \Lambda_{S,n_e} :=\omega_S z \hspace{0.5mm} \Theta \left(z\right)  \\
+ \Lambda_{S,N_i} := \Gamma_{i,1}^{-1} \Lambda_{S,n_e}
+\end{align}
+where we defined the  Heaviside function \(\Theta(z)\) and  
+ \begin{align}
+  z&:=g(x) \left[n_G - \langle n_e \rangle\right] \\
+  g(x) &:= \left[1-\tanh{(x-x_b)/\sigma_b}\right]/2 
+ \end{align}
+to maintain the initial profile in a small region \(x \in \left[0,x_b\right]\).
+\subsection{Initialization}
+We initialize our fields with vanishing initial electric potential. Thus in the \(\delta f\) cas we use
+\begin{align}
+  \delta n_e  =\Gamma_{1,i} \delta  N_i,
+\end{align}
+whereas in the full-F case we use
+\begin{align}
+  n_e  =\Gamma_{1,i}^\dagger N_i.
+\end{align}
+\subsubsection{Blob}
+\begin{align}
+N_{i}\left(\vec{x},0\right) =   n_G\left[1+A \exp{\left(-\frac{\left(\vec{x}-\vec{x}_0\right)^2}{2\sigma^2}\right)}\right]
+\end{align}
+\subsubsection{Wave}
+\begin{align}
+N_{i}\left(\vec{x},0\right) =   n_G\left[1+A \sin{(k_x x)} \cos{(k_y y)}\right]  
+\end{align}
+\subsubsection{Bath}
+\begin{align}
+N_{i}\left(\vec{x},0\right) =   n_G\left[1+\delta N_{bath}(\vec{x})\right]  
+\end{align}
+see further feltor dG docu
+\section{Numerical methods}
+discontinuous Galerkin on structured grid 
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
+coordinate system & cartesian 2D & equidistant discretization of $[0,l_x] \times [0,l_y]$, equal number of Gaussian nodes in x and y \\
+matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
+\ExB advection & Poisson & \\
+time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
+\bottomrule
+\end{longtable}
+%..................................................................
+\begin{thebibliography}{1}
+ \bibitem{held:phd17}
+  M. Held, Full-F gyro-fluid modelling of the tokamak edge and scrape-off, Universit{\"a}t Innsbruck (2017)
+\end{thebibliography}
+%..................................................................
+
+
+\end{document}
