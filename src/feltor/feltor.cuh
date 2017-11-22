@@ -291,21 +291,21 @@ container& Explicit<Geometry, IMatrix, Matrix, container>::polarisation( const s
         multi_pol[u].set_chi( multi_chi[u]);
     }
     //gamma_n
-    if (p.tau[1]==0.) {
+    if (p.tau[1] == 0.) {
         dg::blas1::axpby( 1., y[1], 0.,chi); //chi = N_i - 1
     } 
     else {
         old_gammaN.extrapolate( chi);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaN, chi, y[1], p.eps_gamma);
+        std::vector<unsigned> numberG = multigrid.direct_solve( multi_invgammaN, chi, y[1], p.eps_gamma);
         old_gammaN.update( chi);
-        if(  number[0] == invert_invgamma.get_max())
+        if(  numberG[0] == invert_invgamma.get_max())
             throw dg::Fail( p.eps_gamma);
     }
     //rhs
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);       //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
     //polarisation
     old_phi.extrapolate( phi[0]);
-    number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
     old_phi.update( phi[0]);
     if(  number[0] == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);     
@@ -315,7 +315,7 @@ container& Explicit<Geometry, IMatrix, Matrix, container>::polarisation( const s
 template< class Geometry, class IMatrix, class Matrix, class container>
 container& Explicit<Geometry, IMatrix, Matrix,container>::compute_psi( const container& potential)
 {
-    if (p.tau[1]==0.) {
+    if (p.tau[1] == 0.) {
         dg::blas1::axpby( 1., potential, 0., phi[1]); 
     } 
     else {
@@ -334,7 +334,7 @@ container& Explicit<Geometry, IMatrix, Matrix,container>::compute_psi( const con
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Explicit<Geometry, IMatrix, Matrix, container>::initializene( const container& src, container& target)
 { 
-    if (p.tau[1]==0.) {
+    if (p.tau[1] == 0.) {
         dg::blas1::axpby( 1.,src, 0., target); //  ne-1 = N_i -1
     } 
     else {
