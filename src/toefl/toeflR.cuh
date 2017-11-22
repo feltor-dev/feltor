@@ -179,11 +179,16 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
     //in gyrofluid invert Gamma operator
     if( equations == "local" || equations == "global")
     {
-        old_psi.extrapolate( phi[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, eps_gamma);
-        old_psi.update( phi[1]);
-        if(  number[0] == multigrid.max_iter())
-            throw dg::Fail( eps_gamma);
+        if (p.tau == 0.) {
+            dg::blas1::axpby( 1.,potential, 0.,phi[1]); //chi = N_i - 1
+        } 
+        else {
+            old_psi.extrapolate( phi[1]);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, phi[1], potential, eps_gamma);
+            old_psi.update( phi[1]);
+            if(  number[0] == multigrid.max_iter())
+                throw dg::Fail( eps_gamma);
+        }
     }
     //compute (nabla phi)^2
     arakawa.variation(potential, omega); 
@@ -251,11 +256,16 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     //compute polarisation
     if( equations == "local" || equations == "global")
     {
-        old_gammaN.extrapolate( gamma_n);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, gamma_n, y[1], eps_gamma);
-        old_gammaN.update( gamma_n);
-        if(  number[0] == multigrid.max_iter())
-            throw dg::Fail( eps_gamma);
+        if (p.tau == 0.) {
+            dg::blas1::axpby( 1., y[1], 0.,gamma_n); //chi = N_i - 1
+        } 
+        else {
+            old_gammaN.extrapolate( gamma_n);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_gamma1, gamma_n, y[1], eps_gamma);
+            old_gammaN.update( gamma_n);
+            if(  number[0] == multigrid.max_iter())
+                throw dg::Fail( eps_gamma);
+        }
         dg::blas1::axpby( -1., y[0], 1., gamma_n, omega); //omega = a_i\Gamma n_i - n_e
     }
     else 

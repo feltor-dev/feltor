@@ -164,7 +164,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     {
         multi_pol[u].set_chi( multi_chi[u]); //set chi of polarisation: nabla_perp (chi nabla_perp )
     }   
-    if (p.tau[1]==0.) {
+    if (p.tau[1] == 0.) {
         dg::blas1::axpby( 1., y[1], 0.,chi); //chi = N_i - 1
     } 
     else {
@@ -213,7 +213,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
 template<class G, class Matrix, class container>
 container& Explicit<G, Matrix,container>::compute_psi(const container& ti,container& potential)
 {
-    if (p.tau[1]==0.) {
+    if (p.tau[1] == 0.) {
         dg::blas1::axpby( 1., potential, 0., phi[1]); 
     } 
     else {
@@ -251,7 +251,7 @@ container& Explicit<G, Matrix,container>::compute_psi(const container& ti,contai
 template< class G, class Matrix, class container>
 container& Explicit<G, Matrix,container>::compute_chii(const container& ti,container& potential)
 {    
-    if (p.tau[1]==0.) {
+    if (p.tau[1] == 0.) {
         dg::blas1::scal(chii,0.0); 
     } 
     else {

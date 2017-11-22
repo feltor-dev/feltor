@@ -134,7 +134,7 @@ struct Explicit
     
     dg::Invert<container> invert_pol,invert_invgamma;
     dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
-    dg::Extrapolation<container> old_phi, old_psi, old_gammaN, old_chiia, oldchiib;
+    dg::Extrapolation<container> old_phi, old_psi, old_gammaN, old_chiia, old_chiib;
     
     const eule::Parameters p;
 
@@ -186,7 +186,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     {
         multi_pol[u].set_chi( multi_chi[u]); //set chi of polarisation: nabla_perp (chi nabla_perp )
     }
-    if (p.tau[1]==0.) {
+    if (p.tau[1] == 0.) {
         dg::blas1::axpby( 1., y[1], 0.,chi); //chi = N_i - 1
     } 
     else {
@@ -235,7 +235,7 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
 template<class G, class Matrix, class container>
 container& Explicit<G, Matrix,container>::compute_psi(const container& ti,container& potential)
 {
-    if (p.tau[1]==0.) {
+    if (p.tau[1] == 0.) {
         dg::blas1::axpby( 1., potential, 0., phi[1]); 
     } 
     else {
@@ -273,7 +273,7 @@ container& Explicit<G, Matrix,container>::compute_psi(const container& ti,contai
 template< class G, class Matrix, class container>
 container& Explicit<G, Matrix,container>::compute_chii(const container& ti,container& potential)
 {    
-    if (p.tau[1]==0.) {
+    if (p.tau[1] == 0.) {
         dg::blas1::scal(chii,0.0); 
     } 
     else {
