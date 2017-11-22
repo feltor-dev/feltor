@@ -14,7 +14,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "eps_gamma" : 1e-7,   //accuracy of Gamma 
     "eps_time"  : 1e-10,  //accuracy of implicit time-stepper
     "curvature"  : 0.00015, //magnetic curvature
-    "tau"  : 1,        //Ti/Te
+    "tau"  : 0,        //Ti/Te
     "nu_perp"  : 5e-3, //pependicular viscosity
     "amplitude"  : 1.0,//amplitude of the blob
     "sigma"  : 10,     //blob variance in units of rho_s

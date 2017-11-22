@@ -164,36 +164,41 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
     {
         multi_pol[u].set_chi( multi_chi[u]); //set chi of polarisation: nabla_perp (chi nabla_perp )
     }   
-    if (p.flrmode == 1)
-    {
-        dg::blas1::transform( y[3], chi, dg::PLUS<>( (p.bgprofamp + p.nprofileamp))); //Ti
-        dg::blas1::pointwiseDivide(B2,chi,lambda); //B^2/T_i
-        multigrid.project( lambda, multi_chi);
-        for( unsigned u=0; u<3; u++)
+    if (p.tau[1]==0.) {
+        dg::blas1::axpby( 1., y[1], 0.,chi); //chi = N_i - 1
+    } 
+    else {
+        if (p.flrmode == 1)
         {
-            multi_invgamma1[u].set_chi( multi_chi[u]); //(B^2/T - 0.5*tau_i nabla_perp^2)
-        }        
-        dg::blas1::pointwiseDivide(y[3],B2,chi); //chi=t_i_tilde/b^2    
-        dg::blas2::gemv(lapperpM,chi,omega);
-        dg::blas1::axpby(1.0,y[1],-(p.bgprofamp + p.nprofileamp)*0.5*p.tau[1],omega,omega);    
-        dg::blas1::axpby(1.0,omega,(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.mcv*p.mcv*p.tau[1],one,omega);        
-        old_gammaN.extrapolate( chi);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chi,omega, p.eps_gamma);
-        old_gammaN.update( chi);
-        dg::blas1::pointwiseDot(chi,lambda,chi);   //chi = B^2/T_i chi Gamma (Ni-(bgamp+profamp))   
-    }
-    if (p.flrmode == 0)
-    {
-        multigrid.project( one, multi_chi);
-        for( unsigned u=0; u<3; u++)
-        {
-            multi_invgamma1[u].set_chi( multi_chi[u]); //(1 - 0.5*tau_i nabla_perp^2)
+            dg::blas1::transform( y[3], chi, dg::PLUS<>( (p.bgprofamp + p.nprofileamp))); //Ti
+            dg::blas1::pointwiseDivide(B2,chi,lambda); //B^2/T_i
+            multigrid.project( lambda, multi_chi);
+            for( unsigned u=0; u<3; u++)
+            {
+                multi_invgamma1[u].set_chi( multi_chi[u]); //(B^2/T - 0.5*tau_i nabla_perp^2)
+            }        
+            dg::blas1::pointwiseDivide(y[3],B2,chi); //chi=t_i_tilde/b^2    
+            dg::blas2::gemv(lapperpM,chi,omega);
+            dg::blas1::axpby(1.0,y[1],-(p.bgprofamp + p.nprofileamp)*0.5*p.tau[1],omega,omega);    
+            dg::blas1::axpby(1.0,omega,(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)*p.mcv*p.mcv*p.tau[1],one,omega);        
+            old_gammaN.extrapolate( chi);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chi,omega, p.eps_gamma);
+            old_gammaN.update( chi);
+            dg::blas1::pointwiseDot(chi,lambda,chi);   //chi = B^2/T_i chi Gamma (Ni-(bgamp+profamp))   
         }
-        dg::blas1::axpby(1.0,y[1],0.0,omega,omega);
-        old_gammaN.extrapolate( chi);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chi,omega, p.eps_gamma);
-        old_gammaN.update( chi);
-    }  
+        if (p.flrmode == 0)
+        {
+            multigrid.project( one, multi_chi);
+            for( unsigned u=0; u<3; u++)
+            {
+                multi_invgamma1[u].set_chi( multi_chi[u]); //(1 - 0.5*tau_i nabla_perp^2)
+            }
+            dg::blas1::axpby(1.0,y[1],0.0,omega,omega);
+            old_gammaN.extrapolate( chi);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chi,omega, p.eps_gamma);
+            old_gammaN.update( chi);
+        }  
+    }
 
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);  //chi= Gamma1^dagger (n_i-(bgamp+profamp)) -(n_e-(bgamp+profamp))
      //invert pol
@@ -208,29 +213,34 @@ container& Explicit<G, Matrix, container>::polarisation( const std::vector<conta
 template<class G, class Matrix, class container>
 container& Explicit<G, Matrix,container>::compute_psi(const container& ti,container& potential)
 {
-    if (p.flrmode == 1)
-    {   
-        dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
-      	multigrid.project( lambda, multi_chi);
-        for( unsigned u=0; u<3; u++)
-        {
-            multi_invgamma1[u].set_chi( multi_chi[u]);
+    if (p.tau[1]==0.) {
+        dg::blas1::axpby( 1., potential, 0., phi[1]); 
+    } 
+    else {
+        if (p.flrmode == 1)
+        {   
+            dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
+            multigrid.project( lambda, multi_chi);
+            for( unsigned u=0; u<3; u++)
+            {
+                multi_invgamma1[u].set_chi( multi_chi[u]);
+            }
+            dg::blas1::pointwiseDot(lambda,potential,lambda); //lambda= B^2/T phi
+            old_psi.extrapolate( phi[1]);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, phi[1], lambda, p.eps_gamma);
+            old_psi.update( phi[1]);    
         }
-        dg::blas1::pointwiseDot(lambda,potential,lambda); //lambda= B^2/T phi
-        old_psi.extrapolate( phi[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, phi[1], lambda, p.eps_gamma);
-        old_psi.update( phi[1]);    
-    }
-    if (p.flrmode == 0)
-    {
-        multigrid.project( one, multi_chi);
-        for( unsigned u=0; u<3; u++)
+        if (p.flrmode == 0)
         {
-            multi_invgamma1[u].set_chi( multi_chi[u]);
+            multigrid.project( one, multi_chi);
+            for( unsigned u=0; u<3; u++)
+            {
+                multi_invgamma1[u].set_chi( multi_chi[u]);
+            }
+            old_psi.extrapolate( phi[1]);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, phi[1], potential, p.eps_gamma);
+            old_psi.update( phi[1]);
         }
-        old_psi.extrapolate( phi[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, phi[1], potential, p.eps_gamma);
-        old_psi.update( phi[1]);
     }
 
     poisson.variationRHS(potential, omega); // (nabla_perp phi)^2
@@ -241,24 +251,29 @@ container& Explicit<G, Matrix,container>::compute_psi(const container& ti,contai
 template< class G, class Matrix, class container>
 container& Explicit<G, Matrix,container>::compute_chii(const container& ti,container& potential)
 {    
-    if (p.flrmode==1)
-    {
-            //  setup rhs
-        dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
-        multigrid.project( lambda, multi_chi);
-        for( unsigned u=0; u<3; u++)
+    if (p.tau[1]==0.) {
+        dg::blas1::scal(chii,0.0); 
+    } 
+    else {
+        if (p.flrmode==1)
         {
-            multi_invgamma1[u].set_chi( multi_chi[u]);
-        }       //  set up the lhs
-        dg::blas2::gemv(lapperpM,potential,lambda); //lambda = - nabla_perp^2 phi
-        dg::blas1::scal(lambda,-0.5*p.tau[1]*p.mu[1]); // lambda = 0.5*tau_i*nabla_perp^2 phi 
-        old_chiia.extrapolate( chii);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chii, lambda, p.eps_gamma);
-        old_chiia.update( chii);        dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
-        dg::blas1::pointwiseDot(chii,lambda,lambda);
-        old_chiib.extrapolate( chii);
-        number = multigrid.direct_solve( multi_invgamma1, chii, lambda, p.eps_gamma);
-        old_chiib.update( chii);
+                //  setup rhs
+            dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
+            multigrid.project( lambda, multi_chi);
+            for( unsigned u=0; u<3; u++)
+            {
+                multi_invgamma1[u].set_chi( multi_chi[u]);
+            }       //  set up the lhs
+            dg::blas2::gemv(lapperpM,potential,lambda); //lambda = - nabla_perp^2 phi
+            dg::blas1::scal(lambda,-0.5*p.tau[1]*p.mu[1]); // lambda = 0.5*tau_i*nabla_perp^2 phi 
+            old_chiia.extrapolate( chii);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma1, chii, lambda, p.eps_gamma);
+            old_chiia.update( chii);        dg::blas1::pointwiseDivide(B2,ti,lambda); //B^2/T
+            dg::blas1::pointwiseDot(chii,lambda,lambda);
+            old_chiib.extrapolate( chii);
+            number = multigrid.direct_solve( multi_invgamma1, chii, lambda, p.eps_gamma);
+            old_chiib.update( chii);
+        }
     }
     return chii;
 }
