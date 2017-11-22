@@ -348,17 +348,22 @@ container& Asela<Geometry, IMatrix, Matrix, container>::polarisation( const std:
         multi_pol[u].set_chi( multi_chi[u]);
     }
 
-    
-    old_gammaN.extrapolate( chi);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaN, chi, y[1], p.eps_gamma); //chi= Gamma (Ni-1)
-    old_gammaN.update( chi);
-    if(  number[0] == invert_invgamma.get_max())
-        throw dg::Fail( p.eps_gamma);
+    //Gamma N_i
+    if (p.tau[1] == 0.) {
+        dg::blas1::axpby( 1., y[1], 0.,chi); //chi = N_i - 1
+    } 
+    else {
+        old_gammaN.extrapolate( chi);
+        std::vector<unsigned> numberG = multigrid.direct_solve( multi_invgammaN, chi, y[1], p.eps_gamma); //chi= Gamma (Ni-1)
+        old_gammaN.update( chi);
+        if(  numberG[0] == invert_invgamma.get_max())
+            throw dg::Fail( p.eps_gamma);
+    }
     //rhs
     dg::blas1::axpby( -1., y[0], 1.,chi,chi);        //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
     //polarisation
     old_phi.extrapolate( phi[0]);
-    number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
     old_phi.update( phi[0]);
     if(  number[0] == invert_pol.get_max())
         throw dg::Fail( p.eps_pol);   
@@ -401,18 +406,23 @@ container& Asela<Geometry, IMatrix, Matrix, container>::induct(const std::vector
         }
 
         dg::blas1::pointwiseDot( npe[1], y[3], chi);               //chi = N_i w_i
-        old_gammaNW.extrapolate( lambda);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, lambda,chi, p.eps_gamma); //lambda= Gamma (Ni wi)
-        old_gammaNW.update( lambda);
-        if(  number[0] == invert_invgamma.get_max())
-            throw dg::Fail( p.eps_gamma);
+        if (p.tau[1] == 0.) {
+            dg::blas1::axpby( 1., chi, 0.,lambda); //lambda = N_i w_i
+        } 
+        else {
+            old_gammaNW.extrapolate( lambda);
+            std::vector<unsigned> numberG = multigrid.direct_solve( multi_invgammaDIR, lambda,chi, p.eps_gamma); //lambda= Gamma (Ni wi)
+            old_gammaNW.update( lambda);
+            if(  numberG[0] == invert_invgamma.get_max())
+                throw dg::Fail( p.eps_gamma);
+        }
         dg::blas1::pointwiseDot( npe[0], y[2], chi);                 //chi     = n_e w_e
         dg::blas1::axpby( -1.,lambda , 1., chi);  //chi = - Gamma (n_i w_i) + n_e w_e
         //maxwell = (lap_per + beta*( n_e/mu_e)) A_parallel 
         //chi=n_e w_e -Gamma (N_i w_i )
         //induction
         old_Apar.extrapolate( apar[0]);
-        number = multigrid.direct_solve( multi_maxwell, apar[0], chi, p.eps_maxwell);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_maxwell, apar[0], chi, p.eps_maxwell);
         old_Apar.update( apar[0]);
         if(  number[0] == invert_maxwell.get_max())
             throw dg::Fail( p.eps_maxwell);  
@@ -422,11 +432,16 @@ container& Asela<Geometry, IMatrix, Matrix, container>::induct(const std::vector
 template<class Geometry, class IMatrix, class Matrix, class container>
 container& Asela<Geometry, IMatrix, Matrix,container>::compute_psi( container& potential)
 {
-    old_psi.extrapolate( phi[1]);
-    std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, phi[1], potential, p.eps_gamma);
-    old_psi.update( phi[1]);
-    if(  number[0] == invert_invgamma.get_max())
-      throw dg::Fail( p.eps_gamma); 
+    if (p.tau[1] == 0.) {
+        dg::blas1::axpby( 1., potential, 0., phi[1]); 
+    } 
+    else {
+        old_psi.extrapolate( phi[1]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, phi[1], potential, p.eps_gamma);
+        old_psi.update( phi[1]);
+        if(  number[0] == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma); 
+    }
     poissonN.variationRHS(potential, omega); 
     dg::blas1::pointwiseDot(1.0, binv, binv, omega, 0.0, omega);        // omega = u_E^2 
     dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);        
@@ -436,9 +451,14 @@ container& Asela<Geometry, IMatrix, Matrix,container>::compute_psi( container& p
 template<class Geometry, class IMatrix, class Matrix, class container>
 void Asela<Geometry, IMatrix, Matrix, container>::initializene( const container& src, container& target)
 { 
-    std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
-    if(  number[0] == invert_invgamma.get_max())
-      throw dg::Fail( p.eps_gamma);
+    if (p.tau[1] == 0.) {
+        dg::blas1::axpby( 1.,src, 0., target); //  ne-1 = N_i -1
+    } 
+    else {
+        std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaN, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+        if(  number[0] == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma);
+    }
 }
 
 template<class G, class IMatrix, class M, class V>
@@ -563,11 +583,16 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
     if (p.beta!=0.) apar[0] = induct(y); //computes a_par and needs correct npe
 //     if (p.flrmode==1) invert_invgammaA(invgammaDIR,apar[1] ,apar[0] );             //chi= Gamma (Ni-1)
     if (p.flrmode==1) {
-        old_gammaApar.extrapolate( apar[1]);
-        std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, apar[1], apar[0] , p.eps_gamma);
-        old_gammaApar.update( apar[1]);
-        if(  number[0] == invert_invgamma.get_max())
-            throw dg::Fail( p.eps_gamma); 
+        if (p.tau[1] == 0.) {
+          dg::blas1::axpby(1.0,apar[0],0.,apar[1]);
+        } 
+        else {
+            old_gammaApar.extrapolate( apar[1]);
+            std::vector<unsigned> number = multigrid.direct_solve( multi_invgammaDIR, apar[1], apar[0] , p.eps_gamma);
+            old_gammaApar.update( apar[1]);
+            if(  number[0] == invert_invgamma.get_max())
+                throw dg::Fail( p.eps_gamma); 
+        }
     }
     if (p.flrmode==0) dg::blas1::axpby(1.0,apar[0],0.,apar[1]);
 
