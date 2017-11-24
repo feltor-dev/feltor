@@ -1,27 +1,32 @@
 /*
+ * %%%%%%%%%%%%%%%%%%%%%%%Original development%%%%%%%%%%%%%%%%%%%%%%%%%
  *  Copyright (c) 2016 Inria and University Pierre and Marie Curie 
  *  All rights reserved.
+ * %%%%%%%%%%%%%%%%%%%%%%%Modifications and further additions%%%%%%%%%%
+ *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
  */
 #include "thrust/device_vector.h"
 
 namespace exblas{
 
-static constexpr uint BIN_COUNT      =  39;
-static constexpr int KRX            =  8;                 // High-radix carry-save bits
-static constexpr int DIGITS         =  56;//must be int because appears in integer expresssion
-static constexpr double DELTASCALE   =  72057594037927936.0;  // Assumes KRX>0
-static constexpr int F_WORDS        =  20;
+static constexpr uint BIN_COUNT     =  39; //size of superaccumulator
+static constexpr uint NBFPE         =  3;  //size of floating point expansion
+////////////// parameters for superaccumulator operations //////////////////////
+static constexpr int KRX            =  8;  //High-radix carry-save bits
+static constexpr int DIGITS         =  56; //must be int because appears in integer expresssion
+static constexpr int F_WORDS        =  20; //
 static constexpr int TSAFE          =  0;
-static constexpr uint NBFPE          =  3;
+static constexpr double DELTASCALE  =  72057594037927936.0;  // Assumes KRX>0
 
+////////////// parameters for Kernel execution            //////////////////////
 //Kernel paramters for EXDOT
 static constexpr uint WARP_COUNT               = 16 ; //# of sub superaccs
 static constexpr uint WARP_SIZE                = 32 ;
-static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per group
+static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per block
 static constexpr uint PARTIAL_SUPERACCS_COUNT  = 128; //# of groups; each has a partial SuperAcc
 //Kernel paramters for EXDOTComplete
-static constexpr uint MERGE_SUPERACCS_SIZE     = 128;
-static constexpr uint MERGE_WORKGROUP_SIZE     = 64;
+static constexpr uint MERGE_SUPERACCS_SIZE     = 128; //# of sa each block merges
+static constexpr uint MERGE_WORKGROUP_SIZE     = 64;  //we need only 39 of those
 
 
 ////////////////////////////////////////////////////////////////////////////////
