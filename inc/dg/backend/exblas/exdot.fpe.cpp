@@ -9,8 +9,13 @@
 #include <cmath>
 #include <iostream>
 
-#include "ExSUM.hpp"
-#include "blas1.hpp"
+#include "superaccumulator.hpp"
+#include "ExSUM.FPE.hpp"
+#include <omp.h>
+
+#ifdef EXBLAS_MPI
+    #include <mpi.h>
+#endif
 
 #ifdef EXBLAS_TIMING
     #define iterations 50
