@@ -20,7 +20,8 @@
 #include <stdint.h>
 #include <immintrin.h>
 #include <cassert>
-#include "vectorclass.h" //vcl by Agner Fog
+#define VCL_NAMESPACE vcl
+#include "vcl/vectorclass.h" //vcl by Agner Fog
 
 #ifdef __GNUC__
 #define UNROLL_ATTRIBUTE __attribute__((optimize("unroll-loops")))
@@ -40,6 +41,8 @@
 
 // Debug mode
 #define paranoid_assert(x) assert(x)
+
+namespace exblas{
 
 // Making C code less readable in an attempt to make assembly more readable
 #if 1
@@ -197,24 +200,25 @@ inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
     return oldword;
 }
 
-static inline Vec4d clear_significand(Vec4d x) {
-    return x & Vec4d(_mm256_castsi256_pd(_mm256_set1_epi64x(0xfff0000000000000ull)));
+static inline vcl::Vec4d clear_significand(vcl::Vec4d x) {
+    return x & vcl::Vec4d(_mm256_castsi256_pd(_mm256_set1_epi64x(0xfff0000000000000ull)));
 }
 
-static inline double horizontal_max(Vec4d x) {
-    Vec2d h = x.get_high();
-    Vec2d l = x.get_low();
-    Vec2d m1 = max(h, l);
-    Vec2d m2 = permute2d<1, 0>(m1);
-    Vec2d m = max(m1, m2);
+static inline double horizontal_max(vcl::Vec4d x) {
+    vcl::Vec2d h = x.get_high();
+    vcl::Vec2d l = x.get_low();
+    vcl::Vec2d m1 = max(h, l);
+    vcl::Vec2d m2 = permute2d<1, 0>(m1);
+    vcl::Vec2d m = vcl::max(m1, m2);
     return m[0];    // Why is it so hard to convert from vector xmm register to scalar xmm register?
 }
 
-inline static bool horizontal_or(Vec4d const & a) {
+inline static bool horizontal_or(vcl::Vec4d const & a) {
     //return _mm256_movemask_pd(a) != 0;
-    Vec4db p = a != 0;
+    vcl::Vec4db p = a != 0;
     return !_mm256_testz_pd(p, p);
 }
 
+}//namespace exblas
 
 #endif

@@ -11,6 +11,8 @@
 
 #include <iostream>
 
+namespace exblas{
+
 Superaccumulator::Superaccumulator(int e_bits, int f_bits) :
     f_words((f_bits + digits - 1) / digits),   // Round up
     e_words((e_bits + digits - 1) / digits),
@@ -182,4 +184,5 @@ void Superaccumulator::Dump(std::ostream & os)
     os << std::dec;
     os << std::endl;
 }
+}//namespace exblas
 

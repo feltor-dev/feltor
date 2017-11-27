@@ -33,12 +33,14 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
     assert( result == MPI_CONGRUENT || result == MPI_IDENT); 
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
-    
-    typename VectorTraits<Vector>::value_type sum=0;
     //local compuation
-    typename VectorTraits<Vector>::value_type temp = doDot( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
+    Superacc acc = doDot_dispatch( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
+    acc.Normalize();
     //communication
-    MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, x.communicator());
+    std::vector<int64_t> result(acc.get_f_words() + acc.get_e_words(), 0);
+    MPI_Allreduce(&(acc.get_accumulator()[0]), &(result[0]), acc.get_f_words() + acc.get_e_words(), MPI_LONG, MPI_SUM, 0, x.communicator()); 
+    Superaccumulator acc_fin(result);
+    double sum = acc_fin.Round();
     return sum;
 }
 

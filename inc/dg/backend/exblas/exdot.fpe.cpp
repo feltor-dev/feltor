@@ -10,85 +10,77 @@
 #include <iostream>
 
 #include "superaccumulator.hpp"
-#include "ExSUM.FPE.hpp"
+#include "ExDOT.FPE.hpp"
 #include <omp.h>
 
-#ifdef EXBLAS_MPI
-    #include <mpi.h>
-#endif
-
-#ifdef EXBLAS_TIMING
-    #define iterations 50
-#endif
-
+namespace exblas{
 
 /*
  * Parallel summation using our algorithm
- * If fpe < 2, use superaccumulators only,
  * Otherwise, use floating-point expansions of size FPE with superaccumulators when needed
  * early_exit corresponds to the early-exit technique
  */
-double exdot(int N, double *a, double* b, int fpe, bool early_exit) {
+double exdot_omp(int N, const double *a, const double* b, int fpe, bool early_exit) {
     if (fpe < 2) {
         fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
         exit(1);
     }
+    Superaccumulator acc;
     if (early_exit) {
         if (fpe <= 4)
-            return (ExSUMFPE<FPExpansionVect<Vec4d, 4, FPExpansionTraits<true> > >)(N,a,b);
+            acc = (ExDOTFPE<FPExpansionVect<Vec4d, 4, FPExpansionTraits<true> > >)(N,a,b);
         if (fpe <= 6)
-            return (ExSUMFPE<FPExpansionVect<Vec4d, 6, FPExpansionTraits<true> > >)(N,a,b);
+            acc = (ExDOTFPE<FPExpansionVect<Vec4d, 6, FPExpansionTraits<true> > >)(N,a,b);
         if (fpe <= 8)
-            return (ExSUMFPE<FPExpansionVect<Vec4d, 8, FPExpansionTraits<true> > >)(N,a,b);
+            acc = (ExDOTFPE<FPExpansionVect<Vec4d, 8, FPExpansionTraits<true> > >)(N,a,b);
     } else { // ! early_exit
         if (fpe == 2) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 2> >)(N, a,b);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 2> >)(N, a,b);
         if (fpe == 3) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 3> >)(N, a,b);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 3> >)(N, a,b);
         if (fpe == 4) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 4> >)(N, a,b);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 4> >)(N, a,b);
         if (fpe == 5) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 5> >)(N, a,b);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 5> >)(N, a,b);
         if (fpe == 6) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 6> >)(N, a,b);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 6> >)(N, a,b);
         if (fpe == 7) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 7> >)(N, a,b);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 7> >)(N, a,b);
         if (fpe == 8) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 8> >)(N, a,b);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 8> >)(N, a,b);
     }
-
-    return 0.0;
+    return acc;
 }
-double exdot(int N, double *a, double* b, double * c, int fpe, bool early_exit) {
+Superaccumulator exdot_omp(int N, const double *a, const double* b, const double * c, int fpe, bool early_exit) {
     if (fpe < 2) {
         fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
         exit(1);
     }
+    Superaccumulator acc;
     if (early_exit) {
         if (fpe <= 4)
-            return (ExSUMFPE<FPExpansionVect<Vec4d, 4, FPExpansionTraits<true> > >)(N,a,b,c);
+            acc = (ExDOTFPE<FPExpansionVect<Vec4d, 4, FPExpansionTraits<true> > >)(N,a,b,c);
         if (fpe <= 6)
-            return (ExSUMFPE<FPExpansionVect<Vec4d, 6, FPExpansionTraits<true> > >)(N,a,b,c);
+            acc = (ExDOTFPE<FPExpansionVect<Vec4d, 6, FPExpansionTraits<true> > >)(N,a,b,c);
         if (fpe <= 8)
-            return (ExSUMFPE<FPExpansionVect<Vec4d, 8, FPExpansionTraits<true> > >)(N,a,b,c);
+            acc = (ExDOTFPE<FPExpansionVect<Vec4d, 8, FPExpansionTraits<true> > >)(N,a,b,c);
     } else { // ! early_exit
         if (fpe == 2) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 2> >)(N, a,b,c);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 2> >)(N, a,b,c);
         if (fpe == 3) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 3> >)(N, a,b,c);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 3> >)(N, a,b,c);
         if (fpe == 4) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 4> >)(N, a,b,c);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 4> >)(N, a,b,c);
         if (fpe == 5) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 5> >)(N, a,b,c);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 5> >)(N, a,b,c);
         if (fpe == 6) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 6> >)(N, a,b,c);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 6> >)(N, a,b,c);
         if (fpe == 7) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 7> >)(N, a,b,c);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 7> >)(N, a,b,c);
         if (fpe == 8) 
-	    return (ExSUMFPE<FPExpansionVect<Vec4d, 8> >)(N, a,b,c);
+	    acc = (ExDOTFPE<FPExpansionVect<Vec4d, 8> >)(N, a,b,c);
     }
-
-    return 0.0;
+    return acc;
 }
 
 
@@ -140,124 +132,94 @@ inline static void Reduction(unsigned int tid, unsigned int tnum, std::vector<in
 }
 
 template<typename CACHE> 
-double ExDOTFPE(int N, double *a, double *b) {
+Superaccumulator ExDOTFPE(int N, const double *a, const double *b) {
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t)
     int maxthreads = omp_get_max_threads();
-    double dacc;
-#ifdef EXBLAS_TIMING
-    double t, mint = 10000;
-    uint64_t tstart, tend;
-    for(int iter = 0; iter != iterations; ++iter) {
-        tstart = rdtsc();
-#endif
-        std::vector<Superaccumulator> acc(maxthreads);
-        std::vector<int32_t> ready(maxthreads * linesize);
-    
-        #pragma omp parallel
-        {
-            unsigned int tid = omp_get_thread_num();
-            unsigned int tnum = omp_get_num_threads();
+    std::vector<Superaccumulator> acc(maxthreads);
+    std::vector<int32_t> ready(maxthreads * linesize);
 
-            CACHE cache(acc[tid]);
-            *(int32_t volatile *)(&ready[tid * linesize]) = 0;  // Race here, who cares?
+    #pragma omp parallel
+    {
+        unsigned int tid = omp_get_thread_num();
+        unsigned int tnum = omp_get_num_threads();
 
-            int l = ((tid * int64_t(N)) / tnum) & ~7ul;
-            int r = ((((tid+1) * int64_t(N)) / tnum) & ~7ul) - 1;
+        CACHE cache(acc[tid]);
+        *(int32_t volatile *)(&ready[tid * linesize]) = 0;  // Race here, who cares?
 
-            for(int i = l; i < r; i+=4) {
-                asm ("# myloop");
-                Vec4d r1 ;
-                Vec4d x  = TwoProductFMA(Vec4d().load(a+i), Vec4d().load(b+i), r1);
-                cache.Accumulate(x);
-                cache.Accumulate(r1);
-            }
-            cache.Flush();
-            acc[tid].Normalize();
+        int l = ((tid * int64_t(N)) / tnum) & ~3ul; // & ~3ul == round down to multiple of 4
+        int r = ((((tid+1) * int64_t(N)) / tnum) & ~3ul) - 1;
 
-            Reduction(tid, tnum, ready, acc, linesize);
+        for(int i = l; i < r; i+=4) {
+            asm ("# myloop");
+            Vec4d r1 ;
+            Vec4d x  = TwoProductFMA(Vec4d().load(a+i), Vec4d().load(b+i), r1);
+            cache.Accumulate(x);
+            cache.Accumulate(r1);
         }
-#ifdef EXBLAS_MPI
-        acc[0].Normalize();
-        std::vector<int64_t> result(acc[0].get_f_words() + acc[0].get_e_words(), 0);
-        MPI_Allreduce(&(acc[0].get_accumulator()[0]), &(result[0]), acc[0].get_f_words() + acc[0].get_e_words(), MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+        if( tid+1==tnum && r != N-1) {
+            r+=1
+            //accumulate remainder
+            Vec4d r1 , r2, cvec = Vec4d().load_partial(N-r, c+i);
+            Vec4d x  = TwoProductFMA(Vec4d().load_partial(N-r, a+i), Vec4d().load_partial(N-r,b+i), r1);
+            cache.Accumulate(x);
+            cache.Accumulate(r1);
+        }
+        cache.Flush();
+        acc[tid].Normalize();
 
-        Superaccumulator acc_fin(result);
-        dacc = acc_fin.Round();
-#else
-        dacc = acc[0].Round();
-#endif    
-
-#ifdef EXBLAS_TIMING
-        tend = rdtsc();
-        t = double(tend - tstart) / N;
-        mint = std::min(mint, t);
+        Reduction(tid, tnum, ready, acc, linesize);
     }
-    fprintf(stderr, "%f ", mint);
-#endif
-
-    return dacc;
+    return acc[0];
 }
-template<typename CACHE> double ExDOTFPE(int N, double *a, double *b, double *c) {
+template<typename CACHE> 
+Superaccumulator ExDOTFPE(int N, const double *a, const double *b, const double *c) {
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t)
     int maxthreads = omp_get_max_threads();
-    double dacc;
-#ifdef EXBLAS_TIMING
-    double t, mint = 10000;
-    uint64_t tstart, tend;
-    for(int iter = 0; iter != iterations; ++iter) {
-        tstart = rdtsc();
-#endif
-        std::vector<Superaccumulator> acc(maxthreads);
-        std::vector<int32_t> ready(maxthreads * linesize);
-    
-        #pragma omp parallel
-        {
-            unsigned int tid = omp_get_thread_num();
-            unsigned int tnum = omp_get_num_threads();
+    std::vector<Superaccumulator> acc(maxthreads);
+    std::vector<int32_t> ready(maxthreads * linesize);
 
-            CACHE cache(acc[tid]);
-            *(int32_t volatile *)(&ready[tid * linesize]) = 0;  // Race here, who cares?
+    #pragma omp parallel
+    {
+        unsigned int tid = omp_get_thread_num();
+        unsigned int tnum = omp_get_num_threads();
 
-            int l = ((tid * int64_t(N)) / tnum) & ~7ul;
-            int r = ((((tid+1) * int64_t(N)) / tnum) & ~7ul) - 1;
+        CACHE cache(acc[tid]);
+        *(int32_t volatile *)(&ready[tid * linesize]) = 0;  // Race here, who cares?
 
-            for(int i = l; i < r; i+=4) {
-                asm ("# myloop");
-                Vec4d r1 , r2, cvec = Vec4d().load(c+i);
-                Vec4d x  = TwoProductFMA(Vec4d().load(a+i), Vec4d().load(b+i), r1);
-                Vec4d x2 = TwoProductFMA(x , cvec, r2);
-                cache.Accumulate(x2);
-                cache.Accumulate(r2);
-                x2 = TwoProductFMA(r1, cvec, r2);
-                cache.Accumulate(x2);
-                cache.Accumulate(r2);
-            }
-            cache.Flush();
-            acc[tid].Normalize();
+        int l = ((tid * int64_t(N)) / tnum) & ~3ul;// & ~3ul == round down to multiple of 4
+        int r = ((((tid+1) * int64_t(N)) / tnum) & ~3ul) - 1;
 
-            Reduction(tid, tnum, ready, acc, linesize);
+        for(int i = l; i < r; i+=4) {
+            asm ("# myloop");
+            Vec4d r1 , r2, cvec = Vec4d().load(c+i);
+            Vec4d x  = TwoProductFMA(Vec4d().load(a+i), Vec4d().load(b+i), r1);
+            Vec4d x2 = TwoProductFMA(x , cvec, r2);
+            cache.Accumulate(x2);
+            cache.Accumulate(r2);
+            x2 = TwoProductFMA(r1, cvec, r2);
+            cache.Accumulate(x2);
+            cache.Accumulate(r2);
         }
-#ifdef EXBLAS_MPI
-        acc[0].Normalize();
-        std::vector<int64_t> result(acc[0].get_f_words() + acc[0].get_e_words(), 0);
-        MPI_Allreduce(&(acc[0].get_accumulator()[0]), &(result[0]), acc[0].get_f_words() + acc[0].get_e_words(), MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+        if( tid+1 == tnum && r != N-1) {
+            r+=1;
+            //accumulate remainder
+            Vec4d r1 , r2, cvec = Vec4d().load_partial(N-r, c+i);
+            Vec4d x  = TwoProductFMA(Vec4d().load_partial(N-r, a+i), Vec4d().load_partial(N-r,b+i), r1);
+            Vec4d x2 = TwoProductFMA(x , cvec, r2);
+            cache.Accumulate(x2);
+            cache.Accumulate(r2);
+            x2 = TwoProductFMA(r1, cvec, r2);
+            cache.Accumulate(x2);
+            cache.Accumulate(r2);
+        }
+        cache.Flush();
+        acc[tid].Normalize();
 
-        Superaccumulator acc_fin(result);
-        dacc = acc_fin.Round();
-#else
-        dacc = acc[0].Round();
-#endif    
-
-#ifdef EXBLAS_TIMING
-        tend = rdtsc();
-        t = double(tend - tstart) / N;
-        mint = std::min(mint, t);
+        Reduction(tid, tnum, ready, acc, linesize);
     }
-    fprintf(stderr, "%f ", mint);
-#endif
-
-    return dacc;
+    return acc[0];
 }
 
+}//namespace exblas

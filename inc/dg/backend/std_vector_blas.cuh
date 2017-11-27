@@ -193,10 +193,12 @@ inline typename VectorTraits<Vector>::value_type doDot( const std::vector<Vector
     assert( !x1.empty());
     assert( x1.size() == x2.size() );
 #endif //DG_DEBUG
-    typename VectorTraits<Vector>::value_type sum =0;
+    std::vector<Superacc> acc( x1.size());
     for( unsigned i=0; i<x1.size(); i++)
-        sum += doDot( x1[i], x2[i], typename VectorTraits<Vector>::vector_category());
-    return sum;
+        acc[i] = doDot_dispatch( x1[i], x2[i], typename VectorTraits<Vector>::vector_category());
+    for( unsigned i=1; i<x1.size(); i++)
+        acc[0].Accumulate( acc[i]);
+    return acc[0].Round();
 }
 
 

@@ -12,8 +12,11 @@
 #include "vector_categories.h"
 #include "vector_traits.h"
 
+#include "exblas/exdot.fpe_cpu.cpp"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #include "exblas/exdot.fpe.cu"
+#else
+#include "exblas/exdot.fpe.cpp"
 #endif
 
 
@@ -66,33 +69,40 @@ void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorT
     thrust::copy( in.begin(), in.end(), out.begin());
 }
 
-template< class Vector>
-typename Vector::value_type doDot( const Vector& x, const Vector& y, ThrustVectorTag)
+template< class value_type>
+exblas::Superacc doDot_dispatch( const thrust::host_vector<value_type>& x, const thrust::host_vector<value_type>& y, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    typedef typename Vector::value_type value_type;
+    const double* x_ptr = thrust::raw_pointer_case( x.data());
+    const double* y_ptr = thrust::raw_pointer_case( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_cpu( x.size(), x_ptr,y_ptr)) ;
+}
+
+template< class value_type>
+exblas::Superacc doDot_dispatch( const thrust::device_vector<value_type>& x, const thrust::device_vector<value_type>& y, ThrustVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    value_type sum = 0;
-    unsigned size=x.size();
-    if(size<MIN_SIZE)
-    {
-        for( unsigned i=0; i<size; i++)
-            sum += x[i]*y[i];
-        return sum;
-    }
-    #pragma omp parallel for SIMD reduction(+:sum)
-    for( unsigned i=0; i<size; i++)
-        sum += x[i]*y[i];
-    return sum;
+    const double* x_ptr = thrust::raw_pointer_case( x.data());
+    const double* y_ptr = thrust::raw_pointer_case( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_omp( x.size(), x_ptr,y_ptr)) ;
 #else
-    //return thrust::inner_product( x.begin(), x.end(),  y.begin(), value_type(0));
-    double sum =  exblas::exdot( x,y);
-    return sum;
+    const double* x_ptr = thrust::raw_pointer_case( x.data());
+    const double* y_ptr = thrust::raw_pointer_case( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_gpu( x.size(), x_ptr,y_ptr)) ;
 #endif
 }
 
+template<class Vector>
+double doDot( const Vector& x, const Vector& y, ThrustVectorTag)
+{
+    exblas::Superacc acc = doDot_dispatch( x,y,ThrustVectorTag());
+    return acc.Round();
+}
 template< class Vector, class UnaryOp>
 inline void doTransform(  const Vector& x, Vector& y,
                           UnaryOp op,

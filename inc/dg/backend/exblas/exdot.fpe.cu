@@ -434,8 +434,6 @@ __global__ void ExDOT(
 ////////////////////////////////////////////////////////////////////////////////
 // Merging
 ////////////////////////////////////////////////////////////////////////////////
-template<size_t BLOCK_SIZE>
-__launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
 __global__
 void ExDOTComplete(
      double *d_Res,
@@ -469,40 +467,41 @@ void ExDOTComplete(
 
         d_PartialSuperaccs[lid] = sum;
 
-        __syncthreads();
-        if (lid == 0)
-            d_Res[0] = Round(d_PartialSuperaccs);
+        //__syncthreads();
+        //if (lid == 0)
+        //    d_Res[0] = Round(d_PartialSuperaccs);
     }
 }
 
 __host__
-double exdot(const thrust::device_vector<double>& x1, const thrust::device_vector<double>& x2)
+std::vector<long long int> exdot_gpu(unsigned size, const double* x1,_ptr const double* x2_ptr)
 {
     thrust::device_vector<long long int> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT); //39 columns and PSC rows
     long long int *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    const double *x1_ptr = thrust::raw_pointer_cast( x1.data());
-    const double *x2_ptr = thrust::raw_pointer_cast( x2.data());
-    ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,x1.size());
+    ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
     thrust::device_vector<double> r(1,0);
     double *r_ptr = thrust::raw_pointer_cast( r.data());
-    ExDOTComplete<MERGE_WORKGROUP_SIZE><<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( r_ptr, d_PartialSuperaccs );
-    double sum = r[0];
-    return sum;
+    ExDOTComplete<<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( r_ptr, d_PartialSuperaccs );
+    std::vector<long long int> h_Superacc(BIN_COUNT);
+    cudaMemcpy( &h_Superacc[0], d_PartialSuperaccsV.begin(), BIN_COUNT, cudaMemcpyDeviceToHost);
+    return h_Superacc;
+    //double sum = r[0];
+    //return sum;
 }
 __host__
-double exdot(const thrust::device_vector<double>& x1, const thrust::device_vector<double>& x2, const thrust::device_vector<double>& x3)
+std::vector<long long int> exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const double* x3_ptr)
 {
     thrust::device_vector<long long int> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT); //39 columns and PSC rows
     long long int *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    const double *x1_ptr = thrust::raw_pointer_cast( x1.data());
-    const double *x2_ptr = thrust::raw_pointer_cast( x2.data());
-    const double *x3_ptr = thrust::raw_pointer_cast( x3.data());
-    ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,x3_ptr,x1.size());
+    ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,x3_ptr,size);
     thrust::device_vector<double> r(1,0);
     double *r_ptr = thrust::raw_pointer_cast( r.data());
-    ExDOTComplete<MERGE_WORKGROUP_SIZE><<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( r_ptr, d_PartialSuperaccs );
-    double sum = r[0];
-    return sum;
+    ExDOTComplete<<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( r_ptr, d_PartialSuperaccs );
+    std::vector<long long int> h_Superacc(BIN_COUNT);
+    cudaMemcpy( &h_Superacc[0], d_PartialSuperaccsV.begin(), BIN_COUNT, cudaMemcpyDeviceToHost);
+    return h_Superacc;
+    //double sum = r[0];
+    //return sum;
 }
 }//namespace exblas
 

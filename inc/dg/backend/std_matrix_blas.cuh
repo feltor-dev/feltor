@@ -63,12 +63,14 @@ inline typename MatrixTraits<Matrix>::value_type  doDot(
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    typename MatrixTraits<Matrix>::value_type sum = 0;
+    std::vector<exblas::Superacc> acc( x1.size());
     for( unsigned i=0; i<x.size(); i++)
-        sum += doDot( x[i], m, y[i],
+        acc[i] = doDot_dispatch( x[i], m, y[i],
                        typename dg::MatrixTraits<Matrix>::matrix_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
-    return sum;
+    for( unsigned i=1; i<x.size(); i++)
+        acc[0].Accumulate( acc[i]);
+    return acc[0].Round();
 }
 template< class Matrix, class Vector>
 inline typename VectorTraits<Vector>::value_type  doDot( 
@@ -77,12 +79,7 @@ inline typename VectorTraits<Vector>::value_type  doDot(
               AnyMatrixTag,
               StdVectorTag)
 {
-    typename MatrixTraits<Matrix>::value_type sum = 0;
-    for( unsigned i=0; i<y.size(); i++)
-        sum += doDot( y[i], m, y[i],
-                       typename dg::MatrixTraits<Matrix>::matrix_category(),
-                       typename dg::VectorTraits<Vector>::vector_category() );
-    return sum;
+    return doDot( y,m,y,AnyMatrixTag(),StdVectorTag());
 }
 
 

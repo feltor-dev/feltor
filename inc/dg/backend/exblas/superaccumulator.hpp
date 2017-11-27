@@ -24,6 +24,8 @@
 #include <cmath>
 #include <cstdio>
 
+namespace exblas{
+
 /**
  * \struct Superaccumulator
  * \ingroup ExSUM
@@ -66,7 +68,7 @@ struct Superaccumulator
     void Accumulate(Superaccumulator & other);   // May modify (normalize) other member
 
     /**
-     * Function to perform correct rounding
+     * Function to perform correct rounding (calls Normalize() )
      */
     double Round();
     
@@ -209,4 +211,5 @@ inline void Superaccumulator::set_accumulator(std::vector<int64_t> other){
     accumulator = other;
 }
 
+}//namespace exblas
 #endif

@@ -26,63 +26,45 @@ void doTransfer( const Vector1& in, Vector2& out, ThrustMatrixTag, ThrustMatrixT
     thrust::copy( in.begin(), in.end(), out.begin());
 }
 
-template < class Vector>
-struct ThrustVectorDoDot
-{
-    typedef typename VectorTraits<Vector>::value_type value_type;
-    typedef thrust::tuple< value_type, value_type> Pair; 
-    __host__ __device__
-        value_type operator()( const value_type & x, const Pair& p) {
-            return thrust::get<0>(p)*thrust::get<1>(p)*x;
-        }
-    __host__ __device__
-        value_type operator()( const value_type& x, const value_type& p) {
-            return p*x*x;
-        }
-};
-
-template< class Matrix, class Vector>
-inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
+template< class Matrix, class value_type>
+inline exblas::Superacc doDot_dispatch( const thrust::host_vector<value_type>& x, const Matrix& m, const thrust::host_vector<value_type>& y, ThrustMatrixTag, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() && x.size() == m.size() );
 #endif //DG_DEBUG
-    typedef typename MatrixTraits<Matrix>::value_type value_type;
+    const double* x_ptr = thrust::raw_pointer_case( x.data());
+    const double* m_ptr = thrust::raw_pointer_case( m.data());
+    const double* y_ptr = thrust::raw_pointer_case( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_cpu( x.size(), x_ptr,m_ptr, y_ptr)) ;
+}
+template< class Matrix, class value_type>
+inline exblas::Superacc doDot_dispatch( const thrust::device_vector<value_type>& x, const Matrix& m, const thrust::device_vector<value_type>& y, ThrustMatrixTag, ThrustVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() && x.size() == m.size() );
+#endif //DG_DEBUG
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    value_type sum = 0;
-    unsigned size=x.size();
-    #pragma omp parallel for SIMD reduction(+:sum)
-    for( unsigned i=0; i<size; i++)
-        sum += x[i]*m[i]*y[i];
-    return sum;
+    const double* x_ptr = thrust::raw_pointer_case( x.data());
+    const double* m_ptr = thrust::raw_pointer_case( m.data());
+    const double* y_ptr = thrust::raw_pointer_case( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_omp( x.size(), x_ptr,m_ptr, y_ptr)) ;
 #else
-    double result = exblas::exdot( x, m, y);
-    return result;
+    const double* x_ptr = thrust::raw_pointer_case( x.data());
+    const double* m_ptr = thrust::raw_pointer_case( m.data());
+    const double* y_ptr = thrust::raw_pointer_case( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_gpu( x.size(), x_ptr,m_ptr, y_ptr)) ;
 #endif
 }
 
 template< class Matrix, class Vector>
+inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, dg::ThrustMatrixTag, dg::ThrustVectorTag)
+{
+    exblas::Superacc acc = doDot_dispatch( x,m,y,dg::ThrustMatrixTag(),dg::ThrustVectorTag());
+}
+template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::ThrustMatrixTag, dg::ThrustVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( m.size() == x.size());
-#endif //DG_DEBUG
-    typedef typename MatrixTraits<Matrix>::value_type value_type;
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    value_type sum = 0;
-    unsigned size=x.size();
-    #pragma omp parallel for SIMD reduction(+:sum)
-    for( unsigned i=0; i<size; i++)
-        sum += x[i]*x[i]*m[i];
-    return sum;
-#else
-    return thrust::inner_product( x.begin(), x.end(),
-                                  m.begin(),
-                                  value_type(0),
-                                  thrust::plus<value_type>(),
-                                  detail::ThrustVectorDoDot<Matrix>()
-            ); //very fast
-#endif
+    exblas::Superacc acc = doDot_dispatch( x,m,x,dg::ThrustMatrixTag(),dg::ThrustVectorTag());
 }
 
 template< class Matrix, class Vector>

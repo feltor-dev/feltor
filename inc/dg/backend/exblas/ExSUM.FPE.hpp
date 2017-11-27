@@ -14,6 +14,8 @@
  */
 #ifndef EXSUM_FPE_HPP_
 #define EXSUM_FPE_HPP_
+namespace exblas
+{
 
 /**
  * \struct FPExpansionTraits
@@ -105,7 +107,7 @@ inline static T Knuth2Sum(T a, T b, T & s)
 template<typename T>
 inline static T TwoProductFMA(T a, T b, T &d) {
     T p = a * b;
-    d = mul_sub_x(a, b, p); //extra precision even if FMA is not available
+    d = vcl::mul_sub_x(a, b, p); //extra precision even if FMA is not available
     return p;
 }
 
@@ -134,8 +136,8 @@ template<typename T>
 inline static T FMA2Sum(T a, T b, T & s)
 {
     T r = a + b;
-    T z = mul_sub(1., r, a);
-    s = mul_add(1., a - mul_sub(1., r, z), b - z);
+    T z = vcl::mul_sub(1., r, a);
+    s = vcl::mul_add(1., a - vcl::mul_sub(1., r, z), b - z);
     return r;
 }
 
@@ -158,7 +160,7 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
     }
 }
 
-static inline bool sign_horizontal_or (Vec4db const & a) {
+static inline bool sign_horizontal_or (vcl::Vec4db const & a) {
     return !_mm256_testz_pd(a,a);
 }
 
@@ -168,14 +170,14 @@ static inline bool sign_horizontal_or (Vec4db const & a) {
 // Output:
 // a3 b3 a1 b1
 // a2 b2 a0 b0
-inline static void transpose1(Vec4d & a, Vec4d & b)
+inline static void transpose1(vcl::Vec4d & a, vcl::Vec4d & b)
 {
     // a3 -- a1 --
     // -- b3 -- b1
-    Vec4d a2 = blend4d<4|1,0|1,4|3,0|3>(a, b);
+    vcl::Vec4d a2 = blend4d<4|1,0|1,4|3,0|3>(a, b);
     // a2 -- a0 --
     // -- b2 -- b0
-    Vec4d b2 = blend4d<4|0,0|0,4|2,0|2>(a, b);
+    vcl::Vec4d b2 = blend4d<4|0,0|0,4|2,0|2>(a, b);
     a = a2;
     b = b2;
 }
@@ -186,19 +188,19 @@ inline static void transpose1(Vec4d & a, Vec4d & b)
 // Output:
 // a3 a2 b3 b2
 // a1 a0 b1 b0
-inline static void transpose2(Vec4d & a, Vec4d & b)
+inline static void transpose2(vcl::Vec4d & a, vcl::Vec4d & b)
 {
     // a3 a2 -- --
     // -- -- b3 b2
-    Vec4d a2 = blend4d<4|2,4|3,0|2,0|3>(a, b);
+    vcl::Vec4d a2 = blend4d<4|2,4|3,0|2,0|3>(a, b);
     // a1 a0 -- --
     // -- -- b1 b0
-    Vec4d b2 = blend4d<4|0,4|1,0|0,0|1>(a, b);
+    vcl::Vec4d b2 = blend4d<4|0,4|1,0|0,0|1>(a, b);
     a = a2;
     b = b2;
 }
 
-inline static void horizontal_twosum(Vec4d & r, Vec4d & s)
+inline static void horizontal_twosum(vcl::Vec4d & r, vcl::Vec4d & s)
 {
     //r = Knuth2Sum(r, s, s);
     transpose1(r, s);
@@ -223,13 +225,13 @@ T FPExpansionVect<T,N,TRAITS>::twosum(T a, T b, T & s)
 #endif
 }
 
-inline static void swap_if_nonzero(Vec4d & a, Vec4d & b)
+inline static void swap_if_nonzero(vcl::Vec4d & a, vcl::Vec4d & b)
 {
     // if(a_i != 0) { a'_i = b_i; b'_i = a_i; }
     // else {         a'_i = 0;   b'_i = b_i; }
-    Vec4db swapmask = (a != 0);
-    Vec4d b2 = select(swapmask, a, b);
-    a = b & Vec4d(swapmask);
+    vcl::Vec4db swapmask = (a != 0);
+    vcl::Vec4d b2 = select(swapmask, a, b);
+    a = b & vcl::Vec4d(swapmask);
     b = b2;
 }
 
@@ -313,18 +315,18 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
         auto p = abs(x1) < abs(a[N-1]);
         if(sign_horizontal_or(p)) {
             FlushVector(x1 & T(p));
-            x1 = T(andnot(Vec4db(x1), p));
+            x1 = T(andnot(vcl::Vec4db(x1), p));
         }
         p = abs(x2) < abs(a[N-1]);
         if(sign_horizontal_or(p)) {
             FlushVector(x2 & T(p));
-            x2 = T(andnot(Vec4db(x2), p));
+            x2 = T(andnot(vcl::Vec4db(x2), p));
         }
     }
     
     T s1, s2;
     for(unsigned int i = 0; i != N; ++i) {
-        T ai = Vec4d().load_a((double*)(a+i));
+        T ai = vcl::Vec4d().load_a((double*)(a+i));
         //T ai = a[i];
         ai = twosum(ai, x1, s1);
         ai = twosum(ai, x2, s2);
@@ -431,4 +433,5 @@ void FPExpansionVect<T,N,TRAITS>::DumpVector(T x) const
     }
 }
 
+}//namespace exblas
 #endif // EXSUM_FPE_HPP_

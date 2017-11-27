@@ -11,7 +11,7 @@ namespace blas2
 namespace detail
 {
 template< class Precon, class Vector>
-inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
+inline exblas::Superaccumulator doDot_dispatch( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
 #ifdef DG_DEBUG
     int result;
@@ -20,14 +20,24 @@ inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const P
     MPI_Comm_compare( x.communicator(), P.communicator(), &result);
     assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 #endif //DG_DEBUG
-    //computation
-    typename MatrixTraits<Precon>::value_type temp= doDot(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());
+    typedef typename Vector::container_type container;
+    //local compuation
+    Superacc acc = doDot_dispatch(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());
+    acc.Normalize();
     //communication
-    typename MatrixTraits<Precon>::value_type sum=0;
-    MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, x.communicator());
-
+    std::vector<int64_t> result(acc.get_f_words() + acc.get_e_words(), 0);
+    MPI_Allreduce(&(acc.get_accumulator()[0]), &(result[0]), acc.get_f_words() + acc.get_e_words(), MPI_LONG, MPI_SUM, 0, x.communicator()); 
+    exblas::Superaccumulator acc_fin(result);
+    return acc_fin;
+}
+template< class Precon, class Vector>
+inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
+{
+    exblas::Superaccumulator acc_fin(doDot_dispatch( x,P,y,MPIPreconTag(),MPIVectorTag());
+    double sum = acc_fin.Round();
     return sum;
 }
+
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::MPIPreconTag, dg::MPIVectorTag)
 {
