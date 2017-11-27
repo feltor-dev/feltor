@@ -56,16 +56,8 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const M
         sum += x[i]*m[i]*y[i];
     return sum;
 #else
-    Vector temp (x);
-    dg::blas1::detail::doPointwiseDot( x, m, temp, ThrustVectorTag());
-    double result = dg::blas1::detail::doDot( temp, y, ThrustVectorTag());
+    double result = exblas::exdot( x, m, y);
     return result;
-    //return thrust::inner_product(  x.begin(), x.end(), 
-    //                        thrust::make_zip_iterator( thrust::make_tuple( y.begin(), m.begin())  ), 
-    //                        value_type(0),
-    //                        thrust::plus<value_type>(),
-    //                        detail::ThrustVectorDoDot<Matrix>()
-    //                        );
 #endif
 }
 

@@ -13,10 +13,10 @@ static constexpr uint BIN_COUNT     =  39; //size of superaccumulator
 static constexpr uint NBFPE         =  3;  //size of floating point expansion
 ////////////// parameters for superaccumulator operations //////////////////////
 static constexpr int KRX            =  8;  //High-radix carry-save bits
-static constexpr int DIGITS         =  56; //must be int because appears in integer expresssion
+static constexpr int DIGITS         =  64 - KRX; //must be int because appears in integer expresssion
 static constexpr int F_WORDS        =  20; //
 static constexpr int TSAFE          =  0;
-static constexpr double DELTASCALE  =  72057594037927936.0;  // Assumes KRX>0
+static constexpr double DELTASCALE = double(1ull << DIGITS); // Assumes KRX>0
 
 ////////////// parameters for Kernel execution            //////////////////////
 //Kernel paramters for EXDOT
