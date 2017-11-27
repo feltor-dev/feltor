@@ -241,13 +241,9 @@ __global__ void ExDOT(
 ) {
     __shared__ long long int l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
     long long int *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1)); //the bitwise & with 15 is a modulo operation: threadIdx.x % 16
-    //__shared__ bool l_sa_check[WARP_COUNT];
-    //bool *l_workingBase_check = l_sa_check + (threadIdx.x & (WARP_COUNT - 1));
-
     //Initialize superaccs
     for (uint i = 0; i < BIN_COUNT; i++)
         l_workingBase[i * WARP_COUNT] = 0;
-    //*l_workingBase_check = false;
     __syncthreads();
 
     //Read data from global memory and scatter it to sub-superaccs
@@ -286,6 +282,126 @@ __global__ void ExDOT(
                 for(uint i = 0; i != NBFPE; ++i) {
                     Accumulate(l_workingBase, a[i]);
                     a[i] = 0.0;
+                }
+            }
+        }
+    }
+	//Flush FPEs to superaccs
+    #pragma unroll
+    for(uint i = 0; i != NBFPE; ++i)
+        Accumulate(l_workingBase, a[i]);
+    __syncthreads();
+
+    //Merge sub-superaccs into work-group partial-accumulator ( ATTENTION: PartialSuperacc is transposed!)
+    uint pos = threadIdx.x;
+    if (pos < BIN_COUNT) {
+        long long int sum = 0;
+
+        for(uint i = 0; i < WARP_COUNT; i++)
+            sum += l_sa[pos * WARP_COUNT + i];
+
+        d_PartialSuperaccs[blockIdx.x * BIN_COUNT + pos] = sum;
+    }
+
+    __syncthreads();
+    if (pos == 0) {
+        int imin = 0;
+        int imax = 38;
+        Normalize(&d_PartialSuperaccs[blockIdx.x * BIN_COUNT], &imin, &imax);
+    }
+}
+
+__global__ void ExDOT(
+    long long int *d_PartialSuperaccs,
+    const double *d_a,
+    const double *d_b,
+    const double *d_c,
+    const uint NbElements
+) {
+    __shared__ long long int l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
+    long long int *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1)); //the bitwise & with 15 is a modulo operation: threadIdx.x % 16
+    //Initialize superaccs
+    for (uint i = 0; i < BIN_COUNT; i++)
+        l_workingBase[i * WARP_COUNT] = 0;
+    __syncthreads();
+
+    //Read data from global memory and scatter it to sub-superaccs
+    double a[NBFPE] = {0.0};
+    for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
+        double r  = 0.0, r2 = 0.0;
+        double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
+        double x2 = TwoProductFMA(x , d_c[pos], &r2);
+
+
+        if( x2 != 0.0) {//accumulate x2
+            #pragma unroll
+            for(uint i = 0; i != NBFPE; ++i) {
+                double s;
+                a[i] = KnuthTwoSum(a[i], x2, &s);
+                x2 = s;
+            }
+            if (x2 != 0.0) {
+                Accumulate(l_workingBase, x2);
+                // Flush FPEs to superaccs
+                #pragma unroll
+                for(uint i = 0; i != NBFPE; ++i) {
+                    Accumulate(l_workingBase, a[i]);
+                    a[i] = 0.0;
+                }
+            }
+        }
+        if (r2 != 0.0) {//add the rest r2 
+            #pragma unroll
+            for(uint i = 0; i != NBFPE; ++i) {
+                double s;
+                a[i] = KnuthTwoSum(a[i], r2, &s);
+                r = s;
+            }
+            if (r != 0.0) {
+                Accumulate(l_workingBase, r2);
+                // Flush FPEs to superaccs
+                #pragma unroll
+                for(uint i = 0; i != NBFPE; ++i) {
+                    Accumulate(l_workingBase, a[i]);
+                    a[i] = 0.0;
+                }
+            }
+        }
+
+        if (r != 0.0) {//add the rest r*c in the same manner
+            x2 = TwoProductFMA(r , d_c[pos], &r2);
+            if( x2 != 0.0) {//accumulate x2
+                #pragma unroll
+                for(uint i = 0; i != NBFPE; ++i) {
+                    double s;
+                    a[i] = KnuthTwoSum(a[i], x2, &s);
+                    x2 = s;
+                }
+                if (x2 != 0.0) {
+                    Accumulate(l_workingBase, x2);
+                    // Flush FPEs to superaccs
+                    #pragma unroll
+                    for(uint i = 0; i != NBFPE; ++i) {
+                        Accumulate(l_workingBase, a[i]);
+                        a[i] = 0.0;
+                    }
+                }
+            }
+            if (r2 != 0.0) {//add the rest r2 
+                #pragma unroll
+                for(uint i = 0; i != NBFPE; ++i) {
+                    double s;
+                    a[i] = KnuthTwoSum(a[i], r2, &s);
+                    r = s;
+                }
+                if (r != 0.0) {
+                    Accumulate(l_workingBase, r2);
+                    // Flush FPEs to superaccs
+                    #pragma unroll
+                    for(uint i = 0; i != NBFPE; ++i) {
+                        Accumulate(l_workingBase, a[i]);
+                        a[i] = 0.0;
+                    }
                 }
             }
         }
@@ -359,116 +475,33 @@ void ExDOTComplete(
     }
 }
 
-__global__
-void test_func(
-    long long int *d_x,
-    long long int *d_PartialSuperaccs,
-    long long int *d_ret,
-    const uint NbElements
-    ){
-    __shared__ long long int l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
-    long long int *l_workingBase = l_sa + (threadIdx.x & (WARP_COUNT - 1)); //the bitwise & with 15 is a modulo operation: threadIdx.x % 16
-    //__shared__ bool l_sa_check[WARP_COUNT];
-    //bool *l_workingBase_check = l_sa_check + (threadIdx.x & (WARP_COUNT - 1));
-
-    //Initialize superaccs
-    for (uint i = 0; i < BIN_COUNT; i++)
-        l_workingBase[i * WARP_COUNT] = 0;
-    //*l_workingBase_check = false;
-    __syncthreads();
-    double a[NBFPE] = {10.0, 1e-5, 1e-12};
-	//Flush FPEs to superaccs
-    #pragma unroll
-    for(uint i = 0; i != NBFPE; ++i)
-        Accumulate(l_workingBase, a[i]);
-    __syncthreads();
-    uint pos = threadIdx.x;
-    if (pos < BIN_COUNT) {
-        long long int sum = 0;
-
-        for(uint i = 0; i < WARP_COUNT; i++)
-            sum += l_sa[pos * WARP_COUNT + i];
-
-        d_PartialSuperaccs[blockIdx.x * BIN_COUNT + pos] = sum;
-    }
-    __syncthreads();
-    if (pos == 0) {
-        int imin = 0;
-        int imax = 38;
-        Normalize(&d_PartialSuperaccs[blockIdx.x * BIN_COUNT], &imin, &imax);
-    }
-
-    for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
-        unsigned char of;
-        for (uint i = 0; i < BIN_COUNT; i++)
-            d_ret[pos] = xadd(&d_x[pos], l_workingBase[i*WARP_COUNT], &of);
-    }
-}
-
 __host__
 double exdot(const thrust::device_vector<double>& x1, const thrust::device_vector<double>& x2)
 {
-//    double a[3] = {10., 1e-5, 1e-12};
-//for(uint k=0; k<3; k++)
-//{
-//    double x = a[k];
-//    int e;
-//    frexp(x, &e); //extract the exponent of x (lies in -1024;1023 ?)
-//    int exp_word = e / DIGITS;  // Word containing MSbit
-//    int iup = exp_word + F_WORDS; //can be at most 18 + 20 
-//
-//    double xscaled = ldexp(x, -DIGITS * exp_word);
-//    std::cout << "e "<<e<<" exp_word "<<exp_word<<" iup "<<iup<<" scaled "<<xscaled<<"\n";
-//
-//    int i;
-//    for (i = iup; xscaled != 0; --i) {
-//        double xrounded = rint(xscaled);
-//        long long int xint = (long long int) xrounded;
-//        std::cout << " "<<xrounded<<" "<<xint<<"\n";
-//
-//        //AccumulateWord(sa, i, xint);
-//
-//        xscaled -= xrounded;
-//        xscaled *= DELTASCALE;
-//    }
-//}
-    //thrust::device_vector<double> x1(100, 2.19e-4), x2(100, 3.14e+0);
     thrust::device_vector<long long int> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT); //39 columns and PSC rows
-
-    thrust::host_vector<long long int> h_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT); //39 columns and PSC rows
-    //long long int *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    long long int *d_PartialSuperaccs;
-    cudaMalloc( &d_PartialSuperaccs, PARTIAL_SUPERACCS_COUNT*BIN_COUNT*sizeof(long long int)); 
-    long long int *h_PartialSuperaccs = thrust::raw_pointer_cast( h_PartialSuperaccsV.data());
-
-
-    thrust::device_vector<long long int> result(100, 2),test(100,3), ret(100, 0);
-    long long int *test_ptr = thrust::raw_pointer_cast( test.data());
-    long long int *result_ptr = thrust::raw_pointer_cast( result.data());
-    long long int *ret_ptr = thrust::raw_pointer_cast( ret.data());
+    long long int *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
     const double *x1_ptr = thrust::raw_pointer_cast( x1.data());
     const double *x2_ptr = thrust::raw_pointer_cast( x2.data());
-    std::cout << "sizes: "<<x1.size() << " "<<x2.size()<<"\n";
-
-
-    //test_func<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>(result_ptr, d_PartialSuperaccs, ret_ptr,100);
-    //cudaDeviceSynchronize();
-    //for( unsigned i=0; i<39; i++)
-    //    std::cout <<result[i]<<" "<<d_PartialSuperaccsV[i]<<" "<<ret[i]<<"\n";
-    cudaDeviceSynchronize();
     ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,x1.size());
-    cudaDeviceSynchronize();
-    cudaMemcpy(h_PartialSuperaccs,d_PartialSuperaccs,PARTIAL_SUPERACCS_COUNT*BIN_COUNT*sizeof(long long int),cudaMemcpyDeviceToHost);
-    cudaDeviceSynchronize();
-    for( unsigned i=0; i<39; i++)
-        std::cout << h_PartialSuperaccs[i]<<"\n";
     thrust::device_vector<double> r(1,0);
     double *r_ptr = thrust::raw_pointer_cast( r.data());
     ExDOTComplete<MERGE_WORKGROUP_SIZE><<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( r_ptr, d_PartialSuperaccs );
-    std::cout << "result "<<r[0]<<"\n";
-    cudaDeviceSynchronize();
     double sum = r[0];
-    cudaFree( d_PartialSuperaccs);
+    return sum;
+}
+__host__
+double exdot(const thrust::device_vector<double>& x1, const thrust::device_vector<double>& x2, const thrust::device_vector<double>& x3)
+{
+    thrust::device_vector<long long int> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT); //39 columns and PSC rows
+    long long int *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
+    const double *x1_ptr = thrust::raw_pointer_cast( x1.data());
+    const double *x2_ptr = thrust::raw_pointer_cast( x2.data());
+    const double *x3_ptr = thrust::raw_pointer_cast( x3.data());
+    ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,x3_ptr,x1.size());
+    thrust::device_vector<double> r(1,0);
+    double *r_ptr = thrust::raw_pointer_cast( r.data());
+    ExDOTComplete<MERGE_WORKGROUP_SIZE><<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( r_ptr, d_PartialSuperaccs );
+    double sum = r[0];
     return sum;
 }
 }//namespace exblas
