@@ -16,6 +16,8 @@ namespace exblas{
 
 template<typename CACHE> 
 Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b) {
+    assert( vcl::instrset_detect() >= 7);
+    assert( vcl::hasFMA3() );
     Superaccumulator acc;
     CACHE cache(acc);
 
@@ -39,6 +41,8 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b) {
 }
 template<typename CACHE> 
 Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c) {
+    assert( vcl::instrset_detect() >= 7);
+    assert( vcl::hasFMA3() );
     Superaccumulator acc;
     CACHE cache(acc);
     int r = (( int64_t(N))  & ~3ul);

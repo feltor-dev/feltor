@@ -22,8 +22,9 @@
 #include <cassert>
 #define VCL_NAMESPACE vcl
 #include "vcl/vectorclass.h" //vcl by Agner Fog
+#include "vcl/instrset_detect.cpp"
 #if INSTRSET <7 
-#warning "Please activate 256-bit floating point operations (AVX) and fused multiply add instructions (FMAs)"
+#warning "Please activate AVX support (-mavx) and fused multiply add instructions (-mfma)"
 #endif
 
 #ifdef __GNUC__
@@ -202,17 +203,6 @@ inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
 #endif
     return oldword;
 }
-//inline static int64_t xadd( int64_t & sa, int64_t x, unsigned char &of) {
-//    int64_t y = atomicAdd(sa, x); 
-//    int64_t z = y + x; 
-//    *of = 0;
-//    if(x > 0 && y > 0 && z < 0)
-//        *of = 1;
-//    if(x < 0 && y < 0 && z > 0)
-//        *of = 1;
-//
-//    return y;
-//}
 
 //static inline vcl::Vec4d clear_significand(vcl::Vec4d x) {
 //    return x & vcl::Vec4d(_mm256_castsi256_pd(_mm256_set1_epi64x(0xfff0000000000000ull)));

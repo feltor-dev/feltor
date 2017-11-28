@@ -4,7 +4,7 @@ INCLUDED=1
 #compiler and compiler options
 CC=g++ #C++ compiler
 MPICC=mpic++  #mpi compiler
-CFLAGS=-Wall -std=c++11  #flags for CC
+CFLAGS=-Wall -std=c++11 -mavx -mfma  #flags for CC
 NVCC=nvcc #CUDA compiler
 NVCCARCH=-arch sm_20 #nvcc gpu compute capability
 NVCCFLAGS= -std=c++11 -Xcompiler -Wall#flags for NVCC

@@ -160,6 +160,8 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b, const double 
  * early_exit corresponds to the early-exit technique
  */
 Superaccumulator exdot_omp(int N, const double *a, const double* b, int fpe, bool early_exit) {
+    assert( vcl::instrset_detect() >= 7);
+    assert( vcl::hasFMA3() );
     if (fpe < 2) {
         fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
         exit(1);
@@ -191,6 +193,8 @@ Superaccumulator exdot_omp(int N, const double *a, const double* b, int fpe, boo
     return acc;
 }
 Superaccumulator exdot_omp(int N, const double *a, const double* b, const double * c, int fpe, bool early_exit) {
+    assert( vcl::instrset_detect() >= 7);
+    assert( vcl::hasFMA3() );
     if (fpe < 2) {
         fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
         exit(1);

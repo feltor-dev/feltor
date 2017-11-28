@@ -111,7 +111,7 @@ inline static T TwoProductFMA(T a, T b, T &d) {
     return p;
 }
 
-//// Vector impl with test for fast path (MW: doesn't compile with g++ and new vcl) 
+//// Vector impl with test for fast path (MW: doesn't compile with g++ without -mavx and new vcl) 
 //template<typename T>
 //inline static T BiasedSIMD2Sum(T a, T b, T & s)
 //{
