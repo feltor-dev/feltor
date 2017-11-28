@@ -27,31 +27,31 @@ void doTransfer( const Vector1& in, Vector2& out, ThrustMatrixTag, ThrustMatrixT
 }
 
 template< class Matrix, class value_type>
-inline exblas::Superacc doDot_dispatch( const thrust::host_vector<value_type>& x, const Matrix& m, const thrust::host_vector<value_type>& y, ThrustMatrixTag, ThrustVectorTag)
+inline exblas::Superaccumulator doDot_dispatch( const thrust::host_vector<value_type>& x, const Matrix& m, const thrust::host_vector<value_type>& y, ThrustMatrixTag, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() && x.size() == m.size() );
 #endif //DG_DEBUG
-    const double* x_ptr = thrust::raw_pointer_case( x.data());
-    const double* m_ptr = thrust::raw_pointer_case( m.data());
-    const double* y_ptr = thrust::raw_pointer_case( y.data());
-    return exblas::Superaccumulator(  exblas::exdot_cpu( x.size(), x_ptr,m_ptr, y_ptr)) ;
+    const double* x_ptr = thrust::raw_pointer_cast( x.data());
+    const double* m_ptr = thrust::raw_pointer_cast( m.data());
+    const double* y_ptr = thrust::raw_pointer_cast( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_cpu( x.size(), x_ptr,m_ptr, y_ptr, 8, true)) ;
 }
 template< class Matrix, class value_type>
-inline exblas::Superacc doDot_dispatch( const thrust::device_vector<value_type>& x, const Matrix& m, const thrust::device_vector<value_type>& y, ThrustMatrixTag, ThrustVectorTag)
+inline exblas::Superaccumulator doDot_dispatch( const thrust::device_vector<value_type>& x, const Matrix& m, const thrust::device_vector<value_type>& y, ThrustMatrixTag, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() && x.size() == m.size() );
 #endif //DG_DEBUG
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    const double* x_ptr = thrust::raw_pointer_case( x.data());
-    const double* m_ptr = thrust::raw_pointer_case( m.data());
-    const double* y_ptr = thrust::raw_pointer_case( y.data());
-    return exblas::Superaccumulator(  exblas::exdot_omp( x.size(), x_ptr,m_ptr, y_ptr)) ;
+    const double* x_ptr = thrust::raw_pointer_cast( x.data());
+    const double* m_ptr = thrust::raw_pointer_cast( m.data());
+    const double* y_ptr = thrust::raw_pointer_cast( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_omp( x.size(), x_ptr,m_ptr, y_ptr, 8, true)) ;
 #else
-    const double* x_ptr = thrust::raw_pointer_case( x.data());
-    const double* m_ptr = thrust::raw_pointer_case( m.data());
-    const double* y_ptr = thrust::raw_pointer_case( y.data());
+    const double* x_ptr = thrust::raw_pointer_cast( x.data());
+    const double* m_ptr = thrust::raw_pointer_cast( m.data());
+    const double* y_ptr = thrust::raw_pointer_cast( y.data());
     return exblas::Superaccumulator(  exblas::exdot_gpu( x.size(), x_ptr,m_ptr, y_ptr)) ;
 #endif
 }
@@ -59,12 +59,14 @@ inline exblas::Superacc doDot_dispatch( const thrust::device_vector<value_type>&
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, dg::ThrustMatrixTag, dg::ThrustVectorTag)
 {
-    exblas::Superacc acc = doDot_dispatch( x,m,y,dg::ThrustMatrixTag(),dg::ThrustVectorTag());
+    exblas::Superaccumulator acc = doDot_dispatch( x,m,y,dg::ThrustMatrixTag(),dg::ThrustVectorTag());
+    return acc.Round();
 }
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::ThrustMatrixTag, dg::ThrustVectorTag)
 {
-    exblas::Superacc acc = doDot_dispatch( x,m,x,dg::ThrustMatrixTag(),dg::ThrustVectorTag());
+    exblas::Superaccumulator acc = doDot_dispatch( x,m,x,dg::ThrustMatrixTag(),dg::ThrustVectorTag());
+    return acc.Round();
 }
 
 template< class Matrix, class Vector>

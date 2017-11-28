@@ -111,25 +111,25 @@ inline static T TwoProductFMA(T a, T b, T &d) {
     return p;
 }
 
-// Vector impl with test for fast path
-template<typename T>
-inline static T BiasedSIMD2Sum(T a, T b, T & s)
-{
-    T r = a + b;
-    auto doswap = abs(b) > abs(a);
-    //if(unlikely(!_mm256_testz_pd(doswap, doswap)))
-    //asm("nop");
-    if(/*unlikely*/(!_mm256_testz_si256(_mm256_castpd_si256(doswap), _mm256_castpd_si256(b))))  // any(doswap && b != +0)
-    {
-        // Slow path
-        T a2 = select(doswap, b, a);
-        T b2 = select(doswap, a, b);
-        a = a2;
-        b = b2;
-    }
-    s = (a - r) + b;
-    return r;
-}
+//// Vector impl with test for fast path (MW: doesn't compile with g++ and new vcl) 
+//template<typename T>
+//inline static T BiasedSIMD2Sum(T a, T b, T & s)
+//{
+//    T r = a + b;
+//    auto doswap = abs(b) > abs(a);
+//    //if(unlikely(!_mm256_testz_pd(doswap, doswap)))
+//    //asm("nop");
+//    if(/*unlikely*/(!_mm256_testz_si256(_mm256_castpd_si256(doswap), _mm256_castpd_si256(b))))  // any(doswap && b != +0)
+//    {
+//        // Slow path
+//        T a2 = select(doswap, b, a);
+//        T b2 = select(doswap, a, b);
+//        a = a2;
+//        b = b2;
+//    }
+//    s = (a - r) + b;
+//    return r;
+//}
 
 // Knuth 2Sum with FMAs
 template<typename T>
@@ -161,7 +161,8 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
 }
 
 static inline bool sign_horizontal_or (vcl::Vec4db const & a) {
-    return !_mm256_testz_pd(a,a);
+    return vcl::horizontal_or( a);
+    //return !_mm256_testz_pd(a,a);
 }
 
 // Input:
@@ -174,10 +175,10 @@ inline static void transpose1(vcl::Vec4d & a, vcl::Vec4d & b)
 {
     // a3 -- a1 --
     // -- b3 -- b1
-    vcl::Vec4d a2 = blend4d<4|1,0|1,4|3,0|3>(a, b);
+    vcl::Vec4d a2 = vcl::blend4d<4|1,0|1,4|3,0|3>(a, b);
     // a2 -- a0 --
     // -- b2 -- b0
-    vcl::Vec4d b2 = blend4d<4|0,0|0,4|2,0|2>(a, b);
+    vcl::Vec4d b2 = vcl::blend4d<4|0,0|0,4|2,0|2>(a, b);
     a = a2;
     b = b2;
 }
@@ -192,10 +193,10 @@ inline static void transpose2(vcl::Vec4d & a, vcl::Vec4d & b)
 {
     // a3 a2 -- --
     // -- -- b3 b2
-    vcl::Vec4d a2 = blend4d<4|2,4|3,0|2,0|3>(a, b);
+    vcl::Vec4d a2 = vcl::blend4d<4|2,4|3,0|2,0|3>(a, b);
     // a1 a0 -- --
     // -- -- b1 b0
-    vcl::Vec4d b2 = blend4d<4|0,4|1,0|0,0|1>(a, b);
+    vcl::Vec4d b2 = vcl::blend4d<4|0,4|1,0|0,0|1>(a, b);
     a = a2;
     b = b2;
 }
@@ -212,17 +213,17 @@ inline static void horizontal_twosum(vcl::Vec4d & r, vcl::Vec4d & s)
 template<typename T, int N, typename TRAITS>
 T FPExpansionVect<T,N,TRAITS>::twosum(T a, T b, T & s)
 {
-#if INSTRSET > 7                       // AVX2 and later
+//#if INSTRSET > 7                       // AVX2 and later
 	// Assume Haswell-style architecture with parallel Add and FMA pipelines
 	return FMA2Sum(a, b, s);
-#else
-    if(TRAITS::Biased2Sum) {
-        return BiasedSIMD2Sum(a, b, s);
-    }
-    else {
-        return Knuth2Sum(a, b, s);
-    }
-#endif
+//#else
+    //if(TRAITS::Biased2Sum) {
+    //    return BiasedSIMD2Sum(a, b, s);
+    //}
+    //else {
+    //    return Knuth2Sum(a, b, s);
+    //}
+//#endif
 }
 
 inline static void swap_if_nonzero(vcl::Vec4d & a, vcl::Vec4d & b)

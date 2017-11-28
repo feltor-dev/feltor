@@ -10,72 +10,9 @@
 #include <iostream>
 
 #include "superaccumulator.hpp"
-#include "ExDOT.FPE.hpp"
+#include "ExSUM.FPE.hpp"
 
 namespace exblas{
-
-double exdot_cpu(int N, const double *a, const double* b, int fpe, bool early_exit) {
-    if (fpe < 2) {
-        fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
-        exit(1);
-    }
-    Superaccumulator acc;
-    if (early_exit) {
-        if (fpe <= 4)
-            acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 4, FPExpansionTraits<true> > >)(N,a,b);
-        if (fpe <= 6)
-            acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 6, FPExpansionTraits<true> > >)(N,a,b);
-        if (fpe <= 8)
-            acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 8, FPExpansionTraits<true> > >)(N,a,b);
-    } else { // ! early_exit
-        if (fpe == 2) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 2> >)(N, a,b);
-        if (fpe == 3) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 3> >)(N, a,b);
-        if (fpe == 4) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 4> >)(N, a,b);
-        if (fpe == 5) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 5> >)(N, a,b);
-        if (fpe == 6) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 6> >)(N, a,b);
-        if (fpe == 7) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 7> >)(N, a,b);
-        if (fpe == 8) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 8> >)(N, a,b);
-    }
-    return acc;
-}
-Superaccumulator exdot_cpu(int N, const double *a, const double* b, const double * c, int fpe, bool early_exit) {
-    if (fpe < 2) {
-        fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
-        exit(1);
-    }
-    Superaccumulator acc;
-    if (early_exit) {
-        if (fpe <= 4)
-            acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 4, FPExpansionTraits<true> > >)(N,a,b,c);
-        if (fpe <= 6)
-            acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 6, FPExpansionTraits<true> > >)(N,a,b,c);
-        if (fpe <= 8)
-            acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 8, FPExpansionTraits<true> > >)(N,a,b,c);
-    } else { // ! early_exit
-        if (fpe == 2) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 2> >)(N, a,b,c);
-        if (fpe == 3) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 3> >)(N, a,b,c);
-        if (fpe == 4) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 4> >)(N, a,b,c);
-        if (fpe == 5) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 5> >)(N, a,b,c);
-        if (fpe == 6) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 6> >)(N, a,b,c);
-        if (fpe == 7) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 7> >)(N, a,b,c);
-        if (fpe == 8) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<Vec4d, 8> >)(N, a,b,c);
-    }
-    return acc;
-}
 
 template<typename CACHE> 
 Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b) {
@@ -85,15 +22,15 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b) {
     int r = (( int64_t(N) ) & ~3ul);
     for(int i = 0; i < r; i+=4) {
         asm ("# myloop");
-        Vec4d r1 ;
-        Vec4d x  = TwoProductFMA(Vec4d().load(a+i), Vec4d().load(b+i), r1);
+        vcl::Vec4d r1 ;
+        vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load(a+i), vcl::Vec4d().load(b+i), r1);
         cache.Accumulate(x);
         cache.Accumulate(r1);
     }
     if( r != N) {
         //accumulate remainder
-        Vec4d r1 , r2, cvec = Vec4d().load_partial(N-r, c+i);
-        Vec4d x  = TwoProductFMA(Vec4d().load_partial(N-r, a+i), Vec4d().load_partial(N-r,b+i), r1);
+        vcl::Vec4d r1;
+        vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load_partial(N-r, a+r), vcl::Vec4d().load_partial(N-r,b+r), r1);
         cache.Accumulate(x);
         cache.Accumulate(r1);
     }
@@ -107,9 +44,9 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b, const dou
     int r = (( int64_t(N))  & ~3ul);
     for(int i = 0; i < r; i+=4) {
         asm ("# myloop");
-        Vec4d r1 , r2, cvec = Vec4d().load(c+i);
-        Vec4d x  = TwoProductFMA(Vec4d().load(a+i), Vec4d().load(b+i), r1);
-        Vec4d x2 = TwoProductFMA(x , cvec, r2);
+        vcl::Vec4d r1 , r2, cvec = vcl::Vec4d().load(c+i);
+        vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load(a+i), vcl::Vec4d().load(b+i), r1);
+        vcl::Vec4d x2 = TwoProductFMA(x , cvec, r2);
         cache.Accumulate(x2);
         cache.Accumulate(r2);
         x2 = TwoProductFMA(r1, cvec, r2);
@@ -118,9 +55,9 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b, const dou
     }
     if( r != N) {
         //accumulate remainder
-        Vec4d r1 , r2, cvec = Vec4d().load_partial(N-r, c+i);
-        Vec4d x  = TwoProductFMA(Vec4d().load_partial(N-r, a+i), Vec4d().load_partial(N-r,b+i), r1);
-        Vec4d x2 = TwoProductFMA(x , cvec, r2);
+        vcl::Vec4d r1 , r2, cvec = vcl::Vec4d().load_partial(N-r, c+r);
+        vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load_partial(N-r, a+r), vcl::Vec4d().load_partial(N-r,b+r), r1);
+        vcl::Vec4d x2 = TwoProductFMA(x , cvec, r2);
         cache.Accumulate(x2);
         cache.Accumulate(r2);
         x2 = TwoProductFMA(r1, cvec, r2);
@@ -130,5 +67,68 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b, const dou
     cache.Flush();
     return acc;
 }
+Superaccumulator exdot_cpu(int N, const double *a, const double* b, int fpe, bool early_exit) {
+    if (fpe < 2) {
+        fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
+        exit(1);
+    }
+    Superaccumulator acc;
+    if (early_exit) {
+        if (fpe <= 4)
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 4, FPExpansionTraits<true> > >)(N,a,b);
+        if (fpe <= 6)
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 6, FPExpansionTraits<true> > >)(N,a,b);
+        if (fpe <= 8)
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 8, FPExpansionTraits<true> > >)(N,a,b);
+    } else { // ! early_exit
+        if (fpe == 2) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 2> >)(N, a,b);
+        if (fpe == 3) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 3> >)(N, a,b);
+        if (fpe == 4) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 4> >)(N, a,b);
+        if (fpe == 5) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 5> >)(N, a,b);
+        if (fpe == 6) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 6> >)(N, a,b);
+        if (fpe == 7) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 7> >)(N, a,b);
+        if (fpe == 8) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 8> >)(N, a,b);
+    }
+    return acc;
+}
+Superaccumulator exdot_cpu(int N, const double *a, const double* b, const double * c, int fpe, bool early_exit) {
+    if (fpe < 2) {
+        fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
+        exit(1);
+    }
+    Superaccumulator acc;
+    if (early_exit) {
+        if (fpe <= 4)
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 4, FPExpansionTraits<true> > >)(N,a,b,c);
+        if (fpe <= 6)
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 6, FPExpansionTraits<true> > >)(N,a,b,c);
+        if (fpe <= 8)
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 8, FPExpansionTraits<true> > >)(N,a,b,c);
+    } else { // ! early_exit
+        if (fpe == 2) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 2> >)(N, a,b,c);
+        if (fpe == 3) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 3> >)(N, a,b,c);
+        if (fpe == 4) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 4> >)(N, a,b,c);
+        if (fpe == 5) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 5> >)(N, a,b,c);
+        if (fpe == 6) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 6> >)(N, a,b,c);
+        if (fpe == 7) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 7> >)(N, a,b,c);
+        if (fpe == 8) 
+	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec4d, 8> >)(N, a,b,c);
+    }
+    return acc;
+}
+
 
 }//namespace exblas

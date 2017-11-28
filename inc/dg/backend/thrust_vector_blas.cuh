@@ -70,29 +70,29 @@ void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorT
 }
 
 template< class value_type>
-exblas::Superacc doDot_dispatch( const thrust::host_vector<value_type>& x, const thrust::host_vector<value_type>& y, ThrustVectorTag)
+exblas::Superaccumulator doDot_dispatch( const thrust::host_vector<value_type>& x, const thrust::host_vector<value_type>& y, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    const double* x_ptr = thrust::raw_pointer_case( x.data());
-    const double* y_ptr = thrust::raw_pointer_case( y.data());
-    return exblas::Superaccumulator(  exblas::exdot_cpu( x.size(), x_ptr,y_ptr)) ;
+    const double* x_ptr = thrust::raw_pointer_cast( x.data());
+    const double* y_ptr = thrust::raw_pointer_cast( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_cpu( x.size(), x_ptr,y_ptr,8,true)) ;
 }
 
 template< class value_type>
-exblas::Superacc doDot_dispatch( const thrust::device_vector<value_type>& x, const thrust::device_vector<value_type>& y, ThrustVectorTag)
+exblas::Superaccumulator doDot_dispatch( const thrust::device_vector<value_type>& x, const thrust::device_vector<value_type>& y, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    const double* x_ptr = thrust::raw_pointer_case( x.data());
-    const double* y_ptr = thrust::raw_pointer_case( y.data());
-    return exblas::Superaccumulator(  exblas::exdot_omp( x.size(), x_ptr,y_ptr)) ;
+    const double* x_ptr = thrust::raw_pointer_cast( x.data());
+    const double* y_ptr = thrust::raw_pointer_cast( y.data());
+    return exblas::Superaccumulator(  exblas::exdot_omp( x.size(), x_ptr,y_ptr, 8,true)) ;
 #else
-    const double* x_ptr = thrust::raw_pointer_case( x.data());
-    const double* y_ptr = thrust::raw_pointer_case( y.data());
+    const double* x_ptr = thrust::raw_pointer_cast( x.data());
+    const double* y_ptr = thrust::raw_pointer_cast( y.data());
     return exblas::Superaccumulator(  exblas::exdot_gpu( x.size(), x_ptr,y_ptr)) ;
 #endif
 }
@@ -100,7 +100,7 @@ exblas::Superacc doDot_dispatch( const thrust::device_vector<value_type>& x, con
 template<class Vector>
 double doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
-    exblas::Superacc acc = doDot_dispatch( x,y,ThrustVectorTag());
+    exblas::Superaccumulator acc = doDot_dispatch( x,y,ThrustVectorTag());
     return acc.Round();
 }
 template< class Vector, class UnaryOp>

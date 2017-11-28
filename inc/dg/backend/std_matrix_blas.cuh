@@ -63,7 +63,7 @@ inline typename MatrixTraits<Matrix>::value_type  doDot(
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    std::vector<exblas::Superacc> acc( x1.size());
+    std::vector<exblas::Superaccumulator> acc( x.size());
     for( unsigned i=0; i<x.size(); i++)
         acc[i] = doDot_dispatch( x[i], m, y[i],
                        typename dg::MatrixTraits<Matrix>::matrix_category(),

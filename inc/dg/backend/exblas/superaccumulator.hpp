@@ -212,4 +212,5 @@ inline void Superaccumulator::set_accumulator(std::vector<int64_t> other){
 }
 
 }//namespace exblas
+#include "superaccumulator.cpp"
 #endif

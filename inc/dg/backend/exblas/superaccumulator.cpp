@@ -27,7 +27,7 @@ Superaccumulator::Superaccumulator(std::vector<int64_t> acc, int e_bits, int f_b
     f_words((f_bits + digits - 1) / digits),   // Round up
     e_words((e_bits + digits - 1) / digits),
     accumulator(acc),
-    imax(f_words + e_words - 1), imin(0),
+    imin(0), imax(f_words + e_words - 1),
     status(Exact),
     overflow_counter((1ll<<K)-1)
 {
