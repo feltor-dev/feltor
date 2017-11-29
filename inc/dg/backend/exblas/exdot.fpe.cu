@@ -14,8 +14,8 @@ static constexpr uint NBFPE         =  3;  //size of floating point expansion
 ////////////// parameters for superaccumulator operations //////////////////////
 static constexpr int KRX            =  8;  //High-radix carry-save bits
 static constexpr int DIGITS         =  64 - KRX; //must be int because appears in integer expresssion
-static constexpr int F_WORDS        =  20; //
-static constexpr int TSAFE          =  0;
+static constexpr int F_WORDS        =  20;
+//static constexpr int TSAFE          =  0;
 static constexpr double DELTASCALE = double(1ull << DIGITS); // Assumes KRX>0
 
 ////////////// parameters for Kernel execution            //////////////////////
@@ -87,8 +87,8 @@ __device__ long long int xadd( long long int *sa, long long int x, unsigned char
 ////////////////////////////////////////////////////////////////////////////////
 // Rounding functions
 ////////////////////////////////////////////////////////////////////////////////
-__device__
-double OddRoundSumNonnegative(double th, double tl) {
+__host__ __device__
+double OddRoundSumNonnegative_gpu(double th, double tl) {
     union {
         double d;
         long long int l;
@@ -161,7 +161,7 @@ double Round( long long int *accumulator) {
     //Now add3(hi, mid, lo)
     //No overlap, we have already normalized
     if (mid != 0)
-        lo = OddRoundSumNonnegative(mid, lo);
+        lo = OddRoundSumNonnegative_gpu(mid, lo);
 
     //Final rounding
     hi = hi + lo;
@@ -197,7 +197,8 @@ void AccumulateWord( long long int *sa, int i, long long int x) {
 
         // Cancel carry-save bits
         xadd(&sa[i * WARP_COUNT], (long long int) -(carry << DIGITS), &overflow);
-        if (TSAFE && (s ^ overflow))
+        //if (TSAFE && (s ^ overflow))
+        if (0 && (s ^ overflow)) //MW: TSAFE is always 0
             carrybit *= 2;
         carry += carrybit;
 
@@ -474,7 +475,7 @@ void ExDOTComplete(
 }
 
 __host__
-std::vector<long long int> exdot_gpu(unsigned size, const double* x1,_ptr const double* x2_ptr)
+std::vector<long long int> exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr)
 {
     thrust::device_vector<long long int> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT); //39 columns and PSC rows
     long long int *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
@@ -483,7 +484,7 @@ std::vector<long long int> exdot_gpu(unsigned size, const double* x1,_ptr const 
     double *r_ptr = thrust::raw_pointer_cast( r.data());
     ExDOTComplete<<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( r_ptr, d_PartialSuperaccs );
     std::vector<long long int> h_Superacc(BIN_COUNT);
-    cudaMemcpy( &h_Superacc[0], d_PartialSuperaccsV.begin(), BIN_COUNT, cudaMemcpyDeviceToHost);
+    cudaMemcpy( &h_Superacc[0], d_PartialSuperaccs, BIN_COUNT, cudaMemcpyDeviceToHost);
     return h_Superacc;
     //double sum = r[0];
     //return sum;
@@ -498,7 +499,7 @@ std::vector<long long int> exdot_gpu(unsigned size, const double* x1_ptr, const 
     double *r_ptr = thrust::raw_pointer_cast( r.data());
     ExDOTComplete<<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( r_ptr, d_PartialSuperaccs );
     std::vector<long long int> h_Superacc(BIN_COUNT);
-    cudaMemcpy( &h_Superacc[0], d_PartialSuperaccsV.begin(), BIN_COUNT, cudaMemcpyDeviceToHost);
+    cudaMemcpy( &h_Superacc[0], d_PartialSuperaccs, BIN_COUNT, cudaMemcpyDeviceToHost);
     return h_Superacc;
     //double sum = r[0];
     //return sum;

@@ -16,7 +16,7 @@ namespace exblas{
 Superaccumulator::Superaccumulator(int e_bits, int f_bits) :
     f_words((f_bits + digits - 1) / digits),   // Round up
     e_words((e_bits + digits - 1) / digits),
-    accumulator(f_words + e_words, 0),
+    accumulator(f_words + e_words, (int64_t)0),
     imin(0), imax(f_words + e_words - 1),
     status(Exact),
     overflow_counter((1ll<<K)-1)

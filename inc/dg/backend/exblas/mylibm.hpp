@@ -23,8 +23,10 @@
 #define VCL_NAMESPACE vcl
 #include "vcl/vectorclass.h" //vcl by Agner Fog
 #include "vcl/instrset_detect.cpp"
-#if INSTRSET <7 
-#warning "Please activate AVX support (-mavx) and fused multiply add instructions (-mfma)"
+#if INSTRSET <5
+#error"Instruction set SSE4.1 is required! -msse4.1"
+#elif INSTRSET <7 
+#warning "It is recommended to activate AVX support (-mavx) and fused multiply add instructions (-mfma)"
 #endif
 
 #ifdef __GNUC__

@@ -309,7 +309,7 @@ void FPExpansionVect<T,N,TRAITS>::Insert(T & x1, T & x2)
 
 
 
-template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE INLINE_ATTRIBUTE
+template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE //INLINE_ATTRIBUTE //MW: is ignored?
 void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
 {
     if(TRAITS::CheckRangeFirst) {
@@ -406,7 +406,9 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
     double v[4];
     x.store(v);
     
+#if INSTRSET >= 7
     _mm256_zeroupper();
+#endif
     for(unsigned int j = 0; j != 4; ++j) {
         superacc.Accumulate(v[j]);
     }
