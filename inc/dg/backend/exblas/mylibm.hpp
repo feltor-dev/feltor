@@ -29,7 +29,10 @@
 #warning "It is recommended to activate AVX support (-mavx) and fused multiply add instructions (-mfma)"
 #endif
 
-#ifdef __GNUC__
+#if defined __INTEL_COMPILER
+#define UNROLL_ATTRIBUTE
+#define INLINE_ATTRIBUTE
+#elif defined __GNUC__
 #define UNROLL_ATTRIBUTE __attribute__((optimize("unroll-loops")))
 #define INLINE_ATTRIBUTE __attribute__((always_inline))
 #else
