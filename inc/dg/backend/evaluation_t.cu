@@ -81,9 +81,11 @@ int main()
     std::cout << "Relative 3d error is      "<<(norm3X-solution3)/solution3<<"\n";
     std::cout << "Output double as integer \n";
     udouble res; 
+    res.d = normX;
+    std::cout << "norm1d "<<res.i<<std::endl;
     res.d = norm2X;
-    std::cout << res.i<<std::endl;
+    std::cout << "norm2d "<<res.i<<std::endl;
     res.d = norm3X;
-    std::cout << res.i<<std::endl;
+    std::cout << "norm3d "<<res.i<<std::endl;
     return 0;
 } 
