@@ -28,18 +28,18 @@ template< class Vector>
 typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& y, MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    int result;
-    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-    assert( result == MPI_CONGRUENT || result == MPI_IDENT); 
+    int compare;
+    MPI_Comm_compare( x.communicator(), y.communicator(), &compare);
+    assert( compare == MPI_CONGRUENT || compare == MPI_IDENT); 
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
     //local compuation
-    Superacc acc = doDot_dispatch( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
+    exblas::Superaccumulator acc = doDot_dispatch( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
     acc.Normalize();
     //communication
     std::vector<int64_t> result(acc.get_f_words() + acc.get_e_words(), 0);
-    MPI_Allreduce(&(acc.get_accumulator()[0]), &(result[0]), acc.get_f_words() + acc.get_e_words(), MPI_LONG, MPI_SUM, 0, x.communicator()); 
-    Superaccumulator acc_fin(result);
+    MPI_Allreduce(&(acc.get_accumulator()[0]), &(result[0]), acc.get_f_words() + acc.get_e_words(), MPI_LONG, MPI_SUM,x.communicator()); 
+    exblas::Superaccumulator acc_fin(result);
     double sum = acc_fin.Round();
     return sum;
 }
