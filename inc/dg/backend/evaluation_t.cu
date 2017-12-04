@@ -1,5 +1,4 @@
 #include <iostream>
-#include <iomanip>
 #include <cmath>
 
 #include <thrust/host_vector.h>
@@ -31,6 +30,11 @@ const double lz = 2;
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
 
+union udouble{
+    double d;
+    int64_t i;
+};
+
 int main()
 {
     //This file tests not only the evaluation functions but also the weights
@@ -57,7 +61,7 @@ int main()
     const DVec w3d = dg::create::weights( g3d);
 
     //test preconditioners
-    std::cout << "Square normalized 1DXnorm "<<std::setprecision(16);
+    std::cout << "Square normalized 1DXnorm ";
     double normX = dg::blas2::dot( h_x, w1d, h_x);
     std::cout << normX<<"\n";
     double solution = (exp(4.) -exp(0))/2.;
@@ -75,5 +79,11 @@ int main()
     double solution3 = solution2*solution;
     std::cout << "Correct square norm is    "<<solution3<<std::endl;
     std::cout << "Relative 3d error is      "<<(norm3X-solution3)/solution3<<"\n";
+    std::cout << "Output double as integer \n";
+    udouble res; 
+    res.d = norm2X;
+    std::cout << res.i<<std::endl;
+    res.d = norm3X;
+    std::cout << res.i<<std::endl;
     return 0;
 } 

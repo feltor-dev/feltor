@@ -1,5 +1,4 @@
 #include <iostream>
-#include <iomanip>
 #include <cmath>
 
 #include <mpi.h>
@@ -29,6 +28,10 @@ const double lz = 2;
 
 typedef dg::MPI_Vector<thrust::host_vector<double> > MHVec;
 typedef dg::MPI_Vector<thrust::device_vector<double> > MDVec;
+union udouble{
+    double d;
+    int64_t i;
+};
 
 int main(int argc, char** argv)
 {
@@ -52,7 +55,7 @@ int main(int argc, char** argv)
     double norm2d = dg::blas2::dot( w2d, func2d);
     double norm3d = dg::blas2::dot( w3d, func3d);
 
-    if(rank==0)std::cout << "Square normalized 2D norm "<<std::setprecision(16)<< norm2d <<"\n";
+    if(rank==0)std::cout << "Square normalized 2D norm "<< norm2d <<"\n";
     double solution2 = (exp(4.)-exp(0))/2.*(exp(4.) -exp(0))/2.;
     if(rank==0)std::cout << "Correct square norm is    "<<solution2<<std::endl;
     if(rank==0)std::cout << "Relative 2d error is      "<<(norm2d-solution2)/solution2<<"\n\n";
@@ -79,6 +82,12 @@ int main(int argc, char** argv)
     //    if( globalIdx != result)
     //        std::cerr <<"Inversion failed "<<result<<"\n";
     //}
+    if(rank==0)std::cout << "Output double as integer \n";
+    udouble res; 
+    res.d = norm2d;
+    if(rank==0)std::cout << res.i<<std::endl;
+    res.d = norm3d;
+    if(rank==0)std::cout << res.i<<std::endl;
 
     MPI_Finalize();
     return 0;
