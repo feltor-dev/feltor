@@ -85,9 +85,9 @@ int main(int argc, char** argv)
     if(rank==0)std::cout << "Output double as integer \n";
     udouble res; 
     res.d = norm2d;
-    if(rank==0)std::cout << res.i<<std::endl;
+    if(rank==0)std::cout << "norm2d "<<res.i<<std::endl;
     res.d = norm3d;
-    if(rank==0)std::cout << res.i<<std::endl;
+    if(rank==0)std::cout << "norm3d "<<res.i<<std::endl;
 
     MPI_Finalize();
     return 0;
