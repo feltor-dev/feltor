@@ -21,9 +21,9 @@ static constexpr double DELTASCALE = double(1ull << DIGITS); // Assumes KRX>0
 ////////////// parameters for Kernel execution            //////////////////////
 //Kernel paramters for EXDOT
 static constexpr uint WARP_COUNT               = 16 ; //# of sub superaccs
-static constexpr uint WARP_SIZE                = 32 ;
+static constexpr uint WARP_SIZE                = 16 ; 
 static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per block
-static constexpr uint PARTIAL_SUPERACCS_COUNT  = 512; //# of groups; each has a partial SuperAcc (somehow does not work for 128???)
+static constexpr uint PARTIAL_SUPERACCS_COUNT  = 128; //# of groups; each has a partial SuperAcc (somehow does not work for 128???)
 //Kernel paramters for EXDOTComplete
 static constexpr uint MERGE_SUPERACCS_SIZE     = 128; //# of sa each block merges
 static constexpr uint MERGE_WORKGROUP_SIZE     = 64;  //we need only 39 of those
@@ -118,6 +118,25 @@ int Normalize( long long int *accumulator, int *imin, int *imax) {
 
     // Do not cancel the last carry to avoid losing information
     accumulator[*imax] += carry_in << DIGITS;
+
+    return carry_in < 0;
+}
+__device__
+int NormalizeT( long long int *accumulator, int *imin, int *imax) {
+    long long int carry_in = accumulator[(*imin)*WARP_COUNT] >> DIGITS;
+    accumulator[(*imin)*WARP_COUNT] -= carry_in << DIGITS;
+    int i;
+    // Sign-extend all the way
+    for (i = *imin + 1; i < BIN_COUNT; ++i) {
+        accumulator[i*WARP_COUNT] += carry_in;
+        long long int carry_out = accumulator[i*WARP_COUNT] >> DIGITS;    // Arithmetic shift
+        accumulator[i*WARP_COUNT] -= (carry_out << DIGITS);
+        carry_in = carry_out;
+    }
+    *imax = i - 1;
+
+    // Do not cancel the last carry to avoid losing information
+    accumulator[(*imax)*WARP_COUNT] += carry_in << DIGITS;
 
     return carry_in < 0;
 }
@@ -250,34 +269,15 @@ __global__ void ExDOT(
     //Read data from global memory and scatter it to sub-superaccs
     double a[NBFPE] = {0.0};
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
-        double r = 0.0;
-        double x = TwoProductFMA(d_a[pos], d_b[pos], &r);
-
-        #pragma unroll
-        for(uint i = 0; i != NBFPE; ++i) {
-            double s;
-            a[i] = KnuthTwoSum(a[i], x, &s);
-            x = s;
-        }
-        if (x != 0.0) {
-            Accumulate(l_workingBase, x);
-            // Flush FPEs to superaccs
-            #pragma unroll
-            for(uint i = 0; i != NBFPE; ++i) {
-                Accumulate(l_workingBase, a[i]);
-                a[i] = 0.0;
-            }
-        }
-
-        if (r != 0.0) {//add the rest r in the same manner
+            double x = d_a[pos]*d_b[pos];
             #pragma unroll
             for(uint i = 0; i != NBFPE; ++i) {
                 double s;
-                a[i] = KnuthTwoSum(a[i], r, &s);
-                r = s;
+                a[i] = KnuthTwoSum(a[i], x, &s);
+                x = s;
             }
-            if (r != 0.0) {
-                Accumulate(l_workingBase, r);
+            if (x != 0.0) {
+                Accumulate(l_workingBase, x);
                 // Flush FPEs to superaccs
                 #pragma unroll
                 for(uint i = 0; i != NBFPE; ++i) {
@@ -285,7 +285,42 @@ __global__ void ExDOT(
                     a[i] = 0.0;
                 }
             }
-        }
+        //double r = 0.0;
+        //double x = TwoProductFMA(d_a[pos], d_b[pos], &r);
+
+        //#pragma unroll
+        //for(uint i = 0; i != NBFPE; ++i) {
+        //    double s;
+        //    a[i] = KnuthTwoSum(a[i], x, &s);
+        //    x = s;
+        //}
+        //if (x != 0.0) {
+        //    Accumulate(l_workingBase, x);
+        //    // Flush FPEs to superaccs
+        //    #pragma unroll
+        //    for(uint i = 0; i != NBFPE; ++i) {
+        //        Accumulate(l_workingBase, a[i]);
+        //        a[i] = 0.0;
+        //    }
+        //}
+
+        //if (r != 0.0) {//add the rest r in the same manner
+        //    #pragma unroll
+        //    for(uint i = 0; i != NBFPE; ++i) {
+        //        double s;
+        //        a[i] = KnuthTwoSum(a[i], r, &s);
+        //        r = s;
+        //    }
+        //    if (r != 0.0) {
+        //        Accumulate(l_workingBase, r);
+        //        // Flush FPEs to superaccs
+        //        #pragma unroll
+        //        for(uint i = 0; i != NBFPE; ++i) {
+        //            Accumulate(l_workingBase, a[i]);
+        //            a[i] = 0.0;
+        //        }
+        //    }
+        //}
     }
 	//Flush FPEs to superaccs
     #pragma unroll
@@ -295,6 +330,13 @@ __global__ void ExDOT(
 
     //Merge sub-superaccs into work-group partial-accumulator ( ATTENTION: PartialSuperacc is transposed!)
     uint pos = threadIdx.x;
+//if(pos < WARP_COUNT) {
+//        int imin = 0;
+//        int imax = 38;
+//    NormalizeT( l_workingBase, &imin, &imax);
+//}
+//    __syncthreads();
+
     if (pos < BIN_COUNT) {
         long long int sum = 0;
 
@@ -329,20 +371,15 @@ __global__ void ExDOT(
     //Read data from global memory and scatter it to sub-superaccs
     double a[NBFPE] = {0.0};
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
-        double r  = 0.0, r2 = 0.0;
-        double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
-        double x2 = TwoProductFMA(x , d_c[pos], &r2);
-
-
-        if( x2 != 0.0) {//accumulate x2
+            double x = d_a[pos]*d_c[pos]*d_b[pos];
             #pragma unroll
             for(uint i = 0; i != NBFPE; ++i) {
                 double s;
-                a[i] = KnuthTwoSum(a[i], x2, &s);
-                x2 = s;
+                a[i] = KnuthTwoSum(a[i], x, &s);
+                x = s;
             }
-            if (x2 != 0.0) {
-                Accumulate(l_workingBase, x2);
+            if (x != 0.0) {
+                Accumulate(l_workingBase, x);
                 // Flush FPEs to superaccs
                 #pragma unroll
                 for(uint i = 0; i != NBFPE; ++i) {
@@ -350,62 +387,83 @@ __global__ void ExDOT(
                     a[i] = 0.0;
                 }
             }
-        }
-        if (r2 != 0.0) {//add the rest r2 
-            #pragma unroll
-            for(uint i = 0; i != NBFPE; ++i) {
-                double s;
-                a[i] = KnuthTwoSum(a[i], r2, &s);
-                r = s;
-            }
-            if (r != 0.0) {
-                Accumulate(l_workingBase, r2);
-                // Flush FPEs to superaccs
-                #pragma unroll
-                for(uint i = 0; i != NBFPE; ++i) {
-                    Accumulate(l_workingBase, a[i]);
-                    a[i] = 0.0;
-                }
-            }
-        }
+        //double r  = 0.0, r2 = 0.0;
+        //double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
+        //double x2 = TwoProductFMA(x , d_c[pos], &r2);
 
-        if (r != 0.0) {//add the rest r*c in the same manner
-            x2 = TwoProductFMA(r , d_c[pos], &r2);
-            if( x2 != 0.0) {//accumulate x2
-                #pragma unroll
-                for(uint i = 0; i != NBFPE; ++i) {
-                    double s;
-                    a[i] = KnuthTwoSum(a[i], x2, &s);
-                    x2 = s;
-                }
-                if (x2 != 0.0) {
-                    Accumulate(l_workingBase, x2);
-                    // Flush FPEs to superaccs
-                    #pragma unroll
-                    for(uint i = 0; i != NBFPE; ++i) {
-                        Accumulate(l_workingBase, a[i]);
-                        a[i] = 0.0;
-                    }
-                }
-            }
-            if (r2 != 0.0) {//add the rest r2 
-                #pragma unroll
-                for(uint i = 0; i != NBFPE; ++i) {
-                    double s;
-                    a[i] = KnuthTwoSum(a[i], r2, &s);
-                    r = s;
-                }
-                if (r != 0.0) {
-                    Accumulate(l_workingBase, r2);
-                    // Flush FPEs to superaccs
-                    #pragma unroll
-                    for(uint i = 0; i != NBFPE; ++i) {
-                        Accumulate(l_workingBase, a[i]);
-                        a[i] = 0.0;
-                    }
-                }
-            }
-        }
+
+        //if( x2 != 0.0) {//accumulate x2
+        //    #pragma unroll
+        //    for(uint i = 0; i != NBFPE; ++i) {
+        //        double s;
+        //        a[i] = KnuthTwoSum(a[i], x2, &s);
+        //        x2 = s;
+        //    }
+        //    if (x2 != 0.0) {
+        //        Accumulate(l_workingBase, x2);
+        //        // Flush FPEs to superaccs
+        //        #pragma unroll
+        //        for(uint i = 0; i != NBFPE; ++i) {
+        //            Accumulate(l_workingBase, a[i]);
+        //            a[i] = 0.0;
+        //        }
+        //    }
+        //}
+        //if (r2 != 0.0) {//add the rest r2 
+        //    #pragma unroll
+        //    for(uint i = 0; i != NBFPE; ++i) {
+        //        double s;
+        //        a[i] = KnuthTwoSum(a[i], r2, &s);
+        //        r = s;
+        //    }
+        //    if (r != 0.0) {
+        //        Accumulate(l_workingBase, r2);
+        //        // Flush FPEs to superaccs
+        //        #pragma unroll
+        //        for(uint i = 0; i != NBFPE; ++i) {
+        //            Accumulate(l_workingBase, a[i]);
+        //            a[i] = 0.0;
+        //        }
+        //    }
+        //}
+
+        //if (r != 0.0) {//add the rest r*c in the same manner
+        //    x2 = TwoProductFMA(r , d_c[pos], &r2);
+        //    if( x2 != 0.0) {//accumulate x2
+        //        #pragma unroll
+        //        for(uint i = 0; i != NBFPE; ++i) {
+        //            double s;
+        //            a[i] = KnuthTwoSum(a[i], x2, &s);
+        //            x2 = s;
+        //        }
+        //        if (x2 != 0.0) {
+        //            Accumulate(l_workingBase, x2);
+        //            // Flush FPEs to superaccs
+        //            #pragma unroll
+        //            for(uint i = 0; i != NBFPE; ++i) {
+        //                Accumulate(l_workingBase, a[i]);
+        //                a[i] = 0.0;
+        //            }
+        //        }
+        //    }
+        //    if (r2 != 0.0) {//add the rest r2 
+        //        #pragma unroll
+        //        for(uint i = 0; i != NBFPE; ++i) {
+        //            double s;
+        //            a[i] = KnuthTwoSum(a[i], r2, &s);
+        //            r = s;
+        //        }
+        //        if (r != 0.0) {
+        //            Accumulate(l_workingBase, r2);
+        //            // Flush FPEs to superaccs
+        //            #pragma unroll
+        //            for(uint i = 0; i != NBFPE; ++i) {
+        //                Accumulate(l_workingBase, a[i]);
+        //                a[i] = 0.0;
+        //            }
+        //        }
+        //    }
+        //}
     }
 	//Flush FPEs to superaccs
     #pragma unroll
