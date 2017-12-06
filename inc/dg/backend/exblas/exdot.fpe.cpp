@@ -88,7 +88,7 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b) {
             vcl::Vec4d r1 ;
             vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load(a+i), vcl::Vec4d().load(b+i), r1);
             cache.Accumulate(x);
-            cache.Accumulate(r1);
+            //cache.Accumulate(r1);
         }
         if( tid+1==tnum && r != N-1) {
             r+=1;
@@ -96,7 +96,7 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b) {
             vcl::Vec4d r1;
             vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load_partial(N-r, a+r), vcl::Vec4d().load_partial(N-r,b+r), r1);
             cache.Accumulate(x);
-            cache.Accumulate(r1);
+            //cache.Accumulate(r1);
         }
         cache.Flush();
         acc[tid].Normalize();
@@ -130,10 +130,10 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b, const double 
             vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load(a+i), vcl::Vec4d().load(b+i), r1);
             vcl::Vec4d x2 = TwoProductFMA(x , cvec, r2);
             cache.Accumulate(x2);
-            cache.Accumulate(r2);
-            x2 = TwoProductFMA(r1, cvec, r2);
-            cache.Accumulate(x2);
-            cache.Accumulate(r2);
+            //cache.Accumulate(r2);
+            //x2 = TwoProductFMA(r1, cvec, r2);
+            //cache.Accumulate(x2);
+            //cache.Accumulate(r2);
         }
         if( tid+1 == tnum && r != N-1) {
             r+=1;
@@ -142,10 +142,10 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b, const double 
             vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load_partial(N-r, a+r), vcl::Vec4d().load_partial(N-r,b+r), r1);
             vcl::Vec4d x2 = TwoProductFMA(x , cvec, r2);
             cache.Accumulate(x2);
-            cache.Accumulate(r2);
-            x2 = TwoProductFMA(r1, cvec, r2);
-            cache.Accumulate(x2);
-            cache.Accumulate(r2);
+            //cache.Accumulate(r2);
+            //x2 = TwoProductFMA(r1, cvec, r2);
+            //cache.Accumulate(x2);
+            //cache.Accumulate(r2);
         }
         cache.Flush();
         acc[tid].Normalize();

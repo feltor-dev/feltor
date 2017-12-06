@@ -27,14 +27,14 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b) {
         vcl::Vec4d r1 ;
         vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load(a+i), vcl::Vec4d().load(b+i), r1);
         cache.Accumulate(x);
-        cache.Accumulate(r1);
+        //cache.Accumulate(r1);
     }
     if( r != N) {
         //accumulate remainder
         vcl::Vec4d r1;
         vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load_partial(N-r, a+r), vcl::Vec4d().load_partial(N-r,b+r), r1);
         cache.Accumulate(x);
-        cache.Accumulate(r1);
+        //cache.Accumulate(r1);
     }
     cache.Flush();
     return acc;
@@ -52,10 +52,10 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b, const dou
         vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load(a+i), vcl::Vec4d().load(b+i), r1);
         vcl::Vec4d x2 = TwoProductFMA(x , cvec, r2);
         cache.Accumulate(x2);
-        cache.Accumulate(r2);
-        x2 = TwoProductFMA(r1, cvec, r2);
-        cache.Accumulate(x2);
-        cache.Accumulate(r2);
+        //cache.Accumulate(r2);
+        //x2 = TwoProductFMA(r1, cvec, r2);
+        //cache.Accumulate(x2);
+        //cache.Accumulate(r2);
     }
     if( r != N) {
         //accumulate remainder
@@ -63,10 +63,10 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b, const dou
         vcl::Vec4d x  = TwoProductFMA(vcl::Vec4d().load_partial(N-r, a+r), vcl::Vec4d().load_partial(N-r,b+r), r1);
         vcl::Vec4d x2 = TwoProductFMA(x , cvec, r2);
         cache.Accumulate(x2);
-        cache.Accumulate(r2);
-        x2 = TwoProductFMA(r1, cvec, r2);
-        cache.Accumulate(x2);
-        cache.Accumulate(r2);
+        //cache.Accumulate(r2);
+        //x2 = TwoProductFMA(r1, cvec, r2);
+        //cache.Accumulate(x2);
+        //cache.Accumulate(r2);
     }
     cache.Flush();
     return acc;
