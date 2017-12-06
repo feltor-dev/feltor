@@ -414,9 +414,9 @@ __global__ void ExDOT(
         //    for(uint i = 0; i != NBFPE; ++i) {
         //        double s;
         //        a[i] = KnuthTwoSum(a[i], r2, &s);
-        //        r = s;
+        //        r2 = s; //error was here r = s
         //    }
-        //    if (r != 0.0) {
+        //    if (r2 != 0.0) { //error was here r != 0.0
         //        Accumulate(l_workingBase, r2);
         //        // Flush FPEs to superaccs
         //        #pragma unroll
@@ -451,9 +451,9 @@ __global__ void ExDOT(
         //        for(uint i = 0; i != NBFPE; ++i) {
         //            double s;
         //            a[i] = KnuthTwoSum(a[i], r2, &s);
-        //            r = s;
+        //            r2 = s; //error was here r = s
         //        }
-        //        if (r != 0.0) {
+        //        if (r2 != 0.0) { //error was here r != 0.0
         //            Accumulate(l_workingBase, r2);
         //            // Flush FPEs to superaccs
         //            #pragma unroll
