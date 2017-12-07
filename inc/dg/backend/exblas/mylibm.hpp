@@ -209,24 +209,24 @@ inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
     return oldword;
 }
 
-//static inline vcl::Vec4d clear_significand(vcl::Vec4d x) {
-//    return x & vcl::Vec4d(_mm256_castsi256_pd(_mm256_set1_epi64x(0xfff0000000000000ull)));
+//static inline vcl::Vec8d clear_significand(vcl::Vec8d x) {
+//    return x & vcl::Vec8d(_mm512_castsi256_pd(_mm512_set1_epi64x(0xfff0000000000000ull)));
 //}
 
-static inline double horizontal_max(vcl::Vec4d x) {
-    vcl::Vec2d h = x.get_high();
-    vcl::Vec2d l = x.get_low();
-    vcl::Vec2d m1 = max(h, l);
-    vcl::Vec2d m2 = vcl::permute2d<1, 0>(m1);
-    vcl::Vec2d m = vcl::max(m1, m2);
+static inline double horizontal_max(vcl::Vec8d x) {
+    vcl::Vec4d h = x.get_high();
+    vcl::Vec4d l = x.get_low();
+    vcl::Vec4d m1 = max(h, l);
+    vcl::Vec4d m2 = vcl::permute4d<1, 0, 1, 0>(m1);
+    vcl::Vec4d m = vcl::max(m1, m2);
     return m[0];    // Why is it so hard to convert from vector xmm register to scalar xmm register?
 }
 
-inline static bool horizontal_or(vcl::Vec4d const & a) {
-    //return _mm256_movemask_pd(a) != 0;
-    vcl::Vec4db p = a != 0;
+inline static bool horizontal_or(vcl::Vec8d const & a) {
+    //return _mm512_movemask_pd(a) != 0;
+    vcl::Vec8db p = a != 0;
     return vcl::horizontal_or( p);
-    //return !_mm256_testz_pd(p, p);
+    //return !_mm512_testz_pd(p, p);
 }
 
 }//namespace exblas

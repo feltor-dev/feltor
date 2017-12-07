@@ -117,9 +117,9 @@ inline static T TwoProductFMA(T a, T b, T &d) {
 //{
 //    T r = a + b;
 //    auto doswap = abs(b) > abs(a);
-//    //if(unlikely(!_mm256_testz_pd(doswap, doswap)))
+//    //if(unlikely(!_mm512_testz_pd(doswap, doswap)))
 //    //asm("nop");
-//    if(/*unlikely*/(!_mm256_testz_si256(_mm256_castpd_si256(doswap), _mm256_castpd_si256(b))))  // any(doswap && b != +0)
+//    if(/*unlikely*/(!_mm512_testz_si256(_mm512_castpd_si256(doswap), _mm512_castpd_si256(b))))  // any(doswap && b != +0)
 //    {
 //        // Slow path
 //        T a2 = select(doswap, b, a);
@@ -160,55 +160,55 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
     }
 }
 
-static inline bool sign_horizontal_or (vcl::Vec4db const & a) {
+static inline bool sign_horizontal_or (vcl::Vec8db const & a) {
     return vcl::horizontal_or( a);
-    //return !_mm256_testz_pd(a,a);
+    //return !_mm512_testz_pd(a,a);
 }
 
-// Input:
-// a3 a2 a1 a0
-// b3 b2 b1 b0
-// Output:
-// a3 b3 a1 b1
-// a2 b2 a0 b0
-inline static void transpose1(vcl::Vec4d & a, vcl::Vec4d & b)
-{
-    // a3 -- a1 --
-    // -- b3 -- b1
-    vcl::Vec4d a2 = vcl::blend4d<4|1,0|1,4|3,0|3>(a, b);
-    // a2 -- a0 --
-    // -- b2 -- b0
-    vcl::Vec4d b2 = vcl::blend4d<4|0,0|0,4|2,0|2>(a, b);
-    a = a2;
-    b = b2;
-}
-
-// Input:
-// a3 a2 a1 a0
-// b3 b2 b1 b0
-// Output:
-// a3 a2 b3 b2
-// a1 a0 b1 b0
-inline static void transpose2(vcl::Vec4d & a, vcl::Vec4d & b)
-{
-    // a3 a2 -- --
-    // -- -- b3 b2
-    vcl::Vec4d a2 = vcl::blend4d<4|2,4|3,0|2,0|3>(a, b);
-    // a1 a0 -- --
-    // -- -- b1 b0
-    vcl::Vec4d b2 = vcl::blend4d<4|0,4|1,0|0,0|1>(a, b);
-    a = a2;
-    b = b2;
-}
-
-inline static void horizontal_twosum(vcl::Vec4d & r, vcl::Vec4d & s)
-{
-    //r = Knuth2Sum(r, s, s);
-    transpose1(r, s);
-    r = Knuth2Sum(r, s, s);
-    transpose2(r, s);
-    r = Knuth2Sum(r, s, s);
-}
+//// Input:
+//// a3 a2 a1 a0
+//// b3 b2 b1 b0
+//// Output:
+//// a3 b3 a1 b1
+//// a2 b2 a0 b0
+//inline static void transpose1(vcl::Vec8d & a, vcl::Vec8d & b)
+//{
+//    // a3 -- a1 --
+//    // -- b3 -- b1
+//    vcl::Vec8d a2 = vcl::blend8d<4|1,0|1,4|3,0|3>(a, b);
+//    // a2 -- a0 --
+//    // -- b2 -- b0
+//    vcl::Vec8d b2 = vcl::blend8d<4|0,0|0,4|2,0|2>(a, b);
+//    a = a2;
+//    b = b2;
+//}
+//
+//// Input:
+//// a3 a2 a1 a0
+//// b3 b2 b1 b0
+//// Output:
+//// a3 a2 b3 b2
+//// a1 a0 b1 b0
+//inline static void transpose2(vcl::Vec8d & a, vcl::Vec8d & b)
+//{
+//    // a3 a2 -- --
+//    // -- -- b3 b2
+//    vcl::Vec8d a2 = vcl::blend4d<4|2,4|3,0|2,0|3>(a, b);
+//    // a1 a0 -- --
+//    // -- -- b1 b0
+//    vcl::Vec8d b2 = vcl::blend4d<4|0,4|1,0|0,0|1>(a, b);
+//    a = a2;
+//    b = b2;
+//}
+//
+//inline static void horizontal_twosum(vcl::Vec8d & r, vcl::Vec8d & s)
+//{
+//    //r = Knuth2Sum(r, s, s);
+//    transpose1(r, s);
+//    r = Knuth2Sum(r, s, s);
+//    transpose2(r, s);
+//    r = Knuth2Sum(r, s, s);
+//}
 
 template<typename T, int N, typename TRAITS>
 T FPExpansionVect<T,N,TRAITS>::twosum(T a, T b, T & s)
@@ -226,13 +226,13 @@ T FPExpansionVect<T,N,TRAITS>::twosum(T a, T b, T & s)
 //#endif
 }
 
-inline static void swap_if_nonzero(vcl::Vec4d & a, vcl::Vec4d & b)
+inline static void swap_if_nonzero(vcl::Vec8d & a, vcl::Vec8d & b)
 {
     // if(a_i != 0) { a'_i = b_i; b'_i = a_i; }
     // else {         a'_i = 0;   b'_i = b_i; }
-    vcl::Vec4db swapmask = (a != 0);
-    vcl::Vec4d b2 = select(swapmask, a, b);
-    a = b & vcl::Vec4d(swapmask);
+    vcl::Vec8db swapmask = (a != 0);
+    vcl::Vec8d b2 = select(swapmask, a, b);
+    a = b & vcl::Vec8d(swapmask);
     b = b2;
 }
 
@@ -316,18 +316,18 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
         auto p = abs(x1) < abs(a[N-1]);
         if(sign_horizontal_or(p)) {
             FlushVector(x1 & T(p));
-            x1 = T(andnot(vcl::Vec4db(x1), p));
+            x1 = T(andnot(vcl::Vec8db(x1), p));
         }
         p = abs(x2) < abs(a[N-1]);
         if(sign_horizontal_or(p)) {
             FlushVector(x2 & T(p));
-            x2 = T(andnot(vcl::Vec4db(x2), p));
+            x2 = T(andnot(vcl::Vec8db(x2), p));
         }
     }
     
     T s1, s2;
     for(unsigned int i = 0; i != N; ++i) {
-        T ai = vcl::Vec4d().load_a((double*)(a+i));
+        T ai = vcl::Vec8d().load_a((double*)(a+i));
         //T ai = a[i];
         ai = twosum(ai, x1, s1);
         ai = twosum(ai, x2, s2);
@@ -345,9 +345,9 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
             if(TRAITS::FlushHi) {
                 Insert(x1, x2);
             }
-            if(TRAITS::Horz2Sum) {
-                horizontal_twosum(x1, x2);
-            }
+            //if(TRAITS::Horz2Sum) {
+            //    horizontal_twosum(x1, x2);
+            //}
             FlushVector(x1);
             if(!TRAITS::Horz2Sum || horizontal_or(x2)) {
                 FlushVector(x2);
@@ -361,9 +361,9 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
                 Insert(x1);
             }
             // Compact if we can
-            if(TRAITS::Victimcache && TRAITS::Horz2Sum) {
-                horizontal_twosum(victim, x1);
-            }
+            //if(TRAITS::Victimcache && TRAITS::Horz2Sum) {
+            //    horizontal_twosum(victim, x1);
+            //}
             if(!TRAITS::Horz2Sum || horizontal_or(x1)) {
                 FlushVector(x1);
             }
@@ -372,9 +372,9 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
             if(false && TRAITS::FlushHi) {  // Alternate flush low/high
                 Insert(x2);
             }
-            if(TRAITS::Victimcache && TRAITS::Horz2Sum) {
-                horizontal_twosum(victim, x2);
-            }
+            //if(TRAITS::Victimcache && TRAITS::Horz2Sum) {
+            //    horizontal_twosum(victim, x2);
+            //}
             if(!TRAITS::Horz2Sum || horizontal_or(x2)) {
                 FlushVector(x2);
             }
@@ -429,7 +429,7 @@ void FPExpansionVect<T,N,TRAITS>::DumpVector(T x) const
 {
     double v[4] __attribute__((aligned(32)));
     x.store_a(v);
-    _mm256_zeroupper();
+    _mm512_zeroupper();
     
     for(unsigned int j = 0; j != 4; ++j) {
         printf("%a ", v[j]);

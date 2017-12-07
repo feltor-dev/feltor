@@ -5,7 +5,7 @@ MPICC=mpiicc
 OPT=-O3 -xHost  # overwritten for mic in devices.mk
 #MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
 OMPFLAG=-qopenmp
-CFLAGS=-Wall -std=c++11 -restrict #-mfma  #flags for CC
+CFLAGS=-Wall -std=c++11 -restrict -DMAX_VECTOR_SIZE=512 #-mfma  #flags for CC
 
 INCLUDE += -I$(HOME)/include # cusp, thrust
 INCLUDE += -I$(NETCDF_INC) -I$(HDF5_INC)
