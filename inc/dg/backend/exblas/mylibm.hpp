@@ -12,6 +12,7 @@
  *    Developers : \n
  *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
  *        Sylvain Collange -- sylvain.collange@inria.fr \n
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
  */
 
 #ifndef MYLIBM_HPP_INCLUDED
@@ -27,7 +28,7 @@
 #if INSTRSET <5
 #error"Instruction set SSE4.1 is required! -msse4.1"
 #elif INSTRSET <7 
-#warning "It is recommended to activate AVX support (-mavx) and fused multiply add instructions (-mfma)"
+#warning "It is recommended to activate AVX instruction set (-mavx) or higher"
 #endif
 
 #if defined __INTEL_COMPILER

@@ -11,6 +11,7 @@
  *    Developers : \n
  *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
  *        Sylvain Collange -- sylvain.collange@inria.fr \n
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
  */
 #ifndef EXSUM_FPE_HPP_
 #define EXSUM_FPE_HPP_
@@ -165,6 +166,7 @@ static inline bool sign_horizontal_or (vcl::Vec8db const & a) {
     //return !_mm512_testz_pd(a,a);
 }
 
+//MW: did not get it to compile with the new Vec8d vectorclass
 //// Input:
 //// a3 a2 a1 a0
 //// b3 b2 b1 b0

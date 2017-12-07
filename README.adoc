@@ -323,6 +323,10 @@ gratefully acknowledge fruitful discussions and code contribution from
 - Lukas Einkemmer 
 - Jakob Gath
 
+We are grateful to Roman Iakymchuk, who provided the exblas library 
+for binary reproducible scalar products and advice on how to use and
+adapt it. 
+
 We further acknowledge support on the Knights landing architecture from
 the High Level Support Team from 
 
@@ -332,6 +336,7 @@ the High Level Support Team from
 and from Intel Barcelona 
 
 - Harald Servat
+
 
 == 4. Terms of use
 
