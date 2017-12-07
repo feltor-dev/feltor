@@ -85,16 +85,18 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b) {
 
         for(int i = l; i < r; i+=8) {
             asm ("# myloop");
-            vcl::Vec8d r1 ;
-            vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
+            //vcl::Vec8d r1 ;
+            //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
+            vcl::Vec8d x  = vcl::Vec8d().load(a+i)*vcl::Vec8d().load(b+i);
             cache.Accumulate(x);
             //cache.Accumulate(r1);
         }
         if( tid+1==tnum && r != N-1) {
             r+=1;
             //accumulate remainder
-            vcl::Vec8d r1;
-            vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
+            //vcl::Vec8d r1;
+            //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
+            vcl::Vec8d x  = vcl::Vec8d().load_partial(N-r,a+r)*vcl::Vec8d().load_partial(N-r,b+r);
             cache.Accumulate(x);
             //cache.Accumulate(r1);
         }
@@ -126,9 +128,10 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b, const double 
 
         for(int i = l; i < r; i+=8) {
             asm ("# myloop");
-            vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load(c+i);
-            vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
-            vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
+            //vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load(c+i);
+            //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
+            //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
+            vcl::Vec8d x2  = (vcl::Vec8d().load(a+i)*vcl::Vec8d().load(b+i))*vcl::Vec8d().load(c+i);
             cache.Accumulate(x2);
             //cache.Accumulate(r2);
             //x2 = TwoProductFMA(r1, cvec, r2);
@@ -138,9 +141,10 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b, const double 
         if( tid+1 == tnum && r != N-1) {
             r+=1;
             //accumulate remainder
-            vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load_partial(N-r, c+r);
-            vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
-            vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
+            //vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load_partial(N-r, c+r);
+            //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
+            //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
+            vcl::Vec8d x2  = (vcl::Vec8d().load_partial(N-r,a+r)*vcl::Vec8d().load_partial(N-r,b+r))*vcl::Vec8d().load_partial(N-r,c+r);
             cache.Accumulate(x2);
             //cache.Accumulate(r2);
             //x2 = TwoProductFMA(r1, cvec, r2);

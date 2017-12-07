@@ -209,8 +209,9 @@ __global__ void ExDOT(
     //Read data from global memory and scatter it to sub-superaccs
     double a[NBFPE] = {0.0};
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
-        double r = 0.0;
-        double x = TwoProductFMA(d_a[pos], d_b[pos], &r);
+        //double r = 0.0;
+        //double x = TwoProductFMA(d_a[pos], d_b[pos], &r);
+        double x = d_a[pos]*d_b[pos];
 
         #pragma unroll
         for(uint i = 0; i != NBFPE; ++i) {
@@ -296,9 +297,10 @@ __global__ void ExDOT(
     double a[NBFPE] = {0.0};
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
         //double x2 = d_a[pos]*d_c[pos]*d_b[pos];
-        double r  = 0.0, r2 = 0.0;
-        double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
-        double x2 = TwoProductFMA(x , d_c[pos], &r2);
+        //double r  = 0.0, r2 = 0.0;
+        //double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
+        //double x2 = TwoProductFMA(x , d_c[pos], &r2);
+        double x2 = (d_a[pos]*d_b[pos])*d_c[pos];
 
         if( x2 != 0.0) {//accumulate x2
             #pragma unroll
