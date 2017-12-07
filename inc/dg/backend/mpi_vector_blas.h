@@ -17,7 +17,7 @@ namespace detail{
 template< class Vector1, class Vector2>
 void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag)
 {
-    out.communicator() = in.communicator();
+    out.set_communicator(in.communicator());
     typedef typename Vector1::container_type container1;
     typedef typename Vector2::container_type container2;
     doTransfer( in.data(), out.data(), typename VectorTraits<container1>::vector_category(), typename VectorTraits<container2>::vector_category());
@@ -48,9 +48,10 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
         receive.assign(39,0);
         MPI_Reduce(&(acc_reduce.get_accumulator()[0]), &(receive[0]), acc_fine.get_f_words() + acc_fine.get_e_words(), MPI_LONG, MPI_SUM, 0, x.communicator_mod_reduce()); 
     }
-    MPI_Bcast( &(receive[0]), 39, MPI_DOUBLE, 0, x.communicator());
+    MPI_Bcast( &(receive[0]), 39, MPI_LONG, 0, x.communicator());
 
-    return exblas::Superaccumulator(receive);
+    exblas::Superaccumulator result(receive);
+    return result.Round();
 }
 
 template< class Vector>

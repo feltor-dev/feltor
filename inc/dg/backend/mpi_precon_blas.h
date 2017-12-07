@@ -35,7 +35,7 @@ inline exblas::Superaccumulator doDot_dispatch( const Vector& x, const Precon& P
         receive.assign(39,0);
         MPI_Reduce(&(acc_reduce.get_accumulator()[0]), &(receive[0]), acc_fine.get_f_words() + acc_fine.get_e_words(), MPI_LONG, MPI_SUM, 0, x.communicator_mod_reduce()); 
     }
-    MPI_Bcast( &(receive[0]), 39, MPI_DOUBLE, 0, x.communicator());
+    MPI_Bcast( &(receive[0]), 39, MPI_LONG, 0, x.communicator());
 
     return exblas::Superaccumulator(receive);
 }
