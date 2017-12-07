@@ -194,7 +194,7 @@ struct MatrixTraits< detail::Implicit<M, V> >
 * @brief Struct for Karniadakis semi-implicit multistep time-integration
 * \f[
 * \begin{align}
-    {\bar v}^n &= \frac{1}{\gamma_0}\left(\sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  \hat E( v^{n-q})\right) \\
+    {\bar v}^n &= \sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  \hat E( v^{n-q}) \\
     \left( 1  - \frac{\Delta t}{\gamma_0}  \hat I\right)  v^{n+1} &= {\bar v}^n  
     \end{align}
     \f]

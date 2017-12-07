@@ -45,12 +45,17 @@ inline void transfer( const Matrix& x, AnotherMatrix& y)
     dg::blas2::detail::doTransfer( x,y, typename dg::MatrixTraits<Matrix>::matrix_category(), typename dg::MatrixTraits<AnotherMatrix>::matrix_category());
 }
 
-/*! @brief \f$ x^T M y\f$; General dot produt
+/*! @brief \f$ x^T M y\f$; Binary reproducible general dot product
  *
  * This routine computes the scalar product defined by the symmetric positive definite 
  * matrix M \f[ x^T M y = \sum_{i,j=0}^{N-1} x_i M_{ij} y_j \f]
  * ( Note that if M is not diagonal it is generally more efficient to 
- * precalculate \f$ My\f$ and then call the dg::blas1::dot() routine!
+ * precalculate \f$ My\f$ and then call the \c dg::blas1::dot() routine!
+ * Our implementation guarantees binary reproducible results up to and excluding the last mantissa bit of the result. 
+ * Furthermore, the sum is computed with infinite precision and the result is then rounded
+ * to the nearest double precision number. Although the products are not computed with 
+ * infinite precision, the order of multiplication is guaranteed.
+ * This is possible with the help of an adapted version of the exblas library. 
  * @tparam DiagonalMatrix Right now \c DiagonalMatrix has to be the same as \c container, except if \c container is a \p std::vector<container_type>, then the \c DiagonalMatrix has to be the \c container_type.
  * In the latter case the Matrix is applied to all containers in the std::vector and the sum is returned. 
  * @copydoc hide_container
@@ -70,7 +75,7 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const container& x
                        typename dg::VectorTraits<container>::vector_category() );
 }
 
-/*! @brief \f$ x^T M x\f$; General dot produt
+/*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
  *
  * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
  * @tparam DiagonalMatrix Right now \c DiagonalMatrix has to be the same as \c container, except if \c container is a \c std::vector<container_type>, then the \c DiagonalMatrix has to be the \c container_type. 

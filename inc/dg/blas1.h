@@ -63,10 +63,15 @@ inline void transfer( const container& x, other_container& y)
 template<class Assignable>
 inline void copy( const Assignable& x, Assignable& y){y=x;}
 
-/*! @brief \f$ x^T y\f$; Euclidean dot product between two containers
+/*! @brief \f$ x^T y\f$; Binary reproducible Euclidean dot product between two containers
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
+ * Our implementation guarantees binary reproducible results up to and excluding the last mantissa bit of the result. 
+ * Furthermore, the sum is computed with infinite precision and the result is then rounded
+ * to the nearest double precision number. Although the products are not computed with 
+ * infinite precision, the order of multiplication is guaranteed.
+ * This is possible with the help of an adapted version of the exblas library. 
  * @copydoc hide_container
  * @param x Left container
  * @param y Right container may alias x
