@@ -46,7 +46,7 @@ void split( const MPI_Vector<thrust_vector1>& in, std::vector<MPI_Vector<thrust_
     for(unsigned i=0; i<l.Nz(); i++)
     {
         out[i].data().assign( in.data().begin() + i*size2d, in.data().begin()+(i+1)*size2d);
-        out[i].communicator() = planeComm;
+        out[i].set_communicator( planeComm);
     }
 }
 #endif //MPI_VERSION
@@ -78,7 +78,7 @@ void join( const std::vector<MPI_Vector<thrust_vector1> >& in, MPI_Vector<thrust
     Grid3d l(grid.local());
     unsigned size2d=l.n()*l.n()*l.Nx()*l.Ny();
     out.data().resize( size2d*l.Nz());
-    out.communicator() = grid.communicator();
+    out.set_communicator( grid.communicator());
     for(unsigned i=0; i<l.Nz(); i++)
         thrust::copy( in[i].data().begin(), in[i].data().end(), out.data().begin()+i*size2d);
 }

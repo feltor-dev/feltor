@@ -28,14 +28,15 @@ struct MPI_Vector
 {
     typedef container container_type;//!< typedef to acces underlying container
     ///no data is allocated, communicator is MPI_COMM_WORLD
-    MPI_Vector(){ comm_ = MPI_COMM_WORLD;}
+    MPI_Vector(){ set_communicator(MPI_COMM_WORLD);}
     /**
      * @brief construct a vector
      * @param data internal data copy 
      * @param comm MPI communicator
      */
-    MPI_Vector( const container& data, MPI_Comm comm): 
-        data_( data), comm_(comm) {}
+    MPI_Vector( const container& data, MPI_Comm comm): data_( data) {
+        set_communicator( comm);
+    }
     
     /**
     * @brief Conversion operator
@@ -45,7 +46,10 @@ struct MPI_Vector
     * @param src the source 
     */
     template<class OtherContainer>
-    MPI_Vector( const MPI_Vector<OtherContainer>& src){ data_ = src.data(); comm_ = src.communicator();} 
+    MPI_Vector( const MPI_Vector<OtherContainer>& src){ 
+        data_ = src.data(); 
+        set_communicator( src.communicator());
+    } 
 
     ///@brief Get underlying data
     ///@return read access to data
@@ -57,9 +61,33 @@ struct MPI_Vector
     ///@brief Get the communicator to which this vector belongs
     ///@return read access to MPI communicator
     MPI_Comm communicator() const{return comm_;}
+    ///@brief Returns a communicator of fixed size 128
+    MPI_Comm communicator_mod() const{return comm128_;}
+
+    /**
+     * @brief Returns a communicator consisting of all processes with rank 0 in \c communicator_mod()
+     *
+     * @return returns MPI_COMM_NULL to processes not part of that group
+     */
+    MPI_Comm communicator_mod_reduce() const{return comm128Reduce_;}
     ///@brief Set the communicator to which this vector belongs
-    ///@return write access to MPI communicator
-    MPI_Comm& communicator(){return comm_;}
+    void set_communicator(MPI_Comm comm){
+        int mod = 128;
+        comm_ = comm;
+        int rank, size;
+        MPI_Comm_rank( comm, &rank);
+        MPI_Comm_size( comm, &size);
+        MPI_Comm_split( comm, rank/mod, rank%mod, &comm128_);
+        MPI_Group group, reduce_group; 
+        MPI_Comm_group( comm, &group);
+        int reduce_size=(int)ceil((double)size/(double)mod);
+        int reduce_ranks[reduce_size];
+        for( int i=0; i<reduce_size; i++)
+            reduce_ranks[i] = i*mod;
+        MPI_Group_incl( group, reduce_size, reduce_ranks, &reduce_group);
+        MPI_Comm_create( comm, reduce_group, &comm128Reduce_);
+        //returns MPI_COMM_NULL to processes that are not in the group
+    }
 
     ///@brief Return the size of the data object
     ///@return local size
@@ -68,12 +96,15 @@ struct MPI_Vector
     ///@brief Swap data  and communicator
     ///@param src communicator and data is swapped
     void swap( MPI_Vector& src){ 
-        std::swap( comm_ , src.comm_);
         data_.swap(src.data_);
+        std::swap( comm_ , src.comm_);
+        std::swap( comm128_ , src.comm128_);
+        std::swap( comm128Reduce_ , src.comm128Reduce_);
     }
   private:
     container data_; 
-    MPI_Comm comm_;
+    MPI_Comm comm_, comm128_, comm128Reduce_;
+
 };
 
 ///@cond

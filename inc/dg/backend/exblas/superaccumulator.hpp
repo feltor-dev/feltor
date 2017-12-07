@@ -34,7 +34,7 @@ namespace exblas{
 struct Superaccumulator
 {
     /** 
-     * Construction 
+     * Construction (initialize to 0)
      * \param e_bits maximum exponent 
      * \param f_bits maximum exponent with significand
      */
