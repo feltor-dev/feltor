@@ -226,25 +226,25 @@ T FPExpansionVect<T,N,TRAITS>::twosum(T a, T b, T & s)
 //#endif
 }
 
-inline static void swap_if_nonzero(vcl::Vec8d & a, vcl::Vec8d & b)
-{
-    // if(a_i != 0) { a'_i = b_i; b'_i = a_i; }
-    // else {         a'_i = 0;   b'_i = b_i; }
-    vcl::Vec8db swapmask = (a != 0);
-    vcl::Vec8d b2 = select(swapmask, a, b);
-    a = b & vcl::Vec8d(swapmask);
-    b = b2;
-}
+//inline static void swap_if_nonzero(vcl::Vec8d & a, vcl::Vec8d & b)
+//{
+//    // if(a_i != 0) { a'_i = b_i; b'_i = a_i; }
+//    // else {         a'_i = 0;   b'_i = b_i; }
+//    vcl::Vec8db swapmask = (a != 0);
+//    vcl::Vec8d b2 = select(swapmask, a, b);
+//    a = b & vcl::Vec8d(swapmask);
+//    b = b2;
+//}
 
 template<typename T, int N, typename TRAITS>
 void FPExpansionVect<T,N,TRAITS>::Swap(T & x1, T & x2)
 {
-    if(TRAITS::ConditionalSwap) {
-        swap_if_nonzero(x1, x2);
-    }
-    else {
+    //if(TRAITS::ConditionalSwap) {
+    //    swap_if_nonzero(x1, x2);
+    //}
+    //else {
         std::swap(x1, x2);
-    }
+    //}
 }
 
 template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE
@@ -403,13 +403,13 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
 {
     // TODO: update status, handle Inf/Overflow/NaN cases
     // TODO: make it work for other values of 4
-    double v[4];
+    double v[8];
     x.store(v);
     
 #if INSTRSET >= 7
     _mm256_zeroupper();
 #endif
-    for(unsigned int j = 0; j != 4; ++j) {
+    for(unsigned int j = 0; j != 8; ++j) {
         superacc.Accumulate(v[j]);
     }
 }
@@ -427,11 +427,11 @@ void FPExpansionVect<T,N,TRAITS>::Dump() const
 template<typename T, int N, typename TRAITS>
 void FPExpansionVect<T,N,TRAITS>::DumpVector(T x) const
 {
-    double v[4] __attribute__((aligned(32)));
+    double v[8] __attribute__((aligned(32)));
     x.store_a(v);
-    _mm512_zeroupper();
+    _mm256_zeroupper();
     
-    for(unsigned int j = 0; j != 4; ++j) {
+    for(unsigned int j = 0; j != 8; ++j) {
         printf("%a ", v[j]);
     }
 }
