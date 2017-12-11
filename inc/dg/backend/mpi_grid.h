@@ -124,6 +124,12 @@ struct aMPITopology2d
      * @return Communicator
      */
     MPI_Comm communicator() const{return comm;}
+    MPI_Comm get_poloidal_comm() const{
+        int remain[] = {false, true};
+        MPI_Comm comm1d;
+        MPI_Cart_sub( comm, remain, &comm1d);
+        return comm1d;
+    }
     /**
      * @brief The Discrete Legendre Transformation 
      *

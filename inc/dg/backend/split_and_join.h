@@ -1,6 +1,7 @@
 #pragma once
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include "thrust_vector_blas.cuh"
 #include "grid.h"
 #ifdef MPI_VERSION
 #include "mpi_vector.h"
@@ -12,9 +13,9 @@ namespace dg
 ///@{
 /** @brief  Split a vector into planes 
 *
-* @tparam thrust_vector1 either thrust::host_vector or thrust::device_vector
-* @tparam thrust_vector2 either thrust::host_vector or thrust::device_vector
-* @param in contiguous 3d vector (must be of size grid.size())
+* @tparam thrust_vector1 either thrust::host_vector or \c thrust::device_vector
+* @tparam thrust_vector2 either thrust::host_vector or \c thrust::device_vector
+* @param in contiguous 3d vector (must be of size \c grid.size())
 * @param out contains \c grid.Nz() 2d vectors of 2d size on output (gets resized if necessary)
 * @param grid provide dimensions in 3rd and first two dimensions
 */
@@ -53,8 +54,8 @@ void split( const MPI_Vector<thrust_vector1>& in, std::vector<MPI_Vector<thrust_
 /**
 * @brief Revert split operation
 *
-* @tparam thrust_vector1 either thrust::host_vector or thrust::device_vector
-* @tparam thrust_vector2 either thrust::host_vector or thrust::device_vector
+* @tparam thrust_vector1 either \c thrust::host_vector or \c thrust::device_vector
+* @tparam thrust_vector2 either \c thrust::host_vector or \c thrust::device_vector
 * @param in \c grid.Nz() 2d vectors of 2d size 
 * @param out contiguous 3d vector (gets resized if necessary) 
 * @param grid provide dimensions in 3rd and first two dimensions
@@ -81,6 +82,184 @@ void join( const std::vector<MPI_Vector<thrust_vector1> >& in, MPI_Vector<thrust
     out.set_communicator( grid.communicator());
     for(unsigned i=0; i<l.Nz(); i++)
         thrust::copy( in[i].data().begin(), in[i].data().end(), out.data().begin()+i*size2d);
+}
+#endif //MPI_VERSION
+/////////////////////////////////////////////poloidal split/////////////////////
+///@cond
+void split_poloidal_cpu( unsigned nx, unsigned ny, const double* in, double** out)
+{
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[j][i] = in[i*nx+j];
+}
+void split_poloidal_omp( unsigned nx, unsigned ny, const double* in, double** out)
+{
+#pragma omp parallel for
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[j][i] = in[i*nx+j];
+}
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+__global__
+void split_poloidal_gpu_kernel( unsigned nx, unsigned ny, const double* in, double** out)
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_rows/grid_size rows
+    for( int row = thread_id; row<size; row += grid_size)
+    {
+        int i=row/nx, j = row%nx;
+        out[j][i] = in[i*nx+j];
+    }
+}
+
+void split_poloidal_gpu( unsigned nx, unsigned ny, const double* in, double** out){
+    const size_t BLOCK_SIZE = 256; 
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    split_poloidal_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
+}
+void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, ThrustCudaTag){ 
+    split_poloidal_gpu( nx,ny,in,out);
+}
+#endif
+void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, ThrustOmpTag){ 
+    split_poloidal_omp( nx,ny,in,out);
+}
+void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, ThrustSerialTag){ 
+    split_poloidal_cpu( nx,ny,in,out);
+}
+/////////////join
+void join_poloidal_cpu( unsigned nx, unsigned ny, const double** in, double* out)
+{
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[i*nx+j] = in[j][i];
+}
+void join_poloidal_omp( unsigned nx, unsigned ny, const double** in, double* out)
+{
+#pragma omp parallel for
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[i*nx+j] = in[j][i];
+}
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+__global__
+void join_poloidal_gpu_kernel( unsigned nx, unsigned ny, const double** in, double* out)
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_rows/grid_size rows
+    for( int row = thread_id; row<size; row += grid_size)
+    {
+        int i=row/nx, j = row%nx;
+        out[i*nx+j] = in[j][i];
+    }
+}
+
+void join_poloidal_gpu( unsigned nx, unsigned ny, const double** in, double* out){
+    const size_t BLOCK_SIZE = 256; 
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    join_poloidal_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
+}
+void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, ThrustCudaTag){ 
+    join_poloidal_gpu( nx,ny,in,out);
+}
+#endif
+void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, ThrustOmpTag){ 
+    join_poloidal_omp( nx,ny,in,out);
+}
+void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, ThrustSerialTag){ 
+    join_poloidal_cpu( nx,ny,in,out);
+}
+///@endcond
+/** @brief  Split a vector poloidally into lines
+*
+* @tparam thrust_vector either \c thrust::host_vector or \c thrust::device_vector
+* @param in contiguous 2d vector (must be of size \c grid.size())
+* @param out contains \c grid.n()*grid.Ny() 1d vectors of size \c grid.n()*grid.Nx() on output (gets resized if necessary)
+* @param grid provide dimensions in 1st and 2nd dimensions
+*/
+template<class thrust_vector>
+void split_poloidal( const thrust_vector& in, std::vector<thrust_vector>& out, const aTopology2d& grid)
+{
+    Grid2d l( grid);
+    unsigned size1d=l.n()*l.Ny();
+    out.resize( l.n()*l.Nx());
+    double* in_ptr = thrust::raw_pointer_cast(in.data());
+    std::vector<double*> out_ptrs(l.n()*l.Nx());
+    double** out_ptr = out_ptrs.data();
+    for( unsigned i=0; i<out.size(); i++)
+    {
+        out[i].resize( l.n()*l.Ny());
+        out_ptrs[i] = thrust::raw_pointer_cast( out[i].data());
+    }
+    split_poloidal_dispatch( l.n()*l.Nx(), l.n()*l.Ny(), in_ptr, out_ptr, typename VectorTraits<thrust_vector>::vector_category());
+}
+#ifdef MPI_VERSION
+///@brief MPI Version of split
+///@copydetails dg::split_poloidal()
+///@note every plane in out holds a 1d Cartesian MPI_Communicator 
+///@note two seperately split vectors have congruent (not identical) MPI_Communicators (Note here the MPI concept of congruent vs. identical communicators)
+template<class thrust_vector>
+void split_poloidal( const MPI_Vector<thrust_vector>& in, std::vector<MPI_Vector<thrust_vector> >& out, const aMPITopology2d& grid)
+{
+    int result;
+    MPI_Comm_compare( in.communicator(), grid.communicator(), &result);
+    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+    MPI_Comm poloidalComm = grid.get_poloidal_comm();
+    //local size2d
+    Grid2d l = grid.local();
+    std::vector<thrust_vector> out_local;
+    split_poloidal( in.data(), out_local, l);
+
+    out.resize( l.n()*l.Nx());
+    for(unsigned i=0; i<out.size(); i++)
+    {
+        out[i].data() = out_local[i];
+        out[i].set_communicator( poloidalComm);
+    }
+}
+#endif //MPI_VERSION
+/**
+* @brief Revert split operation
+*
+* @tparam thrust_vector either \c thrust::host_vector or \c thrust::device_vector
+* @param in \c grid.nx()*grid.Nx() 1d vectors of 1d size 
+* @param out contiguous 2d vector (gets resized if necessary) 
+* @param grid provide dimensions in first and 2nd dimensions
+* @note split_poloidal followed by join_poloidal restores the original vector
+*/
+template<class thrust_vector>
+void join_poloidal( const std::vector<thrust_vector>& in, thrust_vector& out, const aTopology2d& grid)
+{
+    std::vector<double*> in_ptrs( in.size());
+    for( unsigned i=0; i<in.size(); i++)
+        in_ptrs[i] = thrust::raw_pointer_cast(in[i].data());
+    double ** in_ptr = in_ptrs.data();
+    double* out_ptr = thrust::raw_pointer_cast( out.data());
+    join_poloidal_dispatch( grid.n()*grid.Nx(), grid.n()*grid.Ny(), in_ptr, out_ptr, typename VectorTraits<thrust_vector>::vector_category());
+}
+
+#ifdef MPI_VERSION
+///@brief MPI Version of join
+///@copydetails dg::join_poloidal()
+template<class thrust_vector>
+void join( const std::vector<MPI_Vector<thrust_vector> >& in, MPI_Vector<thrust_vector >& out, const aMPITopology2d& grid)
+{
+    //local size2d
+
+    Grid2d l = grid.local();
+    thrust_vector out_local(l.size());
+
+    std::vector<double*> in_ptrs( in.size());
+    for( unsigned i=0; i<in.size(); i++)
+        in_ptrs[i] = thrust::raw_pointer_cast(in[i].data().data());
+    double ** in_ptr = in_ptrs.data();
+
+    double* out_ptr = thrust::raw_pointer_cast( out_local.data());
+    join_poloidal_dispatch( l.n()*l.Nx(), l.n()*l.Ny(), in_ptr, out_ptr, typename VectorTraits<thrust_vector>::vector_category());
+    out.set_communicator( grid.communicator());
+    out.data() = out_local;
 }
 #endif //MPI_VERSION
 

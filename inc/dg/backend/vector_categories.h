@@ -15,7 +15,7 @@
 #if defined(__INTEL_COMPILER)
 
 #if __INTEL_COMPILER < 1500
-#warning icc version >= 15.0 recommended to activate OpenMP 4 support
+#warning "icc version >= 15.0 recommended to activate OpenMP 4 support"
 #define SIMD
 #else//>1500
 #define SIMD simd
@@ -25,7 +25,7 @@
 
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 #if GCC_VERSION < 40900
-#warning gcc version >= 4.9 recommended to activate OpenMP 4 support
+#warning "gcc version >= 4.9 recommended to activate OpenMP 4 support"
 #define SIMD
 #else
 #define SIMD simd
@@ -41,6 +41,10 @@ struct AnyVectorTag{};
 struct StdVectorTag:public AnyVectorTag {};
 
 struct ThrustVectorTag: public AnyVectorTag {};
+
+struct ThrustSerialTag : public ThrustVectorTag{};
+struct ThrustCudaTag : public ThrustVectorTag{};
+struct ThrustOmpTag : public ThrustVectorTag{};
 
 struct CuspVectorTag: public ThrustVectorTag {};
 

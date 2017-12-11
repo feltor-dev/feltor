@@ -20,11 +20,33 @@
 #endif
 
 
+///@cond
 namespace dg
 {
+template<class T>
+struct VectorTraits<thrust::host_vector<T> >
+{
+    typedef typename T value_type;
+    typedef ThrustSerialVectorTag vector_category; 
+};
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+template<class T>
+struct VectorTraits<thrust::device_vector<T> >
+{
+    typedef typename T value_type;
+    typedef ThrustCudaVectorTag vector_category; 
+};
+#else
+template<class T>
+struct VectorTraits<thrust::device_vector<T> >
+{
+    typedef typename T value_type;
+    typedef ThrustOmpVectorTag vector_category; 
+};
+#endif
+
 namespace blas1
 {
-    ///@cond
 namespace detail
 {
 const unsigned MIN_SIZE=100;//don't parallelize if work is too small 
@@ -515,8 +537,8 @@ inline void doPointwiseDot(
 
 }//namespace detail
 
-///@endcond
 } //namespace blas1
 } //namespace dg
+///@endcond
 
 #endif //_DG_BLAS_VECTOR_
