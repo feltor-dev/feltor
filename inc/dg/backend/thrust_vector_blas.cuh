@@ -8,6 +8,7 @@
 #include <thrust/inner_product.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <thrust/execution_policy.h>
 
 #include "vector_categories.h"
 #include "vector_traits.h"
@@ -26,24 +27,29 @@ namespace dg
 template<class T>
 struct VectorTraits<thrust::host_vector<T> >
 {
-    typedef typename T value_type;
-    typedef ThrustSerialVectorTag vector_category; 
+    typedef T value_type;
+    typedef ThrustSerialTag vector_category; 
 };
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 template<class T>
 struct VectorTraits<thrust::device_vector<T> >
 {
-    typedef typename T value_type;
-    typedef ThrustCudaVectorTag vector_category; 
+    typedef T value_type;
+    typedef ThrustCudaTag vector_category; 
 };
 #else
 template<class T>
 struct VectorTraits<thrust::device_vector<T> >
 {
-    typedef typename T value_type;
-    typedef ThrustOmpVectorTag vector_category; 
+    typedef T value_type;
+    typedef ThrustOmpTag vector_category; 
 };
 #endif
+//resize
+//size
+//data
+//begin
+//end
 
 namespace blas1
 {
@@ -70,6 +76,92 @@ struct Axpby_Functor
     value_type alpha, beta;
 };
 
+//////////////////////////////////////////////////////////////////////////////////////
+
+template< class Vector1, class Vector2>
+void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorTag)
+{
+    out.resize(in.size());
+    thrust::copy( in.begin(), in.end(), out.begin());
+}
+//////////////////////////////////////////////////////////////////////////////////////
+
+exblas::Superaccumulator doDot_dispatch( ThrustSerialTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+    return exblas::Superaccumulator(  exblas::exdot_cpu( size, x_ptr,y_ptr,8,true)) ;
+}
+exblas::Superaccumulator doDot_dispatch( ThrustOmpTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+    return exblas::Superaccumulator(  exblas::exdot_omp( size, x_ptr,y_ptr,8,true)) ;
+}
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+exblas::Superaccumulator doDot_dispatch( ThrustCudaTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+    return exblas::Superaccumulator(  exblas::exdot_gpu( size, x_ptr,y_ptr)) ;
+}
+#endif
+
+template< class Vector>
+exblas::Superaccumulator doDot_dispatch( const Vector& x, const Vector& y, ThrustVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x.size() == y.size() );
+#endif //DG_DEBUG
+    const double* x_ptr = thrust::raw_pointer_cast( x.data());
+    const double* y_ptr = thrust::raw_pointer_cast( y.data());
+    return doDot_dispatch( typename VectorTraits<Vector>::vector_category(), x.size(), x_ptr, y_ptr);
+}
+template<class Vector>
+double doDot( const Vector& x, const Vector& y, ThrustVectorTag)
+{
+    exblas::Superaccumulator acc = doDot_dispatch( x,y,ThrustVectorTag());
+    return acc.Round();
+}
+//////////////////////////////////////////////////////////////////////////////////////
+template< class Vector, class UnaryOp>
+inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustSerialTag) {
+    thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
+}
+template< class Vector, class UnaryOp>
+inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustOmpTag) {
+    thrust::transform( thrust::omp::tag(), x.begin(), x.end(), y.begin(), op);
+}
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+template< class Vector, class UnaryOp>
+inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustCudaTag) {
+    thrust::transform( thrust::cuda::tag(), x.begin(), x.end(), y.begin(), op);
+}
+#endif
+//////////////////////////////////////////////////////////////////////////////////////
+
+template< class T>
+inline void doScal( unsigned size, T* x, T alpha, ThrustSerialTag)
+{
+    for( unsigned i=0; i<size; i++)
+        x[i]*=alpha;
+}
+template< class T>
+inline void doScal( unsigned size, T* x, T alpha, ThrustOmpTag)
+{
+    if(size<MIN_SIZE) {
+        doScal( size, x, alpha, ThrustSerialTag());
+    }
+    #pragma omp parallel for SIMD
+    for( unsigned i=0; i<size; i++)
+        x[i]*=alpha;
+}
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+template< class T>
+inline void doScal( unsigned size, T* x, T alpha, ThrustCudaTag) {
+    thrust::transform( thrust::cuda::tag(), x, x+size, x, detail::Axpby_Functor<T>( 0, alpha));
+}
+#endif
+template< class Vector>
+inline void doScal(  Vector& x, typename VectorTraits<Vector>::value_type alpha, ThrustVectorTag)
+{
+    if( alpha == 1.) 
+        return;
+    typename VectorTraits<Vector>::value_type * x_ptr = thrust::raw_pointer_cast( x.data());
+    doScal( x.size(), x_ptr, alpha, typename VectorTraits<Vector>::vector_category());
+}
+//////////////////////////////////////////////////////////////////////////////////////
 template <class value_type>
 struct Plus_Functor
 {
@@ -84,81 +176,8 @@ struct Plus_Functor
     value_type alpha;
 };
 
-template< class Vector1, class Vector2>
-void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorTag)
-{
-    out.resize(in.size());
-    thrust::copy( in.begin(), in.end(), out.begin());
-}
-
-template< class value_type>
-exblas::Superaccumulator doDot_dispatch( const thrust::host_vector<value_type>& x, const thrust::host_vector<value_type>& y, ThrustVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
-    const double* x_ptr = thrust::raw_pointer_cast( x.data());
-    const double* y_ptr = thrust::raw_pointer_cast( y.data());
-    return exblas::Superaccumulator(  exblas::exdot_cpu( x.size(), x_ptr,y_ptr,8,true)) ;
-}
-
-template< class value_type>
-exblas::Superaccumulator doDot_dispatch( const thrust::device_vector<value_type>& x, const thrust::device_vector<value_type>& y, ThrustVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    const double* x_ptr = thrust::raw_pointer_cast( x.data());
-    const double* y_ptr = thrust::raw_pointer_cast( y.data());
-    return exblas::Superaccumulator(  exblas::exdot_omp( x.size(), x_ptr,y_ptr, 8,true)) ;
-#else
-    const double* x_ptr = thrust::raw_pointer_cast( x.data());
-    const double* y_ptr = thrust::raw_pointer_cast( y.data());
-    return exblas::Superaccumulator(  exblas::exdot_gpu( x.size(), x_ptr,y_ptr)) ;
-#endif
-}
-
-template<class Vector>
-double doDot( const Vector& x, const Vector& y, ThrustVectorTag)
-{
-    exblas::Superaccumulator acc = doDot_dispatch( x,y,ThrustVectorTag());
-    return acc.Round();
-}
-template< class Vector, class UnaryOp>
-inline void doTransform(  const Vector& x, Vector& y,
-                          UnaryOp op,
-                          ThrustVectorTag)
-{
-    thrust::transform( x.begin(), x.end(), y.begin(), op);
-}
-
 template< class Vector>
-inline void doScal(  Vector& x, typename Vector::value_type alpha, 
-              ThrustVectorTag)
-{
-    if( alpha == 1.) 
-        return;
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    unsigned size=x.size();
-    if(size<MIN_SIZE)
-    {
-        for( unsigned i=0; i<size; i++)
-            x[i]*=alpha;
-        return;
-    }
-    #pragma omp parallel for SIMD
-    for( unsigned i=0; i<size; i++)
-        x[i]*=alpha;
-#else
-    thrust::transform( x.begin(), x.end(), x.begin(), 
-            detail::Axpby_Functor<typename Vector::value_type>( 0, alpha));
-#endif
-}
-template< class Vector>
-inline void doPlus(  Vector& x, 
-              typename Vector::value_type alpha, 
-              ThrustVectorTag)
+inline void doPlus(  Vector& x, typename VectorTraits<Vector>::value_type alpha, ThrustVectorTag)
 {
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
     unsigned size=x.size();
