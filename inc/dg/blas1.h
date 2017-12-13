@@ -132,7 +132,7 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
 template< class container>
 inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, container& z)
 {
-    dg::blas1::detail::doAxpbygz( alpha, x, beta, y, 0, z, get_vector_category<container>() );
+    dg::blas1::detail::doAxpbypgz( alpha, x, beta, y, 0, z, get_vector_category<container>() );
     return;
 }
 

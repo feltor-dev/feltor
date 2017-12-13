@@ -15,8 +15,25 @@ template< class Vector, class UnaryOp>
 inline void doTransform_dispatch( CudaTag, const Vector& x, Vector& y, UnaryOp op) {
     thrust::transform( thrust::cuda::tag(), x.begin(), x.end(), y.begin(), op);
 }
+template< typename value_type>
+struct Axpby_Functor
+{
+    Axpby_Functor( value_type alpha, value_type beta): alpha(alpha), beta(beta) {}
+    __host__ __device__
+        value_type operator()( const value_type& x, const value_type& y)
+        {
+            return alpha*x+beta*y;
+        }
+    __host__ __device__
+        value_type operator()( const value_type& y)
+        {
+            return beta*y;
+        }
+  private:
+    value_type alpha, beta;
+};
 template< class T>
-inline void doScal_dispatch( CudaTag, unsigned size, T* x, T alpha, CudaTag) {
+inline void doScal_dispatch( CudaTag, unsigned size, T* x, T alpha) {
     thrust::transform( thrust::cuda::tag(), x, x+size, x, detail::Axpby_Functor<T>( 0, alpha));
 }
 template <class value_type>
@@ -38,31 +55,14 @@ inline void doPlus_dispatch( CudaTag, unsigned size, T* x, T alpha)
     thrust::transform( thrust::cuda::tag(), x, x+size, x, 
             detail::Plus_Functor<T>( alpha));
 }
-template< typename value_type>
-struct Axpby_Functor
-{
-    Axpby_Functor( value_type alpha, value_type beta): alpha(alpha), beta(beta) {}
-    __host__ __device__
-        value_type operator()( const value_type& x, const value_type& y)
-        {
-            return alpha*x+beta*y;
-        }
-    __host__ __device__
-        value_type operator()( const value_type& y)
-        {
-            return beta*y;
-        }
-  private:
-    value_type alpha, beta;
-};
 template<class T>
 void doAxpby_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x, T beta, T* RESTRICT y)
 {
     if( beta != 0)
-        thrust::transform( thrust::cuda::tag, x, x+size, y, y, 
+        thrust::transform( thrust::cuda::tag(), x, x+size, y, y, 
             detail::Axpby_Functor< T>( alpha, beta) );
     else 
-        thrust::transform( thrust::cuda::tag, x, x+size, y,
+        thrust::transform( thrust::cuda::tag(), x, x+size, y,
             detail::Axpby_Functor< T>( 0., alpha) );
 }
 template<class value_type>
@@ -99,7 +99,7 @@ inline void doPointwiseDot_dispatch( CudaTag, unsigned size,
               const value_type* x1_ptr,
               const value_type* y1_ptr,
               value_type gamma,
-              const value_type* z_ptr)
+              value_type* z_ptr)
 {
     const size_t BLOCK_SIZE = 256; 
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
@@ -121,7 +121,7 @@ inline void doPointwiseDivide_dispatch( CudaTag, unsigned size,
               const value_type* x1_ptr,
               const value_type* y1_ptr,
               value_type gamma,
-              const value_type* z_ptr)
+              value_type* z_ptr)
 {
     const size_t BLOCK_SIZE = 256; 
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
@@ -148,7 +148,7 @@ inline void doPointwiseDot_dispatch( CudaTag, unsigned size,
               const value_type* x2_ptr,
               const value_type* y2_ptr,
               value_type gamma,
-              const value_type* z_ptr)
+              value_type* z_ptr)
 {
     const size_t BLOCK_SIZE = 256; 
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
@@ -175,7 +175,7 @@ inline void doPointwiseDot_dispatch( CudaTag, unsigned size,
               const value_type* x2_ptr,
               const value_type* x3_ptr,
               value_type beta, 
-              value_type* y)
+              value_type* y_ptr)
 {
     const size_t BLOCK_SIZE = 256; 
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);

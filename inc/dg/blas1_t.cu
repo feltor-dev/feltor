@@ -1,8 +1,10 @@
 //#define CUSP_DEVICE_BLAS_SYSTEM CUSP_DEVICE_BLAS_CUBLAS
 #include <iostream>
 #include <vector>
+#include <array>
 
 #include "blas1.h"
+#include "backend/blas1_array.h"
 
 struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 
@@ -48,8 +50,8 @@ int main()
 
     //v1 = 2, v2 = 3
 
-    std::cout << "Test std::vector \n";
-    std::vector<Vector > w1( 2, v1), w2(2, v2), w3( w2), w4(2,v4);
+    std::cout << "Test std::array \n";
+    std::array<Vector, 2> w1( {v1,v1}), w2({v2,v2}), w3({v3,v3}), w4({v4,v4});
     temp = dg::blas1::dot( w1, w2);
     std::cout << "2*5*(2*3) = "<<temp << " (60)\n"; 
     dg::blas1::axpby( 2., w1, 3., w2, w3);
