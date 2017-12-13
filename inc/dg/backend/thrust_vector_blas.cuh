@@ -5,19 +5,17 @@
 #include <cassert>
 #endif //DG_DEBUG
 
-#include <thrust/inner_product.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-#include <thrust/execution_policy.h>
 
 #include "vector_categories.h"
 #include "vector_traits.h"
 
-#include "exblas/exdot.fpe_cpu.cpp"
+#include "blas1_serial.h"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-#include "exblas/exdot.fpe.cu"
+#include "blas1_cuda.cuh"
 #else
-#include "exblas/exdot.fpe.cpp"
+#include "blas1_omp.h"
 #endif
 
 
@@ -62,28 +60,6 @@ namespace blas1
 {
 namespace detail
 {
-const unsigned MIN_SIZE=100;//don't parallelize if work is too small 
-
-
-template< typename value_type>
-struct Axpby_Functor
-{
-    Axpby_Functor( value_type alpha, value_type beta): alpha(alpha), beta(beta) {}
-    __host__ __device__
-        value_type operator()( const value_type& x, const value_type& y)
-        {
-            return alpha*x+beta*y;
-        }
-    __host__ __device__
-        value_type operator()( const value_type& y)
-        {
-            return beta*y;
-        }
-  private:
-    value_type alpha, beta;
-};
-
-//////////////////////////////////////////////////////////////////////////////////////
 
 template< class Vector1, class Vector2>
 void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorTag)
@@ -91,20 +67,6 @@ void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorT
     out.resize(in.size());
     thrust::copy( in.begin(), in.end(), out.begin());
 }
-//////////////////////////////////////////////////////////////////////////////////////
-
-exblas::Superaccumulator doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr) {
-    return exblas::Superaccumulator(  exblas::exdot_cpu( size, x_ptr,y_ptr,8,true)) ;
-}
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-exblas::Superaccumulator doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr) {
-    return exblas::Superaccumulator(  exblas::exdot_gpu( size, x_ptr,y_ptr)) ;
-}
-#else
-exblas::Superaccumulator doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr) {
-    return exblas::Superaccumulator(  exblas::exdot_omp( size, x_ptr,y_ptr,8,true)) ;
-}
-#endif
 
 template< class Vector>
 exblas::Superaccumulator doDot_superacc( const Vector& x, const Vector& y, ThrustVectorTag)
@@ -116,155 +78,70 @@ exblas::Superaccumulator doDot_superacc( const Vector& x, const Vector& y, Thrus
     const double* y_ptr = thrust::raw_pointer_cast( y.data());
     return doDot_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, y_ptr);
 }
+
 template<class Vector>
 get_value_type<Vector> doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
     exblas::Superaccumulator acc = doDot_superacc( x,y,ThrustVectorTag());
     return acc.Round();
 }
-//////////////////////////////////////////////////////////////////////////////////////
-template< class Vector, class UnaryOp>
-inline void doTransform_dispatch(  const Vector& x, Vector& y, UnaryOp op, SerialTag) {
-    thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
-}
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-template< class Vector, class UnaryOp>
-inline void doTransform_dispatch(  const Vector& x, Vector& y, UnaryOp op, CudaTag) {
-    thrust::transform( thrust::cuda::tag(), x.begin(), x.end(), y.begin(), op);
-}
-#else
-template< class Vector, class UnaryOp>
-inline void doTransform_dispatch(  const Vector& x, Vector& y, UnaryOp op, OmpTag) {
-    thrust::transform( thrust::omp::tag(), x.begin(), x.end(), y.begin(), op);
-}
-#endif
+
 template< class Vector, class UnaryOp>
 inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustVectorTag) {
-    doTransform_dispatch( x,y,op,get_execution_policy<Vector>());
+    doTransform_dispatch( get_execution_policy<Vector>(), x,y,op);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////
-
-template< class T>
-inline void doScal_dispatch( unsigned size, T* x, T alpha, SerialTag)
-{
-    for( unsigned i=0; i<size; i++)
-        x[i]*=alpha;
-}
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-template< class T>
-inline void doScal_dispatch( unsigned size, T* x, T alpha, CudaTag) {
-    thrust::transform( thrust::cuda::tag(), x, x+size, x, detail::Axpby_Functor<T>( 0, alpha));
-}
-#else
-template< class T>
-inline void doScal_dispatch( unsigned size, T* x, T alpha, OmpTag)
-{
-    if(size<MIN_SIZE) {
-        doScal_dispatch( size, x, alpha, SerialTag());
-    }
-    #pragma omp parallel for SIMD
-    for( unsigned i=0; i<size; i++)
-        x[i]*=alpha;
-}
-#endif
 template< class Vector>
-inline void doScal(  Vector& x, typename VectorTraits<Vector>::value_type alpha, ThrustVectorTag)
+inline void doScal( Vector& x, typename VectorTraits<Vector>::value_type alpha, ThrustVectorTag)
 {
     if( alpha == 1.) 
         return;
     get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
-    doScal_dispatch( x.size(), x_ptr, alpha, get_execution_policy<Vector>());
+    doScal_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, alpha);
 }
-//////////////////////////////////////////////////////////////////////////////////////
-template <class value_type>
-struct Plus_Functor
-{
-    Plus_Functor( value_type alpha): alpha(alpha){}
-    
-    __host__ __device__
-        value_type operator()( const value_type& x)
-        {
-            return alpha+x;
-        }
-  private:
-    value_type alpha;
-};
 
 template< class Vector>
-inline void doPlus(  Vector& x, typename VectorTraits<Vector>::value_type alpha, ThrustVectorTag)
+inline void doPlus(  Vector& x, get_value_type<Vector> alpha, ThrustVectorTag)
 {
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    unsigned size=x.size();
-    if(size<MIN_SIZE)
-    {
-        for( unsigned i=0; i<size; i++)
-            x[i]+=alpha;
+    if(alpha==0)
         return;
-    }
-    #pragma omp parallel for SIMD
-    for( unsigned i=0; i<size; i++)
-        x[i]+=alpha;
-#else
-    thrust::transform( x.begin(), x.end(), x.begin(), 
-            detail::Plus_Functor<typename Vector::value_type>( alpha));
-#endif
+    get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
+    return doPlus_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, alpha);
 }
 
 template< class Vector>
-inline void doAxpby( typename Vector::value_type alpha, 
+inline void doAxpby( get_value_type<Vector> alpha, 
               const Vector& x, 
-              typename Vector::value_type beta, 
+              get_value_type<Vector> beta, 
               Vector& y, 
               ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    if( alpha == 0)
-    {
+    if( alpha == 0) {
         doScal( y, beta, ThrustVectorTag());
         return;
     }
-    if( &x == &y)
-    {
+    if( &x == &y) {
         doScal( y, (alpha+beta), ThrustVectorTag());
         return;
     }
-    if( alpha==1. && beta == 0) 
-    {
+    if( alpha==1. && beta == 0) {
         thrust::copy( x.begin(), x.end(), y.begin());
         return; 
     }
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    const typename Vector::value_type * RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data()[0]);
-    typename Vector::value_type * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
-    unsigned size = x.size();
-    if(size<MIN_SIZE) 
-    {
-        for( unsigned i=0; i<size; i++)
-            y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
-        return;
-    }
-    #pragma omp parallel for SIMD
-    for( unsigned i=0; i<size; i++)
-        y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
-#else
-    if( beta != 0)
-        thrust::transform( x.begin(), x.end(), y.begin(), y.begin(), 
-            detail::Axpby_Functor< typename Vector::value_type>( alpha, beta) );
-    else 
-        thrust::transform( x.begin(), x.end(), y.begin(),
-            detail::Axpby_Functor< typename Vector::value_type>( 0., alpha) );
-#endif
+    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
+    get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
+    doAxpby_dispatch( get_execution_policy<Vector>(), x.size(), alpha, x_ptr, beta, y_ptr);
 }
 
 template< class Vector>
-inline void doAxpby( typename Vector::value_type alpha, 
+inline void doAxpbypgz( get_value_type<Vector> alpha, 
               const Vector& x, 
-              typename Vector::value_type beta, 
+              get_value_type<Vector> beta, 
               const Vector& y, 
-              typename Vector::value_type gamma, 
+              get_value_type<Vector> gamma, 
               Vector& z, 
               ThrustVectorTag)
 {
@@ -297,105 +174,45 @@ inline void doAxpby( typename Vector::value_type alpha,
         doAxpby( alpha, x, beta+gamma, z, ThrustVectorTag());
         return;
     }
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    const typename Vector::value_type * RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data()[0]);
-    const typename Vector::value_type * RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data()[0]);
-    typename Vector::value_type * RESTRICT z_ptr = thrust::raw_pointer_cast( &z.data()[0]);
+    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
+    const get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
+    get_value_type<Vector> * z_ptr = thrust::raw_pointer_cast( z.data());
     unsigned size = x.size();
-    if(size<MIN_SIZE)
-    {
-        for( unsigned i=0; i<size; i++)
-            z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
-        return;
-    }
-    #pragma omp parallel for SIMD
-    for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
-#else
-    if( gamma==0)
-    {
-        thrust::transform( x.begin(), x.end(), y.begin(), z.begin(), 
-            detail::Axpby_Functor< typename Vector::value_type>( alpha, beta) );
-    }
-    else 
-    {
-        doAxpby( alpha, x, gamma, z, ThrustVectorTag());
-        doAxpby( beta, y, 1., z, ThrustVectorTag());
-    }
-
-#endif
+    doAxpbypgz_dispatch( get_execution_policy<Vector>(), size, alpha, x_ptr, beta, y_ptr, gamma, z_ptr);
 }
 
 template< class Vector>
-inline void doAxpby( typename Vector::value_type alpha, 
+inline void doAxpby( get_value_type<Vector> alpha, 
               const Vector& x, 
-              typename Vector::value_type beta, 
+              get_value_type<Vector> beta, 
               const Vector& y, 
               Vector& z, 
               ThrustVectorTag)
 {
-    doAxpby( alpha, x, beta, y, 0., z, ThrustVectorTag());
+    doAxpbypgz( alpha, x, beta, y, 0., z, ThrustVectorTag());
 }
-
-
-template < class Vector>
-struct ThrustVectorDoSymv
-{
-    typedef typename Vector::value_type value_type;
-    typedef thrust::tuple< value_type, value_type> Pair; 
-    __host__ __device__
-        ThrustVectorDoSymv( value_type alpha, value_type beta): alpha_(alpha), beta_(beta){}
-
-    __host__ __device__
-        value_type operator()( const value_type& y, const Pair& p) 
-        {
-            return alpha_*thrust::get<0>(p)*thrust::get<1>(p) + beta_*y;
-        }
-  private:
-    value_type alpha_, beta_;
-};
 
 template<class Vector>
 inline void doPointwiseDot(  
-              typename Vector::value_type alpha, 
+              get_value_type<Vector> alpha, 
               const Vector& x1,
               const Vector& x2, 
-              typename Vector::value_type beta, 
+              get_value_type<Vector> beta, 
               Vector& y, 
               ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x1.size() == y.size() && x2.size() == y.size() );
 #endif //DG_DEBUG
-    if( alpha == 0)
-    {
+    if( alpha == 0) {
         dg::blas1::detail::doScal(y, beta, dg::ThrustVectorTag());
         return;
     }
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    const typename Vector::value_type * x1_ptr = thrust::raw_pointer_cast( &(x1.data()[0]));
-    const typename Vector::value_type * x2_ptr = thrust::raw_pointer_cast( &(x2.data()[0]));
-     typename Vector::value_type * y_ptr = thrust::raw_pointer_cast( &(y.data()[0]));
+    const get_value_type<Vector> * x1_ptr = thrust::raw_pointer_cast( x1.data());
+    const get_value_type<Vector> * x2_ptr = thrust::raw_pointer_cast( x2.data());
+    get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
     unsigned size = x1.size();
-    if(size<MIN_SIZE)
-    {
-        for( unsigned i=0; i<size; i++)
-            y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*y_ptr[i];
-        return;
-    }
-    #pragma omp parallel for SIMD
-    for( unsigned i=0; i<size; i++)
-    {
-        y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]+beta*y_ptr[i];
-    }
-#else
-    thrust::transform( 
-        y.begin(), y.end(),
-        thrust::make_zip_iterator( thrust::make_tuple( x1.begin(), x2.begin() )),  
-        y.begin(),
-        detail::ThrustVectorDoSymv<Vector>( alpha, beta)
-    ); 
-#endif
+    doPointwiseDot_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, x2_ptr, beta, y_ptr);
 }
 
 template< class Vector>
@@ -403,62 +220,45 @@ inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, Thrus
 {
     doPointwiseDot( 1., x1, x2, 0., y, ThrustVectorTag());
 }
+template<class Vector>
+inline void doPointwiseDivide(  
+              get_value_type<Vector> alpha, 
+              const Vector& x1,
+              const Vector& x2, 
+              get_value_type<Vector> beta, 
+              Vector& y, 
+              ThrustVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( x1.size() == y.size() && x2.size() == y.size() );
+#endif //DG_DEBUG
+    if( alpha == 0) {
+        dg::blas1::detail::doScal(y, beta, dg::ThrustVectorTag());
+        return;
+    }
+    const get_value_type<Vector> * x1_ptr = thrust::raw_pointer_cast( x1.data());
+    const get_value_type<Vector> * x2_ptr = thrust::raw_pointer_cast( x2.data());
+    get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
+    unsigned size = x1.size();
+    doPointwiseDivide_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, x2_ptr, beta, y_ptr);
+}
 
 template< class Vector>
 inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( x1.size() == x2.size() );
-    assert( x1.size() == y.size() );
-#endif //DG_DEBUG
-    thrust::transform( x1.begin(), x1.end(), x2.begin(), y.begin(), 
-                        thrust::divides<typename VectorTraits<Vector>::value_type>());
+    doPointwiseDivide( 1., x1, x2, 0., y, ThrustVectorTag());
 }
 
-
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-template<class value_type>
- __global__ void pointwiseDot_kernel( value_type alpha, value_type beta, value_type gamma,
-         const value_type*  x1, const value_type* y1, const value_type* x2, 
-         const value_type*  y2, value_type* z,  
-         const int size
-         )
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_rows/grid_size rows
-    for( int row = thread_id; row<size; row += grid_size)
-    {
-        z[row]=alpha*x1[row]*y1[row]+beta*x2[row]*y2[row]+gamma*z[row];
-    }
-}
-template<class value_type>
- __global__ void pointwiseDot_kernel( value_type alpha, value_type beta,
-         const value_type*  x1, const value_type* x2, const value_type* x3, 
-         value_type* y,  
-         const int size
-         )
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_rows/grid_size rows
-    for( int row = thread_id; row<size; row += grid_size)
-    {
-        y[row]=alpha*x1[row]*x2[row]*x3[row]+beta*y[row];
-    }
-}
-#endif
-
-template<class value_type>
+template<class Vector>
 inline void doPointwiseDot(  
-              value_type alpha, 
-              const thrust::device_vector<value_type>& x1,
-              const thrust::device_vector<value_type>& y1, 
-              value_type beta, 
-              const thrust::device_vector<value_type>& x2,
-              const thrust::device_vector<value_type>& y2, 
-              value_type gamma, 
-              thrust::device_vector<value_type>& z, 
+              get_value_type<Vector> alpha, 
+              const Vector& x1,
+              const Vector& y1, 
+              get_value_type<Vector> beta, 
+              const Vector& x2,
+              const Vector& y2, 
+              get_value_type<Vector> gamma, 
+              Vector& z, 
               ThrustVectorTag)
 {
     if( alpha==0){ 
@@ -469,104 +269,34 @@ inline void doPointwiseDot(
         doPointwiseDot( alpha, x1,y1, gamma, z, ThrustVectorTag());
         return;
     }
-    const value_type *x1_ptr = thrust::raw_pointer_cast( x1.data());
-    const value_type *x2_ptr = thrust::raw_pointer_cast( x2.data());
-    const value_type *y1_ptr = thrust::raw_pointer_cast( y1.data());
-    const value_type *y2_ptr = thrust::raw_pointer_cast( y2.data());
-          value_type * z_ptr = thrust::raw_pointer_cast( z.data());
+    const get_value_type<Vector> *x1_ptr = thrust::raw_pointer_cast( x1.data());
+    const get_value_type<Vector> *x2_ptr = thrust::raw_pointer_cast( x2.data());
+    const get_value_type<Vector> *y1_ptr = thrust::raw_pointer_cast( y1.data());
+    const get_value_type<Vector> *y2_ptr = thrust::raw_pointer_cast( y2.data());
+          get_value_type<Vector> * z_ptr = thrust::raw_pointer_cast( z.data());
     unsigned size = x1.size();
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    #pragma omp parallel for SIMD
-    for( unsigned i=0; i<size; i++)
-    {
-        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                    +beta*x2_ptr[i]*y2_ptr[i]
-                    +gamma*z_ptr[i];
-    }
-#else
-    //set up kernel parameters
-    const size_t BLOCK_SIZE = 256; 
-    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    pointwiseDot_kernel<value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, beta, gamma, x1_ptr, y1_ptr, x2_ptr, y2_ptr, z_ptr, size);
-#endif
+    doPointwiseDot_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, y1_ptr, beta, x2_ptr, y2_ptr, gamma, z_ptr);
 }
-template<class value_type>
+template<class Vector>
 inline void doPointwiseDot(  
-              value_type alpha, 
-              const thrust::host_vector<value_type>& x1,
-              const thrust::host_vector<value_type>& y1, 
-              value_type beta, 
-              const thrust::host_vector<value_type>& x2,
-              const thrust::host_vector<value_type>& y2, 
-              value_type gamma, 
-              thrust::host_vector<value_type>& z, 
-              ThrustVectorTag)
-{
-    unsigned size=x1.size();
-    for( unsigned i=0; i<size; i++)
-    {
-        z[i] = alpha*x1[i]*y1[i] 
-                    +beta*x2[i]*y2[i]
-                    +gamma*z[i];
-    }
-}
-template<class value_type>
-inline void doPointwiseDot(  
-              value_type alpha, 
-              const thrust::device_vector<value_type>& x1,
-              const thrust::device_vector<value_type>& x2,
-              const thrust::device_vector<value_type>& x3, 
-              value_type beta, 
-              thrust::device_vector<value_type>& y, 
+              get_value_type<Vector> alpha, 
+              const Vector& x1,
+              const Vector& x2,
+              const Vector& x3, 
+              get_value_type<Vector> beta, 
+              Vector& y, 
               ThrustVectorTag)
 {
     if( alpha==0){ 
         doScal( y, beta, ThrustVectorTag());
         return;
     }
-    const value_type *x1_ptr = thrust::raw_pointer_cast( x1.data());
-    const value_type *x2_ptr = thrust::raw_pointer_cast( x2.data());
-    const value_type *x3_ptr = thrust::raw_pointer_cast( x3.data());
-          value_type * y_ptr = thrust::raw_pointer_cast( y.data());
+    const get_value_type<Vector> *x1_ptr = thrust::raw_pointer_cast( x1.data());
+    const get_value_type<Vector> *x2_ptr = thrust::raw_pointer_cast( x2.data());
+    const get_value_type<Vector> *x3_ptr = thrust::raw_pointer_cast( x3.data());
+          get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
     unsigned size = x1.size();
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    if( size <MIN_SIZE)
-    {
-        for( unsigned i=0; i<size; i++)
-        {
-            y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]*x3_ptr[i]
-                       +beta*y_ptr[i];
-        }
-        return;
-    }
-    #pragma omp parallel for SIMD
-    for( unsigned i=0; i<size; i++)
-    {
-        y_ptr[i] = alpha*x1_ptr[i]*x2_ptr[i]*x3_ptr[i]
-                   +beta*y_ptr[i];
-    }
-#else
-    //set up kernel parameters
-    const size_t BLOCK_SIZE = 256; 
-    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    pointwiseDot_kernel<value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, beta, x1_ptr, x2_ptr, x3_ptr, y_ptr, size);
-#endif
-}
-template<class value_type>
-inline void doPointwiseDot(  
-              value_type alpha, 
-              const thrust::host_vector<value_type>& x1,
-              const thrust::host_vector<value_type>& x2,
-              const thrust::host_vector<value_type>& x3,
-              value_type beta, 
-              thrust::host_vector<value_type>& y, 
-              ThrustVectorTag)
-{
-    unsigned size=x1.size();
-    for( unsigned i=0; i<size; i++)
-    {
-        y[i] = alpha*x1[i]*x2[i]*x3[i]+beta*y[i];
-    }
+    doPointwiseDot_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, x2_ptr, x3_ptr, beta, y_ptr);
 }
 
 }//namespace detail

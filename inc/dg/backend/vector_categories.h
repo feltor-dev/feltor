@@ -46,7 +46,7 @@ struct MPIVectorTag     : public AnyVectorTag {};   //MPI vectors, contains a sh
 struct VectorVectorTag  : public AnyVectorTag {};   //container of containers (either Shared or MPI Vectors
 
 struct ThrustVectorTag  : public SharedVectorTag {};
-struct CuspVectorTag    : public SharedVectorTag {};
+struct CuspVectorTag    : public ThrustVectorTag {};
 
 
 

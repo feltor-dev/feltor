@@ -48,7 +48,7 @@ namespace blas1
 template<class container, class other_container>
 inline void transfer( const container& x, other_container& y)
 {
-    dg::blas1::detail::doTransfer( x,y, typename dg::VectorTraits<container>::vector_category(), typename dg::VectorTraits<other_container>::vector_category());
+    dg::blas1::detail::doTransfer( x,y, get_vector_category<container>(), typename dg::VectorTraits<other_container>::vector_category());
 }
 
 
@@ -65,7 +65,7 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
 
 /*! @brief \f$ x^T y\f$; Binary reproducible Euclidean dot product between two containers
  *
- * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
  * Our implementation guarantees binary reproducible results up to and excluding the last mantissa bit of the result. 
  * Furthermore, the sum is computed with infinite precision and the result is then rounded
@@ -85,14 +85,14 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
 @endcode
  */
 template< class container>
-inline typename VectorTraits<container>::value_type dot( const container& x, const container& y)
+inline get_value_type<container> dot( const container& x, const container& y)
 {
-    return dg::blas1::detail::doDot( x, y, typename dg::VectorTraits<container>::vector_category() );
+    return dg::blas1::detail::doDot( x, y, get_vector_category<container>() );
 }
 
 /*! @brief \f$ y = \alpha x + \beta y\f$
  *
- * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
  * @copydoc hide_container
  * @param alpha Scalar  
@@ -106,15 +106,15 @@ inline typename VectorTraits<container>::value_type dot( const container& x, con
 @endcode
  */
 template< class container>
-inline void axpby( typename VectorTraits<container>::value_type alpha, const container& x, typename VectorTraits<container>::value_type beta, container& y)
+inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, container& y)
 {
-    dg::blas1::detail::doAxpby( alpha, x, beta, y, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doAxpby( alpha, x, beta, y, get_vector_category<container>() );
     return;
 }
 
 /*! @brief \f$ z = \alpha x + \beta y\f$
  *
- * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
  * @copydoc hide_container
@@ -130,15 +130,15 @@ inline void axpby( typename VectorTraits<container>::value_type alpha, const con
 @endcode
  */
 template< class container>
-inline void axpby( typename VectorTraits<container>::value_type alpha, const container& x, typename VectorTraits<container>::value_type beta, const container& y, container& z)
+inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, container& z)
 {
-    dg::blas1::detail::doAxpby( alpha, x, beta, y, z, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doAxpby( alpha, x, beta, y, z, get_vector_category<container>() );
     return;
 }
 
 /*! @brief \f$ z = \alpha x + \beta y + \gamma z\f$
  *
- * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
  * @copydoc hide_container
@@ -156,9 +156,9 @@ inline void axpby( typename VectorTraits<container>::value_type alpha, const con
 @endcode
  */
 template< class container>
-inline void axpbypgz( typename VectorTraits<container>::value_type alpha, const container& x, typename VectorTraits<container>::value_type beta, const container& y, typename VectorTraits<container>::value_type gamma, container& z)
+inline void axpbypgz( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, get_value_type<container> gamma, container& z)
 {
-    dg::blas1::detail::doAxpby( alpha, x, beta, y, gamma, z, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doAxpbypgz( alpha, x, beta, y, gamma, z, get_vector_category<container>() );
     return;
 }
 
@@ -181,7 +181,7 @@ inline void axpbypgz( typename VectorTraits<container>::value_type alpha, const 
 template< class container, class UnaryOp>
 inline void transform( const container& x, container& y, UnaryOp op)
 {
-    dg::blas1::detail::doTransform( x, y, op, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doTransform( x, y, op, get_vector_category<container>() );
     return;
 }
 
@@ -198,9 +198,9 @@ inline void transform( const container& x, container& y, UnaryOp op)
 @endcode
  */
 template< class container>
-inline void scal( container& x, typename VectorTraits<container>::value_type alpha)
+inline void scal( container& x, get_value_type<container> alpha)
 {
-    dg::blas1::detail::doScal( x, alpha, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doScal( x, alpha, get_vector_category<container>() );
     return;
 }
 
@@ -217,15 +217,15 @@ inline void scal( container& x, typename VectorTraits<container>::value_type alp
 @endcode
  */
 template< class container>
-inline void plus( container& x, typename VectorTraits<container>::value_type alpha)
+inline void plus( container& x, get_value_type<container> alpha)
 {
-    dg::blas1::detail::doPlus( x, alpha, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doPlus( x, alpha, get_vector_category<container>() );
     return;
 }
 
 /*! @brief \f$ y = x_1 x_2 \f$
 *
-* Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
 * @copydoc hide_container
@@ -241,14 +241,14 @@ inline void plus( container& x, typename VectorTraits<container>::value_type alp
 template< class container>
 inline void pointwiseDot( const container& x1, const container& x2, container& y)
 {
-    dg::blas1::detail::doPointwiseDot( x1, x2, y, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doPointwiseDot( x1, x2, y, get_vector_category<container>() );
     return;
 }
 
 /**
 * @brief \f$ y = \alpha x_1 x_2 + \beta y\f$ 
 *
-* Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
 * @copydoc hide_container
@@ -265,15 +265,15 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
 @endcode
 */
 template< class container>
-inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, const container& x1, const container& x2, typename VectorTraits<container>::value_type beta, container& y)
+inline void pointwiseDot( get_value_type<container> alpha, const container& x1, const container& x2, get_value_type<container> beta, container& y)
 {
-    dg::blas1::detail::doPointwiseDot( alpha, x1, x2, beta, y, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doPointwiseDot( alpha, x1, x2, beta, y, get_vector_category<container>() );
 }
 
 /**
 * @brief \f$ y = \alpha x_1 x_2 x_3 + \beta y\f$ 
 *
-* Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
 * @copydoc hide_container
@@ -291,15 +291,15 @@ inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, co
 @endcode
 */
 template< class container>
-inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, const container& x1, const container& x2, const container& x3, typename VectorTraits<container>::value_type beta, container& y)
+inline void pointwiseDot( get_value_type<container> alpha, const container& x1, const container& x2, const container& x3, get_value_type<container> beta, container& y)
 {
-    dg::blas1::detail::doPointwiseDot( alpha, x1, x2, x3, beta, y, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doPointwiseDot( alpha, x1, x2, x3, beta, y, get_vector_category<container>() );
 }
 
 /**
 * @brief \f$ y = x_1/ x_2\f$ 
 *
-* Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 
 * @copydoc hide_container
@@ -316,8 +316,30 @@ inline void pointwiseDot( typename VectorTraits<container>::value_type alpha, co
 template< class container>
 inline void pointwiseDivide( const container& x1, const container& x2, container& y)
 {
-    dg::blas1::detail::doPointwiseDivide( x1, x2, y, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doPointwiseDivide( x1, x2, y, get_vector_category<container>() );
     return;
+}
+/**
+* @brief \f$ y = \alpha x_1/ x_2 + \beta y \f$ 
+*
+* Divides two vectors element by element: \f[ y_i = \alpha x_{1i}/x_{2i} + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * do not match, the result is undefined.
+
+* @copydoc hide_container
+* @param x1 container x1  
+* @param x2 container x2 may alias x1
+* @param y  container y contains result on output ( may alias x1 and/or x2)
+
+@code
+    dg::DVec two( 100,2), three( 100,3), result(100,1);
+    dg::blas1::pointwiseDivide( 3, two,  three, 5, result ); 
+    //result[i] = 7 (3*2/3+5*1)
+@endcode
+*/
+template< class container>
+inline void pointwiseDivide( get_value_type<container> alpha, const container& x1, const container& x2, get_value_type<container> beta, container& y)
+{
+    dg::blas1::detail::doPointwiseDivide( alpha, x1, x2, beta, y, get_vector_category<container>() );
 }
 
 /**
@@ -325,7 +347,7 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 *
 * A 'new' fused multiply-add BLAS 1 routine. 
 *
-* Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 * @copydoc hide_container
 * @param alpha scalar
@@ -345,11 +367,11 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 @endcode
 */
 template<class container>
-void pointwiseDot(  typename VectorTraits<container>::value_type alpha, const container& x1, const container& y1, 
-                    typename VectorTraits<container>::value_type beta,  const container& x2, const container& y2, 
-                    typename VectorTraits<container>::value_type gamma, container & z)
+void pointwiseDot(  get_value_type<container> alpha, const container& x1, const container& y1, 
+                    get_value_type<container> beta,  const container& x2, const container& y2, 
+                    get_value_type<container> gamma, container & z)
 {
-    dg::blas1::detail::doPointwiseDot( alpha, x1, y1, beta, x2, y2, gamma, z, typename dg::VectorTraits<container>::vector_category() );
+    dg::blas1::detail::doPointwiseDot( alpha, x1, y1, beta, x2, y2, gamma, z, get_vector_category<container>() );
     return;
 }
 ///@}
