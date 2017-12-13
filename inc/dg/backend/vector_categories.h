@@ -47,6 +47,7 @@ struct VectorVectorTag  : public AnyVectorTag {};   //container of containers (e
 
 struct ThrustVectorTag  : public SharedVectorTag {};
 struct CuspVectorTag    : public ThrustVectorTag {};
+struct StdArrayTag      : public ThrustVectorTag {};
 
 
 

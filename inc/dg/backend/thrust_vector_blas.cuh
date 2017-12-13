@@ -181,17 +181,6 @@ inline void doAxpbypgz( get_value_type<Vector> alpha,
     doAxpbypgz_dispatch( get_execution_policy<Vector>(), size, alpha, x_ptr, beta, y_ptr, gamma, z_ptr);
 }
 
-template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              const Vector& y, 
-              Vector& z, 
-              ThrustVectorTag)
-{
-    doAxpbypgz( alpha, x, beta, y, 0., z, ThrustVectorTag());
-}
-
 template<class Vector>
 inline void doPointwiseDot(  
               get_value_type<Vector> alpha, 
@@ -215,11 +204,6 @@ inline void doPointwiseDot(
     doPointwiseDot_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, x2_ptr, beta, y_ptr);
 }
 
-template< class Vector>
-inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
-{
-    doPointwiseDot( 1., x1, x2, 0., y, ThrustVectorTag());
-}
 template<class Vector>
 inline void doPointwiseDivide(  
               get_value_type<Vector> alpha, 
@@ -241,12 +225,6 @@ inline void doPointwiseDivide(
     get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
     unsigned size = x1.size();
     doPointwiseDivide_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, x2_ptr, beta, y_ptr);
-}
-
-template< class Vector>
-inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, ThrustVectorTag)
-{
-    doPointwiseDivide( 1., x1, x2, 0., y, ThrustVectorTag());
 }
 
 template<class Vector>

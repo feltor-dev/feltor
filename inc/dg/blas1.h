@@ -132,7 +132,7 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
 template< class container>
 inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, container& z)
 {
-    dg::blas1::detail::doAxpby( alpha, x, beta, y, z, get_vector_category<container>() );
+    dg::blas1::detail::doAxpbygz( alpha, x, beta, y, 0, z, get_vector_category<container>() );
     return;
 }
 
@@ -241,7 +241,7 @@ inline void plus( container& x, get_value_type<container> alpha)
 template< class container>
 inline void pointwiseDot( const container& x1, const container& x2, container& y)
 {
-    dg::blas1::detail::doPointwiseDot( x1, x2, y, get_vector_category<container>() );
+    dg::blas1::detail::doPointwiseDot( 1, x1, x2, 0, y, get_vector_category<container>() );
     return;
 }
 
@@ -280,7 +280,7 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
 * @param alpha scalar
 * @param x1 container x1  
 * @param x2 container x2 may alias x1
-* @param x3 container x2 may alias x1 and/or x2
+* @param x3 container x3 may alias x1 and/or x2
 * @param beta scalar
 * @param y  container y contains result on output ( may alias x1,x2 or x3)
 
@@ -316,7 +316,7 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
 template< class container>
 inline void pointwiseDivide( const container& x1, const container& x2, container& y)
 {
-    dg::blas1::detail::doPointwiseDivide( x1, x2, y, get_vector_category<container>() );
+    dg::blas1::detail::doPointwiseDivide( 1, x1, x2, 0, y, get_vector_category<container>() );
     return;
 }
 /**
