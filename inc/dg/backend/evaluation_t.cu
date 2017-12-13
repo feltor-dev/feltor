@@ -27,6 +27,7 @@ const double lx = 2;
 const double ly = 2;
 const double lz = 2;
 
+//typedef std::vector< double>   DVec;
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
 
@@ -53,12 +54,13 @@ int main()
     dg::Grid3d g3d( 0, lx,0, ly,0, lz, n, Nx, Ny, Nz,dg::PER,dg::PER,dg::PER);
 
     //test evaluation functions
-    const DVec h_x = dg::evaluate( exp, g1d);
-    const DVec h_n = dg::evaluate( function, g2d);
-    const DVec h_z = dg::evaluate( function, g3d);
-    const DVec w1d = dg::create::weights( g1d);
-    const DVec w2d = dg::create::weights( g2d);
-    const DVec w3d = dg::create::weights( g3d);
+    DVec h_x, h_n, h_z, w1d,w2d,w3d;
+    dg::blas1::transfer( dg::evaluate( exp, g1d), h_x);
+    dg::blas1::transfer( dg::evaluate( function, g2d), h_n);
+    dg::blas1::transfer( dg::evaluate( function, g3d), h_z);
+    dg::blas1::transfer( dg::create::weights( g1d), w1d);
+    dg::blas1::transfer( dg::create::weights( g2d), w2d);
+    dg::blas1::transfer( dg::create::weights( g3d), w3d);
 
     //test preconditioners
     std::cout << "Square normalized 1DXnorm ";

@@ -12,8 +12,8 @@ your matrix try to specialize for const Matrix as well
 */
 template< class Matrix>
 struct MatrixTraits {
-    typedef typename Matrix::value_type value_type;//!< default value type
-    typedef CuspMatrixTag matrix_category; //!< default is a CuspMatrix
+    using value_type        = typename Matrix::value_type;//!< default value type
+    using matrix_category   = CuspMatrixTag; //!< default is a CuspMatrix
 };
 
 

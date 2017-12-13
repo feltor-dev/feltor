@@ -25,26 +25,33 @@
 namespace dg
 {
 template<class T>
-struct VectorTraits<thrust::host_vector<T> >
+struct VectorTraits<thrust::host_vector<T>, 
+    typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
-    typedef T value_type;
-    typedef ThrustSerialTag vector_category; 
+    using value_type        = T;
+    using vector_category   = ThrustVectorTag;
+    using execution_policy  = OmpTag;
 };
+template<class T>
+struct VectorTraits<thrust::host_vector<T>, 
+    typename std::enable_if< !std::is_arithmetic<T>::value>::type>
+{
+    using value_type        = get_value_type<T>;
+    using vector_category   = VectorVectorTag;
+    using execution_policy  = get_execution_policy<T>;
+};
+
+template<class T>
+struct VectorTraits<thrust::device_vector<T>, typename std::enable_if<std::is_arithmetic<T>::value>::type>
+{
+    using value_type        = T;
+    using vector_category   = ThrustVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-template<class T>
-struct VectorTraits<thrust::device_vector<T> >
-{
-    typedef T value_type;
-    typedef ThrustCudaTag vector_category; 
-};
+    using execution_policy  = CudaTag ; 
 #else
-template<class T>
-struct VectorTraits<thrust::device_vector<T> >
-{
-    typedef T value_type;
-    typedef ThrustOmpTag vector_category; 
-};
+    using execution_policy  = OmpTag ; 
 #endif
+};
 //resize
 //size
 //data
@@ -86,71 +93,79 @@ void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorT
 }
 //////////////////////////////////////////////////////////////////////////////////////
 
-exblas::Superaccumulator doDot_dispatch( ThrustSerialTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+exblas::Superaccumulator doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr) {
     return exblas::Superaccumulator(  exblas::exdot_cpu( size, x_ptr,y_ptr,8,true)) ;
 }
-exblas::Superaccumulator doDot_dispatch( ThrustOmpTag, unsigned size, const double* x_ptr, const double * y_ptr) {
-    return exblas::Superaccumulator(  exblas::exdot_omp( size, x_ptr,y_ptr,8,true)) ;
-}
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-exblas::Superaccumulator doDot_dispatch( ThrustCudaTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+exblas::Superaccumulator doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr) {
     return exblas::Superaccumulator(  exblas::exdot_gpu( size, x_ptr,y_ptr)) ;
+}
+#else
+exblas::Superaccumulator doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+    return exblas::Superaccumulator(  exblas::exdot_omp( size, x_ptr,y_ptr,8,true)) ;
 }
 #endif
 
 template< class Vector>
-exblas::Superaccumulator doDot_dispatch( const Vector& x, const Vector& y, ThrustVectorTag)
+exblas::Superaccumulator doDot_superacc( const Vector& x, const Vector& y, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
     const double* x_ptr = thrust::raw_pointer_cast( x.data());
     const double* y_ptr = thrust::raw_pointer_cast( y.data());
-    return doDot_dispatch( typename VectorTraits<Vector>::vector_category(), x.size(), x_ptr, y_ptr);
+    return doDot_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, y_ptr);
 }
 template<class Vector>
-double doDot( const Vector& x, const Vector& y, ThrustVectorTag)
+get_value_type<Vector> doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
-    exblas::Superaccumulator acc = doDot_dispatch( x,y,ThrustVectorTag());
+    exblas::Superaccumulator acc = doDot_superacc( x,y,ThrustVectorTag());
     return acc.Round();
 }
 //////////////////////////////////////////////////////////////////////////////////////
 template< class Vector, class UnaryOp>
-inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustSerialTag) {
+inline void doTransform_dispatch(  const Vector& x, Vector& y, UnaryOp op, SerialTag) {
     thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
-}
-template< class Vector, class UnaryOp>
-inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustOmpTag) {
-    thrust::transform( thrust::omp::tag(), x.begin(), x.end(), y.begin(), op);
 }
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 template< class Vector, class UnaryOp>
-inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustCudaTag) {
+inline void doTransform_dispatch(  const Vector& x, Vector& y, UnaryOp op, CudaTag) {
     thrust::transform( thrust::cuda::tag(), x.begin(), x.end(), y.begin(), op);
 }
+#else
+template< class Vector, class UnaryOp>
+inline void doTransform_dispatch(  const Vector& x, Vector& y, UnaryOp op, OmpTag) {
+    thrust::transform( thrust::omp::tag(), x.begin(), x.end(), y.begin(), op);
+}
 #endif
+template< class Vector, class UnaryOp>
+inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustVectorTag) {
+    doTransform_dispatch( x,y,op,get_execution_policy<Vector>());
+}
+
 //////////////////////////////////////////////////////////////////////////////////////
 
 template< class T>
-inline void doScal( unsigned size, T* x, T alpha, ThrustSerialTag)
+inline void doScal_dispatch( unsigned size, T* x, T alpha, SerialTag)
 {
     for( unsigned i=0; i<size; i++)
         x[i]*=alpha;
 }
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 template< class T>
-inline void doScal( unsigned size, T* x, T alpha, ThrustOmpTag)
+inline void doScal_dispatch( unsigned size, T* x, T alpha, CudaTag) {
+    thrust::transform( thrust::cuda::tag(), x, x+size, x, detail::Axpby_Functor<T>( 0, alpha));
+}
+#else
+template< class T>
+inline void doScal_dispatch( unsigned size, T* x, T alpha, OmpTag)
 {
     if(size<MIN_SIZE) {
-        doScal( size, x, alpha, ThrustSerialTag());
+        doScal_dispatch( size, x, alpha, SerialTag());
     }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
         x[i]*=alpha;
-}
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-template< class T>
-inline void doScal( unsigned size, T* x, T alpha, ThrustCudaTag) {
-    thrust::transform( thrust::cuda::tag(), x, x+size, x, detail::Axpby_Functor<T>( 0, alpha));
 }
 #endif
 template< class Vector>
@@ -158,8 +173,8 @@ inline void doScal(  Vector& x, typename VectorTraits<Vector>::value_type alpha,
 {
     if( alpha == 1.) 
         return;
-    typename VectorTraits<Vector>::value_type * x_ptr = thrust::raw_pointer_cast( x.data());
-    doScal( x.size(), x_ptr, alpha, typename VectorTraits<Vector>::vector_category());
+    get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
+    doScal_dispatch( x.size(), x_ptr, alpha, get_execution_policy<Vector>());
 }
 //////////////////////////////////////////////////////////////////////////////////////
 template <class value_type>

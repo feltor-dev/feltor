@@ -36,19 +36,18 @@
 
 namespace dg{
 
+//here we introduce the concept of data access
+
 struct AnyVectorTag{};
 
-struct StdVectorTag:public AnyVectorTag {};
+struct SharedVectorTag  : public AnyVectorTag {};   //shared vectors
+struct MPIVectorTag     : public AnyVectorTag {};   //MPI vectors, contains a shared vector
 
-struct ThrustVectorTag: public AnyVectorTag {};
+struct VectorVectorTag  : public AnyVectorTag {};   //container of containers (either Shared or MPI Vectors
 
-struct ThrustSerialTag : public ThrustVectorTag{};
-struct ThrustCudaTag : public ThrustVectorTag{};
-struct ThrustOmpTag : public ThrustVectorTag{};
+struct ThrustVectorTag  : public SharedVectorTag {};
+struct CuspVectorTag    : public SharedVectorTag {};
 
-struct CuspVectorTag: public ThrustVectorTag {};
-
-struct MPIVectorTag: public AnyVectorTag{};
 
 
 }//namespace dg

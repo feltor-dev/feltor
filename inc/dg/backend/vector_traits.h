@@ -2,7 +2,9 @@
 #define _DG_VECTOR_TRAITS_
 
 #include <vector>
+#include <type_traits>
 #include "vector_categories.h"
+#include "execution_policy.h"
 
 namespace dg{
 
@@ -10,19 +12,38 @@ namespace dg{
 
 Specialize this struct if you want to enable your own vector/container class for the use in blas1 functions
 */
-template< class Vector>
+template< class Vector, class Enable=void>
 struct VectorTraits {
-    typedef typename Vector::value_type value_type;
-    typedef ThrustVectorTag vector_category; //default is a ThrustVector
+    using value_type        = double;
+    using vector_category   = ThrustVectorTag;
+    using execution_policy  = OmpTag; 
+};
+template<class Vector>
+using get_value_type = typename VectorTraits<Vector>::value_type;
+template<class Vector>
+using get_vector_category = typename VectorTraits<Vector>::vector_category;
+template<class Vector>
+using get_execution_policy = typename VectorTraits<Vector>::execution_policy;
+//using is the new typedef in C++11
+
+template<class T>
+struct VectorTraits<std::vector<T>, 
+    typename std::enable_if< std::is_arithmetic<T>::value>::type>
+{
+    using value_type        = T;
+    using vector_category   = ThrustVectorTag;
+    using execution_policy  = OmpTag;
+};
+template<class T>
+struct VectorTraits<std::vector<T>, 
+    typename std::enable_if< !std::is_arithmetic<T>::value>::type>
+{
+    using value_type        = get_value_type<T>;
+    using vector_category   = VectorVectorTag;
+    using execution_policy  = get_execution_policy<T>;
 };
 
-///@cond
-template< class Vector>
-struct VectorTraits<std::vector<Vector> >{
-    typedef typename VectorTraits<Vector>::value_type value_type;
-    typedef StdVectorTag vector_category;
-};
-///@endcond
+
 
 }//namespace dg
 

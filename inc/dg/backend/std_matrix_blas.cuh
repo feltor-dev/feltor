@@ -17,8 +17,8 @@ inline void doSymv(
               const std::vector<Vector>& x, 
               std::vector<Vector>& y, 
               AnyMatrixTag,
-              StdVectorTag,
-              StdVectorTag)
+              VectorVectorTag,
+              VectorVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
@@ -40,7 +40,7 @@ inline void doSymv(
               typename MatrixTraits<Precon>::value_type beta,
               std::vector<Vector>& y, 
               AnyMatrixTag,
-              StdVectorTag)
+              VectorVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
@@ -58,7 +58,7 @@ inline typename MatrixTraits<Matrix>::value_type  doDot(
               const Matrix& m,
               const std::vector<Vector>& y, 
               AnyMatrixTag,
-              StdVectorTag)
+              VectorVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
@@ -77,9 +77,9 @@ inline typename VectorTraits<Vector>::value_type  doDot(
               const Matrix& m,
               const std::vector<Vector>& y, 
               AnyMatrixTag,
-              StdVectorTag)
+              VectorVectorTag)
 {
-    return doDot( y,m,y,AnyMatrixTag(),StdVectorTag());
+    return doDot( y,m,y,AnyMatrixTag(),VectorVectorTag());
 }
 
 
