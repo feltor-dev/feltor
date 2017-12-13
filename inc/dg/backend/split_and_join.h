@@ -105,7 +105,7 @@ void split_poloidal_gpu_kernel( unsigned nx, unsigned ny, const double* in, doub
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_rows/grid_size rows
+    const int size = nx*ny;
     for( int row = thread_id; row<size; row += grid_size)
     {
         int i=row/nx, j = row%nx;
@@ -115,17 +115,17 @@ void split_poloidal_gpu_kernel( unsigned nx, unsigned ny, const double* in, doub
 
 void split_poloidal_gpu( unsigned nx, unsigned ny, const double* in, double** out){
     const size_t BLOCK_SIZE = 256; 
-    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
     split_poloidal_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
 }
-void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, ThrustCudaTag){ 
+void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, CudaTag){ 
     split_poloidal_gpu( nx,ny,in,out);
 }
 #endif
-void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, ThrustOmpTag){ 
+void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, OmpTag){ 
     split_poloidal_omp( nx,ny,in,out);
 }
-void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, ThrustSerialTag){ 
+void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, SerialTag){ 
     split_poloidal_cpu( nx,ny,in,out);
 }
 /////////////join
@@ -148,7 +148,7 @@ void join_poloidal_gpu_kernel( unsigned nx, unsigned ny, const double** in, doub
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_rows/grid_size rows
+    const int size = nx*ny;
     for( int row = thread_id; row<size; row += grid_size)
     {
         int i=row/nx, j = row%nx;
@@ -158,17 +158,17 @@ void join_poloidal_gpu_kernel( unsigned nx, unsigned ny, const double** in, doub
 
 void join_poloidal_gpu( unsigned nx, unsigned ny, const double** in, double* out){
     const size_t BLOCK_SIZE = 256; 
-    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
     join_poloidal_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
 }
-void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, ThrustCudaTag){ 
+void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, CudaTag){ 
     join_poloidal_gpu( nx,ny,in,out);
 }
 #endif
-void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, ThrustOmpTag){ 
+void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, OmpTag){ 
     join_poloidal_omp( nx,ny,in,out);
 }
-void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, ThrustSerialTag){ 
+void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, SerialTag){ 
     join_poloidal_cpu( nx,ny,in,out);
 }
 ///@endcond

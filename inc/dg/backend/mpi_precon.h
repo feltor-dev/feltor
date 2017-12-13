@@ -18,14 +18,14 @@ namespace dg
 template <class T>
 struct MatrixTraits<MPI_Vector<T> >
 {
-    typedef double value_type;
-    typedef MPIPreconTag matrix_category;
+    using T = value_type;
+    using matrix_category = MPIPreconTag;
 };
 template <class T>
 struct MatrixTraits<const MPI_Vector<T> >
 {
-    typedef double value_type;
-    typedef MPIPreconTag matrix_category;
+    using T = value_type;
+    using matrix_category = MPIPreconTag;
 };
 ///@endcond
 namespace create

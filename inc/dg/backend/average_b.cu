@@ -1,5 +1,5 @@
 #include <iostream>
-#include "average.cuh"
+#include "average.h"
 #include "timer.cuh"
 
 namespace dg
@@ -26,8 +26,8 @@ int main()
     std::cin >> n >> Nx >> Ny;
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::PoloidalAverage<dg::HVec, dg::IHVec > pol(g);
-    dg::PoloidalAverage<dg::DVec, dg::IDVec > pol_device(g);
+    dg::PoloidalAverage<dg::HVec > pol(g);
+    dg::PoloidalAverage<dg::DVec > pol_device(g);
     dg::Timer t;
 
     dg::HVec vector = dg::evaluate( function ,g), vector_y( vector);
