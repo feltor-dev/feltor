@@ -11,7 +11,7 @@ namespace blas2
 namespace detail
 {
 template< class Precon, class Vector>
-inline exblas::Superaccumulator doDot_dispatch( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
+inline exblas::Superaccumulator doDot_superacc( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
 #ifdef DG_DEBUG
     int compare;
@@ -21,7 +21,7 @@ inline exblas::Superaccumulator doDot_dispatch( const Vector& x, const Precon& P
     assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
 #endif //DG_DEBUG
     //local compuation
-    exblas::Superaccumulator acc_fine = doDot_dispatch(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());
+    exblas::Superaccumulator acc_fine = doDot_superacc(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());
     acc_fine.Normalize();
     //communication (we cannot sum more than 128 accumulators at once, so we need to split)
     std::vector<int64_t> receive(39,0);
@@ -42,14 +42,14 @@ inline exblas::Superaccumulator doDot_dispatch( const Vector& x, const Precon& P
 template< class Precon, class Vector>
 inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
-    exblas::Superaccumulator acc_fin(doDot_dispatch( x,P,y,MPIPreconTag(),MPIVectorTag()));
+    exblas::Superaccumulator acc_fin(doDot_superacc( x,P,y,MPIPreconTag(),MPIVectorTag()));
     return acc_fin.Round();
 }
 
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::MPIPreconTag, dg::MPIVectorTag)
 {
-    exblas::Superaccumulator acc_fin(doDot_dispatch( x,m,x,MPIPreconTag(),MPIVectorTag()));
+    exblas::Superaccumulator acc_fin(doDot_superacc( x,m,x,MPIPreconTag(),MPIVectorTag()));
     return acc_fin.Round();
     //return doDot( x,m,x, MPIPreconTag(), MPIVectorTag());
 }
