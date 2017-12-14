@@ -61,11 +61,11 @@ namespace blas1
 namespace detail
 {
 
-template< class Vector1, class Vector2>
-void doTransfer( const Vector1& in, Vector2& out, ThrustVectorTag, ThrustVectorTag)
+template< class To, class From>
+To doTransfer( const From& in, ThrustVectorTag, ThrustVectorTag)
 {
-    out.resize(in.size());
-    thrust::copy( in.begin(), in.end(), out.begin());
+    To t( in.begin(), in.end());
+    return t;
 }
 
 template< class Vector>

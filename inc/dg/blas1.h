@@ -31,24 +31,43 @@ namespace blas1
 ///@{
 
 /**
- * @brief y=x; Generic way to copy and/or convert a container type to a different container type (e.g. from CPU to GPU, or double to float, etc.)
+ * @brief y=x; Generic way to copy/construct and/or convert a container type from a different container type (e.g. from CPU to GPU, or double to float, etc.)
+ *
+ * @copydoc hide_container
+ * @tparam other_container another container type
+ * @param x source
+ * @return sink
+
+ * @code
+ dg::DVec device = dg::blas1::tansfer<dg::DVec>( dg::evaluate(dg::one, grid));
+ * @endcode
+ */
+template<class container, class other_container>
+inline container transfer( const other_container& x)
+{
+    return dg::blas1::detail::doTransfer<container, other_container>( x, get_vector_category<container>(), get_vector_category<other_container>());
+}
+
+/**
+ * @brief y=x; Generic way to copy/assign and/or convert a container type to a different container type (e.g. from CPU to GPU, or double to float, etc.)
  *
  * @copydoc hide_container
  * @tparam other_container another container type
  * @param x source
  * @param y sink
  * @note y gets resized properly
-
+ *
  * @code
  dg::HVec host = dg::evaluate( dg::one, grid);
  dg::DVec device;
  dg::blas1::transfer( host, device); //device now equals host
  * @endcode
+
  */
 template<class container, class other_container>
-inline void transfer( const container& x, other_container& y)
+inline void transfer( const other_container& x, container& y)
 {
-    dg::blas1::detail::doTransfer( x,y, get_vector_category<container>(), typename dg::VectorTraits<other_container>::vector_category());
+    y = transfer<container, other_container>( x);
 }
 
 
