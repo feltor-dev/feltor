@@ -15,12 +15,14 @@ namespace blas1{
 namespace detail{
 
 template< class Vector1, class Vector2>
-void doTransfer( const Vector1& in, Vector2& out, MPIVectorTag, MPIVectorTag)
+Vector1 doTransfer( const Vector2& in, MPIVectorTag, MPIVectorTag)
 {
+    Vector1 out;
     out.set_communicator(in.communicator());
     typedef typename Vector1::container_type container1;
     typedef typename Vector2::container_type container2;
-    doTransfer( in.data(), out.data(), typename VectorTraits<container1>::vector_category(), typename VectorTraits<container2>::vector_category());
+    out.data() = doTransfer<container1, container2>( in.data(), get_vector_category<container1>(), get_vector_category<container2>());
+    return out;
 
 }
 

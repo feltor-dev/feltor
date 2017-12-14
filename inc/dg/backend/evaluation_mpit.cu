@@ -46,11 +46,11 @@ int main(int argc, char** argv)
     dg::MPIGrid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
 
     //test evaluation and expand functions
-    MDVec func2d = dg::evaluate( function, g2d);
-    MDVec func3d = dg::evaluate( function, g3d);
+    MDVec func2d = dg::blas1::transfer<MDVec>(dg::evaluate( function, g2d));
+    MDVec func3d = dg::blas1::transfer<MDVec>(dg::evaluate( function, g3d));
     //test preconditioners
-    const MDVec w2d = dg::create::weights(g2d);
-    const MDVec w3d = dg::create::weights(g3d);
+    const MDVec w2d = dg::blas1::transfer<MDVec>(dg::create::weights(g2d));
+    const MDVec w3d = dg::blas1::transfer<MDVec>(dg::create::weights(g3d));
 
     double norm2d = dg::blas2::dot( w2d, func2d);
     double norm3d = dg::blas2::dot( w3d, func3d);
