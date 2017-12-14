@@ -41,23 +41,6 @@ inline void doAxpby( get_value_type<Vector> alpha,
 }
 
 template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              const Vector& y, 
-              Vector& z, 
-              VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x.empty());
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
-    for( unsigned i=0; i<x.size(); i++)
-        doAxpby( alpha, x[i], beta, y[i], z[i], get_vector_category<typename Vector::value_type>());
-        
-}
-
-template< class Vector>
 inline void doAxpbypgz( get_value_type<Vector> alpha, 
               const Vector& x, 
               get_value_type<Vector> beta, 
@@ -73,13 +56,6 @@ inline void doAxpbypgz( get_value_type<Vector> alpha,
     for( unsigned i=0; i<x.size(); i++)
         doAxpbypgz( alpha, x[i], beta, y[i], gamma, z[i], get_vector_category<typename Vector::value_type>());
         
-}
-
-template<class container>
-inline void doCopy( const std::vector<container>& x, std::vector<container>& y, VectorVectorTag)
-{
-    for( unsigned i=0; i<x.size(); i++)
-        doCopy( x[i], y[i], typename VectorTraits<container>::vector_category());
 }
 
 template< class Vector>
@@ -108,24 +84,13 @@ inline void doPlus( Vector& x,
         
 }
 
-template<class container, class UnaryOp>
-inline void doTransform( const std::vector<container>& x, std::vector<container>& y, UnaryOp op, VectorVectorTag)
+template<class Vector, class UnaryOp>
+inline void doTransform( const Vector& x, Vector& y, UnaryOp op, VectorVectorTag)
 {
     for( unsigned i=0; i<x.size(); i++)
-        doTransform( x[i], y[i], op, typename VectorTraits<container>::vector_category());
+        doTransform( x[i], y[i], op, get_vector_category<typename Vector::value_type>());
 }
 
-template< class Vector>
-inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x1.empty());
-    assert( x1.size() == x2.size() );
-    assert( x1.size() == y.size() );
-#endif //DG_DEBUG
-    for( unsigned i=0; i<x1.size(); i++)
-        doPointwiseDot( x1[i], x2[i], y[i], get_vector_category<typename Vector::value_type>() );
-}
 template< class Vector>
 inline void doPointwiseDot( get_value_type<Vector> alpha, 
 const Vector& x1, const Vector& x2, 
@@ -141,10 +106,24 @@ Vector& y, VectorVectorTag)
         doPointwiseDot( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
 }
 template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
-const Vector& x1, const Vector& x2, const Vector& x3,
+inline void doPointwiseDivide( get_value_type<Vector> alpha, 
+const Vector& x1, const Vector& x2, 
 get_value_type<Vector> beta, 
 Vector& y, VectorVectorTag)
+{
+#ifdef DG_DEBUG
+    assert( !x1.empty());
+    assert( x1.size() == x2.size() );
+    assert( x1.size() == y.size() );
+#endif //DG_DEBUG
+    for( unsigned i=0; i<x1.size(); i++)
+        doPointwiseDivide( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
+}
+template< class Vector>
+inline void doPointwiseDot( get_value_type<Vector> alpha, 
+    const Vector& x1, const Vector& x2, const Vector& x3,
+    get_value_type<Vector> beta, 
+    Vector& y, VectorVectorTag)
 {
 #ifdef DG_DEBUG
     assert( !x1.empty());
@@ -157,11 +136,11 @@ Vector& y, VectorVectorTag)
 }
 template< class Vector>
 inline void doPointwiseDot( get_value_type<Vector> alpha, 
-const Vector& x1, const Vector& y1, 
-get_value_type<Vector> beta, 
-const Vector& x2, const Vector& y2, 
-get_value_type<Vector> gamma, 
-Vector& z, VectorVectorTag)
+    const Vector& x1, const Vector& y1, 
+    get_value_type<Vector> beta, 
+    const Vector& x2, const Vector& y2, 
+    get_value_type<Vector> gamma, 
+    Vector& z, VectorVectorTag)
 {
 #ifdef DG_DEBUG
     assert( !x1.empty());
@@ -172,18 +151,6 @@ Vector& z, VectorVectorTag)
 #endif //DG_DEBUG
     for( unsigned i=0; i<x1.size(); i++)
         doPointwiseDot( alpha, x1[i], y1[i], beta, x2[i], y2[i], gamma,z[i], get_vector_category<typename Vector::value_type>() );
-}
-
-template< class Vector>
-inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x1.empty());
-    assert( x1.size() == x2.size() );
-    assert( x1.size() == y.size() );
-#endif //DG_DEBUG
-    for( unsigned i=0; i<x1.size(); i++)
-        doPointwiseDivide( x1[i], x2[i], y[i], get_vector_category<typename Vector::value_type>());
 }
 
 template< class Vector>

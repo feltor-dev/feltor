@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <thrust/host_vector.h>
 #include "topological_traits.h"
 #include "dlt.h"
 #include "../enums.h"
@@ -760,6 +761,30 @@ void aTopology3d::do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsign
     gy_.set(new_n, new_Ny);
     gz_.set(1,new_Nz);
 }
+template<class MemoryTag, class DimensionalityTag>
+struct MemoryTraits { };
+
+template<>
+struct MemoryTraits< SharedTag, OneDimensionalTag> {
+    using host_vector = thrust::host_vector<double>;
+    using host_grid   = Grid1d;
+};
+template<>
+struct MemoryTraits< SharedTag, TwoDimensionalTag> {
+    using host_vector = thrust::host_vector<double>;
+    using host_grid   = Grid2d;
+};
+template<>
+struct MemoryTraits< SharedTag, ThreeDimensionalTag> {
+    using host_vector = thrust::host_vector<double>;
+    using host_grid   = Grid3d;
+};
+
+template<class Topology>
+using get_host_vector = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality>::host_vector;
+template<class Topology>
+using get_host_grid = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality>::host_grid;
+
 ///@endcond
 
 }// namespace dg

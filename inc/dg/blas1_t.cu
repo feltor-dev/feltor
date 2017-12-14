@@ -4,18 +4,20 @@
 #include <array>
 
 #include "blas1.h"
-#include "backend/blas1_array.h"
 
 struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 
 
 //test program that (should ) call every blas1 function for every specialization
 
-//typedef thrust::device_vector<double>  Vector;
-typedef cusp::array1d<double, cusp::device_memory>  Vector;
+//using Vector = std::array<double,2>;
+using Vector = thrust::host_vector<double>;
+//using Vector = thrust::device_vector<double>;
+//using Vector = cusp::array1d<double, cusp::device_memory>;
 int main()
 {
-    Vector v1( 5, 2), v2( 5, 3), v3(5), v4(5,4);
+    Vector v1( 5, 2), v2( 5, 3), v3(5,5), v4(5,4);
+    //Vector v1( {2,2}), v2({3,3}), v3({5,5}), v4({4,4});
     double temp = dg::blas1::dot(v1,v2);
     std::cout << "5*(2*3) = "<<temp << " (30)\n"; 
     dg::blas1::axpby( 2., v1, 3., v2, v3);
@@ -34,10 +36,10 @@ int main()
     std::cout << "2*2+ 3*3 = " << v2[0] <<" (13)\n";
     dg::blas1::axpby( 2.5, v1, 0., v2);
     std::cout << "2.5*2+ 0 = " << v2[0] <<" (5)\n";
-    dg::blas1::axpbypgz( 2.5, v1, 2., v2, 3., v3);
-    std::cout << "2.5*2+ 2.*5-3*12 = " << v3[0] <<" (-21)\n";
+    dg::blas1::axpbypgz( 2.5, v1, 2., v2, -0.125, v3);
+    std::cout << "2.5*2+ 2.*5-0.125*96 = " << v3[0] <<" (3)\n";
     dg::blas1::pointwiseDivide( 5.,v1,v2,-1,v3);
-    std::cout << "5*2/5-1*21 = " << v3[0] <<" (-19)\n";
+    std::cout << "5*2/5-1*3 = " << v3[0] <<" (-1)\n";
     dg::blas1::copy( v2, v1);
     std::cout << "5 = " << v1[0] <<" (5)"<< std::endl;
     dg::blas1::scal( v1, 0.4);
@@ -72,6 +74,10 @@ int main()
     std::cout << "2*2+ 3*3 = " << w2[0][0] <<" (13)\n";
     dg::blas1::axpby( 2.5, w1, 0., w2);
     std::cout << "2.5*2+ 0 = " << w2[0][0] <<" (5)\n";
+    dg::blas1::axpbypgz( 2.5, w1, 2., w2, -0.125, w3);
+    std::cout << "2.5*2+ 2.*5-0.125*96 = " << w3[0][0] <<" (3)\n";
+    dg::blas1::pointwiseDivide( 5.,w1,w2,-1,w3);
+    std::cout << "5*2/5-1*3 = " << w3[0][0] <<" (-1)\n";
     dg::blas1::copy( w2, w1);
     std::cout << "5 = " << w1[0][0] <<" (5)"<< std::endl;
     dg::blas1::scal( w1, 0.4);

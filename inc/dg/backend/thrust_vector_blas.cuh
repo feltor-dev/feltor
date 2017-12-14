@@ -28,7 +28,7 @@ struct VectorTraits<thrust::host_vector<T>,
 {
     using value_type        = T;
     using vector_category   = ThrustVectorTag;
-    using execution_policy  = OmpTag;
+    using execution_policy  = SerialTag;
 };
 template<class T>
 struct VectorTraits<thrust::host_vector<T>, 
@@ -92,7 +92,7 @@ inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustVectorTa
 }
 
 template< class Vector>
-inline void doScal( Vector& x, typename VectorTraits<Vector>::value_type alpha, ThrustVectorTag)
+inline void doScal( Vector& x, get_value_type<Vector> alpha, ThrustVectorTag)
 {
     if( alpha == 1.) 
         return;

@@ -6,6 +6,7 @@
 #endif //DG_DEBUG
 
 #include <array>
+#include <type_traits>
 #include "vector_categories.h"
 #include "vector_traits.h"
 
@@ -13,7 +14,7 @@
 namespace dg
 {
 template<class T, std::size_t N>
-struct std::array<T,N>Traits<std::array<T, N>, 
+struct VectorTraits<std::array<T, N>, 
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
@@ -21,7 +22,7 @@ struct std::array<T,N>Traits<std::array<T, N>,
     using execution_policy  = SerialTag;
 };
 template<class T, std::size_t N>
-struct std::array<T,N>Traits<std::array<T, N>, 
+struct VectorTraits<std::array<T, N>, 
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
@@ -49,19 +50,19 @@ T doDot( const std::array<T,N>& x, const std::array<T,N>& y, StdArrayTag)
 
 template< class T,std::size_t N, class UnaryOp>
 inline void doTransform(  const std::array<T,N>& x, std::array<T,N>& y, UnaryOp op, StdArrayTag) {
-    for( int i=0; i<N; i++)
+    for( size_t i=0; i<N; i++)
         y[i] = op(x[i]);
 }
 
 template< class T, std::size_t N>
 inline void doScal( std::array<T,N>& x, T alpha, StdArrayTag) {
-    for( int i=0; i<N; i++)
+    for( size_t i=0; i<N; i++)
         x[i] *= alpha;
 }
 
 template< class T, std::size_t N>
 inline void doPlus(  std::array<T,N>& x, T alpha, StdArrayTag) {
-    for( int i=0; i<N; i++)
+    for( size_t i=0; i<N; i++)
         x[i] += alpha;
 }
 
@@ -71,7 +72,7 @@ inline void doAxpby( T alpha,
               T beta, 
               std::array<T,N>& y, 
               StdArrayTag) {
-    for( int i=0; i<N; i++)
+    for( size_t i=0; i<N; i++)
         y[i] = alpha*x[i]+beta*y[i];
 }
 
@@ -83,36 +84,36 @@ inline void doAxpbypgz( T alpha,
               T gamma, 
               std::array<T,N>& z, 
               StdArrayTag) {
-    for( int i=0; i<N; i++)
+    for( size_t i=0; i<N; i++)
         z[i] = alpha*x[i]+beta*y[i]+gamma*z[i];
 }
 
-template<class std::array<T,N>>
-inline void doPointwiseDot(  
+template< class T, std::size_t N>
+inline void doPosize_twiseDot(  
               T alpha, 
               const std::array<T,N>& x1,
               const std::array<T,N>& x2, 
               T beta, 
               std::array<T,N>& y, 
               StdArrayTag) {
-    for( int i=0; i<N; i++)
+    for( size_t i=0; i<N; i++)
         y[i] = alpha*x1[i]*x2[i]+beta*y[i];
 }
 
-template<class std::array<T,N>>
-inline void doPointwiseDivide(  
+template< class T, std::size_t N>
+inline void doPosize_twiseDivide(  
               T alpha, 
               const std::array<T,N>& x1,
               const std::array<T,N>& x2, 
               T beta, 
               std::array<T,N>& y, 
               StdArrayTag) {
-    for( int i=0; i<N; i++)
+    for( size_t i=0; i<N; i++)
         y[i] = alpha*x1[i]/x2[i]+beta*y[i];
 }
 
-template<class std::array<T,N>>
-inline void doPointwiseDot(  
+template< class T, std::size_t N>
+inline void doPosize_twiseDot(  
               T alpha, 
               const std::array<T,N>& x1,
               const std::array<T,N>& y1, 
@@ -123,11 +124,11 @@ inline void doPointwiseDot(
               std::array<T,N>& z, 
               StdArrayTag)
 {
-    for( int i=0; i<N; i++)
+    for( size_t i=0; i<N; i++)
         z[i] = alpha*x1[i]*y1[i]+beta*x2[i]*y2[i]+gamma*z[i];
 }
-template<class std::array<T,N>>
-inline void doPointwiseDot(  
+template< class T, std::size_t N>
+inline void doPosize_twiseDot(  
               T alpha, 
               const std::array<T,N>& x1,
               const std::array<T,N>& x2,
@@ -136,8 +137,8 @@ inline void doPointwiseDot(
               std::array<T,N>& y, 
               StdArrayTag)
 {
-    for( int i=0; i<N; i++)
-        y[i] = alpha*x1[i]*x2[i]*x3[i]*y2[i]+beta*y[i];
+    for( size_t i=0; i<N; i++)
+        y[i] = alpha*x1[i]*x2[i]*x3[i]+beta*y[i];
 }
 
 }//namespace detail

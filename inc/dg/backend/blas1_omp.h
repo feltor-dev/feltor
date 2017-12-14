@@ -21,6 +21,7 @@ inline void doScal_dispatch( OmpTag, unsigned size, T* x, T alpha)
 {
     if(size<MIN_SIZE) {
         doScal_dispatch( SerialTag(), size, x, alpha);
+        return;
     }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
@@ -68,40 +69,38 @@ void doAxpbypgz_dispatch( OmpTag, unsigned size, T alpha, const T * RESTRICT x_p
 template<class value_type>
 inline void doPointwiseDot_dispatch( OmpTag, unsigned size, 
               value_type alpha, 
-              const value_type* x1_ptr,
-              const value_type* y1_ptr,
+              const value_type* x_ptr,
+              const value_type* y_ptr,
               value_type gamma,
               value_type* z_ptr)
 {
     if( size<MIN_SIZE)
     {
         for( unsigned i=0; i<size; i++)
-            z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i]
-                       +gamma*z_ptr[i];
+            z_ptr[i] = alpha*x_ptr[i]*y_ptr[i]+gamma*z_ptr[i];
+        return; 
     }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                    +gamma*z_ptr[i];
+        z_ptr[i] = alpha*x_ptr[i]*y_ptr[i]+gamma*z_ptr[i];
 }
 template<class value_type>
 inline void doPointwiseDivide_dispatch( OmpTag, unsigned size, 
               value_type alpha, 
-              const value_type* x1_ptr,
-              const value_type* y1_ptr,
+              const value_type* x_ptr,
+              const value_type* y_ptr,
               value_type gamma,
               value_type* z_ptr)
 {
     if( size<MIN_SIZE)
     {
         for( unsigned i=0; i<size; i++)
-            z_ptr[i] = alpha*x1_ptr[i]/y1_ptr[i]
-                       +gamma*z_ptr[i];
+            z_ptr[i] = alpha*x_ptr[i]/y_ptr[i]+gamma*z_ptr[i];
+        return;
     }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x1_ptr[i]/y1_ptr[i] 
-                    +gamma*z_ptr[i];
+        z_ptr[i] = alpha*x_ptr[i]/y_ptr[i]+gamma*z_ptr[i];
 }
 
 template<class value_type>
@@ -121,6 +120,7 @@ inline void doPointwiseDot_dispatch( OmpTag, unsigned size,
             z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i]
                        +beta*x2_ptr[i]*y2_ptr[i]
                        +gamma*z_ptr[i];
+        return;
     }
     #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)

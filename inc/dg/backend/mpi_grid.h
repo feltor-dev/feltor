@@ -661,6 +661,7 @@ void aMPITopology3d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, u
     g.set(new_n,new_Nx,new_Ny,new_Nz);
     update_local();
 }
+
 ///@endcond
 
 /**
@@ -722,5 +723,17 @@ struct MPIGrid3d : public aMPITopology3d
     }
 };
 
+///@cond
+template<>
+struct MemoryTraits< MPITag, TwoDimensionalTag> {
+    using host_vector = MPI_Vector<thrust::host_vector<double>>;
+    using host_grid   = MPIGrid2d;
+};
+template<>
+struct MemoryTraits< MPITag, ThreeDimensionalTag> {
+    using host_vector = MPI_Vector<thrust::host_vector<double>>;
+    using host_grid   = MPIGrid3d;
+};
+///@endcond
 
 }//namespace dg

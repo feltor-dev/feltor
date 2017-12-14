@@ -16,8 +16,8 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b) {
     Superaccumulator acc;
     CACHE cache(acc);
 
-    int r = (( int64_t(N) ) & ~3ul);
-    for(int i = 0; i < r; i+=4) {
+    int r = (( int64_t(N) ) & ~7ul);
+    for(int i = 0; i < r; i+=8) {
         asm ("# myloop");
         //vcl::Vec8d r1 ;
         //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
@@ -42,8 +42,8 @@ Superaccumulator ExDOTFPE_cpu(int N, const double *a, const double *b, const dou
     //assert( vcl::hasFMA3() );
     Superaccumulator acc;
     CACHE cache(acc);
-    int r = (( int64_t(N))  & ~3ul);
-    for(int i = 0; i < r; i+=4) {
+    int r = (( int64_t(N))  & ~7ul);
+    for(int i = 0; i < r; i+=8) {
         asm ("# myloop");
         //vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load(c+i);
         //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
@@ -79,25 +79,25 @@ Superaccumulator exdot_cpu(int N, const double *a, const double* b, int fpe, boo
     if (early_exit) {
         if (fpe <= 4)
             acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 4, FPExpansionTraits<true> > >)(N,a,b);
-        if (fpe <= 6)
+        else if (fpe <= 6)
             acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 6, FPExpansionTraits<true> > >)(N,a,b);
-        if (fpe <= 8)
+        else if (fpe <= 8)
             acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 8, FPExpansionTraits<true> > >)(N,a,b);
     } else { // ! early_exit
         if (fpe == 2) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 2> >)(N, a,b);
-        if (fpe == 3) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 3> >)(N, a,b);
-        if (fpe == 4) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 4> >)(N, a,b);
-        if (fpe == 5) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 5> >)(N, a,b);
-        if (fpe == 6) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 6> >)(N, a,b);
-        if (fpe == 7) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 7> >)(N, a,b);
-        if (fpe == 8) 
-	    acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 8> >)(N, a,b);
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 2> >)(N, a,b);
+        else if (fpe == 3) 
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 3> >)(N, a,b);
+        else if (fpe == 4) 
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 4> >)(N, a,b);
+        else if (fpe == 5) 
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 5> >)(N, a,b);
+        else if (fpe == 6) 
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 6> >)(N, a,b);
+        else if (fpe == 7) 
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 7> >)(N, a,b);
+        else if (fpe == 8) 
+            acc = (ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 8> >)(N, a,b);
     }
     return acc;
 }

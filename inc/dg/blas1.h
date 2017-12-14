@@ -2,6 +2,7 @@
 
 #include "backend/vector_traits.h"
 #include "backend/thrust_vector_blas.cuh"
+#include "backend/blas1_array.h"
 #include "backend/cusp_vector_blas.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
@@ -36,10 +37,11 @@ namespace blas1
  * @copydoc hide_container
  * @tparam other_container another container type
  * @param x source
- * @return sink
+ * @return x converted to the new format
+ * @note since this function in quite often used there is a higher level alias \c dg::transfer 
 
  * @code
- dg::DVec device = dg::blas1::tansfer<dg::DVec>( dg::evaluate(dg::one, grid));
+ dg::DVec device = dg::tansfer<dg::DVec>( dg::evaluate(dg::one, grid));
  * @endcode
  */
 template<class container, class other_container>
@@ -56,18 +58,19 @@ inline container transfer( const other_container& x)
  * @param x source
  * @param y sink
  * @note y gets resized properly
+ * @note since this function in quite often used there is a higher level alias \c dg::transfer 
  *
  * @code
  dg::HVec host = dg::evaluate( dg::one, grid);
  dg::DVec device;
- dg::blas1::transfer( host, device); //device now equals host
+ dg::transfer( host, device); //device now equals host
  * @endcode
 
  */
 template<class container, class other_container>
 inline void transfer( const other_container& x, container& y)
 {
-    y = transfer<container, other_container>( x);
+    y = dg::blas1::transfer<container, other_container>( x);
 }
 
 
@@ -395,5 +398,20 @@ void pointwiseDot(  get_value_type<container> alpha, const container& x1, const 
 }
 ///@}
 }//namespace blas1
+
+///@cond
+//forwarding function calls
+template< class T1, class T2>
+void transfer(T1&& arg1, T2&& arg2){ 
+    blas1::transfer( std::forward<T1>(arg1), std::forward<T2>(arg2));
+}
+template< class T1, class T2>
+T1 transfer(T2&& arg){ 
+    return blas1::transfer<T1,T2>( std::forward<T2>(arg));
+}
+
+///@endcond
+
+
 } //namespace dg
 

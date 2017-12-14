@@ -11,10 +11,11 @@ namespace blas1
 namespace detail
 {
 exblas::Superaccumulator doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+    std::cout << size<<" "<<x_ptr[0]<<" "<<y_ptr[0]<<"\n";
     return exblas::Superaccumulator(  exblas::exdot_cpu( size, x_ptr,y_ptr,8,true)) ;
 }
 template< class Vector, class UnaryOp>
-inline void doTransform_dispatch( SerialTag, const Vector& x, Vector& y, UnaryOp op, SerialTag) {
+inline void doTransform_dispatch( SerialTag, const Vector& x, Vector& y, UnaryOp op) {
     thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
 }
 template< class T>
@@ -88,8 +89,7 @@ inline void doPointwiseDot_dispatch( SerialTag, unsigned size,
               const value_type* x2,
               const value_type* x3,
               value_type beta, 
-              value_type* y, 
-              ThrustVectorTag)
+              value_type* y)
 {
     for( unsigned i=0; i<size; i++)
         y[i] = alpha*x1[i]*x2[i]*x3[i]+beta*y[i];

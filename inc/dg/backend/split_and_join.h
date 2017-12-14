@@ -92,12 +92,8 @@ void split_poloidal_cpu( unsigned nx, unsigned ny, const double* in, double** ou
         for( unsigned j=0; j<nx; j++)
             out[j][i] = in[i*nx+j];
 }
-void split_poloidal_omp( unsigned nx, unsigned ny, const double* in, double** out)
-{
-#pragma omp parallel for
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[j][i] = in[i*nx+j];
+void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, SerialTag){ 
+    split_poloidal_cpu( nx,ny,in,out);
 }
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 __global__
@@ -121,13 +117,18 @@ void split_poloidal_gpu( unsigned nx, unsigned ny, const double* in, double** ou
 void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, CudaTag){ 
     split_poloidal_gpu( nx,ny,in,out);
 }
-#endif
+#else
+void split_poloidal_omp( unsigned nx, unsigned ny, const double* in, double** out)
+{
+#pragma omp parallel for
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[j][i] = in[i*nx+j];
+}
 void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, OmpTag){ 
     split_poloidal_omp( nx,ny,in,out);
 }
-void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, SerialTag){ 
-    split_poloidal_cpu( nx,ny,in,out);
-}
+#endif
 /////////////join
 void join_poloidal_cpu( unsigned nx, unsigned ny, const double** in, double* out)
 {
@@ -135,12 +136,8 @@ void join_poloidal_cpu( unsigned nx, unsigned ny, const double** in, double* out
         for( unsigned j=0; j<nx; j++)
             out[i*nx+j] = in[j][i];
 }
-void join_poloidal_omp( unsigned nx, unsigned ny, const double** in, double* out)
-{
-#pragma omp parallel for
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[i*nx+j] = in[j][i];
+void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, SerialTag){ 
+    join_poloidal_cpu( nx,ny,in,out);
 }
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 __global__
@@ -164,13 +161,18 @@ void join_poloidal_gpu( unsigned nx, unsigned ny, const double** in, double* out
 void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, CudaTag){ 
     join_poloidal_gpu( nx,ny,in,out);
 }
-#endif
+#else
+void join_poloidal_omp( unsigned nx, unsigned ny, const double** in, double* out)
+{
+#pragma omp parallel for
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[i*nx+j] = in[j][i];
+}
 void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, OmpTag){ 
     join_poloidal_omp( nx,ny,in,out);
 }
-void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, SerialTag){ 
-    join_poloidal_cpu( nx,ny,in,out);
-}
+#endif
 ///@endcond
 /** @brief  Split a vector poloidally into lines
 *
@@ -183,9 +185,8 @@ template<class thrust_vector>
 void split_poloidal( const thrust_vector& in, std::vector<thrust_vector>& out, const aTopology2d& grid)
 {
     Grid2d l( grid);
-    unsigned size1d=l.n()*l.Ny();
     out.resize( l.n()*l.Nx());
-    double* in_ptr = thrust::raw_pointer_cast(in.data());
+    const double* in_ptr = thrust::raw_pointer_cast(in.data());
     std::vector<double*> out_ptrs(l.n()*l.Nx());
     double** out_ptr = out_ptrs.data();
     for( unsigned i=0; i<out.size(); i++)
@@ -193,7 +194,7 @@ void split_poloidal( const thrust_vector& in, std::vector<thrust_vector>& out, c
         out[i].resize( l.n()*l.Ny());
         out_ptrs[i] = thrust::raw_pointer_cast( out[i].data());
     }
-    split_poloidal_dispatch( l.n()*l.Nx(), l.n()*l.Ny(), in_ptr, out_ptr, typename VectorTraits<thrust_vector>::vector_category());
+    split_poloidal_dispatch( l.n()*l.Nx(), l.n()*l.Ny(), in_ptr, out_ptr, get_execution_policy<thrust_vector>());
 }
 #ifdef MPI_VERSION
 ///@brief MPI Version of split
@@ -232,12 +233,12 @@ void split_poloidal( const MPI_Vector<thrust_vector>& in, std::vector<MPI_Vector
 template<class thrust_vector>
 void join_poloidal( const std::vector<thrust_vector>& in, thrust_vector& out, const aTopology2d& grid)
 {
-    std::vector<double*> in_ptrs( in.size());
+    std::vector<const double*> in_ptrs( in.size());
     for( unsigned i=0; i<in.size(); i++)
         in_ptrs[i] = thrust::raw_pointer_cast(in[i].data());
-    double ** in_ptr = in_ptrs.data();
+    const double ** in_ptr = in_ptrs.data();
     double* out_ptr = thrust::raw_pointer_cast( out.data());
-    join_poloidal_dispatch( grid.n()*grid.Nx(), grid.n()*grid.Ny(), in_ptr, out_ptr, typename VectorTraits<thrust_vector>::vector_category());
+    join_poloidal_dispatch( grid.n()*grid.Nx(), grid.n()*grid.Ny(), in_ptr, out_ptr, get_execution_policy<thrust_vector>());
 }
 
 #ifdef MPI_VERSION
@@ -254,7 +255,7 @@ void join( const std::vector<MPI_Vector<thrust_vector> >& in, MPI_Vector<thrust_
     std::vector<double*> in_ptrs( in.size());
     for( unsigned i=0; i<in.size(); i++)
         in_ptrs[i] = thrust::raw_pointer_cast(in[i].data().data());
-    double ** in_ptr = in_ptrs.data();
+    const double ** in_ptr = in_ptrs.data();
 
     double* out_ptr = thrust::raw_pointer_cast( out_local.data());
     join_poloidal_dispatch( l.n()*l.Nx(), l.n()*l.Ny(), in_ptr, out_ptr, typename VectorTraits<thrust_vector>::vector_category());
