@@ -30,7 +30,7 @@ exblas::Superaccumulator doDot_dispatch( SerialTag, unsigned size, const double*
 }
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 exblas::Superaccumulator doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr, const double * z_ptr) {
-    return exblas::Superaccumulator(  exblas::exdot_gpu( size, x_ptr,y_ptr)) ;
+    return exblas::Superaccumulator(  exblas::exdot_gpu( size, x_ptr,y_ptr,z_ptr)) ;
 }
 #else
 exblas::Superaccumulator doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {

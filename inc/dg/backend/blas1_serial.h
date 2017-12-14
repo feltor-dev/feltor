@@ -11,7 +11,6 @@ namespace blas1
 namespace detail
 {
 exblas::Superaccumulator doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr) {
-    std::cout << size<<" "<<x_ptr[0]<<" "<<y_ptr[0]<<"\n";
     return exblas::Superaccumulator(  exblas::exdot_cpu( size, x_ptr,y_ptr,8,true)) ;
 }
 template< class Vector, class UnaryOp>

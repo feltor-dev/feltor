@@ -60,6 +60,7 @@ int main()
     const DVec w1d = dg::transfer<DVec>( dg::create::weights( g1d));
     const DVec w2d = dg::transfer<DVec>( dg::create::weights( g2d));
     const DVec w3d = dg::transfer<DVec>( dg::create::weights( g3d));
+    std::cout<<h_x.size()<<"\n";
 
     //test preconditioners
     std::cout << "Square normalized 1DXnorm ";

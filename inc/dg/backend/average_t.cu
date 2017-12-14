@@ -1,5 +1,5 @@
 #include <iostream>
-#include "average.cuh"
+#include "average.h"
 #include "../blas2.h"
 #include "typedefs.cuh"
 
@@ -17,15 +17,15 @@ int main()
     //![doxygen]
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::PoloidalAverage<dg::HVec, dg::iHVec > pol(g);
+    dg::PoloidalAverage<dg::Grid2d, dg::DVec > pol(g);
 
-    const dg::HVec vector = dg::evaluate( function ,g); 
-    dg::HVec average_y( vector);
+    const dg::DVec vector = dg::evaluate( function ,g); 
+    dg::DVec average_y( vector);
     std::cout << "Averaging ... \n";
     pol( vector, average_y);
     //![doxygen]
-    const dg::HVec w2d = dg::create::weights( g);
-    const dg::HVec solution = dg::evaluate( pol_average, g);
+    const dg::DVec w2d = dg::create::weights( g);
+    const dg::DVec solution = dg::evaluate( pol_average, g);
     dg::blas1::axpby( 1., solution, -1., average_y);
     std::cout << "Distance to solution is: "<<sqrt(dg::blas2::dot( average_y, w2d, average_y))<<std::endl;
 
