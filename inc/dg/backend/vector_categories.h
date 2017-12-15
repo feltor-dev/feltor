@@ -44,6 +44,7 @@ struct SharedVectorTag  : public AnyVectorTag {};   //shared vectors
 struct MPIVectorTag     : public AnyVectorTag {};   //MPI vectors, contains a shared vector
 
 struct VectorVectorTag  : public AnyVectorTag {};   //container of containers (either Shared or MPI Vectors
+struct ArrayVectorTag   : public VectorVectorTag{}; //std::array of containers
 
 struct ThrustVectorTag  : public SharedVectorTag {};
 struct CuspVectorTag    : public ThrustVectorTag {};

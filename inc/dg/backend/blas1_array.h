@@ -26,7 +26,7 @@ struct VectorTraits<std::array<T, N>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
-    using vector_category   = VectorVectorTag;
+    using vector_category   = ArrayVectorTag;
     using execution_policy  = get_execution_policy<T>;
 };
 
