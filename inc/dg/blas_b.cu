@@ -20,6 +20,7 @@ double function(double x, double y, double z){ return sin(y)*sin(x);}
 //typedef cusp::array1d<float, cusp::device_memory> Vector;
 typedef double value_type;
 typedef dg::DVec Vector;
+using ArrayVec = std::array<Vector, 2>;
 //typedef thrust::device_vector<double> Vector;
 typedef dg::DMatrix Matrix;
 //typedef cusp::array1d<double, cusp::device_memory> Vector;
@@ -38,15 +39,15 @@ int main()
 
     std::cout<<"Evaluate a function on the grid\n";
     t.tic();
-    Vector x;
+    ArrayVec x;
     dg::blas1::transfer( dg::evaluate( function, grid), x);
     t.toc();
     std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
     std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
-    value_type gbytes=(value_type)x.size()*sizeof(value_type)/1e9;
+    value_type gbytes=(value_type)x.size()*x[0].size()*sizeof(value_type)/1e9;
     std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
     std::cout << "Generate interpolation and projection\n";
-    dg::MultiMatrix<Matrix, Vector> inter, project; 
+    dg::MultiMatrix<Matrix, ArrayVec> inter, project; 
     dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
     dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
     //dg::IDMatrix inter = dg::create::interpolation( grid, grid_half);
@@ -56,10 +57,10 @@ int main()
     t.tic();
     value_type norm=0;
     for( int i=0; i<multi; i++)
-        norm += dg::blas1::dot( w2d, x);
+        norm += dg::blas1::dot( w2d, x[0]);
     t.toc();
     std::cout<<"DOT took                         " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
-    Vector y(x), z(x), u(x), v(x);
+    ArrayVec y(x), z(x), u(x), v(x);
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
     t.tic();
@@ -95,7 +96,7 @@ int main()
         dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
-    Vector x_half = dg::evaluate( dg::zero, grid_half);
+    ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::gemv( inter, x_half, x);

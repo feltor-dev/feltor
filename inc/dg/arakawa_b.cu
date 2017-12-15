@@ -39,7 +39,7 @@ double jacobian( double x, double y)
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
-using Vector = std::array<dg::DVec, 5>;
+using Vector = std::array<dg::DVec, 3>;
 typedef dg::DMatrix Matrix;
 
 int main()
@@ -59,12 +59,12 @@ int main()
     //std::cout<< std::setprecision(2);
 
     dg::ArakawaX<dg::CartesianGrid2d, Matrix, Vector> arakawa( grid);
-    unsigned multi=20;
+    unsigned multi=100;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    std::cout << "Arakawa took "<<t.diff()*1000/(double)(multi*5)<<"ms\n";
+    std::cout << "Arakawa took "<<t.diff()*1000/(double)(multi*lhs.size())<<"ms\n";
 
     std::cout << std::scientific;
     std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";

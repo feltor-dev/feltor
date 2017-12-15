@@ -52,12 +52,21 @@ struct MultiMatrix
         for( unsigned i=0; i<dimsM; i++)
             inter_[i] = src.get_matrices()[i];
         for( unsigned i=0; i<dimsT; i++)
-            temp_[i].data() = src.get_temp()[i].data();
+            dg::blas1::transfer(src.get_temp()[i].data(), temp_[i].data());
 
     }
 
     void symv( const container& x, container& y) const{ symv( 1., x,0,y);}
     void symv(double alpha, const container& x, double beta, container& y) const
+    {
+        symv( get_vector_category<container>(), alpha, x, beta, y);
+    }
+    void symv( VectorVectorTag, double alpha, const container& x, double beta, container& y)const
+    {
+        for(unsigned i=0; i<x.size(); i++)
+            symv( get_vector_category<typename container::value_type>(), alpha, x, beta, y);
+    }
+    void symv(SharedVectorTag, double alpha, const container& x, double beta, container& y) const
     {
         int dims = inter_.size();
         if( dims == 1) 
@@ -83,13 +92,13 @@ struct MultiMatrix
 template <class M, class V>
 struct MatrixTraits<MultiMatrix<M, V> >
 {
-    typedef typename VectorTraits<V>::value_type value_type;
+    using value_type = get_value_type<V>;
     typedef SelfMadeMatrixTag matrix_category;
 };
 template <class M, class V>
 struct MatrixTraits<const MultiMatrix<M, V> >
 {
-    typedef typename VectorTraits<V>::value_type value_type;
+    using value_type = get_value_type<V>;
     typedef SelfMadeMatrixTag matrix_category;
 };
 
