@@ -10,10 +10,16 @@ namespace detail
 {
 const unsigned MIN_SIZE=100;//don't parallelize if work is too small 
 exblas::Superaccumulator doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+    if(size<MIN_SIZE) 
+        return exblas::Superaccumulator(  exblas::exdot_cpu( size, x_ptr,y_ptr,8,true)) ;
     return exblas::Superaccumulator(  exblas::exdot_omp( size, x_ptr,y_ptr,8,true)) ;
 }
 template< class Vector, class UnaryOp>
 inline void doTransform_dispatch( OmpTag, const Vector& x, Vector& y, UnaryOp op) {
+    if(size<MIN_SIZE) {
+        thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
+        return;
+    }
     thrust::transform( thrust::omp::tag(), x.begin(), x.end(), y.begin(), op);
 }
 template< class T>

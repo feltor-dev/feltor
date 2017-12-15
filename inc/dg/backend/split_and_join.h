@@ -86,18 +86,15 @@ void join( const std::vector<MPI_Vector<thrust_vector1> >& in, MPI_Vector<thrust
 #endif //MPI_VERSION
 /////////////////////////////////////////////poloidal split/////////////////////
 ///@cond
-void split_poloidal_cpu( unsigned nx, unsigned ny, const double* in, double** out)
+void transpose_dispatch( SerialTag, unsigned nx, unsigned ny, const double* in, double* out)
 {
     for( unsigned i=0; i<ny; i++)
         for( unsigned j=0; j<nx; j++)
-            out[j][i] = in[i*nx+j];
-}
-void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, SerialTag){ 
-    split_poloidal_cpu( nx,ny,in,out);
+            out[j*ny+i] = in[i*nx+j];
 }
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 __global__
-void split_poloidal_gpu_kernel( unsigned nx, unsigned ny, const double* in, double** out)
+void transpose_gpu_kernel( unsigned nx, unsigned ny, const double* in, double* out)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -105,74 +102,24 @@ void split_poloidal_gpu_kernel( unsigned nx, unsigned ny, const double* in, doub
     for( int row = thread_id; row<size; row += grid_size)
     {
         int i=row/nx, j = row%nx;
-        out[j][i] = in[i*nx+j];
+        out[j*ny+i] = in[i*nx+j];
     }
 }
-
-void split_poloidal_gpu( unsigned nx, unsigned ny, const double* in, double** out){
+void transpose_dispatch( CudaTag, unsigned nx, unsigned ny, const double* in, double* out){
     const size_t BLOCK_SIZE = 256; 
     const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
-    split_poloidal_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
-}
-void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, CudaTag){ 
-    split_poloidal_gpu( nx,ny,in,out);
+    transpose_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
 }
 #else
-void split_poloidal_omp( unsigned nx, unsigned ny, const double* in, double** out)
+void transpose_dispatch( OmpTag, unsigned nx, unsigned ny, const double* in, double* out)
 {
 #pragma omp parallel for
     for( unsigned i=0; i<ny; i++)
         for( unsigned j=0; j<nx; j++)
-            out[j][i] = in[i*nx+j];
-}
-void split_poloidal_dispatch( unsigned nx, unsigned ny, const double* in, double** out, OmpTag){ 
-    split_poloidal_omp( nx,ny,in,out);
+            out[j*ny+i] = in[i*nx+j];
 }
 #endif
 /////////////join
-void join_poloidal_cpu( unsigned nx, unsigned ny, const double** in, double* out)
-{
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[i*nx+j] = in[j][i];
-}
-void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, SerialTag){ 
-    join_poloidal_cpu( nx,ny,in,out);
-}
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-__global__
-void join_poloidal_gpu_kernel( unsigned nx, unsigned ny, const double** in, double* out)
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    const int size = nx*ny;
-    for( int row = thread_id; row<size; row += grid_size)
-    {
-        int i=row/nx, j = row%nx;
-        out[i*nx+j] = in[j][i];
-    }
-}
-
-void join_poloidal_gpu( unsigned nx, unsigned ny, const double** in, double* out){
-    const size_t BLOCK_SIZE = 256; 
-    const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
-    join_poloidal_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
-}
-void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, CudaTag){ 
-    join_poloidal_gpu( nx,ny,in,out);
-}
-#else
-void join_poloidal_omp( unsigned nx, unsigned ny, const double** in, double* out)
-{
-#pragma omp parallel for
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[i*nx+j] = in[j][i];
-}
-void join_poloidal_dispatch( unsigned nx, unsigned ny, const double** in, double* out, OmpTag){ 
-    join_poloidal_omp( nx,ny,in,out);
-}
-#endif
 ///@endcond
 /** @brief  Split a vector poloidally into lines
 *
