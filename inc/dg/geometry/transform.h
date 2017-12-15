@@ -204,9 +204,9 @@ namespace create{
  * @return  The inverse volume form
  */
 template< class Geometry>
-typename GeometryTraits<Geometry>::host_vector inv_volume( const Geometry& g)
+get_host_vector<Geometry> inv_volume( const Geometry& g)
 {
-    using host_vec = get_host_vector<Geometry>;
+    using host_vector = get_host_vector<Geometry>;
     SparseElement<host_vector> inv_vol = dg::tensor::determinant(g.metric());
     dg::tensor::sqrt(inv_vol);
     host_vector temp = dg::create::inv_weights( g);
@@ -224,9 +224,9 @@ typename GeometryTraits<Geometry>::host_vector inv_volume( const Geometry& g)
  * @return  The volume form
  */
 template< class Geometry>
-typename GeometryTraits<Geometry>::host_vector volume( const Geometry& g)
+get_host_vector<Geometry> volume( const Geometry& g)
 {
-    using host_vec = get_host_vector<Geometry>;
+    using host_vector = get_host_vector<Geometry>;
     host_vector temp = inv_volume(g);
     dg::blas1::transform(temp,temp,dg::INVERT<double>());
     return temp;
