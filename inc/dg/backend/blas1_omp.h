@@ -16,7 +16,7 @@ exblas::Superaccumulator doDot_dispatch( OmpTag, unsigned size, const double* x_
 }
 template< class Vector, class UnaryOp>
 inline void doTransform_dispatch( OmpTag, const Vector& x, Vector& y, UnaryOp op) {
-    if(size<MIN_SIZE) {
+    if(x.size()<MIN_SIZE) {
         thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
         return;
     }
