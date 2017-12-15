@@ -12,9 +12,9 @@ struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 
 //using Vector = std::array<double,2>;
 //using Vector = thrust::host_vector<double>;
-//using Vector = thrust::device_vector<double>;
+using Vector = thrust::device_vector<double>;
 //using Vector = cusp::array1d<double, cusp::device_memory>;
-using Vector = dg::VectorView<thrust::device_vector<double>>;
+//using Vector = dg::VectorView<thrust::device_vector<double>>;
 int main()
 {
     //Vector v1( 5, 2), v2( 5, 3), v3(5,5), v4(5,4);
@@ -56,7 +56,7 @@ int main()
     //v1 = 2, v2 = 3
 
     std::cout << "Test std::array \n";
-    std::array<Vector, 2> w1( dg::transfer(v1)), w2({v2,v2}), w3({v3,v3}), w4({v4,v4});
+    std::array<Vector, 2> w1( dg::transfer<std::array<Vector,2>>(v1)), w2({v2,v2}), w3({v3,v3}), w4({v4,v4});
     temp = dg::blas1::dot( w1, w2);
     std::cout << "2*5*(2*3) = "<<temp << " (60)\n"; 
     dg::blas1::axpby( 2., w1, 3., w2, w3);
@@ -71,8 +71,8 @@ int main()
     std::cout << "2*2*3 -4*6 = "<<w3[0][0]<<" (-12)\n";
     dg::blas1::pointwiseDot( 2., w1, w2,w4, -4., w3);
     std::cout << "2*2*3*4 -4*(-12) = "<<w3[0][0]<<" (96)\n";
-    dg::blas1::pointwiseDot( 2., w1[0], w2[0], -4., v1, v2, 0., v2);
-    std::cout << "2*2*3 -4*2*3 = "<<v2[0]<<" (-12)\n";
+    dg::blas1::pointwiseDot( 2., w1, w2, -4., w1, w2, 0., w2);
+    std::cout << "2*2*3 -4*2*3 = "<<w2[0][0]<<" (-12)\n";
     dg::blas1::axpby( 2., w1, 3., w2);
     std::cout << "2*2+ 3*3 = " << w2[0][0] <<" (13)\n";
     dg::blas1::axpby( 2.5, w1, 0., w2);
@@ -96,3 +96,4 @@ int main()
     return 0;
 
 }
+

@@ -33,16 +33,16 @@ inline void doScal_omp( unsigned size, T* x, T alpha)
 template< class T>
 inline void doScal_dispatch( OmpTag, unsigned size, T* x, T alpha)
 {
+    if(omp_in_parallel())
+    {
+        doScal_omp( size, x, alpha);
+        return;
+    }
     if(size>MIN_SIZE) 
     {
-        if(omp_in_parallel())
-            doScal_omp( size, x, alpha);
-        else
+        #pragma omp parallel 
         {
-            #pragma omp parallel 
-            {
-                doScal_omp( size, x, alpha);
-            }
+            doScal_omp( size, x, alpha);
         }
     }
     else
@@ -58,16 +58,16 @@ inline void doPlus_omp( unsigned size, T* x, T alpha)
 template<class T>
 inline void doPlus_dispatch( OmpTag, unsigned size, T* x, T alpha)
 {
+    if(omp_in_parallel())
+    {
+        doPlus_omp( size, x, alpha);
+        return;
+    }
     if(size>MIN_SIZE)
     {
-        if(omp_in_parallel())
-            doScal_omp( size, x, alpha);
-        else
+        #pragma omp parallel
         {
-            #pragma omp parallel
-            {
-                doPlus_omp( size, x, alpha);
-            }
+            doPlus_omp( size, x, alpha);
         }
     }
     else
@@ -84,16 +84,16 @@ void doAxpby_omp(unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, T* RE
 template<class T>
 void doAxpby_dispatch( OmpTag, unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, T* RESTRICT y_ptr)
 {
+    if(omp_in_parallel())
+    {
+        doAxpby_omp(size, alpha, x_ptr, beta, y_ptr);
+        return;
+    }
     if(size>MIN_SIZE) 
     {
-        if(omp_in_parallel())
-            doScal_omp( size, x, alpha);
-        else
+        #pragma omp parallel
         {
-            #pragma omp parallel
-            {
-                doAxpby_omp(size, alpha, x_ptr, beta, y_ptr);
-            }
+            doAxpby_omp(size, alpha, x_ptr, beta, y_ptr);
         }
     }
     else
@@ -109,16 +109,16 @@ void doAxpbypgz_omp( unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, c
 template<class T>
 void doAxpbypgz_dispatch( OmpTag, unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, const T* RESTRICT y_ptr, T gamma, T* RESTRICT z_ptr)
 {
+    if(omp_in_parallel())
+    {
+        doAxpbypgz_omp( size, alpha, x_ptr, beta, y_ptr, gamma, z_ptr);
+        return;
+    }
     if(size>MIN_SIZE)
     {
-        if(omp_in_parallel())
-            doScal_omp( size, x, alpha);
-        else
+        #pragma omp parallel 
         {
-            #pragma omp parallel 
-            {
-                doAxpbypgz_omp( size, alpha, x_ptr, beta, y_ptr, gamma, z_ptr);
-            }
+            doAxpbypgz_omp( size, alpha, x_ptr, beta, y_ptr, gamma, z_ptr);
         }
     }
     else
@@ -144,16 +144,16 @@ inline void doPointwiseDot_dispatch( OmpTag, unsigned size,
               value_type gamma,
               value_type* z_ptr)
 {
+    if(omp_in_parallel())
+    {
+        doPointwiseDot_omp( size, alpha, x_ptr, y_ptr, gamma, z_ptr);
+        return;
+    }
     if(size>MIN_SIZE)
     {
-        if(omp_in_parallel())
-            doScal_omp( size, x, alpha);
-        else
+        #pragma omp parallel 
         {
-            #pragma omp parallel 
-            {
-                doPointwiseDot_omp( size, alpha, x_ptr, y_ptr, gamma, z_ptr);
-            }
+            doPointwiseDot_omp( size, alpha, x_ptr, y_ptr, gamma, z_ptr);
         }
     }
     else
@@ -179,16 +179,16 @@ inline void doPointwiseDivide_dispatch( OmpTag, unsigned size,
               value_type gamma,
               value_type* z_ptr)
 {
+    if(omp_in_parallel())
+    {
+        doPointwiseDivide_omp( size, alpha, x_ptr, y_ptr, gamma, z_ptr);
+        return;
+    }
     if(size>MIN_SIZE)
     {
-        if(omp_in_parallel())
-            doScal_omp( size, x, alpha);
-        else
+        #pragma omp parallel 
         {
-            #pragma omp parallel 
-            {
-                doPointwiseDivide_omp( size, alpha, x_ptr, y_ptr, gamma, z_ptr);
-            }
+            doPointwiseDivide_omp( size, alpha, x_ptr, y_ptr, gamma, z_ptr);
         }
     }
     else
@@ -223,16 +223,16 @@ inline void doPointwiseDot_dispatch( OmpTag, unsigned size,
               value_type gamma,
               value_type* z_ptr)
 {
+    if(omp_in_parallel())
+    {
+        doPointwiseDot_omp( size, alpha, x1_ptr, y1_ptr, beta, x2_ptr, y2_ptr, gamma, z_ptr);
+        return;
+    }
     if(size>MIN_SIZE)
     {
-        if(omp_in_parallel())
-            doScal_omp( size, x, alpha);
-        else
+        #pragma omp parallel 
         {
-            #pragma omp parallel 
-            {
-                doPointwiseDot_omp( size, alpha, x1_ptr, y1_ptr, beta, x2_ptr, y2_ptr, gamma, z_ptr);
-            }
+            doPointwiseDot_omp( size, alpha, x1_ptr, y1_ptr, beta, x2_ptr, y2_ptr, gamma, z_ptr);
         }
     }
     else
@@ -261,20 +261,20 @@ inline void doPointwiseDot_dispatch( OmpTag,unsigned size,
               value_type beta, 
               value_type* y_ptr)
 {
+    if(omp_in_parallel())
+    {
+        doPointwiseDot_omp( size, alpha, x1_ptr, x2_ptr, x3_ptr, beta, y_ptr);
+        return;
+    }
     if(size>MIN_SIZE)
     {
-        if(omp_in_parallel())
-            doScal_omp( size, x, alpha);
-        else
+        #pragma omp parallel 
         {
-            #pragma omp parallel 
-            {
-                doPointwiseDot_omp( size, alpha, x1_ptr, x2_ptr, x3_ptr, beta, y_ptr);
-            }
+            doPointwiseDot_omp( size, alpha, x1_ptr, x2_ptr, x3_ptr, beta, y_ptr);
         }
     }
     else
-        doPointwiseDot_dispatch( SerialTag(), alpha, x1_ptr, x2_ptr, x3_ptr, beta, y_ptr);
+        doPointwiseDot_dispatch( SerialTag(),size, alpha, x1_ptr, x2_ptr, x3_ptr, beta, y_ptr);
 }
 
 }//namespace detail

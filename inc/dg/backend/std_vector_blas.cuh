@@ -5,16 +5,11 @@
 #include <cassert>
 #endif //DG_DEBUG
 
-#include <thrust/inner_product.h>
-#include <thrust/host_vector.h>
-#include <thrust/device_vector.h>
 #include <vector>
-
+#include <array>
 #include "thrust_vector_blas.cuh"
 #include "vector_categories.h"
 #include "vector_traits.h"
-
-//assume that each element of a std::vector is a vector itself
 
 ///@cond
 namespace dg
@@ -292,7 +287,7 @@ inline void doPointwiseDivide( get_value_type<Vector> alpha,
     assert( x1.size() == x2.size() );
     assert( x1.size() == y.size() );
 #endif //DG_DEBUG
-    doPointwiseDivide( alpha, x1, x2, beta, y, VectorVectorTag(), get_exeuction_policy() );
+    doPointwiseDivide( alpha, x1, x2, beta, y, VectorVectorTag(), get_execution_policy<Vector>() );
 }
 template< class Vector>
 inline void doPointwiseDot( get_value_type<Vector> alpha, 
