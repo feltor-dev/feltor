@@ -84,7 +84,7 @@ private:
     Superaccumulator & superacc;
 
     // Most significant digits first!
-    T a[N] __attribute__((aligned(32)));
+    T a[N] __attribute__((aligned(64)));
     T victim;
 };
 
@@ -429,7 +429,7 @@ void FPExpansionVect<T,N,TRAITS>::Dump() const
 template<typename T, int N, typename TRAITS>
 void FPExpansionVect<T,N,TRAITS>::DumpVector(T x) const
 {
-    double v[8] __attribute__((aligned(32)));
+    double v[8] __attribute__((aligned(64)));
     x.store_a(v);
     _mm256_zeroupper();
     
