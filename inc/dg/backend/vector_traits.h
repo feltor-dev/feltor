@@ -25,6 +25,8 @@ using get_vector_category = typename VectorTraits<Vector>::vector_category;
 template<class Vector>
 using get_execution_policy = typename VectorTraits<Vector>::execution_policy;
 //using is the new typedef in C++11
+template<class Vector>
+using get_pointer_type = typename std::conditional< std::is_const<Vector>::value, const get_value_type<Vector>*, get_value_type<Vector>* >::type;
 
 template<class T>
 struct VectorTraits<std::vector<T>, 

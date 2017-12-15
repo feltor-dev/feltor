@@ -4,6 +4,7 @@
 #include "backend/thrust_vector_blas.cuh"
 #include "backend/blas1_array.h"
 #include "backend/cusp_vector_blas.h"
+#include "backend/vector_view.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
 #include "backend/mpi_vector_blas.h"
