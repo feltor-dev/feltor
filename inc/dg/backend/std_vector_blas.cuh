@@ -10,6 +10,9 @@
 #include "thrust_vector_blas.cuh"
 #include "vector_categories.h"
 #include "vector_traits.h"
+#ifdef _OPENMP
+#include <omp.h>
+#endif //_OPENMP
 
 ///@cond
 namespace dg
@@ -49,39 +52,147 @@ inline void doTransform( const Vector& x, Vector& y, UnaryOp op, VectorVectorTag
     for( unsigned i=0; i<x.size(); i++)
         doTransform( x[i], y[i], op, get_vector_category<typename Vector::value_type>());
 }
+#ifdef _OPENMP
+template< class Vector>
+inline void doScal( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, OmpTag)
+{
+    if( !omp_in_parallel())//to catch recursive calls
+    {
+        #pragma omp parallel
+        {
+            for( unsigned i=0; i<x.size(); i++)
+                doScal( x[i], alpha, get_vector_category<typename Vector::value_type>());
+        }
+    }
+    else
+        for( unsigned i=0; i<x.size(); i++)
+            doScal( x[i], alpha, get_vector_category<typename Vector::value_type>());
+}
+template< class Vector>
+inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, OmpTag)
+{
+    if( !omp_in_parallel())//to catch recursive calls
+    {
+        #pragma omp parallel
+        {
+            for( unsigned i=0; i<x.size(); i++)
+                doPlus( x[i], alpha, get_vector_category<typename Vector::value_type>());
+        }
+    }
+    else
+        for( unsigned i=0; i<x.size(); i++)
+            doPlus( x[i], alpha, get_vector_category<typename Vector::value_type>());
+}
+template< class Vector>
+inline void doAxpby( get_value_type<Vector> alpha, 
+              const Vector& x, 
+              get_value_type<Vector> beta, 
+              Vector& y, 
+              VectorVectorTag, OmpTag)
+{
+    if( !omp_in_parallel())//to catch recursive calls
+    {
+        #pragma omp parallel
+        {
+            for( unsigned i=0; i<x.size(); i++)
+                doAxpby( alpha, x[i], beta, y[i], get_vector_category<typename Vector::value_type>());
+        }
+    }
+    else
+        for( unsigned i=0; i<x.size(); i++)
+            doAxpby( alpha, x[i], beta, y[i], get_vector_category<typename Vector::value_type>());
+}
+template< class Vector>
+inline void doAxpbypgz( get_value_type<Vector> alpha, 
+              const Vector& x, 
+              get_value_type<Vector> beta, 
+              const Vector& y, 
+              get_value_type<Vector> gamma, 
+              Vector& z, 
+              VectorVectorTag, OmpTag)
+{
+    if( !omp_in_parallel())//to catch recursive calls
+    {
+        #pragma omp parallel
+        {
+            for( unsigned i=0; i<x.size(); i++)
+                doAxpbypgz( alpha, x[i], beta, y[i], gamma, z[i], get_vector_category<typename Vector::value_type>());
+        }
+    }
+    else
+        for( unsigned i=0; i<x.size(); i++)
+            doAxpbypgz( alpha, x[i], beta, y[i], gamma, z[i], get_vector_category<typename Vector::value_type>());
+}
+template< class Vector>
+inline void doPointwiseDivide( get_value_type<Vector> alpha, 
+    const Vector& x1, const Vector& x2, 
+    get_value_type<Vector> beta, 
+    Vector& y, VectorVectorTag, OmpTag)
+{
+    if( !omp_in_parallel())//to catch recursive calls
+    {
+        #pragma omp parallel
+        {
+            for( unsigned i=0; i<x1.size(); i++)
+                doPointwiseDivide( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
+        }
+    }
+    else
+        for( unsigned i=0; i<x1.size(); i++)
+            doPointwiseDivide( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
+}
+template< class Vector>
+inline void doPointwiseDot( get_value_type<Vector> alpha, 
+    const Vector& x1, const Vector& x2, const Vector& x3,
+    get_value_type<Vector> beta, 
+    Vector& y, VectorVectorTag, OmpTag)
+{
+    if( !omp_in_parallel())//to catch recursive calls
+    {
+        #pragma omp parallel
+        {
+            for( unsigned i=0; i<x1.size(); i++)
+                doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], get_vector_category<typename Vector::value_type>());
+        }
+    }
+    else
+        for( unsigned i=0; i<x1.size(); i++)
+            doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], get_vector_category<typename Vector::value_type>());
+
+}
+template< class Vector>
+inline void doPointwiseDot( get_value_type<Vector> alpha, 
+    const Vector& x1, const Vector& y1, 
+    get_value_type<Vector> beta, 
+    const Vector& x2, const Vector& y2, 
+    get_value_type<Vector> gamma, 
+    Vector& z, VectorVectorTag, OmpTag)
+{
+    if( !omp_in_parallel())//to catch recursive calls
+    {
+        #pragma omp parallel
+        {
+            for( unsigned i=0; i<x1.size(); i++)
+                doPointwiseDot( alpha, x1[i], y1[i], beta, x2[i], y2[i], gamma,z[i], get_vector_category<typename Vector::value_type>() );
+        }
+    }
+    else
+        for( unsigned i=0; i<x1.size(); i++)
+            doPointwiseDot( alpha, x1[i], y1[i], beta, x2[i], y2[i], gamma,z[i], get_vector_category<typename Vector::value_type>() );
+}
+#endif //_OPENMP
+
 template< class Vector>
 inline void doScal( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x.size(); i++)
         doScal( x[i], alpha, get_vector_category<typename Vector::value_type>());
-        
 }
-template< class Vector>
-inline void doScal( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, OmpTag)
-{
-    #pragma omp parallel
-    {
-        for( unsigned i=0; i<x.size(); i++)
-            doScal( x[i], alpha, get_vector_category<typename Vector::value_type>());
-    }
-}
-
 template< class Vector>
 inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x.size(); i++)
         doPlus( x[i], alpha, get_vector_category<typename Vector::value_type>());
-        
-}
-template< class Vector>
-inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, OmpTag)
-{
-    #pragma omp parallel
-    {
-        for( unsigned i=0; i<x.size(); i++)
-            doPlus( x[i], alpha, get_vector_category<typename Vector::value_type>());
-    }
-        
 }
 template< class Vector>
 inline void doAxpby( get_value_type<Vector> alpha, 
@@ -92,19 +203,6 @@ inline void doAxpby( get_value_type<Vector> alpha,
 {
     for( unsigned i=0; i<x.size(); i++)
         doAxpby( alpha, x[i], beta, y[i], get_vector_category<typename Vector::value_type>());
-}
-template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
-              VectorVectorTag, OmpTag)
-{
-    #pragma omp parallel
-    {
-        for( unsigned i=0; i<x.size(); i++)
-            doAxpby( alpha, x[i], beta, y[i], get_vector_category<typename Vector::value_type>());
-    }
 }
 
 template< class Vector>
@@ -118,21 +216,6 @@ inline void doAxpbypgz( get_value_type<Vector> alpha,
 {
     for( unsigned i=0; i<x.size(); i++)
         doAxpbypgz( alpha, x[i], beta, y[i], gamma, z[i], get_vector_category<typename Vector::value_type>());
-}
-template< class Vector>
-inline void doAxpbypgz( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              const Vector& y, 
-              get_value_type<Vector> gamma, 
-              Vector& z, 
-              VectorVectorTag, OmpTag)
-{
-    #pragma omp parallel
-    {
-        for( unsigned i=0; i<x.size(); i++)
-            doAxpbypgz( alpha, x[i], beta, y[i], gamma, z[i], get_vector_category<typename Vector::value_type>());
-    }
 }
 
 
@@ -149,18 +232,6 @@ template< class Vector>
 inline void doPointwiseDivide( get_value_type<Vector> alpha, 
     const Vector& x1, const Vector& x2, 
     get_value_type<Vector> beta, 
-    Vector& y, VectorVectorTag, OmpTag)
-{
-    #pragma omp parallel
-    {
-        for( unsigned i=0; i<x1.size(); i++)
-            doPointwiseDivide( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
-    }
-}
-template< class Vector>
-inline void doPointwiseDivide( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& x2, 
-    get_value_type<Vector> beta, 
     Vector& y, VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x1.size(); i++)
@@ -170,36 +241,10 @@ template< class Vector>
 inline void doPointwiseDot( get_value_type<Vector> alpha, 
     const Vector& x1, const Vector& x2, const Vector& x3,
     get_value_type<Vector> beta, 
-    Vector& y, VectorVectorTag, OmpTag)
-{
-    #pragma omp parallel
-    {
-        for( unsigned i=0; i<x1.size(); i++)
-            doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], get_vector_category<typename Vector::value_type>());
-    }
-}
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& x2, const Vector& x3,
-    get_value_type<Vector> beta, 
     Vector& y, VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x1.size(); i++)
         doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
-}
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& y1, 
-    get_value_type<Vector> beta, 
-    const Vector& x2, const Vector& y2, 
-    get_value_type<Vector> gamma, 
-    Vector& z, VectorVectorTag, OmpTag)
-{
-    #pragma omp parallel
-    {
-        for( unsigned i=0; i<x1.size(); i++)
-            doPointwiseDot( alpha, x1[i], y1[i], beta, x2[i], y2[i], gamma,z[i], get_vector_category<typename Vector::value_type>() );
-    }
 }
 template< class Vector>
 inline void doPointwiseDot( get_value_type<Vector> alpha, 
@@ -261,7 +306,6 @@ inline void doAxpbypgz( get_value_type<Vector> alpha,
     doAxpbypgz( alpha, x, beta, y, gamma, z, VectorVectorTag(), get_execution_policy<Vector>());
         
 }
-
 
 template< class Vector>
 inline void doPointwiseDot( get_value_type<Vector> alpha, 

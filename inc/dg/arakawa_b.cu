@@ -39,7 +39,7 @@ double jacobian( double x, double y)
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
-typedef dg::DVec Vector;
+using Vector = std::array<dg::DVec, 5>;
 typedef dg::DMatrix Matrix;
 
 int main()
@@ -50,12 +50,12 @@ int main()
     std::cout << "Type n, Nx and Ny! \n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    Vector w2d = dg::create::weights( grid);
+    dg::DVec w2d = dg::create::weights( grid);
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
-    Vector lhs = dg::evaluate ( left, grid), jac(lhs);
-    Vector rhs = dg::evaluate ( right,grid);
-    const Vector sol = dg::evaluate( jacobian, grid );
-    Vector eins = dg::evaluate( dg::one, grid );
+    Vector lhs = dg::transfer<Vector>(dg::evaluate ( left, grid)), jac(lhs);
+    Vector rhs = dg::transfer<Vector>(dg::evaluate ( right,grid));
+    const Vector sol = dg::transfer<Vector>(dg::evaluate( jacobian, grid ));
+    Vector eins = dg::transfer<Vector>(dg::evaluate( dg::one, grid ));
     //std::cout<< std::setprecision(2);
 
     dg::ArakawaX<dg::CartesianGrid2d, Matrix, Vector> arakawa( grid);

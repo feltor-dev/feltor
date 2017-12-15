@@ -42,7 +42,7 @@ namespace blas2{
 template<class Matrix, class AnotherMatrix>
 inline void transfer( const Matrix& x, AnotherMatrix& y)
 {
-    dg::blas2::detail::doTransfer( x,y, typename dg::MatrixTraits<Matrix>::matrix_category(), typename dg::MatrixTraits<AnotherMatrix>::matrix_category());
+    dg::blas2::detail::doTransfer( x,y, get_matrix_category<Matrix>(), get_matrix_category<AnotherMatrix>());
 }
 
 /*! @brief \f$ x^T M y\f$; Binary reproducible general dot product
@@ -71,8 +71,8 @@ template< class DiagonalMatrix, class container>
 inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const container& x, const DiagonalMatrix& m, const container& y)
 {
     return dg::blas2::detail::doDot( x, m, y, 
-                       typename dg::MatrixTraits<DiagonalMatrix>::matrix_category(), 
-                       typename dg::VectorTraits<container>::vector_category() );
+                       get_matrix_category<DiagonalMatrix>(), 
+                       get_vector_category<container>() );
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
@@ -93,8 +93,8 @@ template< class DiagonalMatrix, class container>
 inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const DiagonalMatrix& m, const container& x)
 {
     return dg::blas2::detail::doDot( m, x, 
-                       typename dg::MatrixTraits<DiagonalMatrix>::matrix_category(), 
-                       typename dg::VectorTraits<container>::vector_category() );
+                       get_matrix_category<DiagonalMatrix>(), 
+                       get_vector_category<container>() );
 }
 
 /*! @brief \f$ y = \alpha M x + \beta y\f$ 
@@ -112,19 +112,19 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const DiagonalMatr
  * @copydoc hide_code_blas2_symv
  */
 template< class Matrix, class container>
-inline void symv( typename MatrixTraits<Matrix>::value_type alpha, 
+inline void symv( get_value_type<container> alpha, 
                   const Matrix& M, 
                   const container& x, 
-                  typename MatrixTraits<Matrix>::value_type beta, 
+                  get_value_type<container> beta, 
                   container& y)
 {
-    if(alpha == (typename MatrixTraits<Matrix>::value_type)0) {
+    if(alpha == (get_value_type<container>)0) {
         dg::blas1::scal( y, alpha);
         return;
     }
     dg::blas2::detail::doSymv( alpha, M, x, beta, y, 
-                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<container>::vector_category() );
+                       get_matrix_category<Matrix>(), 
+                       get_vector_category<container>() );
     return;
 }
 
@@ -148,8 +148,8 @@ inline void symv( Matrix& M,
                   same_or_another_container& y)
 {
     dg::blas2::detail::doSymv( M, x, y, 
-                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<container>::vector_category(),
+                       get_matrix_category<Matrix>(), 
+                       get_vector_category<container>(),
                        typename dg::VectorTraits<same_or_another_container>::vector_category() );
     return;
 }
@@ -172,8 +172,8 @@ inline void gemv( Matrix& M,
                   same_or_another_container& y)
 {
     dg::blas2::detail::doGemv( M, x, y, 
-                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<container>::vector_category(),
+                       get_matrix_category<Matrix>(), 
+                       get_vector_category<container>(),
                        typename dg::VectorTraits<same_or_another_container>::vector_category() );
     return;
 }
@@ -191,19 +191,19 @@ inline void gemv( Matrix& M,
  * @attention y may never alias \p x
  */
 template< class Matrix, class container>
-inline void gemv( typename MatrixTraits<Matrix>::value_type alpha, 
+inline void gemv( get_value_type<container> alpha, 
                   const Matrix& M, 
                   const container& x, 
-                  typename MatrixTraits<Matrix>::value_type beta, 
+                  get_value_type<container> beta, 
                   container& y)
 {
-    if(alpha == (typename MatrixTraits<Matrix>::value_type)0) {
+    if(alpha == (get_value_type<container>)0) {
         dg::blas1::scal( y, alpha);
         return;
     }
     dg::blas2::detail::doGemv( alpha, M, x, beta, y, 
-                       typename dg::MatrixTraits<Matrix>::matrix_category(), 
-                       typename dg::VectorTraits<container>::vector_category() );
+                       get_matrix_category<Matrix>(), 
+                       get_vector_category<container>() );
     return;
 }
 ///@}

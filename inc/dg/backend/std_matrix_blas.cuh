@@ -14,8 +14,8 @@ namespace detail
 template< class Matrix, class Vector>
 inline void doSymv( 
               Matrix& m,
-              const std::vector<Vector>& x, 
-              std::vector<Vector>& y, 
+              const Vector& x, 
+              Vector& y, 
               AnyMatrixTag,
               VectorVectorTag,
               VectorVectorTag)
@@ -26,19 +26,19 @@ inline void doSymv(
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doSymv( m, x[i], y[i], 
-                       typename dg::MatrixTraits<Matrix>::matrix_category(),
-                       typename dg::VectorTraits<Vector>::vector_category(),
-                       typename dg::VectorTraits<Vector>::vector_category() );
+                       get_matrix_category<Matrix>(),
+                       get_vector_category<typename Vector::value_type>(),
+                       get_vector_category<typename Vector::value_type>() );
         
 }
 
 template< class Precon, class Vector>
 inline void doSymv( 
-              typename MatrixTraits<Precon>::value_type alpha,
+              get_value_type<Vector> alpha,
               const Precon& m,
-              const std::vector<Vector>& x, 
-              typename MatrixTraits<Precon>::value_type beta,
-              std::vector<Vector>& y, 
+              const Vector& x, 
+              get_value_type<Vector> beta,
+              Vector& y, 
               AnyMatrixTag,
               VectorVectorTag)
 {
@@ -48,15 +48,15 @@ inline void doSymv(
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doSymv( alpha, m, x[i], beta, y[i],
-                       typename dg::MatrixTraits<Precon>::matrix_category(),
-                       typename dg::VectorTraits<Vector>::vector_category() );
+                       get_matrix_category<Precon>(),
+                       get_vector_category<typename Vector::value_type >() );
 }
 
 template< class Matrix, class Vector>
-inline typename MatrixTraits<Matrix>::value_type  doDot( 
-              const std::vector<Vector>& x, 
+inline get_value_type<Vector> doDot( 
+              const Vector& x, 
               const Matrix& m,
-              const std::vector<Vector>& y, 
+              const Vector& y, 
               AnyMatrixTag,
               VectorVectorTag)
 {
@@ -65,9 +65,9 @@ inline typename MatrixTraits<Matrix>::value_type  doDot(
 #endif //DG_DEBUG
     std::vector<exblas::Superaccumulator> acc( x.size());
     for( unsigned i=0; i<x.size(); i++)
-        acc[i] = doDot_dispatch( x[i], m, y[i],
-                       typename dg::MatrixTraits<Matrix>::matrix_category(),
-                       typename dg::VectorTraits<Vector>::vector_category() );
+        acc[i] = doDot_superacc( x[i], m, y[i],
+                       get_matrix_category<Matrix>(),
+                       get_vector_category<typename Vector::value_type>() );
     for( unsigned i=1; i<x.size(); i++)
         acc[0].Accumulate( acc[i]);
     return acc[0].Round();
@@ -75,7 +75,7 @@ inline typename MatrixTraits<Matrix>::value_type  doDot(
 template< class Matrix, class Vector>
 inline typename VectorTraits<Vector>::value_type  doDot( 
               const Matrix& m,
-              const std::vector<Vector>& y, 
+              const Vector& y, 
               AnyMatrixTag,
               VectorVectorTag)
 {

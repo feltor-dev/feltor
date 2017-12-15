@@ -16,6 +16,8 @@ struct MatrixTraits {
     using matrix_category   = CuspMatrixTag; //!< default is a CuspMatrix
 };
 
+template<class Matrix>
+using get_matrix_category = typename MatrixTraits<Matrix>::matrix_category;
 
 }//namespace dg
 

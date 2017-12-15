@@ -231,8 +231,7 @@ template<class value_type>
 }
 
 template<class value_type>
-template<class DeviceContainer>
-void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel(value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
+void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
 {
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
@@ -242,8 +241,6 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel(value_type alph
     const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
-    const value_type* x_ptr = thrust::raw_pointer_cast( &x[0]);
-    value_type* y_ptr = thrust::raw_pointer_cast( &y[0]);
     const int* right_range_ptr = thrust::raw_pointer_cast( &right_range[0]);
     if( n == 3)
     {
@@ -271,20 +268,17 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel(value_type alph
 }
 
 template<class value_type>
-template<class DeviceContainer>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
 {
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
     const size_t size = left_size*right_size*n;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
 
-    const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
-    const int* rows_ptr = thrust::raw_pointer_cast( &rows_idx[0]);
-    const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
-    const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
-    const value_type* x_ptr = thrust::raw_pointer_cast( &x[0]);
-    value_type* y_ptr = thrust::raw_pointer_cast( &y[0]);
+    const value_type* data_ptr = thrust::raw_pointer_cast( data.data());
+    const int* rows_ptr = thrust::raw_pointer_cast( rows_idx.data());
+    const int* cols_ptr = thrust::raw_pointer_cast( cols_idx.data());
+    const int* block_ptr = thrust::raw_pointer_cast( data_idx.data());
     for( int i=0; i<num_entries; i++)
     {
         coo_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 

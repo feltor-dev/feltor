@@ -13,7 +13,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT x, value_type * RESTRICT y
          )
 {
-#pragma omp parallel for collapse(2)
+#pragma omp for collapse(2)
     for( int s=0; s<left_size; s++)
     for( int i=0; i<num_rows; i++)
     {
@@ -52,7 +52,7 @@ void ell_multiply_kernel3( value_type alpha, value_type beta,
     {
         if( right_size==1)
         {
-            #pragma omp parallel for 
+            #pragma omp for 
             for( int s=0; s<left_size; s++)
             for( int i=0; i<num_rows; i++)
             {
@@ -71,7 +71,7 @@ void ell_multiply_kernel3( value_type alpha, value_type beta,
         }
         else
         {
-            #pragma omp parallel for collapse(2)
+            #pragma omp for collapse(2)
             for( int s=0; s<left_size; s++)
             for( int i=0; i<num_rows; i++)
             for( int k=0; k<3; k++)
@@ -92,7 +92,7 @@ void ell_multiply_kernel3( value_type alpha, value_type beta,
     }
     else
     {
-#pragma omp parallel for collapse(2)
+        #pragma omp for collapse(2)
         for( int s=0; s<left_size; s++)
         for( int i=0; i<num_rows; i++)
         for( int k=0; k<3; k++)
@@ -138,7 +138,7 @@ void ell_multiply_kernel33( value_type alpha, value_type beta,
         }
     if( trivial)
     {
-	#pragma omp parallel for collapse(2)
+	#pragma omp for collapse(2)
 	for( int s=0; s<left_size; s++)
 	{
 		for( int i=0; i<num_rows; i++)
@@ -204,7 +204,7 @@ void ell_multiply_kernel32( value_type alpha, value_type beta,
     //if(forward ) diff = 0;
     if( forward || backward )
     {
-#pragma omp parallel for 
+#pragma omp for 
     for( int s=0; s<left_size; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<3; k++)
@@ -224,7 +224,7 @@ void ell_multiply_kernel32( value_type alpha, value_type beta,
         int I = ((s*num_rows + i)*3+k)*right_size+j;
         y[I]=alpha*temp+beta*y[I];
     }
-#pragma omp parallel for collapse(2)
+#pragma omp for collapse(2)
     for( int s=0; s<left_size; s++)
     for( int i=1; i<num_rows-1; i++)
     for( int k=0; k<3; k++)
@@ -248,7 +248,7 @@ void ell_multiply_kernel32( value_type alpha, value_type beta,
             y[I]=alpha*temp+beta*y[I];
         }
     }
-#pragma omp parallel for 
+#pragma omp for 
     for( int s=0; s<left_size; s++)
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<3; k++)
@@ -296,7 +296,7 @@ void ell_multiply_kernel33x( value_type alpha, value_type beta,
         for( int i=0; i<3; i++)
         for( int j=0; j<3; j++)
             data_[(i*3+k)*3+j] = data[(k*3+i)*3+j];
-#pragma omp parallel for
+#pragma omp for
     for( int s=0; s<left_size; s++)
     {
     for( int i=0; i<1; i++)
@@ -405,7 +405,7 @@ void ell_multiply_kernel32x( value_type alpha, value_type beta,
         for( int i=0; i<3; i++)
         for( int j=0; j<3; j++)
             data_[(i*2+k)*3+j] = data[(k*3+i)*3+j];
-#pragma omp parallel for
+#pragma omp for
     for( int s=0; s<left_size; s++)
     for( int i=0; i<1; i++)
     for( int k=0; k<3; k++)
@@ -424,7 +424,7 @@ void ell_multiply_kernel32x( value_type alpha, value_type beta,
         int I = ((s*num_rows + i)*3+k);
         y[I]=alpha*temp+beta*y[I];
     }
-#pragma omp parallel for
+#pragma omp for
     for( int s=0; s<left_size; s++)
     for( int i=1; i<num_rows-1; i++)
     {
@@ -445,7 +445,7 @@ void ell_multiply_kernel32x( value_type alpha, value_type beta,
             y[I]=alpha*temp+beta*y[I];
         }
     }
-#pragma omp parallel for
+#pragma omp for
     for( int s=0; s<left_size; s++)
     for( int i=num_rows-1; i<num_rows; i++)
     for( int k=0; k<3; k++)
@@ -475,14 +475,11 @@ void ell_multiply_kernel32x( value_type alpha, value_type beta,
 }
 
 template<class value_type>
-template<class DeviceContainer>
-void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
+void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x_ptr, value_type beta, value_type* y_ptr) const
 {
     const value_type* data_ptr = thrust::raw_pointer_cast( &data[0]);
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
-    const value_type* x_ptr = thrust::raw_pointer_cast( &x[0]);
-    value_type* y_ptr = thrust::raw_pointer_cast( &y[0]);
     const int* right_range_ptr = thrust::raw_pointer_cast( &right_range[0]);
     if( n == 3)
     {
@@ -510,8 +507,7 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
 }
 
 template<class value_type>
-template<class DeviceContainer>
-void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
+void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x, value_type beta, value_type* y) const
 {
     for( int i=0; i<num_entries; i++)
 #pragma omp parallel for collapse(3)

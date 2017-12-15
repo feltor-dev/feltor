@@ -2,6 +2,7 @@
 
 #include <thrust/host_vector.h>
 #include "exceptions.h"
+#include "vector_traits.h"
 #include "matrix_traits.h"
 
 namespace dg
@@ -59,7 +60,15 @@ struct EllSparseBlockMat
         right_range = src.right_range;
     }
     
-    typedef thrust::host_vector<int> IVec;//!< typedef for easy programming
+    using IVec = thrust::host_vector<int>;//!< typedef for easy programming
+    /**
+    * @brief Apply the matrix to a vector
+    *
+    * @param x input
+    * @param y output may not alias input
+    */
+    template<class Vector>
+    void symv(const Vector& x, Vector& y) const {symv( 1., x, 0., y);}
     /**
     * @brief Apply the matrix to a vector
     *
@@ -69,14 +78,21 @@ struct EllSparseBlockMat
     * @param beta premultiplies output
     * @param y output may not alias input
     */
-    void symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const;
-    /**
-    * @brief Apply the matrix to a vector
-    *
-    * @param x input
-    * @param y output may not alias input
-    */
-    void symv(const thrust::host_vector<value_type>& x, thrust::host_vector<value_type>& y) const {symv( 1., x, 0., y);}
+    template<class Vector>
+    void symv(value_type alpha, const Vector& x, value_type beta, Vector& y) const
+    {
+        symv( get_vector_category<Vector>(), alpha, x,beta,y);
+    }
+    private:
+    template<class Vector>
+    void symv(VectorVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
+    {
+        for(unsigned i=0; i<x.size(); i++)
+            symv( get_vector_category<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
+    }
+    template<class Vector>
+    void symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;
+    public:
 
     /**
      * @brief Sets ranges from 0 to left_size and 0 to right_size
@@ -172,7 +188,21 @@ struct CooSparseBlockMat
     * @param beta premultiplies output
     * @param y output may not alias input
     */
-    void symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const;
+    template<class Vector>
+    void symv(value_type alpha, const Vector& x, value_type beta, Vector& y) const
+    {
+        symv( get_vector_category<Vector>(), alpha, x,beta,y);
+    }
+    private:
+    template<class Vector>
+    void symv(VectorVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
+    {
+        for(unsigned i=0; i<x.size(); i++)
+            symv( get_vector_category<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
+    }
+    template<class Vector>
+    void symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;
+    public:
     /**
     * @brief Display internal data to a stream
     *
@@ -194,8 +224,10 @@ struct CooSparseBlockMat
 ///@cond
 
 template<class value_type>
-void EllSparseBlockMat<value_type>::symv(value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const
+template<class Vector>
+void EllSparseBlockMat<value_type>::symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
 {
+    static_assert( std::is_same<get_execution_policy<Vector>, SerialTag>::value, "SerialTag required");
     if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
         throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
     }
@@ -216,6 +248,32 @@ void EllSparseBlockMat<value_type>::symv(value_type alpha, const thrust::host_ve
         for( int q=0; q<n; q++) //multiplication-loop
             y[I] += alpha*data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j];
+    }
+}
+
+template<class value_type>
+template<class Vector>
+void CooSparseBlockMat<value_type>::symv( SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
+{
+    static_assert( std::is_same<get_execution_policy<Vector>, SerialTag>::value, "SerialTag required!");
+    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    }
+    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
+    }
+
+    //simplest implementation
+    for( int s=0; s<left_size; s++)
+    for( int i=0; i<num_entries; i++)
+    for( int k=0; k<n; k++)
+    for( int j=0; j<right_size; j++)
+    {
+        int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
+        y[I] *= beta;
+        for( int q=0; q<n; q++) //multiplication-loop
+            y[I] += alpha*data[ (data_idx[i]*n + k)*n+q]*
+                x[((s*num_cols + cols_idx[i])*n+q)*right_size+j];
     }
 }
 
@@ -271,53 +329,30 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os) const
     os << std::endl;
     
 }
-template<class value_type>
-void CooSparseBlockMat<value_type>::symv( value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const
-{
-    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
-    }
-    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
-    }
-
-    //simplest implementation
-    for( int s=0; s<left_size; s++)
-    for( int i=0; i<num_entries; i++)
-    for( int k=0; k<n; k++)
-    for( int j=0; j<right_size; j++)
-    {
-        int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
-        y[I] *= beta;
-        for( int q=0; q<n; q++) //multiplication-loop
-            y[I] += alpha*data[ (data_idx[i]*n + k)*n+q]*
-                x[((s*num_cols + cols_idx[i])*n+q)*right_size+j];
-    }
-}
 
 template <class T>
 struct MatrixTraits<EllSparseBlockMat<T> >
 {
-    typedef T value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type        = T;
+    using matrix_category   = SelfMadeMatrixTag;
 };
 template <class T>
 struct MatrixTraits<const EllSparseBlockMat<T> >
 {
-    typedef T value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type        = T;
+    using matrix_category   = SelfMadeMatrixTag;
 };
 template <class T>
 struct MatrixTraits<CooSparseBlockMat<T> >
 {
-    typedef T value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type        = T;
+    using matrix_category   = SelfMadeMatrixTag;
 };
 template <class T>
 struct MatrixTraits<const CooSparseBlockMat<T> >
 {
-    typedef T value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type        = T;
+    using matrix_category   = SelfMadeMatrixTag;
 };
 ///@endcond
 

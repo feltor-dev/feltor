@@ -31,8 +31,8 @@ exblas::Superaccumulator doDot_dispatch( SerialTag, unsigned size, const double*
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 exblas::Superaccumulator doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr, const double * z_ptr) {
     thrust::device_vector<long long int> d_superacc = exblas::exdot_gpu( size, x_ptr,y_ptr,z_ptr);
-    std::vector<int64_t> h_superacc(BIN_COUNT);
-    cudaMemcpy( &h_superacc[0], &d_superacc[0], BIN_COUNT*sizeof(long long int), cudaMemcpyDeviceToHost);
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    cudaMemcpy( &h_superacc[0], thrust::raw_pointer_cast(d_superacc.data()), exblas::BIN_COUNT*sizeof(long long int), cudaMemcpyDeviceToHost);
     return exblas::Superaccumulator(h_superacc);
 }
 #else
@@ -68,10 +68,10 @@ inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, dg::Thrus
 
 template< class Matrix, class Vector>
 inline void doSymv(  
-              typename MatrixTraits<Matrix>::value_type alpha, 
+              get_value_type<Vector> alpha, 
               const Matrix& m,
               const Vector& x, 
-              typename MatrixTraits<Matrix>::value_type beta, 
+              get_value_type<Vector> beta, 
               Vector& y, 
               ThrustMatrixTag,
               ThrustVectorTag)

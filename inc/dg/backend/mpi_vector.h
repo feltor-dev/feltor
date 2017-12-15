@@ -111,13 +111,13 @@ struct MPI_Vector
 
 template<class container> 
 struct VectorTraits<MPI_Vector<container> > {
-    typedef typename container::value_type value_type;
-    typedef MPIVectorTag vector_category;
+    using value_type = typename container::value_type;
+    using vector_category = MPIVectorTag;
 };
 template<class container> 
 struct VectorTraits<const MPI_Vector<container> > {
-    typedef typename container::value_type value_type;
-    typedef MPIVectorTag vector_category;
+    using value_type = typename container::value_type;
+    using vector_category = MPIVectorTag;
 };
 
 ///@endcond
@@ -339,15 +339,15 @@ void NearestNeighborComm<I,V>::sendrecv( V& sb1, V& sb2 , V& rb1, V& rb2) const
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data
 #endif //THRUST_DEVICE_SYSTEM
-    MPI_Sendrecv(   thrust::raw_pointer_cast(sb1.data()), buffer_size(), getMPIDataType<typename VectorTraits<V>::value_type>(),  //sender
+    MPI_Sendrecv(   thrust::raw_pointer_cast(sb1.data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
                     dest, 3,  //destination
-                    thrust::raw_pointer_cast(rb2.data()), buffer_size(), getMPIDataType<typename VectorTraits<V>::value_type>(), //receiver
+                    thrust::raw_pointer_cast(rb2.data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
                     source, 3, //source
                     comm_, &status);
     MPI_Cart_shift( comm_, direction_, +1, &source, &dest);
-    MPI_Sendrecv(   thrust::raw_pointer_cast(sb2.data()), buffer_size(), getMPIDataType<typename VectorTraits<V>::value_type>(),  //sender
+    MPI_Sendrecv(   thrust::raw_pointer_cast(sb2.data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
                     dest, 9,  //destination
-                    thrust::raw_pointer_cast(rb1.data()), buffer_size(), getMPIDataType<typename VectorTraits<V>::value_type>(), //receiver
+                    thrust::raw_pointer_cast(rb1.data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
                     source, 9, //source
                     comm_, &status);
 }

@@ -3,6 +3,7 @@
 #include <cmath>
 #include "../enums.h"
 #include "grid.h"
+#include "mpi_vector.h"
 
 /*! @file 
   @brief MPI Grid objects
