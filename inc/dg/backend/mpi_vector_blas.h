@@ -36,7 +36,7 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
     //local compuation
-    exblas::Superaccumulator acc_fine = doDot_dispatch( x.data(), y.data(),typename VectorTraits<container>::vector_category()), acc_reduce;  
+    exblas::Superaccumulator acc_fine = doDot_superacc( x.data(), y.data(),typename VectorTraits<container>::vector_category()), acc_reduce;  
     acc_fine.Normalize();
     //communication (we cannot sum more than 128 accumulators at once, so we need to split)
     std::vector<int64_t> receive(39,0);
@@ -101,19 +101,7 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
 }
 
 template< class Vector>
-inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
-              const Vector& x, 
-              typename VectorTraits<Vector>::value_type beta, 
-              const Vector& y, 
-              Vector& z, 
-              MPIVectorTag)
-{
-    typedef typename Vector::container_type container;
-    doAxpby( alpha,x.data(),beta, y.data(), z.data(), typename VectorTraits<container>::vector_category());
-}
-
-template< class Vector>
-inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
+inline void doAxpbypgz( typename VectorTraits<Vector>::value_type alpha, 
               const Vector& x, 
               typename VectorTraits<Vector>::value_type beta, 
               const Vector& y, 
@@ -122,16 +110,9 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
               MPIVectorTag)
 {
     typedef typename Vector::container_type container;
-    doAxpby( alpha,x.data(),beta, y.data(), gamma, z.data(), typename VectorTraits<container>::vector_category());
+    doAxpbypgz( alpha,x.data(),beta, y.data(), gamma, z.data(), typename VectorTraits<container>::vector_category());
 }
 
-template< class Vector>
-inline void doPointwiseDot( const Vector& x1, const Vector& x2, Vector& y, MPIVectorTag)
-{
-    typedef typename Vector::container_type container;
-    doPointwiseDot( x1.data(), x2.data(), y.data(), typename VectorTraits<container>::vector_category());
-
-}
 template< class Vector>
 inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
         const Vector& x1, const Vector& x2, 
@@ -152,13 +133,6 @@ inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
 {
     typedef typename Vector::container_type container;
     doPointwiseDot( alpha, x1.data(), x2.data(), x3.data(), beta, y.data(), typename VectorTraits<container>::vector_category());
-}
-
-template< class Vector>
-inline void doPointwiseDivide( const Vector& x1, const Vector& x2, Vector& y, MPIVectorTag)
-{
-    typedef typename Vector::container_type container;
-    doPointwiseDivide( x1.data(), x2.data(), y.data(), typename VectorTraits<container>::vector_category());
 }
 
 template< class Vector>

@@ -40,7 +40,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     }
 }
 //specialized multiply kernel, as fast as it will ever be :) 
-template<class value_type, size_t n, size_t blocks_per_line>
+template<class value_type, int n, int blocks_per_line>
 void ell_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT data, const int * RESTRICT cols_idx, const int * RESTRICT data_idx, 
          const int num_rows, const int num_cols,
@@ -198,7 +198,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     }
 }
 
-template<class value_type, size_t n>
+template<class value_type, int n>
 void call_ell_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT data_ptr, const int * RESTRICT cols_ptr, const int * RESTRICT block_ptr, 
          const int num_rows, const int num_cols, const int blocks_per_line,
