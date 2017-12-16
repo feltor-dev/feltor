@@ -149,7 +149,7 @@ int main()
         norm += dg::blas2::dot( x, w2d, y);
     }
     t.toc();
-    std::cout<<"DOT(x,w,y) took                  " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"DOT(x,w,y) took                  " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them 
     std::cout<<norm<<std::endl;
 
     return 0;
