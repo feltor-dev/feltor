@@ -51,7 +51,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
 {
     if(right_size==1)
     {
-    //trivial means that the data blocks do not change 
+    //trivial means that the data blocks do not change among rows
     bool trivial = true; 
     for( int i=1; i<num_rows-1; i++)
         for( int d=0; d<blocks_per_line; d++)
@@ -70,12 +70,11 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
         int B = data_idx[blocks_per_line+d];
         dprivate[(k*blocks_per_line+d)*n+q] = data[(B*n+k)*n+q];
     }
-#pragma omp for nowait
+    #pragma omp for nowait
     for( int s=0; s<left_size; s++)
     {
         for( int i=0; i<1; i++)
         {
-            //test if data blocks are still the same as in the last row
             for( int d=0; d<blocks_per_line; d++)
             {
                 int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
@@ -95,9 +94,9 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 y[I] = alpha*temp + beta*y[I];
             }
         }
+        #pragma omp SIMD //very important for KNL
         for( int i=1; i<num_rows-1; i++)
         {
-            //test if data blocks are still the same as in the last row
             for( int d=0; d<blocks_per_line; d++)
             {
                 int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
@@ -108,16 +107,14 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
             {
                 value_type temp = 0;
                 int B = n*blocks_per_line*k;
-                for( int d=0; d<blocks_per_line; d++)
-                    for( int q=0; q<n; q++) //multiplication-loop
-                        temp += dprivate[B+d*n+q]*xprivate[d*n+q];
+                for( int d=0; d<blocks_per_line*n; d++)
+                    temp += dprivate[B+d]*xprivate[d];
                 int I = ((s*num_rows + i)*n+k);
                 y[I] = alpha*temp + beta*y[I];
             }
         }
         for( int i=num_rows-1; i<num_rows; i++)
         {
-            //test if data blocks are still the same as in the last row
             for( int d=0; d<blocks_per_line; d++)
             {
                 int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
@@ -142,11 +139,10 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
     else 
     {
     value_type xprivate[blocks_per_line*n];
-#pragma omp for nowait
+    #pragma omp for nowait
     for( int s=0; s<left_size; s++)
     for( int i=0; i<num_rows; i++)
     {
-        //test if data blocks are still the same as in the last row
         for( int d=0; d<blocks_per_line; d++)
         {
             int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
@@ -186,6 +182,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 for(int q=0; q<n; q++)
                     dprivate[d*n+q] = data[B+q];
             }
+#pragma omp SIMD //very important for KNL
             for( int j=right_range[0]; j<right_range[1]; j++)
             {
                 value_type temp = 0;

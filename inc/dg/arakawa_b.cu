@@ -39,8 +39,8 @@ double jacobian( double x, double y)
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
-using Vector = std::array<dg::DVec, 10>;
-//using Vector = dg::DVec;
+//using Vector = std::array<dg::DVec, 10>;
+using Vector = dg::DVec;
 using Matrix = dg::DMatrix;
 
 int main()
@@ -65,7 +65,7 @@ int main()
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    std::cout << "Arakawa took "<<t.diff()*1000/(double)(multi*lhs.size())<<"ms\n";
+    std::cout << "Arakawa took "<<t.diff()*1000/(double)(multi)<<"ms\n";
 
     std::cout << std::scientific;
     std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
