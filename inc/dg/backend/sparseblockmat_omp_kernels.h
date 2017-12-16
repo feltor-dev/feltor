@@ -28,7 +28,46 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
             for( int j=right_range[0]; j<right_range[1]; j++)
             {
                 value_type temp = 0;
+#pragma unroll
                 for( int d=0; d<blocks_per_line; d++)
+#pragma unroll
+                    for( int q=0; q<n; q++) //multiplication-loop
+                        temp += data[ B[d]+q]*
+                            x[(J[d]+q)*right_size+j];
+                int I = ((s*num_rows + i)*n+k)*right_size+j;
+                y[I] = alpha*temp + beta*y[I];
+            }
+        }
+    }
+}
+template<class value_type, size_t n>
+void ell_multiply_kernel( value_type alpha, value_type beta,
+         const value_type * RESTRICT data, const int * RESTRICT cols_idx, const int * RESTRICT data_idx, 
+         const int num_rows, const int num_cols, const int blocks_per_line,
+         const int left_size, const int right_size, 
+         const int * RESTRICT right_range,
+         const value_type * RESTRICT x, value_type * RESTRICT y
+         )
+{
+    std::cout << "Hello!\n";
+#pragma omp for collapse(2) nowait
+    for( int s=0; s<left_size; s++)
+    for( int i=0; i<num_rows; i++)
+    {
+        int J[blocks_per_line];
+        for( int d=0; d<blocks_per_line; d++)
+            J[d] = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+        for( int k=0; k<n; k++)
+        {
+            int B[blocks_per_line];
+            for( int d=0; d<blocks_per_line; d++)
+                B[d] = (data_idx[i*blocks_per_line+d]*n+k)*n;
+            for( int j=right_range[0]; j<right_range[1]; j++)
+            {
+                value_type temp = 0;
+#pragma unroll
+                for( int d=0; d<blocks_per_line; d++)
+#pragma unroll
                     for( int q=0; q<n; q++) //multiplication-loop
                         temp += data[ B[d]+q]*
                             x[(J[d]+q)*right_size+j];
@@ -481,6 +520,9 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
     const int* cols_ptr = thrust::raw_pointer_cast( &cols_idx[0]);
     const int* block_ptr = thrust::raw_pointer_cast( &data_idx[0]);
     const int* right_range_ptr = thrust::raw_pointer_cast( &right_range[0]);
+    int tid = omp_get_num_thread();
+    if(tid==0)std::cout << n<<std::endl;
+
     if( n == 3)
     {
         if( blocks_per_line == 3)
@@ -501,7 +543,10 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
             ell_multiply_kernel3<value_type>(alpha, beta,  
                 data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
     }
-    else
+    else if( n== 4)
+        ell_multiply_kernel<value_type, 4>  (alpha, beta,  
+            data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
+    else 
         ell_multiply_kernel<value_type>  (alpha, beta,  
             data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
 }
