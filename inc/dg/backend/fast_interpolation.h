@@ -59,15 +59,6 @@ struct MultiMatrix
     void symv( const container& x, container& y) const{ symv( 1., x,0,y);}
     void symv(double alpha, const container& x, double beta, container& y) const
     {
-        symv( get_vector_category<container>(), alpha, x, beta, y);
-    }
-    void symv( VectorVectorTag, double alpha, const container& x, double beta, container& y)const
-    {
-        for(unsigned i=0; i<x.size(); i++)
-            symv( get_vector_category<typename container::value_type>(), alpha, x, beta, y);
-    }
-    void symv(SharedVectorTag, double alpha, const container& x, double beta, container& y) const
-    {
         int dims = inter_.size();
         if( dims == 1) 
         {
