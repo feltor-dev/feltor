@@ -34,8 +34,6 @@ struct EllSparseBlockMatDevice
         num_rows = src.num_rows, num_cols = src.num_cols, blocks_per_line = src.blocks_per_line;
         n = src.n, left_size = src.left_size, right_size = src.right_size;
         right_range = src.right_range;
-        m_trivial = is_trivial();
-        m_directional = is_directional();
     }
     /**
     * @brief Display internal data to a stream
@@ -96,8 +94,6 @@ struct EllSparseBlockMatDevice
     template<class Vector>
     void symv(SharedVectorTag, OmpTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;
 #endif //_OPENMP
-    bool is_trivial() const;
-    bool is_directional() const;
     using IVec = thrust::device_vector<int>;
     void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
     
@@ -107,7 +103,6 @@ struct EllSparseBlockMatDevice
     int n;
     int left_size, right_size;
     IVec right_range;
-    bool m_trivial, m_directional;
 };
 
 
@@ -217,38 +212,6 @@ inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, v
     launch_multiply_kernel(alpha, x_ptr, beta, y_ptr);
 }
 #endif //_OPENMP
-template<class value_type>
-bool EllSparseBlockMatDevice<value_type>::is_trivial() const{
-    bool trivial = true;
-    for( int i=1; i<num_rows-1; i++)
-        for( int d=0; d<3; d++)
-        {
-            if( data_idx[i*3+d] != d) trivial = false;
-            //if( cols_idx[i*3+d] != i+d-1) trivial = false;
-        }
-    return trivial;
-}
-template<class value_type>
-bool EllSparseBlockMatDevice<value_type>::is_directional() const{
-    bool forward = true, backward = true;
-    for( int i=1; i<num_rows-1; i++)
-        for( int d=0; d<2; d++)
-        {
-            if( data_idx[i*2+d] != d) forward = backward = false;
-            //if( cols_idx[i*2+d] != i+d-1) backward = false;
-            //if( cols_idx[i*2+d] != i+d) forward = false;
-        }
-    return forward  || backward;
-
-    //bool forward = true, backward = true;
-    //for( int i=1; i<num_rows-1; i++)
-    //    for( int d=0; d<2; d++)
-    //    {
-    //        if( data_idx[i*2+d] != d) forward = backward = false;
-    //        //if( cols_idx[i*2+d] != i+d-1) backward = false;
-    //        if( cols_idx[i*2+d] != cols_idx[i*2]+d) forward = backward = false;
-    //    }
-}
 
 template<class value_type>
 template<class Vector>
