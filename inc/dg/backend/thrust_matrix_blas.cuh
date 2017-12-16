@@ -88,7 +88,7 @@ inline void doSymv(
               ThrustVectorTag,
               ThrustVectorTag)
 {
-    dg::blas1::detail::doPointwiseDot( m,x,y, dg::ThrustVectorTag());
+    dg::blas1::detail::doPointwiseDot( 1., m,x,0., y, dg::ThrustVectorTag());
 }
 
 
