@@ -19,9 +19,8 @@ double function(double x, double y, double z){ return sin(y)*sin(x);}
 //typedef dg::fDMatrix Matrix;
 //typedef cusp::array1d<float, cusp::device_memory> Vector;
 typedef double value_type;
-typedef dg::DVec Vector;
-using ArrayVec = std::array<Vector, 2>;
-//typedef thrust::device_vector<double> Vector;
+using Vector = thrust::device_vector<double>;
+using ArrayVec = std::array<Vector, 10>;
 typedef dg::DMatrix Matrix;
 //typedef cusp::array1d<double, cusp::device_memory> Vector;
 typedef dg::IDMatrix IMatrix;
@@ -59,7 +58,7 @@ int main()
     for( int i=0; i<multi; i++)
         norm += dg::blas1::dot( w2d, x[0]);
     t.toc();
-    std::cout<<"DOT took                         " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"DOT took                         " <<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
     ArrayVec y(x), z(x), u(x), v(x);
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
@@ -67,82 +66,82 @@ int main()
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"centered x derivative took       "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"centered x derivative took       "<<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dx( grid, dg::backward), M);
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"forward x derivative took        "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"forward x derivative took        "<<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dy( grid, dg::backward), M);
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"forward y derivative took        "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"forward y derivative took        "<<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dy( grid, dg::centered), M);
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"centered y derivative took       "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"centered y derivative took       "<<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::jumpX( grid), M);
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
     t.toc();
-    std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
     ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::gemv( inter, x_half, x);
     t.toc();
-    std::cout<<"Interpolation half to full grid  "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"Interpolation half to full grid  "<<t.diff()/multi<<"s\t"<<1.5*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::gemv( project, x, x_half);
     t.toc();
-    std::cout<<"Projection full to half grid     "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"Projection full to half grid     "<<t.diff()/multi<<"s\t"<<1.5*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpby( 1., y, -1., x);
     t.toc();
-    std::cout<<"AXPBY (1*y-1*x=x)                "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"AXPBY (1*y-1*x=x)                "<<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpbypgz( 1., x, -1., y, 2., z);
     t.toc();
-    std::cout<<"AXPBYPGZ (1*x-1*y+2*z=z)         "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"AXPBYPGZ (1*x-1*y+2*z=z)         "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpbypgz( 1., x, -1., y, 3., x);
     t.toc();
-    std::cout<<"AXPBYPGZ (1*x-1.*y+3*x=x)        "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"AXPBYPGZ (1*x-1.*y+3*x=x)        "<<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
 
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::pointwiseDot(  y, x, x);
     t.toc();
-    std::cout<<"pointwiseDot (yx=x)              "<<t.diff()/multi<<"s\t" <<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"pointwiseDot (yx=x)              "<<t.diff()/multi<<"s\t" <<2*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  z);
     t.toc();
-    std::cout<<"pointwiseDot (1*yx+2*uv=z)       "<<t.diff()/multi<<"s\t" <<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"pointwiseDot (1*yx+2*uv=z)       "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
-    std::cout<<"pointwiseDot (1*yx+2*uv=v)       "<<t.diff()/multi<<"s\t" <<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"pointwiseDot (1*yx+2*uv=v)       "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         norm += dg::blas2::dot( w2d, y);
     t.toc();
-    std::cout<<"DOT(w,y) took                    " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"DOT(w,y) took                    " <<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
 
     t.tic();
     for( int i=0; i<multi; i++)
@@ -150,7 +149,7 @@ int main()
         norm += dg::blas2::dot( x, w2d, y);
     }
     t.toc();
-    std::cout<<"DOT(x,w,y) took                  " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"DOT(x,w,y) took                  " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     std::cout<<norm<<std::endl;
 
     return 0;

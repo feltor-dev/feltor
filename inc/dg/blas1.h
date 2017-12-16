@@ -1,5 +1,7 @@
 #pragma once
 
+#include "thrust/host_vector.h"
+#include "thrust/device_vector.h"
 #include "backend/vector_traits.h"
 #include "backend/thrust_vector_blas.cuh"
 #include "backend/blas1_array.h"

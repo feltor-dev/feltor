@@ -24,7 +24,7 @@ blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(CFLAGS) $< -o $@ -g
 
 %_t: %_t.cu
-	$(CC) $(INCLUDE)  $(CFLAGS) $< -o $@ -g 
+	$(CC) $(OPT) $(INCLUDE)  $(CFLAGS) $< -o $@ -g 
 	
 %_mpit: %_mpit.cu
 	$(MPICC) -O2 $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g

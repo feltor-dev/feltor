@@ -26,7 +26,7 @@ inline void doTransform_dispatch( OmpTag, const Vector& x, Vector& y, UnaryOp op
 template< class T>
 inline void doScal_omp( unsigned size, T* x, T alpha)
 {
-    #pragma omp for SIMD
+    #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
         x[i]*=alpha;
 }
@@ -51,7 +51,7 @@ inline void doScal_dispatch( OmpTag, unsigned size, T* x, T alpha)
 template<class T>
 inline void doPlus_omp( unsigned size, T* x, T alpha)
 {
-    #pragma omp for SIMD 
+    #pragma omp for SIMD nowait 
     for( unsigned i=0; i<size; i++)
         x[i]+=alpha;
 }
@@ -77,7 +77,7 @@ inline void doPlus_dispatch( OmpTag, unsigned size, T* x, T alpha)
 template<class T>
 void doAxpby_omp(unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, T* RESTRICT y_ptr)
 {
-    #pragma omp for SIMD
+    #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
         y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
 }
@@ -102,7 +102,7 @@ void doAxpby_dispatch( OmpTag, unsigned size, T alpha, const T * RESTRICT x_ptr,
 template<class T>
 void doAxpbypgz_omp( unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, const T* RESTRICT y_ptr, T gamma, T* RESTRICT z_ptr)
 {
-    #pragma omp for SIMD
+    #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
         z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
 }
@@ -132,7 +132,7 @@ inline void doPointwiseDot_omp(unsigned size,
               value_type gamma,
               value_type* z_ptr)
 {
-    #pragma omp for SIMD
+    #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
         z_ptr[i] = alpha*x_ptr[i]*y_ptr[i]+gamma*z_ptr[i];
 }
@@ -167,7 +167,7 @@ inline void doPointwiseDivide_omp(unsigned size,
               value_type gamma,
               value_type* z_ptr)
 {
-    #pragma omp for SIMD
+    #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
         z_ptr[i] = alpha*x_ptr[i]/y_ptr[i]+gamma*z_ptr[i];
 }
@@ -205,7 +205,7 @@ inline void doPointwiseDot_omp( unsigned size,
               value_type gamma,
               value_type* z_ptr)
 {
-    #pragma omp for SIMD
+    #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
         z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
                    +beta*x2_ptr[i]*y2_ptr[i]
@@ -247,7 +247,7 @@ inline void doPointwiseDot_omp(unsigned size,
               value_type beta, 
               value_type* y)
 {
-    #pragma omp for SIMD
+    #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
         y[i] = alpha*x1[i]*x2[i]*x3[i] +beta*y[i];
 }

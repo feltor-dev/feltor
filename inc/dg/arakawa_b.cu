@@ -39,8 +39,9 @@ double jacobian( double x, double y)
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
 //double right( double x, double y) {return y;}
 //double jacobian( double x, double y) {return 2.*M_PI*cos(2.*M_PI*(x-hx/2.));}
-using Vector = std::array<dg::DVec, 3>;
-typedef dg::DMatrix Matrix;
+using Vector = std::array<dg::DVec, 10>;
+//using Vector = dg::DVec;
+using Matrix = dg::DMatrix;
 
 int main()
 {
