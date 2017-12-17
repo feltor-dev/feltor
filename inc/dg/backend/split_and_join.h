@@ -84,41 +84,6 @@ void join( const std::vector<MPI_Vector<thrust_vector1> >& in, MPI_Vector<thrust
         thrust::copy( in[i].data().begin(), in[i].data().end(), out.data().begin()+i*size2d);
 }
 #endif //MPI_VERSION
-/////////////////////////////////////////////poloidal split/////////////////////
-///@cond
-void transpose_dispatch( SerialTag, unsigned nx, unsigned ny, const double* in, double* out)
-{
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[j*ny+i] = in[i*nx+j];
-}
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-__global__
-void transpose_gpu_kernel( unsigned nx, unsigned ny, const double* in, double* out)
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    const int size = nx*ny;
-    for( int row = thread_id; row<size; row += grid_size)
-    {
-        int i=row/nx, j = row%nx;
-        out[j*ny+i] = in[i*nx+j];
-    }
-}
-void transpose_dispatch( CudaTag, unsigned nx, unsigned ny, const double* in, double* out){
-    const size_t BLOCK_SIZE = 256; 
-    const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
-    transpose_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
-}
-#else
-void transpose_dispatch( OmpTag, unsigned nx, unsigned ny, const double* in, double* out)
-{
-#pragma omp parallel for
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[j*ny+i] = in[i*nx+j];
-}
-#endif
 /////////////join
 ///@endcond
 /** @brief  Split a vector poloidally into lines

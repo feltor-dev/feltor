@@ -10,6 +10,7 @@
 #include <thrust/transform.h>
 #include <thrust/inner_product.h>
 
+#include "matrix_categories.h"
 #include "thrust_vector_blas.cuh" //load thrust_vector BLAS1 routines
 #include "vector_categories.h"
 
@@ -54,15 +55,15 @@ exblas::Superaccumulator doDot_superacc( const Vector& x, const Matrix& m, const
 }
 
 template< class Matrix, class Vector>
-inline get_value_type<Vector> doDot( const Vector& x, const Matrix& m, const Vector& y, dg::ThrustMatrixTag, dg::ThrustVectorTag)
+inline get_value_type<Vector> doDot( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
 {
-    exblas::Superaccumulator acc = doDot_superacc( x,m,y,dg::ThrustMatrixTag(),dg::ThrustVectorTag());
+    exblas::Superaccumulator acc = doDot_superacc( x,m,y,ThrustMatrixTag(),ThrustVectorTag());
     return acc.Round();
 }
 template< class Matrix, class Vector>
-inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, dg::ThrustMatrixTag, dg::ThrustVectorTag)
+inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, ThrustMatrixTag, ThrustVectorTag)
 {
-    exblas::Superaccumulator acc = doDot_superacc( x,m,x,dg::ThrustMatrixTag(),dg::ThrustVectorTag());
+    exblas::Superaccumulator acc = doDot_superacc( x,m,x,ThrustMatrixTag(),ThrustVectorTag());
     return acc.Round();
 }
 
@@ -88,7 +89,7 @@ inline void doSymv(
               ThrustVectorTag,
               ThrustVectorTag)
 {
-    dg::blas1::detail::doPointwiseDot( 1., m,x,0., y, dg::ThrustVectorTag());
+    dg::blas1::detail::doPointwiseDot( 1., m,x,0., y, ThrustVectorTag());
 }
 
 

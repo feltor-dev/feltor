@@ -17,12 +17,13 @@ int main()
     //![doxygen]
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::PoloidalAverage<dg::Grid2d, dg::DVec > pol(g);
+    //dg::PoloidalAverage<dg::Grid2d, dg::DVec > pol(g);
 
     const dg::DVec vector = dg::evaluate( function ,g); 
     dg::DVec average_y( vector);
     std::cout << "Averaging ... \n";
-    pol( vector, average_y);
+    //pol( vector, average_y);
+    poloidal_average( vector, average_y, g);
     //![doxygen]
     const dg::DVec w2d = dg::create::weights( g);
     const dg::DVec solution = dg::evaluate( pol_average, g);
