@@ -14,7 +14,6 @@ struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 //using Vector = thrust::host_vector<double>;
 using Vector = thrust::device_vector<double>;
 //using Vector = cusp::array1d<double, cusp::device_memory>;
-//using Vector = dg::VectorView<thrust::device_vector<double>>;
 int main()
 {
     //Vector v1( 5, 2), v2( 5, 3), v3(5,5), v4(5,4);
