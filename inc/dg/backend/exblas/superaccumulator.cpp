@@ -130,7 +130,7 @@ double Superaccumulator::Round()
     // Now add3(hi, mid, lo)
     // No overlap, we have already normalized
     if(mid != 0) {
-        lo = OddRoundSumNonnegative(mid, lo);
+        lo = detail::OddRoundSumNonnegative(mid, lo);
     }
     // Final rounding
     hi = hi + lo;

@@ -146,7 +146,7 @@ template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE
 void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
 {
     // Experimental
-    if(TRAITS::CheckRangeFirst && horizontal_or(abs(x) < abs(a[N-1]))) {
+    if(TRAITS::CheckRangeFirst && vcl::horizontal_or(abs(x) < abs(a[N-1]))) {
         FlushVector(x);
         return;
     }
@@ -154,9 +154,9 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
     for(unsigned int i = 0; i != N; ++i) {
         a[i] = twosum(a[i], x, s);
         x = s;
-        if(TRAITS::EarlyExit && i != 0 && !horizontal_or(x)) return;
+        if(TRAITS::EarlyExit && i != 0 && !detail::horizontal_or(x)) return;
     }
-    if(TRAITS::EarlyExit || horizontal_or(x)) {
+    if(TRAITS::EarlyExit || detail::horizontal_or(x)) {
         FlushVector(x);
     }
 }
@@ -337,13 +337,13 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
         //a[i] = ai;
         x1 = s1;
         x2 = s2;
-        if(TRAITS::EarlyExit && i != 0 && !horizontal_or(x1|x2)) return;
+        if(TRAITS::EarlyExit && i != 0 && !detail::horizontal_or(x1|x2)) return;
     }
 
     
     if(TRAITS::EarlyExit || (TRAITS::Horz2Sum && !TRAITS::Victimcache)) {
         // 1 check for both numbers
-        if(TRAITS::EarlyExit || unlikely(horizontal_or(x1|x2))) {
+        if(TRAITS::EarlyExit || unlikely(detail::horizontal_or(x1|x2))) {
             if(TRAITS::FlushHi) {
                 Insert(x1, x2);
             }
@@ -351,14 +351,14 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
             //    horizontal_twosum(x1, x2);
             //}
             FlushVector(x1);
-            if(!TRAITS::Horz2Sum || horizontal_or(x2)) {
+            if(!TRAITS::Horz2Sum || detail::horizontal_or(x2)) {
                 FlushVector(x2);
             }
         }
     }
     else {
         // Separate checks
-        if(unlikely(horizontal_or(x1))) {
+        if(unlikely(detail::horizontal_or(x1))) {
             if(TRAITS::FlushHi) {
                 Insert(x1);
             }

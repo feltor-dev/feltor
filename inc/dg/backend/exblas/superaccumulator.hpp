@@ -141,7 +141,7 @@ inline void Superaccumulator::AccumulateWord(int64_t x, int i)
     int64_t carry = x;
     int64_t carrybit;
     unsigned char overflow;
-    int64_t oldword = xadd(accumulator[i], x, overflow);
+    int64_t oldword = detail::xadd(accumulator[i], x, overflow);
     while(unlikely(overflow))
     {
         // Carry or borrow
@@ -155,7 +155,7 @@ inline void Superaccumulator::AccumulateWord(int64_t x, int i)
         carrybit = (s ? 1ll << K : -1ll << K);
         
         // Cancel carry-save bits
-        xadd(accumulator[i], -(carry << digits), overflow);
+        detail::xadd(accumulator[i], -(carry << digits), overflow);
         if(TSAFE && unlikely(s ^ overflow)) {
             // (Another) overflow of sign S
             carrybit *= 2;
@@ -168,7 +168,7 @@ inline void Superaccumulator::AccumulateWord(int64_t x, int i)
             status = Overflow;
             return;
         }
-        oldword = xadd(accumulator[i], carry, overflow);
+        oldword = detail::xadd(accumulator[i], carry, overflow);
     }
 }
 
@@ -177,17 +177,17 @@ inline void Superaccumulator::Accumulate(double x)
     if(x == 0) return;
     
     
-    int e = exponent(x);
+    int e = detail::exponent(x);
     int exp_word = e / digits;  // Word containing MSbit (upper bound)
     int iup = exp_word + f_words;
     
-    double xscaled = myldexp(x, -digits * exp_word);
+    double xscaled = detail::myldexp(x, -digits * exp_word);
 
     int i;
     for(i = iup; xscaled != 0; --i) {
 
-        double xrounded = myrint(xscaled);
-        int64_t xint = myllrint(xscaled);
+        double xrounded = detail::myrint(xscaled);
+        int64_t xint = detail::myllrint(xscaled);
         AccumulateWord(xint, i);
         
         xscaled -= xrounded;
