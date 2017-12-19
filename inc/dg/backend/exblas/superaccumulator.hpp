@@ -1,6 +1,5 @@
 /*
  *  Copyright (c) 2016 Inria and University Pierre and Marie Curie
- *  All rights reserved.
  */
 
 /**

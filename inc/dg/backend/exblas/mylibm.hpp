@@ -1,6 +1,5 @@
 /*
  *  Copyright (c) 2016 Inria and University Pierre and Marie Curie
- *  All rights reserved.
  */
 
 /**
@@ -18,7 +17,7 @@
 #ifndef MYLIBM_HPP_INCLUDED
 #define MYLIBM_HPP_INCLUDED
 
-#include <stdint.h>
+#include <stdint.h> //definition of int64_t
 #include <immintrin.h>
 #include <cassert>
 #define MAX_VECTOR_SIZE 512
@@ -54,6 +53,7 @@
 #define paranoid_assert(x) assert(x)
 
 namespace exblas{
+namespace detail{
 
 // Making C code less readable in an attempt to make assembly more readable
 #if 1
@@ -231,6 +231,7 @@ inline static bool horizontal_or(vcl::Vec8d const & a) {
     //return !_mm512_testz_pd(p, p);
 }
 
+}//namespace detail
 }//namespace exblas
 
 #endif
