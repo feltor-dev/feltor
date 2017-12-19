@@ -60,11 +60,11 @@ __global__ void ExDOT(
             x = s;
         }
         if (x != 0.0) {
-            Accumulate(l_workingBase, x);
+            AccumulateT(l_workingBase, x);
             // Flush FPEs to superaccs
             #pragma unroll
             for(uint i = 0; i != NBFPE; ++i) {
-                Accumulate(l_workingBase, a[i]);
+                AccumulateT(l_workingBase, a[i]);
                 a[i] = 0.0;
             }
         }
@@ -77,11 +77,11 @@ __global__ void ExDOT(
         //        r = s;
         //    }
         //    if (r != 0.0) {
-        //        Accumulate(l_workingBase, r);
+        //        AccumulateT(l_workingBase, r);
         //        // Flush FPEs to superaccs
         //        #pragma unroll
         //        for(uint i = 0; i != NBFPE; ++i) {
-        //            Accumulate(l_workingBase, a[i]);
+        //            AccumulateT(l_workingBase, a[i]);
         //            a[i] = 0.0;
         //        }
         //    }
@@ -90,7 +90,7 @@ __global__ void ExDOT(
     //Flush FPEs to superaccs
     #pragma unroll
     for(uint i = 0; i != NBFPE; ++i)
-        Accumulate(l_workingBase, a[i]);
+        AccumulateT(l_workingBase, a[i]);
     __syncthreads();
 
     //Merge sub-superaccs into work-group partial-accumulator ( ATTENTION: PartialSuperacc is transposed!)
@@ -146,11 +146,11 @@ __global__ void ExDOT(
                 x2 = s;
             }
             if (x2 != 0.0) {
-                Accumulate(l_workingBase, x2);
+                AccumulateT(l_workingBase, x2);
                 // Flush FPEs to superaccs
                 #pragma unroll
                 for(uint i = 0; i != NBFPE; ++i) {
-                    Accumulate(l_workingBase, a[i]);
+                    AccumulateT(l_workingBase, a[i]);
                     a[i] = 0.0;
                 }
             }
@@ -163,11 +163,11 @@ __global__ void ExDOT(
         //        r2 = s; //error was here r = s
         //    }
         //    if (r2 != 0.0) { //error was here r != 0.0
-        //        Accumulate(l_workingBase, r2);
+        //        AccumulateT(l_workingBase, r2);
         //        // Flush FPEs to superaccs
         //        #pragma unroll
         //        for(uint i = 0; i != NBFPE; ++i) {
-        //            Accumulate(l_workingBase, a[i]);
+        //            AccumulateT(l_workingBase, a[i]);
         //            a[i] = 0.0;
         //        }
         //    }
@@ -184,11 +184,11 @@ __global__ void ExDOT(
         //            x2 = s;
         //        }
         //        if (x2 != 0.0) {
-        //            Accumulate(l_workingBase, x2);
+        //            AccumulateT(l_workingBase, x2);
         //            // Flush FPEs to superaccs
         //            #pragma unroll
         //            for(uint i = 0; i != NBFPE; ++i) {
-        //                Accumulate(l_workingBase, a[i]);
+        //                AccumulateT(l_workingBase, a[i]);
         //                a[i] = 0.0;
         //            }
         //        }
@@ -201,11 +201,11 @@ __global__ void ExDOT(
         //            r2 = s; //error was here r = s
         //        }
         //        if (r2 != 0.0) { //error was here r != 0.0
-        //            Accumulate(l_workingBase, r2);
+        //            AccumulateT(l_workingBase, r2);
         //            // Flush FPEs to superaccs
         //            #pragma unroll
         //            for(uint i = 0; i != NBFPE; ++i) {
-        //                Accumulate(l_workingBase, a[i]);
+        //                AccumulateT(l_workingBase, a[i]);
         //                a[i] = 0.0;
         //            }
         //        }
@@ -215,7 +215,7 @@ __global__ void ExDOT(
 	//Flush FPEs to superaccs
     #pragma unroll
     for(uint i = 0; i != NBFPE; ++i)
-        Accumulate(l_workingBase, a[i]);
+        AccumulateT(l_workingBase, a[i]);
     __syncthreads();
 
     //Merge sub-superaccs into work-group partial-accumulator ( ATTENTION: PartialSuperacc is transposed!)
@@ -277,7 +277,6 @@ void ExDOTComplete(
 
 ////////////// parameters for Kernel execution            //////////////////////
 //Kernel paramters for EXDOT
-static constexpr uint WARP_COUNT               = 16 ; //# of sub superaccs
 static constexpr uint WARP_SIZE                = 16 ; 
 static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per block
 static constexpr uint PARTIAL_SUPERACCS_COUNT  = 256; //# of groups; each has a partial SuperAcc (should not be larger than 512)

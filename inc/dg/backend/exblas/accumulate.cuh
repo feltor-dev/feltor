@@ -11,7 +11,7 @@ namespace exblas
 ////////////////////////////////////////////////////////////////////////////////
 
 __device__
-inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
+inline void AccumulateWordT( int64_t *accumulator, int i, int64_t x) {
     // With atomic superacc updates
     // accumulation and carry propagation can happen in any order,
     // as long as addition is atomic
@@ -26,7 +26,7 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
         // Carry or borrow
         // oldword has sign S
         // x has sign S
-        // superacc[i] has sign !S (just after update)
+        // accumulator[i] has sign !S (just after update)
         // carry has sign !S
         // carrybit has sign S
         carry = (oldword + carry) >> DIGITS;    // Arithmetic shift
@@ -51,7 +51,7 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
 }
 
 __device__
-void Accumulate( int64_t *sa, double x) {
+inline void AccumulateT( int64_t* accumulator, double x) { //transposed accumulation
     if (x == 0)
         return;
 
@@ -66,7 +66,7 @@ void Accumulate( int64_t *sa, double x) {
     for (i = iup; xscaled != 0; --i) {
         double xrounded = rint(xscaled);
         int64_t xint = (int64_t) xrounded;
-        AccumulateWord(sa, i, xint);
+        AccumulateWord(accumulator, i, xint);
 
         xscaled -= xrounded;
         xscaled *= DELTASCALE;
@@ -121,18 +121,18 @@ int NormalizeT( int64_t *accumulator, int& imin, int& imax) {
 ////////////////////////////////////////////////////////////////////////////////
 
 __device__
-double Round( int64_t *accumulator) {
+double Round( int64_t * accumulator) {
     int imin = IMIN;
     int imax = IMAX;
     int negative = Normalize(accumulator, imin, imax);
 
-    //Find leading word
+    // Find leading word
     int i;
-    //Skip zeroes
+    // Skip zeroes
     for (i = imax; accumulator[i] == 0 && i >= imin; --i) {
     }
     if (negative) {
-        //Skip ones
+        // Skip ones
         for(; (accumulator[i] & ((1ll << DIGITS) - 1)) == ((1ll << DIGITS) - 1) && i >= imin;--i) {
         }
     }
@@ -141,7 +141,7 @@ double Round( int64_t *accumulator) {
     }
 
     int64_t hiword = negative ? ((1ll << DIGITS) - 1) - accumulator[i] : accumulator[i];
-    double rounded = (double) hiword;
+    double rounded = (double)hiword;
     double hi = ldexp(rounded, (i - F_WORDS) * DIGITS);
     if (i == 0) {
         return negative ? -hi : hi;  // Correct rounding achieved
@@ -149,9 +149,9 @@ double Round( int64_t *accumulator) {
     hiword -= (int64_t) rint(rounded);
     double mid = ldexp((double) hiword, (i - F_WORDS) * DIGITS);
 
-    //Compute sticky
+    // Compute sticky
     int64_t sticky = 0;
-    for (int j = imin; j != i - 1; ++j){
+    for (int j = imin; j != i - 1; ++j) {
         sticky |= negative ? ((1ll << DIGITS) - accumulator[j]) : accumulator[j];
     }
 
@@ -159,12 +159,12 @@ double Round( int64_t *accumulator) {
     loword |= !!sticky;
     double lo = ldexp((double) loword, (i - 1 - F_WORDS) * DIGITS);
 
-    //Now add3(hi, mid, lo)
-    //No overlap, we have already normalized
+    // Now add3(hi, mid, lo)
+    // No overlap, we have already normalized
     if (mid != 0) {
         lo = detail::OddRoundSumNonnegative(mid, lo);
     }
-    //Final rounding
+    // Final rounding
     hi = hi + lo;
     return negative ? -hi : hi;
 }
