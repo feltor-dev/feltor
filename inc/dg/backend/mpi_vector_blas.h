@@ -36,24 +36,10 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
     //local compuation
-    exblas::Superaccumulator acc_fine = doDot_superacc( x.data(), y.data(),typename VectorTraits<container>::vector_category()), acc_reduce;  
-    acc_fine.Normalize();
-    //communication (we cannot sum more than 128 accumulators at once, so we need to split)
-    std::vector<int64_t> receive(39,0);
-    MPI_Reduce(&(acc_fine.get_accumulator()[0]), &(receive[0]), acc_fine.get_f_words() + acc_fine.get_e_words(), MPI_LONG, MPI_SUM, 0, x.communicator_mod()); 
-    int rank;
-    MPI_Comm_rank( x.communicator_mod(), &rank);
-    if(x.communicator_mod_reduce() != MPI_COMM_NULL)
-    {
-        exblas::Superaccumulator acc_reduce( receive);
-        acc_reduce.Normalize();
-        receive.assign(39,0);
-        MPI_Reduce(&(acc_reduce.get_accumulator()[0]), &(receive[0]), acc_fine.get_f_words() + acc_fine.get_e_words(), MPI_LONG, MPI_SUM, 0, x.communicator_mod_reduce()); 
-    }
-    MPI_Bcast( &(receive[0]), 39, MPI_LONG, 0, x.communicator());
-
-    exblas::Superaccumulator result(receive);
-    return result.Round();
+    std::vector<int64_t> acc = doDot_superacc( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
+    std::vector<int64_t> receive(BIN_COUNT, 0);
+    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicotor(), x.communicator_mod(), x.communicator_mod_reduce());
+    return receive;
 }
 
 template< class Vector>

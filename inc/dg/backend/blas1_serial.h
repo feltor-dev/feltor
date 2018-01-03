@@ -10,8 +10,10 @@ namespace blas1
 {
 namespace detail
 {
-exblas::Superaccumulator doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr) {
-    return exblas::Superaccumulator(  exblas::exdot_cpu( size, x_ptr,y_ptr,8,true)) ;
+std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]) ;
+    return h_superacc;
 }
 template< class Vector, class UnaryOp>
 inline void doTransform_dispatch( SerialTag, const Vector& x, Vector& y, UnaryOp op) {

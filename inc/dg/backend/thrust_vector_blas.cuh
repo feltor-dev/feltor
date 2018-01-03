@@ -69,7 +69,7 @@ To doTransfer( const From& in, ThrustVectorTag, ThrustVectorTag)
 }
 
 template< class Vector>
-exblas::Superaccumulator doDot_superacc( const Vector& x, const Vector& y, ThrustVectorTag)
+std::vector<int64_t> doDot_superacc( const Vector& x, const Vector& y, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
@@ -82,8 +82,8 @@ exblas::Superaccumulator doDot_superacc( const Vector& x, const Vector& y, Thrus
 template<class Vector>
 get_value_type<Vector> doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
-    exblas::Superaccumulator acc = doDot_superacc( x,y,ThrustVectorTag());
-    return acc.Round();
+    std::vector<int64_t> acc = doDot_superacc( x,y,ThrustVectorTag());
+    return exblas::Round(acc.data());
 }
 
 template< class Vector, class UnaryOp>

@@ -26,24 +26,33 @@ void doTransfer( const Vector1& in, Vector2& out, ThrustMatrixTag, ThrustMatrixT
     out.resize(in.size());
     thrust::copy( in.begin(), in.end(), out.begin());
 }
-exblas::Superaccumulator doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
-    return exblas::Superaccumulator(  exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, 8,true)) ;
+std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]) ;
+    return h_superacc;
 }
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-exblas::Superaccumulator doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr, const double * z_ptr) {
-    thrust::device_vector<long long int> d_superacc = exblas::exdot_gpu( size, x_ptr,y_ptr,z_ptr);
+std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr, const double * z_ptr) {
+    thrust::device_vector<int64_t> d_superacc(exblas::BIN_COUNT);
+    int64_t * d_ptr = thrust::raw_pointer_cast( d_superacc.data());
+    exblas::exdot_gpu( size, x_ptr,y_ptr,z_ptr, d_ptr);
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    cudaMemcpy( &h_superacc[0], thrust::raw_pointer_cast(d_superacc.data()), exblas::BIN_COUNT*sizeof(long long int), cudaMemcpyDeviceToHost);
-    return exblas::Superaccumulator(h_superacc);
+    cudaMemcpy( &h_superacc[0], d_ptr, exblas::BIN_COUNT*sizeof(int64_t), cudaMemcpyDeviceToHost);
+    return h_superacc;
 }
 #else
-exblas::Superaccumulator doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
-    return exblas::Superaccumulator(  exblas::exdot_omp( size, x_ptr,y_ptr,z_ptr, 8,true)) ;
+std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    if(size<MIN_SIZE) 
+        exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]);
+    else 
+        exblas::exdot_omp( size, x_ptr,y_ptr, &h_superacc[0]);
+    return h_superacc;
 }
 #endif
 
 template< class Matrix, class Vector>
-exblas::Superaccumulator doDot_superacc( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
+std::vector<int64_t> doDot_superacc( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() && x.size() == m.size() );
@@ -57,14 +66,14 @@ exblas::Superaccumulator doDot_superacc( const Vector& x, const Matrix& m, const
 template< class Matrix, class Vector>
 inline get_value_type<Vector> doDot( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
 {
-    exblas::Superaccumulator acc = doDot_superacc( x,m,y,ThrustMatrixTag(),ThrustVectorTag());
-    return acc.Round();
+    std::vector<int64_t> acc = doDot_superacc( x,m,y,ThrustMatrixTag(),ThrustVectorTag());
+    return exblas::Round(acc.data());
 }
 template< class Matrix, class Vector>
 inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, ThrustMatrixTag, ThrustVectorTag)
 {
-    exblas::Superaccumulator acc = doDot_superacc( x,m,x,ThrustMatrixTag(),ThrustVectorTag());
-    return acc.Round();
+    std::vector<int64_t> acc = doDot_superacc( x,m,x,ThrustMatrixTag(),ThrustVectorTag());
+    return exblas::Round(acc.data());
 }
 
 template< class Matrix, class Vector>

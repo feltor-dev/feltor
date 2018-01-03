@@ -36,16 +36,18 @@ namespace detail
 {
 
 template< class T, std::size_t N>
-exblas::Superaccumulator doDot_superacc( const std::array<T,N>& x, const std::array<T,N>& y, StdArrayTag)
+std::vector<int64_t> doDot_superacc( const std::array<T,N>& x, const std::array<T,N>& y, StdArrayTag)
 {
-    return exblas::Superaccumulator(  exblas::exdot_cpu( N, x.begin(),y.begin(),8,true)) ;
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    exblas::exdot_cpu( N, x.begin(),y.begin(), &h_superacc[0]) ;
+    return h_superacc;
 }
 
 template<class T,std::size_t N>
 T doDot( const std::array<T,N>& x, const std::array<T,N>& y, StdArrayTag)
 {
-    exblas::Superaccumulator acc = doDot_superacc( x,y,StdArrayTag());
-    return acc.Round();
+    std::vector<int64_t> acc = doDot_superacc( x,y,StdArrayTag());
+    return exblas::Round(acc.data());
 }
 
 template< class T,std::size_t N, class UnaryOp>

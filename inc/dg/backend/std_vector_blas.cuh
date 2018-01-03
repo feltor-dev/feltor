@@ -39,12 +39,19 @@ inline get_value_type<Vector> doDot( const Vector& x1, const Vector& x2, VectorV
     assert( !x1.empty());
     assert( x1.size() == x2.size() );
 #endif //DG_DEBUG
-    std::vector<exblas::Superaccumulator> acc( x1.size());
+    std::vector<std::vector<int64_t>> acc( x1.size());
     for( unsigned i=0; i<x1.size(); i++)
         acc[i] = doDot_superacc( x1[i], x2[i], get_vector_category<typename Vector::value_type>());
     for( unsigned i=1; i<x1.size(); i++)
-        acc[0].Accumulate( acc[i]);
-    return acc[0].Round();
+    {
+        int imin = exblas::IMIN, imax = exblas::IMAX;
+        exblas::Normalize( &(acc[0][0]), &imin, &imax);
+        imin = exblas::IMIN, imax = exblas::IMAX;
+        exblas::Normalize( &(acc[i][0]), &imin, &imax);
+        for( int k=IMIN; k<IMAX; k++)
+            acc[0][k] += acc[i][k];
+    }
+    return exblas::Round(&(acc[0][0]));
 }
 template<class Vector, class UnaryOp>
 inline void doTransform( const Vector& x, Vector& y, UnaryOp op, VectorVectorTag)

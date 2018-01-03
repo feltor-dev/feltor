@@ -8,13 +8,13 @@ namespace blas1
 {
 namespace detail
 {
-exblas::Superaccumulator doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr) {
     thrust::device_vector<int64_t> d_superacc(exblas::BIN_COUNT);
     int64_t * d_ptr = thrust::raw_pointer_cast( d_superacc.data());
     exblas::exdot_gpu( size, x_ptr,y_ptr, d_ptr);
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    cudaMemcpy( &h_superacc[0], d_ptr, exblas::BIN_COUNT*sizeof(long long int), cudaMemcpyDeviceToHost);
-    return exblas::Superaccumulator(h_superacc);
+    cudaMemcpy( &h_superacc[0], d_ptr, exblas::BIN_COUNT*sizeof(int64_t), cudaMemcpyDeviceToHost);
+    return h_superacc;
 }
 template< class Vector, class UnaryOp>
 inline void doTransform_dispatch( CudaTag, const Vector& x, Vector& y, UnaryOp op) {
