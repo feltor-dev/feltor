@@ -11,9 +11,12 @@ namespace detail
 {
 const unsigned MIN_SIZE=100;//don't parallelize if work is too small 
 exblas::Superaccumulator doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
     if(size<MIN_SIZE) 
-        return exblas::Superaccumulator(  exblas::exdot_cpu( size, x_ptr,y_ptr,8,true)) ;
-    return exblas::Superaccumulator(  exblas::exdot_omp( size, x_ptr,y_ptr,8,true)) ;
+        exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]);
+    else 
+        exblas::exdot_omp( size, x_ptr,y_ptr, &h_superacc[0]);
+    return exblas::Superaccumulator(h_superacc);
 }
 template< class Vector, class UnaryOp>
 inline void doTransform_dispatch( OmpTag, const Vector& x, Vector& y, UnaryOp op) {

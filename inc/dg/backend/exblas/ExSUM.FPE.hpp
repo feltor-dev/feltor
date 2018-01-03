@@ -15,6 +15,8 @@
  */
 #ifndef EXSUM_FPE_HPP_
 #define EXSUM_FPE_HPP_
+#include "accumulate.h"
+
 namespace exblas
 {
 
@@ -81,7 +83,7 @@ private:
     static void Swap(T & x1, T & x2);
     static T twosum(T a, T b, T & s);
 
-    Superaccumulator & superacc;
+    int64_t* superacc;
 
     // Most significant digits first!
     T a[N] __attribute__((aligned(64)));
@@ -89,7 +91,7 @@ private:
 };
 
 template<typename T, int N, typename TRAITS>
-FPExpansionVect<T,N,TRAITS>::FPExpansionVect(Superaccumulator & sa) :
+FPExpansionVect<T,N,TRAITS>::FPExpansionVect(int64_t * sa) :
     superacc(sa),
     victim(0)
 {
@@ -412,7 +414,7 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
     _mm256_zeroupper();
 #endif
     for(unsigned int j = 0; j != 8; ++j) {
-        superacc.Accumulate(v[j]);
+        Accumulate(superacc, v[j]);
     }
 }
 

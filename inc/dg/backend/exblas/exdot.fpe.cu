@@ -7,7 +7,6 @@
  */
 
 #include "thrust/device_vector.h"
-#include "config.h"
 #include "accumulate.cuh"
 
 namespace exblas{
@@ -284,27 +283,24 @@ static constexpr uint PARTIAL_SUPERACCS_COUNT  = 256; //# of groups; each has a 
 static constexpr uint MERGE_SUPERACCS_SIZE     = 64; //# of sa each block merges
 static constexpr uint MERGE_WORKGROUP_SIZE     = 64;  //we need only 39 of those
 
+//d_superacc must be a pointer to device memory with size at least BIN_COUNT 
 __host__
-thrust::device_vector<int64_t> exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr)
+void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* d_superacc)
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
     ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
-    thrust::device_vector<int64_t> result( BIN_COUNT);
-    int64_t *d_superacc = thrust::raw_pointer_cast( result.data());
     ExDOTComplete<<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
-    return result;
 }
+
 __host__
-thrust::device_vector<int64_t> exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const double* x3_ptr)
+void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const double* x3_ptr, int64_t* d_superacc)
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
     ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
-    thrust::device_vector<int64_t> result( BIN_COUNT);
-    int64_t *d_superacc = thrust::raw_pointer_cast( result.data());
     ExDOTComplete<<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
-    return result;
 }
+
 }//namespace exblas
 

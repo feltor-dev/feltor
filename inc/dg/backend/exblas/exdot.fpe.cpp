@@ -11,7 +11,7 @@
 #include <cmath>
 #include <iostream>
 
-#include "superaccumulator.hpp"
+#include "accumulate.h"
 #include "ExSUM.FPE.hpp"
 #include <omp.h>
 
@@ -37,7 +37,13 @@ inline static void ReductionStep(int step, int tid1, int tid2, Superaccumulator 
         // wait
         _mm_pause();
     }
-    acc1->Accumulate(*acc2);
+    int imin = IMIN, imax = IMAX;
+    Normalize( acc1, &imin, &imax);
+    imin = IMIN, imax = IMAX;
+    Normalize( acc2, &imin, &imax);
+    for(int i = IMIN; i <= IMAX; ++i) {
+        acc1[i] += acc2[i];
+    }
 }
 
 /**
@@ -48,7 +54,7 @@ inline static void ReductionStep(int step, int tid1, int tid2, Superaccumulator 
  * \param acc superaccumulator
  */
 inline static void Reduction(unsigned int tid, unsigned int tnum, std::vector<int32_t>& ready,
-    std::vector<Superaccumulator>& acc, int const linesize)
+    std::vector<int64_t>& acc, int const linesize)
 {
     // Custom reduction
     for(unsigned int s = 1; (unsigned)(1 << (s-1)) < tnum; ++s) 
@@ -59,7 +65,7 @@ inline static void Reduction(unsigned int tid, unsigned int tnum, std::vector<in
             unsigned int tid2 = tid | (1 << (s-1));
             if(tid2 < tnum) {
                 //acc[tid2].Prefetch(); // No effect...
-                ReductionStep(s, tid, tid2, &acc[tid], &acc[tid2],
+                ReductionStep(s, tid, tid2, &acc[tid*BIN_COUNT], &acc[tid2*BIN_COUNT],
                     &ready[tid * linesize], &ready[tid2 * linesize]);
             }
         }
@@ -67,11 +73,11 @@ inline static void Reduction(unsigned int tid, unsigned int tnum, std::vector<in
 }
 
 template<typename CACHE> 
-Superaccumulator ExDOTFPE(int N, const double *a, const double *b) {
+void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t)
     int maxthreads = omp_get_max_threads();
-    std::vector<Superaccumulator> acc(maxthreads);
+    std::vector<int64_t> acc(maxthreads*BIN_COUNT);
     std::vector<int32_t> ready(maxthreads * linesize);
 
     #pragma omp parallel
@@ -103,18 +109,21 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b) {
             //cache.Accumulate(r1);
         }
         cache.Flush();
-        acc[tid].Normalize();
+        int imin=IMIN, imax=IMAX;
+        Normalize(&acc[tid*BIN_COUNT], &imin, &imax);
 
         Reduction(tid, tnum, ready, acc, linesize);
     }
-    return acc[0];
+    for( int i=IMIN; i<=IMAX; i++)
+        h_superacc[i] = acc[i];
 }
+
 template<typename CACHE> 
-Superaccumulator ExDOTFPE(int N, const double *a, const double *b, const double *c) {
+void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t* h_superacc) {
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t)
     int maxthreads = omp_get_max_threads();
-    std::vector<Superaccumulator> acc(maxthreads);
+    std::vector<int64_t> acc(maxthreads*BIN_COUNT);
     std::vector<int32_t> ready(maxthreads * linesize);
 
     #pragma omp parallel
@@ -122,7 +131,7 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b, const double 
         unsigned int tid = omp_get_thread_num();
         unsigned int tnum = omp_get_num_threads();
 
-        CACHE cache(acc[tid]);
+        CACHE cache(&acc[tid*BIN_COUNT]);
         *(int32_t volatile *)(&ready[tid * linesize]) = 0;  // Race here, who cares?
 
         int l = ((tid * int64_t(N)) / tnum) & ~7ul;// & ~3ul == round down to multiple of 4
@@ -154,82 +163,24 @@ Superaccumulator ExDOTFPE(int N, const double *a, const double *b, const double 
             //cache.Accumulate(r2);
         }
         cache.Flush();
-        acc[tid].Normalize();
+        int imin=IMIN, imax=IMAX;
+        Normalize(&acc[tid*BIN_COUNT], &imin, &imax);
 
         Reduction(tid, tnum, ready, acc, linesize);
     }
-    return acc[0];
+    for( int i=IMIN; i<=IMAX; i++)
+        h_superacc[i] = acc[i];
 }
-/*
- * Parallel summation using our algorithm
- * Otherwise, use floating-point expansions of size FPE with superaccumulators when needed
- * early_exit corresponds to the early-exit technique
- */
-Superaccumulator exdot_omp(int N, const double *a, const double* b, int fpe, bool early_exit) {
+
+void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
-    if (fpe < 2) {
-        fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
-        exit(1);
-    }
-    Superaccumulator acc;
-    if (early_exit) {
-        if (fpe <= 4)
-            acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 4, FPExpansionTraits<true> > >)(N,a,b);
-        if (fpe <= 6)
-            acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 6, FPExpansionTraits<true> > >)(N,a,b);
-        if (fpe <= 8)
-            acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 8, FPExpansionTraits<true> > >)(N,a,b);
-    } else { // ! early_exit
-        if (fpe == 2) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 2> >)(N, a,b);
-        if (fpe == 3) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 3> >)(N, a,b);
-        if (fpe == 4) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 4> >)(N, a,b);
-        if (fpe == 5) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 5> >)(N, a,b);
-        if (fpe == 6) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 6> >)(N, a,b);
-        if (fpe == 7) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 7> >)(N, a,b);
-        if (fpe == 8) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 8> >)(N, a,b);
-    }
-    return acc;
+    ExDOTFPE<FPExpansionVect<vcl::Vec8d, 8, FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 }
-Superaccumulator exdot_omp(int N, const double *a, const double* b, const double * c, int fpe, bool early_exit) {
+void exdot_omp(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
-    if (fpe < 2) {
-        fprintf(stderr, "Size of floating-point expansion must be in the interval [2, 8]\n");
-        exit(1);
-    }
-    Superaccumulator acc;
-    if (early_exit) {
-        if (fpe <= 4)
-            acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 4, FPExpansionTraits<true> > >)(N,a,b,c);
-        if (fpe <= 6)
-            acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 6, FPExpansionTraits<true> > >)(N,a,b,c);
-        if (fpe <= 8)
-            acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 8, FPExpansionTraits<true> > >)(N,a,b,c);
-    } else { // ! early_exit
-        if (fpe == 2) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 2> >)(N, a,b,c);
-        if (fpe == 3) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 3> >)(N, a,b,c);
-        if (fpe == 4) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 4> >)(N, a,b,c);
-        if (fpe == 5) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 5> >)(N, a,b,c);
-        if (fpe == 6) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 6> >)(N, a,b,c);
-        if (fpe == 7) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 7> >)(N, a,b,c);
-        if (fpe == 8) 
-	    acc = (ExDOTFPE<FPExpansionVect<vcl::Vec8d, 8> >)(N, a,b,c);
-    }
-    return acc;
+    ExDOTFPE<FPExpansionVect<vcl::Vec8d, 8, FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 }
 
 }//namespace exblas
