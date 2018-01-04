@@ -108,6 +108,18 @@ template<class BinaryFunctor>
 aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFunctorAdapter<BinaryFunctor>(f);}
 
 /**
+ * @brief The constant functor 
+ * \f[ f(x,y) = c\f]
+ */
+struct Constant: public aCloneableBinaryFunctor<Constant> 
+{ 
+    Constant(double c):c_(c){}
+    private:
+    double do_compute(double R,double Z)const{return c_;}
+    double c_;
+};
+
+/**
 * @brief This struct bundles a function and its first derivatives
 *
 * @snippet hector_t.cu doxygen 
@@ -203,7 +215,12 @@ struct BinaryFunctorsLvl2
 ///@snippet hector_t.cu doxygen 
 struct BinarySymmTensorLvl1
 {
-    BinarySymmTensorLvl1( ){}
+    /**
+     * @brief Initialize with the identity tensor
+     */
+    BinarySymmTensorLvl1( ){
+        reset( Constant(1), Constant(0), Constant(1), Constant(0), Constant(0));
+    }
     /**
      * @brief Take ownership of newly allocated functors
      *
@@ -288,13 +305,6 @@ struct BinaryVectorLvl0
     Handle<aBinaryFunctor> p_[3];
 };
 
-struct Constant: public aCloneableBinaryFunctor<Constant> 
-{ 
-    Constant(double c):c_(c){}
-    private:
-    double do_compute(double R,double Z)const{return c_;}
-    double c_;
-};
 
 ///@}
 }//namespace geo
