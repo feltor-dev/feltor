@@ -87,6 +87,14 @@ struct PsiContraY : public aCloneableBinaryFunctor<PsiContraY>
     BinarySymmTensorLvl1 g_;
 };
 
+BinaryFunctorsLvl1 make_PsiContra( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& metric)
+{
+    PsiContraX psix( psi, metric);
+    PsiContraY psiy( psi, metric);
+    BinaryFunctorsLvl1 psi_contra( psi.f(), psix, psiy);
+    return psi_contra;
+}
+
 /**
  * @brief  A weight function for the Hector algorithm
  *\f[ |\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]

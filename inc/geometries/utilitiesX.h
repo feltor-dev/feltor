@@ -10,7 +10,7 @@ namespace geo
  * @brief This function finds the X-point via Newton iteration applied to the gradient of psi, 
  *
  * The inverse of the Hessian matrix is computed analytically
-    @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
+ * @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
  * @param R_X start value on input, X-point on output
  * @param Z_X start value on input, X-point on output
  * @ingroup misc_geo
@@ -30,6 +30,39 @@ void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
     }
     R_X = X[0], Z_X = X[1];
 }
+
+
+/**
+ * @brief construct a monitor metric in which the Laplacian vanishes at the X-point
+ *
+ * calls the \c findXpoint function to find the X-point
+ * @param psi the flux functions
+ * @param R_X start value on input, X-point on output
+ * @param Z_X start value on input, X-point on output
+ *
+ * @return a metric tensor and its derivatives
+ */
+BinarySymmTensorLvl1 make_XMonitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+{
+    findXpoint( psi, R_X, Z_X);
+    double x = R_X, y = Z_X;
+    double psixy    = psi.dfxy()(x,y), psixx = psi.dfxx()(x,y), psiyy = psi.dfyy()(x,y);
+    double sumpsi   = psixx + psiyy;
+    double diffpsi  = psixx - psiyy;
+    double alpha    = (psixy*psixy - psixx*psiyy)*(diffpsi*diffpsi + 4.*psixy*psixy);
+
+    double gxx = (-psiyy*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
+    double gyy = ( psixx*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
+    double gxy = (                   sumpsi*psixy)/sqrt(alpha);
+    Constant xx(gxx);
+    Constant xy(gxy);
+    Constant yy(gyy);
+    Constant divX (0);
+    Constant divY (0);
+    BinarySymmTensorLvl1 monitor( xx, xy, yy, divX, divY);
+    return monitor;
+}
+
 
 ///@cond
 namespace detail
