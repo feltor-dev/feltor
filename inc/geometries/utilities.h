@@ -362,16 +362,20 @@ struct FieldRZYRYZY
 
 struct FieldRZtau
 {
-    FieldRZtau(const BinaryFunctorsLvl1& psip): psip_(psip){}
+    FieldRZtau(const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1()): psip_(psip), chi_(chi){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
-        double psi2 = psipR*psipR+ psipZ*psipZ;
-        yp[0] =  psipR/psi2;
-        yp[1] =  psipZ/psi2;
+        double chiRR = chi_.xx()(y[0], y[1]), 
+               chiRZ = chi_.xy()(y[0], y[1]), 
+               chiZZ = chi_.yy()(y[0], y[1]);
+        double psip2 =   chiRR*psipR*psipR + 2.*chiRZ*psipR*psipZ + chiZZ*psipZ*psipZ;
+        yp[0] =  (chiRR*psipR + chiRZ*psipZ)/psip2;
+        yp[1] =  (chiRZ*psipR + chiZZ*psipZ)/psip2;
     }
   private:
     BinaryFunctorsLvl1 psip_;
+    BinarySymmTensorLvl1 chi_;
 };
 
 struct HessianRZtau

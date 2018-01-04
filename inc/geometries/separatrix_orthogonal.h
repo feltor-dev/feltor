@@ -188,18 +188,19 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     /**
      * @brief Construct 
      *
-     * @param psi
-     * @param psi_0
+     * @param psi the flux function
+     * @param chi the monitor tensor
+     * @param psi_0 must be the closed inside domain boundary 
      * @param xX the X-point
      * @param yX the X-point
      * @param x0
      * @param y0
      * @param firstline =0 means conformal, =1 means equalarc discretization
      */
-    SeparatrixOrthogonal( const BinaryFunctorsLvl2& psi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
+    SeparatrixOrthogonal( const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline ):
-        psi_(psi),
-        sep_( psi, xX, yX, x0, y0, firstline)
+        psi_(psi), chi_(chi),
+        sep_( psi, chi, xX, yX, x0, y0, firstline)
     {
         firstline_ = firstline;
         f0_ = sep_.get_f();
@@ -333,6 +334,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     double f0_, psi_0_;
     int firstline_;
     BinaryFunctorsLvl2 psi_;
+    BinarySymmTensorLvl1 chi_;
     dg::geo::detail::SeparatriX sep_;
 };
 

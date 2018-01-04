@@ -311,10 +311,10 @@ struct PsipSep
 //good as it can, i.e. until machine precision is reached (like FpsiX just for separatrix)
 struct SeparatriX
 {
-    SeparatriX( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0, int firstline): 
+    SeparatriX( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi, double xX, double yX, double x0, double y0, int firstline): 
         mode_(firstline),
-        fieldRZYequi_(psi), fieldRZYTequi_(psi, x0, y0), fieldRZYZequi_(psi),
-        fieldRZYconf_(psi), fieldRZYTconf_(psi, x0, y0), fieldRZYZconf_(psi)
+        fieldRZYequi_(psi, chi), fieldRZYTequi_(psi, x0, y0, chi), fieldRZYZequi_(psi, chi),
+        fieldRZYconf_(psi, chi), fieldRZYTconf_(psi, x0, y0, chi), fieldRZYZconf_(psi, chi)
     {
         //find four points on the separatrix and construct y coordinate at those points and at last construct f 
         //////////////////////////////////////////////

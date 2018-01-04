@@ -11,6 +11,7 @@
 #include "dg/geometry/geometry.h"
 #include "generator.h"
 #include "utilities.h"
+#include "adaption.h"
 
 
 namespace dg
@@ -151,9 +152,9 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const thrust::host_vector<doubl
 //and provides the Nemov algorithm for orthogonal grid
 struct Nemov
 {
-    Nemov( const BinaryFunctorsLvl2 psi, double f0, int mode):
+    Nemov( const BinaryFunctorsLvl2 psi, double f0, int mode, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1()):
         f0_(f0), mode_(mode),
-        psip_(psi) { }
+        psip_(psi), chi_(chi), lapPsi_(psi,chi) { }
     void initialize( 
         const thrust::host_vector<double>& r_init, //1d intial values
         const thrust::host_vector<double>& z_init, //1d intial values
@@ -169,9 +170,12 @@ struct Nemov
                 h_init[i] = f0_;
             if(mode_ == 1)
             {
-                double psipR = psip_.dfx()(r_init[i], z_init[i]), 
-                       psipZ = psip_.dfy()(r_init[i], z_init[i]);
-                double psip2 = (psipR*psipR+psipZ*psipZ);
+                double x = r_init[i], y = z_init[i];
+                double psipR = psip_.dfx()(x, y), psipZ = psip_.dfy()(x,y);
+                double chiRR = chi_.xx()(x, y), 
+                       chiRZ = chi_.xy()(x, y), 
+                       chiZZ = chi_.yy()(x, y);
+                double psip2 =   chiRR*psipR*psipR + 2.*chiRZ*psipR*psipZ + chiZZ*psipZ*psipZ;
                 h_init[i]  = f0_/sqrt(psip2); //equalarc
             }
             //double laplace = psipRR_(r_init[i], z_init[i]) + 
@@ -185,7 +189,6 @@ struct Nemov
     { 
         //y[0] = R, y[1] = Z, y[2] = h, y[3] = hr, y[4] = hz
         unsigned size = y[0].size();
-        double psipR, psipZ, psip2;
         for( unsigned i=0; i<size; i++)
         {
             psipR = psip_.dfx()(y[0][i], y[1][i]), psipZ = psip_.dfy()(y[0][i], y[1][i]);
@@ -196,12 +199,23 @@ struct Nemov
             yp[2][i] = y[2][i]*( - psip_.dfxx()(y[0][i], y[1][i]) - psip_.dfyy()(y[0][i], y[1][i]) )/psip2;
             //yp[3][i] = ( -(2.*psipRR+psipZZ)*y[3][i] - psipRZ*y[4][i] - laplacePsipR_(y[0][i], y[1][i])*y[2][i])/psip2;
             //yp[4][i] = ( -psipRZ*y[3][i] - (2.*psipZZ+psipRR)*y[4][i] - laplacePsipZ_(y[0][i], y[1][i])*y[2][i])/psip2;
+            double x = y[0][i], y = y[1][i];
+            double psipR = psip_.dfx()(x, y), psipZ = psip_.dfy()(x,y);
+            double chiRR = chi_.xx()(x, y), 
+                   chiRZ = chi_.xy()(x, y), 
+                   chiZZ = chi_.yy()(x, y);
+            double psip2 =   chiRR*psipR*psipR + 2.*chiRZ*psipR*psipZ + chiZZ*psipZ*psipZ;
+            yp[0][i] =  (chiRR*psipR + chiRZ*psipZ)/psip2;
+            yp[1][i] =  (chiRZ*psipR + chiZZ*psipZ)/psip2;
+            yp[2][i] = y[2][i]*( - lapPsi_(x,y) )/psip2;
         }
     }
     private:
     double f0_;
     int mode_;
     BinaryFunctorsLvl2 psip_;
+    BinarySymmTensorLvl1 chi_;
+    dg::geo::detail::LaplaceChiPsi lapPsi_;
 };
 
 template<class Nemov>
