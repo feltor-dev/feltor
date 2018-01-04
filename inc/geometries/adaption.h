@@ -59,6 +59,35 @@ struct LaplacePsi: public aCloneableBinaryFunctor<LaplacePsi>
 ///@{
 
 /**
+ * @brief The contravariant x-component of the gradient of psi
+ * \f[ \psi^x = g^{xx}\psi_x + g^{xy}\psi_y \f]
+ */
+struct PsiContraX : public aCloneableBinaryFunctor<PsiContraX>
+{
+    PsiContraX( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& metric) : psi_(psi), g_(metric){}
+    private:
+    double do_compute(double x, double y)const {
+        return  g_.xx()(x,y)*psi_.dfx()(x,y) + g_.xy()(x,y)*psi_.dfy()(x,y);
+    }
+    BinaryFunctorsLvl1 psi_;
+    BinarySymmTensorLvl1 g_;
+};
+/**
+ * @brief The contravariant y-component of the gradient of psi
+ * \f[ \psi^y = g^{xy}\psi_x + g^{yy}\psi_y \f]
+ */
+struct PsiContraY : public aCloneableBinaryFunctor<PsiContraY>
+{
+    PsiContraY( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& metric) : psi_(psi), g_(metric){}
+    private:
+    double do_compute(double x, double y)const {
+        return  g_.xy()(x,y)*psi_.dfx()(x,y) + g_.yy()(x,y)*psi_.dfy()(x,y);
+    }
+    BinaryFunctorsLvl1 psi_;
+    BinarySymmTensorLvl1 g_;
+};
+
+/**
  * @brief  A weight function for the Hector algorithm
  *\f[ |\nabla\psi|^{-1} = (\psi_x^2 + \psi_y^2)^{-1/2} \f]
  */
