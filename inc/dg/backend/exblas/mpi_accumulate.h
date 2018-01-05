@@ -5,6 +5,31 @@
 namespace exblas
 {
 
+/**
+ * @brief This function can be used to generate communicators for the \c reduce_mpi function
+ *
+ * @param comm the input communicator 
+ * @param comm_mod a subgroup of comm (comm is split)
+ * @param comm_mod_reduce a subgroup of comm, consists of all rank 0 processes in comm_mod
+ * @note the creation of new communicators involves communication between all participation processes (comm in this case)
+ */
+void make_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_mod_reduce){
+    int mod = 128;
+    int rank, size;
+    MPI_Comm_rank( comm, &rank);
+    MPI_Comm_size( comm, &size);
+    MPI_Comm_split( comm, rank/mod, rank%mod, comm_mod);
+    MPI_Group group, reduce_group; 
+    MPI_Comm_group( comm, &group);
+    int reduce_size=(int)ceil((double)size/(double)mod);
+    int reduce_ranks[reduce_size];
+    for( int i=0; i<reduce_size; i++)
+        reduce_ranks[i] = i*mod;
+    MPI_Group_incl( group, reduce_size, reduce_ranks, &reduce_group);
+    MPI_Comm_create( comm, reduce_group, comm_mod_reduce);
+    //returns MPI_COMM_NULL to processes that are not in the group
+}
+
 /*! @brief reduce a number of superaccumulators distributed among mpi processes
 
 We cannot sum more than 256 accumulators before we need to normalize again, so we need to split the reduction. This function normalizes, 
@@ -14,8 +39,8 @@ processes.
 @param in unnormalized input superaccumulators ( read/write, must be of size num_superacc*BIN_COUNT)
 @param out each process contains the result on output( write, must be of size num_superacc*BIN_COUNT)
 @param comm The complete MPI communicator
-@param comm_mod This is comm modulo 128 ( or any other number <256)
-@param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be MPI_COMM_NULL
+@param comm_mod This is comm modulo 128 ( or any other number <256) (use \c make_reduce_communicator to generate this)
+@param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL (use \c make_reduce_communicator to generate this)
 */
 void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
 {

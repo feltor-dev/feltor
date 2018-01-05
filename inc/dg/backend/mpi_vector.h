@@ -3,6 +3,7 @@
 #include <cassert>
 #include <thrust/host_vector.h>
 #include <thrust/gather.h>
+#include "exblas/mpi_accumulate.h"
 #include "vector_traits.h"
 #include "thrust_vector_blas.cuh"
 #include "mpi_communicator.h"
@@ -72,21 +73,8 @@ struct MPI_Vector
     MPI_Comm communicator_mod_reduce() const{return comm128Reduce_;}
     ///@brief Set the communicator to which this vector belongs
     void set_communicator(MPI_Comm comm){
-        int mod = 128;
         comm_ = comm;
-        int rank, size;
-        MPI_Comm_rank( comm, &rank);
-        MPI_Comm_size( comm, &size);
-        MPI_Comm_split( comm, rank/mod, rank%mod, &comm128_);
-        MPI_Group group, reduce_group; 
-        MPI_Comm_group( comm, &group);
-        int reduce_size=(int)ceil((double)size/(double)mod);
-        int reduce_ranks[reduce_size];
-        for( int i=0; i<reduce_size; i++)
-            reduce_ranks[i] = i*mod;
-        MPI_Group_incl( group, reduce_size, reduce_ranks, &reduce_group);
-        MPI_Comm_create( comm, reduce_group, &comm128Reduce_);
-        //returns MPI_COMM_NULL to processes that are not in the group
+        exblas::make_reduce_communicator( comm_, &comm128_, &comm128Reduce_);
     }
 
     ///@brief Return the size of the data object
