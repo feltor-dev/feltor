@@ -334,7 +334,7 @@ struct SeparatriX
         R_min = R_X, R_max = R_X+10;
         dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
         R_i[3] = (R_min+R_max)/2., Z_i[3] = Z_X-1.;
-        //std::cout << "Found 3rd point "<<R_i[3]<<" "<<Z_i[3]<<"\n";
+        std::cout << "Found 3rd point "<<R_i[3]<<" "<<Z_i[3]<<"\n";
         //now measure y distance to X-point
         thrust::host_vector<double> begin2d( 3, 0), end2d( begin2d);
         for( int i=0; i<4; i++)
@@ -358,9 +358,10 @@ struct SeparatriX
             }
             //remember last call
             y_i[i] = end2d[2]; 
-            std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
+            if( i==0 || i == 2)
+                y_i[i] *= -1;//these were integrated against y direction
+            std::cout << "Found |y_i["<<i<<"]|: "<<y_i[i]<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
         }
-        y_i[0]*=-1; y_i[2]*=-1; //these were integrated against y direction
 
         f_psi_ = construct_f( );
         y_i[0]*=f_psi_, y_i[1]*=f_psi_, y_i[2]*=f_psi_, y_i[3]*=f_psi_;
