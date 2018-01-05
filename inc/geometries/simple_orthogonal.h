@@ -191,23 +191,17 @@ struct Nemov
         unsigned size = y[0].size();
         for( unsigned i=0; i<size; i++)
         {
-            psipR = psip_.dfx()(y[0][i], y[1][i]), psipZ = psip_.dfy()(y[0][i], y[1][i]);
-            //psipRR = psipRR_(y[0][i], y[1][i]), psipRZ = psipRZ_(y[0][i], y[1][i]), psipZZ = psipZZ_(y[0][i], y[1][i]);
-            psip2 = f0_*(psipR*psipR+psipZ*psipZ);
-            yp[0][i] = psipR/psip2;
-            yp[1][i] = psipZ/psip2;
-            yp[2][i] = y[2][i]*( - psip_.dfxx()(y[0][i], y[1][i]) - psip_.dfyy()(y[0][i], y[1][i]) )/psip2;
-            //yp[3][i] = ( -(2.*psipRR+psipZZ)*y[3][i] - psipRZ*y[4][i] - laplacePsipR_(y[0][i], y[1][i])*y[2][i])/psip2;
-            //yp[4][i] = ( -psipRZ*y[3][i] - (2.*psipZZ+psipRR)*y[4][i] - laplacePsipZ_(y[0][i], y[1][i])*y[2][i])/psip2;
-            double x = y[0][i], y = y[1][i];
-            double psipR = psip_.dfx()(x, y), psipZ = psip_.dfy()(x,y);
-            double chiRR = chi_.xx()(x, y), 
-                   chiRZ = chi_.xy()(x, y), 
-                   chiZZ = chi_.yy()(x, y);
+            double xx = y[0][i], yy = y[1][i];
+            double psipR = psip_.dfx()(xx, yy), psipZ = psip_.dfy()(xx,yy);
+            double chiRR = chi_.xx()(xx, yy), 
+                   chiRZ = chi_.xy()(xx, yy), 
+                   chiZZ = chi_.yy()(xx, yy);
             double psip2 =   chiRR*psipR*psipR + 2.*chiRZ*psipR*psipZ + chiZZ*psipZ*psipZ;
             yp[0][i] =  (chiRR*psipR + chiRZ*psipZ)/psip2;
             yp[1][i] =  (chiRZ*psipR + chiZZ*psipZ)/psip2;
-            yp[2][i] = y[2][i]*( - lapPsi_(x,y) )/psip2;
+            yp[2][i] = y[2][i]*( - lapPsi_(xx,yy) )/psip2;
+            //yp[3][i] = ( -(2.*psipRR+psipZZ)*y[3][i] - psipRZ*y[4][i] - laplacePsipR_(y[0][i], y[1][i])*y[2][i])/psip2; //wrong with monitor metric!!
+            //yp[4][i] = ( -psipRZ*y[3][i] - (2.*psipZZ+psipRR)*y[4][i] - laplacePsipZ_(y[0][i], y[1][i])*y[2][i])/psip2; //wrong with monitor metric!!
         }
     }
     private:
