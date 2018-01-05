@@ -30,11 +30,11 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
      * @param Ny number of cells in y 
      * @param Nz  number of cells z
      * @param bcx boundary condition in x
-     * @param bcy boundary condition in y
+     * @param bcy boundary condition in y (may not be periodic)
      * @param bcz boundary condition in z
      */
     CurvilinearRefinedProductGridX3d( const aRefinementX2d& ref, const aGeneratorX2d& generator, 
-        double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
+        double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::NEU, bc bcz=dg::PER):
         dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), Nz, bcx, bcy, bcz), map_(3)
     { 
         handle_ = generator;
@@ -117,9 +117,9 @@ struct CurvilinearRefinedGridX2d : public dg::aGeometryX2d
      * @param Nx number of cells in first coordinate
      * @param Ny number of cells in second coordinate
      * @param bcx boundary condition in first coordinate
-     * @param bcy boundary condition in second coordinate
+     * @param bcy boundary condition in second coordinate (may not be periodic)
      */
-    CurvilinearRefinedGridX2d( const aRefinementX2d& ref, const aGeneratorX2d& generator, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
+    CurvilinearRefinedGridX2d( const aRefinementX2d& ref, const aGeneratorX2d& generator, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::NEU):
         dg::aGeometryX2d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy),ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), bcx, bcy)
     {
         handle_ = generator;
@@ -132,7 +132,7 @@ struct CurvilinearRefinedGridX2d : public dg::aGeometryX2d
     private:
     void construct(double fx, double fy, unsigned n, unsigned Nx, unsigned Ny)
     {
-        CurvilinearRefinedProductGridX3d g( ref_.get(), handle_.get(),fx,fy,n,Nx,Ny,1,bcx());
+        CurvilinearRefinedProductGridX3d g( ref_.get(), handle_.get(),fx,fy,n,Nx,Ny,1,bcx(), bcy());
         map_=g.map();
         jac_=g.jacobian().perp();
         metric_=g.metric().perp();
