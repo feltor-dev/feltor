@@ -115,7 +115,6 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
 
         Reduction(tid, tnum, ready, acc, linesize);
     }
-    std::cout << "First result "<<Round( acc.data())<<std::endl;
     for( int i=IMIN; i<=IMAX; i++)
         h_superacc[i] = acc[i];
 }
@@ -170,20 +169,17 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
 
         Reduction(tid, tnum, ready, acc, linesize);
     }
-    std::cout << "First result "<<Round( acc.data())<<std::endl;
     for( int i=IMIN; i<=IMAX; i++)
         h_superacc[i] = acc[i];
 }
 }//namespace cpu
 
 void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
-    std::cout << "H2llo exdto 2 omp\n";
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
     cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 }
 void exdot_omp(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
-    std::cout << "H2llo exdto 3 omp\n";
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
     cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);

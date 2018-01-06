@@ -37,7 +37,7 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
     typedef typename Vector::container_type container;
     //local compuation
     std::vector<int64_t> acc = doDot_superacc( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
-    std::vector<int64_t> receive(BIN_COUNT, 0);
+    std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicotor(), x.communicator_mod(), x.communicator_mod_reduce());
     return receive;
 }

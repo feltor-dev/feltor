@@ -2,8 +2,7 @@
 #include <mpi.h>
 #include "accumulate.h"
 
-namespace exblas
-{
+namespace exblas {
 
 /**
  * @brief This function can be used to generate communicators for the \c reduce_mpi function
@@ -47,7 +46,7 @@ void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm
     for( unsigned i=0; i<num_superacc; i++)
     {
         int imin=exblas::IMIN, imax=exblas::IMAX;
-        Normalize(&in[i*exblas::BIN_COUNT], &imin, &imax);
+        cpu::Normalize(&in[i*exblas::BIN_COUNT], imin, imax);
     }
     MPI_Reduce(in, out, num_superacc*exblas::BIN_COUNT, MPI_LONG, MPI_SUM, 0, comm_mod); 
     int rank;
@@ -57,8 +56,8 @@ void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm
         for( unsigned i=0; i<num_superacc; i++)
         {
             int imin=exblas::IMIN, imax=exblas::IMAX;
-            Normalize(&out[i*exblas::BIN_COUNT], &imin, &imax);
-            for( int k=0; k<BIN_COUNT; k++)
+            cpu::Normalize(&out[i*exblas::BIN_COUNT], imin, imax);
+            for( int k=0; k<exblas::BIN_COUNT; k++)
                 in[i*BIN_COUNT+k] = out[i*BIN_COUNT+k];
         }
         MPI_Reduce(in, out, num_superacc*exblas::BIN_COUNT, MPI_LONG, MPI_SUM, 0, comm_mod_reduce); 

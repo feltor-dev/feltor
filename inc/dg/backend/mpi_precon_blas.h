@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include "mpi_vector_blas.h"
 #include "mpi_precon.h"
 #include "thrust_matrix_blas.cuh"
@@ -22,8 +23,8 @@ inline std::vector<int64_t> doDot_superacc( const Vector& x, const Precon& P, co
 #endif //DG_DEBUG
     //local compuation
     std::vector<int64_t> acc = doDot_superacc(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());
-    std::vector<int64_t> receive(BIN_COUNT, 0);
-    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicotor(), x.communicator_mod(), x.communicator_mod_reduce());
+    std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
+    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicator(), x.communicator_mod(), x.communicator_mod_reduce());
 
     return receive;
 }
@@ -31,14 +32,14 @@ template< class Precon, class Vector>
 inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
     std::vector<int64_t> acc = doDot_superacc( x,P,y,MPIPreconTag(), MPIVectorTag());
-    return exblas::Round(acc.data());
+    return exblas::cpu::Round(acc.data());
 }
 
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::MPIPreconTag, dg::MPIVectorTag)
 {
     std::vector<int64_t> acc = doDot_superacc( x,m,x,MPIPreconTag(), MPIVectorTag());
-    return exblas::Round(acc.data());
+    return exblas::cpu::Round(acc.data());
 }
 
 template< class Precon, class Vector>

@@ -23,7 +23,9 @@
 
 #elif defined(__GNUG__)
 
+#ifndef GCC_VERSION
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#endif //GCC_VERSION
 #if GCC_VERSION < 40900
 #warning "gcc version >= 4.9 recommended to activate OpenMP 4 support"
 #define SIMD
