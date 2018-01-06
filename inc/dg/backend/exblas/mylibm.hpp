@@ -53,7 +53,7 @@
 #define paranoid_assert(x) assert(x)
 
 namespace exblas{
-namespace detail{
+namespace cpu{
 
 // Making C code less readable in an attempt to make assembly more readable
 #if 1
@@ -231,7 +231,7 @@ inline static bool horizontal_or(vcl::Vec8d const & a) {
     //return !_mm512_testz_pd(p, p);
 }
 
-}//namespace detail
+}//namespace cpu
 }//namespace exblas
 
 #endif

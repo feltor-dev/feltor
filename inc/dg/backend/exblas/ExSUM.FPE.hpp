@@ -19,6 +19,8 @@
 
 namespace exblas
 {
+namespace cpu
+{
 
 /**
  * \struct FPExpansionTraits
@@ -51,7 +53,7 @@ struct FPExpansionVect
      * Constructor
      * \param sa superaccumulator
      */
-    FPExpansionVect(Superaccumulator & sa);
+    FPExpansionVect(int64_t* sa);
 
     /** 
      * This function accumulates value x to the floating-point expansion
@@ -156,9 +158,9 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
     for(unsigned int i = 0; i != N; ++i) {
         a[i] = twosum(a[i], x, s);
         x = s;
-        if(TRAITS::EarlyExit && i != 0 && !detail::horizontal_or(x)) return;
+        if(TRAITS::EarlyExit && i != 0 && !horizontal_or(x)) return;
     }
-    if(TRAITS::EarlyExit || detail::horizontal_or(x)) {
+    if(TRAITS::EarlyExit || horizontal_or(x)) {
         FlushVector(x);
     }
 }
@@ -339,13 +341,13 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
         //a[i] = ai;
         x1 = s1;
         x2 = s2;
-        if(TRAITS::EarlyExit && i != 0 && !detail::horizontal_or(x1|x2)) return;
+        if(TRAITS::EarlyExit && i != 0 && !horizontal_or(x1|x2)) return;
     }
 
     
     if(TRAITS::EarlyExit || (TRAITS::Horz2Sum && !TRAITS::Victimcache)) {
         // 1 check for both numbers
-        if(TRAITS::EarlyExit || unlikely(detail::horizontal_or(x1|x2))) {
+        if(TRAITS::EarlyExit || unlikely(horizontal_or(x1|x2))) {
             if(TRAITS::FlushHi) {
                 Insert(x1, x2);
             }
@@ -353,14 +355,14 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
             //    horizontal_twosum(x1, x2);
             //}
             FlushVector(x1);
-            if(!TRAITS::Horz2Sum || detail::horizontal_or(x2)) {
+            if(!TRAITS::Horz2Sum || horizontal_or(x2)) {
                 FlushVector(x2);
             }
         }
     }
     else {
         // Separate checks
-        if(unlikely(detail::horizontal_or(x1))) {
+        if(unlikely(horizontal_or(x1))) {
             if(TRAITS::FlushHi) {
                 Insert(x1);
             }
@@ -414,7 +416,7 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
     _mm256_zeroupper();
 #endif
     for(unsigned int j = 0; j != 8; ++j) {
-        Accumulate(superacc, v[j]);
+        exblas::cpu::Accumulate(superacc, v[j]);
     }
 }
 
@@ -440,5 +442,6 @@ void FPExpansionVect<T,N,TRAITS>::DumpVector(T x) const
     }
 }
 
+}//namespace cpu
 }//namespace exblas
 #endif // EXSUM_FPE_HPP_

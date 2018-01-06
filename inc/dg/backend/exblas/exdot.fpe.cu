@@ -10,6 +10,7 @@
 #include "accumulate.cuh"
 
 namespace exblas{
+namespace gpu{
 
 
 
@@ -95,7 +96,8 @@ __global__ void ExDOT(
     //Merge sub-superaccs into work-group partial-accumulator ( ATTENTION: PartialSuperacc is transposed!)
     uint pos = threadIdx.x;
     if(pos < WARP_COUNT) {
-        NormalizeT( l_workingBase);
+        int imin = IMIN, imax = IMAX;
+        NormalizeT( l_workingBase, imin, imax);
     }
     __syncthreads();
 
@@ -110,7 +112,8 @@ __global__ void ExDOT(
 
     __syncthreads();
     if (pos == 0) {
-        Normalize(&d_PartialSuperaccs[blockIdx.x * BIN_COUNT]);
+        int imin = IMIN, imax = IMAX;
+        Normalize(&d_PartialSuperaccs[blockIdx.x * BIN_COUNT], imin, imax);
     }
 }
 
@@ -220,7 +223,8 @@ __global__ void ExDOT(
     //Merge sub-superaccs into work-group partial-accumulator ( ATTENTION: PartialSuperacc is transposed!)
     uint pos = threadIdx.x;
     if(pos<WARP_COUNT){
-            NormalizeT(l_workingBase);
+            int imin = IMIN, imax = IMAX;
+            NormalizeT(l_workingBase, imin, imax);
         }
     __syncthreads();
     if (pos < BIN_COUNT) {
@@ -234,13 +238,22 @@ __global__ void ExDOT(
 
     __syncthreads();
     if (pos == 0) {
-        Normalize(&d_PartialSuperaccs[blockIdx.x * BIN_COUNT]);
+        int imin = IMIN, imax = IMAX;
+        Normalize(&d_PartialSuperaccs[blockIdx.x * BIN_COUNT], imin, imax);
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Merging
 ////////////////////////////////////////////////////////////////////////////////
+////////////// parameters for Kernel execution            //////////////////////
+//Kernel paramters for EXDOT
+static constexpr uint WARP_SIZE                = 16 ; 
+static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per block
+static constexpr uint PARTIAL_SUPERACCS_COUNT  = 256; //# of groups; each has a partial SuperAcc (should not be larger than 512)
+//Kernel paramters for EXDOTComplete
+static constexpr uint MERGE_SUPERACCS_SIZE     = 64; //# of sa each block merges
+static constexpr uint MERGE_WORKGROUP_SIZE     = 64;  //we need only 39 of those
 __global__
 void ExDOTComplete(
      int64_t *d_PartialSuperaccs,
@@ -260,7 +273,8 @@ void ExDOTComplete(
 
     __syncthreads();
     if (lid == 0) {
-        Normalize(&d_PartialSuperaccs[gid * BIN_COUNT]);
+        int imin = IMIN, imax = IMAX;
+        Normalize(&d_PartialSuperaccs[gid * BIN_COUNT], imin, imax);
     }
 
     __syncthreads();
@@ -274,32 +288,25 @@ void ExDOTComplete(
     }
 }
 
-////////////// parameters for Kernel execution            //////////////////////
-//Kernel paramters for EXDOT
-static constexpr uint WARP_SIZE                = 16 ; 
-static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per block
-static constexpr uint PARTIAL_SUPERACCS_COUNT  = 256; //# of groups; each has a partial SuperAcc (should not be larger than 512)
-//Kernel paramters for EXDOTComplete
-static constexpr uint MERGE_SUPERACCS_SIZE     = 64; //# of sa each block merges
-static constexpr uint MERGE_WORKGROUP_SIZE     = 64;  //we need only 39 of those
+}//namespace gpu
 
 //d_superacc must be a pointer to device memory with size at least BIN_COUNT 
 __host__
 void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* d_superacc)
 {
-    static thrust::device_vector<int64_t> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
+    static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
-    ExDOTComplete<<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    gpu::ExDOT<<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
+    gpu::ExDOTComplete<<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 
 __host__
 void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const double* x3_ptr, int64_t* d_superacc)
 {
-    static thrust::device_vector<int64_t> d_PartialSuperaccsV( PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
+    static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    ExDOT<<<PARTIAL_SUPERACCS_COUNT, WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
-    ExDOTComplete<<<PARTIAL_SUPERACCS_COUNT/MERGE_SUPERACCS_SIZE, MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    gpu::ExDOT<<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
+    gpu::ExDOTComplete<<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 
 }//namespace exblas

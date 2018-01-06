@@ -16,6 +16,7 @@
 #include <omp.h>
 
 namespace exblas{
+namespace cpu{
 
 
 
@@ -28,7 +29,7 @@ namespace exblas{
  * \param acc1 superaccumulator of the first thread
  * \param acc2 superaccumulator of the second thread
  */
-inline static void ReductionStep(int step, int tid1, int tid2, Superaccumulator * acc1, Superaccumulator * acc2,
+inline static void ReductionStep(int step, int tid1, int tid2, int64_t * acc1, int64_t * acc2,
     int volatile * ready1, int volatile * ready2)
 {
     _mm_prefetch((char const*)ready2, _MM_HINT_T0);
@@ -38,9 +39,9 @@ inline static void ReductionStep(int step, int tid1, int tid2, Superaccumulator 
         _mm_pause();
     }
     int imin = IMIN, imax = IMAX;
-    Normalize( acc1, &imin, &imax);
+    Normalize( acc1, imin, imax);
     imin = IMIN, imax = IMAX;
-    Normalize( acc2, &imin, &imax);
+    Normalize( acc2, imin, imax);
     for(int i = IMIN; i <= IMAX; ++i) {
         acc1[i] += acc2[i];
     }
@@ -85,7 +86,7 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
         unsigned int tid = omp_get_thread_num();
         unsigned int tnum = omp_get_num_threads();
 
-        CACHE cache(acc[tid]);
+        CACHE cache(&acc[tid*BIN_COUNT]);
         *(int32_t volatile *)(&ready[tid * linesize]) = 0;  // Race here, who cares?
 
         int l = ((tid * int64_t(N)) / tnum) & ~7ul; // & ~3ul == round down to multiple of 4
@@ -110,10 +111,11 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
         }
         cache.Flush();
         int imin=IMIN, imax=IMAX;
-        Normalize(&acc[tid*BIN_COUNT], &imin, &imax);
+        Normalize(&acc[tid*BIN_COUNT], imin, imax);
 
         Reduction(tid, tnum, ready, acc, linesize);
     }
+    std::cout << "First result "<<Round( acc.data())<<std::endl;
     for( int i=IMIN; i<=IMAX; i++)
         h_superacc[i] = acc[i];
 }
@@ -164,23 +166,27 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
         }
         cache.Flush();
         int imin=IMIN, imax=IMAX;
-        Normalize(&acc[tid*BIN_COUNT], &imin, &imax);
+        Normalize(&acc[tid*BIN_COUNT], imin, imax);
 
         Reduction(tid, tnum, ready, acc, linesize);
     }
+    std::cout << "First result "<<Round( acc.data())<<std::endl;
     for( int i=IMIN; i<=IMAX; i++)
         h_superacc[i] = acc[i];
 }
+}//namespace cpu
 
 void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
+    std::cout << "H2llo exdto 2 omp\n";
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
-    ExDOTFPE<FPExpansionVect<vcl::Vec8d, 8, FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
+    cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 }
 void exdot_omp(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
+    std::cout << "H2llo exdto 3 omp\n";
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
-    ExDOTFPE<FPExpansionVect<vcl::Vec8d, 8, FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
+    cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 }
 
 }//namespace exblas

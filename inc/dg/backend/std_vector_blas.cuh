@@ -45,13 +45,13 @@ inline get_value_type<Vector> doDot( const Vector& x1, const Vector& x2, VectorV
     for( unsigned i=1; i<x1.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
-        exblas::Normalize( &(acc[0][0]), &imin, &imax);
+        exblas::cpu::Normalize( &(acc[0][0]), imin, imax);
         imin = exblas::IMIN, imax = exblas::IMAX;
-        exblas::Normalize( &(acc[i][0]), &imin, &imax);
-        for( int k=IMIN; k<IMAX; k++)
+        exblas::cpu::Normalize( &(acc[i][0]), imin, imax);
+        for( int k=exblas::IMIN; k<exblas::IMAX; k++)
             acc[0][k] += acc[i][k];
     }
-    return exblas::Round(&(acc[0][0]));
+    return exblas::cpu::Round(&(acc[0][0]));
 }
 template<class Vector, class UnaryOp>
 inline void doTransform( const Vector& x, Vector& y, UnaryOp op, VectorVectorTag)

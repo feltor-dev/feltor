@@ -47,7 +47,7 @@ template<class T,std::size_t N>
 T doDot( const std::array<T,N>& x, const std::array<T,N>& y, StdArrayTag)
 {
     std::vector<int64_t> acc = doDot_superacc( x,y,StdArrayTag());
-    return exblas::Round(acc.data());
+    return exblas::cpu::Round(acc.data());
 }
 
 template< class T,std::size_t N, class UnaryOp>

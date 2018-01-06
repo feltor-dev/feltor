@@ -8,6 +8,7 @@
 #include "ExSUM.FPE.hpp"
 
 namespace exblas{
+namespace cpu{
 
 template<typename CACHE> 
 void ExDOTFPE_cpu(int N, const double *a, const double *b, int64_t* acc) {
@@ -67,17 +68,18 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int6
     }
     cache.Flush();
 }
+}//namespace cpu
 
 void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
-    ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 8, FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
+    cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 }
 
 void exdot_cpu(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
-    ExDOTFPE_cpu<FPExpansionVect<vcl::Vec8d, 8, FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
+    cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 }
 
 

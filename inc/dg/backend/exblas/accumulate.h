@@ -3,13 +3,12 @@
 #include "mylibm.hpp"
 //this file has a direct correspondance to gpu code accumulate.cuh
 
-namespace exblas
-{
+namespace exblas {
+namespace cpu {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
-
 
 inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
     // With atomic accumulator updates
@@ -20,7 +19,7 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
     unsigned char overflow;
     int64_t carry = x;
     int64_t carrybit;
-    int64_t oldword = xadd(accumulator[i], x, overflow);
+    int64_t oldword = cpu::xadd(accumulator[i], x, overflow);
     // To propagate over- or underflow
     while(unlikely(overflow)) {
         // Carry or borrow
@@ -34,7 +33,7 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
         carrybit = (s ? 1ll << KRX : -1ll << KRX);
         
         // Cancel carry-save bits
-        detail::xadd(accumulator[i], (int64_t) -(carry << DIGITS), &overflow);
+        cpu::xadd(accumulator[i], (int64_t) -(carry << DIGITS), overflow);
         if(TSAFE && unlikely(s ^ overflow)) {
             // (Another) overflow of sign S
             carrybit *= 2;
@@ -46,26 +45,25 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
             //status = Overflow;
             return;
         }
-        oldword = detail::xadd(accumulator[i], carry, overflow);
+        oldword = cpu::xadd(accumulator[i], carry, overflow);
     }
 }
-
 
 inline void Accumulate( int64_t* accumulator, double x) {
     if (x == 0)
         return;
     
 
-    int e = exponent(x);
+    int e = cpu::exponent(x);
     int exp_word = e / DIGITS;  // Word containing MSbit (upper bound)
     int iup = exp_word + F_WORDS;
     
-    double xscaled = detail::myldexp(x, -DIGITS * exp_word);
+    double xscaled = cpu::myldexp(x, -DIGITS * exp_word);
 
     int i;
     for (i = iup; xscaled != 0; --i) {
-        double xrounded = detail::myrint(xscaled);
-        int64_t xint = detail::myllrint(xscaled);
+        double xrounded = cpu::myrint(xscaled);
+        int64_t xint = cpu::myllrint(xscaled);
         AccumulateWord(accumulator, i, xint);
         
         xscaled -= xrounded;
@@ -143,11 +141,12 @@ double Round( int64_t * accumulator) {
     // Now add3(hi, mid, lo)
     // No overlap, we have already normalized
     if (mid != 0) {
-        lo = detail::OddRoundSumNonnegative(mid, lo);
+        lo = cpu::OddRoundSumNonnegative(mid, lo);
     }
     // Final rounding
     hi = hi + lo;
     return negative ? -hi : hi;
 }
 
+}//namespace cpu
 } //namespace exblas

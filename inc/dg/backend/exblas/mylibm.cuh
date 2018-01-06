@@ -2,22 +2,22 @@
 #include <stdint.h>
 namespace exblas
 {
-namespace detail
+namespace gpu
 {
 
 //first define device function equivalent to mylibm.hpp
 //returns the original value at address
 __device__ int64_t atomicAdd( int64_t* address, int64_t val)
 {
-    uint64_t* address_as_ull =
-        (uint64_t*)address;
-    uint64_t old = *address_as_ull, assumed;
+    unsigned long long int* address_as_ull =
+        (unsigned long long int*)address;
+    unsigned long long int old = *address_as_ull, assumed;
 
     do
     {
         assumed = old; //*address_as_ull might change during the time the CAS is reached
         old = atomicCAS(address_as_ull, assumed,
-                          (uint64_t)(val + (int64_t)old));
+                          (unsigned long long int)(val + (int64_t)old));
     } while( old != assumed);//try as often as necessary
     //assume that bit patterns don't change when casting
     //return the original value stored at address
@@ -58,5 +58,5 @@ inline double OddRoundSumNonnegative(double th, double tl) {
     thdb.l |= (tl != 0.0);
     return thdb.d;
 }
-}//namespace detail
+}//namespace gpu
 }//namespace exblas

@@ -5,6 +5,8 @@
 
 namespace exblas
 {
+namespace gpu
+{
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
@@ -34,7 +36,7 @@ inline void AccumulateWordT( int64_t *accumulator, int i, int64_t x) {
         carrybit = (s ? 1l << KRX : -1l << KRX);
 
         // Cancel carry-accumulatorve bits
-        detail::xadd(accumulator[i * WARP_COUNT], (int64_t) -(carry << DIGITS), overflow);
+        xadd(accumulator[i * WARP_COUNT], (int64_t) -(carry << DIGITS), overflow);
         if (TSAFE && (s ^ overflow)){ //MW: TSAFE is always 0
             // (Another) overflow of sign S
             carrybit *= 2;
@@ -46,7 +48,7 @@ inline void AccumulateWordT( int64_t *accumulator, int i, int64_t x) {
             //status = Overflow;
             return;
         }
-        oldword = detail::xadd(accumulator[i * WARP_COUNT], carry, overflow);
+        oldword = xadd(accumulator[i * WARP_COUNT], carry, overflow);
     }
 }
 
@@ -66,7 +68,7 @@ inline void AccumulateT( int64_t* accumulator, double x) { //transposed accumula
     for (i = iup; xscaled != 0; --i) {
         double xrounded = rint(xscaled);
         int64_t xint = (int64_t) xrounded;
-        AccumulateWord(accumulator, i, xint);
+        AccumulateWordT(accumulator, i, xint);
 
         xscaled -= xrounded;
         xscaled *= DELTASCALE;
@@ -162,11 +164,12 @@ double Round( int64_t * accumulator) {
     // Now add3(hi, mid, lo)
     // No overlap, we have already normalized
     if (mid != 0) {
-        lo = detail::OddRoundSumNonnegative(mid, lo);
+        lo = OddRoundSumNonnegative(mid, lo);
     }
     // Final rounding
     hi = hi + lo;
     return negative ? -hi : hi;
 }
 
+} //namespace gpu
 } //namespace exblas

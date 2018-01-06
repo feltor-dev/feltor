@@ -63,21 +63,21 @@ inline get_value_type<Vector> doDot(
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    std::vector<std::vector<int64_t>> acc( x1.size());
+    std::vector<std::vector<int64_t>> acc( x.size());
     for( unsigned i=0; i<x.size(); i++)
         acc[i] = doDot_superacc( x[i], m, y[i],
                        get_matrix_category<Matrix>(),
                        get_vector_category<typename Vector::value_type>() );
-    for( unsigned i=1; i<x1.size(); i++)
+    for( unsigned i=1; i<x.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
-        exblas::Normalize( &(acc[0][0]), &imin, &imax);
+        exblas::cpu::Normalize( &(acc[0][0]), imin, imax);
         imin = exblas::IMIN, imax = exblas::IMAX;
-        exblas::Normalize( &(acc[i][0]), &imin, &imax);
-        for( int k=IMIN; k<IMAX; k++)
+        exblas::cpu::Normalize( &(acc[i][0]), imin, imax);
+        for( int k=exblas::IMIN; k<exblas::IMAX; k++)
             acc[0][k] += acc[i][k];
     }
-    return exblas::Round(&(acc[0][0]));
+    return exblas::cpu::Round(&(acc[0][0]));
 }
 template< class Matrix, class Vector>
 inline typename VectorTraits<Vector>::value_type  doDot( 

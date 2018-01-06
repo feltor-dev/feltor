@@ -83,7 +83,7 @@ template<class Vector>
 get_value_type<Vector> doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 {
     std::vector<int64_t> acc = doDot_superacc( x,y,ThrustVectorTag());
-    return exblas::Round(acc.data());
+    return exblas::cpu::Round(acc.data());
 }
 
 template< class Vector, class UnaryOp>
