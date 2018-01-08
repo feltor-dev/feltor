@@ -138,7 +138,7 @@ struct FieldRZYT
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
-                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ 
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
                        + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] = +psipR;//fieldZ
@@ -165,7 +165,7 @@ struct FieldRZYZ
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
-                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ 
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
                        + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] =  psipR;//fieldZ
@@ -190,7 +190,7 @@ struct FieldRZY
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
-                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ 
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
                        + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         //yp[0] = +psipZ/f_;//volume 
         //yp[1] = -psipR/f_;//volume 
@@ -252,7 +252,7 @@ struct FieldRZYT
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
-                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ 
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
                        + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] = +psipR;//fieldZ
@@ -279,7 +279,7 @@ struct FieldRZYZ
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
-                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ 
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
                        + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] = +psipR;//fieldZ
@@ -304,7 +304,7 @@ struct FieldRZY
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
-                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ 
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
                        + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         //yp[0] = +psipZ/f_;//volume 
         //yp[1] = -psipR/f_;//volume 

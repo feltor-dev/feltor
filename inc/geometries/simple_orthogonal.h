@@ -197,9 +197,9 @@ struct Nemov
                    chiRZ = chi_.xy()(xx, yy), 
                    chiZZ = chi_.yy()(xx, yy);
             double psip2 =   chiRR*psipR*psipR + 2.*chiRZ*psipR*psipZ + chiZZ*psipZ*psipZ;
-            yp[0][i] =  (chiRR*psipR + chiRZ*psipZ)/psip2;
-            yp[1][i] =  (chiRZ*psipR + chiZZ*psipZ)/psip2;
-            yp[2][i] = y[2][i]*( - lapPsi_(xx,yy) )/psip2;
+            yp[0][i] =  (chiRR*psipR + chiRZ*psipZ)/psip2/f0_;
+            yp[1][i] =  (chiRZ*psipR + chiZZ*psipZ)/psip2/f0_;
+            yp[2][i] = y[2][i]*( - lapPsi_(xx,yy) )/psip2/f0_;
             //yp[3][i] = ( -(2.*psipRR+psipZZ)*y[3][i] - psipRZ*y[4][i] - laplacePsipR_(y[0][i], y[1][i])*y[2][i])/psip2; //wrong with monitor metric!!
             //yp[4][i] = ( -psipRZ*y[3][i] - (2.*psipZZ+psipRR)*y[4][i] - laplacePsipZ_(y[0][i], y[1][i])*y[2][i])/psip2; //wrong with monitor metric!!
         }

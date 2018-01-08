@@ -226,6 +226,8 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
         thrust::host_vector<double> r_init, z_init;
         sep_.compute_rzy( eta1d, nodeX0, nodeX1, r_init, z_init);
         dg::geo::orthogonal::detail::Nemov nemov(psi_, f0_, firstline_);
+        for( unsigned i=0; i<zeta1d.size(); i++)
+            std::cout << "zeta "<<i<<" "<<zeta1d[i]<<"\n";
 
         //separate integration of inside and outside
         unsigned inside=0;
