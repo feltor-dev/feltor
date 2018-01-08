@@ -175,7 +175,7 @@ struct Nemov
                 double chiRR = chi_.xx()(x, y), 
                        chiRZ = chi_.xy()(x, y), 
                        chiZZ = chi_.yy()(x, y);
-                double psip2 =   chiRR*psipR*psipR + 2.*chiRZ*psipR*psipZ + chiZZ*psipZ*psipZ;
+                double psip2 = chiRR*psipR*psipR + 2.*chiRZ*psipR*psipZ + chiZZ*psipZ*psipZ;
                 h_init[i]  = f0_/sqrt(psip2); //equalarc
             }
             //double laplace = psipRR_(r_init[i], z_init[i]) + 

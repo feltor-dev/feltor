@@ -10,7 +10,7 @@
 
 #include "dg/backend/timer.cuh"
 #include "solovev.h"
-#include "taylor.h"
+//#include "taylor.h"
 //#include "guenther.h"
 #include "dg/geometry/transform.h"
 #include "refined_curvilinearX.h"
@@ -92,7 +92,8 @@ int main( int argc, char* argv[])
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint_taylor.js");
+        //std::ifstream is("geometry_params_Xpoint_taylor.js");
+        std::ifstream is("geometry_params_Xpoint.js");
         reader.parse(is,js,false);
     }
     else
@@ -100,15 +101,16 @@ int main( int argc, char* argv[])
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    dg::geo::taylor::Parameters gp(js);
+    //dg::geo::taylor::Parameters gp(js);
+    dg::geo::solovev::Parameters gp(js);
     dg::Timer t;
     std::cout << "Type psi_0 \n";
-    double psi_0 = -16;
+    double psi_0 = -20;
     std::cin >> psi_0;
     std::cout << "Typed "<<psi_0<<"\n";
-    std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
+    //std::cout << "Type fx and fy ( fx*Nx and fy*Ny must be integer) \n";
     double fx_0=1./4., fy_0=1./22.;
-    std::cin >> fx_0>> fy_0;
+    //std::cin >> fx_0>> fy_0;
     std::cout << "Typed "<<fx_0<<" "<<fy_0<<"\n";
 
     std::cout << "Type add_x and add_y \n";
@@ -118,15 +120,15 @@ int main( int argc, char* argv[])
     gp.display( std::cout);
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
-    dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
+    //dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::geo::findXpoint( c.get_psip(), R_X, Z_X);
+    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xmonitor( c.get_psip(), R_X,Z_X) ;
     std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
 
     double R0 = gp.R_0, Z0 = 0;
-    dg::geo::BinarySymmTensorLvl1 monitor_chi;
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
     dg::EquidistXRefinement equi(add_x, add_y, 1,1);

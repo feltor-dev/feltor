@@ -42,7 +42,7 @@ void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
  *
  * @return a metric tensor and its derivatives
  */
-BinarySymmTensorLvl1 make_XMonitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+BinarySymmTensorLvl1 make_Xmonitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;
