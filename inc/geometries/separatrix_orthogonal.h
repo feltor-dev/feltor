@@ -319,10 +319,13 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
         {
             double psipX = psi_.dfx()(x[idx], y[idx]);
             double psipY = psi_.dfy()(x[idx], y[idx]);
+            double chiXX = chi_.xx()( x[idx], y[idx]),
+                   chiXY = chi_.xy()( x[idx], y[idx]),
+                   chiYY = chi_.yy()( x[idx], y[idx]);
             zetaX[idx] = f0_*psipX;
             zetaY[idx] = f0_*psipY;
-            etaX[idx] = -h[idx]*psipY;
-            etaY[idx] = +h[idx]*psipX;
+            etaX[idx] = -h[idx]*(chiXY*psipX + chiYY*psipY);
+            etaY[idx] = +h[idx]*(chiXX*psipX + chiXY*psipY);
         }
     }
     virtual double do_zeta0(double fx) const { return f0_*psi_0_; }
