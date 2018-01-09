@@ -98,11 +98,11 @@ struct EllSparseBlockMatDevice
     void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
     
     thrust::device_vector<value_type> data;
-    IVec cols_idx, data_idx; 
+    IVec cols_idx, data_idx;
     int num_rows, num_cols, blocks_per_line;
     int n;
     int left_size, right_size;
-    IVec right_range;
+    IVec right_range; // behold that right_size != right_range[1]-right_range[0] in general
 };
 
 

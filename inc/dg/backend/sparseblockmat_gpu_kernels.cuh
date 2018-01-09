@@ -16,6 +16,7 @@ template<class value_type>
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
+    const int right_ = right_range[1]-right_range[0];
     //every thread takes num_rows/grid_size rows
     for( int row = thread_id; row<size; row += grid_size)
     {
@@ -23,7 +24,7 @@ template<class value_type>
         int s=rrn/num_rows,
             i = (rrn)%num_rows,
             k = (rr)%n,
-            j=right_range[0]+row%right_size;
+            j=right_range[0]+row%right_;
         value_type temp=0;
         for( int d=0; d<blocks_per_line; d++)
         {
@@ -52,6 +53,7 @@ template<class value_type, size_t n, size_t blocks_per_line>
     //int size = left*num_rows*n*right;
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
+    const int right_ = right_range[1]-right_range[0];
     //every thread takes num_rows/grid_size rows
     for( int row = thread_id; row<size; row += grid_size)
     {
@@ -75,7 +77,7 @@ template<class value_type, size_t n, size_t blocks_per_line>
             int rr = row/right_size;
             int rrn = rr/n, k = rr%n;
             int s=rrn/num_rows, i = (rrn)%num_rows;
-            int j=right_range[0]+row%right_size;
+            int j=right_range[0]+row%right_;
             value_type temp = 0;
             for( int d=0; d<blocks_per_line; d++)
             {
