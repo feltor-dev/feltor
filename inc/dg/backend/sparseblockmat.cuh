@@ -66,8 +66,7 @@ struct EllSparseBlockMatDevice
     void display( std::ostream& os = std::cout) const;
     private:
     typedef thrust::device_vector<int> IVec;
-    template <class deviceContainer>
-    void launch_multiply_kernel(value_type alpha, const deviceContainer& x, value_type beta, deviceContainer& y) const;
+    void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
     
     thrust::device_vector<value_type> data;
     IVec cols_idx, data_idx; 
@@ -123,8 +122,7 @@ struct CooSparseBlockMatDevice
     void display(std::ostream& os = std::cout) const;
     private:
     typedef thrust::device_vector<int> IVec;
-    template<class Device>
-    void launch_multiply_kernel(value_type alpha, const Device& x, value_type beta, Device& y) const;
+    void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
     
     thrust::device_vector<value_type> data;
     IVec cols_idx, rows_idx, data_idx; 
@@ -194,7 +192,10 @@ inline void EllSparseBlockMatDevice<value_type>::symv( value_type alpha, const D
     if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
         throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
     }
-    launch_multiply_kernel( alpha, x, beta, y);
+    const value_type * x_ptr = thrust::raw_pointer_cast( x.data());
+          value_type * y_ptr = thrust::raw_pointer_cast( y.data());
+    launch_multiply_kernel( alpha, x_ptr, beta, y_ptr);
+    
 }
 template<class value_type>
 template<class DeviceContainer>
@@ -206,7 +207,9 @@ inline void CooSparseBlockMatDevice<value_type>::symv( value_type alpha, const D
     if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
         throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
     }
-    launch_multiply_kernel(alpha, x, beta, y);
+    const value_type * x_ptr = thrust::raw_pointer_cast( x.data());
+          value_type * y_ptr = thrust::raw_pointer_cast( y.data());
+    launch_multiply_kernel(alpha, x_ptr, beta, y_ptr);
 }
 
 
@@ -242,5 +245,3 @@ struct MatrixTraits<const CooSparseBlockMatDevice<T> >
 #else
 #include "sparseblockmat_gpu_kernels.cuh"
 #endif
-
-
