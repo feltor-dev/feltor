@@ -13,7 +13,6 @@
 #include "init.h"
 #include "testfunctors.h"
 #include "curvilinear.h"
-#include "utilitiesX.h"
 
 #include "file/nc_utilities.h"
 
@@ -69,10 +68,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
 
-    double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
-    double Z_X = -1.1*gp.elongation*gp.a;
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xmonitor( psip, R_X, Z_X) ;
-    dg::geo::SimpleOrthogonal generator( psip, monitor_chi, psi_0, psi_1, gp.R_0, 0., 0);
+    dg::geo::SimpleOrthogonal generator( psip, psi_0, psi_1, gp.R_0, 0., 0);
     dg::geo::CurvilinearProductGrid3d g3d(generator, n, Nx, Ny,Nz, dg::DIR);
     std::unique_ptr<dg::aGeometry2d> g2d( g3d.perp_grid());
     dg::Grid2d g2d_periodic(g2d->x0(), g2d->x1(), g2d->y0(), g2d->y1(), g2d->n(), g2d->Nx(), g2d->Ny()+1); 

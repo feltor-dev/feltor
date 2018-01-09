@@ -126,7 +126,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
             double xX, double yX, double x0, double y0, int firstline =0): psi_(psi)
     {
         firstline_ = firstline;
-        orthogonal::detail::Fpsi fpsi(psi_, x0, y0, firstline);
+        orthogonal::detail::Fpsi fpsi(psi_, BinarySymmTensorLvl1(), x0, y0, firstline);
         double R0, Z0; 
         f0_ = fpsi.construct_f( psi_0, R0, Z0);
         zeta0_=f0_*psi_0;
@@ -152,7 +152,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
 
         thrust::host_vector<double> r_init, z_init;
         orthogonal::detail::computeX_rzy( psi_, eta1d, nodeX0, nodeX1, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        dg::geo::orthogonal::detail::Nemov nemov(psi_, f0_, firstline_);
+        dg::geo::orthogonal::detail::Nemov nemov(psi_, BinarySymmTensorLvl1(), f0_, firstline_);
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
@@ -209,7 +209,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     SeparatrixOrthogonal* clone()const{return new SeparatrixOrthogonal(*this);}
     private:
     bool isConformal()const{return false;}
-    bool do_isOrthogonal()const{return true;}
+    bool do_isOrthogonal()const{return false;}
     double f0() const{return sep_.get_f();}
     virtual void do_generate(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
          const thrust::host_vector<double>& zeta1d, 
@@ -225,7 +225,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 
         thrust::host_vector<double> r_init, z_init;
         sep_.compute_rzy( eta1d, nodeX0, nodeX1, r_init, z_init);
-        dg::geo::orthogonal::detail::Nemov nemov(psi_, f0_, firstline_,chi_);
+        dg::geo::orthogonal::detail::Nemov nemov(psi_, chi_, f0_, firstline_);
 
         //separate integration of inside and outside
         unsigned inside=0;
