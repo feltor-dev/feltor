@@ -75,9 +75,15 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
         ref_.get().generate(g,w[0],w[1],abs[0],abs[1]);
         thrust::host_vector<double> x_vec(this->n()*this->Nx()), y_vec(this->n()*this->Ny());
         for( unsigned i=0; i<x_vec.size(); i++)
+        {
             x_vec[i] = abs[0][i];
+            //std::cout << abs[0][i] <<"\n";
+        }
         for( unsigned i=0; i<y_vec.size(); i++)
+        {
             y_vec[i] = abs[1][i*x_vec.size()];
+            //std::cout << abs[1][i*x_vec.size()] <<"\n";
+        }
         handle_.get().generate( x_vec, y_vec, this->n()*outer_Ny(), this->n()*(inner_Ny()+outer_Ny()), map_[0], map_[1], jac_.value(0), jac_.value(1), jac_.value(2), jac_.value(3));
         //multiply by weights
         dg::blas1::pointwiseDot( jac_.value(0), w[0], jac_.value(0));

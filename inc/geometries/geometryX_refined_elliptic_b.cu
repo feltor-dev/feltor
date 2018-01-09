@@ -8,23 +8,22 @@
 #include "taylor.h"
 #include "testfunctors.h"
 
-const char* parameters = "geometry_params_Xpoint_taylor.js";
-//using namespace dg::geo::solovev;
-//const char* parameters = "geometry_params_Xpoint.js";
+//const char* parameters = "geometry_params_Xpoint_taylor.js";
+const char* parameters = "geometry_params_Xpoint.js";
 
 int main(int argc, char**argv)
 {
     std::cout << "Type n, Nx (fx = 1./4.), Ny (fy = 1./22.)\n";
     unsigned n, Nx, Ny;
     std::cin >> n>> Nx>>Ny;   
-    std::cout << "Type psi_0 (-100)! \n";
+    std::cout << "Type psi_0 (-15)! \n";
     double psi_0, psi_1;
     std::cin >> psi_0;
     Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
-        std::ifstream is("geometry_params_Xpoint_taylor.js");
+        std::ifstream is(parameters);
         reader.parse(is,js,false);
     }
     else
@@ -32,7 +31,10 @@ int main(int argc, char**argv)
         std::ifstream is(argv[1]);
         reader.parse(is,js,false);
     }
-    dg::geo::taylor::Parameters gp(js);
+    //dg::geo::taylor::Parameters gp(js);
+    //dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
+    dg::geo::solovev::Parameters gp(js);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
     gp.display( std::cout);
     dg::Timer t;
     std::cout << "Constructing grid ... \n";
@@ -46,14 +48,14 @@ int main(int argc, char**argv)
     std::cin >> howmanyX >> howmanyY;
 
     ////////////////construct Generator////////////////////////////////////
-    dg::geo::TokamakMagneticField c = dg::geo::taylor::createMagField(gp);
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R0 = gp.R_0, Z0 = 0;
     //double R_X = gp.R_0-1.4*gp.triangularity*gp.a;
     //double Z_X = -1.0*gp.elongation*gp.a;
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
+    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xmonitor( c.get_psip(), R_X, Z_X) ;
+    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
     //dg::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
     dg::EquidistXRefinement equi(add_x, add_y, howmanyX, howmanyY);
