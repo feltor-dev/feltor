@@ -32,7 +32,7 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
         thrust::host_vector<double>& z, //output z - values
         const double* R_init, const double* Z_init,  //2 input coords on perp line
         double f_psi,  //input f
-        int mode ) 
+        int mode, bool verbose = false ) 
 {
     thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
@@ -78,7 +78,7 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
         if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
         if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
         eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
-        std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
+        if(verbose)std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
         ////////////////////bottom right region
         if( nodeX0!= 0)
         {
@@ -102,7 +102,7 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
         double ar = dg::blas1::dot( r, r);
         double az = dg::blas1::dot( z, z);
         eps =  sqrt( er + ez)/sqrt(ar+az);
-        std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+        if(verbose)std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
         steps*=2;
     }
     r = r_old, z = z_old;
@@ -198,9 +198,9 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
      * @param firstline =0 means conformal, =1 means equalarc discretization
      */
     SeparatrixOrthogonal( const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
-            double xX, double yX, double x0, double y0, int firstline ):
+            double xX, double yX, double x0, double y0, int firstline, bool verbose = false ):
         psi_(psi), chi_(chi),
-        sep_( psi, chi, xX, yX, x0, y0, firstline)
+        sep_( psi, chi, xX, yX, x0, y0, firstline, verbose), m_verbose( verbose)
     {
         firstline_ = firstline;
         f0_ = sep_.get_f();
@@ -339,6 +339,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     BinaryFunctorsLvl2 psi_;
     BinarySymmTensorLvl1 chi_;
     dg::geo::detail::SeparatriX sep_;
+    bool m_verbose;
 };
 
 // /**

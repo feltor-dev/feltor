@@ -38,13 +38,13 @@ int main(int argc, char**argv)
     //dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
-    gp.display( std::cout);
+    //gp.display( std::cout);
     dg::Timer t;
-    std::cout << "Constructing grid ... \n";
+    //std::cout << "Constructing grid ... \n";
     t.tic();
 
     ////////////////construct Generator////////////////////////////////////
-    std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
+    //std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R0 = gp.R_0, Z0 = 0;
     //double R_X = gp.R_0-1.4*gp.triangularity*gp.a;
     //double Z_X = -1.0*gp.elongation*gp.a;
@@ -56,10 +56,10 @@ int main(int argc, char**argv)
     dg::Elliptic<dg::geo::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
     double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
-    std::cout << "psi 1 is          "<<psi_1<<"\n";
+    std::cout << "psi_0 = "<<psi_0<<" psi_1 = "<<psi_1<<"\n";
 
     t.toc();
-    std::cout << "Construction took "<<t.diff()<<"s\n";
+    //std::cout << "Construction took "<<t.diff()<<"s\n";
     std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<"\n";
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
@@ -110,7 +110,7 @@ int main(int argc, char**argv)
     //compute error
     dg::DVec error( solution);
     const double eps = 1e-11;
-    std::cout << "eps \t # iterations \t error \t hx_max\t hy_max \t time/iteration \n";
+    std::cout << "eps \t# iterations error \thxX hyX \thx_max hy_max \ttime/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
     dg::Invert<dg::DVec > invert( x, n*n*Nx*Ny, eps);

@@ -129,7 +129,7 @@ int main( int argc, char* argv[])
     std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
 
     double R0 = gp.R_0, Z0 = 0;
-    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
+    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0, true);
     //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
     dg::EquidistXRefinement equi(add_x, add_y, 1,1);
     dg::geo::CurvilinearRefinedProductGridX3d g3d(equi, generator, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);

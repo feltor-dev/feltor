@@ -147,7 +147,8 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
         thrust::host_vector<double>& xr, 
         thrust::host_vector<double>& xz,  
         double* R_0, double* Z_0,  //2 output coords on perp line
-        double& f_psi  //output f
+        double& f_psi,  //output f
+        bool verbose = false
         ) 
 {
     thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old), yr_old(r_old), xr_old(r_old);
@@ -201,7 +202,7 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
             eps = sqrt( (end[0]-R_0[0])*(end[0]-R_0[0]) + (end[1]-Z_0[0])*(end[1]-Z_0[0]));
         else
             eps = sqrt( (end[0]-R_0[1])*(end[0]-R_0[1]) + (end[1]-Z_0[1])*(end[1]-Z_0[1]));
-        std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
+        if(verbose)std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
         ////////////////////bottom right region
         if( nodeX0 != 0)
         {
@@ -227,7 +228,7 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
         double ar = dg::blas1::dot( r, r);
         double az = dg::blas1::dot( z, z);
         eps =  sqrt( er + ez)/sqrt(ar+az);
-        std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
+        if(verbose)std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
         if( std::isnan(eps)) { eps = eps_old/2.; }
         steps*=2;
     }
@@ -241,7 +242,7 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
 template <class XFieldFinv>
 double construct_psi_values( XFieldFinv fpsiMinv, 
         const double psi_0, const double x_0, const thrust::host_vector<double>& x_vec, const double x_1, unsigned idxX, //idxX is the number of x_vec[i] < 0
-        thrust::host_vector<double>& psi_x )
+        thrust::host_vector<double>& psi_x, bool verbose = false )
 {
     psi_x.resize( x_vec.size());
     thrust::host_vector<double> psi_old(psi_x), psi_diff( psi_old);
@@ -286,7 +287,7 @@ double construct_psi_values( XFieldFinv fpsiMinv,
         //eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff)/ dg::blas2::dot( psi_x, w1d, psi_x));
         eps = sqrt( dg::blas1::dot( psi_diff, psi_diff)/ dg::blas1::dot( psi_x, psi_x));
 
-        std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
+        if(verbose)std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
         //std::cout << "psi 1               is "<<psi_1_numerical<<std::endl; 
         N*=2;
     }
@@ -311,10 +312,10 @@ struct PsipSep
 //good as it can, i.e. until machine precision is reached (like FpsiX just for separatrix)
 struct SeparatriX
 {
-    SeparatriX( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi, double xX, double yX, double x0, double y0, int firstline): 
+    SeparatriX( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi, double xX, double yX, double x0, double y0, int firstline, bool verbose=false): 
         mode_(firstline),
         fieldRZYequi_(psi, chi), fieldRZYTequi_(psi, x0, y0, chi), fieldRZYZequi_(psi, chi),
-        fieldRZYconf_(psi, chi), fieldRZYTconf_(psi, x0, y0, chi), fieldRZYZconf_(psi, chi)
+        fieldRZYconf_(psi, chi), fieldRZYTconf_(psi, x0, y0, chi), fieldRZYZconf_(psi, chi), m_verbose( verbose)
     {
         //find four points on the separatrix and construct y coordinate at those points and at last construct f 
         //////////////////////////////////////////////
@@ -334,7 +335,7 @@ struct SeparatriX
         R_min = R_X, R_max = R_X+10;
         dg::bisection1d( psip_sep, R_min, R_max, 1e-13);
         R_i[3] = (R_min+R_max)/2., Z_i[3] = Z_X-1.;
-        std::cout << "Found 3rd point "<<R_i[3]<<" "<<Z_i[3]<<"\n";
+        if(m_verbose)std::cout << "Found 3rd point "<<R_i[3]<<" "<<Z_i[3]<<"\n";
         //now measure y distance to X-point
         thrust::host_vector<double> begin2d( 3, 0), end2d( begin2d);
         for( int i=0; i<4; i++)
@@ -360,7 +361,7 @@ struct SeparatriX
             y_i[i] = end2d[2]; 
             if( i==0 || i == 2)
                 y_i[i] *= -1;//these were integrated against y direction
-            std::cout << "Found |y_i["<<i<<"]|: "<<y_i[i]<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
+            if(m_verbose)std::cout << "Found |y_i["<<i<<"]|: "<<y_i[i]<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
         }
 
         f_psi_ = construct_f( );
@@ -442,7 +443,7 @@ struct SeparatriX
             double ar = dg::blas1::dot( r, r);
             double az = dg::blas1::dot( z, z);
             eps =  sqrt( er + ez)/sqrt(ar+az);
-            std::cout << "rel. Separatrix error is "<<eps<<" with "<<steps<<" steps\n";
+            if(m_verbose)std::cout << "rel. Separatrix error is "<<eps<<" with "<<steps<<" steps\n";
             steps*=2;
         }
         r = r_old, z = z_old;
@@ -451,7 +452,7 @@ struct SeparatriX
     //compute f for psi=0
     double construct_f( ) 
     {
-        std::cout << "In construct f function!\n";
+        if(m_verbose)std::cout << "In construct f function!\n";
         
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         begin[0] = R_i[0], begin[1] = Z_i[0];
@@ -482,8 +483,8 @@ struct SeparatriX
             if( std::isnan(eps)) { eps = eps_old/2.; end = end_old; }
         }
         N_steps_=N;
-        std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
-        std::cout << "Found f = "<< 2.*M_PI/(y_i[0]+end_old[2]+y_i[1])<<" with eps = "<<eps<<"\n";
+        if(m_verbose)std::cout << "Found end[2] = "<< end_old[2]<<" with eps = "<<eps<<"\n";
+        if(m_verbose)std::cout << "Found f = "<< 2.*M_PI/(y_i[0]+end_old[2]+y_i[1])<<" with eps = "<<eps<<"\n";
         f_psi_ = 2.*M_PI/(y_i[0]+end_old[2]+y_i[1]);
         return f_psi_;
     }
@@ -497,6 +498,7 @@ struct SeparatriX
     unsigned N_steps_;
     double R_i[4], Z_i[4], y_i[4];
     double f_psi_;
+    bool m_verbose;
 
 };
 } //namespace detail
@@ -508,9 +510,9 @@ namespace detail
 struct InitialX
 {
 
-    InitialX( const BinaryFunctorsLvl1& psi, double xX, double yX): 
+    InitialX( const BinaryFunctorsLvl1& psi, double xX, double yX, bool verbose = false): 
         psip_(psi), fieldRZtau_(psi), 
-        xpointer_(psi, xX, yX, 1e-4)
+        xpointer_(psi, xX, yX, 1e-4), m_verbose( verbose)
     {
         //constructor finds four points around X-point and integrates them a bit away from it
         dg::geo::FieldRZtau fieldRZtau_(psi);
@@ -552,7 +554,7 @@ struct InitialX
                 //std::cout << " for N "<< N<<" eps is "<<eps<<"\n";
             }
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
-            std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_.f()(R_i_[i], Z_i_[i])<<"\n";
+            if(m_verbose)std::cout << "Quadrant "<<i<<" Found initial point: "<<R_i_[i]<<" "<<Z_i_[i]<<" "<<psip_.f()(R_i_[i], Z_i_[i])<<"\n";
 
         }
     }
@@ -606,6 +608,7 @@ struct InitialX
     const dg::geo::FieldRZtau fieldRZtau_;
     dg::geo::detail::XCross xpointer_;
     double R_i_[4], Z_i_[4];
+    bool m_verbose;
 
 };
 }//namespace detail
