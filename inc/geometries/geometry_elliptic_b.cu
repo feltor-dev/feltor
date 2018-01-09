@@ -10,6 +10,7 @@
 #include "simple_orthogonal.h"
 #include "curvilinear.h"
 #include "testfunctors.h"
+#include "utilitiesX.h"
 
 
 int main(int argc, char**argv)
@@ -40,7 +41,10 @@ int main(int argc, char**argv)
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     std::cout << "Constructing grid ... \n";
     t.tic();
-    dg::geo::SimpleOrthogonal generator( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
+    double Z_X = -1.1*gp.elongation*gp.a;
+    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xmonitor( c.get_psip(), R_X, Z_X) ;
+    dg::geo::SimpleOrthogonal generator( c.get_psip(), monitor_chi, psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::CurvilinearProductGrid3d g3d( generator, n, Nx, Ny,Nz, dg::DIR);
     std::unique_ptr<dg::aGeometry2d> g2d( g3d.perp_grid() );
     dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> pol( *g2d, dg::not_normed, dg::forward);

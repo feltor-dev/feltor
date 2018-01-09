@@ -31,8 +31,8 @@ struct Fpsi
 {
     
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( const BinaryFunctorsLvl1& psi, double x0, double y0, int firstline): 
-        psip_(psi), fieldRZYTconf_(psi, x0, y0),fieldRZYTequl_(psi, x0, y0), fieldRZtau_(psi)
+    Fpsi( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi, double x0, double y0, int firstline): 
+        psip_(psi), fieldRZYTconf_(psi, x0, y0, chi),fieldRZYTequl_(psi, x0, y0, chi), fieldRZtau_(psi, chi)
     {
         X_init = x0, Y_init = y0;
         while( fabs( psi.dfx()(X_init, Y_init)) <= 1e-10 && fabs( psi.dfy()( X_init, Y_init)) <= 1e-10)
@@ -89,6 +89,7 @@ struct Fpsi
     int firstline_;
     double X_init, Y_init;
     BinaryFunctorsLvl1 psip_;
+    BinarySymmTensorLvl1 chi_;
     dg::geo::ribeiro::FieldRZYT fieldRZYTconf_;
     dg::geo::equalarc::FieldRZYT fieldRZYTequl_;
     dg::geo::FieldRZtau fieldRZtau_;
@@ -97,7 +98,8 @@ struct Fpsi
 
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
-void compute_rzy( const BinaryFunctorsLvl1& psi, const thrust::host_vector<double>& y_vec,
+void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi, 
+        const thrust::host_vector<double>& y_vec,
         thrust::host_vector<double>& r, 
         thrust::host_vector<double>& z, 
         double R_0, double Z_0, double f_psi, int mode ) 
@@ -109,8 +111,8 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const thrust::host_vector<doubl
     thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
     begin[0] = R_0, begin[1] = Z_0;
     //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-    dg::geo::ribeiro::FieldRZY fieldRZYconf(psi);
-    dg::geo::equalarc::FieldRZY fieldRZYequi(psi);
+    dg::geo::ribeiro::FieldRZY fieldRZYconf(psi, chi);
+    dg::geo::equalarc::FieldRZY fieldRZYequi(psi, chi);
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
     unsigned steps = 1;
@@ -152,7 +154,7 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const thrust::host_vector<doubl
 //and provides the Nemov algorithm for orthogonal grid
 struct Nemov
 {
-    Nemov( const BinaryFunctorsLvl2 psi, double f0, int mode, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1()):
+    Nemov( const BinaryFunctorsLvl2 psi, const BinarySymmTensorLvl1& chi, double f0, int mode):
         f0_(f0), mode_(mode),
         psip_(psi), chi_(chi), lapPsi_(psi,chi) { }
     void initialize( 
@@ -295,15 +297,31 @@ struct SimpleOrthogonal : public aGenerator2d
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    SimpleOrthogonal(const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
-        psi_(psi)
+    SimpleOrthogonal(const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0): SimpleOrthogonal( psi, BinarySymmTensorLvl1(), psi_0, psi_1, x0, y0, firstline)
+    {
+        m_orthogonal = true;
+    }
+    /**
+     * @brief Construct a simple orthogonal grid 
+     *
+     * @param psi \f$\psi(x,y)\f$ is the flux function and its derivatives in Cartesian coordinates (x,y)
+     * @param chi is the monitor tensor and its divergenc in Cartesian coordinates (x,y)
+     * @param psi_0 first boundary 
+     * @param psi_1 second boundary
+     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
+     */
+    SimpleOrthogonal(const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
+        psi_(psi), chi_(chi)
     {
         assert( psi_1 != psi_0);
         firstline_ = firstline;
-        orthogonal::detail::Fpsi fpsi(psi, x0, y0, firstline);
+        orthogonal::detail::Fpsi fpsi(psi, chi, x0, y0, firstline);
         f0_ = fabs( fpsi.construct_f( psi_0, R0_, Z0_));
         if( psi_1 < psi_0) f0_*=-1;
         lz_ =  f0_*(psi_1-psi_0);
+        m_orthogonal = false;
     }
 
     /**
@@ -318,7 +336,7 @@ struct SimpleOrthogonal : public aGenerator2d
      // length of zeta-domain (f0*(psi_1-psi_0))
     virtual double do_width() const{return lz_;}
     virtual double do_height() const{return 2.*M_PI;}
-    virtual bool do_isOrthogonal() const{return true;}
+    virtual bool do_isOrthogonal() const{return m_orthogonal;}
     virtual void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
@@ -330,8 +348,8 @@ struct SimpleOrthogonal : public aGenerator2d
          thrust::host_vector<double>& etaY) const
     {
         thrust::host_vector<double> r_init, z_init;
-        orthogonal::detail::compute_rzy( psi_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        orthogonal::detail::Nemov nemov(psi_, f0_, firstline_);
+        orthogonal::detail::compute_rzy( psi_, chi_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        orthogonal::detail::Nemov nemov(psi_, chi_, f0_, firstline_);
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
@@ -339,15 +357,20 @@ struct SimpleOrthogonal : public aGenerator2d
         {
             double psipR = psi_.dfx()(x[idx], y[idx]);
             double psipZ = psi_.dfy()(x[idx], y[idx]);
+            double chiRR = chi_.xx()( x[idx], y[idx]),
+                   chiRZ = chi_.xy()( x[idx], y[idx]),
+                   chiZZ = chi_.yy()( x[idx], y[idx]);
             zetaX[idx] = f0_*psipR;
             zetaY[idx] = f0_*psipZ;
-            etaX[idx] = -h[idx]*psipZ;
-            etaY[idx] = +h[idx]*psipR;
+            etaX[idx] = -h[idx]*(chiRZ*psipR + chiZZ*psipZ);
+            etaY[idx] = +h[idx]*(chiRR*psipR + chiRZ*psipZ);
         }
     }
     BinaryFunctorsLvl2 psi_;
+    BinarySymmTensorLvl1 chi_;
     double f0_, lz_, R0_, Z0_;
     int firstline_;
+    bool m_orthogonal;
 };
 
 }//namespace geo

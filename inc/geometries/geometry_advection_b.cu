@@ -132,7 +132,7 @@ int main(int argc, char** argv)
     t.tic();
     //dg::geo::RibeiroFluxGenerator ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::FluxGenerator ribeiro( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
-    //dg::geo::SimpleOrthogonal ribeiro( c.get_psip(), psi_0, psi_1, gp.R_0, 0., 1);
+    //dg::geo::SimpleOrthogonal ribeiro( c.get_psip(), dg::geo::BinarySymmTensorLvl1(), psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::CurvilinearGrid2d grid(ribeiro, n, Nx, Ny, dg::DIR); //2d
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
