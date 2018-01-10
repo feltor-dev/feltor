@@ -135,7 +135,7 @@ struct Gaussian
 /**
  * @brief A blob that drops to zero 
  * \f[
-   f(x,y) = Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - \right)^{-1}} 
+   f(x,y) = Ae^{1 + \left(\frac{(x-x_0)^2}{\sigma_x^2} + \frac{(y-y_0)^2}{\sigma_y^2} - 1\right)^{-1}} 
    \f]
  */
 struct Cauchy

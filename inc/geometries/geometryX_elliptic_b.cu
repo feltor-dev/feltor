@@ -50,7 +50,11 @@ int main(int argc, char**argv)
     //double Z_X = -1.0*gp.elongation*gp.a;
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xmonitor( c.get_psip(), R_X, Z_X, 100, 100) ;
+    double radius;
+    std::cout << "Type radius\n";
+    std::cin >> radius;
+    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xmonitor( c.get_psip(), R_X, Z_X, radius, radius) ;
+    //dg::geo::BinarySymmTensorLvl1 monitor_chi;
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
     dg::geo::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
     dg::Elliptic<dg::geo::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
