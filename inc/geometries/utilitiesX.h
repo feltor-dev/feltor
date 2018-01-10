@@ -1,4 +1,6 @@
 #pragma once
+
+#include "dg/functors.h"
 #include "dg/nullstelle.h"
 #include "utilities.h"
 
@@ -31,6 +33,40 @@ void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
     R_X = X[0], Z_X = X[1];
 }
 
+///@cond
+namespace detail{
+struct Monitor : public aCloneableBinaryFunctor<Monitor>
+{
+    //computes a + eps * b
+    Monitor( double value, double eps_value, double R_X, double Z_X, double sigmaR, double sigmaZ):
+        m_value(value), m_eps_value(eps_value),
+        m_cauchy(R_X, Z_X, sigmaR, sigmaZ, 1){}
+    private:
+    double do_compute( double x, double y)const
+    {
+        return m_value-m_cauchy(x,y)*m_eps_value;
+    }
+    double m_value, m_eps_value;
+    dg::Cauchy m_cauchy;
+
+};
+struct DivMonitor : public aCloneableBinaryFunctor<DivMonitor>
+{
+    //computes a + eps * b
+    Monitor( double valueX, double valueY, double R_X, double Z_X, double sigmaR, double sigmaZ):
+        m_valueX(valueX), m_valueY(valueY),
+        m_cauchy(R_X, Z_X, sigmaR, sigmaZ, 1){}
+    private:
+    double do_compute( double x, double y)const
+    {
+        return m_valueX*m_cauchy.dx(x,y)-m_valueY*m_cauchy.dy(x,y);
+    }
+    double m_valueX, m_valueY;
+    dg::Cauchy m_cauchy;
+
+};
+}//namespace detail
+///@endcond
 
 /**
  * @brief construct a monitor metric in which the Laplacian vanishes at the X-point
@@ -42,7 +78,7 @@ void findXpoint( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
  *
  * @return a metric tensor and its derivatives
  */
-BinarySymmTensorLvl1 make_Xmonitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+BinarySymmTensorLvl1 make_Xmonitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;
@@ -54,11 +90,11 @@ BinarySymmTensorLvl1 make_Xmonitor( const BinaryFunctorsLvl2& psi, double& R_X, 
     double gxx = (-psiyy*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
     double gyy = ( psixx*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
     double gxy = (                   sumpsi*psixy)/sqrt(alpha);
-    Constant xx(gxx);
-    Constant xy(gxy);
-    Constant yy(gyy);
-    Constant divX (0);
-    Constant divY (0);
+    detail::Monitor xx(1, gxx-1, x,y, radiusX, radiusY);
+    detail::Monitor xy(0, gxy-0, x,y, radiusX, radiusY);
+    detail::Monitor yy(1, gyy-1, x,y, radiusX, radiusY);
+    detail::DivMonitor divX(gxx-1, gxy, x,y, radiusX, radiusY);
+    detail::DivMonitor divY(gxy, gyy-1, x,y, radiusX, radiusY);
     BinarySymmTensorLvl1 monitor( xx, xy, yy, divX, divY);
     return monitor;
 }

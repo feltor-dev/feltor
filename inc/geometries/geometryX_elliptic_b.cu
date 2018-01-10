@@ -97,9 +97,9 @@ int main(int argc, char**argv)
     //const dg::DVec solution =     dg::pullback( c.psip, g2d);
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
     const dg::DVec b =    dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d);
-    dg::DVec chi  =  dg::pullback( dg::geo::Bmodule(c), g2d);
-    dg::blas1::plus( chi, 1e4);
-    //const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
+    //dg::DVec chi  =  dg::pullback( dg::geo::Bmodule(c), g2d);
+    //dg::blas1::plus( chi, 1e4);
+    const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
     const dg::DVec solution = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d);
     ////////////////////////////////////////////////////////////////////////////
 

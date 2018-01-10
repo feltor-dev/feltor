@@ -290,8 +290,8 @@ struct EllipticXDirNeuM
         //double chi = bmod; //bmod can be zero for a Taylor state(!)
         double chiR = br;
         double chiZ = bz;
-        return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( func_.dRR(R,Z) + func_.dZZ(R,Z) ));
-        //return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
+        //return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( func_.dRR(R,Z) + func_.dZZ(R,Z) ));
+        return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
 
     }
     double operator()(double R, double Z, double phi) const {
