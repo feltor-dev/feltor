@@ -44,7 +44,7 @@ struct Monitor : public aCloneableBinaryFunctor<Monitor>
     private:
     double do_compute( double x, double y)const
     {
-        return m_value-m_cauchy(x,y)*m_eps_value;
+        return m_value+m_cauchy(x,y)*m_eps_value;
     }
     double m_value, m_eps_value;
     dg::Cauchy m_cauchy;
@@ -52,14 +52,14 @@ struct Monitor : public aCloneableBinaryFunctor<Monitor>
 };
 struct DivMonitor : public aCloneableBinaryFunctor<DivMonitor>
 {
-    //computes a + eps * b
-    Monitor( double valueX, double valueY, double R_X, double Z_X, double sigmaR, double sigmaZ):
+    //computes a*epsX + b*epsY
+    DivMonitor( double valueX, double valueY, double R_X, double Z_X, double sigmaR, double sigmaZ):
         m_valueX(valueX), m_valueY(valueY),
         m_cauchy(R_X, Z_X, sigmaR, sigmaZ, 1){}
     private:
     double do_compute( double x, double y)const
     {
-        return m_valueX*m_cauchy.dx(x,y)-m_valueY*m_cauchy.dy(x,y);
+        return m_valueX*m_cauchy.dx(x,y)+m_valueY*m_cauchy.dy(x,y);
     }
     double m_valueX, m_valueY;
     dg::Cauchy m_cauchy;
