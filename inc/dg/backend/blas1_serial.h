@@ -46,24 +46,24 @@ void doAxpbypgz_dispatch( SerialTag, unsigned size, T alpha, const T * RESTRICT 
 template<class value_type>
 inline void doPointwiseDot_dispatch( SerialTag, unsigned size, 
               value_type alpha, 
-              const value_type* x1_ptr,
-              const value_type* y1_ptr,
+              const value_type* x_ptr,
+              const value_type* y_ptr,
               value_type gamma,
               value_type* z_ptr)
 {
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i]+gamma*z_ptr[i];
+        z_ptr[i] = alpha*x_ptr[i]*y_ptr[i]+gamma*z_ptr[i];
 }
 template<class value_type>
 inline void doPointwiseDivide_dispatch( SerialTag, unsigned size, 
               value_type alpha, 
-              const value_type* x1_ptr,
-              const value_type* y1_ptr,
+              const value_type* x_ptr,
+              const value_type* y_ptr,
               value_type gamma,
               value_type* z_ptr)
 {
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x1_ptr[i]/y1_ptr[i]+gamma*z_ptr[i];
+        z_ptr[i] = alpha*x_ptr[i]/y_ptr[i]+gamma*z_ptr[i];
 }
 
 template<class value_type>

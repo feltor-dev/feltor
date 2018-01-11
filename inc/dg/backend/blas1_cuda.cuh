@@ -16,59 +16,62 @@ std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const double* x_ptr
     cudaMemcpy( &h_superacc[0], d_ptr, exblas::BIN_COUNT*sizeof(int64_t), cudaMemcpyDeviceToHost);
     return h_superacc;
 }
+
 template< class Vector, class UnaryOp>
 inline void doTransform_dispatch( CudaTag, const Vector& x, Vector& y, UnaryOp op) {
     thrust::transform( thrust::cuda::tag(), x.begin(), x.end(), y.begin(), op);
 }
-template< typename value_type>
-struct Axpby_Functor
+
+template<class value_type>
+ __global__ void scal_kernel( value_type alpha,
+         value_type* RESTRICT x, const int size)
 {
-    Axpby_Functor( value_type alpha, value_type beta): alpha(alpha), beta(beta) {}
-    __host__ __device__
-        value_type operator()( const value_type& x, const value_type& y)
-        {
-            return alpha*x+beta*y;
-        }
-    __host__ __device__
-        value_type operator()( const value_type& y)
-        {
-            return beta*y;
-        }
-  private:
-    value_type alpha, beta;
-};
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_rows/grid_size rows
+    for( int row = thread_id; row<size; row += grid_size)
+        x[row]*=alpha;
+}
 template< class T>
 inline void doScal_dispatch( CudaTag, unsigned size, T* x, T alpha) {
-    thrust::transform( thrust::cuda::tag(), x, x+size, x, detail::Axpby_Functor<T>( 0, alpha));
+    const size_t BLOCK_SIZE = 256; 
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    scal_kernel<T><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, x, size);
 }
-template <class value_type>
-struct Plus_Functor
+
+template<class value_type>
+ __global__ void plus_kernel( value_type alpha,
+         value_type* RESTRICT x, const int size)
 {
-    Plus_Functor( value_type alpha): alpha(alpha){}
-    
-    __host__ __device__
-        value_type operator()( const value_type& x)
-        {
-            return alpha+x;
-        }
-  private:
-    value_type alpha;
-};
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_rows/grid_size rows
+    for( int row = thread_id; row<size; row += grid_size)
+        x[row]+=alpha;
+}
 template<class T>
 inline void doPlus_dispatch( CudaTag, unsigned size, T* x, T alpha)
 {
-    thrust::transform( thrust::cuda::tag(), x, x+size, x, 
-            detail::Plus_Functor<T>( alpha));
+    const size_t BLOCK_SIZE = 256; 
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    plus_kernel<T><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, x, size);
+}
+template<class value_type>
+ __global__ void axpby_kernel( value_type alpha, value_type beta,
+         const value_type* RESTRICT x, value_type* RESTRICT y, const int size)
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_rows/grid_size rows
+    for( int row = thread_id; row<size; row += grid_size)
+        y[row]=alpha*x[row]+beta*y[row];
 }
 template<class T>
 void doAxpby_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x, T beta, T* RESTRICT y)
 {
-    if( beta != 0)
-        thrust::transform( thrust::cuda::tag(), x, x+size, y, y, 
-            detail::Axpby_Functor< T>( alpha, beta) );
-    else 
-        thrust::transform( thrust::cuda::tag(), x, x+size, y,
-            detail::Axpby_Functor< T>( 0., alpha) );
+    const size_t BLOCK_SIZE = 256; 
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    axpby_kernel<T><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, beta, x, y, size);
 }
 template<class value_type>
  __global__ void axpbypgz_kernel( value_type alpha, value_type beta, value_type gamma,
@@ -90,25 +93,25 @@ void doAxpbypgz_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x,
 
 template<class value_type>
  __global__ void pointwiseDot_kernel( value_type alpha, value_type gamma,
-         const value_type*  x1, const value_type* y1, value_type* z,  const int size)
+         const value_type*  x, const value_type* y, value_type* z,  const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     for( int row = thread_id; row<size; row += grid_size) {
-        z[row]=alpha*x1[row]*y1[row]+gamma*z[row];
+        z[row]=alpha*x[row]*y[row]+gamma*z[row];
     }
 }
 template<class value_type>
 inline void doPointwiseDot_dispatch( CudaTag, unsigned size, 
               value_type alpha, 
-              const value_type* x1_ptr,
-              const value_type* y1_ptr,
+              const value_type* x_ptr,
+              const value_type* y_ptr,
               value_type gamma,
               value_type* z_ptr)
 {
     const size_t BLOCK_SIZE = 256; 
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    pointwiseDot_kernel<value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, gamma, x1_ptr, y1_ptr, z_ptr, size);
+    pointwiseDot_kernel<value_type><<<NUM_BLOCKS, BLOCK_SIZE>>>( alpha, gamma, x_ptr, y_ptr, z_ptr, size);
 }
 template<class value_type>
  __global__ void pointwiseDivide_kernel( value_type alpha, value_type gamma,

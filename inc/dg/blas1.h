@@ -369,8 +369,6 @@ inline void pointwiseDivide( get_value_type<container> alpha, const container& x
 /**
 * @brief \f$ z = \alpha x_1x_2 + \beta x_2y_2 + \gamma z\f$
 *
-* A 'new' fused multiply-add BLAS 1 routine. 
-*
 * Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
 * @copydoc hide_container
