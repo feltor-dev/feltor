@@ -1,10 +1,10 @@
 #pragma once
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-#include "thrust_vector_blas.cuh"
+#include "dg/backend/thrust_vector_blas.cuh"
 #include "grid.h"
 #ifdef MPI_VERSION
-#include "mpi_vector.h"
+#include "dg/backend/mpi_vector.h"
 #include "mpi_grid.h"
 #endif //MPI_VERSION
 namespace dg
@@ -157,14 +157,14 @@ void join_poloidal( const std::vector<thrust_vector>& in, thrust_vector& out, co
 ///@brief MPI Version of join
 ///@copydetails dg::join_poloidal()
 template<class thrust_vector>
-void join( const std::vector<MPI_Vector<thrust_vector> >& in, MPI_Vector<thrust_vector >& out, const aMPITopology2d& grid)
+void join_poloidal( const std::vector<MPI_Vector<thrust_vector> >& in, MPI_Vector<thrust_vector >& out, const aMPITopology2d& grid)
 {
     //local size2d
 
     Grid2d l = grid.local();
     thrust_vector out_local(l.size());
 
-    std::vector<double*> in_ptrs( in.size());
+    std::vector<const double*> in_ptrs( in.size());
     for( unsigned i=0; i<in.size(); i++)
         in_ptrs[i] = thrust::raw_pointer_cast(in[i].data().data());
     const double ** in_ptr = in_ptrs.data();

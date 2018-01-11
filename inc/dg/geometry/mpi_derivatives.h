@@ -4,6 +4,7 @@
 #include "dg/backend/mpi_matrix.h"
 #include "functions.h"
 #include "derivatives.h"
+#include "mpi_grid.h"
 
 namespace dg{
 

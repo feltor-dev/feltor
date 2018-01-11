@@ -5,11 +5,12 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include "backend/timer.cuh"
-#include "blas.h"
-#include "backend/mpi_evaluation.h"
-#include "backend/mpi_derivatives.h"
 #include "backend/mpi_init.h"
-#include "backend/fast_interpolation.h"
+#include "blas.h"
+#include "geometry/mpi_evaluation.h"
+#include "geometry/mpi_derivatives.h"
+#include "geometry/mpi_weights.h"
+#include "geometry/fast_interpolation.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

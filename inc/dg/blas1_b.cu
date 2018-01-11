@@ -7,8 +7,8 @@
 
 #include "backend/timer.cuh"
 #include "blas.h"
-#include "backend/derivatives.h"
-#include "backend/evaluation.cuh"
+#include "geometry/derivatives.h"
+#include "geometry/evaluation.cuh"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

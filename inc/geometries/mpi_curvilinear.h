@@ -2,9 +2,8 @@
 
 #include <mpi.h>
 
-#include "dg/backend/mpi_evaluation.h"
-#include "dg/backend/mpi_grid.h"
-#include "dg/backend/mpi_vector.h"
+#include "dg/geometry/mpi_evaluation.h"
+#include "dg/geometry/mpi_grid.h"
 #include "dg/geometry/mpi_base.h"
 #include "curvilinear.h"
 #include "generator.h"
@@ -146,12 +145,12 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
         for( unsigned r=0; r<4;r++)
         {
             jac_.value(r).data().resize(size);
-            jac_.value(r).communicator() = communicator();
+            jac_.value(r).set_communicator(communicator());
         }
         map_[0].data().resize(size); 
-        map_[0].communicator() = communicator();
+        map_[0].set_communicator( communicator());
         map_[1].data().resize(size);
-        map_[1].communicator() = communicator();
+        map_[1].set_communicator( communicator());
         //lift to 3D grid
         for( unsigned k=1; k<localNz; k++)
             for( unsigned i=0; i<size2d; i++)

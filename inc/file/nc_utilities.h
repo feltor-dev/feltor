@@ -4,8 +4,8 @@
 #include <netcdf.h>
 #include "thrust/host_vector.h"
 
-#include "dg/backend/grid.h"
-#include "dg/backend/weights.cuh"
+#include "dg/geometry/grid.h"
+#include "dg/geometry/weights.cuh"
 
 /*!@file
  *

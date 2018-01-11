@@ -1,16 +1,16 @@
 #pragma once
 
-#include "backend/fast_interpolation.h"
-#include "backend/interpolation.cuh"
 #include "backend/exceptions.h"
 #include "backend/memory.h"
+#include "geometry/fast_interpolation.h"
+#include "geometry/interpolation.cuh"
 #include "blas.h"
 #include "cg.h"
 #ifdef DG_BENCHMARK
 #include "backend/timer.cuh"
 #endif //DG_BENCHMARK
 #ifdef MPI_VERSION
-#include "backend/mpi_projection.h"
+#include "geometry/mpi_projection.h"
 #endif
 
 namespace dg

@@ -3,7 +3,7 @@
 #include "blas.h"
 
 #include "helmholtz.h"
-#include "backend/xspacelib.cuh"
+#include "geometry/xspacelib.cuh"
 #include "backend/exceptions.h"
 #include "multistep.h"
 #include "cg.h"
@@ -79,6 +79,3 @@ int main()
 
     return 0;
 }
-
-
-

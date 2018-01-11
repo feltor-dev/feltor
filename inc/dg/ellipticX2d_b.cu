@@ -3,16 +3,14 @@
 
 //#include "backend/xspacelib.cuh"
 #include <thrust/device_vector.h>
-#include "blas.h"
-
-
-#include "backend/derivativesX.h"
-#include "backend/gridX.h"
-#include "backend/evaluationX.cuh"
+#include "backend/timer.cuh"
+#include "geometry/derivativesX.h"
+#include "geometry/gridX.h"
+#include "geometry/evaluationX.cuh"
 #include "geometry/base_geometryX.h"
+#include "blas.h"
 #include "elliptic.h"
 #include "cg.h"
-#include "backend/timer.cuh"
 
 const dg::bc bcx = dg::DIR;
 const dg::bc bcy = dg::NEU;

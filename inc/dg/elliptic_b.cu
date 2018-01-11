@@ -6,12 +6,9 @@
 #include <cusp/print.h>
 
 #include "backend/timer.cuh"
-#include "backend/evaluation.cuh"
-#include "backend/sparseblockmat.cuh"
-#include "backend/derivatives.h"
-#include "backend/typedefs.cuh"
-#include "backend/cusp_thrust_backend.h"
-#include "backend/split_and_join.h"
+#include "geometry/evaluation.cuh"
+#include "geometry/derivatives.h"
+#include "geometry/split_and_join.h"
 
 #include "cg.h"
 #include "elliptic.h"

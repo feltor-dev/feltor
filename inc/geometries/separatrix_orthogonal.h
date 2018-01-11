@@ -1,9 +1,9 @@
 #pragma once
 
-#include "dg/backend/gridX.h"
-#include "dg/backend/interpolationX.cuh"
-#include "dg/backend/evaluationX.cuh"
-#include "dg/backend/weightsX.cuh"
+#include "dg/geometry/gridX.h"
+#include "dg/geometry/interpolationX.cuh"
+#include "dg/geometry/evaluationX.cuh"
+#include "dg/geometry/weightsX.cuh"
 #include "dg/runge_kutta.h"
 #include "generatorX.h"
 #include "utilitiesX.h"

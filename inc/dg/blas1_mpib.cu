@@ -5,10 +5,11 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include "backend/timer.cuh"
-#include "blas.h"
-#include "backend/mpi_evaluation.h"
-#include "backend/mpi_derivatives.h"
 #include "backend/mpi_init.h"
+#include "geometry/mpi_evaluation.h"
+#include "geometry/mpi_derivatives.h"
+#include "geometry/mpi_weights.h"
+#include "blas.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
@@ -16,9 +17,9 @@ double function(double x, double y){ return sin(y)*sin(x);}
 
 typedef float value_type;
 //typedef dg::MPI_Vector<dg::DVec> MPIVector;
-typedef dg::MPI_Vector<cusp::array1d<float, cusp::device_memory> > MPIVector;
+//typedef dg::MPI_Vector<cusp::array1d<float, cusp::device_memory> > MPIVector;
 //typedef double value_type;
-//typedef dg::MPI_Vector<cusp::array1d<double, cusp::device_memory> > MPIVector;
+typedef dg::MPI_Vector<cusp::array1d<double, cusp::device_memory> > MPIVector;
 
 int main( int argc, char* argv[])
 {

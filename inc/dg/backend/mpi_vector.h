@@ -101,6 +101,7 @@ template<class container>
 struct VectorTraits<MPI_Vector<container> > {
     using value_type = typename container::value_type;
     using vector_category = MPIVectorTag;
+    using execution_policy = get_execution_policy<container>;
 };
 template<class container> 
 struct VectorTraits<const MPI_Vector<container> > {

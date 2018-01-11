@@ -4,12 +4,12 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "backend/evaluation.cuh"
+#include "backend/typedefs.cuh"
+#include "backend/timer.cuh"
+#include "geometry/evaluation.cuh"
 #include "poisson.h"
 #include "blas.h"
-#include "backend/typedefs.cuh"
 
-#include "backend/timer.cuh"
 
 
 const double lx = 2*M_PI;

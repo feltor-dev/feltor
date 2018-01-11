@@ -2,14 +2,13 @@
 #include <cmath>
 #include <cusp/csr_matrix.h>
 
-#include "dg/backend/grid.h"
-#include "dg/blas.h"
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/projection.cuh"
-#include "dg/backend/functions.h"
-#include "dg/backend/typedefs.cuh"
-#include "dg/backend/split_and_join.h"
 #include "dg/backend/transpose.h"
+#include "dg/blas.h"
+#include "dg/geometry/grid.h"
+#include "dg/geometry/interpolation.cuh"
+#include "dg/geometry/projection.cuh"
+#include "dg/geometry/functions.h"
+#include "dg/geometry/split_and_join.h"
 
 #include "dg/geometry/geometry.h"
 #include "dg/functors.h"

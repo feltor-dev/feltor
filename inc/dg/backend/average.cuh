@@ -1,10 +1,8 @@
 #pragma once
 
-#include "evaluation.cuh"
-#include "xspacelib.cuh"
 #include "memory.h"
 #include "../blas1.h"
-#include "split_and_join.h"
+#include "dg/geometry/split_and_join.h"
 
 /*! @file 
   @brief contains classes for poloidal and toroidal average computations.

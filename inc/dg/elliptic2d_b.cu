@@ -1,15 +1,13 @@
 #include <iostream>
 #include <iomanip>
 
-//#include "backend/xspacelib.cuh"
 #include <thrust/device_vector.h>
+#include "backend/timer.cuh"
+#include "geometry/projection.cuh"
+
 #include "blas.h"
-
-
 #include "elliptic.h"
 #include "multigrid.h"
-#include "backend/timer.cuh"
-#include "backend/projection.cuh"
 
 //global relative error in L2 norm is O(h^P)
 //as a rule of thumb with n=4 the true error is err = 1e-3 * eps as long as eps > 1e3*err

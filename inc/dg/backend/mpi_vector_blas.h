@@ -27,7 +27,7 @@ Vector1 doTransfer( const Vector2& in, MPIVectorTag, MPIVectorTag)
 }
 
 template< class Vector>
-typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& y, MPIVectorTag)
+std::vector<int64_t> doDot_superacc( const Vector& x, const Vector& y, MPIVectorTag)
 {
 #ifdef DG_DEBUG
     int compare;
@@ -38,8 +38,14 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
     //local compuation
     std::vector<int64_t> acc = doDot_superacc( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
-    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicotor(), x.communicator_mod(), x.communicator_mod_reduce());
+    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicator(), x.communicator_mod(), x.communicator_mod_reduce());
     return receive;
+}
+template< class Vector>
+typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& y, MPIVectorTag)
+{
+    std::vector<int64_t> acc = doDot_superacc( x,y,MPIVectorTag());
+    return exblas::cpu::Round(acc.data());
 }
 
 template< class Vector>

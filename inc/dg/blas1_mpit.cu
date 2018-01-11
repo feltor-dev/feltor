@@ -3,8 +3,8 @@
 
 #include <mpi.h>
 #include <thrust/device_vector.h>
+#include "geometry/mpi_evaluation.h"
 #include "blas1.h"
-#include "backend/mpi_evaluation.h"
 
 
 //test program that calls every blas1 function for every specialization
