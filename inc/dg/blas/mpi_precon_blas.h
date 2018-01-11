@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 #include "mpi_vector_blas.h"
-#include "mpi_precon.h"
 #include "thrust_matrix_blas.cuh"
 
 ///@cond
