@@ -1,10 +1,9 @@
 #pragma once
 
+#include "dg/backend/sparseblockmat.h"
+#include "dg/backend/mpi_matrix.h"
 #include "functions.h"
-#include "sparseblockmat.h"
 #include "derivatives.h"
-#include "mpi_vector.h"
-#include "mpi_matrix.h"
 
 namespace dg{
 

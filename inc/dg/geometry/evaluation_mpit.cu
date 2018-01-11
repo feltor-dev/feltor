@@ -2,11 +2,11 @@
 #include <cmath>
 
 #include <mpi.h>
+#include "dg/backend/mpi_init.h"
+#include "dg/blas.h"
 #include "mpi_evaluation.h"
-#include "mpi_precon.h"
+#include "mpi_weights.h"
 
-#include "blas.h"
-#include "mpi_init.h"
 
 double function( double x)
 {

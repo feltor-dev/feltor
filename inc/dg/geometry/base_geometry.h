@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../backend/grid.h"
+#include "grid.h"
 #include "tensor.h"
 
 namespace dg

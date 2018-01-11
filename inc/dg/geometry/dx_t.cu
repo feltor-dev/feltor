@@ -1,11 +1,8 @@
 #include <iostream>
 
-
-#include "blas.h"
+#include "dg/blas.h"
 #include "dx.h"
-#include "sparseblockmat.cuh"
 #include "evaluation.cuh"
-#include "typedefs.cuh"
 #include "weights.cuh"
 
 

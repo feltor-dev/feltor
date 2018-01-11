@@ -1,9 +1,7 @@
 #include <iostream>
-#include "blas.h"
+#include "dg/blas.h"
 #include "derivativesX.h"
 #include "evaluationX.cuh"
-#include "typedefs.cuh"
-#include "sparseblockmat.cuh"
 
 double zero( double x, double y) { return 0;}
 double zero( double x, double y, double z) { return 0;}

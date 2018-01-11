@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cmath>
-#include "../enums.h"
+#include "dg/backend/mpi_vector.h"
+#include "dg/enums.h"
 #include "grid.h"
-#include "mpi_vector.h"
 
 /*! @file 
   @brief MPI Grid objects

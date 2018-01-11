@@ -1,9 +1,9 @@
 #include <iostream>
 
 #include "../blas.h"
-#include "dg/backend/derivatives.h"
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/projection.cuh"
+#include "derivatives.h"
+#include "interpolation.cuh"
+#include "projection.cuh"
 #include "transform.h"
 #include "refined_grid.h"
 

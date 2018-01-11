@@ -1,17 +1,14 @@
 #pragma once
 
 #include <thrust/host_vector.h>
-#include "../enums.h"
+#include "dg/backend/memory.h"
+#include "dg/enums.h"
+#include "dg/blas.h"
 #include "grid.h"
 #include "interpolation.cuh"
 #include "projection.cuh"
-#include "matrix_traits.h"
-#include "sparseblockmat.h"
-#include "memory.h"
 #ifdef MPI_VERSION
 #include "mpi_grid.h"
-#include "mpi_vector.h"
-#include "mpi_matrix.h"
 #endif //MPI_VERSION
 
 

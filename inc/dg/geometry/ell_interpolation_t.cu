@@ -8,9 +8,9 @@ int main(){
 #else
 //#include <cusp/coo_matrix.h>
 //#include <cusp/print.h>
+#include "dg/backend/typedefs.cuh"
 #include "xspacelib.cuh"
 #include "ell_interpolation.cuh"
-#include "typedefs.cuh"
 
 const unsigned n = 3;
 const unsigned Nx = 5; 

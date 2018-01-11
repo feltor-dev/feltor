@@ -6,20 +6,13 @@
 #include <thrust/device_vector.h>
 #include <cusp/array1d.h>
 
-#include "timer.cuh"
-#include "sparseblockmat.h"
-#include "vector_traits.h"
-#include "selfmade_blas.cuh"
-#include "thrust_vector_blas.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/backend/mpi_init.h"
+#include "dg/blas.h"
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
-#include "mpi_matrix.h"
-#include "mpi_precon.h"
-#include "mpi_init.h"
+#include "mpi_weights.h"
 
-#include "sparseblockmat.cuh"
-#include "typedefs.cuh"
-#include "blas.h"
 
 const double lx = 2*M_PI;
 double sinx(   double x, double y, double z) { return sin(x);}

@@ -1,6 +1,6 @@
 #pragma once 
 
-#include "dg/backend/operator.h"
+#include "operator.h"
 #include "dg/functors.h"
 #include "dg/blas1.h"
 

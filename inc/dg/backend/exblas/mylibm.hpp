@@ -19,6 +19,7 @@
 
 #include <stdint.h> //definition of int64_t
 #include <immintrin.h>
+#include <cmath>
 #include <cassert>
 #define MAX_VECTOR_SIZE 512
 #define VCL_NAMESPACE vcl

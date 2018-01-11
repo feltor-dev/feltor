@@ -1,9 +1,8 @@
 #include <iostream>
 #include <cusp/print.h>
+#include "dg/blas.h"
 #include "projection.cuh"
 #include "evaluation.cuh"
-#include "blas.h"
-#include "typedefs.cuh"
 #include "fast_interpolation.h"
 
 double sine( double x){ return sin(x);}

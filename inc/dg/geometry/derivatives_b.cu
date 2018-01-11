@@ -1,11 +1,9 @@
 #include <iostream>
 #include <thrust/device_vector.h>
-#include "timer.cuh"
-#include "blas.h"
+#include "dg/backend/timer.cuh"
+#include "dg/blas.h"
 #include "derivatives.h"
 #include "evaluation.cuh"
-#include "typedefs.cuh"
-#include "sparseblockmat.cuh"
 
 const double lx = 2*M_PI;
 double sinx(   double x, double y, double z) { return sin(x);}

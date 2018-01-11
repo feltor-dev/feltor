@@ -26,7 +26,7 @@ int main()
     int multi=20;
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::tensor::multiply2d_inplace( g, v_x, v_y, temp);
+        dg::tensor::multiply2d( g, v_x, v_y, temp, v_y);
     t.toc();
     std::cout<<"multiply_inplace(g,v_x,v_y,temp) took   "<<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();

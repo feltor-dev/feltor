@@ -4,10 +4,11 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
+#include "dg/blas.h"
+
 #include "evaluation.cuh"
 #include "weights.cuh"
 
-#include "blas.h"
 
 double function( double x)
 {

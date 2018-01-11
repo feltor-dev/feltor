@@ -5,7 +5,7 @@
 #include "gridX.h"
 #include "dx.h"
 #include "weightsX.cuh"
-#include "sparseblockmat.h"
+#include "dg/backend/sparseblockmat.h"
 
 /*! @file 
   @brief Simple 1d derivatives on X-point topology

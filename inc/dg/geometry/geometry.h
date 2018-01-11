@@ -2,12 +2,12 @@
 
 #include <cassert>
 #include "thrust/host_vector.h"
-#include "../backend/evaluation.cuh"
-#include "../backend/weights.cuh"
+#include "evaluation.cuh"
+#include "weights.cuh"
 #ifdef MPI_VERSION
-#include "../backend/mpi_vector.h"
-#include "../backend/mpi_evaluation.h"
-#include "../backend/mpi_precon.h"
+#include "dg/backend/mpi_vector.h"
+#include "mpi_evaluation.h"
+#include "mpi_weights.h"
 #endif//MPI_VERSION
 #include "base_geometry.h"
 #include "base_geometryX.h"

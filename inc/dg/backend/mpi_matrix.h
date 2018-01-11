@@ -1,5 +1,6 @@
 #pragma once
 
+#include "selfmade_blas.cuh" //declaration of dg::blas2::detail
 #include "mpi_vector.h"
 #include "memory.h"
 

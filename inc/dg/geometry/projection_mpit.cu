@@ -1,10 +1,10 @@
 #include <iostream>
 #include <sstream>
 #include <mpi.h>
+#include "dg/backend/mpi_init.h"
+#include "dg/blas.h"
 #include "mpi_projection.h"
-#include "mpi_init.h"
 #include "mpi_evaluation.h"
-#include "transpose.h"
 
 
 double shift = 0.2;
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     dg::HVec global_sine = dg::evaluate( function, g2d.global()); 
     dg::HVec g_temp( x.size());
     converted_i.symv( sine, temp);
-    dg::blas2::detail::doSymv( direct_i, global_sine, g_temp, dg::CuspMatrixTag(), dg::ThrustVectorTag(), dg::ThrustVectorTag());
+    dg::blas2::symv( direct_i, global_sine, g_temp);
     //now compare
     bool success = true;
     for( unsigned i=0; i<temp.size(); i++)
@@ -80,7 +80,6 @@ int main(int argc, char* argv[])
         std::cout << "FAILED from rank "<<rank<<"!\n";
     else
         std::cout << "SUCCESS from rank "<<rank<<"!\n";
-    //Finally test transpose
 
     MPI_Finalize();
     return 0;

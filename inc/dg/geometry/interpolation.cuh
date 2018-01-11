@@ -7,7 +7,6 @@
 #include "evaluation.cuh"
 #include "functions.h"
 #include "creation.cuh"
-#include "dgtensor.cuh"
 #include "operator_tensor.cuh"
 
 /*! @file

@@ -1,12 +1,10 @@
 #pragma once
 
-#include "cusp_matrix_blas.cuh"
+#include "dg/backend/typedefs.cuh"
+#include "dg/backend/mpi_matrix.h"
+#include "dg/backend/mpi_collective.h"
 #include "mpi_grid.h"
-#include "mpi_matrix.h"
-#include "mpi_vector.h"
-#include "mpi_collective.h"
 #include "projection.cuh"
-#include "typedefs.cuh"
 
 /*! @file
   @brief Useful MPI typedefs and overloads of interpolation and projection

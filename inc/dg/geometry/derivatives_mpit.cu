@@ -2,20 +2,12 @@
 #include <iomanip>
 #include <mpi.h>
 
-#include "sparseblockmat.h"
-#include "sparseblockmat.cuh"
-#include "vector_traits.h"
-#include "selfmade_blas.cuh"
-#include "thrust_vector_blas.cuh"
-#include "cusp_vector_blas.h"
+#include "dg/backend/mpi_init.h"
+#include "dg/backend/typedefs.cuh"
+#include "dg/blas.h"
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
-#include "mpi_matrix.h"
-#include "mpi_precon.h"
-#include "mpi_init.h"
-
-#include "typedefs.cuh"
-#include "blas.h"
+#include "mpi_weights.h"
 
 double zero( double x, double y) { return 0;}
 double sin(  double x, double y) { return sin(x)*sin(y);}

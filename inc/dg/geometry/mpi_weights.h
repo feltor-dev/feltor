@@ -1,6 +1,5 @@
 #pragma once
 
-#include "matrix_traits.h"
 #include "weights.cuh"
 #include "mpi_grid.h"
 
@@ -11,21 +10,6 @@
 */
 namespace dg
 {
-///@cond
-
-template <class T>
-struct MatrixTraits<MPI_Vector<T> >
-{
-    using value_type        = get_value_type<T>;
-    using matrix_category   = MPIPreconTag;
-};
-template <class T>
-struct MatrixTraits<const MPI_Vector<T> >
-{
-    using value_type        = get_value_type<T>;
-    using matrix_category   = MPIPreconTag;
-};
-///@endcond
 namespace create
 {
 

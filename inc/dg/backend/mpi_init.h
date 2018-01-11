@@ -1,6 +1,9 @@
 #pragma once
 
 #include <iostream>
+#include <cassert>
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h> //declare THRUST_DEVICE_SYSTEM
 #include "../enums.h"
 
 /*!@file

@@ -17,9 +17,6 @@ version: version.cu
 	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
 	./$@
 
-backscatter_t: backscatter_t.cu xspacelib.cuh
-	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
-
 blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(CFLAGS) $< -o $@ -g
 

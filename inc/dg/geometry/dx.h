@@ -2,11 +2,11 @@
 
 #include <cassert>
 
+#include "dg/backend/sparseblockmat.h"
 #include "grid.h"
 #include "functions.h"
 #include "operator.h"
 #include "weights.cuh"
-#include "sparseblockmat.h"
 
 //What happens for N=1?
 /*! @file 

@@ -6,9 +6,9 @@
 #include <thrust/random/uniform_real_distribution.h>
 #include <thrust/random/normal_distribution.h>
 #include "blas1.h"
-#include "backend/grid.h"
-#include "backend/evaluation.cuh"
-#include "backend/functions.h"
+#include "geometry/grid.h"
+#include "geometry/evaluation.cuh"
+#include "geometry/functions.h"
 /*!@file
  * Functors to use in dg::evaluate or dg::blas1::transform functions
  */
