@@ -6,18 +6,19 @@
 #include <cmath>
 #include <memory>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
-#include "curvilinear.h"
+#include "file/nc_utilities.h"
 
 #include "dg/backend/timer.cuh"
+#include "dg/geometry/xspacelib.cuh"
+#include "dg/functors.h"
+
+#include "curvilinear.h"
 //#include "guenther.h"
 #include "solovev.h"
 #include "hector.h"
 //#include "refined_conformal.h"
 #include "init.h"
 
-#include "file/nc_utilities.h"
 
 thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, const dg::Grid2d& g)
 {

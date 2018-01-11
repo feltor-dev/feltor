@@ -2,7 +2,7 @@
 
 #include <cusp/print.h>
 
-#include "dg/backend/functions.h"
+#include "dg/geometry/functions.h"
 #include "dg/backend/timer.cuh"
 #include "dg/blas.h"
 #include "dg/functors.h"

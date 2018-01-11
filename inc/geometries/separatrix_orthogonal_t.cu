@@ -5,7 +5,7 @@
 #include <sstream>
 #include <cmath>
 
-#include "dg/backend/xspacelib.cuh"
+#include "dg/geometry/xspacelib.cuh"
 #include "dg/functors.h"
 
 #include "dg/backend/timer.cuh"
