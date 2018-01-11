@@ -121,7 +121,7 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
  
     //construct all geometry quantities
-    dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
     const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     const double Z_X = -1.1*gp.elongation*gp.a;
     const double R_H = gp.R_0-gp.triangularity*gp.a;

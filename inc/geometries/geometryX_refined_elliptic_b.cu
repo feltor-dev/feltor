@@ -54,7 +54,16 @@ int main(int argc, char**argv)
     //double Z_X = -1.0*gp.elongation*gp.a;
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xmonitor( c.get_psip(), R_X, Z_X) ;
+    /////////////no monitor
+    dg::geo::BinarySymmTensorLvl1 monitor_chi;
+    ////////////const monitor
+    //dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
+    /////////////monitor bumped around X-point
+    //double radius;
+    //std::cout << "Type radius\n";
+    //std::cin >> radius;
+    //dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xbump_monitor( c.get_psip(), R_X, Z_X, radius, radius) ;
+    /////////////
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
     //dg::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
@@ -69,11 +78,11 @@ int main(int argc, char**argv)
 
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
-    std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<" + "<<add_x<<" + "<<add_y<<" x "<<howmanyX<<" x "<<howmanyY<<"\n";
+    std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<" + "<<add_x<<" x "<<add_y<<" x "<<howmanyX<<" x "<<howmanyY<<"\n";
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
     file::NC_Error_Handle ncerr;
-    ncerr = nc_create( "testX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
+    ncerr = nc_create( "testXrefined.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
     ncerr = file::define_dimensions(  ncid, dim2d, g2d_fine.grid());
     int coordsID[2], psiID, functionID, function2ID;
@@ -92,19 +101,19 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     //////////////////blob solution////////////////////////////////////////////
-    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 450, -340, 40.,1.), g2d_coarse);
-    //const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 450, -340, 40.,1.), g2d_fine);
-    //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d_coarse);
-    //const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d_fine);
-    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d_coarse);
-    //const dg::DVec solutionFINE =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 450, -340, 40., 1. ), g2d_fine);
-    /////////////////blob on X-point///////////////////////////////////////////
-    const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -420, 40.,1.), g2d_coarse);
-    const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -420, 40.,1.), g2d_fine);
+    const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_coarse);
+    const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_fine);
     const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d_coarse);
     const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d_fine);
-    const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d_coarse);
-    const dg::DVec solutionFINE =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -420, 40., 1. ), g2d_fine);
+    const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d_coarse);
+    const dg::DVec solutionFINE =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d_fine);
+    /////////////////blob on X-point///////////////////////////////////////////
+    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d_coarse);
+    //const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d_fine);
+    //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d_coarse);
+    //const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d_fine);
+    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d_coarse);
+    //const dg::DVec solutionFINE =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d_fine);
     ///////////////////////////////////////////////////////////////////////////
     //const dg::DVec b =        dg::pullback( c.laplacePsip, g2d_coarse);
     //const dg::DVec bFINE =    dg::pullback( c.laplacePsip, g2d_fine);
@@ -141,7 +150,7 @@ int main(int argc, char**argv)
     pol_refined.set_chi( chiFINE);
     //compute error
     const double eps = 1e-11;
-    std::cout << "eps \t # sandwich \t # direct \t error_sandwich \t error_direct \t hx_max\t hy_max \t time/iteration \n";
+    std::cout << "eps \t# sandwich \t# direct \terror_sandwich \terror_direct \thx_max\thy_max\ttime/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
     dg::DVec x_sandwich    =    dg::evaluate( dg::zero, g2d_coarse);

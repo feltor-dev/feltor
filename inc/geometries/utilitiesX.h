@@ -78,7 +78,7 @@ struct DivMonitor : public aCloneableBinaryFunctor<DivMonitor>
  *
  * @return a metric tensor and its derivatives
  */
-BinarySymmTensorLvl1 make_Xmonitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
+BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X, double radiusX, double radiusY)
 {
     findXpoint( psi, R_X, Z_X);
     double x = R_X, y = Z_X;
@@ -95,6 +95,36 @@ BinarySymmTensorLvl1 make_Xmonitor( const BinaryFunctorsLvl2& psi, double& R_X, 
     detail::Monitor yy(1, gyy-1, x,y, radiusX, radiusY);
     detail::DivMonitor divX(gxx-1, gxy, x,y, radiusX, radiusY);
     detail::DivMonitor divY(gxy, gyy-1, x,y, radiusX, radiusY);
+    BinarySymmTensorLvl1 monitor( xx, xy, yy, divX, divY);
+    return monitor;
+}
+/**
+ * @brief construct a monitor metric in which the Laplacian vanishes at the X-point
+ *
+ * calls the \c findXpoint function to find the X-point
+ * @param psi the flux functions
+ * @param R_X start value on input, X-point on output
+ * @param Z_X start value on input, X-point on output
+ *
+ * @return a metric tensor and its derivatives
+ */
+BinarySymmTensorLvl1 make_Xconst_monitor( const BinaryFunctorsLvl2& psi, double& R_X, double& Z_X)
+{
+    findXpoint( psi, R_X, Z_X);
+    double x = R_X, y = Z_X;
+    double psixy    = psi.dfxy()(x,y), psixx = psi.dfxx()(x,y), psiyy = psi.dfyy()(x,y);
+    double sumpsi   = psixx + psiyy;
+    double diffpsi  = psixx - psiyy;
+    double alpha    = (psixy*psixy - psixx*psiyy)*(diffpsi*diffpsi + 4.*psixy*psixy);
+
+    double gxx = (-psiyy*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
+    double gyy = ( psixx*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
+    double gxy = (                   sumpsi*psixy)/sqrt(alpha);
+    Constant xx(gxx);
+    Constant xy(gxy);
+    Constant yy(gyy);
+    Constant divX(0);
+    Constant divY(0);
     BinarySymmTensorLvl1 monitor( xx, xy, yy, divX, divY);
     return monitor;
 }
