@@ -23,12 +23,10 @@ namespace create{
 thrust::host_vector<double> abscissas( const Grid1d& g)
 {
     thrust::host_vector<double> v(g.size()); 
-    double xp=1.;
     for( unsigned i=0; i<g.N(); i++)
     {
         for( unsigned j=0; j<g.n(); j++)
-            v[i*g.n()+j] =  g.h()/2.*(xp + g.dlt().abscissas()[j])+g.x0();
-        xp+=2.;
+            v[i*g.n()+j] = (g.x0()+g.h()*(double)i) + (g.h()/2.)*(1 + g.dlt().abscissas()[j]);
     }
     return v;
 }
