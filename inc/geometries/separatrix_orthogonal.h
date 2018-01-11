@@ -196,6 +196,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
      * @param x0
      * @param y0
      * @param firstline =0 means conformal, =1 means equalarc discretization
+     * @param verbose if true the integrators will write additional information to std::cout
      */
     SeparatrixOrthogonal( const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline, bool verbose = false ):
