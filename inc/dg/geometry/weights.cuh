@@ -82,10 +82,8 @@ int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
 ///@copydoc hide_code_evaluate2d
 thrust::host_vector<double> weights( const aTopology2d& g)
 {
-    //choose layout
     thrust::host_vector<double> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        //v[i] = g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
         v[i] = g.hx()*g.hy()/4.*
                 g.dlt().weights()[detail::get_i(g.n(),g.Nx(), i)]*
                 g.dlt().weights()[detail::get_j(g.n(),g.Nx(), i)];
@@ -106,8 +104,7 @@ thrust::host_vector<double> weights( const aTopology3d& g)
 {
     thrust::host_vector<double> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
-        //v[i] = g.hz()*g.hx()*g.hy()/4.*g.dlt().weights()[detail::get_i(g.n(), i)]*g.dlt().weights()[detail::get_j(g.n(), i)];
-        v[i] = g.hz()*g.hx()*g.hy()/4.*
+        v[i] = g.hx()*g.hy()*g.hz()/4.*
                g.dlt().weights()[detail::get_i(g.n(), g.Nx(), i)]*
                g.dlt().weights()[detail::get_j(g.n(), g.Nx(), i)];
     return v;

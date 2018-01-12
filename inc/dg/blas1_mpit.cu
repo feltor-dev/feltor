@@ -3,6 +3,7 @@
 
 #include <mpi.h>
 #include <thrust/device_vector.h>
+#include "backend/mpi_init.h"
 #include "geometry/mpi_evaluation.h"
 #include "blas1.h"
 
@@ -20,31 +21,11 @@ struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
-    int np[2];
-    int periods[2] = {0,0};
-    periods[0] = 1;
-    periods[1] = 1;
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    if( rank == 0)
-    {
-        std::cout << "Type npx and npy\n";
-        std::cin >> np[0] >> np[1];
-        std::cout<< "You typed "<<np[0] <<" and "<<np[1]<<std::endl;
-    }
-    MPI_Bcast( np, 2, MPI_INT, 0, MPI_COMM_WORLD);
-
-    int size;
-    MPI_Comm_size( MPI_COMM_WORLD, &size);
-    if( rank == 0)
-    {
-        std::cout << "Size is "<<size<<std::endl;
-        assert( size == np[0]*np[1]);
-    }
-
     MPI_Comm comm;
-    MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
-    dg::MPIGrid2d g( 0,1,0,1, 3,12,12, comm);
+    mpi_init2d( dg::PER, dg::PER, comm);
+    dg::MPIGrid2d g( 0,1,0,1, 3,120,120, comm);
+    int rank; 
+    MPI_Comm_rank( comm, &rank);
     MVec v1 = dg::evaluate( two, g);
     MVec v2 = dg::evaluate( three, g); 
     MVec v3(v1);

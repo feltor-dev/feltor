@@ -29,7 +29,26 @@ namespace dg
 template< class BinaryOp>
 MPI_Vector<thrust::host_vector<double> > evaluate( const BinaryOp& f, const aMPITopology2d& g)
 {
-    thrust::host_vector<double> w = evaluate( f, g.local());
+    //since the local grid is not binary compatible we have to use this implementation
+    unsigned n = g.n();
+    Grid2d l = g.local();
+    int dims[2], periods[2], coords[2];
+    MPI_Cart_get( g.communicator(), 2, dims, periods, coords);
+    thrust::host_vector<double> absx( l.n()*l.Nx());
+    thrust::host_vector<double> absy( l.n()*l.Ny());
+    for( unsigned i=0; i<l.Nx(); i++)
+        for( unsigned j=0; j<n; j++)
+            absx[i*n+j] = (g.x0()+g.hx()*(double)(i+l.Nx()*coords[0])) + (g.hx()/2.)*(1 + g.dlt().abscissas()[j]);
+    for( unsigned i=0; i<l.Ny(); i++)
+        for( unsigned j=0; j<n; j++)
+            absy[i*n+j] = (g.y0()+g.hy()*(double)(i+l.Ny()*coords[1])) + (g.hy()/2.)*(1 + g.dlt().abscissas()[j]);
+
+    thrust::host_vector<double> w( l.size());
+    for( unsigned i=0; i<l.Ny(); i++)
+        for( unsigned k=0; k<n; k++)
+            for( unsigned j=0; j<l.Nx(); j++)
+                for( unsigned r=0; r<n; r++)
+                    w[ ((i*n+k)*l.Nx() + j)*n + r] = f( absx[j*n+r], absy[i*n+k]);
     MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());
     return v;
 };
@@ -55,7 +74,31 @@ MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double), co
 template< class TernaryOp>
 MPI_Vector<thrust::host_vector<double> > evaluate( const TernaryOp& f, const aMPITopology3d& g)
 {
-    thrust::host_vector<double> w = evaluate( f, g.local());
+    //since the local grid is not binary compatible we have to use this implementation
+    unsigned n = g.n();
+    //abscissas
+    Grid3d l = g.local();
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( g.communicator(), 3, dims, periods, coords);
+    thrust::host_vector<double> absx( l.n()*l.Nx());
+    thrust::host_vector<double> absy( l.n()*l.Ny());
+    thrust::host_vector<double> absz(       l.Nz());
+    for( unsigned i=0; i<l.Nx(); i++)
+        for( unsigned j=0; j<n; j++)
+            absx[i*n+j] = (g.x0()+g.hx()*(double)(i+l.Nx()*coords[0])) + (g.hx()/2.)*(1 + g.dlt().abscissas()[j]);
+    for( unsigned i=0; i<l.Ny(); i++)
+        for( unsigned j=0; j<n; j++)
+            absy[i*n+j] = (g.y0()+g.hy()*(double)(i+l.Ny()*coords[1])) + (g.hy()/2.)*(1 + g.dlt().abscissas()[j]);
+    for( unsigned i=0; i<l.Nz(); i++)
+        absz[i] = (g.y0()+g.hz()*(double)(i+l.Nz()*coords[2])) + (g.hz()/2.);
+
+    thrust::host_vector<double> w( l.size());
+    for( unsigned s=0; s<l.Nz(); s++)
+        for( unsigned i=0; i<l.Ny(); i++)
+            for( unsigned k=0; k<n; k++)
+                for( unsigned j=0; j<l.Nx(); j++)
+                    for( unsigned r=0; r<n; r++)
+                        w[ (((s*l.Ny()+i)*n+k)*l.Nx() + j)*n + r] = f( absx[j*n+r], absy[i*n+k], absz[s]);
     MPI_Vector<thrust::host_vector<double> > v( w, g.communicator());
     return v;
 };

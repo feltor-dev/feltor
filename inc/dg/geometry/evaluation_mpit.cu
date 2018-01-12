@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <cmath>
 
 #include <mpi.h>
@@ -38,33 +39,44 @@ int main(int argc, char** argv)
     MPI_Init( &argc, &argv);
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n = 3, Nx = 10, Ny = 20, Nz = 100; 
     MPI_Comm comm2d, comm3d;
-    mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm2d);
+    mpi_init2d( dg::PER, dg::PER, comm2d);
     dg::MPIGrid2d g2d( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER, comm2d);
-    mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm3d);
+    mpi_init3d( dg::PER, dg::PER, dg::PER, comm3d);
     dg::MPIGrid3d g3d( 0, lx, 0, ly, 0, lz, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER, comm3d);
 
     //test evaluation and expand functions
     MDVec func2d = dg::blas1::transfer<MDVec>(dg::evaluate( function, g2d));
     MDVec func3d = dg::blas1::transfer<MDVec>(dg::evaluate( function, g3d));
-    //test preconditioners
+    //test weights
     const MDVec w2d = dg::blas1::transfer<MDVec>(dg::create::weights(g2d));
     const MDVec w3d = dg::blas1::transfer<MDVec>(dg::create::weights(g3d));
+    udouble res; 
 
-    double norm2d = dg::blas2::dot( w2d, func2d);
-    double norm3d = dg::blas2::dot( w3d, func3d);
+    double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;
+    if(rank==0)std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i << "\n";
+    double sol2d = (exp(2.)-exp(0))*(exp(2.)-exp(0));
+    if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol2d<<std::endl;
+    if(rank==0)std::cout << "Absolute 2d error is      "<<(integral2d-sol2d)<<"\n\n";
 
-    if(rank==0)std::cout << "Square normalized 2D norm "<< norm2d <<"\n";
-    double solution2 = (exp(4.)-exp(0))/2.*(exp(4.) -exp(0))/2.;
-    if(rank==0)std::cout << "Correct square norm is    "<<solution2<<std::endl;
-    if(rank==0)std::cout << "Relative 2d error is      "<<(norm2d-solution2)/solution2<<"\n\n";
+    double integral3d = dg::blas1::dot( w3d, func3d); res.d = integral3d;
+    if(rank==0)std::cout << "3D integral               "<<std::setw(6)<<integral3d <<"\t" << res.i << "\n";
+    double sol3d = sol2d*(exp(2.)-exp(0));
+    if(rank==0)std::cout << "Correct integral is       "<<std::setw(6)<<sol3d<<std::endl;
+    if(rank==0)std::cout << "Absolute 3d error is      "<<(integral3d-sol3d)<<"\n\n";
 
-    if(rank==0)std::cout << "Square normalized 3DXnorm "<< norm3d<<"\n";
-    double solution = (exp(4.) -exp(0))/2.;
-    double solution3 = solution2*solution;
-    if(rank==0)std::cout << "Correct square norm is    "<<solution3<<std::endl;
-    if(rank==0)std::cout << "Relative 3d error is      "<<(norm3d-solution3)/solution3<<"\n";
+    double norm2d = dg::blas2::dot( w2d, func2d); res.d = norm2d;
+    if(rank==0)std::cout << "Square normalized 2D norm "<<std::setw(6)<<norm2d<<"\t" << res.i <<"\n";
+    double solution2d = (exp(4.)-exp(0))/2.*(exp(4.) -exp(0))/2.;
+    if(rank==0)std::cout << "Correct square norm is    "<<std::setw(6)<<solution2d<<std::endl;
+    if(rank==0)std::cout << "Relative 2d error is      "<<(norm2d-solution2d)/solution2d<<"\n\n";
+
+    double norm3d = dg::blas2::dot( func3d, w3d, func3d); res.d = norm3d;
+    if(rank==0)std::cout << "Square normalized 3D norm "<<std::setw(6)<<norm3d<<"\t" << res.i <<"\n";
+    double solution3d = solution2d*(exp(4.)-exp(0))/2.;
+    if(rank==0)std::cout << "Correct square norm is    "<<std::setw(6)<<solution3d<<std::endl;
+    if(rank==0)std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n";
 
     //if(rank==0)
     //{
@@ -82,12 +94,6 @@ int main(int argc, char** argv)
     //    if( globalIdx != result)
     //        std::cerr <<"Inversion failed "<<result<<"\n";
     //}
-    if(rank==0)std::cout << "Output double as integer \n";
-    udouble res; 
-    res.d = norm2d;
-    if(rank==0)std::cout << "norm2d "<<res.i<<std::endl;
-    res.d = norm3d;
-    if(rank==0)std::cout << "norm3d "<<res.i<<std::endl;
 
     MPI_Finalize();
     return 0;
