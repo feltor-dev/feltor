@@ -26,6 +26,10 @@ double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 //typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
 typedef dg::MDMatrix Matrix;
 typedef dg::MDVec Vector;
+union udouble{
+    double d;
+    int64_t i;
+};
 
 int main(int argc, char* argv[])
 {
@@ -50,6 +54,7 @@ int main(int argc, char* argv[])
 
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    udouble res;
     if(rank==0)std::cout << "WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!\n";
     if(rank==0)std::cout << "TEST 2D: DX, DY, JX, JY\n";
     for( unsigned i=0; i<4; i++)
@@ -57,8 +62,8 @@ int main(int argc, char* argv[])
         Vector error = f2d;
         dg::blas2::symv( m2[i], f2d, error);
         dg::blas1::axpby( 1., sol2[i], -1., error);
-        double norm = dg::blas2::dot( error, w2d, error);
-        if(rank==0)std::cout << "Distance to true solution: "<<sqrt(norm)<<"\n";
+        double norm = sqrt(dg::blas2::dot( error, w2d, error)); res.d = norm;
+        if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";
     }
     MPI_Comm comm3d;
     mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm3d);
@@ -84,8 +89,8 @@ int main(int argc, char* argv[])
         Vector error = f3d;
         dg::blas2::symv( m3[i], f3d, error);
         dg::blas1::axpby( 1., sol3[i], -1., error);
-        double norm = dg::blas2::dot( error, w3d, error);
-        if(rank==0)std::cout << "Distance to true solution: "<<sqrt(norm)<<"\n";
+        double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
+        if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";
     }
 
 

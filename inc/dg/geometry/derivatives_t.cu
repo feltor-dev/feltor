@@ -17,6 +17,10 @@ typedef dg::DVec Vector;
 typedef dg::EllSparseBlockMatDevice<double> Matrix;
 //typedef dg::HVec Vector;
 //typedef dg::EllSparseBlockMat<double> Matrix;
+union udouble{
+    double d;
+    int64_t i;
+};
 
 int main()
 {
@@ -38,21 +42,17 @@ int main()
     const Vector null2 = dg::evaluate( zero, g2d);
     Vector sol2[] = {dx2d, dy2d, null2, null2};
 
+    udouble res;
     std::cout << "WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!\n";
-    std::cout << "TEST 2D: DX, DY, JX, JY, JXY\n";
+    std::cout << "TEST 2D: DX, DY, JX, JY\n";
     for( unsigned i=0; i<4; i++)
     {
         Vector error = f2d;
         dg::blas2::symv( m2[i], f2d, error);
         dg::blas1::axpby( 1., sol2[i], -1., error);
-        std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(error, w2d, error))<<"\n";
+        double norm = sqrt(dg::blas2::dot( error, w2d, error)); res.d = norm;
+        std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";
     }
-    Vector tempX = f2d, tempY(tempX);
-    dg::blas2::symv( m2[2], f2d, tempX);
-    dg::blas2::symv( m2[3], f2d, tempY);
-    dg::blas1::axpby( 1., tempX, 1., tempY, tempY);
-    dg::blas1::axpby( 1., null2, -1., tempY);
-    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tempY, w2d, tempY))<<"\n";
     dg::Grid3d g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
@@ -69,20 +69,15 @@ int main()
     const Vector null3 = dg::evaluate( zero, g3d);
     Vector sol3[] = {dx3d, dy3d, dz3d, null3, null3, null3};
 
-    std::cout << "TEST 3D: DX, DY, DZ, JX, JY, JZ, JXY\n";
+    std::cout << "TEST 3D: DX, DY, DZ, JX, JY, JZ\n";
     for( unsigned i=0; i<6; i++)
     {
         Vector error = f3d;
         dg::blas2::symv( m3[i], f3d, error);
         dg::blas1::axpby( 1., sol3[i], -1., error);
-        std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(error, w3d, error))<<"\n";
+        double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
+        std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";
     }
-    Vector tX = f3d, tY(tX);
-    dg::blas2::symv( m3[3], f3d, tX);
-    dg::blas2::symv( m3[4], f3d, tY);
-    dg::blas1::axpby( 1., tX, 1., tY, tY);
-    dg::blas1::axpby( 1., null3, -1., tY);
-    std::cout << "Distance to true solution: "<<sqrt(dg::blas2::dot(tY, w3d, tY))<<"\n";
     //for periodic bc | dirichlet bc
     //n = 1 -> p = 2      2
     //n = 2 -> p = 1      1
