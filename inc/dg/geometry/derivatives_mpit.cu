@@ -59,9 +59,8 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "TEST 2D: DX, DY, JX, JY\n";
     for( unsigned i=0; i<4; i++)
     {
-        Vector error = f2d;
-        dg::blas2::symv( m2[i], f2d, error);
-        dg::blas1::axpby( 1., sol2[i], -1., error);
+        Vector error = sol2[i];
+        dg::blas2::symv( -1., m2[i], f2d, 1., error);
         double norm = sqrt(dg::blas2::dot( error, w2d, error)); res.d = norm;
         if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";
     }
@@ -86,8 +85,8 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "TEST 3D: DX, DY, DZ, JX, JY, JZ\n";
     for( unsigned i=0; i<6; i++)
     {
-        Vector error = f3d;
-        dg::blas2::symv( m3[i], f3d, error);
+        Vector error = sol3[i];
+        dg::blas2::symv( -1., m3[i], f3d, 1., error);
         dg::blas1::axpby( 1., sol3[i], -1., error);
         double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
         if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";

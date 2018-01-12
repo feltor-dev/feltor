@@ -242,12 +242,13 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, value_type alpha, cons
     for( int k=0; k<n; k++)
     for( int j=right_range[0]; j<right_range[1]; j++)
     {
-        int I = ((s*num_rows + i)*n+k)*right_size+j;
-        y[I] *= beta;
+        value_type temp = 0;
         for( int d=0; d<blocks_per_line; d++)
         for( int q=0; q<n; q++) //multiplication-loop
-            y[I] += alpha*data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
+            temp += data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q]*
                 x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j];
+        int I = ((s*num_rows + i)*n+k)*right_size+j;
+        y[I] = alpha*temp + beta*y[I];
     }
 }
 

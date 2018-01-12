@@ -102,7 +102,7 @@ FPExpansionVect<T,N,TRAITS>::FPExpansionVect(int64_t * sa) :
 
 // Knuth 2Sum.
 template<typename T>
-inline static T Knuth2Sum(T a, T b, T & s)
+inline static T KnuthTwoSum(T a, T b, T & s)
 {
     T r = a + b;
     T z = r - a;
@@ -209,11 +209,11 @@ static inline bool sign_horizontal_or (vcl::Vec8db const & a) {
 //
 //inline static void horizontal_twosum(vcl::Vec8d & r, vcl::Vec8d & s)
 //{
-//    //r = Knuth2Sum(r, s, s);
+//    //r = KnuthTwoSum(r, s, s);
 //    transpose1(r, s);
-//    r = Knuth2Sum(r, s, s);
+//    r = KnuthTwoSum(r, s, s);
 //    transpose2(r, s);
-//    r = Knuth2Sum(r, s, s);
+//    r = KnuthTwoSum(r, s, s);
 //}
 
 template<typename T, int N, typename TRAITS>
@@ -227,7 +227,7 @@ T FPExpansionVect<T,N,TRAITS>::twosum(T a, T b, T & s)
     //    return BiasedSIMD2Sum(a, b, s);
     //}
     //else {
-    //    return Knuth2Sum(a, b, s);
+    //    return KnuthTwoSum(a, b, s);
     //}
 //#endif
 }

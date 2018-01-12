@@ -39,7 +39,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
         }
     }
 }
-//specialized multiply kernel, as fast as it will ever be :)
+//specialized multiply kernel
 template<class value_type, int n, int blocks_per_line>
 void ell_multiply_kernel( value_type alpha, value_type beta,
          const value_type * RESTRICT data, const int * RESTRICT cols_idx, const int * RESTRICT data_idx,
