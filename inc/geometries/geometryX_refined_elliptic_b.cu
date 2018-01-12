@@ -19,17 +19,16 @@ int main(int argc, char**argv)
     std::cout << "Type psi_0 (-15)! \n";
     double psi_0, psi_1;
     std::cin >> psi_0;
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is(parameters);
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     //dg::geo::taylor::Parameters gp(js);
     //dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
