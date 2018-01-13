@@ -143,7 +143,8 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
             //vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load(c+i);
             //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
             //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
-            vcl::Vec8d x2  = (vcl::Vec8d().load(a+i)*vcl::Vec8d().load(b+i))*vcl::Vec8d().load(c+i);
+            vcl::Vec8d x1  = vcl::mul_add(vcl::Vec8d().load(a+i),vcl::Vec8d().load(b+i), 0);
+            vcl::Vec8d x2  = vcl::mul_add( x1                   ,vcl::Vec8d().load(c+i), 0);
             cache.Accumulate(x2);
             //cache.Accumulate(r2);
             //x2 = TwoProductFMA(r1, cvec, r2);
@@ -156,7 +157,8 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
             //vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load_partial(N-r, c+r);
             //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
             //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
-            vcl::Vec8d x2  = (vcl::Vec8d().load_partial(N-r,a+r)*vcl::Vec8d().load_partial(N-r,b+r))*vcl::Vec8d().load_partial(N-r,c+r);
+            vcl::Vec8d x1  = vcl::mul_add(vcl::Vec8d().load_partial(N-r, a+r),vcl::Vec8d().load_partial(N-r,b+r), 0);
+            vcl::Vec8d x2  = vcl::mul_add( x1                   ,vcl::Vec8d().load_partial(N-r,c+r), 0);
             cache.Accumulate(x2);
             //cache.Accumulate(r2);
             //x2 = TwoProductFMA(r1, cvec, r2);
