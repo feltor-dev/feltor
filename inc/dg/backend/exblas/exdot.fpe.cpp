@@ -94,20 +94,20 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
 
         for(int i = l; i < r; i+=8) {
             asm ("# myloop");
-            //vcl::Vec8d r1 ;
-            //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
-            vcl::Vec8d x  = vcl::Vec8d().load(a+i)*vcl::Vec8d().load(b+i);
+            vcl::Vec8d r1 ;
+            vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
+            //vcl::Vec8d x  = vcl::Vec8d().load(a+i)*vcl::Vec8d().load(b+i);
             cache.Accumulate(x);
-            //cache.Accumulate(r1);
+            cache.Accumulate(r1);
         }
         if( tid+1==tnum && r != N-1) {
             r+=1;
             //accumulate remainder
-            //vcl::Vec8d r1;
-            //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
-            vcl::Vec8d x  = vcl::Vec8d().load_partial(N-r,a+r)*vcl::Vec8d().load_partial(N-r,b+r);
+            vcl::Vec8d r1;
+            vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
+            //vcl::Vec8d x  = vcl::Vec8d().load_partial(N-r,a+r)*vcl::Vec8d().load_partial(N-r,b+r);
             cache.Accumulate(x);
-            //cache.Accumulate(r1);
+            cache.Accumulate(r1);
         }
         cache.Flush();
         int imin=IMIN, imax=IMAX;
