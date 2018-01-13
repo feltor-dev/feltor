@@ -91,11 +91,10 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
  * do not match, the result is undefined.
- * Our implementation guarantees binary reproducible results up to and excluding the last mantissa bit of the result. 
- * Furthermore, the sum is computed with infinite precision and the result is then rounded
- * to the nearest double precision number. Although the products are not computed with 
- * infinite precision, the order of multiplication is guaranteed.
- * This is possible with the help of an adapted version of the exblas library. 
+ * Our implementation guarantees binary reproducible results. 
+ * The sum is computed with infinite precision and the result is rounded
+ * to the nearest double precision number. 
+ * This is possible with the help of an adapted version of the \c exblas library. 
  * @copydoc hide_container
  * @param x Left container
  * @param y Right container may alias x
