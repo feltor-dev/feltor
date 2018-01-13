@@ -28,9 +28,9 @@ template<class value_type>
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_rows/grid_size rows
-    for( int row = thread_id; row<size; row += grid_size)
-        x[row]*=alpha;
+    //every thread takes num_is/grid_size is
+    for( int i = thread_id; i<size; i += grid_size)
+        x[i]*=alpha;
 }
 template< class T>
 inline void doScal_dispatch( CudaTag, unsigned size, T* x, T alpha) {
@@ -45,9 +45,9 @@ template<class value_type>
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_rows/grid_size rows
-    for( int row = thread_id; row<size; row += grid_size)
-        x[row]+=alpha;
+    //every thread takes num_is/grid_size is
+    for( int i = thread_id; i<size; i += grid_size)
+        x[i]+=alpha;
 }
 template<class T>
 inline void doPlus_dispatch( CudaTag, unsigned size, T* x, T alpha)
@@ -58,13 +58,16 @@ inline void doPlus_dispatch( CudaTag, unsigned size, T* x, T alpha)
 }
 template<class value_type>
  __global__ void axpby_kernel( value_type alpha, value_type beta,
-         const value_type* RESTRICT x, value_type* RESTRICT y, const int size)
+         const value_type* RESTRICT x_ptr, value_type* RESTRICT y_ptr, const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_rows/grid_size rows
-    for( int row = thread_id; row<size; row += grid_size)
-        y[row]=alpha*x[row]+beta*y[row];
+    //every thread takes num_is/grid_size is
+    for( int i = thread_id; i<size; i += grid_size)
+    {
+        double temp = y_ptr[i]*beta;
+        y_ptr[i] = fma( alpha,x_ptr[i], temp);
+    }
 }
 template<class T>
 void doAxpby_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x, T beta, T* RESTRICT y)
@@ -75,13 +78,18 @@ void doAxpby_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x, T 
 }
 template<class value_type>
  __global__ void axpbypgz_kernel( value_type alpha, value_type beta, value_type gamma,
-         const value_type* RESTRICT x, const value_type* RESTRICT y, value_type* RESTRICT z, const int size)
+         const value_type* RESTRICT x_ptr, const value_type* RESTRICT y_ptr, value_type* RESTRICT z_ptr, const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_rows/grid_size rows
-    for( int row = thread_id; row<size; row += grid_size)
-        z[row]=alpha*x[row]+beta*y[row]+gamma*z[row];
+    //every thread takes num_is/grid_size is
+    for( int i = thread_id; i<size; i += grid_size)
+    {
+        double temp = z_ptr[i]*gamma;
+        temp = fma( alpha,x_ptr[i], temp);
+        temp = fma( beta, y_ptr[i], temp);
+        z_ptr[i] = temp;
+    }
 }
 template<class T>
 void doAxpbypgz_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x, T beta, const T* RESTRICT y, T gamma, T* RESTRICT z)
@@ -93,12 +101,14 @@ void doAxpbypgz_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x,
 
 template<class value_type>
  __global__ void pointwiseDot_kernel( value_type alpha, value_type gamma,
-         const value_type*  x, const value_type* y, value_type* z,  const int size)
+         const value_type*  x_ptr, const value_type* y_ptr, value_type* z_ptr,  const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    for( int row = thread_id; row<size; row += grid_size) {
-        z[row]=alpha*x[row]*y[row]+gamma*z[row];
+    for( int i = thread_id; i<size; i += grid_size)
+    {
+        double temp = z_ptr[i]*gamma;
+        z_ptr[i] = fma( alpha, x_ptr[i]*y_ptr[i], temp);
     }
 }
 template<class value_type>
@@ -115,12 +125,14 @@ inline void doPointwiseDot_dispatch( CudaTag, unsigned size,
 }
 template<class value_type>
  __global__ void pointwiseDivide_kernel( value_type alpha, value_type gamma,
-         const value_type*  x1, const value_type* y1, value_type* z,  const int size)
+         const value_type*  x_ptr, const value_type* y_ptr, value_type* z_ptr,  const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    for( int row = thread_id; row<size; row += grid_size) {
-        z[row]=alpha*x1[row]/y1[row]+gamma*z[row];
+    for( int i = thread_id; i<size; i += grid_size)
+    {
+        double temp = z_ptr[i]*gamma;
+        z_ptr[i] = fma( alpha, x_ptr[i]/y_ptr[i], temp);
     }
 }
 template<class value_type>
@@ -138,13 +150,17 @@ inline void doPointwiseDivide_dispatch( CudaTag, unsigned size,
 
 template<class value_type>
  __global__ void pointwiseDot_kernel( value_type alpha, value_type beta, value_type gamma,
-         const value_type*  x1, const value_type* y1, const value_type* x2, 
-         const value_type*  y2, value_type* z,  const int size)
+         const value_type*  x1_ptr, const value_type* y1_ptr, const value_type* x2_ptr, 
+         const value_type*  y2_ptr, value_type* z_ptr,  const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    for( int row = thread_id; row<size; row += grid_size) {
-        z[row]=alpha*x1[row]*y1[row]+beta*x2[row]*y2[row]+gamma*z[row];
+    for( int i = thread_id; i<size; i += grid_size) 
+    {
+        double temp = z_ptr[i]*gamma;
+        temp = fma( alpha, x1_ptr[i]*y1_ptr[i], temp);
+        temp = fma(  beta, x2_ptr[i]*y2_ptr[i], temp);
+        z_ptr[i] = temp;
     }
 }
 template<class value_type>
@@ -166,14 +182,16 @@ inline void doPointwiseDot_dispatch( CudaTag, unsigned size,
 template<class value_type>
  __global__ void pointwiseDot_kernel( value_type alpha, value_type beta,
          const value_type*  x1, const value_type* x2, const value_type* x3, 
-         value_type* y,  
+         value_type* y,
          const int size
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
-    for( int row = thread_id; row<size; row += grid_size) {
-        y[row]=alpha*x1[row]*x2[row]*x3[row]+beta*y[row];
+    for( int i = thread_id; i<size; i += grid_size) 
+    {
+        double temp = y[i]*beta;
+        y[i] = fma( alpha, (x1[i]*x2[i])*x3[i], temp);
     }
 }
 template<class value_type>

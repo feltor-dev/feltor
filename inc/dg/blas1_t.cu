@@ -10,16 +10,16 @@ struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
 
 //test program that (should ) call every blas1 function for every specialization
 
-//using Vector = std::array<double,2>;
+using Vector = std::array<double,2>;
 //using Vector = thrust::host_vector<double>;
-using Vector = thrust::device_vector<double>;
+//using Vector = thrust::device_vector<double>;
 //using Vector = cusp::array1d<double, cusp::device_memory>;
 int main()
 {
     //Vector v1( 5, 2), v2( 5, 3), v3(5,5), v4(5,4);
-    //Vector v1( {2,2}), v2({3,3}), v3({5,5}), v4({4,4});
-    thrust::device_vector<double> v1p( 500, 2), v2p( 500, 3), v3p(500,5), v4p(500,4);
-    Vector v1(v1p), v2(v2p), v3(v3p), v4(v4p);
+    Vector v1( {2,2}), v2({3,3}), v3({5,5}), v4({4,4}); //std::array
+    //thrust::device_vector<double> v1p( 500, 2), v2p( 500, 3), v3p(500,5), v4p(500,4);
+    //Vector v1(v1p), v2(v2p), v3(v3p), v4(v4p);
     double temp = dg::blas1::dot(v1,v2);
     std::cout << "5*(2*3) = "<<temp << " (30)\n"; 
     dg::blas1::axpby( 2., v1, 3., v2, v3);

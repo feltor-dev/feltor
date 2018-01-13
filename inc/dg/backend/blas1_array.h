@@ -75,7 +75,10 @@ inline void doAxpby( T alpha,
               std::array<T,N>& y, 
               StdArrayTag) {
     for( size_t i=0; i<N; i++)
-        y[i] = alpha*x[i]+beta*y[i];
+    {
+        double temp = y[i]*beta;
+        y[i] = std::fma( alpha,x[i], temp);
+    }
 }
 
 template< class T, std::size_t N>
@@ -87,35 +90,46 @@ inline void doAxpbypgz( T alpha,
               std::array<T,N>& z, 
               StdArrayTag) {
     for( size_t i=0; i<N; i++)
-        z[i] = alpha*x[i]+beta*y[i]+gamma*z[i];
+    {
+        double temp = z[i]*gamma;
+        temp = std::fma( alpha,x[i], temp);
+        temp = std::fma( beta, y[i], temp);
+        z[i] = temp;
+    }
 }
 
 template< class T, std::size_t N>
-inline void doPosize_twiseDot(  
+inline void doPointwiseDot(  
               T alpha, 
-              const std::array<T,N>& x1,
-              const std::array<T,N>& x2, 
-              T beta, 
-              std::array<T,N>& y, 
+              const std::array<T,N>& x,
+              const std::array<T,N>& y, 
+              T gamma, 
+              std::array<T,N>& z, 
               StdArrayTag) {
     for( size_t i=0; i<N; i++)
-        y[i] = alpha*x1[i]*x2[i]+beta*y[i];
+    {
+        double temp = z[i]*gamma;
+        z[i] = std::fma( alpha, x[i]*y[i], temp);
+    }
 }
 
 template< class T, std::size_t N>
-inline void doPosize_twiseDivide(  
+inline void doPointwiseDivide(  
               T alpha, 
-              const std::array<T,N>& x1,
-              const std::array<T,N>& x2, 
-              T beta, 
-              std::array<T,N>& y, 
+              const std::array<T,N>& x,
+              const std::array<T,N>& y, 
+              T gamma, 
+              std::array<T,N>& z, 
               StdArrayTag) {
     for( size_t i=0; i<N; i++)
-        y[i] = alpha*x1[i]/x2[i]+beta*y[i];
+    {
+        double temp = z[i]*gamma;
+        z[i] = std::fma( alpha, x[i]/y[i], temp);
+    }
 }
 
 template< class T, std::size_t N>
-inline void doPosize_twiseDot(  
+inline void doPointwiseDot(  
               T alpha, 
               const std::array<T,N>& x1,
               const std::array<T,N>& y1, 
@@ -127,10 +141,15 @@ inline void doPosize_twiseDot(
               StdArrayTag)
 {
     for( size_t i=0; i<N; i++)
-        z[i] = alpha*x1[i]*y1[i]+beta*x2[i]*y2[i]+gamma*z[i];
+    {
+        double temp = z[i]*gamma;
+        temp = std::fma( alpha, x1[i]*y1[i], temp);
+        temp = std::fma(  beta, x2[i]*y2[i], temp);
+        z[i] = temp;
+    }
 }
 template< class T, std::size_t N>
-inline void doPosize_twiseDot(  
+inline void doPointwiseDot(  
               T alpha, 
               const std::array<T,N>& x1,
               const std::array<T,N>& x2,
@@ -140,7 +159,10 @@ inline void doPosize_twiseDot(
               StdArrayTag)
 {
     for( size_t i=0; i<N; i++)
-        y[i] = alpha*x1[i]*x2[i]*x3[i]+beta*y[i];
+    {
+        double temp = y[i]*beta;
+        y[i] = std::fma( alpha, (x1[i]*x2[i])*x3[i], temp);
+    }
 }
 
 }//namespace detail

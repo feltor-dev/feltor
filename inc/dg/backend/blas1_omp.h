@@ -83,7 +83,10 @@ void doAxpby_omp(unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, T* RE
 {
     #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
-        y_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i];
+    {
+        double temp = y_ptr[i]*beta;
+        y_ptr[i] = std::fma( alpha,x_ptr[i], temp);
+    }
 }
 template<class T>
 void doAxpby_dispatch( OmpTag, unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, T* RESTRICT y_ptr)
@@ -108,7 +111,12 @@ void doAxpbypgz_omp( unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, c
 {
     #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x_ptr[i] + beta*y_ptr[i] + gamma*z_ptr[i];
+    {
+        double temp = z_ptr[i]*gamma;
+        temp = std::fma( alpha,x_ptr[i], temp);
+        temp = std::fma( beta, y_ptr[i], temp);
+        z_ptr[i] = temp;
+    }
 }
 template<class T>
 void doAxpbypgz_dispatch( OmpTag, unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, const T* RESTRICT y_ptr, T gamma, T* RESTRICT z_ptr)
@@ -138,7 +146,10 @@ inline void doPointwiseDot_omp(unsigned size,
 {
     #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x_ptr[i]*y_ptr[i]+gamma*z_ptr[i];
+    {
+        double temp = z_ptr[i]*gamma;
+        z_ptr[i] = std::fma( alpha, x_ptr[i]*y_ptr[i], temp);
+    }
 }
 template<class value_type>
 inline void doPointwiseDot_dispatch( OmpTag, unsigned size, 
@@ -173,7 +184,10 @@ inline void doPointwiseDivide_omp(unsigned size,
 {
     #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x_ptr[i]/y_ptr[i]+gamma*z_ptr[i];
+    {
+        double temp = z_ptr[i]*gamma;
+        z_ptr[i] = std::fma( alpha, x_ptr[i]/y_ptr[i], temp);
+    }
 }
 template<class value_type>
 inline void doPointwiseDivide_dispatch( OmpTag, unsigned size, 
@@ -211,9 +225,12 @@ inline void doPointwiseDot_omp( unsigned size,
 {
     #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                   +beta*x2_ptr[i]*y2_ptr[i]
-                   +gamma*z_ptr[i];
+    {
+        double temp = z_ptr[i]*gamma;
+        temp = std::fma( alpha, x1_ptr[i]*y1_ptr[i], temp);
+        temp = std::fma(  beta, x2_ptr[i]*y2_ptr[i], temp);
+        z_ptr[i] = temp;
+    }
 }
 
 template<class value_type>
@@ -253,7 +270,10 @@ inline void doPointwiseDot_omp(unsigned size,
 {
     #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
-        y[i] = alpha*x1[i]*x2[i]*x3[i] +beta*y[i];
+    {
+        double temp = y[i]*beta;
+        y[i] = std::fma( alpha, (x1[i]*x2[i])*x3[i], temp);
+    }
 }
 
 template<class value_type>

@@ -177,6 +177,7 @@ inline void doPointwiseDot( get_value_type<Vector> alpha,
 {
     if( !omp_in_parallel())//to catch recursive calls
     {
+        std::cout << "Hello dispatch\n";
         #pragma omp parallel
         {
             for( unsigned i=0; i<x1.size(); i++)

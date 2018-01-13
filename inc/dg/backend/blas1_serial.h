@@ -32,16 +32,24 @@ inline void doPlus_dispatch( SerialTag, unsigned size, T* x, T alpha)
         x[i]+=alpha;
 }
 template<class T>
-void doAxpby_dispatch( SerialTag, unsigned size, T alpha, const T * RESTRICT x, T beta, T* RESTRICT y)
+void doAxpby_dispatch( SerialTag, unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, T* RESTRICT y_ptr)
 {
     for( unsigned i=0; i<size; i++)
-        y[i] = alpha*x[i] + beta*y[i];
+    {
+        double temp = y_ptr[i]*beta;
+        y_ptr[i] = std::fma( alpha,x_ptr[i], temp);
+    }
 }
 template<class T>
-void doAxpbypgz_dispatch( SerialTag, unsigned size, T alpha, const T * RESTRICT x, T beta, const T* RESTRICT y, T gamma, T* RESTRICT z)
+void doAxpbypgz_dispatch( SerialTag, unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, const T* RESTRICT y_ptr, T gamma, T* RESTRICT z_ptr)
 {
     for( unsigned i=0; i<size; i++)
-        z[i] = alpha*x[i] + beta*y[i] + gamma*z[i];
+    {
+        double temp = z_ptr[i]*gamma;
+        temp = std::fma( alpha,x_ptr[i], temp);
+        temp = std::fma( beta, y_ptr[i], temp);
+        z_ptr[i] = temp;
+    }
 }
 template<class value_type>
 inline void doPointwiseDot_dispatch( SerialTag, unsigned size, 
@@ -52,7 +60,10 @@ inline void doPointwiseDot_dispatch( SerialTag, unsigned size,
               value_type* z_ptr)
 {
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x_ptr[i]*y_ptr[i]+gamma*z_ptr[i];
+    {
+        double temp = z_ptr[i]*gamma;
+        z_ptr[i] = std::fma( alpha, x_ptr[i]*y_ptr[i], temp);
+    }
 }
 template<class value_type>
 inline void doPointwiseDivide_dispatch( SerialTag, unsigned size, 
@@ -63,7 +74,10 @@ inline void doPointwiseDivide_dispatch( SerialTag, unsigned size,
               value_type* z_ptr)
 {
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x_ptr[i]/y_ptr[i]+gamma*z_ptr[i];
+    {
+        double temp = z_ptr[i]*gamma;
+        z_ptr[i] = std::fma( alpha, x_ptr[i]/y_ptr[i], temp);
+    }
 }
 
 template<class value_type>
@@ -78,9 +92,12 @@ inline void doPointwiseDot_dispatch( SerialTag, unsigned size,
               value_type* z_ptr)
 {
     for( unsigned i=0; i<size; i++)
-        z_ptr[i] = alpha*x1_ptr[i]*y1_ptr[i] 
-                   +beta*x2_ptr[i]*y2_ptr[i]
-                   +gamma*z_ptr[i];
+    {
+        double temp = z_ptr[i]*gamma;
+        temp = std::fma( alpha, x1_ptr[i]*y1_ptr[i], temp);
+        temp = std::fma(  beta, x2_ptr[i]*y2_ptr[i], temp);
+        z_ptr[i] = temp;
+    }
 }
 
 template<class value_type>
@@ -93,7 +110,10 @@ inline void doPointwiseDot_dispatch( SerialTag, unsigned size,
               value_type* y)
 {
     for( unsigned i=0; i<size; i++)
-        y[i] = alpha*x1[i]*x2[i]*x3[i]+beta*y[i];
+    {
+        double temp = y[i]*beta;
+        y[i] = std::fma( alpha, (x1[i]*x2[i])*x3[i], temp);
+    }
 }
 
 
