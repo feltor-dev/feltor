@@ -31,10 +31,10 @@ template<class value_type>
             int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
             int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
             for( int q=0; q<n; q++) //multiplication-loop
-                temp +=data[ B+q]* x[(J+q)*right_size+j];
+                temp =fma( data[ B+q], x[(J+q)*right_size+j], temp);
         }
-        int idx = ((s*num_rows+i)*n+k)*right_size+j;
-        y[idx]=alpha*temp+beta*y[idx];
+        y[row]*= beta;
+        y[row] = fma( alpha, temp, y[row]);
     }
 
 }
@@ -67,10 +67,10 @@ template<class value_type, size_t n, size_t blocks_per_line>
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                 int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
                 for( int q=0; q<n; q++) //multiplication-loop
-                    temp += data[ B+q]* x[(J+q)];
+                    temp = fma( data[ B+q], x[(J+q)], temp);
             }
-            int idx = ((s*num_rows+i)*n+k);
-            y[idx]=alpha*temp+beta*y[idx];
+            y[row]*= beta;
+            y[row] = fma( alpha, temp, y[row]);
         }
         else
         {
@@ -84,10 +84,10 @@ template<class value_type, size_t n, size_t blocks_per_line>
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                 int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
                 for( int q=0; q<n; q++) //multiplication-loop
-                    temp += data[ B+q]* x[(J+q)*right_size+j];
+                    temp = fma( data[ B+q], x[(J+q)*right_size+j], temp);
             }
-            int idx = ((s*num_rows+i)*n+k)*right_size+j;
-            y[idx] = alpha*temp + beta*y[idx];
+            y[row]*= beta;
+            y[row] = fma( alpha, temp, y[row]);
         }
     }
 }
@@ -184,8 +184,9 @@ template<class value_type>
         int B = data_idx[entry];
         int J = cols_idx[entry];
         for( int q=0; q<n; q++) //multiplication-loop
-            temp += data[ (B*n + k)*n+q]* x[((s*num_cols + J)*n+q)*right+j];
-        y[I] = alpha*temp + beta*y[I];
+            temp = fma( data[ (B*n + k)*n+q], x[((s*num_cols + J)*n+q)*right+j], temp);
+        y[I]*= beta;
+        y[I] = fma( alpha, temp, y[I]);
     }
 
 }

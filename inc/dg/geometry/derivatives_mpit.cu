@@ -87,7 +87,6 @@ int main(int argc, char* argv[])
     {
         Vector error = sol3[i];
         dg::blas2::symv( -1., m3[i], f3d, 1., error);
-        dg::blas1::axpby( 1., sol3[i], -1., error);
         double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
         if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";
     }

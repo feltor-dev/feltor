@@ -1,6 +1,8 @@
 #include <omp.h>
 #include "vector_categories.h"
 
+//for the fmas it is important to activate -mfma compiler flag
+
 namespace dg{
 
 // general multiply kernel
@@ -31,10 +33,12 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 value_type temp = 0;
                 for( int d=0; d<blocks_per_line; d++)
                     for( int q=0; q<n; q++) //multiplication-loop
-                        temp += data[ B[d]+q]*
-                            x[(J[d]+q)*right_size+j];
+                        temp = std::fma(data[ B[d]+q],
+                                x[(J[d]+q)*right_size+j],
+                                temp);
                 int I = ((s*num_rows + i)*n+k)*right_size+j;
-                y[I] = alpha*temp + beta*y[I];
+                y[I]*= beta;
+                y[I] = std::fma(alpha, temp, y[I]);
             }
         }
     }
@@ -88,10 +92,11 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 {
                     int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                     for( int q=0; q<n; q++) //multiplication-loop
-                        temp += data[B+q]*xprivate[d*n+q];
+                        temp = std::fma(data[B+q], xprivate[d*n+q], temp);
                 }
                 int I = ((s*num_rows + i)*n+k);
-                y[I] = alpha*temp + beta*y[I];
+                y[I]*= beta;
+                y[I] = std::fma(alpha, temp, y[I]);
             }
         }
         #pragma omp SIMD //very important for KNL
@@ -108,9 +113,10 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 value_type temp = 0;
                 int B = n*blocks_per_line*k;
                 for( int d=0; d<blocks_per_line*n; d++)
-                    temp += dprivate[B+d]*xprivate[d];
+                    temp = std::fma( dprivate[B+d], xprivate[d], temp);
                 int I = ((s*num_rows + i)*n+k);
-                y[I] = alpha*temp + beta*y[I];
+                y[I]*= beta;
+                y[I] = std::fma(alpha, temp, y[I]);
             }
         }
         for( int i=num_rows-1; i<num_rows; i++)
@@ -128,10 +134,11 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 {
                     int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                     for( int q=0; q<n; q++) //multiplication-loop
-                        temp += data[B+q]*xprivate[d*n+q];
+                        temp = std::fma( data[B+q], xprivate[d*n+q], temp);
                 }
                 int I = ((s*num_rows + i)*n+k);
-                y[I] = alpha*temp + beta*y[I];
+                y[I]*= beta;
+                y[I] = std::fma(alpha, temp, y[I]);
             }
         }
     }
@@ -156,10 +163,11 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
             {
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                 for( int q=0; q<n; q++) //multiplication-loop
-                    temp += data[B+q]*xprivate[d*n+q];
+                    temp = std::fma( data[B+q], xprivate[d*n+q], temp);
             }
             int I = ((s*num_rows + i)*n+k);
-            y[I] = alpha*temp + beta*y[I];
+            y[I]*= beta;
+            y[I] = std::fma(alpha, temp, y[I]);
         }
     }
     }// trivial
@@ -188,10 +196,12 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 value_type temp = 0;
                 for( int d=0; d<blocks_per_line; d++)
                     for( int q=0; q<n; q++) //multiplication-loop
-                        temp += dprivate[ d*n+q]*
-                            x[(J[d]+q)*right_size+j];
+                        temp = std::fma( dprivate[ d*n+q],
+                                    x[(J[d]+q)*right_size+j], 
+                                    temp);
                 int I = ((s*num_rows + i)*n+k)*right_size+j;
-                y[I] = alpha*temp + beta*y[I];
+                y[I]*= beta;
+                y[I] = std::fma(alpha, temp, y[I]);
             }
         }
     }
@@ -267,9 +277,11 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
         int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
         value_type temp=0;
         for( int q=0; q<n; q++) //multiplication-loop
-            temp+= data[ (data_idx[i]*n + k)*n+q]*
-                x[((s*num_cols + cols_idx[i])*n+q)*right_size+j];
-        y[I] = alpha*temp + beta*y[I];
+            temp = std::fma( data[ (data_idx[i]*n + k)*n+q],
+                x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
+                temp);
+        y[I]*= beta;
+        y[I] = std::fma(alpha, temp, y[I]);
     }
 }
 
