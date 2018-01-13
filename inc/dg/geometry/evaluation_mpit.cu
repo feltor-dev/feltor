@@ -29,10 +29,6 @@ const double lz = 2;
 
 typedef dg::MPI_Vector<thrust::host_vector<double> > MHVec;
 typedef dg::MPI_Vector<thrust::device_vector<double> > MDVec;
-union udouble{
-    double d;
-    int64_t i;
-};
 
 int main(int argc, char** argv)
 {
@@ -52,7 +48,7 @@ int main(int argc, char** argv)
     //test weights
     const MDVec w2d = dg::blas1::transfer<MDVec>(dg::create::weights(g2d));
     const MDVec w3d = dg::blas1::transfer<MDVec>(dg::create::weights(g3d));
-    udouble res; 
+    exblas::udouble res; 
 
     double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;
     if(rank==0)std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i << "\n";

@@ -30,4 +30,18 @@ enum Status
     qNaN /**< not-a-number */
 };
 
+/*! @brief Utility union to display all bits of a double
+@code
+double result; // = ...
+udouble res;
+res.d = result;
+std::cout << "Result as double "<<result<<"  as integer "<<res.i<<std::endl;
+@endcode
+*/
+union udouble{
+    double d;
+    int64_t i;
+};
+
+
 }//namespace exblas

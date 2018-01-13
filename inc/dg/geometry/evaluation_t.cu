@@ -33,11 +33,6 @@ const double lz = 2;
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
 
-union udouble{
-    double d;
-    int64_t i;
-};
-
 int main()
 {
     //This file tests not only the evaluation functions but also the weights
@@ -60,7 +55,7 @@ int main()
     const DVec w1d = dg::transfer<DVec>( dg::create::weights( g1d));
     const DVec w2d = dg::transfer<DVec>( dg::create::weights( g2d));
     const DVec w3d = dg::transfer<DVec>( dg::create::weights( g3d));
-    udouble res; 
+    exblas::udouble res; 
 
     double integral = dg::blas1::dot( w1d, func1d); res.d = integral;
     std::cout << "1D integral               "<<std::setw(6)<<integral <<"\t" << res.i << "\n";

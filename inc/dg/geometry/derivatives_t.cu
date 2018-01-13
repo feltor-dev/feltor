@@ -17,10 +17,6 @@ typedef dg::DVec Vector;
 typedef dg::EllSparseBlockMatDevice<double> Matrix;
 //typedef dg::HVec Vector;
 //typedef dg::EllSparseBlockMat<double> Matrix;
-union udouble{
-    double d;
-    int64_t i;
-};
 
 int main()
 {
@@ -42,7 +38,7 @@ int main()
     const Vector null2 = dg::evaluate( zero, g2d);
     Vector sol2[] = {dx2d, dy2d, null2, null2};
 
-    udouble res;
+    exblas::udouble res;
     std::cout << "WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!\n";
     std::cout << "TEST 2D: DX, DY, JX, JY\n";
     for( unsigned i=0; i<4; i++)

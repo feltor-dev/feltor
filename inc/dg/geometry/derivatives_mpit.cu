@@ -26,10 +26,6 @@ double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 //typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
 typedef dg::MDMatrix Matrix;
 typedef dg::MDVec Vector;
-union udouble{
-    double d;
-    int64_t i;
-};
 
 int main(int argc, char* argv[])
 {
@@ -54,7 +50,7 @@ int main(int argc, char* argv[])
 
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    udouble res;
+    exblas::udouble res;
     if(rank==0)std::cout << "WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!\n";
     if(rank==0)std::cout << "TEST 2D: DX, DY, JX, JY\n";
     for( unsigned i=0; i<4; i++)
