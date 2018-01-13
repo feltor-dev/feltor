@@ -70,7 +70,9 @@ int main()
 
     double normerr = dg::blas2::dot( w3d, error);
     double norm = dg::blas2::dot( w3d, solution);
-    std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
+    exblas::udouble res;
+    norm = normerr/norm; res.d = norm;
+    std::cout << "L2 Norm of relative error is:               " <<norm<<"\t"<<res.i<<std::endl;
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w3d, error); 

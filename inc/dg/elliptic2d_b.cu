@@ -66,6 +66,7 @@ int main()
     const dg::DVec derivati = dg::evaluate( der, grid);
     const double norm = dg::blas2::dot( w2d, solution);
     dg::DVec error( solution);
+    exblas::udouble res;
 
     //std::cout << "Create Polarisation object and set chi!\n";
     {
@@ -101,7 +102,8 @@ int main()
     //! [multigrid]
     dg::blas1::axpby( 1.,x,-1., solution, error);
     double err = dg::blas2::dot( w2d, error);
-    std::cout << " "<<sqrt( err/norm) << "\n";
+    err = sqrt( err/norm); res.d = err;
+    std::cout << " "<<err << "\t"<<res.i<<"\n";
     }
 
 
@@ -126,7 +128,8 @@ int main()
 		std::cout << " "<< invert_bw( pol_backward, x, b, w2d, v2d, chi_inv);
 		dg::blas1::axpby( 1.,x,-1., solution, error);
 		double err = dg::blas2::dot( w2d, error);
-		std::cout << " "<<sqrt( err/norm)<<std::endl;
+        err = sqrt( err/norm); res.d = err;
+        std::cout << " "<<err << "\t"<<res.i<<std::endl;
     }
 
 

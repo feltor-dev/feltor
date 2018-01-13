@@ -23,8 +23,8 @@ int main()
     std::cin >> n >> Nx >> Ny;
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
     dg::Grid2d grid( 0, lx, 0, ly,n, Nx, Ny, dg::PER, dg::PER);
-    dg::HVec w2d = dg::create::weights( grid);
-    dg::HVec v2d = dg::create::inv_weights( grid);
+    const dg::HVec w2d = dg::create::weights( grid);
+    const dg::HVec v2d = dg::create::inv_weights( grid);
     std::cout<<"Evaluate initial condition\n";
     dg::HVec x = dg::evaluate( initial, grid);
 
@@ -44,19 +44,19 @@ int main()
     dg::HVec error( solution);
     dg::blas1::axpby( 1.,x,-1.,error);
 
-    dg::HVec Ax(x), res( b);
+    dg::HVec Ax(x), resi( b);
     dg::blas2::symv(  A, x, Ax);
-    dg::blas1::axpby( 1.,Ax,-1.,res);
+    dg::blas1::axpby( 1.,Ax,-1.,resi);
 
-    double xnorm = sqrt(dg::blas2::dot( w2d, x));
-    std::cout << "L2 Norm of x0 is              " << xnorm << std::endl;
-    double norm = sqrt(dg::blas2::dot(w2d , solution));
-    std::cout << "L2 Norm of Solution is        " << norm << std::endl;
-    double eps = sqrt(dg::blas2::dot(w2d , error));
-    std::cout << "L2 Norm of Error is           " << eps << std::endl;
-    double normres = sqrt(dg::blas2::dot( w2d, res));
-    std::cout << "L2 Norm of Residuum is        " << normres << std::endl;
-    std::cout << "L2 Norm of relative error is  " << eps/norm<<std::endl;
+    exblas::udouble res;
+    res.d = sqrt(dg::blas2::dot( w2d, x));
+    std::cout << "L2 Norm of x0 is              " << res.d<<"\t"<<res.i << std::endl;
+    res.d = sqrt(dg::blas2::dot(w2d , solution));
+    std::cout << "L2 Norm of Solution is        " << res.d<<"\t"<<res.i << std::endl;
+    res.d = sqrt(dg::blas2::dot(w2d , error));
+    std::cout << "L2 Norm of Error is           " << res.d<<"\t"<<res.i << std::endl;
+    res.d = sqrt(dg::blas2::dot( w2d, resi));
+    std::cout << "L2 Norm of Residuum is        " << res.d<<"\t"<<res.i << std::endl;
     //Fehler der Integration des Sinus ist vernachlässigbar (vgl. evaluation_t)
 
     return 0;

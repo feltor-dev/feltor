@@ -75,14 +75,19 @@ int main()
     arakawa( lhs, rhs, jac);
     //![doxygen]
 
+    exblas::udouble res;
     dg::DVec w2d = dg::create::weights( grid);
     dg::DVec eins = dg::evaluate( dg::one, grid);
     const dg::DVec sol = dg::evaluate ( jacobian, grid);
-    std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
-    std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
-    std::cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
+    res.d = dg::blas2::dot( eins, w2d, jac);
+    std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    res.d = dg::blas2::dot( rhs, w2d, jac);
+    std::cout << "Mean rhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    res.d = dg::blas2::dot( lhs, w2d, jac);
+    std::cout << "Mean lhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
-    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
+    res.d = sqrt(dg::blas2::dot( w2d, jac));
+    std::cout << "Distance to solution "<<res.d<<"\t"<<res.i<<std::endl; //don't forget sqrt when comuting errors
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |     
     //n = 2 -> p = 1    |
