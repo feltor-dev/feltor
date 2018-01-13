@@ -99,6 +99,7 @@ int main()
     const dg::DVec variation = dg::evaluate ( variationRHS, grid);
     arakawa.variation( rhs, jac);
     dg::blas1::axpby( 1., variation, -1., jac);
-    std::cout << "Variation distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; //don't forget sqrt when comuting errors
+    res.d = sqrt( dg::blas2::dot( w2d, jac));
+    std::cout << "Variation distance to solution "<<res.d<<"\t"<<res.i<<std::endl; //don't forget sqrt when comuting errors
     return 0;
 }

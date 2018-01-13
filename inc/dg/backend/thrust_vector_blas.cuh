@@ -248,8 +248,8 @@ inline void doPointwiseDot(
         return;
     }
     const get_value_type<Vector> *x1_ptr = thrust::raw_pointer_cast( x1.data());
-    const get_value_type<Vector> *x2_ptr = thrust::raw_pointer_cast( x2.data());
     const get_value_type<Vector> *y1_ptr = thrust::raw_pointer_cast( y1.data());
+    const get_value_type<Vector> *x2_ptr = thrust::raw_pointer_cast( x2.data());
     const get_value_type<Vector> *y2_ptr = thrust::raw_pointer_cast( y2.data());
           get_value_type<Vector> * z_ptr = thrust::raw_pointer_cast( z.data());
     unsigned size = x1.size();

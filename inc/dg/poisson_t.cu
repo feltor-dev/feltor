@@ -62,14 +62,20 @@ int main()
     const dg::DVec eins = dg::evaluate( dg::one, grid);
     const dg::DVec sol = dg::evaluate ( jacobian, grid);
     const dg::DVec variation = dg::evaluate ( variationRHS, grid);
+    exblas::udouble res;
     std::cout << std::scientific;
-    std::cout << "Mean     Jacobian is "<<dg::blas2::dot( eins, w2d, jac)<<"\n";
-    std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs,  w2d, jac)<<"\n";
-    std::cout << "Mean lhs*Jacobian is "<<dg::blas2::dot( lhs,  w2d, jac)<<"\n";
+    res.d = dg::blas2::dot( eins, w2d, jac);
+    std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    res.d = dg::blas2::dot( rhs, w2d, jac);
+    std::cout << "Mean rhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    res.d = dg::blas2::dot( lhs, w2d, jac);
+    std::cout << "Mean lhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
-    std::cout << "Distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; 
+    res.d = sqrt(dg::blas2::dot( w2d, jac));
+    std::cout << "Distance to solution "<<res.d<<"\t"<<res.i<<std::endl; 
     poisson.variationRHS( rhs, jac); 
     dg::blas1::axpby( 1., variation, -1., jac);
-    std::cout << "Variation distance to solution "<<sqrt( dg::blas2::dot( w2d, jac))<<std::endl; 
+    res.d = sqrt( dg::blas2::dot( w2d, jac));
+    std::cout << "Variation distance to solution "<<res.d<<"\t"<<res.i<<std::endl; 
     return 0;
 }
