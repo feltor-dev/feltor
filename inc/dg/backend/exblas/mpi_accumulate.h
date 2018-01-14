@@ -38,8 +38,8 @@ processes.  As usual the result is unnormalized.
 @param in unnormalized input superaccumulators ( read/write, must be of size num_superacc*BIN_COUNT) (undefined on out)
 @param out each process contains the result on output( write, must be of size num_superacc*BIN_COUNT) (may not alias in)
 @param comm The complete MPI communicator
-@param comm_mod This is comm modulo 128 ( or any other number <256) (use \c make_reduce_communicator to generate this)
-@param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL (use \c make_reduce_communicator to generate this)
+@param comm_mod This is comm modulo 128 ( or any other number <256) (use \c mpi_reduce_communicator to generate this)
+@param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL (use \c mpi_reduce_communicator to generate this)
 */
 void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
 {
