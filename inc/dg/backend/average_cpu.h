@@ -7,6 +7,12 @@
 
 namespace dg
 {
+void transpose_dispatch( SerialTag, unsigned nx, unsigned ny, const double* in, double* out)
+{
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[j*ny+i] = in[i*nx+j];
+}
 
 void average( SerialTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out)
 {

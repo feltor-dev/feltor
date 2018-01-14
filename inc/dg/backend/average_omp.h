@@ -7,6 +7,13 @@
 
 namespace dg
 {
+void transpose_dispatch( OmpTag, unsigned nx, unsigned ny, const double* in, double* out)
+{
+#pragma omp parallel for
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[j*ny+i] = in[i*nx+j];
+}
 
 void average( OmpTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out)
 {

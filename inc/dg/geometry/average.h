@@ -17,55 +17,6 @@
   */
 namespace dg{
 
-///@cond
-namespace detail
-{
-/////////////////////////////////////////////poloidal split/////////////////////
-void transpose_dispatch( SerialTag, unsigned nx, unsigned ny, const double* in, double* out)
-{
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[j*ny+i] = in[i*nx+j];
-}
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-__global__
-void transpose_gpu_kernel( unsigned nx, unsigned ny, const double* in, double* out)
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    const int size = nx*ny;
-    for( int row = thread_id; row<size; row += grid_size)
-    {
-        int i=row/nx, j = row%nx;
-        out[j*ny+i] = in[i*nx+j];
-    }
-}
-void transpose_dispatch( CudaTag, unsigned nx, unsigned ny, const double* in, double* out){
-    const size_t BLOCK_SIZE = 256; 
-    const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
-    transpose_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
-}
-#else
-void transpose_dispatch( OmpTag, unsigned nx, unsigned ny, const double* in, double* out)
-{
-#pragma omp parallel for
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[j*ny+i] = in[i*nx+j];
-}
-#endif
-template<class container>
-void invert_xy( unsigned nx, unsigned ny, const container& in, container& out)
-{
-    assert(&in != &out);
-    const get_value_type<container>* in_ptr = thrust::raw_pointer_cast( in.data());
-    get_value_type<container>* out_ptr = thrust::raw_pointer_cast( out.data());
-    return transpose_dispatch( get_execution_policy<container>(), nx, ny, in_ptr, out_ptr);
-}
-
-}//namespace detail
-///@endcond
-
 //template<class container>
 //void poloidal_average( const container& in, container& out, const aTopology2d& g)
 //{
@@ -132,43 +83,43 @@ void invert_xy( unsigned nx, unsigned ny, const container& in, container& out)
  * @tparam container Currently this is one of 
  *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec  
  */
-//template< class Topology2d, class container>
-//struct PoloidalAverage
-//{
-//    /**
-//     * @brief Construct from grid mpi object
-//     * @param g 2d MPITopology
-//     */
-//    PoloidalAverage( const Topology2d& g): 
-//    m_g2d(g)
-//    {
-//        m_w1dy=dg::transfer<container>(dg::detail::create_weightsY1d(g));
-//        container w2d = dg::transfer<container>(dg::create::weights(g));
-//        dg::split_poloidal( w2d, m_split, g);
-//    }
-//    /**
-//     * @brief Compute the average in y-direction
-//     *
-//     * @param src 2D Source Vector (must have the same size as the grid given in the constructor)
-//     * @param res 2D result Vector (may alias src), every line contains the x-dependent average over
-//     the y-direction of src 
-//     */
-//    void operator() (const container& src, container& res)
-//    {
-//        dg::split_poloidal( src, m_split, m_g2d);
-//        for( unsigned i=0; i<m_split.size(); i++)
-//        {
-//            double value = dg::blas1::dot( m_split[i], m_w1dy);
-//            dg::blas1::transform( m_split[i], m_split[i], dg::CONSTANT(value));
-//        }
-//        dg::join_poloidal(m_split, res, m_g2d);
-//    }
-//  private:
-//    container m_w1dy; 
-//    std::vector<container> m_split;
-//    get_host_grid<Topology2d> m_g2d;
-//
-//};
+template< class Topology2d, class container>
+struct PoloidalAverage
+{
+    /**
+     * @brief Construct from grid mpi object
+     * @param g 2d MPITopology
+     */
+    PoloidalAverage( const Topology2d& g): 
+    m_g2d(g)
+    {
+        m_w1dy=dg::transfer<container>(dg::detail::create_weightsY1d(g));
+        container w2d = dg::transfer<container>(dg::create::weights(g));
+        dg::split_poloidal( w2d, m_split, g);
+    }
+    /**
+     * @brief Compute the average in y-direction
+     *
+     * @param src 2D Source Vector (must have the same size as the grid given in the constructor)
+     * @param res 2D result Vector (may alias src), every line contains the x-dependent average over
+     the y-direction of src 
+     */
+    void operator() (const container& src, container& res)
+    {
+        dg::split_poloidal( src, m_split, m_g2d);
+        for( unsigned i=0; i<m_split.size(); i++)
+        {
+            double value = dg::blas1::dot( m_split[i], m_w1dy);
+            dg::blas1::transform( m_split[i], m_split[i], dg::CONSTANT(value));
+        }
+        dg::join_poloidal(m_split, res, m_g2d);
+    }
+  private:
+    container m_w1dy; 
+    std::vector<container> m_split;
+    get_host_grid<Topology2d> m_g2d;
+
+};
 
 
 }//namespace dg

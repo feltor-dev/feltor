@@ -8,6 +8,24 @@
 namespace dg
 {
 
+__global__
+void transpose_gpu_kernel( unsigned nx, unsigned ny, const double* in, double* out)
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    const int size = nx*ny;
+    for( int row = thread_id; row<size; row += grid_size)
+    {
+        int i=row/nx, j = row%nx;
+        out[j*ny+i] = in[i*nx+j];
+    }
+}
+void transpose_dispatch( CudaTag, unsigned nx, unsigned ny, const double* in, double* out){
+    const size_t BLOCK_SIZE = 256; 
+    const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
+    transpose_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
+}
+
 void average( CudaTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out)
 {
     static thrust::device_vector<int64_t> d_accumulator;
