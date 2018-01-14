@@ -38,6 +38,7 @@ struct Average
     Average( const aTopology3d& g, enum coo3d direction)
     {
         m_w = dg::transfer<container>(dg::create::weights(g, direction));
+        m_temp1d = m_temp = m_w;
         m_transpose = false;
         unsigned nx = g.n()*g.Nx(), ny = g.n()*g.Ny(), nz = g.Nz();
         if( direction == coo3d::x) {
@@ -45,22 +46,23 @@ struct Average
             m_nx = nx, m_ny = ny*nz;
         }
         else if( direction == coo3d::z) {
-            dg::blas1::scal( m_w, 1./g.lz());
-            m_nx = nx*ny, m_ny = nz;
             m_transpose = true;
+            dg::blas1::scal( m_temp, 1./g.lz());
+            m_nx = nx*ny, m_ny = nz;
+            dg::transpose( m_nx, m_ny, m_temp, m_w);
         }
         else if( direction == coo3d::xy) {
             dg::blas1::scal( m_w, 1./g.lx()/g.ly());
             m_nx = nx*ny, m_ny = nz;
         }
         else if( direction == coo3d::yz) {
-            dg::blas1::scal( m_w, 1./g.ly()/g.lz());
-            m_nx = nx, m_ny = ny*nz;
             m_transpose = true;
+            dg::blas1::scal( m_temp, 1./g.ly()/g.lz());
+            m_nx = nx, m_ny = ny*nz;
+            dg::transpose( m_nx, m_ny, m_temp, m_w);
         }
         else 
             std::cerr << "Warning: this direction is not implemented\n";
-        m_temp1d = m_temp = m_w;
     }
     /**
      * @brief Compute the average 

@@ -24,6 +24,7 @@ struct Average<MPI_Vector<container> >
     {
         m_nx = g.local().Nx()*g.n(), m_ny = g.local().Ny()*g.n();
         m_w=dg::transfer<MPI_Vector<container>>(dg::create::weights(g, direction));
+        m_temp1d = m_temp = m_w;
         int remain_dims[] = {false,false}; //true true false
         m_transpose = false;
         if( direction == dg::coo2d::x)
@@ -33,11 +34,11 @@ struct Average<MPI_Vector<container> >
         }
         else
         {
-            dg::blas1::scal( m_w, 1./g.ly());
             m_transpose = true;
             remain_dims[1] = true;
+            dg::blas1::scal( m_temp, 1./g.ly());
+            dg::transpose( m_nx, m_ny, m_temp.data(), m_w.data());
         }
-        m_temp1d = m_temp = m_w;
         MPI_Cart_sub( g.communicator(), remain_dims, &m_comm);
         exblas::mpi_reduce_communicator( m_comm, &m_comm_mod, &m_comm_mod_reduce);
     }
@@ -45,6 +46,7 @@ struct Average<MPI_Vector<container> >
     Average( const aMPITopology3d& g, enum coo3d direction)
     {
         m_w = dg::transfer<MPI_Vector<container>>(dg::create::weights(g, direction));
+        m_temp1d = m_temp = m_w;
         m_transpose = false;
         unsigned nx = g.n()*g.local().Nx(), ny = g.n()*g.local().Ny(), nz = g.local().Nz();
         int remain_dims[] = {false,false,false}; //true true false
@@ -55,10 +57,11 @@ struct Average<MPI_Vector<container> >
             remain_dims[0] = true;
         }
         else if( direction == dg::coo3d::z) {
-            dg::blas1::scal( m_w, 1./g.lz());
-            m_nx = nx*ny, m_ny = nz;
             m_transpose = true;
             remain_dims[2] = true;
+            m_nx = nx*ny, m_ny = nz;
+            dg::blas1::scal( m_temp, 1./g.lz());
+            dg::transpose( m_nx, m_ny, m_temp.data(), m_w.data());
         }
         else if( direction == dg::coo3d::xy) {
             dg::blas1::scal( m_w, 1./g.lx()/g.ly());
@@ -66,16 +69,16 @@ struct Average<MPI_Vector<container> >
             remain_dims[0] = remain_dims[1] = true;
         }
         else if( direction == dg::coo3d::yz) {
-            dg::blas1::scal( m_w, 1./g.ly()/g.lz());
-            m_nx = nx, m_ny = ny*nz;
             m_transpose = true;
+            m_nx = nx, m_ny = ny*nz;
             remain_dims[1] = remain_dims[2] = true;
+            dg::blas1::scal( m_temp, 1./g.ly()/g.lz());
+            dg::transpose( m_nx, m_ny, m_temp.data(), m_w.data());
         }
         else 
             std::cerr << "Warning: this direction is not implemented\n";
         MPI_Cart_sub( g.communicator(), remain_dims, &m_comm);
         exblas::mpi_reduce_communicator( m_comm, &m_comm_mod, &m_comm_mod_reduce);
-        m_temp1d = m_temp = m_w;
     }
     /**
      * @brief Compute the average 

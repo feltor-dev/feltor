@@ -16,21 +16,21 @@ int main()
     //![doxygen]
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::Average< dg::HVec > pol(g, dg::coo2d::y);
+    dg::Average< dg::DVec > pol(g, dg::coo2d::y);
 
-    const dg::HVec vector = dg::evaluate( function ,g); 
-    dg::HVec average_y( vector);
+    const dg::DVec vector = dg::evaluate( function ,g); 
+    dg::DVec average_y( vector);
     std::cout << "Averaging y ... \n";
     pol( vector, average_y);
     //![doxygen]
-    const dg::HVec w2d = dg::create::weights( g);
-    dg::HVec solution = dg::evaluate( pol_average, g);
+    const dg::DVec w2d = dg::create::weights( g);
+    dg::DVec solution = dg::evaluate( pol_average, g);
     dg::blas1::axpby( 1., solution, -1., average_y);
     exblas::udouble res; 
     res.d = sqrt( dg::blas2::dot( average_y, w2d, average_y));
     std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i<<std::endl;
     std::cout << "Averaging x ... \n";
-    dg::Average< dg::HVec> tor( g, dg::coo2d::x);
+    dg::Average< dg::DVec> tor( g, dg::coo2d::x);
     tor( vector, average_y);
     solution = dg::evaluate( tor_average, g);
     dg::blas1::axpby( 1., solution, -1., average_y);
