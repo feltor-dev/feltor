@@ -1,18 +1,43 @@
 #pragma once
 
 #include "exblas/exdot.fpe.cpp"
+#include "vector_categories.h"
 #ifdef MPI_VERSION
 #include "exblas/mpi_accumulate.h"
 #endif //MPI_VERSION
 
 namespace dg
 {
-void transpose_dispatch( OmpTag, unsigned nx, unsigned ny, const double* in, double* out)
+void transpose_dispatch( OmpTag, unsigned nx, unsigned ny, const double* RESTRICT in, double* RESTRICT out)
 {
 #pragma omp parallel for
     for( unsigned i=0; i<ny; i++)
         for( unsigned j=0; j<nx; j++)
             out[j*ny+i] = in[i*nx+j];
+}
+template<class value_type>
+void transpose_dispatch( OmpTag, unsigned nx, unsigned ny, const value_type* RESTRICT in, value_type* RESTRICT out)
+{
+#pragma omp parallel for
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[j*ny+i] = in[i*nx+j];
+}
+template<class value_type>
+void extend_line( OmpTag, unsigned nx, unsigned ny, const value_type* RESTRICT in, value_type* RESTRICT out)
+{
+#pragma omp parallel for
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[i*nx+j] = in[j];
+}
+template<class value_type>
+void extend_column( OmpTag, unsigned nx, unsigned ny, const value_type* RESTRICT in, value_type* RESTRICT out)
+{
+#pragma omp parallel for
+    for( unsigned i=0; i<ny; i++)
+        for( unsigned j=0; j<nx; j++)
+            out[i*nx+j] = in[i];
 }
 
 void average( OmpTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out)

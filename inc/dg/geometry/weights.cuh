@@ -53,7 +53,7 @@ thrust::host_vector<double> abscissas( const Grid1d& g)
 * @brief create host vector containing X-space weight coefficients
 * @param g The grid 
 * @param coo The coordinate for which to generate the weights (in 2d only \c dg::x and \c dg::y are allowed)
-* @return Host Vector
+* @return Host Vector with full grid size
 * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
 */
 

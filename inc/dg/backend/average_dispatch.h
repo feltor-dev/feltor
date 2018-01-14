@@ -10,6 +10,32 @@
 namespace dg{
 
 template<class container>
+void transpose( unsigned nx, unsigned ny, const container& in, container& out)
+{
+    assert(&in != &out);
+    const get_value_type<container>* in_ptr = thrust::raw_pointer_cast( in.data());
+    get_value_type<container>* out_ptr = thrust::raw_pointer_cast( out.data());
+    return transpose_dispatch( get_execution_policy<container>(), nx, ny, in_ptr, out_ptr);
+}
+
+template<class container>
+void extend_line( unsigned nx, unsigned ny, const container& in, container& out)
+{
+    assert(&in != &out);
+    const get_value_type<container>* in_ptr = thrust::raw_pointer_cast( in.data());
+    get_value_type<container>* out_ptr = thrust::raw_pointer_cast( out.data());
+    return extend_line( get_execution_policy<container>(), nx, ny, in_ptr, out_ptr);
+}
+template<class container>
+void extend_column( unsigned nx, unsigned ny, const container& in, container& out)
+{
+    assert(&in != &out);
+    const get_value_type<container>* in_ptr = thrust::raw_pointer_cast( in.data());
+    get_value_type<container>* out_ptr = thrust::raw_pointer_cast( out.data());
+    return extend_column( get_execution_policy<container>(), nx, ny, in_ptr, out_ptr);
+}
+
+template<class container>
 void average( unsigned nx, unsigned ny, const container& in0, const container& in1, container& out)
 {
     static_assert( std::is_same<get_value_type<container>, double>::value, "We only support double precision dot products at the moment!");
@@ -17,14 +43,6 @@ void average( unsigned nx, unsigned ny, const container& in0, const container& i
     const double* in1_ptr = thrust::raw_pointer_cast( in1.data());
           double* out_ptr = thrust::raw_pointer_cast( out.data());
     average( get_execution_policy<container>(), nx, ny, in0_ptr, in1_ptr, out_ptr);
-}
-template<class container>
-void transpose( unsigned nx, unsigned ny, const container& in, container& out)
-{
-    assert(&in != &out);
-    const get_value_type<container>* in_ptr = thrust::raw_pointer_cast( in.data());
-    get_value_type<container>* out_ptr = thrust::raw_pointer_cast( out.data());
-    return transpose_dispatch( get_execution_policy<container>(), nx, ny, in_ptr, out_ptr);
 }
 
 #ifdef MPI_VERSION
