@@ -1,104 +1,62 @@
 #pragma once
 
-#include "timer.cuh"
-#include "dg/geometry/evaluation.cuh"
-#include "dg/geometry/grid.h"
-#include "dg/geometry/weights.cuh"
-#ifdef MPI_VERSION
-#include "dg/geometry/mpi_grid.h"
-#endif
+#include "grid.h"
+#include "weights.cuh"
 #include "dg/blas1.h"
-#include "memory.h"
-#include "dg/geometry/split_and_join.h"
-#include "dg/functors.h"
 
 /*! @file 
   @brief contains classes for poloidal and toroidal average computations.
   */
 namespace dg{
 
-//template<class container>
-//void poloidal_average( const container& in, container& out, const aTopology2d& g)
-//{
-//    dg::Timer t;
-//    t.tic();
-//    Grid1d g1d( g.x0(), g.x1(), g.n(), g.Ny());
-//    container w1d = transfer<container>( create::weights( g1d));
-//    VectorView<container> w1d_view(w1d);
-//    blas1::scal( w1d, 1./g.ly());
-//    t.toc();
-//    std::cout << "w1d creation took "<<t.diff()<<"s\n";
-//    t.tic();
-//    int nx = g.n()*g.Nx(), ny = g.n()*g.Ny();
-//    detail::invert_xy( nx, ny, in, out);
-//    t.toc();
-//    std::cout << "transposition ook "<<t.diff()<<"s\n";
-//    t.tic();
-//    for ( int i=0; i<nx; i++)
-//    {
-//        VectorView<container> row( thrust::raw_pointer_cast(out.data())+i*ny, thrust::raw_pointer_cast(out.data())+(i+1)*ny);
-//        double avg = blas1::dot( row, w1d_view);
-//        dg::blas1::transform( row, row, dg::CONSTANT(avg));
-//    }
-//    t.toc();
-//    std::cout << "Averages     took "<<t.diff()<<"s\n";
-//    t.tic();
-//    container tmp(out);
-//    detail::invert_xy( ny, nx, out, tmp);
-//    tmp.swap(out);
-//
-//    t.toc();
-//    std::cout << "Copy         took "<<t.diff()<<"s\n";
-//}
-//
-//#ifdef MPI_VERSION
-//template<class container>
-//void poloidal_average( const MPI_Vector<container>& in, MPI_Vector<container>& out, const aMPITopology2d& g)
-//{
-//    const Grid2d& l = g.local();
-//    Grid1d g1d( l.x0(), l.x1(), l.n(), l.Ny());
-//    MPI_Vector<container > w1d( transfer<container>(create::weights( g1d)), g.get_poloidal_comm());
-//    MPI_Vector<VectorView<container>> w1d_view( w1d.data(), w1d.communicator());
-//    blas1::scal( w1d, 1./g.ly());
-//    int nx = l.n()*l.Nx(), ny = l.n()*l.Ny();
-//    detail::invert_xy( nx, ny, in.data(), out.data());
-//    std::vector<double> avgs(nx);
-//    for ( int i=0; i<nx; i++)
-//    {
-//        VectorView<container> row( thrust::raw_pointer_cast(out.data().data())+i*ny, thrust::raw_pointer_cast(out.data().data())+(i+1)*ny);
-//        MPI_Vector<VectorView<container>> row( row, w1d.communicator());
-//        avgs[i] = blas1::dot( row, w1d_view);
-//    }
-//    detail::copy_transpose( nx, ny, avgs, out.data());
-//}
-//#endif
-
-
-
 /**
  * @brief MPI specialized class for y average computations
  *
  * @snippet backend/average_mpit.cu doxygen
  * @ingroup utilities
- * @tparam container Currently this is one of 
- *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec  
  */
-template< class Topology2d, class container>
+template< class container>
 struct Average
 {
-    /**
-     * @brief Construct from grid mpi object
-     * @param g 2d MPITopology
-     */
-    Average( const Topology2d& g, enum Coordinate direction): 
-    m_g2d(g), m_dir(dir)
+    Average( const aTopology2d& g, enum Coordinate direction): m_dir(direction), m_dim3(false)
     {
-        m_w1dy=dg::transfer<container>(dg::detail::create_weightsY1d(g));
-        container w2d = dg::transfer<container>(dg::create::weights(g));
-        dg::split_poloidal( w2d, m_split, g);
+        m_nx = g.Nx()*g.n(), m_ny = g.Ny()*g.n();
+        m_w=dg::transfer<container>(dg::detail::create_weights(g, diretion));
+        if( direction == dg::x)
+            dg::blas1::scal( m_w, 1./g.lx());
+        else if ( direction == dg::y)
+            dg::blas1::scal( m_w, 1./g.ly());
+        else
+            std::cerr "Warning: attempting to average wrong direction in 2d\n";
+        m_temp1d = m_temp = m_w;
+    }
+
+    Average( const aTopology3d& g, enum Coordinate direction): m_dir(direction), m_dim3(true)
+    {
+        m_w = dg::transfer<container>(dg::detail::create_weights(g, diretion));
+        m_temp2 = m_temp = m_w;
+        unsigned nx = g.n()*g.Nx(), ny = g.n()*g.Ny(), nz = g.Nz();
+        if( direction == dg::x) {
+            dg::blas1::scal( m_w, 1./g.lx());
+            m_nx = nx, m_ny = ny*nz;
+        }
+        else if( direction == dg::z) {
+            dg::blas1::scal( m_w, 1./g.lz());
+            m_nx = nx*ny, m_ny = nz;
+        }
+        else if( direction == dg::xy) {
+            dg::blas1::scal( m_w, 1./g.lx()/g.ly());
+            m_nx = nx*ny, m_ny = nz;
+        }
+        else if( direction == dg::yz) {
+            dg::blas1::scal( m_w, 1./g.ly()/g.lz());
+            m_nx = nx, m_ny = ny*nz;
+        }
+        else 
+            std::cerr << "Warning: this direction is not implemented\n";
     }
     /**
-     * @brief Compute the average in y-direction
+     * @brief Compute the average 
      *
      * @param src 2D Source Vector (must have the same size as the grid given in the constructor)
      * @param res 2D result Vector (may alias src), every line contains the x-dependent average over
@@ -106,19 +64,28 @@ struct Average
      */
     void operator() (const container& src, container& res)
     {
-        dg::transpose( m_nx, m_ny, src, res);
-        for( unsigned i=0; i<m_split.size(); i++)
+        if( m_dir == dg::x || m_dir == dg::xy)
         {
-            double value = dg::blas1::dot( m_split[i], m_w1dy);
-            dg::blas1::transform( m_split[i], m_split[i], dg::CONSTANT(value));
+            dg::average( m_nx, m_ny, m_src, m_w2d, m_temp);
+            dg::extend_column( m_nx, m_ny, m_temp, res);
         }
-        dg::join_poloidal(m_split, res, m_g2d);
+        else if( (m_dir == dg::y && m_dim3 == false) || m_dir == dg::z || m_dir == dg::yz)
+        {
+            dg::transpose( m_nx, m_ny, src, m_temp);
+            dg::average( m_ny, m_nx, m_temp, m_w2d, m_temp1d);
+            dg::extend_line( m_nx, m_ny, m_temp1d, res);
+        }
+        else if( m_dir == dg::y && m_dim3 == true) 
+            std::cerr << "Warning: average y direction in 3d is not implemented\n";
+        else
+            std::cerr << "Warning: average direction is not implemented\n";
+
     }
   private:
     unsigned m_nx, m_ny;
-    container m_w1dy; 
-    get_host_grid<Topology2d> m_g2d;
+    container m_w, m_temp, m_temp2; 
     enum Coordinate m_dir;
+    bool m_dim3;
 
 };
 
