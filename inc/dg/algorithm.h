@@ -26,8 +26,8 @@
 #include "refined_elliptic.h"
 #include "arakawa.h"
 #include "poisson.h"
-#include "backend/average.cuh"
+#include "geometry/average.h"
 #ifdef MPI_VERSION
-#include "backend/average.h"
+#include "geometry/average_mpi.h"
 #include "backend/mpi_init.h"
 #endif

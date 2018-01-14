@@ -7,7 +7,7 @@ int main(){
 }
 #else
 #include <cusp/print.h>
-#include "timer.cuh"
+#include "dg/backend/timer.cuh"
 #include "xspacelib.cuh"
 #include "ell_interpolation.cuh"
 #include "interpolation.cuh"
