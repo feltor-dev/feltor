@@ -1,7 +1,7 @@
 #include <iostream>
+#include "evaluation.cuh"
 #include "average.h"
-#include "../blas2.h"
-#include "typedefs.cuh"
+#include "dg/blas.h"
 
 
 const double lx = 2.*M_PI;
@@ -17,13 +17,12 @@ int main()
     //![doxygen]
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
 
-    //dg::PoloidalAverage<dg::Grid2d, dg::DVec > pol(g);
+    dg::Average< dg::DVec > pol(g, dg::coo2d::y);
 
     const dg::DVec vector = dg::evaluate( function ,g); 
     dg::DVec average_y( vector);
     std::cout << "Averaging ... \n";
-    //pol( vector, average_y);
-    poloidal_average( vector, average_y, g);
+    pol( vector, average_y);
     //![doxygen]
     const dg::DVec w2d = dg::create::weights( g);
     const dg::DVec solution = dg::evaluate( pol_average, g);

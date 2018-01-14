@@ -74,7 +74,7 @@ struct MPI_Vector
     ///@brief Set the communicator to which this vector belongs
     void set_communicator(MPI_Comm comm){
         comm_ = comm;
-        exblas::make_reduce_communicator( comm_, &comm128_, &comm128Reduce_);
+        exblas::mpi_reduce_communicator( comm_, &comm128_, &comm128Reduce_);
     }
 
     ///@brief Return the size of the data object

@@ -96,7 +96,7 @@ enum class coo2d : char
 {
     x = 'x', //!< x direction
     y = 'y', //!< y direction
-}
+};
 ///@brief 3d contra- and covariant coordinates
 enum class coo3d : char
 {

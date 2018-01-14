@@ -107,19 +107,17 @@ thrust::host_vector<double> inv_weights( const aTopology2d& g)
 }
 
 ///@copydoc hide_weights_coo_doc
-thrust::host_vector<double> weights( const aTopology2d& g, enum Coordinate coo)
+thrust::host_vector<double> weights( const aTopology2d& g, enum coo2d coo)
 {
     thrust::host_vector<double> w( g.size());
-    if( coo == dg::x) {
+    if( coo == coo2d::x) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];
     }
-    else if( coo == dg::y) {
+    else if( coo == coo2d::y) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hy()/2.* g.dlt().weights()[(i/(g.n()*g.Nx()))%g.n()];
     }
-    else 
-        std::cerr << "WARNING: specified wrong coordinate in 2d grid\n";
     return w;
 }
 
@@ -146,30 +144,30 @@ thrust::host_vector<double> inv_weights( const aTopology3d& g)
 }
 
 ///@copydoc hide_weights_coo_doc
-thrust::host_vector<double> weights( const aTopology3d& g, enum Coordinate coo)
+thrust::host_vector<double> weights( const aTopology3d& g, enum coo3d coo)
 {
     thrust::host_vector<double> w( g.size());
-    if( coo == dg::x) {
+    if( coo == coo3d::x) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];
     }
-    else if( coo == dg::y) {
+    else if( coo == coo3d::y) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hy()/2.* g.dlt().weights()[(i/(g.n()*g.Nx()))%g.n()];
     }
-    else if( coo == dg::z) {
+    else if( coo == coo3d::z) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hz();
     }
-    else if( coo == dg::xy) {
+    else if( coo == coo3d::xy) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hx()*g.hy()/4.* g.dlt().weights()[i%g.n()]*g.dlt().weights()[(i/(g.n()*g.Nx()))%g.n()];
     }
-    else if( coo == dg::yz) {
+    else if( coo == coo3d::yz) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hy()*g.hz()/2.* g.dlt().weights()[(i/(g.n()*g.Nx()))%g.n()];
     }
-    else if( coo == dg::xz) {
+    else if( coo == coo3d::xz) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hx()*g.hz()/2.* g.dlt().weights()[i%g.n()];
     }

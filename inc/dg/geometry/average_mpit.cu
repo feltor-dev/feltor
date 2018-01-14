@@ -2,13 +2,10 @@
 #include <iomanip>
 #include <mpi.h>
 
-#include "blas.h"
+#include "dg/backend/mpi_init.h"
+#include "dg/blas.h"
+#include "average_mpi.h"
 #include "mpi_evaluation.h"
-#include "mpi_derivatives.h"
-#include "mpi_matrix.h"
-#include "mpi_precon.h"
-#include "mpi_init.h"
-#include "../average.h"
 
 const double lx = 2.*M_PI;
 const double ly = M_PI;
@@ -33,7 +30,7 @@ int main(int argc, char* argv[])
     dg::MPIGrid2d g( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
 
     if(rank==0)std::cout << "constructing polavg" << std::endl;
-    dg::PoloidalAverage<dg::MDVec, dg::MDVec > pol(g);
+    dg::Average<dg::MDVec > pol(g, dg::coo2d::y);
     if(rank==0)std::cout << "constructing polavg end" << std::endl;
     const dg::MDVec vector = dg::evaluate( function ,g); 
     dg::MDVec average_y( vector);

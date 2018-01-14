@@ -5,6 +5,7 @@
  *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
  */
 
+#pragma once
 #include <cassert>
 #include <cstdlib>
 #include <cstdio>

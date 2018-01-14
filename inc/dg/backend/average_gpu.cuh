@@ -28,7 +28,7 @@ void transpose_dispatch( CudaTag, unsigned nx, unsigned ny, const value_type* in
 }
 
 template<class value_type>
-__global__ void extend_line_kernel( OmpTag, unsigned nx, unsigned ny, const value_type* __restrict__ in, value_type* __restrict__ out)
+__global__ void extend_line_kernel( unsigned nx, unsigned ny, const value_type* __restrict__ in, value_type* __restrict__ out)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -47,7 +47,7 @@ void extend_line( CudaTag, unsigned nx, unsigned ny, const value_type* in, value
 }
 
 template<class value_type>
-__global__ void extend_column_kernel( OmpTag, unsigned nx, unsigned ny, const value_type* __restrict__ in, value_type* __restrict__ out)
+__global__ void extend_column_kernel( unsigned nx, unsigned ny, const value_type* __restrict__ in, value_type* __restrict__ out)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -68,37 +68,39 @@ void extend_column( CudaTag, unsigned nx, unsigned ny, const value_type* in, val
 void average( CudaTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out)
 {
     static thrust::device_vector<int64_t> d_accumulator;
+    int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
     static thrust::host_vector<int64_t> h_accumulator;
     static thrust::host_vector<double> h_round;
-    d_accumulator.resize( ny*exdot_BIN_COUNT;
+    d_accumulator.resize( ny*exblas::BIN_COUNT);
     for( unsigned i=0; i<ny; i++)
-        exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_accumulator[i*exdot::BIN_COUNT]);
+        exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_ptr[i*exblas::BIN_COUNT]);
     h_accumulator = d_accumulator;
     h_round.resize( ny);
     for( unsigned i=0; i<ny; i++)
-        h_round[i] = exblas::gpu::Round( &h_accumulator[i*exdot::BIN_COUNT]);
-    cudaMemcpy( out, h_round, ny*sizeof(double), cudaMemcpyHostToDevice);
+        h_round[i] = exblas::cpu::Round( &h_accumulator[i*exblas::BIN_COUNT]);
+    cudaMemcpy( out, &h_round[0], ny*sizeof(double), cudaMemcpyHostToDevice);
 }
 
 #ifdef MPI_VERSION
 //local data plus communication
-void average_mpi( CudaTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out, MPI_Comm comm, MPI_Comm, comm_mod, MPI_Comm comm_mod_reduce )
+void average_mpi( CudaTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
 {
     static thrust::device_vector<int64_t> d_accumulator;
+    int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
     static thrust::host_vector<int64_t> h_accumulator;
     static thrust::host_vector<int64_t> h_accumulator2;
     static thrust::host_vector<double> h_round;
-    d_accumulator.resize( ny*exdot_BIN_COUNT;
+    d_accumulator.resize( ny*exblas::BIN_COUNT);
     for( unsigned i=0; i<ny; i++)
-        exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_accumulator[i*exdot::BIN_COUNT]);
+        exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_ptr[i*exblas::BIN_COUNT]);
     h_accumulator2 = d_accumulator;
     h_accumulator.resize( h_accumulator2.size());
-    reduce_mpi_cpu( ny, &h_accumulator2[0], &h_accumulator[0], comm, comm_mod, comm_mod_reduce);
+    exblas::reduce_mpi_cpu( ny, &h_accumulator2[0], &h_accumulator[0], comm, comm_mod, comm_mod_reduce);
 
     h_round.resize( ny);
     for( unsigned i=0; i<ny; i++)
-        h_round[i] = exblas::gpu::Round( &h_accumulator[i*exdot::BIN_COUNT]);
-    cudaMemcpy( out, h_round, ny*sizeof(double), cudaMemcpyHostToDevice);
+        h_round[i] = exblas::cpu::Round( &h_accumulator[i*exblas::BIN_COUNT]);
+    cudaMemcpy( out, &h_round[0], ny*sizeof(double), cudaMemcpyHostToDevice);
 }
 #endif //MPI_VERSION
 

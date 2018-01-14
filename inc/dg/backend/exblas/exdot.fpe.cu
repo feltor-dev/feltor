@@ -6,6 +6,7 @@
  *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
  */
 
+#pragma once
 #include "thrust/device_vector.h"
 #include "accumulate.cuh"
 
@@ -311,4 +312,3 @@ void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const 
 }
 
 }//namespace exblas
-
