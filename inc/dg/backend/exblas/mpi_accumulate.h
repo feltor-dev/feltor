@@ -33,10 +33,10 @@ void make_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_
 
 We cannot sum more than 256 accumulators before we need to normalize again, so we need to split the reduction. This function normalizes, 
 reduces, normalizes, reduces and broadcasts the result to all participating
-processes. 
+processes.  As usual the result is unnormalized.
 @param num_superacc number of Superaccumulators eaach process holds
-@param in unnormalized input superaccumulators ( read/write, must be of size num_superacc*BIN_COUNT)
-@param out each process contains the result on output( write, must be of size num_superacc*BIN_COUNT)
+@param in unnormalized input superaccumulators ( read/write, must be of size num_superacc*BIN_COUNT) (undefined on out)
+@param out each process contains the result on output( write, must be of size num_superacc*BIN_COUNT) (may not alias in)
 @param comm The complete MPI communicator
 @param comm_mod This is comm modulo 128 ( or any other number <256) (use \c make_reduce_communicator to generate this)
 @param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL (use \c make_reduce_communicator to generate this)

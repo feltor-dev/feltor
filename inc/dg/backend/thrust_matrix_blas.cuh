@@ -66,14 +66,14 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Matrix& m, const Vec
 template< class Matrix, class Vector>
 inline get_value_type<Vector> doDot( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
 {
+    static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
     std::vector<int64_t> acc = doDot_superacc( x,m,y,ThrustMatrixTag(),ThrustVectorTag());
     return exblas::cpu::Round(acc.data());
 }
 template< class Matrix, class Vector>
 inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, ThrustMatrixTag, ThrustVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,m,x,ThrustMatrixTag(),ThrustVectorTag());
-    return exblas::cpu::Round(acc.data());
+    return doDot( x,m,x,ThrustMatrixTag(), ThrustVectorTag());
 }
 
 template< class Matrix, class Vector>
