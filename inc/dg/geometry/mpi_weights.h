@@ -35,6 +35,21 @@ MPI_Vector<thrust::host_vector<double> > inv_weights( const aMPITopology2d& g)
         v.data()[i] = 1./v.data()[i];
     return v;
 }
+
+///@copydoc hide_weights_coo_doc
+MPI_Vector<thrust::host_vector<double> > weights( const aMPITopology2d& g, enum Coordinate coo)
+{
+    thrust::host_vector<double> w( g.local().size());
+    if( coo == dg::x) {
+        for( unsigned i=0; i<g.local().size(); i++)
+            w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];
+    }
+    else if( coo == dg::y) {
+        for( unsigned i=0; i<g.local().size(); i++)
+            w[i] = g.hy()/2.* g.dlt().weights()[(i/(g.n()*g.local().Nx()))%g.n()];
+    }
+    return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
+}
 ///@copydoc hide_weights_doc
 ///@copydoc hide_code_mpi_evaluate3d
 MPI_Vector<thrust::host_vector<double> > weights( const aMPITopology3d& g)
@@ -53,6 +68,37 @@ MPI_Vector<thrust::host_vector<double> > inv_weights( const aMPITopology3d& g)
     for( unsigned i=0; i<g.local().size(); i++)
         v.data()[i] = 1./v.data()[i];
     return v;
+}
+
+///@copydoc hide_weights_coo_doc
+MPI_Vector<thrust::host_vector<double> > weights( const aMPITopology3d& g, enum Coordinate coo)
+{
+    thrust::host_vector<double> w( g.local().size());
+    if( coo == dg::x) {
+        for( unsigned i=0; i<g.local().size(); i++)
+            w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];
+    }
+    else if( coo == dg::y) {
+        for( unsigned i=0; i<g.local().size(); i++)
+            w[i] = g.hy()/2.* g.dlt().weights()[(i/(g.n()*g.local().Nx()))%g.n()];
+    }
+    else if( coo == dg::z) {
+        for( unsigned i=0; i<g.local().size(); i++)
+            w[i] = g.hz();
+    }
+    else if( coo == dg::xy) {
+        for( unsigned i=0; i<g.local().size(); i++)
+            w[i] = g.hx()*g.hy()/4.* g.dlt().weights()[i%g.n()]*g.dlt().weights()[(i/(g.n()*g.local().Nx()))%g.n()];
+    }
+    else if( coo == dg::yz) {
+        for( unsigned i=0; i<g.local().size(); i++)
+            w[i] = g.hy()*g.hz()/2.* g.dlt().weights()[(i/(g.n()*g.local().Nx()))%g.n()];
+    }
+    else if( coo == dg::xz) {
+        for( unsigned i=0; i<g.local().size(); i++)
+            w[i] = g.hx()*g.hz()/2.* g.dlt().weights()[i%g.n()];
+    }
+    return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
 }
 
 ///@}

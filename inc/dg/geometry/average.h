@@ -84,14 +84,14 @@ namespace dg{
  *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec  
  */
 template< class Topology2d, class container>
-struct PoloidalAverage
+struct Average
 {
     /**
      * @brief Construct from grid mpi object
      * @param g 2d MPITopology
      */
-    PoloidalAverage( const Topology2d& g): 
-    m_g2d(g)
+    Average( const Topology2d& g, enum Coordinate direction): 
+    m_g2d(g), m_dir(dir)
     {
         m_w1dy=dg::transfer<container>(dg::detail::create_weightsY1d(g));
         container w2d = dg::transfer<container>(dg::create::weights(g));
@@ -106,7 +106,7 @@ struct PoloidalAverage
      */
     void operator() (const container& src, container& res)
     {
-        dg::split_poloidal( src, m_split, m_g2d);
+        dg::transpose( m_nx, m_ny, src, res);
         for( unsigned i=0; i<m_split.size(); i++)
         {
             double value = dg::blas1::dot( m_split[i], m_w1dy);
@@ -115,9 +115,10 @@ struct PoloidalAverage
         dg::join_poloidal(m_split, res, m_g2d);
     }
   private:
+    unsigned m_nx, m_ny;
     container m_w1dy; 
-    std::vector<container> m_split;
     get_host_grid<Topology2d> m_g2d;
+    enum Coordinate m_dir;
 
 };
 
