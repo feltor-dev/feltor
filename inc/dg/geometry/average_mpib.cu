@@ -2,23 +2,18 @@
 #include <iomanip>
 #include <mpi.h>
 
-#include "blas.h"
+#include "dg/backend/timer.cuh"
+#include "dg/backend/mpi_init.h"
+#include "dg/blas.h"
 
 #include "mpi_evaluation.h"
-#include "mpi_derivatives.h"
-#include "mpi_precon.h"
-#include "mpi_init.h"
-#include "average.h"
-#include "timer.cuh"
+#include "average_mpi.h"
 
 const double lx = 2.*M_PI;
 const double ly = M_PI;
 
 double function( double x, double y) {return cos(x)*sin(y);}
 double pol_average( double x, double y) {return cos(x)*2./M_PI;}
-
-dg::bc bcx = dg::PER; 
-dg::bc bcy = dg::PER;
 
 int main(int argc, char* argv[])
 {
@@ -27,23 +22,21 @@ int main(int argc, char* argv[])
     unsigned n, Nx, Ny; 
 
     MPI_Comm comm;
-    mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
+    mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
-    dg::MPIGrid2d g( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
+    dg::MPIGrid2d g( 0, lx, 0, ly, n, Nx, Ny, comm);
     dg::Timer t;
  
 
-    if(rank==0)std::cout << "constructing polavg" << std::endl;
-    dg::PoloidalAverage<dg::MDVec,dg::MDVec > pol(g);
-    if(rank==0)std::cout << "constructing polavg end" << std::endl;
+    dg::Average<dg::MDVec > pol(g, dg::coo2d::y);
     dg::MDVec vector = dg::evaluate( function ,g), average_y( vector);
     const dg::MDVec solution = dg::evaluate( pol_average, g);
-    if(rank==0)std::cout << "Averaging ... \n";
     t.tic();
-    pol( vector, average_y);
+    for( unsigned i=0; i<100; i++)
+        pol( vector, average_y);
     t.toc();
-    if(rank==0)std::cout << "Assembly of average vector took:      "<<t.diff()<<"s\n";
+    if(rank==0)std::cout << "Assembly of average vector took:      "<<t.diff()/100.<<"s\n";
 
     dg::blas1::axpby( 1., solution, -1., average_y, vector);
     dg::MDVec w2d = dg::create::weights(g);

@@ -33,7 +33,6 @@ void average( SerialTag, unsigned nx, unsigned ny, const double* in0, const doub
 {
     static thrust::host_vector<int64_t> h_accumulator;
     h_accumulator.resize( ny*exblas::BIN_COUNT);
-    std::cout << " size "<<h_accumulator.size()<<"\n";
     for( unsigned i=0; i<ny; i++)
         exblas::exdot_cpu(nx, &in0[i*nx], &in1[i*nx], &h_accumulator[i*exblas::BIN_COUNT]);
     for( unsigned i=0; i<ny; i++)

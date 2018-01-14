@@ -1,16 +1,14 @@
 #include <iostream>
 #include "average.h"
-#include "timer.cuh"
-#include "typedefs.cuh"
+#include "evaluation.cuh"
+#include "dg/backend/timer.cuh"
+#include "dg/backend/typedefs.cuh"
 
 const double lx = 2.*M_PI;
 const double ly = M_PI;
 
 double function( double x, double y) {return cos(x)*sin(y);}
 double pol_average( double x, double y) {return cos(x)*2./M_PI;}
-
-dg::bc bcx = dg::PER; 
-dg::bc bcy = dg::PER;
 
 int main()
 {
@@ -19,8 +17,8 @@ int main()
     std::cin >> n >> Nx >> Ny;
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
 
-    dg::PoloidalAverage<dg::Grid2d, dg::HVec> pol(g);
-    dg::PoloidalAverage<dg::Grid2d, dg::DVec> pol_device(g);
+    dg::Average<dg::HVec> pol(g, dg::coo2d::y);
+    dg::Average<dg::DVec> pol_device(g, dg::coo2d::y);
     dg::Timer t;
 
     dg::HVec vector = dg::evaluate( function ,g), vector_y( vector);
@@ -30,13 +28,15 @@ int main()
     dg::HVec w2d = dg::create::weights( g);
     dg::DVec w2d_device( w2d);
     t.tic();
-    pol( vector, vector_y);
+    for( unsigned i=0; i<100; i++)
+        pol( vector, vector_y);
     t.toc();
-    std::cout << "Assembly of average vector on host took:      "<<t.diff()<<"s\n";
+    std::cout << "Assembly of average vector on host took:      "<<t.diff()/100.<<"s\n";
     t.tic();
-    pol_device( dvector, dvector_y);
+    for( unsigned i=0; i<100; i++)
+        pol_device( dvector, dvector_y);
     t.toc();
-    std::cout << "Assembly of average vector on device took:    "<<t.diff()<<"s\n";
+    std::cout << "Assembly of average vector on device took:    "<<t.diff()/100.<<"s\n";
     dg::blas1::axpby( 1., solution, -1., vector_y, vector);
     std::cout << "Result of integration on host is:     "<<dg::blas1::dot( vector, w2d)<<std::endl; //should be zero
     dg::blas1::axpby( 1., dsolution, -1., dvector_y, dvector);
