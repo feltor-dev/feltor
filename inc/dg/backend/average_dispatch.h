@@ -9,6 +9,14 @@
 
 namespace dg{
 
+/*!@brief Transpose vector
+
+ * @copydoc hide_container
+ * @param nx number of columns in input vector (size of contiguous chunks) /rows in output vector
+ * @param ny number of rows in input vector /columns in output vector
+ * @param in input
+ * @param out output (may not alias in)
+*/
 template<class container>
 void transpose( unsigned nx, unsigned ny, const container& in, container& out)
 {
@@ -18,6 +26,14 @@ void transpose( unsigned nx, unsigned ny, const container& in, container& out)
     return transpose_dispatch( get_execution_policy<container>(), nx, ny, in_ptr, out_ptr);
 }
 
+/*!@brief Copy a line  into rows of output vector
+
+ * @copydoc hide_container
+ * @param nx size of the input vector/ number of columns (size of contiguous chunks) in output vector
+ * @param ny number of rows in output vector
+ * @param in input (size nx)
+ * @param out output (may not alias in)
+*/
 template<class container>
 void extend_line( unsigned nx, unsigned ny, const container& in, container& out)
 {
@@ -26,6 +42,14 @@ void extend_line( unsigned nx, unsigned ny, const container& in, container& out)
     get_value_type<container>* out_ptr = thrust::raw_pointer_cast( out.data());
     return extend_line( get_execution_policy<container>(), nx, ny, in_ptr, out_ptr);
 }
+/*!@brief Copy a line  into columns of output vector
+
+ * @copydoc hide_container
+ * @param nx number of columns (size of contiguous chunks) in output vector
+ * @param ny size of input vector, number of rows in output vector
+ * @param in input (size ny)
+ * @param out output (may not alias in)
+*/
 template<class container>
 void extend_column( unsigned nx, unsigned ny, const container& in, container& out)
 {

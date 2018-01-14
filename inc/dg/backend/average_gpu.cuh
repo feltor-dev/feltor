@@ -68,10 +68,10 @@ void extend_column( CudaTag, unsigned nx, unsigned ny, const value_type* in, val
 void average( CudaTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out)
 {
     static thrust::device_vector<int64_t> d_accumulator;
-    int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
     static thrust::host_vector<int64_t> h_accumulator;
     static thrust::host_vector<double> h_round;
     d_accumulator.resize( ny*exblas::BIN_COUNT);
+    int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
     for( unsigned i=0; i<ny; i++)
         exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_ptr[i*exblas::BIN_COUNT]);
     h_accumulator = d_accumulator;
@@ -86,11 +86,11 @@ void average( CudaTag, unsigned nx, unsigned ny, const double* in0, const double
 void average_mpi( CudaTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
 {
     static thrust::device_vector<int64_t> d_accumulator;
-    int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
     static thrust::host_vector<int64_t> h_accumulator;
     static thrust::host_vector<int64_t> h_accumulator2;
     static thrust::host_vector<double> h_round;
     d_accumulator.resize( ny*exblas::BIN_COUNT);
+    int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
     for( unsigned i=0; i<ny; i++)
         exblas::exdot_gpu(nx, &in0[i*nx], &in1[i*nx], &d_ptr[i*exblas::BIN_COUNT]);
     h_accumulator2 = d_accumulator;

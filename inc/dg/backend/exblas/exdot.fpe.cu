@@ -292,7 +292,9 @@ void ExDOTComplete(
 
 }//namespace gpu
 
-//d_superacc must be a pointer to device memory with size at least BIN_COUNT 
+/*!@brief gpu version of exact dot product
+@param d_superacc pointer to a superaccumulator in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+*/
 __host__
 void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* d_superacc)
 {
@@ -302,6 +304,9 @@ void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
     gpu::ExDOTComplete<<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 
+/*!@brief gpu version of exact triple dot product
+@param d_superacc pointer to a superaccumulator in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+*/
 __host__
 void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const double* x3_ptr, int64_t* d_superacc)
 {

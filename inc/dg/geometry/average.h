@@ -23,15 +23,16 @@ struct Average
     {
         m_nx = g.Nx()*g.n(), m_ny = g.Ny()*g.n();
         m_w=dg::transfer<container>(dg::create::weights(g, direction));
+        m_temp1d = m_temp = m_w;
         m_transpose = false;
         if( direction == coo2d::x)
             dg::blas1::scal( m_w, 1./g.lx());
         else
         {
-            dg::blas1::scal( m_w, 1./g.ly());
             m_transpose = true;
+            dg::blas1::scal( m_temp, 1./g.ly());
+            dg::transpose( m_nx, m_ny, m_temp, m_w);
         }
-        m_temp1d = m_temp = m_w;
     }
 
     Average( const aTopology3d& g, enum coo3d direction)
@@ -70,10 +71,10 @@ struct Average
      */
     void operator() (const container& src, container& res)
     {
-        if( m_transpose)
+        if( !m_transpose)
         {
-            dg::average( m_nx, m_ny, src, m_w, m_temp);
-            dg::extend_column( m_nx, m_ny, m_temp, res);
+            dg::average( m_nx, m_ny, src, m_w, m_temp1d);
+            dg::extend_column( m_nx, m_ny, m_temp1d, res);
         }
         else
         {

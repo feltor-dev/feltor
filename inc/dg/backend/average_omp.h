@@ -8,13 +8,6 @@
 
 namespace dg
 {
-void transpose_dispatch( OmpTag, unsigned nx, unsigned ny, const double* RESTRICT in, double* RESTRICT out)
-{
-#pragma omp parallel for
-    for( unsigned i=0; i<ny; i++)
-        for( unsigned j=0; j<nx; j++)
-            out[j*ny+i] = in[i*nx+j];
-}
 template<class value_type>
 void transpose_dispatch( OmpTag, unsigned nx, unsigned ny, const value_type* RESTRICT in, value_type* RESTRICT out)
 {
@@ -43,7 +36,6 @@ void extend_column( OmpTag, unsigned nx, unsigned ny, const value_type* RESTRICT
 void average( OmpTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out)
 {
     static thrust::host_vector<int64_t> h_accumulator;
-    static thrust::host_vector<double> h_round;
     h_accumulator.resize( ny*exblas::BIN_COUNT);
     for( unsigned i=0; i<ny; i++)
         exblas::exdot_omp(nx, &in0[i*nx], &in1[i*nx], &h_accumulator[i*exblas::BIN_COUNT]);

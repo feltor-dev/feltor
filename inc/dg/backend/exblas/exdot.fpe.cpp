@@ -177,11 +177,17 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
 }
 }//namespace cpu
 
+/*!@brief omp version of exact dot product
+@param h_superacc pointer to a superaccumulator in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+*/
 void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
     cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 }
+/*!@brief omp version of exact triple product
+@param h_superacc pointer to a superaccumulator in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+*/
 void exdot_omp(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );

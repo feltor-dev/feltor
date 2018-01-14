@@ -73,15 +73,25 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int6
 }
 }//namespace cpu
 
+/*!@brief cpu version of exact dot product
+@param h_superacc pointer to a superaccumulator in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+*/
 void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
+    for( int i=0; i<exblas::BIN_COUNT; i++)
+        h_superacc[i] = 0;
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 }
 
+/*!@brief cpu version of exact triple product
+@param h_superacc pointer to a superaccumulator in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+*/
 void exdot_cpu(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
+    for( int i=0; i<exblas::BIN_COUNT; i++)
+        h_superacc[i] = 0;
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 }
 
