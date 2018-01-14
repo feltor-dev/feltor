@@ -91,15 +91,22 @@ enum direction{
     centered //!< centered derivative
 };
 
-///@brief Contravariant and Covariant base
-enum Coordinate
+///@brief 2d coordinates
+enum class coo2d : char
 {
-    x = 0, //!< x direction
-    y = 1, //!< y direction
-    z = 2, //!< z direction 
-    xy = 3, //!< xy plane (in a 3d grid)
-    yz = 4, //!< yz plane (in a 3d grid)
-    xz = 5  //!< xz plane (in a 3d grid)
+    x = 'x', //!< x direction
+    y = 'y', //!< y direction
+}
+///@brief 3d contra- and covariant coordinates
+enum class coo3d : char
+{
+    x = 'x', //!< x direction
+    y = 'y', //!< y direction
+    z = 'z', //!< z direction 
+    xy = 'a', //!< xy plane 
+    yz = 'b', //!< yz plane
+    xz = 'c', //!< xz plane
 };
+
 ///@}
 }//namespace dg

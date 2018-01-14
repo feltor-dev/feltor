@@ -12,7 +12,7 @@ namespace exblas {
  * @param comm_mod_reduce a subgroup of comm, consists of all rank 0 processes in comm_mod
  * @note the creation of new communicators involves communication between all participation processes (comm in this case)
  */
-void make_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_mod_reduce){
+void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_mod_reduce){
     int mod = 128;
     int rank, size;
     MPI_Comm_rank( comm, &rank);

@@ -18,23 +18,28 @@ namespace dg{
 template< class container>
 struct Average
 {
-    Average( const aTopology2d& g, enum Coordinate direction): m_dir(direction), m_dim3(false)
+    Average( const aTopology2d& g, enum Coordinate direction): m_dir(direction)
     {
         m_nx = g.Nx()*g.n(), m_ny = g.Ny()*g.n();
         m_w=dg::transfer<container>(dg::detail::create_weights(g, diretion));
+        m_transpose = false;
         if( direction == dg::x)
             dg::blas1::scal( m_w, 1./g.lx());
         else if ( direction == dg::y)
+        {
             dg::blas1::scal( m_w, 1./g.ly());
+            m_transpose = true;
+        }
         else
             std::cerr "Warning: attempting to average wrong direction in 2d\n";
         m_temp1d = m_temp = m_w;
     }
 
-    Average( const aTopology3d& g, enum Coordinate direction): m_dir(direction), m_dim3(true)
+    Average( const aTopology3d& g, enum Coordinate direction): m_dir(direction)
     {
         m_w = dg::transfer<container>(dg::detail::create_weights(g, diretion));
         m_temp2 = m_temp = m_w;
+        m_transpose = false;
         unsigned nx = g.n()*g.Nx(), ny = g.n()*g.Ny(), nz = g.Nz();
         if( direction == dg::x) {
             dg::blas1::scal( m_w, 1./g.lx());
@@ -43,6 +48,7 @@ struct Average
         else if( direction == dg::z) {
             dg::blas1::scal( m_w, 1./g.lz());
             m_nx = nx*ny, m_ny = nz;
+            m_transpose = true;
         }
         else if( direction == dg::xy) {
             dg::blas1::scal( m_w, 1./g.lx()/g.ly());
@@ -51,6 +57,7 @@ struct Average
         else if( direction == dg::yz) {
             dg::blas1::scal( m_w, 1./g.ly()/g.lz());
             m_nx = nx, m_ny = ny*nz;
+            m_transpose = true;
         }
         else 
             std::cerr << "Warning: this direction is not implemented\n";
@@ -64,28 +71,22 @@ struct Average
      */
     void operator() (const container& src, container& res)
     {
-        if( m_dir == dg::x || m_dir == dg::xy)
+        if( m_transpose)
         {
             dg::average( m_nx, m_ny, m_src, m_w2d, m_temp);
             dg::extend_column( m_nx, m_ny, m_temp, res);
         }
-        else if( (m_dir == dg::y && m_dim3 == false) || m_dir == dg::z || m_dir == dg::yz)
+        else if
         {
             dg::transpose( m_nx, m_ny, src, m_temp);
             dg::average( m_ny, m_nx, m_temp, m_w2d, m_temp1d);
             dg::extend_line( m_nx, m_ny, m_temp1d, res);
         }
-        else if( m_dir == dg::y && m_dim3 == true) 
-            std::cerr << "Warning: average y direction in 3d is not implemented\n";
-        else
-            std::cerr << "Warning: average direction is not implemented\n";
-
     }
   private:
     unsigned m_nx, m_ny;
     container m_w, m_temp, m_temp2; 
-    enum Coordinate m_dir;
-    bool m_dim3;
+    bool m_transpose;
 
 };
 
