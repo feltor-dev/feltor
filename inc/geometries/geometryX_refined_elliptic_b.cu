@@ -34,7 +34,7 @@ int main(int argc, char**argv)
     //dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
-    gp.display( std::cout);
+    //gp.display( std::cout);
     dg::Timer t;
     std::cout << "Constructing grid ... \n";
     t.tic();
@@ -54,14 +54,14 @@ int main(int argc, char**argv)
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     /////////////no monitor
-    dg::geo::BinarySymmTensorLvl1 monitor_chi;
+    //dg::geo::BinarySymmTensorLvl1 monitor_chi;
     ////////////const monitor
     //dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
     /////////////monitor bumped around X-point
-    //double radius;
-    //std::cout << "Type radius\n";
-    //std::cin >> radius;
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xbump_monitor( c.get_psip(), R_X, Z_X, radius, radius) ;
+    double radius;
+    std::cout << "Type radius\n";
+    std::cin >> radius;
+    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xbump_monitor( c.get_psip(), R_X, Z_X, radius, radius) ;
     /////////////
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
@@ -100,12 +100,12 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[0], X.data());
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     //////////////////blob solution////////////////////////////////////////////
-    const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_coarse);
-    const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_fine);
-    const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d_coarse);
-    const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d_fine);
-    const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d_coarse);
-    const dg::DVec solutionFINE =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d_fine);
+    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_coarse);
+    //const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_fine);
+    //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d_coarse);
+    //const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d_fine);
+    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d_coarse);
+    //const dg::DVec solutionFINE =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d_fine);
     /////////////////blob on X-point///////////////////////////////////////////
     //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d_coarse);
     //const dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d_fine);
@@ -121,16 +121,16 @@ int main(int argc, char**argv)
     //const dg::DVec solution =     dg::pullback( c.psip, g2d.associated());
     //const dg::DVec solutionFINE = dg::pullback( c.psip, g2d);
     ///////////////////////////Dir/////FIELALIGNED SIN///////////////////
-    //const dg::DVec b     =    dg::pullback( dg::geo::EllipticXDirNeuM(c, gp.R_0, psi_0, psi_1), g2d.associated());
-    //const dg::DVec bFINE =    dg::pullback( dg::geo::EllipticXDirNeuM(c, gp.R_0, psi_0, psi_1), g2d);
-    //dg::DVec chi  =  dg::pullback( dg::geo::Bmodule(c, gp.R_0), g2d.associated());
-    //dg::DVec chiFINE  =  dg::pullback( dg::geo::Bmodule(c, gp.R_0), g2d);
+    const dg::DVec b     =    dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d_coarse);
+    const dg::DVec bFINE =    dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d_fine);
+    dg::DVec chi  =  dg::pullback( dg::geo::Bmodule(c), g2d_coarse);
+    dg::DVec chiFINE  =  dg::pullback( dg::geo::Bmodule(c), g2d_fine);
     //dg::blas1::plus( chi, 1e5);
     //dg::blas1::plus( chiFINE, 1e5);
-    ////const dg::DVec chi      =  dg::pullback( dg::ONE(), g2d.associated());
-    ////const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution     = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d.associated());
-    //const dg::DVec solutionFINE = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d);
+    //const dg::DVec chi      =  dg::pullback( dg::ONE(), g2d_coarse);
+    //const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d_fine);
+    const dg::DVec solution     = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d_coarse);
+    const dg::DVec solutionFINE = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d_fine);
     //////////////////////////////////////////////////////////////////////////
 
     const dg::DVec vol3d     = dg::create::volume( g2d_coarse);
@@ -156,11 +156,11 @@ int main(int argc, char**argv)
     dg::DVec x_fine_sw     =    dg::evaluate( dg::zero, g2d_fine);
     dg::DVec x_direct      =    dg::evaluate( dg::zero, g2d_coarse);
     dg::DVec x_fine_di     =    dg::evaluate( dg::zero, g2d_fine);
-    dg::Invert<dg::DVec > invert1( x_sandwich, n*n*Nx*Ny, eps);
+    //dg::Invert<dg::DVec > invert1( x_sandwich, n*n*Nx*Ny, eps);
     dg::Invert<dg::DVec > invert2( x_fine_di,  n*n*Nx*Ny, eps);
     dg::DVec bmod(b);
     pol_refined.compute_rhs( bFINE, bmod);
-    unsigned number_sw = invert1(pol_refined, x_sandwich, bmod, w3d, v3d, v3d );
+    //unsigned number_sw = invert1(pol_refined, x_sandwich, bmod, w3d, v3d, v3d );
     unsigned number_di = invert2(pol        , x_fine_di, bFINE, vol3dFINE,v3dFINE, v3dFINE);
     //unsigned number_di = invert2(pol        , x_direct, bmod, w3d,v3d);
     dg::blas2::gemv( Q, x_sandwich, x_fine_sw);
@@ -169,7 +169,7 @@ int main(int argc, char**argv)
     //unsigned number = invert(pol, x_fine ,b_fine, vol3dFINE, v3dFINE );
     //unsigned number = invert(pol, x_fine ,bFINE, vol3dFINE, v3dFINE );
     //dg::blas2::gemv( P, x_fine, x);
-    std::cout <<number_sw<<"\t";
+    std::cout <<0<<"\t";
     std::cout <<number_di<<"\t";
     t.toc();
     dg::DVec error_sandwich( solutionFINE);
