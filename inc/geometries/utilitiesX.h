@@ -89,14 +89,18 @@ BinarySymmTensorLvl1 make_Xbump_monitor( const BinaryFunctorsLvl2& psi, double& 
 
     double gxx = (-psiyy*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
     double gyy = ( psixx*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
-    double gxy = (                   sumpsi*psixy)/sqrt(alpha);
+    double gxy = (               -   sumpsi*psixy)/sqrt(alpha);
     detail::Monitor xx(1, gxx-1, x,y, radiusX, radiusY);
     detail::Monitor xy(0, gxy-0, x,y, radiusX, radiusY);
     detail::Monitor yy(1, gyy-1, x,y, radiusX, radiusY);
     detail::DivMonitor divX(gxx-1, gxy, x,y, radiusX, radiusY);
     detail::DivMonitor divY(gxy, gyy-1, x,y, radiusX, radiusY);
-    BinarySymmTensorLvl1 monitor( xx, xy, yy, divX, divY);
-    return monitor;
+    BinarySymmTensorLvl1 chi( xx, xy, yy, divX, divY);
+    //double laplace = psi.dfxx()(x,y)*chi.xx()(x,y)+2.*psi.dfxy()(x,y)*chi.xy()(x,y)+psi.dfyy()(x,y)*chi.yy()(x,y)
+    //        + chi.divX()(x,y)*psi.dfx()(x,y) + chi.divY()(x,y)*psi.dfy()(x,y);
+    //std::cout << "Laplace at X-point "<<laplace<<std::endl;
+
+    return chi;
 }
 /**
  * @brief construct a monitor metric in which the Laplacian vanishes at the X-point
@@ -119,14 +123,20 @@ BinarySymmTensorLvl1 make_Xconst_monitor( const BinaryFunctorsLvl2& psi, double&
 
     double gxx = (-psiyy*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
     double gyy = ( psixx*diffpsi + 2.*psixy*psixy)/sqrt(alpha);
-    double gxy = (                   sumpsi*psixy)/sqrt(alpha);
+    double gxy = (               -   sumpsi*psixy)/sqrt(alpha);
     Constant xx(gxx);
     Constant xy(gxy);
     Constant yy(gyy);
     Constant divX(0);
     Constant divY(0);
-    BinarySymmTensorLvl1 monitor( xx, xy, yy, divX, divY);
-    return monitor;
+    BinarySymmTensorLvl1 chi( xx, xy, yy, divX, divY);
+    //std::cout << "px  "<<psi.dfx()(x,y)<<" py "<<psi.dfy()(x,y)<<std::endl;
+    //std::cout << "gxx "<<chi.xx()(x,y)<<" gxy "<< chi.xy()(x,y)<<" gyy "<<chi.yy()(x,y)<<std::endl;
+    //std::cout << "pxx "<<psixx<<" pxy "<< psixy<<" pyy "<<psiyy<<std::endl;
+    //double laplace = psi.dfxx()(x,y)*chi.xx()(x,y)+2.*psi.dfxy()(x,y)*chi.xy()(x,y)+psi.dfyy()(x,y)*chi.yy()(x,y);
+    //        //+ chi.divX()(x,y)*psi.dfx()(x,y) + chi.divY()(x,y)*psi.dfy()(x,y);
+    //std::cout << "Laplace at X-point "<<laplace<<std::endl;
+    return chi;
 }
 
 

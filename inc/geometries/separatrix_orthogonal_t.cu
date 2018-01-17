@@ -84,7 +84,7 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
 
 int main( int argc, char* argv[])
 {
-    std::cout << "Type n, Nx, Ny, Nz \n";
+    std::cout << "Type n (3), Nx (8), Ny (176), Nz (1) \n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;   
     std::cout << "Typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<"\n";
@@ -125,7 +125,9 @@ int main( int argc, char* argv[])
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xmonitor( c.get_psip(), R_X, Z_X, 100, 100) ;
+    //dg::geo::BinarySymmTensorLvl1 monitor_chi;
+    //dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
+    dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( c.get_psip(), R_X, Z_X, 100, 100) ;
     std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
 
     double R0 = gp.R_0, Z0 = 0;
@@ -150,7 +152,7 @@ int main( int argc, char* argv[])
     err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());
     //err = file::define_dimensions(  ncid, dim3d, g2d.grid());
     err = file::define_dimension(  ncid, "i", dim1d, g1d);
-    int coordsID[2], onesID, defID, volID, divBID;
+    int coordsID[2], defID, volID, divBID, gxxID, gyyID, gxyID;
     int coord1D[5];
     err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
     err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
@@ -160,14 +162,16 @@ int main( int argc, char* argv[])
     err = nc_def_var( ncid, "y_right", NC_DOUBLE, 1, dim1d, &coord1D[3]);
     err = nc_def_var( ncid, "f_x", NC_DOUBLE, 1, dim1d, &coord1D[4]);
     //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
-    err = nc_def_var( ncid, "psi", NC_DOUBLE, 3, dim3d, &onesID);
+    err = nc_def_var( ncid, "psi", NC_DOUBLE, 3, dim3d, &gxyID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 3, dim3d, &defID);
     err = nc_def_var( ncid, "volume", NC_DOUBLE, 3, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 3, dim3d, &divBID);
+    err = nc_def_var( ncid, "num_solution", NC_DOUBLE, 3, dim3d, &gxxID);
+    err = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 3, dim3d, &gyyID);
 
     thrust::host_vector<double> psi_p = dg::pullback( c.psip(), g2d);
     g2d.display();
-    err = nc_put_var_double( ncid, onesID, periodify(psi_p, g3d_periodic).data());
+    //err = nc_put_var_double( ncid, onesID, periodify(psi_p, g3d_periodic).data());
     //err = nc_put_var_double( ncid, onesID, periodify(g2d.g(), g3d_periodic).data());
     dg::HVec X( g2d.size()), Y(X); //P = dg::pullback( dg::coo3, g);
     for( unsigned i=0; i<g2d.size(); i++)
@@ -193,7 +197,7 @@ int main( int argc, char* argv[])
     //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
 
     dg::SparseTensor<dg::HVec> metric = g2d.metric();
-    dg::HVec g_xx = metric.value(0,0), g_yy=metric.value(1,1);
+    dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
     dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
     dg::HVec vol = vol_.value();
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
@@ -202,9 +206,14 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
     //err = nc_put_var_double( ncid, defID, X.data());
     dg::blas1::transfer( vol, X);
-    dg::blas1::transfer( g_yy, Y);
-    dg::blas1::pointwiseDot( Y, X, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
+    dg::blas1::transfer( g_xx, X);
+    err = nc_put_var_double( ncid, gxxID, periodify(X, g3d_periodic).data());
+    dg::blas1::transfer( g_xy, X);
+    err = nc_put_var_double( ncid, gxyID, periodify(X, g3d_periodic).data());
+    dg::blas1::transfer( g_yy, X);
+    err = nc_put_var_double( ncid, gyyID, periodify(X, g3d_periodic).data());
+    //dg::blas1::pointwiseDot( Y, X, X);
     //err = nc_put_var_double( ncid, volID, X.data());
 
     std::cout << "Construction successful!\n";
