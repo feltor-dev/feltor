@@ -104,7 +104,7 @@ int main( int argc, char* argv[])
     //dg::geo::taylor::Parameters gp(js);
     dg::geo::solovev::Parameters gp(js);
     dg::Timer t;
-    std::cout << "Type psi_0 \n";
+    std::cout << "Type psi_0 (-15) \n";
     double psi_0 = -20;
     std::cin >> psi_0;
     std::cout << "Typed "<<psi_0<<"\n";
@@ -126,8 +126,8 @@ int main( int argc, char* argv[])
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     //dg::geo::BinarySymmTensorLvl1 monitor_chi;
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( c.get_psip(), R_X, Z_X, 100, 100) ;
+    dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
+    //dg::geo::BinarySymmTensorLvl1 monitor_chi = dg::geo::make_Xbump_monitor( c.get_psip(), R_X, Z_X, 100, 100) ;
     std::cout << "X-point set at "<<R_X<<" "<<Z_X<<"\n";
 
     double R0 = gp.R_0, Z0 = 0;

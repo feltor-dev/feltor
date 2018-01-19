@@ -14,23 +14,23 @@ void compute_error_elliptic( const dg::geo::TokamakMagneticField& c, const dg::g
 {
     dg::Elliptic<dg::geo::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
     ////////////////////////blob solution////////////////////////////////////////
-    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d);
-    //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d);
+    //const dg::DVec b        = dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d);
+    //const dg::DVec chi      = dg::pullback( dg::ONE(), g2d);
+    //const dg::DVec solution = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d);
     //////////////////////////blob solution on X-point/////////////////////////////
-    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d);
-    //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d);
+    const dg::DVec b        = dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d);
+    const dg::DVec chi      = dg::pullback( dg::ONE(), g2d);
+    const dg::DVec solution = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d);
     ////////////////////////////laplace psi solution/////////////////////////////
     //const dg::DVec b =        dg::pullback( c.laplacePsip);
     //const dg::DVec chi =      dg::evaluate( dg::one, g2d);
     //const dg::DVec solution =     dg::pullback( c.psip, g2d);
     /////////////////////////////Dir/////FIELALIGNED SIN///////////////////
-    const dg::DVec b = dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d);
-    dg::DVec chi     = dg::pullback( dg::geo::Bmodule(c), g2d);
+    //const dg::DVec b = dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d);
+    //dg::DVec chi     = dg::pullback( dg::geo::Bmodule(c), g2d);
     //dg::blas1::plus( chi, 1e4);
     //const dg::DVec chi =  dg::pullback( dg::ONE(), g2d);
-    const dg::DVec solution = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d);
+    //const dg::DVec solution = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d);
     ////////////////////////////////////////////////////////////////////////////
 
     const dg::DVec vol2d = dg::create::volume( g2d);
@@ -102,9 +102,9 @@ int main(int argc, char**argv)
     double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     double Z_X = -1.1*gp.elongation*gp.a;
     /////////////no monitor
-    dg::geo::BinarySymmTensorLvl1 monitor_chi;
+    //dg::geo::BinarySymmTensorLvl1 monitor_chi;
     ////////////const monitor
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
+    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
     /////////////monitor bumped around X-point
     //double radius;
     //std::cout << "Type radius\n";
@@ -114,7 +114,7 @@ int main(int argc, char**argv)
     double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi_0 = "<<psi_0<<" psi_1 = "<<psi_1<<"\n";
-    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,1);
+    dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
     std::cout << "eps \t# iterations error \thxX hyX \thx_max hy_max \ttime/iteration \n";
     std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<"\n";
     const double eps = 1e-11;
