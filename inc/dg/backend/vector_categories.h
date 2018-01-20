@@ -11,6 +11,11 @@
 # define RESTRICT
 #endif
 
+#include <cmath>
+#ifndef FP_FAST_FMA
+#warning "fast fmas not activated!!"
+#endif
+
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP
 #if defined(__INTEL_COMPILER)
 
