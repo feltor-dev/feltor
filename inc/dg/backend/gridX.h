@@ -77,7 +77,7 @@ struct GridX1d
         n_(n), Nx_(N), bcx_(bcx), dlt_(n)
     {
         assert( (f >= 0) && (f < 0.5) );
-        assert( fabs(outer_N() - f*(double)N) < 1e-15); 
+        assert( fabs(outer_N() - f*(double)N) < 1e-14); 
         assert( x1 > x0 );
         assert( N > 0  );
         assert( n != 0 );
@@ -475,8 +475,8 @@ struct aTopologyX2d
     {
         assert( (fy_ >= 0.) && (fy_ < 0.5) );
         assert( (fx_ >= 0.) && (fx_ < 1.) );
-        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
-        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
+        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-14); 
+        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-14); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
         assert( Nx_ > 0  && Ny > 0 );
@@ -774,8 +774,8 @@ struct aTopologyX3d
     {
         assert( (fy_ >= 0.) && (fy_ < 0.5) );
         assert( (fx_ >= 0.) && (fx_ < 1.) );
-        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
-        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
+        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-14); 
+        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-14); 
         assert( n != 0);
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
         assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);

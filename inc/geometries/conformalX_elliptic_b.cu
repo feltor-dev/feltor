@@ -118,7 +118,7 @@ int main(int argc, char**argv)
     std::cout << "eps \t# iterations error \thxX hyX \thx_max hy_max \ttime/iteration \n";
     std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<"\n";
     const double eps = 1e-11;
-    dg::geo::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
+    dg::geo::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::DIR);
     dg::DVec x = dg::evaluate( dg::zero, g2d);
     compute_error_elliptic(c, g2d, x, psi_0, psi_1, eps);
     compute_cellsize(g2d);
@@ -127,7 +127,7 @@ int main(int argc, char**argv)
     {
         Nx*=2; Ny*=2;
         dg::MultiMatrix<dg::DMatrix, dg::DVec >  inter = dg::create::fast_interpolation(g2d.grid(), 2, 2);
-        dg::geo::CurvilinearGridX2d g2d_new( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
+        dg::geo::CurvilinearGridX2d g2d_new( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::DIR);
         std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<"\n";
         dg::DVec x_new = dg::evaluate( dg::zero, g2d_new);
         dg::blas2::symv( inter, x, x_new);

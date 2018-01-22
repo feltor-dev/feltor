@@ -56,21 +56,21 @@ int main(int argc, char**argv)
     /////////////no monitor
     //dg::geo::BinarySymmTensorLvl1 monitor_chi;
     ////////////const monitor
-    //dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
+    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xconst_monitor( c.get_psip(), R_X, Z_X) ;
     /////////////monitor bumped around X-point
-    double radius;
-    std::cout << "Type radius\n";
-    std::cin >> radius;
-    dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xbump_monitor( c.get_psip(), R_X, Z_X, radius, radius) ;
+    //double radius;
+    //std::cout << "Type radius\n";
+    //std::cin >> radius;
+    //dg::geo::BinarySymmTensorLvl1 monitor_chi = make_Xbump_monitor( c.get_psip(), R_X, Z_X, radius, radius) ;
     /////////////
     dg::geo::SeparatrixOrthogonal generator(c.get_psip(), monitor_chi, psi_0, R_X,Z_X, R0, Z0,0);
     //dg::geo::SimpleOrthogonalX generator(c.get_psip(), psi_0, R_X,Z_X, R0, Z0,0);
     //dg::CurvilinearGridX2d g2d( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
     dg::EquidistXRefinement equi(add_x, add_y, howmanyX, howmanyY);
-    dg::geo::CurvilinearGridX2d g2d_coarse( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
-    dg::geo::CurvilinearRefinedGridX2d g2d_fine( equi, generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::NEU);
+    dg::geo::CurvilinearGridX2d g2d_coarse( generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::DIR);
+    dg::geo::CurvilinearRefinedGridX2d g2d_fine( equi, generator, 0.25, 1./22., n, Nx, Ny, dg::DIR, dg::DIR);
     dg::Elliptic<dg::aGeometryX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d_fine, dg::not_normed, dg::forward);
-    dg::RefinedElliptic<dg::aGeometryX2d, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g2d_coarse, g2d_fine, dg::not_normed, dg::forward);
+    //dg::RefinedElliptic<dg::aGeometryX2d, dg::IDMatrix, dg::Composite<dg::DMatrix>, dg::DVec> pol_refined( g2d_coarse, g2d_fine, dg::not_normed, dg::forward);
     double fx = 0.25;
     psi_1 = -fx/(1.-fx)*psi_0;
     std::cout << "psi 1 is          "<<psi_1<<"\n";
@@ -113,24 +113,36 @@ int main(int argc, char**argv)
     //const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d_fine);
     //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d_coarse);
     //const dg::DVec solutionFINE =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d_fine);
-    ///////////////////////////////////////////////////////////////////////////
-    //const dg::DVec b =        dg::pullback( c.laplacePsip, g2d_coarse);
-    //const dg::DVec bFINE =    dg::pullback( c.laplacePsip, g2d_fine);
-    //const dg::DVec chi =      dg::evaluate( dg::one, g2d.associated());
-    //const dg::DVec chiFINE =  dg::evaluate( dg::one, g2d);
-    //const dg::DVec solution =     dg::pullback( c.psip, g2d.associated());
-    //const dg::DVec solutionFINE = dg::pullback( c.psip, g2d);
+    /////////////////Two blobs solution////////////////////////////////////////
+    const dg::DVec b1 =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d_coarse);
+    dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_coarse);
+    dg::blas1::axpby( 1., b1, 1., b);
+    //
+    const dg::DVec b1fine =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d_fine);
+    dg::DVec bFINE =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d_fine);
+    dg::blas1::axpby( 1., b1fine, 1., bFINE);
+    //
+    const dg::DVec chi =      dg::evaluate( dg::one, g2d_coarse);
+    const dg::DVec chiFINE =  dg::evaluate( dg::one, g2d_fine);
+    //
+    const dg::DVec solution1 = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d_coarse);
+    dg::DVec solution = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d_coarse);
+    dg::blas1::axpby( 1., solution1, 1., solution);
+    //
+    const dg::DVec solution1fine = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d_fine);
+    dg::DVec solutionFINE = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d_fine);
+    dg::blas1::axpby( 1., solution1fine, 1., solutionFINE);
     ///////////////////////////Dir/////FIELALIGNED SIN///////////////////
-    const dg::DVec b     =    dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d_coarse);
-    const dg::DVec bFINE =    dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d_fine);
-    dg::DVec chi  =  dg::pullback( dg::geo::Bmodule(c), g2d_coarse);
-    dg::DVec chiFINE  =  dg::pullback( dg::geo::Bmodule(c), g2d_fine);
+    //const dg::DVec b     =    dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d_coarse);
+    //const dg::DVec bFINE =    dg::pullback( dg::geo::EllipticXDirNeuM(c, psi_0, psi_1), g2d_fine);
+    //dg::DVec chi  =  dg::pullback( dg::geo::Bmodule(c), g2d_coarse);
+    //dg::DVec chiFINE  =  dg::pullback( dg::geo::Bmodule(c), g2d_fine);
     //dg::blas1::plus( chi, 1e5);
     //dg::blas1::plus( chiFINE, 1e5);
     //const dg::DVec chi      =  dg::pullback( dg::ONE(), g2d_coarse);
     //const dg::DVec chiFINE  =  dg::pullback( dg::ONE(), g2d_fine);
-    const dg::DVec solution     = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d_coarse);
-    const dg::DVec solutionFINE = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d_fine);
+    //const dg::DVec solution     = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d_coarse);
+    //const dg::DVec solutionFINE = dg::pullback( dg::geo::FuncXDirNeu(c, psi_0, psi_1 ), g2d_fine);
     //////////////////////////////////////////////////////////////////////////
 
     const dg::DVec vol3d     = dg::create::volume( g2d_coarse);
@@ -138,18 +150,18 @@ int main(int argc, char**argv)
     const dg::DVec w3d       = dg::create::weights( g2d_coarse);
     const dg::DVec v3d       = dg::create::inv_weights( g2d_coarse);
     const dg::DVec v3dFINE   = dg::create::inv_weights( g2d_fine);
-    const dg::IDMatrix Q     = dg::create::interpolation( g2d_fine, g2d_coarse);
-    const dg::IDMatrix P     = dg::create::projection( g2d_coarse, g2d_fine);
-    dg::DVec chi_fine = dg::evaluate( dg::zero, g2d_fine), b_fine(chi_fine);
-    dg::blas2::gemv( Q, chi, chi_fine);
-    dg::blas2::gemv( Q, b, b_fine);
+    //const dg::IDMatrix Q     = dg::create::interpolation( g2d_fine, g2d_coarse);
+    //const dg::IDMatrix P     = dg::create::projection( g2d_coarse, g2d_fine);
+    //dg::DVec chi_fine = dg::evaluate( dg::zero, g2d_fine), b_fine(chi_fine);
+    //dg::blas2::gemv( Q, chi, chi_fine);
+    //dg::blas2::gemv( Q, b, b_fine);
     //pol.set_chi( chi);
     pol.set_chi( chiFINE);
     //pol_refined.set_chi( chi);
-    pol_refined.set_chi( chiFINE);
+    //pol_refined.set_chi( chiFINE);
     //compute error
     const double eps = 1e-11;
-    std::cout << "eps \t# sandwich \t# direct \terror_sandwich \terror_direct \thx_max\thy_max\ttime/iteration \n";
+    std::cout << "eps \t# direct error_direct \thx_max\thy_max\ttime/iteration \n";
     std::cout << eps<<"\t";
     t.tic();
     dg::DVec x_sandwich    =    dg::evaluate( dg::zero, g2d_coarse);
@@ -158,18 +170,18 @@ int main(int argc, char**argv)
     dg::DVec x_fine_di     =    dg::evaluate( dg::zero, g2d_fine);
     //dg::Invert<dg::DVec > invert1( x_sandwich, n*n*Nx*Ny, eps);
     dg::Invert<dg::DVec > invert2( x_fine_di,  n*n*Nx*Ny, eps);
-    dg::DVec bmod(b);
-    pol_refined.compute_rhs( bFINE, bmod);
+    //dg::DVec bmod(b);
+    //pol_refined.compute_rhs( bFINE, bmod);
     //unsigned number_sw = invert1(pol_refined, x_sandwich, bmod, w3d, v3d, v3d );
     unsigned number_di = invert2(pol        , x_fine_di, bFINE, vol3dFINE,v3dFINE, v3dFINE);
     //unsigned number_di = invert2(pol        , x_direct, bmod, w3d,v3d);
-    dg::blas2::gemv( Q, x_sandwich, x_fine_sw);
+    //dg::blas2::gemv( Q, x_sandwich, x_fine_sw);
     //dg::blas2::gemv( Q, x_direct,   x_fine_di);
     //dg::Invert<dg::DVec > invert( x_fine, x_fine.size(), eps);
     //unsigned number = invert(pol, x_fine ,b_fine, vol3dFINE, v3dFINE );
     //unsigned number = invert(pol, x_fine ,bFINE, vol3dFINE, v3dFINE );
     //dg::blas2::gemv( P, x_fine, x);
-    std::cout <<0<<"\t";
+    //std::cout <<0<<"\t";
     std::cout <<number_di<<"\t";
     t.toc();
     dg::DVec error_sandwich( solutionFINE);
@@ -180,7 +192,7 @@ int main(int argc, char**argv)
     double err = dg::blas2::dot( vol3dFINE, error_sandwich);
     const double norm = dg::blas2::dot( vol3dFINE, solutionFINE);
     //const double normFINE = dg::blas2::dot( vol3dFINE, solutionFINE);
-    std::cout << sqrt( err/norm) << "\t";//<<sqrt( errFINE/normFINE)<<"\t";
+    //std::cout << sqrt( err/norm) << "\t";//<<sqrt( errFINE/normFINE)<<"\t";
     err = dg::blas2::dot( vol3dFINE, error_direct);
     std::cout << sqrt( err/norm) << "\t";//<<sqrt( errFINE/normFINE)<<"\t";
     ///////////////////////////////////metric//////////////////////
