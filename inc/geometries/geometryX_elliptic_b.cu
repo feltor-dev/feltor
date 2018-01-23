@@ -93,13 +93,13 @@ int main(int argc, char**argv)
     ncerr = nc_put_var_double( ncid, coordsID[1], Y.data());
     dg::DVec x =    dg::evaluate( dg::zero, g2d);
     ////////////////////////blob solution////////////////////////////////////////
-    const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d);
-    const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
-    const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d);
-    //////////////////////////blob solution on X-point/////////////////////////////
-    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d);
+    //const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d);
     //const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d);
+    //const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d);
+    //////////////////////////blob solution on X-point/////////////////////////////
+    const dg::DVec b =        dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d);
+    const dg::DVec chi  =  dg::pullback( dg::ONE(), g2d);
+    const dg::DVec solution =     dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d);
     ////////////////////////////laplace psi solution/////////////////////////////
     //const dg::DVec b =        dg::pullback( c.laplacePsip);
     //const dg::DVec chi =      dg::evaluate( dg::one, g2d);

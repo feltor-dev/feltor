@@ -17,6 +17,7 @@
 #include "curvilinearX.h"
 #include "separatrix_orthogonal.h"
 #include "init.h"
+#include "testfunctors.h"
 
 #include "file/nc_utilities.h"
 
@@ -153,21 +154,14 @@ int main( int argc, char* argv[])
     //err = file::define_dimensions(  ncid, dim3d, g2d.grid());
     err = file::define_dimension(  ncid, "i", dim1d, g1d);
     int coordsID[2], defID, volID, divBID, gxxID, gyyID, gxyID;
-    int coord1D[5];
-    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
-    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
-    err = nc_def_var( ncid, "x_left", NC_DOUBLE, 1, dim1d, &coord1D[0]);
-    err = nc_def_var( ncid, "y_left", NC_DOUBLE, 1, dim1d, &coord1D[1]);
-    err = nc_def_var( ncid, "x_right", NC_DOUBLE, 1, dim1d, &coord1D[2]);
-    err = nc_def_var( ncid, "y_right", NC_DOUBLE, 1, dim1d, &coord1D[3]);
-    err = nc_def_var( ncid, "f_x", NC_DOUBLE, 1, dim1d, &coord1D[4]);
-    //err = nc_def_var( ncid, "z_XYP", NC_DOUBLE, 3, dim3d, &coordsID[2]);
     err = nc_def_var( ncid, "psi", NC_DOUBLE, 3, dim3d, &gxyID);
     err = nc_def_var( ncid, "deformation", NC_DOUBLE, 3, dim3d, &defID);
     err = nc_def_var( ncid, "volume", NC_DOUBLE, 3, dim3d, &volID);
     err = nc_def_var( ncid, "divB", NC_DOUBLE, 3, dim3d, &divBID);
     err = nc_def_var( ncid, "num_solution", NC_DOUBLE, 3, dim3d, &gxxID);
     err = nc_def_var( ncid, "ana_solution", NC_DOUBLE, 3, dim3d, &gyyID);
+    err = nc_def_var( ncid, "x_XYP", NC_DOUBLE, 3, dim3d, &coordsID[0]);
+    err = nc_def_var( ncid, "y_XYP", NC_DOUBLE, 3, dim3d, &coordsID[1]);
 
     thrust::host_vector<double> psi_p = dg::pullback( c.psip(), g2d);
     g2d.display();
@@ -179,32 +173,17 @@ int main( int argc, char* argv[])
         X[i] = g2d.map()[0][i];
         Y[i] = g2d.map()[1][i];
     }
+    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g3d_periodic).data());
+    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g3d_periodic).data());
 
     dg::HVec ones = dg::evaluate( dg::one, g2d);
     dg::HVec temp0( g2d.size()), temp1(temp0);
     dg::HVec w2d = dg::create::weights( g2d);
 
-    err = nc_put_var_double( ncid, coordsID[0], periodify(X, g3d_periodic).data());
-    err = nc_put_var_double( ncid, coordsID[1], periodify(Y, g3d_periodic).data());
-    //err = nc_put_var_double( ncid, coordsID[0], X.data());
-    //err = nc_put_var_double( ncid, coordsID[1], Y.data());
-    //err = nc_put_var_double( ncid, coord1D[0], g3d.rx0().data());
-    //err = nc_put_var_double( ncid, coord1D[1], g3d.zx0().data());
-    //err = nc_put_var_double( ncid, coord1D[2], g3d.rx1().data());
-    //err = nc_put_var_double( ncid, coord1D[3], g3d.zx1().data());
-    //err = nc_put_var_double( ncid, coord1D[4], periodify(g3d.f_x(), g3d_periodic).data());
-    //err = nc_put_var_double( ncid, coord1D[4], g3d.f_x().data());
-    //err = nc_put_var_double( ncid, coordsID[2], g.z().data());
-
     dg::SparseTensor<dg::HVec> metric = g2d.metric();
     dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
     dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
     dg::HVec vol = vol_.value();
-    dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
-    dg::blas1::axpby( 1., ones, -1., temp0, temp0);
-    dg::blas1::transfer( temp0, X);
-    err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
-    //err = nc_put_var_double( ncid, defID, X.data());
     dg::blas1::transfer( vol, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     dg::blas1::transfer( g_xx, X);
@@ -213,60 +192,13 @@ int main( int argc, char* argv[])
     err = nc_put_var_double( ncid, gxyID, periodify(X, g3d_periodic).data());
     dg::blas1::transfer( g_yy, X);
     err = nc_put_var_double( ncid, gyyID, periodify(X, g3d_periodic).data());
-    //dg::blas1::pointwiseDot( Y, X, X);
-    //err = nc_put_var_double( ncid, volID, X.data());
 
     std::cout << "Construction successful!\n";
 
-    //compare determinant vs volume form
-    dg::blas1::pointwiseDot( g_xx, g_yy, temp0);
-    dg::blas1::axpby( 1., temp0, -1., temp1, temp0);
-    dg::blas1::transform( temp0, temp0, dg::SQRT<double>());
-    dg::blas1::pointwiseDivide( ones, temp0, temp0);
-    dg::blas1::transfer( temp0, X);
-    err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
-    dg::blas1::axpby( 1., temp0, -1., vol, temp0);
-    double error = sqrt(dg::blas2::dot( temp0, w2d, temp0)/dg::blas2::dot( vol, w2d, vol));
-    //error = sqrt(dg::blas1::dot( temp0, temp0)/dg::blas1::dot( g2d.vol(), g2d.vol()));
-    std::cout << "Rel Consistency  of volume is "<<error<<"\n";
-
-    ////alternative method to compute volume
-    //solovev::PsipR psipR( gp);
-    //solovev::PsipZ psipZ( gp);
-    //dg::HVec psipR_ = dg::pullback(psipR, g2d);
-    //dg::HVec psipZ_ = dg::pullback(psipZ, g2d);
-    //dg::HVec psip2_(psipR_);
-    //dg::blas1::pointwiseDot( psipR_, psipR_, psipR_);
-    //dg::blas1::pointwiseDot( psipZ_, psipZ_, psipZ_);
-    //dg::blas1::axpby( 1., psipR_, 1., psipZ_, psip2_);
-    //const dg::HVec f_ = g2d.f();
-    //const dg::HVec g_ = g2d.g();
-    //dg::blas1::pointwiseDot( f_, f_, temp1);
-    //dg::blas1::pointwiseDot( psip2_, temp1, temp1);
-    //dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
-    //dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
-    //dg::blas1::axpby( 1., g2d.g_xx(), -1., temp1, temp1);
-    //error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_xx(),w2d,g2d.g_xx());
-    ////error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(g2d.g_xx(),g2d.g_xx());
-    //std::cout << "Rel Error of g_xx is "<<sqrt(error)<<"\n";
-    //dg::blas1::pointwiseDot( g_, g_, temp1);
-    //dg::blas1::pointwiseDot( psip2_,  temp1, temp1);
-    //dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
-    //dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
-    //dg::blas1::axpby( 1., g2d.g_yy(), -1., temp1, temp1);
-    //error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(g2d.g_yy(),w2d,g2d.g_yy());
-    ////error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(g2d.g_yy(),g2d.g_yy());
-    //std::cout << "Rel Error of g_yy is "<<sqrt(error)<<"\n";
-    //dg::blas1::pointwiseDivide( ones, g2d.vol(), temp0);
-    //dg::blas1::pointwiseDot( f_, psip2_, temp1);
-    //dg::blas1::pointwiseDot( g_, temp1 , temp1);
-    //dg::blas1::pointwiseDot( g2d.weightsX(), temp1, temp1);
-    //dg::blas1::pointwiseDot( g2d.weightsY(), temp1, temp1);
-    //dg::blas1::axpby( 1., temp0, -1., temp1, temp1);
-    //error= dg::blas2::dot( temp1, w2d, temp1)/dg::blas2::dot(temp0,w2d,temp0);
-    ////error= dg::blas1::dot( temp1, temp1)/dg::blas1::dot(temp0,temp0);
-    //std::cout << "Rel Error of volume is "<<sqrt(error)<<"\n";
-    //
+    X = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d);
+    err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
+    X = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50.,1.), g2d);
+    err = nc_put_var_double( ncid, defID, periodify(X, g3d_periodic).data());
     err = nc_close( ncid);
 
     std::cout << "TEST VOLUME IS:\n";
@@ -289,45 +221,6 @@ int main( int argc, char* argv[])
     std::cout << "relative difference in volume is "<<fabs(volumeRZP - volume)/volume<<std::endl;
     std::cout << "Note that the error might also be because the regions in the RZ grid and the orthogonal grid are not the same!\n";
     std::cout << "Note that the error might also come from the volume in RZP!\n";
-
-   // ///////////////////////////TEST 3d grid//////////////////////////////////////
-   // std::cout << "Start DS test!"<<std::endl;
-   // const dg::HVec vol3d = dg::create::volume( g3d);
-   // //DFA fieldaligned(OrthogonalXField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
-   // DFA fieldaligned( ConformalField( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
-
-   // //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, OrthogonalXField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
-   // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, ConformalField(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);
-   // dg::HVec B = dg::pullback( solovev::InvB(gp), g3d), divB(B);
-   // dg::HVec lnB = dg::pullback( solovev::LnB(gp), g3d), gradB(B);
-   // const dg::HVec gradLnB = dg::pullback( solovev::GradLnB(gp), g3d);
-   // dg::blas1::pointwiseDivide( ones, B, B);
-
-   // ds.centeredT( B, divB);
-   // std::cout << "Divergence of B is "<<sqrt( dg::blas2::dot( divB, vol3d, divB))<<"\n";
-   // ds.centered( lnB, gradB);
-   // dg::blas1::axpby( 1., gradB, -1., gradLnB, gradB);
-   // //test if topological shift was correct!!
-   // X = gradB;
-   // dg::blas1::pointwiseDot(cutter, gradB, gradB);
-   // double norm = sqrt( dg::blas2::dot( gradLnB, vol3d, gradLnB) );
-   // std::cout << "rel. error of lnB is    "<<sqrt( dg::blas2::dot( gradB, vol3d, gradB))/norm<<" (doesn't fullfill boundary conditions so it was cut at separatrix)\n";
-
-   // const dg::HVec function = dg::pullback(solovev::FuncNeu(gp), g3d);
-   // dg::HVec temp(function);
-   // const dg::HVec derivative = dg::pullback(solovev::DeriNeu(gp), g3d);
-   // ds( function, temp);
-   // dg::blas1::axpby( 1., temp, -1., derivative, temp);
-   // norm = sqrt( dg::blas2::dot( derivative, vol3d, derivative) );
-   // std::cout << "rel. error of DS  is    "<<sqrt( dg::blas2::dot( temp, vol3d, temp))/norm<<"\n";
-   // err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
-   // //err = nc_put_var_double( ncid, divBID, X.data());
-    //dg::DVec psiphom = dg::pullback( solovev::FuncDirNeu(gp, psi_0, g3d.psi1()), g2d);
-    //dg::DVec psiphom = dg::pullback( solovev::mod::Psip(gp), g2d);
-    //dg::blas1::transfer( g2d.g(), X);
-    //dg::blas1::transfer( psiphom, X);
-    //err = nc_put_var_double( ncid, divBID, periodify(X, g3d_periodic).data());
-
 
     return 0;
 }

@@ -14,13 +14,13 @@ void compute_error_elliptic( const dg::geo::TokamakMagneticField& c, const dg::g
 {
     dg::Elliptic<dg::geo::CurvilinearGridX2d, dg::Composite<dg::DMatrix>, dg::DVec> pol( g2d, dg::not_normed, dg::forward);
     ////////////////////////blob solution////////////////////////////////////////
-    //const dg::DVec b        = dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d);
-    //const dg::DVec chi      = dg::pullback( dg::ONE(), g2d);
-    //const dg::DVec solution = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d);
-    //////////////////////////blob solution on X-point/////////////////////////////
-    const dg::DVec b        = dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d);
+    const dg::DVec b        = dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 480, -300, 70.,1.), g2d);
     const dg::DVec chi      = dg::pullback( dg::ONE(), g2d);
-    const dg::DVec solution = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d);
+    const dg::DVec solution = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 480, -300, 70., 1. ), g2d);
+    //////////////////////////blob solution on X-point/////////////////////////////
+    //const dg::DVec b        = dg::pullback( dg::geo::EllipticBlobDirNeuM(c,psi_0, psi_1, 420, -470, 50.,1.), g2d);
+    //const dg::DVec chi      = dg::pullback( dg::ONE(), g2d);
+    //const dg::DVec solution = dg::pullback( dg::geo::FuncDirNeu(c, psi_0, psi_1, 420, -470, 50., 1. ), g2d);
     ////////////////////////////laplace psi solution/////////////////////////////
     //const dg::DVec b =        dg::pullback( c.laplacePsip);
     //const dg::DVec chi =      dg::evaluate( dg::one, g2d);
