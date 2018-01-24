@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     unsigned n, Nx, Ny, Nz; 
-    dg::bc bcx=dg::DIR, bcz=dg::NEU_DIR, bcy=dg::PER;
+    dg::bc bcx=dg::DIR, bcy=dg::PER, bcz=dg::NEU_DIR;
     MPI_Comm comm2d;
     mpi_init2d( bcx, bcy, n, Nx, Ny, comm2d);
     dg::MPIGrid2d g2d( 0, M_PI,0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy, comm2d);
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);
-    Matrix dz3 = dg::create::dz( g3d, dg::backward);
+    Matrix dz3 = dg::create::dz( g3d, dg::centered);
     Matrix jx3 = dg::create::jumpX( g3d);
     Matrix jy3 = dg::create::jumpY( g3d);
     Matrix jz3 = dg::create::jumpZ( g3d);

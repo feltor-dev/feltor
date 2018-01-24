@@ -23,7 +23,7 @@ int main()
     unsigned n, Nx, Ny, Nz;
     std::cout << "Type in n, Nx and Ny and Nz!\n";
     std::cin >> n >> Nx >> Ny >> Nz;
-    dg::bc bcx=dg::DIR, bcz=dg::NEU_DIR, bcy=dg::PER;
+    dg::bc bcx=dg::DIR, bcy=dg::PER, bcz=dg::NEU_DIR;
     dg::Grid2d g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);
 
