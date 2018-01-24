@@ -17,45 +17,51 @@ namespace detail{
 /**
 * @brief Iterate through elements of a matrix
 *
-* searches and stores all elements with column -1 or num_rows in m, 
+* searches and stores all rows with elements with column -1 or num_rows in m, 
 * if there are no outer values
-* returns an empty matrix and leaves m untouched
-* @param m The input matrix (contains only inner points on return)
+* returns an empty matrix and leaves input untouched
+* @param in The input matrix (contains only inner points on return)
 *
 * @return a newly created Coordinate matrix holding the outer points
 */
-CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& m)
+CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& in)
 {
     //search outer values in m
-    CooSparseBlockMat<double> mat( m.num_rows, 2, m.n, m.left_size, m.right_size);
-    int index = m.data.size()/ m.n/m.n;
-    thrust::host_vector<double> data_element(m.n*m.n, 0), zero(data_element);
+    CooSparseBlockMat<double> out( in.num_rows, 2, in.n, in.left_size, in.right_size);
+    int index = in.data.size()/ in.n/in.n;
+    thrust::host_vector<double> data_element(in.n*in.n, 0), zero(data_element);
     bool found=false;
-    for( int i=0; i<m.num_rows; i++)
-        for( int d=0; d<m.blocks_per_line; d++)
+    for( int i=0; i<in.num_rows; i++)
+        for( int d=0; d<in.blocks_per_line; d++)
         {
-            if( m.cols_idx[i*m.blocks_per_line+d]==-1)
-            {
-                for( int j=0; j<m.n*m.n; j++)
-                    data_element[j] = m.data[ m.data_idx[i*m.blocks_per_line+d]*m.n*m.n + j];
-                mat.add_value( i, 0, data_element);
-                m.data_idx[i*m.blocks_per_line+d] = index; //
-                m.cols_idx[i*m.blocks_per_line+d] = 0;
+            if( in.cols_idx[i*in.blocks_per_line+d]==-1)
+            { //change the whole line
+                for( int k=0; k<in.blocks_per_line; k++)
+                {
+                    for( int j=0; j<in.n*in.n; j++)
+                        data_element[j] = in.data[ in.data_idx[i*in.blocks_per_line+k]*in.n*in.n + j];
+                    out.add_value( i, k, data_element);
+                    in.data_idx[i*in.blocks_per_line+k] = index; //
+                    in.cols_idx[i*in.blocks_per_line+k] = 0;
+                }
                 found=true;
             }
-            if( m.cols_idx[i*m.blocks_per_line+d]==m.num_cols)
+            if( in.cols_idx[i*in.blocks_per_line+d]==in.num_cols)
             {
-                for( int j=0; j<m.n*m.n; j++)
-                    data_element[j] = m.data[ m.data_idx[i*m.blocks_per_line+d]*m.n*m.n + j];
-                mat.add_value( i, 1, data_element);
-                m.data_idx[i*m.blocks_per_line+d] = index;
-                m.cols_idx[i*m.blocks_per_line+d] = m.num_cols-1;
+                for( int k=0; k<in.blocks_per_line; k++)
+                {
+                    for( int j=0; j<in.n*in.n; j++)
+                        data_element[j] = in.data[ in.data_idx[i*in.blocks_per_line+k]*in.n*in.n + j];
+                    out.add_value( i, in.blocks_per_line+k, data_element);
+                    in.data_idx[i*in.blocks_per_line+k] = index;
+                    in.cols_idx[i*in.blocks_per_line+k] = in.num_cols-1;
+                }
                 found=true;
             }
         }
     if(found)
-        m.data.insert( m.data.end(), zero.begin(), zero.end()); 
-    return mat;
+        in.data.insert( in.data.end(), zero.begin(), zero.end()); 
+    return out;
 }
 
 /**
