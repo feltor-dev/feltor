@@ -33,6 +33,8 @@ int main(int argc, char* argv[])
     unsigned n, Nx, Ny, Nz; 
     dg::bc bcx=dg::DIR, bcz=dg::NEU_DIR, bcy=dg::PER;
     MPI_Comm comm2d;
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     mpi_init2d( bcx, bcy, n, Nx, Ny, comm2d);
     dg::MPIGrid2d g2d( 0, M_PI,0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy, comm2d);
     const Vector w2d = dg::create::weights( g2d);
@@ -48,8 +50,6 @@ int main(int argc, char* argv[])
     const Vector null2 = dg::evaluate( zero, g2d);
     Vector sol2[] = {dx2d, dy2d, null2, null2};
 
-    int rank;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     exblas::udouble res;
     if(rank==0)std::cout << "WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!\n";
     if(rank==0)std::cout << "TEST 2D: DX, DY, JX, JY\n";
@@ -71,6 +71,8 @@ int main(int argc, char* argv[])
     Matrix jy3 = dg::create::jumpY( g3d);
     Matrix jz3 = dg::create::jumpZ( g3d);
     Matrix m3[] = {dx3, dy3, dz3, jx3, jy3, jz3};
+    if(rank==0)dz3.inner_matrix().display();
+    if(rank==0)dz3.outer_matrix().display();
     const Vector f3d = dg::evaluate( sin, g3d);
     const Vector dx3d = dg::evaluate( cosx, g3d);
     const Vector dy3d = dg::evaluate( cosy, g3d);

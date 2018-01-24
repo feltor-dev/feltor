@@ -28,7 +28,7 @@ namespace detail{
 CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& in)
 {
     //search outer values in m
-    CooSparseBlockMat<double> out( in.num_rows, 2, in.n, in.left_size, in.right_size);
+    CooSparseBlockMat<double> out( in.num_rows, 6, in.n, in.left_size, in.right_size);
     int index = in.data.size()/ in.n/in.n;
     thrust::host_vector<double> data_element(in.n*in.n, 0), zero(data_element);
     bool found=false;
@@ -41,7 +41,9 @@ CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& in)
                 {
                     for( int j=0; j<in.n*in.n; j++)
                         data_element[j] = in.data[ in.data_idx[i*in.blocks_per_line+k]*in.n*in.n + j];
-                    out.add_value( i, k, data_element);
+                    //assume col is either 0,1,or 2
+                    int col = in.cols_idx[i*in.blocks_per_line+k] + 1;
+                    out.add_value( i, col, data_element);
                     in.data_idx[i*in.blocks_per_line+k] = index; //
                     in.cols_idx[i*in.blocks_per_line+k] = 0;
                 }
@@ -53,7 +55,9 @@ CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& in)
                 {
                     for( int j=0; j<in.n*in.n; j++)
                         data_element[j] = in.data[ in.data_idx[i*in.blocks_per_line+k]*in.n*in.n + j];
-                    out.add_value( i, in.blocks_per_line+k, data_element);
+                    //assume col is either 3,4,or 5
+                    int col = in.cols_idx[i*in.blocks_per_line+k] - in.num_cols + 5;
+                    out.add_value( i, col, data_element);
                     in.data_idx[i*in.blocks_per_line+k] = index;
                     in.cols_idx[i*in.blocks_per_line+k] = in.num_cols-1;
                 }
@@ -61,7 +65,10 @@ CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& in)
             }
         }
     if(found)
+    {
         in.data.insert( in.data.end(), zero.begin(), zero.end()); 
+        std::cout << "Found something!\n";
+    }
     return out;
 }
 

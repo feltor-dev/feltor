@@ -230,17 +230,17 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
             for( unsigned j=0; j<n; j++)
             {
                 hbgather1[i*n+j]        = i*dim_[0]               + j;
-                hbgather2[i*n+j]        = i*dim_[0] + dim_[0] - n + j;
                 mid_gather[i*4*n+0*n+j] = i*dim_[0]               + j;
                 mid_gather[i*4*n+1*n+j] = i*dim_[0] + n           + j;
                 mid_gather[i*4*n+2*n+j] = i*dim_[0] + dim_[0]-2*n + j;
                 mid_gather[i*4*n+3*n+j] = i*dim_[0] + dim_[0]-  n + j;
-                hbscattr1[i*n+j]        =  i*(6*n) + 0*n + j;
+                hbgather2[i*n+j]        = i*dim_[0] + dim_[0]-  n + j;
+                hbscattr1[i*n+j]         = i*(6*n) + 0*n + j;
                 mid_scatter[i*4*n+0*n+j] = i*(6*n) + 1*n + j;
                 mid_scatter[i*4*n+1*n+j] = i*(6*n) + 2*n + j;
-                mid_scatter[i*4*n+1*n+j] = i*(6*n) + 3*n + j;
-                mid_scatter[i*4*n+1*n+j] = i*(6*n) + 4*n + j;
-                hbscattr2[i*n+j]        =  i*(6*n) + 5*n + j;
+                mid_scatter[i*4*n+2*n+j] = i*(6*n) + 3*n + j;
+                mid_scatter[i*4*n+3*n+j] = i*(6*n) + 4*n + j;
+                hbscattr2[i*n+j]         = i*(6*n) + 5*n + j;
             }
         break;
         case( 1):
@@ -249,16 +249,16 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
                 for( unsigned k=0; k<dim_[0]; k++)
                 {
                     hbgather1[(i*n+j)*dim_[0]+k]        = (i*dim_[1] +               j)*dim_[0] + k;
-                    hbgather2[(i*n+j)*dim_[0]+k]        = (i*dim_[1] + dim_[1] - n + j)*dim_[0] + k;
                     mid_gather[(i*4*n+0*n+j)*dim_[0]+k] = (i*dim_[1]               + j)*dim_[0] + k;
                     mid_gather[(i*4*n+1*n+j)*dim_[0]+k] = (i*dim_[1] + n           + j)*dim_[0] + k;
                     mid_gather[(i*4*n+2*n+j)*dim_[0]+k] = (i*dim_[1] + dim_[1]-2*n + j)*dim_[0] + k;
                     mid_gather[(i*4*n+3*n+j)*dim_[0]+k] = (i*dim_[1] + dim_[1]-  n + j)*dim_[0] + k;
+                    hbgather2[(i*n+j)*dim_[0]+k]        = (i*dim_[1] + dim_[1] - n + j)*dim_[0] + k;
                     hbscattr1[(i*n+j)*dim_[0]+k]         = (i*(6*n) + 0*n + j)*dim_[0] + k;
                     mid_scatter[(i*4*n+0*n+j)*dim_[0]+k] = (i*(6*n) + 1*n + j)*dim_[0] + k;
                     mid_scatter[(i*4*n+1*n+j)*dim_[0]+k] = (i*(6*n) + 2*n + j)*dim_[0] + k;
-                    mid_scatter[(i*4*n+1*n+j)*dim_[0]+k] = (i*(6*n) + 3*n + j)*dim_[0] + k;
-                    mid_scatter[(i*4*n+1*n+j)*dim_[0]+k] = (i*(6*n) + 4*n + j)*dim_[0] + k;
+                    mid_scatter[(i*4*n+2*n+j)*dim_[0]+k] = (i*(6*n) + 3*n + j)*dim_[0] + k;
+                    mid_scatter[(i*4*n+3*n+j)*dim_[0]+k] = (i*(6*n) + 4*n + j)*dim_[0] + k;
                     hbscattr2[(i*n+j)*dim_[0]+k]         = (i*(6*n) + 5*n + j)*dim_[0] + k;
                 }
         break;
@@ -267,17 +267,17 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
             for( unsigned j=0; j<dim_[0]*dim_[1]; j++)
             {
                 hbgather1[i*dim_[0]*dim_[1]+j]            = (i               )*dim_[0]*dim_[1] + j;
-                hbgather2[i*dim_[0]*dim_[1]+j]            = (i + dim_[2]-  n )*dim_[0]*dim_[1] + j;
                 mid_gather[(i*4*n+0*n)*dim_[0]*dim_[1]+j] = (i               )*dim_[0]*dim_[1] + j;
                 mid_gather[(i*4*n+1*n)*dim_[0]*dim_[1]+j] = (i + n           )*dim_[0]*dim_[1] + j;
                 mid_gather[(i*4*n+2*n)*dim_[0]*dim_[1]+j] = (i + dim_[2]-2*n )*dim_[0]*dim_[1] + j;
                 mid_gather[(i*4*n+3*n)*dim_[0]*dim_[1]+j] = (i + dim_[2]-  n )*dim_[0]*dim_[1] + j;
+                hbgather2[i*dim_[0]*dim_[1]+j]            = (i + dim_[2]-  n )*dim_[0]*dim_[1] + j;
 
                 hbscattr1[i*dim_[0]*dim_[1]+j]             = (i*(6*n) + 0*n)*dim_[0]*dim_[1] + j;
                 mid_scatter[(i*4*n+0*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 1*n)*dim_[0]*dim_[1] + j;
                 mid_scatter[(i*4*n+1*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 2*n)*dim_[0]*dim_[1] + j;
-                mid_scatter[(i*4*n+1*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 3*n)*dim_[0]*dim_[1] + j;
-                mid_scatter[(i*4*n+1*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 4*n)*dim_[0]*dim_[1] + j;
+                mid_scatter[(i*4*n+2*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 3*n)*dim_[0]*dim_[1] + j;
+                mid_scatter[(i*4*n+3*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 4*n)*dim_[0]*dim_[1] + j;
                 hbscattr2[i*dim_[0]*dim_[1]+j]             = (i*(6*n) + 5*n)*dim_[0]*dim_[1] + j;
             }
         break;
