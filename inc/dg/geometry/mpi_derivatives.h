@@ -19,10 +19,11 @@ namespace detail{
 *
 * searches and stores all rows with elements with column -1 or num_rows in m, 
 * if there are no outer values
-* returns an empty matrix and leaves input untouched
+* returns an empty matrix and leaves input untouched. The rows in question 
+* are then replace by 0 in the input matrix.
 * @param in The input matrix (contains only inner points on return)
 *
-* @return a newly created Coordinate matrix holding the outer points
+* @return a newly created Coordinate matrix holding the outer rows
 */
 CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& in)
 {
