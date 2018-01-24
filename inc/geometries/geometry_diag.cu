@@ -16,6 +16,7 @@
 #include "init.h"
 #include "magnetic_field.h"
 #include "average.h"
+#include "testfunctors.h"
 
 struct Parameters
 {
@@ -163,9 +164,12 @@ int main( int argc, char* argv[])
     dg::geo::PsiLimiter psilimiter(c.psip(), gp.psipmaxlim);
     dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, c.psip());
 
-    dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    dg::geo::FuncDirNeu blob(c, 0, 1, 480, -300, 70., 1. );
+    dg::geo::FuncDirNeu blobX(c, 0, 1, 420, -470, 50.,1.);
+
+    //dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    dg::Gaussian3d blob(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+    //dg::Gaussian3d blob(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
 
     std::vector<dg::HVec> hvisual(21);
@@ -190,7 +194,7 @@ int main( int argc, char* argv[])
     hvisual[13] = dg::evaluate( zonalflow, grid2d);
     hvisual[14] = dg::evaluate( prof, grid2d);
     hvisual[15] = dg::evaluate( blob, grid2d);
-    hvisual[16] = dg::evaluate( bath, grid2d);
+    hvisual[16] = dg::evaluate( blobX, grid2d);
     //initial functions damped and with profile
     hvisual[17] = dg::evaluate( dg::one, grid2d);
     hvisual[18] = dg::evaluate( dg::one, grid2d);
@@ -222,7 +226,7 @@ int main( int argc, char* argv[])
     std::string names[] = { "", "psip", "ipol", "invB","invbf", "KR", 
                             "KZ", "gradLnB", "iris", "pupil", "dampprof", 
                             "damp", "lim",  "zonal", "prof", "blob", 
-                            "bath", "ini1","ini2","ini3","ini4"};
+                            "blobX", "ini1","ini2","ini3","ini4"};
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
