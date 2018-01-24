@@ -195,6 +195,7 @@ struct NearestNeighborComm : public aCommunicator<Vector>
     Index gather_map1, gather_map2, scatter_map1, scatter_map2; //buffer_size
     Index gather_map_middle, scatter_map_middle;
     Buffer<Vector> buffer1, buffer2, rb1, rb2;  //buffer_size
+    Buffer<Vector> buffer_middle;
 
     void sendrecv( Vector&, Vector&, Vector& , Vector&)const;
     unsigned buffer_size() const;
@@ -283,7 +284,9 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
     }
     gather_map1 =hbgather1, gather_map2 =hbgather2;
     scatter_map1=hbscattr1, scatter_map2=hbscattr2;
+    gather_map_middle = mid_gather, scatter_map_middle = mid_scatter;
     buffer1.data().resize( buffer_size()), buffer2.data().resize( buffer_size());
+    buffer_middle.data().resize( 4*buffer_size());
     rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
 }
 
@@ -321,6 +324,8 @@ void NearestNeighborComm<I,V>::do_global_gather( const V& input, V& values) cons
     //scatter received values into values array
     thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values.begin());
     thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.begin());
+    thrust::gather( gather_map_middle.begin(), gather_map_middle.end(), input.begin(), buffer_middle.data().begin());
+    thrust::scatter( buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values.begin());
 }
 template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_scatter_reduce( const V& values, V& input) const
