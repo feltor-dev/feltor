@@ -90,7 +90,7 @@ MPI_Vector<thrust::host_vector<double> > evaluate( const TernaryOp& f, const aMP
         for( unsigned j=0; j<n; j++)
             absy[i*n+j] = (g.y0()+g.hy()*(double)(i+l.Ny()*coords[1])) + (g.hy()/2.)*(1 + g.dlt().abscissas()[j]);
     for( unsigned i=0; i<l.Nz(); i++)
-        absz[i] = (g.y0()+g.hz()*(double)(i+l.Nz()*coords[2])) + (g.hz()/2.);
+        absz[i] = (g.z0()+g.hz()*(double)(i+l.Nz()*coords[2])) + (g.hz()/2.);
 
     thrust::host_vector<double> w( l.size());
     for( unsigned s=0; s<l.Nz(); s++)
