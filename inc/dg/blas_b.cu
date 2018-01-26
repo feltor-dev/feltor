@@ -132,6 +132,7 @@ int main()
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
     std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
     for( int i=0; i<multi; i++)
         norm += dg::blas1::dot( x,y);
     t.toc();
