@@ -14,8 +14,8 @@ double cosx( double x, double y, double z) { return cos(x)*sin(y)*sin(z);}
 double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
 double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 
-typedef dg::HMatrix Matrix;
-typedef dg::HVec Vector;
+typedef dg::DMatrix Matrix;
+typedef dg::DVec Vector;
 
 int main()
 {
@@ -43,15 +43,7 @@ int main()
     for( unsigned i=0; i<4; i++)
     {
         Vector error = sol2[i];
-        //double interF = dg::blas1::dot( w2d ,f2d); res.d = interF;
-        //std::cout << "Right side integral        "<<res.i<<"\n";
         dg::blas2::symv( -1., m2[i], f2d, 1., error);
-        //for( int k=20; k<30; k++)
-        //{
-        //    double interE =  error[k*g2d.n()*g2d.Nx()] ; res.d = interE;
-        //    std::cout << "Solution integral          "<<res.i<<"\n";
-        //}
-        //if(i==0)m2[i].display(std::cout);
         dg::blas1::pointwiseDot( error, error, error);
         double norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
         std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";

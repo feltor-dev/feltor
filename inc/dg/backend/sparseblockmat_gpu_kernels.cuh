@@ -25,16 +25,16 @@ template<class value_type>
             i = (rrn)%num_rows,
             k = (rr)%n,
             j=right_range[0]+row%right_;
-        value_type temp=0;
+        y[row]*= beta;
         for( int d=0; d<blocks_per_line; d++)
         {
+            value_type temp=0;
             int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
             int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
             for( int q=0; q<n; q++) //multiplication-loop
                 temp =fma( data[ B+q], x[(J+q)*right_size+j], temp);
+            y[row] = fma( alpha, temp, y[row]);
         }
-        y[row]*= beta;
-        y[row] = fma( alpha, temp, y[row]);
     }
 
 }
@@ -57,20 +57,21 @@ template<class value_type, size_t n, size_t blocks_per_line>
     //every thread takes num_rows/grid_size rows
     for( int row = thread_id; row<size; row += grid_size)
     {
+        value_type temp[blocks_per_line]={0};
         if(right_size==1)
         {
             int rrn = row/n, k = row%n;
             int s=rrn/num_rows, i = (rrn)%num_rows;
-            value_type temp=0;
             for( int d=0; d<blocks_per_line; d++)
             {
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                 int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
                 for( int q=0; q<n; q++) //multiplication-loop
-                    temp = fma( data[ B+q], x[(J+q)], temp);
+                    temp[d] = fma( data[ B+q], x[(J+q)], temp[d]);
             }
             y[row]*= beta;
-            y[row] = fma( alpha, temp, y[row]);
+            for( int d=0; d<blocks_per_line; d++)
+                y[row] = fma( alpha, temp[d], y[row]);
         }
         else
         {
@@ -78,16 +79,16 @@ template<class value_type, size_t n, size_t blocks_per_line>
             int rrn = rr/n, k = rr%n;
             int s=rrn/num_rows, i = (rrn)%num_rows;
             int j=right_range[0]+row%right_;
-            value_type temp = 0;
             for( int d=0; d<blocks_per_line; d++)
             {
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                 int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
                 for( int q=0; q<n; q++) //multiplication-loop
-                    temp = fma( data[ B+q], x[(J+q)*right_size+j], temp);
+                    temp[d] = fma( data[ B+q], x[(J+q)*right_size+j], temp[d]);
             }
             y[row]*= beta;
-            y[row] = fma( alpha, temp, y[row]);
+            for( int d=0; d<blocks_per_line; d++)
+                y[row] = fma( alpha, temp[d], y[row]);
         }
     }
 }
@@ -164,7 +165,7 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
 template<class value_type>
  __global__ void coo_multiply_kernel(
          const value_type* __restrict__  data, const int* __restrict__  rows_idx, const int* __restrict__  cols_idx, const int* __restrict__  data_idx,
-         const int num_rows, const int num_cols, const int entry,
+         const int num_rows, const int num_cols, const int num_entries,
          const int n,
          const int left, const int right,
          value_type alpha, const value_type* __restrict__  x, value_type beta, value_type * __restrict__ y
@@ -179,13 +180,16 @@ template<class value_type>
         int s=idx/(n*right),
             k=(idx/right)%n,
             j=idx%right;
-        int I = ((s*num_rows+rows_idx[entry])*n+k)*right+j;
-        value_type temp = 0;
-        int B = data_idx[entry];
-        int J = cols_idx[entry];
-        for( int q=0; q<n; q++) //multiplication-loop
-            temp = fma( data[ (B*n + k)*n+q], x[((s*num_cols + J)*n+q)*right+j], temp);
-        y[I] = fma( alpha, temp, y[I]);
+        for( int entry=0; entry<num_entries; entry++)
+        {
+            int I = ((s*num_rows+rows_idx[entry])*n+k)*right+j;
+            value_type temp = 0;
+            int B = data_idx[entry];
+            int J = cols_idx[entry];
+            for( int q=0; q<n; q++) //multiplication-loop
+                temp = fma( data[ (B*n + k)*n+q], x[((s*num_cols + J)*n+q)*right+j], temp);
+            y[I] = fma( alpha, temp, y[I]);
+        }
     }
 
 }
@@ -202,11 +206,11 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
     const int* rows_ptr = thrust::raw_pointer_cast( rows_idx.data());
     const int* cols_ptr = thrust::raw_pointer_cast( cols_idx.data());
     const int* block_ptr = thrust::raw_pointer_cast( data_idx.data());
-    for( int i=0; i<num_entries; i++)
-    {
+    //for( int i=0; i<num_entries; i++)
+    //{
         coo_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> (
-            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, i, n, left_size, right_size, alpha, x_ptr, beta, y_ptr);
-    }
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, num_entries, n, left_size, right_size, alpha, x_ptr, beta, y_ptr);
+    //}
 }
 
 }//namespace dg
