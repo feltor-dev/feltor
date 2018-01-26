@@ -200,16 +200,17 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
 #pragma omp SIMD //very important for KNL
             for( int j=right_range[0]; j<right_range[1]; j++)
             {
-                value_type temp[blocks_per_line] = {0};
-                for( int d=0; d<blocks_per_line; d++)
-                    for( int q=0; q<n; q++) //multiplication-loop
-                        temp[d] = std::fma( dprivate[ d*n+q],
-                                    x[(J[d]+q)*right_size+j], 
-                                    temp[d]);
                 int I = ((s*num_rows + i)*n+k)*right_size+j;
                 y[I]*= beta;
                 for( int d=0; d<blocks_per_line; d++)
-                    y[I] = std::fma(alpha, temp[d], y[I]);
+                {
+                    value_type temp = 0;
+                    for( int q=0; q<n; q++) //multiplication-loop
+                        temp = std::fma( dprivate[ d*n+q],
+                                    x[(J[d]+q)*right_size+j], 
+                                    temp);
+                    y[I] = std::fma(alpha, temp, y[I]);
+                }
             }
         }
     }
