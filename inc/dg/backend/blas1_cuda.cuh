@@ -108,7 +108,7 @@ template<class value_type>
     for( int i = thread_id; i<size; i += grid_size)
     {
         double temp = z_ptr[i]*gamma;
-        z_ptr[i] = fma( alpha, x_ptr[i]*y_ptr[i], temp);
+        z_ptr[i] = fma( alpha*x_ptr[i], y_ptr[i], temp);
     }
 }
 template<class value_type>
@@ -158,8 +158,8 @@ template<class value_type>
     for( int i = thread_id; i<size; i += grid_size) 
     {
         double temp = z_ptr[i]*gamma;
-        temp = fma( alpha, x1_ptr[i]*y1_ptr[i], temp);
-        temp = fma(  beta, x2_ptr[i]*y2_ptr[i], temp);
+        temp = fma( alpha*x1_ptr[i], y1_ptr[i], temp);
+        temp = fma(  beta*x2_ptr[i], y2_ptr[i], temp);
         z_ptr[i] = temp;
     }
 }
@@ -191,7 +191,7 @@ template<class value_type>
     for( int i = thread_id; i<size; i += grid_size) 
     {
         double temp = y[i]*beta;
-        y[i] = fma( alpha, (x1[i]*x2[i])*x3[i], temp);
+        y[i] = fma( alpha*x1[i], x2[i]*x3[i], temp);
     }
 }
 template<class value_type>

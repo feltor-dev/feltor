@@ -109,7 +109,7 @@ inline void doPointwiseDot(
     for( size_t i=0; i<N; i++)
     {
         double temp = z[i]*gamma;
-        z[i] = std::fma( alpha, x[i]*y[i], temp);
+        z[i] = std::fma( alpha*x[i], y[i], temp);
     }
 }
 
@@ -143,8 +143,8 @@ inline void doPointwiseDot(
     for( size_t i=0; i<N; i++)
     {
         double temp = z[i]*gamma;
-        temp = std::fma( alpha, x1[i]*y1[i], temp);
-        temp = std::fma(  beta, x2[i]*y2[i], temp);
+        temp = std::fma( alpha*x1[i], y1[i], temp);
+        temp = std::fma(  beta*x2[i], y2[i], temp);
         z[i] = temp;
     }
 }
@@ -161,7 +161,7 @@ inline void doPointwiseDot(
     for( size_t i=0; i<N; i++)
     {
         double temp = y[i]*beta;
-        y[i] = std::fma( alpha, (x1[i]*x2[i])*x3[i], temp);
+        y[i] = std::fma( alpha*x1[i], x2[i]*x3[i], temp);
     }
 }
 
