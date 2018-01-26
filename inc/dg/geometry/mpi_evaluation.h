@@ -38,10 +38,16 @@ MPI_Vector<thrust::host_vector<double> > evaluate( const BinaryOp& f, const aMPI
     thrust::host_vector<double> absy( l.n()*l.Ny());
     for( unsigned i=0; i<l.Nx(); i++)
         for( unsigned j=0; j<n; j++)
-            absx[i*n+j] = (g.x0()+g.hx()*(double)(i+l.Nx()*coords[0])) + (g.hx()/2.)*(1 + g.dlt().abscissas()[j]);
+        {
+            double xmiddle = std::fma( g.hx(), (double)(i+l.Nx()*coords[0]), g.x0());
+            absx[i*n+j] = std::fma( (g.hx()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+        }
     for( unsigned i=0; i<l.Ny(); i++)
         for( unsigned j=0; j<n; j++)
-            absy[i*n+j] = (g.y0()+g.hy()*(double)(i+l.Ny()*coords[1])) + (g.hy()/2.)*(1 + g.dlt().abscissas()[j]);
+        {
+            double ymiddle = std::fma( g.hy(), (double)(i+l.Ny()*coords[1]), g.y0());
+            absy[i*n+j] = std::fma( (g.hy()/2.), (1. + g.dlt().abscissas()[j]), ymiddle );
+        }
 
     thrust::host_vector<double> w( l.size());
     for( unsigned i=0; i<l.Ny(); i++)
@@ -85,12 +91,21 @@ MPI_Vector<thrust::host_vector<double> > evaluate( const TernaryOp& f, const aMP
     thrust::host_vector<double> absz(       l.Nz());
     for( unsigned i=0; i<l.Nx(); i++)
         for( unsigned j=0; j<n; j++)
-            absx[i*n+j] = (g.x0()+g.hx()*(double)(i+l.Nx()*coords[0])) + (g.hx()/2.)*(1 + g.dlt().abscissas()[j]);
+        {
+            double xmiddle = std::fma( g.hx(), (double)(i+l.Nx()*coords[0]), g.x0());
+            absx[i*n+j] = std::fma( (g.hx()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+        }
     for( unsigned i=0; i<l.Ny(); i++)
         for( unsigned j=0; j<n; j++)
-            absy[i*n+j] = (g.y0()+g.hy()*(double)(i+l.Ny()*coords[1])) + (g.hy()/2.)*(1 + g.dlt().abscissas()[j]);
+        {
+            double ymiddle = std::fma( g.hy(), (double)(i+l.Ny()*coords[1]), g.y0());
+            absy[i*n+j] = std::fma( (g.hy()/2.), (1. + g.dlt().abscissas()[j]), ymiddle );
+        }
     for( unsigned i=0; i<l.Nz(); i++)
-        absz[i] = (g.z0()+g.hz()*(double)(i+l.Nz()*coords[2])) + (g.hz()/2.);
+    {
+        double zmiddle = std::fma( g.hz(), (double)(i+l.Nz()*coords[2]), g.z0());
+        absz[i] = std::fma( (g.hz()/2.), (1.), zmiddle );
+    }
 
     thrust::host_vector<double> w( l.size());
     for( unsigned s=0; s<l.Nz(); s++)

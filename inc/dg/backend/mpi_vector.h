@@ -193,7 +193,9 @@ struct NearestNeighborComm : public aCommunicator<Vector>
     unsigned direction_;
     bool silent_;
     Index gather_map1, gather_map2, scatter_map1, scatter_map2; //buffer_size
+    Index gather_map_middle, scatter_map_middle;
     Buffer<Vector> buffer1, buffer2, rb1, rb2;  //buffer_size
+    Buffer<Vector> buffer_middle;
 
     void sendrecv( Vector&, Vector&, Vector& , Vector&)const;
     unsigned buffer_size() const;
@@ -220,53 +222,71 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
     }
     assert( direction <3);
     thrust::host_vector<int> hbgather1(buffer_size()), hbgather2(hbgather1), hbscattr1(buffer_size()), hbscattr2(hbscattr1);
+    thrust::host_vector<int> mid_gather( 4*buffer_size()), mid_scatter( 4*buffer_size());
     switch( direction)
     {
         case( 0):
         for( unsigned i=0; i<dim_[2]*dim_[1]; i++)
-        {
-            for( unsigned j=0; j<n_; j++)
+            for( unsigned j=0; j<n; j++)
             {
-                hbgather1[i*n+j] = (i*dim_[0]               + j);
-                hbgather2[i*n+j] = (i*dim_[0] + dim_[0] - n + j);
-                hbscattr1[i*n+j] = (i*(2*n)                      + j);
-                hbscattr2[i*n+j] = (i*(2*n)+ (2*n) - n + j);
+                hbgather1[i*n+j]        = i*dim_[0]               + j;
+                mid_gather[i*4*n+0*n+j] = i*dim_[0]               + j;
+                mid_gather[i*4*n+1*n+j] = i*dim_[0] + n           + j;
+                mid_gather[i*4*n+2*n+j] = i*dim_[0] + dim_[0]-2*n + j;
+                mid_gather[i*4*n+3*n+j] = i*dim_[0] + dim_[0]-  n + j;
+                hbgather2[i*n+j]        = i*dim_[0] + dim_[0]-  n + j;
+                hbscattr1[i*n+j]         = i*(6*n) + 0*n + j;
+                mid_scatter[i*4*n+0*n+j] = i*(6*n) + 1*n + j;
+                mid_scatter[i*4*n+1*n+j] = i*(6*n) + 2*n + j;
+                mid_scatter[i*4*n+2*n+j] = i*(6*n) + 3*n + j;
+                mid_scatter[i*4*n+3*n+j] = i*(6*n) + 4*n + j;
+                hbscattr2[i*n+j]         = i*(6*n) + 5*n + j;
             }
-        }
         break;
         case( 1):
         for( unsigned i=0; i<dim_[2]; i++)
-        {
             for( unsigned j=0; j<n; j++)
                 for( unsigned k=0; k<dim_[0]; k++)
                 {
-                    hbgather1[(i*n+j)*dim_[0]+k] = 
-                        (i*dim_[1] +               j)*dim_[0] + k;
-                    hbgather2[(i*n+j)*dim_[0]+k] = 
-                        (i*dim_[1] + dim_[1] - n + j)*dim_[0] + k;
-                    hbscattr1[(i*n+j)*dim_[0]+k] = 
-                        (i*(          2*n) +                       j)*dim_[0] + k;
-                    hbscattr2[(i*n+j)*dim_[0]+k] = 
-                        (i*(          2*n) + (          2*n) - n + j)*dim_[0] + k;
+                    hbgather1[(i*n+j)*dim_[0]+k]        = (i*dim_[1] +               j)*dim_[0] + k;
+                    mid_gather[(i*4*n+0*n+j)*dim_[0]+k] = (i*dim_[1]               + j)*dim_[0] + k;
+                    mid_gather[(i*4*n+1*n+j)*dim_[0]+k] = (i*dim_[1] + n           + j)*dim_[0] + k;
+                    mid_gather[(i*4*n+2*n+j)*dim_[0]+k] = (i*dim_[1] + dim_[1]-2*n + j)*dim_[0] + k;
+                    mid_gather[(i*4*n+3*n+j)*dim_[0]+k] = (i*dim_[1] + dim_[1]-  n + j)*dim_[0] + k;
+                    hbgather2[(i*n+j)*dim_[0]+k]        = (i*dim_[1] + dim_[1] - n + j)*dim_[0] + k;
+                    hbscattr1[(i*n+j)*dim_[0]+k]         = (i*(6*n) + 0*n + j)*dim_[0] + k;
+                    mid_scatter[(i*4*n+0*n+j)*dim_[0]+k] = (i*(6*n) + 1*n + j)*dim_[0] + k;
+                    mid_scatter[(i*4*n+1*n+j)*dim_[0]+k] = (i*(6*n) + 2*n + j)*dim_[0] + k;
+                    mid_scatter[(i*4*n+2*n+j)*dim_[0]+k] = (i*(6*n) + 3*n + j)*dim_[0] + k;
+                    mid_scatter[(i*4*n+3*n+j)*dim_[0]+k] = (i*(6*n) + 4*n + j)*dim_[0] + k;
+                    hbscattr2[(i*n+j)*dim_[0]+k]         = (i*(6*n) + 5*n + j)*dim_[0] + k;
                 }
-        }
         break;
         case( 2):
         for( unsigned i=0; i<n; i++)
-        {
             for( unsigned j=0; j<dim_[0]*dim_[1]; j++)
             {
-                hbgather1[i*dim_[0]*dim_[1]+j] =  i*dim_[0]*dim_[1]            + j;
-                hbgather2[i*dim_[0]*dim_[1]+j] = (i+dim_[2]-n)*dim_[0]*dim_[1] + j;
-                hbscattr1[i*dim_[0]*dim_[1]+j] =  i*dim_[0]*dim_[1]            + j;
-                hbscattr2[i*dim_[0]*dim_[1]+j] = (i+(  2*n)-n)*dim_[0]*dim_[1] + j;
+                hbgather1[i*dim_[0]*dim_[1]+j]            = (i               )*dim_[0]*dim_[1] + j;
+                mid_gather[(i*4*n+0*n)*dim_[0]*dim_[1]+j] = (i               )*dim_[0]*dim_[1] + j;
+                mid_gather[(i*4*n+1*n)*dim_[0]*dim_[1]+j] = (i + n           )*dim_[0]*dim_[1] + j;
+                mid_gather[(i*4*n+2*n)*dim_[0]*dim_[1]+j] = (i + dim_[2]-2*n )*dim_[0]*dim_[1] + j;
+                mid_gather[(i*4*n+3*n)*dim_[0]*dim_[1]+j] = (i + dim_[2]-  n )*dim_[0]*dim_[1] + j;
+                hbgather2[i*dim_[0]*dim_[1]+j]            = (i + dim_[2]-  n )*dim_[0]*dim_[1] + j;
+
+                hbscattr1[i*dim_[0]*dim_[1]+j]             = (i*(6*n) + 0*n)*dim_[0]*dim_[1] + j;
+                mid_scatter[(i*4*n+0*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 1*n)*dim_[0]*dim_[1] + j;
+                mid_scatter[(i*4*n+1*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 2*n)*dim_[0]*dim_[1] + j;
+                mid_scatter[(i*4*n+2*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 3*n)*dim_[0]*dim_[1] + j;
+                mid_scatter[(i*4*n+3*n)*dim_[0]*dim_[1]+j] = (i*(6*n) + 4*n)*dim_[0]*dim_[1] + j;
+                hbscattr2[i*dim_[0]*dim_[1]+j]             = (i*(6*n) + 5*n)*dim_[0]*dim_[1] + j;
             }
-        }
         break;
     }
     gather_map1 =hbgather1, gather_map2 =hbgather2;
     scatter_map1=hbscattr1, scatter_map2=hbscattr2;
+    gather_map_middle = mid_gather, scatter_map_middle = mid_scatter;
     buffer1.data().resize( buffer_size()), buffer2.data().resize( buffer_size());
+    buffer_middle.data().resize( 4*buffer_size());
     rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
 }
 
@@ -274,7 +294,7 @@ template<class I, class V>
 unsigned NearestNeighborComm<I,V>::do_size() const
 {
     if( silent_) return 0;
-    return 2*buffer_size();
+    return 6*buffer_size(); //3 buffers on each side
 }
 
 template<class I, class V>
@@ -304,6 +324,8 @@ void NearestNeighborComm<I,V>::do_global_gather( const V& input, V& values) cons
     //scatter received values into values array
     thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values.begin());
     thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.begin());
+    thrust::gather( gather_map_middle.begin(), gather_map_middle.end(), input.begin(), buffer_middle.data().begin());
+    thrust::scatter( buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values.begin());
 }
 template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_scatter_reduce( const V& values, V& input) const

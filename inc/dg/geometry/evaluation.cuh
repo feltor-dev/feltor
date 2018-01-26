@@ -1,15 +1,39 @@
 #pragma once
 
 #include <cassert> 
+#include <cmath>
 #include <thrust/host_vector.h>
 #include "grid.h"
-#include "weights.cuh"
 
 /*! @file 
   @brief Function discretization routines
   */
 namespace dg
 {
+///@cond
+namespace create
+{
+/**
+* @brief create host_vector containing 1d X-space abscissas 
+*
+* same as evaluation of f(x) = x on the grid
+* @param g The grid 
+*
+* @return Host Vector
+*/
+thrust::host_vector<double> abscissas( const Grid1d& g)
+{
+    thrust::host_vector<double> abs(g.size());
+    for( unsigned i=0; i<g.N(); i++)
+        for( unsigned j=0; j<g.n(); j++)
+        {
+            double xmiddle = std::fma( g.h(), (double)(i), g.x0());
+            abs[i*g.n()+j] = std::fma( (g.h()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+        }
+    return abs;
+}
+}//
+///@endcond
 
 ///@addtogroup evaluation
 ///@{
@@ -66,20 +90,17 @@ thrust::host_vector<double> evaluate( const BinaryOp& f, const aTopology2d& g)
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
 
-    //choose layout in the comments
     thrust::host_vector<double> v( g.size());
     for( unsigned i=0; i<gy.N(); i++)
         for( unsigned k=0; k<n; k++)
             for( unsigned j=0; j<gx.N(); j++)
-                for( unsigned l=0; l<n; l++)
-                    //v[ i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k]);
-                    v[ ((i*n+k)*g.Nx() + j)*n + l] = f( absx[j*n+l], absy[i*n+k]);
+                for( unsigned r=0; r<n; r++)
+                    v[ ((i*n+k)*g.Nx() + j)*n + r] = f( absx[j*n+r], absy[i*n+k]);
     return v;
 };
 ///@cond
 thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology2d& g)
 {
-    //return evaluate<double(&)(double, double), n>( f, g );
     return evaluate<double(double, double)>( *f, g);
 };
 ///@endcond
@@ -113,14 +134,12 @@ thrust::host_vector<double> evaluate( const TernaryOp& f, const aTopology3d& g)
             for( unsigned k=0; k<n; k++)
                 for( unsigned j=0; j<gx.N(); j++)
                     for( unsigned l=0; l<n; l++)
-                        //v[ s*g.Nx()*g.Ny()*n*n + i*g.Nx()*n*n + j*n*n + k*n + l] = f( absx[j*n+l], absy[i*n+k], absz[s]);
                         v[ (((s*gy.N()+i)*n+k)*g.Nx() + j)*n + l] = f( absx[j*n+l], absy[i*n+k], absz[s]);
     return v;
 };
 ///@cond
 thrust::host_vector<double> evaluate( double(f)(double, double, double), const aTopology3d& g)
 {
-    //return evaluate<double(&)(double, double), n>( f, g );
     return evaluate<double(double, double, double)>( *f, g);
 };
 ///@endcond
