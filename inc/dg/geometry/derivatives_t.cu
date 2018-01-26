@@ -52,7 +52,7 @@ int main()
     const Vector w3d = dg::create::weights( g3d);
     Matrix dx3 = dg::create::dx( g3d, dg::forward);
     Matrix dy3 = dg::create::dy( g3d, dg::centered);
-    Matrix dz3 = dg::create::dz( g3d, dg::centered);
+    Matrix dz3 = dg::create::dz( g3d, dg::backward);
     Matrix jx3 = dg::create::jumpX( g3d);
     Matrix jy3 = dg::create::jumpY( g3d);
     Matrix jz3 = dg::create::jumpZ( g3d);

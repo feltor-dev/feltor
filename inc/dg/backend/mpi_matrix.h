@@ -108,9 +108,6 @@ struct RowColDistMat
     {
         if( m_c.get().size() == 0) //no communication needed
         {
-            int rank; 
-            MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-            if(rank==0)std::cout << "Silent!\n";
             dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(), 
                        typename dg::MatrixTraits<LocalMatrixInner>::matrix_category(), 
                        typename dg::VectorTraits<container>::vector_category() );

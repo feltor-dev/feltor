@@ -71,8 +71,6 @@ int main(int argc, char* argv[])
     Matrix jy3 = dg::create::jumpY( g3d);
     Matrix jz3 = dg::create::jumpZ( g3d);
     Matrix m3[] = {dx3, dy3, dz3, jx3, jy3, jz3};
-    if(rank==0)dz3.inner_matrix().display();
-    if(rank==0)dz3.outer_matrix().display();
     const Vector f3d = dg::evaluate( sin, g3d);
     const Vector dx3d = dg::evaluate( cosx, g3d);
     const Vector dy3d = dg::evaluate( cosy, g3d);
