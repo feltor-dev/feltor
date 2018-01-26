@@ -117,7 +117,6 @@ int main()
         dg::blas1::axpbypgz( 1., x, -1., y, 3., x);
     t.toc();
     std::cout<<"AXPBYPGZ (1*x-1.*y+3*x=x) (A)    "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::pointwiseDot(  y, x, x);
@@ -142,7 +141,6 @@ int main()
         norm += dg::blas2::dot( w2d, y);
     t.toc();
     std::cout<<"DOT2(y,w,y) (A) took             " <<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
-
     t.tic();
     for( int i=0; i<multi; i++)
     {
