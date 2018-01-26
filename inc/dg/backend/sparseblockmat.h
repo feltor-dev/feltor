@@ -240,22 +240,23 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, value_type alpha, cons
     }
 
 
-    //simplest implementation
+    //simplest implementation (all optimization must respect the order of operations)
     for( int s=0; s<left_size; s++)
     for( int i=0; i<num_rows; i++)
     for( int k=0; k<n; k++)
     for( int j=right_range[0]; j<right_range[1]; j++)
     {
-        value_type temp[blocks_per_line] = {0};
-        for( int d=0; d<blocks_per_line; d++)
-        for( int q=0; q<n; q++) //multiplication-loop
-            temp[d] = std::fma( data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q],
-                        x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j],
-                        temp[d]);
         int I = ((s*num_rows + i)*n+k)*right_size+j;
         y[I]*= beta;
         for( int d=0; d<blocks_per_line; d++)
-            y[I] = std::fma( alpha,temp[d], y[I]);
+        {
+            value_type temp = 0;
+            for( int q=0; q<n; q++) //multiplication-loop
+                temp = std::fma( data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q],
+                            x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j],
+                            temp);
+            y[I] = std::fma( alpha,temp, y[I]);
+        }
     }
 }
 
@@ -275,9 +276,9 @@ void CooSparseBlockMat<value_type>::symv( SharedVectorTag, value_type alpha, con
 
     //simplest implementation (sums block by block)
     for( int s=0; s<left_size; s++)
-    for( int i=0; i<num_entries; i++)
     for( int k=0; k<n; k++)
     for( int j=0; j<right_size; j++)
+    for( int i=0; i<num_entries; i++)
     {
         value_type temp = 0;
         for( int q=0; q<n; q++) //multiplication-loop
