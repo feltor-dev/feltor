@@ -1,31 +1,27 @@
 #include <iostream>
 #include <iomanip>
+#include <cmath>
 #include <mpi.h>
 
 #include "dg/backend/mpi_init.h"
-#include "dg/backend/typedefs.cuh"
 #include "dg/blas.h"
 #include "mpi_evaluation.h"
 #include "mpi_derivatives.h"
 #include "mpi_weights.h"
 
 double zero( double x, double y) { return 0;}
-double sin(  double x, double y) { return sin(x)*sin(y);}
+double sine( double x, double y) { return sin(x)*sin(y);}
 double cosx( double x, double y) { return cos(x)*sin(y);}
 double cosy( double x, double y) { return cos(y)*sin(x);}
 double zero( double x, double y, double z) { return 0;}
-double sin(  double x, double y, double z) { return sin(x)*sin(y)*sin(z);}
+double sine( double x, double y, double z) { return sin(x)*sin(y)*sin(z);}
 double cosx( double x, double y, double z) { return cos(x)*sin(y)*sin(z);}
 double cosy( double x, double y, double z) { return cos(y)*sin(x)*sin(z);}
 double cosz( double x, double y, double z) { return cos(z)*sin(x)*sin(y);}
 
 
-//typedef dg::RowColDistMat<dg::EllSparseBlockMat<double>, dg::CooSparseBlockMat<double>, dg::NNCH> Matrix;
-//typedef dg::MPI_Vector<thrust::host_vector<double> > Vector;
-//typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice<double>, dg::CooSparseBlockMatDevice<double>, dg::NNCD> Matrix;
-//typedef dg::MPI_Vector<thrust::device_vector<double> > Vector;
-typedef dg::MDMatrix Matrix;
-typedef dg::MDVec Vector;
+typedef dg::MHMatrix Matrix;
+typedef dg::MHVec Vector;
 
 int main(int argc, char* argv[])
 {
@@ -44,7 +40,7 @@ int main(int argc, char* argv[])
     Matrix jx2 = dg::create::jumpX( g2d);
     Matrix jy2 = dg::create::jumpY( g2d);
     Matrix m2[] = {dx2, dy2, jx2, jy2};
-    const Vector f2d = dg::evaluate( sin, g2d);
+    const Vector f2d = dg::evaluate( sine, g2d);
     const Vector dx2d = dg::evaluate( cosx, g2d);
     const Vector dy2d = dg::evaluate( cosy, g2d);
     const Vector null2 = dg::evaluate( zero, g2d);
@@ -56,8 +52,16 @@ int main(int argc, char* argv[])
     for( unsigned i=0; i<4; i++)
     {
         Vector error = sol2[i];
+        double interF = dg::blas1::dot( w2d ,f2d); res.d = interF;
+        if(rank==0)std::cout << "Right side integral        "<<res.i<<"\n";
         dg::blas2::symv( -1., m2[i], f2d, 1., error);
-        double norm = sqrt(dg::blas2::dot( error, w2d, error)); res.d = norm;
+        for( int k=0; k<10; k++)
+        {
+            double interE = error.data()[k*g2d.n()*g2d.local().Nx()]; res.d = interE;
+            if(rank==0)std::cout << "Solution integral          "<<res.i<<"\n";
+        }
+        dg::blas1::pointwiseDot( error, error, error);
+        double norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
         if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";
     }
     MPI_Comm comm3d;
@@ -71,7 +75,7 @@ int main(int argc, char* argv[])
     Matrix jy3 = dg::create::jumpY( g3d);
     Matrix jz3 = dg::create::jumpZ( g3d);
     Matrix m3[] = {dx3, dy3, dz3, jx3, jy3, jz3};
-    const Vector f3d = dg::evaluate( sin, g3d);
+    const Vector f3d = dg::evaluate( sine, g3d);
     const Vector dx3d = dg::evaluate( cosx, g3d);
     const Vector dy3d = dg::evaluate( cosy, g3d);
     const Vector dz3d = dg::evaluate( cosz, g3d);

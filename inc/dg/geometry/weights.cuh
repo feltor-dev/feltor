@@ -12,28 +12,6 @@
 namespace dg{
 namespace create{
     
-///@cond
-/**
-* @brief create host_vector containing 1d X-space abscissas 
-*
-* same as evaluation of f(x) = x on the grid
-* @param g The grid 
-*
-* @return Host Vector
-*/
-thrust::host_vector<double> abscissas( const Grid1d& g)
-{
-    thrust::host_vector<double> v(g.size()); 
-    for( unsigned i=0; i<g.N(); i++)
-    {
-        for( unsigned j=0; j<g.n(); j++)
-            v[i*g.n()+j] = (g.x0()+g.h()*(double)i) + (g.h()/2.)*(1 + g.dlt().abscissas()[j]);
-    }
-    return v;
-}
-///@endcond
-
-
 ///@addtogroup highlevel
 ///@{
 

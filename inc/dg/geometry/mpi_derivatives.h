@@ -67,7 +67,6 @@ CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& in)
     if(found)
     {
         in.data.insert( in.data.end(), zero.begin(), zero.end()); 
-        std::cout << "Found something!\n";
     }
     return out;
 }

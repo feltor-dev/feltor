@@ -38,10 +38,40 @@ MPI_Vector<thrust::host_vector<double> > evaluate( const BinaryOp& f, const aMPI
     thrust::host_vector<double> absy( l.n()*l.Ny());
     for( unsigned i=0; i<l.Nx(); i++)
         for( unsigned j=0; j<n; j++)
-            absx[i*n+j] = (g.x0()+g.hx()*(double)(i+l.Nx()*coords[0])) + (g.hx()/2.)*(1 + g.dlt().abscissas()[j]);
+        {
+            double xmiddle = std::fma( g.hx(), (double)(i+l.Nx()*coords[0]), g.x0());
+            absx[i*n+j] = std::fma( (g.hx()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+        }
     for( unsigned i=0; i<l.Ny(); i++)
         for( unsigned j=0; j<n; j++)
-            absy[i*n+j] = (g.y0()+g.hy()*(double)(i+l.Ny()*coords[1])) + (g.hy()/2.)*(1 + g.dlt().abscissas()[j]);
+        {
+            double ymiddle = std::fma( g.hy(), (double)(i+l.Nx()*coords[1]), g.y0());
+            absy[i*n+j] = std::fma( (g.hy()/2.), (1. + g.dlt().abscissas()[j]), ymiddle );
+        }
+
+    //int rank; 
+    //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    //exblas::udouble res;
+    //res.d = g.hx();
+    //if(rank==0)std::cout << "hX "<<res.i<<"\n";
+    //res.d = g.hy();
+    //if(rank==0)std::cout << "hY "<<res.i<<"\n";
+    //res.d = g.x0();
+    //if(rank==0)std::cout << "X0 "<<res.i<<"\n";
+    //res.d = g.y0();
+    //if(rank==0)std::cout << "Y0 "<<res.i<<"\n";
+    //for( int k=0; k<10; k++)
+    //{
+    //    double interE =  absx[k] ; res.d = interE;
+    //    if(rank==0)std::cout << "k "<<k<<" AbsX "<<res.i<<"\n";
+    //    double interF =  absy[k] ; res.d = interF;
+    //    if(rank==0)std::cout << "k "<<k<<" AbsY "<<res.i<<"\n";
+    //}
+    //for( unsigned k=0; k<g.n(); k++)
+    //{
+    //    double interE = g.dlt().abscissas()[k]; res.d = interE;
+    //    if(rank==0)std::cout << "k "<<k<<" AbsX "<<res.i<<"\n";
+    //}
 
     thrust::host_vector<double> w( l.size());
     for( unsigned i=0; i<l.Ny(); i++)
