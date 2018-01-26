@@ -296,19 +296,26 @@ void EllSparseBlockMat<T>::display( std::ostream& os) const
     os << "right_size            "<<right_size<<"\n";
     os << "right_range_0         "<<right_range[0]<<"\n";
     os << "right_range_1         "<<right_range[1]<<"\n";
-    os << "Columns: \n";
+    os << "Column indices: \n";
     for( int i=0; i<num_rows; i++)
     {
         for( int d=0; d<blocks_per_line; d++)
             os << cols_idx[i*blocks_per_line + d] <<" ";
         os << "\n";
     }
-    os << "\n Data: \n";
+    os << "\n Data indices: \n";
     for( int i=0; i<num_rows; i++)
     {
         for( int d=0; d<blocks_per_line; d++)
             os << data_idx[i*blocks_per_line + d] <<" ";
         os << "\n";
+    }
+    os << "\n Data: \n";
+    for( unsigned i=0; i<data.size(); i++)
+    {
+        exblas::udouble res;
+        res.d = data[i];
+        os << res.d <<"\t"<<res.i<<"\n";
     }
     os << std::endl;
     
