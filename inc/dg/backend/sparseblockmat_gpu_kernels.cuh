@@ -185,7 +185,6 @@ template<class value_type>
         int J = cols_idx[entry];
         for( int q=0; q<n; q++) //multiplication-loop
             temp = fma( data[ (B*n + k)*n+q], x[((s*num_cols + J)*n+q)*right+j], temp);
-        y[I]*= beta;
         y[I] = fma( alpha, temp, y[I]);
     }
 

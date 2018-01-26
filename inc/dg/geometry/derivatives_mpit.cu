@@ -60,9 +60,10 @@ int main(int argc, char* argv[])
             double interE = error.data()[k*g2d.n()*g2d.local().Nx()]; res.d = interE;
             if(rank==0)std::cout << "Solution integral          "<<res.i<<"\n";
         }
-        if(i==0&&rank==0){m2[i].inner_matrix().display(std::cout);
-            m2[i].outer_matrix().display(std::cout);
-        }
+        //if(i==0&&rank==0){
+        //    m2[i].inner_matrix().display(std::cout, true);
+        //    m2[i].outer_matrix().display(std::cout, true);
+        //}
         dg::blas1::pointwiseDot( error, error, error);
         double norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
         if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";

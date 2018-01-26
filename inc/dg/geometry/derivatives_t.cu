@@ -51,7 +51,7 @@ int main()
             double interE =  error[k*g2d.n()*g2d.Nx()] ; res.d = interE;
             std::cout << "Solution integral          "<<res.i<<"\n";
         }
-        if(i==0)m2[i].display(std::cout);
+        //if(i==0)m2[i].display(std::cout);
         dg::blas1::pointwiseDot( error, error, error);
         double norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
         std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";

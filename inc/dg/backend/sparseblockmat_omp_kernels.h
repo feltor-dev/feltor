@@ -280,7 +280,6 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
             temp = std::fma( data[ (data_idx[i]*n + k)*n+q],
                 x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
                 temp);
-        y[I]*= beta;
         y[I] = std::fma(alpha, temp, y[I]);
     }
 }
