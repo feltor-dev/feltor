@@ -29,35 +29,42 @@ int main()
 {
     dg::Timer t;
     unsigned n, Nx, Ny, Nz; 
-    std::cout << "Type n, Nx, Ny and Nz ( Nx and Ny shall be multiples of 2)\n";
+    std::cout << "This program benchmarks basic vector and matrix-vector operations on the machine. These operations should be memory bandwidth bound. ";
+    std::cout << "We therefore convert the measured time into a bandwidth using the given vector size and the STREAM convention for counting memory operations (each read and each write count as one memop. ";
+    std::cout << "In an ideal case all operations perform with the same speed (that of the AXPBY operation, which is certainly memory bandwidth bound). With fast memory (GPU, XeonPhi...) the matrix-vector multiplications can be slower however\n";
+    std::cout << "Input parameters are: \n";
+    std::cout << "    n: # of polynomial coefficients = block size in matrices\n";
+    std::cout << "   Nx: # of cells in x (must be multiple of 2)\n";
+    std::cout << "   Ny: # of cells in y (must be multiple of 2)\n";
+    std::cout << "   Nz: # of cells in z\n";
+    std::cout << "Type n (3), Nx (512) , Ny (512) and Nz (10) \n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d grid(      0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
     dg::Grid3d grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
     Vector w2d;
     dg::blas1::transfer( dg::create::weights(grid), w2d);
 
-    std::cout<<"Evaluate a function on the grid\n";
+    //std::cout<<"Evaluate a function on the grid\n";
     t.tic();
     ArrayVec x;
     dg::blas1::transfer( dg::evaluate( function, grid), x);
     t.toc();
-    std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
-    std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
+    //std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
+    //std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
     value_type gbytes=(value_type)x.size()*x[0].size()*sizeof(value_type)/1e9;
-    std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
-    std::cout << "Generate interpolation and projection\n";
+    std::cout << "Size of vectors is "<<gbytes<<" GB\n";
     dg::MultiMatrix<Matrix, ArrayVec> inter, project; 
     dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
     dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
     //dg::IDMatrix inter = dg::create::interpolation( grid, grid_half);
     //dg::IDMatrix project = dg::create::projection( grid_half, grid);
-    std::cout << "Done...\n";
     int multi=100;
     //t.tic();
     value_type norm=0;
     ArrayVec y(x), z(x), u(x), v(x);
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
+    dg::blas2::symv( M, x, y);
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
@@ -149,7 +156,6 @@ int main()
     }
     t.toc();
     std::cout<<"DOT2(x,w,y) took                 " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them
-    std::cout<<norm<<std::endl;
 
     return 0;
 }

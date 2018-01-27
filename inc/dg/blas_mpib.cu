@@ -16,40 +16,45 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 double function(double x, double y, double z){ return sin(y)*sin(x);}
 
-typedef dg::MDVec Vector;
-typedef dg::MDMatrix Matrix;
+using Vector = dg::MDVec;
+using Matrix = dg::MDMatrix;
+using ArrayVec = std::array<Vector, 10>;
 
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
     unsigned n, Nx, Ny, Nz; 
     MPI_Comm comm;
-    dg::mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
+   
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    if(rank==0)std::cout << "This program is the MPI equivalent of blas_b. See blas_b for more information.\n";
+    if(rank==0)std::cout << "Additional input parameters: \n";
+    if(rank==0)std::cout << "    npx: # of processes in x (must divide Nx and total # of processes!\n";
+    if(rank==0)std::cout << "    npy: # of processes in y (must divide Ny and total # of processes!\n";
+    if(rank==0)std::cout << "    npz: # of processes in z (must divide Nz and total # of processes!\n";
+    dg::mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
 
     dg::MPIGrid3d grid( 0., lx, 0, ly,0., ly, n, Nx, Ny, Nz, comm);
     dg::MPIGrid3d grid_half = grid; grid_half.multiplyCellNumbers(0.5, 0.5);
     Vector w2d;
     dg::blas1::transfer( dg::create::weights(grid), w2d);
-    if(rank==0)std::cout<<"Evaluate a function on the grid\n";
     dg::Timer t;
     t.tic();
-    Vector x;
+    ArrayVec x;
     dg::blas1::transfer( dg::evaluate( function, grid), x);
     t.toc();
-    if(rank==0)std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
-    if(rank==0)std::cout << "Sizeof value type is "<<sizeof(double)<<"\n";
-    double gbytes=(double)grid.global().size()*sizeof(double)/1e9;
+    double gbytes=(double)x.size()*grid.size()*sizeof(double)/1e9;
     if(rank==0)std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
-    dg::MultiMatrix<Matrix, Vector> inter, project; 
+    dg::MultiMatrix<Matrix, ArrayVec> inter, project; 
     dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
     dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
 
     int multi=100;
-    Vector y(x), z(x), u(x), v(x);
+    ArrayVec y(x), z(x), u(x), v(x);
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
+    dg::blas2::symv( M, x, y);
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
@@ -83,7 +88,7 @@ int main( int argc, char* argv[])
         dg::blas2::symv( M, x, y);
     t.toc();
     if(rank==0)std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-    Vector x_half = dg::evaluate( dg::zero, grid_half);
+    ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::gemv( inter, x_half, x);
@@ -127,7 +132,7 @@ int main( int argc, char* argv[])
     t.tic();
     double norm=0;
     for( int i=0; i<multi; i++)
-        norm += dg::blas1::dot( w2d, x);
+        norm += dg::blas1::dot( x,y);
     t.toc();
     if(rank==0)std::cout<<"DOT1(x,y) took                   " <<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
@@ -142,7 +147,6 @@ int main( int argc, char* argv[])
     }
     t.toc();
     if(rank==0)std::cout<<"DOT2(x,w,y) took                 " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them
-    if(rank==0)std::cout<<norm<<std::endl;
 
     MPI_Finalize();
     return 0;

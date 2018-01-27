@@ -23,7 +23,7 @@ namespace detail
 {
 
 template<class To, class From>
-To doTransfer( const From& src, ArrayVectorTag, ThrustVectorTag)
+To doTransfer( const From& src, ArrayVectorTag, AnyVectorTag)
 {
     To t;
     for (unsigned i=0; i<t.size(); i++)
