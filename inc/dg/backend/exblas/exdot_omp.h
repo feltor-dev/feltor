@@ -204,7 +204,6 @@ void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
     //assert( vcl::hasFMA3() );
     cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 }
-/
 /*!@brief OpenMP parallel version of exact triple dot product
  *
  * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
