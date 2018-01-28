@@ -263,13 +263,14 @@ __global__ void ExDOT(
 ////////////// parameters for Kernel execution            //////////////////////
 //Kernel paramters for EXDOT
 static constexpr uint WARP_COUNT               = 16 ; //# of sub superaccs in CUDA kernels
-static constexpr uint WARP_SIZE                = 16 ; 
+static constexpr uint WARP_SIZE                = 32 ; 
 static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per block
-static constexpr uint PARTIAL_SUPERACCS_COUNT  = 256; //# of groups; each has a partial SuperAcc (should not be larger than 512)
+static constexpr uint PARTIAL_SUPERACCS_COUNT  = 512; //# of blocks; each has a partial SuperAcc
 //Kernel paramters for EXDOTComplete
-static constexpr uint MERGE_SUPERACCS_SIZE     = 64; //# of sa each block merges
-static constexpr uint MERGE_WORKGROUP_SIZE     = 64;  //we need only 39 of those
+static constexpr uint MERGE_SUPERACCS_SIZE     = 32; //# of sa each block merges; must divide PARTIAL_SUPERACCS_COUNT
+static constexpr uint MERGE_WORKGROUP_SIZE     = 64;  //we need minimum 39 of those
 
+template<uint MERGE_SIZE>
 __global__
 void ExDOTComplete(
      int64_t *d_PartialSuperaccs,
@@ -278,19 +279,19 @@ void ExDOTComplete(
     uint lid = threadIdx.x;
     uint gid = blockIdx.x;
 
-    if (lid < BIN_COUNT) {
+    if (lid < BIN_COUNT) { //every block sums its assigned superaccs
         int64_t sum = 0;
 
-        for(uint i = 0; i < MERGE_SUPERACCS_SIZE; i++)
-            sum += d_PartialSuperaccs[(gid * MERGE_SUPERACCS_SIZE + i) * BIN_COUNT + lid];
+        for(uint i = 0; i < MERGE_SIZE; i++)
+            sum += d_PartialSuperaccs[(gid * MERGE_SIZE + i) * BIN_COUNT + lid];
 
-        d_PartialSuperaccs[gid * BIN_COUNT + lid] = sum;
+        d_PartialSuperaccs[gid * BIN_COUNT * MERGE_SIZE + lid] = sum;
     }
 
     __syncthreads();
-    if (lid == 0) {
+    if (lid == 0) { //every block normalize its summed superacc
         int imin = IMIN, imax = IMAX;
-        Normalize(&d_PartialSuperaccs[gid * BIN_COUNT], imin, imax);
+        Normalize(&d_PartialSuperaccs[gid * BIN_COUNT * MERGE_SIZE], imin, imax);
     }
 
     __syncthreads();
@@ -298,7 +299,7 @@ void ExDOTComplete(
         int64_t sum = 0;
 
         for(uint i = 0; i < gridDim.x; i++)
-            sum += d_PartialSuperaccs[i * BIN_COUNT + lid];
+            sum += d_PartialSuperaccs[i * BIN_COUNT * MERGE_SIZE + lid];
 
         d_superacc[lid] = sum;
     }
@@ -323,7 +324,7 @@ void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
     gpu::ExDOT<3, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
-    gpu::ExDOTComplete<<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 
 /*!@brief gpu version of exact triple dot product
@@ -343,7 +344,7 @@ void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const 
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
     gpu::ExDOT<3, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
-    gpu::ExDOTComplete<<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
+    gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 
 }//namespace exblas
