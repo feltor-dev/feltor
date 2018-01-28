@@ -20,7 +20,7 @@ double function(double x, double y, double z){ return sin(y)*sin(x);}
 //typedef cusp::array1d<float, cusp::device_memory> Vector;
 typedef double value_type;
 using Vector = thrust::device_vector<double>;
-using ArrayVec = std::array<Vector, 10>;
+using ArrayVec = std::array<Vector, 3>;
 typedef dg::DMatrix Matrix;
 //typedef cusp::array1d<double, cusp::device_memory> Vector;
 typedef dg::IDMatrix IMatrix;

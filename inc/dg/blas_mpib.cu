@@ -18,7 +18,7 @@ double function(double x, double y, double z){ return sin(y)*sin(x);}
 
 using Vector = dg::MDVec;
 using Matrix = dg::MDMatrix;
-using ArrayVec = std::array<Vector, 10>;
+using ArrayVec = std::array<Vector, 3>;
 
 int main( int argc, char* argv[])
 {

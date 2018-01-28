@@ -167,9 +167,9 @@ void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm 
     MPI_Comm_rank( comm, &rank);
     if( rank == 0)
     {
-        std::cout << "Type n, Nx and Ny and Nz\n";
+        if(verbose)std::cout << "Type n, Nx and Ny and Nz\n";
         is >> n >> Nx >> Ny >> Nz;
-        std::cout<< "On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<std::endl;
+        if(verbose)std::cout<< "On the grid "<<n <<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<std::endl;
     }
     MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
     MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);

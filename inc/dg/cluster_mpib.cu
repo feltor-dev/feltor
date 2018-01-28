@@ -38,10 +38,10 @@ typedef dg::MDVec Vector;
 /*******************************************************************************
 program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
 outputs one line to std::cout 
-# npx npy npz #procs #threads n Nx Ny Nz t_AXPBY t_DOT t_DX t_DY t_DZ t_ARAKAWA #iterations t_1xELLIPTIC_CG t_DS
+# npx npy npz #procs #threads n Nx Ny Nz t_AXPBY t_DOT t_DX_per t_DY_per t_DZ_per t_ARAKAWA #iterations t_1xELLIPTIC_CG_dir_centered t_DS EXBLASCHECK
 if Nz == 1, ds is not executed
 Run with: 
->$ echo npx npy npz n Nx Ny Nz | mpirun -#procs ./cluster_mpib 
+>$ echo npx npy npz n Nx Ny Nz | mpirun -n#procs ./cluster_mpib 
  
  *******************************************************************************/
 
@@ -49,50 +49,23 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     unsigned n, Nx, Ny, Nz; 
-    int periods[3] = {false,false, false};
-    if( bcx == dg::PER) periods[0] = true;
-    if( bcy == dg::PER) periods[1] = true;
-    if( bcz == dg::PER) periods[2] = true;
-    int rank, size;
-    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    MPI_Comm_size( MPI_COMM_WORLD, &size);
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    int num_devices=0;
-    cudaGetDeviceCount(&num_devices);
-    if(num_devices == 0)
+    ////////////////////////////////////////////////////////////////
+    mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm, std::cin, false);
+    int rank;
+    MPI_Comm_rank( comm, &rank);
+    if(rank==0)
     {
-        std::cerr << "No CUDA capable devices found"<<std::endl;
-        return -1;
-    }
-    int device = rank % num_devices; //assume # of gpus/node is fixed
-    cudaSetDevice( device);
-#endif//cuda
-    int np[3];
-    if( rank == 0)
-    {
-        std::cin >> np[0] >> np[1]>>np[2];
-        std::cout<< "xxx "<<np[0] <<" "<<np[1]<<" "<<np[2]<<" "<<size<<" ";
-        assert( size == np[0]*np[1]*np[2]);
-    }
-    MPI_Bcast( np, 3, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Comm comm;
-    MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
-
-    int num_threads = 1;
+        int dims[3], periods[3], coords[3];
+        MPI_Cart_get( comm, 3, dims, periods, coords);
+        std::cout<< dims[0] <<" "<<dims[1]<<" "<<dims[2]<<" "<<dims[0]*dims[1]*dims[2]<<" ";
+        int num_threads = 1;
 #ifdef _OPENMP
-    num_threads = omp_get_max_threads( );
+        num_threads = omp_get_max_threads( );
 #endif //omp
-    if(rank==0)std::cout << num_threads<<" ";
-    if( rank == 0)
-    {
-        std::cin >> n >> Nx >> Ny >> Nz;
+        std::cout << num_threads<<" ";
         std::cout<< n <<" "<<Nx<<" "<<Ny<<" "<<Nz<<" ";
     }
-    MPI_Bcast(  &n,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Nx,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Ny,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    MPI_Bcast( &Nz,1 , MPI_UNSIGNED, 0, MPI_COMM_WORLD);
-    ////////////////////////////////////////////////////////////////
+
 
     dg::CartesianMPIGrid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
     dg::Timer t;
@@ -102,8 +75,9 @@ int main(int argc, char* argv[])
     const Vector sol = dg::evaluate( jacobian, grid );
     Vector eins = dg::evaluate( dg::one, grid );
     std::cout<< std::setprecision(6);
-    unsigned multi=20;
+    unsigned multi=100;
 
+    dg::blas1::axpby( 1., lhs, -1., jac);
     //AXPBY
     t.tic();
     for( unsigned i=0; i<multi; i++)
@@ -114,7 +88,7 @@ int main(int argc, char* argv[])
     t.tic();
     double norm;
     for( unsigned i=0; i<multi; i++)
-        norm = dg::blas2::dot( w3d, jac);
+        norm = dg::blas1::dot( lhs, rhs);
     t.toc();
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     norm++;//avoid compiler warning
@@ -168,6 +142,9 @@ int main(int argc, char* argv[])
     unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
     t.toc();
     if(rank==0)std::cout << number << " "<<t.diff()/(double)number<<" "<<std::flush;
+    dg::blas1::axpby( 1., solution, -1., x);
+    exblas::udouble res;
+    res.d = dg::blas2::dot( x, ellw3d, x);
     if( Nz > 1)
     {
         //Application of ds
@@ -191,9 +168,10 @@ int main(int argc, char* argv[])
         t.toc();
         if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     }
+    if(rank==0)std::cout << res.i<<" ";
 
 
-    if(rank==0)std::cout <<" XXX"<<std::endl;
+    if(rank==0)std::cout <<std::endl;
     MPI_Finalize();
     return 0;
 }
