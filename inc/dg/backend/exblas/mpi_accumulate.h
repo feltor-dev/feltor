@@ -12,9 +12,10 @@
 namespace exblas {
 
 /**
- * @brief This function can be used to generate communicators for the \c reduce_mpi function
+ * @brief This function can be used to partition communicators for the \c exblas::reduce_mpi_cpu function
  *
- * @param comm the input communicator 
+ * @ingroup highlevel
+ * @param comm the input communicator (unmodified)
  * @param comm_mod a subgroup of comm (comm is split)
  * @param comm_mod_reduce a subgroup of comm, consists of all rank 0 processes in comm_mod
  * @note the creation of new communicators involves communication between all participation processes (comm in this case)
@@ -38,15 +39,17 @@ void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_m
 
 /*! @brief reduce a number of superaccumulators distributed among mpi processes
 
-We cannot sum more than 256 accumulators before we need to normalize again, so we need to split the reduction. This function normalizes, 
+We cannot sum more than 256 accumulators before we need to normalize again, so we need to split the reduction into several steps if more than 256 processes are involved. This function normalizes, 
 reduces, normalizes, reduces and broadcasts the result to all participating
-processes.  As usual the result is unnormalized.
+processes.  As usual the resulting superaccumulator is unnormalized.
+ * @ingroup highlevel
 @param num_superacc number of Superaccumulators eaach process holds
-@param in unnormalized input superaccumulators ( read/write, must be of size num_superacc*BIN_COUNT) (undefined on out)
-@param out each process contains the result on output( write, must be of size num_superacc*BIN_COUNT) (may not alias in)
+@param in unnormalized input superaccumulators ( must be of size num_superacc*\c exblas::BIN_COUNT, allocated on the cpu) (read/write, undefined on out)
+@param out each process contains the result on output( must be of size num_superacc*\c exblas::BIN_COUNT, allocated on the cpu) (write, may not alias in)
 @param comm The complete MPI communicator
-@param comm_mod This is comm modulo 128 ( or any other number <256) (use \c mpi_reduce_communicator to generate this)
-@param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL (use \c mpi_reduce_communicator to generate this)
+@param comm_mod This is comm modulo 128 ( or any other number <256) 
+@param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL 
+@sa \c exblas::mpi_reduce_communicator to generate the required communicators
 */
 void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
 {

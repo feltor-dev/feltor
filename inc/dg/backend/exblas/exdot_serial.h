@@ -26,6 +26,7 @@
 #include "ExSUM.FPE.hpp"
 
 namespace exblas{
+///@cond
 namespace cpu{
 
 template<typename CACHE> 
@@ -89,9 +90,17 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int6
     cache.Flush();
 }
 }//namespace cpu
+///@endcond
 
-/*!@brief cpu version of exact dot product
-@param h_superacc pointer to a superaccumulator in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+/*!@brief serial version of exact dot product
+ *
+ * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i y_i \f]
+ * @ingroup highlevel
+ * @param size size N of the arrays to sum
+ * @param x1_ptr first array
+ * @param x2_ptr second array
+ * @param h_superacc pointer to an array of 64 bit integers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
 */
 void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
     assert( vcl::instrset_detect() >= 7);
@@ -101,9 +110,17 @@ void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 }
 
-/*!@brief cpu version of exact triple product
-@param h_superacc pointer to a superaccumulator in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
-*/
+/*!@brief gpu version of exact triple dot product
+ *
+ * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
+ * @ingroup highlevel
+ * @param size size N of the arrays to sum
+ * @param x1_ptr first array
+ * @param x2_ptr second array
+ * @param x3_ptr third array
+ * @param h_superacc pointer to an array of 64 bit integegers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
+ */
 void exdot_cpu(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );

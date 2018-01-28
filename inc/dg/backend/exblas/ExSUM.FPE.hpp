@@ -24,8 +24,8 @@ namespace cpu
 
 /**
  * \struct FPExpansionTraits
- * \ingroup ExSUM
- * \brief This struct is meant ot specify optimization or other technique used
+ * \ingroup lowlevel
+ * \brief This struct is meant to specify optimization or other technique used
  */
 template<bool EX=false, bool FLUSHHI=false, bool H2SUM=false, bool CRF=false, bool CSWAP=false, bool B2SUM=true, bool SORT=false, bool VICT=false>
 struct FPExpansionTraits
@@ -42,7 +42,7 @@ struct FPExpansionTraits
 
 /**
  * \struct FPExpansionVect
- * \ingroup ExSUM
+ * \ingroup lowlevel
  * \brief This struct is meant to introduce functionality for working with
  *  floating-point expansions in conjuction with superaccumulators
  */

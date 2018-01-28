@@ -26,7 +26,7 @@ namespace cpu {
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
-
+///@cond
 inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
     // With atomic accumulator updates
     // accumulation and carry propagation can happen in any order,
@@ -65,7 +65,15 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
         oldword = cpu::xadd(accumulator[i], carry, overflow);
     }
 }
+///@endcond
 
+/**
+* @brief Accumulate a double to the superaccumulator
+*
+* @ingroup lowlevel
+* @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
+* @param x the double to add to the superaccumulator
+*/
 inline void Accumulate( int64_t* accumulator, double x) {
     if (x == 0)
         return;
@@ -93,6 +101,16 @@ inline void Accumulate( int64_t* accumulator, double x) {
 // Returns sign
 // Does not really normalize! MW: what does that mean?
 //
+/**
+* @brief Normalize a superaccumulator
+*
+* @ingroup lowlevel
+* @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
+* @param imin the first index in the accumulator
+* @param imax the last index in the accumulator
+*
+* @return  carry in bit (sign)
+*/
 bool Normalize( int64_t *accumulator, int& imin, int& imax) {
     int64_t carry_in = accumulator[imin] >> DIGITS;
     accumulator[imin] -= carry_in << DIGITS;
@@ -117,6 +135,13 @@ bool Normalize( int64_t *accumulator, int& imin, int& imax) {
 ////////////////////////////////////////////////////////////////////////////////
 
 
+/**
+* @brief Convert a superaccumulator to the nearest double precision number (CPU version)
+*
+* @ingroup highlevel
+* @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
+* @return the double precision number nearest to the superaccumulator
+*/
 double Round( int64_t * accumulator) {
     int imin = IMIN;
     int imax = IMAX;

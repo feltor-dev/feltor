@@ -20,6 +20,7 @@
 #include "accumulate.cuh"
 
 namespace exblas{
+///@cond
 namespace gpu{
 
 
@@ -43,7 +44,7 @@ double KnuthTwoSum(double a, double b, double *s) {
 }
 
 
-template<uint NBFPE>
+template<uint NBFPE, uint WARP_COUNT>
 __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
     const double *d_a,
@@ -71,11 +72,11 @@ __global__ void ExDOT(
             x = s;
         }
         if (x != 0.0) {
-            AccumulateT(l_workingBase, x);
+            Accumulate(l_workingBase, x, WARP_COUNT);
             // Flush FPEs to superaccs
             #pragma unroll
             for(uint i = 0; i != NBFPE; ++i) {
-                AccumulateT(l_workingBase, a[i]);
+                Accumulate(l_workingBase, a[i], WARP_COUNT);
                 a[i] = 0.0;
             }
         }
@@ -88,11 +89,11 @@ __global__ void ExDOT(
                 r = s;
             }
             if (r != 0.0) {
-                AccumulateT(l_workingBase, r);
+                Accumulate(l_workingBase, r, WARP_COUNT);
                 // Flush FPEs to superaccs
                 #pragma unroll
                 for(uint i = 0; i != NBFPE; ++i) {
-                    AccumulateT(l_workingBase, a[i]);
+                    Accumulate(l_workingBase, a[i], WARP_COUNT);
                     a[i] = 0.0;
                 }
             }
@@ -101,14 +102,14 @@ __global__ void ExDOT(
     //Flush FPEs to superaccs
     #pragma unroll
     for(uint i = 0; i != NBFPE; ++i)
-        AccumulateT(l_workingBase, a[i]);
+        Accumulate(l_workingBase, a[i], WARP_COUNT);
     __syncthreads();
 
     //Merge sub-superaccs into work-group partial-accumulator ( ATTENTION: PartialSuperacc is transposed!)
     uint pos = threadIdx.x;
     if(pos < WARP_COUNT) {
         int imin = IMIN, imax = IMAX;
-        NormalizeT( l_workingBase, imin, imax);
+        Normalize( l_workingBase, imin, imax, WARP_COUNT);
     }
     __syncthreads();
 
@@ -128,7 +129,7 @@ __global__ void ExDOT(
     }
 }
 
-template<uint NBFPE>
+template<uint NBFPE, uint WARP_COUNT>
 __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
     const double *d_a,
@@ -161,11 +162,11 @@ __global__ void ExDOT(
                 x2 = s;
             }
             if (x2 != 0.0) {
-                AccumulateT(l_workingBase, x2);
+                Accumulate(l_workingBase, x2, WARP_COUNT);
                 // Flush FPEs to superaccs
                 #pragma unroll
                 for(uint i = 0; i != NBFPE; ++i) {
-                    AccumulateT(l_workingBase, a[i]);
+                    Accumulate(l_workingBase, a[i], WARP_COUNT);
                     a[i] = 0.0;
                 }
             }
@@ -178,11 +179,11 @@ __global__ void ExDOT(
         //        r2 = s; //error was here r = s
         //    }
         //    if (r2 != 0.0) { //error was here r != 0.0
-        //        AccumulateT(l_workingBase, r2);
+        //        Accumulate(l_workingBase, r2, WARP_COUNT);
         //        // Flush FPEs to superaccs
         //        #pragma unroll
         //        for(uint i = 0; i != NBFPE; ++i) {
-        //            AccumulateT(l_workingBase, a[i]);
+        //            Accumulate(l_workingBase, a[i], WARP_COUNT);
         //            a[i] = 0.0;
         //        }
         //    }
@@ -199,11 +200,11 @@ __global__ void ExDOT(
         //            x2 = s;
         //        }
         //        if (x2 != 0.0) {
-        //            AccumulateT(l_workingBase, x2);
+        //            Accumulate(l_workingBase, x2, WARP_COUNT);
         //            // Flush FPEs to superaccs
         //            #pragma unroll
         //            for(uint i = 0; i != NBFPE; ++i) {
-        //                AccumulateT(l_workingBase, a[i]);
+        //                Accumulate(l_workingBase, a[i], WARP_COUNT);
         //                a[i] = 0.0;
         //            }
         //        }
@@ -216,11 +217,11 @@ __global__ void ExDOT(
         //            r2 = s; //error was here r = s
         //        }
         //        if (r2 != 0.0) { //error was here r != 0.0
-        //            AccumulateT(l_workingBase, r2);
+        //            Accumulate(l_workingBase, r2, WARP_COUNT);
         //            // Flush FPEs to superaccs
         //            #pragma unroll
         //            for(uint i = 0; i != NBFPE; ++i) {
-        //                AccumulateT(l_workingBase, a[i]);
+        //                Accumulate(l_workingBase, a[i], WARP_COUNT);
         //                a[i] = 0.0;
         //            }
         //        }
@@ -230,14 +231,14 @@ __global__ void ExDOT(
 	//Flush FPEs to superaccs
     #pragma unroll
     for(uint i = 0; i != NBFPE; ++i)
-        AccumulateT(l_workingBase, a[i]);
+        Accumulate(l_workingBase, a[i], WARP_COUNT);
     __syncthreads();
 
     //Merge sub-superaccs into work-group partial-accumulator ( ATTENTION: PartialSuperacc is transposed!)
     uint pos = threadIdx.x;
     if(pos<WARP_COUNT){
             int imin = IMIN, imax = IMAX;
-            NormalizeT(l_workingBase, imin, imax);
+            Normalize(l_workingBase, imin, imax, WARP_COUNT);
         }
     __syncthreads();
     if (pos < BIN_COUNT) {
@@ -261,12 +262,14 @@ __global__ void ExDOT(
 ////////////////////////////////////////////////////////////////////////////////
 ////////////// parameters for Kernel execution            //////////////////////
 //Kernel paramters for EXDOT
+static constexpr uint WARP_COUNT               = 16 ; //# of sub superaccs in CUDA kernels
 static constexpr uint WARP_SIZE                = 16 ; 
 static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per block
 static constexpr uint PARTIAL_SUPERACCS_COUNT  = 256; //# of groups; each has a partial SuperAcc (should not be larger than 512)
 //Kernel paramters for EXDOTComplete
 static constexpr uint MERGE_SUPERACCS_SIZE     = 64; //# of sa each block merges
 static constexpr uint MERGE_WORKGROUP_SIZE     = 64;  //we need only 39 of those
+
 __global__
 void ExDOTComplete(
      int64_t *d_PartialSuperaccs,
@@ -302,28 +305,44 @@ void ExDOTComplete(
 }
 
 }//namespace gpu
+///@endcond
 
 /*!@brief gpu version of exact dot product
-@param d_superacc pointer to a superaccumulator in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ *
+ * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i y_i \f]
+ * @ingroup highlevel
+ * @param size size N of the arrays to sum
+ * @param x1_ptr first array
+ * @param x2_ptr second array
+ * @param d_superacc pointer to an array of 64 bit integers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
 */
 __host__
 void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* d_superacc)
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<3><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
+    gpu::ExDOT<3, WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
     gpu::ExDOTComplete<<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 
 /*!@brief gpu version of exact triple dot product
-@param d_superacc pointer to a superaccumulator in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
-*/
+ *
+ * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
+ * @ingroup highlevel
+ * @param size size N of the arrays to sum
+ * @param x1_ptr first array
+ * @param x2_ptr second array
+ * @param x3_ptr third array
+ * @param d_superacc pointer to an array of 64 bit integegers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
+ * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
+ */
 __host__
 void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const double* x3_ptr, int64_t* d_superacc)
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<3><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
+    gpu::ExDOT<3, WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
     gpu::ExDOTComplete<<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 

@@ -6,7 +6,7 @@
 
 all: doc
 
-.PHONY: clean doc dg.tag geometries.tag dg file geometries
+.PHONY: clean doc exblas.tag dg.tag geometries.tag dg file geometries exblas
 
 # the semicolons and backslashes are needed by Makefile
 dg.tag:
@@ -16,6 +16,13 @@ dg.tag:
 		echo "GENERATE_HTML = NO"; \
 		echo "GENERATE_TAGFILE = ../../doc/dg.tag" ) | doxygen - ;
 
+exblas.tag:
+	cd ../inc/dg/backend/exblas; \
+		(cat Doxyfile; \
+		echo "OUTPUT_DIRECTORY = ../../../../doc/exblas"; \
+		echo "GENERATE_HTML = NO"; \
+		echo "GENERATE_TAGFILE = ../../../../doc/exblas.tag" ) | doxygen - ;
+
 geometries.tag:
 	cd ../inc/geometries;  \
 		(cat Doxyfile; \
@@ -23,7 +30,7 @@ geometries.tag:
 		echo "GENERATE_HTML = NO"; \
 		echo "GENERATE_TAGFILE = ../../doc/geometries.tag" ) | doxygen - ;
 
-dg: geometries.tag dg_introduction.pdf
+dg: exblas.tag geometries.tag dg_introduction.pdf
 	cd ../inc/dg; \
 		(cat Doxyfile; \
 		echo "OUTPUT_DIRECTORY = ../../doc/dg"; \
@@ -51,6 +58,14 @@ file:
 		echo "HTML_HEADER = ../../doc/header.html"; \
 		echo ) | doxygen - ; 
 
+exblas:
+	cd ../inc/dg/backend/exblas; \
+		(cat Doxyfile; \
+		echo "OUTPUT_DIRECTORY = ../../../../doc/exblas"; \
+		echo "HTML_HEADER = ../../../../doc/header.html"; \
+		echo ) | doxygen - ; 
+
+
 %.pdf: 
 	cd related_pages/$*; \
 		pdflatex $*.tex; \
@@ -59,13 +74,14 @@ file:
 		pdflatex $*.tex;
 
 
-doc: dg geometries file
+doc: dg geometries file exblas
 	ln -sf dg/html/modules.html index.html
 	#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-	#Open with: firefox index.html or on Windows: firefox dg/html/modules.html#
+	#Open with: firefox index.html #
+	#or on Windows: firefox dg/html/modules.html#
 	#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 full_doc: pdf doc
 
 clean:
-	rm -rf dg file geometries dg.tag file.tag geometries.tag index.html
+	rm -rf dg file geometries exblas dg.tag file.tag geometries.tag exblas.tag index.html

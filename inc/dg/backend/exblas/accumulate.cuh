@@ -28,9 +28,9 @@ namespace gpu
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
-
+///@cond
 __device__
-inline void AccumulateWordT( int64_t *accumulator, int i, int64_t x) {
+inline void AccumulateWord( int64_t *accumulator, int i, int64_t x, int stride = 1) {
     // With atomic superacc updates
     // accumulation and carry propagation can happen in any order,
     // as long as addition is atomic
@@ -39,7 +39,7 @@ inline void AccumulateWordT( int64_t *accumulator, int i, int64_t x) {
     unsigned char overflow;
     int64_t carry = x;
     int64_t carrybit;
-    int64_t oldword = xadd(accumulator[i * WARP_COUNT], x, overflow);
+    int64_t oldword = xadd(accumulator[i * stride], x, overflow);
     // To propagate over- or underflow
     while (overflow) {
         // Carry or borrow
@@ -53,7 +53,7 @@ inline void AccumulateWordT( int64_t *accumulator, int i, int64_t x) {
         carrybit = (s ? 1l << KRX : -1l << KRX);
 
         // Cancel carry-accumulatorve bits
-        xadd(accumulator[i * WARP_COUNT], (int64_t) -(carry << DIGITS), overflow);
+        xadd(accumulator[i * stride], (int64_t) -(carry << DIGITS), overflow);
         if (TSAFE && (s ^ overflow)){ //MW: TSAFE is always 0
             // (Another) overflow of sign S
             carrybit *= 2;
@@ -65,12 +65,21 @@ inline void AccumulateWordT( int64_t *accumulator, int i, int64_t x) {
             //status = Overflow;
             return;
         }
-        oldword = xadd(accumulator[i * WARP_COUNT], carry, overflow);
+        oldword = xadd(accumulator[i * stride], carry, overflow);
     }
 }
+///@endcond
 
+/**
+* @brief Accumulate a double to the superaccumulator (GPU version)
+*
+* @ingroup lowlevel
+* @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the GPU (representing the superaccumulator)
+* @param x the double to add to the superaccumulator
+* @param stride stride in which accumulator is to be accessed
+*/
 __device__
-inline void AccumulateT( int64_t* accumulator, double x) { //transposed accumulation
+inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //transposed accumulation
     if (x == 0)
         return;
 
@@ -85,7 +94,7 @@ inline void AccumulateT( int64_t* accumulator, double x) { //transposed accumula
     for (i = iup; xscaled != 0; --i) {
         double xrounded = rint(xscaled);
         int64_t xint = (int64_t) xrounded;
-        AccumulateWordT(accumulator, i, xint);
+        AccumulateWord(accumulator, i, xint, stride);
 
         xscaled -= xrounded;
         xscaled *= DELTASCALE;
@@ -96,41 +105,33 @@ inline void AccumulateT( int64_t* accumulator, double x) { //transposed accumula
 ////////////////////////////////////////////////////////////////////////////////
 // Returns sign
 // Does not really normalize! MW: what does that mean?
+/**
+* @brief Normalize a superaccumulator (GPU version)
+*
+* @ingroup lowlevel
+* @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the GPU (representing the superaccumulator)
+* @param imin the first index in the accumulator
+* @param imax the last index in the accumulator
+* @param stride strid in which the superaccumulator is accessed
+*
+* @return  carry in bit (sign)
+*/
 __device__
-bool Normalize( int64_t *accumulator, int& imin, int& imax) {
-    int64_t carry_in = accumulator[imin] >> DIGITS;
-    accumulator[imin] -= carry_in << DIGITS;
+int Normalize( int64_t *accumulator, int& imin, int& imax, int stride = 1) {
+    int64_t carry_in = accumulator[(imin)*stride] >> DIGITS;
+    accumulator[(imin)*stride] -= carry_in << DIGITS;
     int i;
     // Sign-extend all the way
     for (i = imin + 1; i < BIN_COUNT; ++i) {
-        accumulator[i] += carry_in;
-        int64_t carry_out = accumulator[i] >> DIGITS;    // Arithmetic shift
-        accumulator[i] -= (carry_out << DIGITS);
+        accumulator[i*stride] += carry_in;
+        int64_t carry_out = accumulator[i*stride] >> DIGITS;    // Arithmetic shift
+        accumulator[i*stride] -= (carry_out << DIGITS);
         carry_in = carry_out;
     }
     imax = i - 1;
 
     // Do not cancel the last carry to avoid losing information
-    accumulator[imax] += carry_in << DIGITS;
-
-    return carry_in < 0;
-}
-__device__
-int NormalizeT( int64_t *accumulator, int& imin, int& imax) {
-    int64_t carry_in = accumulator[(imin)*WARP_COUNT] >> DIGITS;
-    accumulator[(imin)*WARP_COUNT] -= carry_in << DIGITS;
-    int i;
-    // Sign-extend all the way
-    for (i = imin + 1; i < BIN_COUNT; ++i) {
-        accumulator[i*WARP_COUNT] += carry_in;
-        int64_t carry_out = accumulator[i*WARP_COUNT] >> DIGITS;    // Arithmetic shift
-        accumulator[i*WARP_COUNT] -= (carry_out << DIGITS);
-        carry_in = carry_out;
-    }
-    imax = i - 1;
-
-    // Do not cancel the last carry to avoid losing information
-    accumulator[imax*WARP_COUNT] += carry_in << DIGITS;
+    accumulator[imax*stride] += carry_in << DIGITS;
 
     return carry_in < 0;
 }
@@ -139,6 +140,13 @@ int NormalizeT( int64_t *accumulator, int& imin, int& imax) {
 // Rounding functions
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+* @brief Convert a superaccumulator to the nearest double precision number (GPU version)
+*
+* @ingroup highlevel
+* @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the GPU (representing the superaccumulator)
+* @return the double precision number nearest to the superaccumulator
+*/
 __device__
 double Round( int64_t * accumulator) {
     int imin = IMIN;

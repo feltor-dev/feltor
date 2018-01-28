@@ -63,7 +63,7 @@ LOOKUP_CACHE_SIZE      = 0
 EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = NO
 EXTRACT_PACKAGE        = NO
-EXTRACT_STATIC         = NO
+EXTRACT_STATIC         = YES
 EXTRACT_LOCAL_CLASSES  = YES
 EXTRACT_LOCAL_METHODS  = NO
 EXTRACT_ANON_NSPACES   = NO
@@ -117,7 +117,9 @@ FILE_PATTERNS          = *.h \
                          *.cuh \
                          *.hpp
 RECURSIVE              = NO
-EXCLUDE                =
+EXCLUDE                = mylibm.hpp \
+                         mylibm.cuh \
+                         ExSUM.FPE.hpp
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       =
 EXCLUDE_SYMBOLS        =

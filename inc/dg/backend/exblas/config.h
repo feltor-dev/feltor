@@ -12,41 +12,39 @@
 namespace exblas
 {
 ////////////// parameters for superaccumulator operations //////////////////////
-static constexpr int KRX            =  8;  //!< High-radix carry-save bits
-static constexpr int DIGITS         =  64 - KRX; //must be int because appears in integer expresssion
-static constexpr int F_WORDS        =  20;
-static constexpr int E_WORDS        =  19;
-static constexpr int BIN_COUNT     =  F_WORDS+E_WORDS; //size of superaccumulator
-static constexpr int IMIN           = 0;
-static constexpr int IMAX           = BIN_COUNT-1;
-//static constexpr int TSAFE          =  0;
-static constexpr double DELTASCALE = double(1ull << DIGITS); // Assumes KRX>0
+///High radix carray-save bits
+static constexpr int KRX            =  8; //!< High-radix carry-save bits
+static constexpr int DIGITS         =  64 - KRX; //!< number of nonoverlapping digits
+static constexpr int F_WORDS        =  20;  //!< number of uper exponent words (64bits)
+static constexpr int E_WORDS        =  19;  //!< number of lower exponent words (64bits)
+static constexpr int BIN_COUNT     =  F_WORDS+E_WORDS; //!< size of superaccumulator (in 64 bit units)
+static constexpr int IMIN           = 0; //!< first index in a superaccumulator
+static constexpr int IMAX           = BIN_COUNT-1; //!< last index in a superaccumulator
+static constexpr double DELTASCALE = double(1ull << DIGITS); //!< Assumes KRX>0
 
-static constexpr uint WARP_COUNT     = 16 ; //# of sub superaccs in CUDA kernels
-
-/**< Characterizes the result of summation */
+///@brief Characterizes the result of summation 
 enum Status
 {
-    Exact, /**< Reproducible and accurate */
-    Inexact, /**< non-accurate */
-    MinusInfinity, /**< minus infinity */
-    PlusInfinity, /**< plus infinity */
-    Overflow, /**< overflow occurred */
-    sNaN, /**< not-a-number */
-    qNaN /**< not-a-number */
+    Exact, /*!< Reproducible and accurate */
+    Inexact, /*!< non-accurate */
+    MinusInfinity, /*!< minus infinity */
+    PlusInfinity, /*!< plus infinity */
+    Overflow, /*!< overflow occurred */
+    sNaN, /*!< not-a-number */
+    qNaN /*!< not-a-number */
 };
 
-/*! @brief Utility union to display all bits of a double
+/*! @brief Utility union to display all bits of a double (using "type-punning")
 @code
 double result; // = ...
 udouble res;
 res.d = result;
-std::cout << "Result as double "<<result<<"  as integer "<<res.i<<std::endl;
+std::cout << "Result as double "<<res.d<<"  as integer "<<res.i<<std::endl;
 @endcode
 */
 union udouble{
-    double d;
-    int64_t i;
+    double d; //!< a double 
+    int64_t i; //!< a 64 bit integer
 };
 
 
