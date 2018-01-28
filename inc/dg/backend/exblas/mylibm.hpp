@@ -21,7 +21,6 @@
 #include <immintrin.h>
 #include <cmath>
 #include <cassert>
-#define MAX_VECTOR_SIZE 512
 #define VCL_NAMESPACE vcl
 #include "vcl/vectorclass.h" //vcl by Agner Fog
 #include "vcl/instrset_detect.cpp"
