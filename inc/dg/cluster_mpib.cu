@@ -38,7 +38,7 @@ typedef dg::MDVec Vector;
 /*******************************************************************************
 program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
 outputs one line to std::cout 
-# npx npy npz #procs #threads n Nx Ny Nz t_AXPBY t_DOT t_DX_per t_DY_per t_DZ_per t_ARAKAWA #iterations t_1xELLIPTIC_CG_dir_centered t_DS EXBLASCHECK
+# npx npy npz #procs #threads n Nx Ny Nz t_AXPBY t_DOT t_DX_per t_DY_per t_DZ_per t_ARAKAWA #iterations t_1xELLIPTIC_CG_dir_centered t_DS EXBLASCHECK( d and i)
 if Nz == 1, ds is not executed
 Run with: 
 >$ echo npx npy npz n Nx Ny Nz | mpirun -n#procs ./cluster_mpib 
@@ -49,14 +49,14 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     unsigned n, Nx, Ny, Nz; 
-    ////////////////////////////////////////////////////////////////
+    MPI_Comm comm;
     mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm, std::cin, false);
     int rank;
     MPI_Comm_rank( comm, &rank);
+    int dims[3], periods[3], coords[3];
+    MPI_Cart_get( comm, 3, dims, periods, coords);
     if(rank==0)
     {
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
         std::cout<< dims[0] <<" "<<dims[1]<<" "<<dims[2]<<" "<<dims[0]*dims[1]*dims[2]<<" ";
         int num_threads = 1;
 #ifdef _OPENMP
@@ -127,7 +127,7 @@ int main(int argc, char* argv[])
     //The Elliptic scheme
     periods[0] = false, periods[1] = false;
     MPI_Comm commEll;
-    MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &commEll);
+    MPI_Cart_create( MPI_COMM_WORLD, 3, dims, periods, true, &commEll);
     dg::CylindricalMPIGrid3d gridEll( R_0, R_0+lx, 0., ly, 0.,lz, n, Nx, Ny,Nz, dg::DIR, dg::DIR, dg::PER, commEll);
     const Vector ellw3d = dg::create::volume(gridEll);
     const Vector ellv3d = dg::create::inv_volume(gridEll);
@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
         t.toc();
         if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     }
-    if(rank==0)std::cout << res.i<<" ";
+    if(rank==0)std::cout << res.d<< " "<<res.i<<" ";
 
 
     if(rank==0)std::cout <<std::endl;
