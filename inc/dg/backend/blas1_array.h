@@ -7,6 +7,7 @@
 
 #include <array>
 #include <type_traits>
+#include "exblas/exdot_serial.h"
 #include "vector_categories.h"
 #include "vector_traits.h"
 

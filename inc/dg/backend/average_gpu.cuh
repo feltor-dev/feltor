@@ -1,6 +1,6 @@
 #pragma once
 
-#include "exblas/exdot.fpe.cu"
+#include "exblas/exdot_cuda.cuh"
 #ifdef MPI_VERSION
 #include "exblas/mpi_accumulate.h"
 #endif //MPI_VERSION

@@ -2,7 +2,7 @@
 #define _DG_BLAS_OMP_
 #include <omp.h>
 #include "blas1_serial.h"
-#include "exblas/exdot.fpe.cpp"
+#include "exblas/exdot_omp.h"
 namespace dg
 {
 namespace blas1

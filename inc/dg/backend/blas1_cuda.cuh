@@ -1,7 +1,7 @@
 #ifndef _DG_BLAS_CUDA_
 #define _DG_BLAS_CUDA_
 #include <thrust/transform.h>
-#include "exblas/exdot.fpe.cu"
+#include "exblas/exdot_cuda.cuh"
 namespace dg
 {
 namespace blas1

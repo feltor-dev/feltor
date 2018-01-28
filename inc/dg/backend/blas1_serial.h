@@ -3,7 +3,7 @@
 #include <thrust/execution_policy.h>
 #include <thrust/transform.h>
 #include "execution_policy.h"
-#include "exblas/exdot.fpe_cpu.cpp"
+#include "exblas/exdot_serial.h"
 namespace dg
 {
 namespace blas1
