@@ -4,8 +4,8 @@
  */
 
 /**
- *  \file cpu/blas1/ExSUM.FPE.hpp
- *  \brief Provides a set of routines concerning floating-point expansions
+ *  \file ExSUM.FPE.hpp
+ *  \brief A set of routines concerning floating-point expansions
  *
  *  \authors
  *    Developers : \n

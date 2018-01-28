@@ -5,6 +5,16 @@
  *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
  */
 
+/**
+ *  @file exdot_omp.h
+ *  @brief OpenMP version of exdot
+ *
+ *  @authors
+ *    Developers : \n
+ *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
+ *        Sylvain Collange -- sylvain.collange@inria.fr \n
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ */
 #pragma once
 #include <cassert>
 #include <cstdlib>

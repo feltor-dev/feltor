@@ -3,7 +3,7 @@
  */
 
 /**
- *  \file cpu/blas1/mylibm.hpp
+ *  \file mylibm.hpp
  *  \brief Provides a set of auxiliary functions to superaccumulation.
  *         For internal use
  *

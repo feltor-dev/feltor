@@ -5,7 +5,16 @@
  * %%%%%%%%%%%%%%%%%%%%%%%Modifications and further additions%%%%%%%%%%
  *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
  */
-
+/**
+ *  @file exdot_cuda.cuh
+ *  @brief CUDA version of exdot
+ *
+ *  @authors
+ *    Developers : \n
+ *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
+ *        Sylvain Collange -- sylvain.collange@inria.fr \n
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ */
 #pragma once
 #include "thrust/device_vector.h"
 #include "accumulate.cuh"
@@ -34,6 +43,7 @@ double KnuthTwoSum(double a, double b, double *s) {
 }
 
 
+template<uint NBFPE>
 __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
     const double *d_a,
@@ -118,6 +128,7 @@ __global__ void ExDOT(
     }
 }
 
+template<uint NBFPE>
 __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
     const double *d_a,
@@ -300,7 +311,7 @@ void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
+    gpu::ExDOT<3><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
     gpu::ExDOTComplete<<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 
@@ -312,7 +323,7 @@ void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const 
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
+    gpu::ExDOT<3><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
     gpu::ExDOTComplete<<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 

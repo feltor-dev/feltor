@@ -1,3 +1,10 @@
+/**
+ *  @file mpi_accumulate.h
+ *  @brief Primitives for an MPI Reduction
+ *
+ *  @authors
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ */
 #pragma once
 #include <mpi.h>
 #include "accumulate.h"

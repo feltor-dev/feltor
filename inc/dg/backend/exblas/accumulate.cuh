@@ -1,3 +1,20 @@
+/*
+ * %%%%%%%%%%%%%%%%%%%%%%%Original development%%%%%%%%%%%%%%%%%%%%%%%%%
+ *  Copyright (c) 2016 Inria and University Pierre and Marie Curie 
+ *  All rights reserved.
+ * %%%%%%%%%%%%%%%%%%%%%%%Modifications and further additions%%%%%%%%%%
+ *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
+ */
+/**
+ *  @file accumulate.cuh
+ *  @brief The CUDA version of accumulate.h
+ *
+ *  @authors
+ *    Developers : \n
+ *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
+ *        Sylvain Collange -- sylvain.collange@inria.fr \n
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ */
 #pragma once
 #include "config.h"
 #include "mylibm.cuh"

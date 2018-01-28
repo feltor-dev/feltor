@@ -1,12 +1,18 @@
+/**
+ *  @file config.h
+ *  @brief Configuration of superaccumulators
+ *
+ *  @authors
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ */
 #pragma once
 
 #include <stdint.h> //definition of int64_t
 
 namespace exblas
 {
-static constexpr uint NBFPE         =  3;  //size of floating point expansion
 ////////////// parameters for superaccumulator operations //////////////////////
-static constexpr int KRX            =  8;  //High-radix carry-save bits
+static constexpr int KRX            =  8;  //!< High-radix carry-save bits
 static constexpr int DIGITS         =  64 - KRX; //must be int because appears in integer expresssion
 static constexpr int F_WORDS        =  20;
 static constexpr int E_WORDS        =  19;
