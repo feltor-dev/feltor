@@ -784,6 +784,7 @@ WARN_LOGFILE           =
 
 INPUT                  = . \
                          ./geometry \
+                         ./backend/transpose.h \
                          ./backend/exceptions.h \
                          ./backend/memory.h \
                          ./backend/mpi_collective.h \
@@ -791,10 +792,21 @@ INPUT                  = . \
                          ./backend/mpi_init.h \
                          ./backend/mpi_matrix.h \
                          ./backend/mpi_vector.h \
+                         ./backend/mpi_precon_blas.h \
                          ./backend/sparseblockmat.h \
                          ./backend/sparseblockmat.cuh \
                          ./backend/timer.cuh \
                          ./backend/typedefs.cuh \
+                         ./backend/vector_categories.h \
+                         ./backend/vector_traits.h \
+                         ./backend/matrix_categories.h \
+                         ./backend/matrix_traits.h \
+                         ./backend/execution_policy.h \
+                         ./backend/thrust_vector_blas.cuh \
+                         ./backend/blas1_array.h \
+                         ./backend/cusp_vector_blas.h \
+                         ./backend/cusp_precon_blas.h \
+                         ./backend/matrix_traits_thrust.h \
 
 
 # This tag can be used to specify the character encoding of the source files

@@ -19,9 +19,10 @@
 #endif
 
 
-///@cond
 namespace dg
 {
+///@addtogroup vec_list
+///@{
 template<class T>
 struct VectorTraits<thrust::host_vector<T>, 
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
@@ -45,17 +46,14 @@ struct VectorTraits<thrust::device_vector<T>, typename std::enable_if<std::is_ar
     using value_type        = T;
     using vector_category   = ThrustVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    using execution_policy  = CudaTag ; 
+    using execution_policy  = CudaTag ;  //!< enable if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #else
-    using execution_policy  = OmpTag ; 
+    using execution_policy  = OmpTag ;  //!< enable if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
 #endif
 };
-//resize
-//size
-//data
-//begin
-//end
+///@}
 
+///@cond
 namespace blas1
 {
 namespace detail
@@ -281,7 +279,7 @@ inline void doPointwiseDot(
 }//namespace detail
 
 } //namespace blas1
-} //namespace dg
 ///@endcond
+} //namespace dg
 
 #endif //_DG_BLAS_VECTOR_

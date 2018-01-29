@@ -25,6 +25,11 @@
  *         They are called by all our numerical algorithms like conjugate gradient or 
  *         time integrators.
  *     @{
+ *         @defgroup dispatch The tag dispatch system
+ *         @{
+ *             @defgroup vec_list List of Vector Traits specializations
+ *             @defgroup mat_list List of Matrix Traits specializations
+ *         @}
  *         @defgroup blas1 BLAS level 1 routines
  *             This group contains Vector-Vector operations.
  *             Successive calls to blas routines are executed sequentially.

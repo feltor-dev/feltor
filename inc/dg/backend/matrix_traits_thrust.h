@@ -9,6 +9,8 @@
 #include "matrix_categories.h"
 
 namespace dg{
+///@addtogroup mat_list
+///@{
 
 template<class T>
 struct MatrixTraits<std::vector<T> >{
@@ -41,6 +43,7 @@ struct MatrixTraits<const thrust::device_vector<T> > {
     using value_type = T;
     using matrix_category = ThrustMatrixTag;
 };
+///@}
 
 
 }//namespace dg

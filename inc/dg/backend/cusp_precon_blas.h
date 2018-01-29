@@ -10,7 +10,8 @@
 
 namespace dg{
 
-///@cond
+///@addtogroup mat_list
+///@{
 template<class T,class M>
 struct MatrixTraits<cusp::array1d<T,M> >
 {
@@ -24,5 +25,5 @@ struct MatrixTraits<const cusp::array1d<T,M> >
     using matrix_category = CuspPreconTag; 
 };
 
-///@endcond
+///@}
 } //namespace dg

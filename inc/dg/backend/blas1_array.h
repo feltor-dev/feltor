@@ -12,9 +12,10 @@
 #include "vector_categories.h"
 #include "vector_traits.h"
 
-///@cond
 namespace dg
 {
+///@addtogroup vec_list
+///@{
 template<class T, std::size_t N>
 struct VectorTraits<std::array<T, N>, 
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
@@ -31,7 +32,9 @@ struct VectorTraits<std::array<T, N>,
     using vector_category   = ArrayVectorTag;
     using execution_policy  = get_execution_policy<T>;
 };
+///@}
 
+///@cond
 namespace blas1
 {
 namespace detail
@@ -170,7 +173,7 @@ inline void doPointwiseDot(
 }//namespace detail
 
 } //namespace blas1
-} //namespace dg
 ///@endcond
+} //namespace dg
 
 #endif //_DG_BLAS_ARRAY_

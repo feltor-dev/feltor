@@ -282,7 +282,9 @@ void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
     
 }
 
-
+///@endcond
+///@addtogroup mat_list
+///@{
 template <class T>
 struct MatrixTraits<EllSparseBlockMatDevice<T> >
 {
@@ -307,7 +309,7 @@ struct MatrixTraits<const CooSparseBlockMatDevice<T> >
     using value_type      = T;
     using matrix_category = SelfMadeMatrixTag;
 };
-///@endcond
+///@}
 } //namespace dg
 #if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
 #include "sparseblockmat_omp_kernels.h"

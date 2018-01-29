@@ -95,8 +95,8 @@ struct MPI_Vector
 
 };
 
-///@cond
-
+///@addtogroup vec_list
+///@{
 template<class container> 
 struct VectorTraits<MPI_Vector<container> > {
     using value_type = typename container::value_type;
@@ -108,8 +108,7 @@ struct VectorTraits<const MPI_Vector<container> > {
     using value_type = typename container::value_type;
     using vector_category = MPIVectorTag;
 };
-
-///@endcond
+///@}
 
 /////////////////////////////communicator exchanging columns//////////////////
 /**

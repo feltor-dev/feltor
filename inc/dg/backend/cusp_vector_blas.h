@@ -9,6 +9,8 @@
 namespace dg
 {
 
+///@addtogroup vec_list
+///@{
 template<class T>
 struct VectorTraits<cusp::array1d<T,cusp::host_memory>, 
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
@@ -24,11 +26,12 @@ struct VectorTraits<cusp::array1d<T,cusp::device_memory>,
     using value_type        = T;
     using vector_category   = ThrustVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    using execution_policy  = CudaTag ; 
+    using execution_policy  = CudaTag ; //!< if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #else
-    using execution_policy  = OmpTag ; 
+    using execution_policy  = OmpTag ; //!< if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
+
 #endif
 };
+///@}
 
 } //namespace dg
-

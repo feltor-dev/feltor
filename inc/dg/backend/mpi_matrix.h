@@ -311,8 +311,10 @@ struct MPIDistMat
     Buffer< typename Collective::container_type> m_buffer;
     enum dist_type m_dist;
 };
+///@}
 
-///@cond
+///@addtogroup mat_list
+///@{
 template<class LI, class LO, class C>
 struct MatrixTraits<RowColDistMat<LI,LO, C> >
 {
@@ -338,10 +340,6 @@ struct MatrixTraits<const MPIDistMat<L, C> >
     typedef typename MatrixTraits<L>::value_type value_type;//!< value type
     using matrix_category = MPIMatrixTag;
 };
-///@endcond
-
-
-//
 ///@}
 
 } //namespace dg

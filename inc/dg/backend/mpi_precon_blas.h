@@ -3,10 +3,11 @@
 #include "mpi_vector_blas.h"
 #include "thrust_matrix_blas.cuh"
 
-///@cond
 namespace dg
 {
 
+///@addtogroup mat_list
+///@{
 template <class T>
 struct MatrixTraits<MPI_Vector<T> >
 {
@@ -19,6 +20,9 @@ struct MatrixTraits<const MPI_Vector<T> >
     using value_type        = get_value_type<T>;
     using matrix_category   = MPIPreconTag;
 };
+///@}
+
+///@cond
 namespace blas2
 {
 namespace detail
@@ -76,5 +80,5 @@ inline void doSymv( const Matrix& m, const Vector&x, Vector& y, MPIPreconTag, MP
 
 } //namespace detail
 } //namespace blas2
-} //namespace dg
 ///@endcond
+} //namespace dg
