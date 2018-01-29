@@ -1,5 +1,5 @@
 #include <omp.h>
-#include "vector_categories.h"
+#include "config.h"
 
 //for the fmas it is important to activate -mfma compiler flag
 

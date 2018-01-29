@@ -95,11 +95,11 @@ template<class value_type, size_t n, size_t blocks_per_line>
 
 template<class value_type, size_t n>
 void call_ell_multiply_kernel( value_type alpha, value_type beta,
-         const value_type * RESTRICT data_ptr, const int * RESTRICT cols_ptr, const int * RESTRICT block_ptr,
+         const value_type * __restrict__ data_ptr, const int * __restrict__ cols_ptr, const int * __restrict__ block_ptr,
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int left_size, const int right_size,
-         const int * RESTRICT right_range_ptr,
-         const value_type * RESTRICT x_ptr, value_type * RESTRICT y_ptr)
+         const int * __restrict__ right_range_ptr,
+         const value_type * __restrict__ x_ptr, value_type * __restrict__ y_ptr)
 {
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256;

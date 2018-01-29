@@ -2,6 +2,7 @@
 #define _DG_BLAS_SERIAL_
 #include <thrust/execution_policy.h>
 #include <thrust/transform.h>
+#include "config.h"
 #include "execution_policy.h"
 #include "exblas/exdot_serial.h"
 namespace dg

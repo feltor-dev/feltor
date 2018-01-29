@@ -1,6 +1,7 @@
 #pragma once
 
 #include "exblas/exdot_omp.h"
+#include "config.h"
 #include "vector_categories.h"
 #ifdef MPI_VERSION
 #include "exblas/mpi_accumulate.h"

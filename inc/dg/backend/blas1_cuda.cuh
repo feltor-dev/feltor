@@ -24,7 +24,7 @@ inline void doTransform_dispatch( CudaTag, const Vector& x, Vector& y, UnaryOp o
 
 template<class value_type>
  __global__ void scal_kernel( value_type alpha,
-         value_type* RESTRICT x, const int size)
+         value_type* __restrict__ x, const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -41,7 +41,7 @@ inline void doScal_dispatch( CudaTag, unsigned size, T* x, T alpha) {
 
 template<class value_type>
  __global__ void plus_kernel( value_type alpha,
-         value_type* RESTRICT x, const int size)
+         value_type* __restrict__ x, const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -58,7 +58,7 @@ inline void doPlus_dispatch( CudaTag, unsigned size, T* x, T alpha)
 }
 template<class value_type>
  __global__ void axpby_kernel( value_type alpha, value_type beta,
-         const value_type* RESTRICT x_ptr, value_type* RESTRICT y_ptr, const int size)
+         const value_type* __restrict__ x_ptr, value_type* __restrict__ y_ptr, const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -70,7 +70,7 @@ template<class value_type>
     }
 }
 template<class T>
-void doAxpby_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x, T beta, T* RESTRICT y)
+void doAxpby_dispatch( CudaTag, unsigned size, T alpha, const T * __restrict__ x, T beta, T* __restrict__ y)
 {
     const size_t BLOCK_SIZE = 256; 
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
@@ -78,7 +78,7 @@ void doAxpby_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x, T 
 }
 template<class value_type>
  __global__ void axpbypgz_kernel( value_type alpha, value_type beta, value_type gamma,
-         const value_type* RESTRICT x_ptr, const value_type* RESTRICT y_ptr, value_type* RESTRICT z_ptr, const int size)
+         const value_type* __restrict__ x_ptr, const value_type* __restrict__ y_ptr, value_type* __restrict__ z_ptr, const int size)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -92,7 +92,7 @@ template<class value_type>
     }
 }
 template<class T>
-void doAxpbypgz_dispatch( CudaTag, unsigned size, T alpha, const T * RESTRICT x, T beta, const T* RESTRICT y, T gamma, T* RESTRICT z)
+void doAxpbypgz_dispatch( CudaTag, unsigned size, T alpha, const T * __restrict__ x, T beta, const T* __restrict__ y, T gamma, T* __restrict__ z)
 {
     const size_t BLOCK_SIZE = 256; 
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);

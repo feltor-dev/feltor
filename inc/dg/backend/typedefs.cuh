@@ -36,14 +36,6 @@ typedef EllSparseBlockMat<float> fHMatrix; //!< Host Matrix for derivatives
 #ifdef MPI_VERSION
 #include "mpi_vector.h"
 #include "mpi_matrix.h"
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-#include "mpi-ext.h"
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-#error "CUDA aware MPI installation required!"
-#else
-#warning "Cannot determine CUDA-aware MPI support!";
-#endif
-#endif
 
 namespace dg{
 ///@addtogroup typedefs

@@ -2,12 +2,12 @@
 #define _DG_TIMER_
 #include "thrust/device_vector.h"
 //the <thrust/device_vector.h> header must be included for the THRUST_DEVICE_SYSTEM macros to work
-namespace dg
-{
 #if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA) //if we don't use a GPU
 #ifdef MPI_VERSION //(mpi.h is included)
 ///@cond
-class Timer
+namespace dg
+{
+class Timer //CPU/ OMP + MPI
 {
   public:
     /**
@@ -28,11 +28,12 @@ class Timer
   private:
     double start, stop;
 };
+}//namespace dg
 ///@endcond
-
-#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP //MPI_VERSION
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP //MPI_VERSION not defined and THRUST ==  OMP
 #include "omp.h"
-
+namespace dg
+{
 /*! @brief Very simple tool for performance measuring
  * 
  * @code
@@ -45,7 +46,7 @@ class Timer
  * @ingroup timer
  * @note The Timer knows what hardware you are on!
  */
-class Timer
+class Timer //OMP non-MPI
 {
   public:
     /**
@@ -63,11 +64,15 @@ class Timer
   private:
     double start, stop;
 };
-#else
+}//namespace dg
+#else // MPI_VERSION not defined and THRUST == CPU
+//actually this case never happens?
 
 ///@cond
+
 #include <sys/time.h>
-class Timer
+namespace dg{
+class Timer //CPU non-MPI
 {
     timeval start;
     timeval stop;
@@ -81,13 +86,13 @@ class Timer
      * \return Time in seconds between calls of tic and toc*/
     double diff(){ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
 };
-///@endcond
-#endif //MPI_VERSION
-#else //THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA
-#ifdef MPI_VERSION
+}//namespace dg
+#endif//MPI_VERSION 
 
-///@cond
-class Timer
+#else //THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+#ifdef MPI_VERSION
+namespace dg{
+class Timer //GPU MPI
 {
   public:
     Timer(){
@@ -118,13 +123,12 @@ class Timer
     double start, stop;
     cudaEvent_t cu_sync;
 };
-///@endcond
-
+}//namespace dg
 
 #else //MPI_VERSION
 
-///@cond
-class Timer
+namespace dg{
+class Timer// GPU non-MPI
 {
   public:
     Timer(){
@@ -154,10 +158,10 @@ class Timer
   private:
     cudaEvent_t start, stop;
 };
+} //namespace dg
 ///@endcond
 #endif //MPI_VERSION
 #endif //THRUST
 
-} //namespace dg
 
 #endif //_DG_TIMER_

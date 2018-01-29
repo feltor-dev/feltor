@@ -1,6 +1,7 @@
 #ifndef _DG_BLAS_OMP_
 #define _DG_BLAS_OMP_
 #include <omp.h>
+#include "config.h"
 #include "blas1_serial.h"
 #include "exblas/exdot_omp.h"
 namespace dg

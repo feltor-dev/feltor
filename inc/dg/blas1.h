@@ -94,7 +94,7 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
  * Our implementation guarantees binary reproducible results. 
  * The sum is computed with infinite precision and the result is rounded
  * to the nearest double precision number. 
- * This is possible with the help of an adapted version of the \c exblas library. 
+ * This is possible with the help of an adapted version of the \c ::exblas library.
  * @copydoc hide_container
  * @param x Left container
  * @param y Right container may alias x

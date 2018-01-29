@@ -11,6 +11,14 @@
 /*! 
  * @defgroup backend Level 1: Vectors, Matrices and basic operations
  * @{
+ *     @defgroup typedefs Typedefs
+ *          Useful type definitions for easy programming
+ *     @defgroup sparsematrix Sparse matrix formats
+ *     @defgroup mpi_structures MPI backend functionality
+ *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X 
+ *             is e.g. CPU, GPU, accelerator cards...
+ *             The general idea to achieve this is to separate global communication from local computations and thus 
+ *             readily reuse the existing, optimized library for the local part.
  *     @defgroup blas Basic Linear Algebra Subroutines
  *
  *         These routines form the heart of our container free numerical algorithms. 
@@ -28,14 +36,6 @@
  *             A manual synchronization of threads or devices is never needed in an application 
  *             using these functions. All functions returning a value block until the value is ready.
  *     @}
- *     @defgroup sparsematrix Sparse matrix formats
- *     @defgroup mpi_structures MPI backend functionality
- *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X 
- *             is e.g. CPU, GPU, accelerator cards...
- *             The general idea to achieve this is to separate global communication from local computations and thus 
- *             readily reuse the existing, optimized library for the local part.
- *     @defgroup typedefs Typedefs
- *          Useful type definitions for easy programming
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * These algorithms make use only of blas level 1 and 2 functions

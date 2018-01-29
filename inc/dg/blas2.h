@@ -55,7 +55,7 @@ inline void transfer( const Matrix& x, AnotherMatrix& y)
  * Furthermore, the sum is computed with infinite precision and the result is then rounded
  * to the nearest double precision number. Although the products are not computed with 
  * infinite precision, the order of multiplication is guaranteed.
- * This is possible with the help of an adapted version of the exblas library. 
+ * This is possible with the help of an adapted version of the \c ::exblas library.
  * @tparam DiagonalMatrix Right now \c DiagonalMatrix has to be the same as \c container, except if \c container is a \p std::vector<container_type>, then the \c DiagonalMatrix has to be the \c container_type.
  * In the latter case the Matrix is applied to all containers in the std::vector and the sum is returned. 
  * @copydoc hide_container
