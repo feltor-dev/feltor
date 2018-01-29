@@ -120,7 +120,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * The created matrix has \c g.size() columns and \c x.size() rows. It uses 
  * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
  * When applied to a vector the result contains the interpolated values at the given interpolation points. 
- * @snippet backend/interpolation_t.cu doxygen
+ * @snippet geometry/interpolation_t.cu doxygen
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points ( has to have equal size as x)
@@ -264,7 +264,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * The created matrix has \c g.size() columns and \c x.size() rows. It uses 
  * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
  * When applied to a vector the result contains the interpolated values at the given interpolation points. 
- * @snippet backend/interpolation_t.cu doxygen3d
+ * @snippet geometry/interpolation_t.cu doxygen3d
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points

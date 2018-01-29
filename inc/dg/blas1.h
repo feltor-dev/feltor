@@ -349,8 +349,10 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
  * do not match, the result is undefined.
 
 * @copydoc hide_container
+* @param alpha scalar
 * @param x1 container x1  
 * @param x2 container x2 may alias x1
+* @param beta scalar
 * @param y  container y contains result on output ( may alias x1 and/or x2)
 
 @code

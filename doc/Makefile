@@ -38,7 +38,7 @@ dg: exblas.tag geometries.tag dg_introduction.pdf
 		echo "HTML_EXTRA_FILES  = ../../doc/related_pages/dg_introduction/dg_introduction.pdf"; \
     	echo "EXTERNAL_GROUPS=NO" ;\
     	echo "EXTERNAL_PAGES=NO" ;\
-		echo "TAGFILES = ../../doc/geometries.tag=../../geometries/html") | doxygen - ; 
+		echo "TAGFILES = ../../doc/exblas.tag=../../exblas/html ../../doc/geometries.tag=../../geometries/html") | doxygen - ;
 
 geometries: dg.tag parallel.pdf hector.pdf
 	cd ../inc/geometries; \
