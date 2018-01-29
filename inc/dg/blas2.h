@@ -210,4 +210,3 @@ inline void gemv( get_value_type<container> alpha,
 
 } //namespace blas2
 } //namespace dg
-

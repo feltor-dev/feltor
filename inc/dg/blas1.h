@@ -37,13 +37,16 @@ namespace blas1
  * @brief y=x; Generic way to copy/construct and/or convert a container type from a different container type (e.g. from CPU to GPU, or double to float, etc.)
  *
  * @copydoc hide_container
- * @tparam other_container another container type
+ * @tparam other_container another container type, must have the same data policy derived from \c AnyVectorTag as \c container
  * @param x source
  * @return x converted to the new format
- * @note since this function in quite often used there is a higher level alias \c dg::transfer 
+ * @note since this function is quite often used there is a higher level alias \c dg::transfer 
+ * @note it is possible to transfer a container to a std::array<container, N> (all elements are initialized to container) but not a std::vector<container> (since the desired size of the std::vector cannot be known)
 
+ * For example
  * @code
  dg::DVec device = dg::tansfer<dg::DVec>( dg::evaluate(dg::one, grid));
+ std::array<dg::DVec, 3> device_arr = dg::transfer<std::array<dg::DVec, 3>>( dg::evaluate( dg::one, grid));
  * @endcode
  */
 template<class container, class other_container>
@@ -56,16 +59,20 @@ inline container transfer( const other_container& x)
  * @brief y=x; Generic way to copy/assign and/or convert a container type to a different container type (e.g. from CPU to GPU, or double to float, etc.)
  *
  * @copydoc hide_container
- * @tparam other_container another container type
+ * @tparam other_container another container type, must have the same data policy derived from \c AnyVectorTag as \c container
  * @param x source
  * @param y sink
  * @note y gets resized properly
- * @note since this function in quite often used there is a higher level alias \c dg::transfer 
+ * @note since this function is quite often used there is a higher level alias \c dg::transfer 
+ * @note it is possible to transfer a container to a std::array<container, N> (all elements are initialized to container) but not a std::vector<container> (since the desired size of the std::vector cannot be known)
  *
+ * For example
  * @code
  dg::HVec host = dg::evaluate( dg::one, grid);
  dg::DVec device;
  dg::transfer( host, device); //device now equals host
+ std::array<dg::DVec, 3> device_arr; 
+ dg::transfer( host, device_arr); //every element of device_arr now equals host
  * @endcode
 
  */
@@ -89,7 +96,7 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
 
 /*! @brief \f$ x^T y\f$; Binary reproducible Euclidean dot product between two containers
  *
- * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
  * Our implementation guarantees binary reproducible results. 
  * The sum is computed with infinite precision and the result is rounded
@@ -102,6 +109,7 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
  * @note This routine is always executed synchronously due to the 
         implicit memcpy of the result. With mpi the result is broadcasted to all processes
 
+For example
 @code
     dg::DVec two( 100,2), three(100,3);
     double temp = dg::blas1::dot( two, three); //temp = 30 (5*(2*3))
@@ -115,7 +123,7 @@ inline get_value_type<container> dot( const container& x, const container& y)
 
 /*! @brief \f$ y = \alpha x + \beta y\f$
  *
- * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
  * @copydoc hide_container
  * @param alpha Scalar  
@@ -137,7 +145,7 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
 
 /*! @brief \f$ z = \alpha x + \beta y\f$
  *
- * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
 
  * @copydoc hide_container
@@ -161,7 +169,7 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
 
 /*! @brief \f$ z = \alpha x + \beta y + \gamma z\f$
  *
- * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+ * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
 
  * @copydoc hide_container
@@ -248,7 +256,7 @@ inline void plus( container& x, get_value_type<container> alpha)
 
 /*! @brief \f$ y = x_1 x_2 \f$
 *
-* Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
 
 * @copydoc hide_container
@@ -271,7 +279,7 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
 /**
 * @brief \f$ y = \alpha x_1 x_2 + \beta y\f$ 
 *
-* Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
 
 * @copydoc hide_container
@@ -296,7 +304,7 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
 /**
 * @brief \f$ y = \alpha x_1 x_2 x_3 + \beta y\f$ 
 *
-* Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
 
 * @copydoc hide_container
@@ -322,7 +330,7 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
 /**
 * @brief \f$ y = x_1/ x_2\f$ 
 *
-* Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
 
 * @copydoc hide_container
@@ -345,7 +353,7 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 /**
 * @brief \f$ y = \alpha x_1/ x_2 + \beta y \f$ 
 *
-* Divides two vectors element by element: \f[ y_i = \alpha x_{1i}/x_{2i} + \beta y_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Divides two vectors element by element: \f[ y_i = \alpha x_{1i}/x_{2i} + \beta y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
 
 * @copydoc hide_container
@@ -370,7 +378,7 @@ inline void pointwiseDivide( get_value_type<container> alpha, const container& x
 /**
 * @brief \f$ z = \alpha x_1x_2 + \beta x_2y_2 + \gamma z\f$
 *
-* Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]  i iterates over @b all elements inside the container. Specifically for a \c std::vector<container_type> i includes both the inner and the outer loop. If the container sizes
+* Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
 * @copydoc hide_container
 * @param alpha scalar

@@ -7,13 +7,32 @@ namespace dg{
 
 ///@addtogroup dispatch
 ///@{
+/**
+ * @brief Vector Tag base class
+ *
+ * The vector tag indicates how the data in the vector has to be accessed. For example
+ * how do we get the pointer to the first element? Is there a contiguous chunk of memory
+ * or is it a Vector of Vectors? 
+ * @note in any case we assume that the class is copyable/assignable and has a \c swap member function
+ */
 struct AnyVectorTag{}; //!< Vector Tag base class
 ///@}
 
 struct SharedVectorTag  : public AnyVectorTag {};   //!< vectors on shared memory
-struct MPIVectorTag     : public AnyVectorTag {};   //!< a distributed MPI vector, contains a shared vector
+/**
+ * @brief a distributed MPI vector, contains a shared vector
+ * 
+ * Must have a typedef \c container_type, which must have the SharedVectorTag
+ */
+struct MPIVectorTag     : public AnyVectorTag {};
 
-struct VectorVectorTag  : public AnyVectorTag {};   //!< container of containers (either Shared or MPI Vectors
+/**
+ * @brief A container of containers  (either Shared or MPI Vectors)
+ *
+ * for example a std::vector<container>
+ * @note Can be used recursively, for example a std::vector<std::vector<container>>
+ */
+struct VectorVectorTag  : public AnyVectorTag {};
 struct ArrayVectorTag   : public VectorVectorTag{}; //!< std::array of containers
 
 /**
