@@ -38,8 +38,8 @@ typedef dg::MDVec Vector;
 /*******************************************************************************
 program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
 outputs one line to std::cout 
-# npx npy npz #procs #threads n Nx Ny Nz t_AXPBY t_DOT t_DX_per t_DY_per t_DZ_per t_ARAKAWA #iterations t_1xELLIPTIC_CG_dir_centered t_DS EXBLASCHECK( d and i)
-if Nz == 1, ds is not executed
+# npx npy npz #procs #threads n Nx Ny Nz t_SCAL t_AXPBY t_POINTWISEDOT t_DOT t_DX_per t_DY_per t_DZ_per t_ARAKAWA #iterations t_1xELLIPTIC_CG_dir_centered t_DS EXBLASCHECK( d and i)
+if Nz == 1, DZ and DS are not executed
 Run with: 
 >$ echo npx npy npz n Nx Ny Nz | mpirun -n#procs ./cluster_mpib 
  
@@ -71,24 +71,37 @@ int main(int argc, char* argv[])
     dg::Timer t;
     Vector w3d = dg::create::weights( grid);
     Vector lhs = dg::evaluate ( left, grid), jac(lhs);
-    Vector rhs = dg::evaluate ( right,grid);
+    Vector rhs = dg::evaluate ( right,grid), x(rhs), y(rhs), z(rhs);
     const Vector sol = dg::evaluate( jacobian, grid );
     Vector eins = dg::evaluate( dg::one, grid );
     std::cout<< std::setprecision(6);
     unsigned multi=100;
 
-    dg::blas1::axpby( 1., lhs, -1., jac);
+    //bring vectors into cache
+    dg::blas1::pointwiseDot( 3., lhs,x, 3.,jac, y, 0., z);
+    //SCAL
+    t.tic();
+    for( unsigned i=0; i<multi; i++)
+        dg::blas1::scal( x, 3.);
+    t.toc();
+    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     //AXPBY
     t.tic();
     for( unsigned i=0; i<multi; i++)
-        dg::blas1::axpby( 1., lhs, -1., jac);
+        dg::blas1::axpby( 3., lhs, 1., jac);
+    t.toc();
+    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    //PointwiseDot
+    t.tic();
+    for( unsigned i=0; i<multi; i++)
+        dg::blas1::pointwiseDot( 3., lhs,x, 3.,jac, y, 0., z);
     t.toc();
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     //DOT
     t.tic();
     double norm;
     for( unsigned i=0; i<multi; i++)
-        norm = dg::blas1::dot( lhs, rhs);
+        norm += dg::blas1::dot( lhs, rhs);
     t.toc();
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     norm++;//avoid compiler warning
@@ -116,6 +129,8 @@ int main(int argc, char* argv[])
         t.toc();
         if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     }
+    else 
+        if(rank==0)std::cout<<0.<<" ";
 
     //The Arakawa scheme
     dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
@@ -134,7 +149,7 @@ int main(int argc, char* argv[])
     dg::Elliptic<dg::CylindricalMPIGrid3d, Matrix, Vector> laplace(gridEll, dg::not_normed, dg::centered);
     const Vector solution = dg::evaluate ( fct, gridEll);
     const Vector deriv = dg::evaluate( derivative, gridEll);
-    Vector x = dg::evaluate( initial, gridEll);
+    x = dg::evaluate( initial, gridEll);
     Vector b = dg::evaluate ( laplace_fct, gridEll);
     dg::blas2::symv( ellw3d, b, b);
     dg::CG< Vector > pcg( x, n*n*Nx*Ny);
@@ -168,6 +183,8 @@ int main(int argc, char* argv[])
         t.toc();
         if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     }
+    else 
+        if(rank==0)std::cout<<0.<<" ";
     if(rank==0)std::cout << res.d<< " "<<res.i<<" ";
 
 
