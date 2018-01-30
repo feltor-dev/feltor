@@ -22,7 +22,7 @@ namespace dg
  * @brief X-space generalized version of Arakawa's scheme
  *
  * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
- * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 
+ * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space.
  * @snippet arakawa_t.cu function
  * @snippet arakawa_t.cu doxygen
  * @copydoc hide_geometry_matrix_container
@@ -48,7 +48,7 @@ struct ArakawaX
      * @brief Compute poisson's bracket (25+2 memops)
      *
      * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
-     * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 
+     * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space.
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
@@ -56,7 +56,7 @@ struct ArakawaX
     void operator()( const container& lhs, const container& rhs, container& result);
 
     /**
-     * @brief Return internally used x - derivative 
+     * @brief Return internally used x - derivative
      *
      * The same as a call to dg::create::dx( g, bcx)
      * @return derivative
@@ -71,11 +71,11 @@ struct ArakawaX
     const Matrix& dy() {return bdyf;}
 
     /**
-     * @brief Compute the total variation integrand 
+     * @brief Compute the total variation integrand
      *
      * Computes \f[ (\nabla\phi)^2 = \partial_i \phi g^{ij}\partial_j \phi \f]
      * in the plane of a 2x1 product space
-     * @param phi function 
+     * @param phi function
      * @param varphi may equal phi, contains result on output
      */
     void variation( const container& phi, container& varphi)
@@ -95,8 +95,8 @@ struct ArakawaX
 };
 ///@cond
 template<class Geometry, class Matrix, class container>
-ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ): 
-    dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs), 
+ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
+    dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf( dg::create::dx( g, g.bcx())),
     bdyf( dg::create::dy( g, g.bcy()))
 {
@@ -105,11 +105,11 @@ ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
     dg::tensor::sqrt(perp_vol_inv_);
 }
 template<class Geometry, class Matrix, class container>
-ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy): 
+ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy):
     dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf(dg::create::dx( g, bcx)),
     bdyf(dg::create::dy( g, bcy))
-{ 
+{
     metric_=g.metric().perp();
     perp_vol_inv_ = dg::tensor::determinant(metric_);
     dg::tensor::sqrt(perp_vol_inv_);
