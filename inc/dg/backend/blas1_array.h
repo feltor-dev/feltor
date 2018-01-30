@@ -16,8 +16,14 @@ namespace dg
 {
 ///@addtogroup vec_list
 ///@{
+/**
+ * @brief There is a special implementation of blas1 functions for a \c std::array different from the one indicated by SerialTag
+ *
+ * @tparam T arithmetic value type
+ * @tparam N size of the array
+ */
 template<class T, std::size_t N>
-struct VectorTraits<std::array<T, N>, 
+struct VectorTraits<std::array<T, N>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
@@ -25,7 +31,7 @@ struct VectorTraits<std::array<T, N>,
     using execution_policy  = SerialTag;
 };
 template<class T, std::size_t N>
-struct VectorTraits<std::array<T, N>, 
+struct VectorTraits<std::array<T, N>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
@@ -74,10 +80,10 @@ inline void doPlus(  std::array<T,N>& x, T alpha, StdArrayTag) {
 }
 
 template< class T, std::size_t N>
-inline void doAxpby( T alpha, 
-              const std::array<T,N>& x, 
-              T beta, 
-              std::array<T,N>& y, 
+inline void doAxpby( T alpha,
+              const std::array<T,N>& x,
+              T beta,
+              std::array<T,N>& y,
               StdArrayTag) {
     for( size_t i=0; i<N; i++)
     {
@@ -87,12 +93,12 @@ inline void doAxpby( T alpha,
 }
 
 template< class T, std::size_t N>
-inline void doAxpbypgz( T alpha, 
-              const std::array<T,N>& x, 
-              T beta, 
-              const std::array<T,N>& y, 
-              T gamma, 
-              std::array<T,N>& z, 
+inline void doAxpbypgz( T alpha,
+              const std::array<T,N>& x,
+              T beta,
+              const std::array<T,N>& y,
+              T gamma,
+              std::array<T,N>& z,
               StdArrayTag) {
     for( size_t i=0; i<N; i++)
     {
@@ -104,12 +110,12 @@ inline void doAxpbypgz( T alpha,
 }
 
 template< class T, std::size_t N>
-inline void doPointwiseDot(  
-              T alpha, 
+inline void doPointwiseDot(
+              T alpha,
               const std::array<T,N>& x,
-              const std::array<T,N>& y, 
-              T gamma, 
-              std::array<T,N>& z, 
+              const std::array<T,N>& y,
+              T gamma,
+              std::array<T,N>& z,
               StdArrayTag) {
     for( size_t i=0; i<N; i++)
     {
@@ -119,12 +125,12 @@ inline void doPointwiseDot(
 }
 
 template< class T, std::size_t N>
-inline void doPointwiseDivide(  
-              T alpha, 
+inline void doPointwiseDivide(
+              T alpha,
               const std::array<T,N>& x,
-              const std::array<T,N>& y, 
-              T gamma, 
-              std::array<T,N>& z, 
+              const std::array<T,N>& y,
+              T gamma,
+              std::array<T,N>& z,
               StdArrayTag) {
     for( size_t i=0; i<N; i++)
     {
@@ -134,15 +140,15 @@ inline void doPointwiseDivide(
 }
 
 template< class T, std::size_t N>
-inline void doPointwiseDot(  
-              T alpha, 
+inline void doPointwiseDot(
+              T alpha,
               const std::array<T,N>& x1,
-              const std::array<T,N>& y1, 
-              T beta, 
+              const std::array<T,N>& y1,
+              T beta,
               const std::array<T,N>& x2,
-              const std::array<T,N>& y2, 
-              T gamma, 
-              std::array<T,N>& z, 
+              const std::array<T,N>& y2,
+              T gamma,
+              std::array<T,N>& z,
               StdArrayTag)
 {
     for( size_t i=0; i<N; i++)
@@ -154,13 +160,13 @@ inline void doPointwiseDot(
     }
 }
 template< class T, std::size_t N>
-inline void doPointwiseDot(  
-              T alpha, 
+inline void doPointwiseDot(
+              T alpha,
               const std::array<T,N>& x1,
               const std::array<T,N>& x2,
-              const std::array<T,N>& x3, 
-              T beta, 
-              std::array<T,N>& y, 
+              const std::array<T,N>& x3,
+              T beta,
+              std::array<T,N>& y,
               StdArrayTag)
 {
     for( size_t i=0; i<N; i++)

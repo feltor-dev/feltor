@@ -22,7 +22,7 @@ namespace dg
  * We use mpi to communicate (e.g. boundary points in matrix-vector multiplications) 
  * and use the existing blas functions for the local computations. 
  * (At the blas level 1 communication is needed only for scalar products)
- * @tparam container local container type. Must have a \c size() and a \c swap() member function.
+ * @tparam container local container type. Must have a \c size() and a \c swap() member function and a specialization of the \c VectorTraits class.
  */
 template<class container>
 struct MPI_Vector

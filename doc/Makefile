@@ -77,8 +77,8 @@ exblas:
 doc: dg geometries file exblas
 	ln -sf dg/html/modules.html index.html
 	#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
-	#Open with: firefox index.html #
-	#or on Windows: firefox dg/html/modules.html#
+	#Open with:     firefox index.html                                        #
+	#or on Windows: firefox dg/html/modules.html                              #
 	#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%#
 
 full_doc: pdf doc
