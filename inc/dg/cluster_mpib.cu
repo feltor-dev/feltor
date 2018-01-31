@@ -40,6 +40,7 @@ program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
 outputs one line to std::cout 
 # npx npy npz #procs #threads n Nx Ny Nz t_SCAL t_AXPBY t_POINTWISEDOT t_DOT t_DX_per t_DY_per t_DZ_per t_ARAKAWA #iterations t_1xELLIPTIC_CG_dir_centered t_DS EXBLASCHECK( d and i)
 if Nz == 1, DZ and DS are not executed
+if std::exception is thrown program writes error to std::cerr and terminates
 Run with: 
 >$ echo npx npy npz n Nx Ny Nz | mpirun -n#procs ./cluster_mpib 
  
@@ -69,11 +70,21 @@ int main(int argc, char* argv[])
 
     dg::CartesianMPIGrid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
     dg::Timer t;
-    Vector w3d = dg::create::weights( grid);
-    Vector lhs = dg::evaluate ( left, grid), jac(lhs);
-    Vector rhs = dg::evaluate ( right,grid), x(rhs), y(rhs), z(rhs);
-    const Vector sol = dg::evaluate( jacobian, grid );
-    Vector eins = dg::evaluate( dg::one, grid );
+    Vector w3d, lhs, rhs, jac, x, y, z;
+    try{
+        w3d = dg::transfer<Vector>( dg::create::weights( grid));
+        lhs = dg::transfer<Vector>( dg::evaluate ( left, grid));
+        rhs = dg::transfer<Vector>( dg::evaluate ( right,grid));
+        jac = dg::transfer<Vector>( dg::evaluate ( jacobian,grid));
+        x = y = z = lhs;
+    }
+    catch( std::exception& e)
+    {
+        if(rank==0)std::cout << std::endl;
+        if(rank==0)std::cerr << "Caught std::exception: "<<e.what()<<std::endl;
+        MPI_Finalize();
+        return 0;
+    }
     std::cout<< std::setprecision(6);
     unsigned multi=100;
 
@@ -131,6 +142,9 @@ int main(int argc, char* argv[])
     }
     else 
         if(rank==0)std::cout<<0.<<" ";
+    if(rank==0)std::cout <<std::flush;
+
+    try{
 
     //The Arakawa scheme
     dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
@@ -138,7 +152,7 @@ int main(int argc, char* argv[])
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    if(rank==0)std::cout<<t.diff()/(double)multi<<" "<<std::flush;
     //The Elliptic scheme
     periods[0] = false, periods[1] = false;
     MPI_Comm commEll;
@@ -152,7 +166,7 @@ int main(int argc, char* argv[])
     x = dg::evaluate( initial, gridEll);
     Vector b = dg::evaluate ( laplace_fct, gridEll);
     dg::blas2::symv( ellw3d, b, b);
-    dg::CG< Vector > pcg( x, n*n*Nx*Ny);
+    dg::CG< Vector > pcg( x, 1000);
     t.tic();
     unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
     t.toc();
@@ -187,6 +201,12 @@ int main(int argc, char* argv[])
         if(rank==0)std::cout<<0.<<" ";
     if(rank==0)std::cout << res.d<< " "<<res.i<<" ";
 
+    } catch( std::exception& e) {
+        if(rank==0)std::cout << std::endl;
+        if(rank==0)std::cerr << "Caught std::exception: "<<e.what()<<std::endl;
+        MPI_Finalize();
+        return 0;
+    }
 
     if(rank==0)std::cout <<std::endl;
     MPI_Finalize();
