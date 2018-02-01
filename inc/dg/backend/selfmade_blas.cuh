@@ -16,10 +16,10 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, SelfMadeMatrixTag, SelfMad
 }
 
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv(  
-              Matrix& m, 
+inline void doSymv(
+              Matrix& m,
               Vector1& x,
-              Vector2& y, 
+              Vector2& y,
               SelfMadeMatrixTag,
               AnyVectorTag,
               AnyVectorTag)
@@ -28,10 +28,10 @@ inline void doSymv(
 }
 
 template< class Matrix, class Vector1, class Vector2>
-inline void doGemv(  
-              Matrix& m, 
+inline void doGemv(
+              Matrix& m,
               Vector1& x,
-              Vector2& y, 
+              Vector2& y,
               SelfMadeMatrixTag,
               AnyVectorTag,
               AnyVectorTag)
@@ -40,12 +40,12 @@ inline void doGemv(
 }
 
 template< class Matrix, class Vector>
-inline void doSymv(  
-              get_value_type<Vector> alpha, 
+inline void doSymv(
+              get_value_type<Vector> alpha,
               const Matrix& m,
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+              const Vector& x,
+              get_value_type<Vector> beta,
+              Vector& y,
               SelfMadeMatrixTag,
               AnyVectorTag)
 {
