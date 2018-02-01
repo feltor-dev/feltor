@@ -9,7 +9,7 @@ namespace dg
 namespace geo
 {
 /**
- * @brief This function finds the X-point via Newton iteration applied to the gradient of psi, 
+ * @brief This function finds the X-point via Newton iteration applied to the gradient of psi
  *
  * The inverse of the Hessian matrix is computed analytically
  * @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
@@ -75,6 +75,8 @@ struct DivMonitor : public aCloneableBinaryFunctor<DivMonitor>
  * @param psi the flux functions
  * @param R_X start value on input, X-point on output
  * @param Z_X start value on input, X-point on output
+ * @param radiusX size of bump in x direction
+ * @param radiusY size of bump in y-direction
  *
  * @return a metric tensor and its derivatives
  */
@@ -146,11 +148,10 @@ namespace detail
 
 
 /**
- * @brief This struct finds and stores the X-point and can act in a root finding routine to find points on the perpendicular line through the X-point 
+ * @brief This struct finds and stores the X-point and can act in a root finding routine to find points on the perpendicular line through the X-point
  */
 struct XCross
 {
-    
     XCross( const BinaryFunctorsLvl1& psi, double R_X, double Z_X, double distance=1): fieldRZtau_(psi), psip_(psi), dist_(distance)
     {
         R_X_ = R_X, Z_X_ = Z_X;
@@ -586,8 +587,8 @@ namespace detail
 struct InitialX
 {
 
-    InitialX( const BinaryFunctorsLvl1& psi, double xX, double yX, bool verbose = false): 
-        psip_(psi), fieldRZtau_(psi), 
+    InitialX( const BinaryFunctorsLvl1& psi, double xX, double yX, bool verbose = false):
+        psip_(psi), fieldRZtau_(psi),
         xpointer_(psi, xX, yX, 1e-4), m_verbose( verbose)
     {
         //constructor finds four points around X-point and integrates them a bit away from it
@@ -605,7 +606,7 @@ struct InitialX
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             double eps = 1e10, eps_old = 2e10;
             unsigned N=10;
-            double psi0 = psip_.f()(begin[0], begin[1]), psi1 = 1e3*psi0; 
+            double psi0 = psip_.f()(begin[0], begin[1]), psi1 = 1e3*psi0;
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
                 eps_old = eps; end_old = end;
@@ -618,7 +619,7 @@ struct InitialX
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             eps = 1e10, eps_old = 2e10; N=10;
-            psi0 = psip_.f()(begin[0], begin[1]), psi1 = -0.01; 
+            psi0 = psip_.f()(begin[0], begin[1]), psi1 = -0.01;
             if( i==0||i==2)psi1*=-1.;
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
@@ -641,9 +642,9 @@ struct InitialX
      * @param R_0 array of size 2 (write-only)
      * @param Z_0 array of size 2 (write-only)
      */
-    void find_initial( double psi, double* R_0, double* Z_0) 
+    void find_initial( double psi, double* R_0, double* Z_0)
     {
-        thrust::host_vector<double> begin( 2, 0), end( begin), end_old(begin); 
+        thrust::host_vector<double> begin( 2, 0), end( begin), end_old(begin);
         for( unsigned i=0; i<2; i++)
         {
             if(psi<0)

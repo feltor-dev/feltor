@@ -232,13 +232,13 @@ struct aTopologyX3d; //forward declare 3d version
  *
  * is of the form
  @code
- | -----> y 
+ | -----> y
  |  |---x----------x---|
  |  |---x----------x---|
  v  |--- ---------- ---|
- x  |--- ---------- ---| fx*Lx
+ x  |--- ---------- ---| fx*lx
     |--- ---------- ---|
-    fy*Ly
+    fy*ly
  @endcode
  *
  * @ingroup basictopology
