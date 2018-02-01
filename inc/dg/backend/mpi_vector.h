@@ -184,14 +184,16 @@ struct NearestNeighborComm
     /**
     * @brief Gather values from given Vector and initiate asynchronous communicatino
     * @param values from which to gather data (must not alter before call to \c global_gather_wait)
+    * @param rqst four request variables that can be used to call MPI_Waitall
     */
-    void global_gather_init( const Vector& values)const;
+    void global_gather_init( const Vector& values, MPI_Request rqst[4])const;
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
     *
     * @param buffer where received data resides waiting to be used (must be of size \c size())
+    * @param rqst the same four request variables that were used in global_gather_init
     */
-    void global_gather_wait( Vector& buffer)const;
+    void global_gather_wait( Vector& buffer, MPI_Request rqst[4])const;
     ///@copydoc aCommunicator::size()
     unsigned size() const{return do_size();}
     ///@copydoc aCommunicator::isCommunicating()
@@ -218,9 +220,8 @@ struct NearestNeighborComm
     Buffer<Vector> buffer1, buffer2, rb1, rb2;  //buffer_size
     Buffer<Vector> buffer_middle;
 
-    void sendrecv( Vector&, Vector&, Vector& , Vector&)const;
+    void sendrecv( Vector&, Vector&, Vector& , Vector&, MPI_Request rqst[4])const;
     unsigned buffer_size() const;
-    MPI_Request m_r[4];
     int m_source[2], m_dest[2];
 };
 
@@ -340,43 +341,42 @@ unsigned NearestNeighborComm<I,V>::buffer_size() const
 }
 
 template<class I, class V>
-void NearestNeighborComm<I,V>::global_gather_init( const V& input) const
+void NearestNeighborComm<I,V>::global_gather_init( const V& input, MPI_Request rqst[4]) const
 {
     //gather values from input into sendbuffer
     thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data().begin());
     thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data().begin());
     //mpi sendrecv
-    sendrecv( buffer1.data(), buffer2.data(), rb1.data(), rb2.data());
+    sendrecv( buffer1.data(), buffer2.data(), rb1.data(), rb2.data(), rqst);
+    thrust::gather( gather_map_middle.begin(), gather_map_middle.end(), input.begin(), buffer_middle.data().begin());
 }
 template<class I, class V>
-void NearestNeighborComm<I,V>::global_gather_wait( V& values) const
+void NearestNeighborComm<I,V>::global_gather_wait( V& values, MPI_Request rqst[4]) const
 {
-    MPI_Allwait( 4, m_r, MPI_STATUSES_IGNORE );
+    thrust::scatter( buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values.begin());
+    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     //scatter received values into values array
     thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values.begin());
     thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.begin());
-    thrust::gather( gather_map_middle.begin(), gather_map_middle.end(), input.begin(), buffer_middle.data().begin());
-    thrust::scatter( buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values.begin());
 }
 
 template<class I, class V>
-void NearestNeighborComm<I,V>::sendrecv( V& sb1, V& sb2 , V& rb1, V& rb2) const
+void NearestNeighborComm<I,V>::sendrecv( V& sb1, V& sb2 , V& rb1, V& rb2, MPI_Request rqst[4]) const
 {
-    MPI_Status status;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data
 #endif //THRUST_DEVICE_SYSTEM
     MPI_Isend( thrust::raw_pointer_cast(sb1.data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
-               m_dest[0], 3, comm_, &m_r[0]); //destination
+               m_dest[0], 3, comm_, &rqst[0]); //destination
     MPI_Irecv( thrust::raw_pointer_cast(rb2.data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
-               m_source[0], 3, comm_, &m_r[1]); //source
+               m_source[0], 3, comm_, &rqst[1]); //source
 
     MPI_Isend( thrust::raw_pointer_cast(sb2.data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
-               m_dest[1], 9, comm_, &m_r[2]);  //destination
+               m_dest[1], 9, comm_, &rqst[2]);  //destination
 
 
     MPI_Irecv( thrust::raw_pointer_cast(rb1.data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
-               m_source[1], 9, comm_, &status); //source
+               m_source[1], 9, comm_, &rqst[3]); //source
 }
 
 

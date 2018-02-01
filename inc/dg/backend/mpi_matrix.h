@@ -71,7 +71,7 @@ struct RowColDistMat
     */
     template< class OtherMatrixInner, class OtherMatrixOuter, class OtherCollective>
     RowColDistMat( const RowColDistMat<OtherMatrixInner, OtherMatrixOuter, OtherCollective>& src):
-        m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_c(src.collective()), m_buffer( m_c.get().allocate_buffer()) { }
+        m_i(src.inner_matrix()), m_o( src.outer_matrix()), m_c(src.collective()), m_buffer( m_c.allocate_buffer()) { }
     /**
     * @brief Read access to the inner matrix
     *
@@ -89,7 +89,7 @@ struct RowColDistMat
     *
     * @return
     */
-    const Collective& collective() const{return m_c.get();}
+    const Collective& collective() const{return m_c;}
 
     /**
     * @brief Matrix Vector product
@@ -106,7 +106,7 @@ struct RowColDistMat
     template<class container>
     void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y) const
     {
-        if( m_c.get().size() == 0) //no communication needed
+        if( m_c.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(),
                        get_matrix_category<LocalMatrixInner>(),
@@ -117,16 +117,18 @@ struct RowColDistMat
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
+        MPI_Comm_compare( x.communicator(), m_c.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+
         //1.1 initiate communication
-        m_c.global_gather_init( x.data());
+        MPI_Request rqst[4];
+        m_c.global_gather_init( x.data(), rqst);
         //1.2 compute inner points
         dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(),
                        get_matrix_category<LocalMatrixInner>(),
                        get_vector_category<container>() );
         //2. wait for communication to finish
-        m_c.global_gather_wait( m_buffer.data());
+        m_c.global_gather_wait( m_buffer.data(), rqst);
         //3. compute and add outer points
         dg::blas2::detail::doSymv(alpha, m_o, m_buffer.data(), 1., y.data(),
                        get_matrix_category<LocalMatrixInner>(),
@@ -146,7 +148,7 @@ struct RowColDistMat
     template<class container>
     void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y) const
     {
-        if( m_c.get().size() == 0) //no communication needed
+        if( m_c.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( m_i, x.data(), y.data(),
                        get_matrix_category<LocalMatrixInner>(),
@@ -158,16 +160,18 @@ struct RowColDistMat
         int result;
         MPI_Comm_compare( x.communicator(), y.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
+        MPI_Comm_compare( x.communicator(), m_c.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+
         //1.1 initiate communication
-        m_c.global_gather_init( x.data());
+        MPI_Request rqst[4];
+        m_c.global_gather_init( x.data(), rqst);
         //1.2 compute inner points
         dg::blas2::detail::doSymv( m_i, x.data(), y.data(),
                        get_matrix_category<LocalMatrixInner>(),
                        get_vector_category<container>() );
         //2. wait for communication to finish
-        m_c.global_gather_wait( m_buffer.data());
+        m_c.global_gather_wait( m_buffer.data(), rqst);
         //3. compute and add outer points
         dg::blas2::detail::doSymv(1, m_o, m_buffer.data(), 1., y.data(),
                        get_matrix_category<LocalMatrixInner>(),
