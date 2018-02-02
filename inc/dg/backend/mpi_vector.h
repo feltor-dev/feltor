@@ -343,12 +343,24 @@ unsigned NearestNeighborComm<I,V>::buffer_size() const
 template<class I, class V>
 void NearestNeighborComm<I,V>::global_gather_init( const V& input, MPI_Request rqst[4]) const
 {
+    int rank;
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    dg::Timer t;
+    t.tic();
     //gather values from input into sendbuffer
     thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data().begin());
     thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data().begin());
+    t.toc();
+    if(rank==0)std::cout<<"   gather took "<<t.diff()<<"s\n";
+    //t.tic();
     //mpi sendrecv
     sendrecv( buffer1.data(), buffer2.data(), rb1.data(), rb2.data(), rqst);
+    //t.toc();
+    //if(rank==0)std::cout<<"   sendrectook "<<t.diff()<<"s\n";
+    t.tic();
     thrust::gather( gather_map_middle.begin(), gather_map_middle.end(), input.begin(), buffer_middle.data().begin());
+    t.toc();
+    if(rank==0)std::cout<<"   gather took "<<t.diff()<<"s\n";
 }
 template<class I, class V>
 void NearestNeighborComm<I,V>::global_gather_wait( V& values, MPI_Request rqst[4]) const

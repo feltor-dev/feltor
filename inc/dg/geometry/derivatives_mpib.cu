@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     const Vector u = dg::evaluate( cosx, g);
 
     t.tic();
-    dg::blas2::symv( dx, v, w);
+    dg::blas2::symv( 1., dx, v, 0., w);
     t.toc();
     if(rank==0)std::cout << "Dx took "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., u, -1., w);
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     Matrix dy = dg::create::dy( g); 
     Vector temp( func);
     t.tic();
-    dg::blas2::gemv( dy, func, temp);
+    dg::blas2::gemv( 1., dy, func, 0., temp);
     t.toc();
     if(rank==0)std::cout << "Dy took "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., deri, -1.,temp);
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
     Matrix dz = dg::create::dz( g); 
     Vector temp( func);
     t.tic();
-    dg::blas2::gemv( dz, func, temp);
+    dg::blas2::gemv( 1., dz, func, 0., temp);
     t.toc();
     if(rank==0)std::cout << "Dz took "<<t.diff()<<"s\n";
     dg::blas1::axpby( 1., deri, -1., temp);
@@ -95,15 +95,15 @@ int main(int argc, char* argv[])
     Matrix jumpZ = dg::create::jumpZ( g); 
     Vector temp( func);
     t.tic();
-    dg::blas2::gemv( jumpX, func, temp);
+    dg::blas2::gemv( 1., jumpX, func, 0., temp);
     t.toc();
     if(rank==0)std::cout << "JumpX took "<<t.diff()<<"s\n";
     t.tic();
-    dg::blas2::gemv( jumpY, func, temp);
+    dg::blas2::gemv( 1., jumpY, func, 0., temp);
     t.toc();
     if(rank==0)std::cout << "JumpY took "<<t.diff()<<"s\n";
     t.tic();
-    dg::blas2::gemv( jumpZ, func, temp);
+    dg::blas2::gemv( 1., jumpZ, func, 0., temp);
     t.toc();
     if(rank==0)std::cout << "JumpZ took "<<t.diff()<<"s\n";
     }
