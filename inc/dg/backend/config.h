@@ -16,6 +16,9 @@
 #include <cmath>
 #ifndef FP_FAST_FMA
 #warning "fast fmas not activated!!"
+#define DG_FMA(a,b,c) (a*b+c)
+#else
+#define DG_FMA(a,b,c) (std::fma(a,b,c))
 #endif
 
 //%%%%%%%%%%%%%check for SIMD support in OpenMP4 if device system is OMP%%%%%%%%%%

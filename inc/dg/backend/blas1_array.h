@@ -88,7 +88,7 @@ inline void doAxpby( T alpha,
     for( size_t i=0; i<N; i++)
     {
         double temp = y[i]*beta;
-        y[i] = std::fma( alpha,x[i], temp);
+        y[i] = DG_FMA( alpha,x[i], temp);
     }
 }
 
@@ -103,8 +103,8 @@ inline void doAxpbypgz( T alpha,
     for( size_t i=0; i<N; i++)
     {
         double temp = z[i]*gamma;
-        temp = std::fma( alpha,x[i], temp);
-        temp = std::fma( beta, y[i], temp);
+        temp = DG_FMA( alpha,x[i], temp);
+        temp = DG_FMA( beta, y[i], temp);
         z[i] = temp;
     }
 }
@@ -120,7 +120,7 @@ inline void doPointwiseDot(
     for( size_t i=0; i<N; i++)
     {
         double temp = z[i]*gamma;
-        z[i] = std::fma( alpha*x[i], y[i], temp);
+        z[i] = DG_FMA( alpha*x[i], y[i], temp);
     }
 }
 
@@ -135,7 +135,7 @@ inline void doPointwiseDivide(
     for( size_t i=0; i<N; i++)
     {
         double temp = z[i]*gamma;
-        z[i] = std::fma( alpha, x[i]/y[i], temp);
+        z[i] = DG_FMA( alpha, x[i]/y[i], temp);
     }
 }
 
@@ -154,8 +154,8 @@ inline void doPointwiseDot(
     for( size_t i=0; i<N; i++)
     {
         double temp = z[i]*gamma;
-        temp = std::fma( alpha*x1[i], y1[i], temp);
-        temp = std::fma(  beta*x2[i], y2[i], temp);
+        temp = DG_FMA( alpha*x1[i], y1[i], temp);
+        temp = DG_FMA(  beta*x2[i], y2[i], temp);
         z[i] = temp;
     }
 }
@@ -172,7 +172,7 @@ inline void doPointwiseDot(
     for( size_t i=0; i<N; i++)
     {
         double temp = y[i]*beta;
-        y[i] = std::fma( alpha*x1[i], x2[i]*x3[i], temp);
+        y[i] = DG_FMA( alpha*x1[i], x2[i]*x3[i], temp);
     }
 }
 

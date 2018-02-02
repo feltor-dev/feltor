@@ -38,7 +38,7 @@ void doAxpby_dispatch( SerialTag, unsigned size, T alpha, const T * RESTRICT x_p
     for( unsigned i=0; i<size; i++)
     {
         double temp = y_ptr[i]*beta;
-        y_ptr[i] = std::fma( alpha,x_ptr[i], temp);
+        y_ptr[i] = DG_FMA( alpha,x_ptr[i], temp);
     }
 }
 template<class T>
@@ -47,8 +47,8 @@ void doAxpbypgz_dispatch( SerialTag, unsigned size, T alpha, const T * RESTRICT 
     for( unsigned i=0; i<size; i++)
     {
         double temp = z_ptr[i]*gamma;
-        temp = std::fma( alpha,x_ptr[i], temp);
-        temp = std::fma( beta, y_ptr[i], temp);
+        temp = DG_FMA( alpha,x_ptr[i], temp);
+        temp = DG_FMA( beta, y_ptr[i], temp);
         z_ptr[i] = temp;
     }
 }
@@ -63,7 +63,7 @@ inline void doPointwiseDot_dispatch( SerialTag, unsigned size,
     for( unsigned i=0; i<size; i++)
     {
         double temp = z_ptr[i]*gamma;
-        z_ptr[i] = std::fma( alpha*x_ptr[i], y_ptr[i], temp);
+        z_ptr[i] = DG_FMA( alpha*x_ptr[i], y_ptr[i], temp);
     }
 }
 template<class value_type>
@@ -77,7 +77,7 @@ inline void doPointwiseDivide_dispatch( SerialTag, unsigned size,
     for( unsigned i=0; i<size; i++)
     {
         double temp = z_ptr[i]*gamma;
-        z_ptr[i] = std::fma( alpha, x_ptr[i]/y_ptr[i], temp);
+        z_ptr[i] = DG_FMA( alpha, x_ptr[i]/y_ptr[i], temp);
     }
 }
 
@@ -95,8 +95,8 @@ inline void doPointwiseDot_dispatch( SerialTag, unsigned size,
     for( unsigned i=0; i<size; i++)
     {
         double temp = z_ptr[i]*gamma;
-        temp = std::fma( alpha*x1_ptr[i], y1_ptr[i], temp);
-        temp = std::fma(  beta*x2_ptr[i], y2_ptr[i], temp);
+        temp = DG_FMA( alpha*x1_ptr[i], y1_ptr[i], temp);
+        temp = DG_FMA(  beta*x2_ptr[i], y2_ptr[i], temp);
         z_ptr[i] = temp;
     }
 }
@@ -113,7 +113,7 @@ inline void doPointwiseDot_dispatch( SerialTag, unsigned size,
     for( unsigned i=0; i<size; i++)
     {
         double temp = y[i]*beta;
-        y[i] = std::fma( alpha*x1[i], x2[i]*x3[i], temp);
+        y[i] = DG_FMA( alpha*x1[i], x2[i]*x3[i], temp);
     }
 }
 
