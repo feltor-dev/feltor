@@ -1,11 +1,12 @@
 #pragma once
 
-#include <cassert> 
+#include <cassert>
 #include <cmath>
 #include <thrust/host_vector.h>
+#include "dg/backend/config.h"
 #include "grid.h"
 
-/*! @file 
+/*! @file
   @brief Function discretization routines
   */
 namespace dg
@@ -14,10 +15,10 @@ namespace dg
 namespace create
 {
 /**
-* @brief create host_vector containing 1d X-space abscissas 
+* @brief create host_vector containing 1d X-space abscissas
 *
 * same as evaluation of f(x) = x on the grid
-* @param g The grid 
+* @param g The grid
 *
 * @return Host Vector
 */
@@ -27,8 +28,8 @@ thrust::host_vector<double> abscissas( const Grid1d& g)
     for( unsigned i=0; i<g.N(); i++)
         for( unsigned j=0; j<g.n(); j++)
         {
-            double xmiddle = std::fma( g.h(), (double)(i), g.x0());
-            abs[i*g.n()+j] = std::fma( (g.h()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+            double xmiddle = DG_FMA( g.h(), (double)(i), g.x0());
+            abs[i*g.n()+j] = DG_FMA( (g.h()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
         }
     return abs;
 }

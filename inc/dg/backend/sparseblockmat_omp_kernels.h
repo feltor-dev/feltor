@@ -36,10 +36,10 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 {
                     value_type temp = 0;
                     for( int q=0; q<n; q++) //multiplication-loop
-                        temp = std::fma(data[ B[d]+q],
+                        temp = DG_FMA(data[ B[d]+q],
                                 x[(J[d]+q)*right_size+j],
                                 temp);
-                    y[I] = std::fma(alpha, temp, y[I]);
+                    y[I] = DG_FMA(alpha, temp, y[I]);
                 }
             }
         }
@@ -94,34 +94,45 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 {
                     int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                     for( int q=0; q<n; q++) //multiplication-loop
-                        temp[d] = std::fma(data[B+q], xprivate[d*n+q], temp[d]);
+                        temp[d] = DG_FMA(data[B+q], xprivate[d*n+q], temp[d]);
                 }
                 int I = ((s*num_rows + i)*n+k);
                 y[I]*= beta;
                 for( int d=0; d<blocks_per_line; d++)
-                    y[I] = std::fma(alpha, temp[d], y[I]);
+                    y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
         }
         #pragma omp SIMD //very important for KNL
         for( int i=1; i<num_rows-1; i++)
         {
-            for( int d=0; d<blocks_per_line; d++)
-            {
-                int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
-                for(int q=0; q<n; q++)
-                    xprivate[d*n+q] = x[J+q];
-            }
+            //for( int d=0; d<blocks_per_line; d++)
+            //{
+            //    int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n;
+            //    for(int q=0; q<n; q++)
+            //        xprivate[d*n+q] = x[J+q];
+            //}
             for( int k=0; k<n; k++)
             {
-                value_type temp[blocks_per_line] = {0};
-                int B = n*blocks_per_line*k;
-                for( int d=0; d<blocks_per_line; d++)
-                    for( int q=0; q<n; q++)
-                        temp[d] = std::fma( dprivate[B+d*n+q], xprivate[d*n+q], temp[d]);
                 int I = ((s*num_rows + i)*n+k);
                 y[I]*= beta;
+                int B = n*blocks_per_line*k;
                 for( int d=0; d<blocks_per_line; d++)
-                    y[I] = std::fma(alpha, temp[d], y[I]);
+                {
+                    value_type temp = 0;
+                    for( int q=0; q<n; q++)
+                    {
+                        int J = (s*num_cols+cols_idx[i*blocks_per_line+d])*n+q;
+                        temp = DG_FMA( dprivate[B+d*n+q], x[J], temp);
+                    }
+                    y[I] = DG_FMA(alpha, temp, y[I]);
+                }
+                //value_type temp[blocks_per_line] = {0};
+                //int B = n*blocks_per_line*k;
+                //for( int d=0; d<blocks_per_line; d++)
+                //    for( int q=0; q<n; q++)
+                //        temp[d] = DG_FMA( dprivate[B+d*n+q], xprivate[d*n+q], temp[d]);
+                //for( int d=0; d<blocks_per_line; d++)
+                //    y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
         }
         for( int i=num_rows-1; i<num_rows; i++)
@@ -139,17 +150,17 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 {
                     int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                     for( int q=0; q<n; q++) //multiplication-loop
-                        temp[d] = std::fma( data[B+q], xprivate[d*n+q], temp[d]);
+                        temp[d] = DG_FMA( data[B+q], xprivate[d*n+q], temp[d]);
                 }
                 int I = ((s*num_rows + i)*n+k);
                 y[I]*= beta;
                 for( int d=0; d<blocks_per_line; d++)
-                    y[I] = std::fma(alpha, temp[d], y[I]);
+                    y[I] = DG_FMA(alpha, temp[d], y[I]);
             }
         }
     }
     } //trivial
-    else
+    else // not trivial
     {
     value_type xprivate[blocks_per_line*n];
     #pragma omp for nowait
@@ -169,17 +180,17 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
             {
                 int B = (data_idx[i*blocks_per_line+d]*n+k)*n;
                 for( int q=0; q<n; q++) //multiplication-loop
-                    temp[d] = std::fma( data[B+q], xprivate[d*n+q], temp[d]);
+                    temp[d] = DG_FMA( data[B+q], xprivate[d*n+q], temp[d]);
             }
             int I = ((s*num_rows + i)*n+k);
             y[I]*= beta;
             for( int d=0; d<blocks_per_line; d++)
-                y[I] = std::fma(alpha, temp[d], y[I]);
+                y[I] = DG_FMA(alpha, temp[d], y[I]);
         }
     }
     }// trivial
     }// right_size==1
-    else
+    else // right_size != 1
     {
     value_type dprivate[blocks_per_line*n];
 #pragma omp for collapse(2) nowait
@@ -205,11 +216,12 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                 for( int d=0; d<blocks_per_line; d++)
                 {
                     value_type temp = 0;
+                    int Jd = J[d];
                     for( int q=0; q<n; q++) //multiplication-loop
-                        temp = std::fma( dprivate[ d*n+q],
-                                    x[(J[d]+q)*right_size+j], 
+                        temp = DG_FMA( dprivate[ d*n+q],
+                                    x[(Jd+q)*right_size+j], 
                                     temp);
-                    y[I] = std::fma(alpha, temp, y[I]);
+                    y[I] = DG_FMA(alpha, temp, y[I]);
                 }
             }
         }
@@ -286,10 +298,10 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
         int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
         value_type temp=0;
         for( int q=0; q<n; q++) //multiplication-loop
-            temp = std::fma( data[ (data_idx[i]*n + k)*n+q],
+            temp = DG_FMA( data[ (data_idx[i]*n + k)*n+q],
                 x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
                 temp);
-        y[I] = std::fma(alpha, temp, y[I]);
+        y[I] = DG_FMA(alpha, temp, y[I]);
     }
 }
 

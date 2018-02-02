@@ -252,10 +252,10 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, value_type alpha, cons
         {
             value_type temp = 0;
             for( int q=0; q<n; q++) //multiplication-loop
-                temp = std::fma( data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q],
+                temp = DG_FMA( data[ (data_idx[i*blocks_per_line+d]*n + k)*n+q],
                             x[((s*num_cols + cols_idx[i*blocks_per_line+d])*n+q)*right_size+j],
                             temp);
-            y[I] = std::fma( alpha,temp, y[I]);
+            y[I] = DG_FMA( alpha,temp, y[I]);
         }
     }
 }
@@ -282,11 +282,11 @@ void CooSparseBlockMat<value_type>::symv( SharedVectorTag, value_type alpha, con
     {
         value_type temp = 0;
         for( int q=0; q<n; q++) //multiplication-loop
-            temp = std::fma( data[ (data_idx[i]*n + k)*n+q],
+            temp = DG_FMA( data[ (data_idx[i]*n + k)*n+q],
                     x[((s*num_cols + cols_idx[i])*n+q)*right_size+j],
                     temp);
         int I = ((s*num_rows + rows_idx[i])*n+k)*right_size+j;
-        y[I] = std::fma( alpha,temp, y[I]);
+        y[I] = DG_FMA( alpha,temp, y[I]);
     }
 }
 

@@ -4,7 +4,7 @@
 #include "mpi_grid.h"
 #include "evaluation.cuh"
 
-/*! @file 
+/*! @file
   @brief Function discretization routines for mpi vectors
   */
 namespace dg
@@ -39,14 +39,14 @@ MPI_Vector<thrust::host_vector<double> > evaluate( const BinaryOp& f, const aMPI
     for( unsigned i=0; i<l.Nx(); i++)
         for( unsigned j=0; j<n; j++)
         {
-            double xmiddle = std::fma( g.hx(), (double)(i+l.Nx()*coords[0]), g.x0());
-            absx[i*n+j] = std::fma( (g.hx()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+            double xmiddle = DG_FMA( g.hx(), (double)(i+l.Nx()*coords[0]), g.x0());
+            absx[i*n+j] = DG_FMA( (g.hx()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
         }
     for( unsigned i=0; i<l.Ny(); i++)
         for( unsigned j=0; j<n; j++)
         {
-            double ymiddle = std::fma( g.hy(), (double)(i+l.Ny()*coords[1]), g.y0());
-            absy[i*n+j] = std::fma( (g.hy()/2.), (1. + g.dlt().abscissas()[j]), ymiddle );
+            double ymiddle = DG_FMA( g.hy(), (double)(i+l.Ny()*coords[1]), g.y0());
+            absy[i*n+j] = DG_FMA( (g.hy()/2.), (1. + g.dlt().abscissas()[j]), ymiddle );
         }
 
     thrust::host_vector<double> w( l.size());
@@ -92,19 +92,19 @@ MPI_Vector<thrust::host_vector<double> > evaluate( const TernaryOp& f, const aMP
     for( unsigned i=0; i<l.Nx(); i++)
         for( unsigned j=0; j<n; j++)
         {
-            double xmiddle = std::fma( g.hx(), (double)(i+l.Nx()*coords[0]), g.x0());
-            absx[i*n+j] = std::fma( (g.hx()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+            double xmiddle = DG_FMA( g.hx(), (double)(i+l.Nx()*coords[0]), g.x0());
+            absx[i*n+j] = DG_FMA( (g.hx()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
         }
     for( unsigned i=0; i<l.Ny(); i++)
         for( unsigned j=0; j<n; j++)
         {
-            double ymiddle = std::fma( g.hy(), (double)(i+l.Ny()*coords[1]), g.y0());
-            absy[i*n+j] = std::fma( (g.hy()/2.), (1. + g.dlt().abscissas()[j]), ymiddle );
+            double ymiddle = DG_FMA( g.hy(), (double)(i+l.Ny()*coords[1]), g.y0());
+            absy[i*n+j] = DG_FMA( (g.hy()/2.), (1. + g.dlt().abscissas()[j]), ymiddle );
         }
     for( unsigned i=0; i<l.Nz(); i++)
     {
-        double zmiddle = std::fma( g.hz(), (double)(i+l.Nz()*coords[2]), g.z0());
-        absz[i] = std::fma( (g.hz()/2.), (1.), zmiddle );
+        double zmiddle = DG_FMA( g.hz(), (double)(i+l.Nz()*coords[2]), g.z0());
+        absz[i] = DG_FMA( (g.hz()/2.), (1.), zmiddle );
     }
 
     thrust::host_vector<double> w( l.size());
@@ -129,7 +129,7 @@ MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double, dou
 /**
  * @brief Take the relevant local part of a global vector
  *
- * @param global a vector the size of the global grid 
+ * @param global a vector the size of the global grid
  * @param g the assumed topology
  * @return an MPI_Vector that is the distributed version of the global vector
  * @ingroup scatter
@@ -151,7 +151,7 @@ MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector
                         unsigned idx2 = (((s*dims[1]+coords[1])*l.n()*l.Ny()+i)*dims[0] + coords[0])*l.n()*l.Nx() + j;
                         temp[idx1] = global[idx2];
                     }
-    return MPI_Vector<thrust::host_vector<double> >(temp, g.communicator()); 
+    return MPI_Vector<thrust::host_vector<double> >(temp, g.communicator());
 }
 /**
  * @copydoc global2local
@@ -173,7 +173,7 @@ MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector
                     unsigned idx2 = ((coords[1]*l.n()*l.Ny()+i)*dims[0] + coords[0])*l.n()*l.Nx() + j;
                     temp[idx1] = global[idx2];
                 }
-    return MPI_Vector<thrust::host_vector<double> >(temp, g.communicator()); 
+    return MPI_Vector<thrust::host_vector<double> >(temp, g.communicator());
 }
 
 }//namespace dg
