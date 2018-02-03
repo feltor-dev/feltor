@@ -87,7 +87,7 @@ class Timer //CPU non-MPI
     double diff(){ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
 };
 }//namespace dg
-#endif//MPI_VERSION
+#endif//MPI_VERSION 
 
 #else //THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #ifdef MPI_VERSION
