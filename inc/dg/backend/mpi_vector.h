@@ -4,6 +4,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/gather.h>
 #include "exblas/mpi_accumulate.h"
+#include "timer.cuh"
 #include "vector_traits.h"
 #include "thrust_vector_blas.cuh"
 #include "mpi_communicator.h"
@@ -217,10 +218,10 @@ struct NearestNeighborComm
     bool silent_;
     Index gather_map1, gather_map2, scatter_map1, scatter_map2; //buffer_size
     Index gather_map_middle, scatter_map_middle;
-    Buffer<Vector> buffer1, buffer2, rb1, rb2;  //buffer_size
+    Buffer<Vector> sb1, sb2, rb1, rb2;  //buffer_size
     Buffer<Vector> buffer_middle;
 
-    void sendrecv( Vector&, Vector&, Vector& , Vector&, MPI_Request rqst[4])const;
+    void sendrecv(MPI_Request rqst[4])const;
     unsigned buffer_size() const;
     int m_source[2], m_dest[2];
 };
@@ -312,7 +313,7 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
     gather_map1 =hbgather1, gather_map2 =hbgather2;
     scatter_map1=hbscattr1, scatter_map2=hbscattr2;
     gather_map_middle = mid_gather, scatter_map_middle = mid_scatter;
-    buffer1.data().resize( buffer_size()), buffer2.data().resize( buffer_size());
+    sb1.data().resize( buffer_size()), sb2.data().resize( buffer_size());
     buffer_middle.data().resize( 4*buffer_size());
     rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
 }
@@ -348,13 +349,13 @@ void NearestNeighborComm<I,V>::global_gather_init( const V& input, MPI_Request r
     dg::Timer t;
     t.tic();
     //gather values from input into sendbuffer
-    thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), buffer1.data().begin());
-    thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), buffer2.data().begin());
+    thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), sb1.data().begin());
+    thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), sb2.data().begin());
     t.toc();
     if(rank==0)std::cout<<"   gather took "<<t.diff()<<"s\n";
     //t.tic();
     //mpi sendrecv
-    sendrecv( buffer1.data(), buffer2.data(), rb1.data(), rb2.data(), rqst);
+    sendrecv( rqst);
     //t.toc();
     //if(rank==0)std::cout<<"   sendrectook "<<t.diff()<<"s\n";
     t.tic();
@@ -373,21 +374,21 @@ void NearestNeighborComm<I,V>::global_gather_wait( V& values, MPI_Request rqst[4
 }
 
 template<class I, class V>
-void NearestNeighborComm<I,V>::sendrecv( V& sb1, V& sb2 , V& rb1, V& rb2, MPI_Request rqst[4]) const
+void NearestNeighborComm<I,V>::sendrecv( MPI_Request rqst[4]) const
 {
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data
 #endif //THRUST_DEVICE_SYSTEM
-    MPI_Isend( thrust::raw_pointer_cast(sb1.data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
+    MPI_Isend( thrust::raw_pointer_cast(sb1.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[0], 3, comm_, &rqst[0]); //destination
-    MPI_Irecv( thrust::raw_pointer_cast(rb2.data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
+    MPI_Irecv( thrust::raw_pointer_cast(rb2.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
                m_source[0], 3, comm_, &rqst[1]); //source
 
-    MPI_Isend( thrust::raw_pointer_cast(sb2.data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
+    MPI_Isend( thrust::raw_pointer_cast(sb2.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[1], 9, comm_, &rqst[2]);  //destination
 
 
-    MPI_Irecv( thrust::raw_pointer_cast(rb1.data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
+    MPI_Irecv( thrust::raw_pointer_cast(rb1.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
                m_source[1], 9, comm_, &rqst[3]); //source
 }
 
