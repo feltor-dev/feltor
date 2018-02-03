@@ -84,5 +84,9 @@ int main()
     double solution3d = solution2d*(exp(12.) -exp(10.))/2.;
     std::cout << "Correct square norm is    "<<std::setw(6)<<solution3d<<std::endl;
     std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n";
+
+    std::cout << "TEST result of a sin function to compare platforms/compilers:\n";
+    res.d = sin( 6.12610567450009658);
+    std::cout << "Result of sin "<<res.d<<"\t"<<res.i<<"\t(GCC: -4628567870976535683)"<<std::endl;
     return 0;
 } 
