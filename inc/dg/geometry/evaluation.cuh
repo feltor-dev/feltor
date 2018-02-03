@@ -29,7 +29,9 @@ thrust::host_vector<double> abscissas( const Grid1d& g)
         for( unsigned j=0; j<g.n(); j++)
         {
             double xmiddle = DG_FMA( g.h(), (double)(i), g.x0());
-            abs[i*g.n()+j] = DG_FMA( (g.h()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+            double h2 = g.h()/2.;
+            double absj = 1.+g.dlt().abscissas()[j];
+            abs[i*g.n()+j] = DG_FMA( h2, absj, xmiddle);
         }
     return abs;
 }
