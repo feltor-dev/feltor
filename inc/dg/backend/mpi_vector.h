@@ -4,7 +4,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/gather.h>
 #include "exblas/mpi_accumulate.h"
-//#include "timer.cuh"
+#include "timer.cuh"
 #include "vector_traits.h"
 #include "thrust_vector_blas.cuh"
 #include "mpi_communicator.h"
@@ -219,10 +219,6 @@ struct NearestNeighborComm
     Index gather_map1, gather_map2, scatter_map1, scatter_map2; //buffer_size
     Index gather_map_middle, scatter_map_middle;
     Buffer<Vector> sb1, sb2, rb1, rb2;  //buffer_size
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    Buffer<thrust::host_vector<get_value_type<Vector>>> hsb1, hsb2, hrb1, hrb2;
-    Buffer<cudaStream_t> m_data_stream;
-#endif
     Buffer<Vector> buffer_middle;
 
     void sendrecv(MPI_Request rqst[4])const;
@@ -318,12 +314,8 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
     scatter_map1=hbscattr1, scatter_map2=hbscattr2;
     gather_map_middle = mid_gather, scatter_map_middle = mid_scatter;
     sb1.data().resize( buffer_size()), sb2.data().resize( buffer_size());
-    rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    hsb1.data().resize( buffer_size()), hsb2.data().resize( buffer_size());
-    hrb1.data().resize( buffer_size()), hrb2.data().resize( buffer_size());
-#endif
     buffer_middle.data().resize( 4*buffer_size());
+    rb1.data().resize( buffer_size()), rb2.data().resize( buffer_size());
 }
 
 template<class I, class V>
@@ -375,28 +367,7 @@ template<class I, class V>
 void NearestNeighborComm<I,V>::global_gather_wait( V& values, MPI_Request rqst[4]) const
 {
     thrust::scatter( buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values.begin());
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    get_value_type<V> * hsb1_ptr = thrust::raw_pointer_cast( hsb1.data().data());
-    get_value_type<V> * hsb2_ptr = thrust::raw_pointer_cast( hsb2.data().data());
-    get_value_type<V> * hrb1_ptr = thrust::raw_pointer_cast( hrb1.data().data());
-    get_value_type<V> * hrb2_ptr = thrust::raw_pointer_cast( hrb2.data().data());
-    get_value_type<V> *  rb1_ptr = thrust::raw_pointer_cast(  rb1.data().data());
-    get_value_type<V> *  rb2_ptr = thrust::raw_pointer_cast(  rb2.data().data());
-    cudaStreamSynchronize( m_data_stream.data());
-    MPI_Sendrecv( hsb1_ptr, buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
-               m_dest[0], 3, //destination
-               hrb2_ptr, buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
-               m_source[0], 3, comm_, MPI_STATUS_IGNORE); //source
-    MPI_Sendrecv( hsb2_ptr, buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
-               m_dest[1], 9,  //destination
-               hrb1_ptr, buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
-               m_source[1], 9, comm_, MPI_STATUS_IGNORE); //source
-    cudaMemcpyAsync( rb1_ptr, hrb1_ptr, sizeof(get_value_type<V>)*buffer_size(), cudaMemcpyHostToDevice, m_data_stream.data());
-    cudaMemcpyAsync( rb2_ptr, hrb2_ptr, sizeof(get_value_type<V>)*buffer_size(), cudaMemcpyHostToDevice, m_data_stream.data());
-    cudaStreamDestroy( m_data_stream.data());
-#else
     MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
-#endif
     //scatter received values into values array
     thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values.begin());
     thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.begin());
@@ -406,15 +377,8 @@ template<class I, class V>
 void NearestNeighborComm<I,V>::sendrecv( MPI_Request rqst[4]) const
 {
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    get_value_type<V> * hsb1_ptr = thrust::raw_pointer_cast( hsb1.data().data());
-    get_value_type<V> * hsb2_ptr = thrust::raw_pointer_cast( hsb2.data().data());
-    get_value_type<V> * sb1_ptr = thrust::raw_pointer_cast( sb1.data().data());
-    get_value_type<V> * sb2_ptr = thrust::raw_pointer_cast( sb2.data().data());
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data
-    cudaStreamCreateWithFlags( &m_data_stream.data(), cudaStreamNonBlocking);
-    cudaMemcpyAsync( hsb1_ptr, sb1_ptr, sizeof(get_value_type<V>)*buffer_size(), cudaMemcpyDeviceToHost, m_data_stream.data());
-    cudaMemcpyAsync( hsb2_ptr, sb2_ptr, sizeof(get_value_type<V>)*buffer_size(), cudaMemcpyDeviceToHost, m_data_stream.data());
-#else //THRUST_DEVICE_SYSTEM
+#endif //THRUST_DEVICE_SYSTEM
     MPI_Isend( thrust::raw_pointer_cast(sb1.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[0], 3, comm_, &rqst[0]); //destination
     MPI_Irecv( thrust::raw_pointer_cast(rb2.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
@@ -426,7 +390,6 @@ void NearestNeighborComm<I,V>::sendrecv( MPI_Request rqst[4]) const
 
     MPI_Irecv( thrust::raw_pointer_cast(rb1.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
                m_source[1], 9, comm_, &rqst[3]); //source
-#endif
 }
 
 

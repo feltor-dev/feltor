@@ -119,8 +119,8 @@ struct RowColDistMat
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         MPI_Comm_compare( x.communicator(), m_c.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        int rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        //int rank;
+        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
         //dg::Timer t;
 
         //1.1 initiate communication
