@@ -4,7 +4,6 @@
 #include <thrust/host_vector.h>
 #include <thrust/gather.h>
 #include "exblas/mpi_accumulate.h"
-#include "timer.cuh"
 #include "vector_traits.h"
 #include "thrust_vector_blas.cuh"
 #include "mpi_communicator.h"
@@ -113,16 +112,15 @@ struct VectorTraits<const MPI_Vector<container> > {
 
 /////////////////////////////communicator exchanging columns//////////////////
 /**
-* @brief Communicator for nearest neighbor communication
+* @brief Communicator for asynchronous nearest neighbor communication
 *
 * exchanges a halo of given depth among neighboring processes in a given direction
 * (the corresponding gather map is of general type and the communication
-*  can also be modeled in GeneralComm, but not BijectiveComm or SurjectiveComm )
+*  can also be modeled in \c GeneralComm, but not \c BijectiveComm or \c SurjectiveComm )
 * @ingroup mpi_structures
 * @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
 * @tparam Vector the vector container type must have a resize() function and work
 * in the thrust library functions ( i.e. must a thrust::host_vector or thrust::device_vector)
-* @note models aCommunicator
 */
 template<class Index, class Vector>
 struct NearestNeighborComm
@@ -177,21 +175,27 @@ struct NearestNeighborComm
     * @return direction
     */
     unsigned direction() const {return direction_;}
+
+    /**
+     * @brief Allocate a buffer object of size \c size()
+     * @return a buffer object on the stack
+     * @note if \c size()==0 the default constructor of \c Vector is called
+     */
     Vector allocate_buffer( )const{
         if( do_size() == 0 ) return Vector();
         return do_make_buffer();
     }
 
     /**
-    * @brief Gather values from given Vector and initiate asynchronous communicatino
-    * @param values from which to gather data (must not alter before call to \c global_gather_wait)
+    * @brief Gather values from given Vector and initiate asynchronous MPI communication
+    * @param values from which to gather data (it is safe to change values on return since values to communicate are copied into an internal buffer)
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
     void global_gather_init( const Vector& values, MPI_Request rqst[4])const;
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
     *
-    * @param buffer where received data resides waiting to be used (must be of size \c size())
+    * @param buffer (write only) where received data resides on return (must be of size \c size())
     * @param rqst the same four request variables that were used in global_gather_init
     */
     void global_gather_wait( Vector& buffer, MPI_Request rqst[4])const;

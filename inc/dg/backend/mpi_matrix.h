@@ -18,7 +18,7 @@ namespace dg
 ///@{
 
 /**
-* @brief Distributed memory matrix class
+* @brief Distributed memory matrix class, asynchronous communication
 *
 * The idea of this mpi matrix is to separate communication and computation in order to reuse existing optimized matrix formats for the computation.
 * It can be expected that this works particularly well for cases in which the communication to computation ratio is low.
@@ -34,11 +34,12 @@ namespace dg
  symv(m,x,y) needs to be callable on the container class of the MPI_Vector
 * @tparam LocalMatrixOuter The class of the matrix for local computations of the outer points.
  symv(1,m,x,1,y) needs to be callable on the container class of the MPI_Vector
-* @tparam Collective models aCommunicator The Communication class needs to gather values across processes. Only the global_gather and size
-member functions are needed.
+* @tparam Collective must be a \c NearestNeighborComm The Communication class needs to gather values across processes. The \c global_gather_init(), \c global_gather_wait() and \c size()
+member functions are called.
 Gather points from other processes that are necessary for the outer computations.
- If size()==0 the global_gather() function won't be called and
+ If \c size()==0 the global_gather() function won't be called and
 only the inner matrix is applied.
+@note This class overlaps communication with computation of the inner matrix
 */
 template<class LocalMatrixInner, class LocalMatrixOuter, class Collective >
 struct RowColDistMat

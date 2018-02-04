@@ -73,7 +73,7 @@ struct aCommunicator
     typedef LocalContainer container_type; //!< reveal local container type
 
     /**
-     * @brief Allocate a buffer object of size size()
+     * @brief Allocate a buffer object of size \c size()
      * @return a buffer object on the stack
      * @note if \c size()==0 the default constructor of \c LocalContainer is called
      */
