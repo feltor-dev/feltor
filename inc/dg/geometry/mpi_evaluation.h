@@ -39,14 +39,20 @@ MPI_Vector<thrust::host_vector<double> > evaluate( const BinaryOp& f, const aMPI
     for( unsigned i=0; i<l.Nx(); i++)
         for( unsigned j=0; j<n; j++)
         {
-            double xmiddle = DG_FMA( g.hx(), (double)(i+l.Nx()*coords[0]), g.x0());
-            absx[i*n+j] = DG_FMA( (g.hx()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+            unsigned coord = i+l.Nx()*coords[0];
+            double xmiddle = DG_FMA( g.hx(), (double)(coord), g.x0());
+            double h2 = g.hx()/2.;
+            double absj = 1.+g.dlt().abscissas()[j];
+            absx[i*n+j] = DG_FMA( h2, absj, xmiddle);
         }
     for( unsigned i=0; i<l.Ny(); i++)
         for( unsigned j=0; j<n; j++)
         {
-            double ymiddle = DG_FMA( g.hy(), (double)(i+l.Ny()*coords[1]), g.y0());
-            absy[i*n+j] = DG_FMA( (g.hy()/2.), (1. + g.dlt().abscissas()[j]), ymiddle );
+            unsigned coord = i+l.Ny()*coords[1];
+            double ymiddle = DG_FMA( g.hy(), (double)(coord), g.y0());
+            double h2 = g.hy()/2.;
+            double absj = 1.+g.dlt().abscissas()[j];
+            absy[i*n+j] = DG_FMA( h2, absj, ymiddle );
         }
 
     thrust::host_vector<double> w( l.size());
@@ -92,19 +98,27 @@ MPI_Vector<thrust::host_vector<double> > evaluate( const TernaryOp& f, const aMP
     for( unsigned i=0; i<l.Nx(); i++)
         for( unsigned j=0; j<n; j++)
         {
-            double xmiddle = DG_FMA( g.hx(), (double)(i+l.Nx()*coords[0]), g.x0());
-            absx[i*n+j] = DG_FMA( (g.hx()/2.), (1. + g.dlt().abscissas()[j]), xmiddle);
+            unsigned coord = i+l.Nx()*coords[0];
+            double xmiddle = DG_FMA( g.hx(), (double)(coord), g.x0());
+            double h2 = g.hx()/2.;
+            double absj = 1.+g.dlt().abscissas()[j];
+            absx[i*n+j] = DG_FMA( h2, absj, xmiddle);
         }
     for( unsigned i=0; i<l.Ny(); i++)
         for( unsigned j=0; j<n; j++)
         {
-            double ymiddle = DG_FMA( g.hy(), (double)(i+l.Ny()*coords[1]), g.y0());
-            absy[i*n+j] = DG_FMA( (g.hy()/2.), (1. + g.dlt().abscissas()[j]), ymiddle );
+            unsigned coord = i+l.Ny()*coords[1];
+            double ymiddle = DG_FMA( g.hy(), (double)(coord), g.y0());
+            double h2 = g.hy()/2.;
+            double absj = 1.+g.dlt().abscissas()[j];
+            absy[i*n+j] = DG_FMA( h2, absj, ymiddle );
         }
     for( unsigned i=0; i<l.Nz(); i++)
     {
-        double zmiddle = DG_FMA( g.hz(), (double)(i+l.Nz()*coords[2]), g.z0());
-        absz[i] = DG_FMA( (g.hz()/2.), (1.), zmiddle );
+        unsigned coord = i+l.Nz()*coords[2];
+        double zmiddle = DG_FMA( g.hz(), (double)(coord), g.z0());
+        double h2 = g.hz()/2.;
+        absz[i] = DG_FMA( h2, (1.), zmiddle );
     }
 
     thrust::host_vector<double> w( l.size());
