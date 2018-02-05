@@ -18,16 +18,15 @@
 #define MYLIBM_HPP_INCLUDED
 
 #include <stdint.h> //definition of int64_t
-#include <immintrin.h>
 #include <cmath>
 #include <cassert>
 #define MAX_VECTOR_SIZE 512 //configuration of vcl
 #define VCL_NAMESPACE vcl
-#include "vcl/vectorclass.h" //vcl by Agner Fog
+#include "vcl/vectorclass.h" //vcl by Agner Fog, may also include immintrin.h e.g.
 #include "vcl/instrset_detect.cpp"
 #if INSTRSET <5
 #error"Instruction set SSE4.1 is required! -msse4.1"
-#elif INSTRSET <7 
+#elif INSTRSET <7
 #warning "It is recommended to activate AVX instruction set (-mavx) or higher"
 #endif
 
