@@ -198,6 +198,45 @@ curvature terms & direct & cf. slab approximations \\
 time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
 \bottomrule
 \end{longtable}
+\subsection{Input file structure}
+Input file format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+n      & integer & 3 & - &\# Gaussian nodes in x and y \\
+Nx     & integer &100& - &\# grid points in x \\
+Ny     & integer &100& - &\# grid points in y \\
+dt     & integer &1.0& - &time step in units of $c_{s0}/\rho_{s0}$ \\
+n\_out  & integer &3  & - &\# Gaussian nodes in x and y in output \\
+Nx\_out & integer &100& - &\# grid points in x in output fields \\
+Ny\_out & integer &100& - &\# grid points in y in output fields \\
+itstp  & integer &2  & - &   steps between outputs \\
+maxout & integer &100& - &      \# outputs excluding first \\
+eps\_pol   & float &1e-6    & - &  accuracy of polarisation solver \\
+eps\_gamma & float &1e-7    & - & accuracy of $\Gamma_1$ and $\Gamma_2$\\
+eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
+curvature  & float &0.00015& - & magnetic curvature $\kappa:=\rho_{s0}/R_0$ \\
+tau        & float &1      & - & $\tau = T_i/T_e$  \\
+nu\_perp    & float &5e-3   & - & pependicular viscosity $\nu$ \\
+amplitude  & float &1.0    & - & amplitude $A$ of the blob \\
+sigma      & float &10     & - & blob radius $\sigma$ \\
+posX       & float &0.3    & - & blob x-position in units of $l_x$, i.e. $X = p_x l_x$\\
+posY       & float &0.5    & - & blob y-position in units of $l_y$, i.e. $Y = p_y l_y$ \\
+lx         & float &200    & - & $l_x$  \\
+ly         & float &200    & - & $l_y$  \\
+bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+initmode  & integer & 0 & - & \(n_e = \Gamma_1^\dagger N_i\)(0), \(n_e = N_i\) (1) (cf. initialization)\\
+tempmode & integer & 0    & - &thermal (0), isothermal (1)\\
+flrmode  & integer & 1    & - &const FLR (0), dyn. FLR (1)\\
+\bottomrule
+\end{longtable}
+
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
 %..................................................................
 \begin{thebibliography}{1}
  \bibitem{held16b}

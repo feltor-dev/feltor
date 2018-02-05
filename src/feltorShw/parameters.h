@@ -69,7 +69,7 @@ struct Parameters
         bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
         bc_y = dg::str2bc(js["bc_y"].asString());
         hwmode =  js["hwmode"].asUInt();
-	initmode =  js["initmode"].asUInt();
+        initmode =  js["initmode"].asUInt();
         invkappa =   js["invkappa"].asDouble();
         Chat = (double)(lx*alpha);
         g = (double) (lx/invkappa);

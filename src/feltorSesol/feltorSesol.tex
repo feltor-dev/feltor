@@ -217,6 +217,59 @@ curvature terms & direct & cf. slab approximations \\
 time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
 \bottomrule
 \end{longtable}
+\subsection{Input file structure}
+Input file format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+n      & integer & 3 & - &\# Gaussian nodes in x and y \\
+Nx     & integer &100& - &\# grid points in x \\
+Ny     & integer &100& - &\# grid points in y \\
+dt     & integer &0.5& - &time step in units of $c_{s0}/\rho_{s0}$ \\
+n\_out  & integer &3  & - &\# Gaussian nodes in x and y in output \\
+Nx\_out & integer &100& - &\# grid points in x in output fields \\
+Ny\_out & integer &100& - &\# grid points in y in output fields \\
+itstp  & integer &10  & - &   steps between outputs \\
+maxout & integer &1000& - &      \# outputs excluding first \\
+eps\_pol   & float &1e-5    & - &  accuracy of polarisation solver \\
+jumpfactor & float &1& - &     jumpfactor $\in \left[0.01,1\right]$\\
+eps\_gamma & float &1e-5    & - & accuracy of $\Gamma_1$ \\
+eps\_time  & float &1e-12   & - & accuracy of implicit time-stepper \\
+mu\_e       & float & -0.00272121& - & $\mu_e :=-m_e/m_i \in \left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
+curvature  & float &0.00015& - & magnetic curvature $\kappa:=\rho_{s0}/R_0$ \\
+tau        & float &1      & - & $\tau = T_i/T_e$  \\
+nu\_perp   & float &5e-3   & - & pependicular viscosity $\nu$ \\
+D          & float &2.5e-6    & - & coupling ($ ~ \kappa^2$)\\
+C          & float & 1000000  & - & Parallel Resistivity ($~D lx/d$)     \\
+l\_para    & float &5e-3   & - & parallel Length ($~ 2 pi q / mcv$) \\
+amplitude  & float &1.0    & - & amplitude $A$ of the blob \\
+sigma      & float &10     & - & blob radius $\sigma$ \\
+posX       & float &0.3    & - & blob x-position in units of $l_x$, i.e. $X = p_x l_x$\\
+posY       & float &0.5    & - & blob y-position in units of $l_y$, i.e. $Y = p_y l_y$ \\
+prof\_amp    & float &4   & - &Profile amplitude \\
+bg\_prof\_amp& float &1   & - &Background Prof amplitude  \\
+lx         & float &200    & - & $l_x$  \\
+ly         & float &200    & - & $l_y$  \\
+bc\_x       & char & "DIR\_NEU"  & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+bc\_x\_phi   & char & "DIR\_NEU" & - & boundary condition for electric potential $\phi$ in x (one of  DIR, DIR\_NEU or NEU\_DIR) \\
+bc\_y       & char & "PER"      & - & boundary condition in y (typically PER) \\
+hwmode                    & integer & 0    & - & ordinary/modified HW (0/1)\\
+invkappa                  & float & 100    & - & gradient length (in $\rho_s$)  \\
+SOL\_b                    & float & 0.3    & - & SOL boundary in units of lx (>1 no SOL) \\
+prof\_source\_rate        & float & 0.1    & - & profile source rate in units $c_s/\rho_s$ \\
+source\_b                 & float & 0.1    & - & source dampingb in u of lx (<1 no Source) \\
+prof\_sink\_rate          & float & 0.001  & - & profile source rate in units $c_s/\rho_s$  \\
+sink\_b                   & float & 0.9    & - & sink dampingb in u of lx (<1 no Source)   \\
+damping\_width            & float & 0.5    & - & source, sink, sol and edge damping width \\
+fluxmode                  & integer & 0    & - &"gradient" driven (0), flux driven (1)\\
+\bottomrule
+\end{longtable}
+
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
 %..................................................................
 \begin{thebibliography}{1}
  \bibitem{held:phd17}

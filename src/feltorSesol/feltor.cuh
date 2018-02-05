@@ -149,10 +149,10 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     //damping functions for edge, sol, source and sink
     lh( dg::evaluate(dg::TanhProfX( p.lx*p.solb,   p.dampw,-1.0,0.0,1.0),g)),
     rh( dg::evaluate(dg::TanhProfX( p.lx*p.solb,   p.dampw, 1.0,0.0,1.0),g)), 
-    lhso(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.source_dampw,-1.0,0.0,1.0),g)),
+    lhso(dg::evaluate(dg::TanhProfX(p.lx*p.sourceb,p.dampw,-1.0,0.0,1.0),g)),
     rhsi(dg::evaluate(dg::TanhProfX(p.lx*p.sinkb,  p.dampw, 1.0,0.0,1.0),g)),
     //initial profiles
-    profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.ln),g)),
+    profne(dg::evaluate(dg::ExpProfX(p.nprofileamp, p.bgprofamp,p.invkappa),g)),
     profNi(profne)
 {
     multi_chi= multigrid.project( chi);
@@ -314,13 +314,13 @@ void Explicit<G, Matrix, container>::operator()( const std::vector<container>& y
     polavg(npe[0],neavg);
     dg::blas1::axpby(1.,npe[0],-1.,neavg,nedelta); // delta(ne) = ne-<ne> = <ne>tilde(ne)
     dg::blas1::scal(omega,0.0);
-    if (p.zf==0) {
+    if (p.hwmode==0) {
         dg::blas1::pointwiseDivide(npe[0],neavg,lambda); //lambda = ne/<ne> = 1+ tilde(ne)
         dg::blas1::transform(lambda, lambda, dg::LN<value_type>()); //lambda = ln(N/<N> )
         dg::blas1::axpby(1.,phi[0],p.tau[0],lambda,omega); //omega = phi - <phi> -  ln(N/<N> )
     }
 
-    if (p.zf==1) {
+    if (p.hwmode==1) {
         polavg(logn[0],lambda);       //<ln(ne)> 
         polavg(phi[0],phiavg);        //<phi>
         dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
