@@ -17,9 +17,9 @@ dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 dg::bc bcz = dg::PER;
 double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
-double right( double x, double y, double z) {return cos(x)*sin(y)*z;} 
+double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
 //double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y, double z) 
+double jacobian( double x, double y, double z)
 {
     return z*z*cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
 }
@@ -37,19 +37,19 @@ typedef dg::MDVec Vector;
 
 /*******************************************************************************
 program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
-outputs one line to std::cout 
+outputs one line to std::cout
 # npx npy npz #procs #threads n Nx Ny Nz t_SCAL t_AXPBY t_POINTWISEDOT t_DOT t_DX_per t_DY_per t_DZ_per t_ARAKAWA #iterations t_1xELLIPTIC_CG_dir_centered t_DS EXBLASCHECK( d and i)
 if Nz == 1, DZ and DS are not executed
 if std::exception is thrown program writes error to std::cerr and terminates
-Run with: 
->$ echo npx npy npz n Nx Ny Nz | mpirun -n#procs ./cluster_mpib 
- 
+Run with:
+>$ echo npx npy npz n Nx Ny Nz | mpirun -n#procs ./cluster_mpib
+
  *******************************************************************************/
 
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm, std::cin, false);
     int rank;
@@ -58,13 +58,13 @@ int main(int argc, char* argv[])
     MPI_Cart_get( comm, 3, dims, periods, coords);
     if(rank==0)
     {
-        std::cout<< dims[0] <<" "<<dims[1]<<" "<<dims[2]<<" "<<dims[0]*dims[1]*dims[2]<<" ";
+        std::cout<< dims[0] <<" "<<dims[1]<<" "<<dims[2]<<" "<<dims[0]*dims[1]*dims[2];
         int num_threads = 1;
 #ifdef _OPENMP
         num_threads = omp_get_max_threads( );
 #endif //omp
-        std::cout << num_threads<<" ";
-        std::cout<< n <<" "<<Nx<<" "<<Ny<<" "<<Nz<<" ";
+        std::cout << " "<<num_threads;
+        std::cout<<" "<< n <<" "<<Nx<<" "<<Ny<<" "<<Nz;
     }
 
 
@@ -95,64 +95,64 @@ int main(int argc, char* argv[])
     for( unsigned i=0; i<multi; i++)
         dg::blas1::scal( x, 3.);
     t.toc();
-    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     //AXPBY
     t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas1::axpby( 3., lhs, 1., jac);
     t.toc();
-    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     //PointwiseDot
     t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas1::pointwiseDot( 3., lhs,x, 3.,jac, y, 0., z);
     t.toc();
-    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     //DOT
     t.tic();
     double norm;
     for( unsigned i=0; i<multi; i++)
         norm += dg::blas1::dot( lhs, rhs);
     t.toc();
-    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     norm++;//avoid compiler warning
     //Matrix-Vector product
     Matrix dx = dg::create::dx( grid, dg::centered);
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas2::symv( dx, rhs, jac);
     t.toc();
-    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     //Matrix-Vector product
     Matrix dy = dg::create::dy( grid, dg::centered);
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas2::symv( dy, rhs, jac);
     t.toc();
-    if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+    if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     if( Nz > 2)
     {
         //Matrix-Vector product
         Matrix dz = dg::create::dz( grid, dg::centered);
-        t.tic(); 
+        t.tic();
         for( unsigned i=0; i<multi; i++)
             dg::blas2::symv( dz, rhs, jac);
         t.toc();
-        if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+        if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     }
-    else 
-        if(rank==0)std::cout<<0.<<" ";
+    else
+        if(rank==0)std::cout<<" 0.0";
     if(rank==0)std::cout <<std::flush;
 
     try{
 
     //The Arakawa scheme
     dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
-    if(rank==0)std::cout<<t.diff()/(double)multi<<" "<<std::flush;
+    if(rank==0)std::cout<<" "<<t.diff()/(double)multi<<std::flush;
     //The Elliptic scheme
     periods[0] = false, periods[1] = false;
     MPI_Comm commEll;
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
     t.tic();
     unsigned number = pcg(laplace, x, b, ellv3d, 1e-6);
     t.toc();
-    if(rank==0)std::cout << number << " "<<t.diff()/(double)number<<" "<<std::flush;
+    if(rank==0)std::cout <<" "<< number << " "<<t.diff()/(double)number<<std::flush;
     dg::blas1::axpby( 1., solution, -1., x);
     exblas::udouble res;
     res.d = dg::blas2::dot( x, ellw3d, x);
@@ -182,7 +182,7 @@ int main(int argc, char* argv[])
         double gpa = gpR0*inv_aspect_ratio;
         double Rmin=gpR0-1.0*gpa;
         double Zmin=-1.0*gpa*1.00;
-        double Rmax=gpR0+1.0*gpa; 
+        double Rmax=gpR0+1.0*gpa;
         double Zmax=1.0*gpa*1.00;
         dg::CylindricalMPIGrid3d g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
         dg::geo::TokamakMagneticField magfield = dg::geo::createGuentherField(gpR0, gpI0);
@@ -191,15 +191,15 @@ int main(int argc, char* argv[])
         dg::geo::guenther::FuncNeu funcNEU(gpR0,gpI0);
         Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
 
-        t.tic(); 
+        t.tic();
         for( unsigned i=0; i<multi; i++)
             ds.symv(function,dsTdsfb);
         t.toc();
-        if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
+        if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     }
-    else 
-        if(rank==0)std::cout<<0.<<" ";
-    if(rank==0)std::cout << res.d<< " "<<res.i<<" ";
+    else
+        if(rank==0)std::cout<<" 0.0";
+    if(rank==0)std::cout << " "<<res.d<< " "<<res.i;
 
     } catch( std::exception& e) {
         if(rank==0)std::cout << std::endl;
