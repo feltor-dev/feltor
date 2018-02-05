@@ -386,6 +386,57 @@ curvature terms & direct & cf. curvature approximations \\
 time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
 \bottomrule
 \end{longtable}
+
+\subsection{Input file structure}
+Input file format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+n      & integer & 3 & - &\# Gaussian nodes in R and Z \\
+Nx     & integer &52& - &\# grid points in R \\
+Ny     & integer &52& - &\# grid points in Z \\
+Nz     & integer &16& - &\# grid points in $\varphi$ \\
+dt     & integer &1e-2& - &time step in units of $c_s/\rho_s$ \\
+n\_out  & integer &3  & - &\# Gaussian nodes in R and Z in output \\
+Nx\_out & integer &52& - &\# grid points in R in output fields \\
+Ny\_out & integer &52& - &\# grid points in Z in output fields \\
+Nz\_out & integer &16& - &\# grid points in $\varphi$ \\
+itstp  & integer &2  & - &   steps between outputs \\
+maxout & integer &10& - &      \# outputs excluding first \\
+eps\_pol   & float &1e-5    & - &  accuracy of polarisation solver \\
+jumpfactor & float &1& - &     jumpfactor $\in \left[0.01,1\right]$\\
+eps\_gamma & float &1e-6    & - & accuracy of $\Gamma_1$  \\
+eps\_time  & float &1e-9   & - & accuracy of implicit time-stepper \\
+mu         & float & -0.00272121& - & $\mu_e :=-m_e/m_i \in \left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
+tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\
+nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
+nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
+resistivity & float &1e-4  & - & parallel resistivity parameter $C:= \eta_\parallel n_{e0} e/B $ \\
+amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation \\
+sigma      & float &2      & - & blob variance in units of $\rho_s$ \\
+posX       & float &0.3    & - & blob x-position in units of $a$\\
+posY       & float &0.0    & - & blob y-position in units of $a$ \\
+sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
+k\_psi     & float &0    & - & zonal mode wave number  \\
+nprofileamp& float &4   & - & Profile peak amplitude \\
+bgprofamp  & float &1   & - & Background Prof amplitude (density on the boundary) \\
+bc  & char & "DIR"      & - & GLOBAL perp BC for parallel derivative (one of  DIR, NEU) \\
+source  & float & 0     & - & profile source rate \\
+boxscaleRp  & float & 1.1     & 1.05 & $R_+$ a little larger than 1\\
+boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\
+boxscaleZp  & float & 1.1     & 1.05 & $Z_+$ a little larger than 1 \\
+boxscaleZm  & float & 1.2     & 1.05 & $Z_-$ a little larger than 1 \\
+pollim    & integer & 0     & 0 & poloidal limiter (0/1) \\
+mode      & integer & 2     & 0 & initial condition blob(0), straight blob(1), turbulence(2) \\
+initial   & integer & 0     & 0 & init. phi cond. (stand(0), Force Balance(1))\\
+curvmode  & integer & 1     & 0 & curvature (low beta (0), toroidal field line (1)) \\
+\bottomrule
+\end{longtable}
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
 %..................................................................
 \begin{thebibliography}{1}
  \bibitem{held16}
