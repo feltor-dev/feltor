@@ -49,7 +49,7 @@ struct Parameters
         eps_gamma = js["eps_gamma"].asDouble();
         eps_time = js["eps_time"].asDouble();
         eps_hat = 1.;
-        mu[0] = js["mu_e"].asDouble();
+        mu[0] = -0.000272121; //Note: does not appear in feltor.cuh
         mu[1] = 1.;
         tau[0] = -1.;
         tau[1] = js["tau"].asDouble();

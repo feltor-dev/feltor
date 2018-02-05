@@ -232,6 +232,54 @@ matrix inversions & conjugate gradient & Use previous two solutions to extrapola
 time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
 \bottomrule
 \end{longtable}
+\subsection{Input file structure}
+Input file format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+n      & integer & 3 & - &\# Gaussian nodes in x and y \\
+Nx     & integer &64& - &\# grid points in x \\
+Ny     & integer &64& - &\# grid points in y \\
+dt     & integer &0.1& - &time step in units of $c_s/\rho_s$ \\
+n\_out  & integer &1  & - &\# Gaussian nodes in x and y in output \\
+Nx\_out & integer &64& - &\# grid points in x in output fields \\
+Ny\_out & integer &64& - &\# grid points in y in output fields \\
+itstp  & integer &10  & - &   steps between outputs \\
+maxout & integer &1000& - &      \# outputs excluding first \\
+eps\_pol   & float &1e-6   & - &  accuracy of polarisation solver \\
+jumpfactor & float &0.1    & - &  jumpfactor $\in \left[0.01,1\right]$\ \\
+eps\_gamma & float &1e-14  & - & accuracy of $\Gamma_1$ (only in gyrofluid model) \\
+eps\_time  & float &1e-14  & - & accuracy of implicit time-stepper \\
+tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\
+modelmode  & integer &0   & - & Full-F/Full-F-bousinesq/delta-f/Full-F in df notation \\
+cmode      & integer &0   & - & dyn/const collisionality (0/1) \\
+hwmode     & integer &0   & - & ordinary/modified HW (0/1) \\
+nu\_perp   & float &1e-3  & - & pependicular viscosity $\nu$ \\
+alpha      & float &0.005  & - & adiabaticity $\alpha$ or $\alpha_\delta$ \\
+initmode   & integer &0    & - & (0) blob, (1) Wave in x and y (2) bath\\
+amplitude  & float &1.0    & - & amplitude $A$ of the blob \\
+sigma      & float &10     & - & blob radius $\sigma$ \\
+posX       & float &0.3    & - & blob x-position in units of $l_x$\\
+posY       & float &0.5    & - & blob y-position in units of $l_y$ \\
+prof\_amp    & float &1   & - &Profile amplitude \\
+bg\_prof\_amp& float &0   & - &Background Prof amplitude  \\
+invkappa   & float &64   & - &gradient length $L_n$ (in units of $\rho_s$)   \\
+lx         & float &64   & - & $l_x$  \\
+ly         & float &64  & - & $l_y$  \\
+bc\_x   & char & "DIR\_NEU"      & - & boundary condition in x (one of DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+bc\_phi   & char & "DIR\_NEU"      & - & boundary condition for electric potential $\phi$ in x (one of  DIR, DIR\_NEU or NEU\_DIR) \\
+bc\_y   & char & "PER"      & - & boundary condition in y (typically PER) \\
+prof\_source\_rate     & float &0.1  & - & profile source rate in units $c_s/\rho_s$ \\
+source\_b             & float &0.2  & - & source dampingb in u of lx (<1 no Source)  \\
+source\_damping\_width & float &0.5  & - & source damping width  \\
+\bottomrule
+\end{longtable}
+
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
 %..................................................................
 \begin{thebibliography}{1}
  \bibitem{held:phd17}
