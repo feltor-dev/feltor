@@ -24,7 +24,7 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "ly"  : 200,       //ly in units of rho_s
     "bc_x"  : "DIR",   //boundary condition in x
     "bc_y"  : "PER",   //boundary condition in y
-    "initmode": 0, //standard (0) or vorticity (1)
+    "initmode": 1, //standard (0) or vorticity (1)
     "tempmode": 0, //thermal(0) or isothermal(1)    
     "flrmode": 1  //const FLR (0) or dyn FLR (1)  
 }

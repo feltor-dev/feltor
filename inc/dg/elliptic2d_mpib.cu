@@ -96,13 +96,13 @@ int main(int argc, char* argv[] )
 
     double err = dg::blas2::dot( w2d, error);
     double norm = dg::blas2::dot( w2d, solution);
-    if(rank==0)std::cout << "L2 Norm of relative error is               "<<std::setprecision(16)<<sqrt( err/norm)<<std::endl;
+    if(rank==0)std::cout << "L2 Norm of relative error is               "<<sqrt( err/norm)<<std::endl;
     dg::MDMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1.,derivati,-1., error);
     err = dg::blas2::dot( w2d, error);
     norm = dg::blas2::dot( w2d, derivati);
-    if(rank==0)std::cout << "L2 Norm of relative error in derivative is "<<std::setprecision(16)<<sqrt( err/norm)<<std::endl;
+    if(rank==0)std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
 
     MPI_Finalize();
