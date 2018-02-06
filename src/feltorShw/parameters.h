@@ -49,7 +49,7 @@ struct Parameters
         eps_gamma = js["eps_gamma"].asDouble();
         eps_time = js["eps_time"].asDouble();
         eps_hat = 1.;
-        mu[0] = js["mu_e"].asDouble();
+        mu[0] = -0.000272121; //Note: does not appear in feltor.cuh
         mu[1] = 1.;
         tau[0] = -1.;
         tau[1] = js["tau"].asDouble();
@@ -69,7 +69,7 @@ struct Parameters
         bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
         bc_y = dg::str2bc(js["bc_y"].asString());
         hwmode =  js["hwmode"].asUInt();
-	initmode =  js["initmode"].asUInt();
+        initmode =  js["initmode"].asUInt();
         invkappa =   js["invkappa"].asDouble();
         Chat = (double)(lx*alpha);
         g = (double) (lx/invkappa);

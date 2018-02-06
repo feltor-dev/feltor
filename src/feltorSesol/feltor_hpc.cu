@@ -50,10 +50,10 @@ int main( int argc, char* argv[])
     // Grid for radial probe location. This is used only in netcdf output, probe positioning is still hard-coded
     dg::Grid1d grid_probe(0, p.lx, 1, 8, p.bc_x);
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
+    std::cout << "Constructing Explicit...\n";
+    eule::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    eule::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -70,8 +70,8 @@ int main( int argc, char* argv[])
     //
 //     dg::LinearX prof(-p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);
 //     dg::SinProfX prof(p.nprofileamp, p.bgprofamp,M_PI/(2.*p.lx));
-     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.ln);
-//     dg::TanhProfX prof(p.lx*p.solb,p.ln,-1.0,p.bgprofamp,p.nprofileamp); //<n>
+     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
+//     dg::TanhProfX prof(p.lx*p.solb,p.invkappa,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 //     dg::TanhProfX prof(p.lx*p.solb,p.lx/10.,-1.0,p.bgprofamp,p.nprofileamp); //<n>
 
 //     const dg::DVec prof =  dg::LinearX( -p.nprofileamp/((double)p.lx), p.bgprofamp + p.nprofileamp);

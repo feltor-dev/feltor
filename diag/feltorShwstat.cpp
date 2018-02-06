@@ -82,6 +82,7 @@ int main( int argc, char* argv[])
     
 	std::cout << p.alpha << " " << p.invkappa;
 	//read and write data
+
 	for( unsigned m=0; m<30; m++) {
 	    err = nc_inq_varid(ncid, names[m].data(), &dataIDs[m]);
 	    err = nc_get_vara_double( ncid, dataIDs[m], &start0d, &numOut, temp.data());
@@ -91,6 +92,7 @@ int main( int argc, char* argv[])
 	    std::cout << " " << mean << " " << stddev; // << " " << stddev/mean;
 	}
 	//[[vy]]_norm
+
     err = nc_inq_varid(ncid, names[30].data(), &dataIDs[30]);
     err = nc_get_vara_double( ncid, dataIDs[30], &start0d, &numOut, temp.data());
     std::cout << " " << temp[timepos_max-1]-temp[timepos_min];
