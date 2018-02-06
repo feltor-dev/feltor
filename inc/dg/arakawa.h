@@ -11,8 +11,8 @@
 #include "geometry/mpi_evaluation.h"
 #endif
 
-/*! @file 
-  
+/*! @file
+
   @brief object for computation of Poisson bracket
   */
 namespace dg
@@ -45,13 +45,14 @@ struct ArakawaX
     ArakawaX( const Geometry& g, bc bcx, bc bcy);
 
     /**
-     * @brief Compute poisson's bracket (25+2 memops)
+     * @brief Compute Poisson bracket
      *
      * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
      * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space.
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
+     * @note memops: 25 reads; 9 writes (+ 2 reads and 1 write, if geometry is nontrivial)
      */
     void operator()( const container& lhs, const container& rhs, container& result);
 

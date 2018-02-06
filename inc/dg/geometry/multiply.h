@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "operator.h"
 #include "dg/functors.h"
@@ -19,8 +19,8 @@ namespace tensor
  * @param mu if empty, stays empty, else contains sqrt of input
  */
 template<class container>
-void sqrt( SparseElement<container>& mu){ 
-    if( mu.isSet()) 
+void sqrt( SparseElement<container>& mu){
+    if( mu.isSet())
         dg::blas1::transform( mu.value(), mu.value(), dg::SQRT<double>());
 }
 
@@ -30,15 +30,15 @@ void sqrt( SparseElement<container>& mu){
  * @param mu if empty, stays empty, else contains inverse of input
  */
 template<class container>
-void invert(SparseElement<container>& mu){ 
-    if(mu.isSet()) 
+void invert(SparseElement<container>& mu){
+    if(mu.isSet())
         dg::blas1::transform( mu.value(), mu.value(), dg::INVERT<double>());
 }
 
 /**
  * @brief Scale tensor with a container
  *
- * Computes \f$ t^{ij} = \mu t^{ij}\f$ 
+ * Computes \f$ t^{ij} = \mu t^{ij}\f$
  * @copydoc hide_container
  * @param t input (contains result on output)
  * @param mu all elements in t are scaled with mu
@@ -61,7 +61,7 @@ void scal( SparseTensor<container>& t, const container& mu)
 /**
  * @brief Scale tensor with a form
  *
- * Computes \f$ t^{ij} = \mu t^{ij}\f$ 
+ * Computes \f$ t^{ij} = \mu t^{ij}\f$
  * @copydoc hide_container
  * @param t input (contains result on output)
  * @param mu if mu.isEmpty() then nothing happens, else all elements in t are scaled with its value
@@ -84,7 +84,7 @@ void scal( SparseTensor<container>& t, const SparseElement<container>& mu)
 template<class container>
 void pointwiseDot( const SparseElement<container>& mu, const container& in, container& out)
 {
-    if(mu.isSet()) 
+    if(mu.isSet())
         dg::blas1::pointwiseDot(mu.value(), in,out);
     else
         out=in;
@@ -114,7 +114,7 @@ void pointwiseDot( const container& in, const SparseElement<container>& mu, cont
 template<class container>
 void pointwiseDivide( const container& in, const SparseElement<container>& mu, container& out)
 {
-    if(mu.isSet()) 
+    if(mu.isSet())
         dg::blas1::pointwiseDivide(in, mu.value(),out);
     else
         out=in;
@@ -124,15 +124,15 @@ void pointwiseDivide( const container& in, const SparseElement<container>& mu, c
 namespace detail
 {
 //multiply_add given containers with given tensor indices
-//i0 must be the diagonal index, out0 may alias in0 but not in1 
+//i0 must be the diagonal index, out0 may alias in0 but not in1
 template<class container>
 void multiply2d_helper( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, int i0[2], int i1[2])
 {
-    if( t.isSet(i0[0],i0[1]) && t.isSet(i1[0],i1[1]) ) 
-        dg::blas1::pointwiseDot( 1. , t.value(i0[0],i0[1]), in0, 1., t.value(i1[0], i1[1]), in1, 0., out0); 
-    else if( t.isSet(i0[0],i0[1]) && !t.isSet(i1[0],i1[1]) ) 
+    if( t.isSet(i0[0],i0[1]) && t.isSet(i1[0],i1[1]) )
+        dg::blas1::pointwiseDot( 1. , t.value(i0[0],i0[1]), in0, 1., t.value(i1[0], i1[1]), in1, 0., out0);
+    else if( t.isSet(i0[0],i0[1]) && !t.isSet(i1[0],i1[1]) )
         dg::blas1::pointwiseDot( t.value(i0[0], i0[1]), in0, out0);
-    else 
+    else
     {
         out0=in0;
         if( t.isSet(i1[0], i1[1]))
@@ -152,11 +152,11 @@ void multiply2d_helper( const SparseTensor<container>& t, const container& in0, 
  * @param out0 (output) first component  (restricted)
  * @param out1 (output) second component (may alias in1)
  * @attention aliasing only allowed between out1 and in1
- * @note Currently requires:
-         - 10 memops if all values in t are set; 
-         - 6  memops if t is diagonal; 
-         - 4  memops if t is empty
-         - (-1 memop if alias is used)
+ * @note Currently required memops:
+         - 10(9) reads + 2 writes if all values in t are set; (-1 read if alias is used)
+         - 6(5)  reads + 2 writes if t is diagonal; (-1 read if alias is used)
+         - 4  reads + 2 writes if t is empty and no alias
+         - 2  reads + 1 writes (= 1 copy) if t is empty and out1 aliases in1
  */
 template<class container>
 void multiply2d( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, container& out1)
@@ -201,7 +201,7 @@ void multiply3d( const SparseTensor<container>& t, const container& in0, const c
 /**
 * @brief Compute the determinant of a tensor
 * @copydoc hide_container
-* @param t the input tensor 
+* @param t the input tensor
 * @return the determinant of t as a SparseElement (unset if t is empty)
 */
 template<class container>
@@ -240,7 +240,7 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
     sqrt(volume);
     @endcode
  * @copydoc hide_container
- * @param t the input tensor 
+ * @param t the input tensor
  * @return the inverse square root of the determinant of t as a SparseElement (unset if t is empty)
  */
 template<class container>
