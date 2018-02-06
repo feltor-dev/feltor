@@ -6,13 +6,17 @@
 
 namespace dg{
 
-    ///@cond
+/*! @brief The vector traits 
+
+Specialize this struct if you want to enable your own vector/container class for the use in blas1 functions
+*/
 template< class Vector>
 struct VectorTraits {
     typedef typename Vector::value_type value_type;
     typedef ThrustVectorTag vector_category; //default is a ThrustVector
 };
 
+///@cond
 template< class Vector>
 struct VectorTraits<std::vector<Vector> >{
     typedef typename VectorTraits<Vector>::value_type value_type;

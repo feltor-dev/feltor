@@ -5,14 +5,9 @@
 #include <cmath>
 // #define DG_DEBUG
 
-
-
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/interpolation.cuh"
-#include "file/read_input.h"
+#include "dg/algorithm.h"
+#include "geometries/geometries.h"
 #include "file/nc_utilities.h"
-#include "geometries/solovev.h"
 
 #include "feltor/feltor.cuh"
 #include "feltor/parameters.h"
@@ -24,12 +19,11 @@
         density fields are the real densities in XSPACE ( not logarithmic values)
 */
 
-typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    Json::Reader reader;
+    Json::Value js, gs;
     if( argc != 4)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
@@ -37,23 +31,16 @@ int main( int argc, char* argv[])
     }
     else 
     {
-
-        try{
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-            v = file::read_input( argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            std::cout << geom << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( v);
+    const feltor::Parameters p( js);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
+    std::string input = js.toStyledString(), geom = gs.toStyledString();
     ////////////////////////////////set up computations///////////////////////////
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
@@ -61,39 +48,39 @@ int main( int argc, char* argv[])
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grids
-    dg::CylindricalGrid3d<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER);  
-    dg::CylindricalGrid3d<dg::DVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1,p.bc, p.bc, dg::PER);  
+    dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, 1, p.bc, p.bc, dg::PER);  
+    dg::CylindricalGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,1,p.bc, p.bc, dg::PER);  
     //create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p, gp); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > feltor( grid, p, gp); //initialize before implicit!
+    std::cout << "Constructing Implicit...\n";
+    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> implicit( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
-
     //initial perturbation
-   //     dg::Gaussian3d init0(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-//     dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
-    dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
-//     solovev::ZonalFlow init0(p, gp);
-//     dg::CONSTANT init0( 0.);
-
-    //averaged field aligned initializer
-//     dg::GaussianZ gaussianZ( M_PI, p.sigma_z*M_PI, 1);
-//     dg::Grid3d gridfordz( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, dg::DIR, dg::DIR, dg::PER, dg::cylindrical);  
-//     dg::DZ<dg::DMatrix, dg::DVec> dz( solovev::Field(gp), gridfordz, gridfordz.hz(), gp.rk4eps, solovev::PsiLimiter(gp), dg::DIR);
-//     y1[1] = dz.evaluateAvg( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
-    
-    //no field aligning
-    y1[1] = dg::evaluate( init0, grid);
+    if (p.mode == 0  || p.mode ==1) 
+    { 
+        dg::Gaussian3d init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+        y1[1] = dg::evaluate( init0, grid);
+    }
+    if (p.mode == 2) 
+    { 
+        dg::BathRZ init0(16,16,1,Rmin,Zmin, 30.,5.,p.amp);
+        y1[1] = dg::evaluate( init0, grid);
+    }
+    if (p.mode == 3) 
+    { 
+        dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
+        y1[1] = dg::evaluate( init0, grid);
+    }
     
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //initialize ni
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1)); //initialize ni-1
-    dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+    dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(dg::geo::solovev::Psip(gp), gp), grid);
     dg::blas1::pointwiseDot( damping, y0[1], y0[1]); //damp with gaussprofdamp
     std::cout << "initialize ne" << std::endl;
     feltor.initializene( y0[1], y0[0]);    
@@ -104,7 +91,7 @@ int main( int argc, char* argv[])
     
     std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, implicit, y0, p.dt);
 //     feltor.energies(y0); //now energies and potential are at time 0
     std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
@@ -115,9 +102,10 @@ int main( int argc, char* argv[])
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
-    solovev::FieldR fieldR(gp);
-    solovev::FieldZ fieldZ(gp);
-    solovev::FieldP fieldP(gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
+    dg::geo::FieldR fieldR(c);
+    dg::geo::FieldZ fieldZ(c);
+    dg::geo::FieldP fieldP(c);
     dg::HVec vecR = dg::evaluate( fieldR, grid_out);
     dg::HVec vecZ = dg::evaluate( fieldZ, grid_out);
     dg::HVec vecP = dg::evaluate( fieldP, grid_out);
@@ -202,7 +190,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis( feltor, implicit, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

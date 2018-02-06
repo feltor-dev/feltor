@@ -4,10 +4,7 @@
 #include <exception>
 #include <cusp/ell_matrix.h>
 
-#include "dg/blas.h"
-#include "dg/arakawa.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
 
 namespace dg
 {
@@ -25,6 +22,7 @@ struct Diffusion
         dg::blas1::scal( y, -nu_);
     }
     const container& weights(){return w2d;}
+    const container& inv_weights(){return v2d;}
     const container& precond(){return v2d;}
   private:
     double nu_;
@@ -49,7 +47,7 @@ struct Shu
      * @return psi is the potential
      */
     const container& potential( ) {return psi;}
-    void operator()( Vector& y, Vector& yp);
+    void operator()( const Vector& y, Vector& yp);
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
     container psi, w2d, v2d;
@@ -69,9 +67,9 @@ Shu< Matrix, container>::Shu( const Grid2d& g, double eps):
 }
 
 template< class Matrix, class container>
-void Shu<Matrix, container>::operator()( Vector& y, Vector& yp)
+void Shu<Matrix, container>::operator()( const Vector& y, Vector& yp)
 {
-    invert( laplaceM, psi, y, w2d, v2d);
+    invert( laplaceM, psi, y);
     arakawa_( y, psi, yp); //A(y,psi)-> yp
 }
 

@@ -1,39 +1,28 @@
-
-                * Input-File for "FELTOR" *
-                ---------------------------
-
-
-@-----------------------------Space and Time discretization------------
-1)  n  (# of x,y-polynomials)            =  3(3)
-2)  nx (grid points in x)                =  100(192)
-3)  ny (grid points in y)                =  100(192) 
-4)  dt (time step in units c_s/rho_s)    =  3.0(0.01)
-
-----------------------------------Output parameters--------------------
-5)  n_out (# of x-y polynomials in output)  =  3
-6)  nx_out (# grid points in output field)  =  100
-7)  ny_out (# grid points in output field)  =  100
-8)  itstp  (steps between outputs)          =  2   (5)
-9) total # of outputs (excluding first)     =  100
--------------------------Algorithmic parameters------------------------
-10)  eps_pol (stop for polarisation)        =   1e-6 (1e-6)
-11)  eps_gamma (stop for Gamma CG)          =   1e-7 (1e-8)
-12)  eps_time ( stop for time inversion )   =   1e-14
--------------------------Physical parameters----------------------------
-13) tau (Ti/Te)                             =  1.0    (0.0)
-14) mcv (curvature)                         =  0.00015 (0.00015)
-15) nu_perp                                 =  5e-3
-------------------------Initial perturbation parameters---------------------
-16) amp (blob amplitude)                    =  1.0   (1.0)
-17) sigma (blob variance in units of rho_s) =  10.   (10)
-18) x-position ( in units of lx)            =  0.2   (0.4)
-19) y-position ( in units of ly)            =  0.5   (0.5)
----------------------------------box setup----------------
-20) lx (in rho_s)                           =  200
-21) ly (in rho_s)                           =  200
-22) bc_x (0 periodic, 1 Dirichlet, 2DN )    =   1   (1.0)
-23) bc_y (0 periodic, 1 Dirichlet, 2DN )    =   0   (1.0)
----------------------------------MISC-------------------------------------------
-24) init condition (0 standard, 1 vorticity) = 0 
-25) thermal(0) isothermal(1)                 = 0
-@ ------------------------------------------------------------
+{
+    "n" :  3,       
+    "Nx" : 100,     
+    "Ny" : 100,     
+    "dt" : 1.0,     
+    "n_out"  : 3,   
+    "Nx_out" : 100, 
+    "Ny_out" : 100, 
+    "itstp"  : 20,  
+    "maxout" : 100, 
+    "eps_pol"   : 1e-6,  
+    "eps_gamma" : 1e-7,  
+    "eps_time"  : 1e-10, 
+    "curvature"  : 0.00015,
+    "tau"  : 1,        
+    "nu_perp"  : 5e-3, 
+    "amplitude"  : 1.0,
+    "sigma"  : 10,   
+    "posX"  : 0.3,   
+    "posY"  : 0.5,   
+    "lx"  : 200,     
+    "ly"  : 200,     
+    "bc_x"  : "DIR", 
+    "bc_y"  : "PER", 
+    "initmode": 1, 
+    "tempmode": 0, 
+    "flrmode": 1  
+}

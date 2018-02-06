@@ -9,7 +9,6 @@
 #include "parameters.h"
 
 #include "file/nc_utilities.h"
-#include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
 
@@ -51,18 +50,18 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
-    std::string input;
+    Json::Reader reader;
+    Json::Value js;
     if( argc != 3)
     {   if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
     else
-    {   input = file::read_file( argv[1]);
+    {   
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false); //read input without comments
     }
-    Json::Reader reader;
-    Json::Value js;
-    reader.parse( input, js, false); //read input without comments
-    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);
     if(rank==0)p.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
@@ -142,10 +141,10 @@ int main( int argc, char* argv[])
     MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( argv[2], NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version",    NC_INT, 1, &version[0]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version",    NC_INT, 1, &version[1]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
+    //const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION}; REMOVED (MW)
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version",    NC_INT, 1, &version[0]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version",    NC_INT, 1, &version[1]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
     //field IDs
@@ -176,7 +175,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "First output ... \n";
     int dims[2],  coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
-    size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};
+    size_t count[3] = {1, grid_out.n()*grid_out.local().Ny(), grid_out.n()*grid_out.local().Nx()};
     size_t start[3] = {0, coords[1]*count[1], coords[0]*count[2]};
     dg::MDVec transfer( dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));

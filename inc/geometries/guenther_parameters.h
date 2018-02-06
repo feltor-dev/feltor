@@ -3,16 +3,18 @@
 #include "json/json.h"
 /*!@file
  *
- * Geometry parameters
+ * Geometry parameters for guenther field
  */
-namespace solovev
+namespace dg
 {
-///@addtogroup geom
-///@{
+namespace geo
+{
+namespace guenther
+{
 /**
- * @brief Constructs and display geometric parameters
+ * @brief Constructs and display geometric parameters for the guenther field
  */    
-struct GeomParameters
+struct Parameters
 {
     double I_0, //!< the current
            R_0, //!< central tokamak radius
@@ -26,26 +28,7 @@ struct GeomParameters
            psipmaxcut, //!< for cutting
            psipmaxlim; //!< for limiter
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
-     /**
-     * @brief constructor to make an object
-     *
-     * maps parameters from input file to parameters 
-     * @param v Vector from read_input function
-     */   
-    GeomParameters( const std::vector< double>& v) {
-        I_0=v[1];
-        R_0 = v[2];
-        a=R_0*v[3];
-        elongation=v[4];
-        triangularity=v[5];
-        alpha=v[6];
-        rk4eps=v[7];
-        psipmin= v[8];
-        psipmax= v[9];
-        psipmaxcut = v[10];
-        psipmaxlim = v[11];
-    }
-    GeomParameters( const Json::Value& js) {
+    Parameters( const Json::Value& js) {
         I_0  = js["I_0"].asDouble();
         R_0  = js["R_0"].asDouble();
         a  = R_0*js["inverseaspectratio"].asDouble();
@@ -58,11 +41,6 @@ struct GeomParameters
         psipmaxcut= js["psip_max_cut"].asDouble();
         psipmaxlim= js["psip_max_lim"].asDouble();
     }
-    /**
-     * @brief Display parameters
-     *
-     * @param os Output stream
-     */
     void display( std::ostream& os = std::cout ) const
     {
         os << "Geometrical parameters are: \n"
@@ -81,4 +59,6 @@ struct GeomParameters
 
     }
 };
-} //namespace solovev
+} //namespace guenther
+} //namespace geo
+} //namespace dg

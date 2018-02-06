@@ -5,8 +5,7 @@
 
 /*! @file
 
-  * contains creation functions for integration weights 
-  * and their inverse
+  * @brief contains creation functions for integration weights and their inverse
   */
 
 namespace dg{
@@ -39,14 +38,21 @@ thrust::host_vector<double> abscissas( const Grid1d& g)
 ///@addtogroup highlevel
 ///@{
 
-
-/**
-* @brief create host_vector containing 1d X-space weight coefficients
-*
+/*!@class hide_weights_doc
+* @brief create host_vector containing X-space weight coefficients
 * @param g The grid 
-*
 * @return Host Vector
+* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
 */
+/*!@class hide_inv_weights_doc
+* @brief create host_vector containing inverse X-space weight coefficients
+* @param g The grid 
+* @return Host Vector
+* @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+*/
+
+///@copydoc hide_weights_doc
+///@copydoc hide_code_evaluate1d
 thrust::host_vector<double> weights( const Grid1d& g)
 {
     thrust::host_vector<double> v( g.size());
@@ -55,13 +61,7 @@ thrust::host_vector<double> weights( const Grid1d& g)
             v[i*g.n() + j] = g.h()/2.*g.dlt().weights()[j];
     return v;
 }
-/**
-* @brief create host_vector containing 1d X-space inverse weight coefficients
-*
-* @param g The grid 
-*
-* @return Host Vector
-*/
+///@copydoc hide_inv_weights_doc
 thrust::host_vector<double> inv_weights( const Grid1d& g)
 {
     thrust::host_vector<double> v = weights( g);
@@ -80,14 +80,9 @@ int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
 }//namespace detail
 ///@endcond
 
-/**
-* @brief create host_vector containing 2d X-space integration weight coefficients
-*
-* @param g The grid 
-*
-* @return Host Vector
-*/
-thrust::host_vector<double> weights( const Grid2d& g)
+///@copydoc hide_weights_doc
+///@copydoc hide_code_evaluate2d
+thrust::host_vector<double> weights( const aTopology2d& g)
 {
     //choose layout
     thrust::host_vector<double> v( g.size());
@@ -98,14 +93,8 @@ thrust::host_vector<double> weights( const Grid2d& g)
                 g.dlt().weights()[detail::get_j(g.n(),g.Nx(), i)];
     return v;
 }
-/**
-* @brief create host_vector containing 2d X-space inverse weight coefficients
-*
-* @param g The grid 
-*
-* @return Host Vector
-*/
-thrust::host_vector<double> inv_weights( const Grid2d& g)
+///@copydoc hide_inv_weights_doc
+thrust::host_vector<double> inv_weights( const aTopology2d& g)
 {
     thrust::host_vector<double> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)
@@ -113,14 +102,9 @@ thrust::host_vector<double> inv_weights( const Grid2d& g)
     return v;
 }
 
-/**
-* @brief create host_vector containing 3d X-space weight coefficients for integration
-*
-* @param g The grid 
-*
-* @return Host Vector
-*/
-thrust::host_vector<double> weights( const Grid3d& g)
+///@copydoc hide_weights_doc
+///@copydoc hide_code_evaluate3d
+thrust::host_vector<double> weights( const aTopology3d& g)
 {
     thrust::host_vector<double> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
@@ -131,14 +115,8 @@ thrust::host_vector<double> weights( const Grid3d& g)
     return v;
 }
 
-/**
-* @brief create host_vector containing 3d X-space inverse weight coefficients
-*
-* @param g The grid 
-*
-* @return Host Vector
-*/
-thrust::host_vector<double> inv_weights( const Grid3d& g)
+///@copydoc hide_inv_weights_doc
+thrust::host_vector<double> inv_weights( const aTopology3d& g)
 {
     thrust::host_vector<double> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)

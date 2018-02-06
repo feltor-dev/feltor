@@ -12,7 +12,6 @@
 #include "dg/functors.h"
 
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "toefl/parameters.h"
 // #include "probes.h"
@@ -25,7 +24,7 @@ struct Heaviside2d
     Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
 //     Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
     void set_origin( double x0, double y0){ x_=x0, y_=y0;}
-    double operator()(double x, double y)
+    double operator()(double x, double y)const
     {
         double r2 = (x-x_)*(x-x_)+(y-y_)*(y-y_);
         if( r2 >= sigma2_)
@@ -82,7 +81,6 @@ int main( int argc, char* argv[])
     Json::Reader reader;
     Json::Value js;
     reader.parse( input, js, false);
-    //const Parameters p(file::read_input( input));
     const Parameters p(js);
     p.display(std::cout);
     err = nc_close( ncid);

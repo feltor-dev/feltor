@@ -1,5 +1,8 @@
-#pragma once
+#ifndef _DG_PARAMETERS_ 
+#define _DG_PARAMETERS_
+#include <string>
 #include "dg/enums.h"
+#include "json/json.h"
 
 namespace eule{
 /**
@@ -18,63 +21,61 @@ struct Parameters
     double mu[2];
     double tau[2];
     double lx,ly;
-    double ln;
-    double dlocal;
-    double nu_perp, d, c;
+    double invkappa;
+    double Chat,g;
+    double nu_perp,alpha;
+    
+    double jfactor;
     
     double amp, sigma, posX, posY;
     
     double  nprofileamp, bgprofamp;
-    unsigned zf,boussinesq;
+    unsigned hwmode,modelmode,cmode,initmode;
     double omega_source,sourceb,sourcew;
-    enum dg::bc bc_x,bc_y;
+    enum dg::bc bc_x,bc_y,bc_x_phi;
 
-    /**
-     * @brief constructor to make a const object
-     *
-     * @param v Vector from read_input function
-     */
-    Parameters( const std::vector< double>& v):layout_(0) {
-        if( layout_ == 0)
-        {
-            n  = (unsigned)v[1]; 
-            Nx = (unsigned)v[2];
-            Ny = (unsigned)v[3];
-            dt = v[4];
-            n_out = v[5];
-            Nx_out = v[6];
-            Ny_out = v[7];
-            itstp = v[8];
-            maxout = v[9];
-            eps_pol = v[10];
-            eps_gamma = v[11];
-            eps_time = v[12];
-            eps_hat = 1.;
-            mu[0] = v[13];
-            mu[1] = 1.;
-            tau[0] = -1.;
-            tau[1] = v[14];
-            boussinesq =v[15];
-            nu_perp = v[16];
-            d = v[17];
-            c = v[18];            
-            amp = v[19];
-            sigma = v[20];
-            posX = v[21];
-            posY = v[22];
-            nprofileamp = v[23];
-            bgprofamp = v[24];
-            lx = v[25];
-            ly = v[26];
-            bc_x = map((int)v[27]);
-            bc_y =map((int)v[28]);
-            zf = (unsigned)v[29];
-            ln = v[30];
-            dlocal = (double)(lx*d/c);
-            omega_source = v[31];
-            sourceb = v[32];
-            sourcew = v[33];            
-        }
+    Parameters(const Json::Value& js)        {
+        n  = js["n"].asUInt();
+        Nx = js["Nx"].asUInt();
+        Ny = js["Ny"].asUInt();
+        dt = js["dt"].asDouble();
+        n_out  = js["n_out"].asUInt();
+        Nx_out = js["Nx_out"].asUInt();
+        Ny_out = js["Ny_out"].asUInt();
+        itstp = js["itstp"].asUInt();
+        maxout = js["maxout"].asUInt();
+        eps_pol = js["eps_pol"].asDouble();
+        jfactor = js["jumpfactor"].asDouble();
+        eps_gamma = js["eps_gamma"].asDouble();
+        eps_time = js["eps_time"].asDouble();
+        eps_hat = 1.;
+        mu[0] = -0.000272121; //Note: does not appear in feltor.cuh
+        mu[1] = 1.;
+        tau[0] = -1.;
+        tau[1] = js["tau"].asDouble();
+        modelmode = js["modelmode"].asUInt();
+        cmode = js["cmode"].asUInt();
+        nu_perp = js["nu_perp"].asDouble();
+        alpha   = js["alpha"].asDouble();
+        amp     = js["amplitude"].asDouble();
+        sigma   = js["sigma"].asDouble();
+        posX    = js["posX"].asDouble();
+        posY    = js["posY"].asDouble();
+        nprofileamp = js["prof_amp"].asDouble();
+        bgprofamp =   js["bg_prof_amp"].asDouble();
+        lx =  js["lx"].asDouble();
+        ly =  js["ly"].asDouble();
+        bc_x = dg::str2bc(js["bc_x"].asString());
+        bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
+        bc_y = dg::str2bc(js["bc_y"].asString());
+        hwmode =  js["hwmode"].asUInt();
+        initmode =  js["initmode"].asUInt();
+        invkappa =   js["invkappa"].asDouble();
+        Chat = (double)(lx*alpha);
+        g = (double) (lx/invkappa);
+        omega_source = js["prof_source_rate"].asDouble();
+        sourceb = js["source_b"].asDouble();
+        sourcew = js["source_damping_width"].asDouble();                    
     }
     /**
      * @brief Display parameters
@@ -84,29 +85,35 @@ struct Parameters
     void display( std::ostream& os = std::cout ) const
     {
         os << "Physical parameters are: \n"
-            <<"     mu_e                      = "<<mu[0]<<"\n"
-            <<"     mu_i                      = "<<mu[1]<<"\n"
-            <<"     non-boussinesq/boussinesq = "<<boussinesq<<"\n"
-            <<"     El.-temperature:          = "<<tau[0]<<"\n"
-            <<"     Ion-temperature:          = "<<tau[1]<<"\n"
-            <<"     perp. Viscosity:          = "<<nu_perp<<"\n"
-            <<"     par. Resistivity:         = "<<c<<"\n"
-            <<"     D:                        = "<<d<<"\n"
-            <<"     dlocal:                   = "<<dlocal<<"\n";
+            <<"     mu_e                             = "<<mu[0]<<"\n"
+            <<"     mu_i                             = "<<mu[1]<<"\n"
+            <<"     Full-F/Full-F-boussinesq/delta-f = "<<modelmode<<"\n"
+            <<"     El.-temperature:                 = "<<tau[0]<<"\n"
+            <<"     Ion-temperature:                 = "<<tau[1]<<"\n"
+            <<"     perp. Viscosity:                 = "<<nu_perp<<"\n"
+            <<"     alpha:                           = "<<alpha<<"\n"
+            <<"     Chat  :                          = "<<Chat<<"\n"
+            <<"     g     :                          = "<<g<<"\n"
+            <<"     modelmode:                       = "<<modelmode<<"\n"
+            <<"     hwmode:                          = "<<hwmode<<"\n"
+            <<"     cmode:                           = "<<cmode<<"\n"
+	    <<"     initmode:                        = "<<initmode<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
             << "    width:        "<<sigma<<"\n"
             << "    posX:         "<<posX<<"\n"
             << "    posY:         "<<posY<<"\n";
         os << "Profile parameters are: \n"
-            <<"     density profile amplitude:    "<<nprofileamp<<"\n"
-            <<"     background profile amplitude: "<<bgprofamp<<"\n";
+            <<"     invkappa:                     = "<<invkappa<<"\n"
+            <<"     density profile amplitude:    = "<<nprofileamp<<"\n"
+            <<"     background profile amplitude: = "<<bgprofamp<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"     n  = "<<n<<"\n"
             <<"     Nx = "<<Nx<<"\n"
             <<"     Ny = "<<Ny<<"\n"
             <<"     dt = "<<dt<<"\n";
         os << "     Stopping for Polar CG:   "<<eps_pol<<"\n"
+            <<"     Jump scale factor:   "<<jfactor<<"\n"
             <<"     Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"     Stopping for Time  CG:   "<<eps_time<<"\n";
         os << "Output parameters are: \n"
@@ -117,37 +124,24 @@ struct Parameters
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Box params: \n"
             <<"     lx  =              "<<lx<<"\n"
-            <<"     ly  =              "<<ly<<"\n"
-            <<"     bcx =              "<<bc_x<<"\n"
-            <<"     bcy =              "<<bc_y<<"\n";
-        os << "modified/ordinary \n"
-            <<"     zf =              "<<zf<<"\n"
-            <<"     ln =              "<<ln<<"\n";
+            <<"     ly  =              "<<ly<<"\n";
+        os << "Boundary conditions in x are: \n"
+            <<"    "<<bc2str(bc_x)<<"\n"; 
+        os << "Boundary conditions in y are: \n"
+            <<"    "<<bc2str(bc_y)<<"\n";
+        os << "Boundary conditions in phi in x are: \n"
+            <<"    "<<bc2str(bc_x_phi)<<"\n";
         os << "SOL/EDGE/Source params \n"
             <<"     source rate  =    "<<omega_source<<"\n"
             <<"     source boundary = "<<sourceb<<"\n"
             <<"     source width =    "<<sourcew<<"\n";
         os << std::flush;//the endl is for the implicit flush 
     }
-    private:
-    int layout_;
-    dg::bc map( int i)
-    {
-        switch( i)
-        {
-            case(0): return dg::PER;
-            case(1): return dg::DIR;
-            case(2): return dg::DIR_NEU;
-            case(3): return dg::NEU_DIR;
-            case(4): return dg::NEU;
-            default: return dg::PER;
-        }
-    }
-
 };
 
 }//namespace eule
 
+#endif//_DG_PARAMETERS_
 
     
 

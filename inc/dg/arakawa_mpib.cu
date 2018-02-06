@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     int rank;
     unsigned n, Nx, Ny; 
     MPI_Comm comm;
-    mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
+    dg::mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
     dg::MPIGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::Timer t;
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     std::cout<< std::setprecision(3);
 
     dg::ArakawaX<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> arakawa( grid);
-    unsigned multi=20;
+    unsigned multi=1000;
     t.tic(); 
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);

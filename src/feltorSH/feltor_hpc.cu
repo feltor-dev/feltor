@@ -11,7 +11,6 @@
 #include "dg/backend/timer.cuh"
 
 #include "dg/backend/interpolation.cuh"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -28,8 +27,8 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    Json::Reader reader;
+    Json::Value js;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -37,26 +36,21 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            v = file::read_input( argv[1]);
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false);
     }
-    const eule::Parameters p( v);
+    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    const eule::Parameters p( js);
     p.display( std::cout);
 
       //Make grid
      dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
      dg::Grid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);  
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> feltor( grid, p); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> rolkar( grid, p);
+    std::cout << "Constructing Explicit...\n";
+    eule::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> feltor( grid, p); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    eule::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> rolkar( grid, p);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -89,15 +83,12 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot(y0[1],y0[3],y1[3]); // = Ni Ti
         dg::blas1::transform(y1[3], y1[3], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp))); //Pi = Pi - bg^2
 
-        if( p.init == 0)
-            feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
+        feltor.initializepi(y1[3],y0[3], y0[2]); // = pi-bg^2    
         //compute ti-bg = ((pi-bg^2) +bg^2)/ne -bg
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp)*(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(+(p.bgprofamp + p.nprofileamp))); //=ne    
         dg::blas1::pointwiseDivide(y0[2],y0[0],y0[2]);
 
-        if( p.init != 0)
-            dg::blas1::axpby( 1., y0[3], 0., y0[2], y0[2]); //for Omega*=0
 
         dg::blas1::transform(y0[2], y0[2], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp)));
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-(p.bgprofamp + p.nprofileamp))); // =ne-bg
@@ -114,10 +105,10 @@ int main( int argc, char* argv[])
     int ncid;
     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version", NC_INT, 1, &version[0]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
+    //const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION}; REMOVED (MW)
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version", NC_INT, 1, &version[0]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version", NC_INT, 1, &version[1]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     err = nc_enddef( ncid);

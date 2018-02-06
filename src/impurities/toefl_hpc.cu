@@ -6,7 +6,6 @@
 #include "parameters.h"
 
 #include "file/nc_utilities.h"
-#include "file/read_input.h"
 
 #include "dg/backend/timer.cuh"
 
@@ -17,19 +16,22 @@
 */
 
 int main( int argc, char* argv[])
-{   ////////////////////////Parameter initialisation//////////////////////////
-    std::string input;
-    if( argc != 3)
-    {   std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
-        return -1;
-    }
-    else
-    {   input = file::read_file( argv[1]);
-    }
+{   
+    ////////////////////////Parameter initialisation//////////////////////////
     Json::Reader reader;
     Json::Value js;
-    reader.parse( input, js, false); //read input without comments
-    input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
+    if( argc != 3)
+    {
+        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
+        return -1;
+    }
+    else 
+    {
+        std::ifstream is(argv[1]);
+        reader.parse( is, js, false); //read input without comments
+    }
+    std::cout << js<<std::endl;
+    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);
     p.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
@@ -108,10 +110,10 @@ int main( int argc, char* argv[])
     int ncid;
     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version",    NC_INT, 1, &version[0]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version",    NC_INT, 1, &version[1]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
+    //const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION}; REMOVED (MW)
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version",    NC_INT, 1, &version[0]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version",    NC_INT, 1, &version[1]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     //field IDs

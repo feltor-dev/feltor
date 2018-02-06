@@ -7,81 +7,69 @@
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/sparseblockmat.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/average.cuh"
-#include "dg/backend/typedefs.cuh"
-#include "file/read_input.h"
-#include "geometries/solovev.h"
 
 #include "feltor.cuh"
-#include "parameters.h"
 
 /*
    - reads parameters from input.txt or any other given file, 
-   - integrates the Feltor - functor and 
+   - integrates the Explicit - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
-typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 
 int main( int argc, char* argv[])
 {
-    ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v2,v3;
-    std::stringstream title;
+    ////Parameter initialisation ////////////////////////////////////////////
+    Json::Reader reader;
+    Json::Value js, gs;
     if( argc == 1)
     {
-        try{
-            v = file::read_input("input.txt");
-            v3 = file::read_input( "geometry_params.txt"); 
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is("input.json");
+        std::ifstream ks("geometry_params.json");
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
     else if( argc == 3)
     {
-        try{
-            v = file::read_input(argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            m.display();
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
     else
     {
-        std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
+        std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] \n";
         return -1;
     }
-    const eule::Parameters p( v);
+    const feltor::Parameters p( js);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
     gp.display( std::cout);
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz+1)/v2[2]*v2[3], v2[1]*v2[4], "");
-    draw::RenderHostData render(v2[1], (p.Nz+1)/v2[2]);
-
-
-
-    //////////////////////////////////////////////////////////////////////////
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::stringstream title;
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    unsigned red = js.get("reduction", 1).asUInt();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz/red+1)*js["width"].asDouble(), js["rows"].asDouble()*js["height"].asDouble(), "");
+    draw::RenderHostData render(js["rows"].asDouble(), p.Nz/red + 1);
+    /////////////////////////////////////////////////////////////////////////
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
     double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
     //Make grid
-     dg::CylindricalGrid3d<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+    dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    std::cout << "Constructing Explicit...\n";
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
     //background profile
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid)), y1(y0); 
     //perturbation 
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
@@ -100,18 +88,19 @@ int main( int argc, char* argv[])
     }
     if( p.mode == 3)
     {
-        solovev::ZonalFlow init0(p.amp, p.k_psi, gp);
+        dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
         y1[1] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); 
     }
     dg::blas1::axpby( 1., y1[1], 1., y0[1]); //sum up background and perturbation
     dg::blas1::plus(y0[1], -1); //initialize ni-1
     if( p.mode == 2 || p.mode == 3)
     {
-        dg::DVec damping = dg::evaluate( solovev::GaussianProfXDamping( gp), grid);
+        dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(dg::geo::solovev::Psip(gp), gp), grid);
         dg::blas1::pointwiseDot(damping,y0[1], y0[1]); //damp with gaussprofdamp
     }
     std::cout << "intiialize ne" << std::endl;
-    feltor.initializene( y0[1], y0[0]);    
+    if( p.initcond == 0) feltor.initializene( y0[1], y0[0]);
+    if( p.initcond == 1) dg::blas1::axpby( 1., y0[1], 0.,y0[0], y0[0]); //set n_e = N_i
     std::cout << "Done!\n";
 
     dg::blas1::axpby( 0., y0[2], 0., y0[2]); //set Ue = 0
@@ -127,7 +116,6 @@ int main( int argc, char* argv[])
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::IHMatrix equi = dg::create::backscatter( grid);
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
-    dg::ToroidalAverage<dg::HVec> toravg(grid);
     //create timer
     dg::Timer t;
     double time = 0;
@@ -158,14 +146,14 @@ int main( int argc, char* argv[])
         title << std::setprecision(2) << std::scientific;
         //title <<"ne / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         title <<"ne-1 / " << colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);   
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);   
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
@@ -179,14 +167,14 @@ int main( int argc, char* argv[])
         title << std::setprecision(2) << std::scientific;
         //title <<"ni / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
         title <<"ni-1 / " << colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw potential
@@ -201,14 +189,14 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();
         //title <<"Phi / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         title <<"Omega / "<< colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw U_e
@@ -219,14 +207,14 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();
         //title <<"Ue / "<<colors.scalemin()<<"  " << colors.scalemax()<<"\t";
         title <<"Ue / " << colors.scalemax()<<"\t";
-                for( unsigned k=0; k<p.Nz/v2[2];k++)
+                for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);      
         
         //draw U_i
@@ -237,14 +225,14 @@ int main( int argc, char* argv[])
         colors.scalemin() = -colors.scalemax();
         //title <<"Ui / "<<colors.scalemin()<< "  " << colors.scalemax()<<"\t";
         title <<"Ui / " << colors.scalemax()<<"\t";
-        for( unsigned k=0; k<p.Nz/v2[2];k++)
+        for( unsigned k=0; k<p.Nz/red;k++)
         {
             unsigned size=grid.n()*grid.n()*grid.Nx()*grid.Ny();
-            dg::HVec part( visual.begin() + k*v2[2]*size, visual.begin()+(k*v2[2]+1)*size);
+            dg::HVec part( visual.begin() + k*red*size, visual.begin()+(k*red+1)*size);
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        toravg(visual,avisual);
+        dg::toroidal_average(visual,avisual,grid);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         title << std::fixed; 

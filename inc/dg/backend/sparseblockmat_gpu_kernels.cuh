@@ -5,13 +5,13 @@ namespace dg
 
 // general multiply kernel
 template<class value_type>
- __global__ void ell_multiply_kernel(
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+ __global__ void ell_multiply_kernel( value_type alpha, value_type beta,
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols, const int blocks_per_line,
          const int n, const int size,
          const int right, 
-         const int* right_range,
-         const value_type* x, value_type *y
+         const int* __restrict__  right_range,
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -34,20 +34,20 @@ template<class value_type>
                 temp +=data[ B+q]* x[(J+q)*right+j];
         }
         int idx = ((s*num_rows+i)*n+k)*right+j;
-        y[idx]=temp;
+        y[idx]=alpha*temp+beta*y[idx];
     }
 
 }
 
 // multiply kernel, n=3, 3 blocks per line
 template<class value_type>
- __global__ void ell_multiply_kernel33(
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+ __global__ void ell_multiply_kernel33(value_type alpha, value_type beta,
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols,
          const int size,
          const int right, 
-         const int* right_range,
-         const value_type* x, value_type *y
+         const int* __restrict__  right_range,
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -80,19 +80,19 @@ template<class value_type>
             temp +=data[ B+2]* x[(J+2)*right+j];
         }
         int idx = ((s*num_rows+i)*3+k)*right+j;
-        y[idx]=temp;
+        y[idx]=alpha*temp+beta*y[idx];
     }
 }
 
 // multiply kernel, n=3, 2 blocks per line
 template<class value_type>
- __global__ void ell_multiply_kernel32(
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+ __global__ void ell_multiply_kernel32(value_type alpha, value_type beta,
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols, 
          const int size,
          const int right, 
-         const int* right_range,
-         const value_type* x, value_type *y
+         const int* __restrict__  right_range,
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     //int size = left*num_rows*n*right;
@@ -120,18 +120,18 @@ template<class value_type>
             temp +=data[ B+1]* x[(J+1)*right+j];
             temp +=data[ B+2]* x[(J+2)*right+j];
         }
-        y[idx]=temp;
+        y[idx]=alpha*temp+beta*y[idx];
     }
 
 }
 
 // multiply kernel, n=3, 3 blocks per line, right = 1
 template<class value_type>
- __global__ void ell_multiply_kernel33x(
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+ __global__ void ell_multiply_kernel33x(value_type alpha, value_type beta,
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const value_type* x, value_type *y
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -160,17 +160,17 @@ template<class value_type>
             temp +=data[ B+2]* x[(J+2)];
         }
         int idx = (s*num_rows+i)*3+k;
-        y[idx] = temp;
+        y[idx] = alpha*temp+beta*y[idx];
     }
 }
 
 // multiply kernel, n=3, 2 blocks per line, right = 1
 template<class value_type>
- __global__ void ell_multiply_kernel32x(
-         const value_type* data, const int* cols_idx, const int* data_idx, 
+ __global__ void ell_multiply_kernel32x(value_type alpha, value_type beta,
+         const value_type* __restrict__  data, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols,
          const int size,
-         const value_type* x, value_type *y
+         const value_type* __restrict__  x, value_type * __restrict__ y
          )
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -195,7 +195,7 @@ template<class value_type>
             temp +=data[ B1+1]* x[(J1+1)];
             temp +=data[ B1+2]* x[(J1+2)];
         }
-        y[idx]=temp;
+        y[idx] = alpha*temp+beta*y[idx];
     }
 
 }
@@ -203,11 +203,11 @@ template<class value_type>
 // multiply kernel
 template<class value_type>
  __global__ void coo_multiply_kernel(
-         const value_type* data, const int* rows_idx, const int* cols_idx, const int* data_idx, 
+         const value_type* __restrict__  data, const int* __restrict__  rows_idx, const int* __restrict__  cols_idx, const int* __restrict__  data_idx, 
          const int num_rows, const int num_cols, const int entry,
          const int n, 
          const int left, const int right, 
-         value_type alpha, const value_type* x, value_type *y
+         value_type alpha, const value_type* __restrict__  x, value_type beta, value_type * __restrict__ y
          )
 {
     int size = left*n*right;
@@ -225,17 +225,15 @@ template<class value_type>
         int J = cols_idx[entry];
         for( int q=0; q<n; q++) //multiplication-loop
             temp += data[ (B*n + k)*n+q]* x[((s*num_cols + J)*n+q)*right+j];
-        y[I] += alpha*temp;
+        y[I] = alpha*temp + beta*y[I];
     }
 
 }
 
 template<class value_type>
 template<class DeviceContainer>
-void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceContainer& x, DeviceContainer& y) const
+void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel(value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
     const size_t size = (left_size)*(right_range[1]-right_range[0])*num_rows*n; //number of lines
@@ -252,23 +250,23 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( const DeviceCo
         if( blocks_per_line == 3)
         {
             if( right_size == 1)
-                ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
+                ell_multiply_kernel33x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> (alpha,beta, data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
             else
-                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel33<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> (alpha,beta, data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr, x_ptr,y_ptr);
         }
         else if( blocks_per_line == 2)
         {
             if( right_size == 1)
-                ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
+                ell_multiply_kernel32x<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> (alpha,beta, data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, x_ptr,y_ptr);
             else
-                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr, x_ptr,y_ptr);
+                ell_multiply_kernel32<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> (alpha,beta, data_ptr, cols_ptr, block_ptr, num_rows, num_cols, size, right_size, right_range_ptr, x_ptr,y_ptr);
         }
         else
-            ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
+            ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> (alpha,beta, 
                 data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, 3, size, right_size, right_range_ptr, x_ptr,y_ptr);
     }
     else
-        ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
+        ell_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> (alpha,beta, 
             data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, size, right_size, right_range_ptr, x_ptr,y_ptr);
 }
 
@@ -276,9 +274,6 @@ template<class value_type>
 template<class DeviceContainer>
 void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const DeviceContainer& x, value_type beta, DeviceContainer& y) const
 {
-    assert( y.size() == (unsigned)num_rows*n*left_size*right_size);
-    assert( x.size() == (unsigned)num_cols*n*left_size*right_size);
-    assert( beta == 1);
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256; 
     const size_t size = left_size*right_size*n;
@@ -293,7 +288,7 @@ void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
     for( int i=0; i<num_entries; i++)
     {
         coo_multiply_kernel<value_type> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( 
-            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, i, n, left_size, right_size, alpha, x_ptr,y_ptr);
+            data_ptr, rows_ptr, cols_ptr, block_ptr, num_rows, num_cols, i, n, left_size, right_size, alpha, x_ptr, beta, y_ptr);
     }
 }
 

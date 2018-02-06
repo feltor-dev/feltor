@@ -1,0 +1,45 @@
+
+//                * Input-File for "HEAT" *
+//                -------------------------
+{
+    //----------------------------Space and Time discretization------------
+    "n"  : 3,  //(# of x,y-polynomials)
+    "Nx" : 20, //(grid points in x)
+    "Ny" : 40, //(grid points in y)
+    "Nz" : 20, //(grid points in z)
+    "dt" : 0.1,//(time step in units c_s/rho_s)
+    //-------------------------------Output parameters--------------------
+    "n_out" : 3,    //(# of x-y polynomials in output)
+    "Nx_out" : 20,  //(# grid points in output field)
+    "Ny_out" : 40,  //(# grid points in output field)
+    "Nz_out" : 20,  //(# grid points in output field)
+    "itstp"  : 10,  //(steps between outputs)
+    "maxout" : 10,  //total # of outputs (excluding first)
+    //----------------------Physical parameters----------------------------
+    "nu_perp"     : 0,   //  (perpendicular viscosity)
+    "nu_parallel" : 100, //  (parallel viscosity)
+    //---------------------Initial perturbation parameters---------------------
+    "amplitude" : 0.1,  // (blob amplitude)
+    "sigma"     : 5.0,  // (blob variance in units of rho_s)
+    "posX"      : 0.8,  //x-position ( in units of a)
+    "posY"      : 0,    //y-position ( in units of a)
+    "sigma_z"   : 0.025,// (variance in units of R_0)
+    "k_psi"     : 1,    // (zonal modes)
+    "nprofileamp" : 0,  //Profile peak amplitude
+    "bgprofamp"   : 1,  //Background Prof amplitude (density on the boundary)
+    //-------------------------------Boundary condition----------------------------
+    "bc"          : "NEU", //GLOBAL BC ( DIR/  NEU)
+    //-------------------------------Miscellaneous----------------------------
+    "boxscaleRp" :  1.05, // (a little larger than 1)
+    "boxscaleRm" :  1.05, // (a little larger than 1)
+    "boxscaleZp" :  1.05, // (a little larger than 1)
+    "boxscaleZm" :  1.15, // (a little larger than 1)
+    "adv"        : 3,     // adj(0), nadj(1), onadj(2),no(3)
+    "diff"       : 0,     //a(0), na(1), ona(2),d(3), da(4),no(5)
+    "diffperp"   : 1,     //(lap(0), lap2(1) )
+    //-------------------------------Tor limiter------------------------------
+    "torlim"     : 0,    //toroidal limiter (0/1) 
+    //-------------------------------Algorithmic parameters---------------------
+    "eps_time"   : 1e-12 //( stop for time inversion )
+}
+//@ ------------------------------------------------------------

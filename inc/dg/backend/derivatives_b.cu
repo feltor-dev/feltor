@@ -55,7 +55,7 @@ int main()
     const Vector func = dg::evaluate( siny, g);
     const Vector deri = dg::evaluate( cosy, g);
 
-    Matrix dy = dg::create::dy( g); 
+    Matrix dy = dg::create::dy( g, dg::forward); 
     Vector temp( func);
     t.tic();
     dg::blas2::gemv( dy, func, temp);

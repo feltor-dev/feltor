@@ -6,12 +6,12 @@
 #include "weights.cuh"
 
 /*! @file 
-  
-  Function discretization routines
+  @brief Function discretization routines
   */
 namespace dg
 {
 
+//maybe we should consider using boost::function as argument type as a generic function pointer typ
 
 ///@addtogroup evaluation
 ///@{
@@ -27,6 +27,8 @@ namespace dg
  * @param g The grid on which to evaluate f
  *
  * @return  A DG Host Vector with values
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @copydoc hide_code_evaluate1d
  */
 template< class UnaryOp>
 thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d& g)
@@ -39,7 +41,7 @@ thrust::host_vector<double> evaluate( UnaryOp f, const Grid1d& g)
 ///@cond
 thrust::host_vector<double> evaluate( double (f)(double), const Grid1d& g)
 {
-    thrust::host_vector<double> v = evaluate<double (double)>( f, g);
+    thrust::host_vector<double> v = evaluate<double (double)>( *f, g);
     return v;
 };
 ///@endcond
@@ -49,21 +51,20 @@ thrust::host_vector<double> evaluate( double (f)(double), const Grid1d& g)
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x) on the given grid
- * @tparam BinaryOp Model of Binary Function
+ * @copydoc hide_binary
  * @param f The function to evaluate: f = f(x,y)
  * @param g The 2d grid on which to evaluate f
  *
  * @return  A dG Host Vector with values
- * @note Copies the binary Operator. This function is meant for small function objects, that
-            may be constructed during function call.
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @copydoc hide_code_evaluate2d
  */
 template< class BinaryOp>
-thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d& g)
+thrust::host_vector<double> evaluate( const BinaryOp& f, const aTopology2d& g)
 {
     unsigned n= g.n();
-    //TODO: opens dlt.dat twice...!!
-    Grid1d gx( g.x0(), g.x1(), n, g.Nx()); 
-    Grid1d gy( g.y0(), g.y1(), n, g.Ny());
+    Grid1d gx(g.x0(), g.x1(), g.n(), g.Nx());
+    Grid1d gy(g.y0(), g.y1(), g.n(), g.Ny());
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
 
@@ -78,10 +79,10 @@ thrust::host_vector<double> evaluate( BinaryOp f, const Grid2d& g)
     return v;
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d& g)
+thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology2d& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
-    return evaluate<double(double, double)>( f, g);
+    return evaluate<double(double, double)>( *f, g);
 };
 ///@endcond
 
@@ -89,22 +90,21 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const Grid2d& g
  * @brief Evaluate a function on gaussian abscissas
  *
  * Evaluates f(x,y,z) on the given grid
- * @tparam TernaryOp Model of Ternary Function
+ * @copydoc hide_ternary
  * @param f The function to evaluate: f = f(x,y,z)
  * @param g The 3d grid on which to evaluate f
  *
  * @return  A dG Host Vector with values
- * @note Copies the ternary Operator. This function is meant for small function objects, that
-            may be constructed during function call.
+ * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ * @copydoc hide_code_evaluate3d
  */
 template< class TernaryOp>
-thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d& g)
+thrust::host_vector<double> evaluate( const TernaryOp& f, const aTopology3d& g)
 {
     unsigned n= g.n();
-    //TODO: opens dlt.dat three times...!!
-    Grid1d gx( g.x0(), g.x1(), n, g.Nx()); 
-    Grid1d gy( g.y0(), g.y1(), n, g.Ny());
-    Grid1d gz( g.z0(), g.z1(), 1, g.Nz());
+    Grid1d gx(g.x0(), g.x1(), g.n(), g.Nx());
+    Grid1d gy(g.y0(), g.y1(), g.n(), g.Ny());
+    Grid1d gz(g.z0(), g.z1(), 1, g.Nz());
     thrust::host_vector<double> absx = create::abscissas( gx);
     thrust::host_vector<double> absy = create::abscissas( gy);
     thrust::host_vector<double> absz = create::abscissas( gz);
@@ -120,10 +120,10 @@ thrust::host_vector<double> evaluate( TernaryOp f, const Grid3d& g)
     return v;
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double, double), const Grid3d& g)
+thrust::host_vector<double> evaluate( double(f)(double, double, double), const aTopology3d& g)
 {
     //return evaluate<double(&)(double, double), n>( f, g );
-    return evaluate<double(double, double, double)>( f, g);
+    return evaluate<double(double, double, double)>( *f, g);
 };
 ///@endcond
 

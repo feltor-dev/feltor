@@ -5,19 +5,8 @@
 #include <string>
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
-
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/average.cuh"
-#include "dg/functors.h"
-#include "dg/geometry.h"
-
-#include "file/read_input.h"
+#include "geometries/geometries.h"
 #include "file/nc_utilities.h"
-
-#include "geometries/solovev.h"
-#include "geometries/init.h"
 
 #include "feltor/parameters.h"
 
@@ -52,8 +41,12 @@ int main( int argc, char* argv[])
 
     std::cout << "input "<<input<<std::endl;
     std::cout << "geome "<<geom <<std::endl;
-    const eule::Parameters p(file::read_input( input));
-    const solovev::GeomParameters gp(file::read_input( geom));
+    Json::Reader reader;
+    Json::Value js,gs;
+    reader.parse( input, js, false);
+    const eule::Parameters p(js);
+    reader.parse( geom, gs, false);
+    const dg::geo::solovev::Parameters gp(gs);
     p.display();
     gp.display();
     ///////////////////////////////////////////////////////////////////////////
@@ -69,17 +62,17 @@ int main( int argc, char* argv[])
 //     double Zmax=p.boxscaleRp*gp.a*gp.elongation;
 
     //Grids
-    dg::CylindricalGrid3d<dg::HVec> g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER);  
+    dg::CylindricalGrid3d g3d_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out, p.Nz_out, dg::NEU, dg::NEU, dg::PER);  
     dg::Grid2d  g2d_out( Rmin,Rmax, Zmin,Zmax,p.n_out, p.Nx_out, p.Ny_out, dg::NEU, dg::NEU);
     //1d grid
-    solovev::Psip psip(gp);
+    dg::geo::solovev::Psip psip(gp);
     dg::HVec w3d = dg::create::weights( g3d_out);   
     
     dg::HVec psipog2d   = dg::evaluate( psip, g2d_out);    
     double psipmin = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(), 0.0,thrust::minimum<double>()  );
     double psipmax = (double)thrust::reduce( psipog2d.begin(), psipog2d.end(),psipmin,thrust::maximum<double>()  );
 //     double psipmax = 0.0;
-    solovev::PsiPupil psipupil(gp,psipmax);
+    dg::geo::PsiPupil psipupil(psip,psipmax);
     dg::HVec psipupilog2d   = dg::evaluate( psipupil, g2d_out);    
     dg::HVec psipupilog3d   = dg::evaluate( psipupil, g3d_out);    
 
@@ -151,26 +144,27 @@ int main( int argc, char* argv[])
     //perp laplacian for computation of vorticity
 
     dg::HVec vor3d    = dg::evaluate( dg::zero, g3d_out);
-    dg::Elliptic<dg::CylindricalGrid3d<dg::HVec>, dg::HMatrix, dg::HVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
+    dg::Elliptic<dg::CylindricalGrid3d, dg::HMatrix, dg::HVec> laplacian(g3d_out,dg::DIR, dg::DIR, dg::normed, dg::centered); 
     dg::IHMatrix fsaonrzmatrix,fsaonrzphimatrix;     
     fsaonrzmatrix    =  dg::create::interpolation(psipupilog2d ,g1d_out);    
     fsaonrzphimatrix =  dg::create::interpolation(psipupilog3d ,g1d_out);    
     
     //Vectors and Matrices for Diffusion coefficient
-    const dg::HVec curvR = dg::evaluate( solovev::CurvatureNablaBR(gp), g3d_out);
-    const dg::HVec curvZ = dg::evaluate( solovev::CurvatureNablaBZ(gp), g3d_out);
-    dg::Poisson<dg::CylindricalGrid3d<dg::HVec>, dg::HMatrix, dg::HVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
-    const dg::HVec binv = dg::evaluate(solovev::Field(gp) , g3d_out) ;
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
+    const dg::HVec curvR = dg::evaluate( dg::geo::CurvatureNablaBR(c), g3d_out);
+    const dg::HVec curvZ = dg::evaluate( dg::geo::CurvatureNablaBZ(c), g3d_out);
+    dg::Poisson<dg::CylindricalGrid3d, dg::HMatrix, dg::HVec> poisson(g3d_out,  dg::DIR, dg::DIR,  g3d_out.bcx(), g3d_out.bcy());
+    const dg::HVec binv = dg::evaluate(dg::geo::InvB(c) , g3d_out) ;
     dg::HVec Deperp3d =  dg::evaluate(dg::zero , g3d_out) ; 
     dg::HVec temp1 = dg::evaluate(dg::zero , g3d_out) ;
     dg::HVec temp2 = dg::evaluate(dg::zero , g3d_out) ;
     dg::HVec temp3 = dg::evaluate(dg::zero , g3d_out) ;
     #ifdef RADIALELECTRONDENSITYFLUX
-    const dg::HVec psipR =  dg::evaluate( solovev::PsipR(gp), g3d_out);
-    const dg::HVec psipRR = dg::evaluate( solovev::PsipRR(gp), g3d_out);
-    const dg::HVec psipZ =  dg::evaluate( solovev::PsipZ(gp), g3d_out);
-    const dg::HVec psipZZ = dg::evaluate( solovev::PsipZZ(gp), g3d_out);
-    const dg::HVec psipRZ = dg::evaluate( solovev::PsipRZ(gp), g3d_out);
+    const dg::HVec psipR =  dg::evaluate( dg::geo::solovev::PsipR(gp), g3d_out);
+    const dg::HVec psipRR = dg::evaluate( dg::geo::solovev::PsipRR(gp), g3d_out);
+    const dg::HVec psipZ =  dg::evaluate( dg::geo::solovev::PsipZ(gp), g3d_out);
+    const dg::HVec psipZZ = dg::evaluate( dg::geo::solovev::PsipZZ(gp), g3d_out);
+    const dg::HVec psipRZ = dg::evaluate( dg::geo::solovev::PsipRZ(gp), g3d_out);
     dg::HVec Depsip3d =  dg::evaluate(dg::zero , g3d_out) ;   
     dg::HVec one3d    =  dg::evaluate(dg::one,g3d_out);
     dg::HVec one1d    =  dg::evaluate(dg::one,g1d_out);
@@ -180,7 +174,6 @@ int main( int argc, char* argv[])
 #endif
     std::vector<dg::HVec> fields3d(5,dg::evaluate(dg::zero,g3d_out));
     std::vector<dg::HVec> fields2d(5,dg::evaluate(dg::zero,g3d_out));
-    dg::ToroidalAverage<dg::HVec> toravg(g3d_out);
     unsigned outlim = p.maxout;
     std::cout << "number of outputs ? : " << std::endl;
     std::cin>>outlim;
@@ -221,7 +214,7 @@ int main( int argc, char* argv[])
             err = nc_close(ncid);  //close 3d file
     
             //get 2d data and sum up for avg
-            toravg(fields3d[j],data2davg);
+            dg::toroidal_average(fields3d[j],data2davg, g3d_out);
 
             //get 2d data of MidPlane
             unsigned kmp = (g3d_out.Nz()/2);
@@ -235,7 +228,7 @@ int main( int argc, char* argv[])
 
 
             //computa fsa of quantities
-            solovev::FluxSurfaceAverage<dg::HVec> fsadata(g2d_out,gp, data2davg );
+            dg::geo::FluxSurfaceAverage<dg::HVec> fsadata(g2d_out,c, data2davg );
             dg::HVec data1dfsa = dg::evaluate(fsadata,g1d_out);
             err1d = nc_put_vara_double( ncid1d, dataIDs1d[j], start1d, count1d,  data1dfsa.data());
             
@@ -248,9 +241,9 @@ int main( int argc, char* argv[])
         }
         //----------------Start vorticity computation
         dg::blas2::gemv( laplacian,fields3d[4],vor3d);
-        toravg(vor3d,vor2davg);
+        dg::toroidal_average(vor3d,vor2davg, g3d_out);
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[10],   start2d, count2d, vor2davg.data());
-        solovev::FluxSurfaceAverage<dg::HVec> fsavor(g2d_out,gp,vor2davg );
+        dg::geo::FluxSurfaceAverage<dg::HVec> fsavor(g2d_out,c, vor2davg );
         dg::HVec vor1dfsa = dg::evaluate(fsavor,g1d_out);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[6], start1d, count1d,  vor1dfsa.data()); 
         //----------------Stop vorticity computation
@@ -271,10 +264,10 @@ int main( int argc, char* argv[])
         dg::blas1::axpby(  0.5*p.mu[0], temp1,1.0,  Deperp3d);  //D_perp,e = 1/B*[phi,N_e]_RZ - 1*K(N_e) + 0.5*nu_e*U_e^2*K(N_e)
         dg::blas1::pointwiseDot( Deperp3d, temp3, Deperp3d); //D_perp,e = N_e*(1/B*[phi,N_e]_RZ - 0.5*K(N_e))
 
-        toravg(Deperp3d,Deperp2davg);
+        dg::toroidal_average(Deperp3d,Deperp2davg, g3d_out);
 
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[11],   start2d, count2d, Deperp2davg.data());
-        solovev::FluxSurfaceAverage<dg::HVec> fsaDeperp(g2d_out,gp, Deperp2davg );
+        dg::geo::FluxSurfaceAverage<dg::HVec> fsaDeperp(g2d_out,c, Deperp2davg );
         dg::HVec  Deperp1Dfsa = dg::evaluate(fsaDeperp,g1d_out);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[7], start1d, count1d,   Deperp1Dfsa.data()); 
         //--------------- Stop Perpendicular ELECTRONDENSITYFLUX computation
@@ -303,20 +296,20 @@ int main( int argc, char* argv[])
         dg::blas1::transform(temp1, temp1, dg::SQRT<double>());  // sqrt(psipR^2 +   psipZ^2)
         dg::blas1::pointwiseDivide( Depsip3d, temp1, Depsip3d); //Depsip3d = N_e*(1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p))
       
-        toravg(Depsip3d,Depsip2davg);
+        dg::toroidal_average(Depsip3d,Depsip2davg,g3d_out);
 
-        solovev::FluxSurfaceAverage<dg::HVec> fsaDepsip(g2d_out,gp, Depsip2davg );
+        dg::geo::FluxSurfaceAverage<dg::HVec> fsaDepsip(g2d_out,c, Depsip2davg );
         dg::HVec  Depsip1Dfsa = dg::evaluate(fsaDepsip,g1d_out);
         //compute delta f on midplane : d Depsip2d = Depsip - <Depsip>       
         dg::blas2::gemv(fsaonrzphimatrix, Depsip1Dfsa , Depsip3dfluc ); //fsa on RZ grid
         dg::blas1::axpby(1.0,Depsip3d,-1.0, Depsip3dfluc, Depsip3dfluc); 
         //Same procedure for fluc
-        toravg(Depsip3dfluc,Depsip2dflucavg);
+        dg::toroidal_average(Depsip3dfluc,Depsip2dflucavg, g3d_out);
         //fluctuation
 //         err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, Depsip2dflucavg.data());
         //toroidal avg
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, Depsip2davg.data());
-        solovev::FluxSurfaceAverage<dg::HVec> fsaDepsipfluc(g2d_out,gp,  Depsip2dflucavg );
+        dg::geo::FluxSurfaceAverage<dg::HVec> fsaDepsipfluc(g2d_out,c, Depsip2dflucavg );
         dg::HVec  Depsip1Dflucfsa = dg::evaluate(fsaDepsipfluc,g1d_out);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[8], start1d, count1d,   Depsip1Dflucfsa.data()); 
         std::cout << "Depsip =" << dg::blas2::dot(psipupilog3d,w3d, Depsip3dfluc) << std::endl;
@@ -326,9 +319,9 @@ int main( int argc, char* argv[])
         dg::blas1::transform(temp3, temp1, dg::LN<double>());
         poisson.variationRHS(temp1,temp2);
         dg::blas1::transform(temp2, Lperpinv3d, dg::SQRT<double>());
-        toravg(Lperpinv3d,Lperpinv2davg);
+        dg::toroidal_average(Lperpinv3d,Lperpinv2davg,g3d_out);
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[13],   start2d, count2d, Lperpinv2davg.data());
-        solovev::FluxSurfaceAverage<dg::HVec> fsaLperpinv(g2d_out,gp,Lperpinv2davg );
+        dg::geo::FluxSurfaceAverage<dg::HVec> fsaLperpinv(g2d_out,c, Lperpinv2davg );
         dg::HVec  Lperpinv1Dfsa = dg::evaluate(fsaLperpinv,g1d_out);
         err1d = nc_put_vara_double( ncid1d, dataIDs1d[9], start1d, count1d,   Lperpinv1Dfsa .data()); 
         std::cout << "Lperpinv=" <<dg::blas2::dot(psipupilog3d,w3d, Lperpinv3d) << std::endl;

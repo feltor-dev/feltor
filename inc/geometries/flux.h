@@ -5,35 +5,36 @@
 #include "dg/backend/interpolation.cuh"
 #include "dg/backend/operator.h"
 #include "dg/backend/derivatives.h"
+#include "dg/geometry/geometry.h"
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
-#include "dg/geometry.h"
-#include "fields.h"
+#include "fluxfunctions.h"
 #include "ribeiro.h"
 
 
 namespace dg
 {
-
-namespace flux
+namespace geo
 {
 
+///@cond
+namespace flux
+{
 namespace detail
 {
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
-template< class Psi, class PsiX, class PsiY, class Ipol>
 struct Fpsi
 {
     
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( Psi psi, PsiX psiX, PsiY psiY, Ipol ipol, double x0, double y0): 
-        psip_(psi), fieldRZYT_(psiX, psiY, ipol, x0, y0), fieldRZtau_(psiX, psiY)
+    Fpsi( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double x0, double y0): 
+        psip_(psip), fieldRZYT_(psip, ipol, x0, y0), fieldRZtau_(psip)
     {
         X_init = x0, Y_init = y0;
-        while( fabs( psiX(X_init, Y_init)) <= 1e-10 && fabs( psiY( X_init, Y_init)) <= 1e-10)
+        while( fabs( psip.dfx()(X_init, Y_init)) <= 1e-10 && fabs( psip.dfy()( X_init, Y_init)) <= 1e-10)
             X_init +=  1.; 
     }
     //finds the starting points for the integration in y direction
@@ -47,7 +48,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_(X_init, Y_init), psi, N);
+            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_.f()(X_init, Y_init), psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
@@ -110,30 +111,29 @@ struct Fpsi
 
     private:
     double X_init, Y_init;
-    Psi psip_;
-    solovev::flux::FieldRZYT<PsiX, PsiY, Ipol> fieldRZYT_;
-    solovev::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    BinaryFunctorsLvl1 psip_;
+    dg::geo::flux::FieldRZYT fieldRZYT_;
+    dg::geo::FieldRZtau fieldRZtau_;
 
 };
 
 } //namespace detail
-
-
-
 }//namespace flux
+///@endcond
 
 /**
  * @brief A symmetry flux generator
- * @ingroup generators
- * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ *
+ * @ingroup generators_geo
+ * @snippet flux_t.cu doxygen
  */
-template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class Ipol, class IpolR, class IpolZ>
-struct FluxGenerator
+struct FluxGenerator : public aGenerator2d
 {
     /**
      * @brief Construct a symmetry flux grid generator
      *
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
+     * @param ipol \f$ I(x,y)\f$ the current function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -141,19 +141,19 @@ struct FluxGenerator
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      * @note If mode == 1 then this class does the same as the RibeiroFluxGenerator
      */
-    FluxGenerator( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, Ipol ipol, IpolR ipolR, IpolZ ipolZ, double psi_0, double psi_1, double x0, double y0, int mode=0):
-        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), ipol_(ipol), ipolR_(ipolR), ipolZ_(ipolZ), mode_(mode)
+    FluxGenerator( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& ipol, double psi_0, double psi_1, double x0, double y0, int mode=0):
+        psi_(psi), ipol_(ipol), mode_(mode)
     {
         psi0_ = psi_0, psi1_ = psi_1;
         assert( psi_1 != psi_0);
         if( mode==0)
         {
-            flux::detail::Fpsi<Psi, PsiX, PsiY, Ipol> fpsi(psi, psiX, psiY, ipol, x0, y0);
+            flux::detail::Fpsi fpsi(psi, ipol, x0, y0);
             f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
         }
         else
         {
-            ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, mode);
+            ribeiro::detail::Fpsi fpsi(psi, x0, y0, mode);
             f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
         }
         if( psi_1 < psi_0) f0_*=-1;
@@ -161,36 +161,14 @@ struct FluxGenerator
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
-    /**
-     * @brief The length of the zeta-domain
-     *
-     * Call before discretizing the zeta domain
-     * @return length of zeta-domain (f0*(psi_1-psi_0))
-     * @note the length is always positive
-     */
-    double width() const{return lx_;}
-    /**
-     * @brief 2pi (length of the eta domain)
-     *
-     * Always returns 2pi
-     * @return 2pi 
-     */
-    double height() const{return 2.*M_PI;}
-    /**
-     * @brief Generate the points and the elements of the Jacobian
-     *
-     * Call the width() and height() function before calling this function!
-     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
-     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
-     * @param x  = x(zeta,eta)
-     * @param y  = y(zeta,eta)
-     * @param zetaX = zeta_x(zeta,eta)
-     * @param zetaY = zeta_y(zeta,eta)
-     * @param etaX = eta_x(zeta,eta)
-     * @param etaY = eta_y(zeta,eta)
-     * @note All the resulting vectors are write-only and get properly resized
-     */
-    void operator()( 
+
+    virtual FluxGenerator* clone() const{return new FluxGenerator(*this);}
+
+    private:
+    // length of zeta-domain (f0*(psi_1-psi_0))
+    virtual double do_width() const{return lx_;}
+    virtual double do_height() const{return 2.*M_PI;}
+    virtual void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -198,7 +176,7 @@ struct FluxGenerator
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const 
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         thrust::host_vector<double> psi_x(zeta1d);
@@ -206,13 +184,11 @@ struct FluxGenerator
             psi_x[i] = zeta1d[i]/f0_ +psi0_;
 
         //std::cout << "In grid function:\n";
-        flux::detail::Fpsi<Psi, PsiX, PsiY, Ipol> fpsi(psi_, psiX_, psiY_, ipol_, x0_, y0_);
-        solovev::flux::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY, Ipol, IpolR, IpolZ> fieldRZYRYZY(psiX_, psiY_, psiXX_, psiXY_, psiYY_, ipol_, ipolR_, ipolZ_);
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsiRibeiro(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        solovev::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        unsigned size = zeta1d.size()*eta1d.size();
-        x.resize(size), y.resize(size);
-        zetaX = zetaY = etaX = etaY =x ;
+        flux::detail::Fpsi fpsi(psi_, ipol_, x0_, y0_);
+        dg::geo::flux::FieldRZYRYZY fieldRZYRYZY(psi_, ipol_);
+        ribeiro::detail::Fpsi fpsiRibeiro(psi_, x0_, y0_, mode_);
+        dg::geo::equalarc::FieldRZYRYZY fieldRZYRYZYequalarc(psi_);
+        thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
         thrust::host_vector<double> f_p(fx_);
         unsigned Nx = zeta1d.size(), Ny = eta1d.size();
@@ -221,8 +197,8 @@ struct FluxGenerator
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            if(mode_==0)dg::detail::compute_rzy( fpsi, fieldRZYRYZY, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
-            if(mode_==1)dg::detail::compute_rzy( fpsiRibeiro, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==0)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZY, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==1)dg::geo::detail::compute_rzy( fpsiRibeiro, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
@@ -231,82 +207,47 @@ struct FluxGenerator
             }
         }
     }
-    private:
-    Psi psi_;
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
-    Ipol ipol_;
-    IpolR ipolR_;
-    IpolZ ipolZ_;
-    thrust::host_vector<double> fx_;
+    BinaryFunctorsLvl2 psi_;
+    BinaryFunctorsLvl1 ipol_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
 };
 
 /**
  * @brief Same as the Ribeiro class just but uses psi as a flux label directly
- * @ingroup generators
- * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ * @ingroup generators_geo
  */
-template< class Psi, class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY>
-struct RibeiroFluxGenerator
+struct RibeiroFluxGenerator : public aGenerator2d
 {
     /**
      * @brief Construct a flux aligned grid generator
      *
-     * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
-     * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
+     * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    RibeiroFluxGenerator( Psi psi, PsiX psiX, PsiY psiY, PsiXX psiXX, PsiXY psiXY, PsiYY psiYY, double psi_0, double psi_1, double x0, double y0, int mode=0):
-        psi_(psi), psiX_(psiX), psiY_(psiY), psiXX_(psiXX), psiXY_(psiXY), psiYY_(psiYY), mode_(mode)
+    RibeiroFluxGenerator( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0):
+        psip_(psi), mode_(mode)
     {
         psi0_ = psi_0, psi1_ = psi_1;
         assert( psi_1 != psi_0);
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, mode);
+        ribeiro::detail::Fpsi fpsi(psi, x0, y0, mode);
         f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
         if( psi_1 < psi_0) f0_*=-1;
         lx_ =  f0_*(psi_1-psi_0);
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
         //std::cout << "lx_ = "<<lx_<<"\n";
     }
-    /**
-     * @brief The length of the zeta-domain
-     *
-     * Call before discretizing the zeta domain
-     * @return length of zeta-domain (f0*(psi_1-psi_0))
-     * @note the length is always positive
-     */
-    double width() const{return lx_;}
-    /**
-     * @brief 2pi (length of the eta domain)
-     *
-     * Always returns 2pi
-     * @return 2pi 
-     */
-    double height() const{return 2.*M_PI;}
-    /**
-     * @brief Generate the points and the elements of the Jacobian
-     *
-     * Call the width() and height() function before calling this function!
-     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
-     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
-     * @param x  = x(zeta,eta)
-     * @param y  = y(zeta,eta)
-     * @param zetaX = zeta_x(zeta,eta)
-     * @param zetaY = zeta_y(zeta,eta)
-     * @param etaX = eta_x(zeta,eta)
-     * @param etaY = eta_y(zeta,eta)
-     * @note All the resulting vectors are write-only and get properly resized
-     */
-    void operator()( 
+    virtual RibeiroFluxGenerator* clone() const{return new RibeiroFluxGenerator(*this);}
+
+    private:
+    //length of zeta-domain (f0*(psi_1-psi_0))
+    virtual double do_width() const{return lx_;}
+    virtual double do_height() const{return 2.*M_PI;}
+    virtual void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -314,19 +255,17 @@ struct RibeiroFluxGenerator
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi
         thrust::host_vector<double> psi_x(zeta1d);
         for( unsigned i=0; i<psi_x.size(); i++)
             psi_x[i] = zeta1d[i]/f0_ +psi0_;
 
-        ribeiro::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi_, psiX_, psiY_, x0_, y0_, mode_);
-        solovev::ribeiro::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYribeiro(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        solovev::equalarc::FieldRZYRYZY<PsiX, PsiY, PsiXX, PsiXY, PsiYY> fieldRZYRYZYequalarc(psiX_, psiY_, psiXX_, psiXY_, psiYY_);
-        unsigned size = zeta1d.size()*eta1d.size();
-        x.resize(size), y.resize(size);
-        zetaX = zetaY = etaX = etaY =x ;
+        ribeiro::detail::Fpsi fpsi(psip_, x0_, y0_, mode_);
+        dg::geo::ribeiro::FieldRZYRYZY fieldRZYRYZYribeiro(psip_);
+        dg::geo::equalarc::FieldRZYRYZY fieldRZYRYZYequalarc(psip_);
+        thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
         thrust::host_vector<double> f_p(fx_);
         unsigned Nx = zeta1d.size(), Ny = eta1d.size();
@@ -335,8 +274,8 @@ struct RibeiroFluxGenerator
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            if(mode_==0)dg::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
-            if(mode_==1)dg::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==0)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==1)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
             for( unsigned j=0; j<Ny; j++)
             {
                 x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
@@ -345,15 +284,9 @@ struct RibeiroFluxGenerator
             }
         }
     }
-    private:
-    Psi psi_;
-    PsiX psiX_;
-    PsiY psiY_;
-    PsiXX psiXX_;
-    PsiXY psiXY_;
-    PsiYY psiYY_;
-    thrust::host_vector<double> fx_;
+    BinaryFunctorsLvl2 psip_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
 };
+}//namespace geo
 }//namespace dg

@@ -15,62 +15,44 @@ const unsigned Ny = 20;
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
+//const unsigned NT = 2*T/0.01/lx*(double)Nx; //respect courant condition
+
+//![function]
+const unsigned NT = 20;
 const unsigned s = 17;
 const double T = 1.;
-//const unsigned NT = 2*T/0.01/lx*(double)Nx; //respect courant condition
-unsigned NT = 200;
-
-
+template<class Vector>
+void function(const std::vector<Vector>& y, std::vector<Vector>& yp){ yp = y;}
 double initial( double x, double y) { return sin(x)*sin(y); }
+//![function]
+
 double function( double x, double y){ return sin(y); }
 //double result( double x, double y)  { return initial( x-cos(y)*T, y); }
 double arak   ( double x, double y) { return -cos(y)*sin(y)*cos(x); }
 double result( double x, double y)  { return initial(x,y)*exp(T);}
 
-template< class Vector_Type>
-struct RHS
-{
-    typedef std::vector<Vector_Type> Vector;
-    RHS(const dg::Grid2d& grid): arakawa( grid), phi( evaluate( function, grid)),
-                                     temp(phi)
-    { }
-    void operator()(const Vector& y, Vector& yp)
-    {
-        yp = y;
-        //for( unsigned i=0; i<y.size(); i++)
-        //{
-        //    dg::blas1::axpby( 1., y[i], 0, temp);
-        //    arakawa( phi, temp, yp[i]);
-        //}
-    }
-  private:
-    dg::ArakawaX<dg::CartesianGrid2d, dg::DMatrix, Vector_Type> arakawa;
-    Vector_Type phi, temp;
-};
 
 int main()
 {
-    std::cout << "Type NT!\n";
-    std::cin >> NT;
-    const double dt = T/(double)NT;
-    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
-    dg::DVec w2d = dg::create::weights( grid);
     //Also test std::vector<DVec> functionality
     std::cout << "# of 2d cells                     " << Nx*Ny <<std::endl;
     std::cout << "# of Legendre nodes per dimension "<< n <<std::endl;
     std::cout << "# of timesteps                    "<< NT <<std::endl;
+    //![doxygen]
+    dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     dg::DVec init = dg::evaluate ( initial, grid );
-    const dg::DVec solution = dg::evaluate ( result, grid);
     std::vector<dg::DVec> y0( 2, init), y1(y0);
-
-    RHS<dg::DVec> rhs( grid);
+    const double dt = T/(double)NT;
 
     dg::RK_classic<s, std::vector<dg::DVec> >  rk( y0);
     for( unsigned i=0; i<NT; i++)
     {
-        rk( rhs, y0, y1, dt);
+        rk( function<dg::DVec>, y0, y1, dt);
         y0.swap( y1);
     }
+    //![doxygen]
+    dg::DVec w2d = dg::create::weights( grid);
+    const dg::DVec solution = dg::evaluate ( result, grid);
 
     dg::blas1::axpby( 1., solution, -1., y0[0]);
     std::cout << std::scientific;

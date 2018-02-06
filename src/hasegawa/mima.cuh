@@ -2,20 +2,16 @@
 
 #include <exception>
 
-#include "dg/backend/xspacelib.cuh"
 #include "dg/algorithm.h"
 
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif
+///@note This is an old copy of the toefl project and shouldn't be taken as a basis for a new project
 
-
-namespace dg
+namespace mima
 {
 template< class Matrix, class container>
 struct Diffusion
 {
-    Diffusion( const dg::Grid2d& g, double nu): nu_(nu),
+    Diffusion( const dg::CartesianGrid2d& g, double nu): nu_(nu),
         w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()), LaplacianM( g, dg::normed, dg::centered) {
         }
     void operator()( const container& x, container& y)
@@ -27,12 +23,13 @@ struct Diffusion
         dg::blas1::scal( y, -nu_);
     }
     const container& weights(){return w2d;}
+    const container& inv_weights(){return v2d;}
     const container& precond(){return v2d;}
   private:
     double nu_;
     const container w2d, v2d;
     container temp;
-    Elliptic<Matrix, container, container> LaplacianM;
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container> LaplacianM;
 };
 
 
@@ -55,7 +52,7 @@ struct Mima
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    Mima( const Grid2d& g, double kappa, double eps, bool global);
+    Mima( const dg::CartesianGrid2d& g, double kappa, double eps, bool global);
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -82,24 +79,24 @@ struct Mima
     container dxxphi, dxyphi;
 
     //matrices and solvers
-    Elliptic<Matrix, container, container> laplaceM;
-    ArakawaX< Matrix, container> arakawa; 
+    dg::Elliptic<dg::CartesianGrid2d, Matrix, container> laplaceM;
+    dg::ArakawaX<dg::CartesianGrid2d, Matrix, container> arakawa; 
     const container w2d, v2d;
-    Invert<container> invert;
-    Helmholtz<Matrix, container, container> helmholtz;
+    dg::Invert<container> invert;
+    dg::Helmholtz<dg::CartesianGrid2d, Matrix, container> helmholtz;
 
 
 
 };
 
 template< class M, class container>
-Mima< M, container>::Mima( const Grid2d& grid, double kappa, double eps, bool global ): 
+Mima< M, container>::Mima( const dg::CartesianGrid2d& grid, double kappa, double eps, bool global ): 
     kappa( kappa), global(global),
     phi( grid.size(), 0.), dxphi( phi), dyphi( phi), omega(phi),
     dxxphi( phi), dxyphi(phi),
     arakawa( grid), 
-    w2d( create::weights(grid)), v2d( create::inv_weights(grid)),
-    laplaceM( grid, normed, dg::centered),
+    w2d( dg::create::weights(grid)), v2d( dg::create::inv_weights(grid)),
+    laplaceM( grid, dg::normed, dg::centered),
     helmholtz( grid, -1),
     invert( phi, grid.size(), eps)
 {
@@ -114,22 +111,22 @@ void Mima< M, container>::operator()( const container& y, container& yp)
 
     arakawa( phi, omega, yp);
     //compute derivatives
-    blas2::gemv( arakawa.dx(), phi, dxphi);
-    blas2::gemv( arakawa.dy(), phi, dyphi);
-    blas2::gemv( arakawa.dx(), dxphi, dxxphi);
-    blas2::gemv( arakawa.dy(), dxphi, dxyphi);
+    dg::blas2::gemv( arakawa.dx(), phi, dxphi);
+    dg::blas2::gemv( arakawa.dy(), phi, dyphi);
+    dg::blas2::gemv( arakawa.dx(), dxphi, dxxphi);
+    dg::blas2::gemv( arakawa.dy(), dxphi, dxyphi);
     //gradient terms
-    blas1::axpby( -1, dyphi, 1., yp);
+    dg::blas1::axpby( -1, dyphi, 1., yp);
 
-    blas1::pointwiseDot( dyphi, omega, omega);
-    blas1::axpby( -2*kappa, omega, 1., yp);
+    dg::blas1::pointwiseDot( dyphi, omega, omega);
+    dg::blas1::axpby( -2*kappa, omega, 1., yp);
 
     if( global)
     {
-        blas1::pointwiseDot( dxphi, dxyphi, omega);
-        blas1::axpby( -kappa, omega, 1., yp);
-        blas1::pointwiseDot( dyphi, dxxphi, omega);
-        blas1::axpby( +kappa, omega, 1., yp);
+        dg::blas1::pointwiseDot( dxphi, dxyphi, omega);
+        dg::blas1::axpby( -kappa, omega, 1., yp);
+        dg::blas1::pointwiseDot( dyphi, dxxphi, omega);
+        dg::blas1::axpby( +kappa, omega, 1., yp);
     }
     //dg::blas1::scal(yp, -1.);
 
@@ -137,5 +134,5 @@ void Mima< M, container>::operator()( const container& y, container& yp)
 }
 
 
-}//namespace dg
+}//namespace mima
 

@@ -1,0 +1,36 @@
+
+#grids
+    curvilinearX.h
+    refined_curvilinearX.h
+
+#generators
+    simple_orthogonal.h
+    ribeiro.h
+    flux.h
+    hector.h
+
+    separatrix_orthogonal.h
+    ribeiroX.h
+
+    #utilities
+        utilities.h
+        utilitiesX.h
+
+#magnetic fields
+    solovev.h
+    solovev_parameters.h
+    taylor.h
+    guenther.h
+    guenther_parameters.h
+    toroidal.h
+
+    testfunctors.h 
+    init.h
+    magnetic_field.h
+    adaption.h
+
+#miscellaneous
+    ds.h
+    fieldaligned.h
+    mpi_fieldaligned.h
+    average.h

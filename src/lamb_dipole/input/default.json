@@ -1,0 +1,43 @@
+
+//            * Input-File for "SHU" Code *
+//            -------------------------------------------
+
+{
+    //--------------------Space and Time discretization------------
+    
+    "n"  : 3,       //(# of polynomial coefficients)    =   1     (3)
+    "Nx" : 30,      //(grid points in x)                =   80  (192)
+    "Ny" : 30,      //(grid points in y)                =   80  (192)
+    "dt" : 0.21e-3, //(time step in units c_s/L_p)      =   0.21e-3    (0.01)
+     
+     //-----------------Algorithmic parameters-------------------
+     
+    "eps_pol" : 1e-6, // (stopping for conjugate gradient)
+    "eps_time" : 1e-9, // (stopping for implicit part)
+     
+     //-----------------Boundary conditions----------------------
+     
+    "lx" : 1, //6.2831853 (length of x )
+    "ly" : 1, //6.2831853 (length of y )
+    "bc_x" : "PER", //( periodic,  Dirichlet )
+    "bc_y" : "PER", //( periodic,  Dirichlet )
+     
+     //-----------------Physical parameters----------------------
+     
+    "nu_perp": 1e-4,  //(viscosity)  
+     
+     //-------------Initial dipole parameters---------------------
+     
+    "velocity" : 1,     // (blob speed)
+    "sigma"    : 0.1,   //(dipole radius in units of lx)
+    "posX"     : 0.5,   // ( in units of lx)
+    "posY"     : 0.8,   // ( in units of ly)
+     
+     //-----------------Miscellaneous----------------------------
+     
+    "itstp"   : 5,     // (steps between output)
+    "maxout"  : 200,   //# of outputs (excluding first)
+    "initial" : "lamb" // lamb or shear
+}
+
+//@ ------------------------------------------------------------

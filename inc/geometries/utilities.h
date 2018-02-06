@@ -1,12 +1,457 @@
 #pragma once
+#include "fluxfunctions.h"
 
 ///@cond
 namespace dg
 {
+namespace geo
+{
+
+////////////////////////////////////////////for grid generation/////////////////
+namespace flux{
+
+/**
+ * @brief 
+ * \f[  d R/d \theta =   B^R/B^\theta \f], 
+ * \f[  d Z/d \theta =   B^Z/B^\theta \f],
+ * \f[  d y/d \theta =   B^y/B^\theta\f]
+ */ 
+struct FieldRZYT
+{
+    FieldRZYT( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip), ipol_(ipol){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double ipol=ipol_.f()(y[0], y[1]);
+        yp[0] =  psipZ;//fieldR
+        yp[1] = -psipR;//fieldZ
+        yp[2] =ipol/y[0];
+        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
+        double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; 
+        yp[0] /=  fieldT;
+        yp[1] /=  fieldT;
+        yp[2] /=  fieldT;
+    }
+  private:
+    double R_0_, Z_0_;
+    BinaryFunctorsLvl1 psip_, ipol_;
+};
+
+struct FieldRZYZ
+{
+    FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol):psip_(psip), ipol_(ipol) {}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double ipol=ipol_.f()(y[0], y[1]);
+        yp[0] =  psipZ;//fieldR
+        yp[1] = -psipR;//fieldZ
+        yp[2] =   ipol/y[0]; //fieldYbar
+        yp[0] /=  yp[1];
+        yp[2] /=  yp[1];
+        yp[1] =  1.;
+    }
+  private:
+    BinaryFunctorsLvl1 psip_, ipol_;
+};
+
+/**
+ * @brief 
+ * \f[  d R/d y =   B^R/B^y \f], 
+ * \f[  d Z/d y =   B^Z/B^y \f],
+ */ 
+struct FieldRZY
+{
+    FieldRZY( const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol): f_(1.), psip_(psip), ipol_(ipol){}
+    void set_f(double f){ f_ = f;}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double ipol=ipol_.f()(y[0], y[1]);
+        double fnorm = y[0]/ipol/f_;       
+        yp[0] =  (psipZ)*fnorm;
+        yp[1] = -(psipR)*fnorm;
+    }
+  private:
+    double f_;
+    BinaryFunctorsLvl1 psip_,ipol_;
+};
+
+/**
+ * @brief 
+ * \f[  d R/d y   =   B^R/B^y = \frac{q R}{I} \frac{\partial \psi_p}{\partial Z} \f], 
+ * \f[  d Z/d y   =   B^Z/B^y =    -\frac{q R}{I} \frac{\partial \psi_p}{\partial R} \f],
+ * \f[  d y_R/d y =  \frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial R \partial Z} y_R
+    -\frac{\partial^2 \psi_p}{\partial^2 R} y_Z)\right] + 
+    \frac{\partial \psi_p}{\partial R} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)-\frac{1}{R} \f], 
+ * \f[  d y_Z/d y =   - \frac{q( \psi_p) R}{I( \psi_p)}\left[\frac{\partial^2 \psi_p}{\partial Z^2} y_R\right)
+    -\frac{\partial^2 \psi_p}{\partial R \partial Z} y_Z\right]+ 
+    \frac{\partial \psi_p}{\partial Z} \left(\frac{1}{I(\psi_p)} \frac{\partial I(\psi_p)}{\partial \psi_p} -\frac{1}{q(\psi_p)} \frac{\partial q(\psi_p)}{\partial \psi_p}\right)\f],
+ */ 
+struct FieldRZYRYZY
+{
+    FieldRZYRYZY(const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol): f_(1.), f_prime_(1), psip_(psip), ipol_(ipol){}
+    void set_f( double new_f){ f_ = new_f;}
+    void set_fp( double new_fp){ f_prime_ = new_fp;}
+    void initialize( double R0, double Z0, double& yR, double& yZ)
+    {
+        double psipR = psip_.dfx()(R0, Z0), psipZ = psip_.dfy()(R0,Z0);
+        double psip2 = (psipR*psipR+ psipZ*psipZ);
+        double fnorm =R0/ipol_.f()(R0,Z0)/f_; //=Rq/I
+        yR = -psipZ/psip2/fnorm;
+        yZ = +psipR/psip2/fnorm;
+    }
+    void derive( double R0, double Z0, double& xR, double& xZ)
+    {
+        xR = +f_*psip_.dfx()(R0, Z0);
+        xZ = +f_*psip_.dfy()(R0, Z0);
+    }
+    
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
+        double ipol=ipol_.f()(y[0], y[1]);
+        double ipolR=ipol_.dfx()(y[0], y[1]);
+        double ipolZ=ipol_.dfy()(y[0], y[1]);
+        double fnorm =y[0]/ipol/f_; //=R/(I/q)
+
+        yp[0] = -(psipZ)*fnorm;
+        yp[1] = +(psipR)*fnorm;
+        yp[2] = (+psipRZ*y[2]- psipRR*y[3])*fnorm + f_prime_/f_*psipR + ipolR/ipol - 1./y[0];
+        yp[3] = (-psipRZ*y[3]+ psipZZ*y[2])*fnorm + f_prime_/f_*psipZ + ipolZ/ipol;
+
+    }
+  private:
+    double f_, f_prime_;
+    BinaryFunctorsLvl2 psip_;
+    BinaryFunctorsLvl1 ipol_;
+};
+
+}//namespace flux
+namespace ribeiro{
+
+struct FieldRZYT
+{
+    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        yp[0] = -psipZ;//fieldR
+        yp[1] = +psipR;//fieldZ
+        //yp[2] = 1; //volume
+        //yp[2] = sqrt(psip2); //equalarc
+        yp[2] = psip2; //ribeiro
+        //yp[2] = psip2*sqrt(psip2); //separatrix
+        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
+        double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; 
+        yp[0] /=  fieldT;
+        yp[1] /=  fieldT;
+        yp[2] /=  fieldT;
+    }
+  private:
+    double R_0_, Z_0_;
+    BinaryFunctorsLvl1 psip_;
+};
+
+struct FieldRZYZ
+{
+    FieldRZYZ( const BinaryFunctorsLvl1& psip): psip_(psip){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        yp[0] = -psipZ;//fieldR
+        yp[1] =  psipR;//fieldZ
+        //yp[2] = 1.0; //volume
+        //yp[2] = sqrt(psip2); //equalarc
+        yp[2] = psip2; //ribeiro
+        //yp[2] = psip2*sqrt(psip2); //separatrix
+        yp[0] /=  yp[1];
+        yp[2] /=  yp[1];
+        yp[1] =  1.;
+    }
+  private:
+    BinaryFunctorsLvl1 psip_;
+};
+
+struct FieldRZY
+{
+    FieldRZY( const BinaryFunctorsLvl1& psip): f_(1.),psip_(psip){}
+    void set_f(double f){ f_ = f;}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        //yp[0] = +psipZ/f_;//volume 
+        //yp[1] = -psipR/f_;//volume 
+        //yp[0] = +psipZ/sqrt(psip2)/f_;//equalarc
+        //yp[1] = -psipR/sqrt(psip2)/f_;//equalarc
+        yp[0] = -psipZ/psip2/f_;//ribeiro
+        yp[1] = +psipR/psip2/f_;//ribeiro
+        //yp[0] = +psipZ/psip2/sqrt(psip2)/f_;//separatrix
+        //yp[1] = -psipR/psip2/sqrt(psip2)/f_;//separatrix
+    }
+  private:
+    double f_;
+    BinaryFunctorsLvl1 psip_;
+};
+
+
+struct FieldRZYRYZY
+{
+    FieldRZYRYZY( const BinaryFunctorsLvl2& psip):psip_(psip){ f_ = f_prime_ = 1.;}
+    void set_f( double new_f){ f_ = new_f;}
+    void set_fp( double new_fp){ f_prime_ = new_fp;}
+    void initialize( double R0, double Z0, double& yR, double& yZ)
+    {
+        yR = -f_*psip_.dfy()(R0, Z0);
+        yZ = +f_*psip_.dfx()(R0, Z0);
+    }
+    void derive( double R0, double Z0, double& xR, double& xZ)
+    {
+        xR = +f_*psip_.dfx()(R0, Z0);
+        xZ = +f_*psip_.dfy()(R0, Z0);
+    }
+
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
+        double psip2 = (psipR*psipR+ psipZ*psipZ);
+
+        yp[0] =  -psipZ/f_/psip2;
+        yp[1] =  +psipR/f_/psip2;
+        yp[2] =  ( + psipRZ*y[2] - psipRR*y[3] )/f_/psip2 
+            + f_prime_/f_* psipR + 2.*(psipR*psipRR + psipZ*psipRZ)/psip2 ;
+        yp[3] =  (-psipRZ*y[3] + psipZZ*y[2])/f_/psip2 
+            + f_prime_/f_* psipZ + 2.*(psipR*psipRZ + psipZ*psipZZ)/psip2;
+    }
+  private:
+    double f_, f_prime_;
+    BinaryFunctorsLvl2 psip_;
+};
+}//namespace ribeiro
+namespace equalarc{
+
+
+struct FieldRZYT
+{
+    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        yp[0] = -psipZ;//fieldR
+        yp[1] = +psipR;//fieldZ
+        //yp[2] = 1; //volume
+        yp[2] = sqrt(psip2); //equalarc
+        //yp[2] = psip2; //ribeiro
+        //yp[2] = psip2*sqrt(psip2); //separatrix
+        double r2 = (y[0]-R_0_)*(y[0]-R_0_) + (y[1]-Z_0_)*(y[1]-Z_0_);
+        double fieldT = psipZ*(y[1]-Z_0_)/r2 + psipR*(y[0]-R_0_)/r2; //fieldT
+        yp[0] /=  fieldT;
+        yp[1] /=  fieldT;
+        yp[2] /=  fieldT;
+    }
+  private:
+    double R_0_, Z_0_;
+    BinaryFunctorsLvl1 psip_;
+};
+
+struct FieldRZYZ
+{
+    FieldRZYZ( const BinaryFunctorsLvl1& psip): psip_(psip){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        yp[0] = -psipZ;//fieldR
+        yp[1] = +psipR;//fieldZ
+        //yp[2] = 1.0; //volume
+        yp[2] = sqrt(psip2); //equalarc
+        //yp[2] = psip2; //ribeiro
+        //yp[2] = psip2*sqrt(psip2); //separatrix
+        yp[0] /=  yp[1];
+        yp[2] /=  yp[1];
+        yp[1] =  1.;
+    }
+  private:
+    BinaryFunctorsLvl1 psip_;
+};
+
+struct FieldRZY
+{
+    FieldRZY( const BinaryFunctorsLvl1& psip):f_(1.), psip_(psip){}
+    void set_f(double f){ f_ = f;}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psip2 = psipR*psipR+psipZ*psipZ;
+        //yp[0] = +psipZ/f_;//volume 
+        //yp[1] = -psipR/f_;//volume 
+        yp[0] = -psipZ/sqrt(psip2)/f_;//equalarc
+        yp[1] = +psipR/sqrt(psip2)/f_;//equalarc
+        //yp[0] = -psipZ/psip2/f_;//ribeiro
+        //yp[1] = +psipR/psip2/f_;//ribeiro
+        //yp[0] = +psipZ/psip2/sqrt(psip2)/f_;//separatrix
+        //yp[1] = -psipR/psip2/sqrt(psip2)/f_;//separatrix
+    }
+  private:
+    double f_;
+    BinaryFunctorsLvl1 psip_;
+};
+
+
+struct FieldRZYRYZY
+{
+    FieldRZYRYZY( const BinaryFunctorsLvl2& psip):  psip_(psip){ f_ = f_prime_ = 1.;}
+    void set_f( double new_f){ f_ = new_f;}
+    void set_fp( double new_fp){ f_prime_ = new_fp;}
+    void initialize( double R0, double Z0, double& yR, double& yZ)
+    {
+        double psipR = psip_.dfx()(R0, Z0), psipZ = psip_.dfy()(R0,Z0);
+        double psip2 = (psipR*psipR+ psipZ*psipZ);
+        yR = -f_*psipZ/sqrt(psip2);
+        yZ = +f_*psipR/sqrt(psip2);
+    }
+    void derive( double R0, double Z0, double& xR, double& xZ)
+    {
+        xR = +f_*psip_.dfx()(R0, Z0);
+        xZ = +f_*psip_.dfy()(R0, Z0);
+    }
+
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
+        double psip2 = (psipR*psipR+ psipZ*psipZ);
+
+        yp[0] =  -psipZ/f_/sqrt(psip2);
+        yp[1] =  +psipR/f_/sqrt(psip2);
+        yp[2] =  ( +psipRZ*y[2] - psipRR *y[3])/f_/sqrt(psip2) 
+            + f_prime_/f_* psipR + (psipR*psipRR + psipZ*psipRZ)/psip2 ;
+        yp[3] =  ( -psipRZ*y[3] + psipZZ*y[2])/f_/sqrt(psip2)
+            + f_prime_/f_* psipZ + (psipR*psipRZ + psipZ*psipZZ)/psip2;
+    }
+  private:
+    double f_, f_prime_;
+    BinaryFunctorsLvl2 psip_;
+};
+
+}//namespace equalarc
+
+struct FieldRZtau
+{
+    FieldRZtau(const BinaryFunctorsLvl1& psip): psip_(psip){}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
+        double psi2 = psipR*psipR+ psipZ*psipZ;
+        yp[0] =  psipR/psi2;
+        yp[1] =  psipZ/psi2;
+    }
+  private:
+    BinaryFunctorsLvl1 psip_;
+};
+
+struct HessianRZtau
+{
+    HessianRZtau( const BinaryFunctorsLvl2& psip): norm_(false), quad_(1), psip_(psip){}
+    // if true goes into positive Z - direction and X else
+    void set_quadrant( int quadrant) {quad_ = quadrant;}
+    void set_norm( bool normed) {norm_ = normed;}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipRZ = psip_.dfxy()(y[0], y[1]);
+        if( psipRZ == 0)
+        {
+            if(      quad_ == 0) { yp[0] = 1; yp[1] = 0; }
+            else if( quad_ == 1) { yp[0] = 0; yp[1] = 1; }
+            else if( quad_ == 2) { yp[0] = -1; yp[1] = 0; }
+            else if( quad_ == 3) { yp[0] = 0; yp[1] = -1; }
+        }
+        else
+        {
+            double psipRR = psip_.dfxx()(y[0], y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
+            double T = psipRR + psipZZ; 
+            double D = psipZZ*psipRR - psipRZ*psipRZ;
+            double L1 = 0.5*T+sqrt( 0.25*T*T-D); // > 0
+            double L2 = 0.5*T-sqrt( 0.25*T*T-D); // < 0;  D = L1*L2
+            if      ( quad_ == 0){ yp[0] =  L1 - psipZZ; yp[1] = psipRZ;}
+            else if ( quad_ == 1){ yp[0] = -psipRZ; yp[1] = psipRR - L2;}
+            else if ( quad_ == 2){ yp[0] =  psipZZ - L1; yp[1] = -psipRZ;}
+            else if ( quad_ == 3){ yp[0] = +psipRZ; yp[1] = L2 - psipRR;}
+        }
+        if( norm_) 
+        {
+            double vgradpsi = yp[0]*psip_.dfx()(y[0],y[1]) + yp[1]*psip_.dfy()(y[0],y[1]);
+            yp[0] /= vgradpsi, yp[1] /= vgradpsi;
+        }
+        else
+        {
+            double norm = sqrt(yp[0]*yp[0]+yp[1]*yp[1]);
+            yp[0]/= norm, yp[1]/= norm;
+        }
+
+    }
+    void newton_iteration( const dg::HVec&y, dg::HVec& yp)
+    {
+        double psipRZ = psip_.dfxy()(y[0], y[1]);
+        double psipRR = psip_.dfxx()(y[0], y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0], y[1]);
+        double Dinv = 1./(psipZZ*psipRR - psipRZ*psipRZ);
+        yp[0] = y[0] - Dinv*(psipZZ*psipR - psipRZ*psipZ);
+        yp[1] = y[1] - Dinv*(-psipRZ*psipR + psipRR*psipZ);
+    }
+  private:
+    bool norm_;
+    int quad_;
+    BinaryFunctorsLvl2 psip_;
+};
+
+struct MinimalCurve
+{
+    MinimalCurve(const BinaryFunctorsLvl1& psip): norm_(false), 
+        psip_(psip){}
+    void set_norm( bool normed) {norm_ = normed;}
+    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    {
+        double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0], y[1]);
+        yp[0] = y[2];
+        yp[1] = y[3];
+        //double psipRZ = psipRZ_(y[0], y[1]), psipR = psipR_(y[0], y[1]), psipZ = psipZ_(y[0], y[1]), psipRR=psipRR_(y[0], y[1]), psipZZ=psipZZ_(y[0], y[1]); 
+        //double D2 = psipRR*y[2]*y[2] + 2.*psipRZ*y[2]*y[3] + psipZZ*y[3]*y[3];
+        //double grad2 = psipR*psipR+psipZ*psipZ;
+        //yp[2] = D2/(1.+grad2) * psipR ;
+        //yp[3] = D2/(1.+grad2) * psipZ ;
+        if( psip_.f()(y[0], y[1]) < 0)
+        {
+            yp[2] = -10.*psipR;
+            yp[3] = -10.*psipZ;
+        }
+        else
+        {
+            yp[2] = 10.*psipR;
+            yp[3] = 10.*psipZ;
+        }
+
+        if( norm_) 
+        {
+            double vgradpsi = y[2]*psipR + y[3]*psipZ;
+            yp[0] /= vgradpsi, yp[1] /= vgradpsi, yp[2] /= vgradpsi, yp[3] /= vgradpsi;
+        }
+    }
+  private:
+    bool norm_;
+    BinaryFunctorsLvl1 psip_;
+};
+////////////////////////////////////////////////////////////////////////////////
+
 
 namespace detail
 {
-
 //compute psi(x) and f(x) for given discretization of x and a fpsiMinv functor
 //doesn't integrate over the x-point
 //returns psi_1
@@ -107,8 +552,7 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
 }
 
 } //namespace detail
-
-
+} //namespace geo
 } //namespace dg
 ///@endcond
 

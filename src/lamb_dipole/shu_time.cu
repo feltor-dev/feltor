@@ -51,8 +51,6 @@ int main( int argc, char * argv[])
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
         double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
         /////////////////////////////////////////////////////////////////
-        double time = 0;
-        unsigned step = 0;
         try{
         for( unsigned i=0; i<NT; i++)
         {
@@ -84,8 +82,6 @@ int main( int argc, char * argv[])
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
         double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
         /////////////////////////////////////////////////////////////////
-        double time = 0;
-        unsigned step = 0;
         try{
         for( unsigned i=0; i<NT; i++)
         {
@@ -117,8 +113,6 @@ int main( int argc, char * argv[])
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
         double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
         /////////////////////////////////////////////////////////////////
-        double time = 0;
-        unsigned step = 0;
         try{
         for( unsigned i=0; i<NT; i++)
         {
@@ -150,8 +144,6 @@ int main( int argc, char * argv[])
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
         double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
         /////////////////////////////////////////////////////////////////
-        double time = 0;
-        unsigned step = 0;
         try{
         for( unsigned i=0; i<NT; i++)
         {

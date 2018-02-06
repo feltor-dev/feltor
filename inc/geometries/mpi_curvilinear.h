@@ -2,171 +2,215 @@
 
 #include <mpi.h>
 
-#include "curvilinear.h"
+#include "dg/backend/mpi_evaluation.h"
 #include "dg/backend/mpi_grid.h"
 #include "dg/backend/mpi_vector.h"
+#include "dg/geometry/mpi_base.h"
+#include "curvilinear.h"
+#include "generator.h"
 
 
 
 namespace dg
 {
+namespace geo
+{
 
 ///@cond
-template< class container>
-struct CurvilinearMPIGrid2d; 
+struct CurvilinearProductMPIGrid3d; 
 ///@endcond
 //
 ///@addtogroup grids
 ///@{
-
 /**
- * @tparam LocalContainer Vector class that holds metric coefficients
+ * @brief A two-dimensional MPI grid based on curvilinear coordinates
  */
-template<class LocalContainer>
-struct CurvilinearMPIGrid3d : public dg::MPIGrid3d
+struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
 {
-    typedef dg::CurvilinearCylindricalTag metric_category; //!< metric tag
-    typedef dg::CurvilinearMPIGrid2d<LocalContainer> perpendicular_grid; //!< the two-dimensional grid
-
-    template< class Generator>
-    CurvilinearMPIGrid3d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, dg::bc bcx, MPI_Comm comm): 
-        dg::MPIGrid3d( 0, 1, 0., 2*M_PI, 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, dg::PER, dg::PER, comm),
-        r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_),
-        g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), g_pp_(g_xx_), vol_(g_xx_), vol2d_(g_xx_)
+    /// @copydoc hide_grid_parameters2d
+    /// @param comm a two-dimensional Cartesian communicator
+    /// @note the paramateres given in the constructor are global parameters 
+    CurvilinearMPIGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, MPI_Comm comm): 
+        dg::aMPIGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, bcy, comm), handle_(generator)
     {
-        dg::CurvilinearGrid3d<LocalContainer> g( generator, n,Nx, Ny, local().Nz(), bcx);
+        //generate global 2d grid and then reduce to local 
+        CurvilinearGrid2d g(generator, n, Nx, Ny);
+        divide_and_conquer(g);
+    }
+    ///explicit conversion of 3d product grid to the perpendicular grid
+    explicit CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g);
 
-        //divide and conquer
-        int dims[3], periods[3], coords[3];
-        MPI_Cart_get( comm, 3, dims, periods, coords);
-        init_X_boundaries( g.x0(), g.x1());
-        for( unsigned s=0; s<this->Nz(); s++)
-            //for( unsigned py=0; py<dims[1]; py++)
-                for( unsigned i=0; i<this->n()*this->Ny(); i++)
-                    //for( unsigned px=0; px<dims[0]; px++)
-                        for( unsigned j=0; j<this->n()*this->Nx(); j++)
-                        {
-                            unsigned idx1 = (s*this->n()*this->Ny()+i)*this->n()*this->Nx() + j;
-                            unsigned idx2 = (((s*dims[1]+coords[1])*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            r_.data()[idx1] = g.r()[idx2];
-                            z_.data()[idx1] = g.z()[idx2];
-                            xr_.data()[idx1] = g.xr()[idx2];
-                            xz_.data()[idx1] = g.xz()[idx2];
-                            yr_.data()[idx1] = g.yr()[idx2];
-                            yz_.data()[idx1] = g.yz()[idx2];
-                            g_xx_.data()[idx1] = g.g_xx()[idx2];
-                            g_xy_.data()[idx1] = g.g_xy()[idx2];
-                            g_yy_.data()[idx1] = g.g_yy()[idx2];
-                            g_pp_.data()[idx1] = g.g_pp()[idx2];
-                            vol_.data()[idx1] = g.vol()[idx2];
-                            vol2d_.data()[idx1] = g.perpVol()[idx2];
-                        }
+    ///read access to the generator 
+    const aGenerator2d& generator() const{return handle_.get();}
+    virtual CurvilinearMPIGrid2d* clone()const{return new CurvilinearMPIGrid2d(*this);}
+    virtual CurvilinearGrid2d* global_geometry()const{
+        return new CurvilinearGrid2d( 
+                handle_.get(),
+                global().n(), global().Nx(), global().Ny(),
+                global().bcx(), global().bcy());
+    }
+    private:
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
+    {
+        dg::aMPITopology2d::do_set(new_n, new_Nx, new_Ny);
+        CurvilinearGrid2d g( handle_.get(), new_n, new_Nx, new_Ny);
+        divide_and_conquer(g);//distribute to processes
+    }
+    void divide_and_conquer(const CurvilinearGrid2d& g_)
+    {
+        dg::SparseTensor<thrust::host_vector<double> > jacobian=g_.jacobian(); 
+        dg::SparseTensor<thrust::host_vector<double> > metric=g_.metric(); 
+        std::vector<thrust::host_vector<double> > map = g_.map();
+        for( unsigned i=0; i<3; i++)
+            for( unsigned j=0; j<3; j++)
+            {
+                metric_.idx(i,j) = metric.idx(i,j);
+                jac_.idx(i,j) = jacobian.idx(i,j);
+            }
+        for( unsigned i=0; i<jacobian.values().size(); i++)
+            jac_.value(i) = global2local( jacobian.value(i), *this);
+        for( unsigned i=0; i<metric.values().size(); i++)
+            metric_.value(i) = global2local( metric.value(i), *this);
+        map_.resize(map.size());
+        for( unsigned i=0; i<map.size(); i++)
+            map_[i] = global2local( map[i], *this);
     }
 
-    //these are for the Field class
-
-    perpendicular_grid perp_grid() const { return perpendicular_grid(*this);}
-
-    const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& z()const{return z_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& xr()const{return xr_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& yz()const{return yz_;}
-    const dg::MPI_Vector<LocalContainer>& g_xx()const{return g_xx_;}
-    const dg::MPI_Vector<LocalContainer>& g_yy()const{return g_yy_;}
-    const dg::MPI_Vector<LocalContainer>& g_xy()const{return g_xy_;}
-    const dg::MPI_Vector<LocalContainer>& g_pp()const{return g_pp_;}
-    const dg::MPI_Vector<LocalContainer>& vol()const{return vol_;}
-    const dg::MPI_Vector<LocalContainer>& perpVol()const{return vol2d_;}
-    private:
-    dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_; //3d vector
-    dg::MPI_Vector<LocalContainer> g_xx_, g_xy_, g_yy_, g_pp_, vol_, vol2d_;
+    virtual SparseTensor<host_vector> do_compute_jacobian( ) const {
+        return jac_;
+    }
+    virtual SparseTensor<host_vector> do_compute_metric( ) const {
+        return metric_;
+    }
+    virtual std::vector<host_vector > do_compute_map()const{return map_;}
+    dg::SparseTensor<host_vector > jac_, metric_;
+    std::vector<host_vector > map_;
+    dg::Handle<aGenerator2d> handle_;
 };
 
 /**
- * @tparam LocalContainer Vector class that holds metric coefficients
- */
-template<class LocalContainer>
-struct CurvilinearMPIGrid2d : public dg::MPIGrid2d
-{
-    typedef dg::CurvilinearCylindricalTag metric_category; 
+ * @brief A 2x1 curvilinear product space MPI grid
 
-    template< class Generator>
-    CurvilinearMPIGrid2d( const Generator& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, MPI_Comm comm2d): 
-        dg::MPIGrid2d( 0, 1, 0., 2*M_PI, n, Nx, Ny, bcx, dg::PER, comm2d),
-        r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), 
-        g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
+ * The base coordinate system is the cylindrical coordinate system R,Z,phi
+ */
+struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
+{
+    typedef dg::geo::CurvilinearMPIGrid2d perpendicular_grid; //!< the two-dimensional grid
+    /// @copydoc hide_grid_parameters3d
+    /// @param comm a three-dimensional Cartesian communicator
+    /// @note the paramateres given in the constructor are global parameters 
+    CurvilinearProductMPIGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm): 
+        dg::aProductMPIGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
+        handle_( generator)
     {
-        dg::CurvilinearGrid2d<LocalContainer> g( generator, n,Nx, Ny, bcx);
-        //divide and conquer
-        int dims[2], periods[2], coords[2];
-        MPI_Cart_get( communicator(), 2, dims, periods, coords);
-        init_X_boundaries( g.x0(), g.x1());
-            //for( unsigned py=0; py<dims[1]; py++)
-                for( unsigned i=0; i<this->n()*this->Ny(); i++)
-                    //for( unsigned px=0; px<dims[0]; px++)
-                        for( unsigned j=0; j<this->n()*this->Nx(); j++)
-                        {
-                            unsigned idx1 = i*this->n()*this->Nx() + j;
-                            unsigned idx2 = ((coords[1]*this->n()*this->Ny()+i)*dims[0] + coords[0])*this->n()*this->Nx() + j;
-                            r_.data()[idx1] = g.r()[idx2];
-                            z_.data()[idx1] = g.z()[idx2];
-                            xr_.data()[idx1] = g.xr()[idx2];
-                            xz_.data()[idx1] = g.xz()[idx2];
-                            yr_.data()[idx1] = g.yr()[idx2];
-                            yz_.data()[idx1] = g.yz()[idx2];
-                            g_xx_.data()[idx1] = g.g_xx()[idx2];
-                            g_xy_.data()[idx1] = g.g_xy()[idx2];
-                            g_yy_.data()[idx1] = g.g_yy()[idx2];
-                            vol2d_.data()[idx1] = g.perpVol()[idx2];
-                        }
+        map_.resize(3);
+        CurvilinearMPIGrid2d g(generator,n,Nx,Ny, bcx, bcy, get_perp_comm());
+        constructPerp( g);
+        constructParallel(this->local().Nz());
     }
-    CurvilinearMPIGrid2d( const CurvilinearMPIGrid3d<LocalContainer>& g):
-        dg::MPIGrid2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), get_reduced_comm( g.communicator() )),
-        r_(dg::evaluate( dg::one, *this)), z_(r_), xr_(r_), xz_(r_), yr_(r_), yz_(r_), 
-        g_xx_(r_), g_xy_(g_xx_), g_yy_(g_xx_), vol2d_(g_xx_)
+
+
+    ///read access to the generator
+    const aGenerator2d& generator() const{return handle_.get();}
+    virtual CurvilinearProductMPIGrid3d* clone()const{return new CurvilinearProductMPIGrid3d(*this);}
+    virtual CurvilinearProductGrid3d* global_geometry()const{
+        return new CurvilinearProductGrid3d( 
+                handle_.get(),
+                global().n(), global().Nx(), global().Ny(), global().Nz(), 
+                global().bcx(), global().bcy(), global().bcz());
+    }
+    private:
+    virtual perpendicular_grid* do_perp_grid() const { return new perpendicular_grid(*this);}
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)
     {
-        unsigned s = this->size();
-        for( unsigned i=0; i<s; i++)
+        dg::aMPITopology3d::do_set(new_n, new_Nx, new_Ny, new_Nz);
+        if( !( new_n == n() && new_Nx == global().Nx() && new_Ny == global().Ny() ) )
         {
-            r_.data()[i]=g.r().data()[i]; 
-            z_.data()[i]=g.z().data()[i]; 
-            xr_.data()[i]=g.xr().data()[i]; 
-            xz_.data()[i]=g.xz().data()[i]; 
-            yr_.data()[i]=g.yr().data()[i]; 
-            yz_.data()[i]=g.yz().data()[i];
+            CurvilinearMPIGrid2d g(handle_.get(),new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), get_perp_comm());
+            constructPerp( g);
         }
-        thrust::copy( g.g_xx().data().begin(), g.g_xx().data().begin()+s, g_xx_.data().begin());
-        thrust::copy( g.g_xy().data().begin(), g.g_xy().data().begin()+s, g_xy_.data().begin());
-        thrust::copy( g.g_yy().data().begin(), g.g_yy().data().begin()+s, g_yy_.data().begin());
-        thrust::copy( g.perpVol().data().begin(), g.perpVol().data().begin()+s, vol2d_.data().begin());
-        
+        constructParallel(this->local().Nz());
     }
-
-    const dg::MPI_Vector<thrust::host_vector<double> >& r()const{return r_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& z()const{return z_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& xr()const{return xr_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& yr()const{return yr_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& xz()const{return xz_;}
-    const dg::MPI_Vector<thrust::host_vector<double> >& yz()const{return yz_;}
-    const dg::MPI_Vector<LocalContainer>& g_xx()const{return g_xx_;}
-    const dg::MPI_Vector<LocalContainer>& g_yy()const{return g_yy_;}
-    const dg::MPI_Vector<LocalContainer>& g_xy()const{return g_xy_;}
-    const dg::MPI_Vector<LocalContainer>& vol()const{return vol2d_;}
-    const dg::MPI_Vector<LocalContainer>& perpVol()const{return vol2d_;}
-    private:
-    MPI_Comm get_reduced_comm( MPI_Comm src)
+    void constructPerp( CurvilinearMPIGrid2d& g2d)
     {
-        MPI_Comm planeComm;
-        int remain_dims[] = {true,true,false}; //true true false
-        MPI_Cart_sub( src, remain_dims, &planeComm);
-        return planeComm;
+        jac_=g2d.jacobian();
+        map_=g2d.map();
     }
-
-    dg::MPI_Vector<thrust::host_vector<double> > r_, z_, xr_, xz_, yr_, yz_; //2d vector
-    dg::MPI_Vector<LocalContainer> g_xx_, g_xy_, g_yy_, vol2d_;
+    void constructParallel( unsigned localNz )
+    {
+        map_.resize(3);
+        map_[2]=dg::evaluate(dg::cooZ3d, *this);
+        unsigned size = this->local().size();
+        unsigned size2d = this->n()*this->n()*this->local().Nx()*this->local().Ny();
+        //resize for 3d values
+        for( unsigned r=0; r<4;r++)
+        {
+            jac_.value(r).data().resize(size);
+            jac_.value(r).communicator() = communicator();
+        }
+        map_[0].data().resize(size); 
+        map_[0].communicator() = communicator();
+        map_[1].data().resize(size);
+        map_[1].communicator() = communicator();
+        //lift to 3D grid
+        for( unsigned k=1; k<localNz; k++)
+            for( unsigned i=0; i<size2d; i++)
+            {
+                for(unsigned r=0; r<4; r++)
+                    jac_.value(r).data()[k*size2d+i] = jac_.value(r).data()[(k-1)*size2d+i];
+                map_[0].data()[k*size2d+i] = map_[0].data()[(k-1)*size2d+i];
+                map_[1].data()[k*size2d+i] = map_[1].data()[(k-1)*size2d+i];
+            }
+    }
+    virtual SparseTensor<host_vector> do_compute_jacobian( ) const {
+        return jac_;
+    }
+    virtual SparseTensor<host_vector> do_compute_metric( ) const {
+        thrust::host_vector<double> tempxx( local().size()), tempxy(local().size()), tempyy(local().size()), temppp(local().size());
+        for( unsigned i=0; i<local().size(); i++)
+        {
+            tempxx[i] = (jac_.value(0,0).data()[i]*jac_.value(0,0).data()[i]+jac_.value(0,1).data()[i]*jac_.value(0,1).data()[i]);
+            tempxy[i] = (jac_.value(0,0).data()[i]*jac_.value(1,0).data()[i]+jac_.value(0,1).data()[i]*jac_.value(1,1).data()[i]);
+            tempyy[i] = (jac_.value(1,0).data()[i]*jac_.value(1,0).data()[i]+jac_.value(1,1).data()[i]*jac_.value(1,1).data()[i]);
+            temppp[i] = 1./map_[0].data()[i]/map_[0].data()[i]; //1/R^2
+        }
+        SparseTensor<host_vector > metric;
+        metric.idx(0,0) = 0; metric.value(0) = host_vector(tempxx, communicator());
+        metric.idx(1,1) = 1; metric.value(1) = host_vector(tempyy, communicator());
+        metric.idx(2,2) = 2; metric.value(2) = host_vector(temppp, communicator());
+        if( !handle_.get().isOrthogonal())
+        {
+            metric.idx(0,1) = metric.idx(1,0) = 3; 
+            metric.value(3) = host_vector(tempxy, communicator());
+        }
+        return metric;
+    }
+    virtual std::vector<host_vector > do_compute_map()const{return map_;}
+    dg::SparseTensor<host_vector > jac_;
+    std::vector<host_vector > map_;
+    Handle<dg::geo::aGenerator2d> handle_;
 };
+///@cond
+CurvilinearMPIGrid2d::CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g):
+    dg::aMPIGeometry2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), g.get_perp_comm() ),
+    handle_(g.generator())
+{
+    map_=g.map();
+    jac_=g.jacobian();
+    metric_=g.metric();
+    //now resize to 2d
+    map_.pop_back();
+    unsigned s = this->local().size();
+    for( unsigned i=0; i<jac_.values().size(); i++)
+        jac_.value(i).data().resize(s);
+    for( unsigned i=0; i<metric_.values().size(); i++)
+        metric_.value(i).data().resize(s);
+    for( unsigned i=0; i<map_.size(); i++)
+        map_[i].data().resize(s);
+}
+///@endcond
+
 ///@}
+}//namespace geo
 }//namespace dg
 

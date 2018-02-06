@@ -10,8 +10,7 @@
 
 namespace dg{
 
-    
-/////@cond
+///@cond
 template<class T,class M>
 struct MatrixTraits<cusp::array1d<T,M> >
 {
@@ -24,11 +23,10 @@ struct MatrixTraits<const cusp::array1d<T,M> >
     typedef typename cusp::array1d<T,M>::value_type value_type;
     typedef CuspPreconTag matrix_category; //default is a ThrustVector
 };
-/////@endcond
+
 
 
 namespace blas2{
-    ///@cond
 namespace detail{
 
 
@@ -56,6 +54,7 @@ namespace detail{
 
 
 }//namespace detail
-    ///@endcond
 } //namespace blas2
+
+///@endcond
 } //namespace dg

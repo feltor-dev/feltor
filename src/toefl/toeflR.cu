@@ -9,7 +9,6 @@
 #include "toeflR.cuh"
 #include "dg/algorithm.h"
 #include "dg/backend/xspacelib.cuh"
-#include "file/read_input.h"
 #include "parameters.h"
 
 /*
@@ -21,14 +20,13 @@
 
 int main( int argc, char* argv[])
 {
-    //Parameter initialisation
-    std::vector<double> v2;
+    ////Parameter initialisation ////////////////////////////////////////////
     std::stringstream title;
     Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
-        std::ifstream is("input.txt");
+        std::ifstream is("input.json");
         reader.parse(is,js,false);
     }
     else if( argc == 2)
@@ -41,19 +39,21 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-
-    v2 = file::read_input( "window_params.txt");
-    GLFWwindow* w = draw::glfwInitAndCreateWindow( v2[3], v2[4], "");
-    draw::RenderHostData render(v2[1], v2[2]);
-    /////////////////////////////////////////////////////////////////////////
     const Parameters p( js);
     p.display( std::cout);
+    /////////glfw initialisation ////////////////////////////////////////////
+    std::ifstream is( "window_params.js");
+    reader.parse( is, js, false);
+    is.close();
+    GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
+    draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
+    /////////////////////////////////////////////////////////////////////////
 
     dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    dg::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
-    dg::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
-    //create initial vector
+    toefl::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
+    toefl::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
+    //////////////////create initial vector///////////////////////////////////////
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     std::vector<dg::DVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
@@ -61,13 +61,14 @@ int main( int argc, char* argv[])
         dg::DVec v2d = dg::create::inv_weights(grid);
         dg::blas2::symv( v2d, y0[1], y0[1]);
     }
-    if( p.equations == "ralf" || p.equations == "rafl_global"){
+    if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global"){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
+    //////////////////////////////////////////////////////////////////////
 
 
     //dg::AB< k, std::vector<dg::DVec> > ab( y0);
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
+    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);

@@ -6,14 +6,9 @@
 #include <sstream>
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
-//#include "dg/weiss.h" //MW: not commited?
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
+#include "geometries/geometries.h"
 
 
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
 #include "feltorSH/parameters.h"
 // #include "probes.h"
@@ -26,7 +21,7 @@ struct Heaviside2d
     Heaviside2d( double sigma):sigma2_(sigma*sigma/4.), x_(0), y_(0){}
 //     Heaviside2d( double sigma):sigma2_(sigma*sigma), x_(0), y_(0){}
     void set_origin( double x0, double y0){ x_=x0, y_=y0;}
-    double operator()(double x, double y)
+    double operator()(double x, double y)const
     {
         double r2 = (x-x_)*(x-x_)+(y-y_)*(y-y_);
         if( r2 >= sigma2_)
@@ -60,7 +55,10 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
     std::cout << "input "<<input<<std::endl;
     
-    const eule::Parameters p(file::read_input( input));
+    Json::Reader reader;
+    Json::Value js;
+    reader.parse( input, js, false);
+    const eule::Parameters p(js);
     p.display();
     
     ///////////////////////////////////////////////////////////////////////////
@@ -168,8 +166,6 @@ int main( int argc, char* argv[])
     {
         start2d[0] = i;
         start1d[0] = i;
-
-
         //Get fields
         for (unsigned j=0;j<2;j++)
         {

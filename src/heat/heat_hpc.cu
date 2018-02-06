@@ -8,39 +8,19 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/print.h>
 
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/interpolation.cuh"
-// #include "dg/backend/ell_interpolation.h"
-#include "file/read_input.h"
 #include "file/nc_utilities.h"
-#include "dg/runge_kutta.h"
-#include "dg/multistep.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
-// #include "solovev/geometry.h"
-// #include "geometry_g.h"
-#include "geometries/solovev.h"
-// for guenter
-// #include "geometries/guenther.h"
-#include "heat/parameters.h"
+#include "dg/algorithm.h"
+#include "geometries/geometries.h"
 
+#include "parameters.h"
 #include "heat.cuh"
-
-/*
-   - reads parameters from input.txt or any other given file, 
-   - integrates the ToeflR - functor and 
-   - writes outputs to a given outputfile using hdf5. 
-        density fields are the real densities in XSPACE ( not logarithmic values)
-*/
-
-typedef dg::FieldAligned< dg::CylindricalGrid3d<dg::DVec>, dg::IDMatrix, dg::DVec> DFA;
 
 int main( int argc, char* argv[])
 {
-    ////////////////////////Parameter initialisation//////////////////////////
-    std::vector<double> v,v3;
-    std::string input, geom;
+    ////Parameter initialisation ////////////////////////////////////////////
+    std::stringstream title;
+    Json::Reader reader;
+    Json::Value js, gs;
     if(!(( argc == 4) || ( argc == 5)) )
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [output.nc] [input.nc]\n";
@@ -49,24 +29,13 @@ int main( int argc, char* argv[])
     }
     else 
     {
-        try{
-            input = file::read_file( argv[1]);
-            geom = file::read_file( argv[2]);
-            v = file::read_input( argv[1]);
-            v3 = file::read_input( argv[2]); 
-        }catch( toefl::Message& m){
-            m.display();
-            std::cout << input << std::endl;
-            std::cout << geom << std::endl;
-            return -1;
-        }
+        std::ifstream is(argv[1]);
+        std::ifstream ks(argv[2]);
+        reader.parse(is,js,false);
+        reader.parse(ks,gs,false);
     }
-    const eule::Parameters p( v);
-    p.display( std::cout);
-    const solovev::GeomParameters gp(v3);
-    gp.display( std::cout);
-    
-    ///////////////////////////////////////////////////////////////////////////
+    const heat::Parameters p( js); p.display( std::cout);
+    const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
     ////////////////////////////////set up computations///////////////////////////
 
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
@@ -75,8 +44,8 @@ int main( int argc, char* argv[])
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
 
     //Make grids
-    dg::CylindricalGrid3d<dg::DVec> grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
-    dg::CylindricalGrid3d<dg::DVec> grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,p.Nz_out,p.bc, p.bc, dg::PER); 
+    dg::CylindricalGrid3d grid( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n, p.Nx, p.Ny, p.Nz, p.bc, p.bc, dg::PER);  
+    dg::CylindricalGrid3d grid_out( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, p.n_out, p.Nx_out, p.Ny_out,p.Nz_out,p.bc, p.bc, dg::PER); 
     dg::DVec w3d =  dg::create::volume(grid);
     dg::DVec w3dout =  dg::create::volume(grid_out);
 
@@ -105,13 +74,15 @@ int main( int argc, char* argv[])
         errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
-        const eule::Parameters pin(file::read_input( inputin));
-        const solovev::GeomParameters gpin(file::read_input( geomin));
+        reader.parse(inputin,js,false);
+        reader.parse(geomin,gs,false);
+        const heat::Parameters pin(js);
+        const dg::geo::solovev::Parameters gpin(gs);
         double Rminin = gpin.R_0 - pin.boxscaleRm*gpin.a;
         double Zminin =-pin.boxscaleZm*gpin.a*gpin.elongation;
         double Rmaxin = gpin.R_0 + pin.boxscaleRp*gpin.a; 
         double Zmaxin = pin.boxscaleZp*gpin.a*gpin.elongation;
-        dg::CylindricalGrid3d<dg::DVec > grid_in( Rminin,Rmaxin, Zminin,Zmaxin, 0, 2.*M_PI, pin.n, pin.Nx, pin.Ny, pin.Nz, pin.bc, pin.bc, dg::PER);
+        dg::CylindricalGrid3d grid_in( Rminin,Rmaxin, Zminin,Zmaxin, 0, 2.*M_PI, pin.n, pin.Nx, pin.Ny, pin.Nz, pin.bc, pin.bc, dg::PER);
         size_t start3din[4]  = {pin.maxout, 0, 0, 0};
         size_t count3din[4]  = {1, grid_in.Nz(), grid_in.n()*grid_in.Ny(), grid_in.n()*grid_in.Nx()};
         std::string namesin[1] = {"T"}; 
@@ -123,9 +94,9 @@ int main( int argc, char* argv[])
     }
     // /////////////////////create RHS 
     std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > feltor( grid, p,gp); 
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CylindricalGrid3d<dg::DVec>, dg::DS<DFA, dg::DMatrix, dg::DVec>, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
+    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p,gp); //initialize before rolkar!
+    std::cout << "initialize implicit" << std::endl;
+    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -137,7 +108,7 @@ int main( int argc, char* argv[])
 //     dg::CONSTANT init0( 0.);
 
     //background profile
-    solovev::Nprofile prof(p.bgprofamp, p.nprofileamp, gp); //initial background profile
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
     std::vector<dg::DVec> y0(1, dg::evaluate( prof, grid)), y1(y0); 
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);
@@ -155,9 +126,9 @@ int main( int argc, char* argv[])
 //     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     ///////////////////TIME STEPPER   
     //RK solver
-    dg::RK<4, std::vector<dg::DVec> >  rk( y0);
+//     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
-//     dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
+    dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
 //     karniadakis.init( feltor, rolkar, y0, p.dt);
 
@@ -173,7 +144,9 @@ int main( int argc, char* argv[])
     file::NC_Error_Handle err;
     int ncid;
     err = nc_create( argv[3],NC_NETCDF4|NC_CLOBBER, &ncid);
+    std::string input = js.toStyledString(); 
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
+    std::string geom = gs.toStyledString(); 
     err = nc_put_att_text( ncid, NC_GLOBAL, "geomfile", geom.size(), geom.data());
     int dim_ids[4];
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
@@ -271,8 +244,8 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{
-                rk( feltor, y0, y1, p.dt); //RK stepper
-//                 sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
+//                 rk( feltor, y0, y1, p.dt); //RK stepper
+                sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
 //                 karniadakis( feltor, rolkar, y0);  //Karniadakis stepper
                 y0.swap( y1);}
               catch( dg::Fail& fail) { 
