@@ -14,7 +14,8 @@
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
-double function(double x, double y, double z){ return sin(y)*sin(x);}
+double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
+double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
 
 using Vector = dg::MDVec;
 using Matrix = dg::MDMatrix;
@@ -42,7 +43,7 @@ int main( int argc, char* argv[])
     dg::Timer t;
     t.tic();
     ArrayVec x;
-    dg::blas1::transfer( dg::evaluate( function, grid), x);
+    dg::blas1::transfer( dg::evaluate( left, grid), x);
     t.toc();
     double gbytes=(double)x.size()*grid.size()*sizeof(double)/1e9;
     if(rank==0)std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
@@ -131,7 +132,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
     //these functions are more mean to dot
     dg::blas1::transfer( dg::evaluate( left, grid), x);
-    dg::blas1::transfer( dg::evaluate( left, grid), y);
+    dg::blas1::transfer( dg::evaluate( right, grid), y);
     t.tic();
     double norm=0;
     for( int i=0; i<multi; i++)

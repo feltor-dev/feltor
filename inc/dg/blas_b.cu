@@ -141,7 +141,7 @@ int main()
     std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
     //these functions are more mean to dot
     dg::blas1::transfer( dg::evaluate( left, grid), x);
-    dg::blas1::transfer( dg::evaluate( left, grid), y);
+    dg::blas1::transfer( dg::evaluate( right, grid), y);
     t.tic();
     value_type norm=0;
     for( int i=0; i<multi; i++)
