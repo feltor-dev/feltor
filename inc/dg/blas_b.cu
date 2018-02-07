@@ -12,7 +12,8 @@
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
-double function(double x, double y, double z){ return sin(y)*sin(x);}
+double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
+double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
 
 //typedef float value_type;
 //typedef dg::fDVec Vector;
@@ -28,7 +29,7 @@ typedef dg::IDMatrix IMatrix;
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     std::cout << "This program benchmarks basic vector and matrix-vector operations on the machine. These operations should be memory bandwidth bound. ";
     std::cout << "We therefore convert the measured time into a bandwidth using the given vector size and the STREAM convention for counting memory operations (each read and each write count as one memop. ";
     std::cout << "In an ideal case all operations perform with the same speed (that of the AXPBY operation, which is certainly memory bandwidth bound). With fast memory (GPU, XeonPhi...) the matrix-vector multiplications can be slower however\n";
@@ -47,20 +48,19 @@ int main()
     //std::cout<<"Evaluate a function on the grid\n";
     t.tic();
     ArrayVec x;
-    dg::blas1::transfer( dg::evaluate( function, grid), x);
+    dg::blas1::transfer( dg::evaluate( left, grid), x);
     t.toc();
     //std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
     //std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
     value_type gbytes=(value_type)x.size()*x[0].size()*sizeof(value_type)/1e9;
     std::cout << "Size of vectors is "<<gbytes<<" GB\n";
-    dg::MultiMatrix<Matrix, ArrayVec> inter, project; 
+    dg::MultiMatrix<Matrix, ArrayVec> inter, project;
     dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
     dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
     //dg::IDMatrix inter = dg::create::interpolation( grid, grid_half);
     //dg::IDMatrix project = dg::create::projection( grid_half, grid);
     int multi=100;
     //t.tic();
-    value_type norm=0;
     ArrayVec y(x), z(x), u(x), v(x);
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
@@ -139,7 +139,11 @@ int main()
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
     std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
+    //these functions are more mean to dot
+    dg::blas1::transfer( dg::evaluate( left, grid), x);
+    dg::blas1::transfer( dg::evaluate( left, grid), y);
     t.tic();
+    value_type norm=0;
     for( int i=0; i<multi; i++)
         norm += dg::blas1::dot( x,y);
     t.toc();

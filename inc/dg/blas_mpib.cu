@@ -23,9 +23,9 @@ using ArrayVec = std::array<Vector, 3>;
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
-   
+
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     if(rank==0)std::cout << "This program is the MPI equivalent of blas_b. See blas_b for more information.\n";
@@ -46,7 +46,7 @@ int main( int argc, char* argv[])
     t.toc();
     double gbytes=(double)x.size()*grid.size()*sizeof(double)/1e9;
     if(rank==0)std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
-    dg::MultiMatrix<Matrix, ArrayVec> inter, project; 
+    dg::MultiMatrix<Matrix, ArrayVec> inter, project;
     dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
     dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
 
@@ -129,6 +129,9 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
     if(rank==0)std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
+    //these functions are more mean to dot
+    dg::blas1::transfer( dg::evaluate( left, grid), x);
+    dg::blas1::transfer( dg::evaluate( left, grid), y);
     t.tic();
     double norm=0;
     for( int i=0; i<multi; i++)
