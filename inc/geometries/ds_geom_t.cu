@@ -115,7 +115,7 @@ int main( int argc, char* argv[])
     dg::HVec vecZ = dg::evaluate( fieldZ, grid);
     dg::HVec vecP = dg::evaluate( fieldP, grid);
 
-    file::NC_Error_ClonePtr err;
+    file::NC_Error_Handle err;
     int ncid, dim_ids[3];
 //     err = nc_create( "geometry.nc", NC_CLOBBER, &ncid);
     err = nc_create( "geometry.nc", NC_NETCDF4|NC_CLOBBER, &ncid);

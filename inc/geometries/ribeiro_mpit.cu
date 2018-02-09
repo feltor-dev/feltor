@@ -64,7 +64,7 @@ int main( int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
-    file::NC_Error_ClonePtr err;
+    file::NC_Error_Handle err;
     MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( "test_mpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, g2d.get().communicator(), info, &ncid); //MPI ON
     int dim3d[2];

@@ -75,7 +75,7 @@ int main( int argc, char* argv[])
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
-    file::NC_Error_ClonePtr err;
+    file::NC_Error_Handle err;
     err = nc_create( "orthogonal.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[2];
     err = file::define_dimensions(  ncid, dim3d, g2d_periodic);

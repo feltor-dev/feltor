@@ -80,7 +80,7 @@ int main(int argc, char**argv)
     std::cout << "Computing on "<<n<<" x "<<Nx<<" x "<<Ny<<" + "<<add_x<<" x "<<add_y<<" x "<<howmanyX<<" x "<<howmanyY<<"\n";
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
-    file::NC_Error_ClonePtr ncerr;
+    file::NC_Error_Handle ncerr;
     ncerr = nc_create( "testXrefined.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
     ncerr = file::define_dimensions(  ncid, dim2d, g2d_fine.grid());

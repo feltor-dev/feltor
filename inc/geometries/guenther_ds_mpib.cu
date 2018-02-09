@@ -436,7 +436,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Relative Difference is  "<< sqrt( errinvT2/normf )<<"\n";
 
 //write netcdf
-//     file::NC_Error_ClonePtr err;
+//     file::NC_Error_Handle err;
 //     int ncid,tvarID;
 //     err = nc_create( "out3.nc",NC_NETCDF4|NC_CLOBBER, &ncid);
 //     dg::MDVec transferD( dg::evaluate(dg::zero, g3d));

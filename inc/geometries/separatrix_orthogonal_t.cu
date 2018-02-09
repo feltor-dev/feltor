@@ -147,7 +147,7 @@ int main( int argc, char* argv[])
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);
     dg::HVec y_left = dg::evaluate( cosine, g1d);
     int ncid;
-    file::NC_Error_ClonePtr err;
+    file::NC_Error_Handle err;
     err = nc_create( "orthogonalX.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim3d[3], dim1d[1];
     err = file::define_dimensions(  ncid, dim3d, g3d_periodic.grid());

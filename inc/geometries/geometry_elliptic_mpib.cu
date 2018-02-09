@@ -55,7 +55,7 @@ int main(int argc, char**argv)
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
-    file::NC_Error_ClonePtr ncerr;
+    file::NC_Error_Handle ncerr;
     MPI_Info info = MPI_INFO_NULL;
     ncerr = nc_create_par( "testE_mpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, comm, info, &ncid); //MPI ON
     int dim2d[2];
