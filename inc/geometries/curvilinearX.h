@@ -92,7 +92,7 @@ struct CurvilinearProductGridX3d : public dg::aGeometryX3d
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
     std::vector<thrust::host_vector<double> > map_;
     SparseTensor<thrust::host_vector<double> > jac_;
-    dg::Handle<aGeneratorX2d> handle_;
+    dg::ClonePtr<aGeneratorX2d> handle_;
 };
 
 /**
@@ -137,7 +137,7 @@ struct CurvilinearGridX2d : public dg::aGeometryX2d
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
     dg::SparseTensor<thrust::host_vector<double> > jac_, metric_;
     std::vector<thrust::host_vector<double> > map_;
-    dg::Handle<aGeneratorX2d> handle_;
+    dg::ClonePtr<aGeneratorX2d> handle_;
 };
 
 ///@}

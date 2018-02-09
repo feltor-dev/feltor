@@ -126,7 +126,7 @@ struct DSField
     }
     private:
     thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
-    dg::Handle<dg::aGeometry2d> g_;
+    dg::ClonePtr<dg::aGeometry2d> g_;
 
 };
 
@@ -521,7 +521,7 @@ struct Fieldaligned
     unsigned m_Nz, m_perp_size;
     dg::bc m_bcz;
     std::vector<container> m_f, m_temp; //split 3d vectors
-    dg::Handle<ProductGeometry> m_g;
+    dg::ClonePtr<ProductGeometry> m_g;
     bool m_dependsOnX, m_dependsOnY;
 };
 
@@ -546,7 +546,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    dg::Handle<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
+    dg::ClonePtr<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     m_perp_size = grid_coarse.get().size();
     dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
@@ -560,7 +560,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     t.tic();
     std::cout << "Generate high order grid...\n";
 #endif
-    dg::Handle<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
+    dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
     dg::Grid2d grid_fine( grid_coarse.get() );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
@@ -622,7 +622,7 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
     assert( p0 < m_g.get().Nz());
-    const dg::Handle<aGeometry2d> g2d = m_g.get().perp_grid();
+    const dg::ClonePtr<aGeometry2d> g2d = m_g.get().perp_grid();
     container init2d = dg::pullback( binary, g2d.get());
     container zero2d = dg::evaluate( dg::zero, g2d.get());
 

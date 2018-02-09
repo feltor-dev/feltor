@@ -152,7 +152,7 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     unsigned m_Nz, m_perp_size;
     dg::bc m_bcz;
     std::vector<MPI_Vector<LocalContainer> > m_f, m_temp;  //split 3d vectors
-    dg::Handle<ProductMPIGeometry> m_g;
+    dg::ClonePtr<ProductMPIGeometry> m_g;
     bool m_dependsOnX, m_dependsOnY;
     unsigned m_coords2, m_sizeZ; //number of processes in z
 };
@@ -176,7 +176,7 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     MPI_Cart_get( m_g.get().communicator(), 3, dims, periods, coords);
     m_coords2 = coords[2], m_sizeZ = dims[2];
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    dg::Handle<aMPIGeometry2d> grid_coarse( grid.perp_grid());
+    dg::ClonePtr<aMPIGeometry2d> grid_coarse( grid.perp_grid());
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     m_perp_size = grid_coarse.get().local().size();
     dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
@@ -192,9 +192,9 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     t.tic();
     if(rank==0)std::cout << "Generate high order grid...\n";
 #endif
-    dg::Handle<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
+    dg::ClonePtr<dg::aMPIGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
-    dg::Handle<dg::aGeometry2d> global_grid_magnetic = grid_magnetic.get().global_geometry();
+    dg::ClonePtr<dg::aGeometry2d> global_grid_magnetic = grid_magnetic.get().global_geometry();
     dg::MPIGrid2d grid_fine( grid_coarse.get() );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
 #ifdef DG_BENCHMARK
@@ -262,7 +262,7 @@ MPI_Vector<container> Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::e
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
     assert( p0 < m_g.get().global().Nz());
-    const dg::Handle<aMPIGeometry2d> g2d = m_g.get().perp_grid();
+    const dg::ClonePtr<aMPIGeometry2d> g2d = m_g.get().perp_grid();
     MPI_Vector<container> init2d = dg::pullback( binary, g2d.get());
     MPI_Vector<container> zero2d = dg::evaluate( dg::zero, g2d.get());
     unsigned globalNz = m_g.get().global().Nz();

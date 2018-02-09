@@ -82,7 +82,7 @@ int main( int argc, char* argv[])
     x = dg::evaluate( initial, grid);
     b = dg::evaluate ( laplace_fct, grid);
     //create grid and perp and parallel volume
-    dg::Handle<dg::aMPIGeometry2d> grid_perp = grid.perp_grid();
+    dg::ClonePtr<dg::aMPIGeometry2d> grid_perp = grid.perp_grid();
     dg::MDVec v2d = dg::create::inv_volume( grid_perp.get());
     dg::MDVec w2d = dg::create::volume( grid_perp.get());
     dg::SparseElement<dg::MDVec> g_parallel = dg::tensor::volume( grid.metric().parallel());

@@ -92,7 +92,7 @@ int main( int argc, char* argv[])
         newfilename = argv[2];
         std::cout << argv[0]<< " "<<argv[1]<<" -> " <<argv[2]<<std::endl;
         //////////////////////////open nc file//////////////////////////////////
-        file::NC_Error_Handle err;
+        file::NC_Error_ClonePtr err;
         int ncid;
         err = nc_open( argv[1], NC_NOWRITE, &ncid);
         ///////////////read in and show inputfile und geomfile//////////////////
@@ -229,7 +229,7 @@ int main( int argc, char* argv[])
                             "blobX", "ini1","ini2","ini3","ini4"};
 
     /////////////////////////////set up netcdf/////////////////////////////////////
-    file::NC_Error_Handle err;
+    file::NC_Error_ClonePtr err;
     int ncid;
     err = nc_create( newfilename.data(), NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());

@@ -41,8 +41,8 @@ int main()
 {
     {
         std::cout << "Test correct behaviour of handle: cat and mouse\n";
-        dg::Handle<aAnimal> h0, h1(new Mouse()); //default and pointer constructor
-        dg::Handle<aAnimal> h2(h1.get()); //reference constructor
+        dg::ClonePtr<aAnimal> h0, h1(new Mouse()); //default and pointer constructor
+        dg::ClonePtr<aAnimal> h2(h1.get()); //reference constructor
         aAnimal* ptr = new Cat();
         h0.reset(ptr); //pointer reset
         h1.reset( h2.get()); //reference reset

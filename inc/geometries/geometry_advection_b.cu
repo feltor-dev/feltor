@@ -53,7 +53,7 @@ struct FuncDirPer2
     }
     double R_0_;
     double psi0_, psi1_;
-    dg::Handle<dg::geo::aBinaryFunctor> psip_, psipR_,  psipZ_;
+    dg::ClonePtr<dg::geo::aBinaryFunctor> psip_, psipR_,  psipZ_;
 };
 
 struct ArakawaDirPer

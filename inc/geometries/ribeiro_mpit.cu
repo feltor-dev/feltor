@@ -60,11 +60,11 @@ int main( int argc, char* argv[])
     t.tic();
     dg::geo::Ribeiro ribeiro( psip, psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::CurvilinearProductMPIGrid3d g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR,dg::PER, dg::PER,comm);
-    dg::Handle<dg::aMPIGeometry2d> g2d = g3d.perp_grid();
+    dg::ClonePtr<dg::aMPIGeometry2d> g2d = g3d.perp_grid();
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;
-    file::NC_Error_Handle err;
+    file::NC_Error_ClonePtr err;
     MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( "test_mpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, g2d.get().communicator(), info, &ncid); //MPI ON
     int dim3d[2];

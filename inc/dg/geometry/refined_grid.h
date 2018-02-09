@@ -296,7 +296,7 @@ struct CartesianRefinedGrid2d : public dg::aGeometry2d
 
     CartesianRefinedGrid2d* clone()const{return new CartesianRefinedGrid2d(*this);}
     private:
-    Handle<aRefinement1d> refX_, refY_;
+    ClonePtr<aRefinement1d> refX_, refY_;
     std::vector<thrust::host_vector<double> > w_, a_;
     void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny)
     { 
@@ -352,7 +352,7 @@ struct CartesianRefinedGrid3d : public dg::aGeometry3d
 
     CartesianRefinedGrid3d* clone()const{return new CartesianRefinedGrid3d(*this);}
     private:
-    Handle<aRefinement1d> refX_, refY_, refZ_;
+    ClonePtr<aRefinement1d> refX_, refY_, refZ_;
     std::vector<thrust::host_vector<double> > w_, a_;
     void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny,unsigned Nz)
     { 

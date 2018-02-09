@@ -7,55 +7,55 @@ namespace dg
 /*!@brief a manager class that invokes the \c clone() method on the managed ptr when copied
 *
 *When copied invokes a deep copy using the \c clone() method.
-* This class is most useful when a class needs to hold a polymorphic, cloneable oject as a variable. 
+* This class is most useful when a class needs to hold a polymorphic, cloneable oject as a variable.
 @tparam cloneable a type that may be uncopyable/unassignable but provides the \c clone() method with signature
  -  \c cloneable* \c clone() \c const;
 @ingroup lowlevel
 */
 template<class cloneable>
-struct Handle
+struct ClonePtr
 {
-    ///init an empty Handle
-    Handle():ptr_(0){}
+    ///init an empty ClonePtr
+    ClonePtr():ptr_(nullptr){}
     /**
     * @brief take ownership of the pointer
     * @param ptr a pointer to object to manage
     */
-    Handle( cloneable* ptr): ptr_(ptr){}
+    ClonePtr( cloneable* ptr): ptr_(ptr){}
 
     /**
     * @brief clone the given value and manage
     * @param src an object to clone
     */
-    Handle( const cloneable& src): ptr_(src.clone()){}
+    ClonePtr( const cloneable& src): ptr_(src.clone()){}
     /**
     * @brief deep copy the given handle using the \c clone() method of \c cloneable
     * @param src an oject to copy, clones the contained object if not empty
     */
-    Handle( const Handle& src):ptr_(0) {
-        if(src.ptr_!=0) ptr_ = src.ptr_->clone(); //deep copy
+    ClonePtr( const ClonePtr& src):ptr_(nullptr) {
+        if(src.ptr_!=nullptr) ptr_ = src.ptr_->clone(); //deep copy
     }
     /**
     * @brief deep copy the given handle using the \c clone() method of \c cloneable
     * @param src an oject to copy and swap
     */
-    Handle& operator=( Handle src) {
+    ClonePtr& operator=( ClonePtr src) {
         this->swap( src );
         return *this;
     }
-    ///delete managed pointer if not NULL
-    ~Handle(){ clear();}
+    ///delete managed pointer if not nullptr
+    ~ClonePtr(){ clear();}
 
-    ///delete managed pointer if not NULL
+    ///delete managed pointer if not nullptr
     void clear(){
-        if(ptr_!=0) delete ptr_; 
-        ptr_=0;
+        if(ptr_!=nullptr) delete ptr_;
+        ptr_=nullptr;
     }
 
     /**
     * @brief Get a constant reference to the object on the heap
     * @return a reference to the cloneable object
-    * @note undefined if the Handle manages a NULL pointer
+    * @note undefined if the ClonePtr manages a nullptr pointer
     */
     const cloneable& get()const {return *ptr_;}
 
@@ -63,7 +63,7 @@ struct Handle
     /**
     * @brief Non constant access to the object on the heap
     * @return a non-const reference to the cloneable object
-    * @note undefined if the Handle manages a NULL pointer
+    * @note undefined if the ClonePtr manages a nullptr pointer
     */
     cloneable& get() {return *ptr_;}
 
@@ -71,23 +71,23 @@ struct Handle
     * @brief Take the ownership of the given pointer and delete the currently held one if non-empty
     * @param ptr a pointer to an object to manage
     */
-    void reset( cloneable* ptr){ 
-        Handle tmp(ptr);
+    void reset( cloneable* ptr){
+        ClonePtr tmp(ptr);
         *this=tmp;
     }
     /**
     * @brief Clone the given object and replace the currently held one
-    * @param src a cloneable object 
+    * @param src a cloneable object
     */
-    void reset( const cloneable& src){ 
-        Handle tmp(src);
+    void reset( const cloneable& src){
+        ClonePtr tmp(src);
         *this=tmp;
     }
     /**
     * @brief swap the managed pointers
     * @param src another handle
     */
-    void swap( Handle& src){
+    void swap( ClonePtr& src){
         std::swap(ptr_,src.ptr_);
     }
     private:
@@ -119,7 +119,7 @@ struct Buffer
     ~Buffer(){
         delete ptr;
     }
-    Buffer( const Buffer& src){ 
+    Buffer( const Buffer& src){
         ptr = new T(*src.ptr);
     }
     Buffer& operator=( const Buffer& src){
@@ -131,9 +131,10 @@ struct Buffer
     /**
     * @brief Get write access to the data on the heap
     * @return a reference to the data object
-    * @attention never try to delete this
+    * @attention never try to delete the returned reference
     */
     T& data( )const { return *ptr;}
+
     private:
     T* ptr;
 };

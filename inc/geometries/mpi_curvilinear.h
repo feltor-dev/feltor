@@ -85,7 +85,7 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
     virtual std::vector<host_vector > do_compute_map()const{return map_;}
     dg::SparseTensor<host_vector > jac_, metric_;
     std::vector<host_vector > map_;
-    dg::Handle<aGenerator2d> handle_;
+    dg::ClonePtr<aGenerator2d> handle_;
 };
 
 /**
@@ -188,7 +188,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
     virtual std::vector<host_vector > do_compute_map()const{return map_;}
     dg::SparseTensor<host_vector > jac_;
     std::vector<host_vector > map_;
-    Handle<dg::geo::aGenerator2d> handle_;
+    ClonePtr<dg::geo::aGenerator2d> handle_;
 };
 ///@cond
 CurvilinearMPIGrid2d::CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g):

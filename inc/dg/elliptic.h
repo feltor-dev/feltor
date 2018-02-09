@@ -674,7 +674,7 @@ struct TensorElliptic
     container chixx_, chixy_, chiyy_, tempx_, tempy_, gradx_;
     SparseElement<container> vol_;
     norm no_;
-    Handle<Geometry> g_;
+    ClonePtr<Geometry> g_;
 };
 
 ///@cond

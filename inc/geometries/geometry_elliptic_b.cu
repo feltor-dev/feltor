@@ -48,7 +48,7 @@ int main(int argc, char**argv)
     std::cout << "Construction took "<<t.diff()<<"s\n";
     ///////////////////////////////////////////////////////////////////////////
     int ncid;
-    file::NC_Error_Handle ncerr;
+    file::NC_Error_ClonePtr ncerr;
     ncerr = nc_create( "testE.nc", NC_NETCDF4|NC_CLOBBER, &ncid);
     int dim2d[2];
     ncerr = file::define_dimensions(  ncid, dim2d, *g2d);

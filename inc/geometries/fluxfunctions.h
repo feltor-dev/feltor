@@ -163,7 +163,7 @@ struct BinaryFunctorsLvl1
     /// \f$ \partial f / \partial y\f$
     const aBinaryFunctor& dfy()const{return p_[2].get();}
     private:
-    Handle<aBinaryFunctor> p_[3];
+    ClonePtr<aBinaryFunctor> p_[3];
 };
 /**
 * @brief This struct bundles a function and its first and second derivatives
@@ -269,7 +269,7 @@ struct BinarySymmTensorLvl1
      /// \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     const aBinaryFunctor& divY()const{return p_[4].get();}
     private:
-    Handle<aBinaryFunctor> p_[5];
+    ClonePtr<aBinaryFunctor> p_[5];
 };
 
 /// A vector field with three components that depend only on the first two coordinates
@@ -302,7 +302,7 @@ struct BinaryVectorLvl0
     /// z-component of the vector
     const aBinaryFunctor& z()const{return p_[2].get();}
     private:
-    Handle<aBinaryFunctor> p_[3];
+    ClonePtr<aBinaryFunctor> p_[3];
 };
 
 

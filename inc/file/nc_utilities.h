@@ -21,7 +21,7 @@ namespace file
 {
 
 /**
- * @brief Class thrown by the NC_ErrorHandle
+ * @brief Class thrown by the NC_ErrorClonePtr
  */
 struct NC_Error : public std::exception
 {
@@ -47,7 +47,7 @@ struct NC_Error : public std::exception
  * @brief Empty utitlity class that handles return values of netcdf
  * functions and throws NC_Error if something goes wrong
  */
-struct NC_Error_Handle
+struct NC_Error_ClonePtr
 {
     /**
      * @brief Construct from error code
@@ -57,9 +57,9 @@ struct NC_Error_Handle
      *
      * @return Newly instantiated object
      */
-    NC_Error_Handle operator=( int err)
+    NC_Error_ClonePtr operator=( int err)
     {
-        NC_Error_Handle h;
+        NC_Error_ClonePtr h;
         return h(err);
     }
     /**
@@ -70,7 +70,7 @@ struct NC_Error_Handle
      *
      * @return Newly instantiated object
      */
-    NC_Error_Handle operator()( int err)
+    NC_Error_ClonePtr operator()( int err)
     {
         if( err)
             throw NC_Error( err);

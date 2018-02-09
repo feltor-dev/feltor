@@ -380,7 +380,7 @@ struct PsipSep
     void set_Z( double z){ Z_=z;}
     double operator()(double R) { return psip_.get()(R, Z_);}
     private:
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
     double Z_;
 };
 
