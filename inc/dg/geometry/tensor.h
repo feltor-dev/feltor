@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "dg/backend/operator.h"
 #include "dg/functors.h"
@@ -41,12 +41,12 @@ struct SparseElement
 
     ///@brief Read access
     ///@return read access to contained value
-    const T& value( )const { 
+    const T& value( )const {
         return value_[0];
     }
     /**
      * @brief write access, create a T if there isn't one already
-     * @return write access, always returns a T 
+     * @return write access, always returns a T
      */
     T& value() {
         if(!isSet()) value_.resize(1);
@@ -68,13 +68,13 @@ struct SparseElement
 };
 
 /**
-* @brief Class for 2x2 and 3x3 matrices sharing or implicitly assuming elements 
+* @brief Class for 2x2 and 3x3 matrices sharing or implicitly assuming elements
 *
-* This class enables shared access to stored Ts 
+* This class enables shared access to stored Ts
 * or not store them at all since the storage of (and computation with) a T is expensive.
 
 * This class contains a (dense) 3x3 matrix of integers.
-* If positive or zero, the integer represents a gather index into the stored array of Ts, 
+* If positive or zero, the integer represents a gather index into the stored array of Ts,
 if negative the value of the T is assumed to be 1, except for the off-diagonal entries
     in the matrix where it is assumed to be 0.
 * We then only need to store non-trivial and non-repetitive Ts.
@@ -89,7 +89,7 @@ struct SparseTensor
 
     /**
      * @brief reserve space for value_size Ts in the values array
-     * @param value_size reserve space for this number of Ts (default constructor) 
+     * @param value_size reserve space for this number of Ts (default constructor)
      */
     SparseTensor( unsigned value_size): mat_idx_(3,-1.), values_(value_size){}
 
@@ -101,7 +101,7 @@ struct SparseTensor
 
     /**
      * @brief Type conversion from other value types
-     * @tparam OtherT dg::blas1::transfer must be callable for T and OtherT
+     * @tparam OtherT \c dg::blas1::transfer must be callable for \c T and \c OtherT
      * @param src the source matrix to convert
      */
     template<class OtherT>
@@ -118,7 +118,7 @@ struct SparseTensor
     * @brief check if a value is set at the given position or not
     * @param i row index 0<=i<3
     * @param j col index 0<=j<3
-    * @return true if T is non-empty, false if value is assumed implicitly
+    * @return true if \c T is non-empty, false if value is assumed implicitly
     */
     bool isSet(size_t i, size_t j)const{
         if( mat_idx_(i,j) <0) return false;
@@ -129,13 +129,13 @@ struct SparseTensor
     * @brief read index into the values array at the given position
     * @param i row index 0<=i<3
     * @param j col index 0<=j<3
-    * @return -1 if !isSet(i,j), index into values array else
+    * @return -1 if \c !isSet(i,j), index into values array else
     */
     int idx(unsigned i, unsigned j)const{return mat_idx_(i,j);}
     /**
     * @brief write index into the values array at the given position
     *
-    * use this and the value() member to assemble the tensor
+    * use this and the \c values() member to assemble the tensor
     * @param i row index 0<=i<3
     * @param j col index 0<=j<3
     * @return write access to value index to be set
@@ -157,27 +157,22 @@ struct SparseTensor
      void clear_unused_values();
 
     /*!@brief Read access the underlying T
-     * @return if !isSet(i,j) the result is undefined, otherwise values[idx(i,j)] is returned. 
+     * @return if !isSet(i,j) the result is undefined, otherwise values[idx(i,j)] is returned.
      * @param i row index 0<=i<3
      * @param j col index 0<=j<3
      * @note If the indices fall out of range of index the result is undefined
      */
-    const T& value(size_t i, size_t j)const{ 
+    const T& value(size_t i, size_t j)const{
         int k = mat_idx_(i,j);
         return values_[k];
     }
     //if you're looking for this function: YOU DON'T NEED IT!!ALIASING
     //T& value(size_t i, size_t j);
     /**
-     * @brief Return the T at given position, default construct one if there isn't one already
-     * @param i index into the values array
-     * @return  always returns a T 
+     * @brief Return write access to the values array
+     * @return write access to values array
      */
-    T& value( size_t i)
-    {
-        if(i>=values_.size() ) values_.resize(i+1, T());
-        return values_[i];
-    }
+    std::vector<T>& values() {return values_;}
     /**
      * @brief Return read access to the values array
      * @return read access to values array
@@ -195,11 +190,11 @@ struct SparseTensor
     * The matrix is empty if !isSet(i,j) for all i and j
     * @return true if no value in the matrix is set
     */
-    bool isEmpty()const{ 
+    bool isEmpty()const{
         bool empty=true;
         for(unsigned i=0; i<3; i++)
             for( unsigned j=0; j<3; j++)
-                if( isSet(i,j) ) 
+                if( isSet(i,j) )
                     empty=false;
         return empty;
     }
@@ -214,7 +209,7 @@ struct SparseTensor
         bool dense=true;
         for(unsigned i=0; i<3; i++)
             for( unsigned j=0; j<3; j++)
-                if( !isSet(i,j) ) 
+                if( !isSet(i,j) )
                     dense=false;
         return dense;
     }
@@ -229,7 +224,7 @@ struct SparseTensor
         bool empty=true;
         for(unsigned i=0; i<3; i++)
         {
-            if( isSet(i,2) || isSet(2,i)) 
+            if( isSet(i,2) || isSet(2,i))
                 empty=false;
         }
         return empty;
@@ -248,7 +243,7 @@ struct SparseTensor
                     diagonal=false;
         return diagonal;
     }
-     
+
      ///construct an empty Tensor
      SparseTensor empty()const{return SparseTensor();}
      ///erase all values in the third dimension
@@ -276,13 +271,13 @@ struct SparseTensor
 namespace tensor
 {
  /**
- * @brief Construct a tensor with all unset values filled with explicit 0 or 1
+ * @brief Construct a tensor with all unset values filled with explicit 0 or 1 using \c dg::blas1::transform
  *
  * @copydoc hide_container
  * @return a dense tensor
- * @note undefined if t.isEmpty() returns true
+ * @note undefined if \c t.isEmpty() returns true
  */
-template<class container> 
+template<class container>
 SparseTensor<container> dense(const SparseTensor<container>& tensor)
 {
     SparseTensor<container> t(tensor);
@@ -295,7 +290,8 @@ SparseTensor<container> dense(const SparseTensor<container>& tensor)
         if(!t.isSet(i,i)) diagonalIsSet = false;
     if (!diagonalIsSet){
         dg::blas1::transform( tmp, tmp, dg::CONSTANT(1));
-        t.value(size)=tmp;
+        t.values().resize(size+1);
+        t.values()[(size)]=tmp;
         for(unsigned i=0; i<3; i++)
             if(!t.isSet(i,i)) t.idx(i,i) = size;
     }
@@ -307,7 +303,8 @@ SparseTensor<container> dense(const SparseTensor<container>& tensor)
             if( !t.isSet(i,j) ) offIsSet=false;
     if (!offIsSet){
         dg::blas1::transform( tmp, tmp, dg::CONSTANT(0));
-        t.value(size)=tmp;
+        t.values().resize(size+1);
+        t.values()[size]=tmp;
         for(unsigned i=0; i<3; i++)
             for(unsigned j=0; j<3; j++)
                 if(!t.isSet(i,j) ) t.idx(i,j) = size;
@@ -354,28 +351,34 @@ struct CholeskyTensor
     {
         SparseTensor<container> denseIn=dg::tensor::dense(in);
         /*
-         * One nice property of positive definite is that the diagonal elements are 
+         * One nice property of positive definite is that the diagonal elements are
          * greater than zero.
          */
 
         if(in.isSet(0,0))
         {
             diag_.idx(0,0)=0;
-            diag_.value(0)=in.value(0,0);
+            if(diag_.values().size() == 0)
+                diag_.values().resize(1);
+            diag_.values()[0]=in.value(0,0);
         }
         if(in.isSet(1,0))
         {
             container tmp=in.value(1,0);
             if(diag_.isSet(0,0)) dg::blas1::pointwiseDivide(tmp,diag_.value(0,0),tmp);
             q_.idx(1,0)=0;
-            q_.value(0)=tmp;
+            if(q_.values().size() == 0)
+                q_.values().resize(1);
+            q_.values()[0]=tmp;
         }
         if(in.isSet(2,0))
         {
             container tmp=in.value(2,0);
             if(diag_.isSet(0,0))dg::blas1::pointwiseDivide(tmp,diag_.value(0,0),tmp);
             q_.idx(2,0)=1;
-            q_.value(1)=tmp;
+            if(q_.values().size() < 2)
+                q_.values().resize(2);
+            q_.values()[1]=tmp;
         }
 
         if( q_.isSet(1,0) || in.isSet(1,1))
@@ -386,7 +389,9 @@ struct CholeskyTensor
             if(diag_.isSet(0,0)) dg::blas1::pointwiseDot(tmp,diag_.value(0,0),tmp);
             dg::blas1::axpby( 1., denseIn.value(1,1), -1., tmp, tmp);
             diag_.idx(1,1)=1;
-            diag_.value(1) = tmp;
+            if(diag_.values().size() < 2)
+                diag_.values().resize(2);
+            diag_.values()[1] = tmp;
         }
 
         if( in.isSet(2,1) || (q_.isSet(2,0)&&q_.isSet(1,0)))
@@ -398,7 +403,9 @@ struct CholeskyTensor
             dg::blas1::axpby(1., denseIn.value(2,1),-1.,tmp, tmp);
             if(diag_.isSet(1,1))dg::blas1::pointwiseDivide(tmp, diag_.value(1,1),tmp);
             q_.idx(2,1)=2;
-            q_.value(2)=tmp;
+            if(q_.values().size() < 3)
+                q_.values().resize(3);
+            q_.values()[2]=tmp;
         }
         if( in.isSet(2,2) || q_.isSet(2,0) || q_.isSet(2,1))
         {
@@ -411,7 +418,9 @@ struct CholeskyTensor
             dg::blas1::axpby(1., denseIn.value(2,2), -1., tmp, tmp);
             dg::blas1::axpby(1., tmp, -1., tmp1, tmp);
             diag_.idx(2,2)=2;
-            diag_.value(2) = tmp;
+            if(diag_.values().size() < 3)
+                diag_.values().resize(3);
+            diag_.values()[2]=tmp;
         }
         diag_.clear_unused_values();
         q_.clear_unused_values();
@@ -449,7 +458,7 @@ struct CholeskyTensor
 ///@cond
 
 template<class container>
-void SparseTensor<container>::unique_insert(std::vector<int>& indices, int& idx) 
+void SparseTensor<container>::unique_insert(std::vector<int>& indices, int& idx)
 {
     bool unique=true;
     unsigned size=indices.size();
@@ -483,7 +492,7 @@ SparseTensor<container> SparseTensor<container>::parallel() const
 {
     SparseTensor<container> t;
     if( isEmpty()) return t;
-    if( isSet( 2,2) ) 
+    if( isSet( 2,2) )
     {
         t.mat_idx_(2,2) = 0;
         t.values_.assign(1,values_[idx(2,2)] );
