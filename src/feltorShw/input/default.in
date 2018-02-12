@@ -1,41 +1,38 @@
-/* This is a comment: Remember that comments are not conformal 
-with the JSON standard but are allowed only with some specifig JSON parsers. So remove them when you automate the process */
 {
 
-    "n" :  1,        //# x-y-polynomials
-    "Nx" : 100,      //# grid points in x
-    "Ny" : 100,      //# grid points in y
-    "dt" : 1.,       //time step in units of c_s/rho_s
-    "n_out"  : 1,    //# x-y polynomials in output
-    "Nx_out" : 150,  //# grid points in x in output fields
-    "Ny_out" : 150,  //# grid points in y in output fields
-    "itstp"  : 10,   //steps between outputs
-    "maxout" : 1000, //# outputs excluding first
-    "eps_pol"   : 1e-6,   //accuracy of polarisation solver
-    "jumpfactor": 0.01,   //jumpfactor € [0.01,1]
-    "eps_gamma" : 1e-6,   //accuracy of Gamma 
-    "eps_time"  : 1e-14,  //accuracy of implicit time-stepper
-    "mu_e"      : -0.000272121, // -m_e/m_i 
-    "tau"       : 0,         //Ti/Te
-    "modelmode" : 2,         //Full-F/Full-F-boussinesq/delta-f (0/1/2)
-    "cmode" : 0,             //dyn/const collisionality (0/1)  
-    "hwmode": 1,             // ordinary/modified HW (0/1)
-    "nu_perp"   : 1e-3,      //pependicular viscosity
-    "alpha"         : 0.01, //adiabaticity 
-    "initmode"      : 0,     // (0) blob, (1) Wave in x and y (2) bath
-    "amplitude" :0.1,        //amplitude of the perturbation
-    "sigma"  : 2.5,          //blob variance in units of rho_s or ky of wave
-    "posX"  : 0.5,           //blob x-position in units of lx
-    "posY"  : 0.5,           //blob y-position in units of ly
-    "prof_amp": 1.0,         //Profile amplitude
-    "bg_prof_amp" : 1.0,     //Background Prof amplitude 
-    "invkappa": 64,          //gradient length Ln (in rho_s) 
-    "lx"  : 64,              //lx=L_perp in units of rho_s
-    "ly"  : 64,              //ly in units of rho_s
-    "bc_x"  : "DIR_NEU",     //boundary condition in x
-    "bc_x_phi"  : "DIR",     //boundary condition in x for phi
-    "bc_y"  : "PER",         //boundary condition in y
-    "prof_source_rate" : 0.0,     //profile source rate in units c_s/rho_s
-    "source_b" : 0.2,             //source dampingb in u of lx (<1 no Source)
-    "source_damping_width" : 0.5  //source damping width
+    "n" :  3,       
+    "Nx" : 64,      
+    "Ny" : 64,      
+    "dt" : 0.1,     
+    "n_out"  :1,    
+    "Nx_out" : 64,  
+    "Ny_out" : 64,  
+    "itstp"  :10,   
+    "maxout" : 1000, 
+    "eps_pol"   : 1e-6,  
+    "jumpfactor": 0.1,   
+    "eps_gamma" : 1e-14,  
+    "eps_time"  : 1e-14,  
+    "tau"       : 0,         
+    "modelmode" : 3,         
+    "cmode" : 0,             
+    "hwmode": 0,             
+    "nu_perp"   : 1e-3,      
+    "alpha"         : 0.005, 
+    "initmode"      : 0,     
+    "amplitude" :0.1,        
+    "sigma"  : 2.5,          
+    "posX"  : 0.5,           
+    "posY"  : 0.5,           
+    "prof_amp": 1.0,         
+    "bg_prof_amp" : 0.0,     
+    "invkappa": 64,          
+    "lx"  : 64,              
+    "ly"  : 64,              
+    "bc_x"  : "DIR_NEU",     
+    "bc_x_phi"  : "DIR_NEU",    
+    "bc_y"  : "PER",         
+    "prof_source_rate" : 0.1,  
+    "source_b" : 0.2,             
+    "source_damping_width" : 0.5  
 }

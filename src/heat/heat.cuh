@@ -151,7 +151,6 @@ void Explicit<G,I,M,V>::energies( std::vector<V>& y)
 //         dsNU_.centeredDiv(omega,lambda);
         dsNU_.forward( y[0], omega); 
         dsNU_.backwardDiv(0.5, omega,0., chi);
-// 
         dsNU_.backward( y[0], omega); 
         dsNU_.forwardDiv(0.5, omega,1., chi);
         Dpar[0]= p.nu_parallel*dg::blas2::dot(y[0], w3d, chi);

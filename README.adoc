@@ -304,15 +304,14 @@ pages] for some general information, user oriented documentation and
 Troubleshooting. Moreover, we maintain tex files in every src folder for
 technical documentation, which can be compiled using pdflatex with
 `make doc` in the respective src folder. The
-http://feltor-dev.github.io/feltor/inc/dg/html/modules.html[developer
+http://feltor-dev.github.io/doc/dg/html/modules.html[developer
 oriented documentation] of the dG library was generated with
 http://www.doxygen.org[Doxygen] and LateX. You can generate a local
 version including informative pdf writeups on implemented numerical
 methods directly from source code. This depends on the `doxygen`,
 `libjs-mathjax` and `graphviz` packages and LateX. Type `make doc` in
 the folder `path/to/feltor/doc` and open `index.html` (a symbolic link
-to `dg/html/modules.html`) with your favorite browser. Links to the pdf
-writeups can be found, among other places, on the Mainpage.
+to `dg/html/modules.html`) with your favorite browser. 
 Finally, also note the documentations of https://thrust.github.io/doc/modules.html[thrust]
 and https://cusplibrary.github.io/[cusp].
 

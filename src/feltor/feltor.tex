@@ -1,0 +1,450 @@
+%\documentclass[12pt]{article}
+%\documentclass[12pt]{scrartcl}
+\documentclass{hitec} % contained in texlive-latex-extra 
+\settextfraction{0.9} % indent text
+\usepackage{csquotes}
+\usepackage[hidelinks]{hyperref} % doi links are short and usefull?
+\hypersetup{%
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=magenta
+}
+\urlstyle{rm}
+\usepackage[english]{babel}
+\usepackage{mathtools} % loads and extends amsmath
+\usepackage{amssymb}
+% packages not used
+%\usepackage{graphicx}
+%\usepackage{amsthm}
+%\usepackage{subfig}
+\usepackage{bm}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{ragged2e} % maybe use \RaggedRight for tables and literature?
+\usepackage[table]{xcolor} % for alternating colors
+\rowcolors{2}{gray!25}{white}
+\renewcommand\arraystretch{1.3}
+
+%%% reset bibliography distances %%%
+\let\oldthebibliography\thebibliography
+\let\endoldthebibliography\endthebibliography
+\renewenvironment{thebibliography}[1]{
+  \begin{oldthebibliography}{#1}
+    \RaggedRight % remove if justification is desired
+    \setlength{\itemsep}{0em}
+    \setlength{\parskip}{0em}
+}
+{
+  \end{oldthebibliography}
+}
+%%% --- %%%
+
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\T}{\mathrm{T}}
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+
+\newcommand{\dx}{\,\mathrm{d}x}
+%\newcommand{\dA}{\,\mathrm{d}(x,y)}
+%\newcommand{\dV}{\mathrm{d}^3{x}\,}
+\newcommand{\dA}{\,\mathrm{dA}}
+\newcommand{\dV}{\mathrm{dV}\,}
+\newcommand{\Eins}{\mathbf{1}}
+\newcommand{\ExB}{$\bm{E}\times\bm{B} \,$}
+\newcommand{\GKI}{\int d^6 \bm{Z} \BSP}
+\newcommand{\GKIV}{\int dv_{\|} d \mu d \theta \BSP}
+\newcommand{\BSP}{B_{\|}^*}
+\newcommand{\GA}[1]{\langle #1   \rangle}
+\newcommand{\Abar}{\langle A_\parallel \rangle}
+%Vectors
+\newcommand{\bhat}{\bm{\hat{b}}}
+\newcommand{\bbar}{\overline{\bm{b}}}
+\newcommand{\chat}{\bm{\hat{c}}}
+\newcommand{\ahat}{\bm{\hat{a}}}
+\newcommand{\xhat}{\bm{\hat{x}}}
+\newcommand{\yhat}{\bm{\hat{y}}}
+\newcommand{\zhat}{\bm{\hat{z}}}
+\newcommand{\Xbar}{\bar{\vec{X}}}
+\newcommand{\phat}{\bm{\hat{\perp}}}
+\newcommand{\that}{\bm{\hat{\theta}}}
+\newcommand{\eI}{\bm{\hat{e}}_1}
+\newcommand{\eII}{\bm{\hat{e}}_2}
+\newcommand{\ud}{\mathrm{d}}
+%Derivatives etc.
+\newcommand{\pfrac}[2]{\frac{\partial#1}{\partial#2}}
+\newcommand{\ffrac}[2]{\frac{\delta#1}{\delta#2}}
+\newcommand{\fixd}[1]{\Big{\arrowvert}_{#1}}
+\newcommand{\curl}[1]{\nabla \times #1}
+\newcommand{\np}{\nabla_{\perp}}
+\newcommand{\npc}{\nabla_{\perp} \cdot }
+\newcommand{\nc}{\nabla\cdot }
+\newcommand{\GAI}{\Gamma_{1}^{\dagger}}
+\newcommand{\GAII}{\Gamma_{1}^{\dagger -1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The feltor project}
+\maketitle
+
+\begin{abstract}
+This is a program for global 3d isothermal electrostatic full-F gyro-fluid simulations.
+\end{abstract}
+
+\section{Equations}
+% \(n_e\) is the electron density, \(N_i\) is the ion gyro-centre density, \(\phi\) is the electric potential, 
+% \\
+% This model is an isothermal 3D gyro-fluid model, which exploits the toroidal field line approximation in the curvature operator terms (cf.~\ref{sec:torfieldlineapprox}). 
+% It incorporates a Solov'ev equilibrium (cf.~\ref{sec:solovev}) for the magnetic field, which allows a
+% realistically shaped axisymmetric magnetic field. The coordinate system of choice is a non-aligned  cylindrical coordinate system (cf.~\ref{sec:cylmetric} and~\ref{sec:nonparallelalignedmetric}), which allows 
+% the correct numerical treatment of singular points (e.g. X- and O- Points). These points occur naturally in realistic magnetic field configurations.
+% Since it is based on a global geometry, treating the complete poloidal flux surface, it is suited for coupled simulations of core, edge and SOL. 
+% However, our isothermal model misses important core physics ingredients, such as the ion temperature gradient (ITG) and trapped electron mode (TEM)~\cite{Wesson07}. Thus the validity the global model is limited to certain
+% parameter regimes.\\
+The continuity equations for the electron density \(n_e\) and  ion gyro-centre density electrons  \(N_i\) read
+\begin{align}
+ \frac{\partial}{\partial t}n_e =&
+ - \frac{1}{B}\left[\phi,  n_e \right]_{\perp}
+ -  {\nabla}_{\parallel}( n_e u_e)
+ + n_e u_e   {\nabla}_{\parallel} \ln{(B)} 
++ \frac{t_e }{e }  \mathcal{K} \left( n_e\right)
+\nonumber  \\ &
+-   n_e \mathcal{K}(\phi) 
+%  + \frac{m_e }{ e } n_e u_e \mathcal{K} \left(  u_e \right) 
+%  + \frac{m_e }{2 e } u_e^2 \mathcal{K} \left(n_e \right) +
+   +  \frac{m_e }{ e } \mathcal{K}_{\kappa} \left( n_e u_e^2 \right) 
+   + \frac{m_e }{ e } \left( n_e u_e^2 \right) \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
+   + \Lambda_{n_e} ,\\
+\frac{\partial}{\partial t}N_i =&
+ - \frac{1}{B}\left[\psi_i,  N_i \right]_{\perp}
+ - {\nabla}_{\parallel}(N_i U_i)
+ + N_i U_i   {\nabla}_{\parallel} \ln{(B)} 
+- \frac{T_i }{e }  \mathcal{K} \left( N_i\right)
+\nonumber  \\ &
+-   N_i \mathcal{K}(\psi) 
+%  - \frac{m_i }{ e } N_i U_i \mathcal{K} \left(  U_i \right) 
+%  - \frac{m_i }{2 e } U_i^2 \mathcal{K} \left(N_i \right) +
+- \frac{m_i }{ e }\mathcal{K}_{\kappa}  \left( N_i U_i^2 \right)
+- \frac{m_i }{ e } \left( N_i U_i^2 \right)\vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
++ \Lambda_{N_i} .
+\end{align}
+The evolution equation for the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are 
+\begin{align}
+\frac{\partial}{\partial t}  u_e 
+      =&
+      - \frac{1 }{ B} \left[ \phi, u_e  \right]_{\perp} 
+      +  \frac{e}{m_e}   \nabla_\parallel \phi  
+      -   \frac{1}{2}   \nabla_\parallel u_e^2
+      - \frac{t_e}{m_e } \nabla_\parallel \ln  n_e     
+     - u_e   \mathcal{K}_{\kappa} \left( \phi  \right)   
+     + \frac{t_e}{e} \mathcal{K}\left(  u_e \right)     
+     \nonumber  \\    &
+%      + \frac{m_e  u_e^2}{ e} \mathcal{K}_{\kappa} \left(u_e\right)      
+%     + \frac{2  t_e}{ e} \mathcal{K}_{\kappa} \left(u_e\right)
+     + \frac{1}{e} \left(m_e  u_e^2 +  2  t_e\right)\mathcal{K}_{\kappa} \left(u_e\right)      
+    + \frac{2  t_e u_e }{ e} \mathcal{K}_{\kappa} \left(\ln n_e \right)  
+    + \frac{t_e  u_e }{e} \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
+%      +\frac{  t_e u_e }{e }  \mathcal{K}\left( \ln n_e \right)       
+%       +\left(\frac{2  t_e  }{e} + \frac{m_e  u_e^2}{2 e} \right) \mathcal{K} \left(u_e\right)      
+%       +\frac{e}{m_e}   \eta_{\parallel} J_\parallel
+      +\Lambda_{u_e},  \\
+\frac{\partial}{\partial t}    U_i 
+      =&
+      - \frac{1 }{ B} \left[ \psi_i, U_i  \right]_{\perp} 
+      -  \frac{e}{m_i}   \nabla_\parallel \psi_i  
+      -     \frac{1}{2}  \nabla_\parallel U_i^2
+      - \frac{T_i}{m_i } \nabla_\parallel \ln  N_i     
+     -  U_i  \mathcal{K}_{\kappa} \left( \psi_i  \right)   
+     - \frac{T_i}{e} \mathcal{K}\left(  U_i \right)     
+     \nonumber  \\    &
+%            - \frac{m_i  U_i^2}{ e} \mathcal{K}_{\kappa} \left(U_i\right)      
+%            - \frac{2  T_i}{ e} \mathcal{K}_{\kappa} \left(U_i\right)
+           - \frac{1}{e}\left(m_i  U_i^2 + 2  T_i \right) \mathcal{K}_{\kappa} \left(U_i\right)      
+           - \frac{2  T_i U_i }{ e} \mathcal{K}_{\kappa} \left(\ln N_i \right)   
+           - \frac{T_i  U_i }{e} \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
+%      -\frac{  T_i U_i }{e }  \mathcal{K}\left( \ln N_i \right)       
+%       -\left(\frac{2  T_i  }{e} + \frac{m_i  U_i^2}{2 e} \right) \mathcal{K} \left(U_i\right)      
+%       -\frac{e}{m_i}   \eta_{\parallel} J_\parallel
++\Lambda_{U_i}  .
+\end{align}
+The electric potential \(\phi\) is computed by the polarisation equation
+\begin{align}
+  n_e -\Gamma_{1,i} N_i &= \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right),
+\end{align}
+and with the generalised electric potential
+\begin{align}
+ \psi_i&:= \Gamma_{1,i} \phi - \frac{m u_E^2}{2 q},
+\end{align}
+The perpendicular Poisson bracket, the parallel derivative \(\nabla_\parallel\), and the parallel Laplacian \(\Delta_\parallel\) is
+\begin{align}\label{eq:perppoiss}
+ \frac{1}{B}\left[f,g\right]_\perp &:= \frac{1}{B}\left(\vec{\hat{b}} \times \vec{\nabla}_\perp f \right)\cdot \vec{\nabla} g, \\
+ \nabla_\parallel f&:= \vec{\hat{b}}\cdot\vec{\nabla} f,  \\
+ \Delta_\parallel &:= \vec{\nabla} \cdot ( \vec{\hat{b}} \vec{\hat{b}}\cdot\vec{\nabla} f ), 
+\end{align}
+and the curvature operator \(\mathcal{K}(f)\)
+\begin{align}\label{eq:curvopgen}
+\mathcal{K}(f)&:=\vec{\nabla} \cdot \left(\frac{1}{B} \vec{\hat{b}} \times \vec{\nabla} f \right).
+\end{align}
+Moreover explicit expressions of the perpendicular Poisson bracket \( \frac{1}{B}\left[f,g\right]_\perp\), the perpendicular elliptic operator \( \vec{\nabla}\cdot\left(g \vec{\nabla}_\perp f\right)\), 
+the parallel derivative \(\nabla_\parallel\) and the parallel Laplacian \(\Delta_\parallel\) and  the curvature operators \(\mathcal{K}(f)\), 
+\(\mathcal{K}_\kappa(f)\) and \(\vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} \)
+depend on the choice of the magnetic field geometry, curvature approximation and the underlying coordinate system.
+\subsection{Dissipation and parallel resistivity}\label{sec:dissres}
+The dissipative terms can be decomposed into a perpendicular and parallel components and a term which accounts for resistive friction (subscript \(\eta_\parallel\)) 
+\begin{align}
+ \Lambda_{n_e} &= \Lambda_{n_e,\perp}+\Lambda_{n_e,\parallel}, &
+ \Lambda_{N_i} &= \Lambda_{N_i,\perp}+\Lambda_{N_i,\parallel},\\
+ \Lambda_{u_e} &= \Lambda_{u_e,\perp}+\Lambda_{u_e,\parallel}+\Lambda_{e,\eta_\parallel},&
+ \Lambda_{U_i} &= \Lambda_{U_i,\perp}+\Lambda_{U_i,\parallel}+\Lambda_{i,\eta_\parallel}.
+\end{align}
+The parallel Spitzer resistivity
+\begin{align}
+\eta_\parallel := \frac{0.51 m_e \nu_e}{n_e e^2} 
+\end{align}
+and the approximate Spitzer current \(J_{\parallel,s}:= e n_e \left(U_i - u_e\right)\) determine the parallel resistive terms to:
+\begin{align}
+ \Lambda_{e,\eta_\parallel} &=  \eta_\parallel e J_{\parallel,s} /m_e  &
+ \Lambda_{i,\eta_\parallel} &=- \frac{m_e n_e }{m_i N_i  }\Lambda_{e,\eta_\parallel}
+\end{align}
+For numerical stabilisation we choose:
+\begin{align}
+\Lambda_{n_e,\parallel} &=  \nu_\parallel\vec{\nabla} \cdot \left(\vec{\hat{b}} \nabla_\parallel n_e\right) &
+ \Lambda_{N_i,\parallel} &=  \nu_\parallel\vec{\nabla} \cdot \left(\vec{\hat{b}} \nabla_\parallel N_i\right) \\
+  \Lambda_{u_e,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\vec{\hat{b}} \nabla_\parallel u_e\right) &
+ \Lambda_{U_i,\parallel} &= \nu_\parallel \vec{\nabla} \cdot \left(\vec{\hat{b}} \nabla_\parallel U_i\right) 
+\end{align}
+Similarly for the perpendicular dissipation we apply hyperviscous terms of second order.
+\begin{align}\label{eq:perpdiffNT}
+ \Lambda_{n_e,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 n_e &
+ \Lambda_{N_i,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 N_i &
+ \Lambda_{u_e,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 u_e &
+ \Lambda_{U_i,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 U_i
+\end{align}
+Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
+\subsection{Coonservation laws}
+\subsubsection{Mass conservation}
+\begin{align}
+\frac{\partial}{\partial t} \int d\vec{x} n_e :=  - \int d\vec{x} \Lambda_{n_e}
+\end{align}
+\subsubsection{Charge conservation}
+\begin{align}
+\frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) :=  - \int d\vec{x} (\Lambda_{n_e} - \Lambda_{N_i})
+\end{align}
+\subsubsection{Energy theorem}
+The terms of the energy theorem are derived to
+\begin{align}
+  \mathcal{E}=&  \int  d\vec{x}  \left(t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+  \frac{1}{2} m_i N_i u_E^2 +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
+\Lambda =&  \int d\vec{x} \bigg\{\left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right]\Lambda_{n_e}
++\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right]\Lambda_{N_i}
+\nonumber \\ &
++ u_e n_e \Lambda_{u_e}+U_i N_i \Lambda_{U_i}\bigg\}.
+\end{align}
+The energy consists of the Helmholtz free energy density for electrons and ions, the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
+In \(\Lambda\) we insert the dissipative and resistive terms of Section~\ref{sec:dissres}. \\
+\subsection{Cylindrical coordinates (\(R,Z,\varphi\))}\label{sec:cylmetric}
+We start with cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle to
+obtain a right handed system. The parametric representation in Cartesian \((x,y,z)\) coordinates is therefore simply:
+\begin{align}
+ x &= R \hspace{1 mm} \sin{(\varphi)}, &
+ y &= R \hspace{1 mm} \cos{(\varphi)}, &
+ z &= Z .               
+\end{align}
+Covariant
+and contravariant basis vectors:
+\begin{align}
+ \vec{e}_R      &= (\sin{(\varphi)} ,   \cos{(\varphi)},0)^T, &
+ \vec{e}_Z      &= ( 0 ,0 ,1 )^T, &
+ \vec{e}_{\varphi} &= R ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T,
+\\
+ \vec{\nabla} R &= (\sin{(\varphi)} ,   \cos{(\varphi)},0 )^T , &
+  \vec{\nabla}Z &= ( 0 ,0 ,1 )^T,  &
+  \vec{\nabla}{\varphi} &= \frac{1}{R} ( \cos{(\varphi)} , -\sin{(\varphi)} , 0 )^T .
+\end{align}
+With the help of the metric elements we get a well behaved volume element \(\sqrt{g} = R\), since 
+\begin{equation}
+\frac{1}{ \sqrt{g}} =  \vec{\nabla} R\cdot \vec{\nabla}Z \times\vec{\nabla}{\varphi} =\frac{1}{R},
+\end{equation}
+as long as our numerical grid does not cross the singularity at \(R=0\). The cylindrical map is orthogonal and conformal in the perpendicular plane. 
+\subsection{Curvature approximations}
+\subsubsection{Low beta approximation}\label{sec:lowbetaapprox}
+We can rewrite the curvature
+\begin{align}
+ \vec{\kappa} \equiv \vec{\hat{b}} \cdot \vec{\nabla} \vec{\hat{b}} = - \vec{\hat{b}} \times \left(\vec{\nabla} \times \vec{\hat{b}} \right) ,
+\end{align}
+for an isotropic pressure plasma \(\vec{P} = \vec{I} P_\perp + \vec{b} \vec{b} P_\Delta \approx \vec{I} P_\perp\) and with the definition of the plasma beta parameter 
+\(\beta = \frac{P}{B^2/(2 \mu_0) } \) to
+\begin{align}
+ \vec{\kappa} &\approx \frac{\beta}{2} \vec{\nabla} \ln(P) +\vec{\nabla}_\perp \ln{B} .
+\end{align}
+In low beta plasmas \(\beta\ll1\) the curvature reduces to:
+\begin{align}\label{eq:kappalowbeta}
+ \vec{\kappa} & \approx \vec{\nabla}_\perp \ln{B} .
+\end{align}
+This simplifies the curvature operators according to:
+\begin{align}
+\mathcal{K}_{\kappa}(f)   &\approx  \mathcal{K}_{\vec{\nabla}  B}(f),  & 
+\mathcal{K} (f) &\approx2 \mathcal{K}_{\vec{\nabla}  B} (f) , &
+ \vec{\kappa} \cdot \vec{\mathcal{K}}_{\vec{\nabla}  B} &= 0.
+\end{align}
+The divergence over the curvature vanishes \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\) only if \( \vec{\nabla} \cdot \vec{ \mathcal{K}}_{\vec{\nabla}  B}   = 0\). 
+However this property has to be checked for a specified coordinate system, since e.g. in cylindrical coordinates \((R,Z,\varphi)\) the divergence \( \vec{\nabla} \cdot \vec{ \mathcal{K} } \approx 0\) is only approximately vanishing.
+\subsubsection{Toroidal field line approximation}\label{sec:torfieldlineapprox}
+The toroidal field line approximation applies \(\vec{\hat{b}}\approx \vec{\hat{e}}_\varphi\) to all perpendicular operators (e.g.: Poisson bracket, perpendicular elliptic operator and curvature operators) 
+but retains the full expression for the magnetic field unity vector \(\vec{\hat{b}}\) 
+for parallel operators (\(\nabla_\parallel\) and \(\Delta_\parallel\)). 
+Hence the curvature reduces in cylindrical coordinates \((R,Z,\varphi)\) to 
+% In low beta plasmas \(\beta\ll1\) the curvature (Equation~\eqref{eq:kappagen}) reduces to:
+\begin{align}\label{eq:kappalowbeta}
+ \vec{\kappa} &\approx \vec{\hat{e}}_\varphi \times \left(\vec{\nabla} \times \vec{\hat{e}}_\varphi \right) = -  \frac{1}{R} \vec{\hat{e}}_R.
+\end{align}
+This simplifies the curvature operators according to:
+\begin{align}
+\vec{\mathcal{K}}_{\kappa}  &\approx  -  \frac{1}{B R} \vec{\hat{e}}_Z , &  
+\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx \frac{1}{B}\vec{\hat{e}}_\varphi \times \vec{\nabla} \ln B, &
+\vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vec{\nabla}  B}  +\vec{ \mathcal{K} }_{\kappa} ,\\
+\mathcal{K}_{\kappa}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},& 
+\mathcal{K}_{\vec{\nabla}  B} (f)  &= \frac{1}{B} \left[\ln B, f \right]_{RZ},& 
+\mathcal{K} (f) &\approx\frac{1}{B} \left[\ln B, f \right]_{RZ}-  \frac{1}{B R} \frac{\partial f}{\partial Z} ,
+\end{align}
+and
+\begin{align}
+ \vec{\nabla} \cdot \vec{\mathcal{K}}_{\kappa} &\approx \frac{1}{B R} \frac{\partial \ln B}{\partial Z}.
+\end{align}
+This results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\), which is an important property for energetic consistency.
+\section{Magnetic field}
+In cylindrical coordinates the general axisymmetric magnetic field can be rewritten to
+\begin{align}
+ \vec{B} &= \frac{I(\psi)}{R} \vec{\hat{e}}_{\varphi} + \frac{1}{R}\left[\frac{\partial \psi}{\partial Z} \vec{\hat{e}}_R 
+         -  \frac{\partial \psi}{\partial R} \vec{\hat{e}}_Z\right] ,
+\end{align}
+which can obviously not be manipulated to be in Clebsch form. Hence we are dealing with a non-flux aligned coordinate system. 
+For the sake of clarity we define the poloidal magnetic field \( \vec{B}_p = \frac{1}{R}\left( \frac{\partial \psi}{\partial Z}\vec{\hat{e}}_R - \frac{\partial \psi}{\partial R}\vec{\hat{e}}_Z\right) 
+\) and the toroidal magnetic field \(\vec{B}_t =\frac{I}{R} \vec{\hat{e}}_{\varphi}\).
+The unit vectors are denoted by \(\vec{\hat{e}}_{R}\), \(\vec{\hat{e}}_{Z}\), \(\vec{\hat{e}}_{\varphi}\).
+\subsection{Solov'ev equilbrium}\label{sec:solovev}
+First, we normalise our variables according to \( R = \rho_s \hat{R} \), \( Z = \rho_s \hat{Z} \), \( \psi_p = \psi_{p0} \hat{\psi_p}\), \( p =  \frac{\psi_{p0}^2}{\mu_0 \rho_s^4}\hat{p}= p_0 \hat{p} \), \( I = \frac{\psi_{p0}}{\rho_s} \hat{I} = I_0 \hat{I} \), 
+ \(j_\varphi = \frac{\psi_{p0}}{\rho_s^3 \mu_0} \hat{I} = j_{\varphi 0} \hat{j}_\varphi \) and rewrite the GSEin normalised form:
+\begin{align}\label{eq:GSEdimless}
+ \hat{\Delta}^*_\perp  \hat{\psi}_p &= -\hat{R}^2 \frac{d \hat{p}}{d  \hat{\psi}_p } - \hat{I} \frac{d \hat{I}}{d  \hat{\psi}_p }\equiv - \hat{R} \hat{j}_\varphi.
+\end{align}
+% The Solov'ev assumptions are 
+% \begin{align}
+%  C&=(1-A)/\hat{R}_0^3 = -\frac{d \hat{p}}{d  \hat{\psi}_p }, & A/\hat{R}_0 &= -\hat{I} \frac{d \hat{I}}{d  \hat{\psi}_p },
+% \end{align}
+% where \(A\) and \(C\) are two constants.
+The Solov'ev assumptions consist of \(A/\hat{R}_0 = -\hat{I} \frac{d \hat{I}}{d  \hat{\psi}_p }\) and \((1-A)/\hat{R}_0^3 = -\frac{d \hat{p}}{d  \hat{\psi}_p }\), where \(A\) is a constant~\cite{solovev68,solovev76}.
+By integration over \(\hat{\psi}_p\) we find
+\begin{align}\label{eq:solovevassumption}
+ \hat{p}(\hat{\psi}_p) &= (A-1)\hat{\psi}_p/\hat{R}_0^3,  &
+ \hat{I}(\hat{\psi}_p) &= \sqrt{-2 A \hat{\psi}_p/\hat{R}_0 + 1}, &
+ \hat{j}_\varphi &= \left[(A-1)\hat{R} - A \hat{R}_0^2 / \hat{R}\right]/\hat{R}_0^3.
+\end{align}
+Now, we introduce another normalisation  \(\bar{R} = \frac{\hat{R}}{\hat{R}_0}\) and \(\bar{Z} = \frac{\hat{Z}}{\hat{R}_0}\) 
+and solve Equations~\eqref{eq:GSEdimless} and~\eqref{eq:solovevassumption} to obtain
+\begin{align}
+ \hat{\psi}_p (\hat{R},\hat{Z}) &= \hat{R}_0 \left[ \frac{1}{8}\bar{R}^4 + A\left( \frac{1}{2} \bar{R}^2 \ln{\bar{R}} 
+   - \frac{1}{8}\bar{R}^4\right) + \sum_{i=1}^{12} c_{i}  \bar{\psi}_{pi}\right],
+\end{align}
+with
+\begin{align}
+  \bar{\psi}_{p1} &= 1,
+  \nonumber \\
+  \bar{\psi}_{p2} &= \bar{R}^2, \nonumber\\
+  \bar{\psi}_{p3} &= \bar{Z}^2 - \bar{R}^2 \ln{\bar{R}},\nonumber\\
+  \bar{\psi}_{p4} &= \bar{R}^4 -4\bar{R}^2\bar{Z}^2,\nonumber\\
+  \bar{\psi}_{p5} &= 2\bar{Z}^4 - 9 \bar{R}^2\bar{Z}^2 +
+                     3 \bar{R}^4 \ln{\bar{R}} 
+                    -12  \bar{R}^2\bar{Z}^2 \ln{\bar{R}},
+  \nonumber \\
+\bar{\psi}_{p6} &= \bar{R}^6 -12 \bar{R}^4 \bar{Z}^2 
+                     + 8  \bar{R}^2 \bar{Z}^4,\nonumber\\
+ \bar{\psi}_{p7} &=  8\bar{Z}^6 -140 \bar{R}^2 \bar{Z}^4
+                      + 75 \bar{R}^4 \bar{Z}^2 - 15\bar{R}^6\ln{\bar{R}}+ 180 \bar{R}^4 \bar{Z}^2 \ln{\bar{R}}
+                       -120 \bar{R}^2 \bar{Z}^4 \ln{\bar{R}},\nonumber\\
+  \bar{\psi}_{p8} &= \bar{Z},\nonumber \\
+  \bar{\psi}_{p9} &=  \bar{Z}  \bar{R}^2,\nonumber\\
+  \bar{\psi}_{p10} &=  \bar{Z}^3 - 3 \bar{Z} \bar{R}^2 \ln{\bar{R}},\nonumber\\
+  \bar{\psi}_{p11} &= 3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2,\nonumber\\
+  \bar{\psi}_{p12} &=  8 \bar{Z}^5 -45 \bar{Z} \bar{R}^4 -
+                       80 \bar{Z}^3 \bar{R}^2\ln{\bar{R}} 
+                       +60 \bar{Z} \bar{R}^4\ln{\bar{R}} .\nonumber
+\end{align}
+The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field. It allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states, 
+field reversed configurations and low and high beta tokamak equilbria. This casts this simple analytical equilibrium to the ideal choice in order to study geometric effects (e.g. inverse aspect ratio, elongation and triangularity) in magnetised plasmas.
+\section{Numerical methods}
+discontinuous Galerkin on structured grid 
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
+coordinate system & Cylindrical 3D & equidistant discretization of $[0,l_R] \times [0,l_Z]$, equal number of Gaussian nodes in R and Z \\
+matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
+\ExB advection & Poisson & \\
+Parallel derivative & refined  FCI & cf.~\cite{held16,stegmeir17} \\
+Parallel diffusion & refined FCI & cf.~\cite{held16,stegmeir17} \\
+curvature terms & direct & cf. curvature approximations \\
+time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
+\bottomrule
+\end{longtable}
+
+\subsection{Input file structure}
+Input file format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+n      & integer & 3 & - &\# Gaussian nodes in R and Z \\
+Nx     & integer &52& - &\# grid points in R \\
+Ny     & integer &52& - &\# grid points in Z \\
+Nz     & integer &16& - &\# grid points in $\varphi$ \\
+dt     & integer &1e-2& - &time step in units of $c_s/\rho_s$ \\
+n\_out  & integer &3  & - &\# Gaussian nodes in R and Z in output \\
+Nx\_out & integer &52& - &\# grid points in R in output fields \\
+Ny\_out & integer &52& - &\# grid points in Z in output fields \\
+Nz\_out & integer &16& - &\# grid points in $\varphi$ \\
+itstp  & integer &2  & - &   steps between outputs \\
+maxout & integer &10& - &      \# outputs excluding first \\
+eps\_pol   & float &1e-5    & - &  accuracy of polarisation solver \\
+jumpfactor & float &1& - &     jumpfactor $\in \left[0.01,1\right]$\\
+eps\_gamma & float &1e-6    & - & accuracy of $\Gamma_1$  \\
+eps\_time  & float &1e-9   & - & accuracy of implicit time-stepper \\
+mu         & float & -0.00272121& - & $\mu_e :=-m_e/m_i \in \left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
+tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\
+nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
+nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
+resistivity & float &1e-4  & - & parallel resistivity parameter $C:= \eta_\parallel n_{e0} e/B $ \\
+amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation \\
+sigma      & float &2      & - & blob variance in units of $\rho_s$ \\
+posX       & float &0.3    & - & blob x-position in units of $a$\\
+posY       & float &0.0    & - & blob y-position in units of $a$ \\
+sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
+k\_psi     & float &0    & - & zonal mode wave number  \\
+nprofileamp& float &4   & - & Profile peak amplitude \\
+bgprofamp  & float &1   & - & Background Prof amplitude (density on the boundary) \\
+bc  & char & "DIR"      & - & GLOBAL perp BC for parallel derivative (one of  DIR, NEU) \\
+source  & float & 0     & - & profile source rate \\
+boxscaleRp  & float & 1.1     & 1.05 & $R_+$ a little larger than 1\\
+boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\
+boxscaleZp  & float & 1.1     & 1.05 & $Z_+$ a little larger than 1 \\
+boxscaleZm  & float & 1.2     & 1.05 & $Z_-$ a little larger than 1 \\
+pollim    & integer & 0     & 0 & poloidal limiter (0/1) \\
+mode      & integer & 2     & 0 & initial condition blob(0), straight blob(1), turbulence(2) \\
+initial   & integer & 0     & 0 & init. phi cond. (stand(0), Force Balance(1))\\
+curvmode  & integer & 1     & 0 & curvature (low beta (0), toroidal field line (1)) \\
+\bottomrule
+\end{longtable}
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
+%..................................................................
+\begin{thebibliography}{1}
+ \bibitem{held16}
+  M. Held and M. Wiesenberger and A. Stegmeir,  Computer Physics Communications 199, 29-39 (2016)
+  \bibitem{stegmeir17}
+  A. Stegmeir and O. Maj and D. Coster and K. Lackner and M. Held and M. Wiesenberger, Computer Physics Communications 213, 111 - 121 (2017)
+\end{thebibliography}
+%..................................................................
+
+
+\end{document}

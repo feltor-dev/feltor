@@ -58,6 +58,7 @@ int main(int argc, char* argv[] )
     dg::MDVec chi =  dg::evaluate( pol, grid);
 
 
+    
     if(rank==0)std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     //dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> pol( grid, dg::not_normed, dg::centered);
