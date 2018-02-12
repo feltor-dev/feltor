@@ -23,9 +23,9 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
      * the coordinates of the computational space are called x,y,z
      * @param ref a X-point refinement
      * @param generator must generate a grid
+     * @param fx a rational number indicating partition of the x - direction
+     * @param fy a rational number indicating partition of the y - direction
      * @param n number of %Gaussian nodes in x and y
-     * @param fx
-     * @param fy
      * @param Nx number of cells in x
      * @param Ny number of cells in y
      * @param Nz  number of cells z
@@ -35,7 +35,7 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
      */
     CurvilinearRefinedProductGridX3d( const aRefinementX2d& ref, const aGeneratorX2d& generator,
         double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::NEU, bc bcz=dg::PER):
-        dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), Nz, bcx, bcy, bcz), map_(3)
+        dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), Nz, bcx, bcy, bcz), map_(3), jac_(4)
     {
         handle_ = generator;
         ref_=ref;
@@ -54,7 +54,7 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
         unsigned size2d = this->n()*this->n()*this->Nx()*this->Ny();
         //resize for 3d values
         for( unsigned r=0; r<4;r++)
-            jac_.value(r).resize(size);
+            jac_.values()[r].resize(size);
         map_[0].resize(size);
         map_[1].resize(size);
         //lift to 3D grid
@@ -62,7 +62,7 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
             for( unsigned i=0; i<size2d; i++)
             {
                 for(unsigned r=0; r<4; r++)
-                    jac_.value(r)[k*size2d+i] = jac_.value(r)[(k-1)*size2d+i];
+                    jac_.values()[r][k*size2d+i] = jac_.values()[r][(k-1)*size2d+i];
                 map_[0][k*size2d+i] = map_[0][(k-1)*size2d+i];
                 map_[1][k*size2d+i] = map_[1][(k-1)*size2d+i];
             }
@@ -84,12 +84,12 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
             y_vec[i] = abs[1][i*x_vec.size()];
             //std::cout << abs[1][i*x_vec.size()] <<"\n";
         }
-        handle_.get().generate( x_vec, y_vec, this->n()*outer_Ny(), this->n()*(inner_Ny()+outer_Ny()), map_[0], map_[1], jac_.value(0), jac_.value(1), jac_.value(2), jac_.value(3));
+        handle_.get().generate( x_vec, y_vec, this->n()*outer_Ny(), this->n()*(inner_Ny()+outer_Ny()), map_[0], map_[1], jac_.values()[0], jac_.values()[1], jac_.values()[2], jac_.values()[3]);
         //multiply by weights
-        dg::blas1::pointwiseDot( jac_.value(0), w[0], jac_.value(0));
-        dg::blas1::pointwiseDot( jac_.value(1), w[0], jac_.value(1));
-        dg::blas1::pointwiseDot( jac_.value(2), w[1], jac_.value(2));
-        dg::blas1::pointwiseDot( jac_.value(3), w[1], jac_.value(3));
+        dg::blas1::pointwiseDot( jac_.values()[0], w[0], jac_.values()[0]);
+        dg::blas1::pointwiseDot( jac_.values()[1], w[0], jac_.values()[1]);
+        dg::blas1::pointwiseDot( jac_.values()[2], w[1], jac_.values()[2]);
+        dg::blas1::pointwiseDot( jac_.values()[3], w[1], jac_.values()[3]);
         jac_.idx(0,0) = 0, jac_.idx(0,1) = 1, jac_.idx(1,0)=2, jac_.idx(1,1) = 3;
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
@@ -115,10 +115,10 @@ struct CurvilinearRefinedGridX2d : public dg::aGeometryX2d
 {
     /*!@brief Constructor
 
-     * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
      * @param ref a X-point refinement
-     * @param fx
-     * @param fy
+     * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
+     * @param fx a rational number indicating partition of the x - direction
+     * @param fy a rational number indicating partition of the y - direction
      * @param n number of polynomial coefficients
      * @param Nx number of cells in first coordinate
      * @param Ny number of cells in second coordinate

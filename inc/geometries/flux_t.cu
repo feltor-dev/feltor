@@ -72,7 +72,7 @@ int main( int argc, char* argv[])
     //create the magnetic field
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     //create a grid generator
-    dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 0, true);
+    dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 0, false);
     //create a grid
     dg::geo::CurvilinearGrid2d g2d(flux, n, Nx,Ny, dg::NEU);
     //![doxygen]
