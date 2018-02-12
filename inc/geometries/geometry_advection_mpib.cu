@@ -112,17 +112,16 @@ int main(int argc, char** argv)
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);

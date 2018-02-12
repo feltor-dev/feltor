@@ -44,17 +44,16 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
     dg::geo::BinaryFunctorsLvl2 psip=dg::geo::solovev::createPsip(gp);

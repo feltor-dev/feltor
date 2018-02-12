@@ -89,18 +89,17 @@ int main( int argc, char* argv[])
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "Typed "<<n<<" "<<Nx<<" "<<Ny<<" "<<Nz<<"\n";
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         //std::ifstream is("geometry_params_Xpoint_taylor.js");
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     //dg::geo::taylor::Parameters gp(js);
     dg::geo::solovev::Parameters gp(js);

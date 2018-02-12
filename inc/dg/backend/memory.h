@@ -126,19 +126,19 @@ struct Buffer
     Buffer( const T& t){
         ptr = new T(t);
     }
-    Buffer( T&& t): ptr( t.ptr){ //move (memory steal) construct
-        t.ptr = nullptr;
-    }
-    ///delete managed object
-    ~Buffer(){
-        delete ptr; //if ptr is nullptr delete does nothing
-    }
-    Buffer( const Buffer& src){
+    Buffer( const Buffer& src){ //copy
         ptr = new T(*src.ptr);
+    }
+    Buffer( Buffer&& t): ptr( t.ptr){ //move (memory steal) construct
+        t.ptr = nullptr;
     }
     Buffer& operator=( Buffer src){ //copy and swap idiom, also implements move assign
         swap( *this, src);
         return *this;
+    }
+    ///delete managed object
+    ~Buffer(){
+        delete ptr; //if ptr is nullptr delete does nothing
     }
     friend void swap( Buffer& first, Buffer& second) //make std::swap work (ADL)
     {

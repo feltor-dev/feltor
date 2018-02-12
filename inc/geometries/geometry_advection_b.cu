@@ -105,17 +105,16 @@ int main(int argc, char** argv)
     std::cout << "Type n, Nx, Ny\n";
     unsigned n, Nx, Ny;
     std::cin >> n>> Nx>>Ny;
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
