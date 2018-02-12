@@ -95,33 +95,20 @@ namespace dg{
 class Timer //GPU MPI
 {
   public:
-    Timer(){
-        cudaEventCreate( &cu_sync);
-    }
-    /**
-    * @brief Start timer using MPI_Wtime
-    *
-    * @param comm the communicator
-    * @note uses MPI_Barrier(comm)
-    */
+    Timer(){ }
     void tic( MPI_Comm comm = MPI_COMM_WORLD ){
-    MPI_Barrier(comm);
-    start = MPI_Wtime();}
-    /**
-    * @brief Stop timer using MPI_Wtime
-    *
-    * @param comm the communicator
-    * @note uses MPI_Barrier(comm)
-    */
+        cudaDeviceSynchronize();
+        MPI_Barrier(comm);
+        start = MPI_Wtime();
+    }
     void toc( MPI_Comm comm = MPI_COMM_WORLD ){
-    cudaEventRecord( cu_sync, 0); //place event in stream
-    cudaEventSynchronize( cu_sync); //sync cpu  on event
-    MPI_Barrier(comm); //sync other cpus on event
-    stop = MPI_Wtime(); }
+        cudaDeviceSynchronize();
+        MPI_Barrier(comm); //sync other cpus
+        stop = MPI_Wtime();
+    }
     double diff(){ return stop - start; }
   private:
     double start, stop;
-    cudaEvent_t cu_sync;
 };
 }//namespace dg
 
@@ -135,17 +122,7 @@ class Timer// GPU non-MPI
         cudaEventCreate( &start);
         cudaEventCreate( &stop);
     }
-    /**
-    * @brief Start timer using cudaEventRecord
-    *
-    * @param stream the stream in which the Event is placed
-    */
     void tic( cudaStream_t stream = 0){ cudaEventRecord( start, stream);}
-    /**
-    * @brief Stop timer using cudaEventRecord and Synchronize
-    *
-    * @param stream the stream in which the Event is placed
-    */
     void toc( cudaStream_t stream = 0){
         cudaEventRecord( stop, stream);
         cudaEventSynchronize( stop);

@@ -262,12 +262,11 @@ __global__ void ExDOT(
 ////////////////////////////////////////////////////////////////////////////////
 ////////////// parameters for Kernel execution            //////////////////////
 //Kernel paramters for EXDOT
-static constexpr uint WARP_COUNT               = 16 ; //# of sub superaccs in CUDA kernels
-static constexpr uint WARP_SIZE                = 32 ;
-static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per block
-static constexpr uint PARTIAL_SUPERACCS_COUNT  = 512; //# of blocks; each has a partial SuperAcc
+static constexpr uint WARP_COUNT               = 32; //# of sub superaccs in CUDA kernels
+static constexpr uint WORKGROUP_SIZE           = 512; //# threads per block
+static constexpr uint PARTIAL_SUPERACCS_COUNT  = 64; //# of blocks; each has a partial SuperAcc
 //Kernel paramters for EXDOTComplete
-static constexpr uint MERGE_SUPERACCS_SIZE     = 32; //# of sa each block merges; must divide PARTIAL_SUPERACCS_COUNT
+static constexpr uint MERGE_SUPERACCS_SIZE     = 16; //# of sa each block merges; must divide PARTIAL_SUPERACCS_COUNT
 static constexpr uint MERGE_WORKGROUP_SIZE     = 64;  //we need minimum 39 of those
 
 template<uint MERGE_SIZE>

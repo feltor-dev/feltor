@@ -12,7 +12,8 @@
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
-double function(double x, double y, double z){ return sin(y)*sin(x);}
+double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
+double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
 
 //typedef float value_type;
 //typedef dg::fDVec Vector;
@@ -47,7 +48,7 @@ int main()
     //std::cout<<"Evaluate a function on the grid\n";
     t.tic();
     ArrayVec x;
-    dg::blas1::transfer( dg::evaluate( function, grid), x);
+    dg::blas1::transfer( dg::evaluate( left, grid), x);
     t.toc();
     //std::cout<<"Evaluation of a function took    "<<t.diff()<<"s\n";
     //std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
@@ -60,7 +61,6 @@ int main()
     //dg::IDMatrix project = dg::create::projection( grid_half, grid);
     int multi=100;
     //t.tic();
-    value_type norm=0;
     ArrayVec y(x), z(x), u(x), v(x);
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
@@ -139,7 +139,11 @@ int main()
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
     std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
+    //these functions are more mean to dot
+    dg::blas1::transfer( dg::evaluate( left, grid), x);
+    dg::blas1::transfer( dg::evaluate( right, grid), y);
     t.tic();
+    value_type norm=0;
     for( int i=0; i<multi; i++)
         norm += dg::blas1::dot( x,y);
     t.toc();
