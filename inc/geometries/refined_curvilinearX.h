@@ -13,13 +13,13 @@ namespace geo
 
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
- * 
+ *
  * The base coordinate system is the cylindrical coordinate system R,Z,phi
  */
 struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
 {
     /*!@brief Constructor
-    
+
      * the coordinates of the computational space are called x,y,z
      * @param ref a X-point refinement
      * @param generator must generate a grid
@@ -27,16 +27,16 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
      * @param fx
      * @param fy
      * @param Nx number of cells in x
-     * @param Ny number of cells in y 
+     * @param Ny number of cells in y
      * @param Nz  number of cells z
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y (may not be periodic)
      * @param bcz boundary condition in z
      */
-    CurvilinearRefinedProductGridX3d( const aRefinementX2d& ref, const aGeneratorX2d& generator, 
+    CurvilinearRefinedProductGridX3d( const aRefinementX2d& ref, const aGeneratorX2d& generator,
         double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::NEU, bc bcz=dg::PER):
         dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, ref.fx_new(Nx,fx),ref.fy_new(Ny,fy),n, ref.nx_new(Nx,fx), ref.ny_new(Ny,fy), Nz, bcx, bcy, bcz), map_(3)
-    { 
+    {
         handle_ = generator;
         ref_=ref;
         constructPerp( fx,fy,n, Nx, Ny);
@@ -114,7 +114,7 @@ struct CurvilinearRefinedProductGridX3d : public dg::aGeometryX3d
 struct CurvilinearRefinedGridX2d : public dg::aGeometryX2d
 {
     /*!@brief Constructor
-    
+
      * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
      * @param ref a X-point refinement
      * @param fx

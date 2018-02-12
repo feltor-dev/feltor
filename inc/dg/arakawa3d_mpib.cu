@@ -20,9 +20,9 @@ const double ly = 2*M_PI;
 /*
 double left( double x, double y) { return sin(x)*cos(y);}
 double right( double x, double y){ return exp(0.1*(x+y)); }
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
-    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
+    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI);
 }
 */
 
@@ -30,15 +30,15 @@ dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return cos(x)*sin(y);}
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
-    return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
+    return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y);
 }
 const double lz = 1.;
 double left( double x, double y, double z) {return left(x,y)*z;}
-double right( double x, double y, double z) {return right(x,y)*z;} 
+double right( double x, double y, double z) {return right(x,y)*z;}
 //double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y, double z) 
+double jacobian( double x, double y, double z)
 {
     return jacobian(x,y)*z*z;
 }
@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     mpi_init3d( bcx, bcy,dg::PER, n, Nx, Ny,Nz, comm);
     dg::MPIGrid3d grid( 0, lx, 0, ly, 0,lz, n, Nx, Ny, Nz, bcx, bcy, dg::PER, comm);
@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
     dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
     unsigned multi=20;
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
     if(rank==0) std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
     result = sqrt( dg::blas2::dot( w3d, jac));
-    if(rank==0) std::cout << "Distance to solution "<<result<<std::endl; 
+    if(rank==0) std::cout << "Distance to solution "<<result<<std::endl;
 
 
     MPI_Finalize();

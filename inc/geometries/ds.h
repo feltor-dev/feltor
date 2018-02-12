@@ -10,7 +10,7 @@
 #endif //MPI_VERSION
 #include "magnetic_field.h"
 
-/*!@file 
+/*!@file
  *
  * This file includes the appropriate headers for parallel derivatives
  */

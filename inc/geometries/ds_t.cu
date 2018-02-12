@@ -10,7 +10,7 @@
 
 const double R_0 = 10;
 const double I_0 = 20; //q factor at r=1 is I_0/R_0
-const double a  = 1; //small radius  
+const double a  = 1; //small radius
 double func(double R, double Z, double phi)
 {
     double r2 = (R-R_0)*(R-R_0)+Z*Z;
@@ -45,7 +45,7 @@ int main(int argc, char * argv[])
     const dg::geo::Fieldaligned<dg::aProductGeometry3d,dg::IDMatrix,dg::DVec>  dsFA( bhat, g3d, dg::NEU, dg::NEU, dg::geo::NoLimiter(), 1e-8, mx, my, true,true,true);
     dg::geo::DS<dg::aProductGeometry3d, dg::IDMatrix, dg::DMatrix, dg::DVec> ds( dsFA, dg::not_normed, dg::centered);
     ///##########################################################///
-    //apply to function 
+    //apply to function
     dg::DVec function = dg::evaluate( func, g3d), derivative(function);
     ds( function, derivative);
     //![doxygen]
@@ -63,7 +63,7 @@ int main(int argc, char * argv[])
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
     std::cout << "Error Backward Derivative "<<sqrt( norm/sol)<<"\n";
-    std::cout << "(Since the function is a parabola, the error is from the parallel derivative only if n>2/ no interpolation error)\n"; 
+    std::cout << "(Since the function is a parabola, the error is from the parallel derivative only if n>2/ no interpolation error)\n";
     ///##########################################################///
     std::cout << "TEST FIELDALIGNED EVALUATION of a Gaussian\n";
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);

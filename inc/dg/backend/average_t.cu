@@ -19,7 +19,7 @@ int main()
 
     dg::PoloidalAverage<dg::HVec, dg::iHVec > pol(g);
 
-    const dg::HVec vector = dg::evaluate( function ,g); 
+    const dg::HVec vector = dg::evaluate( function ,g);
     dg::HVec average_y( vector);
     std::cout << "Averaging ... \n";
     pol( vector, average_y);

@@ -27,7 +27,7 @@ struct Mouse: public aAnimal
 
 struct Cat : public aAnimal
 {
-    virtual void speak()const { 
+    virtual void speak()const {
         aAnimal::speak();
         std::cout << " a cat!\n";
     }

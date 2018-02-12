@@ -6,7 +6,7 @@
 #include "dlt.h"
 #include "../enums.h"
 
-/*! @file 
+/*! @file
   @brief base topology classes
   */
 
@@ -14,12 +14,12 @@
  * @brief Construct a 2D grid
  *
  * @param x0 left boundary in x
- * @param x1 right boundary in x 
+ * @param x1 right boundary in x
  * @param y0 lower boundary in y
- * @param y1 upper boundary in y 
+ * @param y1 upper boundary in y
  * @param n  # of polynomial coefficients per dimension
  *  (1<=n<=20, note that the library is optimized for n=3 )
- * @param Nx # of points in x 
+ * @param Nx # of points in x
  * @param Ny # of points in y
  */
 /*!@class hide_bc_parameters2d
@@ -31,15 +31,15 @@
  * @brief Construct a 3D grid
  *
  * @param x0 left boundary in x
- * @param x1 right boundary in x 
+ * @param x1 right boundary in x
  * @param y0 lower boundary in y
- * @param y1 upper boundary in y 
+ * @param y1 upper boundary in y
  * @param z0 lower boundary in z
- * @param z1 upper boundary in z 
+ * @param z1 upper boundary in z
  * @param n  # of polynomial coefficients per (x-,y-) dimension
  *   (1<=n<=20, note that the library is optimized for n=3 )
  * @attention # of polynomial coefficients in z direction is always 1
- * @param Nx # of points in x 
+ * @param Nx # of points in x
  * @param Ny # of points in y
  * @param Nz # of points in z
  */
@@ -67,10 +67,10 @@ struct Grid1d
     Grid1d(){}
     /**
      * @brief 1D grid
-     * 
+     *
      * @param x0 left boundary
      * @param x1 right boundary
-     * @param n # of polynomial coefficients 
+     * @param n # of polynomial coefficients
      *  (1<=n<=20, note that the library is optimized for n=3 )
      * @param N # of cells
      * @param bcx boundary conditions
@@ -84,43 +84,43 @@ struct Grid1d
     /**
      * @brief left boundary
      *
-     * @return 
+     * @return
      */
     double x0() const {return x0_;}
     /**
      * @brief right boundary
      *
-     * @return 
+     * @return
      */
     double x1() const {return x1_;}
     /**
      * @brief total length of interval
      *
-     * @return 
+     * @return
      */
     double lx() const {return x1_-x0_;}
     /**
      * @brief cell size
      *
-     * @return 
+     * @return
      */
     double h() const {return lx()/(double)Nx_;}
     /**
      * @brief number of cells
      *
-     * @return 
+     * @return
      */
     unsigned N() const {return Nx_;}
     /**
      * @brief number of polynomial coefficients
      *
-     * @return 
+     * @return
      */
     unsigned n() const {return n_;}
     /**
      * @brief boundary conditions
      *
-     * @return 
+     * @return
      */
     bc bcx() const {return bcx_;}
     /**
@@ -173,7 +173,7 @@ struct Grid1d
     /**
      * @brief the discrete legendre transformation
      *
-     * @return 
+     * @return
      */
     const DLT<double>& dlt() const {return dlt_;}
     void display( std::ostream& os = std::cout) const
@@ -216,7 +216,7 @@ struct Grid1d
      */
     bool contains( double x)const
     {
-        if( (x>=x0_ && x <= x1_)) return true; 
+        if( (x>=x0_ && x <= x1_)) return true;
         return false;
     }
 
@@ -235,90 +235,90 @@ struct Grid1d
 struct aTopology2d
 {
     typedef SharedTag memory_category; //!< tag for choosing default host vector type
-    typedef TwoDimensionalTag dimensionality; 
+    typedef TwoDimensionalTag dimensionality;
 
     /**
      * @brief Left boundary in x
      *
-     * @return 
+     * @return
      */
     double x0() const {return gx_.x0();}
     /**
      * @brief Right boundary in x
      *
-     * @return 
+     * @return
      */
     double x1() const {return gx_.x1();}
     /**
      * @brief left boundary in y
      *
-     * @return 
+     * @return
      */
     double y0() const {return gy_.x0();}
     /**
-     * @brief Right boundary in y 
+     * @brief Right boundary in y
      *
-     * @return 
+     * @return
      */
     double y1() const {return gy_.x1();}
     /**
-     * @brief length of x 
+     * @brief length of x
      *
-     * @return 
+     * @return
      */
     double lx() const {return gx_.lx();}
     /**
      * @brief length of y
      *
-     * @return 
+     * @return
      */
     double ly() const {return gy_.lx();}
     /**
-     * @brief cell size in x 
+     * @brief cell size in x
      *
-     * @return 
+     * @return
      */
     double hx() const {return gx_.h();}
     /**
      * @brief cell size in y
      *
-     * @return 
+     * @return
      */
     double hy() const {return gy_.h();}
     /**
      * @brief number of polynomial coefficients in x and y
      *
-     * @return 
+     * @return
      */
     unsigned n() const {return gx_.n();}
     /**
      * @brief number of cells in x
      *
-     * @return 
+     * @return
      */
     unsigned Nx() const {return gx_.N();}
     /**
      * @brief number of cells in y
      *
-     * @return 
+     * @return
      */
     unsigned Ny() const {return gy_.N();}
     /**
      * @brief boundary conditions in x
      *
-     * @return 
+     * @return
      */
     bc bcx() const {return gx_.bcx();}
     /**
      * @brief boundary conditions in y
      *
-     * @return 
+     * @return
      */
     bc bcy() const {return gy_.bcx();}
     /**
      * @brief discrete legendre trafo
      *
-     * @return 
+     * @return
      */
     const DLT<double>& dlt() const{return gx_.dlt();}
 
@@ -337,11 +337,11 @@ struct aTopology2d
     * @brief Set the number of polynomials and cells
     *
     * @param new_n new number of %Gaussian nodes
-    * @param new_Nx new number of cells in x 
+    * @param new_Nx new number of cells in x
     * @param new_Ny new number of cells in y
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
-        if( !( new_n==n() && new_Nx==Nx() && new_Ny == Ny() ) ) 
+        if( !( new_n==n() && new_Nx==Nx() && new_Ny == Ny() ) )
             do_set(new_n,new_Nx,new_Ny);
     }
 
@@ -353,7 +353,7 @@ struct aTopology2d
      */
     unsigned size() const { return gx_.size()*gy_.size();}
     /**
-     * @brief Display 
+     * @brief Display
      *
      * @param os output stream
      */
@@ -402,7 +402,7 @@ struct aTopology2d
      */
     bool contains( double x, double y)const
     {
-        if( gx_.contains(x) && gy_.contains(y)) return true; 
+        if( gx_.contains(x) && gy_.contains(y)) return true;
         return false;
     }
     protected:
@@ -427,10 +427,10 @@ struct aTopology2d
     }
 
     ///explicit copy constructor (default)
-    ///@param src source 
+    ///@param src source
     aTopology2d(const aTopology2d& src){gx_=src.gx_, gy_=src.gy_;}
     ///explicit assignment operator (default)
-    ///@param src source 
+    ///@param src source
     aTopology2d& operator=(const aTopology2d& src){
         gx_=src.gx_;
         gy_=src.gy_;
@@ -438,7 +438,7 @@ struct aTopology2d
     }
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)=0;
     private:
-    Grid1d gx_, gy_; 
+    Grid1d gx_, gy_;
 };
 
 
@@ -456,125 +456,125 @@ struct aTopology3d
     /**
      * @brief left boundary in x
      *
-     * @return 
+     * @return
      */
     double x0() const {return gx_.x0();}
     /**
      * @brief right boundary in x
      *
-     * @return 
+     * @return
      */
     double x1() const {return gx_.x1();}
 
     /**
-     * @brief left boundary in y 
+     * @brief left boundary in y
      *
-     * @return 
+     * @return
      */
     double y0() const {return gy_.x0();}
     /**
      * @brief right boundary in y
      *
-     * @return 
+     * @return
      */
     double y1() const {return gy_.x1();}
 
     /**
      * @brief left boundary in z
      *
-     * @return 
+     * @return
      */
     double z0() const {return gz_.x0();}
     /**
      * @brief right boundary in z
      *
-     * @return 
+     * @return
      */
     double z1() const {return gz_.x1();}
 
     /**
      * @brief length in x
      *
-     * @return 
+     * @return
      */
     double lx() const {return gx_.lx();}
     /**
      * @brief length in y
      *
-     * @return 
+     * @return
      */
     double ly() const {return gy_.lx();}
     /**
      * @brief length in z
      *
-     * @return 
+     * @return
      */
     double lz() const {return gz_.lx();}
-    
+
     /**
      * @brief cell size in x
      *
-     * @return 
+     * @return
      */
     double hx() const {return gx_.h();}
     /**
      * @brief cell size in y
      *
-     * @return 
+     * @return
      */
     double hy() const {return gy_.h();}
     /**
      * @brief cell size in z
      *
-     * @return 
+     * @return
      */
     double hz() const {return gz_.h();}
     /**
      * @brief number of polynomial coefficients in x and y
      *
-     * @return 
+     * @return
      */
     unsigned n() const {return gx_.n();}
     /**
      * @brief number of points in x
      *
-     * @return 
+     * @return
      */
     unsigned Nx() const {return gx_.N();}
     /**
      * @brief number of points in y
      *
-     * @return 
+     * @return
      */
     unsigned Ny() const {return gy_.N();}
     /**
      * @brief number of points in z
      *
-     * @return 
+     * @return
      */
     unsigned Nz() const {return gz_.N();}
     /**
-     * @brief boundary conditions in x 
+     * @brief boundary conditions in x
      *
-     * @return 
+     * @return
      */
     bc bcx() const {return gx_.bcx();}
     /**
      * @brief boundary conditions in y
      *
-     * @return 
+     * @return
      */
     bc bcy() const {return gy_.bcx();}
     /**
-     * @brief boundary conditions in z 
+     * @brief boundary conditions in z
      *
-     * @return 
+     * @return
      */
     bc bcz() const {return gz_.bcx();}
     /**
      * @brief discrete legendre transformation
      *
-     * @return 
+     * @return
      */
     const DLT<double>& dlt() const{return gx_.dlt();}
     /**
@@ -584,7 +584,7 @@ struct aTopology3d
      */
     unsigned size() const { return gx_.size()*gy_.size()*gz_.size();}
     /**
-     * @brief Display 
+     * @brief Display
      *
      * @param os output stream
      */
@@ -646,8 +646,8 @@ struct aTopology3d
      */
     bool contains( double x, double y, double z)const
     {
-        if( gx_.contains(x) && gy_.contains(y) && gz_.contains(z)) 
-            return true; 
+        if( gx_.contains(x) && gy_.contains(y) && gz_.contains(z))
+            return true;
         return false;
     }
     ///@copydoc aTopology2d::multiplyCellNumbers()
@@ -658,12 +658,12 @@ struct aTopology3d
     * @brief Set the number of polynomials and cells
     *
     * @param new_n new number of %Gaussian nodes
-    * @param new_Nx new number of cells in x 
+    * @param new_Nx new number of cells in x
     * @param new_Ny new number of cells in y
     * @param new_Nz new number of cells in z
     */
     void set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
-        if(!( new_n==n() && new_Nx ==Nx() && new_Ny == Ny() && new_Nz==Nz())) 
+        if(!( new_n==n() && new_Nx ==Nx() && new_Ny == Ny() && new_Nz==Nz()))
             do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
     protected:
@@ -673,7 +673,7 @@ struct aTopology3d
     @copydoc hide_grid_parameters3d
     @copydoc hide_bc_parameters3d
      */
-    aTopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): 
+    aTopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
         gx_(x0,x1,n,Nx,bcx),
         gy_(y0,y1,n,Ny,bcy),
         gz_(z0,z1,1,Nz,bcz){}
@@ -690,10 +690,10 @@ struct aTopology3d
         assert( gz.n() == 1);
     }
     ///explicit copy constructor (default)
-    ///@param src source 
+    ///@param src source
     aTopology3d(const aTopology3d& src):gx_(src.gx_),gy_(src.gy_),gz_(src.gz_){}
     ///explicit assignment operator (default)
-    ///@param src source 
+    ///@param src source
     aTopology3d& operator=(const aTopology3d& src){ //use default in C++11
         gx_=src.gx_; gy_=src.gy_; gz_=src.gz_;
         return *this;
@@ -720,7 +720,7 @@ struct Grid2d : public aTopology2d
     ///allow explicit type conversion from any other topology
     explicit Grid2d( const aTopology2d& src): aTopology2d(src){}
     private:
-    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny){ 
+    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny){
         aTopology2d::do_set(n,Nx,Ny);
     }
 
@@ -743,7 +743,7 @@ struct Grid3d : public aTopology3d
     ///@param src source
     explicit Grid3d( const aTopology3d& src): aTopology3d(src){ }
     private:
-    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz){ 
+    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz){
         aTopology3d::do_set(n,Nx,Ny,Nz);
     }
 };

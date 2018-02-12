@@ -28,7 +28,7 @@ typedef dg::IDMatrix IMatrix;
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     std::cout << "Type n, Nx, Ny and Nz ( Nx and Ny shall be multiples of 2)\n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d grid(      0., lx, 0, ly, 0, ly, n, Nx, Ny, Nz);
@@ -46,7 +46,7 @@ int main()
     value_type gbytes=(value_type)x.size()*sizeof(value_type)/1e9;
     std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
     std::cout << "Generate interpolation and projection\n";
-    //dg::MultiMatrix<Matrix, Vector> inter, project; 
+    //dg::MultiMatrix<Matrix, Vector> inter, project;
     //dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
     //dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
     dg::IDMatrix inter = dg::create::interpolation( grid, grid_half);

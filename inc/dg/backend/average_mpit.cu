@@ -16,14 +16,14 @@ const double ly = M_PI;
 double function( double x, double y) {return cos(x)*sin(y);}
 double pol_average( double x, double y) {return cos(x)*2./M_PI;}
 
-dg::bc bcx = dg::PER; 
+dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
 
     MPI_Comm comm;
     mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "constructing polavg" << std::endl;
     dg::PoloidalAverage<dg::MDVec, dg::MDVec > pol(g);
     if(rank==0)std::cout << "constructing polavg end" << std::endl;
-    const dg::MDVec vector = dg::evaluate( function ,g); 
+    const dg::MDVec vector = dg::evaluate( function ,g);
     dg::MDVec average_y( vector);
     if(rank==0)std::cout << "Averaging ... \n";
     pol( vector, average_y);

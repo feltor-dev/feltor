@@ -30,10 +30,10 @@ namespace create{
  * @brief make a matrix that transforms values to an equidistant grid ready for visualisation
  *
  * Useful if you want to visualize a dg-formatted vector.
- * @param g The grid on which to operate 
+ * @param g The grid on which to operate
  *
  * @return transformation matrix
- * @note this matrix has ~n^4 N^2 entries 
+ * @note this matrix has ~n^4 N^2 entries
  */
 dg::IHMatrix backscatter( const aTopology2d& g)
 {
@@ -53,7 +53,7 @@ dg::IHMatrix backscatter( const aTopology2d& g)
     //cusp::multiply( p, backward, scatter);
     //choose vector layout
     //return scatter;
-    return (dg::IHMatrix)backward; 
+    return (dg::IHMatrix)backward;
 
 }
 
@@ -70,8 +70,8 @@ dg::IHMatrix backscatter( const aTopology3d& g)
 /**
  * @brief Index map for scatter operation on dg - formatted vectors
  *
- * Use in thrust::scatter function on a dg-formatted vector. We obtain a vector 
- where the y direction is contiguous in memory. 
+ * Use in thrust::scatter function on a dg-formatted vector. We obtain a vector
+ where the y direction is contiguous in memory.
  * @param n # of polynomial coefficients
  * @param Nx # of points in x
  * @param Ny # of points in y

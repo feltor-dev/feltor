@@ -37,18 +37,18 @@ typename Vector::value_type doDot( const Vector& x, const Vector& y, CuspVectorT
 }
 
 template< class Vector>
-inline void doScal(  Vector& x, 
-              typename Vector::value_type alpha, 
+inline void doScal(  Vector& x,
+              typename Vector::value_type alpha,
               CuspVectorTag)
 {
     cusp::blas::scal( x, alpha);
 }
 
 template< class Vector>
-inline void doAxpby( typename Vector::value_type alpha, 
-              const Vector& x, 
-              typename Vector::value_type beta, 
-              Vector& y, 
+inline void doAxpby( typename Vector::value_type alpha,
+              const Vector& x,
+              typename Vector::value_type beta,
+              Vector& y,
               CuspVectorTag)
 {
 #ifdef DG_DEBUG
@@ -69,11 +69,11 @@ inline void doAxpby( typename Vector::value_type alpha,
 
 
 template< class Vector>
-inline void doAxpby( typename Vector::value_type alpha, 
-              const Vector& x, 
-              typename Vector::value_type beta, 
-              const Vector& y, 
-              Vector& z, 
+inline void doAxpby( typename Vector::value_type alpha,
+              const Vector& x,
+              typename Vector::value_type beta,
+              const Vector& y,
+              Vector& z,
               CuspVectorTag)
 {
 #ifdef DG_DEBUG

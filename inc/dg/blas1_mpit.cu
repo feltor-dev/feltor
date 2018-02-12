@@ -46,13 +46,13 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     dg::MPIGrid2d g( 0,1,0,1, 3,12,12, comm);
     MVec v1 = dg::evaluate( two, g);
-    MVec v2 = dg::evaluate( three, g); 
+    MVec v2 = dg::evaluate( three, g);
     MVec v3(v1);
-    MVec v4 = dg::evaluate( four, g); 
+    MVec v4 = dg::evaluate( four, g);
     unsigned gsize = g.global().n()*g.global().n()*g.global().Nx()*g.global().Ny();
 
     double temp = dg::blas1::dot(v1,v2);
-    if(rank==0)std::cout << "(2*3) = "<<temp/gsize << " (6)\n"; 
+    if(rank==0)std::cout << "(2*3) = "<<temp/gsize << " (6)\n";
     dg::blas1::axpby( 2., v1, 3., v2, v3);
     if(rank==0)std::cout << "2*2+ 3*3 = " << v3.data()[0] <<" (13)\n";
     dg::blas1::axpby( 0., v1, 3., v2, v3);
@@ -84,7 +84,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Test std::vector \n";
     std::vector<MVec > w1( 2, v1), w2(2, v2), w3( w2), w4( 2, v4);
     temp = dg::blas1::dot( w1, w2);
-    if(rank==0)std::cout << "2*(2*3) = "<<temp/gsize << " (12)\n"; 
+    if(rank==0)std::cout << "2*(2*3) = "<<temp/gsize << " (12)\n";
     dg::blas1::axpby( 2., w1, 3., w2, w3);
     if(rank==0)std::cout << "2*2+ 3*3 = " << w3[0].data()[0] <<" (13)\n";
     dg::blas1::axpby( 0., w1, 3., w2, w3);

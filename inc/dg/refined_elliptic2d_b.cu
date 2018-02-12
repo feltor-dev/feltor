@@ -17,7 +17,7 @@ const double lx = M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
-//const double eps = 1e-3; //# of pcg iterations increases very much if 
+//const double eps = 1e-3; //# of pcg iterations increases very much if
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double initial( double x, double y) {return 0.;}
@@ -36,8 +36,8 @@ double der(double x, double y)  { return cos( x)*sin(y);}
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny; 
-    unsigned n_ref, multiple_x, multiple_y; 
+    unsigned n, Nx, Ny;
+    unsigned n_ref, multiple_x, multiple_y;
     double eps;
     std::cout << "Type n, Nx and Ny and epsilon! \n";
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error

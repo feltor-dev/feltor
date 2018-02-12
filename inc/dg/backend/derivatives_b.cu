@@ -55,7 +55,7 @@ int main()
     const Vector func = dg::evaluate( siny, g);
     const Vector deri = dg::evaluate( cosy, g);
 
-    Matrix dy = dg::create::dy( g, dg::forward); 
+    Matrix dy = dg::create::dy( g, dg::forward);
     Vector temp( func);
     t.tic();
     dg::blas2::gemv( dy, func, temp);
@@ -69,7 +69,7 @@ int main()
     const Vector func = dg::evaluate( sinz, g);
     const Vector deri = dg::evaluate( cosz, g);
 
-    Matrix dz = dg::create::dz( g); 
+    Matrix dz = dg::create::dz( g);
     Vector temp( func);
     t.tic();
     dg::blas2::gemv( dz, func, temp);
@@ -82,9 +82,9 @@ int main()
     {
     const Vector func = dg::evaluate( sinx, g);
 
-    Matrix jumpX = dg::create::jumpX( g); 
-    Matrix jumpY = dg::create::jumpY( g); 
-    Matrix jumpZ = dg::create::jumpZ( g); 
+    Matrix jumpX = dg::create::jumpX( g);
+    Matrix jumpY = dg::create::jumpY( g);
+    Matrix jumpZ = dg::create::jumpZ( g);
     Vector temp( func);
     t.tic();
     dg::blas2::gemv( jumpX, func, temp);

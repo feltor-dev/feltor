@@ -5,7 +5,7 @@
 
 /*!@file
  *
- * TokamakMagneticField objects 
+ * TokamakMagneticField objects
  */
 namespace dg
 {
@@ -52,7 +52,7 @@ struct FuncDirPer
     double dR( double R, double Z)const
     {
         double psip = c_.psip()(R,Z), psipR = c_.psipR()(R,Z), theta_ = k_*theta(R,Z);
-        double result = (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos(theta_) 
+        double result = (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos(theta_)
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*k_*thetaR(R,Z);
         return 0.1*result;
     }
@@ -64,12 +64,12 @@ struct FuncDirPer
             - 2.*(2.*psip*psipR-(psi0_+psi1_)*psipR)*sin(theta_)*thetaR_
             - (psip-psi0_)*(psip-psi1_)*(k_*thetaRR(R,Z)*sin(theta_)+cos(theta_)*thetaR_*thetaR_);
         return 0.1*result;
-            
+
     }
     double dZ( double R, double Z)const
     {
         double psip = c_.psip()(R,Z), psipZ = c_.psipZ()(R,Z), theta_=k_*theta(R,Z);
-        double result = (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos(theta_) 
+        double result = (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos(theta_)
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*k_*thetaZ(R,Z);
         return 0.1*result;
     }
@@ -130,7 +130,7 @@ struct EllipticDirPerM
 struct FuncDirNeu
 {
     FuncDirNeu( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
-        psi0_(psi_0), psi1_(psi_1), 
+        psi0_(psi_0), psi1_(psi_1),
         cauchy_(R_blob, Z_blob, sigma_blob, sigma_blob, amp_blob){}
 
     double operator()(double R, double Z, double phi) const {
@@ -155,7 +155,7 @@ struct FuncDirNeu
         //double psipRR = psipRR_(R,Z);
         //return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR)+cauchy_.dxx(R,Z);
         //return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
-            
+
     }
     double dZ( double R, double Z)const
     {
@@ -203,7 +203,7 @@ struct BmodTheta
 //take BmodTheta as chi
 struct EllipticDirNeuM
 {
-    EllipticDirNeuM( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(c.R0()), 
+    EllipticDirNeuM( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): R_0_(c.R0()),
     func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob,amp_blob), bmod_(c), br_(c), bz_(c) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z), theta_ = theta(R,Z);
@@ -261,7 +261,7 @@ struct FuncXDirNeu
         double psip = c_.psip()(R,Z), psipR = c_.psipR()(R,Z);
         double psipRR = c_.psipRR()(R,Z);
         return (2.*(psipR*psipR + psip*psipRR) - (psi0_+psi1_)*psipRR);
-            
+
     }
     double dZ( double R, double Z)const
     {
@@ -282,7 +282,7 @@ struct FuncXDirNeu
 //take Bmod as chi
 struct EllipticXDirNeuM
 {
-    EllipticXDirNeuM( const TokamakMagneticField& c, double psi_0, double psi_1): R_0_(c.R0()), 
+    EllipticXDirNeuM( const TokamakMagneticField& c, double psi_0, double psi_1): R_0_(c.R0()),
     func_(c, psi_0, psi_1), bmod_(c), br_(c), bz_(c) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
@@ -308,7 +308,7 @@ struct EllipticXDirNeuM
 //take Blob and chi=1
 struct EllipticBlobDirNeuM
 {
-    EllipticBlobDirNeuM( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob): 
+    EllipticBlobDirNeuM( const TokamakMagneticField& c, double psi_0, double psi_1, double R_blob, double Z_blob, double sigma_blob, double amp_blob):
     func_(c, psi_0, psi_1, R_blob, Z_blob, sigma_blob, amp_blob){}
     double operator()(double R, double Z) const {
         return -( func_.dRR(R,Z) + func_.dZZ(R,Z) );
@@ -333,18 +333,18 @@ struct EllipticDirSimpleM
 };
 
 /**
- * @brief testfunction to test the parallel derivative 
+ * @brief testfunction to test the parallel derivative
       \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
- */ 
+ */
 struct TestFunction
 {
-    TestFunction( const TokamakMagneticField& c) :  
+    TestFunction( const TokamakMagneticField& c) :
         bhatR_(c),
         bhatZ_(c),
         bhatP_(c) {}
     /**
      * @brief \f[ f(R,Z,\varphi) = -\frac{\cos(\varphi)}{R\hat b_\varphi} \f]
-     */ 
+     */
     double operator()( double R, double Z, double phi)const
     {
 //         return psip_(R,Z,phi)*sin(phi);
@@ -371,7 +371,7 @@ struct TestFunction
 /**
  * @brief analyitcal solution of the parallel derivative of the testfunction
  *  \f[ \nabla_\parallel(R,Z,\varphi) f = \frac{\sin(\varphi)}{R}\f]
- */ 
+ */
 struct DeriTestFunction
 {
     DeriTestFunction( const TokamakMagneticField& c) :
@@ -380,8 +380,8 @@ struct DeriTestFunction
         bhatP_(c) {}
 /**
  * @brief \f[ \nabla_\parallel f = \frac{\sin(\varphi)}{R}\f]
- */ 
-    double operator()( double R, double Z, double phi)const 
+ */
+    double operator()( double R, double Z, double phi)const
     {
 //         double Rmin = gp_.R_0-(p_.boxscaleRm)*gp_.a;
 //         double Rmax = gp_.R_0+(p_.boxscaleRp)*gp_.a;
@@ -407,7 +407,7 @@ struct DeriTestFunction
     dg::geo::BHatP bhatP_;
 };
 
-///@} 
+///@}
 ///@endcond
 //
 } //namespace functors

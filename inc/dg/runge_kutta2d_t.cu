@@ -59,9 +59,9 @@ int main()
     std::cout << "Norm of error is "<<sqrt(dg::blas2::dot( w2d, y0[0]))<<"\n"; //never forget the sqrt when computing errors
     //n = 1 -> p = 2 ( as it should be )
     //n = 2 -> p = 1 (is error dominated by error for dx(phi)?
-    //n = 3 -> p = 3 
+    //n = 3 -> p = 3
     //n = 4 -> p = 3
-    //n = 5 -> p = 5 
+    //n = 5 -> p = 5
 
 
     return 0;

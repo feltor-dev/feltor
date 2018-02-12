@@ -23,7 +23,7 @@ double laplace_fct( double x, double y, double z) { return 2*sin(y)*sin(x)*sin(2
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( bcx, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     int rank;
@@ -42,7 +42,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Create Laplacian\n";
     dg::Timer t;
     t.tic();
-    dg::Elliptic<dg::CartesianMPIGrid3d, dg::MDMatrix, dg::MDVec> A ( grid, dg::not_normed); 
+    dg::Elliptic<dg::CartesianMPIGrid3d, dg::MDMatrix, dg::MDVec> A ( grid, dg::not_normed);
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
 
@@ -52,7 +52,7 @@ int main( int argc, char* argv[])
     dg::MDVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
-    
+
     t.tic();
     int number = pcg( A, x, b, v3d, eps);
     t.toc();

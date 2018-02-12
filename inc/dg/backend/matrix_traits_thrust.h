@@ -15,22 +15,22 @@ namespace dg{
 template< class T>
 struct MatrixTraits<thrust::host_vector<T> > {
     typedef T value_type;
-    typedef ThrustMatrixTag matrix_category; 
+    typedef ThrustMatrixTag matrix_category;
 };
 template< class T>
 struct MatrixTraits<thrust::device_vector<T> > {
     typedef T value_type;
-    typedef ThrustMatrixTag matrix_category; 
+    typedef ThrustMatrixTag matrix_category;
 };
 template< class T>
 struct MatrixTraits<const thrust::host_vector<T> > {
     typedef T value_type;
-    typedef ThrustMatrixTag matrix_category; 
+    typedef ThrustMatrixTag matrix_category;
 };
 template< class T>
 struct MatrixTraits<const thrust::device_vector<T> > {
     typedef T value_type;
-    typedef ThrustMatrixTag matrix_category; 
+    typedef ThrustMatrixTag matrix_category;
 };
 ///@endcond
 

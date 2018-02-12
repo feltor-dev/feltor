@@ -6,7 +6,7 @@
 
 namespace dg{
 
-/*! @brief The vector traits 
+/*! @brief The vector traits
 
 Specialize this struct if you want to enable your own vector/container class for the use in blas1 functions
 */

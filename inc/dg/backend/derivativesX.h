@@ -3,7 +3,7 @@
 #include "gridX.h"
 #include "dxX.h"
 
-/*! @file 
+/*! @file
   @brief Convenience functions to create 2D derivatives on X-point topology
   */
 namespace dg{
@@ -17,7 +17,7 @@ struct Composite
     Composite( const Matrix& m):m1(m), m2(m), dual(false){ }
     Composite( const Matrix& m1, const Matrix& m2):m1(m1), m2(m2), dual(true){ }
     template<class Matrix2>
-    Composite& operator=( const Composite<Matrix2>& src){ Composite c(src); 
+    Composite& operator=( const Composite<Matrix2>& src){ Composite c(src);
         *this = c; return *this;}
     template< class container>
     void symv( const  container& v1, container& v2) const
@@ -85,7 +85,7 @@ namespace create{
  * @param bcx The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > dx( const aTopologyX2d& g, bc bcx, direction dir = centered)
 {
@@ -139,7 +139,7 @@ Composite<EllSparseBlockMat<double> > dy( const aTopologyX2d& g, bc bcy, directi
  * @param g The grid on which to create dy (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > dy( const aTopologyX2d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
@@ -149,7 +149,7 @@ Composite<EllSparseBlockMat<double> > dy( const aTopologyX2d& g, direction dir =
  * @param g grid
  * @param bcx boundary condition in x
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX2d& g, bc bcx)
 {
@@ -166,7 +166,7 @@ Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX2d& g, bc bcx)
  * @param g grid
  * @param bcy boundary condition in y
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX2d& g, bc bcy)
 {
@@ -191,7 +191,7 @@ Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX2d& g, bc bcy)
  *
  * @param g grid
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX2d& g)
 {
@@ -203,7 +203,7 @@ Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX2d& g)
  *
  * @param g grid
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX2d& g)
 {
@@ -218,7 +218,7 @@ Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX2d& g)
  * @param g The 3D grid
  * @param bcx boundary condition in x
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX3d& g, bc bcx)
 {
@@ -235,7 +235,7 @@ Composite<EllSparseBlockMat<double> > jumpX( const aTopologyX3d& g, bc bcx)
  * @param g The 3D grid
  * @param bcy boundary condition in y
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX3d& g, bc bcy)
 {
@@ -263,7 +263,7 @@ Composite<EllSparseBlockMat<double> > jumpY( const aTopologyX3d& g, bc bcy)
  * @param g The 3D grid
  * @param bcz boundary condition in z
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > jumpZ( const aTopologyX3d& g, bc bcz)
 {
@@ -318,7 +318,7 @@ Composite<EllSparseBlockMat<double> > jumpZ( const aTopologyX3d& g)
  * @param bcx The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > dx( const aTopologyX3d& g, bc bcx, direction dir = centered)
 {
@@ -335,7 +335,7 @@ Composite<EllSparseBlockMat<double> > dx( const aTopologyX3d& g, bc bcx, directi
  * @param g The grid on which to create dx (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > dx( const aTopologyX3d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
@@ -346,7 +346,7 @@ Composite<EllSparseBlockMat<double> > dx( const aTopologyX3d& g, direction dir =
  * @param bcy The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > dy( const aTopologyX3d& g, bc bcy, direction dir = centered)
 {
@@ -374,7 +374,7 @@ Composite<EllSparseBlockMat<double> > dy( const aTopologyX3d& g, bc bcy, directi
  * @param g The grid on which to create dy (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > dy( const aTopologyX3d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
@@ -385,7 +385,7 @@ Composite<EllSparseBlockMat<double> > dy( const aTopologyX3d& g, direction dir =
  * @param bcz The boundary condition
  * @param dir The direction of the stencil
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > dz( const aTopologyX3d& g, bc bcz, direction dir = centered)
 {
@@ -403,7 +403,7 @@ Composite<EllSparseBlockMat<double> > dz( const aTopologyX3d& g, bc bcz, directi
  * @param g The grid on which to create dz (boundary condition is taken from here)
  * @param dir The direction of the stencil
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 Composite<EllSparseBlockMat<double> > dz( const aTopologyX3d& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 

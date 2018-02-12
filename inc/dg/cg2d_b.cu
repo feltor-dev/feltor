@@ -26,11 +26,11 @@ double initial( double x, double y) {return sin(0);}
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
     std::cout << "Type in eps\n";
-    double eps = 1e-6; //# of pcg iterations increases very much if 
+    double eps = 1e-6; //# of pcg iterations increases very much if
     std::cin >> eps;
 
     dg::Grid2d grid( 0., lx, 0, ly, n, Nx, Ny, bcx, dg::PER);
@@ -73,10 +73,10 @@ int main()
     std::cout << "L2 Norm of relative error is: " <<sqrt( normerr/norm)<<std::endl;
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
-    normerr = dg::blas2::dot( w2d, error); 
+    normerr = dg::blas2::dot( w2d, error);
     norm = dg::blas2::dot( w2d, deriv);
     std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
-    //both functiona and derivative converge with order P 
+    //both functiona and derivative converge with order P
 
     return 0;
 }

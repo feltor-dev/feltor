@@ -21,7 +21,7 @@ typedef dg::MDMatrix Matrix;
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( dg::PER, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     int rank;
@@ -41,7 +41,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Sizeof value type is "<<sizeof(double)<<"\n";
     double gbytes=(double)grid.global().size()*sizeof(double)/1e9;
     if(rank==0)std::cout << "Sizeof vectors is "<<gbytes<<" GB\n";
-    dg::MultiMatrix<Matrix, Vector> inter, project; 
+    dg::MultiMatrix<Matrix, Vector> inter, project;
     dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
     dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
 

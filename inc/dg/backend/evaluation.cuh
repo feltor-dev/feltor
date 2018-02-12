@@ -1,11 +1,11 @@
 #pragma once
 
-#include <cassert> 
+#include <cassert>
 #include <thrust/host_vector.h>
 #include "grid.h"
 #include "weights.cuh"
 
-/*! @file 
+/*! @file
   @brief Function discretization routines
   */
 namespace dg

@@ -13,16 +13,16 @@ namespace dg
 *
 * @ingroup sparsematrix
 * The basis of this format is the ell sparse matrix format, i.e. a format
-where the numer of entries per line is fixed. 
-* The clue is that instead of a values array we use an index array with 
+where the numer of entries per line is fixed.
+* The clue is that instead of a values array we use an index array with
 indices into a data array that contains the actual blocks. This safes storage if the number
-of nonrecurrent blocks is small. 
+of nonrecurrent blocks is small.
 The indices and blocks are those of a one-dimensional problem. When we want
-to apply the matrix to a multidimensional vector we can multiply it by 
+to apply the matrix to a multidimensional vector we can multiply it by
 Kronecker deltas of the form
 \f[  1\otimes M \otimes 1\f]
 where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
-one-dimensional matrix. 
+one-dimensional matrix.
 */
 template<class value_type>
 struct EllSparseBlockMat
@@ -58,7 +58,7 @@ struct EllSparseBlockMat
         n = src.n, left_size = src.left_size, right_size = src.right_size;
         right_range = src.right_range;
     }
-    
+
     typedef thrust::host_vector<int> IVec;//!< typedef for easy programming
     /**
     * @brief Apply the matrix to a vector
@@ -81,21 +81,21 @@ struct EllSparseBlockMat
     /**
      * @brief Sets ranges from 0 to left_size and 0 to right_size
      */
-    void set_default_range(){ 
-        right_range[0]=0; 
+    void set_default_range(){
+        right_range[0]=0;
         right_range[1]=right_size;
     }
-    
+
     thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks. The first block is contained in the first n*n elements, then comes the next block, etc.
     IVec cols_idx; //!< is of size num_block_rows*num_blocks_per_line and contains the column indices % n into the vector
-    IVec data_idx; //!< has the same size as cols_idx and contains indices into the data array, i.e. the block number 
+    IVec data_idx; //!< has the same size as cols_idx and contains indices into the data array, i.e. the block number
     int num_rows; //!< number of block rows, each row contains blocks ( total number of rows is num_rows*n*left_size*right_size
     int num_cols; //!< number of block columns (total number of columns is num_cols*n*left_size*right_size
     int blocks_per_line; //!< number of blocks in each line
     int n;  //!< each block has size n*n
     int left_size; //!< size of the left Kronecker delta
     int right_size; //!< size of the right Kronecker delta (is e.g 1 for a x - derivative)
-    IVec right_range; //!< range 
+    IVec right_range; //!< range
 
     /**
     * @brief Display internal data to a stream
@@ -111,17 +111,17 @@ struct EllSparseBlockMat
 *
 * @ingroup sparsematrix
 * The basis of this format is the well-known coordinate sparse matrix format.
-* The clue is that instead of a values array we use an index array with 
+* The clue is that instead of a values array we use an index array with
 indices into a data array that contains the actual blocks. This safes storage if the number
-of nonrecurrent blocks is small. 
+of nonrecurrent blocks is small.
 The indices and blocks are those of a one-dimensional problem. When we want
-to apply the matrix to a multidimensional vector we can multiply it by 
+to apply the matrix to a multidimensional vector we can multiply it by
 Kronecker deltas of the form
 \f[  1\otimes M \otimes 1\f]
 where \f$ 1\f$ are diagonal matrices of variable size and \f$ M\f$ is our
-one-dimensional matrix. 
-@note This matrix type is used for the computation of boundary points in 
-mpi - distributed matrices 
+one-dimensional matrix.
+@note This matrix type is used for the computation of boundary points in
+mpi - distributed matrices
 */
 template<class value_type>
 struct CooSparseBlockMat
@@ -162,7 +162,7 @@ struct CooSparseBlockMat
 
         num_entries++;
     }
-    
+
     typedef thrust::host_vector<int> IVec;//!< typedef for easy programming
     /**
     * @brief Apply the matrix to a vector
@@ -179,10 +179,10 @@ struct CooSparseBlockMat
     * @param os the output stream
     */
     void display(std::ostream& os = std::cout) const;
-    
+
     thrust::host_vector<value_type> data;//!< The data array is of size n*n*num_different_blocks and contains the blocks
-    IVec cols_idx; //!< is of size num_block_rows and contains the column indices 
-    IVec rows_idx; //!< is of size num_block_rows and contains the row 
+    IVec cols_idx; //!< is of size num_block_rows and contains the column indices
+    IVec rows_idx; //!< is of size num_block_rows and contains the row
     IVec data_idx; //!< has the same size as cols_idx and contains indices into the data array
     int num_rows; //!< number of rows, each row contains blocks
     int num_cols; //!< number of columns
@@ -246,7 +246,7 @@ void EllSparseBlockMat<T>::display( std::ostream& os) const
         os << "\n";
     }
     os << std::endl;
-    
+
 }
 
 template<class value_type>
@@ -269,7 +269,7 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os) const
     for( int i=0; i<num_entries; i++)
         os << data_idx[i] <<" ";
     os << std::endl;
-    
+
 }
 template<class value_type>
 void CooSparseBlockMat<value_type>::symv( value_type alpha, const thrust::host_vector<value_type>& x, value_type beta, thrust::host_vector<value_type>& y) const

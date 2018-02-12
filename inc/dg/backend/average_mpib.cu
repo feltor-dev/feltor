@@ -17,14 +17,14 @@ const double ly = M_PI;
 double function( double x, double y) {return cos(x)*sin(y);}
 double pol_average( double x, double y) {return cos(x)*2./M_PI;}
 
-dg::bc bcx = dg::PER; 
+dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
 
     MPI_Comm comm;
     mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
 
     dg::MPIGrid2d g( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     dg::Timer t;
- 
+
 
     if(rank==0)std::cout << "constructing polavg" << std::endl;
     dg::PoloidalAverage<dg::MDVec,dg::MDVec > pol(g);

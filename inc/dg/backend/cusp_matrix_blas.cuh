@@ -27,10 +27,10 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixT
     cusp::convert(x,y);
 }
 template< class Matrix, class Vector>
-inline void doSymv( Matrix& m, 
-                    const Vector&x, 
-                    Vector& y, 
-                    CuspMatrixTag, 
+inline void doSymv( Matrix& m,
+                    const Vector&x,
+                    Vector& y,
+                    CuspMatrixTag,
                     ThrustVectorTag,
                     ThrustVectorTag, cusp::csr_format  )
 {
@@ -43,7 +43,7 @@ inline void doSymv( Matrix& m,
     const index_type* RESTRICT row_ptr = thrust::raw_pointer_cast( &m.row_offsets[0]);
     const index_type* RESTRICT col_ptr = thrust::raw_pointer_cast( &m.column_indices[0]);
     int rows = m.num_rows;
-    #pragma omp parallel for 
+    #pragma omp parallel for
     for(int i = 0; i < rows; i++)
     {
         value_type temp = 0.;
@@ -63,12 +63,12 @@ inline void doSymv( Matrix& m,
 }
 
 template< class Matrix, class Vector>
-inline void doSymv( Matrix& m, 
-                    const Vector&x, 
-                    Vector& y, 
-                    CuspMatrixTag, 
+inline void doSymv( Matrix& m,
+                    const Vector&x,
+                    Vector& y,
+                    CuspMatrixTag,
                     ThrustVectorTag,
-                    ThrustVectorTag, 
+                    ThrustVectorTag,
                     cusp::sparse_format  )
 {
     cusp::array1d_view< typename Vector::const_iterator> cx( x.cbegin(), x.cend());
@@ -77,10 +77,10 @@ inline void doSymv( Matrix& m,
 }
 
 template< class Matrix, class Vector>
-inline void doSymv( Matrix& m, 
-                    const Vector&x, 
-                    Vector& y, 
-                    CuspMatrixTag, 
+inline void doSymv( Matrix& m,
+                    const Vector&x,
+                    Vector& y,
+                    CuspMatrixTag,
                     ThrustVectorTag,
                     ThrustVectorTag  )
 {
@@ -92,10 +92,10 @@ inline void doSymv( Matrix& m,
 }
 
 template< class Matrix, class Vector>
-inline void doSymv( Matrix& m, 
-                    const Vector&x, 
-                    Vector& y, 
-                    CuspMatrixTag, 
+inline void doSymv( Matrix& m,
+                    const Vector&x,
+                    Vector& y,
+                    CuspMatrixTag,
                     CuspVectorTag,
                     CuspVectorTag  )
 {
@@ -107,10 +107,10 @@ inline void doSymv( Matrix& m,
 }
 
 template< class Matrix, class Vector>
-inline void doGemv( Matrix& m, 
-                    const Vector&x, 
-                    Vector& y, 
-                    CuspMatrixTag, 
+inline void doGemv( Matrix& m,
+                    const Vector&x,
+                    Vector& y,
+                    CuspMatrixTag,
                     ThrustVectorTag,
                     ThrustVectorTag  )
 {
@@ -118,10 +118,10 @@ inline void doGemv( Matrix& m,
 }
 
 template< class Matrix, class Vector>
-inline void doGemv( Matrix& m, 
-                    const Vector&x, 
-                    Vector& y, 
-                    CuspMatrixTag, 
+inline void doGemv( Matrix& m,
+                    const Vector&x,
+                    Vector& y,
+                    CuspMatrixTag,
                     CuspVectorTag,
                     CuspVectorTag  )
 {

@@ -23,7 +23,7 @@ namespace dg{
  * @copydoc hide_geometry_matrix_container
  * @attention The Laplacian in this formula is positive as opposed to the negative sign in the \c Elliptic operator
  */
-template< class Geometry, class Matrix, class container> 
+template< class Geometry, class Matrix, class container>
 struct Helmholtz
 {
     ///@brief empty object ( no memory allocation)
@@ -38,7 +38,7 @@ struct Helmholtz
      * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
      */
     Helmholtz( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
-    { 
+    {
         construct( g, alpha, dir, jfactor);
     }
     /**
@@ -53,22 +53,22 @@ struct Helmholtz
      * @note The default value of \f$\chi\f$ is one
      */
     Helmholtz( const Geometry& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
-    { 
+    {
         construct( g, bcx, bcy, alpha, dir, jfactor);
     }
     ///@copydoc Helmholtz::Helmholtz(const Geometry&,bc,bc,double,direction,double)
-    void construct( const Geometry& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.) 
+    void construct( const Geometry& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         laplaceM_.construct( g, bcx, bcy, dg::normed, dir, jfactor);
         dg::blas1::transfer( dg::evaluate( dg::one, g), temp_);
-        alpha_ = alpha; 
+        alpha_ = alpha;
     }
     ///@copydoc Helmholtz::Helmholtz(const Geometry&,double,direction,double)
-    void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.) 
+    void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         laplaceM_.construct( g, dg::normed, dir, jfactor);
         dg::blas1::transfer( dg::evaluate( dg::one, g), temp_);
-        alpha_ = alpha; 
+        alpha_ = alpha;
     }
     /**
      * @brief apply operator
@@ -79,7 +79,7 @@ struct Helmholtz
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
      */
-    void symv( const container& x, container& y) 
+    void symv( const container& x, container& y)
     {
         if( alpha_ != 0)
             blas2::symv( laplaceM_, x, y);
@@ -140,8 +140,8 @@ struct Helmholtz
  *
  * @ingroup matrixoperators
  *
- * Unnormed discretization of 
- * \f[ \left[ \chi +2 \alpha\Delta +  \alpha^2\Delta \left(\chi^{-1}\Delta \right)\right] \f] 
+ * Unnormed discretization of
+ * \f[ \left[ \chi +2 \alpha\Delta +  \alpha^2\Delta \left(\chi^{-1}\Delta \right)\right] \f]
  * where \f$ \chi\f$ is a function and \f$\alpha\f$ a scalar.
  * Can be used by the Invert class
  * @copydoc hide_geometry_matrix_container
@@ -150,7 +150,7 @@ struct Helmholtz
  * consecutively, than solving the \c Helmholtz2 operator once. The following code snippet shows how to do it:
  @snippet helmholtzg2_b.cu doxygen
  */
-template< class Geometry, class Matrix, class container> 
+template< class Geometry, class Matrix, class container>
 struct Helmholtz2
 {
     /**
@@ -163,10 +163,10 @@ struct Helmholtz2
      * @note The default value of \f$\chi\f$ is one
      */
     Helmholtz2( const Geometry& g, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
-        laplaceM_(g, normed, dir, jfactor), 
+        laplaceM_(g, normed, dir, jfactor),
         temp1_(dg::evaluate(dg::one, g)),temp2_(temp1_), chi_(temp1_),
         alpha_(alpha)
-    { 
+    {
     }
     /**
      * @brief Construct \c Helmholtz2 operator
@@ -180,10 +180,10 @@ struct Helmholtz2
      * @note The default value of \f$\chi\f$ is one
      */
     Helmholtz2( const Geometry& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.):
-        laplaceM_(g, bcx,bcy,normed, dir, jfactor), 
+        laplaceM_(g, bcx,bcy,normed, dir, jfactor),
         temp1_(dg::evaluate(dg::one, g)), temp2_(temp1_),chi_(temp1_),
         alpha_(alpha)
-    { 
+    {
     }
     /**
      * @brief apply operator
@@ -194,16 +194,16 @@ struct Helmholtz2
      * @param y rhs contains solution
      * @note Takes care of sign in laplaceM and thus multiplies by -alpha
      */
-    void symv(const container& x, container& y) 
+    void symv(const container& x, container& y)
     {
         if( alpha_ != 0)
         {
             blas2::symv( laplaceM_, x, temp1_); // temp1_ = -nabla_perp^2 x
             tensor::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*W*nabla_perp^2 x
-            blas2::symv( laplaceM_, y, temp2_);//temp2_ = nabla_perp^2 *(chi^-1)*nabla_perp^2 x            
+            blas2::symv( laplaceM_, y, temp2_);//temp2_ = nabla_perp^2 *(chi^-1)*nabla_perp^2 x
         }
         tensor::pointwiseDot( chi_, x, y); //y = chi*x
-        blas1::axpby( 1., y, -2.*alpha_, temp1_, y); 
+        blas1::axpby( 1., y, -2.*alpha_, temp1_, y);
         blas1::axpby( alpha_*alpha_, temp2_, 1., y, y);
         blas2::symv( laplaceM_.weights(), y, y);//Helmholtz is never normed
     }

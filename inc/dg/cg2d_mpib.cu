@@ -29,7 +29,7 @@ double initial( double x, double y) {return sin(0);}
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     MPI_Comm comm;
     dg::mpi_init2d( bcx, dg::PER, n, Nx, Ny, comm);
     int rank;
@@ -79,7 +79,7 @@ int main( int argc, char* argv[])
     dg::MDMatrix DX = dg::create::dx( grid);
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
-    normerr = dg::blas2::dot( w2d, error); 
+    normerr = dg::blas2::dot( w2d, error);
     norm = dg::blas2::dot( w2d, deriv);
     if(rank==0)std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
 

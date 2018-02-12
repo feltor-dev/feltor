@@ -23,13 +23,13 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[((i*g.n() + k)*g.Nx() + j)*g.n()+l];
     for( unsigned i=g.Ny()-1; i<g.Ny(); i++)
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[((0*g.n() + k)*g.Nx() + j)*g.n()+l];
     return out;
 }
@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
 {
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
+    std::cin >> n>> Nx>>Ny>>Nz;
     Json::Reader reader;
     Json::Value js;
     if( argc==1)
@@ -71,7 +71,7 @@ int main( int argc, char* argv[])
     dg::geo::SimpleOrthogonal generator( psip, psi_0, psi_1, gp.R_0, 0., 0);
     dg::geo::CurvilinearProductGrid3d g3d(generator, n, Nx, Ny,Nz, dg::DIR);
     std::unique_ptr<dg::aGeometry2d> g2d( g3d.perp_grid());
-    dg::Grid2d g2d_periodic(g2d->x0(), g2d->x1(), g2d->y0(), g2d->y1(), g2d->n(), g2d->Nx(), g2d->Ny()+1); 
+    dg::Grid2d g2d_periodic(g2d->x0(), g2d->x1(), g2d->y0(), g2d->y1(), g2d->n(), g2d->Nx(), g2d->Ny()+1);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;

@@ -9,7 +9,7 @@ struct AnyMatrixTag{};
 struct CuspMatrixTag: public AnyMatrixTag {};
 
 /// indicates that the \c Matrix type has the \c void \c symv( const Vector&, Vector& ) member function.
-struct SelfMadeMatrixTag {}; 
+struct SelfMadeMatrixTag {};
 
 struct MPIMatrixTag: public AnyMatrixTag {};
 

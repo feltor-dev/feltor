@@ -2,7 +2,7 @@
 #include <string>
 #include "backend/exceptions.h"
 
-/*! @file 
+/*! @file
   @brief enums
   */
 
@@ -10,10 +10,10 @@ namespace dg
 {
 /**
  * @brief Switch between boundary conditions
- * 
+ *
  * @ingroup creation
  */
-enum bc{ 
+enum bc{
     PER = 0, //!< periodic boundaries
     DIR = 1, //!< homogeneous dirichlet boundaries
     DIR_NEU = 2, //!< Dirichlet on left, Neumann on right boundary
@@ -25,7 +25,7 @@ enum bc{
 /**
  * @brief write a string describing boundary condition to an output stream
  *
- * converts 
+ * converts
  * - dg::PER to PERIODIC
  * - dg::DIR to DIRICHLET
  * - dg::NEU to NEUMANN
@@ -46,7 +46,7 @@ std::string bc2str( bc bcx)
         case(dg::NEU): s = "NEUMANN"; break;
         case(dg::DIR_NEU): s = "DIR_NEU"; break;
         case(dg::NEU_DIR): s = "NEU_DIR"; break;
-        default: s = "Not specified!!"; 
+        default: s = "Not specified!!";
     }
     return s;
 }
@@ -54,7 +54,7 @@ std::string bc2str( bc bcx)
 /**
  * @brief convert a string to a bc
  *
- * converts 
+ * converts
  * - PER, per, periodic, PERIODIC and Periodic to dg::PER
  * - DIR, dir, dirichlet, DIRICHLET and Dirichlet to dg::DIR
  * - NEU, neu, neumann, NEUMANN and Neumann to dg::NEU

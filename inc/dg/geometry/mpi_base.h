@@ -72,8 +72,8 @@ struct aMPIGeometry3d : public aMPITopology3d
         return do_compute_jacobian();
     }
     ///@copydoc aGeometry3d::metric()
-    SparseTensor<host_vector > metric()const { 
-        return do_compute_metric(); 
+    SparseTensor<host_vector > metric()const {
+        return do_compute_metric();
     }
     ///@copydoc aGeometry3d::map()
     std::vector<host_vector > map()const{
@@ -166,10 +166,10 @@ struct CartesianMPIGrid2d : public aMPIGeometry2d
     CartesianMPIGrid2d( const dg::MPIGrid2d& g): aMPIGeometry2d( g.global().x0(),g.global().x1(),g.global().y0(),g.global().y1(),g.global().n(),g.global().Nx(),g.global().Ny(),g.global().bcx(),g.global().bcy(),g.communicator()){}
     virtual CartesianMPIGrid2d* clone()const{return new CartesianMPIGrid2d(*this);}
     virtual CartesianGrid2d* global_geometry()const{
-        return new CartesianGrid2d( 
-                global().x0(), global().x1(), 
-                global().y0(), global().y1(), 
-                global().n(), global().Nx(), global().Ny(),  
+        return new CartesianGrid2d(
+                global().x0(), global().x1(),
+                global().y0(), global().y1(),
+                global().n(), global().Nx(), global().Ny(),
                 global().bcx(), global().bcy());
     }
     private:
@@ -199,16 +199,16 @@ struct CartesianMPIGrid3d : public aProductMPIGeometry3d
     CartesianMPIGrid3d( const dg::MPIGrid3d& g): aProductMPIGeometry3d( g.global().x0(),g.global().x1(),g.global().y0(),g.global().y1(),g.global().z0(),g.global().z1(),g.global().n(),g.global().Nx(),g.global().Ny(),g.global().Nz(),g.global().bcx(),g.global().bcy(),g.global().bcz(),g.communicator()){}
     virtual CartesianMPIGrid3d* clone()const{return new CartesianMPIGrid3d(*this);}
     virtual CartesianGrid3d* global_geometry()const{
-        return new CartesianGrid3d( 
-                global().x0(), global().x1(), 
-                global().y0(), global().y1(), 
-                global().z0(), global().z1(), 
-                global().n(), global().Nx(), global().Ny(), global().Nz(), 
+        return new CartesianGrid3d(
+                global().x0(), global().x1(),
+                global().y0(), global().y1(),
+                global().z0(), global().z1(),
+                global().n(), global().Nx(), global().Ny(), global().Nz(),
                 global().bcx(), global().bcy(), global().bcz());
     }
 
     private:
-    virtual CartesianMPIGrid2d* do_perp_grid()const{ 
+    virtual CartesianMPIGrid2d* do_perp_grid()const{
         return new CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( ));
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
@@ -236,15 +236,15 @@ struct CylindricalMPIGrid3d: public aProductMPIGeometry3d
 
     virtual CylindricalMPIGrid3d* clone()const{return new CylindricalMPIGrid3d(*this);}
     virtual CylindricalGrid3d* global_geometry()const{
-        return new CylindricalGrid3d( 
-                global().x0(), global().x1(), 
-                global().y0(), global().y1(), 
-                global().z0(), global().z1(), 
-                global().n(), global().Nx(), global().Ny(), global().Nz(), 
+        return new CylindricalGrid3d(
+                global().x0(), global().x1(),
+                global().y0(), global().y1(),
+                global().z0(), global().z1(),
+                global().n(), global().Nx(), global().Ny(), global().Nz(),
                 global().bcx(), global().bcy(), global().bcz());
     }
     private:
-    virtual CartesianMPIGrid2d* do_perp_grid()const{ 
+    virtual CartesianMPIGrid2d* do_perp_grid()const{
         return new CartesianMPIGrid2d( global().x0(), global().x1(), global().y0(), global().y1(), global().n(), global().Nx(), global().Ny(), global().bcx(), global().bcy(), get_perp_comm( ));
     }
     virtual SparseTensor<host_vector > do_compute_metric()const{

@@ -9,7 +9,7 @@ namespace geo {
 
  \f[ x = r \cos(\eta) \\
      y = r \sin(\eta) \f]
-     with \f$ r = \zeta + r_{min}\f$ 
+     with \f$ r = \zeta + r_{min}\f$
  * @ingroup generators_geo
 */
 struct PolarGenerator : public aGenerator2d
@@ -29,14 +29,14 @@ struct PolarGenerator : public aGenerator2d
     virtual PolarGenerator* clone() const{return new PolarGenerator(*this); }
 
     private:
-    void do_generate( 
-         const thrust::host_vector<double>& zeta1d, 
-         const thrust::host_vector<double>& eta1d, 
-         thrust::host_vector<double>& x, 
-         thrust::host_vector<double>& y, 
-         thrust::host_vector<double>& zetaX, 
-         thrust::host_vector<double>& zetaY, 
-         thrust::host_vector<double>& etaX, 
+    void do_generate(
+         const thrust::host_vector<double>& zeta1d,
+         const thrust::host_vector<double>& eta1d,
+         thrust::host_vector<double>& x,
+         thrust::host_vector<double>& y,
+         thrust::host_vector<double>& zetaX,
+         thrust::host_vector<double>& zetaY,
+         thrust::host_vector<double>& etaX,
          thrust::host_vector<double>& etaY) const {
 
         int size_r   = zeta1d.size();
@@ -63,7 +63,7 @@ struct PolarGenerator : public aGenerator2d
             }
 
     }
-   
+
     double do_width() const{return r_max-r_min;}
     double do_height() const{return 2*M_PI;}
     bool do_isOrthogonal() const{return true;}
@@ -71,11 +71,11 @@ struct PolarGenerator : public aGenerator2d
 
 
 /**
-* @brief Log Polar coordinates (conformal) 
+* @brief Log Polar coordinates (conformal)
 
  \f[ x = \exp(l) \cos(\eta) \\
      y = \exp(l) \sin(\eta) \f]
-     with \f$ l = \zeta + \log (r_{min})\f$ 
+     with \f$ l = \zeta + \log (r_{min})\f$
  * @ingroup generators_geo
 */
 struct LogPolarGenerator : public aGenerator2d

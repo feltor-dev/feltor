@@ -3,7 +3,7 @@
 #include "grid.h"
 #include "dx.h"
 
-/*! @file 
+/*! @file
   @brief Convenience functions to create 2D derivatives
   */
 
@@ -27,7 +27,7 @@ namespace create{
  * @param bcx The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> dx( const aTopology2d& g, bc bcx, direction dir = centered)
 {
@@ -73,7 +73,7 @@ EllSparseBlockMat<double> dy( const aTopology2d& g, bc bcy, direction dir = cent
  * @param g The grid on which to create dy (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> dy( const aTopology2d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
@@ -83,7 +83,7 @@ EllSparseBlockMat<double> dy( const aTopology2d& g, direction dir = centered){ r
  * @param g grid
  * @param bcx boundary condition in x
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> jumpX( const aTopology2d& g, bc bcx)
 {
@@ -100,7 +100,7 @@ EllSparseBlockMat<double> jumpX( const aTopology2d& g, bc bcx)
  * @param g grid
  * @param bcy boundary condition in y
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> jumpY( const aTopology2d& g, bc bcy)
 {
@@ -116,7 +116,7 @@ EllSparseBlockMat<double> jumpY( const aTopology2d& g, bc bcy)
  *
  * @param g grid
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> jumpX( const aTopology2d& g)
 {
@@ -128,7 +128,7 @@ EllSparseBlockMat<double> jumpX( const aTopology2d& g)
  *
  * @param g grid
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> jumpY( const aTopology2d& g)
 {
@@ -143,7 +143,7 @@ EllSparseBlockMat<double> jumpY( const aTopology2d& g)
  * @param g The 3D grid
  * @param bcx boundary condition in x
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> jumpX( const aTopology3d& g, bc bcx)
 {
@@ -160,7 +160,7 @@ EllSparseBlockMat<double> jumpX( const aTopology3d& g, bc bcx)
  * @param g The 3D grid
  * @param bcy boundary condition in y
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> jumpY( const aTopology3d& g, bc bcy)
 {
@@ -178,7 +178,7 @@ EllSparseBlockMat<double> jumpY( const aTopology3d& g, bc bcy)
  * @param g The 3D grid
  * @param bcz boundary condition in z
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> jumpZ( const aTopology3d& g, bc bcz)
 {
@@ -233,7 +233,7 @@ EllSparseBlockMat<double> jumpZ( const aTopology3d& g)
  * @param bcx The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> dx( const aTopology3d& g, bc bcx, direction dir = centered)
 {
@@ -250,7 +250,7 @@ EllSparseBlockMat<double> dx( const aTopology3d& g, bc bcx, direction dir = cent
  * @param g The grid on which to create dx (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> dx( const aTopology3d& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
@@ -261,7 +261,7 @@ EllSparseBlockMat<double> dx( const aTopology3d& g, direction dir = centered) { 
  * @param bcy The boundary condition
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> dy( const aTopology3d& g, bc bcy, direction dir = centered)
 {
@@ -279,7 +279,7 @@ EllSparseBlockMat<double> dy( const aTopology3d& g, bc bcy, direction dir = cent
  * @param g The grid on which to create dy (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> dy( const aTopology3d& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
@@ -290,7 +290,7 @@ EllSparseBlockMat<double> dy( const aTopology3d& g, direction dir = centered){ r
  * @param bcz The boundary condition
  * @param dir The direction of the stencil
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> dz( const aTopology3d& g, bc bcz, direction dir = centered)
 {
@@ -308,7 +308,7 @@ EllSparseBlockMat<double> dz( const aTopology3d& g, bc bcz, direction dir = cent
  * @param g The grid on which to create dz (boundary condition is taken from here)
  * @param dir The direction of the stencil
  *
- * @return A host matrix 
+ * @return A host matrix
  */
 EllSparseBlockMat<double> dz( const aTopology3d& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 

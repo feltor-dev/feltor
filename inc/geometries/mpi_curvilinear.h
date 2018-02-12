@@ -17,7 +17,7 @@ namespace geo
 {
 
 ///@cond
-struct CurvilinearProductMPIGrid3d; 
+struct CurvilinearProductMPIGrid3d;
 ///@endcond
 //
 ///@addtogroup grids
@@ -29,22 +29,22 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
 {
     /// @copydoc hide_grid_parameters2d
     /// @param comm a two-dimensional Cartesian communicator
-    /// @note the paramateres given in the constructor are global parameters 
-    CurvilinearMPIGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, MPI_Comm comm): 
+    /// @note the paramateres given in the constructor are global parameters
+    CurvilinearMPIGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, MPI_Comm comm):
         dg::aMPIGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, bcy, comm), handle_(generator)
     {
-        //generate global 2d grid and then reduce to local 
+        //generate global 2d grid and then reduce to local
         CurvilinearGrid2d g(generator, n, Nx, Ny);
         divide_and_conquer(g);
     }
     ///explicit conversion of 3d product grid to the perpendicular grid
     explicit CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g);
 
-    ///read access to the generator 
+    ///read access to the generator
     const aGenerator2d& generator() const{return handle_.get();}
     virtual CurvilinearMPIGrid2d* clone()const{return new CurvilinearMPIGrid2d(*this);}
     virtual CurvilinearGrid2d* global_geometry()const{
-        return new CurvilinearGrid2d( 
+        return new CurvilinearGrid2d(
                 handle_.get(),
                 global().n(), global().Nx(), global().Ny(),
                 global().bcx(), global().bcy());
@@ -58,8 +58,8 @@ struct CurvilinearMPIGrid2d : public dg::aMPIGeometry2d
     }
     void divide_and_conquer(const CurvilinearGrid2d& g_)
     {
-        dg::SparseTensor<thrust::host_vector<double> > jacobian=g_.jacobian(); 
-        dg::SparseTensor<thrust::host_vector<double> > metric=g_.metric(); 
+        dg::SparseTensor<thrust::host_vector<double> > jacobian=g_.jacobian();
+        dg::SparseTensor<thrust::host_vector<double> > metric=g_.metric();
         std::vector<thrust::host_vector<double> > map = g_.map();
         for( unsigned i=0; i<3; i++)
             for( unsigned j=0; j<3; j++)
@@ -98,8 +98,8 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
     typedef dg::geo::CurvilinearMPIGrid2d perpendicular_grid; //!< the two-dimensional grid
     /// @copydoc hide_grid_parameters3d
     /// @param comm a three-dimensional Cartesian communicator
-    /// @note the paramateres given in the constructor are global parameters 
-    CurvilinearProductMPIGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm): 
+    /// @note the paramateres given in the constructor are global parameters
+    CurvilinearProductMPIGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         dg::aProductMPIGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
         handle_( generator)
     {
@@ -114,9 +114,9 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
     const aGenerator2d& generator() const{return handle_.get();}
     virtual CurvilinearProductMPIGrid3d* clone()const{return new CurvilinearProductMPIGrid3d(*this);}
     virtual CurvilinearProductGrid3d* global_geometry()const{
-        return new CurvilinearProductGrid3d( 
+        return new CurvilinearProductGrid3d(
                 handle_.get(),
-                global().n(), global().Nx(), global().Ny(), global().Nz(), 
+                global().n(), global().Nx(), global().Ny(), global().Nz(),
                 global().bcx(), global().bcy(), global().bcz());
     }
     private:
@@ -148,7 +148,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
             jac_.value(r).data().resize(size);
             jac_.value(r).communicator() = communicator();
         }
-        map_[0].data().resize(size); 
+        map_[0].data().resize(size);
         map_[0].communicator() = communicator();
         map_[1].data().resize(size);
         map_[1].communicator() = communicator();
@@ -180,7 +180,7 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
         metric.idx(2,2) = 2; metric.value(2) = host_vector(temppp, communicator());
         if( !handle_.get().isOrthogonal())
         {
-            metric.idx(0,1) = metric.idx(1,0) = 3; 
+            metric.idx(0,1) = metric.idx(1,0) = 3;
             metric.value(3) = host_vector(tempxy, communicator());
         }
         return metric;

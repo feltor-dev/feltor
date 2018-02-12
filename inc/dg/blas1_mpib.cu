@@ -23,7 +23,7 @@ typedef dg::MPI_Vector<cusp::array1d<float, cusp::device_memory> > MPIVector;
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     MPI_Comm comm;
     dg::mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm);
 

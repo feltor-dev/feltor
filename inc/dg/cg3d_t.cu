@@ -15,7 +15,7 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double lz = 10.;
 
-const double eps_ = 1e-6; //# of pcg iterations increases very much if 
+const double eps_ = 1e-6; //# of pcg iterations increases very much if
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double fct(double x, double y){ return sin(y)*sin(x);}
@@ -33,7 +33,7 @@ int main()
     dg::HVec v3d = dg::create::inv_weights( g3d);
     dg::HVec x3 = dg::evaluate( initial, g3d);
 
-    dg::Elliptic<dg::CartesianGrid3d, dg::HMatrix, dg::HVec> A3( g3d, dg::not_normed); 
+    dg::Elliptic<dg::CartesianGrid3d, dg::HMatrix, dg::HVec> A3( g3d, dg::not_normed);
     dg::HVec b3 = dg::evaluate ( laplace_fct, g3d);
     const dg::HVec solution3 = dg::evaluate ( fct, g3d);
     dg::blas2::symv( w3d, b3, b3);

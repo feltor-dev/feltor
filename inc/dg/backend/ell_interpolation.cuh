@@ -9,7 +9,7 @@
 
 
 /**
-* @file 
+* @file
 
 @brief contains creation functions to create an interpolation ell_matrix on the
     device
@@ -31,7 +31,7 @@ namespace detail
 {
 
 //find cell number of given x
-struct FindCell 
+struct FindCell
 {
     FindCell( double x0, double h):x0_(x0), h_(h){}
     __host__ __device__
@@ -93,11 +93,11 @@ void __host__ __device__ legendre( double* pxn, const double xn, const unsigned 
 
 template<size_t BLOCK_SIZE>
 __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
- __global__ void interpolation_kernel1d( 
-         const int num_rows, 
-         const int n, 
-         const int* cellx, const double* xn, 
-         const int pitch, int* Aj, double* Av, 
+ __global__ void interpolation_kernel1d(
+         const int num_rows,
+         const int n,
+         const int* cellx, const double* xn,
+         const int pitch, int* Aj, double* Av,
          const double* forward)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -107,7 +107,7 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
     {
         double px[4];
         detail::legendre( px, xn[row], n, forward);
-        
+
         int offset = row;
         for(int k=0; k<n; k++)
         {
@@ -121,11 +121,11 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
 
 template<size_t BLOCK_SIZE>
 __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
- __global__ void interpolation_kernel2d( 
-         const int num_rows, const int n, const int Nx, 
-         const int* cellx, const int* celly, 
-         const double* xn, const double * yn, 
-         const int pitch, int* Aj, double* Av, 
+ __global__ void interpolation_kernel2d(
+         const int num_rows, const int n, const int Nx,
+         const int* cellx, const int* celly,
+         const double* xn, const double * yn,
+         const int pitch, int* Aj, double* Av,
          const double * forward)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -135,9 +135,9 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
     {
         //evaluate 2d Legendre polynomials at (xn, yn)...
         double px[4], py[4];
-        detail::legendre( px, xn[row], n, forward); 
+        detail::legendre( px, xn[row], n, forward);
         detail::legendre( py, yn[row], n, forward);
-        
+
         int offset = row;
         //the column is the row in the vector with which to multiply
         //int col_begin = celly[row]*Nx*n*n + cellx[row]*n;
@@ -155,11 +155,11 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
 
 template<size_t BLOCK_SIZE>
 __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per_block, minBlocksPerMultiprocessor)
- __global__ void interpolation_kernel3d( 
-         const int num_rows, const int n, const int Nx, const int Ny, const int Nz, 
+ __global__ void interpolation_kernel3d(
+         const int num_rows, const int n, const int Nx, const int Ny, const int Nz,
          const int* cellx, const int* celly, const int *cellz,
          const double* xn, const double * yn, const double *zn,
-         const int pitch, int* Aj, double* Av, 
+         const int pitch, int* Aj, double* Av,
          const double * forward)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
@@ -169,9 +169,9 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
     {
         //evaluate 2d Legendre polynomials at (xn, yn)...
         double px[4], py[4], pz[2] = {1-zn[row], zn[row]};
-        detail::legendre( px, xn[row], n, forward); 
+        detail::legendre( px, xn[row], n, forward);
         detail::legendre( py, yn[row], n, forward);
-        
+
         int offset = row;
         for( int m=0; m<2; m++)
             for( int k=0; k<n; k++)
@@ -188,14 +188,14 @@ __launch_bounds__(BLOCK_SIZE, 1) //cuda performance hint macro, (max_threads_per
 }
 
 
-} //namespace detail 
+} //namespace detail
 ///@endcond
 
 /**
  * @brief Create an interpolation matrix on the device
  *
  * @param x Vector of x-values
- * @param g aTopology on which to interpolate 
+ * @param g aTopology on which to interpolate
  *
  * @return interpolation matrix
  * @note n must be smaller than 5
@@ -209,11 +209,11 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
 
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256/4;
-    const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( 
-            detail::interpolation_kernel1d<BLOCK_SIZE>, 
+    const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks(
+            detail::interpolation_kernel1d<BLOCK_SIZE>,
             BLOCK_SIZE, (size_t) 0  );
-    const size_t NUM_BLOCKS = std::min<size_t>( 
-            MAX_BLOCKS, 
+    const size_t NUM_BLOCKS = std::min<size_t>(
+            MAX_BLOCKS,
             cusp::system::cuda::DIVIDE_INTO( A.num_rows, BLOCK_SIZE));
     const int pitch = A.column_indices.pitch; //ell has columen major format
     int* Aj = thrust::raw_pointer_cast(&A.column_indices(0,0));
@@ -221,7 +221,7 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
 
     //compute normalized x values and cell numbers
     thrust::device_vector<double> xn(x.size()), cellxh(x.size());
-    
+
     //dg::blas1::transform( x, xn, dg::PLUS<double>( -g.x0()));
     //dg::blas1::scal( xn, 1./g.h());
     thrust::device_vector<int> cellx( x.size());
@@ -244,7 +244,7 @@ cusp::ell_matrix<double, int, cusp::device_memory> ell_interpolation( const thru
  *
  * @param x Vector of x-values
  * @param y Vector of y-values
- * @param g 2D aTopology on which to interpolate 
+ * @param g 2D aTopology on which to interpolate
  *
  * @return interpolation matrix
  * @note n must be smaller than 5
@@ -260,8 +260,8 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256/4;
     const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( detail::interpolation_kernel2d<BLOCK_SIZE>, BLOCK_SIZE, (size_t) 0  );
-    const size_t NUM_BLOCKS = std::min<size_t>( 
-            MAX_BLOCKS, 
+    const size_t NUM_BLOCKS = std::min<size_t>(
+            MAX_BLOCKS,
             cusp::system::cuda::DIVIDE_INTO( A.num_rows, BLOCK_SIZE));
     const int pitch = A.column_indices.pitch; //# of cols in memory
     assert( pitch == (int)A.values.pitch);
@@ -281,8 +281,8 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     const double* yn_ptr = thrust::raw_pointer_cast( &yn[0]);
     thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
-    detail::interpolation_kernel2d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), 
-            cellX_ptr, cellY_ptr, 
+    detail::interpolation_kernel2d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(),
+            cellX_ptr, cellY_ptr,
             xn_ptr, yn_ptr, pitch, Aj, Av, forward_ptr);
     return A;
 
@@ -311,8 +311,8 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     //set up kernel parameters
     const size_t BLOCK_SIZE = 256/4;
     const size_t MAX_BLOCKS = cusp::system::cuda::detail::max_active_blocks( detail::interpolation_kernel3d<BLOCK_SIZE>, BLOCK_SIZE, (size_t) 0  );
-    const size_t NUM_BLOCKS = std::min<size_t>( 
-            MAX_BLOCKS, 
+    const size_t NUM_BLOCKS = std::min<size_t>(
+            MAX_BLOCKS,
             cusp::system::cuda::DIVIDE_INTO( A.num_rows, BLOCK_SIZE));
     const int pitch = A.column_indices.pitch; //# of cols in memory
     assert( pitch == (int)A.values.pitch);
@@ -337,7 +337,7 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
     const double* zn_ptr = thrust::raw_pointer_cast( &zn[0]);
     thrust::device_vector<double> forward(std::vector<double> ( g.dlt().forward()));
     const double * forward_ptr = thrust::raw_pointer_cast( &forward[0]);
-    detail::interpolation_kernel3d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), g.Ny(), g.Nz(), 
+    detail::interpolation_kernel3d<BLOCK_SIZE> <<<NUM_BLOCKS, BLOCK_SIZE>>> ( A.num_rows, g.n(), g.Nx(), g.Ny(), g.Nz(),
             cellX_ptr, cellY_ptr, cellZ_ptr,
             xn_ptr, yn_ptr, zn_ptr, pitch, Aj, Av, forward_ptr);
     return A;
@@ -348,8 +348,8 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const thru
  *
  * This matrix can be applied to vectors defined on the old grid to obtain
  * its values on the new grid.
- * 
- * @param g_new The new points 
+ *
+ * @param g_new The new points
  * @param g_old The old grid
  *
  * @return Interpolation matrix
@@ -373,8 +373,8 @@ cusp::ell_matrix<int, double, cusp::device_memory> ell_interpolation( const aTop
  *
  * This matrix can be applied to vectors defined on the old grid to obtain
  * its values on the new grid.
- * 
- * @param g_new The new points 
+ *
+ * @param g_new The new points
  * @param g_old The old grid
  *
  * @return Interpolation matrix

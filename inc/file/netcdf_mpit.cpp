@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     int ncid;
     file::NC_Error_Handle err;
     MPI_Info info = MPI_INFO_NULL;
-    err = nc_create_par( "testmpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, MPI_COMM_WORLD, info, &ncid); 
+    err = nc_create_par( "testmpi.nc", NC_NETCDF4|NC_MPIIO|NC_CLOBBER, MPI_COMM_WORLD, info, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "input", hello.size(), hello.data());
 
     int dimids[4], tvarID;
