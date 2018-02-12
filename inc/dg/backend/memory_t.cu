@@ -47,7 +47,7 @@ int main()
         h0.reset(ptr); //pointer reset
         h1.reset( h2.get()); //reference reset
         h1.get()=h2.get();//reference test
-        h1.swap(h0); //swap test
+        std::swap(h1,h0); //swap test
         h0.get().speak();
         h1.get().speak();
         h2.get().speak();
@@ -61,6 +61,7 @@ int main()
         buffer.data().speak();
         dg::Buffer<Mouse> buffer2 = buffer;
         buffer2.data().speak();
+        std::swap( buffer, buffer2);
     }
 
     return 0;

@@ -28,6 +28,15 @@ struct ClonePtr
     * @param src an object to clone
     */
     ClonePtr( const cloneable& src): ptr_(src.clone()){}
+
+    /**
+     * @brief Steal resources (move construct)
+     * @param src an object to steal pointer from
+     */
+    ClonePtr( ClonePtr&& src) : ptr_( src.ptr_) //steal resource
+    {
+        src.ptr_ = nullptr; //repair
+    }
     /**
     * @brief deep copy the given handle using the \c clone() method of \c cloneable
     * @param src an oject to copy, clones the contained object if not empty
@@ -39,12 +48,21 @@ struct ClonePtr
     * @brief deep copy the given handle using the \c clone() method of \c cloneable
     * @param src an oject to copy and swap
     */
-    ClonePtr& operator=( ClonePtr src) {
-        this->swap( src );
+    ClonePtr& operator=( ClonePtr src) { //copy and swap, also implements move assignment
+        swap( *this, src );
         return *this;
     }
     ///delete managed pointer if not nullptr
     ~ClonePtr(){ clear();}
+    /**
+    * @brief swap the managed pointers
+    * @param first first instance
+    * @param second second instance
+    */
+    friend void swap( ClonePtr& first, ClonePtr& second){ //make std::swap work (ADL)
+        using std::swap;
+        swap(first.ptr_,second.ptr_);
+    }
 
     ///delete managed pointer if not nullptr
     void clear(){
@@ -83,13 +101,6 @@ struct ClonePtr
         ClonePtr tmp(src);
         *this=tmp;
     }
-    /**
-    * @brief swap the managed pointers
-    * @param src another handle
-    */
-    void swap( ClonePtr& src){
-        std::swap(ptr_,src.ptr_);
-    }
     private:
     cloneable* ptr_;
 };
@@ -115,19 +126,27 @@ struct Buffer
     Buffer( const T& t){
         ptr = new T(t);
     }
+    Buffer( T&& t): ptr( t.ptr){ //move (memory steal) construct
+        t.ptr = nullptr;
+    }
     ///delete managed object
     ~Buffer(){
-        delete ptr;
+        delete ptr; //if ptr is nullptr delete does nothing
     }
     Buffer( const Buffer& src){
         ptr = new T(*src.ptr);
     }
-    Buffer& operator=( const Buffer& src){
-        if( this == &src) return *this;
-        Buffer tmp(src);
-        std::swap( ptr, tmp.ptr);
+    Buffer& operator=( Buffer src){ //copy and swap idiom, also implements move assign
+        swap( *this, src);
         return *this;
     }
+    friend void swap( Buffer& first, Buffer& second) //make std::swap work (ADL)
+    {
+        using std::swap;
+        swap( first.ptr, second.ptr);
+    }
+
+
     /**
     * @brief Get write access to the data on the heap
     * @return a reference to the data object
