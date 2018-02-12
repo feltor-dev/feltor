@@ -47,6 +47,7 @@ int main()
     for( unsigned i=0; i<20;i++)
         value_type norm = dg::blas1::dot( w2d, x);
     t.toc();
+    norm++;//prevent compiler warning
     std::cout<<"DOT took                         " <<t.diff()/20.<<"s\t"<<gbytes*20./t.diff()<<"GB/s\n";
 
     t.tic();

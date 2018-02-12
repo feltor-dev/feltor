@@ -51,6 +51,7 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<20;i++)
         dg::blas1::axpby( 1., y, -1., x);
     t.toc();
+    norm++;//prevent compiler warning
     if(rank==0)std::cout<<"AXPBY took                       "<<t.diff()/20.<<"s\t"<<gbytes*20/t.diff()<<"GB/s\n";
 
     t.tic();

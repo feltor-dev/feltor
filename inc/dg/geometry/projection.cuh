@@ -4,6 +4,7 @@
 #include <cusp/transpose.h>
 #include "grid.h"
 #include "interpolation.cuh"
+#include "weights.cuh"
 
 /*!@file
 

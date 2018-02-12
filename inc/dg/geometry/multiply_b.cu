@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "tensor.h"
+#include "weights.cuh"
 #include "multiply.h"
 #include "dg/backend/timer.cuh"
 
