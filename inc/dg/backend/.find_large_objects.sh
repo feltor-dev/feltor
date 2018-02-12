@@ -8,5 +8,5 @@ for SHA in `cut -f 1 -d\  < bigobjects.txt`; do
     echo $(grep $SHA bigobjects.txt) $(grep $SHA allfileshas.txt) | awk '{print $1,$3,$7}' >> bigtosmall.txt
     done;
 mv bigtosmall.txt largeobjects.txt
-rm allfileshas.txt bigobjects.txt 
+rm allfileshas.txt bigobjects.txt
 

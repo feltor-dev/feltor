@@ -61,6 +61,6 @@ int main ()
     //n = 5 -> p = 5      5
 
 
-    
+
     return 0;
 }

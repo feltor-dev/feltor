@@ -69,9 +69,9 @@ std::vector<double> coefficients( double xn, unsigned n)
 /**
  * @brief Create interpolation matrix
  *
- * The created matrix has \c g.size() columns and \c x.size() rows. It uses 
+ * The created matrix has \c g.size() columns and \c x.size() rows. It uses
  * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
- * When applied to a vector the result contains the interpolated values at the given interpolation points. 
+ * When applied to a vector the result contains the interpolated values at the given interpolation points.
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param g The Grid on which to operate
@@ -91,11 +91,11 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         }
         assert(x[i] >= g.x0() && x[i] <= g.x1());
 
-        //determine which cell (x) lies in 
+        //determine which cell (x) lies in
         double xnn = (x[i]-g.x0())/g.h();
         unsigned n = (unsigned)floor(xnn);
         //determine normalized coordinates
-        double xn = 2.*xnn - (double)(2*n+1); 
+        double xn = 2.*xnn - (double)(2*n+1);
         //intervall correction
         if (n==g.N()) {
             n-=1;
@@ -103,7 +103,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         }
         //evaluate 2d Legendre polynomials at (xn, yn)...
         std::vector<double> px = detail::coefficients( xn, g.n());
-        //...these are the matrix coefficients with which to multiply 
+        //...these are the matrix coefficients with which to multiply
         std::vector<double> pxF(px.size(),0);
         for( unsigned l=0; l<g.n(); l++)
             for( unsigned k=0; k<g.n(); k++)
@@ -117,15 +117,15 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * The created matrix has \c g.size() columns and \c x.size() rows. It uses 
+ * The created matrix has \c g.size() columns and \c x.size() rows. It uses
  * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
- * When applied to a vector the result contains the interpolated values at the given interpolation points. 
+ * When applied to a vector the result contains the interpolated values at the given interpolation points.
  * @snippet geometry/interpolation_t.cu doxygen
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points ( has to have equal size as x)
  * @param g The Grid on which to operate
- * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix, 
+ * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix,
  NEU and PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
  * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
  *
@@ -135,7 +135,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const aTopology2d& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
     assert( x.size() == y.size());
-    std::vector<double> gauss_nodes = g.dlt().abscissas(); 
+    std::vector<double> gauss_nodes = g.dlt().abscissas();
     dg::Operator<double> forward( g.dlt().forward());
     cusp::array1d<double, cusp::host_memory> values;
     cusp::array1d<int, cusp::host_memory> row_indices;
@@ -153,14 +153,14 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         }
         assert( y[i] >= g.y0() && y[i] <= g.y1());
 
-        //determine which cell (x,y) lies in 
+        //determine which cell (x,y) lies in
         double xnn = (x[i]-g.x0())/g.hx();
         double ynn = (y[i]-g.y0())/g.hy();
         unsigned nn = (unsigned)floor(xnn);
         unsigned mm = (unsigned)floor(ynn);
         //determine normalized coordinates
-        double xn =  2.*xnn - (double)(2*nn+1); 
-        double yn =  2.*ynn - (double)(2*mm+1); 
+        double xn =  2.*xnn - (double)(2*nn+1);
+        double yn =  2.*ynn - (double)(2*mm+1);
         //interval correction
         if (nn==g.Nx()) {
             nn-=1;
@@ -182,7 +182,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         if( idxX < 0 && idxY < 0 ) //there is no corresponding point
         {
             //evaluate 2d Legendre polynomials at (xn, yn)...
-            std::vector<double> px = detail::coefficients( xn, g.n()), 
+            std::vector<double> px = detail::coefficients( xn, g.n()),
                                 py = detail::coefficients( yn, g.n());
             std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
             for( unsigned l=0; l<g.n(); l++)
@@ -192,7 +192,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
                     pyF[l]+= py[k]*forward(k,l);
                 }
             std::vector<double> pxy( g.n()*g.n());
-            //these are the matrix coefficients with which to multiply 
+            //these are the matrix coefficients with which to multiply
             for(unsigned k=0; k<pyF.size(); k++)
                 for( unsigned l=0; l<pxF.size(); l++)
                     pxy[k*px.size()+l]= pyF[k]*pxF[l];
@@ -201,10 +201,10 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
                 ||(y[i] == g.y0() && (bcy==dg::DIR || bcy==dg::DIR_NEU) )
                 ||(y[i] == g.y1() && (bcy==dg::DIR || bcy==dg::NEU_DIR) ))
             {
-                //zeroe boundary values 
+                //zeroe boundary values
                 for(unsigned k=0; k<py.size(); k++)
                 for( unsigned l=0; l<px.size(); l++)
-                    pxy[k*px.size()+l]= 0; 
+                    pxy[k*px.size()+l]= 0;
             }
             for( unsigned k=0; k<g.n(); k++)
                 for( unsigned l=0; l<g.n(); l++)
@@ -245,7 +245,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         else //the point already exists
         {
             row_indices.push_back(i);
-            column_indices.push_back(idxY*g.Nx()*g.n() + idxX); 
+            column_indices.push_back(idxY*g.Nx()*g.n() + idxX);
             values.push_back(1.);
         }
 
@@ -261,16 +261,16 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 /**
  * @brief Create interpolation matrix
  *
- * The created matrix has \c g.size() columns and \c x.size() rows. It uses 
+ * The created matrix has \c g.size() columns and \c x.size() rows. It uses
  * polynomial interpolation given by the dG polynomials, i.e. the interpolation has order \c g.n() .
- * When applied to a vector the result contains the interpolated values at the given interpolation points. 
+ * When applied to a vector the result contains the interpolated values at the given interpolation points.
  * @snippet geometry/interpolation_t.cu doxygen3d
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
  * @param x X-coordinates of interpolation points
  * @param y Y-coordinates of interpolation points
  * @param z Z-coordinates of interpolation points
  * @param g The Grid on which to operate
- * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix, 
+ * @param bcx determines what to do when a point lies exactly on the boundary in x:  DIR generates zeroes in the interpolation matrix,
  NEU and PER interpolate the inner side polynomial. (DIR_NEU and NEU_DIR apply NEU / DIR to the respective left or right boundary )
  * @param bcy determines what to do when a point lies exactly on the boundary in y. Behaviour correponds to bcx.
  *
@@ -281,7 +281,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
 {
     assert( x.size() == y.size());
     assert( y.size() == z.size());
-    std::vector<double> gauss_nodes = g.dlt().abscissas(); 
+    std::vector<double> gauss_nodes = g.dlt().abscissas();
     dg::Operator<double> forward( g.dlt().forward());
     cusp::array1d<double, cusp::host_memory> values;
     cusp::array1d<int, cusp::host_memory> row_indices;
@@ -300,7 +300,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
             std::cerr << g.z0()<<"< zi = " << z[i] <<" < "<<g.z1()<<std::endl;
         } assert( z[i] >= g.z0() && z[i] <= g.z1());
 
-        //determine which cell (x,y) lies in 
+        //determine which cell (x,y) lies in
         double xnn = (x[i]-g.x0())/g.hx();
         double ynn = (y[i]-g.y0())/g.hy();
         double znn = (z[i]-g.z0())/g.hz();
@@ -308,8 +308,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         unsigned mm = (unsigned)floor(ynn);
         unsigned ll = (unsigned)floor(znn);
         //determine normalized coordinates
-        double xn = 2.*xnn - (double)(2*nn+1); 
-        double yn = 2.*ynn - (double)(2*mm+1); 
+        double xn = 2.*xnn - (double)(2*nn+1);
+        double yn = 2.*ynn - (double)(2*mm+1);
         //interval correction
         if (nn==g.Nx()) {
             nn-=1;
@@ -334,7 +334,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         if( idxX < 0 && idxY < 0 ) //there is no corresponding point
         {
             //evaluate 2d Legendre polynomials at (xn, yn)...
-            std::vector<double> px = detail::coefficients( xn, g.n()), 
+            std::vector<double> px = detail::coefficients( xn, g.n()),
                                 py = detail::coefficients( yn, g.n());
             std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
             for( unsigned l=0; l<g.n(); l++)
@@ -344,7 +344,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
                     pyF[l]+= py[k]*forward(k,l);
                 }
             std::vector<double> pxyz( g.n()*g.n());
-            //these are the matrix coefficients with which to multiply 
+            //these are the matrix coefficients with which to multiply
             for(unsigned k=0; k<pyF.size(); k++)
                 for( unsigned l=0; l<pxF.size(); l++)
                     pxyz[k*g.n()+l]= 1.*pyF[k]*pxF[l];
@@ -353,10 +353,10 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
                 ||(y[i] == g.y0() && (bcy==dg::DIR || bcy==dg::DIR_NEU) )
                 ||(y[i] == g.y1() && (bcy==dg::DIR || bcy==dg::NEU_DIR) ))
             {
-                //zeroe boundary values 
+                //zeroe boundary values
                 for(unsigned k=0; k<g.n(); k++)
                 for(unsigned l=0; l<g.n(); l++)
-                    pxyz[k*g.n()+l]= 0; 
+                    pxyz[k*g.n()+l]= 0;
             }
             for( unsigned k=0; k<g.n(); k++)
                 for( unsigned l=0; l<g.n(); l++)
@@ -397,7 +397,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
         else //the point already exists
         {
             row_indices.push_back(i);
-            column_indices.push_back((ll*g.Ny()*g.n()+idxY)*g.Nx()*g.n() + idxX); 
+            column_indices.push_back((ll*g.Ny()*g.n()+idxY)*g.Nx()*g.n() + idxX);
             values.push_back(1.);
         }
 
@@ -412,7 +412,7 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  *
  * This matrix interpolates vectors on the old grid \c g_old to the %Gaussian nodes of the new grid \c g_new. The interpolation is of the order \c g_old.n()
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * 
+ *
  * @param g_new The new grid
  * @param g_old The old grid
  *
@@ -507,15 +507,15 @@ double interpolate( double x, double y,  const thrust::host_vector<double>& v, c
     if (!(x >= g.x0() && x <= g.x1())) {
         std::cerr << g.x0()<<"< xi = " << x <<" < "<<g.x1()<<std::endl;
     }
-    
+
     assert(x >= g.x0() && x <= g.x1());
-    
+
     if (!(y >= g.y0() && y <= g.y1())) {
         std::cerr << g.y0()<<"< yi = " << y <<" < "<<g.y1()<<std::endl;
     }
     assert( y >= g.y0() && y <= g.y1());
 
-    //determine which cell (x,y) lies in 
+    //determine which cell (x,y) lies in
 
     double xnn = (x-g.x0())/g.hx();
     double ynn = (y-g.y0())/g.hy();
@@ -523,8 +523,8 @@ double interpolate( double x, double y,  const thrust::host_vector<double>& v, c
     unsigned m = (unsigned)floor(ynn);
     //determine normalized coordinates
 
-    double xn =  2.*xnn - (double)(2*n+1); 
-    double yn =  2.*ynn - (double)(2*m+1); 
+    double xn =  2.*xnn - (double)(2*n+1);
+    double yn =  2.*ynn - (double)(2*m+1);
     //interval correction
     if (n==g.Nx()) {
         n-=1;
@@ -535,7 +535,7 @@ double interpolate( double x, double y,  const thrust::host_vector<double>& v, c
         yn =1.;
     }
     //evaluate 2d Legendre polynomials at (xn, yn)...
-    std::vector<double> px = create::detail::coefficients( xn, g.n()), 
+    std::vector<double> px = create::detail::coefficients( xn, g.n()),
                         py = create::detail::coefficients( yn, g.n());
     //dg::Operator<double> forward( g.dlt().forward());
     //std::vector<double> pxF(g.n(),0), pyF(g.n(), 0);
@@ -545,9 +545,9 @@ double interpolate( double x, double y,  const thrust::host_vector<double>& v, c
     //        pxF[l]+= px[k]*forward(k,l);
     //        pyF[l]+= py[k]*forward(k,l);
     //    }
-    //these are the matrix coefficients with which to multiply 
+    //these are the matrix coefficients with which to multiply
     unsigned col_begin = (m)*g.Nx()*g.n()*g.n() + (n)*g.n();
-    //multiply x 
+    //multiply x
     double value = 0;
     for( unsigned i=0; i<g.n(); i++)
         for( unsigned j=0; j<g.n(); j++)

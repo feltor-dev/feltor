@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
     MPI_Init( &argc, &argv);
     int rank, size;
     MPI_Comm_size( MPI_COMM_WORLD, &size);
-    if(size!=4) 
+    if(size!=4)
     {
         std::cerr << "Please run with 4 processes!\n";
         MPI_Finalize();
@@ -65,18 +65,18 @@ int main(int argc, char* argv[])
     }
     dg::IHMatrix  direct_i = dg::create::interpolation( x,y,g2d.global());
     dg::MIHMatrix converted_i = dg::create::interpolation( x,y,g2d);
-    dg::MHVec sine = dg::evaluate( function, g2d); 
+    dg::MHVec sine = dg::evaluate( function, g2d);
     dg::MHVec temp(sine);
-    dg::HVec global_sine = dg::evaluate( function, g2d.global()); 
+    dg::HVec global_sine = dg::evaluate( function, g2d.global());
     dg::HVec g_temp( x.size());
     converted_i.symv( sine, temp);
     dg::blas2::symv( direct_i, global_sine, g_temp);
     //now compare
     bool success = true;
     for( unsigned i=0; i<temp.size(); i++)
-        if( temp.data()[i] - g_temp[i] > 1e-14) 
-            success = false; 
-    if( !success) 
+        if( temp.data()[i] - g_temp[i] > 1e-14)
+            success = false;
+    if( !success)
         std::cout << "FAILED from rank "<<rank<<"!\n";
     else
         std::cout << "SUCCESS from rank "<<rank<<"!\n";

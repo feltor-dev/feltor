@@ -2,8 +2,8 @@
 #include "projection.cuh"
 #include "gridX.h"
 
-/*!@file 
-  
+/*!@file
+
   @brief contains creation of projection matrices for X point topology
  */
 namespace dg{

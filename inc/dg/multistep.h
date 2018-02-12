@@ -10,18 +10,18 @@ namespace dg{
 
 
 /*! @class hide_explicit_implicit
- * @tparam Explicit 
-    models BinaryFunction with no return type (subroutine): 
+ * @tparam Explicit
+    models BinaryFunction with no return type (subroutine):
     void operator()(const container&, container&);
     The first argument is the actual argument, The second contains
     the return value, i.e. y' = f(y) translates to f( y, y').
- * @tparam Implicit 
-    models BinaryFunction with no return type (subroutine): 
+ * @tparam Implicit
+    models BinaryFunction with no return type (subroutine):
     void operator()(const container&, container&);
     The first argument is the actual argument, The second contains
     the return value, i.e. y' = I(y) translates to I( y, y').
     Furthermore the routines %weights(), %inv_weights() and %precond() must be callable
-    and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient. 
+    and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient.
     The return type of these member functions must be useable in blas2 functions together with the container type.
  * @param exp explic part
  * @param imp implicit part ( must be linear and symmetric up to weights)
@@ -61,11 +61,11 @@ struct AB
     /**
     * @brief Reserve memory for the integration
     *
-    * @param copyable container of size which is used in integration. 
+    * @param copyable container of size which is used in integration.
     * A container object must be copy-constructible from copyable.
     */
     AB( const container& copyable): f_(k, container(copyable)), u_(copyable){ }
-   
+
     /**
      * @brief Init with initial value
      *
@@ -160,7 +160,7 @@ template< class LinearOp, class container>
 struct Implicit
 {
     Implicit( double alpha, LinearOp& f): f_(f), alpha_(alpha){}
-    void symv( const container& x, container& y) 
+    void symv( const container& x, container& y)
     {
         if( alpha_ != 0)
             f_( x,y);
@@ -168,7 +168,7 @@ struct Implicit
         blas2::symv( f_.weights(), y, y);
     }
     //compute without weights
-    void operator()( const container& x, container& y) 
+    void operator()( const container& x, container& y)
     {
         if( alpha_ != 0)
             f_( x,y);
@@ -195,7 +195,7 @@ struct MatrixTraits< detail::Implicit<M, V> >
 * \f[
 * \begin{align}
     {\bar v}^n &= \sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  \hat E( v^{n-q}) \\
-    \left( 1  - \frac{\Delta t}{\gamma_0}  \hat I\right)  v^{n+1} &= {\bar v}^n  
+    \left( 1  - \frac{\Delta t}{\gamma_0}  \hat I\right)  v^{n+1} &= {\bar v}^n
     \end{align}
     \f]
 
@@ -203,16 +203,16 @@ struct MatrixTraits< detail::Implicit<M, V> >
     \f[
     \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
     \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11} \\
-    \gamma_0 = \frac{11}{6} 
+    \gamma_0 = \frac{11}{6}
 \f]
 *
-* Uses only one right-hand-side evaluation per step. 
-* Uses a conjugate gradient method for the implicit operator. 
+* Uses only one right-hand-side evaluation per step.
+* Uses a conjugate gradient method for the implicit operator.
 The following code example demonstrates how to integrate the 2d diffusion equation with the dg library:
 @snippet multistep_t.cu function
 In the main function:
 @snippet multistep_t.cu doxygen
-@note In our experience the implicit treatment of diffusive or hyperdiffusive 
+@note In our experience the implicit treatment of diffusive or hyperdiffusive
 terms can significantly reduce the required number of time steps. This
 far outweighs the increased computational cost of the additional matrix inversions.
 * @ingroup time
@@ -225,7 +225,7 @@ struct Karniadakis
     /**
     * @brief Reserve memory for the integration
     *
-    * @param copyable container of size which is used in integration. 
+    * @param copyable container of size which is used in integration.
     * @param max_iter parameter for cg
     * @param eps  accuracy parameter for cg
     * A container object must be copy-constructible from copyable.
@@ -238,12 +238,12 @@ struct Karniadakis
         a[1] = -9./11.;     b[1] = -18./11.;
         a[2] = 2./11.;      b[2] = 6./11.;   //Karniadakis !!!
     }
-   
+
     /**
      * @brief Initialize with initial value
      *
      * @copydoc hide_explicit_implicit
-     * @param u0 The initial value 
+     * @param u0 The initial value
      * @param dt The timestep saved for later use
      */
     template< class Explicit, class Implicit>
@@ -271,7 +271,7 @@ struct Karniadakis
      */
     const container& last()const{return u_[1];}
   private:
-    std::vector<container> u_, f_; 
+    std::vector<container> u_, f_;
     CG< container> pcg;
     double eps_;
     double dt_;
@@ -286,7 +286,7 @@ template< class Functor, class Diffusion>
 void Karniadakis<container>::init( Functor& f, Diffusion& diff,  const container& u0,  double dt)
 {
     dt_ = dt;
-    blas1::copy(  u0, u_[0]); 
+    blas1::copy(  u0, u_[0]);
     detail::Implicit<Diffusion, container> implicit( -dt, diff);
     f( u0, f_[0]);
     blas1::axpby( 1., u_[0], -dt, f_[0], f_[1]); //Euler step
@@ -324,7 +324,7 @@ void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container&
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
     Timer t;
-    t.tic(); 
+    t.tic();
     unsigned number = pcg( implicit, u, u_[0], diff.precond(), diff.inv_weights(), eps_);
     t.toc();
 #ifdef MPI_VERSION
@@ -345,23 +345,23 @@ void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container&
 The SIRK algorithm reads
 \f[
 	\vec v^{n+1} = \vec v^n + \sum_{i=0}^2 w_i \vec k_i \\
-	\vec k_i = \Delta t\left[ \vec E\left( \vec v^n + \sum_{j=0}^{i-1} b_{ij}\vec k_j\right) 
-	+\vec I\left( \vec v^n + \sum_{j=0}^{i-1}c_{ij}\vec k_j + d_i \vec k_i\right) \right] 
+	\vec k_i = \Delta t\left[ \vec E\left( \vec v^n + \sum_{j=0}^{i-1} b_{ij}\vec k_j\right)
+	+\vec I\left( \vec v^n + \sum_{j=0}^{i-1}c_{ij}\vec k_j + d_i \vec k_i\right) \right]
   \f]
 with rational coefficients
 \f[
 	w_0 = \frac{1}{8} \quad b_{10} = \frac{8}{7} \quad d_0 = \frac{3}{4}  \quad c_{10} = \frac{5589}{6524}  \\
 	w_1 = \frac{1}{8} \quad b_{20} = \frac{71}{252} \quad d_1 = \frac{75}{233}  \quad c_{20} = \frac{7691}{26096} \\
-	w_2 = \frac{3}{4} \quad b_{21} = \frac{7}{36}   \quad d_2 = \frac{65}{168}  \quad c_{21} = -\frac{26335}{78288}   
+	w_2 = \frac{3}{4} \quad b_{21} = \frac{7}{36}   \quad d_2 = \frac{65}{168}  \quad c_{21} = -\frac{26335}{78288}
 \f]
-We solve the implicit substeps by a conjugate gradient method, which works as long 
-as the implicit part remains symmetric and linear. 
+We solve the implicit substeps by a conjugate gradient method, which works as long
+as the implicit part remains symmetric and linear.
 
 The following code example demonstrates how to integrate the 2d diffusion equation with the dg library:
 @snippet multistep_t.cu function
 In the main function:
 @snippet multistep_t.cu doxygen
-@note To our experience the implicit treatment of diffusive or hyperdiffusive 
+@note To our experience the implicit treatment of diffusive or hyperdiffusive
 terms can significantly reduce the required number of time steps. This
 far outweighs the increased computational cost of the additional matrix inversions.
  * @ingroup time
@@ -461,7 +461,7 @@ struct SIRK
     double b[3][3];
     double d[3];
     double c[3][3];
-    CG<container> pcg; 
+    CG<container> pcg;
     double eps_;
 };
 

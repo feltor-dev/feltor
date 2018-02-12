@@ -1,6 +1,6 @@
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%Original development%%%%%%%%%%%%%%%%%%%%%%%%%
- *  Copyright (c) 2016 Inria and University Pierre and Marie Curie 
+ *  Copyright (c) 2016 Inria and University Pierre and Marie Curie
  *  All rights reserved.
  * %%%%%%%%%%%%%%%%%%%%%%%Modifications and further additions%%%%%%%%%%
  *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
@@ -13,7 +13,7 @@
  *    Developers : \n
  *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
  *        Sylvain Collange -- sylvain.collange@inria.fr \n
- *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk
  */
 #pragma once
 #include "config.h"
@@ -48,7 +48,7 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
         carry = (oldword + carry) >> DIGITS;    // Arithmetic shift
         bool s = oldword > 0;
         carrybit = (s ? 1ll << KRX : -1ll << KRX);
-        
+
         // Cancel carry-save bits
         cpu::xadd(accumulator[i], (int64_t) -(carry << DIGITS), overflow);
         if(TSAFE && unlikely(s ^ overflow)) {
@@ -77,12 +77,12 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
 inline void Accumulate( int64_t* accumulator, double x) {
     if (x == 0)
         return;
-    
+
 
     int e = cpu::exponent(x);
     int exp_word = e / DIGITS;  // Word containing MSbit (upper bound)
     int iup = exp_word + F_WORDS;
-    
+
     double xscaled = cpu::myldexp(x, -DIGITS * exp_word);
 
     int i;
@@ -90,7 +90,7 @@ inline void Accumulate( int64_t* accumulator, double x) {
         double xrounded = cpu::myrint(xscaled);
         int64_t xint = cpu::myllrint(xscaled);
         AccumulateWord(accumulator, i, xint);
-        
+
         xscaled -= xrounded;
         xscaled *= DELTASCALE;
     }
@@ -146,7 +146,7 @@ double Round( int64_t * accumulator) {
     int imin = IMIN;
     int imax = IMAX;
     bool negative = Normalize(accumulator, imin, imax);
-    
+
     // Find leading word
     int i;
     // Skip zeroes
@@ -160,7 +160,7 @@ double Round( int64_t * accumulator) {
     if (i < 0) {
         return 0.0;
     }
-    
+
     int64_t hiword = negative ? ((1ll << DIGITS) - 1) - accumulator[i] : accumulator[i];
     double rounded = (double)hiword;
     double hi = ldexp(rounded, (i - F_WORDS) * DIGITS);
@@ -169,7 +169,7 @@ double Round( int64_t * accumulator) {
     }
     hiword -= llrint(rounded);
     double mid = ldexp((double) hiword, (i - F_WORDS) * DIGITS);
-    
+
     // Compute sticky
     int64_t sticky = 0;
     for (int j = imin; j != i - 1; ++j) {

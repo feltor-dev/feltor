@@ -27,13 +27,13 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[((i*g.n() + k)*g.Nx() + j)*g.n()+l];
     for( unsigned i=g.Ny()-1; i<g.Ny(); i++)
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[((0*g.n() + k)*g.Nx() + j)*g.n()+l];
     return out;
 }
@@ -42,13 +42,13 @@ int main( int argc, char* argv[])
 {
     std::cout << "Type nHector, NxHector, NyHector ( 13 2 10)\n";
     unsigned nGrid, NxGrid, NyGrid;
-    std::cin >> nGrid>> NxGrid>>NyGrid;   
+    std::cin >> nGrid>> NxGrid>>NyGrid;
     std::cout << "Type epsHector (1e-10)\n";
     double epsHector;
     std::cin >> epsHector;
     std::cout << "Type n, Nx, Ny, Nz ( 3 4 40 1)\n";
     unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
+    std::cin >> n>> Nx>>Ny>>Nz;
     Json::Reader reader;
     Json::Value js;
     if( argc==1)
@@ -63,7 +63,7 @@ int main( int argc, char* argv[])
     }
     //write parameters from file into variables
     dg::geo::solovev::Parameters gp(js);
-    {const dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp); 
+    {const dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";}
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
@@ -76,24 +76,24 @@ int main( int argc, char* argv[])
     t.tic();
     //![doxygen]
     std::unique_ptr< dg::geo::aGenerator2d > hector;
-    const dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp); 
+    const dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     if( construction == 0)
     {
-        hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( 
+        hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>(
                 psip, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
     }
     else if( construction == 1)
     {
         dg::geo::BinaryFunctorsLvl1 nc = dg::geo::make_NablaPsiInvCollective( psip);
-        hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( 
+        hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>(
                 psip, nc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
     }
     else
     {
-        dg::geo::BinarySymmTensorLvl1 lc = dg::geo::make_LiseikinCollective( 
+        dg::geo::BinarySymmTensorLvl1 lc = dg::geo::make_LiseikinCollective(
                 psip, 0.1, 0.001);
-        hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>( 
+        hector.reset( new dg::geo::Hector<dg::IDMatrix, dg::DMatrix, dg::DVec>(
                 psip,lc, psi_0, psi_1, gp.R_0, 0., nGrid, NxGrid, NyGrid, epsHector, true));
     }
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -102,7 +102,7 @@ int main( int argc, char* argv[])
     //![doxygen]
     const dg::aGeometry2d& g2d = *g2d_ptr;
 
-    dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
+    dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     std::cout << "Length in u is    "<<hector->width()<<std::endl;

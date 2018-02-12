@@ -17,29 +17,29 @@ namespace geo
 
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
- * 
+ *
  * The base coordinate system is the cylindrical coordinate system R,Z,phi
  */
 struct CurvilinearProductGridX3d : public dg::aGeometryX3d
 {
     /*!@brief Constructor
-    
+
      * the coordinates of the computational space are called x,y,z
      * @param generator must generate a grid
      * @param n number of %Gaussian nodes in x and y
      * @param fx
      * @param fy
      * @param Nx number of cells in x
-     * @param Ny number of cells in y 
+     * @param Ny number of cells in y
      * @param Nz  number of cells z
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      * @param bcz boundary condition in z
      */
-    CurvilinearProductGridX3d( const aGeneratorX2d& generator, 
+    CurvilinearProductGridX3d( const aGeneratorX2d& generator,
         double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
         dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, fx,fy,n, Nx, Ny, Nz, bcx, bcy, bcz)
-    { 
+    {
         map_.resize(3);
         handle_ = generator;
         constructPerp( n, Nx, Ny);
@@ -101,7 +101,7 @@ struct CurvilinearProductGridX3d : public dg::aGeometryX3d
 struct CurvilinearGridX2d : public dg::aGeometryX2d
 {
     /*!@brief Constructor
-    
+
      * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
      * @param fx
      * @param fy

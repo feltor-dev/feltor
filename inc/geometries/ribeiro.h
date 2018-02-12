@@ -23,11 +23,11 @@ namespace ribeiro
 namespace detail
 {
 
-//This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
+//This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as
 //good as it can, i.e. until machine precision is reached
 struct Fpsi
 {
-    Fpsi( const BinaryFunctorsLvl1& psi, double x0, double y0, int mode): 
+    Fpsi( const BinaryFunctorsLvl1& psi, double x0, double y0, int mode):
         psip_(psi), fieldRZYTribeiro_(psi,x0, y0),fieldRZYTequalarc_(psi, x0, y0), fieldRZtau_(psi), mode_(mode)
     {
         R_init = x0; Z_init = y0;
@@ -35,10 +35,10 @@ struct Fpsi
             R_init = x0 + 1.; Z_init = y0;
     }
     //finds the starting points for the integration in y direction
-    void find_initial( double psi, double& R_0, double& Z_0) 
+    void find_initial( double psi, double& R_0, double& Z_0)
     {
         unsigned N = 50;
-        thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d); 
+        thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d);
         begin2d[0] = end2d[0] = end2d_old[0] = R_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Z_init;
         //std::cout << "In init function\n";
@@ -53,7 +53,7 @@ struct Fpsi
     }
 
     //compute f for a given psi between psi0 and psi1
-    double construct_f( double psi, double& R_0, double& Z_0) 
+    double construct_f( double psi, double& R_0, double& Z_0)
     {
         find_initial( psi, R_0, Z_0);
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
@@ -64,7 +64,7 @@ struct Fpsi
         //double y_eps = 1;
         while( (eps < eps_old || eps > 1e-7)&& N < 1e6)
         {
-            eps_old = eps, end_old = end; N*=2; 
+            eps_old = eps, end_old = end; N*=2;
             if(mode_==0)dg::stepperRK17( fieldRZYTribeiro_,  begin, end, 0., 2*M_PI, N);
             if(mode_==1)dg::stepperRK17( fieldRZYTequalarc_, begin, end, 0., 2*M_PI, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
@@ -76,19 +76,19 @@ struct Fpsi
     }
     double operator()( double psi)
     {
-        double R_0, Z_0; 
+        double R_0, Z_0;
         return construct_f( psi, R_0, Z_0);
     }
 
     /**
      * @brief This function computes the integral x_1 = -\int_{\psi_0}^{\psi_1} f(\psi) d\psi to machine precision
      *
-     * @param psi_0 lower boundary 
-     * @param psi_1 upper boundary 
+     * @param psi_0 lower boundary
+     * @param psi_1 upper boundary
      *
      * @return x1
      */
-    double find_x1( double psi_0, double psi_1 ) 
+    double find_x1( double psi_0, double psi_1 )
     {
         unsigned P=8;
         double x1 = 0, x1_old = 0;
@@ -96,7 +96,7 @@ struct Fpsi
         //std::cout << "In x1 function\n";
         while(eps < eps_old && P < 20 && eps > 1e-15)
         {
-            eps_old = eps; 
+            eps_old = eps;
             x1_old = x1;
 
             P+=1;
@@ -117,7 +117,7 @@ struct Fpsi
         return -x1_old;
     }
 
-    double f_prime( double psi) 
+    double f_prime( double psi)
     {
         //compute fprime
         double deltaPsi = fabs(psi)/100.;
@@ -135,7 +135,7 @@ struct Fpsi
             fofpsi[1] = operator()(psi-deltaPsi);
             fofpsi[2] = operator()(psi+deltaPsi);
             //reuse previously computed fpsi for current fprime
-            fprime  = (+ 1./12.*fofpsi[0] 
+            fprime  = (+ 1./12.*fofpsi[0]
                        - 2./3. *fofpsi[1]
                        + 2./3. *fofpsi[2]
                        - 1./12.*fofpsi[3]
@@ -160,8 +160,8 @@ struct FieldFinv
 {
     FieldFinv( const BinaryFunctorsLvl1& psi, double x0, double y0, unsigned N_steps, int mode):
         fpsi_(psi, x0, y0, mode), fieldRZYTribeiro_(psi, x0, y0), fieldRZYTequalarc_(psi, x0, y0), N_steps(N_steps), mode_(mode) { }
-    void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM) 
-    { 
+    void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
+    {
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         fpsi_.find_initial( psi[0], begin[0], begin[1]);
         if(mode_==0)dg::stepperRK17( fieldRZYTribeiro_, begin, end, 0., 2*M_PI, N_steps);
@@ -181,7 +181,7 @@ struct FieldFinv
 ///@endcond
 
 /**
- * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010 
+ * @brief A two-dimensional grid based on "almost-conformal" coordinates by %Ribeiro and Scott 2010
  * @ingroup generators_geo
  */
 struct Ribeiro : public aGenerator2d
@@ -191,7 +191,7 @@ struct Ribeiro : public aGenerator2d
      *
      * @param psi psi is the flux function in Cartesian coordinates (x,y), psiX is its derivative in x, psiY the derivative in y, psiXX the second derivative in x, etc.
      * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
-     * @param psi_0 first boundary 
+     * @param psi_0 first boundary
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
@@ -221,17 +221,17 @@ struct Ribeiro : public aGenerator2d
      * @brief 2pi (length of the eta domain)
      *
      * Always returns 2pi
-     * @return 2pi 
+     * @return 2pi
      */
     virtual double do_height() const{return 2.*M_PI;}
-    virtual void do_generate( 
-         const thrust::host_vector<double>& zeta1d, 
-         const thrust::host_vector<double>& eta1d, 
-         thrust::host_vector<double>& x, 
-         thrust::host_vector<double>& y, 
-         thrust::host_vector<double>& zetaX, 
-         thrust::host_vector<double>& zetaY, 
-         thrust::host_vector<double>& etaX, 
+    virtual void do_generate(
+         const thrust::host_vector<double>& zeta1d,
+         const thrust::host_vector<double>& eta1d,
+         thrust::host_vector<double>& x,
+         thrust::host_vector<double>& y,
+         thrust::host_vector<double>& zetaX,
+         thrust::host_vector<double>& zetaY,
+         thrust::host_vector<double>& etaX,
          thrust::host_vector<double>& etaY) const
     {
         //compute psi(x) for a grid on x and call construct_rzy for all psi

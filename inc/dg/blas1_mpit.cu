@@ -27,16 +27,16 @@ int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
     MPI_Comm comm;
-    int rank; 
+    int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     if(rank==0)std::cout << "This program tests the blas1 functions up to binary reproducibility with the exception of the dot function, which is tested in the dg/geometry/evaluation_mpit program\n";
     mpi_init2d( dg::PER, dg::PER, comm);
     dg::MPIGrid2d g( 0,1,0,1, 3,120,120, comm);
     {
     MVec v1 = dg::evaluate( two2, g);
-    MVec v2 = dg::evaluate( three3, g); 
-    MVec v3 = dg::evaluate( five5, g); 
-    MVec v4 = dg::evaluate( four4, g), v5(v4); 
+    MVec v2 = dg::evaluate( three3, g);
+    MVec v3 = dg::evaluate( five5, g);
+    MVec v4 = dg::evaluate( four4, g), v5(v4);
     if(rank==0)std::cout << "A TEST IS PASSED IF THE RESULT IS ZERO.\n";
     exblas::udouble ud;
     dg::blas1::scal( v3, 3e-10); ud.d = v3.data()[0];
@@ -63,9 +63,9 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "transform y=exp(x)    "<<ud.i-4620007020034741378<<std::endl;
     }
     MVec v1 = dg::evaluate( two, g);
-    MVec v2 = dg::evaluate( three, g); 
-    MVec v3 = dg::evaluate( five, g); 
-    MVec v4 = dg::evaluate( four, g); 
+    MVec v2 = dg::evaluate( three, g);
+    MVec v3 = dg::evaluate( five, g);
+    MVec v4 = dg::evaluate( four, g);
 
     if(rank==0)std::cout << "Human readable test VectorVector (passed if ouput equals value in brackets) \n";
     std::vector<MVec > w1( 2, v1), w2(2, v2), w3( w2), w4( 2, v4);

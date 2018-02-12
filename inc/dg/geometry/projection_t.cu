@@ -37,14 +37,14 @@ int main()
     std::cout << "Difference       "<<dg::blas2::dot( oneo, w1do, v) - dg::blas2::dot( onen, w1dn, w) << "\n"<<std::endl;
 
     std::cout << "TEST 2D and 3D\n";
-    
+
     dg::Grid3d g2o (0, M_PI, 0, M_PI, 0,1, n_old, N_old, N_old, 4);
     dg::Grid3d g2n (0, M_PI, 0, M_PI, 0,1, n_new, N_new, N_new, 4);
     //cusp::coo_matrix<int, double, cusp::host_memory> proj2d = dg::create::transformation( g2n, g2o);
     cusp::coo_matrix<int, double, cusp::host_memory> inte2d = dg::create::interpolation( g2n, g2o);
     dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > proj2d = dg::create::fast_projection( g2o, N_old/N_new, N_old/N_new);
     dg::MultiMatrix< dg::HMatrix, thrust::host_vector<double> > fast_inte2d = dg::create::fast_interpolation( g2n, N_old/N_new, N_old/N_new);
-    const dg::HVec sinO = dg::evaluate( sine, g2o), 
+    const dg::HVec sinO = dg::evaluate( sine, g2o),
                    sinN = dg::evaluate( sine, g2n);
     dg::HVec w2do = dg::create::weights( g2o);
     dg::HVec w2dn = dg::create::weights( g2n);

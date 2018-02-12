@@ -13,7 +13,7 @@ struct TopologyTraits{
 struct MPITag{}; //!< distributed memory system
 struct SharedTag{}; //!<  shared memory system
 
-//dimensionality 
+//dimensionality
 struct OneDimensionalTag{}; //!< 1d
 struct TwoDimensionalTag{}; //!< 2d
 struct ThreeDimensionalTag{}; //!< 3d

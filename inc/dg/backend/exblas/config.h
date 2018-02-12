@@ -3,7 +3,7 @@
  *  @brief Configuration of superaccumulators
  *
  *  @authors
- *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk
  */
 #pragma once
 
@@ -22,7 +22,7 @@ static constexpr int IMIN           = 0; //!< first index in a superaccumulator
 static constexpr int IMAX           = BIN_COUNT-1; //!< last index in a superaccumulator
 static constexpr double DELTASCALE = double(1ull << DIGITS); //!< Assumes KRX>0
 
-///@brief Characterizes the result of summation 
+///@brief Characterizes the result of summation
 enum Status
 {
     Exact, /*!< Reproducible and accurate */
@@ -43,7 +43,7 @@ std::cout << "Result as double "<<res.d<<"  as integer "<<res.i<<std::endl;
 @endcode
 */
 union udouble{
-    double d; //!< a double 
+    double d; //!< a double
     int64_t i; //!< a 64 bit integer
 };
 

@@ -19,7 +19,7 @@ int main(int argc, char**argv)
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);

@@ -11,9 +11,9 @@ template< class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d& g, double nu): m_nu(nu),
-        m_w2d( dg::create::weights(g)), 
+        m_w2d( dg::create::weights(g)),
         m_v2d( dg::create::inv_weights(g)),
-        m_LaplacianM( g, dg::normed) 
+        m_LaplacianM( g, dg::normed)
         { }
 
     void operator()( const std::vector<container>& x, std::vector<container>& y)
@@ -74,16 +74,16 @@ int main()
     //![doxygen]
     exblas::udouble res;
     dg::DVec w2d = dg::create::weights( grid);
-    res.d = dg::blas2::dot( w2d, y0[0]); 
+    res.d = dg::blas2::dot( w2d, y0[0]);
     std::cout << "Normalized y0 after "<< NT <<" steps is "<< res.d <<"\t"<<res.i << std::endl;
     dg::DVec solution = dg::evaluate( sol, grid), error( solution);
-    double norm_sol = dg::blas2::dot( w2d, solution); 
+    double norm_sol = dg::blas2::dot( w2d, solution);
     std::cout << "Normalized solution is "<<  norm_sol<< std::endl;
     dg::blas1::axpby( -1., y0[0], 1., error);
     double norm_error = sqrt(dg::blas2::dot( w2d, error)/norm_sol); res.d = norm_error;
     std::cout << "Relative error is      "<< res.d<<" (0.000149144 Karniadakis) (0.000148647 SIRK)\n";
     std::cout << "Relative error (binary)"<< res.i<<"\n";
-    //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
+    //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter)
     //n = 2 -> p = 2
     //n = 3 -> p = 3
     //n = 4 -> p = 4

@@ -1,6 +1,6 @@
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%Original development%%%%%%%%%%%%%%%%%%%%%%%%%
- *  Copyright (c) 2016 Inria and University Pierre and Marie Curie 
+ *  Copyright (c) 2016 Inria and University Pierre and Marie Curie
  * %%%%%%%%%%%%%%%%%%%%%%%Modifications and further additions%%%%%%%%%%
  *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
  */
@@ -13,7 +13,7 @@
  *    Developers : \n
  *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
  *        Sylvain Collange -- sylvain.collange@inria.fr \n
- *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk
  */
 #pragma once
 #include <cassert>
@@ -70,7 +70,7 @@ inline static void Reduction(unsigned int tid, unsigned int tnum, std::vector<in
     std::vector<int64_t>& acc, int const linesize)
 {
     // Custom reduction
-    for(unsigned int s = 1; (unsigned)(1 << (s-1)) < tnum; ++s) 
+    for(unsigned int s = 1; (unsigned)(1 << (s-1)) < tnum; ++s)
     {
         int32_t volatile * c = &ready[tid * linesize];
         ++*c;
@@ -85,7 +85,7 @@ inline static void Reduction(unsigned int tid, unsigned int tnum, std::vector<in
     }
 }
 
-template<typename CACHE> 
+template<typename CACHE>
 void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t)
@@ -131,7 +131,7 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
         h_superacc[i] = acc[i];
 }
 
-template<typename CACHE> 
+template<typename CACHE>
 void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t* h_superacc) {
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t)

@@ -22,7 +22,7 @@ double cosy(   double x, double y, double z) { return cos(y);}
 double sinz(   double x, double y, double z) { return sin(z);}
 double cosz(   double x, double y, double z) { return cos(z);}
 
-dg::bc bcx = dg::DIR; 
+dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::DIR;
 
@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny,Nz; 
+    unsigned n, Nx, Ny,Nz;
     MPI_Comm comm;
     mpi_init3d( bcx, bcy, bcz, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -61,7 +61,7 @@ int main(int argc, char* argv[])
     const Vector func = dg::evaluate( siny, g);
     const Vector deri = dg::evaluate( cosy, g);
 
-    Matrix dy = dg::create::dy( g); 
+    Matrix dy = dg::create::dy( g);
     Vector temp( func);
     t.tic();
     dg::blas2::gemv( 1., dy, func, 0., temp);
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     const Vector func = dg::evaluate( sinz, g);
     const Vector deri = dg::evaluate( cosz, g);
 
-    Matrix dz = dg::create::dz( g); 
+    Matrix dz = dg::create::dz( g);
     Vector temp( func);
     t.tic();
     dg::blas2::gemv( 1., dz, func, 0., temp);
@@ -90,9 +90,9 @@ int main(int argc, char* argv[])
     {
     const Vector func = dg::evaluate( sinx, g);
 
-    Matrix jumpX = dg::create::jumpX( g); 
-    Matrix jumpY = dg::create::jumpY( g); 
-    Matrix jumpZ = dg::create::jumpZ( g); 
+    Matrix jumpX = dg::create::jumpX( g);
+    Matrix jumpY = dg::create::jumpY( g);
+    Matrix jumpZ = dg::create::jumpZ( g);
     Vector temp( func);
     t.tic();
     dg::blas2::gemv( 1., jumpX, func, 0., temp);

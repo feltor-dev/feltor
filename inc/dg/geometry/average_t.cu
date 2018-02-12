@@ -18,7 +18,7 @@ int main()
 
     dg::Average< dg::DVec > pol(g, dg::coo2d::y);
 
-    const dg::DVec vector = dg::evaluate( function ,g); 
+    const dg::DVec vector = dg::evaluate( function ,g);
     dg::DVec average_y( vector);
     std::cout << "Averaging y ... \n";
     pol( vector, average_y);
@@ -26,7 +26,7 @@ int main()
     const dg::DVec w2d = dg::create::weights( g);
     dg::DVec solution = dg::evaluate( pol_average, g);
     dg::blas1::axpby( 1., solution, -1., average_y);
-    exblas::udouble res; 
+    exblas::udouble res;
     res.d = sqrt( dg::blas2::dot( average_y, w2d, average_y));
     std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i<<std::endl;
     std::cout << "Averaging x ... \n";

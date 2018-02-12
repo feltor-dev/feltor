@@ -91,10 +91,10 @@ inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, Om
             doPlus( x[i], alpha, get_vector_category<typename Vector::value_type>());
 }
 template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+inline void doAxpby( get_value_type<Vector> alpha,
+              const Vector& x,
+              get_value_type<Vector> beta,
+              Vector& y,
               VectorVectorTag, OmpTag)
 {
     if( !omp_in_parallel())//to catch recursive calls
@@ -110,12 +110,12 @@ inline void doAxpby( get_value_type<Vector> alpha,
             doAxpby( alpha, x[i], beta, y[i], get_vector_category<typename Vector::value_type>());
 }
 template< class Vector>
-inline void doAxpbypgz( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              const Vector& y, 
-              get_value_type<Vector> gamma, 
-              Vector& z, 
+inline void doAxpbypgz( get_value_type<Vector> alpha,
+              const Vector& x,
+              get_value_type<Vector> beta,
+              const Vector& y,
+              get_value_type<Vector> gamma,
+              Vector& z,
               VectorVectorTag, OmpTag)
 {
     if( !omp_in_parallel())//to catch recursive calls
@@ -131,9 +131,9 @@ inline void doAxpbypgz( get_value_type<Vector> alpha,
             doAxpbypgz( alpha, x[i], beta, y[i], gamma, z[i], get_vector_category<typename Vector::value_type>());
 }
 template< class Vector>
-inline void doPointwiseDivide( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& x2, 
-    get_value_type<Vector> beta, 
+inline void doPointwiseDivide( get_value_type<Vector> alpha,
+    const Vector& x1, const Vector& x2,
+    get_value_type<Vector> beta,
     Vector& y, VectorVectorTag, OmpTag)
 {
     if( !omp_in_parallel())//to catch recursive calls
@@ -149,9 +149,9 @@ inline void doPointwiseDivide( get_value_type<Vector> alpha,
             doPointwiseDivide( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
 }
 template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
+inline void doPointwiseDot( get_value_type<Vector> alpha,
     const Vector& x1, const Vector& x2, const Vector& x3,
-    get_value_type<Vector> beta, 
+    get_value_type<Vector> beta,
     Vector& y, VectorVectorTag, OmpTag)
 {
     if( !omp_in_parallel())//to catch recursive calls
@@ -168,11 +168,11 @@ inline void doPointwiseDot( get_value_type<Vector> alpha,
 
 }
 template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& y1, 
-    get_value_type<Vector> beta, 
-    const Vector& x2, const Vector& y2, 
-    get_value_type<Vector> gamma, 
+inline void doPointwiseDot( get_value_type<Vector> alpha,
+    const Vector& x1, const Vector& y1,
+    get_value_type<Vector> beta,
+    const Vector& x2, const Vector& y2,
+    get_value_type<Vector> gamma,
     Vector& z, VectorVectorTag, OmpTag)
 {
     if( !omp_in_parallel())//to catch recursive calls
@@ -202,10 +202,10 @@ inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, An
         doPlus( x[i], alpha, get_vector_category<typename Vector::value_type>());
 }
 template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+inline void doAxpby( get_value_type<Vector> alpha,
+              const Vector& x,
+              get_value_type<Vector> beta,
+              Vector& y,
               VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x.size(); i++)
@@ -213,12 +213,12 @@ inline void doAxpby( get_value_type<Vector> alpha,
 }
 
 template< class Vector>
-inline void doAxpbypgz( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              const Vector& y, 
-              get_value_type<Vector> gamma, 
-              Vector& z, 
+inline void doAxpbypgz( get_value_type<Vector> alpha,
+              const Vector& x,
+              get_value_type<Vector> beta,
+              const Vector& y,
+              get_value_type<Vector> gamma,
+              Vector& z,
               VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x.size(); i++)
@@ -227,38 +227,38 @@ inline void doAxpbypgz( get_value_type<Vector> alpha,
 
 
 template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& x2, 
-    get_value_type<Vector> beta, 
+inline void doPointwiseDot( get_value_type<Vector> alpha,
+    const Vector& x1, const Vector& x2,
+    get_value_type<Vector> beta,
     Vector& y, VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x1.size(); i++)
         doPointwiseDot( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
 }
 template< class Vector>
-inline void doPointwiseDivide( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& x2, 
-    get_value_type<Vector> beta, 
+inline void doPointwiseDivide( get_value_type<Vector> alpha,
+    const Vector& x1, const Vector& x2,
+    get_value_type<Vector> beta,
     Vector& y, VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x1.size(); i++)
         doPointwiseDivide( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
 }
 template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
+inline void doPointwiseDot( get_value_type<Vector> alpha,
     const Vector& x1, const Vector& x2, const Vector& x3,
-    get_value_type<Vector> beta, 
+    get_value_type<Vector> beta,
     Vector& y, VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x1.size(); i++)
         doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
 }
 template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& y1, 
-    get_value_type<Vector> beta, 
-    const Vector& x2, const Vector& y2, 
-    get_value_type<Vector> gamma, 
+inline void doPointwiseDot( get_value_type<Vector> alpha,
+    const Vector& x1, const Vector& y1,
+    get_value_type<Vector> beta,
+    const Vector& x2, const Vector& y2,
+    get_value_type<Vector> gamma,
     Vector& z, VectorVectorTag, AnyPolicyTag)
 {
     for( unsigned i=0; i<x1.size(); i++)
@@ -272,7 +272,7 @@ inline void doScal( Vector& x, get_value_type<Vector> alpha, VectorVectorTag)
     assert( !x.empty());
 #endif //DG_DEBUG
     doScal( x, alpha, VectorVectorTag(), get_execution_policy<Vector>());
-        
+
 }
 template< class Vector>
 inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag)
@@ -284,10 +284,10 @@ inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag)
 }
 
 template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+inline void doAxpby( get_value_type<Vector> alpha,
+              const Vector& x,
+              get_value_type<Vector> beta,
+              Vector& y,
               VectorVectorTag)
 {
 #ifdef DG_DEBUG
@@ -298,12 +298,12 @@ inline void doAxpby( get_value_type<Vector> alpha,
 }
 
 template< class Vector>
-inline void doAxpbypgz( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              const Vector& y, 
-              get_value_type<Vector> gamma, 
-              Vector& z, 
+inline void doAxpbypgz( get_value_type<Vector> alpha,
+              const Vector& x,
+              get_value_type<Vector> beta,
+              const Vector& y,
+              get_value_type<Vector> gamma,
+              Vector& z,
               VectorVectorTag)
 {
 #ifdef DG_DEBUG
@@ -311,13 +311,13 @@ inline void doAxpbypgz( get_value_type<Vector> alpha,
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
     doAxpbypgz( alpha, x, beta, y, gamma, z, VectorVectorTag(), get_execution_policy<Vector>());
-        
+
 }
 
 template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& x2, 
-    get_value_type<Vector> beta, 
+inline void doPointwiseDot( get_value_type<Vector> alpha,
+    const Vector& x1, const Vector& x2,
+    get_value_type<Vector> beta,
     Vector& y, VectorVectorTag)
 {
 #ifdef DG_DEBUG
@@ -328,9 +328,9 @@ inline void doPointwiseDot( get_value_type<Vector> alpha,
     doPointwiseDot( alpha, x1, x2, beta, y, VectorVectorTag(), get_execution_policy<Vector>() );
 }
 template< class Vector>
-inline void doPointwiseDivide( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& x2, 
-    get_value_type<Vector> beta, 
+inline void doPointwiseDivide( get_value_type<Vector> alpha,
+    const Vector& x1, const Vector& x2,
+    get_value_type<Vector> beta,
     Vector& y, VectorVectorTag)
 {
 #ifdef DG_DEBUG
@@ -341,9 +341,9 @@ inline void doPointwiseDivide( get_value_type<Vector> alpha,
     doPointwiseDivide( alpha, x1, x2, beta, y, VectorVectorTag(), get_execution_policy<Vector>() );
 }
 template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
+inline void doPointwiseDot( get_value_type<Vector> alpha,
     const Vector& x1, const Vector& x2, const Vector& x3,
-    get_value_type<Vector> beta, 
+    get_value_type<Vector> beta,
     Vector& y, VectorVectorTag)
 {
 #ifdef DG_DEBUG
@@ -355,11 +355,11 @@ inline void doPointwiseDot( get_value_type<Vector> alpha,
     doPointwiseDot( alpha, x1, x2,x3, beta, y, VectorVectorTag(), get_execution_policy<Vector>() );
 }
 template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha, 
-    const Vector& x1, const Vector& y1, 
-    get_value_type<Vector> beta, 
-    const Vector& x2, const Vector& y2, 
-    get_value_type<Vector> gamma, 
+inline void doPointwiseDot( get_value_type<Vector> alpha,
+    const Vector& x1, const Vector& y1,
+    get_value_type<Vector> beta,
+    const Vector& x2, const Vector& y2,
+    get_value_type<Vector> gamma,
     Vector& z, VectorVectorTag)
 {
 #ifdef DG_DEBUG

@@ -5,7 +5,7 @@
 #include "mpi_grid.h"
 #include "mpi_weights.h"
 
-/*! @file 
+/*! @file
   @brief contains classes for poloidal and toroidal average computations.
   */
 namespace dg{
@@ -75,17 +75,17 @@ struct Average<MPI_Vector<container> >
             dg::blas1::scal( m_temp, 1./g.ly()/g.lz());
             dg::transpose( m_nx, m_ny, m_temp.data(), m_w.data());
         }
-        else 
+        else
             std::cerr << "Warning: this direction is not implemented\n";
         MPI_Cart_sub( g.communicator(), remain_dims, &m_comm);
         exblas::mpi_reduce_communicator( m_comm, &m_comm_mod, &m_comm_mod_reduce);
     }
     /**
-     * @brief Compute the average 
+     * @brief Compute the average
      *
      * @param src 2D Source Vector (must have the same size as the grid given in the constructor)
      * @param res 2D result Vector (may alias src), every line contains the x-dependent average over
-     the y-direction of src 
+     the y-direction of src
      */
     void operator() (const MPI_Vector<container>& src, MPI_Vector<container>& res)
     {
@@ -94,7 +94,7 @@ struct Average<MPI_Vector<container> >
             dg::mpi_average( m_nx, m_ny, src.data(), m_w.data(), m_temp.data(), m_comm, m_comm_mod, m_comm_mod_reduce);
             dg::extend_column( m_nx, m_ny, m_temp.data(), res.data());
         }
-        else 
+        else
         {
             dg::transpose( m_nx, m_ny, src.data(), m_temp.data());
             dg::mpi_average( m_ny, m_nx, m_temp.data(), m_w.data(), m_temp1d.data(), m_comm, m_comm_mod, m_comm_mod_reduce);
@@ -104,7 +104,7 @@ struct Average<MPI_Vector<container> >
     }
   private:
     unsigned m_nx, m_ny;
-    MPI_Vector<container> m_w, m_temp, m_temp1d; 
+    MPI_Vector<container> m_w, m_temp, m_temp1d;
     bool m_transpose;
     MPI_Comm m_comm, m_comm_mod, m_comm_mod_reduce;
 };

@@ -11,7 +11,7 @@
  *    Developers : \n
  *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
  *        Sylvain Collange -- sylvain.collange@inria.fr \n
- *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk
  */
 
 #ifndef MYLIBM_HPP_INCLUDED
@@ -148,7 +148,7 @@ inline double myldexp(double x, int e)
         double d;
         uint64_t i;
     } caster;
-    
+
     caster.d = x;
     caster.i += (uint64_t)e << 52;
     return caster.d;
@@ -161,7 +161,7 @@ inline double exp2i(int e)
         double d;
         uint64_t i;
     } caster;
-    
+
     caster.i = (uint64_t)(e + 0x3ff) << 52;
     return caster.d;
 }

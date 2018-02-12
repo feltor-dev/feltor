@@ -11,8 +11,8 @@
 #include "geometry/mpi_evaluation.h"
 #endif
 
-/*! @file 
-  
+/*! @file
+
   object for computation of Poisson bracket
   */
 namespace dg
@@ -54,7 +54,7 @@ struct Poisson
      * @brief Compute poisson's bracket
      *
      * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
-     * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 
+     * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space.
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
@@ -62,21 +62,21 @@ struct Poisson
     void operator()( const container& lhs, const container& rhs, container& result);
 
     /**
-     * @brief Return internally used x - derivative 
+     * @brief Return internally used x - derivative
      *
      * The same as a call to dg::create::dx( g, bcx)
      * @return derivative
      */
     const Matrix& dxlhs() {return dxlhs_;}
     /**
-     * @brief Return internally used y - derivative 
+     * @brief Return internally used y - derivative
      *
      * The same as a call to dg::create::dy( g, bcy)
      * @return derivative
      */
     const Matrix& dylhs() {return dylhs_;}
     /**
-     * @brief Return internally used x - derivative 
+     * @brief Return internally used x - derivative
      *
      * The same as a call to dg::create::dx( g, bcx)
      * @return derivative
@@ -94,7 +94,7 @@ struct Poisson
      *
      * Computes \f[ (\nabla\phi)^2 = \partial_i \phi g^{ij}\partial_j \phi \f]
      * in the plane of a 2x1 product space
-     * @param phi function 
+     * @param phi function
      * @param varphi may equal phi, contains result on output
      */
     void variationRHS( const container& phi, container& varphi)
@@ -117,7 +117,7 @@ struct Poisson
 //idea: backward transform lhs and rhs and then use bdxf and bdyf , then forward transform
 //needs less memory!! and is faster
 template< class Geometry, class Matrix, class container>
-Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g ): 
+Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g ):
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
     dxlhs_(dg::create::dx( g, g.bcx(),dg::centered)),
     dylhs_(dg::create::dy( g, g.bcy(),dg::centered)),
@@ -130,26 +130,26 @@ Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g ):
 }
 
 template< class Geometry, class Matrix, class container>
-Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g, bc bcx, bc bcy): 
+Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g, bc bcx, bc bcy):
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
     dxlhs_(dg::create::dx( g, bcx,dg::centered)),
     dylhs_(dg::create::dy( g, bcy,dg::centered)),
     dxrhs_(dg::create::dx( g, bcx,dg::centered)),
     dyrhs_(dg::create::dy( g, bcy,dg::centered))
-{ 
+{
     metric_=g.metric().perp();
     perp_vol_inv_ = dg::tensor::determinant(metric_);
     dg::tensor::sqrt(perp_vol_inv_);
 }
 
 template< class Geometry, class Matrix, class container>
-Poisson<Geometry, Matrix, container>::Poisson(  const Geometry& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs): 
+Poisson<Geometry, Matrix, container>::Poisson(  const Geometry& g, bc bcxlhs, bc bcylhs, bc bcxrhs, bc bcyrhs):
     dxlhslhs_( dg::evaluate( one, g) ), dxrhsrhs_(dxlhslhs_), dylhslhs_(dxlhslhs_), dyrhsrhs_( dxlhslhs_), helper_( dxlhslhs_),
     dxlhs_(dg::create::dx( g, bcxlhs,dg::centered)),
     dylhs_(dg::create::dy( g, bcylhs,dg::centered)),
     dxrhs_(dg::create::dx( g, bcxrhs,dg::centered)),
     dyrhs_(dg::create::dy( g, bcyrhs,dg::centered))
-{ 
+{
     metric_=g.metric().perp();
     perp_vol_inv_ = dg::tensor::determinant(metric_);
     dg::tensor::sqrt(perp_vol_inv_);
@@ -162,8 +162,8 @@ void Poisson< Geometry, Matrix, container>::operator()( const container& lhs, co
     blas2::symv(  dylhs_, lhs,  dylhslhs_); //dy_lhs lhs
     blas2::symv(  dxrhs_, rhs,  dxrhsrhs_); //dx_rhs rhs
     blas2::symv(  dyrhs_, rhs,  dyrhsrhs_); //dy_rhs rhs
-    
-    blas1::pointwiseDot( 1., dxlhslhs_, dyrhsrhs_, -1., dylhslhs_, dxrhsrhs_, 0., result);   
+
+    blas1::pointwiseDot( 1., dxlhslhs_, dyrhsrhs_, -1., dylhslhs_, dxrhsrhs_, 0., result);
     tensor::pointwiseDot( perp_vol_inv_, result, result);
 }
 ///@endcond

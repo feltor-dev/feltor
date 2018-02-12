@@ -19,22 +19,22 @@ double right( double x, double y){ return sin(y/2.)*sin(y/2.)*exp(y)*sin(x/2)*si
 double left( double x, double y) {return sin(x)*exp(x-M_PI)*sin(y);}
 double right( double x, double y) {return sin(x)*sin(y);}
 double right2( double x, double y) {return exp(y-M_PI);}
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
-    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
+    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI);
 }
 */
 
 double left( double x, double y) {return sin(x)*cos(y);}
-double right( double x, double y) {return sin(y)*cos(x);} 
+double right( double x, double y) {return sin(y)*cos(x);}
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
-dg::bc bcx = dg::PER; 
+dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 //double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
-    return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
+    return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y);
 }
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
@@ -44,11 +44,11 @@ double jacobian( double x, double y)
 const double lx = M_PI/2.;
 const double ly = M_PI/2.;
 double left( double x, double y) {return sin(x)*sin(y);}
-double right( double x, double y) {return sin(2*x)*sin(2*y);} 
-dg::bc bcx = dg::DIR_NEU; 
+double right( double x, double y) {return sin(2*x)*sin(2*y);}
+dg::bc bcx = dg::DIR_NEU;
 dg::bc bcy = dg::DIR_NEU;
 //double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
     return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
 }
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     MPI_Comm comm;
     dg::mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
     dg::CartesianMPIGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);

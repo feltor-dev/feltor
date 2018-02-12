@@ -1,6 +1,6 @@
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%Original development%%%%%%%%%%%%%%%%%%%%%%%%%
- *  Copyright (c) 2016 Inria and University Pierre and Marie Curie 
+ *  Copyright (c) 2016 Inria and University Pierre and Marie Curie
  *  All rights reserved.
  * %%%%%%%%%%%%%%%%%%%%%%%Modifications and further additions%%%%%%%%%%
  *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
@@ -13,7 +13,7 @@
  *    Developers : \n
  *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
  *        Sylvain Collange -- sylvain.collange@inria.fr \n
- *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk
  */
 #pragma once
 #include "config.h"
@@ -86,7 +86,7 @@ inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //tran
     int e;
     frexp(x, &e); //extract the exponent of x (lies in -1024;1023 ?)
     int exp_word = e / DIGITS;  // Word containing MSbit
-    int iup = exp_word + F_WORDS; //can be at most 18 + 20 
+    int iup = exp_word + F_WORDS; //can be at most 18 + 20
 
     double xscaled = ldexp(x, -DIGITS * exp_word);
 

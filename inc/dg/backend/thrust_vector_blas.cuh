@@ -24,7 +24,7 @@ namespace dg
 ///@addtogroup vec_list
 ///@{
 template<class T>
-struct VectorTraits<thrust::host_vector<T>, 
+struct VectorTraits<thrust::host_vector<T>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
@@ -32,7 +32,7 @@ struct VectorTraits<thrust::host_vector<T>,
     using execution_policy  = SerialTag;
 };
 template<class T>
-struct VectorTraits<thrust::host_vector<T>, 
+struct VectorTraits<thrust::host_vector<T>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
@@ -93,7 +93,7 @@ inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustVectorTa
 template< class Vector>
 inline void doScal( Vector& x, get_value_type<Vector> alpha, ThrustVectorTag)
 {
-    if( alpha == 1.) 
+    if( alpha == 1.)
         return;
     get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
     doScal_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, alpha);
@@ -109,10 +109,10 @@ inline void doPlus(  Vector& x, get_value_type<Vector> alpha, ThrustVectorTag)
 }
 
 template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+inline void doAxpby( get_value_type<Vector> alpha,
+              const Vector& x,
+              get_value_type<Vector> beta,
+              Vector& y,
               ThrustVectorTag)
 {
 #ifdef DG_DEBUG
@@ -128,7 +128,7 @@ inline void doAxpby( get_value_type<Vector> alpha,
     }
     if( alpha==1. && beta == 0) {
         thrust::copy( x.begin(), x.end(), y.begin());
-        return; 
+        return;
     }
     const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
     get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
@@ -136,12 +136,12 @@ inline void doAxpby( get_value_type<Vector> alpha,
 }
 
 template< class Vector>
-inline void doAxpbypgz( get_value_type<Vector> alpha, 
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              const Vector& y, 
-              get_value_type<Vector> gamma, 
-              Vector& z, 
+inline void doAxpbypgz( get_value_type<Vector> alpha,
+              const Vector& x,
+              get_value_type<Vector> beta,
+              const Vector& y,
+              get_value_type<Vector> gamma,
+              Vector& z,
               ThrustVectorTag)
 {
 #ifdef DG_DEBUG
@@ -181,12 +181,12 @@ inline void doAxpbypgz( get_value_type<Vector> alpha,
 }
 
 template<class Vector>
-inline void doPointwiseDot(  
-              get_value_type<Vector> alpha, 
+inline void doPointwiseDot(
+              get_value_type<Vector> alpha,
               const Vector& x1,
-              const Vector& x2, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+              const Vector& x2,
+              get_value_type<Vector> beta,
+              Vector& y,
               ThrustVectorTag)
 {
 #ifdef DG_DEBUG
@@ -204,12 +204,12 @@ inline void doPointwiseDot(
 }
 
 template<class Vector>
-inline void doPointwiseDivide(  
-              get_value_type<Vector> alpha, 
+inline void doPointwiseDivide(
+              get_value_type<Vector> alpha,
               const Vector& x1,
-              const Vector& x2, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+              const Vector& x2,
+              get_value_type<Vector> beta,
+              Vector& y,
               ThrustVectorTag)
 {
 #ifdef DG_DEBUG
@@ -227,18 +227,18 @@ inline void doPointwiseDivide(
 }
 
 template<class Vector>
-inline void doPointwiseDot(  
-              get_value_type<Vector> alpha, 
+inline void doPointwiseDot(
+              get_value_type<Vector> alpha,
               const Vector& x1,
-              const Vector& y1, 
-              get_value_type<Vector> beta, 
+              const Vector& y1,
+              get_value_type<Vector> beta,
               const Vector& x2,
-              const Vector& y2, 
-              get_value_type<Vector> gamma, 
-              Vector& z, 
+              const Vector& y2,
+              get_value_type<Vector> gamma,
+              Vector& z,
               ThrustVectorTag)
 {
-    if( alpha==0){ 
+    if( alpha==0){
         doPointwiseDot( beta, x2,y2, gamma, z, ThrustVectorTag());
         return;
     }
@@ -255,16 +255,16 @@ inline void doPointwiseDot(
     doPointwiseDot_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, y1_ptr, beta, x2_ptr, y2_ptr, gamma, z_ptr);
 }
 template<class Vector>
-inline void doPointwiseDot(  
-              get_value_type<Vector> alpha, 
+inline void doPointwiseDot(
+              get_value_type<Vector> alpha,
               const Vector& x1,
               const Vector& x2,
-              const Vector& x3, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+              const Vector& x3,
+              get_value_type<Vector> beta,
+              Vector& y,
               ThrustVectorTag)
 {
-    if( alpha==0){ 
+    if( alpha==0){
         doScal( y, beta, ThrustVectorTag());
         return;
     }

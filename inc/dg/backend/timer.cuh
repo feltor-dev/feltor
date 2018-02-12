@@ -13,14 +13,14 @@ class Timer //CPU/ OMP + MPI
     /**
     * @brief Start timer using MPI_Wtime
     *
-    * @param comm the communicator 
+    * @param comm the communicator
     * @note uses MPI_Barrier(comm)
     */
     void tic( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); start = MPI_Wtime();}
     /**
     * @brief Stop timer using MPI_Wtime
     *
-    * @param comm the communicator 
+    * @param comm the communicator
     * @note uses MPI_Barrier(comm)
     */
     void toc( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); stop = MPI_Wtime(); }
@@ -35,7 +35,7 @@ class Timer //CPU/ OMP + MPI
 namespace dg
 {
 /*! @brief Very simple tool for performance measuring
- * 
+ *
  * @code
    dg::Timer t;
    t.tic();
@@ -50,11 +50,11 @@ class Timer //OMP non-MPI
 {
   public:
     /**
-    * @brief Start timer 
+    * @brief Start timer
     */
     void tic( ){ start = omp_get_wtime();}
     /**
-    * @brief Stop timer 
+    * @brief Stop timer
     */
     void toc( ){ stop = omp_get_wtime(); }
     /*! \brief Return time elapsed between tic and toc
@@ -101,19 +101,19 @@ class Timer //GPU MPI
     /**
     * @brief Start timer using MPI_Wtime
     *
-    * @param comm the communicator 
+    * @param comm the communicator
     * @note uses MPI_Barrier(comm)
     */
-    void tic( MPI_Comm comm = MPI_COMM_WORLD ){ 
-    MPI_Barrier(comm); 
+    void tic( MPI_Comm comm = MPI_COMM_WORLD ){
+    MPI_Barrier(comm);
     start = MPI_Wtime();}
     /**
     * @brief Stop timer using MPI_Wtime
     *
-    * @param comm the communicator 
+    * @param comm the communicator
     * @note uses MPI_Barrier(comm)
     */
-    void toc( MPI_Comm comm = MPI_COMM_WORLD ){ 
+    void toc( MPI_Comm comm = MPI_COMM_WORLD ){
     cudaEventRecord( cu_sync, 0); //place event in stream
     cudaEventSynchronize( cu_sync); //sync cpu  on event
     MPI_Barrier(comm); //sync other cpus on event
@@ -132,7 +132,7 @@ class Timer// GPU non-MPI
 {
   public:
     Timer(){
-        cudaEventCreate( &start); 
+        cudaEventCreate( &start);
         cudaEventCreate( &stop);
     }
     /**
@@ -146,12 +146,12 @@ class Timer// GPU non-MPI
     *
     * @param stream the stream in which the Event is placed
     */
-    void toc( cudaStream_t stream = 0){ 
+    void toc( cudaStream_t stream = 0){
         cudaEventRecord( stop, stream);
         cudaEventSynchronize( stop);
     }
-    float diff(){ 
-        float time; 
+    float diff(){
+        float time;
         cudaEventElapsedTime( &time, start, stop);
         return time/1000.;
     }

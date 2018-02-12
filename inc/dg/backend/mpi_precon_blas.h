@@ -59,12 +59,12 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const V
 }
 
 template< class Precon, class Vector>
-inline void doSymv(  
-              typename MatrixTraits<Precon>::value_type alpha, 
+inline void doSymv(
+              typename MatrixTraits<Precon>::value_type alpha,
               const Precon& P,
-              const Vector& x, 
-              typename MatrixTraits<Precon>::value_type beta, 
-              Vector& y, 
+              const Vector& x,
+              typename MatrixTraits<Precon>::value_type beta,
+              Vector& y,
               MPIPreconTag,
               MPIVectorTag)
 {

@@ -29,7 +29,7 @@ double initial( double x, double y, double z) {return sin(0);}
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     std::cout << "Type n, Nx, Ny and Nz\n";
     std::cin >> n >> Nx >> Ny >> Nz;
     double eps;
@@ -56,7 +56,7 @@ int main()
     dg::DVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
-    
+
     std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     x = dg::evaluate( initial, grid);
     unsigned num;
@@ -75,10 +75,10 @@ int main()
     std::cout << "L2 Norm of relative error is:               " <<norm<<"\t"<<res.i<<std::endl;
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
-    normerr = dg::blas2::dot( w3d, error); 
+    normerr = dg::blas2::dot( w3d, error);
     norm = dg::blas2::dot( w3d, deriv);
     std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
-    
+
     std::cout << "TEST SPLIT SOLUTION\n";
     x = dg::evaluate( initial, grid);
     b = dg::evaluate ( laplace_fct, grid);
@@ -90,7 +90,7 @@ int main()
     dg::DVec chi = dg::evaluate( dg::one, grid);
     dg::tensor::pointwiseDot( chi, g_parallel, chi);
     //create split Laplacian
-    std::vector< dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > laplace_split( 
+    std::vector< dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > laplace_split(
             grid.Nz(), dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec>(grid_perp.get(), dg::not_normed, dg::centered));
     // create split  vectors and solve
     std::vector<dg::DVec> b_split, x_split, chi_split;
@@ -116,7 +116,7 @@ int main()
     norm = dg::blas2::dot( w3d, solution);
     std::cout << "L2 Norm of relative error is:     " <<sqrt( normerr/norm)<<std::endl;
 
-    //both function and derivative converge with order P 
+    //both function and derivative converge with order P
 
     return 0;
 }

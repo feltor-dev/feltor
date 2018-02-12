@@ -14,7 +14,7 @@ double gradientX(double x, double y, double z){return cos(x)*sin(y)*cos(z);}
 double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
 double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
 
-typedef thrust::host_vector<double> HVec; 
+typedef thrust::host_vector<double> HVec;
 
 int main()
 {

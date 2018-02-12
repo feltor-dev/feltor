@@ -43,9 +43,9 @@ std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const double* x_ptr
 #else
 std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    if(size<dg::blas1::detail::MIN_SIZE) 
+    if(size<dg::blas1::detail::MIN_SIZE)
         exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]);
-    else 
+    else
         exblas::exdot_omp( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]);
     return h_superacc;
 }
@@ -77,12 +77,12 @@ inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, ThrustMat
 }
 
 template< class Matrix, class Vector>
-inline void doSymv(  
-              get_value_type<Vector> alpha, 
+inline void doSymv(
+              get_value_type<Vector> alpha,
               const Matrix& m,
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+              const Vector& x,
+              get_value_type<Vector> beta,
+              Vector& y,
               ThrustMatrixTag,
               ThrustVectorTag)
 {
@@ -90,10 +90,10 @@ inline void doSymv(
 }
 
 template< class Matrix, class Vector>
-inline void doSymv(  
-              Matrix& m, 
+inline void doSymv(
+              Matrix& m,
               const Vector& x,
-              Vector& y, 
+              Vector& y,
               ThrustMatrixTag,
               ThrustVectorTag,
               ThrustVectorTag)

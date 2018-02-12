@@ -12,10 +12,10 @@ namespace detail
 {
 
 template< class Matrix, class Vector>
-inline void doSymv( 
+inline void doSymv(
               Matrix& m,
-              const Vector& x, 
-              Vector& y, 
+              const Vector& x,
+              Vector& y,
               AnyMatrixTag,
               VectorVectorTag,
               VectorVectorTag)
@@ -25,20 +25,20 @@ inline void doSymv(
     //assert( m.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        doSymv( m, x[i], y[i], 
+        doSymv( m, x[i], y[i],
                        get_matrix_category<Matrix>(),
                        get_vector_category<typename Vector::value_type>(),
                        get_vector_category<typename Vector::value_type>() );
-        
+
 }
 
 template< class Precon, class Vector>
-inline void doSymv( 
+inline void doSymv(
               get_value_type<Vector> alpha,
               const Precon& m,
-              const Vector& x, 
+              const Vector& x,
               get_value_type<Vector> beta,
-              Vector& y, 
+              Vector& y,
               AnyMatrixTag,
               VectorVectorTag)
 {
@@ -53,10 +53,10 @@ inline void doSymv(
 }
 
 template< class Matrix, class Vector>
-inline get_value_type<Vector> doDot( 
-              const Vector& x, 
+inline get_value_type<Vector> doDot(
+              const Vector& x,
               const Matrix& m,
-              const Vector& y, 
+              const Vector& y,
               AnyMatrixTag,
               VectorVectorTag)
 {
@@ -80,9 +80,9 @@ inline get_value_type<Vector> doDot(
     return exblas::cpu::Round(&(acc[0][0]));
 }
 template< class Matrix, class Vector>
-inline typename VectorTraits<Vector>::value_type  doDot( 
+inline typename VectorTraits<Vector>::value_type  doDot(
               const Matrix& m,
-              const Vector& y, 
+              const Vector& y,
               AnyMatrixTag,
               VectorVectorTag)
 {

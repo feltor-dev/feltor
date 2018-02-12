@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "operator.h"
 #include "dg/functors.h"
@@ -41,12 +41,12 @@ struct SparseElement
 
     ///@brief Read access
     ///@return read access to contained value
-    const T& value( )const { 
+    const T& value( )const {
         return value_[0];
     }
     /**
      * @brief write access, create a T if there isn't one already
-     * @return write access, always returns a T 
+     * @return write access, always returns a T
      */
     T& value() {
         if(!isSet()) value_.resize(1);
@@ -68,13 +68,13 @@ struct SparseElement
 };
 
 /**
-* @brief Class for 2x2 and 3x3 matrices sharing or implicitly assuming elements 
+* @brief Class for 2x2 and 3x3 matrices sharing or implicitly assuming elements
 *
-* This class enables shared access to stored Ts 
+* This class enables shared access to stored Ts
 * or not store them at all since the storage of (and computation with) a T is expensive.
 
 * This class contains a (dense) 3x3 matrix of integers.
-* If positive or zero, the integer represents a gather index into the stored array of Ts, 
+* If positive or zero, the integer represents a gather index into the stored array of Ts,
 if negative the value of the T is assumed to be 1, except for the off-diagonal entries
     in the matrix where it is assumed to be 0.
 * We then only need to store non-trivial and non-repetitive Ts.
@@ -89,7 +89,7 @@ struct SparseTensor
 
     /**
      * @brief reserve space for value_size Ts in the values array
-     * @param value_size reserve space for this number of Ts (default constructor) 
+     * @param value_size reserve space for this number of Ts (default constructor)
      */
     SparseTensor( unsigned value_size): mat_idx_(3,-1.), values_(value_size){}
 
@@ -157,12 +157,12 @@ struct SparseTensor
      void clear_unused_values();
 
     /*!@brief Read access the underlying T
-     * @return if !isSet(i,j) the result is undefined, otherwise values[idx(i,j)] is returned. 
+     * @return if !isSet(i,j) the result is undefined, otherwise values[idx(i,j)] is returned.
      * @param i row index 0<=i<3
      * @param j col index 0<=j<3
      * @note If the indices fall out of range of index the result is undefined
      */
-    const T& value(size_t i, size_t j)const{ 
+    const T& value(size_t i, size_t j)const{
         int k = mat_idx_(i,j);
         return values_[k];
     }
@@ -171,7 +171,7 @@ struct SparseTensor
     /**
      * @brief Return the T at given position, default construct one if there isn't one already
      * @param i index into the values array
-     * @return  always returns a T 
+     * @return  always returns a T
      */
     T& value( size_t i)
     {
@@ -195,11 +195,11 @@ struct SparseTensor
     * The matrix is empty if !isSet(i,j) for all i and j
     * @return true if no value in the matrix is set
     */
-    bool isEmpty()const{ 
+    bool isEmpty()const{
         bool empty=true;
         for(unsigned i=0; i<3; i++)
             for( unsigned j=0; j<3; j++)
-                if( isSet(i,j) ) 
+                if( isSet(i,j) )
                     empty=false;
         return empty;
     }
@@ -214,7 +214,7 @@ struct SparseTensor
         bool dense=true;
         for(unsigned i=0; i<3; i++)
             for( unsigned j=0; j<3; j++)
-                if( !isSet(i,j) ) 
+                if( !isSet(i,j) )
                     dense=false;
         return dense;
     }
@@ -229,7 +229,7 @@ struct SparseTensor
         bool empty=true;
         for(unsigned i=0; i<3; i++)
         {
-            if( isSet(i,2) || isSet(2,i)) 
+            if( isSet(i,2) || isSet(2,i))
                 empty=false;
         }
         return empty;
@@ -248,7 +248,7 @@ struct SparseTensor
                     diagonal=false;
         return diagonal;
     }
-     
+
      ///construct an empty Tensor
      SparseTensor empty()const{return SparseTensor();}
      ///erase all values in the third dimension
@@ -282,7 +282,7 @@ namespace tensor
  * @return a dense tensor
  * @note undefined if t.isEmpty() returns true
  */
-template<class container> 
+template<class container>
 SparseTensor<container> dense(const SparseTensor<container>& tensor)
 {
     SparseTensor<container> t(tensor);
@@ -354,7 +354,7 @@ struct CholeskyTensor
     {
         SparseTensor<container> denseIn=dg::tensor::dense(in);
         /*
-         * One nice property of positive definite is that the diagonal elements are 
+         * One nice property of positive definite is that the diagonal elements are
          * greater than zero.
          */
 
@@ -449,7 +449,7 @@ struct CholeskyTensor
 ///@cond
 
 template<class container>
-void SparseTensor<container>::unique_insert(std::vector<int>& indices, int& idx) 
+void SparseTensor<container>::unique_insert(std::vector<int>& indices, int& idx)
 {
     bool unique=true;
     unsigned size=indices.size();
@@ -483,7 +483,7 @@ SparseTensor<container> SparseTensor<container>::parallel() const
 {
     SparseTensor<container> t;
     if( isEmpty()) return t;
-    if( isSet( 2,2) ) 
+    if( isSet( 2,2) )
     {
         t.mat_idx_(2,2) = 0;
         t.values_.assign(1,values_[idx(2,2)] );

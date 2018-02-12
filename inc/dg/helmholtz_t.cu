@@ -9,7 +9,7 @@
 #include "cg.h"
 
 const double eps = 1e-4;
-const double alpha = -0.5; 
+const double alpha = -0.5;
 double lhs( double x, double y){ return sin(x)*sin(y);}
 double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
 const double R_0 = 1000;
@@ -17,17 +17,17 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double lz = 2.*M_PI;
 double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
-double laplace_fct( double x, double y, double z) { 
+double laplace_fct( double x, double y, double z) {
     return -1./x*cos(x-R_0)*sin(y) + 2.*sin(x-R_0)*sin(y);}
-double helmholtz_fct( double x, double y, double z) { 
+double helmholtz_fct( double x, double y, double z) {
     return fct(x,y,z) - alpha*laplace_fct(x,y,z);}
 
 dg::bc bcx = dg::DIR;
 double initial( double x, double y, double z) {return sin(0);}
 int main()
 {
-    
-    unsigned n, Nx, Ny, Nz; 
+
+    unsigned n, Nx, Ny, Nz;
     std::cout << "Type n, Nx Ny and Nz\n";
     std::cin >> n>> Nx >> Ny >> Nz;
     dg::Grid2d grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);

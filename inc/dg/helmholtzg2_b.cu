@@ -10,13 +10,13 @@
 #include "functors.h"
 
 const double eps = 1e-4;
-const double tau=1.0; 
+const double tau=1.0;
 const double alpha = -0.5*tau;
 double lhs( double x,double y){ return sin(x);}
 double rhs( double x,double y){
     return  (-2.-2.*x+2.*cos(x)+2*x*cos(x)+sin(x)+2*x*sin(x)+x*x*sin(x)
     -2*alpha*sin(x)-2*x*alpha*sin(x)+alpha*alpha*sin(x))/(1.0+x)/alpha;
-    
+
 }
 // double dxrhs( double x,double y){ return (1.0 - 2.*alpha + alpha*alpha)*sin(x);} //// chi=1
 double dxrhs( double x,double y){ return (1.+x)*sin(x)-2*alpha*sin(x)+alpha*alpha*(2*cos(x)/(1.+x)/(1.+x)-2*sin(x)/(1.+x)/(1.+x)/(1.+x)+sin(x)/(1.+x));} // chi=x
@@ -24,8 +24,8 @@ double dxrhs( double x,double y){ return (1.+x)*sin(x)-2*alpha*sin(x)+alpha*alph
 
 int main()
 {
-    
-    unsigned n, Nx, Ny; 
+
+    unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n>> Nx >> Ny;
     dg::Grid2d grid2d( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny,dg::DIR,dg::PER);
@@ -35,20 +35,20 @@ int main()
     const dg::DVec sol = dg::evaluate( lhs, grid2d);
     dg::DVec x(sol.size(), 0.);
     const dg::DVec chi = dg::evaluate( dg::LinearX(1.0,1.0), grid2d);
-    
+
     dg::Helmholtz2< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2barinv(grid2d, alpha,dg::centered);
     dg::Elliptic< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > gamma2tilde(grid2d, dg::normed, dg::centered);
-    gamma2barinv.set_chi(chi); 
+    gamma2barinv.set_chi(chi);
 
     dg::Invert<dg::DVec> invertg2( x, grid2d.size(), eps);
     dg::Invert<dg::DVec> invertg1( x, grid2d.size(), eps);
-    
+
     dg::DVec rho = dg::evaluate( rhs, grid2d);
     dg::DVec rholap = dg::evaluate( dxrhs, grid2d);
     dg::blas2::gemv(gamma2tilde,rho,rholap); //lambda = - nabla_perp^2 phi
     dg::blas1::scal(rholap,alpha); // lambda = 0.5*tau_i*nabla_perp^2 phi
-    
-    //test gamma2    
+
+    //test gamma2
     dg::Timer t;
     t.tic();
     unsigned number = invertg2( gamma2barinv, x, rholap);

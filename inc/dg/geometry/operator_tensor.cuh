@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <algorithm>
 
@@ -111,7 +111,7 @@ cusp::coo_matrix<int, T, cusp::host_memory> sandwich( const Operator<T>& left,  
 
 ///@}
 
-    
+
 }//namespace dg
 
 

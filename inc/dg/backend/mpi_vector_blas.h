@@ -32,11 +32,11 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector& y, MPIVector
 #ifdef DG_DEBUG
     int compare;
     MPI_Comm_compare( x.communicator(), y.communicator(), &compare);
-    assert( compare == MPI_CONGRUENT || compare == MPI_IDENT); 
+    assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
     //local compuation
-    std::vector<int64_t> acc = doDot_superacc( x.data(), y.data(),typename VectorTraits<container>::vector_category());  
+    std::vector<int64_t> acc = doDot_superacc( x.data(), y.data(),typename VectorTraits<container>::vector_category());
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicator(), x.communicator_mod(), x.communicator_mod_reduce());
     return receive;
@@ -49,20 +49,20 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
 }
 
 template< class Vector>
-inline void doScal(  Vector& x, 
-              typename VectorTraits<Vector>::value_type alpha, 
+inline void doScal(  Vector& x,
+              typename VectorTraits<Vector>::value_type alpha,
               MPIVectorTag)
 {
-    //local computation 
+    //local computation
     typedef typename Vector::container_type container;
     doScal( x.data(), alpha, typename VectorTraits<container>::vector_category());
 }
 template< class Vector>
-inline void doPlus(  Vector& x, 
-              typename VectorTraits<Vector>::value_type alpha, 
+inline void doPlus(  Vector& x,
+              typename VectorTraits<Vector>::value_type alpha,
               MPIVectorTag)
 {
-    //local computation 
+    //local computation
     typedef typename Vector::container_type container;
     doPlus( x.data(), alpha, typename VectorTraits<container>::vector_category());
 }
@@ -75,17 +75,17 @@ inline void doTransform(  const Vector& x, Vector& y,
 #ifdef DG_DEBUG
     int result;
     MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-    assert( result == MPI_CONGRUENT || result == MPI_IDENT); 
+    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 #endif //DG_DEBUG
     typedef typename Vector::container_type container;
     doTransform( x.data(), y.data(), op, typename VectorTraits<container>::vector_category());
 }
 
 template< class Vector>
-inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
-              const Vector& x, 
-              typename VectorTraits<Vector>::value_type beta, 
-              Vector& y, 
+inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
+              const Vector& x,
+              typename VectorTraits<Vector>::value_type beta,
+              Vector& y,
               MPIVectorTag)
 {
     typedef typename Vector::container_type container;
@@ -93,12 +93,12 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
 }
 
 template< class Vector>
-inline void doAxpbypgz( typename VectorTraits<Vector>::value_type alpha, 
-              const Vector& x, 
-              typename VectorTraits<Vector>::value_type beta, 
-              const Vector& y, 
-              typename VectorTraits<Vector>::value_type gamma, 
-              Vector& z, 
+inline void doAxpbypgz( typename VectorTraits<Vector>::value_type alpha,
+              const Vector& x,
+              typename VectorTraits<Vector>::value_type beta,
+              const Vector& y,
+              typename VectorTraits<Vector>::value_type gamma,
+              Vector& z,
               MPIVectorTag)
 {
     typedef typename Vector::container_type container;
@@ -106,20 +106,20 @@ inline void doAxpbypgz( typename VectorTraits<Vector>::value_type alpha,
 }
 
 template< class Vector>
-inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
-        const Vector& x1, const Vector& x2, 
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
+        const Vector& x1, const Vector& x2,
         typename VectorTraits<Vector>::value_type beta,
-        Vector& y, 
+        Vector& y,
         MPIVectorTag)
 {
     typedef typename Vector::container_type container;
     doPointwiseDot( alpha, x1.data(), x2.data(), beta, y.data(), typename VectorTraits<container>::vector_category());
 }
 template< class Vector>
-inline void doPointwiseDivide( typename VectorTraits<Vector>::value_type alpha, 
-        const Vector& x1, const Vector& x2, 
+inline void doPointwiseDivide( typename VectorTraits<Vector>::value_type alpha,
+        const Vector& x1, const Vector& x2,
         typename VectorTraits<Vector>::value_type beta,
-        Vector& y, 
+        Vector& y,
         MPIVectorTag)
 {
     typedef typename Vector::container_type container;
@@ -127,10 +127,10 @@ inline void doPointwiseDivide( typename VectorTraits<Vector>::value_type alpha,
 }
 
 template< class Vector>
-inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
         const Vector& x1, const Vector& x2, const Vector& x3,
         typename VectorTraits<Vector>::value_type beta,
-        Vector& y, 
+        Vector& y,
         MPIVectorTag)
 {
     typedef typename Vector::container_type container;
@@ -138,22 +138,22 @@ inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
 }
 
 template< class Vector>
-inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
-        const Vector& x1, const Vector& x2, 
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
+        const Vector& x1, const Vector& x2,
         typename VectorTraits<Vector>::value_type beta,
-        const Vector& y1, const Vector& y2, 
+        const Vector& y1, const Vector& y2,
         typename VectorTraits<Vector>::value_type gamma,
-        Vector& z, 
+        Vector& z,
         MPIVectorTag)
 {
     typedef typename Vector::container_type container;
     doPointwiseDot( alpha, x1.data(), x2.data(), beta, y1.data(), y2.data(), gamma, z.data(), typename VectorTraits<container>::vector_category());
 
 }
-        
+
 
 }//namespace detail
-    
+
 } //namespace blas1
 
 } //namespace dg

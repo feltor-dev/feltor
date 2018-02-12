@@ -6,13 +6,13 @@
 @-----------------------------Space and Time discretization------------
 1)  n  (# of x,y-polynomials)            =   3      (3)
 2)  nx (grid points in x)                =   2000 (192)
-3)  ny (grid points in y)                =   3400 (192) 
+3)  ny (grid points in y)                =   3400 (192)
 4)  nz (grid points in z)                =   15(>16)
 5)  dt (time step in units c_s/rho_s)    =   1e-2 (0.01)
 
 ----------------------------------Output parameters--------------------
 6)  n_out (# of x-y polynomials in output)  =  3
-7)  nx_out (# grid points in output field)  =  2000 
+7)  nx_out (# grid points in output field)  =  2000
 8)  ny_out (# grid points in output field)  =  3400
 9)  nz_out (# grid points in output field)  =  15
 10) itstp  (steps between outputs)          =  500  (> 5)
@@ -27,7 +27,7 @@
 16) mu_e (-m_e/m_i)                         = -0.000272121 (-0.000544617,-0.000272121,-0.000181372 )
 17) tau (Ti/Te)                             =  0.0    (0.0)
 18) beta_e0                                 =  2.7e-5    (5.4e-5,8.1e-5,1.35e-4 )
-19) nu_perp                                 =  1e-4 
+19) nu_perp                                 =  1e-4
 20) nu_parallel  (viscosity)                =  1   (0.001)
 21) para resistivity (c)                    =  2e-6   (2e-6, 4e-6,6e-6,1e-5)
 
@@ -37,7 +37,7 @@
 24) x-position ( in units of a)             =  0.75   (0.4)
 25) y-position ( in units of a)             =  0.00   (0.5)
 26) sigma_z (variance in units of R_0)      =  0.5       (12.5 for oo)
-27) k_psi (zonal modes)                     =  7.0   
+27) k_psi (zonal modes)                     =  7.0
 28) Profile amplitude                       =  2.5  (peak amplitude)
 29) Background Prof amplitude               =  1.   (density on the boundary)
 ----------------------------------Miscellaneous----------------------------

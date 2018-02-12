@@ -15,7 +15,7 @@ namespace solovev
 /**
  * @brief Constructs and display geometric parameters for the solovev and taylor fields
  * @ingroup geom
- */    
+ */
 struct Parameters
 {
     double A, //!< A
@@ -25,7 +25,7 @@ struct Parameters
            triangularity, //!< triangularity of the magnetic surfaces
            alpha, //!< damping width
            rk4eps,  //!< accuracy for the field line integration
-           psipmin, //!< for source 
+           psipmin, //!< for source
            psipmax, //!< for profile
            psipmaxcut, //!< for cutting
            psipmaxlim,  //!< for limiter
@@ -78,18 +78,18 @@ struct Parameters
     /**
      * @brief Put values into a json string
      *
-     * @return 
+     * @return
      */
     Json::Value dump( ) const
     {
-        Json::Value js; 
+        Json::Value js;
         js["A"] = A;
         for (unsigned i=0;i<12;i++) js["c"][i] = c[i];
         js["R_0"] = R_0;
         js["inverseaspectratio"] = a/R_0;
         js["elongation"] = elongation;
         js["triangularity"] = triangularity;
-        js["alpha"] = alpha; 
+        js["alpha"] = alpha;
         js["rk4eps"] = rk4eps;
         js["psip_min"] = psipmin;
         js["psip_max"] = psipmax;

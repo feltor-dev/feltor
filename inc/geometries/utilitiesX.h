@@ -7,7 +7,7 @@ namespace dg
 namespace geo
 {
 /**
- * @brief This function finds the X-point via Newton iteration applied to the gradient of psi, 
+ * @brief This function finds the X-point via Newton iteration applied to the gradient of psi,
  *
  * The inverse of the Hessian matrix is computed analytically
     @param psi \f$ \psi(R,Z)\f$, where R, Z are cylindrical coordinates
@@ -37,11 +37,11 @@ namespace detail
 
 
 /**
- * @brief This struct finds and stores the X-point and can act in a root finding routine to find points on the perpendicular line through the X-point 
+ * @brief This struct finds and stores the X-point and can act in a root finding routine to find points on the perpendicular line through the X-point
  */
 struct XCross
 {
-    
+
     XCross( const BinaryFunctorsLvl1& psi, double R_X, double Z_X, double distance=1): fieldRZtau_(psi), psip_(psi), dist_(distance)
     {
         R_X_ = R_X, Z_X_ = Z_X;
@@ -70,7 +70,7 @@ struct XCross
         while( (eps < eps_old || eps > 1e-4 ) && eps > 1e-10)
         {
             eps_old = eps; end_old = end;
-            N*=2; 
+            N*=2;
             dg::stepperRK17( fieldRZtau_, begin, end, psi0, 0, N);
 
             eps = sqrt( (end[0]-end_old[0])*(end[0]-end_old[0]) + (end[1]-end_old[1])*(end[1]-end_old[1]));
@@ -104,23 +104,23 @@ struct XCross
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
 template <class FpsiX, class FieldRZYRYZY>
-void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY, 
-        double psi, const thrust::host_vector<double>& y_vec, 
+void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
+        double psi, const thrust::host_vector<double>& y_vec,
         const unsigned nodeX0, const unsigned nodeX1,
         thrust::host_vector<double>& r, //output r - values
         thrust::host_vector<double>& z, //output z - values
-        thrust::host_vector<double>& yr, 
-        thrust::host_vector<double>& yz,  
-        thrust::host_vector<double>& xr, 
-        thrust::host_vector<double>& xz,  
+        thrust::host_vector<double>& yr,
+        thrust::host_vector<double>& yz,
+        thrust::host_vector<double>& xr,
+        thrust::host_vector<double>& xz,
         double* R_0, double* Z_0,  //2 output coords on perp line
         double& f_psi  //output f
-        ) 
+        )
 {
     thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old), yr_old(r_old), xr_old(r_old);
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old), yz_old(r_old), xz_old(z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size()), xr.resize(y_vec.size()), xz.resize(y_vec.size());
-    //now compute f and starting values 
+    //now compute f and starting values
     thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
     const double fprime = fpsi.f_prime( psi);
     f_psi = fpsi.construct_f(psi, R_0, Z_0);
@@ -206,7 +206,7 @@ void computeX_rzy(FpsiX fpsi, FieldRZYRYZY fieldRZYRYZY,
 //doesn't integrate over the x-point
 //returns psi_1
 template <class XFieldFinv>
-double construct_psi_values( XFieldFinv fpsiMinv, 
+double construct_psi_values( XFieldFinv fpsiMinv,
         const double psi_0, const double x_0, const thrust::host_vector<double>& x_vec, const double x_1, unsigned idxX, //idxX is the number of x_vec[i] < 0
         thrust::host_vector<double>& psi_x )
 {
@@ -220,30 +220,30 @@ double construct_psi_values( XFieldFinv fpsiMinv,
     double eps = 1e10, eps_old=2e10;
     while( (eps <  eps_old || eps > 1e-8) && eps > 1e-11) //1e-8 < eps < 1e-14
     {
-        eps_old = eps; 
-        psi_old = psi_x; 
+        eps_old = eps;
+        psi_old = psi_x;
         x0 = x_0, x1 = x_vec[0];
 
         thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
         dg::stepperRK17( fpsiMinv, begin, end, x0, x1, N);
-        psi_x[0] = end[0]; fpsiMinv(end,temp); 
+        psi_x[0] = end[0]; fpsiMinv(end,temp);
         for( unsigned i=1; i<idxX; i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
             dg::stepperRK17( fpsiMinv, temp, end, x0, x1, N);
-            psi_x[i] = end[0]; fpsiMinv(end,temp); 
+            psi_x[i] = end[0]; fpsiMinv(end,temp);
             //std::cout << "FOUND PSI "<<end[0]<<"\n";
         }
         end[0] = psi_const;
         //std::cout << "FOUND PSI "<<end[0]<<"\n";
-        psi_x[idxX] = end[0]; fpsiMinv(end,temp); 
+        psi_x[idxX] = end[0]; fpsiMinv(end,temp);
         for( unsigned i=idxX+1; i<x_vec.size(); i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
             dg::stepperRK17( fpsiMinv, temp, end, x0, x1, N);
-            psi_x[i] = end[0]; fpsiMinv(end,temp); 
+            psi_x[i] = end[0]; fpsiMinv(end,temp);
             //std::cout << "FOUND PSI "<<end[0]<<"\n";
         }
         temp = end;
@@ -253,8 +253,8 @@ double construct_psi_values( XFieldFinv fpsiMinv,
         //eps = sqrt( dg::blas2::dot( psi_diff, w1d, psi_diff)/ dg::blas2::dot( psi_x, w1d, psi_x));
         eps = sqrt( dg::blas1::dot( psi_diff, psi_diff)/ dg::blas1::dot( psi_x, psi_x));
 
-        std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n"; 
-        //std::cout << "psi 1               is "<<psi_1_numerical<<std::endl; 
+        std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n";
+        //std::cout << "psi 1               is "<<psi_1_numerical<<std::endl;
         N*=2;
     }
     return psi_1_numerical;
@@ -274,16 +274,16 @@ struct PsipSep
 };
 
 //!ATTENTION: choosing h on separatrix is a mistake if LaplacePsi does not vanish at X-point
-//This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
+//This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as
 //good as it can, i.e. until machine precision is reached (like FpsiX just for separatrix)
 struct SeparatriX
 {
-    SeparatriX( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0, int firstline): 
+    SeparatriX( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0, int firstline):
         mode_(firstline),
         fieldRZYequi_(psi), fieldRZYTequi_(psi, x0, y0), fieldRZYZequi_(psi),
         fieldRZYconf_(psi), fieldRZYTconf_(psi, x0, y0), fieldRZYZconf_(psi)
     {
-        //find four points on the separatrix and construct y coordinate at those points and at last construct f 
+        //find four points on the separatrix and construct y coordinate at those points and at last construct f
         //////////////////////////////////////////////
         double R_X = xX; double Z_X = yX;
         PsipSep psip_sep( psi.f());
@@ -324,7 +324,7 @@ struct SeparatriX
                 //std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
             }
             //remember last call
-            y_i[i] = end2d[2]; 
+            y_i[i] = end2d[2];
             std::cout << "Found y_i["<<i<<"]: "<<y<<" with eps = "<<eps<<" and "<<N<<" steps and diff "<<fabs(end2d[0]-R_X)/R_X<<"\n";
         }
         y_i[0]*=-1; y_i[2]*=-1; //these were integrated against y direction
@@ -338,7 +338,7 @@ struct SeparatriX
     double get_f( ) const{return f_psi_;}
 
     //compute the vector of r and z - values that form the separatrix
-    void compute_rzy( const thrust::host_vector<double>& y_vec, 
+    void compute_rzy( const thrust::host_vector<double>& y_vec,
             const unsigned nodeX0, const unsigned nodeX1,
             thrust::host_vector<double>& r, //same size as y_vec on output
             thrust::host_vector<double>& z ) const
@@ -415,24 +415,24 @@ struct SeparatriX
     }
     private:
     //compute f for psi=0
-    double construct_f( ) 
+    double construct_f( )
     {
         std::cout << "In construct f function!\n";
-        
+
         thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
         begin[0] = R_i[0], begin[1] = Z_i[0];
         double eps = 1e10, eps_old = 2e10;
-        unsigned N = 32; 
+        unsigned N = 32;
         while( (eps < eps_old || eps > 1e-7) && N < 1e6)
         {
-            eps_old = eps, end_old = end; 
-            N*=2; 
+            eps_old = eps, end_old = end;
+            N*=2;
             if(mode_==0)
             {
                 dg::stepperRK17( fieldRZYZconf_, begin, end, begin[1], 0., N);
                 thrust::host_vector<double> temp(end);
                 dg::stepperRK17( fieldRZYTconf_, temp, end, 0., M_PI, N);
-                temp = end; 
+                temp = end;
                 dg::stepperRK17( fieldRZYZconf_, temp, end, temp[1], Z_i[1], N);
             }
             if(mode_==1)
@@ -440,7 +440,7 @@ struct SeparatriX
                 dg::stepperRK17( fieldRZYZequi_, begin, end, begin[1], 0., N);
                 thrust::host_vector<double> temp(end);
                 dg::stepperRK17( fieldRZYTequi_, temp, end, 0., M_PI, N);
-                temp = end; 
+                temp = end;
                 dg::stepperRK17( fieldRZYZequi_, temp, end, temp[1], Z_i[1], N);
             }
             eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
@@ -474,8 +474,8 @@ namespace detail
 struct InitialX
 {
 
-    InitialX( const BinaryFunctorsLvl1& psi, double xX, double yX): 
-        psip_(psi), fieldRZtau_(psi), 
+    InitialX( const BinaryFunctorsLvl1& psi, double xX, double yX):
+        psip_(psi), fieldRZtau_(psi),
         xpointer_(psi, xX, yX, 1e-4)
     {
         //constructor finds four points around X-point and integrates them a bit away from it
@@ -493,7 +493,7 @@ struct InitialX
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             double eps = 1e10, eps_old = 2e10;
             unsigned N=10;
-            double psi0 = psip_.f()(begin[0], begin[1]), psi1 = 1e3*psi0; 
+            double psi0 = psip_.f()(begin[0], begin[1]), psi1 = 1e3*psi0;
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
                 eps_old = eps; end_old = end;
@@ -506,7 +506,7 @@ struct InitialX
             R_i_[i] = end_old[0], Z_i_[i] = end_old[1];
             begin[0] = R_i_[i], begin[1] = Z_i_[i];
             eps = 1e10, eps_old = 2e10; N=10;
-            psi0 = psip_.f()(begin[0], begin[1]), psi1 = -0.01; 
+            psi0 = psip_.f()(begin[0], begin[1]), psi1 = -0.01;
             if( i==0||i==2)psi1*=-1.;
             while( (eps < eps_old || eps > 1e-5 ) && eps > 1e-9)
             {
@@ -529,9 +529,9 @@ struct InitialX
      * @param R_0 array of size 2 (write-only)
      * @param Z_0 array of size 2 (write-only)
      */
-    void find_initial( double psi, double* R_0, double* Z_0) 
+    void find_initial( double psi, double* R_0, double* Z_0)
     {
-        thrust::host_vector<double> begin( 2, 0), end( begin), end_old(begin); 
+        thrust::host_vector<double> begin( 2, 0), end( begin), end_old(begin);
         for( unsigned i=0; i<2; i++)
         {
             if(psi<0)

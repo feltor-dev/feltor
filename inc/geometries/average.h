@@ -47,7 +47,7 @@ struct DeltaFunction
     }
     /**
      * @brief == operator()(R,Z)
-     */ 
+     */
     double operator()( double R, double Z, double phi) const
     {
         return (*this)(R,Z);
@@ -77,7 +77,7 @@ struct Alpha
     }
     /**
      * @brief == operator()(R,Z)
-     */ 
+     */
     double operator()( double R, double Z, double phi) const
     {
         return operator()(R,Z);
@@ -108,14 +108,14 @@ struct FluxSurfaceAverage
     f_(f),
     deltaf_(geo::DeltaFunction(c,0.0,0.0)),
     w2d_ ( dg::create::weights( g2d_)),
-    oneongrid_(dg::evaluate(dg::one,g2d_))              
+    oneongrid_(dg::evaluate(dg::one,g2d_))
     {
         thrust::host_vector<double> psipRog2d  = dg::evaluate( c.psipR(), g2d_);
         thrust::host_vector<double> psipZog2d  = dg::evaluate( c.psipZ(), g2d_);
-        double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  0.,     thrust::maximum<double>()  );    
+        double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  0.,     thrust::maximum<double>()  );
         //double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
-        double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
-        //double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
+        double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );
+        //double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );
         double deltapsi = fabs(psipZmax/g2d_.Ny()/g2d_.n() +psipRmax/g2d_.Nx()/g2d_.n());
         //deltaf_.setepsilon(deltapsi/4.);
         deltaf_.setepsilon(deltapsi); //macht weniger Zacken
@@ -128,7 +128,7 @@ struct FluxSurfaceAverage
     double operator()(double psip0)
     {
         deltaf_.setpsi( psip0);
-        container deltafog2d = dg::evaluate( deltaf_, g2d_);    
+        container deltafog2d = dg::evaluate( deltaf_, g2d_);
         double psipcut = dg::blas2::dot( f_,w2d_,deltafog2d); //int deltaf psip
         double vol     = dg::blas2::dot( oneongrid_ , w2d_,deltafog2d); //int deltaf
         double fsa = psipcut/vol;
@@ -137,7 +137,7 @@ struct FluxSurfaceAverage
     private:
     dg::Grid2d g2d_;
     container f_;
-    geo::DeltaFunction deltaf_;    
+    geo::DeltaFunction deltaf_;
     const container w2d_;
     const container oneongrid_;
 };
@@ -164,14 +164,14 @@ struct SafetyFactor
     f_(f), //why not directly use Alpha??
     deltaf_(geo::DeltaFunction(c,0.0,0.0)),
     w2d_ ( dg::create::weights( g2d_)),
-    oneongrid_(dg::evaluate(dg::one,g2d_))              
+    oneongrid_(dg::evaluate(dg::one,g2d_))
     {
       thrust::host_vector<double> psipRog2d  = dg::evaluate( c.psipR(), g2d_);
       thrust::host_vector<double> psipZog2d  = dg::evaluate( c.psipZ(), g2d_);
-      double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(), 0.,     thrust::maximum<double>()  );    
+      double psipRmax = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(), 0.,     thrust::maximum<double>()  );
       //double psipRmin = (double)thrust::reduce( psipRog2d.begin(), psipRog2d.end(),  psipRmax,thrust::minimum<double>()  );
-      double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );    
-      //double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );   
+      double psipZmax = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), 0.,      thrust::maximum<double>()  );
+      //double psipZmin = (double)thrust::reduce( psipZog2d.begin(), psipZog2d.end(), psipZmax,thrust::minimum<double>()  );
       double deltapsi = fabs(psipZmax/g2d_.Ny() +psipRmax/g2d_.Nx());
       //deltaf_.setepsilon(deltapsi/4.);
       deltaf_.setepsilon(4.*deltapsi); //macht weniger Zacken
@@ -185,14 +185,14 @@ struct SafetyFactor
     double operator()(double psip0)
     {
         deltaf_.setpsi( psip0);
-        container deltafog2d = dg::evaluate( deltaf_, g2d_);    
+        container deltafog2d = dg::evaluate( deltaf_, g2d_);
         double q = dg::blas2::dot( f_,w2d_,deltafog2d)/(2.*M_PI);
         return q;
     }
     private:
     dg::Grid2d g2d_;
     container f_;
-    geo::DeltaFunction deltaf_;    
+    geo::DeltaFunction deltaf_;
     const container w2d_;
     const container oneongrid_;
 };

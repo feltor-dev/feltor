@@ -1,6 +1,6 @@
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%Original development%%%%%%%%%%%%%%%%%%%%%%%%%
- *  Copyright (c) 2016 Inria and University Pierre and Marie Curie 
+ *  Copyright (c) 2016 Inria and University Pierre and Marie Curie
  * %%%%%%%%%%%%%%%%%%%%%%%Modifications and further additions%%%%%%%%%%
  *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
  */
@@ -13,7 +13,7 @@
  *    Developers : \n
  *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
  *        Sylvain Collange -- sylvain.collange@inria.fr \n
- *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk
  */
 #pragma once
 #include <cassert>
@@ -29,7 +29,7 @@ namespace exblas{
 ///@cond
 namespace cpu{
 
-template<typename CACHE> 
+template<typename CACHE>
 void ExDOTFPE_cpu(int N, const double *a, const double *b, int64_t* acc) {
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
@@ -55,7 +55,7 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, int64_t* acc) {
     cache.Flush();
 }
 
-template<typename CACHE> 
+template<typename CACHE>
 void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int64_t* acc) {
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );

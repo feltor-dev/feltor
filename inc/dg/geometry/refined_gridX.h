@@ -19,12 +19,12 @@ namespace dg
 struct aRefinementX2d
 {
     /*! @brief Generate the grid transformation
-     *  
+     *
      * @param g_old The 1d grid to refine
      * @param weightsX A 2d vector of size nx_new()*ny_new(). These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
      * @param weightsY A 2d vector of size nx_new()*ny_new(). These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
-     * @param abscissasX A 2d vector of size nx_new()*ny_new(). These are the new abscissas \f$ x(\zeta) \f$ of the grid. 
-     * @param abscissasY A 2d vector of size nx_new()*ny_new(). These are the new abscissas \f$ x(\zeta) \f$ of the grid. 
+     * @param abscissasX A 2d vector of size nx_new()*ny_new(). These are the new abscissas \f$ x(\zeta) \f$ of the grid.
+     * @param abscissasY A 2d vector of size nx_new()*ny_new(). These are the new abscissas \f$ x(\zeta) \f$ of the grid.
     */
     void generate( const GridX2d& g_old, thrust::host_vector<double>& weightsX, thrust::host_vector<double>& weightsY, thrust::host_vector<double>& abscissasX, thrust::host_vector<double>& abscissasY) const
     {
@@ -34,7 +34,7 @@ struct aRefinementX2d
         GridX1d gy( g_old.y0(), g_old.y1(), g_old.fy(), g_old.n(), g_old.Ny(), g_old.bcy());
         do_generateY(gy,wy,ay);
         unsigned size=wx.size()*wy.size();
-        weightsX.resize(size), weightsY.resize(size); 
+        weightsX.resize(size), weightsY.resize(size);
         abscissasX.resize(size), abscissasY.resize(size);
         //now make product space
         for( unsigned i=0; i<wy.size(); i++)
@@ -113,20 +113,20 @@ struct EquidistXRefinement : public aRefinementX2d
     EquidistXRefinement* clone()const{return new EquidistXRefinement(*this);}
     private:
     unsigned add_x_, howm_x_, add_y_, howm_y_;
-    virtual void do_generateX( const Grid1d& gx, unsigned nodeXX, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const 
+    virtual void do_generateX( const Grid1d& gx, unsigned nodeXX, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const
     {
         EquidistRefinement equi(add_x_, nodeXX, howm_x_);
         equi.generate(gx,weights,abscissas);
     }
-    virtual void do_generateY( const GridX1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const 
+    virtual void do_generateY( const GridX1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const
     {
         EquidistRefinement equi0(add_y_,0,howm_y_);
-        if( add_y_ == 0 || howm_y_ == 0) { 
+        if( add_y_ == 0 || howm_y_ == 0) {
             equi0.generate(g.grid(), weights, abscissas);
             return;
         }
-        if( g.f() == 0) { 
-            equi0.generate( Grid1d( g.x0(), g.x1(), g.n(), g.N(), dg::PER), weights, abscissas); 
+        if( g.f() == 0) {
+            equi0.generate( Grid1d( g.x0(), g.x1(), g.n(), g.N(), dg::PER), weights, abscissas);
             return;
         }
         thrust::host_vector<double> w1, w2, w3;
@@ -148,19 +148,19 @@ struct EquidistXRefinement : public aRefinementX2d
         abscissas = detail::normalize_weights_and_compute_abscissas( g.grid(), weights);
     }
     virtual unsigned do_Ny_new( unsigned Ny, double fy) const {
-        if( fy==0 ) return Ny + 2*add_y_; 
+        if( fy==0 ) return Ny + 2*add_y_;
         return Ny + 4*add_y_;
     }
     virtual unsigned do_Nx_new( unsigned Nx, double fx) const {
-        if( fx==0 ) return Nx + add_x_; 
+        if( fx==0 ) return Nx + add_x_;
         return Nx + 2*add_x_;
     }
     virtual double do_fx_new( unsigned Nx, double fx) const {
-        if( fx==0 ) return 0; 
+        if( fx==0 ) return 0;
         return (fx*(double)Nx + (double)add_x_)/(double)(Nx+2.*add_x_);
     }
-    virtual double do_fy_new( unsigned Ny, double fy) const { 
-        if( fy==0 ) return 0; 
+    virtual double do_fy_new( unsigned Ny, double fy) const {
+        if( fy==0 ) return 0;
         return (fy*(double)Ny + (double)add_y_)/(double)(Ny+4.*add_y_);
     }
 };
@@ -174,12 +174,12 @@ struct ExponentialXRefinement : public aRefinementX2d
     ExponentialXRefinement* clone()const{return new ExponentialXRefinement(*this);}
     private:
     unsigned add_x_, howm_x_, add_y_, howm_y_;
-    virtual void do_generateX( const Grid1d& gx, unsigned nodeXX, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const 
+    virtual void do_generateX( const Grid1d& gx, unsigned nodeXX, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const
     {
         EquidistRefinement equi(add_x_, nodeXX, howm_x_);
         equi.generate(gx,weights,abscissas);
     }
-    virtual void do_generateY( const GridX1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const 
+    virtual void do_generateY( const GridX1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const
     {
         ExponentialRefinement expo0( add_x_, 0);
         if( add_y_ == 0) { return expo0.generate( g.grid(), weights, abscissas); }
@@ -204,19 +204,19 @@ struct ExponentialXRefinement : public aRefinementX2d
         abscissas = detail::normalize_weights_and_compute_abscissas( g.grid(), weights);
     }
     virtual unsigned do_Ny_new( unsigned Ny, double fy) const {
-        if( fy==0 ) return Ny + 2*add_y_; 
+        if( fy==0 ) return Ny + 2*add_y_;
         return Ny + 4*add_y_;
     }
     virtual unsigned do_Nx_new( unsigned Nx, double fx) const {
-        if( fx==0 ) return Nx + add_x_; 
+        if( fx==0 ) return Nx + add_x_;
         return Nx + 2*add_x_;
     }
     virtual double do_fx_new( unsigned Nx, double fx) const {
-        if( fx==0 ) return 0; 
+        if( fx==0 ) return 0;
         return (fx*(double)Nx + (double)add_x_)/(double)(Nx+2.*add_x_);
     }
-    virtual double do_fy_new( unsigned Ny, double fy) const { 
-        if( fy==0 ) return 0; 
+    virtual double do_fy_new( unsigned Ny, double fy) const {
+        if( fy==0 ) return 0;
         return (fy*(double)Ny + (double)add_y_)/(double)(Ny+4.*add_y_);
     }
 };
@@ -224,16 +224,16 @@ struct ExponentialXRefinement : public aRefinementX2d
 
 
 /**
- * @brief Refined X-point grid 
+ * @brief Refined X-point grid
  * @ingroup geometry
  */
 struct CartesianRefinedGridX2d : public dg::aGeometryX2d
 {
     CartesianRefinedGridX2d( const aRefinementX2d& ref,
-            double x0, double x1, double y0, double y1, 
-            double fx, double fy, 
-            unsigned n, unsigned Nx, unsigned Ny, 
-            bc bcx = dg::PER, bc bcy = dg::PER) : dg::aGeometryX2d( x0, x1, y0, y1, 
+            double x0, double x1, double y0, double y1,
+            double fx, double fy,
+            unsigned n, unsigned Nx, unsigned Ny,
+            bc bcx = dg::PER, bc bcy = dg::PER) : dg::aGeometryX2d( x0, x1, y0, y1,
                 ref.fx_new(Nx, fx), ref.fy_new(Ny, fy), n, ref.nx_new(Nx, fx), ref.ny_new(Ny, fy), bcx, bcy), w_(2), abs_(2)
     {
         GridX2d g( x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy);
@@ -247,12 +247,12 @@ struct CartesianRefinedGridX2d : public dg::aGeometryX2d
         SparseTensor<thrust::host_vector<double> > t(w_);
         dg::blas1::pointwiseDot( w_[0], w_[0], t.value(0));
         dg::blas1::pointwiseDot( w_[1], w_[1], t.value(1));
-        t.idx(0,0)=0, t.idx(1,1)=1; 
+        t.idx(0,0)=0, t.idx(1,1)=1;
         return t;
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian()const {
         SparseTensor<thrust::host_vector<double> > t(w_);
-        t.idx(0,0)=0, t.idx(1,1)=1; 
+        t.idx(0,0)=0, t.idx(1,1)=1;
         return t;
     }
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{
@@ -261,19 +261,19 @@ struct CartesianRefinedGridX2d : public dg::aGeometryX2d
 };
 
 /**
- * @brief Refined X-point grid 
+ * @brief Refined X-point grid
  * @ingroup geometry
  */
 struct CartesianRefinedGridX3d : public dg::aGeometryX3d
 {
     CartesianRefinedGridX3d( const aRefinementX2d& ref,
             double x0, double x1, double y0, double y1, double z0, double z1,
-            double fx, double fy, 
+            double fx, double fy,
             unsigned n, unsigned Nx, unsigned Ny, unsigned Nz,
-            bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : dg::aGeometryX3d( 
+            bc bcx = dg::PER, bc bcy = dg::PER, bc bcz = dg::PER) : dg::aGeometryX3d(
                 x0, x1, y0, y1,z0,z1,
-                ref.fx_new(Nx, fx), ref.fy_new(Ny, fy), 
-                n, ref.nx_new(Nx, fx), ref.ny_new(Ny, fy), Nz, 
+                ref.fx_new(Nx, fx), ref.fy_new(Ny, fy),
+                n, ref.nx_new(Nx, fx), ref.ny_new(Ny, fy), Nz,
                 bcx, bcy, bcz), w_(2), abs_(2)
     {
         GridX2d g( x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy);
@@ -298,12 +298,12 @@ struct CartesianRefinedGridX3d : public dg::aGeometryX3d
         SparseTensor<thrust::host_vector<double> > t(w_);
         dg::blas1::pointwiseDot( w_[0], w_[0], t.value(0));
         dg::blas1::pointwiseDot( w_[1], w_[1], t.value(1));
-        t.idx(0,0)=0, t.idx(1,1)=1; 
+        t.idx(0,0)=0, t.idx(1,1)=1;
         return t;
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian()const {
         SparseTensor<thrust::host_vector<double> > t(w_);
-        t.idx(0,0)=0, t.idx(1,1)=1; 
+        t.idx(0,0)=0, t.idx(1,1)=1;
         return t;
     }
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{

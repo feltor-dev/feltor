@@ -8,7 +8,7 @@
 int main( int argc, char * argv[])
 {
     MPI_Init( &argc, &argv);
-    unsigned Nx = 30, Ny = 30; 
+    unsigned Nx = 30, Ny = 30;
     int rank, size;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
@@ -38,14 +38,14 @@ int main( int argc, char * argv[])
         //if( rank==0) std::cout << i << " "<<v[i]<<" "<<w[i]<<"\n";
     }
     {
-        if( equal) 
+        if( equal)
             std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
         else
             std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
     }
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank==0)std::cout << "Test SurjectiveComm and GeneralComm:\n";
-    Nx = 5, Ny = 5; 
+    Nx = 5, Ny = 5;
     thrust::host_vector<double> vec( Nx*Ny, rank), result( Nx*Ny);
     thrust::host_vector<int> idx( (Nx+1)*(Ny+1)), pids( (Nx+1)*(Ny+1));
     for( unsigned i=0; i<(Nx+1)*(Ny+1); i++)
@@ -64,12 +64,12 @@ int main( int argc, char * argv[])
     for( unsigned i=0; i<(Nx)*(Ny); i++)
     {
         //if(rank==1) std::cout << i<<"\t "<< vec[i] << std::endl;
-        result[i] = rank; 
+        result[i] = rank;
         if( i < (Nx+1)*(Ny+1) - Nx*Ny) result[i] += (rank)%size;
         if( vec2[i] != result[i]) equal = false;
     }
     {
-        if( equal) 
+        if( equal)
             std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
         else
             std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;
@@ -77,7 +77,7 @@ int main( int argc, char * argv[])
 
     MPI_Barrier(MPI_COMM_WORLD);
     if(rank==0)std::cout<< "Test Nearest Neighbor Comm\n";
-    unsigned dims[3] = {Nx, Ny, 1}; 
+    unsigned dims[3] = {Nx, Ny, 1};
     int np[2] = {2,2}, periods[2] = { false, false};
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
@@ -92,7 +92,7 @@ int main( int argc, char * argv[])
         if( vec[i] != vec2[i]) equal = false;
     }
     {
-        if( equal) 
+        if( equal)
             std::cout <<"Rank "<<rank<<" PASSED"<<std::endl;
         else
             std::cerr <<"Rank "<<rank<<" FAILED"<<std::endl;

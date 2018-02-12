@@ -26,13 +26,13 @@ namespace detail
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
 void computeX_rzy( const BinaryFunctorsLvl1& psi,
-        const thrust::host_vector<double>& y_vec, 
+        const thrust::host_vector<double>& y_vec,
         const unsigned nodeX0, const unsigned nodeX1,
         thrust::host_vector<double>& r, //output r - values
         thrust::host_vector<double>& z, //output z - values
         const double* R_init, const double* Z_init,  //2 input coords on perp line
         double f_psi,  //input f
-        int mode ) 
+        int mode )
 {
     thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
@@ -114,7 +114,7 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
 ///@endcond
 
 /**
- * @brief Choose points on inside or outside line 
+ * @brief Choose points on inside or outside line
  *
  * @ingroup generators_geo
  */
@@ -122,12 +122,12 @@ struct SimpleOrthogonalX : public aGeneratorX2d
 {
     SimpleOrthogonalX(): f0_(1), firstline_(0){}
     ///psi_0 must be the closed surface, 0 the separatrix
-    SimpleOrthogonalX( const BinaryFunctorsLvl2& psi, double psi_0, 
+    SimpleOrthogonalX( const BinaryFunctorsLvl2& psi, double psi_0,
             double xX, double yX, double x0, double y0, int firstline =0): psi_(psi)
     {
         firstline_ = firstline;
         orthogonal::detail::Fpsi fpsi(psi_, x0, y0, firstline);
-        double R0, Z0; 
+        double R0, Z0;
         f0_ = fpsi.construct_f( psi_0, R0, Z0);
         zeta0_=f0_*psi_0;
         dg::geo::orthogonal::detail::InitialX initX(psi_, xX, yX);
@@ -139,14 +139,14 @@ struct SimpleOrthogonalX : public aGeneratorX2d
     bool do_isOrthogonal()const{return true;}
     double f0() const{return f0_;}
     virtual void do_generate( //this one doesn't know if the separatrix comes to lie on a cell boundary or not
-         const thrust::host_vector<double>& zeta1d, 
-         const thrust::host_vector<double>& eta1d, 
+         const thrust::host_vector<double>& zeta1d,
+         const thrust::host_vector<double>& eta1d,
          unsigned nodeX0, unsigned nodeX1,
-         thrust::host_vector<double>& x, 
-         thrust::host_vector<double>& y, 
-         thrust::host_vector<double>& zetaX, 
-         thrust::host_vector<double>& zetaY, 
-         thrust::host_vector<double>& etaX, 
+         thrust::host_vector<double>& x,
+         thrust::host_vector<double>& y,
+         thrust::host_vector<double>& zetaX,
+         thrust::host_vector<double>& zetaY,
+         thrust::host_vector<double>& etaX,
          thrust::host_vector<double>& etaY) const
     {
 
@@ -156,7 +156,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, zeta0_, zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
-        zetaX.resize(size), zetaY.resize(size), 
+        zetaX.resize(size), zetaY.resize(size),
         etaX.resize(size), etaY.resize(size);
         for( unsigned idx=0; idx<size; idx++)
         {
@@ -179,14 +179,14 @@ struct SimpleOrthogonalX : public aGeneratorX2d
 };
 
 /**
- * @brief Choose points on separatrix 
+ * @brief Choose points on separatrix
  *
  * @ingroup generators_geo
  */
 struct SeparatrixOrthogonal : public aGeneratorX2d
 {
     /**
-     * @brief Construct 
+     * @brief Construct
      *
      * @param psi
      * @param psi_0
@@ -211,14 +211,14 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
     bool do_isOrthogonal()const{return true;}
     double f0() const{return sep_.get_f();}
     virtual void do_generate(  //this one doesn't know if the separatrix comes to lie on a cell boundary or not
-         const thrust::host_vector<double>& zeta1d, 
-         const thrust::host_vector<double>& eta1d, 
-         unsigned nodeX0, unsigned nodeX1, 
-         thrust::host_vector<double>& x, 
-         thrust::host_vector<double>& y, 
-         thrust::host_vector<double>& zetaX, 
-         thrust::host_vector<double>& zetaY, 
-         thrust::host_vector<double>& etaX, 
+         const thrust::host_vector<double>& zeta1d,
+         const thrust::host_vector<double>& eta1d,
+         unsigned nodeX0, unsigned nodeX1,
+         thrust::host_vector<double>& x,
+         thrust::host_vector<double>& y,
+         thrust::host_vector<double>& zetaX,
+         thrust::host_vector<double>& zetaY,
+         thrust::host_vector<double>& etaX,
          thrust::host_vector<double>& etaY) const
     {
 
@@ -262,7 +262,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
         orthogonal::detail::construct_rz(nemov, 0., zeta1dI, r_initF, z_initF, xIF, yIF, hIF);
         orthogonal::detail::construct_rz(nemov, 0., zeta1dO, r_initF, z_initF, xOF, yOF, hOF);
         //now glue far and close back together
-        thrust::host_vector<double> xI(inside*eta1d.size()), xO( (zeta1d.size()-inside)*eta1d.size()); 
+        thrust::host_vector<double> xI(inside*eta1d.size()), xO( (zeta1d.size()-inside)*eta1d.size());
         thrust::host_vector<double> yI(xI), hI(xI), yO(xO),hO(xO);
         for( unsigned i=0; i<idxC.size(); i++)
             for(unsigned j=0; j<zeta1dI.size(); j++)
@@ -295,7 +295,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 
         //now glue inside and outside together
         unsigned size = zeta1d.size()*eta1d.size();
-        x.resize( size); y.resize( size); 
+        x.resize( size); y.resize( size);
         thrust::host_vector<double> h(size);
         for( unsigned i=0; i<eta1d.size(); i++)
             for( unsigned j=0; j<inside; j++)
@@ -312,7 +312,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
                 h[i*zeta1d.size()+j] = hO[i*zeta1dO.size() + j-inside];
             }
 
-        zetaX.resize(size), zetaY.resize(size), 
+        zetaX.resize(size), zetaY.resize(size),
         etaX.resize(size), etaY.resize(size);
         for( unsigned idx=0; idx<size; idx++)
         {
@@ -338,14 +338,14 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 
 // /**
 //* @brief Integrates the equations for a field line and 1/B
-// */ 
+// */
 //struct XField
 //{
 //    XField( dg::geo::solovev::Parameters gp,const dg::GridX2d& gXY, const thrust::host_vector<double>& g):
 //        gp_(gp),
 //        psipR_(gp), psipZ_(gp),
-//        ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(g, gXY)) 
-//    { 
+//        ipol_(gp), invB_(gp), gXY_(gXY), g_(dg::create::forward_transform(g, gXY))
+//    {
 //        solovev::HessianRZtau hessianRZtau(gp);
 //        R_X = gp.R_0-1.1*gp.triangularity*gp.a;
 //        Z_X = -1.1*gp.elongation*gp.a;
@@ -357,14 +357,14 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 //            XN.swap(X);
 //        }
 //        R_X = X[0], Z_X = X[1];
-//    
+//
 //    }
 //
 //    /**
 //     * @brief \f[ \frac{d \hat{R} }{ d \varphi}  = \frac{\hat{R}}{\hat{I}} \frac{\partial\hat{\psi}_p}{\partial \hat{Z}}, \hspace {3 mm}
 //     \frac{d \hat{Z} }{ d \varphi}  =- \frac{\hat{R}}{\hat{I}} \frac{\partial \hat{\psi}_p}{\partial \hat{R}} , \hspace {3 mm}
 //     \frac{d \hat{l} }{ d \varphi}  =\frac{\hat{R}^2 \hat{B}}{\hat{I}  \hat{R}_0}  \f]
-//     */ 
+//     */
 //    void operator()( const dg::HVec& y, dg::HVec& yp)
 //    {
 //        //x,y,s,R,Z
@@ -372,7 +372,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 //        double xs = y[0],ys=y[1];
 //        if( y[4] > Z_X) //oberhalb vom X-Punkt
 //            gXY_.shift_topologic( y[0], M_PI, xs,ys);
-//        else 
+//        else
 //        {
 //            if( y[1] > M_PI) //Startpunkt vermutlich in der rechten Hälfte
 //                gXY_.shift_topologic( y[0], gXY_.y1()-1e-10, xs,ys);
@@ -393,16 +393,16 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 //
 //    }
 //    /**
-//     * @brief \f[   \frac{1}{\hat{B}} = 
+//     * @brief \f[   \frac{1}{\hat{B}} =
 //      \frac{\hat{R}}{\hat{R}_0}\frac{1}{ \sqrt{ \hat{I}^2  + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{R}}\right)^2
 //      + \left(\frac{\partial \hat{\psi}_p }{ \partial \hat{Z}}\right)^2}}  \f]
-//     */ 
+//     */
 //    double operator()( double R, double Z) const { return invB_(R,Z); }
 //    /**
 //     * @brief == operator()(R,Z)
-//     */ 
+//     */
 //    double operator()( double R, double Z, double phi) const { return invB_(R,Z,phi); }
-//    
+//
 //    private:
 //    dg::geo::solovev::GeomParameters gp_;
 //    dg::geo::solovev::mod::PsipR  psipR_;
@@ -412,7 +412,7 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
 //    const dg::GridX2d gXY_;
 //    thrust::host_vector<double> g_;
 //    double R_X, Z_X;
-//   
+//
 //};
 //
 

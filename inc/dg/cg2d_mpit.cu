@@ -10,7 +10,7 @@
 const double ly = 2.*M_PI;
 const double lx = 2.*M_PI;
 
-const double eps = 1e-6; //# of pcg iterations increases very much if 
+const double eps = 1e-6; //# of pcg iterations increases very much if
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double fct(double x, double y){ return sin(y)*sin(x);}
@@ -22,7 +22,7 @@ dg::bc bcx = dg::PER;
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     MPI_Comm comm;
     dg::mpi_init2d( bcx, dg::PER, n, Nx, Ny, comm);
     int rank;
@@ -35,13 +35,13 @@ int main( int argc, char* argv[])
     dg::MDVec x = dg::evaluate( initial, grid);
 
     if( rank == 0) std::cout << "Create Laplacian\n";
-    dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> A ( grid, dg::not_normed); 
+    dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> A ( grid, dg::not_normed);
     dg::CG< dg::MDVec > pcg( x, n*n*Nx*Ny);
     if( rank == 0) std::cout<<"Evaluate right hand side\n";
     dg::MDVec b = dg::evaluate ( laplace_fct, grid);
     const dg::MDVec solution = dg::evaluate ( fct, grid);
     dg::blas2::symv( w2d, b, b);
-    
+
     int number = pcg( A, x, b, v2d, eps);
     if( rank == 0)
     {

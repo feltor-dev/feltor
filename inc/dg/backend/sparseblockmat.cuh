@@ -11,7 +11,7 @@ namespace dg
 * @brief Ell Sparse Block Matrix format device version
 *
 * @ingroup sparsematrix
-* This class holds a copy of a EllSparseBlockMat on the device, which may 
+* This class holds a copy of a EllSparseBlockMat on the device, which may
 be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It can be applied
 to device vectors and does the same thing as the host version
 */
@@ -41,7 +41,7 @@ struct EllSparseBlockMatDevice
     * @param os the output stream
     */
     void display( std::ostream& os = std::cout) const;
-    
+
     /**
     * @brief Apply the matrix to a vector
     *
@@ -96,7 +96,7 @@ struct EllSparseBlockMatDevice
 #endif //_OPENMP
     using IVec = thrust::device_vector<int>;
     void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
-    
+
     thrust::device_vector<value_type> data;
     IVec cols_idx, data_idx;
     int num_rows, num_cols, blocks_per_line;
@@ -110,7 +110,7 @@ struct EllSparseBlockMatDevice
 * @brief Coo Sparse Block Matrix format device version
 *
 * @ingroup sparsematrix
-* This class holds a copy of a CooSparseBlockMat on the device, which may 
+* This class holds a copy of a CooSparseBlockMat on the device, which may
 be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It does the same thing as the host version with the difference that it applies to device vectors.
 */
 template<class value_type>
@@ -138,7 +138,7 @@ struct CooSparseBlockMatDevice
     * @param os the output stream
     */
     void display(std::ostream& os = std::cout) const;
-    
+
     /**
     * @brief Apply the matrix to a vector
     *
@@ -164,9 +164,9 @@ struct CooSparseBlockMatDevice
     using IVec = thrust::device_vector<int>;
 
     void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
-    
+
     thrust::device_vector<value_type> data;
-    IVec cols_idx, rows_idx, data_idx; 
+    IVec cols_idx, rows_idx, data_idx;
     int num_rows, num_cols, num_entries;
     int n, left_size, right_size;
 };
@@ -257,7 +257,7 @@ void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const
         os << "\n";
     }
     os << std::endl;
-    
+
 }
 template<class value_type>
 void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
@@ -279,7 +279,7 @@ void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
     for( int i=0; i<num_entries; i++)
         os << data_idx[i] <<" ";
     os << std::endl;
-    
+
 }
 
 ///@endcond

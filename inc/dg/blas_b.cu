@@ -28,7 +28,7 @@ typedef dg::IDMatrix IMatrix;
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     std::cout << "This program benchmarks basic vector and matrix-vector operations on the machine. These operations should be memory bandwidth bound. ";
     std::cout << "We therefore convert the measured time into a bandwidth using the given vector size and the STREAM convention for counting memory operations (each read and each write count as one memop. ";
     std::cout << "In an ideal case all operations perform with the same speed (that of the AXPBY operation, which is certainly memory bandwidth bound). With fast memory (GPU, XeonPhi...) the matrix-vector multiplications can be slower however\n";
@@ -53,7 +53,7 @@ int main()
     //std::cout << "Sizeof value type is "<<sizeof(value_type)<<"\n";
     value_type gbytes=(value_type)x.size()*x[0].size()*sizeof(value_type)/1e9;
     std::cout << "Size of vectors is "<<gbytes<<" GB\n";
-    dg::MultiMatrix<Matrix, ArrayVec> inter, project; 
+    dg::MultiMatrix<Matrix, ArrayVec> inter, project;
     dg::blas2::transfer(dg::create::fast_interpolation( grid_half, 2,2), inter);
     dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
     //dg::IDMatrix inter = dg::create::interpolation( grid, grid_half);

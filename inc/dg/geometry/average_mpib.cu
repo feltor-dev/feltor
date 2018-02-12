@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
 
     MPI_Comm comm;
     mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm);
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 
     dg::MPIGrid2d g( 0, lx, 0, ly, n, Nx, Ny, comm);
     dg::Timer t;
- 
+
 
     dg::Average<dg::MDVec > pol(g, dg::coo2d::y);
     dg::MDVec vector = dg::evaluate( function ,g), average_y( vector);

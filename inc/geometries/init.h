@@ -20,10 +20,10 @@ namespace geo
         1  \text{ if } \psi_{p,min} < \psi_p(R,Z) < \psi_{p,max}\\
         0  \text{ else}
      \end{cases}\f]
- */ 
+ */
 struct Iris : public aCloneableBinaryFunctor<Iris>
 {
-    Iris( const aBinaryFunctor& psi, double psi_min, double psi_max ): 
+    Iris( const aBinaryFunctor& psi, double psi_min, double psi_max ):
         psip_(psi), psipmin_(psi_min), psipmax_(psi_max) { }
     private:
     double do_compute(double R, double Z)const
@@ -41,10 +41,10 @@ struct Iris : public aCloneableBinaryFunctor<Iris>
         0  \text{ if } \psi_p(R,Z) > \psi_{p,maxcut} \\
         1  \text{ else}
      \end{cases}\f]
- */ 
+ */
 struct Pupil : public aCloneableBinaryFunctor<Pupil>
 {
-    Pupil( const aBinaryFunctor& psi, double psipmaxcut): 
+    Pupil( const aBinaryFunctor& psi, double psipmaxcut):
         psip_(psi), psipmaxcut_(psipmaxcut) { }
     private:
     double do_compute(double R, double Z)const
@@ -61,11 +61,11 @@ struct Pupil : public aCloneableBinaryFunctor<Pupil>
         \psi_{p,max}  \text{ if } \psi_p(R,Z) > \psi_{p,max} \\
         \psi_p(R,Z) \text{ else}
      \end{cases}\f]
- */ 
+ */
 struct PsiPupil : public aCloneableBinaryFunctor<PsiPupil>
 {
-    PsiPupil(const aBinaryFunctor& psi, double psipmax): 
-        psipmax_(psipmax), psip_(psi) { } 
+    PsiPupil(const aBinaryFunctor& psi, double psipmax):
+        psipmax_(psipmax), psip_(psi) { }
     private:
     double do_compute(double R, double Z)const
     {
@@ -82,10 +82,10 @@ struct PsiPupil : public aCloneableBinaryFunctor<PsiPupil>
         0  \text{ else}
      \end{cases}\f]
  *
- */ 
+ */
 struct PsiLimiter : public aCloneableBinaryFunctor<PsiLimiter>
 {
-    PsiLimiter( const aBinaryFunctor& psi, double psipmaxlim): 
+    PsiLimiter( const aBinaryFunctor& psi, double psipmaxlim):
         psipmaxlim_(psipmaxlim), psip_(psi) { }
 
     private:
@@ -101,7 +101,7 @@ struct PsiLimiter : public aCloneableBinaryFunctor<PsiLimiter>
 
 
 /**
- * @brief Damps the outer boundary in a zone 
+ * @brief Damps the outer boundary in a zone
  * from psipmaxcut to psipmaxcut+ 4*alpha with a normal distribution
  * Returns 1 inside, zero outside and a gaussian within
      \f[ \begin{cases}
@@ -111,7 +111,7 @@ struct PsiLimiter : public aCloneableBinaryFunctor<PsiLimiter>
  \end{cases}
    \f]
  *
- */ 
+ */
 struct GaussianDamping : public aCloneableBinaryFunctor<GaussianDamping>
 {
     GaussianDamping( const aBinaryFunctor& psi, double psipmaxcut, double alpha):
@@ -128,7 +128,7 @@ struct GaussianDamping : public aCloneableBinaryFunctor<GaussianDamping>
 };
 
 /**
- * @brief Damps the inner boundary in a zone 
+ * @brief Damps the inner boundary in a zone
  * from psipmax to psipmax+ 4*alpha with a normal distribution
  * Returns 1 inside, zero outside and a gaussian within
      \f[ \begin{cases}
@@ -138,7 +138,7 @@ struct GaussianDamping : public aCloneableBinaryFunctor<GaussianDamping>
  \end{cases}
    \f]
  *
- */ 
+ */
 struct GaussianProfDamping : public aCloneableBinaryFunctor<GaussianProfDamping>
 {
     GaussianProfDamping( const aBinaryFunctor& psi, double psipmax, double alpha):
@@ -154,7 +154,7 @@ struct GaussianProfDamping : public aCloneableBinaryFunctor<GaussianProfDamping>
     double psipmax_, alpha_;
 };
 /**
- * @brief Damps the inner boundary in a zone 
+ * @brief Damps the inner boundary in a zone
  * from psipmax to psipmax+ 4*alpha with a normal distribution
  * Returns 1 inside, zero outside and a gaussian within
  * Additionally cuts if Z < Z_xpoint
@@ -165,7 +165,7 @@ struct GaussianProfDamping : public aCloneableBinaryFunctor<GaussianProfDamping>
  \end{cases}
    \f]
  *
- */ 
+ */
 struct GaussianProfXDamping : public aCloneableBinaryFunctor<GaussianProfXDamping>
 {
     GaussianProfXDamping( const aBinaryFunctor& psi, dg::geo::solovev::Parameters gp):
@@ -196,7 +196,7 @@ struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
     {
         return 0.5*(1.+tanh(-(psip_.get()(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
     }
-    double psipmin_, alpha_; 
+    double psipmin_, alpha_;
     Handle<aBinaryFunctor> psip_;
 };
 
@@ -220,13 +220,13 @@ struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
 // };
 
 /**
- * @brief Returns density profile with variable peak amplitude and background amplitude 
+ * @brief Returns density profile with variable peak amplitude and background amplitude
      *\f[ N(R,Z)=\begin{cases}
  A_{bg} + A_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
- A_{bg} \text{ else } 
+ A_{bg} \text{ else }
  \end{cases}
    \f]
- */ 
+ */
 struct Nprofile : public aCloneableBinaryFunctor<Nprofile>
 {
      Nprofile( double bgprofamp, double peakamp, dg::geo::solovev::Parameters gp, const aBinaryFunctor& psi):
@@ -246,13 +246,13 @@ struct Nprofile : public aCloneableBinaryFunctor<Nprofile>
 };
 
 /**
- * @brief returns zonal flow field 
+ * @brief returns zonal flow field
      \f[ N(R,Z)=\begin{cases}
     A_{bg} |\cos(2\pi\psi_p(R,Z) k_\psi)| \text{ if }\psi_p < \psi_{p,max} \\
-    0 \text{ else } 
+    0 \text{ else }
  \end{cases}
    \f]
- */ 
+ */
 struct ZonalFlow : public aCloneableBinaryFunctor<ZonalFlow>
 {
     ZonalFlow(  double amplitude, double k_psi, dg::geo::solovev::Parameters gp, const aBinaryFunctor& psi):
@@ -262,7 +262,7 @@ struct ZonalFlow : public aCloneableBinaryFunctor<ZonalFlow>
     private:
     double do_compute(double R, double Z)const
     {
-      if (psip_.get()(R,Z)<gp_.psipmax) 
+      if (psip_.get()(R,Z)<gp_.psipmax)
           return (amp_*fabs(cos(2.*M_PI*psip_.get()(R,Z)*k_)));
       return 0.;
 

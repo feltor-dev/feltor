@@ -11,7 +11,7 @@
  *    Developers : \n
  *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
  *        Sylvain Collange -- sylvain.collange@inria.fr \n
- *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk
  */
 #ifndef EXSUM_FPE_HPP_
 #define EXSUM_FPE_HPP_
@@ -55,13 +55,13 @@ struct FPExpansionVect
      */
     FPExpansionVect(int64_t* sa);
 
-    /** 
+    /**
      * This function accumulates value x to the floating-point expansion
      * \param x input value
      */
     void Accumulate(T x);
 
-    /** 
+    /**
      * This function accumulates two values x to the floating-point expansion
      * \param x1 input value
      * \param x2 input value
@@ -116,7 +116,7 @@ inline static T TwoProductFMA(T a, T b, T &d) {
     return p;
 }
 
-//// Vector impl with test for fast path (MW: doesn't compile with g++ without -mavx and new vcl) 
+//// Vector impl with test for fast path (MW: doesn't compile with g++ without -mavx and new vcl)
 //template<typename T>
 //inline static T BiasedSIMD2Sum(T a, T b, T & s)
 //{
@@ -330,7 +330,7 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
             x2 = T(andnot(vcl::Vec8db(x2), p));
         }
     }
-    
+
     T s1, s2;
     for(unsigned int i = 0; i != N; ++i) {
         T ai = vcl::Vec8d().load_a((double*)(a+i));
@@ -344,7 +344,7 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
         if(TRAITS::EarlyExit && i != 0 && !horizontal_or(x1|x2)) return;
     }
 
-    
+
     if(TRAITS::EarlyExit || (TRAITS::Horz2Sum && !TRAITS::Victimcache)) {
         // 1 check for both numbers
         if(TRAITS::EarlyExit || unlikely(horizontal_or(x1|x2))) {
@@ -411,7 +411,7 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
     // TODO: make it work for other values of 4
     double v[8];
     x.store(v);
-    
+
 #if INSTRSET >= 7
     _mm256_zeroupper();
 #endif
@@ -436,7 +436,7 @@ void FPExpansionVect<T,N,TRAITS>::DumpVector(T x) const
     double v[8] __attribute__((aligned(64)));
     x.store_a(v);
     _mm256_zeroupper();
-    
+
     for(unsigned int j = 0; j != 8; ++j) {
         printf("%a ", v[j]);
     }

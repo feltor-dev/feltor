@@ -9,7 +9,7 @@
 namespace dg{
 ///@addtogroup dispatch
 ///@{
-/*! @brief The vector traits 
+/*! @brief The vector traits
 
 Specialize this struct if you want to enable your own vector/container class for the use in blas1 functions
 @ingroup vec_list
@@ -34,7 +34,7 @@ using get_pointer_type = typename std::conditional< std::is_const<Vector>::value
 ///@addtogroup vec_list
 ///@{
 template<class T>
-struct VectorTraits<std::vector<T>, 
+struct VectorTraits<std::vector<T>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
@@ -42,7 +42,7 @@ struct VectorTraits<std::vector<T>,
     using execution_policy  = OmpTag;
 };
 template<class T>
-struct VectorTraits<std::vector<T>, 
+struct VectorTraits<std::vector<T>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
@@ -71,7 +71,7 @@ struct ThrustTag<OmpTag>
 {
     using thrust_tag = thrust::omp::tag;
 };
-#endif 
+#endif
 template<class Vector>
 using get_thrust_tag = typename ThrustTag<get_execution_policy<Vector>>::thrust_tag;
 ///@endcond

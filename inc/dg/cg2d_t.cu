@@ -7,7 +7,7 @@
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 
-const double eps_ = 1e-6; //# of pcg iterations increases very much if 
+const double eps_ = 1e-6; //# of pcg iterations increases very much if
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double fct(double x, double y){ return sin(y)*sin(x);}

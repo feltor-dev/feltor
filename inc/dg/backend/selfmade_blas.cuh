@@ -53,12 +53,12 @@ inline void doSymv(
 }
 
 template< class Matrix, class Vector>
-inline void doGemv(  
-              get_value_type<Vector> alpha, 
+inline void doGemv(
+              get_value_type<Vector> alpha,
               const Matrix& m,
-              const Vector& x, 
-              get_value_type<Vector> beta, 
-              Vector& y, 
+              const Vector& x,
+              get_value_type<Vector> beta,
+              Vector& y,
               SelfMadeMatrixTag,
               AnyVectorTag)
 {

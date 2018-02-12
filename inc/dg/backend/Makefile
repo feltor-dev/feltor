@@ -1,8 +1,8 @@
 device=gpu
 
-#configure machine 
+#configure machine
 include ../../../config/default.mk
-include ../../../config/*.mk 
+include ../../../config/*.mk
 include ../../../config/devices/devices.mk
 
 INCLUDE+= -I../../ # other project libraries
@@ -13,7 +13,7 @@ CUFILES=$(wildcard *.cu)
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
-version: version.cu 
+version: version.cu
 	$(CC) $(CFLAGS) $(INCLUDE) $< -o $@
 	./$@
 
@@ -21,20 +21,20 @@ blas%_t: blas%_t.cu ../blas%.h
 	$(CC) $(CFLAGS) $< -o $@ -g
 
 %_t: %_t.cu
-	$(CC) $(OPT) $(INCLUDE)  $(CFLAGS) $< -o $@ -g 
-	
+	$(CC) $(OPT) $(INCLUDE)  $(CFLAGS) $< -o $@ -g
+
 %_mpit: %_mpit.cu
 	$(MPICC) $(OPT) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
 
 %_mpib: %_mpib.cu
-	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) 
-	
-%_b: %_b.cu 
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) 
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE)
+
+%_b: %_b.cu
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)
 
 .PHONY: clean doc
 
-doc: 
+doc:
 	doxygen Doxyfile
 
 clean:

@@ -12,7 +12,7 @@ namespace dg
 ///@addtogroup vec_list
 ///@{
 template<class T>
-struct VectorTraits<cusp::array1d<T,cusp::host_memory>, 
+struct VectorTraits<cusp::array1d<T,cusp::host_memory>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
@@ -20,7 +20,7 @@ struct VectorTraits<cusp::array1d<T,cusp::host_memory>,
     using execution_policy  = SerialTag;
 };
 template<class T>
-struct VectorTraits<cusp::array1d<T,cusp::device_memory>, 
+struct VectorTraits<cusp::array1d<T,cusp::device_memory>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;

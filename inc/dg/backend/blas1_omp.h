@@ -10,13 +10,13 @@ namespace blas1
 {
 namespace detail
 {
-const unsigned MIN_SIZE=100;//don't parallelize if work is too small 
+const unsigned MIN_SIZE=100;//don't parallelize if work is too small
 
 std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
-    if(size<MIN_SIZE) 
+    if(size<MIN_SIZE)
         exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]);
-    else 
+    else
         exblas::exdot_omp( size, x_ptr,y_ptr, &h_superacc[0]);
     return h_superacc;
 }
@@ -43,9 +43,9 @@ inline void doScal_dispatch( OmpTag, unsigned size, T* x, T alpha)
         doScal_omp( size, x, alpha);
         return;
     }
-    if(size>MIN_SIZE) 
+    if(size>MIN_SIZE)
     {
-        #pragma omp parallel 
+        #pragma omp parallel
         {
             doScal_omp( size, x, alpha);
         }
@@ -56,7 +56,7 @@ inline void doScal_dispatch( OmpTag, unsigned size, T* x, T alpha)
 template<class T>
 inline void doPlus_omp( unsigned size, T* x, T alpha)
 {
-    #pragma omp for SIMD nowait 
+    #pragma omp for SIMD nowait
     for( unsigned i=0; i<size; i++)
         x[i]+=alpha;
 }
@@ -77,7 +77,7 @@ inline void doPlus_dispatch( OmpTag, unsigned size, T* x, T alpha)
     }
     else
         doPlus_dispatch( SerialTag(), size, x, alpha);
-       
+
 }
 template<class T>
 void doAxpby_omp(unsigned size, T alpha, const T * RESTRICT x_ptr, T beta, T* RESTRICT y_ptr)
@@ -97,7 +97,7 @@ void doAxpby_dispatch( OmpTag, unsigned size, T alpha, const T * RESTRICT x_ptr,
         doAxpby_omp(size, alpha, x_ptr, beta, y_ptr);
         return;
     }
-    if(size>MIN_SIZE) 
+    if(size>MIN_SIZE)
     {
         #pragma omp parallel
         {
@@ -129,7 +129,7 @@ void doAxpbypgz_dispatch( OmpTag, unsigned size, T alpha, const T * RESTRICT x_p
     }
     if(size>MIN_SIZE)
     {
-        #pragma omp parallel 
+        #pragma omp parallel
         {
             doAxpbypgz_omp( size, alpha, x_ptr, beta, y_ptr, gamma, z_ptr);
         }
@@ -138,8 +138,8 @@ void doAxpbypgz_dispatch( OmpTag, unsigned size, T alpha, const T * RESTRICT x_p
         doAxpbypgz_dispatch(SerialTag(), size, alpha, x_ptr, beta, y_ptr, gamma, z_ptr);
 }
 template<class value_type>
-inline void doPointwiseDot_omp(unsigned size, 
-              value_type alpha, 
+inline void doPointwiseDot_omp(unsigned size,
+              value_type alpha,
               const value_type* x_ptr,
               const value_type* y_ptr,
               value_type gamma,
@@ -153,8 +153,8 @@ inline void doPointwiseDot_omp(unsigned size,
     }
 }
 template<class value_type>
-inline void doPointwiseDot_dispatch( OmpTag, unsigned size, 
-              value_type alpha, 
+inline void doPointwiseDot_dispatch( OmpTag, unsigned size,
+              value_type alpha,
               const value_type* x_ptr,
               const value_type* y_ptr,
               value_type gamma,
@@ -167,7 +167,7 @@ inline void doPointwiseDot_dispatch( OmpTag, unsigned size,
     }
     if(size>MIN_SIZE)
     {
-        #pragma omp parallel 
+        #pragma omp parallel
         {
             doPointwiseDot_omp( size, alpha, x_ptr, y_ptr, gamma, z_ptr);
         }
@@ -176,8 +176,8 @@ inline void doPointwiseDot_dispatch( OmpTag, unsigned size,
         doPointwiseDot_dispatch(SerialTag(), size, alpha, x_ptr, y_ptr, gamma, z_ptr);
 }
 template<class value_type>
-inline void doPointwiseDivide_omp(unsigned size, 
-              value_type alpha, 
+inline void doPointwiseDivide_omp(unsigned size,
+              value_type alpha,
               const value_type* x_ptr,
               const value_type* y_ptr,
               value_type gamma,
@@ -191,8 +191,8 @@ inline void doPointwiseDivide_omp(unsigned size,
     }
 }
 template<class value_type>
-inline void doPointwiseDivide_dispatch( OmpTag, unsigned size, 
-              value_type alpha, 
+inline void doPointwiseDivide_dispatch( OmpTag, unsigned size,
+              value_type alpha,
               const value_type* x_ptr,
               const value_type* y_ptr,
               value_type gamma,
@@ -205,7 +205,7 @@ inline void doPointwiseDivide_dispatch( OmpTag, unsigned size,
     }
     if(size>MIN_SIZE)
     {
-        #pragma omp parallel 
+        #pragma omp parallel
         {
             doPointwiseDivide_omp( size, alpha, x_ptr, y_ptr, gamma, z_ptr);
         }
@@ -214,11 +214,11 @@ inline void doPointwiseDivide_dispatch( OmpTag, unsigned size,
         doPointwiseDivide_dispatch(SerialTag(), size, alpha, x_ptr, y_ptr, gamma, z_ptr);
 }
 template<class value_type>
-inline void doPointwiseDot_omp( unsigned size, 
-              value_type alpha, 
+inline void doPointwiseDot_omp( unsigned size,
+              value_type alpha,
               const value_type* x1_ptr,
               const value_type* y1_ptr,
-              value_type beta, 
+              value_type beta,
               const value_type* x2_ptr,
               const value_type* y2_ptr,
               value_type gamma,
@@ -235,11 +235,11 @@ inline void doPointwiseDot_omp( unsigned size,
 }
 
 template<class value_type>
-inline void doPointwiseDot_dispatch( OmpTag, unsigned size, 
-              value_type alpha, 
+inline void doPointwiseDot_dispatch( OmpTag, unsigned size,
+              value_type alpha,
               const value_type* x1_ptr,
               const value_type* y1_ptr,
-              value_type beta, 
+              value_type beta,
               const value_type* x2_ptr,
               const value_type* y2_ptr,
               value_type gamma,
@@ -252,7 +252,7 @@ inline void doPointwiseDot_dispatch( OmpTag, unsigned size,
     }
     if(size>MIN_SIZE)
     {
-        #pragma omp parallel 
+        #pragma omp parallel
         {
             doPointwiseDot_omp( size, alpha, x1_ptr, y1_ptr, beta, x2_ptr, y2_ptr, gamma, z_ptr);
         }
@@ -261,12 +261,12 @@ inline void doPointwiseDot_dispatch( OmpTag, unsigned size,
         doPointwiseDot_dispatch( SerialTag(), size, alpha, x1_ptr, y1_ptr, beta, x2_ptr, y2_ptr, gamma, z_ptr);
 }
 template<class value_type>
-inline void doPointwiseDot_omp(unsigned size, 
-              value_type alpha, 
+inline void doPointwiseDot_omp(unsigned size,
+              value_type alpha,
               const value_type* x1,
               const value_type* x2,
               const value_type* x3,
-              value_type beta, 
+              value_type beta,
               value_type* y)
 {
     #pragma omp for SIMD nowait
@@ -278,12 +278,12 @@ inline void doPointwiseDot_omp(unsigned size,
 }
 
 template<class value_type>
-inline void doPointwiseDot_dispatch( OmpTag,unsigned size, 
-              value_type alpha, 
+inline void doPointwiseDot_dispatch( OmpTag,unsigned size,
+              value_type alpha,
               const value_type* x1_ptr,
               const value_type* x2_ptr,
               const value_type* x3_ptr,
-              value_type beta, 
+              value_type beta,
               value_type* y_ptr)
 {
     if(omp_in_parallel())
@@ -293,7 +293,7 @@ inline void doPointwiseDot_dispatch( OmpTag,unsigned size,
     }
     if(size>MIN_SIZE)
     {
-        #pragma omp parallel 
+        #pragma omp parallel
         {
             doPointwiseDot_omp( size, alpha, x1_ptr, x2_ptr, x3_ptr, beta, y_ptr);
         }

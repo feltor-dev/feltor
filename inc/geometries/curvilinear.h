@@ -19,7 +19,7 @@ namespace geo
  *  (1<=n<=20, note that the library is optimized for n=3 )
  * @attention # of polynomial coefficients in z direction is always 1
  * @param Nx number of cells in x
- * @param Ny number of cells in y 
+ * @param Ny number of cells in y
  * @param Nz  number of cells z
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
@@ -34,7 +34,7 @@ namespace geo
  * @param n number of %Gaussian nodes in x and y
  *  (1<=n<=20, note that the library is optimized for n=3 )
  * @param Nx number of cells in x
- * @param Ny number of cells in y 
+ * @param Ny number of cells in y
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
  */
@@ -62,14 +62,14 @@ void square( const dg::SparseTensor<thrust::host_vector<double> >& jac, const th
     metric.idx(2,2) = 2; metric.value(2) = temppp;
     if( !orthogonal)
     {
-        metric.idx(0,1) = metric.idx(1,0) = 3; 
+        metric.idx(0,1) = metric.idx(1,0) = 3;
         metric.value(3) = tempxy;
     }
 }
 }//namespace detail
 ///@endcond
 
-//when we make a 3d grid with eta and phi swapped the metric structure and the transformation changes 
+//when we make a 3d grid with eta and phi swapped the metric structure and the transformation changes
 //In practise it can only be orthogonal due to the projection tensor in the elliptic operator
 
 /**
@@ -92,7 +92,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
      */
     explicit CurvilinearGrid2d( CurvilinearProductGrid3d g);
 
-    ///read access to the generator 
+    ///read access to the generator
     const aGenerator2d& generator() const{return handle_.get();}
     virtual CurvilinearGrid2d* clone()const{return new CurvilinearGrid2d(*this);}
     private:
@@ -128,7 +128,7 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
     ///@copydoc hide_grid_parameters3d
     CurvilinearProductGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
         dg::aProductGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz)
-    { 
+    {
         map_.resize(3);
         handle_ = generator;
         constructPerp( n, Nx, Ny);

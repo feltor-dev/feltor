@@ -22,7 +22,7 @@ __global__ void transpose_gpu_kernel( unsigned nx, unsigned ny, const value_type
 }
 template<class value_type>
 void transpose_dispatch( CudaTag, unsigned nx, unsigned ny, const value_type* in, value_type* out){
-    const size_t BLOCK_SIZE = 256; 
+    const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
     transpose_gpu_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
 }
@@ -41,7 +41,7 @@ __global__ void extend_line_kernel( unsigned nx, unsigned ny, const value_type* 
 }
 template<class value_type>
 void extend_line( CudaTag, unsigned nx, unsigned ny, const value_type* in, value_type* out){
-    const size_t BLOCK_SIZE = 256; 
+    const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
     extend_line_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
 }
@@ -60,7 +60,7 @@ __global__ void extend_column_kernel( unsigned nx, unsigned ny, const value_type
 }
 template<class value_type>
 void extend_column( CudaTag, unsigned nx, unsigned ny, const value_type* in, value_type* out){
-    const size_t BLOCK_SIZE = 256; 
+    const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((nx*ny-1)/BLOCK_SIZE+1, 65000);
     extend_column_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
 }

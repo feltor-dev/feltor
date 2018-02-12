@@ -11,14 +11,14 @@ typedef thrust::device_vector<double> Vector;
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     std::cout << "Type n, Nx, Ny and Nz\n";
     std::cin >> n >> Nx >> Ny >> Nz;
     dg::Grid3d grid( 0., 2.*M_PI, 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, Nz);
     Vector w2d;
     dg::blas1::transfer( dg::create::weights(grid), w2d);
     dg::SparseTensor<Vector> g(3);
-    g.idx(0,0) = 0, g.idx(0,1) = g.idx(1,0) = 1, g.idx(1,1) = 2; 
+    g.idx(0,0) = 0, g.idx(0,1) = g.idx(1,0) = 1, g.idx(1,1) = 2;
     g.value(0) = g.value(1) = g.value(2) = w2d;
     Vector v_x = dg::evaluate( dg::CONSTANT(2), grid), w_x(v_x), temp(v_x);
     Vector v_y = dg::evaluate( dg::CONSTANT(5), grid), w_y(v_y);

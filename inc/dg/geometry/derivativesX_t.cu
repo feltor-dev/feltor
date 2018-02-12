@@ -5,8 +5,8 @@
 
 double zero( double x, double y) { return 0;}
 double zero( double x, double y, double z) { return 0;}
-double sin( double x, double y ) { 
-    if( x < 0)  
+double sin( double x, double y ) {
+    if( x < 0)
     {
         if( y < 0) return sin(x)*sin(y);
         else if( 0 <= y && y < 2*M_PI) return sin(x)*cos(y);
@@ -14,7 +14,7 @@ double sin( double x, double y ) {
     }
     return sin(x)*sin(y);
 }
-double cosx( double x, double y) { 
+double cosx( double x, double y) {
     if( x < 0)
     {
         if( y < 0) return cos(x)*sin(y);
@@ -23,7 +23,7 @@ double cosx( double x, double y) {
     } //has a discontinuity at x=0
     return cos(x)*sin(y);
 }
-double cosy( double x, double y) { 
+double cosy( double x, double y) {
     if( x < 0)
     {
         if( y < 0) return sin(x)*cos(y);

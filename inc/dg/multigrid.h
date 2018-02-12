@@ -20,21 +20,21 @@ namespace dg
 * @brief Class for the solution of a symmetric matrix equation discretizeable on multiple grids
 *
 * @snippet elliptic2d_b.cu multigrid
-* We use conjugate gradient (CG) at each stage and refine the grids in the first two dimensions (2d / x and y) 
+* We use conjugate gradient (CG) at each stage and refine the grids in the first two dimensions (2d / x and y)
 * @note The preconditioner for the CG solver is taken from the \c precond() method in the \c SymmetricOp class
 * @copydoc hide_geometry_matrix_container
 * @ingroup multigrid
 * @sa \c Extrapolation  to generate an initial guess
-* 
+*
 */
-template< class Geometry, class Matrix, class container> 
+template< class Geometry, class Matrix, class container>
 struct MultigridCG2d
 {
     /**
      * @brief Construct the grids and the interpolation/projection operators
      *
      * @param grid the original grid (Nx() and Ny() must be evenly divisable by pow(2, stages-1)
-     * @param stages number of grids in total (The second grid contains half the points of the original grids,  
+     * @param stages number of grids in total (The second grid contains half the points of the original grids,
      *   The third grid contains half of the second grid ...). Must be > 1
      * @param scheme_type scheme type in the solve function (irrelevant for \c direct_solve method)
     */
@@ -42,27 +42,27 @@ struct MultigridCG2d
     {
         stages_= stages;
         if(stages < 2 ) throw Error( Message(_ping_)<<" There must be minimum 2 stages in a multigrid solver! You gave " << stages);
-        
+
 		grids_.resize(stages);
         cg_.resize(stages);
 
         grids_[0].reset( grid);
         //grids_[0].get().display();
-        
+
 		for(unsigned u=1; u<stages; u++)
         {
             grids_[u] = grids_[u-1]; // deep copy
             grids_[u].get().multiplyCellNumbers(0.5, 0.5);
             //grids_[u].get().display();
         }
-        
+
 		inter_.resize(stages-1);
 		interT_.resize(stages-1);
         project_.resize( stages-1);
-        
+
 		for(unsigned u=0; u<stages-1; u++)
         {
-            // Projecting from one grid to the next is the same as 
+            // Projecting from one grid to the next is the same as
             // projecting from the original grid to the coarse grids
             project_[u] = dg::create::fast_projection(grids_[u].get(), 2, 2, dg::normed);
             inter_[u] = dg::create::fast_interpolation(grids_[u+1].get(), 2, 2);
@@ -71,10 +71,10 @@ struct MultigridCG2d
 
         container x0;
         dg::blas1::transfer( dg::evaluate( dg::zero, grid), x0);
-        x_ = project(x0); 
+        x_ = project(x0);
         m_r = x_,
-		b_ = x_;        
-        set_scheme(scheme_type);        
+		b_ = x_;
+        set_scheme(scheme_type);
     }
 
 	template<class SymmetricOp>
@@ -87,12 +87,12 @@ struct MultigridCG2d
         for( unsigned u=0; u<stages_-1; u++)
             dg::blas2::gemv( interT_[u], b_[u], b_[u+1]);
 
-        
+
         unsigned int numStageSteps = m_schemeLayout.size();
 		std::vector<unsigned> number(numStageSteps);
 
         unsigned u = m_startStage;
-                        
+
         for (unsigned i = 0; i < numStageSteps; i++)
         {
             unsigned w = u + m_schemeLayout[i].m_step;
@@ -126,7 +126,7 @@ struct MultigridCG2d
                 dg::blas2::symv(1., inter_[w], x_[u], 1., x_[w]);
                 //dg::blas2::symv(inter_[w], x_[u], x_[w]);
             }
-            
+
             u = w;
 		}
 
@@ -137,16 +137,16 @@ struct MultigridCG2d
     /**
      * @brief Nested iterations
      *
-     * - Compute residual with given initial guess. 
-     * - Project residual down to the coarsest grid. 
-     * - Solve equation on the coarse grid 
-     * - interpolate solution up to next finer grid and repeat until the original grid is reached. 
+     * - Compute residual with given initial guess.
+     * - Project residual down to the coarsest grid.
+     * - Solve equation on the coarse grid
+     * - interpolate solution up to next finer grid and repeat until the original grid is reached.
      * @note The preconditioner for the CG solver is taken from the \c precond() method in the \c SymmetricOp class
      * @copydoc hide_symmetric_op
      * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
      * @param x (read/write) contains initial guess on input and the solution on output
      * @param b The right hand side (will be multiplied by \c weights)
-     * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$ 
+     * @param eps the accuracy: iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + 1) \f$
      * @return the number of iterations in each of the stages beginning with the finest grid
      * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
     */
@@ -164,7 +164,7 @@ struct MultigridCG2d
 #ifdef DG_BENCHMARK
         Timer t;
 #endif //DG_BENCHMARK
-        
+
         dg::blas1::scal( x_[stages_-1], 0.0);
         //now solve residual equations
 		for( unsigned u=stages_-1; u>0; u--)
@@ -203,7 +203,7 @@ struct MultigridCG2d
 #endif //MPI
         std::cout << "stage: " << 0 << ", iter: " << number[0] << ", took "<<t.diff()<<"s\n";
 #endif //DG_BENCHMARK
-        
+
         return number;
     }
 
@@ -221,7 +221,7 @@ struct MultigridCG2d
 
     /**
     * @brief Project vector to all involved grids (allocate memory version)
-    * @param src the input vector 
+    * @param src the input vector
     * @return the input vector projected to all grids ( index 0 contains a copy of src, 1 is the projetion to the first coarse grid, 2 is the next coarser grid, ...)
     */
     std::vector<container> project( const container& src)
@@ -233,23 +233,23 @@ struct MultigridCG2d
         return out;
 
     }
-    ///@return number of stages 
+    ///@return number of stages
     unsigned stages()const{return stages_;}
 
     ///observe the grids at all stages
     const std::vector<dg::Handle< Geometry > > grids()const { return grids_; }
 
-    
+
     ///After a call to a solution method returns the maximum number of iterations allowed at stage  0
     ///(if the solution method returns this number, failure is indicated)
-    unsigned max_iter() const{return cg_[0].get_max();} 
+    unsigned max_iter() const{return cg_[0].get_max();}
 
 private:
 
 	void set_scheme(const int scheme_type)
 	{
         assert(scheme_type <= 1 && scheme_type >= 0);
-        
+
         // initialize one conjugate-gradient for each grid size
         for (unsigned u = 0; u < stages_; u++)
             cg_[u].construct(x_[u], 1);
@@ -258,7 +258,7 @@ private:
         {
             // from coarse to fine
         case(0):
-            
+
             //m_mode = nestediteration;
             m_startStage = stages_ - 1;
             for (int u = stages_ - 1; u >= 0; u--)
@@ -271,7 +271,7 @@ private:
             m_startStage = 0;
             for (unsigned u = 0; u < stages_-1; u++)
                 m_schemeLayout.push_back(stepinfo(1, 5));
-            
+
             m_schemeLayout.push_back(stepinfo(-1, 1000));
 
             for (int u = stages_ - 2; u >= 0; u--)
@@ -292,14 +292,14 @@ private:
         // checks:
         // (0) the last entry should be the stage before the original grid
         // (1) there can not be more than n-1 interpolations in succession
-        
+
         unsigned u = m_startStage;
         assert( u <= stages_ - 1);
         for (unsigned i = 0; i < m_schemeLayout.size(); i++)
         {
             u += m_schemeLayout[i].m_step;
             assert( u <= stages_ - 1);
-        }   
+        }
         assert(u == 0);
 	}
 
@@ -321,7 +321,7 @@ private:
     std::vector< MultiMatrix<Matrix, container> >  interT_;
     std::vector< MultiMatrix<Matrix, container> >  project_;
     std::vector< CG<container> > cg_;
-    std::vector< container> x_, m_r, b_; 
+    std::vector< container> x_, m_r, b_;
 
     struct stepinfo
     {
@@ -330,7 +330,7 @@ private:
         };
 
         int m_step; // {+1,-1}
-        unsigned int m_niter;        
+        unsigned int m_niter;
     };
 
     unsigned m_startStage;

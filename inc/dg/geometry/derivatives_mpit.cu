@@ -26,7 +26,7 @@ typedef dg::MDVec Vector;
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     dg::bc bcx=dg::DIR, bcy=dg::PER, bcz=dg::NEU_DIR;
     MPI_Comm comm2d;
     int rank;

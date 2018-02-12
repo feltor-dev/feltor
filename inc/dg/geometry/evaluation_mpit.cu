@@ -33,7 +33,7 @@ int main(int argc, char** argv)
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     if(rank==0)std::cout << "This program tests the exblas::dot function. The tests succeed only if the evaluation and grid functions but also the weights and especially the exblas::dot function are correctly implemented and compiled. Furthermore, the compiler implementation of the exp function in the math library must be consistent across platforms to get reproducible results.\n";
     if(rank==0)std::cout << "A TEST is PASSED if the number in the second column shows EXACTLY 0!\n";
-    unsigned n = 3, Nx = 12, Ny = 28, Nz = 100; 
+    unsigned n = 3, Nx = 12, Ny = 28, Nz = 100;
     if(rank==0)std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
     MPI_Comm comm2d, comm3d;
     mpi_init2d( dg::PER, dg::PER, comm2d);
@@ -47,7 +47,7 @@ int main(int argc, char** argv)
     //test weights
     const MDVec w2d = dg::blas1::transfer<MDVec>(dg::create::weights(g2d));
     const MDVec w3d = dg::blas1::transfer<MDVec>(dg::create::weights(g3d));
-    exblas::udouble res; 
+    exblas::udouble res;
 
     double integral2d = dg::blas1::dot( w2d, func2d); res.d = integral2d;
     if(rank==0)std::cout << "2D integral               "<<std::setw(6)<<integral2d <<"\t" << res.i - 4639875759346476257 << "\n";
@@ -75,4 +75,4 @@ int main(int argc, char** argv)
 
     MPI_Finalize();
     return 0;
-} 
+}

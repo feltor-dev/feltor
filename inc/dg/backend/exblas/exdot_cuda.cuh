@@ -1,6 +1,6 @@
 /*
  * %%%%%%%%%%%%%%%%%%%%%%%Original development%%%%%%%%%%%%%%%%%%%%%%%%%
- *  Copyright (c) 2016 Inria and University Pierre and Marie Curie 
+ *  Copyright (c) 2016 Inria and University Pierre and Marie Curie
  *  All rights reserved.
  * %%%%%%%%%%%%%%%%%%%%%%%Modifications and further additions%%%%%%%%%%
  *  Matthias Wiesenberger, 2017, within FELTOR and EXBLAS licenses
@@ -13,7 +13,7 @@
  *    Developers : \n
  *        Roman Iakymchuk  -- roman.iakymchuk@lip6.fr \n
  *        Sylvain Collange -- sylvain.collange@inria.fr \n
- *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk
  */
 #pragma once
 #include "thrust/device_vector.h"
@@ -28,14 +28,14 @@ namespace gpu{
 ////////////////////////////////////////////////////////////////////////////////
 // Auxiliary functions
 ////////////////////////////////////////////////////////////////////////////////
-__device__ 
+__device__
 double TwoProductFMA(double a, double b, double *d) {
     double p = a * b;
     *d = fma(a, b, -p);
     return p;
 }
 
-__device__ 
+__device__
 double KnuthTwoSum(double a, double b, double *s) {
     double r = a + b;
     double z = r - a;
@@ -171,7 +171,7 @@ __global__ void ExDOT(
                 }
             }
         }
-        //if (r2 != 0.0) {//add the rest r2 
+        //if (r2 != 0.0) {//add the rest r2
         //    #pragma unroll
         //    for(uint i = 0; i != NBFPE; ++i) {
         //        double s;
@@ -209,7 +209,7 @@ __global__ void ExDOT(
         //            }
         //        }
         //    }
-        //    if (r2 != 0.0) {//add the rest r2 
+        //    if (r2 != 0.0) {//add the rest r2
         //        #pragma unroll
         //        for(uint i = 0; i != NBFPE; ++i) {
         //            double s;
@@ -263,7 +263,7 @@ __global__ void ExDOT(
 ////////////// parameters for Kernel execution            //////////////////////
 //Kernel paramters for EXDOT
 static constexpr uint WARP_COUNT               = 16 ; //# of sub superaccs in CUDA kernels
-static constexpr uint WARP_SIZE                = 32 ; 
+static constexpr uint WARP_SIZE                = 32 ;
 static constexpr uint WORKGROUP_SIZE           = (WARP_COUNT * WARP_SIZE); //# threads per block
 static constexpr uint PARTIAL_SUPERACCS_COUNT  = 512; //# of blocks; each has a partial SuperAcc
 //Kernel paramters for EXDOTComplete

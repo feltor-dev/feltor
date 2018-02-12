@@ -20,7 +20,7 @@ int main(int argc, char * argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -48,7 +48,7 @@ int main(int argc, char * argv[])
     dg::geo::CurvilinearProductMPIGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR, dg::PER, dg::PER, comm);
     if(rank==0)std::cout << "Constructing Fieldlines...\n";
     dg::geo::DS<dg::aProductMPIGeometry3d, dg::MIHMatrix, dg::MHMatrix, dg::MHVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my, false, true,false);
-    
+
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s\n";
     dg::MHVec B = dg::pullback( dg::geo::InvB(mag), g3d), divB(B);

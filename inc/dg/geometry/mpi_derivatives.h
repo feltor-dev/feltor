@@ -8,18 +8,18 @@
 
 namespace dg{
 
-namespace create{ 
+namespace create{
 
 ///@cond
-namespace detail{ 
+namespace detail{
 
 
 /**
 * @brief Iterate through elements of a matrix
 *
-* searches and stores all rows with elements with column -1 or num_rows in m, 
+* searches and stores all rows with elements with column -1 or num_rows in m,
 * if there are no outer values
-* returns an empty matrix and leaves input untouched. The rows in question 
+* returns an empty matrix and leaves input untouched. The rows in question
 * are then replace by 0 in the input matrix.
 * @param in The input matrix (contains only inner points on return)
 *
@@ -66,7 +66,7 @@ CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& in)
         }
     if(found)
     {
-        in.data.insert( in.data.end(), zero.begin(), zero.end()); 
+        in.data.insert( in.data.end(), zero.begin(), zero.end());
     }
     return out;
 }
@@ -75,7 +75,7 @@ CooSparseBlockMat<double> save_outer_values(EllSparseBlockMat<double>& in)
 * @brief Reduce a global matrix into equal chunks among mpi processes
 *
 * grabs the right chunk of column and data indices and remaps the column indices to vector with ghostcells
-* copies the whole data array 
+* copies the whole data array
 * @param coord The mpi proces coordinate of the proper dimension
 * @param howmany[3] # of processes 0 is left, 1 is the middle, 2 is right
 * @return The reduced matrix
@@ -105,12 +105,12 @@ EllSparseBlockMat<double> distribute_rows( const EllSparseBlockMat<double>& src,
         temp.cols_idx[i] = src.cols_idx[ coord*(chunk_size*src.blocks_per_line)+i];
         //data indices are correct but cols are still the global indices (remapping a bit clumsy)
         //first in the zeroth line the col idx might be (global)num_cols - 1 -> map that to -1
-        if( coord==0 && i/src.blocks_per_line == 0 && temp.cols_idx[i] == src.num_cols-1) temp.cols_idx[i] = -1; 
+        if( coord==0 && i/src.blocks_per_line == 0 && temp.cols_idx[i] == src.num_cols-1) temp.cols_idx[i] = -1;
         //second in the last line the col idx mighty be 0 -> map to (global)num_cols
-        if( coord==(howmany[1]-1)&& (int)i/src.blocks_per_line == temp.num_rows-1 && temp.cols_idx[i] == 0) temp.cols_idx[i] = src.num_cols;  
+        if( coord==(howmany[1]-1)&& (int)i/src.blocks_per_line == temp.num_rows-1 && temp.cols_idx[i] == 0) temp.cols_idx[i] = src.num_cols;
         //Elements are now in the range -1, 0, 1,..., (global)num_cols
         //now shift this range to chunk range -1,..,chunk_size
-        temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size ); 
+        temp.cols_idx[i] = (temp.cols_idx[i] - coord*chunk_size );
     }
     temp.set_default_range();
     return temp;
@@ -401,7 +401,7 @@ RowColDistMat< EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ
  * @param g The grid on which to create dx (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A mpi matrix 
+ * @return A mpi matrix
  */
 RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const aMPITopology2d& g, direction dir = centered)
 {
@@ -414,7 +414,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( co
  * @param g The grid on which to create dx (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A mpi matrix 
+ * @return A mpi matrix
  */
 RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( const aMPITopology3d& g, direction dir = centered)
 {
@@ -425,7 +425,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dx( co
  *
  * @param g The grid on which to create jump (boundary condition is taken from here)
  *
- * @return A mpi matrix 
+ * @return A mpi matrix
  */
 RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const aMPITopology2d& g)
 {
@@ -437,7 +437,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX(
  *
  * @param g The grid on which to create jump (boundary condition is taken from here)
  *
- * @return A mpi matrix 
+ * @return A mpi matrix
  */
 RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpX( const aMPITopology3d& g)
 {
@@ -463,7 +463,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( co
  * @param g The grid on which to create dy (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A mpi matrix 
+ * @return A mpi matrix
  */
 RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dy( const aMPITopology3d& g, direction dir = centered)
 {
@@ -487,7 +487,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY(
  *
  * @param g The grid on which to create dy (boundary condition is taken from here)
  *
- * @return A mpi matrix 
+ * @return A mpi matrix
  */
 RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY( const aMPITopology3d& g)
 {
@@ -500,7 +500,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpY(
  * @param g The grid on which to create dz (boundary condition is taken from here)
  * @param dir The direction of the first derivative
  *
- * @return A mpi matrix 
+ * @return A mpi matrix
  */
 RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( const aMPITopology3d& g, direction dir = centered)
 {
@@ -512,7 +512,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> dz( co
  *
  * @param g The grid on which to create dz (boundary condition is taken from here)
  *
- * @return A mpi matrix 
+ * @return A mpi matrix
  */
 RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ( const aMPITopology3d& g)
 {
@@ -520,7 +520,7 @@ RowColDistMat<EllSparseBlockMat<double>, CooSparseBlockMat<double>, NNCH> jumpZ(
 }
 
 
-///@} 
+///@}
 
 
 } //namespace create

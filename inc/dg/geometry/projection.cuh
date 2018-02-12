@@ -5,8 +5,8 @@
 #include "grid.h"
 #include "interpolation.cuh"
 
-/*!@file 
-  
+/*!@file
+
   @brief contains creation of projection matrices
  */
 namespace dg{
@@ -38,7 +38,7 @@ unsigned gcd( unsigned a, unsigned b)
  * @brief Least common multiple
  *
  * @param a Fist number
- * @param b Second number 
+ * @param b Second number
  *
  * @return Least common multiple
  * @ingroup misc
@@ -60,7 +60,7 @@ namespace create{
    return A.transpose();
    @endcode
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * @param g_new The new grid 
+ * @param g_new The new grid
  * @param g_old The old grid
  *
  * @return transposed interpolation matrix
@@ -94,12 +94,12 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology
  * its values projected on the new (coarse) grid. (Projection means that the
  * projection integrals over the base polynomials are computed).
  * If the fine grid is a multiple of the coarse grid, the integral value
- of the projected vector will be conserved and the difference in the L2 norm 
- between old and new vector small. 
+ of the projected vector will be conserved and the difference in the L2 norm
+ between old and new vector small.
  * The projection matrix is the adjoint of the interpolation matrix
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * 
- * @param g_new The new (coarse) grid 
+ *
+ * @param g_new The new (coarse) grid
  * @param g_old The old (fine) grid
  *
  * @return Projection matrix
@@ -191,19 +191,19 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology3d&
 /**
  * @brief Create a transformation matrix between two grids
  *
- * The transformation matrix is probably the most correct way of 
- transforming dG vectors between any two grids of different resolution. 
+ * The transformation matrix is probably the most correct way of
+ transforming dG vectors between any two grids of different resolution.
  It first finds the least common multiple grid (lcm) of the old and the new grid. Then
  it interpolates the values to the lcm grid and finally projects them back to
  the new grid. In total we have
  \f[
- \mathcal T = P Q 
- \f] 
+ \mathcal T = P Q
+ \f]
  where \f$ Q\f$ is the interpolation matrix and \f$ P \f$ the projection. If either new or
- old grid is already the lcm grid this function reduces to the interpolation/projection function. 
+ old grid is already the lcm grid this function reduces to the interpolation/projection function.
  * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- * 
- * @param g_new The new grid 
+ *
+ * @param g_new The new grid
  * @param g_old The old grid
  *
  * @return transformation matrix
@@ -212,8 +212,8 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology3d&
  */
 cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopology3d& g_new, const aTopology3d& g_old)
 {
-    Grid3d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), g_new.z0(), g_new.z1(), 
-                 lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()), 
+    Grid3d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), g_new.z0(), g_new.z1(),
+                 lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()),
                  lcm(g_new.Nz(), g_old.Nz()));
     cusp::coo_matrix< int, double, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
     cusp::coo_matrix< int, double, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
@@ -225,7 +225,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopolog
 ///@copydoc transformation(const aTopology3d&,const aTopology3d&)
 cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopology2d& g_new, const aTopology2d& g_old)
 {
-    Grid2d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), 
+    Grid2d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(),
                  lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()));
     cusp::coo_matrix< int, double, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
     cusp::coo_matrix< int, double, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;

@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #ifdef DG_DEBUG
 #include <cassert>
@@ -16,13 +16,13 @@ template<class T,class M>
 struct MatrixTraits<cusp::array1d<T,M> >
 {
     using value_type = typename cusp::array1d<T,M>::value_type;
-    using matrix_category = CuspPreconTag; 
+    using matrix_category = CuspPreconTag;
 };
 template<class T,class M>
 struct MatrixTraits<const cusp::array1d<T,M> >
 {
     using value_type = typename cusp::array1d<T,M>::value_type;
-    using matrix_category = CuspPreconTag; 
+    using matrix_category = CuspPreconTag;
 };
 
 ///@}

@@ -8,7 +8,7 @@
 
 const double R_0 = 10;
 const double I_0 = 20; //q factor at r=1 is I_0/R_0
-const double a  = 1; //small radius  
+const double a  = 1; //small radius
 double func(double R, double Z, double phi)
 {
     double r2 = (R-R_0)*(R-R_0)+Z*Z;
@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( dg::NEU, dg::NEU, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
     dg::blas1::axpby( 1., solution, -1., derivative);
     norm = dg::blas2::dot(vol3d, derivative);
     if(rank==0)std::cout << "Error Backward Derivative "<<sqrt( norm/sol)<<"\n";
-    if(rank==0)std::cout << "(Since the function is a parabola, the error is from the parallel derivative only if n>2/ no interpolation error)\n"; 
+    if(rank==0)std::cout << "(Since the function is a parabola, the error is from the parallel derivative only if n>2/ no interpolation error)\n";
     if(rank==0)std::cout << "TEST FIELDALIGNED EVALUATION of a Gaussian\n";
     dg::Gaussian init0(R_0+0.5, 0, 0.2, 0.2, 1);
     dg::GaussianZ modulate(0., M_PI/3., 1);

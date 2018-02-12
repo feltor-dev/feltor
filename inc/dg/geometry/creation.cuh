@@ -14,9 +14,9 @@ namespace detail{
 //pay attention to duplicate values
 template< class T>
 void add_index( unsigned n,
-                cusp::coo_matrix<int, T, cusp::host_memory>& hm, 
-                int& number, 
-                unsigned i, unsigned j, unsigned k, unsigned l, 
+                cusp::coo_matrix<int, T, cusp::host_memory>& hm,
+                int& number,
+                unsigned i, unsigned j, unsigned k, unsigned l,
                 T value )
 {
     hm.row_indices[number] = n*i+k;
@@ -28,9 +28,9 @@ void add_index( unsigned n,
 //take care that the matrix is properly sorted after use (sort_by_row_and_column)
 //take care to not add duplicate values
 template< class T>
-void add_operator( cusp::coo_matrix<int, T, cusp::host_memory>& hm, 
-                int& number, 
-                unsigned i, unsigned j, 
+void add_operator( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
+                int& number,
+                unsigned i, unsigned j,
                 Operator<T>& op )
 {
     for( unsigned k=0; k<op.size(); k++)
@@ -38,12 +38,12 @@ void add_operator( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
             add_index( op.size(), hm, number, i,j, k,l, op(k,l));
 }
 
-//add line row_index to the matrix hm beginning from col_begin 
+//add line row_index to the matrix hm beginning from col_begin
 template< class T>
-void add_line( cusp::coo_matrix<int, T, cusp::host_memory>& hm, 
-                int& number, 
-                unsigned row_index, 
-                unsigned col_begin, 
+void add_line( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
+                int& number,
+                unsigned row_index,
+                unsigned col_begin,
                 std::vector<T>& vec )
 {
     for( unsigned k=0; k<vec.size(); k++)
@@ -54,13 +54,13 @@ void add_line( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
         number++;
     }
 }
-//add line row_index to the matrix hm beginning from col_begin 
+//add line row_index to the matrix hm beginning from col_begin
 template< class T>
-void add_line( cusp::coo_matrix<int, T, cusp::host_memory>& hm, 
-                int& number, 
-                unsigned row_index, 
-                unsigned col_begin, 
-                unsigned n, 
+void add_line( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
+                int& number,
+                unsigned row_index,
+                unsigned col_begin,
+                unsigned n,
                 unsigned Nx,
                 std::vector<T>& vec )
 {
@@ -76,7 +76,7 @@ void add_line( cusp::coo_matrix<int, T, cusp::host_memory>& hm,
 
 } //namespace detail
 } //namespace create
-} //namespace dg 
+} //namespace dg
 ///@endcond
 
 #endif // _DG_CREATION_CUH

@@ -3,7 +3,7 @@
  *  @brief Primitives for an MPI Reduction
  *
  *  @authors
- *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk 
+ *        Matthias Wiesenberger -- mattwi@fysik.dtu.dk
  */
 #pragma once
 #include <mpi.h>
@@ -26,7 +26,7 @@ void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_m
     MPI_Comm_rank( comm, &rank);
     MPI_Comm_size( comm, &size);
     MPI_Comm_split( comm, rank/mod, rank%mod, comm_mod);
-    MPI_Group group, reduce_group; 
+    MPI_Group group, reduce_group;
     MPI_Comm_group( comm, &group);
     int reduce_size=(int)ceil((double)size/(double)mod);
     int reduce_ranks[reduce_size];
@@ -39,7 +39,7 @@ void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_m
 
 /*! @brief reduce a number of superaccumulators distributed among mpi processes
 
-We cannot sum more than 256 accumulators before we need to normalize again, so we need to split the reduction into several steps if more than 256 processes are involved. This function normalizes, 
+We cannot sum more than 256 accumulators before we need to normalize again, so we need to split the reduction into several steps if more than 256 processes are involved. This function normalizes,
 reduces, normalizes, reduces and broadcasts the result to all participating
 processes.  As usual the resulting superaccumulator is unnormalized.
  * @ingroup highlevel
@@ -47,8 +47,8 @@ processes.  As usual the resulting superaccumulator is unnormalized.
 @param in unnormalized input superaccumulators ( must be of size num_superacc*\c exblas::BIN_COUNT, allocated on the cpu) (read/write, undefined on out)
 @param out each process contains the result on output( must be of size num_superacc*\c exblas::BIN_COUNT, allocated on the cpu) (write, may not alias in)
 @param comm The complete MPI communicator
-@param comm_mod This is comm modulo 128 ( or any other number <256) 
-@param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL 
+@param comm_mod This is comm modulo 128 ( or any other number <256)
+@param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL
 @sa \c exblas::mpi_reduce_communicator to generate the required communicators
 */
 void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
@@ -58,7 +58,7 @@ void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm
         int imin=exblas::IMIN, imax=exblas::IMAX;
         cpu::Normalize(&in[i*exblas::BIN_COUNT], imin, imax);
     }
-    MPI_Reduce(in, out, num_superacc*exblas::BIN_COUNT, MPI_LONG, MPI_SUM, 0, comm_mod); 
+    MPI_Reduce(in, out, num_superacc*exblas::BIN_COUNT, MPI_LONG, MPI_SUM, 0, comm_mod);
     int rank;
     MPI_Comm_rank( comm_mod, &rank);
     if(comm_mod_reduce != MPI_COMM_NULL)
@@ -70,7 +70,7 @@ void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm
             for( int k=0; k<exblas::BIN_COUNT; k++)
                 in[i*BIN_COUNT+k] = out[i*BIN_COUNT+k];
         }
-        MPI_Reduce(in, out, num_superacc*exblas::BIN_COUNT, MPI_LONG, MPI_SUM, 0, comm_mod_reduce); 
+        MPI_Reduce(in, out, num_superacc*exblas::BIN_COUNT, MPI_LONG, MPI_SUM, 0, comm_mod_reduce);
     }
     MPI_Bcast( out, num_superacc*exblas::BIN_COUNT, MPI_LONG, 0, comm);
 }

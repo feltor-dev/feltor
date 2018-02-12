@@ -5,7 +5,7 @@
 #include "dg/enums.h"
 #include "grid.h"
 
-/*! @file 
+/*! @file
   @brief MPI Grid objects
   */
 
@@ -14,20 +14,20 @@ namespace dg
 
 /*! @class hide_comm_parameters2d
  * @param comm a two-dimensional Cartesian communicator
- * @note the paramateres given in the constructor are global parameters 
+ * @note the paramateres given in the constructor are global parameters
  */
 /*! @class hide_comm_parameters3d
  * @param comm a three-dimensional Cartesian communicator
- * @note the paramateres given in the constructor are global parameters 
+ * @note the paramateres given in the constructor are global parameters
  */
 
 
 
 
 /**
- * @brief 2D MPI abstract grid class 
+ * @brief 2D MPI abstract grid class
  *
- * Represents the global grid coordinates and the process topology. 
+ * Represents the global grid coordinates and the process topology.
  * It just divides the given (global) box into nonoverlapping (local) subboxes that are attributed to each process
  * @note a single cell is never divided across processes.
  * @note although it is abstract objects, are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
@@ -95,13 +95,13 @@ struct aMPITopology2d
      */
     unsigned n() const {return g.n();}
     /**
-     * @brief Return the global number of cells 
+     * @brief Return the global number of cells
      *
      * @return number of cells
      */
     unsigned Nx() const { return g.Nx();}
     /**
-     * @brief Return the global number of cells 
+     * @brief Return the global number of cells
      *
      * Not the one given in the constructor
      * @return number of cells
@@ -132,7 +132,7 @@ struct aMPITopology2d
         return comm1d;
     }
     /**
-     * @brief The Discrete Legendre Transformation 
+     * @brief The Discrete Legendre Transformation
      *
      * @return DLT corresponding to n given in the constructor
      */
@@ -227,7 +227,7 @@ struct aMPITopology2d
         int lIdx0 = gIdx0%(l.n()*l.Nx());
         int lIdx1 = gIdx1%(l.n()*l.Ny());
         localIdx = lIdx1*l.n()*l.Nx() + lIdx0;
-        if( MPI_Cart_rank( comm, coords, &PID) == MPI_SUCCESS ) 
+        if( MPI_Cart_rank( comm, coords, &PID) == MPI_SUCCESS )
             return true;
         else
         {
@@ -238,18 +238,18 @@ struct aMPITopology2d
     /**
      * @brief Return a non-MPI grid local for the calling process
      *
-     * The local grid contains the boundaries and cell numbers the calling process sees and is in charge of. 
+     * The local grid contains the boundaries and cell numbers the calling process sees and is in charge of.
      * @return Grid object
      * @note the boundary conditions in the local grid are not well defined since there might not actually be any boundaries
      */
     const Grid2d& local() const {return l;}
     /**
-     * @brief Return the global non-MPI grid 
+     * @brief Return the global non-MPI grid
      *
-     * The global grid contains the global boundaries and cell numbers. 
+     * The global grid contains the global boundaries and cell numbers.
      * This is the grid that we would have to use in a non-MPI implementation.
      * The global grid returns the same values for x0(), x1(), ..., Nx(), Ny(), ... as the grid
-     * class itself 
+     * class itself
      * @return non-MPI Grid object
      */
     const Grid2d& global() const {return g;}
@@ -275,7 +275,7 @@ struct aMPITopology2d
         g = src.g; l = src.l; comm = src.comm;
         return *this;
     }
-    ///This function has an implementation 
+    ///This function has an implementation
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)=0;
     private:
     void check_division( unsigned Nx, unsigned Ny, bc bcx, bc bcy)
@@ -300,13 +300,13 @@ struct aMPITopology2d
     void update_local(){
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        double x0 = g.x0() + g.lx()/(double)dims[0]*(double)coords[0]; 
-        double x1 = g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
-        if( coords[0] == dims[0]-1) 
+        double x0 = g.x0() + g.lx()/(double)dims[0]*(double)coords[0];
+        double x1 = g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1);
+        if( coords[0] == dims[0]-1)
             x1 = g.x1();
-        double y0 = g.y0() + g.ly()/(double)dims[1]*(double)coords[1]; 
-        double y1 = g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
-        if( coords[1] == dims[1]-1) 
+        double y0 = g.y0() + g.ly()/(double)dims[1]*(double)coords[1];
+        double y1 = g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1);
+        if( coords[1] == dims[1]-1)
             y1 = g.y1();
         unsigned Nx = g.Nx()/dims[0];
         unsigned Ny = g.Ny()/dims[1];
@@ -318,7 +318,7 @@ struct aMPITopology2d
 
 
 /**
- * @brief 3D MPI Grid class 
+ * @brief 3D MPI Grid class
  *
  * @copydetails aMPITopology2d
  * @ingroup basictopology
@@ -407,21 +407,21 @@ struct aMPITopology3d
      */
     unsigned n() const {return g.n();}
     /**
-     * @brief Return the global number of cells 
+     * @brief Return the global number of cells
      *
      * Not the one given in the constructor
      * @return number of cells
      */
     unsigned Nx() const { return g.Nx();}
     /**
-     * @brief Return the global number of cells 
+     * @brief Return the global number of cells
      *
      * Not the one given in the constructor
      * @return number of cells
      */
     unsigned Ny() const { return g.Ny();}
     /**
-     * @brief Return the global number of cells 
+     * @brief Return the global number of cells
      *
      * Not the one given in the constructor
      * @return number of cells
@@ -456,7 +456,7 @@ struct aMPITopology3d
      */
     MPI_Comm get_perp_comm() const {return planeComm;}
     /**
-     * @brief The Discrete Legendre Transformation 
+     * @brief The Discrete Legendre Transformation
      *
      * @return DLT corresponding to n given in the constructor
      */
@@ -472,7 +472,7 @@ struct aMPITopology3d
      */
     unsigned local_size() const { return l.size();}
     /**
-     * @brief Display global and local grid paramters 
+     * @brief Display global and local grid paramters
      *
      * @param os output stream
      */
@@ -536,7 +536,7 @@ struct aMPITopology3d
         int lIdx1 = gIdx1%(l.n()*l.Ny());
         int lIdx2 = gIdx2%l.Nz();
         localIdx = (lIdx2*l.n()*l.Ny() + lIdx1)*l.n()*l.Nx() + lIdx0;
-        if( MPI_Cart_rank( comm, coords, &PID) == MPI_SUCCESS ) 
+        if( MPI_Cart_rank( comm, coords, &PID) == MPI_SUCCESS )
             return true;
         else
             return false;
@@ -569,7 +569,7 @@ struct aMPITopology3d
         g = src.g; l = src.l; comm = src.comm; planeComm = src.planeComm;
         return *this;
     }
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)=0; 
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)=0;
     private:
     void check_division( unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz)
     {
@@ -598,24 +598,24 @@ struct aMPITopology3d
     void update_local(){
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        double x0 = g.x0() + g.lx()/(double)dims[0]*(double)coords[0]; 
-        double x1 = g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1); 
-        if( coords[0] == dims[0]-1) 
+        double x0 = g.x0() + g.lx()/(double)dims[0]*(double)coords[0];
+        double x1 = g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1);
+        if( coords[0] == dims[0]-1)
             x1 = g.x1();
 
-        double y0 = g.y0() + g.ly()/(double)dims[1]*(double)coords[1]; 
-        double y1 = g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1); 
-        if( coords[1] == dims[1]-1) 
+        double y0 = g.y0() + g.ly()/(double)dims[1]*(double)coords[1];
+        double y1 = g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1);
+        if( coords[1] == dims[1]-1)
             y1 = g.y1();
 
-        double z0 = g.z0() + g.lz()/(double)dims[2]*(double)coords[2]; 
-        double z1 = g.z0() + g.lz()/(double)dims[2]*(double)(coords[2]+1); 
-        if( coords[2] == dims[2]-1) 
+        double z0 = g.z0() + g.lz()/(double)dims[2]*(double)coords[2];
+        double z1 = g.z0() + g.lz()/(double)dims[2]*(double)(coords[2]+1);
+        if( coords[2] == dims[2]-1)
             z1 = g.z1();
         unsigned Nx = g.Nx()/dims[0];
         unsigned Ny = g.Ny()/dims[1];
         unsigned Nz = g.Nz()/dims[2];
-        
+
         l = Grid3d(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
     }
     Grid3d g, l; //global grid
@@ -632,7 +632,7 @@ int aMPITopology2d::pidOf( double x, double y) const
     coords[0]=(coords[0]==dims[0]) ? coords[0]-1 :coords[0];
     coords[1]=(coords[1]==dims[1]) ? coords[1]-1 :coords[1];
     int rank;
-    if( MPI_Cart_rank( comm, coords, &rank) == MPI_SUCCESS ) 
+    if( MPI_Cart_rank( comm, coords, &rank) == MPI_SUCCESS )
         return rank;
     else
         return -1;
@@ -649,7 +649,7 @@ int aMPITopology3d::pidOf( double x, double y, double z) const
     coords[1]=(coords[1]==dims[1]) ? coords[1]-1 :coords[1];
     coords[2]=(coords[2]==dims[2]) ? coords[2]-1 :coords[2];
     int rank;
-    if( MPI_Cart_rank( comm, coords, &rank) == MPI_SUCCESS ) 
+    if( MPI_Cart_rank( comm, coords, &rank) == MPI_SUCCESS )
         return rank;
     else
         return -1;

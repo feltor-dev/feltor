@@ -7,7 +7,7 @@ namespace dg
 /*!@brief a manager class that invokes the \c clone() method on the managed ptr when copied
 *
 *When copied invokes a deep copy using the \c clone() method.
-* This class is most useful when a class needs to hold a polymorphic, cloneable oject as a variable. 
+* This class is most useful when a class needs to hold a polymorphic, cloneable oject as a variable.
 @tparam cloneable a type that may be uncopyable/unassignable but provides the \c clone() method with signature
  -  \c cloneable* \c clone() \c const;
 @ingroup lowlevel
@@ -48,7 +48,7 @@ struct Handle
 
     ///delete managed pointer if not NULL
     void clear(){
-        if(ptr_!=0) delete ptr_; 
+        if(ptr_!=0) delete ptr_;
         ptr_=0;
     }
 
@@ -71,15 +71,15 @@ struct Handle
     * @brief Take the ownership of the given pointer and delete the currently held one if non-empty
     * @param ptr a pointer to an object to manage
     */
-    void reset( cloneable* ptr){ 
+    void reset( cloneable* ptr){
         Handle tmp(ptr);
         *this=tmp;
     }
     /**
     * @brief Clone the given object and replace the currently held one
-    * @param src a cloneable object 
+    * @param src a cloneable object
     */
-    void reset( const cloneable& src){ 
+    void reset( const cloneable& src){
         Handle tmp(src);
         *this=tmp;
     }
@@ -119,7 +119,7 @@ struct Buffer
     ~Buffer(){
         delete ptr;
     }
-    Buffer( const Buffer& src){ 
+    Buffer( const Buffer& src){
         ptr = new T(*src.ptr);
     }
     Buffer& operator=( const Buffer& src){

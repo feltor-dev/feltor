@@ -7,7 +7,7 @@
 #include "weightsX.cuh"
 #include "dg/backend/sparseblockmat.h"
 
-/*! @file 
+/*! @file
   @brief Simple 1d derivatives on X-point topology
   */
 namespace dg
@@ -24,7 +24,7 @@ namespace create
 * @param bcx boundary condition
 * @param dir The direction of the first derivative
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> dx( const GridX1d& g, bc bcx, direction dir = centered)
 {
@@ -33,9 +33,9 @@ EllSparseBlockMat<double> dx( const GridX1d& g, bc bcx, direction dir = centered
     for( int i=0; i<DX.blocks_per_line; i++)
     {
         if( DX.cols_idx[DX.blocks_per_line*(g.outer_N()-1)+i] == (int)g.outer_N())
-            DX.cols_idx[DX.blocks_per_line*(g.outer_N()-1)+i] += g.inner_N(); 
+            DX.cols_idx[DX.blocks_per_line*(g.outer_N()-1)+i] += g.inner_N();
         if( DX.cols_idx[DX.blocks_per_line*(g.outer_N())+i] == (int)g.outer_N()-1)
-            DX.cols_idx[DX.blocks_per_line*(g.outer_N())+i] += g.inner_N(); 
+            DX.cols_idx[DX.blocks_per_line*(g.outer_N())+i] += g.inner_N();
         if( DX.cols_idx[DX.blocks_per_line*(g.N()-g.outer_N()-1)+i] == (int)(g.N()-g.outer_N()))
             DX.cols_idx[DX.blocks_per_line*(g.N()-g.outer_N()-1)+i] -= g.inner_N();
         if( DX.cols_idx[DX.blocks_per_line*(g.N()-g.outer_N())+i] == (int)(g.N()-g.outer_N()-1))
@@ -52,7 +52,7 @@ EllSparseBlockMat<double> dx( const GridX1d& g, bc bcx, direction dir = centered
 * @param g 1D grid with X-point topology
 * @param dir The direction of the first derivative
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> dx( const GridX1d& g, direction dir = centered)
 {
@@ -65,7 +65,7 @@ EllSparseBlockMat<double> dx( const GridX1d& g, direction dir = centered)
 * @param g 1D grid with X-point topology
 * @param bcx boundary condition
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> jump( const GridX1d& g, bc bcx)
 {
@@ -74,9 +74,9 @@ EllSparseBlockMat<double> jump( const GridX1d& g, bc bcx)
     for( int i=0; i<J.blocks_per_line; i++)
     {
         if( J.cols_idx[J.blocks_per_line*(g.outer_N()-1)+i] == (int)g.outer_N())
-            J.cols_idx[J.blocks_per_line*(g.outer_N()-1)+i] += g.inner_N(); 
+            J.cols_idx[J.blocks_per_line*(g.outer_N()-1)+i] += g.inner_N();
         if( J.cols_idx[J.blocks_per_line*(g.outer_N())+i] == (int)g.outer_N()-1)
-            J.cols_idx[J.blocks_per_line*(g.outer_N())+i] += g.inner_N(); 
+            J.cols_idx[J.blocks_per_line*(g.outer_N())+i] += g.inner_N();
         if( J.cols_idx[J.blocks_per_line*(g.N()-g.outer_N()-1)+i] == (int)(g.N()-g.outer_N()))
             J.cols_idx[J.blocks_per_line*(g.N()-g.outer_N()-1)+i] -= g.inner_N();
         if( J.cols_idx[J.blocks_per_line*(g.N()-g.outer_N())+i] == (int)(g.N()-g.outer_N()-1))
@@ -91,7 +91,7 @@ EllSparseBlockMat<double> jump( const GridX1d& g, bc bcx)
 * @ingroup create
 * @param g 1D grid with X-point topology
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> jump( const GridX1d& g)
 {

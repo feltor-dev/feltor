@@ -39,7 +39,7 @@ thrust::host_vector<double> normalize_weights_and_compute_abscissas( const Grid1
         boundaries[i+1] = boundaries[i] + g.lx()/(double)Nx_new/weights[g.n()*i];
         for( unsigned j=0; j<g.n(); j++)
         {
-            abs[i*g.n()+j] =  (boundaries[i+1]+boundaries[i])/2. + 
+            abs[i*g.n()+j] =  (boundaries[i+1]+boundaries[i])/2. +
                 (boundaries[i+1]-boundaries[i])/2.*g.dlt().abscissas()[j];
         }
     }
@@ -58,10 +58,10 @@ thrust::host_vector<double> normalize_weights_and_compute_abscissas( const Grid1
 struct aRefinement1d
 {
     /*! @brief Generate the grid transformation
-     *  
+     *
      * @param g_old The 1d grid to refine
      * @param weights A 1d vector of size N_new. These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
-     * @param abscissas A 1d vector of size N_new. These are the new abscissas \f$ x(\zeta) \f$ of the grid. 
+     * @param abscissas A 1d vector of size N_new. These are the new abscissas \f$ x(\zeta) \f$ of the grid.
     */
     void generate( const Grid1d& g_old, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const
     {
@@ -121,7 +121,7 @@ struct LinearRefinement : public aRefinement1d
     LinearRefinement* clone()const{return new LinearRefinement(*this);}
     private:
     unsigned m_;
-    virtual void do_generate( const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const 
+    virtual void do_generate( const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const
     {
         thrust::host_vector< double> left( g.n()*g.N()*m_, 1);
         for( unsigned k=0; k<left.size(); k++)
@@ -135,30 +135,30 @@ struct LinearRefinement : public aRefinement1d
 };
 
 /**
- * @brief Equidistant cell refinement around a given node 
+ * @brief Equidistant cell refinement around a given node
  */
 struct EquidistRefinement : public aRefinement1d
 {
     /**
      * @brief Divide a number of cells left and right of a node into an equidistant number of new cells
      *
-     * There will be 2*howmany refined cells (each containing 1+add_x equidistant cells) at the end except if a 
-     * corner node is given and the boundary condition is not periodic. 
+     * There will be 2*howmany refined cells (each containing 1+add_x equidistant cells) at the end except if a
+     * corner node is given and the boundary condition is not periodic.
      * @param add_x number of additional cells in the cells around the node
-     * @param node the node around which to refine. We count nodes from 0 (left corner) to N (right corner). 
+     * @param node the node around which to refine. We count nodes from 0 (left corner) to N (right corner).
      * @param howmany  number of cells around a node to refine
      */
     EquidistRefinement( unsigned add_x, unsigned node, unsigned howmany=1): add_x_(add_x), node_(node), howm_(howmany){ }
     EquidistRefinement* clone()const{return new EquidistRefinement(*this);}
     private:
     unsigned add_x_, node_, howm_;
-    virtual void do_generate( const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const 
+    virtual void do_generate( const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const
     {
         if( add_x_ == 0 || howm_ == 0)
         {
             thrust::host_vector<double> w_( g.size(), 1);
             abscissas = dg::create::abscissas(g);
-            weights = w_; 
+            weights = w_;
             return;
         }
         weights = equidist_ref( add_x_, node_, g.n(), g.N(), g.bcx(), howm_);
@@ -166,14 +166,14 @@ struct EquidistRefinement : public aRefinement1d
     }
     virtual unsigned do_N_new( unsigned N_old, bc bcx) const
     {
-        if( bcx == dg::PER) return N_old + 2*add_x_*howm_; 
+        if( bcx == dg::PER) return N_old + 2*add_x_*howm_;
         return N_old + add_x_*howm_;
     }
     thrust::host_vector<double> equidist_ref( unsigned add_x, unsigned node, unsigned n, unsigned N, dg::bc bcx, unsigned howmany) const
     {
         assert( howm_ <= N);
         assert( node_ <= N);
-        if( node_ != 0 && node_ != N) 
+        if( node_ != 0 && node_ != N)
             assert( howm_ <= node_ && howm_ <= N-node_);
         if( add_x_ == 0 || howm_ == 0)
         {
@@ -196,7 +196,7 @@ struct EquidistRefinement : public aRefinement1d
         if(      node_ == 0     && bcx != dg::PER) { return left; }
         else if( node_ == N && bcx != dg::PER) { return right; }
         else if((node_ == N || node_ == 0) && bcx == dg::PER) { return both; }
-        else 
+        else
         {
             thrust::host_vector<double> w_ = both;
             //now shift indices so that refinement is around node_s
@@ -209,15 +209,15 @@ struct EquidistRefinement : public aRefinement1d
 };
 
 /**
- * @brief The exponential refinement around a node 
+ * @brief The exponential refinement around a node
  */
 struct ExponentialRefinement : public aRefinement1d
 {
     /**
      * @brief Construct exponential refinement
      *
-     * There will be two refined cells at the end except if a corner node is 
-     * given and the boundary condition is not periodic.  
+     * There will be two refined cells at the end except if a corner node is
+     * given and the boundary condition is not periodic.
      * @param add_x number of additional cells in the cells node-1 and node. Every new additional cell divides the cell closest to the node in half.
      * @param node The cells node-1 and node will be refined. We count nodes from
      * 0 (left corner) to N (right corner).
@@ -226,13 +226,13 @@ struct ExponentialRefinement : public aRefinement1d
     ExponentialRefinement* clone()const{return new ExponentialRefinement(*this);}
     private:
     unsigned add_x_, node_;
-    virtual void do_generate( const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const 
+    virtual void do_generate( const Grid1d& g, thrust::host_vector<double>& weights, thrust::host_vector<double>& abscissas) const
     {
         if( add_x_ == 0)
         {
             thrust::host_vector<double> w_( g.size(), 1);
             abscissas= dg::create::abscissas(g);
-            weights = w_; 
+            weights = w_;
             return;
         }
         weights = exponential_ref( add_x_, node_, g.n(), g.N(), g.bcx());
@@ -240,7 +240,7 @@ struct ExponentialRefinement : public aRefinement1d
     }
     virtual unsigned do_N_new( unsigned N_old, bc bcx) const
     {
-        if( bcx == dg::PER) return N_old + 2*add_x_; 
+        if( bcx == dg::PER) return N_old + 2*add_x_;
         return N_old + add_x_;
     }
     thrust::host_vector<double> exponential_ref( unsigned add_x, unsigned node, unsigned n, unsigned N, dg::bc bcx) const
@@ -255,7 +255,7 @@ struct ExponentialRefinement : public aRefinement1d
         thrust::host_vector< double> left( n*N+n*add_x_, 1), right(left);
         for( unsigned k=0; k<n; k++)//the original cell and the additional ones
             left[k] = pow( 2, add_x_);
-        for( unsigned i=0; i<add_x_; i++) 
+        for( unsigned i=0; i<add_x_; i++)
             for( unsigned k=0; k<n; k++)
                 left[(i+1)*n+k] = pow( 2, add_x_-i);
         //mirror left into right
@@ -269,7 +269,7 @@ struct ExponentialRefinement : public aRefinement1d
         if(      node_ == 0     && bcx != dg::PER) { return left; }
         else if( node_ == N && bcx != dg::PER) { return right; }
         else if((node_ == N || node_ == 0) && bcx == dg::PER) { return both; }
-        else 
+        else
         {
             thrust::host_vector<double> w_ = both;
             //now shift indices so that refinement is around node_s
@@ -283,12 +283,12 @@ struct ExponentialRefinement : public aRefinement1d
 ///@}
 
 /**
- * @brief Refined Cartesian grid 
+ * @brief Refined Cartesian grid
  * @ingroup geometry
  */
 struct CartesianRefinedGrid2d : public dg::aGeometry2d
 {
-    CartesianRefinedGrid2d( const aRefinement1d& refX, const aRefinement1d& refY, double x0, double x1, double y0, double y1, 
+    CartesianRefinedGrid2d( const aRefinement1d& refX, const aRefinement1d& refY, double x0, double x1, double y0, double y1,
             unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::aGeometry2d( x0, x1, y0, y1, n, refX.N_new(Nx, bcx), refY.N_new(Ny,bcy), bcx, bcy), refX_(refX), refY_(refY), w_(2), a_(2)
     {
         construct_weights_and_abscissas(n,Nx,Ny);
@@ -299,13 +299,13 @@ struct CartesianRefinedGrid2d : public dg::aGeometry2d
     Handle<aRefinement1d> refX_, refY_;
     std::vector<thrust::host_vector<double> > w_, a_;
     void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny)
-    { 
+    {
         Grid1d gx( x0(), x1(), n, Nx, bcx());
         Grid1d gy( y0(), y1(), n, Ny, bcy());
         thrust::host_vector<double> wx, ax, wy, ay;
         refX_.get().generate( gx, wx, ax);
         refY_.get().generate( gy, wy, ay);
-        w_[0].resize(size()), w_[1].resize(size()); 
+        w_[0].resize(size()), w_[1].resize(size());
         a_[0].resize(size()), a_[1].resize(size());
         //now make product space
         for( unsigned i=0; i<wy.size(); i++)
@@ -325,12 +325,12 @@ struct CartesianRefinedGrid2d : public dg::aGeometry2d
         SparseTensor<thrust::host_vector<double> > t(w_);
         dg::blas1::pointwiseDot( w_[0], w_[0], t.value(0));
         dg::blas1::pointwiseDot( w_[1], w_[1], t.value(1));
-        t.idx(0,0)=0, t.idx(1,1)=1; 
+        t.idx(0,0)=0, t.idx(1,1)=1;
         return t;
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian()const {
         SparseTensor<thrust::host_vector<double> > t(w_);
-        t.idx(0,0)=0, t.idx(1,1)=1; 
+        t.idx(0,0)=0, t.idx(1,1)=1;
         return t;
     }
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{
@@ -339,7 +339,7 @@ struct CartesianRefinedGrid2d : public dg::aGeometry2d
 };
 
 /**
- * @brief Refined Cartesian grid 
+ * @brief Refined Cartesian grid
  * @ingroup geometry
  */
 struct CartesianRefinedGrid3d : public dg::aGeometry3d
@@ -355,7 +355,7 @@ struct CartesianRefinedGrid3d : public dg::aGeometry3d
     Handle<aRefinement1d> refX_, refY_, refZ_;
     std::vector<thrust::host_vector<double> > w_, a_;
     void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny,unsigned Nz)
-    { 
+    {
         Grid1d gx( x0(), x1(), n, Nx, bcx());
         Grid1d gy( y0(), y1(), n, Ny, bcy());
         Grid1d gz( y0(), y1(), 1, Nz, bcz());
@@ -363,8 +363,8 @@ struct CartesianRefinedGrid3d : public dg::aGeometry3d
         refX_.get().generate( gx, w[0], a[0]);
         refY_.get().generate( gy, w[1], a[1]);
         refZ_.get().generate( gz, w[2], a[2]);
-        w_[0].resize(size()), w_[1].resize(size()), w_[2].resize(size()); 
-        a_[0].resize(size()), a_[1].resize(size()), a_[2].resize(size()); 
+        w_[0].resize(size()), w_[1].resize(size()), w_[2].resize(size());
+        a_[0].resize(size()), a_[1].resize(size()), a_[2].resize(size());
         //now make product space
     for( unsigned s=0; s<w[2].size(); s++)
         for( unsigned i=0; i<w[1].size(); i++)
@@ -387,12 +387,12 @@ struct CartesianRefinedGrid3d : public dg::aGeometry3d
         dg::blas1::pointwiseDot( w_[0], w_[0], t.value(0));
         dg::blas1::pointwiseDot( w_[1], w_[1], t.value(1));
         dg::blas1::pointwiseDot( w_[2], w_[2], t.value(2));
-        t.idx(0,0)=0, t.idx(1,1)=1, t.idx(2,2)=2; 
+        t.idx(0,0)=0, t.idx(1,1)=1, t.idx(2,2)=2;
         return t;
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian()const {
         SparseTensor<thrust::host_vector<double> > t(w_);
-        t.idx(0,0)=0, t.idx(1,1)=1, t.idx(2,2)=2; 
+        t.idx(0,0)=0, t.idx(1,1)=1, t.idx(2,2)=2;
         return t;
     }
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{

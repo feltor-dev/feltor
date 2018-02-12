@@ -78,7 +78,7 @@ int main ()
     integral = dg::blas2::dot( vec_c, w2d_c, vec_c);
     std::cout << "error of projected integral is "<<integral-M_PI*M_PI<<std::endl;
 
-    //also test P D^f_x Q f_c = D^c_x f 
+    //also test P D^f_x Q f_c = D^c_x f
     std::cout << "TEST OF P D_x^f Q = D_x^c\n";
     const dg::HMatrix dx_f = dg::create::dx( g2d_f);
     const dg::HMatrix dx_c = dg::create::dx( g2d_c);

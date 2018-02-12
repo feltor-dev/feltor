@@ -5,7 +5,7 @@
 #include "dg/blas1.h"
 #include "dg/backend/average_dispatch.h"
 
-/*! @file 
+/*! @file
   @brief contains classes for poloidal and toroidal average computations.
   */
 namespace dg{
@@ -61,15 +61,15 @@ struct Average
             m_nx = nx, m_ny = ny*nz;
             dg::transpose( m_nx, m_ny, m_temp, m_w);
         }
-        else 
+        else
             std::cerr << "Warning: this direction is not implemented\n";
     }
     /**
-     * @brief Compute the average 
+     * @brief Compute the average
      *
      * @param src 2D Source Vector (must have the same size as the grid given in the constructor)
      * @param res 2D result Vector (may alias src), every line contains the x-dependent average over
-     the y-direction of src 
+     the y-direction of src
      */
     void operator() (const container& src, container& res)
     {
@@ -87,7 +87,7 @@ struct Average
     }
   private:
     unsigned m_nx, m_ny;
-    container m_w, m_temp, m_temp1d; 
+    container m_w, m_temp, m_temp1d;
     bool m_transpose;
 
 };

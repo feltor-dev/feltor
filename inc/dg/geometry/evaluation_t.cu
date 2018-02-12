@@ -33,7 +33,7 @@ int main()
 {
     std::cout << "This program tests the exblas::dot function. The tests succeed only if the evaluation and grid functions but also the weights and especially the exblas::dot function are correctly implemented and compiled. Furthermore, the compiler implementation of the exp function in the math library must be consistent across platforms to get reproducible results\n";
     std::cout << "A TEST is PASSED if the number in the second column shows EXACTLY 0!\n";
-    unsigned n = 3, Nx = 12, Ny = 28, Nz = 100; 
+    unsigned n = 3, Nx = 12, Ny = 28, Nz = 100;
     std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
 
     dg::Grid1d g1d( 1, 2, n, Nx);
@@ -47,7 +47,7 @@ int main()
     const DVec w1d = dg::transfer<DVec>( dg::create::weights( g1d));
     const DVec w2d = dg::transfer<DVec>( dg::create::weights( g2d));
     const DVec w3d = dg::transfer<DVec>( dg::create::weights( g3d));
-    exblas::udouble res; 
+    exblas::udouble res;
 
     double integral = dg::blas1::dot( w1d, func1d); res.d = integral;
     std::cout << "1D integral               "<<std::setw(6)<<integral <<"\t" << res.i - 4616944842743393935  << "\n";
@@ -89,4 +89,4 @@ int main()
     res.d = sin( 6.12610567450009658);
     std::cout << "Result of sin "<<res.d<<"\t"<<res.i<<"\t(GCC: -4628567870976535683)"<<std::endl;
     return 0;
-} 
+}

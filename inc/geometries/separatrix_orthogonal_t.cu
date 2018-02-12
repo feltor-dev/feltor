@@ -25,7 +25,7 @@ struct ZCutter
 {
     ZCutter(double ZX): Z_X(ZX){}
     double operator()(double R, double Z) const {
-        if( Z> Z_X) 
+        if( Z> Z_X)
             return 1;
         return 0;
     }
@@ -45,7 +45,7 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((s*g.Ny()+i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((s*g.Ny()+i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[((i*g.n() + k)*g.Nx() + j)*g.n()+l];
 
     //exchange two segments
@@ -53,13 +53,13 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[(((i+g.inner_Ny())*g.n() + k)*g.Nx() + j)*g.n()+l];
     for( unsigned i=g.inner_Ny()+g.outer_Ny(); i<g.Ny(); i++)
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[(((i-g.inner_Ny())*g.n() + k)*g.Nx() + j)*g.n()+l];
     if( g.outer_Ny() == 0)
     {
@@ -68,13 +68,13 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[(((i+1)*g.n() + k)*g.Nx() + j)*g.n()+l];
     for( unsigned i=g.Ny()-1; i<g.Ny(); i++)
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[(((0)*g.n() + k)*g.Nx() + j)*g.n()+l];
     }
 
@@ -86,7 +86,7 @@ int main( int argc, char* argv[])
 {
     std::cout << "Type n, Nx, Ny, Nz \n";
     unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
+    std::cin >> n>> Nx>>Ny>>Nz;
     Json::Reader reader;
     Json::Value js;
     if( argc==1)
@@ -126,7 +126,7 @@ int main( int argc, char* argv[])
     dg::geo::CurvilinearRefinedProductGridX3d g3d(equi, generator, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     dg::geo::CurvilinearRefinedGridX2d g2d(equi, generator, fx_0, fy_0, n, Nx, Ny,dg::DIR, dg::NEU);
     t.toc();
-    dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
+    dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2);
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     double psi_1 = -fx_0/(1.-fx_0)*psi_0;
     std::cout << "psi 1 is          "<<psi_1<<"\n";
@@ -261,7 +261,7 @@ int main( int argc, char* argv[])
 
     dg::HVec cutter = dg::pullback( iris, g2d), vol_cut( cutter);
     ZCutter cut(Z_X);
-    dg::HVec zcutter = dg::pullback( cut, g2d); 
+    dg::HVec zcutter = dg::pullback( cut, g2d);
     w2d = dg::create::weights( g2d);//make weights w/o refined weights
     dg::blas1::pointwiseDot(cutter, w2d, vol_cut);
     dg::blas1::pointwiseDot(zcutter, vol_cut, vol_cut);
@@ -275,8 +275,8 @@ int main( int argc, char* argv[])
    // ///////////////////////////TEST 3d grid//////////////////////////////////////
    // std::cout << "Start DS test!"<<std::endl;
    // const dg::HVec vol3d = dg::create::volume( g3d);
-   // //DFA fieldaligned(OrthogonalXField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
-   // DFA fieldaligned( ConformalField( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU); 
+   // //DFA fieldaligned(OrthogonalXField( gp, g2d, g2d.g()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU);
+   // DFA fieldaligned( ConformalField( gp, g2d.x(), g2d.f_x()), g3d, gp.rk4eps, dg::NoLimiter(), dg::NEU);
 
    // //dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, OrthogonalXField(gp, g2d, g2d.g()), dg::normed, dg::centered, false);
    // dg::DS<DFA, dg::Composite<dg::DMatrix>, dg::HVec> ds( fieldaligned, ConformalField(gp, g2d.x(), g2d.f_x()), dg::normed, dg::centered, false);

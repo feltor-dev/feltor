@@ -13,7 +13,7 @@
 
 /*!@file
  *
- * MagneticField objects 
+ * MagneticField objects
  */
 namespace dg
 {
@@ -27,7 +27,7 @@ namespace guenther
 ///@addtogroup guenther
 ///@{
 
-   
+
 /**
  * @brief \f[\cos(\pi(R-R_0)/2)\cos(\pi Z/2)\f]
  */
@@ -36,7 +36,7 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
     Psip(double R_0 ):   R_0(R_0) {}
   private:
     double do_compute(double R, double Z) const
-    {    
+    {
         return cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
     double R_0;
@@ -49,7 +49,7 @@ struct PsipR : public aCloneableBinaryFunctor<PsipR>
     PsipR(double R_0 ):   R_0(R_0) {}
   private:
     double do_compute(double R, double Z) const
-    {    
+    {
         return -M_PI*0.5*sin(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
     double R_0;
@@ -62,7 +62,7 @@ struct PsipRR : public aCloneableBinaryFunctor<PsipRR>
     PsipRR(double R_0 ):   R_0(R_0) {}
   private:
     double do_compute(double R, double Z) const
-    {    
+    {
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
     double R_0;
@@ -76,7 +76,7 @@ struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
     PsipZ(double R_0 ):   R_0(R_0) {}
   private:
     double do_compute(double R, double Z) const
-    {    
+    {
         return -M_PI*0.5*cos(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
     double R_0;
@@ -89,7 +89,7 @@ struct PsipZZ : public aCloneableBinaryFunctor<PsipZZ>
     PsipZZ(double R_0 ):   R_0(R_0){}
   private:
     double do_compute(double R, double Z) const
-    {    
+    {
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
     double R_0;
@@ -102,7 +102,7 @@ struct PsipRZ : public aCloneableBinaryFunctor<PsipRZ>
     PsipRZ(double R_0 ):   R_0(R_0) {}
   private:
     double do_compute(double R, double Z) const
-    {    
+    {
         return M_PI*M_PI*0.25*sin(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
     double R_0;
@@ -271,12 +271,12 @@ struct DeriNeuT
         double z1 = cos(M_PI*0.5*(R-R_0))*(32.*I_0*I_0+5.*M_PI*M_PI)+
                     M_PI*M_PI* cos(M_PI*3.*(R-R_0)/2.)+
                     M_PI*R*sin(M_PI*3.*(R-R_0)/2.) ;
-        double z2 = cos(M_PI*0.5*(R-R_0)) + 
-                    cos(M_PI*3*(R-R_0)/2) + 
+        double z2 = cos(M_PI*0.5*(R-R_0)) +
+                    cos(M_PI*3*(R-R_0)/2) +
                     M_PI*R*sin(M_PI*0.5*(R-R_0));
         double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
         double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
-        
+
         double func = -psi*cos(phi);
         double deri = psi*sin(phi)/dldp;
         return divb*func + deri;
@@ -298,8 +298,8 @@ struct Divb
         double z1 = cos(M_PI*0.5*(R-R_0))*(32.*I_0*I_0+5.*M_PI*M_PI)+
                     M_PI*M_PI* cos(M_PI*3.*(R-R_0)/2.)+
                     M_PI*R*sin(M_PI*3.*(R-R_0)/2.) ;
-        double z2 = cos(M_PI*0.5*(R-R_0)) + 
-                    cos(M_PI*3*(R-R_0)/2) + 
+        double z2 = cos(M_PI*0.5*(R-R_0)) +
+                    cos(M_PI*3*(R-R_0)/2) +
                     M_PI*R*sin(M_PI*0.5*(R-R_0));
         double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
         double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);

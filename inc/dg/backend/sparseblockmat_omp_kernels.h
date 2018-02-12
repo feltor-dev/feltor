@@ -219,7 +219,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
                     int Jd = J[d];
                     for( int q=0; q<n; q++) //multiplication-loop
                         temp = DG_FMA( dprivate[ d*n+q],
-                                    x[(Jd+q)*right_size+j], 
+                                    x[(Jd+q)*right_size+j],
                                     temp);
                     y[I] = DG_FMA(alpha, temp, y[I]);
                 }

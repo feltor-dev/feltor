@@ -9,11 +9,11 @@ namespace dg
 /**
  * @brief This function pulls back a function defined in some basic coordinates to the curvilinear coordinate system
  *
- * e.g. F(x,y) = f(R(x,y), Z(x,y)) in 2d 
+ * e.g. F(x,y) = f(R(x,y), Z(x,y)) in 2d
  * @tparam Functor The binary or ternary function class
  * @param f The function defined in cartesian coordinates
  * @param g a two- or three dimensional Geometry
- * @note Template deduction for the Functor will fail if you overload functions with different 
+ * @note Template deduction for the Functor will fail if you overload functions with different
  dimensionality (e.g. double sine( double x) and double sine(double x, double y) )
  * You will want to rename those uniquely
  *
@@ -75,7 +75,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIG
  *
  * Computes \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
                 v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
-   where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
+   where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Functor2 Binary or Ternary functor
  * @copydoc hide_container_geometry
@@ -86,8 +86,8 @@ MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIG
  * @param g The geometry object
  * @ingroup pullback
  */
-template<class Functor1, class Functor2, class container, class Geometry> 
-void pushForwardPerp( const Functor1& vR, const Functor2& vZ, 
+template<class Functor1, class Functor2, class container, class Geometry>
+void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
         container& vx, container& vy,
         const Geometry& g)
 {
@@ -104,7 +104,7 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
  *
  * Computes \f[ v^x(x,y) = x_R (x,y) v^R(R(x,y), Z(x,y)) + x_Z v^Z(R(x,y), Z(x,y)) \\
                 v^y(x,y) = y_R (x,y) v^R(R(x,y), Z(x,y)) + y_Z v^Z(R(x,y), Z(x,y)) \f]
-   where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
+   where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Functor2 Binary or Ternary functor
  * @tparam Functor3 Binary or Ternary functor
@@ -118,7 +118,7 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
  * @param g The geometry object
  * @ingroup pullback
  */
-template<class Functor1, class Functor2, class Functor3, class container, class Geometry> 
+template<class Functor1, class Functor2, class Functor3, class container, class Geometry>
 void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
         container& vx, container& vy, container& vz,
         const Geometry& g)
@@ -136,12 +136,12 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
 /**
  * @brief Push forward a symmetric 2d tensor from cylindrical or Cartesian to a new coordinate system
  *
- * Computes \f[ 
+ * Computes \f[
  \chi^{xx}(x,y) = x_R x_R \chi^{RR} + 2x_Rx_Z \chi^{RZ} + x_Zx_Z\chi^{ZZ} \\
  \chi^{xy}(x,y) = x_R x_R \chi^{RR} + (x_Ry_Z+y_Rx_Z) \chi^{RZ} + x_Zx_Z\chi^{ZZ} \\
  \chi^{yy}(x,y) = y_R y_R \chi^{RR} + 2y_Ry_Z \chi^{RZ} + y_Zy_Z\chi^{ZZ} \\
                \f]
-   where \f$ x_R = \frac{\partial x}{\partial R}\f$, ... 
+   where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam FunctorRR Binary or Ternary functor
  * @tparam FunctorRZ Binary or Ternary functor
  * @tparam FunctorZZ Binary or Ternary functor
@@ -155,7 +155,7 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
  * @param g The geometry object
  * @ingroup pullback
  */
-template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry> 
+template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry>
 void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const FunctorZZ& chiZZ,
         container& chixx, container& chixy, container& chiyy,
         const Geometry& g)
@@ -173,7 +173,7 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
         return;
     }
     const dg::SparseTensor<container> jac = g.jacobian();
-    std::vector<container> values( 3); 
+    std::vector<container> values( 3);
     values[0] = chiRR_, values[1] = chiRZ_, values[2] = chiZZ_;
     SparseTensor<container> chi(values);
     chi.idx(0,0)=0, chi.idx(0,1)=chi.idx(1,0)=1, chi.idx(1,1)=2;

@@ -44,7 +44,7 @@ void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, 
         for( int j=0; j<howmany[i]; j++)
             gather_map.push_back(i);
     assert( gather_map.size() == global_idx.size());
-    //5. buffer idx is the new index 
+    //5. buffer idx is the new index
     buffer_idx.resize( global_idx.size());
     thrust::scatter( gather_map.begin(), gather_map.end(), index.begin(), buffer_idx.begin());
 }
@@ -54,21 +54,21 @@ void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, 
 /**
  * @brief Convert a matrix with local row and global column indices to a row distributed MPI matrix
  *
- * @tparam ConversionPolicy has to have the members: 
+ * @tparam ConversionPolicy has to have the members:
  *  - \c global2localIdx(unsigned,unsigned,unsigned) \c const;
- * where the first parameter is the global index and the 
- * other two are the pair (local idx, rank). 
+ * where the first parameter is the global index and the
+ * other two are the pair (local idx, rank).
  *  - \c MPI_Comm \c %communicator() \c const;  returns the communicator to use in the gather/scatter
  *  - \c local_size(); return the local vector size
  * @param global the column indices and num_cols need to be global, the row indices and num_rows local
  * @param policy the conversion object
  *
- * @return a row distributed MPI matrix. If no MPI communication is needed the collective communicator will have zero size. 
+ * @return a row distributed MPI matrix. If no MPI communication is needed the collective communicator will have zero size.
  * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
  * @ingroup mpi_structures
  */
 template<class ConversionPolicy>
-dg::MIHMatrix convert( const dg::IHMatrix& global, const ConversionPolicy& policy) 
+dg::MIHMatrix convert( const dg::IHMatrix& global, const ConversionPolicy& policy)
 {
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
@@ -76,7 +76,7 @@ dg::MIHMatrix convert( const dg::IHMatrix& global, const ConversionPolicy& polic
     cusp::array1d<int, cusp::host_memory> buffer_idx;
     dg::detail::global2bufferIdx( global.column_indices, buffer_idx, unique_global_idx);
     dg::GeneralComm<dg::iHVec, dg::HVec> comm( unique_global_idx, policy);
-    if( !comm.isCommunicating() ) 
+    if( !comm.isCommunicating() )
     {
         cusp::array1d<int, cusp::host_memory> local_idx(global.column_indices), pids(local_idx);
         bool success = true;
@@ -138,7 +138,7 @@ dg::MIHMatrix projection( const aMPITopology3d& g_new, const aMPITopology3d& g_o
 }
 
 /**
- * @brief Create an MPI row distributed interpolation matrix 
+ * @brief Create an MPI row distributed interpolation matrix
  *
  * @copydetails interpolation(const thrust::host_vector<double>&,const thrust::host_vector<double>&,const aTopology2d&,dg::bc,dg::bc)
  */
