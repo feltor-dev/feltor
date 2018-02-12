@@ -35,7 +35,7 @@ class NoRoot1d: public std::exception
     /**
      * @brief what string
      */
-    char const* what() const throw(){ return "Failed to find root!";}
+    char const* what() const throw(){ return "There is no root!";}
 };
 
 /*! @brief Find a root of a 1d function in given boundaries using bisection

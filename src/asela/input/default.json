@@ -4,14 +4,14 @@
 {
     //----------------------------Space and Time discretization------------
     "n"  : 3,   //(# of x,y-polynomials)
-    "Nx" : 50,  //(grid points in x)
-    "Ny" : 50,  //(grid points in y)
+    "Nx" : 52,  //(grid points in x)
+    "Ny" : 52,  //(grid points in y)
     "Nz" : 16,  //(grid points in z)
-    "dt" : 0.44,//(time step in units c_s/rho_s)
+    "dt" : 0.04,//(time step in units c_s/rho_s)
     //-------------------------------Output parameters--------------------
     "n_out" : 3,    //(# of x-y polynomials in output)
-    "Nx_out" : 50,  //(# grid points in output field)
-    "Ny_out" : 50,  //(# grid points in output field)
+    "Nx_out" : 52,  //(# grid points in output field)
+    "Ny_out" : 52,  //(# grid points in output field)
     "Nz_out" : 16,  //(# grid points in output field)
     "itstp"  : 5,   //(steps between outputs)
     "maxout" : 10,  //total # of outputs (excluding first)

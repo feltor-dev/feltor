@@ -22,7 +22,7 @@ struct Parameters
     double tau[2];
     double mcv;
     double lx,ly;
-    double ln;
+    double invkappa;
     double dlocal;
     double l_para;
     double nu_perp, d, c;
@@ -30,9 +30,9 @@ struct Parameters
     double amp, sigma, posX, posY;
     
     double  nprofileamp, bgprofamp;
-    unsigned zf,fluxmode;
+    unsigned hwmode,fluxmode;
     double solb;
-    double omega_source,sourceb,source_dampw;
+    double omega_source,sourceb;
     double omega_sink,sinkb;
     double dampw;
     enum dg::bc bc_x,bc_y,bc_x_phi; 
@@ -75,19 +75,18 @@ struct Parameters
         lx =  js["lx"].asDouble();
         ly =  js["ly"].asDouble();
         bc_x     = dg::str2bc(js["bc_x"].asString());
-	    bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
+        bc_x_phi = dg::str2bc(js["bc_x_phi"].asString());
         bc_y     = dg::str2bc(js["bc_y"].asString());
-        zf =  js["hwmode"].asUInt();
-        ln =   js["ln"].asDouble();
+        hwmode =  js["hwmode"].asUInt();
+        invkappa =   js["invkappa"].asDouble();
         dlocal = (double)(lx*d/c);
         solb = js["SOL_b"].asDouble();
         omega_source = js["prof_source_rate"].asDouble();
         sourceb = js["source_b"].asDouble();
-	source_dampw = js["source_damping_width"].asDouble();       
-	omega_sink = js["prof_sink_rate"].asDouble();
+        omega_sink = js["prof_sink_rate"].asDouble();
         sinkb = js["sink_b"].asDouble();
         dampw = js["damping_width"].asDouble();       
-	fluxmode =  js["fluxmode"].asUInt();
+        fluxmode =  js["fluxmode"].asUInt();
 
     }
     /**
@@ -135,13 +134,12 @@ struct Parameters
             <<"     lx  =              "<<lx<<"\n"
             <<"     ly  =              "<<ly<<"\n";
         os << "modified/ordinary \n"
-            <<"     zf =              "<<zf<<"\n"
-            <<"     ln =              "<<ln<<"\n";
+            <<"     hwmode =              "<<hwmode<<"\n"
+            <<"     invkappa =              "<<invkappa<<"\n";
         os << "SOL/EDGE/Source params \n"
             <<"     sol boundary =    "<<solb<<"\n"            
             <<"     source rate  =    "<<omega_source<<"\n" 
             <<"     source boundary = "<<sourceb<<"\n"
-	    <<"     source damping width= "<<source_dampw<<"\n"
 	    <<"     sink rate  =    "<<omega_sink<<"\n"
             <<"     sink boundary = "<<sourceb<<"\n"
 	    <<"     damping width =   "<<dampw<<"\n"
