@@ -53,7 +53,11 @@ struct Shu
     Elliptic<Geometry, Matrix, container> laplaceM;
     ArakawaX<Geometry, Matrix, container> arakawa_; 
     Invert<container> invert;
+
+    Geometry grid;
+    DVec tmp;
 };
+
 
 template<class Geometry, class Matrix, class container>
 Shu< Geometry, Matrix, container>::Shu( const Geometry& g, double eps): 
@@ -61,14 +65,17 @@ Shu< Geometry, Matrix, container>::Shu( const Geometry& g, double eps):
     w2d( create::weights( g)), v2d( create::inv_weights(g)),  
     laplaceM( g, not_normed),
     arakawa_( g), 
-    invert( psi, g.size(), eps)
+    invert( psi, g.size(), eps),
+    grid(g)
 {
 }
 
 template<class Geometry, class Matrix, class container>
 void Shu<Geometry, Matrix, container>::operator()( Vector& y, Vector& yp)
 {
-    invert( laplaceM, psi, y, w2d, v2d);
+    tmp = y;
+    geo::multiplyPerpVolume(tmp, grid);
+    invert( laplaceM, psi, tmp, w2d, v2d);
     arakawa_( y, psi, yp); //A(y,psi)-> yp
 }
 
