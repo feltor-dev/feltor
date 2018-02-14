@@ -1,0 +1,285 @@
+%\documentclass[12pt]{article}
+%\documentclass[12pt]{scrartcl}
+\documentclass{hitec}
+\settextfraction{0.9} % indent text
+\usepackage{csquotes}
+\usepackage[hidelinks]{hyperref} % doi links are short and usefull?
+\hypersetup{%
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=magenta
+}
+\urlstyle{rm}
+\usepackage[english]{babel}
+\usepackage{mathtools} % loads and extends amsmath
+\usepackage{amssymb}
+% packages not used
+%\usepackage{graphicx}
+%\usepackage{amsthm}
+%\usepackage{subfig}
+\usepackage{bm}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{ragged2e} % maybe use \RaggedRight for tables and literature?
+\usepackage[table]{xcolor} % for alternating colors
+\rowcolors{2}{gray!25}{white}
+\renewcommand\arraystretch{1.3}
+
+%%% reset bibliography distances %%%
+\let\oldthebibliography\thebibliography
+\let\endoldthebibliography\endthebibliography
+\renewenvironment{thebibliography}[1]{
+  \begin{oldthebibliography}{#1}
+    \RaggedRight % remove if justification is desired
+    \setlength{\itemsep}{0em}
+    \setlength{\parskip}{0em}
+}
+{
+  \end{oldthebibliography}
+}
+%%% --- %%%
+
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\d}{\mathrm{d}}
+\newcommand{\T}{\mathrm{T}}
+\renewcommand{\vec}[1]{{\mathbf{#1}}}
+\newcommand{\dx}{\,\mathrm{d}x}
+%\newcommand{\dA}{\,\mathrm{d}(x,y)}
+%\newcommand{\dV}{\mathrm{d}^3{x}\,}
+\newcommand{\dA}{\,\mathrm{dA}}
+\newcommand{\dV}{\mathrm{dV}\,}
+\newcommand{\Eins}{\mathbf{1}}
+\newcommand{\ExB}{$\bm{E}\times\bm{B} \,$}
+\newcommand{\GKI}{\int d^6 \bm{Z} \BSP}
+\newcommand{\GKIV}{\int dv_{\|} d \mu d \theta \BSP}
+\newcommand{\BSP}{B_{\|}^*}
+\newcommand{\GA}[1]{\langle #1   \rangle}
+\newcommand{\Abar}{\langle A_\parallel \rangle}
+%Vectors
+\newcommand{\bhat}{\bm{\hat{b}}}
+\newcommand{\bbar}{\overline{\bm{b}}}
+\newcommand{\chat}{\bm{\hat{c}}}
+\newcommand{\ahat}{\bm{\hat{a}}}
+\newcommand{\xhat}{\bm{\hat{x}}}
+\newcommand{\yhat}{\bm{\hat{y}}}
+\newcommand{\zhat}{\bm{\hat{z}}}
+\newcommand{\Xbar}{\bar{\vec{X}}}
+\newcommand{\phat}{\bm{\hat{\perp}}}
+\newcommand{\that}{\bm{\hat{\theta}}}
+\newcommand{\eI}{\bm{\hat{e}}_1}
+\newcommand{\eII}{\bm{\hat{e}}_2}
+\newcommand{\ud}{\mathrm{d}}
+%Derivatives etc.
+\newcommand{\pfrac}[2]{\frac{\partial#1}{\partial#2}}
+\newcommand{\ffrac}[2]{\frac{\delta#1}{\delta#2}}
+\newcommand{\fixd}[1]{\Big{\arrowvert}_{#1}}
+\newcommand{\curl}[1]{\nabla \times #1}
+\newcommand{\np}{\nabla_{\perp}}
+\newcommand{\npc}{\nabla_{\perp} \cdot }
+\newcommand{\nc}{\nabla\cdot }
+\newcommand{\GAI}{\Gamma_{1}^{\dagger}}
+\newcommand{\GAII}{\Gamma_{1}^{\dagger -1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+\title{The electron-positron plasma project}
+\maketitle
+
+\begin{abstract}
+This is a program for 2d isothermal blob simulations.
+\end{abstract}
+
+\section{Equations}
+$N_e$ is the electron density, $N_p$ is the positron density. 
+ $\phi$ is the electric potential. We use Cartesian coordinates $x$, $y$. 
+
+\subsection{Model}
+
+"global"
+\begin{subequations}
+\begin{align}
+B(x)^{-1} = \kappa x +1-\kappa X\quad \Gamma_1 = ( 1- 0.5\mu\tau\nabla^2)^{-1}\\
+ -\nabla\cdot \left( \varepsilon + \frac{z_e\mu_e N_e + z_p\mu_pN_p}{B^2} \nabla \phi\right) = z_p \Gamma_{1p} N_p +z_e\Gamma_{1e} N_e, \quad
+\psi = \Gamma_1 \phi - \frac{1}{2} \mu \frac{(\nabla\phi)^2}{B^2}\\
+  \frac{\partial N}{\partial t} =
+  \frac{1}{B}\{ N, \psi\} 
+  + \kappa N\frac{\partial \psi}{\partial y} 
+  + \tau \kappa\frac{\partial N}{\partial y} +\nu\nabla^2N
+\end{align}
+\end{subequations}
+
+\subsection{Initialization}
+We define a Gaussian 
+\begin{align}
+    n(x,y) = 1 + A\exp\left( -\frac{(x-X)^2 + (y-Y)^2}{2\sigma^2}\right)
+    \label{}
+\end{align}
+where $X = p_x l_x$ and $Y=p_yl_y$ are the initial centre of mass position coordinates, $A$ is the amplitude and $\sigma$ the
+radius of the blob.
+We initialize 
+\begin{align}
+    N_s = \Gamma_{1s}^{-1} n \quad \phi = 0 
+    \label{}
+\end{align}
+\subsection{Diagnostics}
+\begin{align}
+    M(t) = \int n-1 \\
+    \Lambda_n = \nu \int \Delta n  \\
+    ...
+    \label{}
+\end{align}
+\section{Numerical methods}
+discontinuous Galerkin on structured grid
+\begin{longtable}{ll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
+coordinate system & Cartesian 2D & equidistant discretization of $[0,l_x] \times [0,l_y]$, equal number of Gaussian nodes in x and y \\
+matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
+\ExB advection & Arakawa & - \\
+curvature terms & direct & flux conserving \\
+time &  Karniadakis multistep & $3rd$ order explicit, diffusion $2nd$ order implicit \\
+\bottomrule
+\end{longtable}
+
+\section{Compilation and useage}
+There are two programs toeflR.cu, and toefl\_mpi.cu . Compilation with 
+\begin{verbatim}
+make device = <omp or gpu>
+\end{verbatim}
+Run with
+\begin{verbatim}
+path/to/feltor/src/ep/toeflR input.json
+echo np_x np_y | mpirun -n np_x*np_y path/to/feltor/src/ep/toefl_mpi\
+    input.json output.nc
+\end{verbatim}
+All programs write performance informations to std::cout.
+The first opens a terminal window with life simulation results the
+other two write the results to disc. 
+The second for distributed
+memory systems, which expects the distribution of processes in the
+x and y directions.
+
+\subsection{Input file structure}
+Input file format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+n      & integer & 3 & - &\# Gaussian nodes in x and y \\
+Nx     & integer &100& - &\# grid points in x \\
+Ny     & integer &100& - &\# grid points in y \\
+dt     & integer &3.0& - &time step in units of $c_s/\rho_s$ \\
+n\_out  & integer &3  & - &\# Gaussian nodes in x and y in output \\
+Nx\_out & integer &100& - &\# grid points in x in output fields \\
+Ny\_out & integer &100& - &\# grid points in y in output fields \\
+itstp  & integer &2  & - &   steps between outputs \\
+maxout & integer &100& - &      \# outputs excluding first \\
+eps\_pol   & float &1e-6    & - &  accuracy of polarisation solver \\
+eps\_gamma & float &1e-7    & - & accuracy of $\Gamma_1$ (only in gyrofluid model) \\
+eps\_time  & float &1e-10   & - & accuracy of implicit time-stepper \\
+curvature  & float &0.00015& - & magnetic curvature $\kappa$ \\
+tau        & float array &[-1., 1.]  & - & $\tau_s = T_s/Z_s T_e$\\
+mu         & float array &[-1., 1.]  & - & $\mu_s = m_s/Z_s m_e$\\
+z          & integer array  & [-1,1]  & - & charge number\\
+nu\_perp    & float &5e-3   & - & pependicular viscosity $\nu$ \\
+amplitude  & float &1.0    & - & amplitude $A$ of the blob \\
+sigma      & float &10     & - & blob radius $\sigma$ \\
+posX       & float &0.3    & - & blob x-position in units of $l_x$, i.e. $X = p_x l_x$\\
+posY       & float &0.5    & - & blob y-position in units of $l_y$, i.e. $Y = p_y l_y$ \\
+lx         & float &200    & - & $l_x$  \\
+ly         & float &200    & - & $l_y$  \\
+bc\_x   & char & "DIR"      & - & boundary condition in x (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+bc\_y   & char & "PER"      & - & boundary condition in y (one of PER, DIR, NEU, DIR\_NEU or NEU\_DIR) \\
+debye  & float & 0 & 0 & debye length parameter\\
+\bottomrule
+\end{longtable}
+
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
+
+\subsection{Structure of output file}
+Output file format: netcdf-4/hdf5
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &             text attribute & 1 & verbose input file as a string \\
+energy\_time             & Dataset & 1 & timesteps at which 1d variables are written \\
+time                     & Dataset & 1 & time at which fields are written \\
+x                        & Dataset & 1 & x-coordinate  \\
+y                        & Dataset & 1 & y-coordinate \\
+electrons                & Dataset & 3 (time, y, x) & electon density $n$ \\
+positrons                & Dataset & 3 (time, y, x) & positron density \\
+potential                & Dataset & 3 (time, y, x) & electric potential $\phi$  \\
+vorticity                & Dataset & 3 (time, y, x) & Laplacian of potential $\nabla^2\phi$  \\
+dEdt                     & Dataset & 1 (energy\_time) & change of energy per time  \\
+dissipation              & Dataset & 1 (energy\_time) & diffusion integrals  \\
+energy                   & Dataset & 1 (energy\_time) & total energy integral  \\
+mass                     & Dataset & 1 (energy\_time) & mass integral   \\
+\bottomrule
+\end{longtable}
+\section{Diagnostics toeflEPdiag.cu}
+There only is a shared memory version available
+\begin{verbatim}
+cd path/to/feltor/diag
+make toeflEPdiag 
+path/to/feltor/diag/toeflEPdiag input.nc output.nc
+\end{verbatim}
+
+Input file format: netcdf-4/hdf5
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+inputfile  &             text attribute & 1 & verbose input file as a string \\
+electrons                & Dataset & 3 & electon density (time, y, x) \\
+positrons                & Dataset & 3 & positron density (time, y, x) \\
+potential                & Dataset & 3 & electric potential (time, y, x) \\
+\bottomrule
+\end{longtable}
+
+Output file format: netcdf-4/hdf5
+%
+%Name | Type | Dimensionality | Description
+%---|---|---|---|
+\begin{longtable}{lll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Dimension} & \textbf{Description}  \\ \midrule
+ inputfile & text attribute & 1 & copy of inputfile attribute of the input file (the json string of the simulation input file) \\
+ time & Dataset & 1 & the time steps at which variables are written \\
+ posX & Dataset & 1 (time) & centre of mass (COM) position x-coordinate \\
+ posY & Dataset & 1 (time) &COM y-position \\
+ velX & Dataset & 1 (time)& COM x-velocity \\
+ velY & Dataset & 1 (time)& COM y-velocity \\
+ accX & Dataset & 1 (time)& COM x-acceleration \\
+ accY & Dataset & 1 (time)& COM y-acceleration \\
+ velCOM & Dataset & 1 (time)&absolute value of the COM velocity \\
+ posXmax& Dataset & 1 (time)&maximum amplitude x-position \\
+ posYmax& Dataset & 1 (time)&maximum amplitude y-position \\
+ velXmax& Dataset & 1 (time)&maximum amplitude x-velocity \\
+ velYmax& Dataset & 1 (time)&maximum amplitude y-velocity \\
+ maxamp & Dataset & 1 (time)&value of the maximum amplitude  \\
+  compactness\_ne& Dataset & 1 (time) &compactness of the density field \\
+ Ue& Dataset&  1 (time) &entropy electrons \\
+ Ui &Dataset& 1 (time) & entropy ions \\
+ Uphi& Dataset& 1 (time) &  exb energy \\
+ mass& Dataset & 1 (time) & mass of the blob without background \\
+\bottomrule
+\end{longtable}
+%..................................................................
+\begin{thebibliography}{1}
+    \bibitem{Kendl2017}
+    A. Kendl, G. Danler, M. Wiesenberger, and M. Held, "Interchange instability in matter-antimatter plasmas" Phys. Rev. Letters (2017) https://arxiv.org/abs/1611.07836
+\end{thebibliography}
+%..................................................................
+
+
+\end{document}

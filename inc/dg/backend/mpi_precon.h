@@ -4,6 +4,11 @@
 #include "weights.cuh"
 #include "mpi_grid.h"
 
+
+
+/**@file
+* @brief contains MPI weights
+*/
 namespace dg
 {
  
@@ -29,50 +34,28 @@ namespace create
 ///@addtogroup highlevel
 ///@{
 
-/**
-* @brief create Preconditioner containing 2d X-space weight coefficients
-*
-* @param g The grid 
-*
-* @return Preconditioner
-*/
-MPI_Vector<thrust::host_vector<double> > weights( const MPIGrid2d& g)
+///@copydoc hide_weights_doc
+///@copydoc hide_code_mpi_evaluate2d
+MPI_Vector<thrust::host_vector<double> > weights( const aMPITopology2d& g)
 {
     thrust::host_vector<double> w = create::weights( g.local());
     return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
 }
-/**
-* @brief create Preconditioner containing 2d inverse X-space weight coefficients
-*
-* @param g The grid 
-*
-* @return Preconditioner
-*/
-MPI_Vector<thrust::host_vector<double> > inv_weights( const MPIGrid2d& g)
+///@copydoc hide_inv_weights_doc
+MPI_Vector<thrust::host_vector<double> > inv_weights( const aMPITopology2d& g)
 {
     thrust::host_vector<double> w = create::inv_weights( g.local());
     return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
 }
-/**
-* @brief create Preconditioner containing 3d X-space weight coefficients
-*
-* @param g The grid 
-*
-* @return Preconditioner
-*/
-MPI_Vector<thrust::host_vector<double> > weights( const MPIGrid3d& g)
+///@copydoc hide_weights_doc
+///@copydoc hide_code_mpi_evaluate3d
+MPI_Vector<thrust::host_vector<double> > weights( const aMPITopology3d& g)
 {
     thrust::host_vector<double> w = create::weights( g.local());
     return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());
 }
-/**
-* @brief create Preconditioner containing 3d inverse X-space weight coefficients
-*
-* @param g The grid 
-*
-* @return Preconditioner
-*/
-MPI_Vector<thrust::host_vector<double> > inv_weights( const MPIGrid3d& g)
+///@copydoc hide_inv_weights_doc
+MPI_Vector<thrust::host_vector<double> > inv_weights( const aMPITopology3d& g)
 {
     thrust::host_vector<double> w = create::inv_weights( g.local());
     return MPI_Vector<thrust::host_vector<double> >( w, g.communicator());

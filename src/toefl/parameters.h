@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "dg/enums.h"
+#include "dg/algorithm.h"
 #include "json/json.h"
 
 /**

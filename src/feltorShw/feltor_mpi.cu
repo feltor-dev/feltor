@@ -101,10 +101,10 @@ int main( int argc, char* argv[])
     dg::MPIGrid2d grid(     0., p.lx, 0.,p.ly, p.n,     p.Nx,     p.Ny,     p.bc_x, p.bc_y, comm);
     dg::MPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
     //create RHS 
-    if(rank==0) std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > feltor( grid, p); //initialize before rolkar!
-    if(rank==0) std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > rolkar( grid, p);
+    if(rank==0) std::cout << "Constructing Explicit...\n";
+    eule::Explicit<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > feltor( grid, p); //initialize before rolkar!
+    if(rank==0) std::cout << "Constructing Implicit...\n";
+    eule::Implicit<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > rolkar( grid, p);
     if(rank==0) std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -119,7 +119,7 @@ int main( int argc, char* argv[])
         y1[1] = dg::evaluate( init0, grid);
       }	
       if (p.initmode == 1) {
-        dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
+        dg::SinXCosY init0(p.amp,0.,2.*M_PI/p.lx,p.sigma*2.*M_PI/p.ly);
         y1[1] = dg::evaluate( init0, grid);
       }
       if (p.initmode == 2) {
@@ -277,7 +277,7 @@ int main( int argc, char* argv[])
     if(rank==0) std::cout << "First output ... \n";
     int dims[2],  coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
-    size_t count[3] = {1, grid_out.n()*grid_out.Ny(), grid_out.n()*grid_out.Nx()};  
+    size_t count[3] = {1, grid_out.n()*grid_out.local().Ny(), grid_out.n()*grid_out.local().Nx()};  
     size_t start[3] = {0, coords[1]*count[1],          coords[0]*count[2]}; 
     dg::MDVec transfer( dg::evaluate(dg::zero, grid));
     dg::DVec transferD( dg::evaluate(dg::zero, grid_out.local()));

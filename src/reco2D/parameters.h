@@ -2,7 +2,7 @@
 #include "dg/enums.h"
 #include "json/json.h"
 
-namespace eule
+namespace reco
 {
 /**
  * @brief Provide a mapping between input file and named parameters
@@ -77,7 +77,7 @@ struct Parameters
             <<"Number of outputs:       "<<maxout<<std::endl; //the endl is for the implicit flush 
     }
 };
-} //namespace eule
+} //namespace reco
 
 
     

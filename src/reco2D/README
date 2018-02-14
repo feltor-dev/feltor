@@ -1,4 +1,0 @@
-project description: 2d electromagnetic turbulence 
-
-cp input/default.json input.json
-./asela

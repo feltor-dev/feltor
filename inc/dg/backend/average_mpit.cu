@@ -29,20 +29,22 @@ int main(int argc, char* argv[])
     mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
+    //![doxygen]
     dg::MPIGrid2d g( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
-    
 
     if(rank==0)std::cout << "constructing polavg" << std::endl;
     dg::PoloidalAverage<dg::MDVec, dg::MDVec > pol(g);
     if(rank==0)std::cout << "constructing polavg end" << std::endl;
-    dg::MDVec vector = dg::evaluate( function ,g), average_y( vector);
-    const dg::MDVec solution = dg::evaluate( pol_average, g);
+    const dg::MDVec vector = dg::evaluate( function ,g); 
+    dg::MDVec average_y( vector);
     if(rank==0)std::cout << "Averaging ... \n";
     pol( vector, average_y);
-    dg::blas1::axpby( 1., solution, -1., average_y, vector);
+    //![doxygen]
+    const dg::MDVec solution = dg::evaluate( pol_average, g);
+    dg::blas1::axpby( 1., solution, -1., average_y);
 
     dg::MDVec w2d = dg::create::weights(g);
-    double norm = dg::blas2::dot(vector, w2d, vector);
+    double norm = dg::blas2::dot(average_y, w2d, average_y);
     if(rank==0)std::cout << "Distance to solution is: "<<        sqrt(norm)<<std::endl;
 
     MPI_Finalize();

@@ -27,8 +27,6 @@
 using namespace std;
 using namespace dg;
 
-#define Grid OrthogonalGrid2d<DVec>
-
 #ifdef LOG_POLAR
     typedef dg::geo::LogPolarGenerator Generator;
 #else
@@ -37,7 +35,7 @@ using namespace dg;
 
 // simple, text based, equidistant output format that makes it easy to compare
 // with output from other equidistant codes, etc.
-void write(string prefix, DVec& y0, double time, const Parameters& p, Grid& grid)
+void write(string prefix, DVec& y0, double time, const Parameters& p, dg::geo::CurvilinearGrid2d& grid)
 {
     // interpolate to an equidistant grid
     int N = 1024;
@@ -126,11 +124,10 @@ int main(int argc, char* argv[])
     const Parameters p( js);
     p.display( std::cout);
 
-    //Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     Generator generator(p.r_min, p.r_max); // Generator is defined by the compiler
-    Grid grid( generator, p.n, p.Nx, p.Ny, dg::DIR); // second coordiante is periodic by default
+    dg::geo::CurvilinearGrid2d grid( generator, p.n, p.Nx, p.Ny, dg::DIR, dg::PER);
 
-    DVec w2d( create::weights(grid));
+    DVec w2d( create::volume(grid));
 
 #ifdef OPENGL_WINDOW
     //create CUDA context that uses OpenGL textures in Glfw window
@@ -148,8 +145,8 @@ int main(int argc, char* argv[])
     DVec y0( omega ), y1( y0);
 
     //make solver and stepper
-    Shu<Grid, DMatrix, DVec> shu( grid, p.eps);
-    Diffusion<Grid, DMatrix, DVec> diffusion( grid, p.nu);
+    polar::Explicit<dg::geo::CurvilinearGrid2d, DMatrix, DVec> shu( grid, p.eps);
+    polar::Diffusion<dg::geo::CurvilinearGrid2d, DMatrix, DVec> diffusion( grid, p.nu);
     Karniadakis< DVec > ab( y0, y0.size(), p.eps_time);
 
 

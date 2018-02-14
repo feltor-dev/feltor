@@ -110,10 +110,10 @@ int main( int argc, char* argv[])
     int ncid;
     err = nc_create( argv[2],NC_NETCDF4|NC_CLOBBER, &ncid);
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
-    const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION};
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version",    NC_INT, 1, &version[0]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version",    NC_INT, 1, &version[1]);
-    err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
+    //const int version[3] = {FELTOR_MAJOR_VERSION, FELTOR_MINOR_VERSION, FELTOR_SUBMINOR_VERSION}; REMOVED (MW)
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_major_version",    NC_INT, 1, &version[0]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_minor_version",    NC_INT, 1, &version[1]);
+    //err = nc_put_att_int( ncid, NC_GLOBAL, "feltor_subminor_version", NC_INT, 1, &version[2]);
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out);
     //field IDs

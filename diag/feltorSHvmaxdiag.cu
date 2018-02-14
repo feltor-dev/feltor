@@ -7,7 +7,6 @@
 #include <math.h>
 
 #include "dg/algorithm.h"
-#include "dg/backend/xspacelib.cuh"
 #include "feltorSH/parameters.h"
 #include "file/nc_utilities.h"
 
@@ -61,7 +60,7 @@ int main( int argc, char* argv[])
         
         //Find integer time value of t=17 gamma
         double dpe=neamp+teamp+neamp*teamp;
-        double gammath =20./sqrt((2+p.amp)*p.amp*p.mcv/(p.sigma*(1.)));
+        //double gammath =20./sqrt((2+p.amp)*p.amp*p.mcv/(p.sigma*(1.)));
         double gammathreal = sqrt((2+neamp)*neamp*p.mcv/p.sigma);
         double gammathrealdpe = sqrt(dpe*p.mcv/p.sigma);
 //         if (p.sigma==10.)

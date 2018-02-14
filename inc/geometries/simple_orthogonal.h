@@ -8,7 +8,8 @@
 #include "dg/functors.h"
 #include "dg/runge_kutta.h"
 #include "dg/nullstelle.h"
-#include "dg/geometry.h"
+#include "dg/geometry/geometry.h"
+#include "generator.h"
 #include "utilities.h"
 
 
@@ -25,16 +26,15 @@ namespace detail
 
 //This leightweights struct and its methods finds the initial R and Z values and the coresponding f(\psi) as 
 //good as it can, i.e. until machine precision is reached
-template< class Psi, class PsiX, class PsiY>
 struct Fpsi
 {
     
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( Psi psi, PsiX psiX, PsiY psiY, double x0, double y0, int firstline): 
-        psip_(psi), fieldRZYTconf_(psiX, psiY, x0, y0),fieldRZYTequl_(psiX, psiY, x0, y0), fieldRZtau_(psiX, psiY)
+    Fpsi( const BinaryFunctorsLvl1& psi, double x0, double y0, int firstline): 
+        psip_(psi), fieldRZYTconf_(psi, x0, y0),fieldRZYTequl_(psi, x0, y0), fieldRZtau_(psi)
     {
         X_init = x0, Y_init = y0;
-        while( fabs( psiX(X_init, Y_init)) <= 1e-10 && fabs( psiY( X_init, Y_init)) <= 1e-10)
+        while( fabs( psi.dfx()(X_init, Y_init)) <= 1e-10 && fabs( psi.dfy()( X_init, Y_init)) <= 1e-10)
             X_init +=  1.; 
         firstline_ = firstline;
     }
@@ -49,7 +49,7 @@ struct Fpsi
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_(X_init, Y_init), psi, N);
+            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_.f()(X_init, Y_init), psi, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
@@ -87,17 +87,16 @@ struct Fpsi
     private:
     int firstline_;
     double X_init, Y_init;
-    Psi psip_;
-    dg::geo::ribeiro::FieldRZYT<PsiX, PsiY> fieldRZYTconf_;
-    dg::geo::equalarc::FieldRZYT<PsiX, PsiY> fieldRZYTequl_;
-    dg::geo::FieldRZtau<PsiX, PsiY> fieldRZtau_;
+    BinaryFunctorsLvl1 psip_;
+    dg::geo::ribeiro::FieldRZYT fieldRZYTconf_;
+    dg::geo::equalarc::FieldRZYT fieldRZYTequl_;
+    dg::geo::FieldRZtau fieldRZtau_;
 
 };
 
 //compute the vector of r and z - values that form one psi surface
 //assumes y_0 = 0
-template <class PsiX, class PsiY>
-void compute_rzy( PsiX psiX, PsiY psiY, const thrust::host_vector<double>& y_vec,
+void compute_rzy( const BinaryFunctorsLvl1& psi, const thrust::host_vector<double>& y_vec,
         thrust::host_vector<double>& r, 
         thrust::host_vector<double>& z, 
         double R_0, double Z_0, double f_psi, int mode ) 
@@ -109,8 +108,8 @@ void compute_rzy( PsiX psiX, PsiY psiY, const thrust::host_vector<double>& y_vec
     thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
     begin[0] = R_0, begin[1] = Z_0;
     //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
-    dg::geo::ribeiro::FieldRZY<PsiX, PsiY> fieldRZYconf(psiX, psiY);
-    dg::geo::equalarc::FieldRZY<PsiX, PsiY> fieldRZYequi(psiX, psiY);
+    dg::geo::ribeiro::FieldRZY fieldRZYconf(psi);
+    dg::geo::equalarc::FieldRZY fieldRZYequi(psi);
     fieldRZYconf.set_f(f_psi);
     fieldRZYequi.set_f(f_psi);
     unsigned steps = 1;
@@ -150,15 +149,11 @@ void compute_rzy( PsiX psiX, PsiY psiY, const thrust::host_vector<double>& y_vec
 
 //This struct computes -2pi/f with a fixed number of steps for all psi
 //and provides the Nemov algorithm for orthogonal grid
-//template< class PsiX, class PsiY, class PsiXX, class PsiXY, class PsiYY, class LaplacePsiX, class LaplacePsiY>
-template< class PsiX, class PsiY, class LaplacePsi>
 struct Nemov
 {
-    Nemov( PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double f0, int mode):
+    Nemov( const BinaryFunctorsLvl2 psi, double f0, int mode):
         f0_(f0), mode_(mode),
-        psipR_(psiX), psipZ_(psiY),
-        laplacePsip_( laplacePsi)
-            { }
+        psip_(psi) { }
     void initialize( 
         const thrust::host_vector<double>& r_init, //1d intial values
         const thrust::host_vector<double>& z_init, //1d intial values
@@ -174,8 +169,8 @@ struct Nemov
                 h_init[i] = f0_;
             if(mode_ == 1)
             {
-                double psipR = psipR_(r_init[i], z_init[i]), 
-                       psipZ = psipZ_(r_init[i], z_init[i]);
+                double psipR = psip_.dfx()(r_init[i], z_init[i]), 
+                       psipZ = psip_.dfy()(r_init[i], z_init[i]);
                 double psip2 = (psipR*psipR+psipZ*psipZ);
                 h_init[i]  = f0_/sqrt(psip2); //equalarc
             }
@@ -193,12 +188,12 @@ struct Nemov
         double psipR, psipZ, psip2;
         for( unsigned i=0; i<size; i++)
         {
-            psipR = psipR_(y[0][i], y[1][i]), psipZ = psipZ_(y[0][i], y[1][i]);
+            psipR = psip_.dfx()(y[0][i], y[1][i]), psipZ = psip_.dfy()(y[0][i], y[1][i]);
             //psipRR = psipRR_(y[0][i], y[1][i]), psipRZ = psipRZ_(y[0][i], y[1][i]), psipZZ = psipZZ_(y[0][i], y[1][i]);
             psip2 = f0_*(psipR*psipR+psipZ*psipZ);
             yp[0][i] = psipR/psip2;
             yp[1][i] = psipZ/psip2;
-            yp[2][i] = y[2][i]*( -laplacePsip_(y[0][i], y[1][i]) )/psip2;
+            yp[2][i] = y[2][i]*( - psip_.dfxx()(y[0][i], y[1][i]) - psip_.dfyy()(y[0][i], y[1][i]) )/psip2;
             //yp[3][i] = ( -(2.*psipRR+psipZZ)*y[3][i] - psipRZ*y[4][i] - laplacePsipR_(y[0][i], y[1][i])*y[2][i])/psip2;
             //yp[4][i] = ( -psipRZ*y[3][i] - (2.*psipZZ+psipRR)*y[4][i] - laplacePsipZ_(y[0][i], y[1][i])*y[2][i])/psip2;
         }
@@ -206,9 +201,7 @@ struct Nemov
     private:
     double f0_;
     int mode_;
-    PsiX psipR_;
-    PsiY psipZ_;
-    LaplacePsi laplacePsip_;
+    BinaryFunctorsLvl2 psip_;
 };
 
 template<class Nemov>
@@ -280,31 +273,26 @@ void construct_rz( Nemov nemov,
  * @brief Generate a simple orthogonal grid 
  *
  * Psi is the radial coordinate and you can choose various discretizations of the first line
- * @ingroup generators
- * @tparam Psi All the template parameters must model a Binary-operator i.e. the bracket operator() must be callable with two arguments and return a double. 
+ * @ingroup generators_geo
  */
-template< class Psi, class PsiX, class PsiY, class LaplacePsi>
-struct SimpleOrthogonal
+struct SimpleOrthogonal : public aGenerator2d
 {
     /**
      * @brief Construct a simple orthogonal grid 
      *
-     * @param psi \f$\psi(x,y)\f$ is the flux function in Cartesian coordinates (x,y)
-     * @param psiX \f$ \psi_x\f$ is its derivative in x
-     * @param psiY \f$ \psi_y\f$ ...
-     * @param laplacePsi \f$ \Delta\psi\f$ 
+     * @param psi \f$\psi(x,y)\f$ is the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary 
      * @param psi_1 second boundary
      * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
      * @param firstline This parameter indicates the adaption type used to create the orthogonal grid: 0 is no adaption, 1 is an equalarc adaption
      */
-    SimpleOrthogonal( Psi psi, PsiX psiX, PsiY psiY, LaplacePsi laplacePsi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
-        psiX_(psiX), psiY_(psiY), laplacePsi_(laplacePsi)
+    SimpleOrthogonal(const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int firstline =0):
+        psi_(psi)
     {
         assert( psi_1 != psi_0);
         firstline_ = firstline;
-        orthogonal::detail::Fpsi<Psi, PsiX, PsiY> fpsi(psi, psiX, psiY, x0, y0, firstline);
+        orthogonal::detail::Fpsi fpsi(psi, x0, y0, firstline);
         f0_ = fabs( fpsi.construct_f( psi_0, R0_, Z0_));
         if( psi_1 < psi_0) f0_*=-1;
         lz_ =  f0_*(psi_1-psi_0);
@@ -316,49 +304,14 @@ struct SimpleOrthogonal
      * @return f_0 is the grid constant  s.a. width() )
      */
     double f0() const{return f0_;}
-    /**
-     * @brief The length of the zeta-domain
-     *
-     * Call before discretizing the zeta domain
-     * @return length of zeta-domain (f0*(psi_1-psi_0))
-     * @note the length is always positive
-     */
-    double width() const{return lz_;}
-    /**
-     * @brief 2pi (length of the eta domain)
-     *
-     * Always returns 2pi
-     * @return 2pi 
-     */
-    double height() const{return 2.*M_PI;}
-    /**
-     * @brief Indicate orthogonality
-     *
-     * @return true
-     */
-    bool isOrthogonal() const{return true;}
-    /**
-     * @brief Indicate conformity
-     *
-     * @return false
-     */
-    bool isConformal()  const{return false;}
-    /**
-     * @brief Generate the points and the elements of the Jacobian
-     *
-     * Call the width() and height() function before calling this function!
-     * @param zeta1d one-dimensional list of points inside the zeta-domain (0<zeta<width())
-     * @param eta1d one-dimensional list of points inside the eta-domain (0<eta<height())
-     * @param x  \f$= x(\zeta,\eta)\f$
-     * @param y  \f$= y(\zeta,\eta)\f$
-     * @param zetaX \f$= \zeta_x(\zeta,\eta)\f$
-     * @param zetaY \f$= \zeta_y(\zeta,\eta)\f$
-     * @param etaX \f$= \eta_x(\zeta,\eta)\f$
-     * @param etaY \f$= \eta_y(\zeta,\eta)\f$
-     * @note All the resulting vectors are write-only and get properly resized
-     * @note The \f$ \zeta\f$ direction is continuous in memory
-     */
-    void operator()( 
+    virtual SimpleOrthogonal* clone() const{return new SimpleOrthogonal(*this);}
+
+    private:
+     // length of zeta-domain (f0*(psi_1-psi_0))
+    virtual double do_width() const{return lz_;}
+    virtual double do_height() const{return 2.*M_PI;}
+    virtual bool do_isOrthogonal() const{return true;}
+    virtual void do_generate( 
          const thrust::host_vector<double>& zeta1d, 
          const thrust::host_vector<double>& eta1d, 
          thrust::host_vector<double>& x, 
@@ -366,30 +319,25 @@ struct SimpleOrthogonal
          thrust::host_vector<double>& zetaX, 
          thrust::host_vector<double>& zetaY, 
          thrust::host_vector<double>& etaX, 
-         thrust::host_vector<double>& etaY) 
+         thrust::host_vector<double>& etaY) const
     {
         thrust::host_vector<double> r_init, z_init;
-        orthogonal::detail::compute_rzy( psiX_, psiY_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
-        orthogonal::detail::Nemov<PsiX, PsiY, LaplacePsi> nemov(psiX_, psiY_, laplacePsi_, f0_, firstline_);
+        orthogonal::detail::compute_rzy( psi_, eta1d, r_init, z_init, R0_, Z0_, f0_, firstline_);
+        orthogonal::detail::Nemov nemov(psi_, f0_, firstline_);
         thrust::host_vector<double> h;
         orthogonal::detail::construct_rz(nemov, 0., zeta1d, r_init, z_init, x, y, h);
         unsigned size = x.size();
-        zetaX.resize(size), zetaY.resize(size), 
-        etaX.resize(size), etaY.resize(size);
         for( unsigned idx=0; idx<size; idx++)
         {
-            double psipR = psiX_(x[idx], y[idx]);
-            double psipZ = psiY_(x[idx], y[idx]);
+            double psipR = psi_.dfx()(x[idx], y[idx]);
+            double psipZ = psi_.dfy()(x[idx], y[idx]);
             zetaX[idx] = f0_*psipR;
             zetaY[idx] = f0_*psipZ;
             etaX[idx] = -h[idx]*psipZ;
             etaY[idx] = +h[idx]*psipR;
         }
     }
-    private:
-    PsiX psiX_;
-    PsiY psiY_;
-    LaplacePsi laplacePsi_;
+    BinaryFunctorsLvl2 psi_;
     double f0_, lz_, R0_, Z0_;
     int firstline_;
 };

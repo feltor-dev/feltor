@@ -18,7 +18,7 @@
 
 /*
    - reads parameters from input.txt or any other given file, 
-   - integrates the Feltor - functor and 
+   - integrates the Explicit - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
 
@@ -57,10 +57,10 @@ int main( int argc, char* argv[])
     //Make grid
      dg::Grid2d grid( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);  
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
+    std::cout << "Constructing Explicit...\n";
+    eule::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    eule::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -74,7 +74,7 @@ int main( int argc, char* argv[])
       y1[1] = dg::evaluate( init0, grid);
     }
     if (p.initmode == 1) {
-      dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
+      dg::SinXCosY init0(p.amp,0.,2.*M_PI/p.lx,p.sigma*2.*M_PI/p.ly);
       y1[1] = dg::evaluate( init0, grid);
     }
     if (p.initmode == 2) {
@@ -83,8 +83,7 @@ int main( int argc, char* argv[])
       dg::DVec  dampr = dg::evaluate(dg::TanhProfX(p.lx*0.95,p.sourcew,-1.0,0.0,1.0),grid);
       dg::DVec  dampl = dg::evaluate(dg::TanhProfX(p.lx*0.05,p.sourcew,1.0,0.0,1.0),grid);
       dg::blas1::pointwiseDot(y1[1],dampr,y1[1]);
-      dg::blas1::pointwiseDot(y1[1],dampl,y1[1]);
-   
+      dg::blas1::pointwiseDot(y1[1],dampl,y1[1]);   
     }  
         
     if (p.modelmode == 0 || p.modelmode == 1)
@@ -164,7 +163,7 @@ int main( int argc, char* argv[])
 
         title << std::setprecision(2) << std::scientific;
         //title <<"ne / "<<(double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() )<<"  " << colors.scalemax()<<"\t";
-        title <<"ne-1 / " << colors.scalemin()<<"\t";
+        title <<"ne-1 / " << colors.scalemax()<< " "<< colors.scalemin()<<"\t";
 
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 

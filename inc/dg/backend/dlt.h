@@ -5,9 +5,12 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
-#include "../exceptions.h"
+#include "exceptions.h"
 
 
+/**@file
+* @brief contains the discrete legendre trafo class
+*/
 namespace dg{
 
 /**
@@ -19,13 +22,14 @@ template< class T>
 class DLT
 {
   public:
+
       /**
        * @brief Initialize coefficients
        *
        * The constructor reads the data corresponding to given n from the file dlt.dat. 
-       * @param n # of polynomial coefficients
+       * @param n # of polynomial coefficients (0<n<21)
        */
-    DLT( unsigned n);
+    DLT( unsigned n=3);
 
     /**
      * @brief Return Gauss-Legendre weights
@@ -67,6 +71,7 @@ class DLT
     std::vector<T> a_, w_, forw_, back_, backEQ_;
 };
 
+///@cond
 template<class T>
 DLT<T>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
 {
@@ -186,10 +191,13 @@ DLT<T>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
     for( unsigned j=0; j<n*n; j++) stream >> back_[j];
     for( unsigned j=0; j<n*n; j++) stream >> forw_[j];
     for( unsigned j=0; j<n*n; j++) stream >> backEQ_[j];
+    
+    if( n==0) throw Error( Message(_ping_) << "n==0 not allowed! You typed "<<n);
     if( !stream.good())
-        throw dg::Ooops( "Error: n>20 not allowed!");
+        throw Error( Message(_ping_)<<"n>20 not allowed! You typed: "<<n );
 }
 
 
+///@endcond
 } //namespace dg
 #endif//_DLT_CUH_

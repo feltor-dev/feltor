@@ -6,18 +6,22 @@
 
 #include "dg/backend/grid.h"
 #include "dg/backend/weights.cuh"
+
 /*!@file
  *
  * Contains Error handling class and the define_dimensions functions
  */
 
+
+/**
+* @brief Namespace for netcdf output related classes and functions following the
+ <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html">CF-conventions</a>
+*/
 namespace file
 {
 
 /**
  * @brief Class thrown by the NC_ErrorHandle
- *
- * @ingroup utilities
  */
 struct NC_Error : public std::exception
 {
@@ -74,10 +78,12 @@ struct NC_Error_Handle
     }
 };
 /**
- * @brief Define an unlimited time variable 
+ * @brief Define an unlimited time dimension and variable following 
+  <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html">CF-conventions</a>
  *
+ * The conventions dictate that the units attribute must be defined for a time variable: we give it the value "time since start"
  * @param ncid file ID
- * @param name Name of time variable
+ * @param name Name of time variable (variable names are not standardized)
  * @param dimID time-dimension ID
  * @param tvarID time-variable ID
  *
@@ -94,8 +100,10 @@ int define_time( int ncid, const char* name, int* dimID, int* tvarID)
 }
 
 /**
- * @brief Define a limited time variable
+ * @brief Define a limited time dimension and variable following
+  <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html">CF-conventions</a>
  *
+ * The conventions dictate that the units attribute must be defined for a time variable: we give it the value "time since start"
  * @param ncid file ID
  * @param name Name of the time variable (usually "time")
  * @param size The number of timesteps 
@@ -115,13 +123,14 @@ int define_limited_time( int ncid, const char* name, int size, int* dimID, int* 
 }
 
 /**
- * @brief Define a 1d dimension variable together with its data points
+ * @brief Define a 1d dimension and create a coordinate variable together with its data points in a netcdf file
  *
+ * By netcdf conventions a variable with the same name as a dimension is called a coordinate variable. 
  * @param ncid file ID
- * @param name Name of dimension
- * @param dimID dimension ID
- * @param points pointer to data
- * @param size size of data points
+ * @param name Name of dimension (input)
+ * @param dimID dimension ID (output)
+ * @param points pointer to data (input)
+ * @param size size of data points (input)
  *
  * @return netcdf error code if any
  */
@@ -137,12 +146,13 @@ int define_dimension( int ncid, const char* name, int* dimID, const double * poi
     return retval;
 }
 /**
- * @brief Define a 1d dimension variable together with its data points
+ * @brief Define a 1d dimension and create a coordinate variable together with its data points in a netcdf file
  *
+ * By netcdf conventions a variable with the same name as a dimension is called a coordinate variable. 
  * @param ncid file ID
- * @param name Name of dimension
- * @param dimID dimension ID
- * @param g The 1d DG grid from which data points are generated
+ * @param name Name of dimension (input)
+ * @param dimID dimension ID (output)
+ * @param g The 1d DG grid from which data points are generated (input)
  *
  * @return netcdf error code if any
  */
@@ -182,7 +192,7 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g)
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, const dg::Grid2d& g)
+int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology2d& g)
 {
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
@@ -204,7 +214,7 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::Grid2d& g)
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d& g)
+int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aTopology2d& g)
 {
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
@@ -229,7 +239,7 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid2d& g)
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::Grid2d& g)
+int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::aTopology2d& g)
 {
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
@@ -251,7 +261,7 @@ int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, const dg::Grid3d& g)
+int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology3d& g)
 {
     dg::Grid1d gx( g.x0(), g.x1(), g.n(), g.Nx());
     dg::Grid1d gy( g.y0(), g.y1(), g.n(), g.Ny());
@@ -275,7 +285,7 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::Grid3d& g)
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
  * @note File stays in define mode
  */
-int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid3d& g)
+int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::aTopology3d& g)
 {
     int retval;
     if( (retval = define_dimensions( ncid, &dimsIDs[1], g)) ){ return retval;}

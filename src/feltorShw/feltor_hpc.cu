@@ -50,10 +50,10 @@ int main( int argc, char* argv[])
     // Grid for radial probe location. This is used only in netcdf output, probe positioning is still hard-coded
     dg::Grid1d grid_probe(0, p.lx, 1, 8, p.bc_x);
     //create RHS 
-    std::cout << "Constructing Feltor...\n";
-    eule::Feltor<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
-    std::cout << "Constructing Rolkar...\n";
-    eule::Rolkar<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
+    std::cout << "Constructing Explicit...\n";
+    eule::Explicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > feltor( grid, p); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    eule::Implicit<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > rolkar( grid, p);
     std::cout << "Done!\n";
     /////////////////////The initial field///////////////////////////////////////////
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa);
@@ -68,7 +68,7 @@ int main( int argc, char* argv[])
         y1[1] = dg::evaluate( init0, grid);
       }
       if (p.initmode == 1) {
-        dg::SinXSinY init0(p.amp,0.,2*M_PI/p.lx,p.sigma*2*M_PI/p.ly);
+        dg::SinXCosY init0(p.amp,0.,2.*M_PI/p.lx,p.sigma*2.*M_PI/p.ly);
         y1[1] = dg::evaluate( init0, grid);
       }
       if (p.initmode == 2) {
