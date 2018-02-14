@@ -2,7 +2,7 @@
 #define _DG_ARAKAWA_CUH
 
 #include "blas.h"
-#include "geometry.h"
+#include "geometry/geometry.h"
 #include "enums.h"
 #include "backend/evaluation.cuh"
 #include "backend/derivatives.h"
@@ -13,42 +13,39 @@
 
 /*! @file 
   
-  object for computation of Poisson bracket
+  @brief object for computation of Poisson bracket
   */
 namespace dg
 {
-
+//citation missing in documentation
 /**
  * @brief X-space generalized version of Arakawa's scheme
  *
+ * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
+ * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 
+ * @snippet arakawa_t.cu function
+ * @snippet arakawa_t.cu doxygen
+ * @copydoc hide_geometry_matrix_container
  * @ingroup arakawa
- * @tparam Matrix The Matrix class to use
- * @tparam container The vector class on which to operate on. The blas2 function symv( m, x, y) must be callable and may not change x. 
  */
 template< class Geometry, class Matrix, class container >
 struct ArakawaX
 {
     /**
      * @brief Create Arakawa on a grid
-     *
-     * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
-     * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
      * @param g The grid
      */
-    ArakawaX( Geometry g);
+    ArakawaX( const Geometry& g);
     /**
      * @brief Create Arakawa on a grid using different boundary conditions
-     *
-     * @tparam Grid The Grid class. The functions dg::create::dx( g, bcx) and
-     * dg::create::dy( g, bcy) must be callable and return an instance of the Matrix class. Furthermore dg::evaluate( one, g) must return an instance of the container class.
      * @param g The grid
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
      */
-    ArakawaX( Geometry g, bc bcx, bc bcy);
+    ArakawaX( const Geometry& g, bc bcx, bc bcy);
 
     /**
-     * @brief Compute poisson's bracket
+     * @brief Compute poisson's bracket (25+2 memops)
      *
      * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
      * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space. 
@@ -85,9 +82,7 @@ struct ArakawaX
     {
         blas2::symv( bdxf, phi, dxrhs);
         blas2::symv( bdyf, phi, dyrhs);
-        blas1::copy( dxrhs, dxlhs);//save results
-        blas1::copy( dyrhs, dylhs);
-        geo::raisePerpIndex( dxlhs, dylhs, varphi, helper_, grid); //input gets destroyed
+        tensor::multiply2d( metric_, dxrhs, dyrhs, varphi, helper_);
         blas1::pointwiseDot( varphi, dxrhs, varphi);
         blas1::pointwiseDot( 1., helper_, dyrhs,1., varphi );
     }
@@ -95,21 +90,30 @@ struct ArakawaX
   private:
     container dxlhs, dxrhs, dylhs, dyrhs, helper_;
     Matrix bdxf, bdyf;
-    Geometry grid;
+    SparseElement<container> perp_vol_inv_;
+    SparseTensor<container> metric_;
 };
-
+///@cond
 template<class Geometry, class Matrix, class container>
-ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g ): 
+ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs), 
     bdxf( dg::create::dx( g, g.bcx())),
-    bdyf( dg::create::dy( g, g.bcy())), grid( g)
-{ }
+    bdyf( dg::create::dy( g, g.bcy()))
+{
+    metric_=g.metric().perp();
+    perp_vol_inv_ = dg::tensor::determinant(metric_);
+    dg::tensor::sqrt(perp_vol_inv_);
+}
 template<class Geometry, class Matrix, class container>
-ArakawaX<Geometry, Matrix, container>::ArakawaX( Geometry g, bc bcx, bc bcy): 
+ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy): 
     dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf(dg::create::dx( g, bcx)),
-    bdyf(dg::create::dy( g, bcy)), grid(g)
-{ }
+    bdyf(dg::create::dy( g, bcy))
+{ 
+    metric_=g.metric().perp();
+    perp_vol_inv_ = dg::tensor::determinant(metric_);
+    dg::tensor::sqrt(perp_vol_inv_);
+}
 
 template< class Geometry, class Matrix, class container>
 void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
@@ -120,37 +124,15 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     blas2::symv( bdxf, rhs, dxrhs);
     blas2::symv( bdyf, rhs, dyrhs);
 
-    // order is important now
-    // +x (1) -> result und (2) -> blhs
-    blas1::pointwiseDot( lhs, dyrhs, result);
-    blas1::pointwiseDot( lhs, dxrhs, helper_);
+    blas1::pointwiseDot( 1./3., dxlhs, dyrhs, -1./3., dylhs, dxrhs, 0., result);
+    blas1::pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., dylhs);
+    blas1::pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dxrhs);
 
-    // ++ (1) -> dyrhs and (2) -> dxrhs
-    blas1::pointwiseDot( dxlhs, dyrhs, dyrhs);
-    blas1::pointwiseDot( dylhs, dxrhs, dxrhs);
-
-    // x+ (1) -> dxlhs and (2) -> dylhs
-    blas1::pointwiseDot( dxlhs, rhs, dxlhs);
-    blas1::pointwiseDot( dylhs, rhs, dylhs);
-
-    blas1::axpby( 1./3., dyrhs, -1./3., dxrhs);  //dxl*dyr - dyl*dxr -> dxrhs
-    //everything which needs a dx 
-    blas1::axpby( 1./3., dxlhs, -1./3., helper_);   //dxl*r - l*dxr     -> helper 
-    //everything which needs a dy
-    blas1::axpby( 1./3., result, -1./3., dylhs); //l*dyr - dyl*r     -> dylhs
-
-    //blas1::axpby( 0., dyrhs,  -0., dxrhs); //++
-    ////for testing purposes (note that you need to set criss-cross)
-    //blas1::axpby( 1., dxlhs,  -0., helper); //x+ - +x
-    //blas1::axpby( 0., result, -1., dylhs);  //+x - x+
-
-    blas2::symv( bdyf, helper_, result);      //dy*(dxl*r - l*dxr) -> result
-    blas2::symv( bdxf, dylhs, dxlhs);      //dx*(l*dyr - dyl*r) -> dxlhs
-    //now sum everything up
-    blas1::axpby( 1., dxlhs, 1., result); //result + dxlhs -> result
-    blas1::axpby( 1., dxrhs, 1., result); //result + dyrhs -> result
-    geo::dividePerpVolume( result, grid);
+    blas2::symv( 1., bdxf, dylhs, 1., result);
+    blas2::symv( 1., bdyf, dxrhs, 1., result);
+    tensor::pointwiseDot( perp_vol_inv_, result, result);
 }
+///@endcond
 
 }//namespace dg
 

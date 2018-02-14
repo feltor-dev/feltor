@@ -1,6 +1,8 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
+#include "blas.h"
+#include "dg/backend/interpolation.cuh"
 #include "dg/backend/xspacelib.cuh"
 #include "dg/backend/projection.cuh"
 #include "dg/backend/typedefs.cuh"
@@ -35,9 +37,7 @@ int main()
     dg::HVec hvisual_old = dg::evaluate( bathRZ, grid_old);
     dg::HVec hvisual_new( grid_new.size());
     dg::blas2::gemv( interpolate, hvisual_old, hvisual_new);
-    dg::DifferenceNorm<dg::HVec> diff( grid_old, grid_new);
     dg::HVec w2d = dg::create::weights( grid_old);
-    std::cout << "Relative error norm between original and interpolation: "<<diff( hvisual_old, hvisual_new)/dg::blas2::dot( w2d, hvisual_old)<<std::endl;
     //allocate mem for visual
     dg::HVec visual_old( grid_old.size());
     dg::HVec visual_new( grid_new.size());

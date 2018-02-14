@@ -7,8 +7,6 @@
 //#include "draw/device_window.cuh"
 
 #include "mima.cuh"
-#include "dg/multistep.h"
-#include "dg/backend/timer.cuh"
 #include "../toefl/parameters.h"
 
 /*
@@ -47,10 +45,10 @@ int main( int argc, char* argv[])
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
     /////////////////////////////////////////////////////////////////////////
-    dg::Grid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
+    dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
     bool mhw = ( p.equations == "modified");
-    dg::Mima< dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.eps_pol, mhw); 
+    mima::Mima< dg::DMatrix, dg::DVec > mima( grid, p.kappa, p.eps_pol, mhw); 
     dg::DVec one( grid.size(), 1.);
     //create initial vector
     dg::Gaussian gaussian( p.posX*grid.lx(), p.posY*grid.ly(), p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
@@ -69,7 +67,7 @@ int main( int argc, char* argv[])
         dg::blas1::axpby( -meanMass, one, 1., y0);
     }
     dg::Karniadakis<dg::DVec > ab( y0, y0.size(), p.eps_time);
-    dg::Diffusion<dg::DMatrix,dg::DVec> diffusion( grid, p.nu);
+    mima::Diffusion<dg::DMatrix,dg::DVec> diffusion( grid, p.nu);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);

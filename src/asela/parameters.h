@@ -2,7 +2,7 @@
 #include "dg/enums.h"
 #include "json/json.h"
 
-namespace eule{
+namespace asela{
 /**
  * @brief Provide a mapping between input file and named parameters
  */

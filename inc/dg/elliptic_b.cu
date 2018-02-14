@@ -11,6 +11,7 @@
 #include "backend/derivatives.h"
 #include "backend/typedefs.cuh"
 #include "backend/cusp_thrust_backend.h"
+#include "backend/split_and_join.h"
 
 #include "cg.h"
 #include "elliptic.h"
@@ -37,7 +38,7 @@ int main()
     double eps;
     std::cout << "Type epsilon! \n";
     std::cin >> eps;
-    dg::CylindricalGrid3d<dg::DVec> grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, dg::PER);
+    dg::CylindricalGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, bcy, dg::PER);
     dg::DVec w3d = dg::create::volume( grid);
     dg::DVec v3d = dg::create::inv_volume( grid);
     dg::DVec x = dg::evaluate( initial, grid);
@@ -45,8 +46,7 @@ int main()
     std::cout << "TEST CYLINDRICAL LAPLACIAN\n";
     std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic<dg::CylindricalGrid3d<dg::DVec>, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
-    dg::Elliptic<dg::CylindricalGrid3d<dg::fDVec>, dg::fDMatrix, dg::fDVec> flaplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::aGeometry3d, dg::DMatrix, dg::DVec> laplace(grid, dg::not_normed, dg::centered);
     dg::DMatrix DX = dg::create::dx( grid);
     t.toc();
     std::cout<< "Creation took "<<t.diff()<<"s\n";
@@ -59,20 +59,15 @@ int main()
     dg::DVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
-    dg::fDVec fx;
-    dg::blas1::transfer(x,fx);
-    dg::Inverse<dg::Elliptic<dg::CylindricalGrid3d<dg::fDVec>, dg::fDMatrix, dg::fDVec>, dg::fDVec> inverse( flaplace, fx, 10, 1e-15, 0);
     
     std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
-    t.tic();
-    std::cout << "Number of mixed pcg iterations "<< pcg( laplace, x, b, inverse, v3d, eps)<<std::endl;
-    t.toc();
-    std::cout << "... on the device took "<< t.diff()<<"s\n";
     x = dg::evaluate( initial, grid);
+    unsigned num;
     t.tic();
-    std::cout << "Number of pcg iterations "<< pcg( laplace, x, b, v3d, eps)<<std::endl;
+    num = pcg( laplace, x, b, v3d, eps);
     t.toc();
-    std::cout << "... on the device took "<< t.diff()<<"s\n";
+    std::cout << "Number of pcg iterations "<<num<<std::endl;
+    std::cout << "... on the device took   "<< t.diff()<<"s\n";
     dg::DVec  error(  solution);
     dg::blas1::axpby( 1., x,-1., error);
 
@@ -84,6 +79,44 @@ int main()
     normerr = dg::blas2::dot( w3d, error); 
     norm = dg::blas2::dot( w3d, deriv);
     std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
+    
+    std::cout << "TEST SPLIT SOLUTION\n";
+    x = dg::evaluate( initial, grid);
+    b = dg::evaluate ( laplace_fct, grid);
+    //create grid and perp and parallel volume
+    dg::Handle<dg::aGeometry2d> grid_perp = grid.perp_grid();
+    dg::DVec v2d = dg::create::inv_volume( grid_perp.get());
+    dg::DVec w2d = dg::create::volume( grid_perp.get());
+    dg::SparseElement<dg::DVec> g_parallel = dg::tensor::volume( grid.metric().parallel());
+    dg::DVec chi = dg::evaluate( dg::one, grid);
+    dg::tensor::pointwiseDot( chi, g_parallel, chi);
+    //create split Laplacian
+    std::vector< dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > laplace_split( 
+            grid.Nz(), dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec>(grid_perp.get(), dg::not_normed, dg::centered));
+    // create split  vectors and solve
+    std::vector<dg::DVec> b_split, x_split, chi_split;
+    pcg.construct( w2d, w2d.size());
+    std::vector<unsigned>  number(grid.Nz());
+    t.tic();
+    dg::tensor::pointwiseDot( b, g_parallel, b);
+    dg::split( b, b_split, grid);
+    dg::split( chi, chi_split, grid);
+    dg::split( x, x_split, grid);
+    for( unsigned i=0; i<grid.Nz(); i++)
+    {
+        laplace_split[i].set_chi( chi_split[i]);
+        dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
+        number[i] = pcg( laplace_split[i], x_split[i], b_split[i], v2d, eps);
+    }
+    dg::join( x_split, x, grid);
+    t.toc();
+    std::cout << "Number of iterations in split     "<< number[0]<<"\n";
+    std::cout << "Split solution on the device took "<< t.diff()<<"s\n";
+    dg::blas1::axpby( 1., x,-1., solution, error);
+    normerr = dg::blas2::dot( w3d, error);
+    norm = dg::blas2::dot( w3d, solution);
+    std::cout << "L2 Norm of relative error is:     " <<sqrt( normerr/norm)<<std::endl;
+
     //both function and derivative converge with order P 
 
     return 0;

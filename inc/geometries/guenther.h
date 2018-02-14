@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iostream>
-#include <fstream>
 #include <cmath>
 #include <vector>
 
@@ -25,360 +24,136 @@ namespace geo
  */
 namespace guenther
 {
-///@addtogroup geom
+///@addtogroup guenther
 ///@{
 
    
 /**
  * @brief \f[\cos(\pi(R-R_0)/2)\cos(\pi Z/2)\f]
  */
-struct Psip
+struct Psip : public aCloneableBinaryFunctor<Psip>
 {
     Psip(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
-  private:
     double R_0;
 };
 /**
  * @brief \f[-\pi\sin(\pi(R-R_0)/2)\cos(\pi Z/2)/2\f]
  */
-struct PsipR
+struct PsipR : public aCloneableBinaryFunctor<PsipR>
 {
     PsipR(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return -M_PI*0.5*sin(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
-  private:
     double R_0;
 };
 /**
  * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
  */
-struct PsipRR
+struct PsipRR : public aCloneableBinaryFunctor<PsipRR>
 {
     PsipRR(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
-  private:
     double R_0;
 };
 /**
  * @brief \f[-\pi\cos(\pi(R-R_0)/2)\sin(\pi Z/2)/2\f]
  */
-struct PsipZ
+struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
+
 {
     PsipZ(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return -M_PI*0.5*cos(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
-  private:
     double R_0;
 };
 /**
  * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/4\f]
  */
-struct PsipZZ
+struct PsipZZ : public aCloneableBinaryFunctor<PsipZZ>
 {
     PsipZZ(double R_0 ):   R_0(R_0){}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return -M_PI*M_PI*0.25*cos(M_PI*0.5*(R-R_0))*cos(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
-  private:
     double R_0;
 };
 /**
  * @brief \f[ \pi^2\sin(\pi(R-R_0)/2)\sin(\pi Z/2)/4\f]
  */
-struct PsipRZ
+struct PsipRZ : public aCloneableBinaryFunctor<PsipRZ>
 {
     PsipRZ(double R_0 ):   R_0(R_0) {}
-    double operator()(double R, double Z) const
+  private:
+    double do_compute(double R, double Z) const
     {    
         return M_PI*M_PI*0.25*sin(M_PI*0.5*(R-R_0))*sin(M_PI*Z*0.5);
     }
-    double operator()(double R, double Z, double phi)const{return operator()(R,Z);}
-  private:
     double R_0;
-};
-
-/**
- * @brief \f[-\pi^2\cos(\pi(R-R_0)/2)\cos(\pi Z/2)/2\f]
- */
-struct LaplacePsip
-{
-    LaplacePsip( double R_0 ): psipRR_(R_0), psipZZ_(R_0){}
-    double operator()(double R, double Z) const
-    {    
-        return psipRR_(R,Z) + psipZZ_(R,Z);
-    }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return operator()(R,Z);
-    }
-  private:
-    PsipRR psipRR_;
-    PsipZZ psipZZ_;
 };
 
 /**
  * @brief \f[ I_0\f]
  */
-struct Ipol
+struct Ipol : public aCloneableBinaryFunctor<Ipol>
 {
     Ipol( double I_0):   I_0(I_0) {}
-    double operator()(double R, double Z) const { return I_0; }
-    double operator()(double R, double Z, double phi) const { return I_0; }
-  private:
+    private:
+    double do_compute(double R, double Z) const { return I_0; }
     double I_0;
 };
 /**
  * @brief \f[0\f]
  */
-struct IpolR
+struct IpolR : public aCloneableBinaryFunctor<IpolR>
 {
     IpolR(  ) {}
-    double operator()(double R, double Z) const { return 0; }
-    double operator()(double R, double Z, double phi) const { return 0; }
+    private:
+    double do_compute(double R, double Z) const { return 0; }
 };
 /**
  * @brief \f[0\f]
  */
-struct IpolZ
+struct IpolZ : public aCloneableBinaryFunctor<IpolZ>
 {
     IpolZ(  ) {}
-    double operator()(double R, double Z) const { return 0; }
-    double operator()(double R, double Z, double phi) const { return 0; }
+    private:
+    double do_compute(double R, double Z) const { return 0; }
 };
 
-/**
- * @brief Contains all guenther fields (models aTokamakMagneticField)
- */
-struct MagneticField
+BinaryFunctorsLvl2 createPsip( double R_0)
 {
-    MagneticField( double R_0, double I_0):psip(R_0), psipR(R_0), psipZ(R_0), psipRR(R_0), psipRZ(R_0), psipZZ(R_0), laplacePsip(R_0), ipol(I_0), ipolR(), ipolZ(){}
-    Psip psip;
-    PsipR psipR;
-    PsipZ psipZ;
-    PsipRR psipRR;
-    PsipRZ psipRZ;
-    PsipZZ psipZZ;
-    LaplacePsip laplacePsip;
-    Ipol ipol;
-    IpolR ipolR;
-    IpolZ ipolZ;
-};
+    BinaryFunctorsLvl2 psip( new Psip(R_0), new PsipR(R_0), new PsipZ(R_0),new PsipRR(R_0), new PsipRZ(R_0), new PsipZZ(R_0));
+    return psip;
+}
+BinaryFunctorsLvl1 createIpol( double I_0)
+{
+    BinaryFunctorsLvl1 ipol( new Ipol(I_0), new IpolR(), new IpolZ());
+    return ipol;
+}
+TokamakMagneticField createMagField( double R_0, double I_0)
+{
+    return TokamakMagneticField( R_0, createPsip(R_0), createIpol(I_0));
+}
 ///@}
 
-/////////////////////////////////////////These should not be necessary!////////
 ///@cond
-struct InvB
-{
-    InvB( double R_0, double I_0 ):  R_0(R_0), I_0(I_0){}
-
-    double operator()(double R, double Z) const
-    {    
-        return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-    }
-    double operator()(double R, double Z, double phi) const
-    {  
-
-        return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-
-    }
-  private: 
-    double R_0,I_0;
-
-};
-struct B
-{
-    B( double R_0, double I_0):  R_0(R_0), I_0(I_0){}
-
-    double operator()(double R, double Z) const
-    {    
-        return sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))*R_0/ (sqrt(8.)*R);
-    }
-    double operator()(double R, double Z, double phi) const
-    {    
-        return sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))*R_0/ (sqrt(8.)*R);
-
-    }
-  private:
-    double R_0,I_0;
-
-};
-struct LnB
-{
-    LnB( double R_0, double I_0 ):  R_0(R_0), I_0(I_0) {}
-
-    double operator()(double R, double Z) const
-    {    
-        double invB = sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        return log(1./invB);    }
-    double operator()(double R, double Z, double phi) const
-    {    
-        double invB = sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-
-        return log(1./invB);    }
-  private:
-    double R_0,I_0;
-
-};
-struct GradLnB
-{
-    GradLnB(double R_0, double I_0):  R_0(R_0), I_0(I_0) {} 
- 
-    double operator()( double R, double Z) const
-    {
-        double fac1 = sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-        double z1 = cos(M_PI*0.5*(R-R_0))*(32.*I_0*I_0+5.*M_PI*M_PI)+
-        M_PI*M_PI* cos(M_PI*3.*(R-R_0)/2.)+
-        M_PI*R*sin(M_PI*3.*(R-R_0)/2.) ;
-        double z2 = cos(M_PI*0.5*(R-R_0)) + 
-        cos(M_PI*3*(R-R_0)/2) + 
-        M_PI*R*sin(M_PI*0.5*(R-R_0));
-        double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
-        double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
-       return -divb ;
-    }
-    /*
-    double operator()( double R, double Z, double phi) const
-    {
-        double fac1 = sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-        double z1 = cos(M_PI*0.5*(R-R_0))*(32.*I_0*I_0+5.*M_PI*M_PI)+
-        M_PI*M_PI* cos(M_PI*3.*(R-R_0)/2.)+
-        M_PI*R*sin(M_PI*3.*(R-R_0)/2.) ;
-        double z2 = cos(M_PI*0.5*(R-R_0)) + 
-        cos(M_PI*3*(R-R_0)/2) + 
-        M_PI*R*sin(M_PI*0.5*(R-R_0));
-        double nenner = fac1*fac1*fac1*2.*sqrt(2.)*R;
-        double divb = -M_PI*(z1*sin(M_PI*Z*0.5)-z2*M_PI*M_PI*sin(M_PI*Z*3./2.))/(nenner);
-       return -divb ;
-    }
-    */
-    double operator()( double R, double Z, double phi)const{return operator()(R,Z);}
-    private:
-    double R_0,I_0;
-
-};
-struct Field
-{
-     Field( double R0, double I0):  R_0(R0), I_0(I0){}
-     Field( GeomParameters gp ):  R_0(gp.R_0), I_0(gp.I_0){}
-    void operator()( const std::vector<thrust::host_vector<double> >& y, std::vector<thrust::host_vector<double> >& yp) const
-    {
-        for( unsigned i=0; i<y[0].size(); i++)
-        {        
-
-            yp[2][i] = y[0][i]*sqrt(1.+ M_PI*M_PI*(1.- cos(M_PI*(y[0][i]-R_0))*cos(M_PI*y[1][i]))/8./I_0/I_0);            
-            yp[0][i] = -M_PI*y[0][i]*cos(M_PI*(y[0][i]-R_0)/2.)*sin(M_PI*y[1][i]/2.)/2./I_0;
-            yp[1][i] =  M_PI*y[0][i]*sin(M_PI*(y[0][i]-R_0)/2.)*cos(M_PI*y[1][i]/2.)/2./I_0 ;
-
-        }
-    }
-    void operator()( const thrust::host_vector<double> & y, thrust::host_vector<double> & yp) const
-    {
-            yp[2] = y[0]*sqrt(1.+ M_PI*M_PI*(1.-cos(M_PI*(y[0]-R_0))*cos(M_PI*y[1]))/8./I_0/I_0);
-            yp[0] = -M_PI*y[0]*cos(M_PI*(y[0]-R_0)/2.)*sin(M_PI*y[1]/2.)/2./I_0;
-            yp[1] =  M_PI*y[0]*sin(M_PI*(y[0]-R_0)/2.)*cos(M_PI*y[1]/2.)/2./I_0 ;
-    }
-    double operator()( double R, double Z) const
-    {
-
-        return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-    }
-    double operator()( double R, double Z, double phi) const
-    {
-
-        return sqrt(8.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        
-    }
-    double error( const dg::HVec& x0, const dg::HVec& x1)
-    {
-        return sqrt( (x0[0]-x1[0])*(x0[0]-x1[0]) +(x0[1]-x1[1])*(x0[1]-x1[1])+(x0[2]-x1[2])*(x0[2]-x1[2]));
-    }
-    bool monitor( const dg::HVec& end){ 
-        if ( std::isnan(end[0]) || std::isnan(end[1]) || std::isnan(end[2]) ) 
-        {
-            return false;
-        }
-        //if new integrated point outside domain
-        if ((1e-5 > end[0]  ) || (1e10 < end[0])  ||(-1e10  > end[1]  ) || (1e10 < end[1])||(-1e10 > end[2]  ) || (1e10 < end[2])  )
-        {
-            return false;
-        }
-        return true;
-    }
-    private:
-    double R_0, I_0;
-   
-};
-/**
- * @brief \f[ b^R\f]
- */
-struct FieldR
-{
-    FieldR( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    double operator()( double R, double Z, double phi) const
-    {
-        return -sqrt(2.)*M_PI*cos(M_PI*(R-R_0)/2.)*sin(M_PI*Z/2)/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-    }
-    private:
-    double R_0, I_0;
-};
-/**
- * @brief \f[ b^Z)\f]
- */
-struct FieldZ
-{
-    FieldZ( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    double operator()( double R, double Z, double phi) const
-    {
-        return sqrt(2.)*M_PI*sin(M_PI*(R-R_0)/2.)*cos(M_PI*Z/2)/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-
-    }
-    private:
-    double R_0, I_0;
-};
-/**
- * @brief \f[ b^\phi\f]
- */
-struct FieldP
-{
-    FieldP( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    double operator()( double R, double Z, double phi) const
-    {
-        return 2.*sqrt(2.)*I_0/R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z));
-    }
-    private:
-    double R_0, I_0;
-}; 
-/**
- * @brief \f[ b_t\f]
- */
-struct bt
-{
-    bt( double R_0, double I_0):R_0(R_0), I_0(I_0){}
-    double operator()( double R, double Z, double phi) const
-    {
-        double invB = 2.*sqrt(2.)*R/sqrt(8.*I_0*I_0+ M_PI*M_PI-M_PI*M_PI* cos(M_PI*(R-R_0))*cos(M_PI*Z))/R_0;
-        return invB*I_0*R_0/R;
-    }
-    private:
-    double R_0, I_0;
-}; 
 /////////////////////Test functions//////////////////
 /**
  * @brief \f[ f(R,Z,\phi)\f]
@@ -535,5 +310,19 @@ struct Divb
 };
 ///@endcond
 } //namespace guenther
+
+/**
+ * @brief Create a Guenther Magnetic field
+
+ * \f[\psi_p(R,Z) = \cos(\pi(R-R_0)/2)\cos(\pi Z/2),\quad I(\psi_p) = I_0\f]
+ * @param R_0 the major radius
+ * @param I_0 the current
+ * @return A magnetic field object
+ * @ingroup geom
+ */
+dg::geo::TokamakMagneticField createGuentherField( double R_0, double I_0)
+{
+    return TokamakMagneticField( R_0, guenther::createPsip(R_0), guenther::createIpol(I_0));
+}
 } //namespace geo
 }//namespace dg

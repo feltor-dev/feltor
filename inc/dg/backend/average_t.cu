@@ -14,17 +14,20 @@ int main()
     unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny!\n";
     std::cin >> n >> Nx >> Ny;
+    //![doxygen]
     const dg::Grid2d g( 0, lx, 0, ly, n, Nx, Ny);
-    dg::HVec w2d = dg::create::weights( g);
 
-    dg::PoloidalAverage<dg::HVec, thrust::host_vector<int> > pol(g);
+    dg::PoloidalAverage<dg::HVec, dg::iHVec > pol(g);
 
-    dg::HVec vector = dg::evaluate( function ,g), average_y( vector);
-    const dg::HVec solution = dg::evaluate( pol_average, g);
+    const dg::HVec vector = dg::evaluate( function ,g); 
+    dg::HVec average_y( vector);
     std::cout << "Averaging ... \n";
     pol( vector, average_y);
-    dg::blas1::axpby( 1., solution, -1., average_y, vector);
-    std::cout << "Distance to solution is: "<<sqrt(dg::blas2::dot( vector, w2d, vector))<<std::endl;
+    //![doxygen]
+    const dg::HVec w2d = dg::create::weights( g);
+    const dg::HVec solution = dg::evaluate( pol_average, g);
+    dg::blas1::axpby( 1., solution, -1., average_y);
+    std::cout << "Distance to solution is: "<<sqrt(dg::blas2::dot( average_y, w2d, average_y))<<std::endl;
 
 
 

@@ -1,0 +1,588 @@
+%%%%%%%%%%%%%%%%%%%%%definitions%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{../header.tex}
+\input{../newcommands.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%DOCUMENT%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\title{DG methods on structured grids}
+\author{M.~Wiesenberger}
+
+\section{ Introduction to discontinuous Galerkin methods} \label{sec:discretization}
+This writeup is based on Reference~\cite{WiesenbergerPhD}. 
+
+In recent years, discontinuous Galerkin (dG) methods have been investigated 
+as an excellent alternative to finite difference and finite volume schemes 
+in numerical simulations involving both parabolic as well as hyperbolic problems 
+(for the advection dominated case see, for example, the review article~\cite{Cockburn2001runge}). 
+Such methods combine many advantages of finite element methods (such as the ease of handling 
+complicated geometry) with properties more commonly associated with 
+finite difference approximations. Examples of the latter includes the absence 
+of a global mass matrix. 
+The main idea of a dG method is to approximate the solution 
+of a differential equation by a polynomial in each grid-cell. 
+Higher/lower
+order methods can be constructed by simply increasing/decreasing the degree of 
+the polynomials used in each cell. 
+In classical finite element methods continuity is required across cell boundaries. 
+In contrast, dG methods allow discontinuities across cell boundaries, which adds to the flexibility of the method.
+
+For the discretization of second derivatives we discuss the so-called local discontinuous Galerkin (LDG) method~\cite{Cockburn1998}.
+The LDG method and its advantages can also be used for the discretization of 
+elliptic equations (including Poisson's equation). 
+Reference~\cite{Arnold2001} highlights the relation 
+of the method to interior penalty and other alternative methods. 
+A superconvergence result for the 
+LDG approach was proven on Cartesian grids~\cite{Cockburn2001},
+where the order of convergence is $1/2$ better than on arbitrary meshes.
+Reference~\cite{Yadav2013} later showed a similar result for general, nonlinear elliptic equations.
+
+The downside of the dG methods is their rather complex and unintuitive notation 
+in the existing mathematical literature. Often, algorithms
+are described in terms of arbitrary sets of polynomials and spatial grids. 
+We propose an adapted, simplified, and in our view more practical notation for orthogonal grids and Legendre polynomials, which can be implemented straightforwardly.
+We reformulate the LDG method in terms of adjoint matrices and
+ naturally develop the symmetry of the resulting discretization.
+Doing so, we also propose a new discretization for the general elliptic equation. 
+Unfortunately, our discretization has a wider stencil than the existing ones, but 
+our numerical experiments indicate superconvergent properties and the resulting
+matrix equation is better conditioned than the old one. To the knowledge
+of the author these findings are unpublished to date.
+
+\subsection{ The Legendre polynomials} \label{sec:legendre}
+First, let us consider the one-dimensional case.
+For simplicity and ease of implementation we choose an equidistant grid with $N$ cells $C_n = [x_{n-1/2},x_{n+1/2}]$ of size $h$;
+with this choice we are able to construct basis functions of $P(C_n)$, the space of 
+polynomials of degree at most $P-1$ on $C_n$, by using orthogonal Legendre polynomials\footnote{ Often, in the literature the order of the polynomials is denoted by $k$.
+Pay attention, that we use the number of polynomial coefficients $P$ instead. We have $P=k+1$}. 
+The Legendre polynomials can be recursively defined on $[-1,1]$ by setting
+$p_0(x) = 1$, $p_1(x) = x$ and (see e.g.~\cite{AS})
+\begin{align}
+    (k+1)p_{k+1}(x) = (2k+1)xp_k(x) - kp_{k-1}(x).
+    \label{eq:recursion}
+\end{align}
+The so constructed Legendre polynomials are orthogonal on $[-1,1]$.
+We write 
+$x^a_j$ and $w_j$, $j=0,\dots,P-1$ denoting the abscissas and weights of 
+the Gauss--Legendre quadrature on the interval $[-1,1]$. Then we note that for $k,l=0, \dots, P-1$
+\begin{align}
+    \int_{-1}^1 p_k(x)p_l(x) \dx = \sum_{j=0}^{P-1} w_jp_k (x^a_j)p_l(x^a_j) = \frac{2}{2k+1}\delta_{kl}, 
+    \label{}
+\end{align}
+ since Gauss--Legendre quadrature is exact for polynomials of degree at most $2P-1$.
+
+The discrete completeness relation can then be written as 
+\begin{align}
+    \sum_{k=0}^{P-1} \frac{2k+1}{2}w_j p_k(x^a_i)p_k(x^a_j) = \delta_{ij}.
+    \label{eq:completeness}
+\end{align}
+Given a real function $f:[-1,1]\rightarrow \mathbb{R}$ we define $f_j:=f(x^a_j)$ and
+\begin{align} \label{eq:ex2}
+    \bar f^k := \frac{2k+1}{2}\sum_{j=0}^{P-1}w_j p_k(x^a_j) f_j 
+\end{align}
+Now let us define the forward transformation matrix by $F^{kj}:=\frac{2k+1}{2}w_jp_k(x^a_j)$ and 
+the backward transformation matrix by $B_{kj}:= p_j(x^a_k)$. Then, 
+using Eq.~\eqref{eq:ex2}, we get
+\begin{subequations}
+\begin{align}
+    \bar f^k = \sum_{j=0}^{P-1}F^{kj}f_j \\
+    f_j = \sum_{k=0}^{P-1} B_{jk}\bar f^k,
+\end{align}
+\end{subequations}
+We call $\bar f^k$ the values of $f$ in $L$-space and $f_j$ the values of $f$ in $X$-space.
+
+Let us now consider an interval $[a,b]$ and an equidistant discretization
+by $N$ cells with cell center $x_n$ and grid size $h=\frac{b-a}{N}$; in addition, we set $x_{nj}^a := x_n + \frac{h}{2}x^a_j$.
+Given a function $f:[a,b]\rightarrow \mathbb{R}$ we then define
+$f_{nj} := f(x^a_{nj})$ and note that
+\begin{subequations}
+\begin{align}
+    \bar{ \vec f} &= (\Eins\otimes F) \vec f \\
+    \vec f &= (\Eins\otimes B) \bar{\vec f},
+    \label{}
+\end{align}
+\end{subequations}
+where $f_{nj}$ are the elements of $\vec f$,
+ $\Eins\in\mathbb{R}^{N\times N}$ is the identity matrix and $F,B\in\mathbb{R}^{P\times P}$. Furthermore, we use
+$\otimes$ to denote the Kronecker product which is bilinear and associative. 
+The discontinuous Galerkin expansion $f_h$ of a function $f$ in the interval $[a,b]$ can 
+then readily be given as
+\begin{align}
+    f_h(x) = \sum_{n=1}^N \sum_{k=0}^{P-1} \bar f^{nk} p_{nk}(x),
+    \label{eq:dgexpansion}
+\end{align}
+where
+\begin{align}
+    p_{nk}(x) := \begin{cases}
+        p_k\left(  \frac{2}{h}(x-x_n)\right),& \ \text{for } x-x_n\in\left[ -\frac{h}{2}, \frac{h}{2} \right]\\
+        0,& \ \text{else}.
+    \end{cases}
+    \label{}
+\end{align}
+As an example, we plot Eq.~\eqref{eq:dgexpansion} for $f(x)=\sin(2x)$ in Fig.~\ref{fig:discretization}. 
+\begin{figure}[htpb]
+    \includegraphics[width= 0.9\textwidth]{discretization.pdf}
+    \caption{ 
+    Discretization of a sine function with second order polynomials, $P=3$, 
+    on $N=5$ grid cells. Dotted lines depict the cell boundaries. 
+    }
+    \label{fig:discretization}
+\end{figure}
+Already with a very low resolution of $P=3$ and $N=5$ 
+we get an acceptable function approximation. We clearly see the discontinuities
+at the cell boundaries. 
+
+The use of Legendre polynomials yields a natural approximation of the integrals of $f$
+via Gauss--Legendre quadrature
+\begin{subequations}
+\begin{align}
+    \langle f_h,g_h\rangle:=\int_a^b f_hg_h \dx &= \sum_{n=1}^N\sum_{j=0}^{P-1} \frac{hw_j}{2} f_{nj} g_{nj} 
+    = \sum_{n=1}^N\sum_{k=0}^{P-1}\frac{h}{2k+1}\bar f^{nk}\bar g^{nk}  \\
+    \|f_h\|^2_{L_2} := \int_a^b |f_h|^2 \dx &= \sum_{n=1}^N\sum_{j=0}^{P-1} \frac{h w_j}{2}f_{nj}^2 
+    = \sum_{n=1}^N\sum_{k=0}^{P-1} \frac{h}{2k+1}\left(\bar f^{nk}\right)^2. 
+    \label{eq:def_norm}
+\end{align}
+\label{eq:gausslegendre}
+\end{subequations}
+With these formulas we have a simple, accurate, and fast 
+method to evaluate integrals. This is applied, for example, to compute
+errors in the $L_2$-norm.
+
+We now define some useful quantities that simplify our notation (note that $i,j=0,\dots,P-1$) 
+\begin{subequations}
+    \begin{align}
+        S_{ij} &:= \int_{-h/2}^{h/2} p_i\left(\frac{2}{h} x\right)p_j\left(\frac{2}{h} x\right) \dx = \frac{h}{2i+1}\delta_{ij} \\%=: s_i \delta_{ij}\\ 
+        T^{ij} &:= S^{-1}_{ij} = \frac{2i+1}{h}\delta_{ij} \\%=: t_i \delta_{ij}\\
+        W^{ij} &:= \frac{h w_j}{2}\delta_{ij}\\
+        V_{ij} &:= W_{ij}^{-1} = \frac{2}{hw_j}\delta_{ij}. 
+    \end{align}
+    \label{eq:diagonal}
+\end{subequations}
+Employing these relations we can write
+    \begin{align}
+		\langle f_h,g_h\rangle =& \vec f^{\mathrm{T}}(\Eins\otimes W)\vec g 
+		= \bar{\vec f}^{\mathrm{T}}(\Eins\otimes S)\bar{\vec g} 
+    \end{align}
+    and \begin{align}
+        F = TB^{\mathrm{T}}W.
+        \label{eq:transformation}
+    \end{align}
+Furthermore, we note that
+\begin{subequations}
+    \begin{align}
+        M_{ij} &:= \int_{-h/2}^{h/2} p_i\left(\frac{2}{h} x\right)\partial_xp_j\left(\frac{2}{h} x\right) \dx\\
+		R_{ij} &:= p_i(1)p_j(1) = 1 = R^{\mathrm{T}}_{ij}\\
+		L_{ij} &:= p_i(-1)p_j(-1) = (-1)^{i+j} = L^{\mathrm{T}}_{ij}\\
+        RL_{ij}&:= p_i(1)p_j(-1) = (-1)^j\\
+		LR_{ij}&:= p_i(-1)p_j(1) = (-1)^i = RL^{\mathrm{T}}_{ij}.
+    \end{align}
+    \label{eq:legendre_operators}
+\end{subequations}
+In order to compute the elements of $M_{ij}$ we first note that $M_{ij} = 0$ for
+$i > j-1$ as $\partial_x p_j(x)$ is a polynomial of degree $j-1$. Then
+we use integration by parts to show that 
+\begin{align}
+	(M+L) = (R-M)^{\mathrm{T}}.
+    \label{eq:legendre_derivative}
+\end{align}
+Therefore, we conclude that $M_{ij} = 1 - (-1)^{i+j}$ for $i\le (j-1)$. 
+
+We introduce the notation~\eqref{eq:diagonal} and~\eqref{eq:legendre_operators} mainly for ease of implementation. If a block-matrix class is written and the
+operations $+$, $-$ and $*$ are defined on it, the assembly of the derivative
+matrices is simplified to a large extent. 
+
+%Note that $\forall n\in\mathbb{N}$ and $x\in[-1,1]$
+%    $p_n(1) = 1$ and 
+%    $p_n(-x) = (-1)^np_n(x)$.
+%For $P=4$ we have e.g.
+%\begin{align}
+%    D = \begin{pmatrix}
+%        0 & 2 & 0 & 2 \\
+%        0 & 0 & 2 & 0 \\
+%        0 & 0 & 0 & 2 \\
+%        0 & 0 & 0 & 0 
+%    \end{pmatrix}
+%    \label{eq:example_derivative}
+%\end{align}
+%
+
+
+
+\subsection{ Discretization of first derivatives} \label{sec:firstderivatives}
+From here on we write
+$ f_h(x) = \bar f^{ni}p_{ni}(x)$ and imply the summation over cell index $n$ and polynomial
+index $i$.
+The first naive idea to get an approximation to the first derivative of $f_h(x)$
+is to simply set $f_x(x) = \partial_x f_h(x) = \bar f^{ni}\partial_x p_{ni}(x)$ in 
+the interior of each cell $n$. 
+Unfortunately, in this approach we loose one polynomial order and the discretization for
+$P=1$ is plain wrong. We would 
+like our discretization to become finite differences in the limit $P=1$.
+
+On cell boundaries the derivative
+of $p_{ni}(x)$ is actually not well defined, which is why we now retain to 
+a weak formulation of derivatives. 
+Consider 
+\begin{align}
+    \int_{C_n} \partial_x f_h(x) p_{ni}(x) \dx = f_h p_{ni}|_{x_{n-1/2}}^{x_{n+1/2}}  -
+    \int_{C_n} f_h(x) \partial_x p_{ni}(x) \dx.
+    \label{}
+\end{align}
+The approximation $f_h(x)$ is double valued on the cell boundaries, which is why we replace
+the boundary terms by
+\begin{align}
+    \int_{C_n} f_x p_{ni}(x) \dx
+    = \hat f p_{ni}|_{x_{n-1/2}}^{x_{n+1/2}}  -
+    \int_{C_n} \bar f^{nk} p_{nk} \partial_x p_{ni} \dx,
+    \label{}
+\end{align}
+where $\hat f(x)$ is the numerical flux across cell boundaries and we call $f_x(x)$ the numerical approximation to the first derivative. We will use three different fluxes in this work. 
+\begin{subequations}
+\begin{align}
+	\hat{f_C}(x) &= \tfrac{1}{2}(\lim_{\eps\to 0,\eps>0}f_h(x+\eps)+\lim_{\eps\to 0,\eps>0}f_h(x-\eps)),\\
+	\hat{f_F}(x) &= \lim_{\eps\to 0,\eps>0}f_h(x+\eps), \\
+	\hat{f_B}(x) &= \lim_{\eps\to 0,\eps>0}f_h(x-\eps),
+\end{align}
+\end{subequations}
+which we call the centered, the forward and the backward flux respectively.
+For $f\colon [a,b]\to\mathbb{R}$ and periodic boundary conditions, we assume that
+\begin{equation}
+	\lim_{\eps\to 0,\eps>0} f(b+\eps) = \lim_{\eps\to 0,\eps>0} f(a+\eps), \qquad
+	\lim_{\eps\to 0,\eps>0} f(a-\eps) = \lim_{\eps\to 0,\eps>0} f(b-\eps),
+\end{equation}
+for homogeneous Dirichlet boundary conditions we assume that
+\begin{equation}
+    \hat f(a) = \hat f(b) = 0,
+\end{equation}
+and for homogeneous Neumann boundaries we assume that
+\begin{align}
+    \hat f(a) = \lim_{\eps\to 0,\eps>0} f_h(a+\eps), \qquad 
+    \hat f(b) = \lim_{\eps\to 0,\eps>0} f_h(b-\eps).
+\end{align}
+As we see the choice
+of $\hat f$ is not unique. It actually is the crucial ingredient in every dG method. 
+Depending on what flux we choose, we arrive at various 
+approximations to the derivative,
+e.g. for $P=1$ (i.e. a piecewise constant approximation in each cell)
+our scheme reduces to the classic centered, forward and backward finite difference
+schemes respectively.
+In a way all the ingenuity of a dG method lies in the choice of the numerical flux.
+
+For the following discussion we choose the centered flux $\hat f_C$ and note
+that the derivation is analogous for $\hat f_F$ and $\hat f_B$.
+We arrive at
+\begin{align}
+    \bar f_x^{ni}= T^{ij}&\left[ \quad \frac{1}{2} \left(\bar f^{(n+1)k}p_k(-1)+ \bar f^{nk}p_k(1)\right)p_j(1)\right. \nonumber\\
+        &\ \ - \left.\frac{1}{2} \left(\bar f^{nk}p_k(-1) + \bar f^{(n-1)k}p_k(1)\right)p_j(-1) - \bar f^{nk} M_{kj} \vphantom{\frac{1}{2}}\right]
+    \label{}
+\end{align}
+where we used that $p_{nk}(x_{n+1/2})\equiv p_k(1)$ and $p_{nk}(x_{n-1/2}) \equiv p_k(-1)$ holds true for all $n$.
+Together with the previously defined quantities in~\eqref{eq:legendre_operators} we can write
+\begin{align}
+	\bar{\mathbf f}_x  &= (\Eins\otimes T)\circ \left[ \frac{1}{2}(\Eins^+\otimes RL + \Eins \otimes (M-M^{\mathrm{T}}) - \Eins^-\otimes LR)\right] \bar{\mathbf f}\nonumber \\
+    &=: (\Eins\otimes T) \circ \bar D^0_{x,per} \bar {\mathbf f},
+    \label{eq:discrete_der}
+\end{align}
+using $M+M^{\mathrm{T}} = R-L$ from Eq.~\eqref{eq:legendre_derivative}
+and 
+\begin{align}
+    \Eins^{-}f^{n} &:= f^{n-1}\\
+    \Eins^{+}f^{n} &:= f^{n+1}.
+    \label{eq:operator_one}
+\end{align}
+We define
+\begin{align*}
+    D^0_{x,per} := (\Eins\otimes F^T)\circ \bar D^0_{x,per}\circ (\Eins\otimes F).
+    \label{}
+\end{align*}
+If our coefficients are given in $X$-space, we note with the help of Eq.~\eqref{eq:transformation}
+\begin{align}
+	\mathbf f_x %&= (\Eins\otimes V) (\Eins\otimes F^{\mathrm{T}}) 
+    %\bar M_x^{per}
+%\circ (\Eins\otimes F) \mathbf f%\nonumber\\
+ = (\Eins\otimes V)\circ D^0_{x,per} \mathbf f,
+    \label{eq:matrix_xspace}
+\end{align}
+where $\bar D_x^{per}$ and $D_x^{per}$ are skew-symmetric matrices.
+
+From Eq.~\eqref{eq:discrete_der} we are now able to show the matrix representation of the one-dimensional discrete derivative for 
+periodic boundary conditions that can be used
+in the implementation
+\begin{align}
+    \bar D^0_{x,per} = \frac{1}{2}\begin{pmatrix}
+		(M-M^{\mathrm{T}}) & RL      &    &   & -LR \\
+		-LR  & (M-M^{\mathrm{T}}) & RL &   &     \\
+             &  -LR    & \dots   &   &     \\
+             &         &    & \dots  & RL    \\
+			 RL &         &    & -LR&(M-M^{\mathrm{T}}) 
+    \end{pmatrix}
+    \label{eq:dxcentered}
+\end{align}
+We also write down the expressions resulting from the forward and backward fluxes $\hat f_F$ and $\hat f_B$ respectively:
+\begin{align}
+    \bar D^+_{x,per} = \begin{pmatrix}
+        -(M+L)^{\mathrm{T}} & RL      &    &   & 0 \\
+		 0   & -(M+L)^{\mathrm{T}} & RL &   &     \\
+             &    0   & \dots   &   &     \\
+             &         &    & \dots  & RL    \\
+			 RL  &         &    & 0 & -(M+L)^{\mathrm{T}}
+    \end{pmatrix}
+    \label{eq:dxplus}
+\end{align}
+and 
+\begin{align}
+    \bar D^-_{x,per} = \begin{pmatrix}
+		(M+L) & 0      &    &   & -LR \\
+		-LR  & (M+L) & 0 &   &     \\
+             &   -LR   & \dots   &   &     \\
+             &         &    & \dots  & 0    \\
+			 0  &         &    & -LR &(M+L)
+    \end{pmatrix}.
+    \label{eq:dxminus}
+\end{align}
+Note that for $P=1$ we recover the familiar finite difference approximations of the first derivative. 
+\input{boundary_terms.tex}
+Finally we note the boundary terms for homogeneous Dirichlet and Neumann boundaries
+in Table~\eqref{tab:boundary_terms} noticing that only the 
+corner entries of the matrices change.
+
+In our notation the local character of the dG method is apparent.
+To compute the derivative in one cell we only use values of neighboring
+cells. Therefore, the method is well suited for parallelization which we
+will exploit in our implementation.
+
+The generalization to higher dimensions is immediate.  
+All the 
+matrices derived above can readily be extended via the appropriate Kronecker products.
+The space complexity of 
+the matrices derived is $\mathcal{O}(P^2 N)$ in one and $\mathcal{O}(P^3N^2)$ in two dimensions.
+
+Finally, let us remark that we found it practical to always operate on 
+coefficients in $X$-space, i.e.~we use Eq.~\eqref{eq:matrix_xspace}
+for our implementations and thus use $\vec f$ rather than $\bar{\vec f}$ to represent the approximation. Function products are easily computed coefficient-wise in $X$-space, i.e.~we use
+\begin{align}
+    (fg)_{ni}=f_{ni}g_{ni}
+    \label{}
+\end{align}
+to represent the corresponding products.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discretization of elliptic equations} \label{sec:elliptic}
+We are now ready to discretize the one-dimensional general elliptic equation 
+\begin{align}
+    -\frac{\partial}{\partial x}\left( \chi(x)\frac{\partial \phi}{\partial x}(x)\right) = \rho(x)
+    \label{eq:elliptic}
+\end{align}
+on the interval $[a,b]$. Here, $\chi(x)$ and $\rho(x)$ are given functions.
+%We assume that the function $\chi(x)$ is given in dG coefficients $\chi^{in}$ in X-space.
+
+We either choose periodic, Dirichlet, or Von-Neumann boundary conditions on the 
+left and right border for $\phi$. 
+As a first step we rewrite Eq.~\eqref{eq:elliptic} into two first order differential equations and a function product:
+\begin{subequations}
+\begin{align}
+    j'&= \partial_x \phi, \label{eq:polarisationa}\\
+    j &= \chi j', \label{eq:polarisationb}\\
+    \rho &= -\partial_x j. \label{eq:polarisationc}
+\end{align}
+\end{subequations}
+%Our plan is to now simply use a forward discretization\footnote{
+%The choice of forward discretizing the first equation is arbitrary. A backward discretization 
+%works equally well} for the first equation 
+Our plan is to simply use one of the discretizations developed in the last 
+section for the first equation~\eqref{eq:polarisationa} 
+and its negative adjoint for the third equation~\eqref{eq:polarisationc}. 
+Recall that the adjoint of a square matrix $A$ is defined by the scalar product, i.e. 
+\begin{align}
+    \vec f^\mathrm{T} (\Eins\otimes W)\circ A\vec g = 
+    \vec g^\mathrm{T} (A^\mathrm{T}\circ(1\otimes W)) \vec f =:     \vec g^\mathrm{T} (\Eins\otimes W) A^\dagger \vec f. \nonumber
+    \label{}
+\end{align}
+From here we immediately get the relation
+\begin{align}
+    A^\dagger \equiv (\Eins\otimes V)\circ A^\mathrm{T}\circ (\Eins\otimes W).
+    \label{eq:adjoint}
+\end{align}
+There is a close connection between symmetric, $A=A^\mathrm{T}$, and self-adjoint, $A=A^\dagger$, matrices.
+If and only if the matrix $A$ is symmetric, then $(\Eins\otimes V)\circ A$ is self-adjoint. Of course, we have $(AB)^\dagger = B^\dagger A^\dagger$ and $(A^\dagger)^\dagger = A$. 
+
+The function product in Eq.~\eqref{eq:polarisationb} is computed pointwisely on the Gaussian abscissas. 
+\begin{align}
+    \vec j' &= (\Eins\otimes V)\circ D_x \vec \phi, \nonumber \\
+    \vec j &= \vec \chi \vec j', \nonumber\\
+    \vec \rho &= (\Eins\otimes V)\circ D_x^\mathrm{T}\vec j = (\Eins\otimes V) D_x^\mathrm{T}\circ\chi\circ (\Eins\otimes V)\circ D_x \vec \phi,
+    \label{eq:naive}
+\end{align}
+where $D_x$ is either $D_x^+$, $D_x^-$, or $D_x^0$ with the correct boundary terms.
+Note, that~\cite{Cockburn2001} originally only proposed to use the forward or backward discretization for $D_x$. 
+Equation~\eqref{eq:naive} is indeed a self-adjoint
+discretization for the second derivative. However, it turns out that 
+Eq.~\eqref{eq:naive} is inconsistent for given $\rho(x)$. The solution does not converge. 
+This problem is solved according to~\cite{Cockburn2001} by adding a jump term
+to the flux of $j$: 
+\begin{align}
+    \hat j(x_{n+1/2}) \rightarrow \hat j(x_{n+1/2}) + [\phi(x_{n+1/2})],
+\end{align}
+where $[\phi(x_{n+1/2}]:=\phi^n(x_{n+1/2}) - \phi^{n+1}(x_{n+1/2})$ is the jump term of
+$\phi$ at $x_{n+1/2}$. That means we have to alter our discretization~\eqref{eq:naive} according to
+\begin{align}
+    \rho =  (\Eins\otimes V)[D_x^\mathrm{T}\circ \chi\circ(\Eins\otimes V)\circ D_x  + J]\phi
+    \label{eq:discreteelliptic}
+\end{align}
+where 
+\begin{align}
+    \bar J = \begin{pmatrix}
+		(L+R) & -RL      &    &   & -LR \\
+		-LR  & (L+R) & -RL &   &     \\
+             &   -LR   & \dots   &   &     \\
+             &         &    & \dots  & -RL    \\
+			 -RL  &         &    & -LR &(L+R)
+    \end{pmatrix}.
+\end{align}
+for periodic boundaries. Again we give the correct boundary terms for Dirichlet
+and Neumann boundary conditions in Table~\ref{tab:jump_terms}.
+\input{jump_terms.tex}
+Note that $J$ is symmetric, thus the overall discretization remains self-adjoint. Indeed, with $D_x = D_x^+$ Eq.~\eqref{eq:discreteelliptic} recovers
+the discretization proposed by~\cite{Cockburn2001}. 
+In addition, we remark that the centered discretization in Eq.~\eqref{eq:discreteelliptic} is symmetric with respect to an inversion of the coordinate system $x\rightarrow -x$ even for double Dirichlet or Neumann boundaries, while the forward and backward discretization is not. 
+
+We note again that the generalization to two or more dimensions is straightforward
+in a rectangular grid using Kronecker products.
+\subsection{Numerical experiments} \label{sec:ellipticexperiments}
+As an example we solve Eq.~\eqref{eq:elliptic} in two dimensions for 
+\begin{align*}
+\chi(x,y) &= 1 + \sin(x)\sin(y)\\
+\rho(x,y) &= 2\sin(x)\sin(y)\left[\sin(x)\sin(y)+1\right]-\sin^2(x)\cos^2(y)-\cos^2(x)\sin^2(y)
+    \label{}
+\end{align*}
+on the domain $D=[ 0, \pi]\times[0,\pi]$ for double Dirichlet boundary conditions. 
+The analytical solution is given by $\phi(x,y) = \sin(x)\sin(y)$.  
+
+Do not try to insert $\phi$ into Eq.~\eqref{eq:discreteelliptic} directly. The result sub-optimally converges to the analytical $\rho$ or may not converge at all, a phenomenon that is called supraconvergence. Only as a discretization for 
+elliptic or parabolic equations the stencil~\eqref{eq:discreteelliptic} works fine. 
+
+We note that Eq.~\eqref{eq:discreteelliptic}, when multiplied by $(\Eins\otimes W)$, has the form of a symmetric matrix equation
+$A\vec x=\vec b$. 
+This equation is solved by a conjugate gradient method with
+$\Eins\otimes V$ as a diagonal preconditioner. 
+We use a truncation criterion based on the norm of the residuum
+\begin{align}
+    ||\vec r_k|| < \eps_{res}||\vec b||_{L_2} + \eps_{res}
+    \label{}
+\end{align}
+where $\vec r_k=A\vec x_k - \vec b$ is the residuum of
+the $k-th$ iteration. In Table~\ref{tab:polarisation} we summarize our results.
+\input{table_polarisation.tex}
+We observe that the forward and backward discretizations give the same results, 
+which is due to the symmetry of the sine functions. The order of the 
+relative error in the $L_2$-norm coincides with the predicted convergence of order $P$
+for all $P$. 
+
+On the other side, the centered discretization needs significantly less iterations
+to achieve the same error in the residuum. This indicates that the centered
+discretization is better conditioned than the forward and backward discretizations. 
+Also, we observe a superconvergent error of order $P+1$ for $P=3$ and $P=5$. In order to exclude symmetry reasons for these
+phenomena, we repeated the computations on the domain $D=[0, \pi/2]\times[0,\pi/2]$ using Dirichlet boundaries on the left
+and Neumann boundaries on the right side. We find 
+equal results; only
+the equality in the results for forward and 
+backward discretization is broken. 
+To the knowledge of the author this superconvergence has not yet been observed before. 
+
+\section{Interpolation and Projection}
+Eq.~\eqref{eq:dgexpansion} provides a natural way to interpolate any
+dg expanded function $f_h(x)$ on any point in the interval $[a,b]$. 
+The interpolation has the same order $P$ as the expansion and 
+can be formulated as a matrix vector multiplication
+\begin{align}
+f_h(x_0) = \sum_{n=1}^N\sum_{k=0}^{P-1} p_{nk}(x_0) \bar f^{nk} =: \sum_{n=1}^N\sum_{k=0}^{P-1}I_{nk} \bar f^{nk}
+\label{eq:basic_interpolation}
+\end{align}
+where the sparse interpolation matrix $I$ has as many rows as there are 
+points to interpolate. $I$ has $P^d$ entries per line, where $d$ is the dimensionality of the grid. 
+
+
+\subsection{Interpolation and Projection}
+A special case emerges when the list of points to interpolate is made up
+by the Gaussian abscissas of another grid. 
+Suppose we want to divide each cell $C_n$ of the original grid into $M$ equidistant subcells.
+We use the letter $c$ to denote the coarse grid and the letter $f$ to denote
+the fine grid. 
+For ease of discussion we assume that the number of polynomial coefficients
+in the fine and the coarse grid are the same. 
+We denote $q_{ml}(x)$ the polynomials on the fine grid and $y^P_{mj}$ the 
+corresponding Gaussian abscissas. 
+If a vector $\vec f$ is given on the coarse grid, we can simply interpolate
+it onto the fine grid analogous to Eq.~\eqref{eq:basic_interpolation} via
+\begin{subequations}
+\begin{align}
+  f^F_{mj} &= f_h(y^P_{mj}) = p_{nk}(y^P_{mj})F^{ki} f^C_{ni} \\
+  f^F_{mj} &=: {Q_{mj}}^{ni} f^C_{ni}
+  \label{eq:interpolation}
+\end{align}
+\end{subequations}
+where we denote the special interpolation matrix with $Q$ and implicitly assume the sum of repeated indices.
+No information is lost in this process if the cells $C_n$ are divided by an 
+integer number $M$ and the number of polynomials is the same, i.e. 
+$f^F$ and $f^C$ represent exactly the same expansion $f_h(x)$. 
+\begin{align}
+  f^C(x) = \bar f_C^{nk}p_{nk}(x) = f^F(x) = \bar f_F^{ml}q_{ml}(x) 
+  \label{eq:no_loss}
+\end{align}
+
+Vice versa, given a expansion $f^F(x)$ on the fine grid, we can the projection integrals from the fine grid to the coarse grid. 
+It can be shown that
+\begin{align}
+  \bar f_C^{nk} &:= T_C^{ks}\int \dx f^F(x)p_{ns}(x) = T_C^{ks}  W_m^{ij}p_{ns}(y_{mj}) f^F_{mi} \\
+  f^C_{nt} &= B_{tk}\bar f_C^{nk} = V^c_{tk}  {{(Q^T)}^{nk}}_{mj}W_m^{ji} f^F_{mi} =: {P_{nt}}^{mi} f^F_{mi}
+  %\bar f_C^{nk} = T_C^{ks}\int \dx f^F(x)p_{ns}(x) = T_C^{ks} \bar f_F^{ml} \int \dx q_{ml}(x)p_{ns}(x) \\
+  %= T_C^{ks} F^{lo}f^F_{mo} \int \dx q_{ml}(x)p_{ns}(x)  \\
+  %= T_C^{ks} F^{lo}f^F_{mo} W_F^{ij}q_{ml}(y_{mi})p_{ns}(y_{mj})  \\
+  %= T_C^{ks} F^{lo}f^F_{mo} W_m^{ij}B_{il}p_{ns}(y_{mj})  \\
+  %= T_C^{ks} f^F_{mi} W_m^{ij}p_{ns}(y_{mj})  \\
+  %f^C_{nt} = B_{tk}\bar f_C^{nk} = B_{tk} T_C^{ks} W_m^{ij} p_{ns}(y_{mj}) f^F_{mi}\\
+  %= V^c_{tk} F^{sk} W_m^{ij} p_{ns}(y_{mj}) f^F_{mi}\\
+  %= V^c_{tk}  {Q_{mj}}^{nk}W_m^{ji} f^F_{mi}\\
+  %= V^c_{tk}  {{(Q^T)}^{nk}}_{mj}W_m^{ji} f^F_{mi}\\
+  %=: {P_{nt}}^{mi} f^F_{mi}
+  \label{eq:basic_projection}
+\end{align}
+from where we directly conclude that 
+\begin{align}
+  P = Q^\dagger = V^C Q^T W_F
+  \label{eq:projection_adjoint}
+\end{align}
+i.e. the projection matrix is the adjoint of the interpolation matrix.
+We can also proof that
+\begin{align}
+  P\circ Q = 1_C
+  \label{}
+\end{align}
+which is a reformulation of Eq.~\eqref{eq:no_loss}.
+Note that $Q\circ P \neq 1$.
+The projection is not loss-free but it conserves the integral
+value of the function on the fine grid and the error in the 
+$L_2$-norm between the vectors on fine and coarse grid is 
+minimal (proof?).
+\subsection{Grid transformations}
+The above transformation Eq.~\eqref{eq:projection_adjoint} is
+valid only if the number of cells in the fine grid is an integer multiple of the number of cells in the coarse grid. 
+If this is not the case, the adjoint of the interpolation matrix
+does not(!) give a valid projection matrix (tried this 
+out in the code).
+However, what we can always do is to find the least common multiple grid (c) of two given grids (a) and (b). Then
+we can interpolate loss-free from the given grid (a) to the 
+common grid (c) and then project back from (c) to (b).
+In this way we get the forward and backward transformation matrices
+\begin{align}
+    \mathcal T &= P_{c2b}Q_{a2c}\\
+    \mathcal T^\dagger &= P_{c2a} Q_{b2c}
+    \label{}
+\end{align}
+If the least common grid reduces to either grid (a) or (b) the
+transformation matrix reduces to either $P_{a2b}$ or $Q_{a2b}$ as expected.
+
+
+\bibliography{../references}
+%..................................................................
+\end{document}

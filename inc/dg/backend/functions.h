@@ -2,7 +2,7 @@
 #pragma once
 /*! @file
  *
- * Contains some utility functions for the evaluation() routines
+ * @brief contains some utility functions for the evaluation() routines
  */
 
 namespace dg{
@@ -216,7 +216,7 @@ inline double zero( double x, double y, double z) {return 0.;}
  *
  * @return 
  */
-double cooX1d( double x) {return x;}
+inline double cooX1d( double x) {return x;}
 /**
  * @brief
  * \f[ f(x,y) = x\f]
@@ -226,7 +226,7 @@ double cooX1d( double x) {return x;}
  *
  * @return 
  */
-double cooX2d( double x, double y) {return x;}
+inline double cooX2d( double x, double y) {return x;}
 /**
  * @brief
  * \f[ f(x,y,z) = x\f]
@@ -237,7 +237,7 @@ double cooX2d( double x, double y) {return x;}
  *
  * @return 
  */
-double cooX3d( double x, double y, double z) {return x;}
+inline double cooX3d( double x, double y, double z) {return x;}
 
 /**
  * @brief 
@@ -248,7 +248,7 @@ double cooX3d( double x, double y, double z) {return x;}
  *
  * @return 
  */
-double cooY2d( double x, double y) {return y;}
+inline double cooY2d( double x, double y) {return y;}
 /**
  * @brief
  * \f[ f(x,y,z) = y\f]
@@ -259,7 +259,7 @@ double cooY2d( double x, double y) {return y;}
  *
  * @return 
  */
-double cooY3d( double x, double y, double z) {return y;}
+inline double cooY3d( double x, double y, double z) {return y;}
 /**
  * @brief
  * \f[ f(x,y,z) = z\f]
@@ -270,7 +270,7 @@ double cooY3d( double x, double y, double z) {return y;}
  *
  * @return 
  */
-double cooZ3d( double x, double y, double z) {return z;}
+inline double cooZ3d( double x, double y, double z) {return z;}
 } //namespace dg
 
 ///@}

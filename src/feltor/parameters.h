@@ -2,7 +2,7 @@
 #include "dg/enums.h"
 #include "json/json.h"
 
-namespace eule{
+namespace feltor{
 /**
  * @brief Provide a mapping between input file and named parameters
  */
@@ -23,14 +23,12 @@ struct Parameters
 
     double eps_pol;  //!< accuracy of polarization 
     double jfactor; //jump factor € [1,0.01]
-    double eps_maxwell; //!< accuracy of induction equation
     double eps_gamma; //!< accuracy of gamma operator
     double eps_time;//!< accuracy of implicit timestep
     double eps_hat;//!< 1
 
     double mu[2]; //!< mu[0] = mu_e, m[1] = mu_i
     double tau[2]; //!< tau[0] = -1, tau[1] = tau_i
-    double beta; //!< plasma beta
 
     double nu_perp;  //!< perpendicular diffusion
     double nu_parallel;  //!< parallel diffusion
@@ -53,7 +51,6 @@ struct Parameters
 
     enum dg::bc bc; //!< global perpendicular boundary condition
     unsigned pollim; //!< 0= no poloidal limiter, 1 = poloidal limiter
-    unsigned pardiss; //!< 0 = adjoint parallel dissipation, 1 = nonadjoint parallel dissipation
     unsigned mode; //!< 0 = blob simulations (several rounds fieldaligned), 1 = straight blob simulation( 1 round fieldaligned), 2 = turbulence simulations ( 1 round fieldaligned), 
     unsigned initcond; //!< 0 = zero electric potential, 1 = ExB vorticity equals ion diamagnetic vorticity
     unsigned curvmode; //!< 0 = low beta, 1 = toroidal field line 
@@ -72,7 +69,6 @@ struct Parameters
 
         eps_pol     = js["eps_pol"].asDouble();
         jfactor     = js["jumpfactor"].asDouble();
-        eps_maxwell = js["eps_maxwell"].asDouble();
         eps_gamma   = js["eps_gamma"].asDouble();
         eps_time    = js["eps_time"].asDouble();
         eps_hat     = 1.;
@@ -81,7 +77,6 @@ struct Parameters
         mu[1]       = +1.;
         tau[0]      = -1.;
         tau[1]      = js["tau"].asDouble();
-        beta        = js["beta"].asDouble();
         nu_perp     = js["nu_perp"].asDouble();
         nu_parallel = js["nu_parallel"].asDouble();
         c           = js["resistivity"].asDouble();
@@ -104,7 +99,6 @@ struct Parameters
         boxscaleZm  = js.get("boxscaleZm",1.05).asDouble();
 
         pollim      = js.get( "pollim", 0).asUInt();
-        pardiss     = js.get( "pardiss", 0).asUInt();
         mode        = js.get( "mode", 0).asUInt();
         initcond    = js.get( "initial", 0).asUInt();
         curvmode    = js.get( "curvmode", 0).asUInt();
@@ -119,7 +113,6 @@ struct Parameters
         os << "Physical parameters are: \n"
             <<"     mu_e              = "<<mu[0]<<"\n"
             <<"     mu_i              = "<<mu[1]<<"\n"
-            <<"     beta              = "<<beta<<"\n"
             <<"     El.-temperature:  = "<<tau[0]<<"\n"
             <<"     Ion-temperature:  = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
@@ -147,7 +140,6 @@ struct Parameters
             <<"     dt = "<<dt<<"\n";
         os << "     Stopping for Polar CG:   "<<eps_pol<<"\n"
             <<"     Jump scale factor:   "<<jfactor<<"\n"
-            <<"     Stopping for Maxwell CG: "<<eps_maxwell<<"\n"
             <<"     Stopping for Gamma CG:   "<<eps_gamma<<"\n"
             <<"     Stopping for Time  CG:   "<<eps_time<<"\n";
         os << "Output parameters are: \n"
@@ -160,7 +152,6 @@ struct Parameters
         os << "Boundary condition is: \n"
             <<"     global BC             =              "<<dg::bc2str(bc)<<"\n"
             <<"     Poloidal limiter      =              "<<pollim<<"\n"
-            <<"     Parallel dissipation  =              "<<pardiss<<"\n"
             <<"     Computation mode      =              "<<mode<<"\n"
             <<"     init cond             =              "<<initcond<<"\n"
             <<"     curvature mode        =              "<<curvmode<<"\n";
@@ -168,7 +159,7 @@ struct Parameters
     }
 };
 
-}//namespace eule
+}//namespace feltor
 
 
     

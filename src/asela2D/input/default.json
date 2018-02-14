@@ -38,7 +38,7 @@
     "nprofileamp" : 4.0,  //Profile peak amplitude
     "bgprofamp"   : 1,  //Background Prof amplitude (density on the boundary)
     //-------------------------------Boundary condition----------------------------
-    "bc"          : "NEU_DIR", //GLOBAL BC for parallel derivative
+    "bc"          : "DIR", //GLOBAL BC for parallel derivative
     //-------------------------------Miscellaneous----------------------------
     "source"     :  0,     //profile source rate
     "boxscaleRp" :  1.1, // (a little larger than 1)
@@ -51,6 +51,6 @@
     "mode"       : 2,    //initial condition blob(0), straight blob(1), turbulence(2)
     "initial"    : 0,    //init. phi cond. (stand(0), Force Balance(1)
     "curvmode"   : 1,    //curvature (low beta (0), tfl (1))
-    "flrmode"    : 1     //em FLR mode (no FLR (0), FLR (1))
+    "flrmode"    : 0     //em FLR mode (no FLR (0), FLR (1))
 }
 //@ ------------------------------------------------------------
