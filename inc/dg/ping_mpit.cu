@@ -17,7 +17,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #endif
 #include <sched.h>
 
+#ifndef __CUDACC__
 int sched_getcpu(void); //forward declare glibc function to avoid compiler warnings
+#endif
 
 //**************************************************************************************//
 //Determine on which CPU a thread in an MPI, MPI+OpenMP, or MPI+CUDA program executes.  //
@@ -30,7 +32,7 @@ int sched_getcpu(void); //forward declare glibc function to avoid compiler warni
 //**************************************************************************************//
 int main(int argc, char **argv)
 {
-    int i,j,k,l, task, ntasks, thread, cpuid;
+    int i,l, task, ntasks, cpuid;
     char node_name[MPI_MAX_PROCESSOR_NAME];
 
     // determine MPI task and total number of MPI tasks
@@ -41,6 +43,7 @@ int main(int argc, char **argv)
     // determine total number of OpenMP threads, thread number,
     // associated core and hostname and print in correct order
 #ifdef _OPENMP
+    int j;
     int nthreads = omp_get_max_threads();
 #elif defined  __CUDACC__
     int num_devices=0;
@@ -61,7 +64,7 @@ int main(int argc, char **argv)
 #ifdef _OPENMP
             #pragma omp parallel for schedule(static,1) ordered private(thread, cpuid)
             for ( j=0; j<nthreads; j++) {
-                thread = omp_get_thread_num();
+                int thread = omp_get_thread_num();
                 cpuid = sched_getcpu();
                 #pragma omp ordered
                 printf("node %s, task %3d of %3d tasks, thread %3d of %3d threads, on cpu %3d\n",
@@ -69,7 +72,7 @@ int main(int argc, char **argv)
             }
 #elif defined __CUDACC__
             cpuid = sched_getcpu();
-            printf("node %s, task %3d of %3d tasks, GPU %3d of %3d, on cpu %3d\n",
+            printf("node %s, task %3d of %3d tasks, GPU %3d out of %3d, on cpu %3d\n",
                     &node_name[0], task, ntasks, device, num_devices, cpuid);
 #else //pure MPI
             cpuid = sched_getcpu();
