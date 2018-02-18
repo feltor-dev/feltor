@@ -62,7 +62,7 @@ int main(int argc, char **argv)
         {
             MPI_Get_processor_name(&node_name[0], &l);
 #ifdef _OPENMP
-            #pragma omp parallel for schedule(static,1) ordered private(thread, cpuid)
+            #pragma omp parallel for schedule(static,1) ordered private(cpuid)
             for ( j=0; j<nthreads; j++) {
                 int thread = omp_get_thread_num();
                 cpuid = sched_getcpu();
