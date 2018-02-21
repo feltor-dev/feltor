@@ -83,7 +83,7 @@ int main( int argc, char* argv[])
     double deltaT = p.dt*p.itstp;     //define timestep
 
     
-    double phisupnorm, phisupnorm0, phinorm, phinorm0,dnesupnorm, dnesupnorm0, dnenorm, dnenorm0, dNinorm, dNinorm0, Enorm, Enorm0, Eqnorm, Eqnorm0, Edfnorm, Edfnorm0, uE2norm, NiuE2norm, NiuE2norm0, nlnnnorm, nlnnnorm0,NiuE2normq, NiuE2normq0, nlnnnormq, nlnnnormq0=0.;
+    double phisupnorm, phisupnorm0, phinorm, phinorm0,dnesupnorm, dnesupnorm0, dnenorm, dnenorm0, dNinorm, dNinorm0, Enorm, Enorm0, Eqnorm, Eqnorm0, Edfnorm, Edfnorm0, uE2norm, NiuE2norm, NiuE2norm0, nlnnnorm, nlnnnorm0,NiuE2normq, NiuE2normq0, nlnnnormq, nlnnnormq0, unorm, unorm0=0.;
 
     for( unsigned i=imin; i<=imax; i++)//timestepping
     {
@@ -133,24 +133,27 @@ int main( int argc, char* argv[])
         Edfnorm = uE2norm + dnenorm*dnenorm ;
         Enorm = NiuE2norm + nlnnnorm ;
         Eqnorm = NiuE2normq + nlnnnormq;
+        unorm = sqrt(dnenorm*dnenorm+ phinorm);
         //normalize
         if (i==0) {
-            phisupnorm0=phisupnorm;
-            phinorm0=phinorm;
+            phisupnorm0=1.+phisupnorm; //is initialy 0
+            phinorm0=1.+phinorm;//is initialy 0
             dnesupnorm0=dnesupnorm;
             dnenorm0=dnenorm;
             Edfnorm0=Edfnorm;
             Enorm0=Enorm;
             Eqnorm0=Eqnorm;
+            unorm0=unorm;
         }
         //write norm data
-        std::cout << time << " " <<  phisupnorm/phisupnorm0<< " " 
+        std::cout << time << " " <<  (1.+phisupnorm)/phisupnorm0<< " " 
                                  <<  dnesupnorm/dnesupnorm0<< " "
-                                 <<  phinorm/phinorm0<< " " 
+                                 <<  (1.+phinorm)/phinorm0<< " " 
                                  <<  dnenorm/dnenorm0<< " "
                                  <<  Edfnorm/Edfnorm0<<" "
                                  <<  Enorm/Enorm0<<" "
-                                 <<  Eqnorm/Eqnorm0<<"\n";
+                                 <<  Eqnorm/Eqnorm0<<" "
+                                 <<  unorm/unorm0<<"\n";
 
         time += deltaT;
     }
