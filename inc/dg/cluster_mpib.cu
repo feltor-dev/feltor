@@ -88,8 +88,7 @@ int main(int argc, char* argv[])
     std::cout<< std::setprecision(6);
     unsigned multi=100;
 
-    //bring vectors into cache
-    dg::blas1::pointwiseDot( 3., lhs,x, 3.,jac, y, 0., z);
+    dg::blas1::scal( x, 3.);//warm up
     //SCAL
     t.tic();
     for( unsigned i=0; i<multi; i++)
@@ -97,20 +96,23 @@ int main(int argc, char* argv[])
     t.toc();
     if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     //AXPBY
+    dg::blas1::axpby( 3., lhs, 1., jac);//warm up
     t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas1::axpby( 3., lhs, 1., jac);
     t.toc();
     if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     //PointwiseDot
+    dg::blas1::pointwiseDot( 3., lhs,x, 3.,jac, y, 0., z);//warm up
     t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas1::pointwiseDot( 3., lhs,x, 3.,jac, y, 0., z);
     t.toc();
     if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     //DOT
+    double norm=0;
+    norm += dg::blas1::dot( lhs, rhs);//warm up
     t.tic();
-    double norm;
     for( unsigned i=0; i<multi; i++)
         norm += dg::blas1::dot( lhs, rhs);
     t.toc();
@@ -118,6 +120,7 @@ int main(int argc, char* argv[])
     norm++;//avoid compiler warning
     //Matrix-Vector product
     Matrix dx = dg::create::dx( grid, dg::centered);
+    dg::blas2::symv(dx,rhs,jac);//warm up
     t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas2::symv( dx, rhs, jac);
@@ -125,6 +128,7 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout<<" "<<t.diff()/(double)multi;
     //Matrix-Vector product
     Matrix dy = dg::create::dy( grid, dg::centered);
+    dg::blas2::symv(dy,rhs,jac);//warm up
     t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas2::symv( dy, rhs, jac);
@@ -134,6 +138,7 @@ int main(int argc, char* argv[])
     {
         //Matrix-Vector product
         Matrix dz = dg::create::dz( grid, dg::centered);
+        dg::blas2::symv(dz,rhs,jac);//warm up
         t.tic();
         for( unsigned i=0; i<multi; i++)
             dg::blas2::symv( dz, rhs, jac);
@@ -148,6 +153,7 @@ int main(int argc, char* argv[])
 
     //The Arakawa scheme
     dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
+    arakawa( lhs, rhs, jac);//warm up
     t.tic();
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
@@ -191,6 +197,7 @@ int main(int argc, char* argv[])
         dg::geo::guenther::FuncNeu funcNEU(gpR0,gpI0);
         Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
 
+        ds.symv(function,dsTdsfb);//warm up
         t.tic();
         for( unsigned i=0; i<multi; i++)
             ds.symv(function,dsTdsfb);

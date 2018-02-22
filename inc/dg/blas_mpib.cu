@@ -55,7 +55,7 @@ int main( int argc, char* argv[])
     ArrayVec y(x), z(x), u(x), v(x);
     Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
-    dg::blas2::symv( M, x, y);
+    dg::blas2::symv( M, x, y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
@@ -63,6 +63,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"centered x derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dx( grid, dg::forward), M);
+    dg::blas2::symv( M, x, y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
@@ -70,6 +71,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"forward x derivative took        "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dy( grid, dg::forward), M);
+    dg::blas2::symv( M, x, y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
@@ -77,6 +79,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"forward y derivative took        "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dy( grid, dg::centered), M);
+    dg::blas2::symv( M, x, y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
@@ -84,17 +87,20 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"centered y derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::jumpX( grid), M);
+    dg::blas2::symv( M, x, y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::symv( M, x, y);
     t.toc();
     if(rank==0)std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
+    dg::blas2::gemv( inter, x_half, x);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::gemv( inter, x_half, x);
     t.toc();
     if(rank==0)std::cout<<"Interpolation quarter to full    "<<t.diff()/multi<<"s\t"<<3.75*gbytes*multi/t.diff()<<"GB/s\n";
+    dg::blas2::gemv( project, x, x_half);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas2::gemv( project, x, x_half);
@@ -133,17 +139,20 @@ int main( int argc, char* argv[])
     //these functions are more mean to dot
     dg::blas1::transfer( dg::evaluate( left, grid), x);
     dg::blas1::transfer( dg::evaluate( right, grid), y);
-    t.tic();
     double norm=0;
+    norm += dg::blas1::dot( x,y);//warm up
+    t.tic();
     for( int i=0; i<multi; i++)
         norm += dg::blas1::dot( x,y);
     t.toc();
     if(rank==0)std::cout<<"DOT1(x,y) took                   " <<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
+    norm += dg::blas2::dot( w2d,y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         norm += dg::blas2::dot( w2d, y);
     t.toc();
     if(rank==0)std::cout<<"DOT2(y,w,y) (A) took             " <<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
+    norm += dg::blas2::dot( x,w2d,y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
     {
