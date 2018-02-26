@@ -17,10 +17,21 @@ namespace dg
 {
 
 /**
-* @brief Class for the solution of a symmetric matrix equation discretizeable on multiple grids
+* @brief Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
+*
+ * using a multigrid algorithm for any operator \f$\hat O\f$ that was made symmetric
+ * by appropriate weights \f$W\f$ (s. comment below).
 *
 * @snippet elliptic2d_b.cu multigrid
 * We use conjugate gradient (CG) at each stage and refine the grids in the first two dimensions (2d / x and y)
+ * @note A note on weights, inverse weights and preconditioning.
+ * A normalized DG-discretized derivative or operator is normally not symmetric.
+ * The diagonal coefficient matrix that is used to make the operator
+ * symmetric is called weights W, i.e. \f$ \hat O = W\cdot O\f$ is symmetric.
+ * Now, to compute the correct scalar product of the right hand side the
+ * inverse weights have to be used i.e. \f$ W\rho\cdot W \rho /W\f$.
+ * Independent from this, a preconditioner should be used to solve the
+ * symmetric matrix equation.
 * @note The preconditioner for the CG solver is taken from the \c precond() method in the \c SymmetricOp class
 * @copydoc hide_geometry_matrix_container
 * @ingroup multigrid

@@ -95,7 +95,7 @@
  * @{
  *     @defgroup arakawa Discretization of Poisson bracket
  *     @defgroup matrixoperators Elliptic and Helmholtz operators
- *     @defgroup multigrid Multigrid matrix inversion
+ *     @defgroup multigrid Advanced matrix inversion
  * @}
  * @defgroup misc Level 00: Miscellaneous additions
  * @{

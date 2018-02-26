@@ -199,7 +199,12 @@ struct MatrixTraits< detail::Implicit<M, V> >
     \end{align}
     \f]
 
-    where \f$ \hat E \f$ constains the explicit and \f$ \hat I \f$ the implicit part of the equations. The coefficients are
+    which discretizes
+    \f[
+    \frac{\partial v}{\partial t} = \hat E(v) + \hat I(v)
+    \f]
+    where \f$ \hat E \f$ contains the explicit and \f$ \hat I \f$ the implicit part of the equations.
+    The coefficients are
     \f[
     \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
     \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11} \\

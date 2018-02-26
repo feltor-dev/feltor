@@ -35,7 +35,7 @@ class CG
 {
   public:
     typedef typename VectorTraits<container>::value_type value_type;//!< value type of the container class
-    ///@brief Allocate nothing,
+    ///@brief Allocate nothing, Call \c construct method before usage
     CG(){}
     ///@copydoc construct()
     CG( const container& copyable, unsigned max_iterations):r(copyable), p(r), ap(r), max_iter(max_iterations){}
@@ -337,17 +337,14 @@ struct Extrapolation
 
 
 /**
- * @brief Smart conjugate gradient solver.
-
- * Solve a symmetric linear inversion problem using a conjugate gradient method and
- * the last two solutions.
+ * @brief Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
  *
- * @ingroup invert
- * Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
- * for any operator \f$\hat O\f$ that was made symmetric
+ * using conjugate gradient for any operator \f$\hat O\f$ that was made symmetric
  * by appropriate weights \f$W\f$ (s. comment below).
  * It uses solutions from the last two calls to
  * extrapolate a solution for the current call.
+ *
+ * @ingroup multigrid
  * @snippet elliptic2d_b.cu invert
  * @copydoc hide_container
  * @note A note on weights, inverse weights and preconditioning.
@@ -447,7 +444,7 @@ struct Invert
      * @copydoc hide_symmetric_op
      * @param op selfmade symmetric Matrix operator class
      * @param phi solution (write only)
-     * @param rho right-hand-side
+     * @param rho right-hand-side (will be multiplied by \c weights)
      * @note computes inverse weights from the weights
      * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
      *
@@ -469,7 +466,7 @@ struct Invert
      * @tparam Preconditioner A type for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable.
      * @param op symmetric Matrix operator class
      * @param phi solution (write only)
-     * @param rho right-hand-side
+     * @param rho right-hand-side (will be multiplied by \c weights)
      * @param weights The weights that normalize the symmetric operator
      * @param inv_weights The inverse of the weights that normalize the symmetric operator
      * @param p The preconditioner
