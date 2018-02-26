@@ -1,8 +1,12 @@
-###Packages needed on linux:
-###doxygen
-###libjs-mathjax
-###graphviz
-#(shouldn't require latex according to doxygen documentation)
+###
+##Packages needed on linux for compilation of both doxygen and latex doc
+##sudo apt install
+#doxygen
+#libjs-mathjax (for nice mathematical formulas)
+#graphviz (for nice graphical nodes)
+#texlive  (for pdflatex)
+#texlive-latex-extra (for the hitec.cls package)
+###
 
 all: doc
 
