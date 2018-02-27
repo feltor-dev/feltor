@@ -245,11 +245,12 @@ struct Karniadakis
     }
 
     /**
-     * @brief Initialize with initial value
+     * @brief Initialize by integrating two timesteps backward in time
      *
      * @copydoc hide_explicit_implicit
      * @param u0 The initial value
      * @param dt The timestep saved for later use
+     * @note The last call to exp is two steps backward in time (n-2)
      */
     template< class Explicit, class Implicit>
     void init( Explicit& exp, Implicit& imp, const container& u0, double dt);
