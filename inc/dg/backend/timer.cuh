@@ -10,21 +10,9 @@ namespace dg
 class Timer //CPU/ OMP + MPI
 {
   public:
-    /**
-    * @brief Start timer using MPI_Wtime
-    *
-    * @param comm the communicator
-    * @note uses MPI_Barrier(comm)
-    */
     void tic( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); start = MPI_Wtime();}
-    /**
-    * @brief Stop timer using MPI_Wtime
-    *
-    * @param comm the communicator
-    * @note uses MPI_Barrier(comm)
-    */
     void toc( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); stop = MPI_Wtime(); }
-    double diff(){ return stop - start; }
+    double diff()const{ return stop - start; }
   private:
     double start, stop;
 };
@@ -34,8 +22,9 @@ class Timer //CPU/ OMP + MPI
 #include "omp.h"
 namespace dg
 {
-/*! @brief Very simple tool for performance measuring
+/*! @brief Simple tool for performance measuring
  *
+ * The implementation of this class is chosen with compile-time MACROS \c THRUST_DEVICE_SYSTEM and \c MPI_VERSION.
  * @code
    dg::Timer t;
    t.tic();
@@ -44,29 +33,34 @@ namespace dg
    std::cout << "Function took "<<t.diff()<<"s\n";
  * @endcode
  * @ingroup timer
- * @note The Timer knows what hardware you are on!
  */
 class Timer //OMP non-MPI
 {
   public:
     /**
     * @brief Start timer
+    *
+    * uses \c omp_get_wtime() if available, else \c gettimeofday.
+    * If compiled with nvcc we place \c cudaEvent_t in the gpu stream.
+    * The mpi version places an \c MPI_Barrier(MPI_COMM_WORLD)
+    * and then uses \c MPI_Wtime.
+    * MPI + Cuda adds an additional \c cudaDeviceSynchronize
     */
     void tic( ){ start = omp_get_wtime();}
     /**
     * @brief Stop timer
+    * @copydetails tic
     */
     void toc( ){ stop = omp_get_wtime(); }
     /*! \brief Return time elapsed between tic and toc
      *
      * \return Time in seconds between calls of tic and toc*/
-    double diff(){ return stop - start; }
+    double diff()const{ return stop - start; }
   private:
     double start, stop;
 };
 }//namespace dg
 #else // MPI_VERSION not defined and THRUST == CPU
-//actually this case never happens?
 
 ///@cond
 
@@ -77,14 +71,9 @@ class Timer //CPU non-MPI
     timeval start;
     timeval stop;
     public:
-    /*! @brief Start timer using gettimeofday */
     void tic(){ gettimeofday( &start, NULL);}
-    /*! @brief Stop timer using gettimeofday */
     void toc(){ gettimeofday( &stop, NULL);}
-    /*! \brief Return time elapsed between tic and toc
-     *
-     * \return Time in seconds between calls of tic and toc*/
-    double diff(){ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
+    double diff()const{ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
 };
 }//namespace dg
 #endif//MPI_VERSION
@@ -106,7 +95,7 @@ class Timer //GPU MPI
         MPI_Barrier(comm); //sync other cpus
         stop = MPI_Wtime();
     }
-    double diff(){ return stop - start; }
+    double diff()const{ return stop - start; }
   private:
     double start, stop;
 };
@@ -127,7 +116,7 @@ class Timer// GPU non-MPI
         cudaEventRecord( stop, stream);
         cudaEventSynchronize( stop);
     }
-    float diff(){
+    float diff()const{
         float time;
         cudaEventElapsedTime( &time, start, stop);
         return time/1000.;
