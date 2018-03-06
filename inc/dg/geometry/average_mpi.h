@@ -90,7 +90,10 @@ struct Average<MPI_Vector<container> >
     /**
      * @brief Compute the average as configured in the constructor
      *
-     * The compuatation is based on the exactly reproducible scalar product provided in the \c exblas library
+     * The compuatation is based on the exact, reproducible scalar product provided in the \c ::exblas library. It is divided in two steps
+     *  - average the input field over the direction or plane given in the constructor
+     *  - extend the lower dimensional result back to the original dimensionality
+     *
      * @param src Source Vector (must have the same size and communicator as the grid given in the constructor)
      * @param res result Vector (must have same size and communicator as src vector, may alias src)
      */
