@@ -5,14 +5,7 @@
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
-#include "dg/backend/timer.cuh"
-#include "dg/backend/evaluation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/runge_kutta.h"
-#include "dg/multistep.h"
-#include "dg/helmholtz.h"
-#include "dg/backend/typedefs.cuh"
-#include "dg/functors.h"
+#include "dg/algorithm.h"
 
 #include "draw/host_window.h"
 

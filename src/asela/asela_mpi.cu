@@ -7,9 +7,6 @@
 #include <mpi.h> //activate mpi
 
 #include "dg/algorithm.h"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/interpolation.cuh"
 
 #include "netcdf_par.h" //exclude if par netcdf=OFF
 #include "file/nc_utilities.h"

@@ -1,14 +1,7 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
 #include "parameters.h"
-// #include "geometry_circ.h"
-#include "dg/average.h"
-
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif //DG_BENCHMARK
 /*!@file
 
   Contains the solvers 

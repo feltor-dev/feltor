@@ -7,9 +7,7 @@
 //#include "draw/device_window.cuh"
 
 
-#include "dg/backend/xspacelib.cuh"
 #include "toeflI.cuh"
-#include "dg/backend/timer.cuh" 
 #include "parameters.h"
 
 /*

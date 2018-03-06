@@ -3,10 +3,7 @@
 #include <exception>
 #include <cusp/ell_matrix.h>
 
-#include "dg/blas.h"
-#include "dg/arakawa.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
 
 namespace polar
 {

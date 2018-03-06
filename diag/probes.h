@@ -10,8 +10,7 @@
 
 using namespace std;
 
-#include "dg/backend/grid.h"
-#include "dg/backend/interpolation.cuh"
+#include "dg/algorithm.h"
 #include <fstream>
 #include <sstream>
 

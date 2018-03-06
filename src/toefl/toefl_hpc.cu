@@ -9,9 +9,6 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 
-#include "dg/backend/timer.cuh"
-
-
 int main( int argc, char* argv[])
 {
     //Parameter initialisation

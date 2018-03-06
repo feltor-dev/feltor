@@ -5,7 +5,7 @@
 #include "thrust/host_vector.h"
 
 #include "dg/geometry/grid.h"
-#include "dg/geometry/weights.cuh"
+#include "dg/geometry/evaluation.cuh"
 
 /*!@file
  *

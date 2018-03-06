@@ -9,12 +9,6 @@
 // #include "spectral/drt_drt.h"
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
-
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/average.cuh"
-#include "dg/functors.h"
 
 #include "file/nc_utilities.h"
 #include "feltorShw/parameters.h"

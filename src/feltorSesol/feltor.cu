@@ -6,9 +6,6 @@
 // #define DG_DEBUG
 
 #include "draw/host_window.h"
-//#include "draw/device_window.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/timer.cuh"
 
 #include "feltor.cuh"
 #include "parameters.h"
