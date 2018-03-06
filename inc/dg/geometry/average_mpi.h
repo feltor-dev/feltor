@@ -11,7 +11,7 @@
 namespace dg{
 
 /**
- * @brief MPI specialized class for y average computations
+ * @brief MPI specialized class for average computations
  *
  * @snippet geometry/average_mpit.cu doxygen
  * @ingroup utilities
@@ -20,6 +20,12 @@ template< class container>
 struct Average<MPI_Vector<container> >
 {
 
+    /**
+     * @brief Prepare internal workspace
+     *
+     * @param g the grid from which to take the dimensionality and sizes
+     * @param direction the direction or plane over which to average when calling \c operator() (at the moment cannot be \c coo3d::xz or \c coo3d::y)
+     */
     Average( const aMPITopology2d& g, enum coo2d direction)
     {
         m_nx = g.local().Nx()*g.n(), m_ny = g.local().Ny()*g.n();
@@ -43,6 +49,7 @@ struct Average<MPI_Vector<container> >
         exblas::mpi_reduce_communicator( m_comm, &m_comm_mod, &m_comm_mod_reduce);
     }
 
+    ///@copydoc Average()
     Average( const aMPITopology3d& g, enum coo3d direction)
     {
         m_w = dg::transfer<MPI_Vector<container>>(dg::create::weights(g, direction));
@@ -81,11 +88,11 @@ struct Average<MPI_Vector<container> >
         exblas::mpi_reduce_communicator( m_comm, &m_comm_mod, &m_comm_mod_reduce);
     }
     /**
-     * @brief Compute the average
+     * @brief Compute the average as configured in the constructor
      *
-     * @param src 2D Source Vector (must have the same size as the grid given in the constructor)
-     * @param res 2D result Vector (may alias src), every line contains the x-dependent average over
-     the y-direction of src
+     * The compuatation is based on the exactly reproducible scalar product provided in the \c exblas library
+     * @param src Source Vector (must have the same size and communicator as the grid given in the constructor)
+     * @param res result Vector (must have same size and communicator as src vector, may alias src)
      */
     void operator() (const MPI_Vector<container>& src, MPI_Vector<container>& res)
     {

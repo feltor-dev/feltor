@@ -183,7 +183,7 @@ struct Helmholtz2
     {
               construct( g, bcx, bcy, alpha, dir, jfactor);
     }
-    ///@copydoc Helmholtz::Helmholtz2(const Geometry&,bc,bc,double,direction,double)
+    ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,bc,bc,double,direction,double)
     void construct( const Geometry& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         laplaceM_.construct( g, bcx, bcy, dg::normed, dir, jfactor);
@@ -191,7 +191,7 @@ struct Helmholtz2
 	dg::blas1::transfer( dg::evaluate( dg::one, g), temp2_);
         alpha_ = alpha;
     }
-    ///@copydoc Helmholtz::Helmholtz2(const Geometry&,double,direction,double)
+    ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,double,direction,double)
     void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
         laplaceM_.construct( g, dg::normed, dir, jfactor);

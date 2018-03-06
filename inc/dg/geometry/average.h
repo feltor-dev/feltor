@@ -11,14 +11,20 @@
 namespace dg{
 
 /**
- * @brief MPI specialized class for y average computations
+ * @brief Class for average computations over a given direction or plane
  *
- * @snippet geometry/average_mpit.cu doxygen
+ * @snippet geometry/average_t.cu doxygen
  * @ingroup utilities
  */
 template< class container>
 struct Average
 {
+    /**
+     * @brief Prepare internal workspace
+     *
+     * @param g the grid from which to take the dimensionality and sizes
+     * @param direction the direction or plane over which to average when calling \c operator() (at the moment cannot be \c coo3d::xz or \c coo3d::y)
+     */
     Average( const aTopology2d& g, enum coo2d direction)
     {
         m_nx = g.Nx()*g.n(), m_ny = g.Ny()*g.n();
@@ -35,6 +41,7 @@ struct Average
         }
     }
 
+    ///@copydoc Average()
     Average( const aTopology3d& g, enum coo3d direction)
     {
         m_w = dg::transfer<container>(dg::create::weights(g, direction));
@@ -65,11 +72,11 @@ struct Average
             std::cerr << "Warning: this direction is not implemented\n";
     }
     /**
-     * @brief Compute the average
+     * @brief Compute the average as configured in the constructor
      *
-     * @param src 2D Source Vector (must have the same size as the grid given in the constructor)
-     * @param res 2D result Vector (may alias src), every line contains the x-dependent average over
-     the y-direction of src
+     * The compuatation is based on the exactly reproducible scalar product provided in the \c exblas library
+     * @param src Source Vector (must have the same size as the grid given in the constructor)
+     * @param res result Vector (must have same size as src vector, may alias src)
      */
     void operator() (const container& src, container& res)
     {
