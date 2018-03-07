@@ -375,13 +375,16 @@ unsigned NearestNeighborComm<I,V>::buffer_size() const
 template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_gather_init( OmpTag, const value_type* input, MPI_Request rqst[4]) const
 {
-    int size = buffer_size();
+    unsigned size = buffer_size();
 #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
     {
         sb1.data()[i] = input[gather_map1[i]];
         sb2.data()[i] = input[gather_map2[i]];
-        buffer_middle.data()[i] = input[gather_map_middle[i]];
+        buffer_middle.data()[4*i+0] = input[gather_map_middle[4*i+0]];
+        buffer_middle.data()[4*i+1] = input[gather_map_middle[4*i+1]];
+        buffer_middle.data()[4*i+2] = input[gather_map_middle[4*i+2]];
+        buffer_middle.data()[4*i+3] = input[gather_map_middle[4*i+3]];
     }
     //mpi sendrecv
     sendrecv( rqst);
@@ -390,12 +393,15 @@ template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_gather_wait(OmpTag, value_type* values, MPI_Request rqst[4]) const
 {
     MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
-    int size = buffer_size();
+    unsigned size = buffer_size();
 #pragma omp parallel for SIMD
     for( unsigned i=0; i<size; i++)
     {
         values[scatter_map1[i]] = rb1.data()[i];
-        values[scatter_map_middle[i]] = buffer_middle.data()[i];
+        values[scatter_map_middle[4*i+0]] = buffer_middle.data()[4*i+0];
+        values[scatter_map_middle[4*i+1]] = buffer_middle.data()[4*i+1];
+        values[scatter_map_middle[4*i+2]] = buffer_middle.data()[4*i+2];
+        values[scatter_map_middle[4*i+3]] = buffer_middle.data()[4*i+3];
         values[scatter_map2[i]] = rb2.data()[i];
     }
 }
@@ -403,12 +409,15 @@ void NearestNeighborComm<I,V>::do_global_gather_wait(OmpTag, value_type* values,
 template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_gather_init( SerialTag, const value_type* input, MPI_Request rqst[4]) const
 {
-    int size = buffer_size();
+    unsigned size = buffer_size();
     for( unsigned i=0; i<size; i++)
     {
         sb1.data()[i] = input[gather_map1[i]];
         sb2.data()[i] = input[gather_map2[i]];
-        buffer_middle.data()[i] = input[gather_map_middle[i]];
+        buffer_middle.data()[4*i+0] = input[gather_map_middle[4*i+0]];
+        buffer_middle.data()[4*i+1] = input[gather_map_middle[4*i+1]];
+        buffer_middle.data()[4*i+2] = input[gather_map_middle[4*i+2]];
+        buffer_middle.data()[4*i+3] = input[gather_map_middle[4*i+3]];
     }
     sendrecv( rqst);
 }
@@ -416,11 +425,14 @@ template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_gather_wait( SerialTag, value_type * values, MPI_Request rqst[4]) const
 {
     MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
-    int size = buffer_size();
+    unsigned size = buffer_size();
     for( unsigned i=0; i<size; i++)
     {
         values[scatter_map1[i]] = rb1.data()[i];
-        values[scatter_map_middle[i]] = buffer_middle.data()[i];
+        values[scatter_map_middle[4*i+0]] = buffer_middle.data()[4*i+0];
+        values[scatter_map_middle[4*i+1]] = buffer_middle.data()[4*i+1];
+        values[scatter_map_middle[4*i+2]] = buffer_middle.data()[4*i+2];
+        values[scatter_map_middle[4*i+3]] = buffer_middle.data()[4*i+3];
         values[scatter_map2[i]] = rb2.data()[i];
     }
 }
@@ -429,20 +441,20 @@ template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_gather_init( CudaTag, const value_type* input, MPI_Request rqst[4]) const
 {
     //gather values from input into sendbuffer
-    thrust::gather( gather_map1.begin(), gather_map1.end(), input, sb1.data().begin());
-    thrust::gather( gather_map2.begin(), gather_map2.end(), input, sb2.data().begin());
+    thrust::gather( thrust::cuda::tag(), gather_map1.begin(), gather_map1.end(), input, sb1.data().begin());
+    thrust::gather( thrust::cuda::tag(), gather_map2.begin(), gather_map2.end(), input, sb2.data().begin());
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data
     sendrecv( rqst);
-    thrust::gather( gather_map_middle.begin(), gather_map_middle.end(), input, buffer_middle.data().begin());
+    thrust::gather( thrust::cuda::tag(), gather_map_middle.begin(), gather_map_middle.end(), input, buffer_middle.data().begin());
 }
 template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_gather_wait( CudaTag, value_type * values, MPI_Request rqst[4]) const
 {
-    thrust::scatter( buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values);
+    thrust::scatter( thrust::cuda::tag(), buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values);
     MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     //scatter received values into values array
-    thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values);
-    thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values);
+    thrust::scatter( thrust::cuda::tag(), rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values);
+    thrust::scatter( thrust::cuda::tag(), rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values);
 }
 #endif
 
