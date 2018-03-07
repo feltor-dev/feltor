@@ -117,7 +117,7 @@ struct Explicit
     dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
 
     
-    dg::PoloidalAverage<container, container > polavg; //device int vectors would be better for cuda
+    dg::Average<container > polavg; //device int vectors would be better for cuda
 
     const eule::Parameters p;
 
@@ -144,7 +144,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     multigrid( g, 3),
     old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
-    polavg(g),
+    polavg(g,dg::coo2d::y),
     p(p),
     evec(3)
 {
