@@ -30,22 +30,22 @@ int main( int argc, char* argv[])
     err = nc_inq_attlen( ncid, NC_GLOBAL, "inputfile", &length);
     std::string input( length, 'x');
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
-    
+
     std::cout << "input "<<input<<std::endl;
     Json::Reader reader;
     Json::Value js;
     reader.parse( input, js, false);
     const eule::Parameters p(js);
-   
+
     ///////////////////////////////////////////////////////////////////////////
-    
+
     //Grids
     dg::Grid2d g2d( 0., p.lx, 0.,p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     dg::Grid2d g2d_in( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y);
     dg::Grid1d g1d( 0., p.lx,p.n, p.Nx, p.bc_x);
-    
+
     double time = 0.;
-    
+
     dg::HVec w2d = dg::create::weights( g2d);
 
     std::vector<dg::HVec> npe(2,dg::evaluate(dg::zero,g2d));
@@ -60,7 +60,7 @@ int main( int argc, char* argv[])
     dg::HVec xcoo(dg::evaluate(dg::cooX1d,g1d));
 //     dg::HVec y0coo(dg::evaluate(1,0.0));
     dg::HVec y0coo(dg::evaluate(dg::CONSTANT(0.0),g1d));
-    dg::PoloidalAverage<dg::HVec,dg::HVec > polavg(g2d);
+    dg::Average<dg::HVec> polavg(g2d, dg::coo2d::y);
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x, p.bc_y);
@@ -94,7 +94,7 @@ int main( int argc, char* argv[])
     err_out = nc_close(ncid_out); 
     //2d field netcdf vars read
 
-    
+
     unsigned imin,imax;
     imin= 0;
 //     std::cout << "tmin = 0 tmax =" << p.maxout*p.itstp << std::endl;
@@ -178,21 +178,17 @@ int main( int argc, char* argv[])
 
   
             //Compute avg 2d fields and convert them into 1d field
-            polavg(npe[0],temp);
-            dg::blas2::gemv(interp,temp,temp1d); 
+            polavg(npe[0],temp1d,false);
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[0],   start1d, count1d, temp1d.data()); 
-            polavg(npe[1],temp);
-            dg::blas2::gemv(interp,temp,temp1d); 
+            polavg(npe[1],temp1d,false);
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[1],   start1d, count1d, temp1d.data()); 
-            polavg(logn[0],temp);
-            dg::blas2::gemv(interp,temp,temp1d); 
+            polavg(logn[0],temp1d,false);
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[2],   start1d, count1d, temp1d.data()); 
-            polavg(logn[1],temp);
-            dg::blas2::gemv(interp,temp,temp1d); 
+            polavg(logn[1],temp1d,false);
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[3],   start1d, count1d, temp1d.data()); 
-            polavg(phi,temp);      
+            polavg(phi,temp1d,false);
             poisson.variationRHS(phi,temp2);
-            double T_perp = 0.5*dg::blas2::dot( npe[1], w2d, temp2);               
+            double T_perp = 0.5*dg::blas2::dot( npe[1], w2d, temp2);
             poisson.variationRHS(temp,temp2);
             double T_perp_zonal = 0.5*dg::blas2::dot( npe[1], w2d, temp2);   
             double T_perpratio = T_perp_zonal/T_perp;
@@ -200,14 +196,12 @@ int main( int argc, char* argv[])
             double Gamma_ne = -1.* dg::blas2::dot(npe[0],w2d,temp2);
             dg::blas2::gemv(interp,temp,temp1d); 
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[4],   start1d, count1d, temp1d.data()); 
-            polavg(vor,temp);
-            dg::blas2::gemv(interp,temp,temp1d); 
+            polavg(vor,temp1d,false);
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[5],   start1d, count1d, temp1d.data()); 
 
-            err_out = nc_put_vara_double( ncid_out, dataIDs1d[6],   start1d, count1d, xcoo.data());             
+            err_out = nc_put_vara_double( ncid_out, dataIDs1d[6],   start1d, count1d, xcoo.data());
             dg::blas2::gemv(poisson.dxrhs(),phi,temp);
-            polavg(temp,temp2);            
-            dg::blas2::gemv(interp,temp2,temp1d); 
+            polavg(temp,temp1d,false);
             err_out = nc_put_vara_double( ncid_out, dataIDs1d[7],   start1d, count1d, temp1d.data()); 
 
             //compute probe values by interpolation and write 2d data fields
@@ -216,7 +210,7 @@ int main( int argc, char* argv[])
                 dg::blas1::pointwiseDivide(npe[0],temp,temp);
                 dg::blas1::axpby(1.0,temp,-1.0,one,temp);
             err_out = nc_put_vara_double( ncid_out, dataIDs2d[0], start2d_out, count2d_out, temp.data());
-          
+
             dg::blas2::gemv(probe_interp, temp, npe_probes);
 
                 polavg(phi,temp);
@@ -225,7 +219,7 @@ int main( int argc, char* argv[])
                 dg::blas1::axpby(1.0,temp,-1.0,one,temp);
             dg::blas2::gemv(probe_interp, temp, phi_probes);
 //                 dg::blas2::gemv(probe_interp, phi, phi_probes);
-                
+
             dg::blas2::gemv(dy, phi, temp);
             dg::blas2::gemv(probe_interp, temp, gamma_probes);
 
@@ -233,7 +227,7 @@ int main( int argc, char* argv[])
 //             dg::blas2::gemv(probe_interp, phi, phi_probes);
 //             dg::blas2::gemv(dy, phi, temp);
 //             dg::blas2::gemv(probe_interp, temp, gamma_probes);
-            
+
             //write data in netcdf file
             err_out = nc_put_vara_double( ncid_out, timevarID, start1d, count1d, &time);
             for( unsigned i=0; i<num_probes; i++){
@@ -245,11 +239,11 @@ int main( int argc, char* argv[])
             err_out = nc_put_vara_double( ncid_out, T_perpID, start1d, count1d, &T_perp);
             err_out = nc_put_vara_double( ncid_out, T_perpratioID, start1d, count1d, &T_perpratio);
             err_out = nc_put_vara_double( ncid_out, Gamma_neID, start1d, count1d, &Gamma_ne);
-            err_out = nc_put_vara_double( ncid_out, tvarIDout, start1d, count1d, &time);        
-        
+            err_out = nc_put_vara_double( ncid_out, tvarIDout, start1d, count1d, &time);
+
     }
     err = nc_close(ncid);
-    
+
     err_out = nc_close(ncid_out);
     return 0;
 }

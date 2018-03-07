@@ -337,14 +337,14 @@ struct Extrapolation
 
 
 /**
- * @brief Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
+ * @brief Wrapper around CG and Extrapolation to solve the Equation \f[ Ax = W  b \f]
  *
- * using conjugate gradient for any operator \f$\hat O\f$ that was made symmetric
+ * where \f$A\f$ was made symmetric
  * by appropriate weights \f$W\f$ (s. comment below).
- * It uses solutions from the last two calls to
+ * Uses solutions from the last calls to
  * extrapolate a solution for the current call.
  *
- * @ingroup multigrid
+ * @ingroup invert
  * @snippet elliptic2d_b.cu invert
  * @copydoc hide_container
  * @note A note on weights, inverse weights and preconditioning.
@@ -356,7 +356,7 @@ struct Extrapolation
  * Independent from this, a preconditioner should be used to solve the
  * symmetric matrix equation. The inverse of \f$W\f$ is
  * a good general purpose preconditioner.
- * @sa Extrapolation
+ * @sa Extrapolation MultigridCG2d
  */
 template<class container>
 struct Invert

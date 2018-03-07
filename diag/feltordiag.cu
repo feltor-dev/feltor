@@ -43,7 +43,7 @@ int main( int argc, char* argv[])
     Json::Reader reader;
     Json::Value js,gs;
     reader.parse( input, js, false);
-    const eule::Parameters p(js);
+    const feltor::Parameters p(js);
     reader.parse( geom, gs, false);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
@@ -178,6 +178,7 @@ int main( int argc, char* argv[])
     err = nc_inq_dimlen( ncid, timeID, &steps);
     steps-=1;
     outlim = steps/p.itstp;
+    dg::Average<dg::DVec> toroidal_average( g3d_out, dg::coo3d::z);
     for( unsigned i=0; i<outlim; i++)//timestepping
     {
 //      start3dp[0] = i; //set specific time  
@@ -213,7 +214,7 @@ int main( int argc, char* argv[])
             fields3d[j] = fields3d_h[j];
     
             //get 2d data and sum up for avg
-            dg::toroidal_average(fields3d[j],data2davg,g3d_out);
+            toroidal_average(fields3d[j],data2davg,false);
 
             //get 2d data of MidPlane
             unsigned kmp = (g3d_out.Nz()/2);
@@ -240,7 +241,7 @@ int main( int argc, char* argv[])
         }
         //----------------Start vorticity computation
         dg::blas2::gemv( laplacian,fields3d[4],vor3d);
-        dg::toroidal_average(vor3d,vor2davg,g3d_out);
+        toroidal_average(vor3d,vor2davg,false);
         dg::blas1::transfer(vor2davg,transfer2d);     
 
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[10],   start2d, count2d, transfer2d.data());
@@ -277,7 +278,7 @@ int main( int argc, char* argv[])
         dg::blas1::transform(temp1, temp1, dg::SQRT<double>());  // sqrt(psipR^2 +   psipZ^2)
         dg::blas1::pointwiseDivide( Depsip3d, temp1, Depsip3d); //Depsip3d = N_e*(1/B*[phi,psi_p]_RZ - K(psi_p) + 0.5*nu_e*U_e^2*K(psi_p))
       
-        dg::toroidal_average(Depsip3d,Depsip2davg,g3d_out);
+        toroidal_average(Depsip3d,Depsip2davg,false);
 
         dg::geo::FluxSurfaceAverage<dg::DVec> fsaDepsip(g2d_out,c, Depsip2davg );
         dg::DVec  Depsip1Dfsa = dg::evaluate(fsaDepsip,g1d_out);
@@ -285,7 +286,7 @@ int main( int argc, char* argv[])
         dg::blas2::gemv(fsaonrzphimatrix, Depsip1Dfsa , Depsip3dfluc ); //fsa on RZ grid
         dg::blas1::axpby(1.0,Depsip3d,-1.0, Depsip3dfluc, Depsip3dfluc); 
         //Same procedure for fluc
-        dg::toroidal_average(Depsip3dfluc,Depsip2dflucavg,g3d_out);
+        toroidal_average(Depsip3dfluc,Depsip2dflucavg,false);
         //fluctuation
 //         transfer2d = Depsip2dflucavg;
         //toroidal avg
@@ -302,7 +303,7 @@ int main( int argc, char* argv[])
         dg::blas1::transform(temp3, temp1, dg::LN<double>()); // lnN
         poisson.variationRHS(temp1,temp2); // (nabla_perp N)^2
         dg::blas1::transform(temp2, Lperpinv3d, dg::SQRT<double>()); // |(nabla_perp N)|
-        dg::toroidal_average(Lperpinv3d,Lperpinv2davg, g3d_out);
+        toroidal_average(Lperpinv3d,Lperpinv2davg,false);
         transfer2d = Lperpinv2davg;
         err2d = nc_put_vara_double( ncid2d, dataIDs2d[12],   start2d, count2d, transfer2d.data());
         dg::geo::FluxSurfaceAverage< dg::DVec> fsaLperpinv(g2d_out,c, Lperpinv2davg );

@@ -79,22 +79,30 @@ struct Average
      *  - extend the lower dimensional result back to the original dimensionality
      *
      * @param src Source Vector (must have the same size as the grid given in the constructor)
-     * @param res result Vector (must have same size as src vector, may alias src)
+     * @param res result Vector (if \c extend==true, \c res must have same size as \c src vector, else it gets properly resized, may alias \c src)
+     * @param extend if \c true the average is extended back to the original dimensionality, if \c false, this step is skipped
      */
-    void operator() (const container& src, container& res)
+    void operator() (const container& src, container& res, bool extend = true)
     {
         if( !m_transpose)
         {
             dg::average( m_nx, m_ny, src, m_w, m_temp1d);
-            dg::extend_column( m_nx, m_ny, m_temp1d, res);
+            if( extend )
+                dg::extend_column( m_nx, m_ny, m_temp1d, res);
+            else
+                res = m_temp1d;
         }
         else
         {
             dg::transpose( m_nx, m_ny, src, m_temp);
             dg::average( m_ny, m_nx, m_temp, m_w, m_temp1d);
-            dg::extend_line( m_nx, m_ny, m_temp1d, res);
+            if( extend )
+                dg::extend_line( m_nx, m_ny, m_temp1d, res);
+            else
+                res = m_temp1d;
         }
     }
+
   private:
     unsigned m_nx, m_ny;
     container m_w, m_temp, m_temp1d;
