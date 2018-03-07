@@ -8,18 +8,18 @@ feltor/config/*.mk                  #overwrite variables if machine is recognize
 feltor/config/devices/devices.mk    #recombine variables depending on device
 ```
 
-The machine specific config files (e.g. vsc3.mk) should have an include guard and can overwrite or add to any of the following variables:
+Your machine specific config file (e.g. feltor/config/your-machine.mk) should have an include guard and overwrite or add to any of the following variables:
 
 | variable  | default value                | description                              |
 | :-------: | :--------------------------- | :--------------------------------------- |
 |    CC     | g++                          | C++ compiler                             |
 |   MPICC   | mpic++                       | the corresponding mpi wrapper for the c++ compiler |
-|  CFLAGS   | -std=c++11 -mavx -mfma -Wall | flags for the C++ compiler, avx is necessary, fma can be omitted if unavailable               |
+|  CFLAGS   | -std=c++11 -mavx -mfma -Wall | flags for the C++ compiler, minimum instruction set is sse4.1, avx and fma are recommended               |
 | MPICFLAGS |                              | flags specific to the MPI compilation    |
    OPT    | -O3                                      | optimization flags for the **host** code (can be overwritten on the command line, CUDA kernel code is always compiled with -O3) |
 |  OMPFLAG  | -fopenmp                                 | The compiler flag activating the OpenMP support |
 |   NVCC    | nvcc                                     | CUDA compiler                            |
-| NVCCFLAGS | -std=c++11  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc  and underlying host compiler, (avx is necessary, fma optional)                         |
+| NVCCFLAGS | -std=c++11  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc  and underlying host compiler, (minimum instruction set is sse4.1, avx and fma are recommended)                         |
 | NVCCARCH  | -arch sm_35                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (note: can be overwritten on the command line) |
 |                                          |                                          |     |
 |  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, json, vcl and the draw libraries. The default expects to find (symbolic links to ) these libraries in your home folder |

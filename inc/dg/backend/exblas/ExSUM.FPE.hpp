@@ -435,7 +435,9 @@ void FPExpansionVect<T,N,TRAITS>::DumpVector(T x) const
 {
     double v[8] __attribute__((aligned(64)));
     x.store_a(v);
+#if INSTRSET >= 7
     _mm256_zeroupper();
+#endif
 
     for(unsigned int j = 0; j != 8; ++j) {
         printf("%a ", v[j]);
