@@ -14,13 +14,13 @@ The machine specific config files (e.g. vsc3.mk) should have an include guard an
 | :-------: | :--------------------------- | :--------------------------------------- |
 |    CC     | g++                          | C++ compiler                             |
 |   MPICC   | mpic++                       | the corresponding mpi wrapper for the c++ compiler |
-|  CFLAGS   | -std=c++11 -mavx -mfma -Wall | flags for the C++ compiler               |
+|  CFLAGS   | -std=c++11 -mavx -mfma -Wall | flags for the C++ compiler, avx is necessary, fma can be omitted if unavailable               |
 | MPICFLAGS |                              | flags specific to the MPI compilation    |
    OPT    | -O3                                      | optimization flags for the **host** code (can be overwritten on the command line, CUDA kernel code is always compiled with -O3) |
 |  OMPFLAG  | -fopenmp                                 | The compiler flag activating the OpenMP support |
 |   NVCC    | nvcc                                     | CUDA compiler                            |
-| NVCCFLAGS | -std=c++11  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc                           |
-| NVCCARCH  | -arch sm_35                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (can be overwritten on the command line) |
+| NVCCFLAGS | -std=c++11  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc  and underlying host compiler, (avx is necessary, fma optional)                         |
+| NVCCARCH  | -arch sm_35                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (note: can be overwritten on the command line) |
 |                                          |                                          |     |
 |  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, json, vcl and the draw libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
 |   LIBS    | -lnetcdf -lhdf5 -ldhf5_hl                | netcdf library                           |
@@ -60,6 +60,6 @@ make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
  - If MPI is used in connection with the gpu backend, the mpi installation needs to be **cuda-aware**
  - If `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
  - Support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
- - The library headers are compliant with the c++11 standard but we reserve the right to change that in future updates
+ - The library headers are compliant with the c++11 standard but we reserve the right to upgrade that in future updates
 
 
