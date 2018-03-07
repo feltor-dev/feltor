@@ -286,7 +286,7 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
 template<class value_type>
 void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* x, value_type beta, value_type* y) const
 {
-#pragma omp parallel for collapse(3)
+#pragma omp parallel for SIMD collapse(3)
     for( int s=0; s<left_size; s++)
     for( int k=0; k<n; k++)
     for( int j=0; j<right_size; j++)

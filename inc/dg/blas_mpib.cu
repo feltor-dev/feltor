@@ -23,7 +23,13 @@ using ArrayVec = std::array<Vector, 3>;
 
 int main( int argc, char* argv[])
 {
+#ifdef _OPENMP
+    int provided;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    assert( provided >= MPI_THREAD_FUNNELED && "Threaded MPI lib required!\n");
+#else
     MPI_Init(&argc, &argv);
+#endif
     unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
 

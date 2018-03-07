@@ -36,8 +36,16 @@ int main(int argc, char **argv)
     char node_name[MPI_MAX_PROCESSOR_NAME];
 
     // determine MPI task and total number of MPI tasks
+#ifdef _OPENMP
+    int provided;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    MPI_Comm_rank(MPI_COMM_WORLD, &task);
+    if(provided < MPI_THREAD_FUNNELED)
+        if(task==0)printf("Warning: mpi implementation does not support threads!\n");
+#else
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &task);
+#endif
     MPI_Comm_size(MPI_COMM_WORLD, &ntasks);
 
     // determine total number of OpenMP threads, thread number,

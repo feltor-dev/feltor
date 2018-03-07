@@ -1,7 +1,7 @@
 
 ifeq ($(strip $(HPC_SYSTEM)),marconi)
 CC=icc
-MPICC=mpiicc
+MPICC=mpiicc -mt_mpi
 OPT=-O3 -xHost  # overwritten for mic in devices.mk
 #MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
 OMPFLAG=-qopenmp
