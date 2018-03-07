@@ -191,14 +191,33 @@ struct NearestNeighborComm
     * @param values from which to gather data (it is safe to change values on return since values to communicate are copied into an internal buffer)
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
-    void global_gather_init( const Vector& values, MPI_Request rqst[4])const;
+    template<class container>
+    void global_gather_init( const container& values, MPI_Request rqst[4])const
+    {
+        static_assert( std::is_base_of<SharedVectorTag, get_vector_category<container>>::value ,
+                   "Only Shared vectors allowed");
+        static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
+        static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
+        const get_value_type<container>* ptr = thrust::raw_pointer_cast( values.data());
+        do_global_gather_init( get_execution_policy<container>(),  ptr, rqst);
+    }
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
     *
     * @param buffer (write only) where received data resides on return (must be of size \c size())
     * @param rqst the same four request variables that were used in global_gather_init
     */
-    void global_gather_wait( Vector& buffer, MPI_Request rqst[4])const;
+    template<class container>
+    void global_gather_wait( container& buffer, MPI_Request rqst[4])const
+    {
+        static_assert( std::is_base_of<SharedVectorTag, get_vector_category<container>>::value ,
+                   "Only Shared vectors allowed");
+        static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
+        static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
+        get_value_type<container>* ptr = thrust::raw_pointer_cast( buffer.data());
+        do_global_gather_wait( get_execution_policy<container>(),  ptr, rqst);
+
+    }
     ///@copydoc aCommunicator::size()
     unsigned size() const{return do_size();}
     ///@copydoc aCommunicator::isCommunicating()
@@ -209,6 +228,13 @@ struct NearestNeighborComm
     ///@copydoc aCommunicator::isCommunicating()
     MPI_Comm communicator() const{return comm_;}
     private:
+    using value_type = get_value_type<Vector>;
+    void do_global_gather_init( OmpTag, const value_type*, MPI_Request rqst[4])const;
+    void do_global_gather_wait( OmpTag, value_type*, MPI_Request rqst[4])const;
+    void do_global_gather_init( SerialTag, const value_type*, MPI_Request rqst[4])const;
+    void do_global_gather_wait( SerialTag, value_type*, MPI_Request rqst[4])const;
+    void do_global_gather_init( CudaTag, const value_type*, MPI_Request rqst[4])const;
+    void do_global_gather_wait( CudaTag, value_type*, MPI_Request rqst[4])const;
     unsigned do_size()const; //size of values is size of input plus ghostcells
     Vector do_make_buffer( )const{
         Vector tmp( do_size());
@@ -345,44 +371,85 @@ unsigned NearestNeighborComm<I,V>::buffer_size() const
     }
 }
 
+#ifdef _OPENMP
 template<class I, class V>
-void NearestNeighborComm<I,V>::global_gather_init( const V& input, MPI_Request rqst[4]) const
+void NearestNeighborComm<I,V>::do_global_gather_init( OmpTag, const value_type* input, MPI_Request rqst[4]) const
 {
-    //int rank;
-    //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    //dg::Timer t;
-    //t.tic();
-    //gather values from input into sendbuffer
-    thrust::gather( gather_map1.begin(), gather_map1.end(), input.begin(), sb1.data().begin());
-    thrust::gather( gather_map2.begin(), gather_map2.end(), input.begin(), sb2.data().begin());
-    //t.toc();
-    //if(rank==0)std::cout<<"   gather took "<<t.diff()<<"s\n";
-    //t.tic();
+    int size = buffer_size();
+#pragma omp parallel for SIMD
+    for( unsigned i=0; i<size; i++)
+    {
+        sb1.data()[i] = input[gather_map1[i]];
+        sb2.data()[i] = input[gather_map2[i]];
+        buffer_middle.data()[i] = input[gather_map_middle[i]];
+    }
     //mpi sendrecv
     sendrecv( rqst);
-    //t.toc();
-    //if(rank==0)std::cout<<"   sendrectook "<<t.diff()<<"s\n";
-    //t.tic();
-    thrust::gather( gather_map_middle.begin(), gather_map_middle.end(), input.begin(), buffer_middle.data().begin());
-    //t.toc();
-    //if(rank==0)std::cout<<"   gather took "<<t.diff()<<"s\n";
 }
 template<class I, class V>
-void NearestNeighborComm<I,V>::global_gather_wait( V& values, MPI_Request rqst[4]) const
+void NearestNeighborComm<I,V>::do_global_gather_wait(OmpTag, value_type* values, MPI_Request rqst[4]) const
 {
-    thrust::scatter( buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values.begin());
+    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
+    int size = buffer_size();
+#pragma omp parallel for SIMD
+    for( unsigned i=0; i<size; i++)
+    {
+        values[scatter_map1[i]] = rb1.data()[i];
+        values[scatter_map_middle[i]] = buffer_middle.data()[i];
+        values[scatter_map2[i]] = rb2.data()[i];
+    }
+}
+#endif
+template<class I, class V>
+void NearestNeighborComm<I,V>::do_global_gather_init( SerialTag, const value_type* input, MPI_Request rqst[4]) const
+{
+    int size = buffer_size();
+    for( unsigned i=0; i<size; i++)
+    {
+        sb1.data()[i] = input[gather_map1[i]];
+        sb2.data()[i] = input[gather_map2[i]];
+        buffer_middle.data()[i] = input[gather_map_middle[i]];
+    }
+    sendrecv( rqst);
+}
+template<class I, class V>
+void NearestNeighborComm<I,V>::do_global_gather_wait( SerialTag, value_type * values, MPI_Request rqst[4]) const
+{
+    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
+    int size = buffer_size();
+    for( unsigned i=0; i<size; i++)
+    {
+        values[scatter_map1[i]] = rb1.data()[i];
+        values[scatter_map_middle[i]] = buffer_middle.data()[i];
+        values[scatter_map2[i]] = rb2.data()[i];
+    }
+}
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+template<class I, class V>
+void NearestNeighborComm<I,V>::do_global_gather_init( CudaTag, const value_type* input, MPI_Request rqst[4]) const
+{
+    //gather values from input into sendbuffer
+    thrust::gather( gather_map1.begin(), gather_map1.end(), input, sb1.data().begin());
+    thrust::gather( gather_map2.begin(), gather_map2.end(), input, sb2.data().begin());
+    cudaDeviceSynchronize(); //wait until device functions are finished before sending data
+    sendrecv( rqst);
+    thrust::gather( gather_map_middle.begin(), gather_map_middle.end(), input, buffer_middle.data().begin());
+}
+template<class I, class V>
+void NearestNeighborComm<I,V>::do_global_gather_wait( CudaTag, value_type * values, MPI_Request rqst[4]) const
+{
+    thrust::scatter( buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values);
     MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     //scatter received values into values array
-    thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values.begin());
-    thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values.begin());
+    thrust::scatter( rb1.data().begin(), rb1.data().end(), scatter_map1.begin(), values);
+    thrust::scatter( rb2.data().begin(), rb2.data().end(), scatter_map2.begin(), values);
 }
+#endif
+
 
 template<class I, class V>
 void NearestNeighborComm<I,V>::sendrecv( MPI_Request rqst[4]) const
 {
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-    cudaDeviceSynchronize(); //wait until device functions are finished before sending data
-#endif //THRUST_DEVICE_SYSTEM
     MPI_Isend( thrust::raw_pointer_cast(sb1.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[0], 3, comm_, &rqst[0]); //destination
     MPI_Irecv( thrust::raw_pointer_cast(rb2.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
@@ -390,8 +457,6 @@ void NearestNeighborComm<I,V>::sendrecv( MPI_Request rqst[4]) const
 
     MPI_Isend( thrust::raw_pointer_cast(sb2.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(),  //sender
                m_dest[1], 9, comm_, &rqst[2]);  //destination
-
-
     MPI_Irecv( thrust::raw_pointer_cast(rb1.data().data()), buffer_size(), getMPIDataType<get_value_type<V>>(), //receiver
                m_source[1], 9, comm_, &rqst[3]); //source
 }

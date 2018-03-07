@@ -120,33 +120,20 @@ struct RowColDistMat
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         MPI_Comm_compare( x.communicator(), m_c.communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-        //int rank;
-        //MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-        //dg::Timer t;
 
         //1.1 initiate communication
         MPI_Request rqst[4];
         m_c.global_gather_init( x.data(), rqst);
-        //t.tic();
-
         //1.2 compute inner points
         dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(),
                        get_matrix_category<LocalMatrixInner>(),
                        get_vector_category<container>() );
-        //t.toc();
-        //if(rank==0)std::cout<<" symv took "<<t.diff()<<"s\n";
-        //t.tic();
         //2. wait for communication to finish
         m_c.global_gather_wait( m_buffer.data(), rqst);
-        //t.toc();
-        //if(rank==0)std::cout<<" wait took "<<t.diff()<<"s\n";
-        //t.tic();
         //3. compute and add outer points
         dg::blas2::detail::doSymv(alpha, m_o, m_buffer.data(), 1., y.data(),
                        get_matrix_category<LocalMatrixOuter>(),
                        get_vector_category<container>() );
-        //t.toc();
-        //if(rank==0)std::cout<<" symv took "<<t.diff()<<"s\n";
     }
 
     /**
