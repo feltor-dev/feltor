@@ -208,14 +208,15 @@ struct NearestNeighborComm
     * @param rqst the same four request variables that were used in global_gather_init
     */
     template<class container>
-    void global_gather_wait( container& buffer, MPI_Request rqst[4])const
+    void global_gather_wait(const container& input, container& buffer, MPI_Request rqst[4])const
     {
         static_assert( std::is_base_of<SharedVectorTag, get_vector_category<container>>::value ,
                    "Only Shared vectors allowed");
         static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
         static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
         get_value_type<container>* ptr = thrust::raw_pointer_cast( buffer.data());
-        do_global_gather_wait( get_execution_policy<container>(),  ptr, rqst);
+        const get_value_type<container>* i_ptr = thrust::raw_pointer_cast( input.data());
+        do_global_gather_wait( get_execution_policy<container>(), i_ptr, ptr, rqst);
 
     }
     ///@copydoc aCommunicator::size()
@@ -230,11 +231,11 @@ struct NearestNeighborComm
     private:
     using value_type = get_value_type<Vector>;
     void do_global_gather_init( OmpTag, const value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_wait( OmpTag, value_type*, MPI_Request rqst[4])const;
+    void do_global_gather_wait( OmpTag, const value_type*, value_type*, MPI_Request rqst[4])const;
     void do_global_gather_init( SerialTag, const value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_wait( SerialTag, value_type*, MPI_Request rqst[4])const;
+    void do_global_gather_wait( SerialTag, const value_type*, value_type*, MPI_Request rqst[4])const;
     void do_global_gather_init( CudaTag, const value_type*, MPI_Request rqst[4])const;
-    void do_global_gather_wait( CudaTag, value_type*, MPI_Request rqst[4])const;
+    void do_global_gather_wait( CudaTag, const value_type*, value_type*, MPI_Request rqst[4])const;
     unsigned do_size()const; //size of values is size of input plus ghostcells
     Vector do_make_buffer( )const{
         Vector tmp( do_size());
@@ -376,32 +377,27 @@ template<class I, class V>
 void NearestNeighborComm<I,V>::do_global_gather_init( OmpTag, const value_type* input, MPI_Request rqst[4]) const
 {
     unsigned size = buffer_size();
-#pragma omp parallel for SIMD
+#pragma omp parallel for
     for( unsigned i=0; i<size; i++)
     {
         sb1.data()[i] = input[gather_map1[i]];
         sb2.data()[i] = input[gather_map2[i]];
-        buffer_middle.data()[4*i+0] = input[gather_map_middle[4*i+0]];
-        buffer_middle.data()[4*i+1] = input[gather_map_middle[4*i+1]];
-        buffer_middle.data()[4*i+2] = input[gather_map_middle[4*i+2]];
-        buffer_middle.data()[4*i+3] = input[gather_map_middle[4*i+3]];
     }
     //mpi sendrecv
     sendrecv( rqst);
 }
 template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_wait(OmpTag, value_type* values, MPI_Request rqst[4]) const
+void NearestNeighborComm<I,V>::do_global_gather_wait(OmpTag, const value_type* input, value_type* values, MPI_Request rqst[4]) const
 {
-    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     unsigned size = buffer_size();
-#pragma omp parallel for SIMD
+#pragma omp parallel for
+    for( unsigned i=0; i<4*size; i++)
+        values[scatter_map_middle[i]] = input[gather_map_middle[i]];
+    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
+#pragma omp parallel for
     for( unsigned i=0; i<size; i++)
     {
         values[scatter_map1[i]] = rb1.data()[i];
-        values[scatter_map_middle[4*i+0]] = buffer_middle.data()[4*i+0];
-        values[scatter_map_middle[4*i+1]] = buffer_middle.data()[4*i+1];
-        values[scatter_map_middle[4*i+2]] = buffer_middle.data()[4*i+2];
-        values[scatter_map_middle[4*i+3]] = buffer_middle.data()[4*i+3];
         values[scatter_map2[i]] = rb2.data()[i];
     }
 }
@@ -414,25 +410,19 @@ void NearestNeighborComm<I,V>::do_global_gather_init( SerialTag, const value_typ
     {
         sb1.data()[i] = input[gather_map1[i]];
         sb2.data()[i] = input[gather_map2[i]];
-        buffer_middle.data()[4*i+0] = input[gather_map_middle[4*i+0]];
-        buffer_middle.data()[4*i+1] = input[gather_map_middle[4*i+1]];
-        buffer_middle.data()[4*i+2] = input[gather_map_middle[4*i+2]];
-        buffer_middle.data()[4*i+3] = input[gather_map_middle[4*i+3]];
     }
     sendrecv( rqst);
 }
 template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_wait( SerialTag, value_type * values, MPI_Request rqst[4]) const
+void NearestNeighborComm<I,V>::do_global_gather_wait( SerialTag, const value_type* input, value_type * values, MPI_Request rqst[4]) const
 {
-    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     unsigned size = buffer_size();
+    for( unsigned i=0; i<4*size; i++)
+        values[scatter_map_middle[i]] = input[gather_map_middle[i]];
+    MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     for( unsigned i=0; i<size; i++)
     {
         values[scatter_map1[i]] = rb1.data()[i];
-        values[scatter_map_middle[4*i+0]] = buffer_middle.data()[4*i+0];
-        values[scatter_map_middle[4*i+1]] = buffer_middle.data()[4*i+1];
-        values[scatter_map_middle[4*i+2]] = buffer_middle.data()[4*i+2];
-        values[scatter_map_middle[4*i+3]] = buffer_middle.data()[4*i+3];
         values[scatter_map2[i]] = rb2.data()[i];
     }
 }
@@ -445,11 +435,11 @@ void NearestNeighborComm<I,V>::do_global_gather_init( CudaTag, const value_type*
     thrust::gather( thrust::cuda::tag(), gather_map2.begin(), gather_map2.end(), input, sb2.data().begin());
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data
     sendrecv( rqst);
-    thrust::gather( thrust::cuda::tag(), gather_map_middle.begin(), gather_map_middle.end(), input, buffer_middle.data().begin());
 }
 template<class I, class V>
-void NearestNeighborComm<I,V>::do_global_gather_wait( CudaTag, value_type * values, MPI_Request rqst[4]) const
+void NearestNeighborComm<I,V>::do_global_gather_wait( CudaTag, const value_type* input, value_type * values, MPI_Request rqst[4]) const
 {
+    thrust::gather( thrust::cuda::tag(), gather_map_middle.begin(), gather_map_middle.end(), input, buffer_middle.data().begin());
     thrust::scatter( thrust::cuda::tag(), buffer_middle.data().begin(), buffer_middle.data().end(), scatter_map_middle.begin(), values);
     MPI_Waitall( 4, rqst, MPI_STATUSES_IGNORE );
     //scatter received values into values array

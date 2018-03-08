@@ -129,7 +129,7 @@ struct RowColDistMat
                        get_matrix_category<LocalMatrixInner>(),
                        get_vector_category<container>() );
         //2. wait for communication to finish
-        m_c.global_gather_wait( m_buffer.data(), rqst);
+        m_c.global_gather_wait( x.data(), m_buffer.data(), rqst);
         //3. compute and add outer points
         dg::blas2::detail::doSymv(alpha, m_o, m_buffer.data(), 1., y.data(),
                        get_matrix_category<LocalMatrixOuter>(),
@@ -173,7 +173,7 @@ struct RowColDistMat
                        get_vector_category<container>(),
                        get_vector_category<container>() );
         //2. wait for communication to finish
-        m_c.global_gather_wait( m_buffer.data(), rqst);
+        m_c.global_gather_wait( x.data(), m_buffer.data(), rqst);
         //3. compute and add outer points
         dg::blas2::detail::doSymv(1, m_o, m_buffer.data(), 1., y.data(),
                        get_matrix_category<LocalMatrixOuter>(),
