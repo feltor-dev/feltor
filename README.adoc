@@ -30,16 +30,14 @@ git clone https://www.github.com/feltor-dev/feltor
 
 You also need to clone https://github.com/thrust/thrust[thrust] and
 https://github.com/cusplibrary/cusplibrary[cusp] distributed under the
-Apache-2.0 license. So again in a folder of your choice
+Apache-2.0 license. Also, we depend on Agner Fog's https://github.com/feltor-dev/vcl[vcl] library (GPL-3.0). So again in a folder of your choice
 
 [source,sh]
 ----
 git clone https://www.github.com/thrust/thrust
 git clone https://www.github.com/cusplibrary/cusplibrary
+git clone https://www.github.com/feltor-dev/vcl
 ----
-
-Finally, you need to download and unzip the C++ vector class library by Agner Fog (GNU GPL license)
-from http://www.agner.org/optimize/#vectorclass
 
 ____
 Our code only depends on external libraries that are themselves openly
