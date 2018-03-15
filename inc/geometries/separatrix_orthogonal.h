@@ -179,7 +179,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
 };
 
 /**
- * @brief Choose points on separatrix
+ * @brief Choose points on separatrix and construct grid from there
  *
  * @ingroup generators_geo
  */
@@ -191,12 +191,12 @@ struct SeparatrixOrthogonal : public aGeneratorX2d
      * @param psi the flux function
      * @param chi the monitor tensor
      * @param psi_0 must be the closed flux surface inside domain boundary
-     * @param xX the X-point
-     * @param yX the X-point
-     * @param x0
-     * @param y0
+     * @param xX the X-point x - coordinate
+     * @param yX the X-point y - coordinate
+     * @param x0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
      * @param firstline =0 means conformal, =1 means equalarc discretization of the separatrix
-     * @param verbose if true the integrators will write additional information to std::cout
+     * @param verbose if true the integrators will write additional information to \c std::cout
      */
     SeparatrixOrthogonal( const BinaryFunctorsLvl2& psi, const BinarySymmTensorLvl1& chi, double psi_0, //psi_0 must be the closed surface, 0 the separatrix
             double xX, double yX, double x0, double y0, int firstline, bool verbose = false ):

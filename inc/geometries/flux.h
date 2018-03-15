@@ -138,11 +138,11 @@ struct FluxGenerator : public aGenerator2d
      * @param ipol \f$ I(x,y)\f$ the current function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary
      * @param psi_1 second boundary
-     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param x0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
-     * @param verbose if true the integrators will write additional information to std::cout
-     * @note If mode == 1 then this class does the same as the RibeiroFluxGenerator
+     * @param verbose if true the integrators will write additional information to \c std::cout
+     * @note If \c mode==1 then this class does the same as the \c RibeiroFluxGenerator
      */
     FluxGenerator( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& ipol, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
         psi_(psi), ipol_(ipol), mode_(mode), m_verbose( verbose)
@@ -229,10 +229,10 @@ struct RibeiroFluxGenerator : public aGenerator2d
      * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary
      * @param psi_1 second boundary
-     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param x0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
-     * @param verbose if true the integrators will write additional information to std::cout
+     * @param verbose if true the integrators will write additional information to \c std::cout
      */
     RibeiroFluxGenerator( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
         psip_(psi), mode_(mode), m_verbose(verbose)
