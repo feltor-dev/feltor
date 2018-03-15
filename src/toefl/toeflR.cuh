@@ -179,7 +179,7 @@ const container& Explicit<G, M, container>::compute_psi( const container& potent
     //in gyrofluid invert Gamma operator
     if( equations == "local" || equations == "global")
     {
-        if (p.tau == 0.) {
+        if (tau == 0.) {
             dg::blas1::axpby( 1.,potential, 0.,phi[1]); //chi = N_i - 1
         } 
         else {
@@ -256,7 +256,7 @@ const container& Explicit<G, M, container>::polarisation( const std::vector<cont
     //compute polarisation
     if( equations == "local" || equations == "global")
     {
-        if (p.tau == 0.) {
+        if (tau == 0.) {
             dg::blas1::axpby( 1., y[1], 0.,gamma_n); //chi = N_i - 1
         } 
         else {
