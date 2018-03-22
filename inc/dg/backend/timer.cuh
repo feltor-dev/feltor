@@ -63,7 +63,29 @@ class Timer //OMP non-MPI
 #else // MPI_VERSION not defined and THRUST == CPU
 
 ///@cond
-
+#if defined _MSC_VER //we are on windows, God help us
+#include <windows.h>
+namespace dg{
+class Timer
+{
+public:
+    Timer()
+    {
+        LARGE_INTEGER timerFreq;
+        QueryPerformanceFrequency(&timerFreq);
+        m_freq = 1.0 / timerFreq.QuadPart;
+    }
+    inline void tic(void) { QueryPerformanceCounter(&m_beginTime); }
+    inline void toc(void) { QueryPerformanceCounter(&m_endTime); }
+    inline double diff(void) {
+        return (m_endTime.QuadPart - m_beginTime.QuadPart) * m_freq;
+    }
+private:
+    double m_freq;
+    LARGE_INTEGER m_beginTime;
+    LARGE_INTEGER m_endTime;
+};
+#else //linux
 #include <sys/time.h>
 namespace dg{
 class Timer //CPU non-MPI
@@ -76,6 +98,7 @@ class Timer //CPU non-MPI
     double diff()const{ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
 };
 }//namespace dg
+#endif//windows or not
 #endif//MPI_VERSION
 
 #else //THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA

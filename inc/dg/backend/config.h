@@ -7,6 +7,8 @@
 # define RESTRICT restrict
 #elif defined(__GNUG__)
 # define RESTRICT __restrict__
+#elif defined( _MSC_VER)
+# define RESTRICT __restrict
 #else
 # warning Missing restrict keyword for this compiler
 # define RESTRICT
@@ -45,7 +47,11 @@
 #define SIMD simd
 #endif //GCC_VERSION
 
-#endif //__GNUG__
+#elif defined(_MSC_VER)
+#warning "No OpenMP 4 support on your compiler"
+#define SIMD
+#endif
+#endif //compilers
 #endif //THRUST_DEVICE_SYSTEM
 
 //%%%%%%%%%%%%%%%try to check for cuda-aware MPI support%%%%%%%%%%%%%%%%%%%%%%%%%%
