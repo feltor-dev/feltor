@@ -10,14 +10,14 @@
 #elif defined( _MSC_VER)
 # define RESTRICT __restrict
 #else
-# warning Missing restrict keyword for this compiler
+#pragma message "Don't know restrict keyword for this compiler!"
 # define RESTRICT
 #endif
 
 //%%%%%%%%%%%%%%%%check for fast FMAs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #include <cmath>
 #ifndef FP_FAST_FMA
-#warning "Fast std::fma(a,b,c) not activated! Using a*b+c instead!"
+#pragma message "Fast std::fma(a,b,c) not activated! Using a*b+c instead!"
 #define DG_FMA(a,b,c) (a*b+c)
 #else
 #define DG_FMA(a,b,c) (std::fma(a,b,c))
@@ -29,7 +29,7 @@
 #if defined(__INTEL_COMPILER)
 
 #if __INTEL_COMPILER < 1500
-#warning "icc version >= 15.0 recommended to activate OpenMP 4 support"
+#pragma message "icc version >= 15.0 recommended to activate OpenMP 4 support"
 #define SIMD
 #else//>1500
 #define SIMD simd
@@ -41,16 +41,15 @@
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 #endif //GCC_VERSION
 #if GCC_VERSION < 40900
-#warning "gcc version >= 4.9 recommended to activate OpenMP 4 support"
+#pragma message "gcc version >= 4.9 recommended to activate OpenMP 4 support"
 #define SIMD
 #else
 #define SIMD simd
 #endif //GCC_VERSION
 
 #elif defined(_MSC_VER)
-#warning "No OpenMP 4 support on your compiler"
+#pragma message "No OpenMP 4 support on your compiler"
 #define SIMD
-#endif
 #endif //compilers
 #endif //THRUST_DEVICE_SYSTEM
 
@@ -62,7 +61,7 @@
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
 #error "CUDA aware MPI installation required!"
 #else
-#warning "Cannot determine CUDA-aware MPI support!";
+#pragma message "Cannot determine CUDA-aware MPI support!"
 #endif //MPIX_CUDA
 
 #endif //THRUST = CUDA

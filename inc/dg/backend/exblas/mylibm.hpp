@@ -27,7 +27,7 @@
 #if INSTRSET <5
 #error"Instruction set SSE4.1 is required! -msse4.1"
 #elif INSTRSET <7
-#warning "It is recommended to activate AVX instruction set (-mavx) or higher"
+#pragma message "It is recommended to activate AVX instruction set (-mavx) or higher"
 #endif
 
 #if defined __INTEL_COMPILER
@@ -63,13 +63,6 @@ namespace cpu{
 #define likely(x) (x)
 #define unlikely(x) (x)
 #endif
-
-inline uint64_t rdtsc()
-{
-	uint32_t hi, lo;
-	asm volatile ("rdtsc" : "=a"(lo), "=d"(hi));
-	return lo | ((uint64_t)hi << 32);
-}
 
 inline int64_t myllrint(double x) {
     return _mm_cvtsd_si64(_mm_set_sd(x));
@@ -215,14 +208,14 @@ inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
 //    return x & vcl::Vec8d(_mm512_castsi256_pd(_mm512_set1_epi64x(0xfff0000000000000ull)));
 //}
 
-static inline double horizontal_max(vcl::Vec8d x) {
-    vcl::Vec4d h = x.get_high();
-    vcl::Vec4d l = x.get_low();
-    vcl::Vec4d m1 = max(h, l);
-    vcl::Vec4d m2 = vcl::permute4d<1, 0, 1, 0>(m1);
-    vcl::Vec4d m = vcl::max(m1, m2);
-    return m[0];    // Why is it so hard to convert from vector xmm register to scalar xmm register?
-}
+//static inline double horizontal_max(vcl::Vec8d x) {
+//    vcl::Vec4d h = x.get_high();
+//    vcl::Vec4d l = x.get_low();
+//    vcl::Vec4d m1 = max(h, l);
+//    vcl::Vec4d m2 = vcl::permute4d<1, 0, 1, 0>(m1);
+//    vcl::Vec4d m = vcl::max(m1, m2);
+//    return m[0];    // Why is it so hard to convert from vector xmm register to scalar xmm register?
+//}
 
 inline static bool horizontal_or(vcl::Vec8d const & a) {
     //return _mm512_movemask_pd(a) != 0;
