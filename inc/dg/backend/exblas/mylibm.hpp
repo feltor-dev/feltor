@@ -56,7 +56,7 @@ namespace exblas{
 namespace cpu{
 
 // Making C code less readable in an attempt to make assembly more readable
-#if 1
+#if not defined _MSC_VER //there is no builtin_expect on msvc:
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 #else
