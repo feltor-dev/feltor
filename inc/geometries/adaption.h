@@ -2,7 +2,7 @@
 
 #include "fluxfunctions.h"
 
-/*!@file 
+/*!@file
  *
  * contains an adaption function and a monitor metric for the Hector algorithm
  *
@@ -94,7 +94,7 @@ struct NablaPsiInvX: public aCloneableBinaryFunctor<NablaPsiInvX>
         double psip = sqrt( psiX*psiX+psiY*psiY);
         return -(psiX*psiXX+psiY*psiXY)/psip/psip/psip;
     }
-    
+
     BinaryFunctorsLvl2 psi_;
 };
 
@@ -113,7 +113,7 @@ struct NablaPsiInvY: public aCloneableBinaryFunctor<NablaPsiInvY>
         double psip = sqrt( psiX*psiX+psiY*psiY);
         return -(psiX*psiXY+psiY*psiYY)/psip/psip/psip;
     }
-    
+
     BinaryFunctorsLvl2 psi_;
 };
 
@@ -130,7 +130,7 @@ BinaryFunctorsLvl1 make_NablaPsiInvCollective( const BinaryFunctorsLvl2& psi)
 
 /**
  * @brief The xx-component of the Liseikin monitor metric
- * \f[ \chi^{xx} = (\psi_y^2+k^2\psi_x^2 + \varepsilon)/\sqrt{\det \chi} \f] 
+ * \f[ \chi^{xx} = (\psi_y^2+k^2\psi_x^2 + \varepsilon)/\sqrt{\det \chi} \f]
  *
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
@@ -153,7 +153,7 @@ struct Liseikin_XX: public aCloneableBinaryFunctor<Liseikin_XX>
 
 /**
  * @brief The xy-component of the Liseikin monitor metric
- * \f[ \chi^{xy} = (-\psi_x\psi_y+k^2\psi_x\psi_y )/\sqrt{\det \chi} \f] 
+ * \f[ \chi^{xy} = (-\psi_x\psi_y+k^2\psi_x\psi_y )/\sqrt{\det \chi} \f]
  *
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
@@ -176,7 +176,7 @@ struct Liseikin_XY: public aCloneableBinaryFunctor<Liseikin_XY>
 
 /**
  * @brief The yy-component of the Liseikin monitor metric
- * \f[ \chi^{yy} = (\varepsilon+\psi_x^2+k^2\psi_y^2 )/\sqrt{\det \chi} \f] 
+ * \f[ \chi^{yy} = (\varepsilon+\psi_x^2+k^2\psi_y^2 )/\sqrt{\det \chi} \f]
  *
  * with
  * \f[ \det \chi = (\varepsilon+(\nabla\psi)^2)(\varepsilon+k^2(\nabla\psi)^2)\f]
@@ -214,9 +214,9 @@ struct DivLiseikinX: public aCloneableBinaryFunctor<DivLiseikinX>
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
         return (k2-1.)*(k2*psiY5*psiXY-k2*psiX*psiY4*(psiYY-2.*psiXX) +
-                    psiX*(eps_+2.*eps_*k2+2.*k2*psiX2)*psiY2*psiXX + 
+                    psiX*(eps_+2.*eps_*k2+2.*k2*psiX2)*psiY2*psiXX +
                     psiX*(eps_+k2*psiX2)*((eps_+psiX2)*psiYY+eps_*psiXX)+
-                    psiY*((eps_*eps_-k2*psiX4)*psiXY-(eps_+2*psiX2)*(eps_+k2*psiX2)*psiXY) + 
+                    psiY*((eps_*eps_-k2*psiX4)*psiXY-(eps_+2*psiX2)*(eps_+k2*psiX2)*psiXY) +
                     psiY3*(eps_*(1.+k2)*psiXY-(eps_+2.*k2*psiX2)*psiXY))/sqrtG/sqrtG/sqrtG;
     }
 
@@ -240,7 +240,7 @@ struct DivLiseikinY : public aCloneableBinaryFunctor<DivLiseikinY>
         double psiY2 = psiY*psiY, psiY4 = psiY2*psiY2;
         double psip2 = psiX*psiX+psiY*psiY;
         double sqrtG = sqrt((eps_+psip2)*(eps_+k2*psip2));
-        return (k2-1.)*(psiX2*psiY*(eps_+2.*eps_*k2+2.*k2*psiY2)*psiYY + 
+        return (k2-1.)*(psiX2*psiY*(eps_+2.*eps_*k2+2.*k2*psiY2)*psiYY +
                 k2*psiX4*psiY*(2.*psiYY-psiXX)+psiY*(eps_+k2*psiY2)
                 *(eps_*psiYY+(eps_+psiY2)*psiXX)+k2*psiX5*psiXY+
                 psiX3*(-(eps_+2.*k2*psiY2)*psiXY+eps_*(1.+k2)*psiXY) +

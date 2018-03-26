@@ -10,19 +10,19 @@
 
 namespace dg{
 namespace create{
-    
+
 ///@cond
 /**
-* @brief create host_vector containing 1d X-space abscissas 
+* @brief create host_vector containing 1d X-space abscissas
 *
 * same as evaluation of f(x) = x on the grid
-* @param g The grid 
+* @param g The grid
 *
 * @return Host Vector
 */
 thrust::host_vector<double> abscissas( const Grid1d& g)
 {
-    thrust::host_vector<double> v(g.size()); 
+    thrust::host_vector<double> v(g.size());
     double xp=1.;
     for( unsigned i=0; i<g.N(); i++)
     {
@@ -40,13 +40,13 @@ thrust::host_vector<double> abscissas( const Grid1d& g)
 
 /*!@class hide_weights_doc
 * @brief create host_vector containing X-space weight coefficients
-* @param g The grid 
+* @param g The grid
 * @return Host Vector
 * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_inv_weights_doc
 * @brief create host_vector containing inverse X-space weight coefficients
-* @param g The grid 
+* @param g The grid
 * @return Host Vector
 * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
 */

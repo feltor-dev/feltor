@@ -11,7 +11,7 @@
 */
 namespace dg
 {
- 
+
 
 ///@cond
 

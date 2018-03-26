@@ -16,6 +16,7 @@
 #include "init.h"
 #include "magnetic_field.h"
 #include "average.h"
+#include "testfunctors.h"
 
 struct Parameters
 {
@@ -77,7 +78,7 @@ int main( int argc, char* argv[])
     std::string newfilename;
     Json::Reader reader;
     Json::Value input_js, geom_js;
-    if( argc == 4) 
+    if( argc == 4)
     {
         newfilename = argv[3];
         std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
@@ -117,11 +118,11 @@ int main( int argc, char* argv[])
     n = p.n, Nx = p.Nx, Ny = p.Ny, Nz = p.Nz;
     double Rmin=gp.R_0-p.boxscaleRm*gp.a;
     double Zmin=-p.boxscaleZm*gp.a*gp.elongation;
-    double Rmax=gp.R_0+p.boxscaleRp*gp.a; 
+    double Rmax=gp.R_0+p.boxscaleRp*gp.a;
     double Zmax=p.boxscaleZp*gp.a*gp.elongation;
- 
+
     //construct all geometry quantities
-    dg::geo::TokamakMagneticField c = dg::geo::createTaylorField(gp);
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField(gp);
     const double R_X = gp.R_0-1.1*gp.triangularity*gp.a;
     const double Z_X = -1.1*gp.elongation*gp.a;
     const double R_H = gp.R_0-gp.triangularity*gp.a;
@@ -163,9 +164,12 @@ int main( int argc, char* argv[])
     dg::geo::PsiLimiter psilimiter(c.psip(), gp.psipmaxlim);
     dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, c.psip());
 
-    dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
+    dg::geo::FuncDirNeu blob(c, 0, 1, 480, -300, 70., 1. );
+    dg::geo::FuncDirNeu blobX(c, 0, 1, 420, -470, 50.,1.);
+
+    //dg::BathRZ bath(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
 //     dg::Gaussian3d bath(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
-    dg::Gaussian3d blob(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
+    //dg::Gaussian3d blob(gp.R_0+p.posX*gp.a, p.posY*gp.a, M_PI, p.sigma, p.sigma, p.sigma, p.amp);
     dg::Grid2d grid2d(Rmin,Rmax,Zmin,Zmax, n,Nx,Ny);
 
     std::vector<dg::HVec> hvisual(21);
@@ -190,26 +194,26 @@ int main( int argc, char* argv[])
     hvisual[13] = dg::evaluate( zonalflow, grid2d);
     hvisual[14] = dg::evaluate( prof, grid2d);
     hvisual[15] = dg::evaluate( blob, grid2d);
-    hvisual[16] = dg::evaluate( bath, grid2d);
+    hvisual[16] = dg::evaluate( blobX, grid2d);
     //initial functions damped and with profile
     hvisual[17] = dg::evaluate( dg::one, grid2d);
     hvisual[18] = dg::evaluate( dg::one, grid2d);
     hvisual[19] = dg::evaluate( dg::one, grid2d);
-    hvisual[20] = dg::evaluate( dg::one, grid2d);            
+    hvisual[20] = dg::evaluate( dg::one, grid2d);
     dg::blas1::axpby( 1.,hvisual[16] , 1.,hvisual[14],hvisual[17]); //prof + bath
     dg::blas1::axpby( 1.,hvisual[13] , 1.,hvisual[14],hvisual[18]); //prof + zonal
     dg::blas1::axpby( 1.,hvisual[15] , 1.,hvisual[14],hvisual[19]); //prof + blob
     dg::blas1::plus(hvisual[17], -1); //to n -1
     dg::blas1::plus(hvisual[18], -1); //to n -1
     dg::blas1::plus(hvisual[19], -1); //to n -1
-    dg::blas1::pointwiseDot(hvisual[10], hvisual[17], hvisual[17]); //damped 
-    dg::blas1::pointwiseDot(hvisual[10], hvisual[18], hvisual[18]); //damped 
-    dg::blas1::pointwiseDot(hvisual[10], hvisual[19], hvisual[19]); //damped 
+    dg::blas1::pointwiseDot(hvisual[10], hvisual[17], hvisual[17]); //damped
+    dg::blas1::pointwiseDot(hvisual[10], hvisual[18], hvisual[18]); //damped
+    dg::blas1::pointwiseDot(hvisual[10], hvisual[19], hvisual[19]); //damped
 
     //Compute flux average
     dg::geo::Alpha alpha(c); // = B^phi / |nabla psip |
     dg::DVec psipog2d   = dg::evaluate( c.psip(), grid2d);
-    dg::DVec alphaog2d  = dg::evaluate( alpha, grid2d); 
+    dg::DVec alphaog2d  = dg::evaluate( alpha, grid2d);
     double psipmin = (float)thrust::reduce( psipog2d .begin(), psipog2d .end(), 0.0,thrust::minimum<double>()  );
     unsigned npsi = 3, Npsi = 150;//set number of psivalues
     psipmin += (gp.psipmax - psipmin)/(double)Npsi; //the inner value is not good
@@ -218,11 +222,11 @@ int main( int argc, char* argv[])
     dg::HVec sf         = dg::evaluate( qprof,    grid1d);
     dg::HVec abs        = dg::evaluate( dg::cooX1d, grid1d);
 
-    
-    std::string names[] = { "", "psip", "ipol", "invB","invbf", "KR", 
-                            "KZ", "gradLnB", "iris", "pupil", "dampprof", 
-                            "damp", "lim",  "zonal", "prof", "blob", 
-                            "bath", "ini1","ini2","ini3","ini4"};
+
+    std::string names[] = { "", "psip", "ipol", "invB","invbf", "KR",
+                            "KZ", "gradLnB", "iris", "pupil", "dampprof",
+                            "damp", "lim",  "zonal", "prof", "blob",
+                            "blobX", "ini1","ini2","ini3","ini4"};
 
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -234,7 +238,7 @@ int main( int argc, char* argv[])
     err = file::define_dimension( ncid,"psi", &dim1d_ids[0], grid1d);
     dg::Grid3d grid3d(Rmin,Rmax,Zmin,Zmax, 0, 2.*M_PI, n,Nx,Ny,Nz);
     err = file::define_dimensions( ncid, &dim3d_ids[0], grid3d);
-    dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2]; 
+    dim2d_ids[0] = dim3d_ids[1], dim2d_ids[1] = dim3d_ids[2];
 
     //write 1d vectors
     int avgID[2];

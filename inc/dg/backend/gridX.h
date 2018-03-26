@@ -5,7 +5,7 @@
 #include "grid.h"
 #include "../enums.h"
 
-/*! @file 
+/*! @file
   @brief base X-point topology classes
   */
 
@@ -13,31 +13,31 @@
  * @brief Construct a 2D X-point grid
  *
  * @param x0 left boundary in x
- * @param x1 right boundary in x 
+ * @param x1 right boundary in x
  * @param y0 lower boundary in y
- * @param y1 upper boundary in y 
+ * @param y1 upper boundary in y
  * @param fx factor for the partition in x-direction (fx*Nx will be rounded)
  * @param fy factor for the partition in y-direction (fy*Ny will be rounded)
  * @param n  # of polynomial coefficients per dimension
  *   (1<=n<=20, note that the library is optimized for n=3 )
- * @param Nx # of points in x 
+ * @param Nx # of points in x
  * @param Ny # of points in y
  */
 
 /*!@class hide_gridX_parameters3d
  * @brief Construct a 3D X-point grid
  * @param x0 left boundary in x
- * @param x1 right boundary in x 
+ * @param x1 right boundary in x
  * @param y0 lower boundary in y
- * @param y1 upper boundary in y 
+ * @param y1 upper boundary in y
  * @param z0 lower boundary in z
- * @param z1 upper boundary in z 
+ * @param z1 upper boundary in z
  * @param fx factor for the partition in x-direction
  * @param fy factor for the partition in y-direction
  * @param n  # of polynomial coefficients per (x-,y-) dimension
 *   (1<=n<=20, note that the library is optimized for n=3 )
 * @attention # of polynomial coefficients in z direction is always 1
- * @param Nx # of points in x 
+ * @param Nx # of points in x
  * @param Ny # of points in y
  * @param Nz # of points in z
  */
@@ -48,7 +48,7 @@ namespace dg{
 /**
 * @brief 1D grid for X-point topology
 *
-* The grid looks like 
+* The grid looks like
 @code
 |------x----------x------|
 @endcode
@@ -64,7 +64,7 @@ struct GridX1d
     typedef OneDimensionalTag dimensionality;
     /**
      * @brief 1D X-point grid
-     * 
+     *
      * @param x0 left boundary
      * @param x1 right boundary
      * @param f factor 0<f<0.5 divides the domain
@@ -77,7 +77,7 @@ struct GridX1d
         n_(n), Nx_(N), bcx_(bcx), dlt_(n)
     {
         assert( (f >= 0) && (f < 0.5) );
-        assert( fabs(outer_N() - f*(double)N) < 1e-15); 
+        assert( fabs(outer_N() - f*(double)N) < 1e-14);
         assert( x1 > x0 );
         assert( N > 0  );
         assert( n != 0 );
@@ -86,61 +86,61 @@ struct GridX1d
     /**
      * @brief left boundary
      *
-     * @return 
+     * @return
      */
     double x0() const {return x0_;}
     /**
      * @brief right boundary
      *
-     * @return 
+     * @return
      */
     double x1() const {return x1_;}
     /**
      * @brief Factor
      *
-     * @return 
+     * @return
      */
     double f() const {return f_;}
     /**
      * @brief total length of interval
      *
-     * @return 
+     * @return
      */
     double lx() const {return x1_-x0_;}
     /**
      * @brief cell size
      *
-     * @return 
+     * @return
      */
     double h() const {return lx()/(double)Nx_;}
     /**
      * @brief number of cells
      *
-     * @return 
+     * @return
      */
     unsigned N() const {return Nx_;}
     /**
      * @brief number of cells in one of the outer regions
      *
-     * @return 
+     * @return
      */
     unsigned outer_N() const {return (unsigned)(round(f_*(double)Nx_));}
     /**
      * @brief number of cells in the inner region
      *
-     * @return 
+     * @return
      */
     unsigned inner_N() const {return N()-2*outer_N();}
     /**
      * @brief number of polynomial coefficients
      *
-     * @return 
+     * @return
      */
     unsigned n() const {return n_;}
     /**
      * @brief boundary conditions
      *
-     * @return 
+     * @return
      */
     bc bcx() const {return bcx_;}
     /**
@@ -152,10 +152,10 @@ struct GridX1d
     /**
      * @brief the discrete legendre transformation
      *
-     * @return 
+     * @return
      */
     /**
-     * @brief Display 
+     * @brief Display
      *
      * @param os output stream
      */
@@ -215,7 +215,7 @@ struct GridX1d
      */
     bool contains( double x) const
     {
-        if( (x>=x0_ && x <= x1_)) return true; 
+        if( (x>=x0_ && x <= x1_)) return true;
         return false;
     }
   private:
@@ -232,13 +232,13 @@ struct aTopologyX3d; //forward declare 3d version
  *
  * is of the form
  @code
- | -----> y 
+ | -----> y
  |  |---x----------x---|
  |  |---x----------x---|
  v  |--- ---------- ---|
- x  |--- ---------- ---| fx*Lx
+ x  |--- ---------- ---| fx*lx
     |--- ---------- ---|
-    fy*Ly
+    fy*ly
  @endcode
  *
  * @ingroup basictopology
@@ -251,127 +251,127 @@ struct aTopologyX2d
     /**
      * @brief Left boundary in x
      *
-     * @return 
+     * @return
      */
     double x0() const {return x0_;}
     /**
      * @brief Right boundary in x
      *
-     * @return 
+     * @return
      */
     double x1() const {return x1_;}
     /**
      * @brief left boundary in y
      *
-     * @return 
+     * @return
      */
     double y0() const {return y0_;}
     /**
-     * @brief Right boundary in y 
+     * @brief Right boundary in y
      *
-     * @return 
+     * @return
      */
     double y1() const {return y1_;}
     /**
-     * @brief length of x 
+     * @brief length of x
      *
-     * @return 
+     * @return
      */
     double lx() const {return x1_-x0_;}
     /**
      * @brief length of y
      *
-     * @return 
+     * @return
      */
     double ly() const {return y1_-y0_;}
     /**
-     * @brief cell size in x 
+     * @brief cell size in x
      *
-     * @return 
+     * @return
      */
     double hx() const {return lx()/(double)Nx_;}
     /**
      * @brief cell size in y
      *
-     * @return 
+     * @return
      */
     double hy() const {return ly()/(double)Ny_;}
     /**
      * @brief partition factor in x
      *
-     * @return 
+     * @return
      */
     double fx() const {return fx_;}
     /**
      * @brief partition factor in y
      *
-     * @return 
+     * @return
      */
     double fy() const {return fy_;}
     /**
      * @brief number of polynomial coefficients in x and y
      *
-     * @return 
+     * @return
      */
     unsigned n() const {return n_;}
     /**
      * @brief number of cells in x
      *
-     * @return 
+     * @return
      */
     unsigned Nx() const {return Nx_;}
     /**
      * @brief number of topological cells in x
      *
-     * @return 
+     * @return
      */
     unsigned inner_Nx() const {return Nx_ - outer_Nx();}
     /**
      * @brief number of smooth rows in x
      *
-     * @return 
+     * @return
      */
     unsigned outer_Nx() const {return (unsigned)round(fx_*(double)Nx_);}
     /**
      * @brief number of cells in y
      *
-     * @return 
+     * @return
      */
     unsigned Ny() const {return Ny_;}
     /**
      * @brief number of cells in the inner region of y
      *
-     * @return 
+     * @return
      */
     unsigned inner_Ny() const {return Ny_-2*outer_Ny();}
     /**
      * @brief number of cells in one of the outer regions of y
      *
-     * @return 
+     * @return
      */
     unsigned outer_Ny() const {return (unsigned)round(fy_*(double)Ny_);}
     /**
      * @brief boundary conditions in x
      *
-     * @return 
+     * @return
      */
     bc bcx() const {return bcx_;}
     /**
      * @brief boundary conditions in y
      *
-     * @return 
+     * @return
      */
     bc bcy() const {return bcy_;}
     /**
      * @brief Return a copy without topology
      *
-     * @return 
+     * @return
      */
     Grid2d grid() const {return Grid2d( x0_,x1_,y0_,y1_,n_,Nx_,Ny_,bcx_,bcy_);}
     /**
      * @brief discrete legendre trafo
      *
-     * @return 
+     * @return
      */
     const DLT<double>& dlt() const{return dlt_;}
     /**
@@ -381,7 +381,7 @@ struct aTopologyX2d
      */
     unsigned size() const { return n_*n_*Nx_*Ny_;}
     /**
-     * @brief Display 
+     * @brief Display
      *
      * @param os output stream
      */
@@ -461,7 +461,7 @@ struct aTopologyX2d
      */
     bool contains( double x, double y)const
     {
-        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true; 
+        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_)) return true;
         return false;
     }
   protected:
@@ -475,8 +475,8 @@ struct aTopologyX2d
     {
         assert( (fy_ >= 0.) && (fy_ < 0.5) );
         assert( (fx_ >= 0.) && (fx_ < 1.) );
-        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
-        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
+        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-14);
+        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-14);
         assert( n != 0);
         assert( x1 > x0 && y1 > y0);
         assert( Nx_ > 0  && Ny > 0 );
@@ -526,7 +526,7 @@ struct GridX2d : public aTopologyX2d
  * In the third dimension only 1 polynomial coefficient is used,
  * not n. In 2d it looks like
  @code
- | -----> y 
+ | -----> y
  |  |---x----------x---|
  |  |---x----------x---|
  v  |--- ---------- ---|
@@ -543,167 +543,167 @@ struct aTopologyX3d
     /**
      * @brief left boundary in x
      *
-     * @return 
+     * @return
      */
     double x0() const {return x0_;}
     /**
      * @brief right boundary in x
      *
-     * @return 
+     * @return
      */
     double x1() const {return x1_;}
 
     /**
-     * @brief left boundary in y 
+     * @brief left boundary in y
      *
-     * @return 
+     * @return
      */
     double y0() const {return y0_;}
     /**
      * @brief right boundary in y
      *
-     * @return 
+     * @return
      */
     double y1() const {return y1_;}
 
     /**
      * @brief left boundary in z
      *
-     * @return 
+     * @return
      */
     double z0() const {return z0_;}
     /**
      * @brief right boundary in z
      *
-     * @return 
+     * @return
      */
     double z1() const {return z1_;}
 
     /**
      * @brief length in x
      *
-     * @return 
+     * @return
      */
     double lx() const {return x1_-x0_;}
     /**
      * @brief length in y
      *
-     * @return 
+     * @return
      */
     double ly() const {return y1_-y0_;}
     /**
      * @brief length in z
      *
-     * @return 
+     * @return
      */
     double lz() const {return z1_-z0_;}
-    
+
     /**
      * @brief cell size in x
      *
-     * @return 
+     * @return
      */
     double hx() const {return lx()/(double)Nx_;}
     /**
      * @brief cell size in y
      *
-     * @return 
+     * @return
      */
     double hy() const {return ly()/(double)Ny_;}
     /**
      * @brief cell size in z
      *
-     * @return 
+     * @return
      */
     double hz() const {return lz()/(double)Nz_;}
     /**
      * @brief partition factor in x
      *
-     * @return 
+     * @return
      */
     double fx() const {return fx_;}
     /**
      * @brief partition factor in y
      *
-     * @return 
+     * @return
      */
     double fy() const {return fy_;}
     /**
      * @brief number of polynomial coefficients in x and y
      *
-     * @return 
+     * @return
      */
     unsigned n() const {return n_;}
     /**
      * @brief number of points in x
      *
-     * @return 
+     * @return
      */
     unsigned Nx() const {return Nx_;}
     /**
      * @brief number of topological cells in x
      *
-     * @return 
+     * @return
      */
     unsigned inner_Nx() const {return Nx_ - outer_Nx();}
     /**
      * @brief number of smooth rows in x
      *
-     * @return 
+     * @return
      */
     unsigned outer_Nx() const {return (unsigned)round(fx_*(double)Nx_);}
     /**
      * @brief number of cells in y
      *
-     * @return 
+     * @return
      */
     unsigned Ny() const {return Ny_;}
     /**
      * @brief number of cells in the inner region of y
      *
-     * @return 
+     * @return
      */
     unsigned inner_Ny() const {return Ny_-2*outer_Ny();}
     /**
      * @brief number of cells in one of the outer regions of y
      *
-     * @return 
+     * @return
      */
     unsigned outer_Ny() const {return (unsigned)round(fy_*(double)Ny_);}
     /**
      * @brief number of points in z
      *
-     * @return 
+     * @return
      */
     unsigned Nz() const {return Nz_;}
     /**
-     * @brief boundary conditions in x 
+     * @brief boundary conditions in x
      *
-     * @return 
+     * @return
      */
     bc bcx() const {return bcx_;}
     /**
      * @brief boundary conditions in y
      *
-     * @return 
+     * @return
      */
     bc bcy() const {return bcy_;}
     /**
-     * @brief boundary conditions in z 
+     * @brief boundary conditions in z
      *
-     * @return 
+     * @return
      */
     bc bcz() const {return bcz_;}
     /**
      * @brief Return a copy without topology
      *
-     * @return 
+     * @return
      */
     Grid3d grid() const {return Grid3d( x0_,x1_,y0_,y1_,z0_,z1_,n_,Nx_,Ny_,Nz_,bcx_,bcy_,bcz_);}
     /**
      * @brief discrete legendre transformation
      *
-     * @return 
+     * @return
      */
     const DLT<double>& dlt() const{return dlt_;}
     /**
@@ -713,7 +713,7 @@ struct aTopologyX3d
      */
     unsigned size() const { return n_*n_*Nx_*Ny_*Nz_;}
     /**
-     * @brief Display 
+     * @brief Display
      *
      * @param os output stream
      */
@@ -759,8 +759,8 @@ struct aTopologyX3d
      */
     bool contains( double x, double y, double z)const
     {
-        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_) && (z>=z0_ && z<=z1_)) 
-            return true; 
+        if( (x>=x0_ && x <= x1_) && (y>=y0_ && y <= y1_) && (z>=z0_ && z<=z1_))
+            return true;
         return false;
     }
   protected:
@@ -774,10 +774,10 @@ struct aTopologyX3d
     {
         assert( (fy_ >= 0.) && (fy_ < 0.5) );
         assert( (fx_ >= 0.) && (fx_ < 1.) );
-        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-15); 
-        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-15); 
+        assert( fabs(outer_Nx() - fx_*(double)Nx) < 1e-14);
+        assert( fabs(outer_Ny() - fy_*(double)Ny) < 1e-14);
         assert( n != 0);
-        assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );         
+        assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );
         assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
     }
     ///@copydoc aTopology3d::aTopology3d(const aTopology3d&)

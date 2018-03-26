@@ -21,9 +21,9 @@ const double ly = 2*M_PI;
 /*
 double left( double x, double y) { return sin(x)*cos(y);}
 double right( double x, double y){ return exp(0.1*(x+y)); }
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
-    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
+    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI);
 }
 */
 
@@ -31,9 +31,9 @@ dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return cos(x)*sin(y);}
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
-    return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
+    return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y);
 }
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
@@ -60,7 +60,7 @@ int main()
 
     dg::ArakawaX<dg::CartesianGrid2d, Matrix, Vector> arakawa( grid);
     unsigned multi=20;
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();

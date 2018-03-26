@@ -17,14 +17,14 @@ namespace dg{
 * @ingroup lowlevel
 * In principle it's an enhanced quadratic dynamic matrix
 * for which arithmetic operators are overloaded
-* but it's not meant for performance critical code. 
+* but it's not meant for performance critical code.
 * @tparam T value type
 */
 template< class T>
 class Operator
 {
   public:
-    typedef T value_type; //!< typically double or float 
+    typedef T value_type; //!< typically double or float
     /**
     * @brief Construct empty Operator
     */
@@ -61,7 +61,7 @@ class Operator
     /**
      * @brief Copy from existing data
      *
-     * @param src size must be a square number 
+     * @param src size must be a square number
      */
     Operator( const std::vector<T>& src): data_(src)
     {
@@ -113,7 +113,7 @@ class Operator
      */
     unsigned size() const { return n_;}
     /**
-     * @brief Resize 
+     * @brief Resize
      *
      * @param m new size
      */
@@ -122,7 +122,7 @@ class Operator
     /**
      * @brief access underlying data
      *
-     * @return 
+     * @return
      */
     const std::vector<value_type>& data() const {return data_;}
 
@@ -146,7 +146,7 @@ class Operator
     *
     * @return  A newly generated Operator containing the transpose.
     */
-    Operator transpose() const 
+    Operator transpose() const
     {
         Operator o(*this);
         for( unsigned i=0; i<n_; i++)
@@ -179,7 +179,7 @@ class Operator
     /**
      * @brief subtract
      *
-     * @return 
+     * @return
      */
     Operator operator-() const
     {
@@ -187,13 +187,13 @@ class Operator
         for( unsigned i=0; i<n_*n_; i++)
             temp.data_[i] = -data_[i];
         return temp;
-    } 
+    }
     /**
      * @brief add
      *
      * @param op
      *
-     * @return 
+     * @return
      */
     Operator& operator+=( const Operator& op)
     {
@@ -209,7 +209,7 @@ class Operator
      *
      * @param op
      *
-     * @return 
+     * @return
      */
     Operator& operator-=( const Operator& op)
     {
@@ -221,11 +221,11 @@ class Operator
         return *this;
     }
     /**
-     * @brief scalar multiply 
+     * @brief scalar multiply
      *
      * @param value
      *
-     * @return 
+     * @return
      */
     Operator& operator*=( const T& value )
     {
@@ -239,11 +239,11 @@ class Operator
      * @param lhs
      * @param rhs
      *
-     * @return 
+     * @return
      */
-    friend Operator operator+( const Operator& lhs, const Operator& rhs) 
+    friend Operator operator+( const Operator& lhs, const Operator& rhs)
     {
-        Operator temp(lhs); 
+        Operator temp(lhs);
         temp+=rhs;
         return temp;
     }
@@ -253,11 +253,11 @@ class Operator
      * @param lhs
      * @param rhs
      *
-     * @return 
+     * @return
      */
     friend Operator operator-( const Operator& lhs, const Operator& rhs)
     {
-        Operator temp(lhs); 
+        Operator temp(lhs);
         temp-=rhs;
         return temp;
     }
@@ -267,11 +267,11 @@ class Operator
      * @param value
      * @param rhs
      *
-     * @return 
+     * @return
      */
     friend Operator operator*( const T& value, const Operator& rhs )
     {
-        Operator temp(rhs); 
+        Operator temp(rhs);
         temp*=value;
         return temp;
     }
@@ -282,7 +282,7 @@ class Operator
      * @param lhs
      * @param value
      *
-     * @return 
+     * @return
      */
     friend Operator operator*( const Operator& lhs, const T& value)
     {
@@ -295,7 +295,7 @@ class Operator
      * @param lhs
      * @param rhs
      *
-     * @return 
+     * @return
      */
     friend Operator operator*( const Operator& lhs, const Operator& rhs)
     {
@@ -336,7 +336,7 @@ class Operator
 
     /*! @brief Read values into a Matrix from given istream
      *
-     * The values are filled linewise into the matrix. Values are seperated by 
+     * The values are filled linewise into the matrix. Values are seperated by
      * whitespace characters. (i.e. newline, blank, etc)
      * @tparam Istream The stream e.g. std::cin
      * @param is The istream
@@ -372,7 +372,7 @@ template< class T>
 T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
 {
     //from numerical recipes
-    T pivot, determinant=(T)1; 
+    T pivot, determinant=(T)1;
     unsigned pivotzeile, numberOfSwaps=0;
     const size_t n = m.size();
     p.resize( n);
@@ -390,26 +390,26 @@ T lr_pivot( dg::Operator<T>& m, std::vector<unsigned>& p)
         pivot = m(j,j);
         pivotzeile = j;
         for( size_t i = j+1; i < n; i++)
-            if( fabs( m(i,j)) > fabs(pivot)) 
+            if( fabs( m(i,j)) > fabs(pivot))
             {
                 pivot = m(i,j), pivotzeile = i;
             }
 
         if( pivot!= (T)0 )
         {
-            if( pivotzeile != j) 
+            if( pivotzeile != j)
             {
-                m.swap_lines( pivotzeile, j); 
+                m.swap_lines( pivotzeile, j);
                 numberOfSwaps++;
             }
             p[j] = pivotzeile;
-            //divide all elements below the diagonal by the pivot to get the lower matrix 
+            //divide all elements below the diagonal by the pivot to get the lower matrix
             for( size_t i=j+1; i<n; i++)
                 m(i,j) /= pivot;
             determinant*=m(j,j);
 
         }
-        else 
+        else
             throw std::runtime_error( "Matrix is singular!!");
     }
     if( numberOfSwaps % 2 != 0)
@@ -431,10 +431,10 @@ void lr_solve( const dg::Operator<T>& lr, const std::vector<unsigned>& p, std::v
 {
     assert(p.size() == lr.size() && p.size() == b.size());
     const size_t n = p.size();
-    // Vorwärtseinsetzen 
+    // Vorwärtseinsetzen
     for( size_t i = 0; i<n; i++)
     {
-        //mache Zeilentausch 
+        //mache Zeilentausch
         std::swap( b[ p[i] ], b[i]);
         for( size_t j = 0; j < i; j++)
             b[i] -= lr(i,j)*b[j];
@@ -473,7 +473,7 @@ dg::Operator<T> invert( const dg::Operator<T>& in)
     std::vector<unsigned> pivot( n);
     dg::Operator<T> lr(in);
     T determinant = detail::lr_pivot( lr, pivot);
-    if( fabs(determinant ) < 1e-14) 
+    if( fabs(determinant ) < 1e-14)
         throw std::runtime_error( "Determinant zero!");
     for( unsigned i=0; i<n; i++)
     {
@@ -591,7 +591,7 @@ Operator<double> lirj( unsigned n) {return rilj( n).transpose();}
  *
  * @return Operator
  */
-Operator<double> lilj( unsigned n) 
+Operator<double> lilj( unsigned n)
 {
     Operator<double> op( n, -1.);
     for( unsigned i=0; i<n; i++)
@@ -605,7 +605,7 @@ Operator<double> lilj( unsigned n)
 /**
  * @brief Construct a diagonal operator with weights
  *
- * @param dlt 
+ * @param dlt
  *
  * @return new operator
  */
@@ -620,7 +620,7 @@ Operator<double> weights( const DLT<double>& dlt)
 /**
  * @brief Construct a diagonal operator with inverse weights
  *
- * @param dlt 
+ * @param dlt
  *
  * @return new operator
  */

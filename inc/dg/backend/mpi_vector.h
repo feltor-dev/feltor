@@ -12,14 +12,14 @@ namespace dg
 {
 
 /**
- * @brief mpi Vector class 
+ * @brief mpi Vector class
  *
  * @ingroup mpi_structures
  *
- * This class is a simple wrapper around a container object and an MPI_Comm. 
+ * This class is a simple wrapper around a container object and an MPI_Comm.
  * The blas1 and blas2 functionality is available iff it is available for the container type.
- * We use mpi to communicate (e.g. boundary points in matrix-vector multiplications) 
- * and use the existing blas functions for the local computations. 
+ * We use mpi to communicate (e.g. boundary points in matrix-vector multiplications)
+ * and use the existing blas functions for the local computations.
  * (At the blas level 1 communication is needed only for scalar products)
  * @tparam container local container type. Must have a size() and a swap() member function.
  */
@@ -31,21 +31,21 @@ struct MPI_Vector
     MPI_Vector(){ comm_ = MPI_COMM_WORLD;}
     /**
      * @brief construct a vector
-     * @param data internal data copy 
+     * @param data internal data copy
      * @param comm MPI communicator
      */
-    MPI_Vector( const container& data, MPI_Comm comm): 
+    MPI_Vector( const container& data, MPI_Comm comm):
         data_( data), comm_(comm) {}
-    
+
     /**
     * @brief Conversion operator
     *
     * uses conversion between compatible containers
     * @tparam OtherContainer another container class (container must be copy constructible from OtherContainer)
-    * @param src the source 
+    * @param src the source
     */
     template<class OtherContainer>
-    MPI_Vector( const MPI_Vector<OtherContainer>& src){ data_ = src.data(); comm_ = src.communicator();} 
+    MPI_Vector( const MPI_Vector<OtherContainer>& src){ data_ = src.data(); comm_ = src.communicator();}
 
     ///@brief Get underlying data
     ///@return read access to data
@@ -67,23 +67,23 @@ struct MPI_Vector
 
     ///@brief Swap data  and communicator
     ///@param src communicator and data is swapped
-    void swap( MPI_Vector& src){ 
+    void swap( MPI_Vector& src){
         std::swap( comm_ , src.comm_);
         data_.swap(src.data_);
     }
   private:
-    container data_; 
+    container data_;
     MPI_Comm comm_;
 };
 
 ///@cond
 
-template<class container> 
+template<class container>
 struct VectorTraits<MPI_Vector<container> > {
     typedef typename container::value_type value_type;
     typedef MPIVectorTag vector_category;
 };
-template<class container> 
+template<class container>
 struct VectorTraits<const MPI_Vector<container> > {
     typedef typename container::value_type value_type;
     typedef MPIVectorTag vector_category;
@@ -95,12 +95,12 @@ struct VectorTraits<const MPI_Vector<container> > {
 /**
 * @brief Communicator for nearest neighbor communication
 *
-* exchanges a halo of given depth among neighboring processes in a given direction 
-* (the corresponding gather map is of general type and the communication 
+* exchanges a halo of given depth among neighboring processes in a given direction
+* (the corresponding gather map is of general type and the communication
 *  can also be modeled in GeneralComm, but not BijectiveComm or SurjectiveComm )
 * @ingroup mpi_structures
 * @tparam Index the type of index container (must be either thrust::host_vector<int> or thrust::device_vector<int>)
-* @tparam Vector the vector container type must have a resize() function and work 
+* @tparam Vector the vector container type must have a resize() function and work
 * in the thrust library functions ( i.e. must a thrust::host_vector or thrust::device_vector)
 * @note models aCommunicator
 */
@@ -112,11 +112,11 @@ struct NearestNeighborComm : public aCommunicator<Vector>
         silent_ = true;
     }
     /**
-    * @brief Construct 
+    * @brief Construct
     *
     * @param n size of the halo
     * @param vector_dimensions {x, y, z} dimension (total number of points)
-    * @param comm the (cartesian) communicator 
+    * @param comm the (cartesian) communicator
     * @param direction 0 is x, 1 is y, 2 is z
     */
     NearestNeighborComm( unsigned n, const unsigned vector_dimensions[3], MPI_Comm comm, unsigned direction)
@@ -127,7 +127,7 @@ struct NearestNeighborComm : public aCommunicator<Vector>
     /**
     * @brief Construct from other Communicator
     *
-    * Simply copies halo size, dimensions, communicator and direction and 
+    * Simply copies halo size, dimensions, communicator and direction and
     constructs a new object
     * @tparam OtherIndex other index type
     * @tparam OtherVector other container type
@@ -220,13 +220,13 @@ void NearestNeighborComm<I,V>::construct( unsigned n, const unsigned dimensions[
             for( unsigned j=0; j<n; j++)
                 for( unsigned k=0; k<dim_[0]; k++)
                 {
-                    hbgather1[(i*n+j)*dim_[0]+k] = 
+                    hbgather1[(i*n+j)*dim_[0]+k] =
                         (i*dim_[1] +               j)*dim_[0] + k;
-                    hbgather2[(i*n+j)*dim_[0]+k] = 
+                    hbgather2[(i*n+j)*dim_[0]+k] =
                         (i*dim_[1] + dim_[1] - n + j)*dim_[0] + k;
-                    hbscattr1[(i*n+j)*dim_[0]+k] = 
+                    hbscattr1[(i*n+j)*dim_[0]+k] =
                         (i*(          2*n) +                       j)*dim_[0] + k;
-                    hbscattr2[(i*n+j)*dim_[0]+k] = 
+                    hbscattr2[(i*n+j)*dim_[0]+k] =
                         (i*(          2*n) + (          2*n) - n + j)*dim_[0] + k;
                 }
         }
@@ -268,7 +268,7 @@ unsigned NearestNeighborComm<I,V>::buffer_size() const
             return n_*dim_[0]*dim_[2];
         case( 2): //z-direction
             return n_*dim_[0]*dim_[1]; //no further n_ (hide in dim_)
-        default: 
+        default:
             return 0;
     }
 }
@@ -303,7 +303,7 @@ void NearestNeighborComm<I,V>::sendrecv( V& sb1, V& sb2 , V& rb1, V& rb2) const
 {
     int source, dest;
     MPI_Status status;
-    //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified 
+    //mpi_cart_shift may return MPI_PROC_NULL then the receive buffer is not modified
     MPI_Cart_shift( comm_, direction_, -1, &source, &dest);
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     cudaDeviceSynchronize(); //wait until device functions are finished before sending data

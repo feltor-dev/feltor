@@ -4,7 +4,7 @@
 #include "evaluation.cuh"
 
 
-/*! @file 
+/*! @file
   @brief Function discretization routines on X-point topology
   */
 namespace dg

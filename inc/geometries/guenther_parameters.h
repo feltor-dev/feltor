@@ -13,7 +13,7 @@ namespace guenther
 {
 /**
  * @brief Constructs and display geometric parameters for the guenther field
- */    
+ */
 struct Parameters
 {
     double I_0, //!< the current
@@ -23,7 +23,7 @@ struct Parameters
            triangularity, //!< triangularity of the magnetic surfaces
            alpha, //!< damping width
            rk4eps,  //!< accuracy for the field line mapping
-           psipmin, //!< for source 
+           psipmin, //!< for source
            psipmax, //!< for profile
            psipmaxcut, //!< for cutting
            psipmaxlim; //!< for limiter

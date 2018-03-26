@@ -10,7 +10,7 @@
 #endif //MPI_VERSION
 #include "magnetic_field.h"
 
-/*!@file 
+/*!@file
  *
  * This file includes the appropriate headers for parallel derivatives
  */
@@ -34,21 +34,21 @@ namespace geo{
 /**
 * @brief Class for the evaluation of parallel derivatives
 *
-* This class discretizes the operators 
-\f$ \nabla_\parallel = \vec{v}\cdot \nabla = v^\zeta\partial_\zeta + v^\eta\partial_\eta + v^\varphi\partial_\varphi \f$, 
-\f$\nabla_\parallel^\dagger = -\nabla\cdot(\vec v .)\f$ and 
+* This class discretizes the operators
+\f$ \nabla_\parallel = \vec{v}\cdot \nabla = v^\zeta\partial_\zeta + v^\eta\partial_\eta + v^\varphi\partial_\varphi \f$,
+\f$\nabla_\parallel^\dagger = -\nabla\cdot(\vec v .)\f$ and
 \f$\Delta_\parallel=-\nabla_\parallel^\dagger\cdot\nabla_\parallel\f$
 in arbitrary coordinates
 @snippet ds_t.cu doxygen
 * @ingroup fieldaligned
-* @tparam ProductGeometry must be either dg::aProductGeometry3d or dg::aProductMPIGeometry3d or any derivative 
-* @tparam IMatrix The type of the interpolation matrix 
-    - dg::IHMatrix, or dg::IDMatrix, dg::MIHMatrix, or dg::MIDMatrix
-* @tparam Matrix The matrix class of the jump matrix   
-    - dg::HMatrix, or dg::DMatrix, dg::MHMatrix, or dg::MDMatrix
+* @tparam ProductGeometry must be either \c dg::aProductGeometry3d or \c dg::aProductMPIGeometry3d or any derivative
+* @tparam IMatrix The type of the interpolation matrix
+    - \c dg::IHMatrix, or \c dg::IDMatrix, \c dg::MIHMatrix, or \c dg::MIDMatrix
+* @tparam Matrix The matrix class of the jump matrix
+    - \c dg::HMatrix, or \c dg::DMatrix, \c dg::MHMatrix, or \c dg::MDMatrix
 * @tparam container The container-class on which the interpolation matrix operates on
-    - dg::HVec, or dg::DVec, dg::MHVec, or dg::MDVec
-* @sa The pdf <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup 
+    - \c dg::HVec, or \c dg::DVec, \c dg::MHVec, or \c dg::MDVec
+* @sa The pdf <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
 */
 template< class ProductGeometry, class IMatrix, class Matrix, class container >
 struct DS
@@ -56,7 +56,7 @@ struct DS
     typedef dg::geo::Fieldaligned<ProductGeometry, IMatrix, container> FA; //!< conveniently abbreviates underlying \c Fieldaligned type
     ///@brief No memory allocation; all member calls except construct are invalid
     DS(){}
-    
+
     /**
      * @brief Create the magnetic unit vector field and construct
 
@@ -67,11 +67,11 @@ struct DS
      * @sa \c Fieldaligned
      */
     template <class Limiter>
-    DS(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid, 
-        dg::bc bcx = dg::NEU, 
-        dg::bc bcy = dg::NEU, 
-        Limiter limit = FullLimiter(), 
-        dg::norm no=dg::normed, dg::direction dir = dg::centered, 
+    DS(const dg::geo::TokamakMagneticField& vec, const ProductGeometry& grid,
+        dg::bc bcx = dg::NEU,
+        dg::bc bcy = dg::NEU,
+        Limiter limit = FullLimiter(),
+        dg::norm no=dg::normed, dg::direction dir = dg::centered,
         double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, bool integrateAll=true, double deltaPhi=-1)
     {
         dg::geo::BinaryVectorLvl0 bhat( (dg::geo::BHatR)(vec), (dg::geo::BHatZ)(vec), (dg::geo::BHatP)(vec));
@@ -88,11 +88,11 @@ struct DS
      * @sa \c Fieldaligned
      */
     template<class Limiter>
-    DS(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid, 
-        dg::bc bcx = dg::NEU, 
-        dg::bc bcy = dg::NEU, 
-        Limiter limit = FullLimiter(), 
-        dg::norm no=dg::normed, dg::direction dir = dg::centered, 
+    DS(const dg::geo::BinaryVectorLvl0& vec, const ProductGeometry& grid,
+        dg::bc bcx = dg::NEU,
+        dg::bc bcy = dg::NEU,
+        Limiter limit = FullLimiter(),
+        dg::norm no=dg::normed, dg::direction dir = dg::centered,
         double eps = 1e-5, unsigned multiplyX=10, unsigned multiplyY=10, bool dependsOnX = true, bool dependsOnY=true, bool integrateAll=true, double deltaPhi=-1)
     {
         m_fa.construct( vec, grid, bcx, bcy, limit, eps, multiplyX, multiplyY, dependsOnX, dependsOnY, integrateAll,deltaPhi);
@@ -250,14 +250,14 @@ struct DS
      */
     void symv( double alpha, const container& f, double beta, container& g){ do_symv( alpha, f, beta, g);}
     /**
-     * @brief Discretizes \f$ g = (\vec v\cdot \nabla)^2 f \f$ 
+     * @brief Discretizes \f$ g = (\vec v\cdot \nabla)^2 f \f$
      *
      * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+h_z^0} - \frac{f^0}{h_z^+h_z^-} + \frac{f^-}{h_z^-h_z^0}\right) \f]
      * @copydoc hide_ds_parameters2
      */
     void dss( const container& f, container& g){ do_dss( 1., f, 0., g);}
     /**
-     * @brief Discretizes \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$ 
+     * @brief Discretizes \f$ g = \alpha (\vec v\cdot \nabla)^2 f + \beta g \f$
      *
      * The formula used is \f[ \nabla_\parallel^2 f = 2\left(\frac{f^+}{h_z^+h_z^0} - \frac{f^0}{h_z^+h_z^-} + \frac{f^-}{h_z^-h_z^0}\right) \f]
      * @copydoc hide_ds_parameters4
@@ -302,16 +302,16 @@ void DS<Geometry, I, M,container>::construct(const Fieldaligned<Geometry, I, con
     m_fa=fa;
     m_no=no, m_dir=dir;
 
-    dg::blas1::transfer( dg::create::volume(     fa.grid()), m_vol3d); 
-    dg::blas1::transfer( dg::create::weights(    fa.grid()), m_weights_wo_vol); 
-    dg::blas1::transfer( dg::create::inv_volume( fa.grid()), m_inv3d); 
+    dg::blas1::transfer( dg::create::volume(     fa.grid()), m_vol3d);
+    dg::blas1::transfer( dg::create::weights(    fa.grid()), m_weights_wo_vol);
+    dg::blas1::transfer( dg::create::inv_volume( fa.grid()), m_inv3d);
     dg::blas2::transfer( dg::create::jumpX( fa.grid()), m_jumpX);
     dg::blas2::transfer( dg::create::jumpY( fa.grid()), m_jumpY);
     m_temp = m_vol3d, m_tempP = m_temp, m_temp0 = m_temp, m_tempM = m_temp;
 }
 
 template<class G, class I, class M, class container>
-inline void DS<G,I,M,container>::operator()( double alpha, const container& f, double beta, container& dsf) { 
+inline void DS<G,I,M,container>::operator()( double alpha, const container& f, double beta, container& dsf) {
     if( m_dir == dg::centered)
         return centered( alpha, f, beta, dsf);
     else if( m_dir == dg::forward)
@@ -347,43 +347,43 @@ void DS<G, I,M,container>::do_centered( double alpha, const container& f, double
 }
 template<class G, class I, class M, class container>
 void DS<G,I,M,container>::do_backwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
-{    
+{
     //adjoint discretisation
     dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hp_inv(), 0., m_temp0);
     m_fa(einsPlusT, m_temp0, m_tempP);
-    if(no == dg::normed) 
+    if(no == dg::normed)
     {
         dg::blas1::axpby( 1., m_temp0, -1., m_tempP, m_temp0);
-        dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
+        dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf);
     }
     else
         dg::blas1::axpbypgz( alpha, m_temp0, -alpha, m_tempP, beta, dsf);
 }
 template<class G,class I, class M, class container>
 void DS<G,I,M,container>::do_forwardDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
-{    
+{
     //adjoint discretisation
     dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hm_inv(),0., m_temp0);
     m_fa(einsMinusT, m_temp0, m_tempM);
-    if(no == dg::normed) 
+    if(no == dg::normed)
     {
         dg::blas1::axpby( 1., m_tempM, -1., m_temp0, m_temp0);
-        dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf); 
+        dg::blas1::pointwiseDot( alpha, m_inv3d, m_temp0, beta, dsf);
     }
     else
         dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_temp0, beta, dsf);
 }
 template<class G, class I, class M, class container>
 void DS<G, I,M,container>::do_centeredDiv( double alpha, const container& f, double beta, container& dsf, dg::norm no)
-{               
+{
     //adjoint discretisation
     dg::blas1::pointwiseDot( 1., m_vol3d, f, m_fa.hz_inv(), 0.,m_temp0);
     m_fa(einsPlusT,  m_temp0, m_tempP);
     m_fa(einsMinusT, m_temp0, m_tempM);
-    if(no == dg::normed) 
+    if(no == dg::normed)
     {
         dg::blas1::axpby( 1., m_tempM, -1., m_tempP);
-        dg::blas1::pointwiseDot( alpha, m_inv3d, m_tempP, beta, dsf); 
+        dg::blas1::pointwiseDot( alpha, m_inv3d, m_tempP, beta, dsf);
     }
     else
         dg::blas1::axpbypgz( alpha, m_tempM, -alpha, m_tempP, beta, dsf);
@@ -398,7 +398,7 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
         do_centered( 1., f, 0., m_tempP);
         do_centeredDiv( 1., m_tempP, 0., m_temp, dg::not_normed);
     }
-    else 
+    else
     {
         do_forward( 1., f, 0., m_tempP);
         do_backwardDiv( 1., m_tempP, 0., m_temp, dg::not_normed);
@@ -406,7 +406,7 @@ void DS<G,I,M,container>::do_symv( double alpha, const container& f, double beta
         do_forwardDiv( 0.5, m_tempM, 0.5, m_temp, dg::not_normed);
     }
     dg::blas1::pointwiseDivide( m_temp, m_weights_wo_vol, m_temp);
-    //     add jump term 
+    //     add jump term
     if(m_fa.dependsOnX())
         dg::blas2::symv( -1., m_jumpX, f, 1., m_temp);
     if(m_fa.dependsOnY())

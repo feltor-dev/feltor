@@ -15,7 +15,7 @@ int main()
 {
     Vector v1( 5, 2), v2( 5, 3), v3(5), v4(5,4);
     double temp = dg::blas1::dot(v1,v2);
-    std::cout << "5*(2*3) = "<<temp << " (30)\n"; 
+    std::cout << "5*(2*3) = "<<temp << " (30)\n";
     dg::blas1::axpby( 2., v1, 3., v2, v3);
     std::cout << "2*2+ 3*3 = " << v3[0] <<" (13)\n";
     dg::blas1::axpby( 0., v1, 3., v2, v3);
@@ -49,7 +49,7 @@ int main()
     std::cout << "Test std::vector \n";
     std::vector<Vector > w1( 2, v1), w2(2, v2), w3( w2), w4(2,v4);
     temp = dg::blas1::dot( w1, w2);
-    std::cout << "2*5*(2*3) = "<<temp << " (60)\n"; 
+    std::cout << "2*5*(2*3) = "<<temp << " (60)\n";
     dg::blas1::axpby( 2., w1, 3., w2, w3);
     std::cout << "2*2+ 3*3 = " << w3[0][0] <<" (13)\n";
     dg::blas1::axpby( 0., w1, 3., w2, w3);

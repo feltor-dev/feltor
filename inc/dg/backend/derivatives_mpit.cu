@@ -38,7 +38,7 @@ typedef dg::MDVec Vector;
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     dg::bc bcx=dg::DIR, bcz=dg::NEU_DIR, bcy=dg::PER;
     MPI_Comm comm2d;
     mpi_init2d( bcx, bcy, n, Nx, Ny, comm2d);

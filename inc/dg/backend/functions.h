@@ -10,14 +10,14 @@ namespace dg{
 /**
 * @brief The delta function
 *
-* @param i Index 
+* @param i Index
 * @param j Index
 *
 * @return delta_{ij}
 */
 inline double delta( unsigned i, unsigned j)
 {
-    if( i==j ) 
+    if( i==j )
         return 1.;
     return 0.;
 }
@@ -32,7 +32,7 @@ inline double delta( unsigned i, unsigned j)
 */
 inline double pipj( unsigned i, unsigned j)
 {
-    if( i==j) 
+    if( i==j)
         return 2./(2.*(double)i+1.);
     return 0;
 }
@@ -110,7 +110,7 @@ inline double rilj( unsigned i, unsigned j)
 * @param i Index of first Legendre function
 * @param j Index of second Legendre function
 *
-* @return (-1)^i 
+* @return (-1)^i
 */
 inline double lirj( unsigned i, unsigned j)
 {
@@ -137,7 +137,7 @@ inline double lilj( unsigned i, unsigned j)
 ///@{
 
 /**
- * @brief 
+ * @brief
  * \f[ f(x) = 1\f]
  *
  * Useful for integration.
@@ -173,7 +173,7 @@ inline double one( double x, double y) {return 1;}
 inline double one( double x, double y, double z) {return 1;}
 
 /**
- * @brief 
+ * @brief
  * \f[ f(x) = 0\f]
  *
  * Useful for integration.
@@ -214,7 +214,7 @@ inline double zero( double x, double y, double z) {return 0.;}
  *
  * @param x
  *
- * @return 
+ * @return
  */
 inline double cooX1d( double x) {return x;}
 /**
@@ -224,7 +224,7 @@ inline double cooX1d( double x) {return x;}
  * @param x
  * @param y
  *
- * @return 
+ * @return
  */
 inline double cooX2d( double x, double y) {return x;}
 /**
@@ -235,18 +235,18 @@ inline double cooX2d( double x, double y) {return x;}
  * @param y
  * @param z
  *
- * @return 
+ * @return
  */
 inline double cooX3d( double x, double y, double z) {return x;}
 
 /**
- * @brief 
+ * @brief
  * \f[ f(x,y) = y\f]
  *
  * @param x
  * @param y
  *
- * @return 
+ * @return
  */
 inline double cooY2d( double x, double y) {return y;}
 /**
@@ -257,7 +257,7 @@ inline double cooY2d( double x, double y) {return y;}
  * @param y
  * @param z
  *
- * @return 
+ * @return
  */
 inline double cooY3d( double x, double y, double z) {return y;}
 /**
@@ -268,7 +268,7 @@ inline double cooY3d( double x, double y, double z) {return y;}
  * @param y
  * @param z
  *
- * @return 
+ * @return
  */
 inline double cooZ3d( double x, double y, double z) {return z;}
 } //namespace dg

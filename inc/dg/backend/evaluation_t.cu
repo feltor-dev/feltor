@@ -75,4 +75,4 @@ int main()
     std::cout << "Correct square norm is    "<<solution3<<std::endl;
     std::cout << "Relative 3d error is      "<<(norm3X-solution3)/solution3<<"\n";
     return 0;
-} 
+}

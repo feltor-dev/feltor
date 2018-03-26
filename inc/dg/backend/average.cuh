@@ -6,7 +6,7 @@
 #include "../blas1.h"
 #include "split_and_join.h"
 
-/*! @file 
+/*! @file
   @brief contains classes for poloidal and toroidal average computations.
   */
 namespace dg{
@@ -16,8 +16,8 @@ namespace dg{
  *
  * @snippet backend/average_t.cu doxygen
  * @ingroup utilities
- * @tparam container Currently this is one of 
- *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec  
+ * @tparam container Currently this is one of
+ *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec
  * @tparam IndexContainer Type of index vectors; May equal \c container
  */
 template< class container, class IndexContainer>
@@ -29,7 +29,7 @@ struct PoloidalAverage
      * @param g 2d Grid
      */
     PoloidalAverage( const aTopology2d& g):
-        dummy( g.n()*g.Nx()), 
+        dummy( g.n()*g.Nx()),
         helper( g.size()), helper1d( g.n()*g.Nx()), ly_(g.ly())
     {
         invertxy = create::scatterMapInvertxy( g.n(), g.Nx(), g.Ny());
@@ -43,9 +43,9 @@ struct PoloidalAverage
     /**
      * @brief Compute the average in y-direction
      *
-     * @param src 2D Source vector 
+     * @param src 2D Source vector
      * @param res 2D result vector (may not equal src), every line contains the x-dependent average over
-     the y-direction of src 
+     the y-direction of src
      */
     void operator() (const container& src, container& res)
     {
@@ -64,7 +64,7 @@ struct PoloidalAverage
         while ( 2*pos < res.size() )
         {
             thrust::copy_n( res.begin(), pos, res.begin() + pos);
-            pos*=2; 
+            pos*=2;
         }
         thrust::copy_n( res.begin(), res.size() - pos, res.begin() + pos);
 
@@ -80,9 +80,9 @@ struct PoloidalAverage
  * @brief Compute the average in the 3rd direction
  *
  * @tparam container must be either \c dg::HVec or \c dg::DVec
- * @param src 3d Source vector 
+ * @param src 3d Source vector
  * @param res contains the 2d result on output (may not equal src, gets resized properly)
- * @param t Contains the grid sizes 
+ * @param t Contains the grid sizes
  * @ingroup utilities
  */
 template<class container>
@@ -92,7 +92,7 @@ void toroidal_average( const container& src, container& res, const aTopology3d& 
     dg::split( src, split_src, t);
     res = split_src[0];
     for( unsigned k=1; k<t.Nz(); k++)
-        dg::blas1::axpby(1.0,split_src[k],1.0,res); 
+        dg::blas1::axpby(1.0,split_src[k],1.0,res);
     dg::blas1::scal(res,1./(double)t.Nz()); //scale avg
 }
 

@@ -25,10 +25,10 @@ namespace detail
 {
 
 template< class Vector>
-inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
-              const std::vector<Vector>& x, 
-              typename VectorTraits<Vector>::value_type beta, 
-              std::vector<Vector>& y, 
+inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
+              const std::vector<Vector>& x,
+              typename VectorTraits<Vector>::value_type beta,
+              std::vector<Vector>& y,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -37,15 +37,15 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doAxpby( alpha, x[i], beta, y[i], typename VectorTraits<Vector>::vector_category());
-        
+
 }
 
 template< class Vector>
-inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
-              const std::vector<Vector>& x, 
-              typename VectorTraits<Vector>::value_type beta, 
-              const std::vector<Vector>& y, 
-              std::vector<Vector>& z, 
+inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
+              const std::vector<Vector>& x,
+              typename VectorTraits<Vector>::value_type beta,
+              const std::vector<Vector>& y,
+              std::vector<Vector>& z,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -54,16 +54,16 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doAxpby( alpha, x[i], beta, y[i], z[i], typename VectorTraits<Vector>::vector_category());
-        
+
 }
 
 template< class Vector>
-inline void doAxpby( typename VectorTraits<Vector>::value_type alpha, 
-              const std::vector<Vector>& x, 
-              typename VectorTraits<Vector>::value_type beta, 
-              const std::vector<Vector>& y, 
-              typename VectorTraits<Vector>::value_type gamma, 
-              std::vector<Vector>& z, 
+inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
+              const std::vector<Vector>& x,
+              typename VectorTraits<Vector>::value_type beta,
+              const std::vector<Vector>& y,
+              typename VectorTraits<Vector>::value_type gamma,
+              std::vector<Vector>& z,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -72,7 +72,7 @@ inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doAxpby( alpha, x[i], beta, y[i], gamma, z[i], typename VectorTraits<Vector>::vector_category());
-        
+
 }
 
 template<class container>
@@ -83,8 +83,8 @@ inline void doCopy( const std::vector<container>& x, std::vector<container>& y, 
 }
 
 template< class Vector>
-inline void doScal( std::vector<Vector>& x, 
-              typename VectorTraits<Vector>::value_type alpha, 
+inline void doScal( std::vector<Vector>& x,
+              typename VectorTraits<Vector>::value_type alpha,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -92,12 +92,12 @@ inline void doScal( std::vector<Vector>& x,
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doScal( x[i], alpha, typename VectorTraits<Vector>::vector_category());
-        
+
 }
 
 template< class Vector>
-inline void doPlus( std::vector<Vector>& x, 
-              typename VectorTraits<Vector>::value_type alpha, 
+inline void doPlus( std::vector<Vector>& x,
+              typename VectorTraits<Vector>::value_type alpha,
               StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -105,7 +105,7 @@ inline void doPlus( std::vector<Vector>& x,
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
         doPlus( x[i], alpha, typename VectorTraits<Vector>::vector_category());
-        
+
 }
 
 template<class container, class UnaryOp>
@@ -127,9 +127,9 @@ inline void doPointwiseDot( const std::vector<Vector>& x1, const std::vector<Vec
         doPointwiseDot( x1[i], x2[i], y[i], typename VectorTraits<Vector>::vector_category() );
 }
 template< class Vector>
-inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
-const std::vector<Vector>& x1, const std::vector<Vector>& x2, 
-typename VectorTraits<Vector>::value_type beta, 
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
+const std::vector<Vector>& x1, const std::vector<Vector>& x2,
+typename VectorTraits<Vector>::value_type beta,
 std::vector<Vector>& y, StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -141,9 +141,9 @@ std::vector<Vector>& y, StdVectorTag)
         doPointwiseDot( alpha, x1[i], x2[i], beta, y[i], typename VectorTraits<Vector>::vector_category() );
 }
 template< class Vector>
-inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
 const std::vector<Vector>& x1, const std::vector<Vector>& x2, const std::vector<Vector>& x3,
-typename VectorTraits<Vector>::value_type beta, 
+typename VectorTraits<Vector>::value_type beta,
 std::vector<Vector>& y, StdVectorTag)
 {
 #ifdef DG_DEBUG
@@ -156,11 +156,11 @@ std::vector<Vector>& y, StdVectorTag)
         doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], typename VectorTraits<Vector>::vector_category() );
 }
 template< class Vector>
-inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha, 
-const std::vector<Vector>& x1, const std::vector<Vector>& y1, 
-typename VectorTraits<Vector>::value_type beta, 
-const std::vector<Vector>& x2, const std::vector<Vector>& y2, 
-typename VectorTraits<Vector>::value_type gamma, 
+inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
+const std::vector<Vector>& x1, const std::vector<Vector>& y1,
+typename VectorTraits<Vector>::value_type beta,
+const std::vector<Vector>& x2, const std::vector<Vector>& y2,
+typename VectorTraits<Vector>::value_type gamma,
 std::vector<Vector>& z, StdVectorTag)
 {
 #ifdef DG_DEBUG

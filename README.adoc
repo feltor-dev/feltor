@@ -307,28 +307,38 @@ version including informative pdf writeups on implemented numerical
 methods directly from source code. This depends on the `doxygen`,
 `libjs-mathjax` and `graphviz` packages and LateX. Type `make doc` in
 the folder `path/to/feltor/doc` and open `index.html` (a symbolic link
-to `dg/html/modules.html`) with your favorite browser. 
+to `dg/html/modules.html`) with your favorite browser.
 Finally, also note the documentations of https://thrust.github.io/doc/modules.html[thrust]
 and https://cusplibrary.github.io/[cusp].
 
 == 3. Acknowledgements
 
-FELTOR is developed by Matthias Wiesenberger and Markus Held and
-receives contributions from an increasing number of people. We
-gratefully acknowledge fruitful discussions and code contribution from
+FELTOR's main authors are Matthias Wiesenberger and Markus Held.
+We received funding from the Austrian Science Fund (FWF) within
+project W1227 and Y398 under project leader Alexander Kendl at
+Innsbruck University.
+The work has been carried out within
+the framework of the EUROfusion Consortium and has received funding
+from the Euratom research and training programme 2014-2018 under
+grant agreement No 633053.
+MW has received funding from the European Union’s Horizon 2020
+research and innovation programme under the Marie
+Sklodowska-Curie grant agreement no. 713683 (COFUNDfellowsDTU).
+
+We gratefully acknowledge fruitful discussions and code contribution from
 
 - Ralph Kube
-- Eduard Reiter 
-- Lukas Einkemmer 
+- Eduard Reiter
+- Lukas Einkemmer
 - Jakob Gath
 
 We further acknowledge support on the Knights landing architecture from
-the High Level Support Team from 
+the High Level Support Team from
 
-- Albert Gutiérrez 
+- Albert Gutiérrez
 - Xavier Saez
 
-and from Intel Barcelona 
+and from Intel Barcelona
 
 - Harald Servat
 

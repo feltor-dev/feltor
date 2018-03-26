@@ -16,7 +16,7 @@ const double ly = M_PI;
 double function( double x, double y) {return cos(x)*sin(y);}
 double pol_average( double x, double y) {return cos(x)*2./M_PI;}
 
-dg::bc bcx = dg::PER; 
+dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 
 int main()

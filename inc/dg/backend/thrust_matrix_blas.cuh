@@ -30,7 +30,7 @@ template < class Vector>
 struct ThrustVectorDoDot
 {
     typedef typename VectorTraits<Vector>::value_type value_type;
-    typedef thrust::tuple< value_type, value_type> Pair; 
+    typedef thrust::tuple< value_type, value_type> Pair;
     __host__ __device__
         value_type operator()( const value_type & x, const Pair& p) {
             return thrust::get<0>(p)*thrust::get<1>(p)*x;
@@ -56,8 +56,8 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const M
         sum += x[i]*m[i]*y[i];
     return sum;
 #else
-    return thrust::inner_product(  x.begin(), x.end(), 
-                            thrust::make_zip_iterator( thrust::make_tuple( y.begin(), m.begin())  ), 
+    return thrust::inner_product(  x.begin(), x.end(),
+                            thrust::make_zip_iterator( thrust::make_tuple( y.begin(), m.begin())  ),
                             value_type(0),
                             thrust::plus<value_type>(),
                             detail::ThrustVectorDoDot<Matrix>()
@@ -90,12 +90,12 @@ inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const V
 }
 
 template< class Matrix, class Vector>
-inline void doSymv(  
-              typename MatrixTraits<Matrix>::value_type alpha, 
+inline void doSymv(
+              typename MatrixTraits<Matrix>::value_type alpha,
               const Matrix& m,
-              const Vector& x, 
-              typename MatrixTraits<Matrix>::value_type beta, 
-              Vector& y, 
+              const Vector& x,
+              typename MatrixTraits<Matrix>::value_type beta,
+              Vector& y,
               ThrustMatrixTag,
               ThrustVectorTag)
 {
@@ -103,10 +103,10 @@ inline void doSymv(
 }
 
 template< class Matrix, class Vector>
-inline void doSymv(  
-              Matrix& m, 
+inline void doSymv(
+              Matrix& m,
               const Vector& x,
-              Vector& y, 
+              Vector& y,
               ThrustMatrixTag,
               ThrustVectorTag,
               ThrustVectorTag)

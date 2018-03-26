@@ -64,8 +64,8 @@ dg::blas2::transfer( dg::create::dx(g2d), dx);
 const dg::DVec  x, y;
 dg::blas1::transfer( dg::evaluate( function, g2d), x);
 y=x;
-dg::blas2::symv(dx, x,y); 
-//or 
-dg::blas2::symv(1., dx, x, 0., y); 
+dg::blas2::symv(dx, x,y);
+//or
+dg::blas2::symv(1., dx, x, 0., y);
 @endcode
 */

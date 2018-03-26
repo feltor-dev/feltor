@@ -12,10 +12,10 @@ namespace detail
 {
 
 template< class Matrix, class Vector>
-inline void doSymv( 
+inline void doSymv(
               Matrix& m,
-              const std::vector<Vector>& x, 
-              std::vector<Vector>& y, 
+              const std::vector<Vector>& x,
+              std::vector<Vector>& y,
               AnyMatrixTag,
               StdVectorTag,
               StdVectorTag)
@@ -25,20 +25,20 @@ inline void doSymv(
     //assert( m.size() == y.size() );
 #endif //DG_DEBUG
     for( unsigned i=0; i<x.size(); i++)
-        doSymv( m, x[i], y[i], 
+        doSymv( m, x[i], y[i],
                        typename dg::MatrixTraits<Matrix>::matrix_category(),
                        typename dg::VectorTraits<Vector>::vector_category(),
                        typename dg::VectorTraits<Vector>::vector_category() );
-        
+
 }
 
 template< class Precon, class Vector>
-inline void doSymv( 
+inline void doSymv(
               typename MatrixTraits<Precon>::value_type alpha,
               const Precon& m,
-              const std::vector<Vector>& x, 
+              const std::vector<Vector>& x,
               typename MatrixTraits<Precon>::value_type beta,
-              std::vector<Vector>& y, 
+              std::vector<Vector>& y,
               AnyMatrixTag,
               StdVectorTag)
 {
@@ -53,10 +53,10 @@ inline void doSymv(
 }
 
 template< class Matrix, class Vector>
-inline typename MatrixTraits<Matrix>::value_type  doDot( 
-              const std::vector<Vector>& x, 
+inline typename MatrixTraits<Matrix>::value_type  doDot(
+              const std::vector<Vector>& x,
               const Matrix& m,
-              const std::vector<Vector>& y, 
+              const std::vector<Vector>& y,
               AnyMatrixTag,
               StdVectorTag)
 {
@@ -71,9 +71,9 @@ inline typename MatrixTraits<Matrix>::value_type  doDot(
     return sum;
 }
 template< class Matrix, class Vector>
-inline typename VectorTraits<Vector>::value_type  doDot( 
+inline typename VectorTraits<Vector>::value_type  doDot(
               const Matrix& m,
-              const std::vector<Vector>& y, 
+              const std::vector<Vector>& y,
               AnyMatrixTag,
               StdVectorTag)
 {

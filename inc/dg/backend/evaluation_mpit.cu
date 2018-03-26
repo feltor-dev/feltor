@@ -33,7 +33,7 @@ int main(int argc, char** argv)
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm2d, comm3d;
     mpi_init2d( dg::PER, dg::PER, n, Nx, Ny, comm2d);
     dg::MPIGrid2d g2d( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER, comm2d);
@@ -87,4 +87,4 @@ int main(int argc, char** argv)
 
     MPI_Finalize();
     return 0;
-} 
+}

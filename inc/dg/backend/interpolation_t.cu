@@ -10,9 +10,9 @@ double function( double x, double y){return sin(x)*sin(y);}
 double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}
 
 const unsigned n = 3;
-const unsigned Nx = 3; 
-const unsigned Ny = 5; 
-const unsigned Nz = 2; 
+const unsigned Nx = 3;
+const unsigned Ny = 5;
+const unsigned Nz = 2;
 
 typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
 
@@ -34,15 +34,15 @@ int main()
     for( unsigned i=0; i<g.Ny()*g.n(); i++)
         for( unsigned j=0; j<g.Nx()*g.n(); j++)
         {
-            x[i*g.Nx()*g.n() + j] = 
+            x[i*g.Nx()*g.n() + j] =
                     g.x0() + (j+0.5)*g.hx()/(double)(g.n());
-            y[i*g.Nx()*g.n() + j] = 
+            y[i*g.Nx()*g.n() + j] =
                     g.y0() + (i+0.5)*g.hy()/(double)(g.n());
         }
     //typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
     Matrix B = dg::create::interpolation( x, y, g);
 
-    const thrust::host_vector<double> vec = dg::evaluate( function, g); 
+    const thrust::host_vector<double> vec = dg::evaluate( function, g);
     thrust::host_vector<double> inter(vec);
     dg::blas2::symv( B, vec, inter);
     //inter now contains the values of vec interpolated at equidistant points
@@ -53,7 +53,7 @@ int main()
     dg::blas1::axpby( 1., inter1, -1., inter, inter1);
     double error = dg::blas1::dot( inter1, inter1);
     std::cout << "Error is "<<error<<" (should be small)!\n";
-    if( error > 1e-14) 
+    if( error > 1e-14)
         std::cout<< "2D TEST FAILED!\n";
     else
         std::cout << "2D TEST PASSED!\n";
@@ -76,8 +76,8 @@ int main()
 
 
     bool passed = true;
-    thrust::host_vector<double> xs = dg::evaluate( dg::cooX2d, g); 
-    thrust::host_vector<double> ys = dg::evaluate( dg::cooY2d, g); 
+    thrust::host_vector<double> xs = dg::evaluate( dg::cooX2d, g);
+    thrust::host_vector<double> ys = dg::evaluate( dg::cooY2d, g);
     thrust::host_vector<double> xF = dg::create::forward_transform( xs, g);
     thrust::host_vector<double> yF = dg::create::forward_transform( ys, g);
     for( unsigned i=0; i<x.size(); i++)
@@ -113,16 +113,16 @@ int main()
         for( unsigned i=0; i<g.Ny()*g.n(); i++)
             for( unsigned j=0; j<g.Nx()*g.n(); j++)
             {
-                x[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
+                x[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
                         g.x0() + (j+0.5)*g.hx()/(double)(g.n());
-                y[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
+                y[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
                         g.y0() + (i+0.5)*g.hy()/(double)(g.n());
-                z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
+                z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
                         g.z0() + (k+0.5)*g.hz();
             }
     //typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
     Matrix B = dg::create::interpolation( x, y, z, g);
-    const thrust::host_vector<double> vec = dg::evaluate( function, g); 
+    const thrust::host_vector<double> vec = dg::evaluate( function, g);
     thrust::host_vector<double> inter(vec);
     dg::blas2::symv( B, vec, inter);
     //![doxygen3d]
@@ -131,7 +131,7 @@ int main()
     dg::blas1::axpby( 1., inter1, -1., inter, inter1);
     double error = dg::blas1::dot( inter1, inter1);
     std::cout << "Error is "<<error<<" (should be small)!\n";
-    if( error > 1e-14) 
+    if( error > 1e-14)
         std::cout<< "3D TEST FAILED!\n";
     else
         std::cout << "3D TEST PASSED!\n";

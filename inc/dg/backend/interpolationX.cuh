@@ -69,8 +69,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  *
  * This matrix can be applied to vectors defined on the old grid to obtain
  * its values on the new grid.
- * 
- * @param g_new The new points 
+ *
+ * @param g_new The new points
  * @param g_old The old grid
  *
  * @return Interpolation matrix
@@ -85,8 +85,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX1d& g
  *
  * This matrix can be applied to vectors defined on the old grid to obtain
  * its values on the new grid.
- * 
- * @param g_new The new points 
+ *
+ * @param g_new The new points
  * @param g_old The old grid
  *
  * @return Interpolation matrix
@@ -102,8 +102,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopologyX
  *
  * This matrix can be applied to vectors defined on the old grid to obtain
  * its values on the new grid.
- * 
- * @param g_new The new points 
+ *
+ * @param g_new The new points
  * @param g_old The old grid
  *
  * @return Interpolation matrix

@@ -9,7 +9,7 @@
 #include "sparseblockmat.h"
 
 //What happens for N=1?
-/*! @file 
+/*! @file
   @brief Simple 1d derivatives
   */
 namespace dg
@@ -21,16 +21,16 @@ namespace create
 
 
 /**
-* @brief Create and assemble a host Matrix for the centered 1d single derivative 
+* @brief Create and assemble a host Matrix for the centered 1d single derivative
 *
 * The matrix isn't symmetric due to the normalisation T.
 * @ingroup create
 * @param n Number of Legendre nodes per cell
 * @param N Vector size ( number of cells)
 * @param h cell size (used to compute normalisation)
-* @param bcx boundary condition 
+* @param bcx boundary condition
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> dx_symm(int n, int N, double h, bc bcx)
 {
@@ -87,7 +87,7 @@ EllSparseBlockMat<double> dx_symm(int n, int N, double h, bc bcx)
         A.cols_idx[0*3+1] = 1;
         A.data_idx[0*3+2] = 5; //0
         A.cols_idx[0*3+2] = 1; //prevent unnecessary data fetch
-        for( int i=1; i<N-1; i++) 
+        for( int i=1; i<N-1; i++)
             for( int d=0; d<3; d++)
             {
                 A.data_idx[i*3+d] = d; //bp, a, b
@@ -112,7 +112,7 @@ EllSparseBlockMat<double> dx_symm(int n, int N, double h, bc bcx)
             A.data[(1*n+i)*n+j] = a(i,j);
             A.data[(2*n+i)*n+j] = b(i,j);
         }
-        for( int i=0; i<N; i++) 
+        for( int i=0; i<N; i++)
             for( int d=0; d<3; d++)
             {
                 A.data_idx[i*3+d] = d; //bp, a, b
@@ -123,7 +123,7 @@ EllSparseBlockMat<double> dx_symm(int n, int N, double h, bc bcx)
 };
 
 /**
-* @brief Create and assemble a host Matrix for the forward 1d single derivative 
+* @brief Create and assemble a host Matrix for the forward 1d single derivative
 *
 * @ingroup create
 * @param n Number of Legendre nodes per cell
@@ -131,7 +131,7 @@ EllSparseBlockMat<double> dx_symm(int n, int N, double h, bc bcx)
 * @param h cell size ( used to compute normalisation)
 * @param bcx boundary condition
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> dx_plus( int n, int N, double h, bc bcx )
 {
@@ -147,7 +147,7 @@ EllSparseBlockMat<double> dx_plus( int n, int N, double h, bc bcx )
     //if( dir == backward) a = -a.transpose();
     Operator<double> a_bound_left = a; //PER, NEU and NEU_DIR
     Operator<double> a_bound_right = a; //PER, DIR and NEU_DIR
-    if( bcx == dg::DIR || bcx == dg::DIR_NEU) 
+    if( bcx == dg::DIR || bcx == dg::DIR_NEU)
         a_bound_left = t*(-d.transpose());
     if( bcx == dg::NEU || bcx == dg::DIR_NEU)
         a_bound_right = t*(d);
@@ -197,7 +197,7 @@ EllSparseBlockMat<double> dx_plus( int n, int N, double h, bc bcx )
             A.data[(0*n+i)*n+j] = a(i,j);
             A.data[(1*n+i)*n+j] = b(i,j);
         }
-        for( int i=0; i<N; i++) 
+        for( int i=0; i<N; i++)
             for( int d=0; d<2; d++)
             {
                 A.data_idx[i*2+d] = d; //a, b
@@ -208,7 +208,7 @@ EllSparseBlockMat<double> dx_plus( int n, int N, double h, bc bcx )
 };
 
 /**
-* @brief Create and assemble a host Matrix for the backward 1d single derivative 
+* @brief Create and assemble a host Matrix for the backward 1d single derivative
 *
 * @ingroup create
 * @param n Number of Legendre nodes per cell
@@ -216,7 +216,7 @@ EllSparseBlockMat<double> dx_plus( int n, int N, double h, bc bcx )
 * @param h cell size ( used to compute normalisation)
 * @param bcx boundary condition
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> dx_minus( int n, int N, double h, bc bcx )
 {
@@ -231,7 +231,7 @@ EllSparseBlockMat<double> dx_minus( int n, int N, double h, bc bcx )
     //if( dir == backward) a = -a.transpose();
     Operator<double> a_bound_right = a; //PER, NEU and DIR_NEU
     Operator<double> a_bound_left = a; //PER, DIR and DIR_NEU
-    if( bcx == dg::DIR || bcx == dg::NEU_DIR) 
+    if( bcx == dg::DIR || bcx == dg::NEU_DIR)
         a_bound_right = t*(-d.transpose());
     if( bcx == dg::NEU || bcx == dg::NEU_DIR)
         a_bound_left = t*d;
@@ -242,7 +242,7 @@ EllSparseBlockMat<double> dx_minus( int n, int N, double h, bc bcx )
     Operator<double> forward=g.dlt().forward();
     a  = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
     bp = backward*bp*forward, a_bound_right = backward*a_bound_right*forward;
-    
+
     //assemble the matrix
     if(bcx != dg::PER)
     {
@@ -269,7 +269,7 @@ EllSparseBlockMat<double> dx_minus( int n, int N, double h, bc bcx )
         A.data_idx[(N-1)*2+0] = 0; //bp
         A.cols_idx[(N-1)*2+0] = N-2;
         A.data_idx[(N-1)*2+1] = 3; //a_bound_right
-        A.cols_idx[(N-1)*2+1] = N-1; 
+        A.cols_idx[(N-1)*2+1] = N-1;
         return A;
 
     }
@@ -282,7 +282,7 @@ EllSparseBlockMat<double> dx_minus( int n, int N, double h, bc bcx )
             A.data[(0*n+i)*n+j] = bp(i,j);
             A.data[(1*n+i)*n+j] = a(i,j);
         }
-        for( int i=0; i<N; i++) 
+        for( int i=0; i<N; i++)
             for( int d=0; d<2; d++)
             {
                 A.data_idx[i*2+d] = d; //bp, a
@@ -301,7 +301,7 @@ EllSparseBlockMat<double> dx_minus( int n, int N, double h, bc bcx )
 * @param h cell size ( used to compute normalisation)
 * @param bcx boundary condition
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> jump( int n, int N, double h, bc bcx)
 {
@@ -317,7 +317,7 @@ EllSparseBlockMat<double> jump( int n, int N, double h, bc bcx)
     if( bcx == NEU || bcx == DIR_NEU)
         a_bound_right = l;
     Operator<double> b = -rl;
-    Operator<double> bp = -lr; 
+    Operator<double> bp = -lr;
     //transform to XSPACE
     Operator<double> t = create::pipj_inv(n);
     t *= 2./h;
@@ -372,7 +372,7 @@ EllSparseBlockMat<double> jump( int n, int N, double h, bc bcx)
             A.data[(1*n+i)*n+j] = a(i,j);
             A.data[(2*n+i)*n+j] = b(i,j);
         }
-        for( int i=0; i<N; i++) 
+        for( int i=0; i<N; i++)
             for( int d=0; d<3; d++)
             {
                 A.data_idx[i*3+d] = d; //bp, a, b
@@ -392,7 +392,7 @@ EllSparseBlockMat<double> jump( int n, int N, double h, bc bcx)
 * @param bcx boundary condition
 * @param dir The direction of the first derivative
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> dx_normed( int n, int N, double h, bc bcx, direction dir )
 {
@@ -416,7 +416,7 @@ EllSparseBlockMat<double> dx_normed( int n, int N, double h, bc bcx, direction d
 * @param bcx boundary condition
 * @param dir The direction of the first derivative
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> dx( const Grid1d& g, bc bcx, direction dir = centered)
 {
@@ -431,7 +431,7 @@ EllSparseBlockMat<double> dx( const Grid1d& g, bc bcx, direction dir = centered)
 * @param g 1D grid
 * @param dir The direction of the first derivative
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> dx( const Grid1d& g, direction dir = centered)
 {
@@ -445,7 +445,7 @@ EllSparseBlockMat<double> dx( const Grid1d& g, direction dir = centered)
 * @param g 1D grid
 * @param bcx boundary condition
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> jump( const Grid1d& g, bc bcx)
 {
@@ -456,9 +456,9 @@ EllSparseBlockMat<double> jump( const Grid1d& g, bc bcx)
 *
 * Take the boundary condition from the grid
 * @ingroup create
-* @param g 1D grid 
+* @param g 1D grid
 *
-* @return Host Matrix 
+* @return Host Matrix
 */
 EllSparseBlockMat<double> jump( const Grid1d& g)
 {

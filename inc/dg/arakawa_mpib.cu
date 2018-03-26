@@ -24,9 +24,9 @@ const double ly = 2*M_PI;
 /*
 double left( double x, double y) { return sin(x)*cos(y);}
 double right( double x, double y){ return exp(0.1*(x+y)); }
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
-    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI); 
+    return exp( x-M_PI)*(sin(x)+cos(x))*sin(y) * exp(y-M_PI)*sin(x)*(sin(y) + cos(y)) - sin(x)*exp(x-M_PI)*cos(y) * cos(x)*sin(y)*exp(y-M_PI);
 }
 */
 
@@ -34,9 +34,9 @@ dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 double left( double x, double y) {return sin(x)*cos(y);}
 double right( double x, double y) {return cos(x)*sin(y);}
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
-    return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y); 
+    return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y);
 }
 ////These are for comparing to FD arakawa results
 //double left( double x, double y) {return sin(2.*M_PI*(x-hx/2.));}
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     MPI_Comm comm;
     dg::mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
     dg::MPIGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 
     dg::ArakawaX<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> arakawa( grid);
     unsigned multi=1000;
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     if(rank==0)std::cout << "Mean lhs*Jacobian is "<<result<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
     result = sqrt( dg::blas2::dot( w2d, jac));
-    if(rank==0)std::cout << "Distance to solution "<<result<<std::endl; 
+    if(rank==0)std::cout << "Distance to solution "<<result<<std::endl;
 
 
     MPI_Finalize();

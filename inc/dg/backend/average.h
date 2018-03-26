@@ -5,7 +5,7 @@
 #include "average.cuh"
 #include "../blas1.h"
 
-/*! @file 
+/*! @file
   @brief contains classes for poloidal and toroidal average computations.
   */
 namespace dg{
@@ -15,8 +15,8 @@ namespace dg{
  *
  * @snippet backend/average_mpit.cu doxygen
  * @ingroup utilities
- * @tparam container Currently this is one of 
- *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec  
+ * @tparam container Currently this is one of
+ *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec
  * @tparam IndexContainer Type of index vectors; May equal \c container
  */
 template< class container, class IndexContainer>
@@ -26,9 +26,9 @@ struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
      * @brief Construct from grid mpi object
      * @param g 2d MPITopology
      */
-    PoloidalAverage( const aMPITopology2d& g): 
+    PoloidalAverage( const aMPITopology2d& g):
         helper1d_( g.n()*g.local().Nx()), hhelper1d_(helper1d_),
-        recv_(helper1d_),dummy( helper1d_), 
+        recv_(helper1d_),dummy( helper1d_),
         helper_( g.local().size()), ly_( g.global().ly())
     {
         int remain[] = {false, true};
@@ -45,9 +45,9 @@ struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
     /**
      * @brief Compute the average in y-direction
      *
-     * @param src 2D Source MPIvector 
+     * @param src 2D Source MPIvector
      * @param res 2D result MPIvector (may not equal src), every line contains the x-dependent average over
-     the y-direction of src 
+     the y-direction of src
      */
     void operator() (const MPI_Vector<container>& src, MPI_Vector<container>& res)
     {
@@ -62,7 +62,7 @@ struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
         blas1::pointwiseDot( helper1d_, v1d, helper1d_);
         //copy to host
         thrust::copy( helper1d_.begin(), helper1d_.end(), hhelper1d_.begin());
-        //Reduce  
+        //Reduce
         MPI_Allreduce( hhelper1d_.data(), recv_.data(), helper1d_.size(), MPI_DOUBLE, MPI_SUM, comm1d_);
         //copy to device
         thrust::copy( recv_.begin(), recv_.end(), helper1d_.begin());
@@ -72,7 +72,7 @@ struct PoloidalAverage<MPI_Vector<container>, MPI_Vector<IndexContainer> >
         while ( 2*pos < res.data().size() )
         {
             thrust::copy_n( res.data().begin(), pos, res.data().begin() + pos);
-            pos*=2; 
+            pos*=2;
         }
         thrust::copy_n( res.data().begin(), res.data().size() - pos, res.data().begin() + pos);
     }

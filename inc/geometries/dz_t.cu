@@ -80,6 +80,6 @@ int main()
     dg::blas1::axpby( 1., solution, -1., derivative);
     diff = sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm );
     std::cout << "DIR global: Relative Difference Is "<< diff <<"\n";
-    
+
     return 0;
 }

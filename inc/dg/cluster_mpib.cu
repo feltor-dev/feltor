@@ -17,9 +17,9 @@ dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
 dg::bc bcz = dg::PER;
 double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
-double right( double x, double y, double z) {return cos(x)*sin(y)*z;} 
+double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
 //double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y, double z) 
+double jacobian( double x, double y, double z)
 {
     return z*z*cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
 }
@@ -37,18 +37,18 @@ typedef dg::MDVec Vector;
 
 /*******************************************************************************
 program expects npx, npy, npz, n, Nx, Ny, Nz from std::cin
-outputs one line to std::cout 
+outputs one line to std::cout
 # npx npy npz #procs #threads n Nx Ny Nz t_AXPBY t_DOT t_DX t_DY t_DZ t_ARAKAWA #iterations t_1xELLIPTIC_CG t_DS
 if Nz == 1, ds is not executed
-Run with: 
->$ echo npx npy npz n Nx Ny Nz | mpirun -#procs ./cluster_mpib 
- 
+Run with:
+>$ echo npx npy npz n Nx Ny Nz | mpirun -#procs ./cluster_mpib
+
  *******************************************************************************/
 
 int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     int periods[3] = {false,false, false};
     if( bcx == dg::PER) periods[0] = true;
     if( bcy == dg::PER) periods[1] = true;
@@ -120,14 +120,14 @@ int main(int argc, char* argv[])
     norm++;//avoid compiler warning
     //Matrix-Vector product
     Matrix dx = dg::create::dx( grid, dg::centered);
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas2::symv( dx, rhs, jac);
     t.toc();
     if(rank==0)std::cout<<t.diff()/(double)multi<<" ";
     //Matrix-Vector product
     Matrix dy = dg::create::dy( grid, dg::centered);
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<multi; i++)
         dg::blas2::symv( dy, rhs, jac);
     t.toc();
@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
     {
         //Matrix-Vector product
         Matrix dz = dg::create::dz( grid, dg::centered);
-        t.tic(); 
+        t.tic();
         for( unsigned i=0; i<multi; i++)
             dg::blas2::symv( dz, rhs, jac);
         t.toc();
@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
 
     //The Arakawa scheme
     dg::ArakawaX<dg::CartesianMPIGrid3d, Matrix, Vector> arakawa( grid);
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<multi; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
         double gpa = gpR0*inv_aspect_ratio;
         double Rmin=gpR0-1.0*gpa;
         double Zmin=-1.0*gpa*1.00;
-        double Rmax=gpR0+1.0*gpa; 
+        double Rmax=gpR0+1.0*gpa;
         double Zmax=1.0*gpa*1.00;
         dg::CylindricalMPIGrid3d g3d( Rmin,Rmax, Zmin,Zmax, 0, 2.*M_PI, n, Nx ,Ny, Nz,dg::DIR, dg::DIR, dg::PER,commEll);
         dg::geo::TokamakMagneticField magfield = dg::geo::createGuentherField(gpR0, gpI0);
@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
         dg::geo::guenther::FuncNeu funcNEU(gpR0,gpI0);
         Vector function = dg::evaluate( funcNEU, g3d) , dsTdsfb(function);
 
-        t.tic(); 
+        t.tic();
         for( unsigned i=0; i<multi; i++)
             ds.symv(function,dsTdsfb);
         t.toc();

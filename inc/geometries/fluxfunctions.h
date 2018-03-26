@@ -108,11 +108,23 @@ template<class BinaryFunctor>
 aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFunctorAdapter<BinaryFunctor>(f);}
 
 /**
+ * @brief The constant functor
+ * \f[ f(x,y) = c\f]
+ */
+struct Constant: public aCloneableBinaryFunctor<Constant>
+{
+    Constant(double c):c_(c){}
+    private:
+    double do_compute(double R,double Z)const{return c_;}
+    double c_;
+};
+
+/**
 * @brief This struct bundles a function and its first derivatives
 *
-* @snippet hector_t.cu doxygen 
+* @snippet hector_t.cu doxygen
 */
-struct BinaryFunctorsLvl1 
+struct BinaryFunctorsLvl1
 {
     ///the access functions are undefined as long as the class remains empty
     BinaryFunctorsLvl1(){}
@@ -146,46 +158,46 @@ struct BinaryFunctorsLvl1
     }
     /// \f$ f \f$
     const aBinaryFunctor& f()const{return p_[0].get();}
-    /// \f$ \partial f / \partial x \f$ 
+    /// \f$ \partial f / \partial x \f$
     const aBinaryFunctor& dfx()const{return p_[1].get();}
     /// \f$ \partial f / \partial y\f$
     const aBinaryFunctor& dfy()const{return p_[2].get();}
     private:
-    Handle<aBinaryFunctor> p_[3];
+    ClonePtr<aBinaryFunctor> p_[3];
 };
 /**
 * @brief This struct bundles a function and its first and second derivatives
 *
 * @snippet hector_t.cu doxygen
 */
-struct BinaryFunctorsLvl2 
+struct BinaryFunctorsLvl2
 {
     ///the access functions are undefined as long as the class remains empty
     BinaryFunctorsLvl2(){}
     /**
     * @copydoc BinaryFunctorsLvl1::BinaryFunctorsLvl1(aBinaryFunctor*,aBinaryFunctor*,aBinaryFunctor*)
     * @param fxx \f$ \partial^2 f / \partial x^2\f$ second derivative in first coordinate
-    * @param fxy \f$ \partial^2 f / \partial x \partial y\f$ second mixed derivative 
+    * @param fxy \f$ \partial^2 f / \partial x \partial y\f$ second mixed derivative
     * @param fyy \f$ \partial^2 f / \partial y^2\f$ second derivative in second coordinate
     */
-    BinaryFunctorsLvl2(  aBinaryFunctor* f,  aBinaryFunctor* fx,  aBinaryFunctor* fy,  aBinaryFunctor* fxx,  aBinaryFunctor* fxy,  aBinaryFunctor* fyy): f0(f,fx,fy), f1(fxx,fxy,fyy) 
+    BinaryFunctorsLvl2(  aBinaryFunctor* f,  aBinaryFunctor* fx,  aBinaryFunctor* fy,  aBinaryFunctor* fxx,  aBinaryFunctor* fxy,  aBinaryFunctor* fyy): f0(f,fx,fy), f1(fxx,fxy,fyy)
     { }
     ///clone given Functors
-    BinaryFunctorsLvl2( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy, const aBinaryFunctor& fxx, const aBinaryFunctor& fxy, const aBinaryFunctor& fyy): f0(f,fx,fy), f1(fxx,fxy,fyy) 
+    BinaryFunctorsLvl2( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy, const aBinaryFunctor& fxx, const aBinaryFunctor& fxy, const aBinaryFunctor& fyy): f0(f,fx,fy), f1(fxx,fxy,fyy)
     { }
     ///Take ownership of given pointers
-    void reset(  aBinaryFunctor* f,  aBinaryFunctor* fx,  aBinaryFunctor* fy,  aBinaryFunctor* fxx,  aBinaryFunctor* fxy,  aBinaryFunctor* fyy){ 
+    void reset(  aBinaryFunctor* f,  aBinaryFunctor* fx,  aBinaryFunctor* fy,  aBinaryFunctor* fxx,  aBinaryFunctor* fxy,  aBinaryFunctor* fyy){
         f0.reset(f,fx,fy), f1.reset(fxx,fxy,fyy);
     }
     ///clone given pointers
-    void reset( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy, const aBinaryFunctor& fxx, const aBinaryFunctor& fxy, const aBinaryFunctor& fyy){ 
+    void reset( const aBinaryFunctor& f, const aBinaryFunctor& fx, const aBinaryFunctor& fy, const aBinaryFunctor& fxx, const aBinaryFunctor& fxy, const aBinaryFunctor& fyy){
         f0.reset(f,fx,fy), f1.reset(fxx,fxy,fyy);
     }
     ///type conversion: Lvl2 can also be used as Lvl1
     operator BinaryFunctorsLvl1 ()const {return f0;}
     /// \f$ f \f$
     const aBinaryFunctor& f()const{return f0.f();}
-    /// \f$ \partial f / \partial x \f$ 
+    /// \f$ \partial f / \partial x \f$
     const aBinaryFunctor& dfx()const{return f0.dfx();}
     /// \f$ \partial f / \partial y\f$
     const aBinaryFunctor& dfy()const{return f0.dfy();}
@@ -200,17 +212,22 @@ struct BinaryFunctorsLvl2
 };
 
 /// A symmetric 2d tensor field and its divergence
-///@snippet hector_t.cu doxygen 
+///@snippet hector_t.cu doxygen
 struct BinarySymmTensorLvl1
 {
-    BinarySymmTensorLvl1( ){}
+    /**
+     * @brief Initialize with the identity tensor
+     */
+    BinarySymmTensorLvl1( ){
+        reset( Constant(1), Constant(0), Constant(1), Constant(0), Constant(0));
+    }
     /**
      * @brief Take ownership of newly allocated functors
      *
      * let's assume the tensor is called \f$ \chi \f$ (chi)
-     * @param chi_xx contravariant xx component \f$ \chi^{xx}\f$ 
-     * @param chi_xy contravariant xy component \f$ \chi^{xy}\f$ 
-     * @param chi_yy contravariant yy component \f$ \chi^{yy}\f$ 
+     * @param chi_xx contravariant xx component \f$ \chi^{xx}\f$
+     * @param chi_xy contravariant xy component \f$ \chi^{xy}\f$
+     * @param chi_yy contravariant yy component \f$ \chi^{yy}\f$
      * @param divChiX \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
      * @param divChiY \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     */
@@ -232,7 +249,7 @@ struct BinarySymmTensorLvl1
         p_[3].reset( divChiX);
         p_[4].reset( divChiY);
     }
-    ///clone given references 
+    ///clone given references
     void reset( const aBinaryFunctor& chi_xx, const aBinaryFunctor& chi_xy, const aBinaryFunctor& chi_yy, const aBinaryFunctor& divChiX, const aBinaryFunctor& divChiY)
     {
         p_[0].reset( chi_xx);
@@ -241,18 +258,18 @@ struct BinarySymmTensorLvl1
         p_[3].reset( divChiX);
         p_[4].reset( divChiY);
     }
-    ///xy component \f$ \chi^{xx}\f$ 
+    ///xy component \f$ \chi^{xx}\f$
     const aBinaryFunctor& xx()const{return p_[0].get();}
-    ///xy component \f$ \chi^{xy}\f$ 
+    ///xy component \f$ \chi^{xy}\f$
     const aBinaryFunctor& xy()const{return p_[1].get();}
-    ///yy component \f$ \chi^{yy}\f$ 
+    ///yy component \f$ \chi^{yy}\f$
     const aBinaryFunctor& yy()const{return p_[2].get();}
      /// \f$ \partial_x \chi^{xx} + \partial_y\chi^{yx}\f$ is the x-component of the divergence of the tensor \f$ \chi\f$
     const aBinaryFunctor& divX()const{return p_[3].get();}
      /// \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     const aBinaryFunctor& divY()const{return p_[4].get();}
     private:
-    Handle<aBinaryFunctor> p_[5];
+    ClonePtr<aBinaryFunctor> p_[5];
 };
 
 /// A vector field with three components that depend only on the first two coordinates
@@ -285,16 +302,9 @@ struct BinaryVectorLvl0
     /// z-component of the vector
     const aBinaryFunctor& z()const{return p_[2].get();}
     private:
-    Handle<aBinaryFunctor> p_[3];
+    ClonePtr<aBinaryFunctor> p_[3];
 };
 
-struct Constant: public aCloneableBinaryFunctor<Constant> 
-{ 
-    Constant(double c):c_(c){}
-    private:
-    double do_compute(double R,double Z)const{return c_;}
-    double c_;
-};
 
 ///@}
 }//namespace geo

@@ -17,26 +17,26 @@ struct aGeometry2d : public aTopology2d
     *
     *  The elements of the Tensor are (if x,y are the coordinates in computational space and R,Z are the physical space coordinates)
     \f[
-    J = \begin{pmatrix} x_R(x,y) & x_Z(x,y) \\ y_R(x,y) & y_Z(x,y) 
+    J = \begin{pmatrix} x_R(x,y) & x_Z(x,y) \\ y_R(x,y) & y_Z(x,y)
     \end{pmatrix}
     \f]
-    * @return Jacobian 
+    * @return Jacobian
     */
     SparseTensor<thrust::host_vector<double> > jacobian()const{
         return do_compute_jacobian();
     }
     /**
-    * @brief The Metric tensor of the coordinate system 
+    * @brief The Metric tensor of the coordinate system
     *
-    *  The elements are the contravariant elements (if x,y are the coordinates) 
+    *  The elements are the contravariant elements (if x,y are the coordinates)
     \f[
     g = \begin{pmatrix} g^{xx}(x,y) & g^{xy}(x,y) \\  & g^{yy}(x,y) \end{pmatrix}
     \f]
     * @return symmetric tensor
     * @note use the dg::tensor functions to compute the volume element from here
     */
-    SparseTensor<thrust::host_vector<double> > metric()const { 
-        return do_compute_metric(); 
+    SparseTensor<thrust::host_vector<double> > metric()const {
+        return do_compute_metric();
     }
     /**
     * @brief The coordinate map from computational to physical space
@@ -46,7 +46,7 @@ struct aGeometry2d : public aTopology2d
     R(x,y) \\
     Z(x,y)
     \f]
-    * @return a vector of size 2 
+    * @return a vector of size 2
     */
     std::vector<thrust::host_vector<double> > map()const{
         return do_compute_map();
@@ -58,7 +58,7 @@ struct aGeometry2d : public aTopology2d
     protected:
     /*!
      * @copydoc aTopology2d::aTopology2d()
-     * @note the default coordinate map will be the identity 
+     * @note the default coordinate map will be the identity
      */
     aGeometry2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aTopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
     ///@copydoc aTopology2d::aTopology2d(const aTopology2d&)
@@ -98,15 +98,15 @@ struct aGeometry3d : public aTopology3d
     z_R(x,y,z) & z_Z(x,y,z) & z_\varphi(x,y,z)
     \end{pmatrix}
     \f]
-    * @return Jacobian 
+    * @return Jacobian
     */
     SparseTensor<thrust::host_vector<double> > jacobian()const{
         return do_compute_jacobian();
     }
     /**
-    * @brief The Metric tensor of the coordinate system 
+    * @brief The Metric tensor of the coordinate system
     *
-    *  The elements are the contravariant elements (if x,y,z are the coordinates) 
+    *  The elements are the contravariant elements (if x,y,z are the coordinates)
     \f[
     g = \begin{pmatrix} g^{xx}(x,y,z) & g^{xy}(x,y,z) & g^{zz}(x,y,z)\\
       & g^{yy}(x,y,z) & g^{yz}(x,y,z) \\
@@ -115,8 +115,8 @@ struct aGeometry3d : public aTopology3d
     * @return symmetric tensor
     * @note use the dg::tensor functions to compute the volume element from here
     */
-    SparseTensor<thrust::host_vector<double> > metric()const { 
-        return do_compute_metric(); 
+    SparseTensor<thrust::host_vector<double> > metric()const {
+        return do_compute_metric();
     }
     /**
     * @brief The coordinate map from computational to physical space
@@ -127,7 +127,7 @@ struct aGeometry3d : public aTopology3d
     Z(x,y,z) \\
     \varphi(x,y,z)
     \f]
-    * @return a vector of size 3 
+    * @return a vector of size 3
     */
     std::vector<thrust::host_vector<double> > map()const{
         return do_compute_map();
@@ -139,7 +139,7 @@ struct aGeometry3d : public aTopology3d
     protected:
     /*!
      * @copydoc aTopology3d::aTopology3d()
-     * @note the default coordinate map will be the identity 
+     * @note the default coordinate map will be the identity
      */
     aGeometry3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     ///@copydoc aTopology3d::aTopology3d(const aTopology3d&)
@@ -191,7 +191,7 @@ struct aProductGeometry3d : public aGeometry3d
     }
     /*!
      * @copydoc aTopology3d::aTopology3d()
-     * @note the default coordinate map will be the identity 
+     * @note the default coordinate map will be the identity
      */
     aProductGeometry3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     private:
@@ -265,7 +265,7 @@ struct CylindricalGrid3d: public dg::aProductGeometry3d
         for( unsigned i = 0; i<size(); i++)
             R[i] = 1./R[i]/R[i];
         metric.idx(2,2)=0;
-        metric.value(0) = R;
+        metric.values()[0] = R;
         return metric;
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){

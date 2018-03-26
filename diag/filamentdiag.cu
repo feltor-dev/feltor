@@ -38,7 +38,7 @@ int main( int argc, char* argv[])
     Json::Reader reader;
     Json::Value js,gs;
     reader.parse( input, js, false);
-    const eule::Parameters p(js);
+    const feltor::Parameters p(js);
     reader.parse( geom, gs, false);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();

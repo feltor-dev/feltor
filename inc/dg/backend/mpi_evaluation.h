@@ -4,7 +4,7 @@
 #include "mpi_vector.h"
 #include "evaluation.cuh"
 
-/*! @file 
+/*! @file
   @brief Function discretization routines for mpi vectors
   */
 namespace dg
@@ -71,7 +71,7 @@ MPI_Vector<thrust::host_vector<double> > evaluate( double(f)(double, double, dou
 /**
  * @brief Take the relevant local part of a global vector
  *
- * @param global a vector the size of the global grid 
+ * @param global a vector the size of the global grid
  * @param g the assumed topology
  * @return an MPI_Vector that is the distributed version of the global vector
  * @ingroup scatter
@@ -93,7 +93,7 @@ MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector
                         unsigned idx2 = (((s*dims[1]+coords[1])*l.n()*l.Ny()+i)*dims[0] + coords[0])*l.n()*l.Nx() + j;
                         temp[idx1] = global[idx2];
                     }
-    return MPI_Vector<thrust::host_vector<double> >(temp, g.communicator()); 
+    return MPI_Vector<thrust::host_vector<double> >(temp, g.communicator());
 }
 /**
  * @copydoc global2local
@@ -115,7 +115,7 @@ MPI_Vector<thrust::host_vector<double> > global2local( const thrust::host_vector
                     unsigned idx2 = ((coords[1]*l.n()*l.Ny()+i)*dims[0] + coords[0])*l.n()*l.Nx() + j;
                     temp[idx1] = global[idx2];
                 }
-    return MPI_Vector<thrust::host_vector<double> >(temp, g.communicator()); 
+    return MPI_Vector<thrust::host_vector<double> >(temp, g.communicator());
 }
 
 }//namespace dg

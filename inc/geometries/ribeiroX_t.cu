@@ -28,7 +28,7 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((s*g.Ny()+i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((s*g.Ny()+i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[((i*g.n() + k)*g.Nx() + j)*g.n()+l];
 
     //exchange two segments
@@ -36,13 +36,13 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[(((i+g.inner_Ny())*g.n() + k)*g.Nx() + j)*g.n()+l];
     for( unsigned i=g.inner_Ny()+g.outer_Ny(); i<g.Ny(); i++)
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[(((i-g.inner_Ny())*g.n() + k)*g.Nx() + j)*g.n()+l];
     if( g.outer_Ny() == 0)
     {
@@ -51,13 +51,13 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[(((i+1)*g.n() + k)*g.Nx() + j)*g.n()+l];
     for( unsigned i=g.Ny()-1; i<g.Ny(); i++)
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[(((1*g.Ny() + i)*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[(((0)*g.n() + k)*g.Nx() + j)*g.n()+l];
     }
 
@@ -69,19 +69,18 @@ int main( int argc, char* argv[])
 {
     std::cout << "Type n, Nx, Ny, Nz (Nx must be divided by 4 and Ny by 10) \n";
     unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
-    Json::Reader reader;
+    std::cin >> n>> Nx>>Ny>>Nz;
     Json::Value js;
     if( argc==1)
     {
         //std::ifstream is("geometry_params_Xpoint_taylor.js");
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
     dg::Timer t;
@@ -105,7 +104,7 @@ int main( int argc, char* argv[])
     dg::geo::CurvilinearProductGridX3d g3d(generator, fx_0, fy_0, n, Nx, Ny,Nz, dg::DIR, dg::NEU);
     dg::geo::CurvilinearGridX2d g2d(generator, fx_0, fy_0, n, Nx, Ny, dg::DIR, dg::NEU);
     t.toc();
-    dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2); 
+    dg::GridX3d g3d_periodic(g3d.x0(), g3d.x1(), g3d.y0(), g3d.y1(), g3d.z0(), g3d.z1(), g3d.fx(), g3d.fy(), g3d.n(), g3d.Nx(), g3d.Ny(), 2);
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     dg::Grid1d g1d( g2d.x0(), g2d.x1(), g2d.n(), g2d.Nx());
     dg::HVec x_left = dg::evaluate( sine, g1d), x_right(x_left);

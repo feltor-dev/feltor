@@ -18,7 +18,7 @@ const double lx = M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
-//const double eps = 1e-3; //# of pcg iterations increases very much if 
+//const double eps = 1e-3; //# of pcg iterations increases very much if
  // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double initial( double x, double y) {return 0.;}
@@ -36,7 +36,7 @@ double der(double x, double y)  { return cos( x)*sin(y);}
 
 int main()
 {
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     double eps;
     double jfactor;
 
@@ -49,8 +49,8 @@ int main()
     std::cin >> n >> Nx >> Ny; //more N means less iterations for same error
     std::cin >> eps >> jfactor;*/
     std::cout << "Computation on: "<< n <<" x "<< Nx <<" x "<< Ny << std::endl;
-    //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;		
-	
+    //std::cout << "# of 2d cells                 "<< Nx*Ny <<std::endl;
+
 	dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::DVec w2d = dg::create::weights( grid);
     dg::DVec v2d = dg::create::inv_weights( grid);
@@ -59,7 +59,7 @@ int main()
     dg::DVec x =    dg::evaluate( initial, grid);
     dg::DVec b =    dg::evaluate( rhs, grid);
     dg::DVec chi =  dg::evaluate( pol, grid);
-    dg::DVec chi_inv(chi); 
+    dg::DVec chi_inv(chi);
     dg::blas1::transform( chi, chi_inv, dg::INVERT<double>());
     dg::blas1::pointwiseDot( chi_inv, v2d, chi_inv);
     dg::DVec temp = x;
@@ -85,7 +85,7 @@ int main()
     std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
     for(unsigned u=0; u<stages; u++)
     {
-        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, jfactor); 
+        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, jfactor);
         multi_pol[u].set_chi( multi_chi[u]);
     }
 

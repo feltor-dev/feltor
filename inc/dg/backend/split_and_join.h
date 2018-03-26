@@ -10,7 +10,7 @@ namespace dg
 {
 ///@ingroup scatter
 ///@{
-/** @brief  Split a vector into planes 
+/** @brief  Split a vector into planes
 *
 * @tparam thrust_vector1 either thrust::host_vector or thrust::device_vector
 * @tparam thrust_vector2 either thrust::host_vector or thrust::device_vector
@@ -30,7 +30,7 @@ void split( const thrust_vector1& in, std::vector<thrust_vector2>& out, const aT
 #ifdef MPI_VERSION
 ///@brief MPI Version of split
 ///@copydetails dg::split()
-///@note every plane in out holds a 2d Cartesian MPI_Communicator 
+///@note every plane in out holds a 2d Cartesian MPI_Communicator
 ///@note two seperately split vectors have congruent (not identical) MPI_Communicators (Note here the MPI concept of congruent vs. identical communicators)
 template<class thrust_vector1, class thrust_vector2>
 void split( const MPI_Vector<thrust_vector1>& in, std::vector<MPI_Vector<thrust_vector2> >& out, const aMPITopology3d& grid)
@@ -55,8 +55,8 @@ void split( const MPI_Vector<thrust_vector1>& in, std::vector<MPI_Vector<thrust_
 *
 * @tparam thrust_vector1 either thrust::host_vector or thrust::device_vector
 * @tparam thrust_vector2 either thrust::host_vector or thrust::device_vector
-* @param in \c grid.Nz() 2d vectors of 2d size 
-* @param out contiguous 3d vector (gets resized if necessary) 
+* @param in \c grid.Nz() 2d vectors of 2d size
+* @param out contiguous 3d vector (gets resized if necessary)
 * @param grid provide dimensions in 3rd and first two dimensions
 * @note split followed by join restores the original vector
 */

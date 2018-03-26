@@ -11,7 +11,7 @@ namespace dg
 * @brief Ell Sparse Block Matrix format device version
 *
 * @ingroup sparsematrix
-* This class holds a copy of a EllSparseBlockMat on the device, which may 
+* This class holds a copy of a EllSparseBlockMat on the device, which may
 be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It can be applied
 to device vectors and does the same thing as the host version
 */
@@ -35,7 +35,7 @@ struct EllSparseBlockMatDevice
         n = src.n, left_size = src.left_size, right_size = src.right_size;
         right_range = src.right_range;
     }
-    
+
     /**
     * @brief Apply the matrix to a vector
     * \f[  y= \alpha M x + \beta y\f]
@@ -66,11 +66,10 @@ struct EllSparseBlockMatDevice
     void display( std::ostream& os = std::cout) const;
     private:
     typedef thrust::device_vector<int> IVec;
-    template <class deviceContainer>
-    void launch_multiply_kernel(value_type alpha, const deviceContainer& x, value_type beta, deviceContainer& y) const;
-    
+    void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+
     thrust::device_vector<value_type> data;
-    IVec cols_idx, data_idx; 
+    IVec cols_idx, data_idx;
     int num_rows, num_cols, blocks_per_line;
     int n;
     int left_size, right_size;
@@ -82,7 +81,7 @@ struct EllSparseBlockMatDevice
 * @brief Coo Sparse Block Matrix format device version
 *
 * @ingroup sparsematrix
-* This class holds a copy of a CooSparseBlockMat on the device, which may 
+* This class holds a copy of a CooSparseBlockMat on the device, which may
 be gpu or omp depending on the THRUST_DEVICE_SYSTEM macro. It does the same thing as the host version with the difference that it applies to device vectors.
 */
 template<class value_type>
@@ -104,7 +103,7 @@ struct CooSparseBlockMatDevice
         num_rows = src.num_rows, num_cols = src.num_cols, num_entries = src.num_entries;
         n = src.n, left_size = src.left_size, right_size = src.right_size;
     }
-    
+
     /**
     * @brief Apply the matrix to a vector
     *
@@ -123,11 +122,10 @@ struct CooSparseBlockMatDevice
     void display(std::ostream& os = std::cout) const;
     private:
     typedef thrust::device_vector<int> IVec;
-    template<class Device>
-    void launch_multiply_kernel(value_type alpha, const Device& x, value_type beta, Device& y) const;
-    
+    void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+
     thrust::device_vector<value_type> data;
-    IVec cols_idx, rows_idx, data_idx; 
+    IVec cols_idx, rows_idx, data_idx;
     int num_rows, num_cols, num_entries;
     int n, left_size, right_size;
 };
@@ -160,7 +158,7 @@ void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const
         os << "\n";
     }
     os << std::endl;
-    
+
 }
 template<class value_type>
 void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
@@ -182,7 +180,7 @@ void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
     for( int i=0; i<num_entries; i++)
         os << data_idx[i] <<" ";
     os << std::endl;
-    
+
 }
 template<class value_type>
 template<class DeviceContainer>
@@ -194,7 +192,10 @@ inline void EllSparseBlockMatDevice<value_type>::symv( value_type alpha, const D
     if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
         throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
     }
-    launch_multiply_kernel( alpha, x, beta, y);
+    const value_type * x_ptr = thrust::raw_pointer_cast( x.data());
+          value_type * y_ptr = thrust::raw_pointer_cast( y.data());
+    launch_multiply_kernel( alpha, x_ptr, beta, y_ptr);
+
 }
 template<class value_type>
 template<class DeviceContainer>
@@ -206,7 +207,9 @@ inline void CooSparseBlockMatDevice<value_type>::symv( value_type alpha, const D
     if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
         throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
     }
-    launch_multiply_kernel(alpha, x, beta, y);
+    const value_type * x_ptr = thrust::raw_pointer_cast( x.data());
+          value_type * y_ptr = thrust::raw_pointer_cast( y.data());
+    launch_multiply_kernel(alpha, x_ptr, beta, y_ptr);
 }
 
 
@@ -242,5 +245,3 @@ struct MatrixTraits<const CooSparseBlockMatDevice<T> >
 #else
 #include "sparseblockmat_gpu_kernels.cuh"
 #endif
-
-

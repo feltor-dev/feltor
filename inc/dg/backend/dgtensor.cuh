@@ -24,7 +24,7 @@ namespace detail{
 struct AddIndex2d{
     AddIndex2d( size_t M, size_t n, size_t m):M(M), n(n), m(m), number(0) {}
 
-    void operator() ( cusp::array1d< int, cusp::host_memory>& Idx, 
+    void operator() ( cusp::array1d< int, cusp::host_memory>& Idx,
                       unsigned i, unsigned j, unsigned k, unsigned l)
     {
         //choose vector layout, old or new
@@ -54,7 +54,7 @@ struct AddIndex2d{
 * @tparam T value type
 * @param n # of Legendre coefficients per dimension
 * @param lhs The left hand side (1D )
-* @param rhs The right hand side (1D ) 
+* @param rhs The right hand side (1D )
 *
 * @return A newly allocated cusp matrix containing the tensor product
 * @note use cusp::add and cups::multiply to add and multiply matrices
@@ -63,15 +63,15 @@ template< class T>
 cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
         const cusp::coo_matrix< int, T, cusp::host_memory>& lhs,
         const cusp::coo_matrix< int, T, cusp::host_memory>& rhs)
-{    
+{
     //assert quadratic matrices
     assert( lhs.num_rows == lhs.num_cols);
     assert( rhs.num_rows == rhs.num_cols);
     //assert dg matrices
     assert( lhs.num_rows%n == 0);
     assert( rhs.num_rows%n == 0);
-    unsigned Nx = rhs.num_rows/n; 
-    //unsigned Ny = lhs.num_rows/n; 
+    unsigned Nx = rhs.num_rows/n;
+    //unsigned Ny = lhs.num_rows/n;
     //taken from the cusp examples:
     //dimensions of the matrix
     int num_rows     = lhs.num_rows*rhs.num_rows;
@@ -126,7 +126,7 @@ cusp::coo_matrix< int, T, cusp::host_memory> dgtensor( unsigned n,
                           A.values.begin(),
                           thrust::equal_to< thrust::tuple<int,int> >(),
                           thrust::plus<T>());
-    return A; 
+    return A;
 }
 
 

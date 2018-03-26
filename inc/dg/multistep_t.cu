@@ -11,9 +11,9 @@ template< class Matrix, class container>
 struct Diffusion
 {
     Diffusion( const dg::Grid2d& g, double nu): m_nu(nu),
-        m_w2d( dg::create::weights(g)), 
+        m_w2d( dg::create::weights(g)),
         m_v2d( dg::create::inv_weights(g)),
-        m_LaplacianM( g, dg::normed) 
+        m_LaplacianM( g, dg::normed)
         { }
 
     void operator()( const std::vector<container>& x, std::vector<container>& y)
@@ -81,7 +81,7 @@ int main()
     std::cout << "Normalized solution is "<<  norm_sol<< std::endl;
     double norm_error = dg::blas2::dot( w2d, error);
     std::cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000149144 Karniadakis) (0.000148647 SIRK)\n";
-    //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter) 
+    //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter)
     //n = 2 -> p = 2
     //n = 3 -> p = 3
     //n = 4 -> p = 4

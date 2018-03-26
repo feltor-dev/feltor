@@ -13,9 +13,9 @@ int main(){
 #include "typedefs.cuh"
 
 const unsigned n = 3;
-const unsigned Nx = 5; 
-const unsigned Ny = 7; 
-const unsigned Nz = 5; 
+const unsigned Nx = 5;
+const unsigned Ny = 7;
+const unsigned Nz = 5;
 
 double sinus( double x, double y) {return sin(x)*sin(y);}
 double sinus( double x, double y, double z) {return sin(x)*sin(y)*sin(z);}
@@ -34,9 +34,9 @@ int main()
     for( unsigned i=0; i<g.Ny()*g.n(); i++)
         for( unsigned j=0; j<g.Nx()*g.n(); j++)
         {
-            x[i*g.Nx()*g.n() + j] = 
+            x[i*g.Nx()*g.n() + j] =
                     g.x0() + (j+0.5)*g.hx()/(double)(g.n());
-            y[i*g.Nx()*g.n() + j] = 
+            y[i*g.Nx()*g.n() + j] =
                     g.y0() + (i+0.5)*g.hy()/(double)(g.n());
         }
     thrust::device_vector<double> xd(x), yd(y);
@@ -79,11 +79,11 @@ int main()
         for( unsigned i=0; i<g.Ny()*g.n(); i++)
             for( unsigned j=0; j<g.Nx()*g.n(); j++)
             {
-                x[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
+                x[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
                         g.x0() + (j+0.5)*g.hx()/(double)(g.n());
-                y[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
+                y[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
                         g.y0() + (i+0.5)*g.hy()/(double)(g.n());
-                z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] = 
+                z[(k*g.Ny()*g.n() + i)*g.Nx()*g.n() + j] =
                         g.z0() + (k+0.5)*g.hz();
             }
     thrust::device_vector<double> xd(x), yd(y), zd(z);
@@ -96,7 +96,7 @@ int main()
     dg::blas1::axpby( 1., (dg::DVec)w, -1., w2, w2);
     std::cout << "3D Error is: "<<dg::blas1::dot( w2, w2)<<std::endl;
     }
-    
+
     return 0;
 }
 #endif //__NVCC__

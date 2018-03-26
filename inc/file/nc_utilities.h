@@ -21,7 +21,7 @@ namespace file
 {
 
 /**
- * @brief Class thrown by the NC_ErrorHandle
+ * @brief Class thrown by the NC_ErrorClonePtr
  */
 struct NC_Error : public std::exception
 {
@@ -37,7 +37,7 @@ struct NC_Error : public std::exception
      *
      * @return string netcdf error message generated from error code
      */
-    char const* what() const throw(){ 
+    char const* what() const throw(){
         return nc_strerror(error_);}
   private:
     int error_;
@@ -78,7 +78,7 @@ struct NC_Error_Handle
     }
 };
 /**
- * @brief Define an unlimited time dimension and variable following 
+ * @brief Define an unlimited time dimension and variable following
   <a href="http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html">CF-conventions</a>
  *
  * The conventions dictate that the units attribute must be defined for a time variable: we give it the value "time since start"
@@ -106,7 +106,7 @@ int define_time( int ncid, const char* name, int* dimID, int* tvarID)
  * The conventions dictate that the units attribute must be defined for a time variable: we give it the value "time since start"
  * @param ncid file ID
  * @param name Name of the time variable (usually "time")
- * @param size The number of timesteps 
+ * @param size The number of timesteps
  * @param dimID time-dimension ID
  * @param tvarID time-variable ID
  *
@@ -125,7 +125,7 @@ int define_limited_time( int ncid, const char* name, int size, int* dimID, int* 
 /**
  * @brief Define a 1d dimension and create a coordinate variable together with its data points in a netcdf file
  *
- * By netcdf conventions a variable with the same name as a dimension is called a coordinate variable. 
+ * By netcdf conventions a variable with the same name as a dimension is called a coordinate variable.
  * @param ncid file ID
  * @param name Name of dimension (input)
  * @param dimID dimension ID (output)
@@ -148,7 +148,7 @@ int define_dimension( int ncid, const char* name, int* dimID, const double * poi
 /**
  * @brief Define a 1d dimension and create a coordinate variable together with its data points in a netcdf file
  *
- * By netcdf conventions a variable with the same name as a dimension is called a coordinate variable. 
+ * By netcdf conventions a variable with the same name as a dimension is called a coordinate variable.
  * @param ncid file ID
  * @param name Name of dimension (input)
  * @param dimID dimension ID (output)
@@ -175,7 +175,7 @@ int define_dimension( int ncid, const char* name, int* dimID, const dg::Grid1d& 
  */
 int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g)
 {
-    int retval;    
+    int retval;
     if( (retval = define_dimension( ncid, "x", &dimsIDs[1], g))){ return retval;}
     if( (retval = define_time( ncid, "time", &dimsIDs[0], tvarID)) ){ return retval;}
 
@@ -185,8 +185,8 @@ int define_dimensions( int ncid, int* dimsIDs, int* tvarID, const dg::Grid1d& g)
  * @brief Define 2d dimensions and associate values in NetCDF-file
  *
  * Dimensions are named x, y
- * @param ncid file ID 
- * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x) 
+ * @param ncid file ID
+ * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x)
  * @param g The 2d grid from which to derive the dimensions
  *
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
@@ -206,8 +206,8 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology2d& g)
  * @brief Define 2d time-dependent dimensions and associate values in NetCDF-file
  *
  * Dimensions are named x, y, and time
- * @param ncid file ID 
- * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x) 
+ * @param ncid file ID
+ * @param dimsIDs (write - only) 3D array of dimension IDs (time, y,x)
  * @param tvarID (write - only) The ID of the time variable
  * @param g The 2d grid from which to derive the dimensions
  *
@@ -254,8 +254,8 @@ int define_limtime_xy( int ncid, int* dimsIDs, int size, int* tvarID, const dg::
  * @brief Define 3d dimensions and associate values in NetCDF-file
  *
  * Dimensions are named x, y, z
- * @param ncid file ID 
- * @param dimsIDs (write - only) 3D array of dimension IDs (z,y,x) 
+ * @param ncid file ID
+ * @param dimsIDs (write - only) 3D array of dimension IDs (z,y,x)
  * @param g The grid from which to derive the dimensions
  *
  * @return if anything goes wrong it returns the netcdf code, else SUCCESS
@@ -277,8 +277,8 @@ int define_dimensions( int ncid, int* dimsIDs, const dg::aTopology3d& g)
  * @brief Define 3d time-dependent dimensions and associate values in NetCDF-file
  *
  * Dimensions are named x, y, z, and time
- * @param ncid file ID 
- * @param dimsIDs (write - only) 4D array of dimension IDs (time, z,y,x) 
+ * @param ncid file ID
+ * @param dimsIDs (write - only) 4D array of dimension IDs (time, z,y,x)
  * @param tvarID (write - only) The ID of the time variable
  * @param g The grid from which to derive the dimensions
  *

@@ -26,7 +26,7 @@ int main()
     //viennacl::ocl::set_context_device_type(0, viennacl::ocl::gpu_tag());
     //viennacl::ocl::current_context().build_options("-cl-mad-enable");
     dg::Timer t;
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n >> Nx >> Ny;
     dg::Grid2d grid( 0., lx, 0, ly, n, Nx, Ny);

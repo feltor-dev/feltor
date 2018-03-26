@@ -39,11 +39,11 @@ int main()
     dg::SparseTensor<thrust::host_vector<double> > dense2d(3);
     dense2d.idx(0,0) = 0, dense2d.idx(0,1) = 1;
     dense2d.idx(1,0) = 1, dense2d.idx(1,1) = 2;
-    dense2d.value(0) = eight; dense2d.value(1) = two; dense2d.value(2) = nine; 
+    dense2d.values()[0] = eight; dense2d.values()[1] = two; dense2d.values()[2] = nine;
     std::cout << "Dense 2d Tensor \n";
     if( !dense2d.isEmpty())print( dense2d);
     std::vector<thrust::host_vector<double> > values(4);
-    values[0] = seven; values[1] = three; values[2] = nine; values[3] = one; 
+    values[0] = seven; values[1] = three; values[2] = nine; values[3] = one;
     dg::SparseTensor<thrust::host_vector<double> > sparse3d(values);
     sparse3d.idx(0,0) = 0, sparse3d.idx(0,1) = 1                       ;
     sparse3d.idx(1,0) = 1                       , sparse3d.idx(1,2) = 3;
@@ -76,7 +76,7 @@ int main()
     sparse3d.idx(2,0)=sparse3d.idx(0,2);
     sparse3d.idx(1,2)=sparse3d.idx(2,1);
     sparse3d.idx(1,1)=3;
-    sparse3d.value(3)=nine;
+    sparse3d.values()[3]=nine;
     std::cout<<"Make a LDL^T decomposition\n";
     dg::CholeskyTensor<thrust::host_vector<double> > ch(sparse3d);
     std::cout << "origin\n"; print(sparse3d);

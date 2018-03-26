@@ -75,30 +75,29 @@ int main(int argc, char**argv)
 {
     std::cout << "Type nHector, NxHector, NyHector (13 2 10)\n";
     unsigned nGrid, NxGrid, NyGrid;
-    std::cin >> nGrid>> NxGrid>>NyGrid;   
+    std::cin >> nGrid>> NxGrid>>NyGrid;
     std::cout << "Type nInit, NxInit, NyInit (for conformal grid, 3 2 20)\n";
     unsigned n, Nx, Ny;
-    std::cin >> n>> Nx>>Ny;   
+    std::cin >> n>> Nx>>Ny;
     const unsigned NxIni=Nx, NyIni=Ny;
     std::cout << "Type psi_0 and psi_1\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     //write parameters from file into variables
     dg::geo::solovev::Parameters gp(js);
     gp.display( std::cout);
-    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp); 
+    dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     const double eps = 1e-10;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     std::cout << "eps\tn\t Nx\t Ny \t # iterations \t error  \t time/iteration (s)\t hx_max\t hy_max\t hx_min\t hy_min \n";

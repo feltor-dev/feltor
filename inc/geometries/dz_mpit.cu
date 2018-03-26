@@ -24,7 +24,7 @@ double r2z( double x, double y, double z) {return (x*x+y*y)*z;}
 int main(int argc, char **argv)
 {
     MPI_Init(&argc, &argv);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::DIR, dg::NEU, n, Nx, Ny, Nz, comm);
     int rank;
@@ -84,6 +84,6 @@ int main(int argc, char **argv)
     diff = sqrt( dg::blas2::dot( derivative, w3d, derivative)/norm );
     if(rank==0)std::cout << "DIR global: Relative Difference Is "<< diff <<"\n";
     MPI_Finalize();
-    
+
     return 0;
 }
