@@ -183,7 +183,7 @@ int main( int argc, char* argv[])
         dg::MPIGrid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y,comm);  
         int dimsIN[2],  coordsIN[2];
         MPI_Cart_get( comm, 2, dimsIN, periods, coordsIN);
-        size_t count2dIN[3] = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};  
+        size_t count2dIN[3] = {1, grid_IN.n()*grid_IN.local().Ny(), grid_IN.n()*grid_IN.local().Nx()};  
         size_t start2dIN[3] = {0, coordsIN[1]*count2dIN[1], coordsIN[0]*count2dIN[2]}; 
         dg::HVec transferIN( dg::evaluate(dg::zero, grid_IN.local()));
         dg::DVec transferIND( dg::evaluate(dg::zero, grid_IN.local()));
