@@ -114,7 +114,7 @@ inline void symv( typename MatrixTraits<Matrix>::value_type alpha,
                   container& y)
 {
     if(alpha == (typename MatrixTraits<Matrix>::value_type)0) {
-        dg::blas1::scal( y, alpha);
+        dg::blas1::scal( y, beta);
         return;
     }
     dg::blas2::detail::doSymv( alpha, M, x, beta, y,
@@ -193,7 +193,7 @@ inline void gemv( typename MatrixTraits<Matrix>::value_type alpha,
                   container& y)
 {
     if(alpha == (typename MatrixTraits<Matrix>::value_type)0) {
-        dg::blas1::scal( y, alpha);
+        dg::blas1::scal( y, beta);
         return;
     }
     dg::blas2::detail::doGemv( alpha, M, x, beta, y,
