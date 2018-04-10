@@ -119,7 +119,7 @@ inline void symv( get_value_type<container> alpha,
                   container& y)
 {
     if(alpha == (get_value_type<container>)0) {
-        dg::blas1::scal( y, alpha);
+        dg::blas1::scal( y, beta);
         return;
     }
     dg::blas2::detail::doSymv( alpha, M, x, beta, y,
@@ -198,7 +198,7 @@ inline void gemv( get_value_type<container> alpha,
                   container& y)
 {
     if(alpha == (get_value_type<container>)0) {
-        dg::blas1::scal( y, alpha);
+        dg::blas1::scal( y, beta);
         return;
     }
     dg::blas2::detail::doGemv( alpha, M, x, beta, y,
