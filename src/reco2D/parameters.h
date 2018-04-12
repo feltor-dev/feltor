@@ -35,9 +35,7 @@ struct Parameters
     double nu_perp;  //!< perpendicular diffusion
     
     double amp;  //!< blob amplitude
-    double sigma; //!< perpendicular blob width
-    double posX;  //!< perpendicular position relative to box width
-    double posY; //!< perpendicular position relative to box height
+    double mY; //!< perpendicular position relative to box height
 
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
@@ -69,9 +67,7 @@ struct Parameters
         nu_perp     = js["nu_perp"].asDouble();
 
         amp         = js["amplitude"].asDouble();
-        sigma       = js["sigma"].asDouble();
-        posX        = js["posX"].asDouble();
-        posY        = js["posY"].asDouble();
+        mY          = js["mY"].asDouble();
     }
     /**
      * @brief Display parameters
@@ -89,9 +85,7 @@ struct Parameters
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
-            << "    width:        "<<sigma<<"\n"
-            << "    posX:         "<<posX<<"\n"
-            << "    posY:         "<<posY<<"\n";
+            << "    mY:           "<<mY<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"     n  = "<<n<<"\n"
             <<"     Nx = "<<Nx<<"\n"
@@ -108,7 +102,7 @@ struct Parameters
             <<"     Ny_out =              "<<Ny_out<<"\n"
             <<"     Steps between output: "<<itstp<<"\n"
             <<"     Number of outputs:    "<<maxout<<"\n";
-        os << "Boundary condition is: \n"
+        os << "Domain size is: \n"
             <<"    lx = "<<2.*lxhalf<<"\n"
             <<"    ly = "<<2.*lyhalf<<"\n";
         os << std::flush;

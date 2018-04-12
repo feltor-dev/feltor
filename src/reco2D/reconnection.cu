@@ -63,7 +63,7 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
    /////////////////////The initial field///////////////////////////////////////////
-    dg::CosYdivCosh2X init0( p.amp, 2.*M_PI/p.lxhalf, M_PI/p.lyhalf/2.);
+    dg::CosYdivCosh2X init0( p.amp, 2.*M_PI/p.lxhalf,p.mY*M_PI/p.lyhalf/2.);
 
     
     std::cout << "intiialize fields" << std::endl;

@@ -23,12 +23,10 @@
     "mu"          : -0.000544617, //(-m_e/m_i) -0.000544617, -0.000272121, -0.000181372
     "tau"         : 0,      //T_i/T_e
     "beta"        : 1e-4,      //Plasma beta 
-    "nu_perp"     : 1e-9,   //  (perpendicular viscosity)
+    "nu_perp"     : 1e-9,   //  (perpendicular viscosity, roughly 0)
     //---------------------Initial perturbation parameters---------------------
     "amplitude" : -0.1, // (blob amplitude)
-    "sigma"     : 2.0,  // (blob variance in units of rho_s)
-    "posX"      : 0.75,  //x-position ( in units of a)
-    "posY"      : 0,    //y-position ( in units of a)
+    "mY"      : 2,  //y-mode number
     //-------------------------------Sim Setup-----------------------------
     "lxhalf"  : 80,   //(in units rho_s)   
     "lyhalf"  : 80,   //(in units rho_s)
