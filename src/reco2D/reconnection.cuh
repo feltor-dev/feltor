@@ -3,127 +3,476 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 
-namespace reco
+// #define APAR
+namespace asela
 {
-
-template<class Geometry, class Matrix, class container>
-struct Diffusion
+///@addtogroup solver
+///@{
+/**
+ * @brief Implicit (perpendicular diffusive) terms for Feltor solver
+ *
+ \f[
+    \begin{align}
+     -\nu_\perp\Delta_\perp^2 N \\
+     -\nu_\perp\Delta_\perp^2 w 
+     -\nu_\parallel \Delta_\parallel N
+     -\nu_\parallel \Delta_\parallel w
+    \end{align}
+\f]
+ * @tparam Matrix The Matrix class
+ * @tparam container The Vector class 
+ * @tparam container The container class
+ */
+template<class Geometry, class IMatrix, class Matrix, class container>
+struct Implicit
 {
-    Diffusion( const Geometry& g, double nu, double mue_hat, double mui_hat):
-        nu_(nu), mue_hat(mue_hat), mui_hat(mui_hat), 
-        w2d_( dg::create::weights(g)), v2d_( dg::create::inv_weights(g)), 
-        temp( g.size()), LaplacianM_perp( g, dg::normed)
-{ }
+        /**
+     * @brief Construct from parameters
+     *
+     * @tparam Grid3d three-dimensional grid class 
+     * @param g The grid
+     * @param p the physics parameters
+     * @param gp the geometry parameters
+     */
+    Implicit( const Geometry& g, asela::Parameters p ):
+        p(p),
+        LaplacianM_perp  ( g, g.bcx(), g.bcy(), dg::normed, dg::centered)
+    {
+        dg::blas1::transfer( dg::evaluate( dg::zero, g), temp);
+    }
+        /**
+     * @brief Return implicit terms
+     *
+     * @param x input vector (x[0] := N_e -1, x[1] := N_i-1, x[2] := w_e, x[3] = w_i)
+     * @param y output vector
+     */
     void operator()( const std::vector<container>& x, std::vector<container>& y)
     {
-        for( unsigned i=0; i<x.size(); i++)
+        /* x[0] := N_e - 1
+           x[1] := N_i - 1
+           x[2] := w_e
+           x[3] := w_i
+        */
+        dg::blas1::axpby( 0., x, 0, y);
+        for( unsigned i=0; i<2; i++)
         {
+            //not linear any more (cannot be written as y = Ax)
             dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
+            dg::blas1::scal( y[i], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ N) 
+            //dissipation acts on w!
+            dg::blas2::gemv( LaplacianM_perp, x[i+2], temp);
+            dg::blas2::gemv( LaplacianM_perp, temp, y[i+2]);
+            dg::blas1::scal( y[i+2], -p.nu_perp);  //  nu_perp lapl_RZ (lapl_RZ w)  
         }
-        dg::blas1::scal( y[0], -nu_);
-        dg::blas1::scal( y[1], -nu_);
-        dg::blas1::scal( y[2], -nu_/mue_hat);
-        dg::blas1::scal( y[3], -nu_/mui_hat);
 
     }
-    const container& weights(){return w2d_;}
-    const container& inv_weights(){return v2d_;}
-    const container& precond(){return v2d_;}
+    /**
+     * @brief Return the laplacian with dirichlet BC
+     *
+     * @return 
+     */
+    dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}
 
+    const container& weights(){return LaplacianM_perp.weights();}
+    const container& inv_weights(){return LaplacianM_perp.inv_weights();}
+    const container& precond(){return LaplacianM_perp.precond();}
   private:
-    double nu_, mue_hat, mui_hat;
-    container w2d_, v2d_;
+    const asela::Parameters p;
     container temp;
     dg::Elliptic<Geometry, Matrix, container> LaplacianM_perp;
+    
 };
 
-template< class Geometry, class Matrix, class container=thrust::device_vector<double> >
-struct Explicit
+/**
+ * @brief compute explicit terms
+ *
+ * @tparam Matrix matrix class to use
+ * @tparam container main container to hold the vectors
+ * @tparam container class of the weights
+ */
+template< class Geometry, class IMatrix, class Matrix, class container >
+struct Asela
 {
-    Explicit( const Geometry& g, Parameters p);
-
+    /**
+     * @brief Construct from parameters
+     *
+     * @tparam Grid3d three-dimensional grid class 
+     * @param g The grid
+     * @param p the physics parameters
+     * @param gp the geometry parameters
+     */
+    Asela( const Geometry& g, asela::Parameters p);
+    /**
+     * @brief Returns phi and psi that belong to the last solve of the polarization equation
+     *
+     * In a multistep scheme this corresponds to the point HEAD-1
+     * unless energies() is called beforehand, then they always belong to HEAD
+     * @return phi[0] is the electron and phi[1] the generalized ion potential
+     */
     const std::vector<container>& potential( ) const { return phi;}
-    const container& aparallel( ) const { return apar;}
+    /**
+     * @brief Returns Aparallel that belongs to the last solve of the induction equation
+     *
+     * In a multistep scheme this corresponds to the point HEAD-1
+     * unless energies() is called beforehand, then they always belong to HEAD
+     * @return Aparallel is parallel vector Potential
+     */
+    const container& aparallel( ) const { return apar[0];}
+    /**
+     * @brief Returns U_e and U_i
+     * @return u[0] is the electron and u[1] the ion gyro-center velocity
+     */
+    const std::vector<container>& uparallel( ) const { return u;}
+    /**
+     * @brief Given N_i-1 initialize N_e -1 such that phi=0
+     *
+     * @param y N_i -1 
+     * @param target N_e -1
+     */
+    void initializene( const container& y, container& target);
+    /**
+     * @brief Compute explicit rhs of Feltor equations
+     *
+     * @param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := w_e, y[3] := w_i
+     * @param yp Result
+     */
     void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    
+    /**
+     * @brief \f[ M := \int_V (n_e-1) dV \f]
+     *
+     * @return mass of plasma contained in volume
+     * @note call energies() before use
+     */
+    double mass( ) {return mass_;}
+        /**
+     * @brief Do not use! Not implemented yet!
+     *
+     * @return 0
+     */
+    double mass_diffusion( ) {return diff_;}
+        /**
+     * @brief 
+     \f[
+\begin{align}
+ E = \partial_t  \int_V d^3x \left[\frac{1}{2}m_e n_e u_e^2 +\frac{1}{2}m_i N_i U_i^2 + \frac{(\nabla_\perp A_\parallel)^2}{2\mu_0} + \frac{1}{2} m_i N_i\left(\frac{\nabla_\perp\phi}{B}\right)^2 + t_e n_e\ln(n_e)+T_i N_i\ln(N_i)\right] 
+\end{align}
+\f]
 
+     * @return Total energy contained in volume
+     * @note call energies() before use
+     */
+    double energy( ) {return energy_;}
+     /**
+     * @brief Individual energies
+     *
+     * @return individual energy terms in total energy
+     E[0]=S_e, E[1] = S_i, E[2] = U_E, E[3] = T_pare, E[4] = T_pari
+     * @note call energies() before use
+     */
+    std::vector<double> energy_vector( ) {return evec;}
+    /**
+     * @brief 
+     \f[
+     \begin{align}
+\sum_z \int_V d^3 x \left[ T(1+\ln N)\Lambda_N + q\psi\Lambda_N + N U\Lambda_U + \frac{1}{2}mU^2\Lambda_N \right] , 
+\end{align}
+\f]
+     * @return Total energy diffusion
+     * @note call energies() before use
+     */
+    double energy_diffusion( ){ return ediff_;}
+
+    
   private:
-    const container w2d, v2d, one;
-    container rho, omega, apar;
+    //extrapolates and solves for phi[1], then adds square velocity ( omega)
+    container& compute_psi( container& potential);
+    container& polarisation( const std::vector<container>& y); //solves polarisation equation
+    container& induct(const std::vector<container>& y);//solves induction equation
+    double add_parallel_dynamics( const std::vector<container>& y, std::vector<container>& yp);
 
-    std::vector<container> phi, expy, arakAN, arakAU, u;
+    container chi, omega,lambda;//1d container
+
+    container one;
+    container w2d, v2d;
+    
+    std::vector<container> phi,apar, u, u2, npe, logn,un; //2d container
+    std::vector<container> arakawan,arakawau,arakawaun,arakawalogn,arakawaphi,arakawau2; //2d container
 
     //matrices and solvers
+    dg::ArakawaX< Geometry, Matrix, container > arakawa; 
+    dg::Elliptic<  Geometry, Matrix, container  > lapperp; //note the host vector    
+    
+    std::vector<container> multi_chi;
+    std::vector<dg::Elliptic<Geometry, Matrix, container> > multi_pol;
+    std::vector<dg::Helmholtz<Geometry,  Matrix, container> > multi_maxwell, multi_invgamma; 
+    
+    dg::Invert<container> invert_maxwell, invert_pol, invert_invgamma;
+    dg::MultigridCG2d<Geometry, Matrix, container> multigrid;
+    dg::Extrapolation<container> old_phi, old_psi, old_gammaN, old_gammaNW, old_Apar, old_gammaApar;
+    
+    const asela::Parameters p;
 
-    dg::ArakawaX<Geometry, Matrix, container> arakawa; 
-    dg::Invert<container> invert_pol, invert_maxwell; 
-    dg::Helmholtz<Geometry, Matrix, container> maxwell;
-    dg::Elliptic< Geometry, Matrix, container > pol, laplaceM; 
+    double mass_, energy_, diff_, ediff_, aligned_;
+    std::vector<double> evec;
 
-    Parameters p;
 };
+///@}
 
-template< class G, class M, class container>
-Explicit< G, M, container>::Explicit( const G& grid, Parameters p ): 
-    w2d( dg::create::weights(grid)),
-    v2d( dg::create::inv_weights(grid)),
-    one( dg::evaluate( dg::one, grid)),
-    rho( dg::evaluate( dg::zero, grid)),
-    omega(rho), apar(rho),
-    phi( 2, rho), expy( phi), arakAN( phi), arakAU( phi), u(phi), 
-    arakawa( grid), 
-    invert_pol( rho, rho.size(), p.eps_pol),
-    invert_maxwell( rho, rho.size(), p.eps_maxwell),
-    maxwell( grid),
-    pol(     grid), 
-    laplaceM ( grid, dg::normed, dg::centered),
-    p(p)
-{ }
-
-template<class G, class M, class container>
-void Explicit< G, M, container>::operator()( const std::vector<container>& y, std::vector<container>& yp) 
-{
-    assert( y.size() == 4);
-    assert( y.size() == yp.size());
-
-    //solve polarisation equation
-    for( unsigned i=0; i<2; i++)
-        dg::blas1::transform( y[i], expy[i], dg::EXP<double>());
-    dg::blas1::axpby( p.dhat[1]*p.dhat[1], expy[1], 0., omega);
-    pol.set_chi(omega);
-    dg::blas1::axpby( -p.dhat[0], expy[0], p.dhat[1], expy[1], rho);
-    invert_pol( pol, phi[0], rho);
-    //compute phi[1]
-    arakawa.variation( phi[0], phi[1]);
-    dg::blas1::axpby( 1., phi[0], -0.5*p.dhat[1], phi[1]);////////////////////
-
-    //solve induction equation
-    dg::blas1::axpby( -1./p.dhat[1], expy[0], 0., omega);
-    dg::blas1::axpby( -1./p.dhat[1], expy[1], 1., omega);
-    maxwell.set_chi(omega);
-    dg::blas1::pointwiseDot( expy[0], y[2], rho);
-    dg::blas1::pointwiseDot( expy[1], y[3], omega);
-    dg::blas1::axpby( -1./p.dhat[1],omega , -1./p.dhat[1], rho);
-    invert_maxwell( maxwell, apar, rho);
-    dg::blas1::axpby( -1./p.dhat[0]/p.dhat[0], y[2], 1./p.dhat[0]/p.dhat[0], apar, u[0]);
-    dg::blas1::axpby( 1./p.dhat[1]/p.dhat[1], y[3], -1./p.dhat[1]/p.dhat[1], apar, u[1]);
-
-    double sign[2]={-1.,1.};
-    for( unsigned i=0; i<2; i++)
+template<class Grid, class IMatrix, class Matrix, class container>
+Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p): 
+    //////////the arakawa operators ////////////////////////////////////////
+    arakawa(g), 
+    //////////the elliptic and Helmholtz operators//////////////////////////
+    lapperp (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
+    multigrid( g, 3),
+    old_phi( 2, dg::evaluate( dg::zero, g)),old_psi( 2, dg::evaluate( dg::zero, g)), old_gammaN( 2, dg::evaluate( dg::zero, g)), old_gammaNW( 2, dg::evaluate( dg::zero, g)), old_Apar( 2, dg::evaluate( dg::zero, g)), old_gammaApar( 2, dg::evaluate( dg::zero, g)), 
+    p(p),  evec(6)
+{ 
+    ////////////////////////////init temporaries///////////////////
+    dg::blas1::transfer( dg::evaluate( dg::zero, g), chi ); 
+    dg::blas1::transfer( dg::evaluate( dg::zero, g), omega ); 
+    dg::blas1::transfer( dg::evaluate( dg::zero, g), lambda ); 
+    dg::blas1::transfer( dg::evaluate( dg::one,  g), one); 
+    phi.resize(2);apar.resize(2); phi[0] = phi[1] = apar[0]=apar[1] =  chi;
+    npe = logn = u = u2 = un =  phi;
+    arakawan = arakawau =  phi;
+    arakawau2  = arakawaun = arakawalogn =arakawaphi  = phi;
+    //////////////////////////init invert objects///////////////////
+    invert_pol.construct(        omega, p.Nx*p.Ny*p.n*p.n, p.eps_pol  ); 
+    invert_maxwell.construct(    omega, p.Nx*p.Ny*p.n*p.n, p.eps_maxwell ); 
+    invert_invgamma.construct(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma); 
+    //////////////////////////////init elliptic and helmholtz operators////////////
+    multi_chi = multigrid.project( chi);
+    multi_pol.resize(3);
+    multi_maxwell.resize(3);
+    multi_invgamma.resize(3);
+    for( unsigned u=0; u<3; u++)
     {
-        arakawa( y[i], phi[i], yp[i]);
-        arakawa( y[2+i], phi[i], yp[2+i]);
-        arakawa( apar, y[i], arakAN[i]);
-        arakawa( apar, u[i], arakAU[i]);
-        dg::blas1::pointwiseDot( u[i], arakAN[i], rho);
-        dg::blas1::pointwiseDot( u[i], arakAU[i], omega);
-        dg::blas1::axpby( p.dhat[i], rho, 1., yp[i]);
-        dg::blas1::axpby( sign[i]*p.dhat[i]*p.dhat[i]*p.dhat[i], omega, 1., yp[2+i]);
-        dg::blas1::axpby( p.dhat[i], arakAU[i], 1., yp[i]);
-        dg::blas1::axpby( sign[i]*p.rhohat[i]*p.rhohat[i]/p.dhat[i], arakAN[i], 1., yp[2+i]);
+        multi_pol[u].construct(        multigrid.grids()[u].get(), g.bcx(), g.bcy(), dg::not_normed, dg::centered, p.jfactor);
+        multi_maxwell[u].construct(    multigrid.grids()[u].get(), g.bcx(), g.bcy(), 1., dg::centered);
+        multi_invgamma[u].construct(   multigrid.grids()[u].get(), g.bcx(), g.bcy(), -0.5*p.tau[1]*p.mu[1], dg::centered);
     }
-
+    //////////////////////////init weights////////////////////////////
+    dg::blas1::transfer( dg::create::volume(g),     w2d);
+    dg::blas1::transfer( dg::create::inv_volume(g), v2d);
 }
 
-}//namespace reco
 
+
+//computes and modifies expy!!
+template<class Geometry, class IMatrix, class Matrix, class container>
+container& Asela<Geometry, IMatrix, Matrix, container>::polarisation( const std::vector<container>& y)
+{
+    dg::blas1::axpby( p.mu[1], y[1], 0, chi);        //chi =  \mu_i (n_i-1) 
+    dg::blas1::plus( chi, p.mu[1]);
+
+    multigrid.project( chi, multi_chi);
+    for( unsigned u=0; u<3; u++)
+    {
+        multi_pol[u].set_chi( multi_chi[u]);
+    }
+
+    //Gamma N_i
+    if (p.tau[1] == 0.) {
+        dg::blas1::axpby( 1., y[1], 0.,chi); //chi = N_i - 1
+    } 
+    else {
+        old_gammaN.extrapolate( chi);
+        std::vector<unsigned> numberG = multigrid.direct_solve( multi_invgamma, chi, y[1], p.eps_gamma); //chi= Gamma (Ni-1)
+        old_gammaN.update( chi);
+        if(  numberG[0] == invert_invgamma.get_max())
+            throw dg::Fail( p.eps_gamma);
+    }
+    //rhs
+    dg::blas1::axpby( -1., y[0], 1.,chi,chi);        //chi=  Gamma (n_i-1) - (n_e-1) = Gamma n_i - n_e
+    //polarisation
+    old_phi.extrapolate( phi[0]);
+    std::vector<unsigned> number = multigrid.direct_solve( multi_pol, phi[0], chi, p.eps_pol);
+    old_phi.update( phi[0]);
+    if(  number[0] == invert_pol.get_max())
+        throw dg::Fail( p.eps_pol);   
+    return phi[0];
+}
+
+template<class Geometry, class IMatrix, class Matrix, class container>
+container& Asela<Geometry, IMatrix, Matrix, container>::induct(const std::vector<container>& y)
+{
+
+        dg::blas1::axpby( p.beta/p.mu[0], npe[0], 0., chi); //chi = beta/mu_e N_e
+        multigrid.project( chi, multi_chi);
+        for( unsigned u=0; u<3; u++)
+        {
+            multi_maxwell[u].set_chi( multi_chi[u]);
+        }
+
+        dg::blas1::pointwiseDot( npe[1], y[3], chi);               //chi = N_i w_i
+        if (p.tau[1] == 0.) {
+            dg::blas1::axpby( 1., chi, 0.,lambda); //lambda = N_i w_i
+        } 
+        else {
+            old_gammaNW.extrapolate( lambda);
+            std::vector<unsigned> numberG = multigrid.direct_solve( multi_invgamma, lambda,chi, p.eps_gamma); //lambda= Gamma (Ni wi)
+            old_gammaNW.update( lambda);
+            if(  numberG[0] == invert_invgamma.get_max())
+                throw dg::Fail( p.eps_gamma);
+        }
+        dg::blas1::pointwiseDot( npe[0], y[2], chi);                 //chi     = n_e w_e
+        dg::blas1::axpby( -1.,lambda , 1., chi);  //chi = - Gamma (n_i w_i) + n_e w_e
+        //maxwell = (lap_per + beta*( n_e/mu_e)) A_parallel 
+        //chi=n_e w_e -Gamma (N_i w_i )
+        //induction
+        old_Apar.extrapolate( apar[0]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_maxwell, apar[0], chi, p.eps_maxwell);
+        old_Apar.update( apar[0]);
+        if(  number[0] == invert_maxwell.get_max())
+            throw dg::Fail( p.eps_maxwell);  
+    return apar[0];
+}
+template<class Geometry, class IMatrix, class Matrix, class container>
+container& Asela<Geometry, IMatrix, Matrix,container>::compute_psi( container& potential)
+{
+    if (p.tau[1] == 0.) {
+        dg::blas1::axpby( 1., potential, 0., phi[1]); 
+    } 
+    else {
+        old_psi.extrapolate( phi[1]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma, phi[1], potential, p.eps_gamma);
+        old_psi.update( phi[1]);
+        if(  number[0] == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma); 
+    }
+    arakawa.variation(potential, omega); 
+    dg::blas1::axpby( 1., phi[1], -0.5, omega,phi[1]);        
+    return phi[1];  
+}
+
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Asela<Geometry, IMatrix, Matrix, container>::initializene( const container& src, container& target)
+{ 
+    if (p.tau[1] == 0.) {
+        dg::blas1::axpby( 1.,src, 0., target); //  ne-1 = N_i -1
+    } 
+    else {
+        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma, target,src, p.eps_gamma);  //=ne-1 = Gamma (ni-1)  
+        if(  number[0] == invert_invgamma.get_max())
+        throw dg::Fail( p.eps_gamma);
+    }
+}
+
+template<class G, class IMatrix, class M, class V>
+double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, std::vector<V>& yp)
+{
+    double z[2]     = {-1.0,1.0};
+    double Dperp[4] = {0.0, 0.0,0.0,0.0};
+    //Parallel dynamics
+    for(unsigned i=0; i<2; i++)
+    {
+        //compute em ArakawaX bracket of ds_b
+        arakawa( logn[i], apar[i],arakawalogn[i]);                     // -[Apar,logN]_RZ
+        arakawa( u2[i],   apar[i],arakawau2[i]);                       // -[Apar,U^2]_RZ 
+        arakawa(un[i], apar[i], arakawaun[i]);                         // -[Apar,U N]_RZ 
+
+        dg::blas1::axpby( -p.beta, arakawaun[i] ,1., yp[i]);                      // dtN +=[Apar,U N]_RZ 
+        dg::blas1::axpby( -p.tau[i]/p.mu[i]*p.beta, arakawalogn[i], 1., yp[2+i]); // dtw += tau/hat(mu)* [Apar,logN]_RZ
+        dg::blas1::axpby( -0.5*p.beta, arakawau2[i], 1., yp[2+i]);                // dtw +=  0.5 [Apar,U^2]_RZ 
+
+        //Compute perp dissipation for N
+        dg::blas2::gemv( lapperp, y[i], lambda);
+        dg::blas2::gemv( lapperp, lambda, omega);                      //nabla_RZ^4 N_e
+        Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  
+
+        //Compute perp dissipation  for U
+        dg::blas2::gemv( lapperp, y[i+2], lambda);
+        dg::blas2::gemv( lapperp, lambda, chi);//nabla_RZ^4 U
+        Dperp[i+2] = -z[i]*p.mu[i]*p.nu_perp* dg::blas2::dot(omega, w2d, chi);
+
+    }
+    return Dperp[0]+Dperp[1]+Dperp[2]+Dperp[3];
+}
+
+// #endif
+template<class Geometry, class IMatrix, class Matrix, class container>
+void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+{   
+    /*  y[0] := N_e - 1
+        y[1] := N_i - 1
+        y[2] := w_e =  U_e + beta/mu_e Apar_e
+        y[3] := w_i =  U_i + beta/mu_i Apar_i
+    */
+    
+    dg::Timer t;
+    t.tic();
+    assert( y.size() == 4);
+    assert( y.size() == yp.size());
+    double z[2]    = {-1.0,1.0};
+    double S[2]    = {0.0, 0.0};
+    double Tpar[2] = {0.0, 0.0};
+    
+    //compute phi via polarisation
+    phi[0] = polarisation( y); //computes phi and Gamma n_i
+    phi[1] = compute_psi( phi[0]); //sets omega = u_E^2
+    
+    //transform n-1 to n and n to logn
+    for(unsigned i=0; i<2; i++)
+    {
+        dg::blas1::transform( y[i], npe[i], dg::PLUS<>(+1.)); //npe = N+1
+        dg::blas1::transform( npe[i], logn[i], dg::LN<double>());
+    }
+    //compute A_parallel via induction and compute U_e and U_i from it
+    if (p.beta!=0.) apar[0] = induct(y); //computes a_par and needs correct npe
+    if (p.tau[1] == 0.) {
+        dg::blas1::axpby(1.0,apar[0],0.,apar[1]);
+    } 
+    else {
+        old_gammaApar.extrapolate( apar[1]);
+        std::vector<unsigned> number = multigrid.direct_solve( multi_invgamma, apar[1], apar[0] , p.eps_gamma);
+        old_gammaApar.update( apar[1]);
+        if(  number[0] == invert_invgamma.get_max())
+            throw dg::Fail( p.eps_gamma); 
+    }
+
+    //calculate U from Apar and w
+
+    dg::blas1::axpby( 1., y[2], - p.beta/p.mu[0], apar[0], u[0]); // U_e = w_e -beta/mu_e Apar
+    dg::blas1::axpby( 1., y[3], - p.beta/p.mu[1], apar[1], u[1]); // U_i = w_i -beta/mu_i Apar
+    
+    //Compute U^2  and UN and energies 
+    for(unsigned i=0; i<2; i++)
+    {
+        dg::blas1::pointwiseDot( u[i], u[i], u2[i]);               // U^2
+        dg::blas1::pointwiseDot( npe[i], u[i], un[i]);             // UN
+        S[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w2d, npe[i]); // S = Z tau N logN
+        Tpar[i] = 0.5*z[i]*p.mu[i]*dg::blas2::dot( npe[i], w2d, u2[i]); //Tpar = 0.5 Z mu N U^2  
+    }
+    mass_ = dg::blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
+    double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w2d, omega);   // Tperp = 0.5 mu_i N_i u_E^2
+    arakawa.variation( apar[0], omega); // |nabla_\perp Aparallel|^2 
+    double Uapar = 0.5*p.beta*dg::blas2::dot( one, w2d, omega); // Uapar = 0.5 beta |nabla_\perp Aparallel|^2
+    energy_ = S[0] + S[1]  + Tperp + Tpar[0] + Tpar[1]; 
+    evec[0] = S[0], evec[1] = S[1], evec[2] = Tperp, evec[3] = Tpar[0], evec[4] = Tpar[1]; evec[5] = Uapar;
+
+    for( unsigned i=0; i<2; i++)
+    {
+        //ExB dynamics
+        arakawa( y[i],   phi[i], yp[i]);                         //[N-1,phi]_RZ
+        arakawa( y[i+2], phi[i], yp[i+2]);                       //[w,phi]_RZ 
+    }    
+    //parallel dynamics
+    ediff_= add_parallel_dynamics( y, yp); 
+ 
+
+    t.toc();
+    #ifdef MPI_VERSION
+        int rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if(rank==0)
+    #endif 
+    std::cout << "One rhs took "<<t.diff()<<"s\n";
+}
+
+
+///@endcond
+
+} //namespace asela

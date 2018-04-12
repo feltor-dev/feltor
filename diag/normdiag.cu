@@ -95,31 +95,49 @@ int main( int argc, char* argv[])
         err = nc_inq_varid(ncid, names[1].data(), &dataIDs[1]);
         err = nc_inq_varid(ncid, names[2].data(), &dataIDs[2]);
         err = nc_get_vara_double( ncid, dataIDs[0], start2d, count2d, tempH.data());
-        ne=tempH;
-        dg::blas1::axpby(1.0,ne,+1.0,one,ne);
-        dg::blas1::transform(ne, logne, dg::LN<double>());
+        if (p.modelmode==0 || p.modelmode==1)
+        {
+            ne=tempH;
+            dg::blas1::axpby(1.0,ne,+1.0,one,ne);
+            dg::blas1::transform(ne, logne, dg::LN<double>());
+
+        }
+        if (p.modelmode==2)
+        {
+            dne=tempH;
+            dg::blas1::axpby(1.0,one,+1.0,dne,ne);
+            dg::blas1::pointwiseDivide(ne,nG,ne);
+            dg::blas1::transform(ne, logne, dg::LN<double>());
+            
+        }
         err = nc_get_vara_double( ncid, dataIDs[0], start2d, count2d, tempH.data());
-        Ni=tempH;
-        dg::blas1::axpby(1.0,Ni,+1.0,one,Ni);
+        if (p.modelmode==0 || p.modelmode==1)
+        {
+            Ni=tempH;
+            dg::blas1::axpby(1.0,Ni,+1.0,one,Ni);        
+            dg::blas1::pointwiseDivide(Ni,nG,dNi);
+            dg::blas1::axpby(1.0,dNi,-1.0,one,dNi);
+        } 
+        if (p.modelmode==2)
+        {
+            dNi=tempH;
+            dg::blas1::axpby(1.0,one,+1.0,dNi,Ni);
+            dg::blas1::pointwiseDivide(Ni,nG,Ni);
+        }
         err = nc_get_vara_double( ncid, dataIDs[2], start2d, count2d, tempH.data());
         phi=tempH;
+
         dg::blas1::pointwiseDivide(ne,nG,dne);
         dg::blas1::transform(dne, lognednG, dg::LN<double>());
         dg::blas1::pointwiseDot(lognednG,dne,lognednG);
         dg::blas1::axpby(1.0,dne,-1.0,one,dne);
-        
         dg::blas1::axpby(1.0,lognednG,-1.0,dne,lognednG);
         nlnnnormq = dg::blas2::dot(one,w2d,lognednG);
-        
-        dg::blas1::pointwiseDivide(Ni,nG,dNi);
-        dg::blas1::axpby(1.0,dNi,-1.0,one,dNi);
         
         //get max phi value
         phisupnorm=*thrust::max_element(phi.begin(),phi.end());
         phinorm = sqrt(dg::blas2::dot(phi,w2d,phi));
         dnesupnorm =*thrust::max_element(dne.begin(),dne.end()); 
-        dnenorm = sqrt(dg::blas2::dot(dne,w2d,dne));
-        dNinorm = sqrt(dg::blas2::dot(dNi,w2d,dNi));
         dnenorm = sqrt(dg::blas2::dot(dne,w2d,dne));
         
         poisson.variationRHS(phi,uE2);

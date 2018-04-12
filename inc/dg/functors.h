@@ -501,7 +501,33 @@ struct SinX
   private:
     double amp_,bamp_,kx_;
 };
-
+/**
+ * @brief Functor for a sin prof in x and y-direction
+ * \f[ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f]
+ */
+struct CosYdivCosh2X
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     * @param ky  ky
+     */
+    CosYdivCosh2X( double amp, double kx, double ky):amp_(amp), kx_(kx),ky_(ky){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y)const{ return amp_*cos(y*ky_)/cosh(x*kx_)/cosh(x*kx_);}
+  private:
+    double amp_,kx_,ky_;
+};
 /**
  * @brief Functor for a sin prof in x-direction
  * \f[ f(x,y) = B + A(1-\sin(k_xx )) \f]

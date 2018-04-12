@@ -2,29 +2,32 @@
 #include <iomanip>
 #include <vector>
 #include <sstream>
+#include <cmath>
+// #define DG_DEBUG
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
+#include "dg/algorithm.h"
 
 #include "reconnection.cuh"
 #include "parameters.h"
+
 
 /*
    - reads parameters from input.txt or any other given file, 
    - integrates the ToeflR - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
-
-double aparallel( double x, double y)
-{
-    return 0.1/cosh(x)/cosh(x)*cos(1./8.*y);
-}
+// double aparallel( double x, double y)
+// {
+//     return 0.1/cosh(x)/cosh(x)*fabs(sin(1./2.*y));
+// }
 
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Reader reader;
-    Json::Value js;
+    Json::Value js, gs;
     if( argc == 1)
     {
         std::ifstream is("input.json");
@@ -40,7 +43,7 @@ int main( int argc, char* argv[])
         std::cerr << "ERROR: Too many arguments!\nUsage: "<< argv[0]<<" [filename]\n";
         return -1;
     }
-    const reco::Parameters p( js);
+    const asela::Parameters p( js);
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
@@ -49,109 +52,112 @@ int main( int argc, char* argv[])
     is.close();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
-    /////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
+    //Make grid
 
-    dg::Grid2d grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
-    //create RHS 
-    reco::Explicit< dg::CartesianGrid2d, dg::DMatrix, dg::DVec > reconnection( grid, p); 
-    reco::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu, 1., 1. );
-    //create initial vector
-    std::vector<dg::DVec> y0(4, dg::evaluate( dg::one, grid)), y1(y0); // n_e' = gaussian
-    y0[2] = y0[3] = dg::evaluate( aparallel, grid);
-    dg::DVec temp( y0[2]);
-    dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> laplaceM(grid, dg::normed, dg::centered);
-    dg::blas2::gemv( laplaceM, y0[2], temp); //u_e = \Delta A_parallel
-    dg::blas1::axpby( p.dhat[0]*p.dhat[0], temp, 1., y0[2]);//w_e = \Delta A + beta/mue A
-   
-    for( unsigned i=0; i<2; i++)
-        dg::blas1::transform( y0[i], y0[i], dg::LN<double>());
+    dg::Grid2d grid( -p.lxhalf, p.lxhalf, -p.lyhalf, p.lyhalf , p.n, p.Nx, p.Ny, dg::DIR, dg::PER);
+    std::cout << "Constructing Explicit...\n";
+    asela::Asela<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> asela( grid, p); //initialize before rolkar!
+    std::cout << "Constructing Implicit...\n";
+    asela::Implicit<dg::CartesianGrid2d, dg::IDMatrix, dg::DMatrix, dg::DVec> rolkar(  grid, p);
+    std::cout << "Done!\n";
 
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
+   /////////////////////The initial field///////////////////////////////////////////
+    dg::CosYdivCosh2X init0( p.amp, 2.*M_PI/p.lxhalf, M_PI/p.lyhalf/2.);
+
+    
+    std::cout << "intiialize fields" << std::endl;
+    std::vector<dg::DVec> y0(4, dg::evaluate( dg::one, grid)), y1(y0); 
+    y0[2] = y0[3] = dg::evaluate( init0, grid);
+    dg::blas2::gemv( rolkar.laplacianM(),y0[3], y0[2]); //w_e = -nabla_perp A_par
+    dg::blas1::axpby(-1., y0[2], -p.beta/p.mu[0], y0[3], y0[2]);//w_e = nabla_perp A_par - beta/mue A
+    dg::blas1::scal(y0[3],-p.beta/p.mu[1]); //w_i = beta/mui A
+    
+    dg::blas1::transform( y0[0], y0[0], dg::PLUS<>(-1.)); // n-1
+    dg::blas1::transform( y0[1], y0[1], dg::PLUS<>(-1.)); // N-1
+    std::cout << "Done!\n";
+
+
+    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    std::cout << "intiialize karniadakis" << std::endl;
+    karniadakis.init( asela, rolkar, y0, p.dt);
+    std::cout << "Done!\n";
+//     asela.energies( y0);//now energies and potential are at time 0
 
     dg::DVec dvisual( grid.size(), 0.);
-    dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
+    dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
     dg::IHMatrix equi = dg::create::backscatter( grid);
-    draw::ColorMapRedBlueExt colors( 1.);
+    draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
+
     //create timer
     dg::Timer t;
     double time = 0;
-    //ab.init( reconnection, y0, p.dt);
-    ab.init( reconnection, diffusion, y0, p.dt);
-    //ab( reconnection, y0, y1, p.dt);
-    //y0.swap( y1); 
+    unsigned step = 0;
+    const double mass0 = asela.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
+    double E0 = asela.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
-    unsigned step = 0;
+
     while ( !glfwWindowShouldClose( w ))
     {
-        for( unsigned i=0; i<2; i++)
-            dg::blas1::transform( y0[i], y0[i], dg::EXP<double>());
-
-        thrust::transform( y1[0].begin(), y1[0].end(), dvisual.begin(), dg::PLUS<double>(-1));
-        dg::blas1::transfer(dvisual, hvisual);
+        //plot electrons
+        dg::blas1::transfer( y0[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw ions
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+        colors.scalemin() = -colors.scalemax();   
         title << std::setprecision(2) << std::scientific;
-        title <<"ne / "<<colors.scale()<<"\t";
+        title <<"ne-1 / " << colors.scalemax()<<"\t";
+
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
-
-
-        thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-1));
-        dg::blas1::transfer(dvisual, hvisual);
-        dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
         //draw ions
+        dg::blas1::transfer( y0[1], hvisual);
+        dg::blas2::gemv( equi, hvisual, visual);
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+        colors.scalemin() = -colors.scalemax();   
         title << std::setprecision(2) << std::scientific;
-        title <<"ni / "<<colors.scale()<<"\t";
+        title <<"ni-1 / " << colors.scalemax()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
-
-        dvisual = reconnection.potential()[0];
-        dg::blas1::transfer(dvisual, hvisual);
+        //draw Potential
+        dg::blas1::transfer( asela.potential()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw phi and swap buffers
-        title <<"Potential / "<<colors.scale()<<"\t";
+        //transform to Vor
+        //dvisual=asela.potential()[0];
+        //dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        //hvisual = y1[1];
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
+//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemin() = -colors.scalemax();
+        title <<"Phi / " << colors.scalemax()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
 
-        //transform phi
-        dg::blas2::gemv(laplaceM, reconnection.potential()[0], dvisual);
-        dg::blas1::transfer(dvisual, hvisual);
+        //draw U_e
+        dg::blas1::transfer( asela.uparallel()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw phi and swap buffers
-        title <<"omega / "<<colors.scale()<<"\t";
-        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+        colors.scalemin() = -colors.scalemax();   
+        title <<"Ue / " << colors.scalemax()<<"\t";
+         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
-
-        //transform Aparallel
-        dvisual = reconnection.aparallel();
-        dg::blas1::transfer(dvisual, hvisual);
+        //draw U_i
+        dg::blas1::transfer( asela.uparallel()[1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw phi and swap buffers
-        title <<"Aparallel / "<<colors.scale()<<"\t";
+        colors.scalemax() = (float)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
+        colors.scalemin() = -colors.scalemax();   
+        title <<"Ui / "<< colors.scalemax()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
-
-        //transform Aparallel
-        dg::blas2::gemv( laplaceM, reconnection.aparallel(), dvisual);
-        dg::blas1::transfer(dvisual, hvisual);
+        //draw a parallel
+        dg::blas1::transfer(asela.aparallel(), hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
-        //compute the color scale
-        colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), 0., dg::AbsMax<double>() );
-        //draw phi and swap buffers
-        title <<"Jpar / "<<colors.scale()<<"\t";
+        colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0., thrust::maximum<double>()  );
+        colors.scalemin() = - colors.scalemax();
+        title <<"A / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax(),thrust::minimum<double>() )<< "  " << colors.scalemax()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+
+ 
         
-
         title << std::fixed; 
         title << " &&   time = "<<time;
         glfwSetWindowTitle(w,title.str().c_str());
@@ -163,17 +169,26 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
+        //double x;
+        //std::cin >> x;
         for( unsigned i=0; i<p.itstp; i++)
         {
-            step++;
-            try{ ab( reconnection, diffusion, y0);}
+            try{ karniadakis( asela, rolkar, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 glfwSetWindowShouldClose( w, GL_TRUE);
                 break;
             }
-            //y0.swap( y1); //attention on -O3 ?
+            step++;
+            std::cout << "(m_tot-m_0)/m_0: "<< (asela.mass()-mass0)/mass_blob0<<"\t";
+            E1 = asela.energy();
+            diff = (E1 - E0)/p.dt; //
+            double diss = asela.energy_diffusion( );
+            std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
+            std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
+            E0 = E1;
+
         }
         time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK

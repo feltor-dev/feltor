@@ -96,7 +96,9 @@ int main( int argc, char** argv)
         double norm = dg::blas1::dot( input1, input1);
         double diff = dg::blas1::dot( input2, input2);
         //double norm2 = *thrust::max_element( input2.begin(), input2.end());
-        std::cout << "Abs. and rel. difference at timestep \t"<<i<<"\t"<<std::setprecision(17)<<sqrt(diff)<<"\t"<<sqrt(diff/norm)<<"\n";
+        std::cout << 
+//"Abs. and rel. difference at timestep \t"<<
+i<<"\t"<<std::setprecision(17)<<sqrt(diff)<<"\t"<<sqrt(diff/norm)<<"\n";
     }
     err = nc_close(ncid1);
     err = nc_close(ncid2);
