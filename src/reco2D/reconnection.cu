@@ -63,18 +63,42 @@ int main( int argc, char* argv[])
     std::cout << "Done!\n";
 
    /////////////////////The initial field///////////////////////////////////////////
-    dg::CosYdivCosh2X init0( p.amp, 2.*M_PI/p.lxhalf,p.mY*M_PI/p.lyhalf/2.);
-
-    
     std::cout << "intiialize fields" << std::endl;
     std::vector<dg::DVec> y0(4, dg::evaluate( dg::one, grid)), y1(y0); 
-    y0[2] = y0[3] = dg::evaluate( init0, grid);
-    dg::blas2::gemv( rolkar.laplacianM(),y0[3], y0[2]); //w_e = -nabla_perp A_par
-    dg::blas1::axpby(-1., y0[2], -p.beta/p.mu[0], y0[3], y0[2]);//w_e = nabla_perp A_par - beta/mue A
-    dg::blas1::scal(y0[3],-p.beta/p.mu[1]); //w_i = beta/mui A
     
-    dg::blas1::transform( y0[0], y0[0], dg::PLUS<>(-1.)); // n-1
-    dg::blas1::transform( y0[1], y0[1], dg::PLUS<>(-1.)); // N-1
+    //Harris sheet problem
+    if( p.init == 0) { 
+        dg::InvCoshXsq init0( 1., 2.*M_PI/p.lxhalf);
+        dg::CosY perty(   1., 0., p.mY*M_PI/p.lyhalf);
+        dg::CosXCosY damp(1., 0., M_PI/p.lxhalf/2.,0.);    
+        y0[3] = dg::evaluate( init0, grid);
+        y1[2] = dg::evaluate( perty, grid);
+        y1[3] = dg::evaluate( damp, grid);
+    }
+    //Island coalescence problem
+    if( p.init == 1) { 
+        dg::IslandXY init0( p.lxhalf/(2.*M_PI), 0.2);
+        dg::CosY perty(   1., 0., p.mY*M_PI/p.lyhalf);
+        dg::CosXCosY damp(1., 0., M_PI/p.lxhalf/2.,0.);    
+        y0[3] = dg::evaluate( init0, grid);
+        y1[2] = dg::evaluate( perty, grid);
+        y1[3] = dg::evaluate( damp, grid);
+    }
+    
+    //Compute initial A_par
+    dg::blas1::axpby(-p.amp,y1[2],1.0,y0[3],y0[3]); // = [ A*Cos(y*ky) + 1/Cosh2(x*kx) ]
+    dg::blas1::pointwiseDot(y1[3],y0[3],y0[3]);     // A_par = cos(x *kx') * [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] 
+
+    //Compute u_e, U_i, w_e, W_i
+    dg::blas2::gemv( rolkar.laplacianM(),y0[3], y0[2]);        //u_e = -nabla_perp A_par
+    dg::blas1::scal(y0[2],-1.0);                               //u_e =  nabla_perp A_par
+    dg::blas1::axpby(1., y0[2], p.beta/p.mu[0], y0[3], y0[2]); //w_e =  u_e + beta/mue A_par
+    asela.initializene( y0[3], y1[3]);                         //A_G = Gamma_1 A_par
+    dg::blas1::axpby(p.beta/p.mu[1], y1[3], 0.0, y0[3]);       //w_i =  beta/mui A_G
+    //Compute n_e
+    dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1.)); // =Ni - bg 
+    asela.initializene( y0[1], y0[0]);                         //n_e = Gamma_1 N_i
+
     std::cout << "Done!\n";
 
 
@@ -132,6 +156,18 @@ int main( int argc, char* argv[])
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
 
+        //draw Vor
+        dvisual=asela.potential()[0];
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        dg::blas1::transfer( y1[1], hvisual);
+        dg::blas2::gemv( equi, hvisual, visual);
+        dg::blas1::scal(visual,-1.0);
+        colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
+//         colors.scalemin() =  (float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
+        colors.scalemin() = -colors.scalemax();
+        title <<"Vor / " << colors.scalemax()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
+        
         //draw U_e
         dg::blas1::transfer( asela.uparallel()[0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
@@ -156,7 +192,16 @@ int main( int argc, char* argv[])
         title <<"A / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax(),thrust::minimum<double>() )<< "  " << colors.scalemax()<<"\t";
         render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
- 
+         //draw j_par
+        dvisual=asela.aparallel();
+        dg::blas2::gemv( rolkar.laplacianM(), dvisual, y1[1]);
+        dg::blas1::transfer( y1[1], hvisual);
+        dg::blas2::gemv( equi, hvisual, visual);
+        
+        colors.scalemax() = (float)thrust::reduce( visual.begin(),visual.end(), 0., thrust::maximum<double>()  );
+        colors.scalemin() = - colors.scalemax();
+        title <<"j / "<<(float)thrust::reduce( visual.begin(), visual.end(), colors.scalemax(),thrust::minimum<double>() )<< "  " << colors.scalemax()<<"\t";
+        render.renderQuad( visual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         title << std::fixed; 
         title << " &&   time = "<<time;

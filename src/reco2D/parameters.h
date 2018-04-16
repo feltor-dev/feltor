@@ -36,6 +36,8 @@ struct Parameters
     
     double amp;  //!< blob amplitude
     double mY; //!< perpendicular position relative to box height
+    
+    unsigned init;
 
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
@@ -68,6 +70,8 @@ struct Parameters
 
         amp         = js["amplitude"].asDouble();
         mY          = js["mY"].asDouble();
+        init        = js["initmode"].asUInt();
+
     }
     /**
      * @brief Display parameters
@@ -82,7 +86,8 @@ struct Parameters
             <<"     beta              = "<<beta<<"\n"
             <<"     El.-temperature:  = "<<tau[0]<<"\n"
             <<"     Ion-temperature:  = "<<tau[1]<<"\n"
-            <<"     perp. Viscosity:  = "<<nu_perp<<"\n";
+            <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
+            <<"     initmode   (0/1)  = "<<init<<"\n";
         os  <<"Blob parameters are: \n"
             << "    amplitude:    "<<amp<<"\n"
             << "    mY:           "<<mY<<"\n";

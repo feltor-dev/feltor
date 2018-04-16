@@ -6,12 +6,12 @@
     "n"  : 3,   //(# of x,y-polynomials)
     "Nx" : 100,  //(grid points in x)
     "Ny" : 100,  //(grid points in y)
-    "dt" : 1000.0,//(time step in units c_s/rho_s)
+    "dt" : 2.0,//(time step in units c_s/rho_s)
     //-------------------------------Output parameters--------------------
     "n_out" : 3,    //(# of x-y polynomials in output)
     "Nx_out" : 100,  //(# grid points in output field)
     "Ny_out" : 100,  //(# grid points in output field)
-    "itstp"  : 10,   //(steps between outputs)
+    "itstp"  : 20,   //(steps between outputs)
     "maxout" : 10,  //total # of outputs (excluding first)
     //-------------------------------Algorithmic parameters---------------------
     "eps_pol"    : 1e-6, //( stop for polarisation)   
@@ -22,11 +22,12 @@
     //----------------------Physical parameters----------------------------
     "mu"          : -0.000544617, //(-m_e/m_i) -0.000544617, -0.000272121, -0.000181372
     "tau"         : 0,      //T_i/T_e
-    "beta"        : 1e-4,      //Plasma beta 
-    "nu_perp"     : 1e-9,   //  (perpendicular viscosity, roughly 0)
-    //---------------------Initial perturbation parameters---------------------
-    "amplitude" : -0.1, // (blob amplitude)
-    "mY"      : 2,  //y-mode number
+    "beta"        : 1e-3,      //Plasma beta 
+    "nu_perp"     : 1e-6,   //  (perpendicular viscosity, roughly 0)
+    //---------------------Initial perturbation parameters and setup ---------------------
+    "initmode"      : 1.0, // (initmode (harris 0 / island 1)
+    "amplitude" : 0.1, // (blob amplitude)
+    "mY"        : 1,  //y-mode number
     //-------------------------------Sim Setup-----------------------------
     "lxhalf"  : 80,   //(in units rho_s)   
     "lyhalf"  : 80,   //(in units rho_s)

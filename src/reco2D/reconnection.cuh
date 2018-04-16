@@ -223,7 +223,7 @@ struct Asela
 template<class Grid, class IMatrix, class Matrix, class container>
 Asela<Grid, IMatrix, Matrix, container>::Asela( const Grid& g, Parameters p): 
     //////////the arakawa operators ////////////////////////////////////////
-    arakawa(g), 
+    arakawa(g, g.bcx(), g.bcy()), 
     //////////the elliptic and Helmholtz operators//////////////////////////
     lapperp (     g, g.bcx(), g.bcy(),   dg::normed,        dg::centered),
     multigrid( g, 3),
@@ -370,13 +370,13 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
     for(unsigned i=0; i<2; i++)
     {
         //compute em ArakawaX bracket of ds_b
-        arakawa( logn[i], apar[i],arakawalogn[i]);                     // -[Apar,logN]_RZ
-        arakawa( u2[i],   apar[i],arakawau2[i]);                       // -[Apar,U^2]_RZ 
-        arakawa(un[i], apar[i], arakawaun[i]);                         // -[Apar,U N]_RZ 
+        arakawa( apar[i], logn[i], arakawalogn[i]);                     // -[Apar,logN]_RZ
+        arakawa( apar[i], u2[i],   arakawau2[i]);                       // -[Apar,U^2]_RZ 
+        arakawa( apar[i], un[i],   arakawaun[i]);                       // -[Apar,U N]_RZ 
 
-        dg::blas1::axpby( -p.beta, arakawaun[i] ,1., yp[i]);                      // dtN +=[Apar,U N]_RZ 
-        dg::blas1::axpby( -p.tau[i]/p.mu[i]*p.beta, arakawalogn[i], 1., yp[2+i]); // dtw += tau/hat(mu)* [Apar,logN]_RZ
-        dg::blas1::axpby( -0.5*p.beta, arakawau2[i], 1., yp[2+i]);                // dtw +=  0.5 [Apar,U^2]_RZ 
+        dg::blas1::axpby( p.beta, arakawaun[i] ,1., yp[i]);                      // dtN += beta [Apar,U N]_RZ 
+        dg::blas1::axpby( p.tau[i]/p.mu[i]*p.beta, arakawalogn[i], 1., yp[2+i]); // dtw += tau beta/mu* [Apar,logN]_RZ
+        dg::blas1::axpby( 0.5*p.beta, arakawau2[i], 1., yp[2+i]);                // dtw +=  0.5 beta [Apar,U^2]_RZ 
 
         //Compute perp dissipation for N
         dg::blas2::gemv( lapperp, y[i], lambda);
@@ -432,18 +432,14 @@ void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<
         if(  number[0] == invert_invgamma.get_max())
             throw dg::Fail( p.eps_gamma); 
     }
-
-    //calculate U from Apar and w
-
-    dg::blas1::axpby( 1., y[2], - p.beta/p.mu[0], apar[0], u[0]); // U_e = w_e -beta/mu_e Apar
-    dg::blas1::axpby( 1., y[3], - p.beta/p.mu[1], apar[1], u[1]); // U_i = w_i -beta/mu_i Apar
     
-    //Compute U^2  and UN and energies 
+    //Compute U, U^2  and UN and energies 
     for(unsigned i=0; i<2; i++)
     {
-        dg::blas1::pointwiseDot( u[i], u[i], u2[i]);               // U^2
-        dg::blas1::pointwiseDot( npe[i], u[i], un[i]);             // UN
-        S[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w2d, npe[i]); // S = Z tau N logN
+        dg::blas1::axpby( 1., y[i+2], - p.beta/p.mu[i], apar[i], u[i]); // U = w -beta/mu A_G
+        dg::blas1::pointwiseDot( u[i], u[i], u2[i]);                    // U^2
+        dg::blas1::pointwiseDot( npe[i], u[i], un[i]);                  // UN
+        S[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w2d, npe[i]);  // S = Z tau N logN
         Tpar[i] = 0.5*z[i]*p.mu[i]*dg::blas2::dot( npe[i], w2d, u2[i]); //Tpar = 0.5 Z mu N U^2  
     }
     mass_ = dg::blas2::dot( one, w2d, y[0] ); //take real ion density which is electron density!!
