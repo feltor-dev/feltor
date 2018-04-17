@@ -92,7 +92,6 @@ struct MPI_Vector
   private:
     container data_;
     MPI_Comm comm_, comm128_, comm128Reduce_;
-};
 
 };
 

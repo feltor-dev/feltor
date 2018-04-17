@@ -15,6 +15,11 @@ Specialize this struct if you want to enable your own vector/container class for
 @ingroup vec_list
 */
 template< class Vector, class Enable=void>
+struct VectorTraits {
+    using value_type        = double; //!< The underlying data type
+    using vector_category   = ThrustVectorTag; //!< Policy how data has to be accessed (has to derive from \c AnyVectorTag)
+    using execution_policy  = OmpTag;  //!< The execution policy (has to derive from \c AnyPolicyTag)
+};
 template<class Vector>
 using get_value_type = typename VectorTraits<Vector>::value_type;
 template<class Vector>
@@ -31,9 +36,19 @@ using get_pointer_type = typename std::conditional< std::is_const<Vector>::value
 template<class T>
 struct VectorTraits<std::vector<T>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
+{
+    using value_type        = T;
+    using vector_category   = ThrustVectorTag;
+    using execution_policy  = OmpTag;
+};
 template<class T>
 struct VectorTraits<std::vector<T>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
+{
+    using value_type        = get_value_type<T>;
+    using vector_category   = VectorVectorTag;
+    using execution_policy  = get_execution_policy<T>;
+};
 ///@}
 
 ///@cond
@@ -41,12 +56,21 @@ template<class Tag>
 struct ThrustTag { };
 template <>
 struct ThrustTag<SerialTag>
+{
+    using thrust_tag = thrust::cpp::tag;
+};
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 template <>
 struct ThrustTag<CudaTag>
+{
+    using thrust_tag = thrust::cuda::tag;
+};
 #else
 template <>
 struct ThrustTag<OmpTag>
+{
+    using thrust_tag = thrust::omp::tag;
+};
 #endif
 template<class Vector>
 using get_thrust_tag = typename ThrustTag<get_execution_policy<Vector>>::thrust_tag;
