@@ -43,38 +43,36 @@ double cosineY( double x, double y) {return sin(x)*cos(y);}
 
 int main( int argc, char* argv[])
 {
-    std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
-    unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     //write parameters from file into variables
     dg::geo::solovev::Parameters gp(js);
     {dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";}
+    std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
+    unsigned n, Nx, Ny, Nz;
+    std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
     gp.display( std::cout);
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
-    std::cout << "Constructing flux grid ... \n";
     t.tic();
     //![doxygen]
     //create the magnetic field
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     //create a grid generator
-    dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 0, false);
     //create a grid
     dg::geo::CurvilinearGrid2d g2d(flux, n, Nx,Ny, dg::NEU);
     //![doxygen]

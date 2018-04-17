@@ -44,17 +44,16 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny, Nz\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
     dg::geo::BinaryFunctorsLvl2 psip=dg::geo::solovev::createPsip(gp);
@@ -68,7 +67,7 @@ int main( int argc, char* argv[])
     std::cout << "Constructing orthogonal grid ... \n";
     t.tic();
 
-    dg::geo::SimpleOrthogonal generator( psip, psi_0, psi_1, gp.R_0, 0., 1);
+    dg::geo::SimpleOrthogonal generator( psip, psi_0, psi_1, gp.R_0, 0., 0);
     dg::geo::CurvilinearProductGrid3d g3d(generator, n, Nx, Ny,Nz, dg::DIR);
     std::unique_ptr<dg::aGeometry2d> g2d( g3d.perp_grid());
     dg::Grid2d g2d_periodic(g2d->x0(), g2d->x1(), g2d->y0(), g2d->y1(), g2d->n(), g2d->Nx(), g2d->Ny()+1);

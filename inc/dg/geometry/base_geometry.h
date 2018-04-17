@@ -265,7 +265,7 @@ struct CylindricalGrid3d: public dg::aProductGeometry3d
         for( unsigned i = 0; i<size(); i++)
             R[i] = 1./R[i]/R[i];
         metric.idx(2,2)=0;
-        metric.value(0) = R;
+        metric.values()[0] = R;
         return metric;
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){

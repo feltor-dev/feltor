@@ -29,8 +29,8 @@ struct Fpsi
 {
 
     //firstline = 0 -> conformal, firstline = 1 -> equalarc
-    Fpsi( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double x0, double y0):
-        psip_(psip), fieldRZYT_(psip, ipol, x0, y0), fieldRZtau_(psip)
+    Fpsi( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double x0, double y0, bool verbose = false):
+        psip_(psip), fieldRZYT_(psip, ipol, x0, y0), fieldRZtau_(psip),m_verbose(verbose)
     {
         X_init = x0, Y_init = y0;
         while( fabs( psip.dfx()(X_init, Y_init)) <= 1e-10 && fabs( psip.dfy()( X_init, Y_init)) <= 1e-10)
@@ -41,6 +41,7 @@ struct Fpsi
     {
         unsigned N = 50;
         thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d);
+        if(m_verbose)std::cout << "In init function\n";
         begin2d[0] = end2d[0] = end2d_old[0] = X_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Y_init;
         double eps = 1e10, eps_old = 2e10;
@@ -51,7 +52,7 @@ struct Fpsi
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
-        //std::cout << "In init function error: psi(R,Z)-psi0: "<<psip_(X_init, Y_init)-psi<<"\n";
+        if(m_verbose)std::cout << "In init function error: psi(R,Z)-psi0: "<<psip_.f()(X_init, Y_init)-psi<<"\n";
     }
 
     //compute f for a given psi between psi0 and psi1
@@ -68,8 +69,8 @@ struct Fpsi
             dg::stepperRK17( fieldRZYT_, begin, end, 0., 2*M_PI, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
-        //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
-        //std::cout <<end_old[2] << " "<<end[2] << "error in y is "<<y_eps<<"\n";
+        if(m_verbose)std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
+        if(m_verbose)std::cout <<end_old[2] << " "<<end[2] <<"\n";
         double f_psi = 2.*M_PI/end_old[2];
         return f_psi;
     }
@@ -113,6 +114,7 @@ struct Fpsi
     BinaryFunctorsLvl1 psip_;
     dg::geo::flux::FieldRZYT fieldRZYT_;
     dg::geo::FieldRZtau fieldRZtau_;
+    bool m_verbose;
 
 };
 
@@ -135,30 +137,31 @@ struct FluxGenerator : public aGenerator2d
      * @param ipol \f$ I(x,y)\f$ the current function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary
      * @param psi_1 second boundary
-     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param x0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
-     * @note If mode == 1 then this class does the same as the RibeiroFluxGenerator
+     * @param verbose if true the integrators will write additional information to \c std::cout
+     * @note If \c mode==1 then this class does the same as the \c RibeiroFluxGenerator
      */
-    FluxGenerator( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& ipol, double psi_0, double psi_1, double x0, double y0, int mode=0):
-        psi_(psi), ipol_(ipol), mode_(mode)
+    FluxGenerator( const BinaryFunctorsLvl2& psi, const BinaryFunctorsLvl1& ipol, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
+        psi_(psi), ipol_(ipol), mode_(mode), m_verbose( verbose)
     {
         psi0_ = psi_0, psi1_ = psi_1;
         assert( psi_1 != psi_0);
         if( mode==0)
         {
-            flux::detail::Fpsi fpsi(psi, ipol, x0, y0);
+            flux::detail::Fpsi fpsi(psi, ipol, x0, y0, m_verbose);
             f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
         }
         else
         {
-            ribeiro::detail::Fpsi fpsi(psi, x0, y0, mode);
+            ribeiro::detail::Fpsi fpsi(psi, x0, y0, mode, m_verbose);
             f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
         }
         if( psi_1 < psi_0) f0_*=-1;
         lx_ =  f0_*(psi_1-psi_0);
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
-        //std::cout << "lx_ = "<<lx_<<"\n";
+        if(m_verbose)std::cout << "lx = "<<lx_<<"\n";
     }
 
     virtual FluxGenerator* clone() const{return new FluxGenerator(*this);}
@@ -182,10 +185,10 @@ struct FluxGenerator : public aGenerator2d
         for( unsigned i=0; i<psi_x.size(); i++)
             psi_x[i] = zeta1d[i]/f0_ +psi0_;
 
-        //std::cout << "In grid function:\n";
-        flux::detail::Fpsi fpsi(psi_, ipol_, x0_, y0_);
+        if(m_verbose)std::cout << "In grid function:"<<std::endl;
+        flux::detail::Fpsi fpsi(psi_, ipol_, x0_, y0_, m_verbose);
         dg::geo::flux::FieldRZYRYZY fieldRZYRYZY(psi_, ipol_);
-        ribeiro::detail::Fpsi fpsiRibeiro(psi_, x0_, y0_, mode_);
+        ribeiro::detail::Fpsi fpsiRibeiro(psi_, x0_, y0_, mode_, m_verbose);
         dg::geo::equalarc::FieldRZYRYZY fieldRZYRYZYequalarc(psi_);
         thrust::host_vector<double> fx_;
         fx_.resize( zeta1d.size());
@@ -196,8 +199,8 @@ struct FluxGenerator : public aGenerator2d
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            if(mode_==0)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZY, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
-            if(mode_==1)dg::geo::detail::compute_rzy( fpsiRibeiro, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==0)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZY, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i], m_verbose);
+            if(mode_==1)dg::geo::detail::compute_rzy( fpsiRibeiro, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i], m_verbose);
             for( unsigned j=0; j<Ny; j++)
             {
                 x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
@@ -210,6 +213,7 @@ struct FluxGenerator : public aGenerator2d
     BinaryFunctorsLvl1 ipol_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
+    bool m_verbose;
 };
 
 /**
@@ -224,21 +228,22 @@ struct RibeiroFluxGenerator : public aGenerator2d
      * @param psi \f$ \psi(x,y)\f$ the flux function and its derivatives in Cartesian coordinates (x,y)
      * @param psi_0 first boundary
      * @param psi_1 second boundary
-     * @param x0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
-     * @param y0 a point in the inside of the ring bounded by psi0 (shouldn't be the O-point)
+     * @param x0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
+     * @param y0 a point in the inside of the domain bounded by \c psi_0 (shouldn't be the O-point)
      * @param mode This parameter indicates the adaption type used to create the grid: 0 is no adaption, 1 is an equalarc adaption
+     * @param verbose if true the integrators will write additional information to \c std::cout
      */
-    RibeiroFluxGenerator( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0):
-        psip_(psi), mode_(mode)
+    RibeiroFluxGenerator( const BinaryFunctorsLvl2& psi, double psi_0, double psi_1, double x0, double y0, int mode=0, bool verbose = false):
+        psip_(psi), mode_(mode), m_verbose(verbose)
     {
         psi0_ = psi_0, psi1_ = psi_1;
         assert( psi_1 != psi_0);
-        ribeiro::detail::Fpsi fpsi(psi, x0, y0, mode);
+        ribeiro::detail::Fpsi fpsi(psi, x0, y0, mode, m_verbose);
         f0_ = fabs( fpsi.construct_f( psi_0, x0_, y0_));
         if( psi_1 < psi_0) f0_*=-1;
         lx_ =  f0_*(psi_1-psi_0);
         x0_=x0, y0_=y0, psi0_=psi_0, psi1_=psi_1;
-        //std::cout << "lx_ = "<<lx_<<"\n";
+        if(m_verbose)std::cout << "lx = "<<lx_<<"\n";
     }
     virtual RibeiroFluxGenerator* clone() const{return new RibeiroFluxGenerator(*this);}
 
@@ -261,7 +266,7 @@ struct RibeiroFluxGenerator : public aGenerator2d
         for( unsigned i=0; i<psi_x.size(); i++)
             psi_x[i] = zeta1d[i]/f0_ +psi0_;
 
-        ribeiro::detail::Fpsi fpsi(psip_, x0_, y0_, mode_);
+        ribeiro::detail::Fpsi fpsi(psip_, x0_, y0_, mode_, m_verbose);
         dg::geo::ribeiro::FieldRZYRYZY fieldRZYRYZYribeiro(psip_);
         dg::geo::equalarc::FieldRZYRYZY fieldRZYRYZYequalarc(psip_);
         thrust::host_vector<double> fx_;
@@ -273,8 +278,8 @@ struct RibeiroFluxGenerator : public aGenerator2d
             thrust::host_vector<double> ry, zy;
             thrust::host_vector<double> yr, yz, xr, xz;
             double R0, Z0;
-            if(mode_==0)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
-            if(mode_==1)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i]);
+            if(mode_==0)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYribeiro, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i], m_verbose);
+            if(mode_==1)dg::geo::detail::compute_rzy( fpsi, fieldRZYRYZYequalarc, psi_x[i], eta1d, ry, zy, yr, yz, xr, xz, R0, Z0, fx_[i], f_p[i], m_verbose);
             for( unsigned j=0; j<Ny; j++)
             {
                 x[j*Nx+i]  = ry[j], y[j*Nx+i]  = zy[j];
@@ -286,6 +291,7 @@ struct RibeiroFluxGenerator : public aGenerator2d
     BinaryFunctorsLvl2 psip_;
     double f0_, lx_, x0_, y0_, psi0_, psi1_;
     int mode_;
+    bool m_verbose;
 };
 }//namespace geo
 }//namespace dg

@@ -286,8 +286,8 @@ struct EllipticXDirNeuM
     func_(c, psi_0, psi_1), bmod_(c), br_(c), bz_(c) {}
     double operator()(double R, double Z) const {
         double bmod = bmod_(R,Z), br = br_(R,Z), bz = bz_(R,Z);
-        double chi = 1e4+bmod; //bmod can be zero for a Taylor state(!)
-        //double chi = bmod; //bmod can be zero for a Taylor state(!)
+        //double chi = 1e4+bmod; //bmod can be zero for a Taylor state(!)
+        double chi = bmod; //bmod for solovev state
         double chiR = br;
         double chiZ = bz;
         return -(chiR*func_.dR(R,Z) + chiZ*func_.dZ(R,Z) + chi*( func_.dRR(R,Z) + func_.dZZ(R,Z) ));

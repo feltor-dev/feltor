@@ -49,17 +49,16 @@ int main( int argc, char* argv[])
     std::cout << "Type n, Nx, Ny, Nz ( 3 4 40 1)\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     //write parameters from file into variables
     dg::geo::solovev::Parameters gp(js);

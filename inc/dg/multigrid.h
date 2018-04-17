@@ -248,7 +248,7 @@ struct MultigridCG2d
     unsigned stages()const{return stages_;}
 
     ///observe the grids at all stages
-    const std::vector<dg::Handle< Geometry > > grids()const { return grids_; }
+    const std::vector<dg::ClonePtr< Geometry > > grids()const { return grids_; }
 
 
     ///After a call to a solution method returns the maximum number of iterations allowed at stage  0
@@ -327,7 +327,7 @@ private:
 
 private:
     unsigned stages_;
-    std::vector< dg::Handle< Geometry> > grids_;
+    std::vector< dg::ClonePtr< Geometry> > grids_;
     std::vector< MultiMatrix<Matrix, container> >  inter_;
     std::vector< MultiMatrix<Matrix, container> >  interT_;
     std::vector< MultiMatrix<Matrix, container> >  project_;

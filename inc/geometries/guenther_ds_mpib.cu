@@ -32,10 +32,9 @@ int main( int argc, char* argv[])
     MPI_Cart_create( MPI_COMM_WORLD, 3, np, periods, true, &comm);
 
     /////////////////initialize params////////////////////////////////
-    Json::Reader reader;
     Json::Value js;
     std::ifstream is("guenther_params.js");
-    reader.parse(is,js,false);
+    is >> js;
     dg::geo::guenther::Parameters gp(js);
 //     gp.display( std::cout);
 

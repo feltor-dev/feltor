@@ -133,11 +133,13 @@ namespace ribeiro{
 
 struct FieldRZYT
 {
-    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip){}
+    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
-        double psip2 = psipR*psipR+psipZ*psipZ;
+        double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
+                       + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] = +psipR;//fieldZ
         //yp[2] = 1; //volume
@@ -153,15 +155,18 @@ struct FieldRZYT
   private:
     double R_0_, Z_0_;
     BinaryFunctorsLvl1 psip_;
+    BinarySymmTensorLvl1 chi_;
 };
 
 struct FieldRZYZ
 {
-    FieldRZYZ( const BinaryFunctorsLvl1& psip): psip_(psip){}
+    FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): psip_(psip), chi_(chi){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
-        double psip2 = psipR*psipR+psipZ*psipZ;
+        double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
+                       + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] =  psipR;//fieldZ
         //yp[2] = 1.0; //volume
@@ -174,16 +179,19 @@ struct FieldRZYZ
     }
   private:
     BinaryFunctorsLvl1 psip_;
+    BinarySymmTensorLvl1 chi_;
 };
 
 struct FieldRZY
 {
-    FieldRZY( const BinaryFunctorsLvl1& psip): f_(1.),psip_(psip){}
+    FieldRZY( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
     void set_f(double f){ f_ = f;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
-        double psip2 = psipR*psipR+psipZ*psipZ;
+        double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
+                       + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         //yp[0] = +psipZ/f_;//volume
         //yp[1] = -psipR/f_;//volume
         //yp[0] = +psipZ/sqrt(psip2)/f_;//equalarc
@@ -196,6 +204,7 @@ struct FieldRZY
   private:
     double f_;
     BinaryFunctorsLvl1 psip_;
+    BinarySymmTensorLvl1 chi_;
 };
 
 
@@ -238,11 +247,13 @@ namespace equalarc{
 
 struct FieldRZYT
 {
-    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip){}
+    FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
-        double psip2 = psipR*psipR+psipZ*psipZ;
+        double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
+                       + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] = +psipR;//fieldZ
         //yp[2] = 1; //volume
@@ -258,15 +269,18 @@ struct FieldRZYT
   private:
     double R_0_, Z_0_;
     BinaryFunctorsLvl1 psip_;
+    BinarySymmTensorLvl1 chi_;
 };
 
 struct FieldRZYZ
 {
-    FieldRZYZ( const BinaryFunctorsLvl1& psip): psip_(psip){}
+    FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): psip_(psip), chi_(chi){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
-        double psip2 = psipR*psipR+psipZ*psipZ;
+        double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
+                       + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         yp[0] = -psipZ;//fieldR
         yp[1] = +psipR;//fieldZ
         //yp[2] = 1.0; //volume
@@ -279,16 +293,19 @@ struct FieldRZYZ
     }
   private:
     BinaryFunctorsLvl1 psip_;
+    BinarySymmTensorLvl1 chi_;
 };
 
 struct FieldRZY
 {
-    FieldRZY( const BinaryFunctorsLvl1& psip):f_(1.), psip_(psip){}
+    FieldRZY( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
     void set_f(double f){ f_ = f;}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
-        double psip2 = psipR*psipR+psipZ*psipZ;
+        double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
+                    + 2.*chi_.xy()(y[0], y[1])*psipR*psipZ
+                       + chi_.yy()(y[0], y[1])*psipZ*psipZ;
         //yp[0] = +psipZ/f_;//volume
         //yp[1] = -psipR/f_;//volume
         yp[0] = -psipZ/sqrt(psip2)/f_;//equalarc
@@ -301,6 +318,7 @@ struct FieldRZY
   private:
     double f_;
     BinaryFunctorsLvl1 psip_;
+    BinarySymmTensorLvl1 chi_;
 };
 
 
@@ -344,16 +362,20 @@ struct FieldRZYRYZY
 
 struct FieldRZtau
 {
-    FieldRZtau(const BinaryFunctorsLvl1& psip): psip_(psip){}
+    FieldRZtau(const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1()): psip_(psip), chi_(chi){}
     void operator()( const dg::HVec& y, dg::HVec& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
-        double psi2 = psipR*psipR+ psipZ*psipZ;
-        yp[0] =  psipR/psi2;
-        yp[1] =  psipZ/psi2;
+        double chiRR = chi_.xx()(y[0], y[1]),
+               chiRZ = chi_.xy()(y[0], y[1]),
+               chiZZ = chi_.yy()(y[0], y[1]);
+        double psip2 =   chiRR*psipR*psipR + 2.*chiRZ*psipR*psipZ + chiZZ*psipZ*psipZ;
+        yp[0] =  (chiRR*psipR + chiRZ*psipZ)/psip2;
+        yp[1] =  (chiRZ*psipR + chiZZ*psipZ)/psip2;
     }
   private:
     BinaryFunctorsLvl1 psip_;
+    BinarySymmTensorLvl1 chi_;
 };
 
 struct HessianRZtau
@@ -459,13 +481,13 @@ template <class FieldFinv>
 void construct_psi_values( FieldFinv fpsiMinv,
         const double psi_0, const double psi_1, const double x_0, const thrust::host_vector<double>& x_vec, const double x_1,
         thrust::host_vector<double>& psi_x,
-        thrust::host_vector<double>& f_x_)
+        thrust::host_vector<double>& f_x_, bool verbose = false)
 {
     f_x_.resize( x_vec.size()), psi_x.resize( x_vec.size());
     thrust::host_vector<double> begin(1,psi_0), end(begin), temp(begin);
     unsigned N = 1;
     double eps = 1e10, eps_old=2e10;
-    //std::cout << "In psi function:\n";
+    if(verbose)std::cout << "In psi function:\n";
     double x0=x_0, x1 = psi_1>psi_0? x_vec[0]:-x_vec[0];
     while( (eps <  eps_old || eps > 1e-8) && eps > 1e-14) //1e-8 < eps < 1e-14
     {
@@ -486,7 +508,7 @@ void construct_psi_values( FieldFinv fpsiMinv,
         dg::stepperRK17(fpsiMinv, temp, end, x1, psi_1>psi_0?x_1:-x_1,N);
         double psi_1_numerical = end[0];
         eps = fabs( psi_1_numerical-psi_1);
-        //std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n";
+        if(verbose)std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n";
         N*=2;
     }
 
@@ -503,7 +525,7 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
         thrust::host_vector<double>& yz,
         thrust::host_vector<double>& xr,
         thrust::host_vector<double>& xz,
-        double& R_0, double& Z_0, double& f, double& fp )
+        double& R_0, double& Z_0, double& f, double& fp, bool verbose = false )
 {
     thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old), yr_old(r_old), xr_old(r_old);
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old), yz_old(r_old), xz_old(z_old);
@@ -517,7 +539,7 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     fieldRZYRYZY.set_fp(fprime);
     fieldRZYRYZY.initialize( begin[0], begin[1], begin[2], begin[3]);
     R_0 = begin[0], Z_0 = begin[1];
-    //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
+    if(verbose)std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
     unsigned steps = 1;
     double eps = 1e10, eps_old=2e10;
     while( eps < eps_old)

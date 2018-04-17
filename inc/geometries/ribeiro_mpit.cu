@@ -33,17 +33,16 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
     dg::geo::BinaryFunctorsLvl2 psip = dg::geo::solovev::createPsip( gp);
@@ -60,7 +59,7 @@ int main( int argc, char* argv[])
     t.tic();
     dg::geo::Ribeiro ribeiro( psip, psi_0, psi_1, gp.R_0, 0., 1);
     dg::geo::CurvilinearProductMPIGrid3d g3d(ribeiro, n, Nx, Ny,Nz, dg::DIR,dg::PER, dg::PER,comm);
-    dg::Handle<dg::aMPIGeometry2d> g2d = g3d.perp_grid();
+    dg::ClonePtr<dg::aMPIGeometry2d> g2d = g3d.perp_grid();
     t.toc();
     if(rank==0)std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     int ncid;

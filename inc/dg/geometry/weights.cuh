@@ -16,13 +16,21 @@ namespace create{
 ///@{
 
 /*!@class hide_weights_doc
+<<<<<<< HEAD:inc/dg/geometry/weights.cuh
 * @brief create host vector containing X-space weight coefficients
+=======
+* @brief create host_vector containing X-space weight coefficients
+>>>>>>> master:inc/dg/backend/weights.cuh
 * @param g The grid
 * @return Host Vector
 * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
 */
 /*!@class hide_inv_weights_doc
+<<<<<<< HEAD:inc/dg/geometry/weights.cuh
 * @brief create host vector containing inverse X-space weight coefficients
+=======
+* @brief create host_vector containing inverse X-space weight coefficients
+>>>>>>> master:inc/dg/backend/weights.cuh
 * @param g The grid
 * @return Host Vector
 * @sa <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>

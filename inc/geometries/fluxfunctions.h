@@ -108,6 +108,18 @@ template<class BinaryFunctor>
 aBinaryFunctor* make_aBinaryFunctor(const BinaryFunctor& f){return new BinaryFunctorAdapter<BinaryFunctor>(f);}
 
 /**
+ * @brief The constant functor
+ * \f[ f(x,y) = c\f]
+ */
+struct Constant: public aCloneableBinaryFunctor<Constant>
+{
+    Constant(double c):c_(c){}
+    private:
+    double do_compute(double R,double Z)const{return c_;}
+    double c_;
+};
+
+/**
 * @brief This struct bundles a function and its first derivatives
 *
 * @snippet hector_t.cu doxygen
@@ -151,7 +163,7 @@ struct BinaryFunctorsLvl1
     /// \f$ \partial f / \partial y\f$
     const aBinaryFunctor& dfy()const{return p_[2].get();}
     private:
-    Handle<aBinaryFunctor> p_[3];
+    ClonePtr<aBinaryFunctor> p_[3];
 };
 /**
 * @brief This struct bundles a function and its first and second derivatives
@@ -203,7 +215,12 @@ struct BinaryFunctorsLvl2
 ///@snippet hector_t.cu doxygen
 struct BinarySymmTensorLvl1
 {
-    BinarySymmTensorLvl1( ){}
+    /**
+     * @brief Initialize with the identity tensor
+     */
+    BinarySymmTensorLvl1( ){
+        reset( Constant(1), Constant(0), Constant(1), Constant(0), Constant(0));
+    }
     /**
      * @brief Take ownership of newly allocated functors
      *
@@ -252,7 +269,7 @@ struct BinarySymmTensorLvl1
      /// \f$ \partial_x \chi^{xy} + \partial_y\chi^{yy}\f$ is the y-component of the divergence of the tensor \f$ \chi \f$
     const aBinaryFunctor& divY()const{return p_[4].get();}
     private:
-    Handle<aBinaryFunctor> p_[5];
+    ClonePtr<aBinaryFunctor> p_[5];
 };
 
 /// A vector field with three components that depend only on the first two coordinates
@@ -285,15 +302,7 @@ struct BinaryVectorLvl0
     /// z-component of the vector
     const aBinaryFunctor& z()const{return p_[2].get();}
     private:
-    Handle<aBinaryFunctor> p_[3];
-};
-
-struct Constant: public aCloneableBinaryFunctor<Constant>
-{
-    Constant(double c):c_(c){}
-    private:
-    double do_compute(double R,double Z)const{return c_;}
-    double c_;
+    ClonePtr<aBinaryFunctor> p_[3];
 };
 
 ///@}

@@ -26,17 +26,17 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology
 
 ///@copydoc projection(const Grid1d&,const Grid1d&)
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const GridX1d& g_new, const GridX1d& g_old) {
-    return projection(g_new, g_old);
+    return projection(g_new.grid(), g_old.grid());
 }
 
 ///@copydoc projection(const Grid1d&,const Grid1d&)
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopologyX2d& g_new, const aTopologyX2d& g_old) {
-    return projection(g_new, g_old);
+    return projection(g_new.grid(), g_old.grid());
 }
 
 ///@copydoc projection(const Grid1d&,const Grid1d&)
 cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopologyX3d& g_new, const aTopologyX3d& g_old) {
-    return projection(g_new, g_old);
+    return projection(g_new.grid(), g_old.grid());
 }
 
 ///@}

@@ -48,9 +48,12 @@ void scal( SparseTensor<container>& t, const container& mu)
 {
     unsigned size=t.values().size();
     for( unsigned i=0; i<size; i++)
-        dg::blas1::pointwiseDot( mu, t.value(i), t.value(i));
+        dg::blas1::pointwiseDot( mu, t.values()[i], t.values()[i]);
     if(!t.isSet(0,0)|| !t.isSet(1,1) || !t.isSet(2,2))
-        t.value(size) = mu;
+    {
+        t.values().resize(size+1);
+        t.values()[size] = mu;
+    }
     for( unsigned i=0; i<3; i++)
     {
         if(!t.isSet(i,i) )
@@ -64,7 +67,7 @@ void scal( SparseTensor<container>& t, const container& mu)
  * Computes \f$ t^{ij} = \mu t^{ij}\f$
  * @copydoc hide_container
  * @param t input (contains result on output)
- * @param mu if mu.isEmpty() then nothing happens, else all elements in t are scaled with its value
+ * @param mu if \c mu.isEmpty() then nothing happens, else all elements in t are scaled with its value
  */
 template<class container>
 void scal( SparseTensor<container>& t, const SparseElement<container>& mu)
@@ -77,9 +80,9 @@ void scal( SparseTensor<container>& t, const SparseElement<container>& mu)
  * @brief Multiply container with form
  *
  * @copydoc hide_container
- * @param mu if mu.isEmpty() then out=in, else the input is pointwise multiplied with the value in mu
+ * @param mu if \c mu.isEmpty() then \c out=in, else the input is pointwise multiplied with the value in \c mu
  * @param in input vector
- * @param out output vector (may alias in)
+ * @param out output vector (may alias \c in)
  */
 template<class container>
 void pointwiseDot( const SparseElement<container>& mu, const container& in, container& out)
@@ -292,9 +295,12 @@ void scal(const CholeskyTensor<container>& ch, const SparseElement<container>& e
     if(!e.isSet()) return;
     unsigned size=diag.values().size();
     for( unsigned i=0; i<size; i++)
-        dg::blas1::pointwiseDot( e.value(), diag.value(i), diag.value(i));
+        dg::blas1::pointwiseDot( e.value(), diag.values()[i], diag.values()[i]);
     if(!diag.isSet(0,0)|| !diag.isSet(1,1) || !diag.isSet(2,2))
-        diag.value(size) = e.value();
+    {
+        diag.values().resize(size+1);
+        diag.values()[size] = e.value();
+    }
     for( unsigned i=0; i<3; i++)
     {
         if(!diag.isSet(i,i) )

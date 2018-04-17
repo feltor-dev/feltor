@@ -21,7 +21,7 @@ namespace file
 {
 
 /**
- * @brief Class thrown by the NC_ErrorHandle
+ * @brief Class thrown by the NC_ErrorClonePtr
  */
 struct NC_Error : public std::exception
 {

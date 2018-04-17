@@ -314,7 +314,7 @@ struct MPIDistMat
 
     private:
     LocalMatrix m_m;
-    Handle<Collective> m_c;
+    ClonePtr<Collective> m_c;
     Buffer< typename Collective::container_type> m_buffer;
     enum dist_type m_dist;
 };

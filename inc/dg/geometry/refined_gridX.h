@@ -22,9 +22,9 @@ struct aRefinementX2d
      *
      * @param g_old The 1d grid to refine
      * @param weightsX A 2d vector of size nx_new()*ny_new(). These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
-     * @param weightsY A 2d vector of size nx_new()*ny_new(). These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
+     * @param weightsY A 2d vector of size nx_new()*ny_new(). These represent the Jacobian of the transformation \f[\frac{\partial \eta}{\partial y} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
      * @param abscissasX A 2d vector of size nx_new()*ny_new(). These are the new abscissas \f$ x(\zeta) \f$ of the grid.
-     * @param abscissasY A 2d vector of size nx_new()*ny_new(). These are the new abscissas \f$ x(\zeta) \f$ of the grid.
+     * @param abscissasY A 2d vector of size nx_new()*ny_new(). These are the new abscissas \f$ y(\eta) \f$ of the grid.
     */
     void generate( const GridX2d& g_old, thrust::host_vector<double>& weightsX, thrust::host_vector<double>& weightsY, thrust::host_vector<double>& abscissasX, thrust::host_vector<double>& abscissasY) const
     {
@@ -104,6 +104,7 @@ struct IdentityXRefinement : public aRefinementX2d
     virtual double do_fx_new( unsigned Nx_old, double fx) const { return fx; }
     virtual double do_fy_new( unsigned Ny_old, double fy) const { return fy; }
 };
+
 /**
  * @brief Equidistant cell refinement around the X-point
  */
@@ -133,17 +134,17 @@ struct EquidistXRefinement : public aRefinementX2d
         thrust::host_vector<double> a1, a2, a3;
         unsigned node1 = g.outer_N();
         EquidistRefinement equi1(add_y_, node1, howm_y_);
-        equi1.generate(Grid1d(g.x0(),g.x1(), g.n(), g.outer_N(), dg::DIR), w1,a1); //left side
-        equi0.generate( Grid1d(g.x0(),g.x1(), g.n(), g.inner_N(), dg::PER), w2,a2);//inner side
-        equi0.generate( Grid1d(g.x0(),g.x1(), g.n(), g.outer_N(), dg::DIR), w3,a3);//right side
-        //now combine unnormalized weights
-        thrust::host_vector<double> wtot( w1.size() + w2.size() + w3.size());
+        equi1.generate( Grid1d(g.x0()                  ,g.x0()+g.outer_N()*g.h(), g.n(), g.outer_N(), dg::DIR), w1,a1); //left side
+        equi0.generate( Grid1d(g.x0()+g.outer_N()*g.h(),g.x1()-g.outer_N()*g.h(), g.n(), g.inner_N(), dg::PER), w2,a2);//inner side
+        equi0.generate( Grid1d(g.x1()-g.outer_N()*g.h(),g.x1()                  , g.n(), g.outer_N(), dg::DIR), w3,a3);//right side
+        //now combine and unnormalize weights
+        thrust::host_vector<double> wtot( w1.size() + w2.size() + w3.size()), atot( wtot);
         for( unsigned i=0; i<w1.size() ; i++)
-            wtot[i] = w1[i];
+            wtot[i]                     = w1[i]*equi1.N_new( g.outer_N(), dg::DIR)/g.outer_N();
         for( unsigned i=0; i<w2.size(); i++)
-            wtot[w1.size()+i] = w2[i];
+            wtot[w1.size()+i]           = w2[i]*equi0.N_new( g.inner_N(), dg::PER)/g.inner_N();
         for( unsigned i=0; i<w3.size(); i++)
-            wtot[w1.size()+w2.size()+i] = w3[i];
+            wtot[w1.size()+w2.size()+i] = w3[i]*equi0.N_new( g.outer_N(), dg::DIR)/g.outer_N();
         weights = wtot;
         abscissas = detail::normalize_weights_and_compute_abscissas( g.grid(), weights);
     }
@@ -245,8 +246,8 @@ struct CartesianRefinedGridX2d : public dg::aGeometryX2d
     std::vector<thrust::host_vector<double> > w_,abs_;
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const {
         SparseTensor<thrust::host_vector<double> > t(w_);
-        dg::blas1::pointwiseDot( w_[0], w_[0], t.value(0));
-        dg::blas1::pointwiseDot( w_[1], w_[1], t.value(1));
+        dg::blas1::pointwiseDot( w_[0], w_[0], t.values()[0]);
+        dg::blas1::pointwiseDot( w_[1], w_[1], t.values()[1]);
         t.idx(0,0)=0, t.idx(1,1)=1;
         return t;
     }
@@ -296,8 +297,8 @@ struct CartesianRefinedGridX3d : public dg::aGeometryX3d
     std::vector<thrust::host_vector<double> > w_,abs_;
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const {
         SparseTensor<thrust::host_vector<double> > t(w_);
-        dg::blas1::pointwiseDot( w_[0], w_[0], t.value(0));
-        dg::blas1::pointwiseDot( w_[1], w_[1], t.value(1));
+        dg::blas1::pointwiseDot( w_[0], w_[0], t.values()[0]);
+        dg::blas1::pointwiseDot( w_[1], w_[1], t.values()[1]);
         t.idx(0,0)=0, t.idx(1,1)=1;
         return t;
     }

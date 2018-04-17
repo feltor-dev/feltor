@@ -125,7 +125,7 @@ struct DSField
     }
     private:
     thrust::host_vector<double> dzetadphi_, detadphi_, dsdphi_;
-    dg::Handle<dg::aGeometry2d> g_;
+    dg::ClonePtr<dg::aGeometry2d> g_;
 
 };
 
@@ -324,7 +324,7 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg:
     * @param dependsOnY indicates, whether the given vector field vec depends on the second coordinate
     * @param integrateAll indicates, that all fieldlines of the fine grid should be integrated instead of interpolating it from the coarse grid.
     *  Should be true if the streamlines of the vector field cross the domain boudary.
-    * @param deltaPhi Is either <0 (then it's ignored), or may differ from grid.hz() if grid.Nz() == 1
+    * @param deltaPhi Is either <0 (then it's ignored), or may differ from \c grid.hz() if \c grid.Nz() == 1, then \c deltaPhi is taken instead of \c grid.hz()
     * @note If there is a limiter, the boundary condition on the first/last plane is set
         by the \c grid.bcz() variable and can be changed by the set_boundaries function.
         If there is no limiter, the boundary condition is periodic.
@@ -335,11 +335,11 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg:
 *
 * @ingroup fieldaligned
 * @snippet ds_t.cu doxygen
-* @tparam ProductGeometry must be either aProductGeometry3d or aProductMPIGeometry3d or any derivative
+* @tparam ProductGeometry must be either \c dg::aProductGeometry3d or \c dg::aProductMPIGeometry3d or any derivative
 * @tparam IMatrix The type of the interpolation matrix
-    - dg::IHMatrix, or dg::IDMatrix, dg::MIHMatrix, or dg::MIDMatrix
+    - \c dg::IHMatrix, or \c dg::IDMatrix, \c dg::MIHMatrix, or \c dg::MIDMatrix
 * @tparam container The container-class on which the interpolation matrix operates on
-    - dg::HVec, or dg::DVec, dg::MHVec, or dg::MDVec
+    - \c dg::HVec, or \c dg::DVec, \c dg::MHVec, or \c dg::MDVec
 * @sa The pdf <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
 */
 template<class ProductGeometry, class IMatrix, class container >
@@ -520,7 +520,7 @@ struct Fieldaligned
     unsigned m_Nz, m_perp_size;
     dg::bc m_bcz;
     std::vector<container> m_f, m_temp; //split 3d vectors
-    dg::Handle<ProductGeometry> m_g;
+    dg::ClonePtr<ProductGeometry> m_g;
     bool m_dependsOnX, m_dependsOnY;
 };
 
@@ -545,7 +545,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    dg::Handle<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
+    dg::ClonePtr<dg::aGeometry2d> grid_coarse( grid.perp_grid()) ;
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     m_perp_size = grid_coarse.get().size();
     dg::blas1::transfer( dg::pullback(limit, grid_coarse.get()), m_limiter);
@@ -559,7 +559,7 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     t.tic();
     std::cout << "Generate high order grid...\n";
 #endif
-    dg::Handle<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
+    dg::ClonePtr<dg::aGeometry2d> grid_magnetic = grid_coarse;//INTEGRATE HIGH ORDER GRID
     grid_magnetic.get().set( 7, grid_magnetic.get().Nx(), grid_magnetic.get().Ny());
     dg::Grid2d grid_fine( grid_coarse.get() );//FINE GRID
     grid_fine.multiplyCellNumbers((double)mx, (double)my);
@@ -621,7 +621,7 @@ container Fieldaligned<G, I,container>::evaluate( const BinaryOp& binary, const 
     //idea: simply apply I+/I- enough times on the init2d vector to get the result in each plane
     //unary function is always such that the p0 plane is at x=0
     assert( p0 < m_g.get().Nz());
-    const dg::Handle<aGeometry2d> g2d = m_g.get().perp_grid();
+    const dg::ClonePtr<aGeometry2d> g2d = m_g.get().perp_grid();
     container init2d = dg::pullback( binary, g2d.get());
     container zero2d = dg::evaluate( dg::zero, g2d.get());
 

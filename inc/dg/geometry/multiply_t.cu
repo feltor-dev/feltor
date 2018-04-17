@@ -35,7 +35,7 @@ int main()
     dg::SparseTensor<thrust::host_vector<double> > t(3);
     t.idx(0,0) = 0, t.idx(0,1)=t.idx(1,0) = 1;
     t.idx(1,1) = 2;
-    t.value(0)= two, t.value(1) = three, t.value(2)=four;
+    t.values()[0]= two, t.values()[1] = three, t.values()[2]=four;
     thrust::host_vector<double> inout0=eight, inout1=nine, inout2=two, work0(inout0), work1(inout1), work2(inout2);
     dg::SparseElement<thrust::host_vector<double> >mu(five), nu;
     std::cout << "Begin T\n"; print(t);
@@ -80,7 +80,7 @@ int main()
     std::cout << "Determinant of T: "<<dg::tensor::determinant(t).value()[0]<<" (320)\n";
     std::cout << "Perp Determinant of T: "<<dg::tensor::determinant(t.perp()).value()[0]<<" (-32)\n";
     std::swap(t.idx(2,1), t.idx(2,0));
-    t.value(0) = five;
+    t.values()[0] = five;
     t.idx(1,1) = 0;
     t.idx(2,2) = 0;
     std::cout<<"Make a LDL^T decomposition\n";

@@ -41,13 +41,13 @@ namespace geo{
 in arbitrary coordinates
 @snippet ds_t.cu doxygen
 * @ingroup fieldaligned
-* @tparam ProductGeometry must be either dg::aProductGeometry3d or dg::aProductMPIGeometry3d or any derivative
+* @tparam ProductGeometry must be either \c dg::aProductGeometry3d or \c dg::aProductMPIGeometry3d or any derivative
 * @tparam IMatrix The type of the interpolation matrix
-    - dg::IHMatrix, or dg::IDMatrix, dg::MIHMatrix, or dg::MIDMatrix
+    - \c dg::IHMatrix, or \c dg::IDMatrix, \c dg::MIHMatrix, or \c dg::MIDMatrix
 * @tparam Matrix The matrix class of the jump matrix
-    - dg::HMatrix, or dg::DMatrix, dg::MHMatrix, or dg::MDMatrix
+    - \c dg::HMatrix, or \c dg::DMatrix, \c dg::MHMatrix, or \c dg::MDMatrix
 * @tparam container The container-class on which the interpolation matrix operates on
-    - dg::HVec, or dg::DVec, dg::MHVec, or dg::MDVec
+    - \c dg::HVec, or \c dg::DVec, \c dg::MHVec, or \c dg::MDVec
 * @sa The pdf <a href="./parallel.pdf" target="_blank">parallel derivative</a> writeup
 */
 template< class ProductGeometry, class IMatrix, class Matrix, class container >

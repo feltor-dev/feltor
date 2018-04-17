@@ -71,14 +71,13 @@ int main( int argc, char* argv[])
         return -1;
     }
     std::string newfilename;
-    Json::Reader reader;
     Json::Value input_js, geom_js;
     {
         std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<std::endl;
         std::ifstream isI( argv[1]);
         std::ifstream isG( argv[2]);
-        reader.parse( isI, input_js, false);
-        reader.parse( isG, geom_js, false);
+        isI >> input_js;
+        isG >> geom_js;
     }
     const Parameters p(input_js);
     const dg::geo::solovev::Parameters gp(geom_js);

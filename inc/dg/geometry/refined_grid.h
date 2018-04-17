@@ -296,7 +296,7 @@ struct CartesianRefinedGrid2d : public dg::aGeometry2d
 
     CartesianRefinedGrid2d* clone()const{return new CartesianRefinedGrid2d(*this);}
     private:
-    Handle<aRefinement1d> refX_, refY_;
+    ClonePtr<aRefinement1d> refX_, refY_;
     std::vector<thrust::host_vector<double> > w_, a_;
     void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny)
     {
@@ -323,8 +323,8 @@ struct CartesianRefinedGrid2d : public dg::aGeometry2d
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const {
         SparseTensor<thrust::host_vector<double> > t(w_);
-        dg::blas1::pointwiseDot( w_[0], w_[0], t.value(0));
-        dg::blas1::pointwiseDot( w_[1], w_[1], t.value(1));
+        dg::blas1::pointwiseDot( w_[0], w_[0], t.values()[0]);
+        dg::blas1::pointwiseDot( w_[1], w_[1], t.values()[1]);
         t.idx(0,0)=0, t.idx(1,1)=1;
         return t;
     }
@@ -352,7 +352,7 @@ struct CartesianRefinedGrid3d : public dg::aGeometry3d
 
     CartesianRefinedGrid3d* clone()const{return new CartesianRefinedGrid3d(*this);}
     private:
-    Handle<aRefinement1d> refX_, refY_, refZ_;
+    ClonePtr<aRefinement1d> refX_, refY_, refZ_;
     std::vector<thrust::host_vector<double> > w_, a_;
     void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny,unsigned Nz)
     {
@@ -384,9 +384,9 @@ struct CartesianRefinedGrid3d : public dg::aGeometry3d
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const {
         SparseTensor<thrust::host_vector<double> > t(w_);
-        dg::blas1::pointwiseDot( w_[0], w_[0], t.value(0));
-        dg::blas1::pointwiseDot( w_[1], w_[1], t.value(1));
-        dg::blas1::pointwiseDot( w_[2], w_[2], t.value(2));
+        dg::blas1::pointwiseDot( w_[0], w_[0], t.values()[0]);
+        dg::blas1::pointwiseDot( w_[1], w_[1], t.values()[1]);
+        dg::blas1::pointwiseDot( w_[2], w_[2], t.values()[2]);
         t.idx(0,0)=0, t.idx(1,1)=1, t.idx(2,2)=2;
         return t;
     }

@@ -282,6 +282,7 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
         ell_multiply_kernel<value_type> ( alpha, beta,
             data_ptr, cols_ptr, block_ptr, num_rows, num_cols, blocks_per_line, n, left_size, right_size, right_range_ptr,  x_ptr,y_ptr);
 }
+}
 
 template<class value_type>
 void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const

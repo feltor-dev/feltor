@@ -32,7 +32,7 @@ struct Iris : public aCloneableBinaryFunctor<Iris>
         if( psip_.get()(R,Z) < psipmin_) return 0.;
         return 1.;
     }
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
     double psipmin_, psipmax_;
 };
 /**
@@ -52,7 +52,7 @@ struct Pupil : public aCloneableBinaryFunctor<Pupil>
         if( psip_.get()(R,Z) > psipmaxcut_) return 0.;
         return 1.;
     }
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
     double psipmaxcut_;
 };
 /**
@@ -73,7 +73,7 @@ struct PsiPupil : public aCloneableBinaryFunctor<PsiPupil>
         return  psip_.get()(R,Z);
     }
     double psipmax_;
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
 };
 /**
  * @brief Sets values to one outside psipmaxcut, zero else
@@ -95,7 +95,7 @@ struct PsiLimiter : public aCloneableBinaryFunctor<PsiLimiter>
         return 0.;
     }
     double psipmaxlim_;
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
 };
 
 
@@ -123,7 +123,7 @@ struct GaussianDamping : public aCloneableBinaryFunctor<GaussianDamping>
         if( psip_.get()(R,Z) < psipmaxcut_) return 1.;
         return exp( -( psip_.get()(R,Z)-psipmaxcut_)*( psip_.get()(R,Z)-psipmaxcut_)/2./alpha_/alpha_);
     }
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
     double psipmaxcut_, alpha_;
 };
 
@@ -150,7 +150,7 @@ struct GaussianProfDamping : public aCloneableBinaryFunctor<GaussianProfDamping>
         if( psip_.get()(R,Z) < (psipmax_-4.*alpha_)) return 1.;
         return exp( -( psip_.get()(R,Z)-(psipmax_-4.*alpha_))*( psip_.get()(R,Z)-(psipmax_-4.*alpha_))/2./alpha_/alpha_);
     }
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
     double psipmax_, alpha_;
 };
 /**
@@ -179,7 +179,7 @@ struct GaussianProfXDamping : public aCloneableBinaryFunctor<GaussianProfXDampin
         return exp( -( psip_.get()(R,Z)-(gp_.psipmax-4.*gp_.alpha))*( psip_.get()(R,Z)-(gp_.psipmax-4.*gp_.alpha))/2./gp_.alpha/gp_.alpha);
     }
     dg::geo::solovev::Parameters gp_;
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
 };
 
 /**
@@ -197,7 +197,7 @@ struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
         return 0.5*(1.+tanh(-(psip_.get()(R,Z)-psipmin_ + 3.*alpha_)/alpha_) );
     }
     double psipmin_, alpha_;
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
 };
 
 // struct Gradient : public aCloneableBinaryFunctor<Gradient>
@@ -216,7 +216,7 @@ struct TanhSource : public aCloneableBinaryFunctor<TanhSource>
 //     }
 //     eule::Parameters p_;
 //     Parameters gp_;
-//     Handle<aBinaryFunctor> psip_;
+//     ClonePtr<aBinaryFunctor> psip_;
 // };
 
 /**
@@ -242,7 +242,7 @@ struct Nprofile : public aCloneableBinaryFunctor<Nprofile>
     }
     double bgamp, namp;
     dg::geo::solovev::Parameters gp_;
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
 };
 
 /**
@@ -269,7 +269,7 @@ struct ZonalFlow : public aCloneableBinaryFunctor<ZonalFlow>
     }
     double amp_, k_;
     dg::geo::solovev::Parameters gp_;
-    Handle<aBinaryFunctor> psip_;
+    ClonePtr<aBinaryFunctor> psip_;
 };
 
 

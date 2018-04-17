@@ -15,10 +15,9 @@ int main( )
 {
 
     /////////////////initialize params////////////////////////////////
-    Json::Reader reader;
     Json::Value js;
     std::ifstream is("guenther_params.js");
-    reader.parse(is,js,false);
+    is >> js;
     dg::geo::guenther::Parameters gp(js);
     gp.display( std::cout);
 
