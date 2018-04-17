@@ -188,6 +188,12 @@ inline static double OddRoundSumNonnegative(double th, double tl)
 // signedcarry in {-1, 0, 1}
 inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
 {
+
+#if defined _MSC_VER && !TSAFE //non-atomic load-ADDC-store
+    int64_t oldword = memref;
+    of = _addcarry_u64(0, memref, x, &memref); //*memref = memref+x (return carry-out)
+    return oldword;
+#else
     // OF and SF  -> carry=1
     // OF and !SF -> carry=-1
     // !OF        -> carry=0
@@ -200,8 +206,9 @@ inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
     asm volatile (LOCK_PREFIX"xadd %1, %0\n"
         "seto %2"
      : "+m" (memref), "+r" (oldword), "=q" (of) : : "cc", "memory");
-#endif
+#endif //ATT_SYNTAX
     return oldword;
+#endif //_MSC_VER
 }
 
 //static inline vcl::Vec8d clear_significand(vcl::Vec8d x) {

@@ -30,7 +30,7 @@ namespace exblas{
 ///@cond
 namespace cpu{
 
-
+//MW: does this implementation code a manual lock?
 
 /**
  * \brief Parallel reduction step
