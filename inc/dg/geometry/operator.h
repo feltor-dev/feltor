@@ -50,7 +50,7 @@ class Operator
      * @param last
      */
     template< class InputIterator>
-    Operator( InputIterator first, InputIterator last): data_(first, last)
+    Operator( InputIterator first, InputIterator last, typename std::enable_if<!std::is_integral<InputIterator>::value>::type* = 0): data_(first, last)
     {
         unsigned n = std::distance( first, last);
         n_ = (unsigned)sqrt( (value_type)n);
