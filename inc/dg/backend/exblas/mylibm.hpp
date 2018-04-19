@@ -190,9 +190,15 @@ inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
 {
 
 #if defined _MSC_VER && !TSAFE //non-atomic load-ADDC-store
-    int64_t oldword = memref;
-    of = _addcarry_u64(0, memref, x, &memref); //*memref = memref+x (return carry-out)
-    return oldword;
+	int64_t y = memref;
+	memref = y + x;
+	int64_t x63 = (x >> 63) & 1;
+	int64_t y63 = (y >> 63) & 1;
+	int64_t r63 = (memref >> 63) & 1;
+	int64_t c62 = r63 ^ x63 ^ y63;
+	int64_t c63 = (x63 & y63) | (c62 & (x63 | y63));
+	of = c63 ^ c62;
+	return y;
 #else
     // OF and SF  -> carry=1
     // OF and !SF -> carry=-1
