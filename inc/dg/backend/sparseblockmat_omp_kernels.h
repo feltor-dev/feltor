@@ -22,7 +22,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
 		int s = si / num_rows;
 		int i = si % num_rows;
 #ifdef _MSC_VER //MSVC does not support variable lenght arrays...
-		int* J = alloca(blocks_per_line * sizeof(int));
+		int* J = (int*)alloca(blocks_per_line * sizeof(int));
 #else
         int J[blocks_per_line];
 #endif
@@ -31,7 +31,7 @@ void ell_multiply_kernel( value_type alpha, value_type beta,
         for( int k=0; k<n; k++)
         {
 #ifdef _MSC_VER
-			int* B = alloca(blocks_per_line * sizeof(int));
+			int* B = (int*)alloca(blocks_per_line * sizeof(int));
 #else
             int B[blocks_per_line];
 #endif
