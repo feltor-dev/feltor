@@ -1,6 +1,10 @@
 #pragma once
 
 #include <cmath>
+//M_PI is non-standard ... so MSVC complains
+#ifndef M_PI 
+#define M_PI 3.14159265358979323846
+#endif
 #include <vector>
 #include <thrust/random/linear_congruential_engine.h>
 #include <thrust/random/uniform_real_distribution.h>
@@ -722,7 +726,11 @@ struct Lamb
     {
         gamma_ = 3.83170597020751231561;
         lambda_ = gamma_/R;
+#ifdef _MSC_VER
+		j_ = _j0(gamma_);
+#else
         j_ = j0( gamma_);
+#endif
         //std::cout << r_ <<u_<<x0_<<y0_<<lambda_<<gamma_<<j_<<std::endl;
     }
     /**
@@ -739,7 +747,11 @@ struct Lamb
         double theta = atan2( (y-y0_),(x-x0_));
 
         if( radius <= R_)
-            return 2.*lambda_*U_*j1( lambda_*radius)/j_*cos( theta) ;
+#ifdef _MSC_VER
+			return 2.*lambda_*U_*_j1(lambda_*radius)/j_*cos( theta);
+#else
+            return 2.*lambda_*U_*j1( lambda_*radius)/j_*cos( theta);
+#endif
         return 0;
     }
     /**
@@ -830,7 +842,11 @@ struct Vortex
         if( r/R_<=1.)
             return u_d*(
                       r *( 1 +beta*beta/g_[s_]/g_[s_] )
-                    - R_*  beta*beta/g_[s_]/g_[s_] *j1(g_[s_]*r/R_)/j1(g_[s_])
+#ifdef _MSC_VER
+                    - R_*  beta*beta/g_[s_]/g_[s_] *_j1(g_[s_]*r/R_)/_j1(g_[s_])
+#else
+				    - R_ * beta*beta/g_[s_]/g_[s_] * j1(g_[s_]*r/R_)/ j1(g_[s_])
+#endif
                     )*cos(theta)/norm;
         return u_d * R_* bessk1(beta*r/R_)/bessk1(beta)*cos(theta)/norm;
     }

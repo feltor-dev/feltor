@@ -37,7 +37,9 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, int64_t* acc) {
 
     int r = (( int64_t(N) ) & ~7ul);
     for(int i = 0; i < r; i+=8) {
+#ifndef _MSC_VER
         asm ("# myloop");
+#endif
         vcl::Vec8d r1 ;
         vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
         //vcl::Vec8d x  = vcl::Vec8d().load(a+i)*vcl::Vec8d().load(b+i);
@@ -62,7 +64,9 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int6
     CACHE cache(acc);
     int r = (( int64_t(N))  & ~7ul);
     for(int i = 0; i < r; i+=8) {
+#ifndef _MSC_VER
         asm ("# myloop");
+#endif
         //vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load(c+i);
         //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
         //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);

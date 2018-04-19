@@ -105,7 +105,9 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
         int r = ((((tid+1) * int64_t(N)) / tnum) & ~7ul) - 1;
 
         for(int i = l; i < r; i+=8) {
+#ifndef _MSC_VER
             asm ("# myloop");
+#endif
             vcl::Vec8d r1 ;
             vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
             //vcl::Vec8d x  = vcl::mul_add( vcl::Vec8d().load(a+i),vcl::Vec8d().load(b+i),0);
@@ -151,7 +153,9 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
         int r = ((((tid+1) * int64_t(N)) / tnum) & ~7ul) - 1;
 
         for(int i = l; i < r; i+=8) {
+#ifndef _MSC_VER
             asm ("# myloop");
+#endif
             //vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load(c+i);
             //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
             //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);

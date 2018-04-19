@@ -84,7 +84,7 @@ inline int32_t mylrint<int32_t>(double x) {
 
 inline double myrint(double x)
 {
-#if defined __GNUG__
+#if defined __GNUG__ || _MSC_VER
     // Workaround gcc bug 51033
     union {
         __m128d v;

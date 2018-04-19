@@ -88,7 +88,11 @@ private:
     int64_t* superacc;
 
     // Most significant digits first!
+#ifdef _MSC_VER
+	_declspec(align(64)) T a[N];
+#else
     T a[N] __attribute__((aligned(64)));
+#endif
     T victim;
 };
 
