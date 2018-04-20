@@ -10,9 +10,6 @@
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
 
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/average.cuh"
 #include "dg/functors.h"
 
 #include "file/nc_utilities.h"
@@ -36,12 +33,10 @@ int main( int argc, char* argv[])
     err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);    
     err = nc_close(ncid); 
 
-//     std::cout << "input "<<input<<std::endl;    
     Json::Reader reader;
     Json::Value js;
     reader.parse( input, js, false);
     const eule::Parameters p(js);
-//     p.display(std::cout);
     
     //////////////////////////////Grids//////////////////////////////////////
     //input grid
@@ -110,6 +105,16 @@ int main( int argc, char* argv[])
             dg::blas1::transform(ne, logne, dg::LN<double>());
             
         }
+        if (p.modelmode==3)
+        {
+            dne=tempH;
+            dg::blas1::transform(dne, dne, dg::EXP<double>());
+            dg::blas1::transform(dne, dne,  dg::PLUS<>(-1.0)); 
+            dg::blas1::axpby(1.0,one,+1.0,dne,ne);
+            dg::blas1::pointwiseDivide(ne,nG,ne);
+            dg::blas1::transform(ne, logne, dg::LN<double>());
+            
+        }
         err = nc_get_vara_double( ncid, dataIDs[0], start2d, count2d, tempH.data());
         if (p.modelmode==0 || p.modelmode==1)
         {
@@ -124,8 +129,26 @@ int main( int argc, char* argv[])
             dg::blas1::axpby(1.0,one,+1.0,dNi,Ni);
             dg::blas1::pointwiseDivide(Ni,nG,Ni);
         }
+        if (p.modelmode==3)
+        {
+            dNi=tempH;
+            dg::blas1::transform(dNi, dNi, dg::EXP<double>());
+            dg::blas1::transform(dNi, dNi,  dg::PLUS<>(-1.0)); 
+            dg::blas1::axpby(1.0,one,+1.0,dNi,Ni);
+            dg::blas1::pointwiseDivide(Ni,nG,Ni);
+        }
         err = nc_get_vara_double( ncid, dataIDs[2], start2d, count2d, tempH.data());
         phi=tempH;
+
+        //get max phi value
+
+        phisupnorm=*thrust::max_element(phi.begin(),phi.end());
+        phinorm = sqrt(dg::blas2::dot(phi,w2d,phi));
+        if (p.modelmode==2 || p.modelmode==3)
+        {
+            dnesupnorm =*thrust::max_element(dne.begin(),dne.end()); 
+            dnenorm = sqrt(dg::blas2::dot(dne,w2d,dne));
+        }
 
         dg::blas1::pointwiseDivide(ne,nG,dne);
         dg::blas1::transform(dne, lognednG, dg::LN<double>());
@@ -133,13 +156,14 @@ int main( int argc, char* argv[])
         dg::blas1::axpby(1.0,dne,-1.0,one,dne);
         dg::blas1::axpby(1.0,lognednG,-1.0,dne,lognednG);
         nlnnnormq = dg::blas2::dot(one,w2d,lognednG);
+
+        if (p.modelmode==0 || p.modelmode==1)
+        {
+            dnesupnorm =*thrust::max_element(dne.begin(),dne.end());
+            dnenorm = sqrt(dg::blas2::dot(dne,w2d,dne));
+        }
         
-        //get max phi value
-        phisupnorm=*thrust::max_element(phi.begin(),phi.end());
-        phinorm = sqrt(dg::blas2::dot(phi,w2d,phi));
-        dnesupnorm =*thrust::max_element(dne.begin(),dne.end()); 
-        dnenorm = sqrt(dg::blas2::dot(dne,w2d,dne));
-        
+
         poisson.variationRHS(phi,uE2);
         uE2norm= 0.5*dg::blas2::dot( one, w2d,uE2);   // 0.5   u_E^2    
         
@@ -185,4 +209,5 @@ int main( int argc, char* argv[])
     err = nc_close(ncid);
     return 0;
 }
+
 

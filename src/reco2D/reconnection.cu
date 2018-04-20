@@ -7,10 +7,8 @@
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"
-#include "dg/algorithm.h"
 
 #include "reconnection.cuh"
-#include "parameters.h"
 
 
 /*
@@ -27,7 +25,7 @@ int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     Json::Reader reader;
-    Json::Value js, gs;
+    Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.json");
@@ -68,6 +66,7 @@ int main( int argc, char* argv[])
     
     //Harris sheet problem
     if( p.init == 0) { 
+        //true harris is -lambda ln (cosh(x/lambda))
         dg::InvCoshXsq init0( 1., 2.*M_PI/p.lxhalf);
         dg::CosY perty(   1., 0., p.mY*M_PI/p.lyhalf);
         dg::CosXCosY damp(1., 0., M_PI/p.lxhalf/2.,0.);    
@@ -86,8 +85,8 @@ int main( int argc, char* argv[])
     }
     
     //Compute initial A_par
-    dg::blas1::axpby(-p.amp,y1[2],1.0,y0[3],y0[3]); // = [ A*Cos(y*ky) + 1/Cosh2(x*kx) ]
-    dg::blas1::pointwiseDot(y1[3],y0[3],y0[3]);     // A_par = cos(x *kx') * [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] 
+    dg::blas1::axpby(-p.amp,y1[2],1.0,y0[3],y0[3]); // = [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] (harris)
+    dg::blas1::pointwiseDot(y1[3],y0[3],y0[3]);     // A_par = cos(x *kx') * [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] (harris)
 
     //Compute u_e, U_i, w_e, W_i
     dg::blas2::gemv( rolkar.laplacianM(),y0[3], y0[2]);        //u_e = -nabla_perp A_par

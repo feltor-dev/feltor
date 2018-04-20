@@ -378,15 +378,20 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         dg::blas1::axpby( p.tau[i]/p.mu[i]*p.beta, arakawalogn[i], 1., yp[2+i]); // dtw += tau beta/mu* [Apar,logN]_RZ
         dg::blas1::axpby( 0.5*p.beta, arakawau2[i], 1., yp[2+i]);                // dtw +=  0.5 beta [Apar,U^2]_RZ 
 
+        
+        dg::blas1::axpby(1.,one,1., logn[i] ,chi); //chi = (1+lnN_e)
+        dg::blas1::pointwiseDot(u[i],u[i], omega);  
+        dg::blas1::axpbypgz(0.5*p.mu[i], omega, 1.0, phi[i], p.tau[i], chi); //chi = (tau (1+lnN_e) + psi + 0.5 mu U^2)
+        
         //Compute perp dissipation for N
         dg::blas2::gemv( lapperp, y[i], lambda);
-        dg::blas2::gemv( lapperp, lambda, omega);                      //nabla_RZ^4 N_e
+        dg::blas2::gemv( lapperp, lambda, omega);                      //nabla_RZ^4 N
         Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  
 
-        //Compute perp dissipation  for U
+        //Compute perp dissipation  for w
         dg::blas2::gemv( lapperp, y[i+2], lambda);
-        dg::blas2::gemv( lapperp, lambda, chi);//nabla_RZ^4 U
-        Dperp[i+2] = -z[i]*p.mu[i]*p.nu_perp* dg::blas2::dot(omega, w2d, chi);
+        dg::blas2::gemv( lapperp, lambda, chi);//nabla_RZ^4 w
+        Dperp[i+2] = -z[i]*p.mu[i]*p.nu_perp* dg::blas2::dot(un[i], w2d, chi);
 
     }
     return Dperp[0]+Dperp[1]+Dperp[2]+Dperp[3];
