@@ -1,5 +1,6 @@
 #pragma once
 
+#include "runge_kutta.h"
 #include "cg.h"
 
 
@@ -50,7 +51,7 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 * @ingroup time
 *
 * Computes \f[ u_{n+1} = u_n + dt\sum_{j=0}^k b_j f(u_{n-j}) \f]
-* Uses only blas1::axpby routines to integrate one step
+* Uses only \c blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step.
 * @tparam k Order of the method (Currently one of 1, 2, 3, 4 or 5)
 * @copydoc hide_container
@@ -82,7 +83,12 @@ struct AB
      * @note The class allows Functor to change its first (input) argument, i.e. the first argument need not be const
      */
     template< class Functor>
-    void init( Functor& f, const container& u0, double dt);
+    void init( Functor& f, const container& u0, double dt){
+        detail::Wrapper<Functor> wrap(f);
+        timeinit( wrap, u0, 0, dt);
+    }
+    template< class Functor>
+    void timeinit( Functor& f, const container& u0, double t0, double dt);
     /**
     * @brief Advance u0 one timestep
     *
@@ -95,41 +101,55 @@ struct AB
      * @note The class allows Functor to change its first (input) argument, i.e. the first argument need not be const
     */
     template< class Functor>
-    void operator()( Functor& f, container& u);
+    void operator()( Functor& f, container& u){
+        step( f, u);
+    }
+    template< class Functor>
+    void step( Functor& f, container& u){
+        double t=0;
+        detail::Wrapper<Functor> wrap(f);
+        timestep( wrap, f, t);
+    }
+    template< class Functor>
+    void timestep( Functor& f, container& u, double& t);
   private:
-    double dt_;
+    double tn_, dt_;
     std::vector<container> f_; //TODO std::array is more natural here (but unfortunately not available)
     container u_;
 };
 
 template< size_t k, class container>
 template< class Functor>
-void AB<k, container>::init( Functor& f, const container& u0,  double dt)
+void AB<k, container>::timeinit( Functor& f, const container& u0, double t0, double dt)
 {
-    dt_ = dt;
+    tn_ = t0, dt_ = dt;
     container u1(u0), u2(u0);
     blas1::axpby( 1., u0, 0, u_);
-    f( u1, f_[0]);
+    f( t0, u1, f_[0]);
     for( unsigned i=1; i<k; i++)
     {
         blas1::axpby( 1., u2, -dt, f_[i-1], u1);
         blas1::axpby( 1., u1, 0, u2); //f may destroy u1
-        f( u1, f_[i]);
+        tn_ -= dt;
+        f( tn_, u1, f_[i]);
     }
+    tn_ = t0;
 }
 
 template< size_t k, class container>
 template< class Functor>
-void AB<k, container>::operator()( Functor& f, container& u)
+void AB<k, container>::timestep( Functor& f, container& u, double& t)
 {
     blas1::copy(  u_, u);
-    f( u, f_[0]);
+    f( tn_, u, f_[0]);
     for( unsigned i=0; i<k; i++)
         blas1::axpby( dt_*ab_coeff<k>::b[i], f_[i], 1., u_);
     //permute f_[k-1]  to be the new f_[0]
     for( unsigned i=k-1; i>0; i--)
         f_[i-1].swap( f_[i]);
     blas1::copy( u_, u);
+    tn_ += dt_;
+    t = tn_;
 }
 
 ///@cond
@@ -140,16 +160,21 @@ struct AB<1, container>
     AB(){}
     AB( const container& copyable):temp_(2, copyable){}
     template < class Functor>
-    void init( Functor& f, const container& u0, double dt){ dt_=dt;}
+    void init( Functor& f, const container& u0, double dt){ t0_ = 0, dt_=dt;}
     template < class Functor>
-    void operator()( Functor& f, container& u)
+    void timeinit( Functor& f, const container& u0, double t0, double dt){ t0_ = t0, dt_=dt;}
+
+    template < class Functor>
+    void timestep( Functor& f, container& u, double& t)
     {
         blas1::axpby( 1., u, 0, temp_[0]);
-        f( u, temp_[1]);
+        f( t0_, u, temp_[1]);
         blas1::axpby( 1., temp_[0], dt_, temp_[1], u);
+        t0_ += dt_;
+        t = t0_;
     }
     private:
-    double dt_;
+    double t0_, dt_;
     std::vector<container> temp_;
 };
 ///@endcond

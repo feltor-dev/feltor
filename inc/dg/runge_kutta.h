@@ -395,7 +395,7 @@ struct Wrapper{
     Wrapper( Functor& f): m_f(f){}
 
     template<class container>
-    void operator()(const container& u0, container& u1, double t){ m_f(u0,u1);}
+    void operator()(double t, const container& u0, container& u1){ m_f(u0,u1);}
     Functor& m_f;
 };
 }//namespace detail
@@ -417,12 +417,12 @@ void RK<k, container>::timestep( Functor& f, const container& u0, container& u1,
 {
     assert( &u0 != &u1);
     u1 = u0;
-    f(u1, u_[0], t0);
+    f(t0, u1, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
     double tn =  rk_coeff<k>::alpha[0][0]*t0 + dt*rk_coeff<k>::beta[0];
     for( unsigned i=1; i<k-1; i++)
     {
-        f( u_[i-1], u_[i], tn );
+        f(tn, u_[i-1], u_[i] );
         blas1::axpby( rk_coeff<k>::alpha[i][0], u0, dt*rk_coeff<k>::beta[i], u_[i]);
         tn = rk_coeff<k>::alpha[i][0]*t0 + dt*rk_coeff<k>::beta[i];
         for( unsigned l=1; l<=i; l++)
@@ -432,7 +432,7 @@ void RK<k, container>::timestep( Functor& f, const container& u0, container& u1,
         }
     }
     //Now add everything up to u1
-    f( u_[k-2], u1, tn);
+    f(tn, u_[k-2], u1);
     blas1::axpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u1);
     for( unsigned l=1; l<=k-1; l++)
     {
@@ -524,7 +524,7 @@ void RK_classic<s, container>::timestep( Functor& f, const container& u0, contai
 {
     assert( &u0 != &u1);
     u1 = u0; //to let u0 const and later for summation
-    f(u1, k_[0], t0); //compute k_0
+    f(t0, u1, k_[0]); //compute k_0
     double tn = t0;
     for( unsigned i=1; i<s; i++) //compute k_i
     {
@@ -535,7 +535,7 @@ void RK_classic<s, container>::timestep( Functor& f, const container& u0, contai
             blas1::axpby( dt*rk_classic<s>::a[i][l], k_[l],1., u_);
             tn += dt*rk_classic<s>::a[i][l];
         }
-        f( u_, k_[i], tn);
+        f( tn, u_, k_[i]);
 
     }
     //Now add everything up to u1

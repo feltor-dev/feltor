@@ -22,7 +22,7 @@ const unsigned NT = 20;
 const unsigned s = 17;
 const double T = 1.;
 template<class Vector>
-void function(const std::vector<Vector>& y, std::vector<Vector>& yp, double t){
+void function(double t, const std::vector<Vector>& y, std::vector<Vector>& yp){
     yp = y;
     dg::blas1::scal( yp, 2*t);
 }
