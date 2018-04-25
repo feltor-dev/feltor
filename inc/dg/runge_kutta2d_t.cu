@@ -22,14 +22,18 @@ const unsigned NT = 20;
 const unsigned s = 17;
 const double T = 1.;
 template<class Vector>
-void function(const std::vector<Vector>& y, std::vector<Vector>& yp){ yp = y;}
-double initial( double x, double y) { return sin(x)*sin(y); }
+void function(const std::vector<Vector>& y, std::vector<Vector>& yp, double t){
+    yp = y;
+    dg::blas1::scal( yp, 2*t);
+}
+double initial( double x, double y) {
+    return sin(x)*sin(y);
+}
 //![function]
 
 double function( double x, double y){ return sin(y); }
 //double result( double x, double y)  { return initial( x-cos(y)*T, y); }
-double arak   ( double x, double y) { return -cos(y)*sin(y)*cos(x); }
-double result( double x, double y)  { return initial(x,y)*exp(T);}
+double result( double x, double y)  { return initial(x,y)*exp(T*T);}
 
 
 int main()
@@ -45,9 +49,12 @@ int main()
     const double dt = T/(double)NT;
 
     dg::RK_classic<s, std::vector<dg::DVec> >  rk( y0);
+    //dg::RK<4, std::vector<dg::DVec> >  rk( y0);
+    double t=0;
     for( unsigned i=0; i<NT; i++)
     {
-        rk( function<dg::DVec>, y0, y1, dt);
+        rk.timestep( function<dg::DVec>, y0, y1, t, dt);
+        t+=dt;
         y0.swap( y1);
     }
     //![doxygen]
@@ -57,12 +64,6 @@ int main()
     dg::blas1::axpby( 1., solution, -1., y0[0]);
     std::cout << std::scientific;
     std::cout << "Norm of error is "<<sqrt(dg::blas2::dot( w2d, y0[0]))<<"\n"; //never forget the sqrt when computing errors
-    //n = 1 -> p = 2 ( as it should be )
-    //n = 2 -> p = 1 (is error dominated by error for dx(phi)?
-    //n = 3 -> p = 3
-    //n = 4 -> p = 3
-    //n = 5 -> p = 5
-
 
     return 0;
 }

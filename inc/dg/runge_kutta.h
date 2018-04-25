@@ -320,7 +320,7 @@ const double rk_classic<17>::b[17] = {
 *
 * @ingroup time
 *
-* Uses only dg::blas1::axpby() routines to integrate one step.
+* Uses only \c dg::blas1::axpby() routines to integrate one step.
  * The coefficients are in the form Cockburn proposed in his paper.
  * It's just a reformulation in that you don't store the sequence of
  * k_j but rather the abscissas u_j with k_j = f(u_j)
@@ -329,7 +329,7 @@ const double rk_classic<17>::b[17] = {
  * consider.
  * \f[ u = Bhk = (B-D)hk + Dhk = (B-D)B^{-1}y + Dhk
  *       = ( 1- DB^{-1})u + Dhk = \alpha u + \beta h k\f]
- *  where \f$ B\f$ is the butcher tableau without the c's and extended
+ *  where \f$ B\f$ is the Butcher tableau without the c's and extended
  *  by ones on the left and \f$ D\f$ its
  *  diagonal part.
 * @tparam k Order of the method (1, 2, 3 or 4)
@@ -346,7 +346,16 @@ struct RK
     */
     RK( const container& copyable): u_(k-1, container(copyable)){ }
     /**
-    * @brief Advance u0 one timestep
+    * @brief Call the step member
+    *
+    * @copydetails step()
+    */
+    template< class Functor>
+    void operator()( Functor& f, const container& u0, container& u1, double dt){
+        step(f,u0,u1,dt);
+    }
+    /**
+    * @brief Advance one step for time-independent right hand side
     *
     * @tparam Functor models BinaryFunction with no return type (subroutine)
         Its arguments both have to be of type container.
@@ -354,38 +363,76 @@ struct RK
         the return value, i.e. y' = f(y) translates to f( y, y').
     * @param f right hand side function
     * @param u0 initial value
-    * @param u1 contains result on output. u0 and u1 may currently not be the same.
+    * @param u1 contains result on output. u0 and u1 may currently not alias each other.
     * @param dt The timestep.
     */
     template< class Functor>
-    void operator()( Functor& f, const container& u0, container& u1, double dt);
+    void step( Functor& f, const container& u0, container& u1, double dt);
+
+    /**
+    * @brief Advance one step for time-dependent right hand side
+    *
+    * @tparam Functor models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type container.
+        The first argument is the actual argument, The second contains
+        the return value while time is the last argument, i.e. y' = f(y, t) translates to f( y, y', t).
+    * @param f right hand side function
+    * @param u0 initial value at \c t0
+    * @param u1 contains result on output. u0 and u1 may currently not alias each other.
+    * @param t0 the current time
+    * @param dt The timestep.
+    */
+    template< class Functor>
+    void timestep( Functor& f, const container& u0, container& u1, double t0, double dt);
   private:
     std::vector<container> u_; //TODO std::array is more natural here (but unfortunately not available)
 };
+
+///@cond
+namespace detail{
+template<class Functor>
+struct Wrapper{
+    Wrapper( Functor& f): m_f(f){}
+
+    template<class container>
+    void operator()(const container& u0, container& u1, double t){ m_f(u0,u1);}
+    Functor& m_f;
+};
+}//namespace detail
+///@endcond
 
 //u0 and u1 may not be the same vector
 //TO DO: this might be cured by adding u0 first to u_[0] in the last step
 //f( y, yp) where y is const and yp contains the result
 template< size_t k, class container>
 template< class Functor>
-void RK<k, container>::operator()( Functor& f, const container& u0, container& u1, double dt)
+void RK<k, container>::step( Functor& f, const container& u0, container& u1, double dt)
+{
+    detail::Wrapper<Functor> wrap( f);
+    timestep( wrap, u0, u1, 0, dt);
+}
+template< size_t k, class container>
+template< class Functor>
+void RK<k, container>::timestep( Functor& f, const container& u0, container& u1, double t0, double dt)
 {
     assert( &u0 != &u1);
     u1 = u0;
-    f(u1, u_[0]);
+    f(u1, u_[0], t0);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
+    double tn =  rk_coeff<k>::alpha[0][0]*t0 + dt*rk_coeff<k>::beta[0];
     for( unsigned i=1; i<k-1; i++)
     {
-        f( u_[i-1], u_[i]);
+        f( u_[i-1], u_[i], tn );
         blas1::axpby( rk_coeff<k>::alpha[i][0], u0, dt*rk_coeff<k>::beta[i], u_[i]);
+        tn = rk_coeff<k>::alpha[i][0]*t0 + dt*rk_coeff<k>::beta[i];
         for( unsigned l=1; l<=i; l++)
         {
-            blas1::axpby( rk_coeff<k>::alpha[i][l], u_[l-1],1., u_[i]); //Fall alpha = 0 muss axpby abfangen!!
+            blas1::axpby( rk_coeff<k>::alpha[i][l], u_[l-1],1., u_[i]);
+            tn += rk_coeff<k>::alpha[i][l]*t0;
         }
-
     }
     //Now add everything up to u1
-    f( u_[k-2], u1);
+    f( u_[k-2], u1, tn);
     blas1::axpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u1);
     for( unsigned l=1; l<=k-1; l++)
     {
@@ -422,7 +469,16 @@ struct RK_classic
     */
     RK_classic( const container& copyable): k_(s, container(copyable)), u_(copyable){ }
     /**
-    * @brief Advance u0 one timestep
+    * @brief Call the step member
+    *
+    * @copydetails step()
+    */
+    template< class Functor>
+    void operator()( Functor& f, const container& u0, container& u1, double dt){
+        step( f, u0, u1, dt);
+    }
+    /**
+    * @brief Advance one step for time-independent right hand side
     *
     * @tparam Functor models BinaryFunction with no return type (subroutine)
         Its arguments both have to be of type container.
@@ -430,32 +486,56 @@ struct RK_classic
         the return value, i.e. y' = f(y) translates to f( y, y').
     * @param f right hand side function
     * @param u0 initial value
-    * @param u1 contains result on output. u0 and u1 may currently not be the same.
+    * @param u1 contains result on output. u0 and u1 may currently not alias each other
     * @param dt The timestep.
     */
-    template< class Functor>
-    void operator()( Functor& f, const container& u0, container& u1, double dt);
+    template<class Functor>
+    void step( Functor& f, const container& u0, container& u1, double dt);
+    /**
+    * @brief Advance one step for time-independent right hand side
+    *
+    * @tparam Functor models BinaryFunction with no return type (subroutine)
+        Its arguments both have to be of type container.
+        The first argument is the actual argument, The second contains
+        the return value while time is the last argument, i.e. y' = f(y, t) translates to f( y, y', t).
+    * @param f right hand side function
+    * @param u0 initial value
+    * @param u1 contains result on output. u0 and u1 may currently not alias each other
+    * @param dt The timestep.
+    */
+    template<class Functor>
+    void timestep( Functor& f, const container& u0, container& u1, double t, double dt);
   private:
     std::vector<container> k_;
     container u_;
 };
 
-//u0 and u1 may not be the same vector
-//TO DO: this might be cured by adding u0 first to u_[0] in the last step
-//f( y, yp) where y is const and yp contains the result
+template< size_t k, class container>
+template< class Functor>
+void RK_classic<k, container>::step( Functor& f, const container& u0, container& u1, double dt)
+{
+    detail::Wrapper<Functor> wrap( f);
+    timestep( wrap, u0, u1, 0, dt);
+}
+
 template< size_t s, class container>
 template< class Functor>
-void RK_classic<s, container>::operator()( Functor& f, const container& u0, container& u1, double dt)
+void RK_classic<s, container>::timestep( Functor& f, const container& u0, container& u1, double t0, double dt)
 {
     assert( &u0 != &u1);
     u1 = u0; //to let u0 const and later for summation
-    f(u1, k_[0]); //compute k_0
+    f(u1, k_[0], t0); //compute k_0
+    double tn = t0;
     for( unsigned i=1; i<s; i++) //compute k_i
     {
         blas1::axpby( 1., u0, dt*rk_classic<s>::a[i][0],k_[0], u_); //l=0
+        tn = t0 + dt*rk_classic<s>::a[i][0]; //l=0
         for( unsigned l=1; l<i; l++)
+        {
             blas1::axpby( dt*rk_classic<s>::a[i][l], k_[l],1., u_);
-        f( u_, k_[i]);
+            tn += dt*rk_classic<s>::a[i][l];
+        }
+        f( u_, k_[i], tn);
 
     }
     //Now add everything up to u1
@@ -469,27 +549,65 @@ void RK_classic<s, container>::operator()( Functor& f, const container& u0, cont
  * @brief Integrate differential equation with a stage s Runge-Kutta scheme and a fixed number of steps
  *
  * @tparam s # of stages (1, 2, 3, 4, 6, 17)
- * @copydetails stepperRK1()
+ * @copydetails timestepperRK1()
  */
 template< class RHS, class container, unsigned s>
-void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
+void timestepperRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
     RK_classic<s, container > rk( begin);
     container temp(begin);
     if( T_max == T_min){ end = begin; return;}
     double dt = (T_max-T_min)/(double)N;
     end = begin;
+    double t0 = T_min;
     for( unsigned i=0; i<N; i++)
     {
-        rk( rhs, end, temp, dt);
+        rk.timestep( rhs, end, temp, t0, dt);
+        t0+=dt;
         end.swap( temp); //end is one step further
     }
+}
+/**
+ * @brief Integrate differential equation with a stage 1 Runge-Kutta scheme and a fixed number of steps
+ *
+ * @tparam RHS The time dependent right-hand side class.
+        Its arguments both have to be of type container.
+        The first argument is the actual argument, The second contains
+        the return value while time is the last argument, i.e. y' = f(y, t) translates to f( y, y', t).
+ * @copydoc hide_container
+ * @param rhs The right-hand-side
+ * @param begin initial condition
+ * @param end (write-only) contains solution on output
+ * @param T_min initial time
+ * @param T_max final time
+ * @param N number of steps
+ */
+template< class RHS, class container>
+void timestepperRK1(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
+{
+    timestepperRK<RHS, container, 1>( rhs, begin, end, T_min, T_max, N);
+}
+
+/**
+ * @brief Integrate differential equation with a stage s Runge-Kutta scheme and a fixed number of steps
+ *
+ * @tparam s # of stages (1, 2, 3, 4, 6, 17)
+ * @copydetails stepperRK1()
+ */
+template< class RHS, class container, unsigned s>
+void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
+{
+    detail::Wrapper<RHS> wrap( rhs);
+    timestepperRK<RHS,container,s>(rhs,begin,end,T_min,T_max,N);
 }
 
 /**
  * @brief Integrate differential equation with a stage 1 Runge-Kutta scheme and a fixed number of steps
  *
- * @tparam RHS The right-hand side class
+ * @tparam RHS The time independent right-hand side class.
+        Its arguments both have to be of type container.
+        The first argument is the actual argument, The second contains
+        the return value, i.e. y' = f(y) translates to f( y, y').
  * @copydoc hide_container
  * @param rhs The right-hand-side
  * @param begin initial condition
