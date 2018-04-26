@@ -198,10 +198,11 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
  * This routine computes \f[ y_i = op(x_i) \f]
  * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
  * @copydoc hide_container
- * @tparam UnaryOp Type with member function: value_type operator()(value_type)
+ * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
  * @param x container x may alias y
  * @param y container y contains result, may alias x
  * @param op unary Operator to use on every element
+ * @note the Functor must be callable on the device. In particular, with CUDA the signature must contain the \__device__ specifier.
 
 @code
     dg::DVec two( 100,2), result(100);

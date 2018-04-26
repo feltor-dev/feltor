@@ -16,7 +16,7 @@ namespace dg{
  * @note in any case we assume that the class is copyable/assignable and has a \c size and a \c swap member function
  * @note \c dg::VectorTraits<Vector> has member typedefs \c value_type, \c execution_policy, \c vector_category
  */
-struct AnyVectorTag{}; //!< Vector Tag base class
+struct AnyVectorTag{};
 ///@}
 
 /**
@@ -27,7 +27,7 @@ struct AnyVectorTag{}; //!< Vector Tag base class
  * how this pointer can be accessed by an algorithm, how it can be resized
  * and how information like size can be retrieved.
  */
-struct SharedVectorTag  : public AnyVectorTag {};   //!< vectors on shared memory
+struct SharedVectorTag  : public AnyVectorTag {};
 /**
  * @brief A distributed vector contains a data container and a MPI communicator
  *
@@ -50,7 +50,7 @@ struct MPIVectorTag     : public AnyVectorTag {};
  */
 struct VectorVectorTag  : public AnyVectorTag {};
 
-struct ArrayVectorTag   : public VectorVectorTag{}; //!< std::array of containers
+struct ArrayVectorTag   : public VectorVectorTag{}; //!< \c std::array of containers
 
 /**
  * @brief Indicate that thrust - like members are available
@@ -64,7 +64,7 @@ struct ArrayVectorTag   : public VectorVectorTag{}; //!< std::array of container
  */
 struct ThrustVectorTag  : public SharedVectorTag {};
 struct CuspVectorTag    : public ThrustVectorTag {}; //!< special tag for cusp arrays
-struct StdArrayTag      : public ThrustVectorTag {}; //!< std::array< primitive_type>
+struct StdArrayTag      : public ThrustVectorTag {}; //!< \c std::array< primitive_type>
 
 }//namespace dg
 

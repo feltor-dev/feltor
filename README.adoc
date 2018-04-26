@@ -295,7 +295,7 @@ chooses the correct implementation for you! This is a first example of a
 __container free numerical algorithm__.
 
 === Using FELTOR on Windows
-FELTOR has been developed mostly on Linux machines. Since recently, it has also
+FELTOR has been developed mostly on Linux machines. Recently, it has
 become possible to develop on Windows using https://www.visualstudio.com/[Microsoft Visual Studio].
 ____
 Unfortunately, the msvc compiler only supports an outdated OpenMP version so
