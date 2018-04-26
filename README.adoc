@@ -30,7 +30,7 @@ git clone https://www.github.com/feltor-dev/feltor
 
 You also need to clone https://github.com/thrust/thrust[thrust] and
 https://github.com/cusplibrary/cusplibrary[cusp] distributed under the
-Apache-2.0 license. Also, we depend on Agner Fog's https://github.com/feltor-dev/vcl[vcl] library (GPL-3.0). So again in a folder of your choice
+Apache-2.0 license. Also, we need Agner Fog's https://github.com/feltor-dev/vcl[vcl] library (GPL-3.0). So again in a folder of your choice
 
 [source,sh]
 ----
@@ -41,8 +41,7 @@ git clone https://www.github.com/feltor-dev/vcl
 
 ____
 Our code only depends on external libraries that are themselves openly
-available. We note here that we do not distribute copies of these
-libraries.
+available.
 ____
 
 === Using FELTOR's code projects
@@ -65,7 +64,7 @@ ln -s path/to/vcl
 
 ____
 If you do not like this, you can also create your own config file as
-discribed link:config/README.md[here].
+described link:config/README.md[here].
 ____
 
 Now let us compile the first benchmark program.
@@ -295,9 +294,31 @@ line calling the dot function did not change at all. The compiler
 chooses the correct implementation for you! This is a first example of a
 __container free numerical algorithm__.
 
+=== Using FELTOR on Windows
+FELTOR has been developed mostly on Linux machines. Since recently, it has also
+become possible to develop on https://www.visualstudio.com/[Microsoft Visual Studio].
+We have not yet investigated how to compile and run FELTOR's own programs on Windows,
+but it is possible to use it as a library.
+____
+Unfortunately, the msvc compiler only supports an outdated OpenMP version so
+consider a performance penalty of approximately factor 2, when running the OpenMP backend on Windows.
+____
+
+
+For the download of the library and its dependencies from github you may want
+to consider a software solution like for example https://desktop.github.com
+The include paths need to be set in the project properties.
+Please also enable the use of intrinsic functions, the AVX2 instruction set and
+activate Open MP support.
+____
+It is important to set the Platform to x64!
+____
+
+
+
 == 2. Further reading
 
-Please check out our https://github.com/feltor-dev/feltor/wiki[wiki
+Please check out our https://feltor-dev.github.io/wiki[wiki
 pages] for some general information, user oriented documentation and
 Troubleshooting. Moreover, we maintain tex files in every src folder for
 technical documentation, which can be compiled using pdflatex with
