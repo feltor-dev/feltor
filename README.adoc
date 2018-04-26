@@ -19,7 +19,7 @@ MIT]]
 
 toc::[]
 
-== 1. Quick start guide
+== 1. Quick start guide [[sec_quickstart]]
 
 Go ahead and clone our library into any folder you like
 
@@ -296,21 +296,19 @@ __container free numerical algorithm__.
 
 === Using FELTOR on Windows
 FELTOR has been developed mostly on Linux machines. Since recently, it has also
-become possible to develop on https://www.visualstudio.com/[Microsoft Visual Studio].
-We have not yet investigated how to compile and run FELTOR's own programs on Windows,
-but it is possible to use it as a library.
+become possible to develop on Windows using https://www.visualstudio.com/[Microsoft Visual Studio].
 ____
 Unfortunately, the msvc compiler only supports an outdated OpenMP version so
 consider a performance penalty of approximately factor 2, when running the OpenMP backend on Windows.
 ____
 
-
-For the download of the library and its dependencies from github you may want
-to consider a software solution like for example https://desktop.github.com
+For the download of the library and its dependencies described <<sec_quickstart,previously>> you may want
+to activate Bash in Windows 10 or
+ consider a software solution like https://desktop.github.com
+____
 The include paths need to be set in the project properties.
 Please also enable the use of intrinsic functions, the AVX2 instruction set and
 activate Open MP support.
-____
 It is important to set the Platform to x64!
 ____
 
