@@ -1,8 +1,6 @@
 #pragma once
 
 #include <exception>
-#include <cusp/ell_matrix.h>
-
 #include "dg/algorithm.h"
 
 namespace polar
@@ -53,7 +51,6 @@ struct Explicit
     ArakawaX<Geometry, Matrix, container> arakawa_; 
     Invert<container> invert;
 
-    Geometry grid;
 };
 
 
@@ -62,8 +59,7 @@ Explicit< Geometry, Matrix, container>::Explicit( const Geometry& g, double eps)
     psi( dg::evaluate(dg::zero, g) ),
     laplaceM( g, dg::not_normed),
     arakawa_( g), 
-    invert( psi, g.size(), eps),
-    grid(g)
+    invert( psi, g.size(), eps)
 {
 }
 

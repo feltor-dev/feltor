@@ -145,10 +145,10 @@ struct CurvilinearProductMPIGrid3d : public dg::aProductMPIGeometry3d
         for( unsigned r=0; r<4;r++)
         {
             jac_.values()[r].data().resize(size);
-            jac_.values()[r].communicator() = communicator();
+            jac_.values()[r].set_communicator( communicator());
         }
         map_[0].data().resize(size);
-        map_[0].communicator() = communicator();
+        map_[0].set_communicator( communicator());
         map_[1].data().resize(size);
         map_[1].set_communicator( communicator());
         //lift to 3D grid

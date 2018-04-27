@@ -8,7 +8,6 @@
 
 #include "dg/algorithm.h"
 #include "geometries/geometries.h"
-#include "dg/backend/projection.cuh"
 
 #ifdef OPENGL_WINDOW
 #include "draw/host_window.h"
@@ -42,7 +41,7 @@ void write(string prefix, DVec& y0, double time, const Parameters& p, dg::geo::C
 
     DVec eq(N*N);
     thrust::fill(begin(eq), end(eq),1.0);
-    auto interp_matrix = dg::create::interpolation(x, y, grid, dg::DIR);
+    IDMatrix interp_matrix = dg::create::interpolation(x, y, grid, dg::DIR);
     dg::blas2::gemv(interp_matrix, y0, eq);
 
     // filename
