@@ -7,6 +7,8 @@
 
 namespace polar
 {
+using namespace dg;
+
 template< class Geometry, class Matrix, class container>
 struct Diffusion
 {
@@ -46,26 +48,30 @@ struct Explicit
      */
     const container& potential( ) {return psi;}
     void operator()( const Vector& y, Vector& yp);
-  private:
-    container psi;
-    dg::Elliptic<Geometry, Matrix, container> laplaceM;
-    dg::ArakawaX<Geometry, Matrix, container> arakawa_; 
-    dg::Invert<container> invert;
+    container psi, w2d, v2d;
+    Elliptic<Geometry, Matrix, container> laplaceM;
+    ArakawaX<Geometry, Matrix, container> arakawa_; 
+    Invert<container> invert;
+
+    Geometry grid;
 };
+
 
 template<class Geometry, class Matrix, class container>
 Explicit< Geometry, Matrix, container>::Explicit( const Geometry& g, double eps): 
     psi( dg::evaluate(dg::zero, g) ),
     laplaceM( g, dg::not_normed),
     arakawa_( g), 
-    invert( psi, g.size(), eps)
+    invert( psi, g.size(), eps),
+    grid(g)
 {
 }
+
 
 template<class Geometry, class Matrix, class container>
 void Explicit<Geometry, Matrix, container>::operator()( const Vector& y, Vector& yp)
 {
-    invert( laplaceM, psi, y);
+    invert(laplaceM, psi, y);
     arakawa_( y, psi, yp); //A(y,psi)-> yp
 }
 
