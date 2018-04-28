@@ -11,21 +11,23 @@ namespace dg{
 
 
 /*! @class hide_explicit_implicit
- * @tparam Explicit
-    models BinaryFunction with no return type (subroutine):
-    void operator()(const container&, container&);
-    The first argument is the actual argument, The second contains
-    the return value, i.e. y' = f(y) translates to f( y, y').
- * @tparam Implicit
-    models BinaryFunction with no return type (subroutine):
-    void operator()(const container&, container&);
-    The first argument is the actual argument, The second contains
-    the return value, i.e. y' = I(y) translates to I( y, y').
-    Furthermore the routines %weights(), %inv_weights() and %precond() must be callable
+ * @tparam Explicit The explicit part of the right hand side
+        is a functor type with no return value (subroutine)
+        of signature \c void \c operator()(value_type, const container&, container&)
+        The first argument is the time, the second is the input vector and the third is the output,
+        i.e. y' = f(y, t) translates to f(t, y, y').
+        The two container arguments never alias each other in calls to the functor.
+ * @tparam Implicit The implicit part of the right hand side
+        is a functor type with no return value (subroutine)
+        of signature \c void \c operator()(value_type, const container&, container&)
+        The first argument is the time, the second is the input vector and the third is the output,
+        i.e. y' = f(y, t) translates to f(t, y, y').
+        The two container arguments never alias each other in calls to the functor.
+    Furthermore, the routines %weights(), %inv_weights() and %precond() must be callable
     and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient.
     The return type of these member functions must be useable in blas2 functions together with the container type.
  * @param exp explic part
- * @param imp implicit part ( must be linear and symmetric up to weights)
+ * @param imp implicit part ( must be linear in its second argument and symmetric up to weights)
  */
 
 ///@cond
@@ -59,68 +61,50 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 template< size_t k, class container>
 struct AB
 {
-    /**
-    * @brief Reserve memory for the integration
-    *
-    * @param copyable container of size which is used in integration.
-    * A container object must be copy-constructible from copyable.
-    */
+    ///copydoc RK::RK()
+    AB(){}
+    ///@copydoc RK::construct(const container&)
     AB( const container& copyable): f_(k, container(copyable)), u_(copyable){ }
+    ///@copydoc RK::construct(const container&)
+    void construct(const container& copyable){
+        f_.fill( copyable);
+        u_ = copyable;
+    }
 
     /**
-     * @brief Init with initial value
+     * @brief Initialize first step. Call before using the step function.
      *
      * This routine initiates the first steps in the multistep method by integrating
      * backwards with a Euler method. This routine has to be called
-     * before the first timestep is made and with the same initial value as the first timestep.
-     * @tparam Functor models BinaryFunction with no return type (subroutine).
-        Its arguments both have to be of type container.
-        The first argument is the actual argument, the second contains
-        the return value, i.e. y' = f(y) translates to f( y, y').
-     * @param f The rhs functor
+     * before the first timestep is made.
+     * @copydoc hide_rhs
+     * @param rhs The rhs functor
      * @param u0 The initial value of the integration
+     * @param t0 The intital time corresponding to u0
      * @param dt The timestep
-     * @note The class allows Functor to change its first (input) argument, i.e. the first argument need not be const
+     * @note The class allows RHS to change its first (input) argument, i.e. the first argument need not be const
      */
-    template< class Functor>
-    void init( Functor& f, const container& u0, double dt){
-        detail::Wrapper<Functor> wrap(f);
-        timeinit( wrap, u0, 0, dt);
-    }
-    template< class Functor>
-    void timeinit( Functor& f, const container& u0, double t0, double dt);
+    template< class RHS>
+    void init( RHS& rhs, const container& u0, double t0, double dt);
     /**
     * @brief Advance u0 one timestep
     *
-    * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type container.
-        The first argument is the actual argument, The second contains
-        the return value, i.e. y' = f(y) translates to f( y, y').
+    * @copydoc hide_rhs
     * @param f right hand side function or functor
     * @param u (write-only) contains next step of the integration on output
-     * @note The class allows Functor to change its first (input) argument, i.e. the first argument need not be const
+    * @param t (write-only) contains timestep corresponding to \c u
     */
-    template< class Functor>
-    void operator()( Functor& f, container& u){
-        step( f, u);
-    }
-    template< class Functor>
-    void step( Functor& f, container& u){
-        double t=0;
-        detail::Wrapper<Functor> wrap(f);
-        timestep( wrap, f, t);
-    }
-    template< class Functor>
-    void timestep( Functor& f, container& u, double& t);
+    template< class RHS>
+    void step( RHS& f, container& u, double& t);
   private:
     double tn_, dt_;
-    std::vector<container> f_; //TODO std::array is more natural here (but unfortunately not available)
+    std::array<container,k> f_;
     container u_;
 };
 
 template< size_t k, class container>
-template< class Functor>
-void AB<k, container>::timeinit( Functor& f, const container& u0, double t0, double dt)
+template< class RHS>
+void AB<k, container>::init( RHS& f, const container& u0, double t0, double dt)
 {
     tn_ = t0, dt_ = dt;
     container u1(u0), u2(u0);
@@ -137,8 +121,8 @@ void AB<k, container>::timeinit( Functor& f, const container& u0, double t0, dou
 }
 
 template< size_t k, class container>
-template< class Functor>
-void AB<k, container>::timestep( Functor& f, container& u, double& t)
+template< class RHS>
+void AB<k, container>::step( RHS& f, container& u, double& t)
 {
     blas1::copy(  u_, u);
     f( tn_, u, f_[0]);
@@ -158,14 +142,18 @@ template < class container>
 struct AB<1, container>
 {
     AB(){}
-    AB( const container& copyable):temp_(2, copyable){}
-    template < class Functor>
-    void init( Functor& f, const container& u0, double dt){ t0_ = 0, dt_=dt;}
-    template < class Functor>
-    void timeinit( Functor& f, const container& u0, double t0, double dt){ t0_ = t0, dt_=dt;}
-
-    template < class Functor>
-    void timestep( Functor& f, container& u, double& t)
+    AB( const container& copyable){
+        construct(copyable);
+    }
+    void construct(const container& copyable){
+       temp_.fill(copyable);
+    }
+    template < class RHS>
+    void init( RHS& f, const container& u0, double t0, double dt){
+        t0_ = 0, dt_=dt;
+    }
+    template < class RHS>
+    void step( RHS& f, container& u, double& t)
     {
         blas1::axpby( 1., u, 0, temp_[0]);
         f( t0_, u, temp_[1]);
@@ -175,20 +163,21 @@ struct AB<1, container>
     }
     private:
     double t0_, dt_;
-    std::vector<container> temp_;
+    std::array<container,2> temp_;
 };
 ///@endcond
 ///@cond
 namespace detail{
 
+//compute: y + alpha f(y,t)
 template< class LinearOp, class container>
 struct Implicit
 {
-    Implicit( double alpha, LinearOp& f): f_(f), alpha_(alpha){}
+    Implicit( double alpha, double t, LinearOp& f): f_(f), alpha_(alpha), t_(t){}
     void symv( const container& x, container& y)
     {
         if( alpha_ != 0)
-            f_( x,y);
+            f_(t_,x,y);
         blas1::axpby( 1., x, alpha_, y, y);
         blas2::symv( f_.weights(), y, y);
     }
@@ -196,14 +185,17 @@ struct Implicit
     void operator()( const container& x, container& y)
     {
         if( alpha_ != 0)
-            f_( x,y);
+            f_(t_,x,y);
         blas1::axpby( 1., x, alpha_, y, y);
     }
     double& alpha( ){  return alpha_;}
     double alpha( ) const  {return alpha_;}
+    double& time( ){  return t_;}
+    double time( ) const  {return t_;}
   private:
     LinearOp& f_;
     double alpha_;
+    double t_;
 };
 
 }//namespace detail
@@ -219,14 +211,14 @@ struct MatrixTraits< detail::Implicit<M, V> >
 * @brief Struct for Karniadakis semi-implicit multistep time-integration
 * \f[
 * \begin{align}
-    {\bar v}^n &= \sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  \hat E( v^{n-q}) \\
-    \left( 1  - \frac{\Delta t}{\gamma_0}  \hat I\right)  v^{n+1} &= {\bar v}^n
+    {\bar v}^{n+1} &= \sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  \hat E(t^{n-q}, v^{n-q}) \\
+    \left( 1  - \frac{\Delta t}{\gamma_0}  \hat I\right)  v^{n+1} &= {\bar v}^{n+1}
     \end{align}
     \f]
 
     which discretizes
     \f[
-    \frac{\partial v}{\partial t} = \hat E(v) + \hat I(v)
+    \frac{\partial v}{\partial t} = \hat E(t,v) + \hat I(t,v)
     \f]
     where \f$ \hat E \f$ contains the explicit and \f$ \hat I \f$ the implicit part of the equations.
     The coefficients are
@@ -251,16 +243,24 @@ far outweighs the increased computational cost of the additional matrix inversio
 template<class container>
 struct Karniadakis
 {
+    ///@copydoc RK::RK()
+    Karniadakis(){}
 
+    ///@copydoc construct()
+    Karniadakis( const container& copyable, unsigned max_iter, double eps){
+        construct( copyable, max_iter, eps);
+    }
     /**
     * @brief Reserve memory for the integration
     *
-    * @param copyable container of size which is used in integration.
+    * @param copyable container of size which is used in integration (values do not matter, the size is important).
     * @param max_iter parameter for cg
     * @param eps  accuracy parameter for cg
-    * A container object must be copy-constructible from copyable.
     */
-    Karniadakis( const container& copyable, unsigned max_iter, double eps): u_(3, container(copyable)), f_(3, container(copyable)), pcg( copyable, max_iter), eps_(eps){
+    void construct( const container& copyable, unsigned max_iter, double eps){
+        f_.fill(copyble), u_.fill(copyable);
+        pcg.construct( copyable, max_iter);
+        eps_ = eps;
         //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
         //a[1] = -1.334951446162515;  b[1] = -1.654746338401493;
         //a[2] =  0.426415969280137;  b[2] =  0.670051276940255;
@@ -273,12 +273,13 @@ struct Karniadakis
      * @brief Initialize by integrating two timesteps backward in time
      *
      * @copydoc hide_explicit_implicit
-     * @param u0 The initial value
+     * @param u0 The initial value of the integration
+     * @param t0 The intital time corresponding to u0
      * @param dt The timestep saved for later use
      * @note The last call to exp is two steps backward in time (n-2)
      */
     template< class Explicit, class Implicit>
-    void init( Explicit& exp, Implicit& imp, const container& u0, double dt);
+    void init( Explicit& exp, Implicit& imp, const container& u0, double t0, double dt);
 
     /**
     * @brief Advance one timestep
@@ -287,7 +288,7 @@ struct Karniadakis
     * @param u (write-only), contains next step of time-integration on output
     */
     template< class Explicit, class Implicit>
-    void operator()( Explicit& exp, Implicit& imp, container& u);
+    void step( Explicit& exp, Implicit& imp, container& u, double& t);
 
 
     /**
@@ -302,7 +303,7 @@ struct Karniadakis
      */
     const container& last()const{return u_[1];}
   private:
-    std::vector<container> u_, f_;
+    std::array<container,3> u_, f_;
     CG< container> pcg;
     double eps_;
     double dt_;
@@ -313,14 +314,14 @@ struct Karniadakis
 
 ///@cond
 template< class container>
-template< class Functor, class Diffusion>
-void Karniadakis<container>::init( Functor& f, Diffusion& diff,  const container& u0,  double dt)
+template< class RHS, class Diffusion>
+void Karniadakis<container>::init( RHS& f, Diffusion& diff,  const container& u0,  double t0, double dt)
 {
     dt_ = dt;
     blas1::copy(  u0, u_[0]);
-    detail::Implicit<Diffusion, container> implicit( -dt, diff);
-    f( u0, f_[0]);
+    f( t0, u0, f_[0]);
     blas1::axpby( 1., u_[0], -dt, f_[0], f_[1]); //Euler step
+    detail::Implicit<Diffusion, container> implicit( -dt, t0-dt, diff);
     implicit( f_[1], u_[1]); //explicit Euler step backwards
     f( u_[1], f_[1]);
     blas1::axpby( 1.,u_[1], -dt, f_[1], f_[2]);
@@ -329,8 +330,8 @@ void Karniadakis<container>::init( Functor& f, Diffusion& diff,  const container
 }
 
 template<class container>
-template< class Functor, class Diffusion>
-void Karniadakis<container>::operator()( Functor& f, Diffusion& diff, container& u)
+template< class RHS, class Diffusion>
+void Karniadakis<container>::step( RHS& f, Diffusion& diff, container& u)
 {
 
     f( u_[0], f_[0]);
@@ -424,7 +425,7 @@ struct SIRK
      * @param dt timestep
      */
     template <class Explicit, class Implicit>
-    void operator()( Explicit& exp, Implicit& imp, const container& u0, container& u1, double dt)
+    void step( Explicit& exp, Implicit& imp, const container& u0, container& u1, double dt)
     {
         detail::Implicit<Implicit, container> implicit( -dt*d[0], imp);
         exp(u0, f_);
