@@ -7,7 +7,7 @@
 
 #include "json/json.h"
 
-#include "dg/backend/xspacelib.cuh"
+#include "dg/geometry/xspacelib.cuh"
 #include "dg/functors.h"
 #include "file/nc_utilities.h"
 

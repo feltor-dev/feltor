@@ -1,8 +1,8 @@
 #pragma once
 
-#include "dg/backend/gridX.h"
-#include "dg/backend/evaluationX.cuh"
-#include "dg/backend/functions.h"
+#include "dg/geometry/gridX.h"
+#include "dg/geometry/evaluationX.cuh"
+#include "dg/geometry/functions.h"
 #include "dg/blas1.h"
 #include "dg/geometry/base_geometryX.h"
 #include "generatorX.h"

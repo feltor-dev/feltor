@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "dg/backend/grid.h"
+#include "dg/geometry/grid.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"
 

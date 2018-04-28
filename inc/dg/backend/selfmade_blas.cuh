@@ -1,5 +1,7 @@
 #ifndef _DG_BLAS_SELFMADE_
 #define _DG_BLAS_SELFMADE_
+#include "vector_traits.h"
+#include "matrix_traits.h"
 //
 ///@cond
 namespace dg{
@@ -39,10 +41,10 @@ inline void doGemv(
 
 template< class Matrix, class Vector>
 inline void doSymv(
-              typename VectorTraits<Vector>::value_type alpha,
+              get_value_type<Vector> alpha,
               const Matrix& m,
               const Vector& x,
-              typename VectorTraits<Vector>::value_type beta,
+              get_value_type<Vector> beta,
               Vector& y,
               SelfMadeMatrixTag,
               AnyVectorTag)
@@ -52,10 +54,10 @@ inline void doSymv(
 
 template< class Matrix, class Vector>
 inline void doGemv(
-              typename VectorTraits<Vector>::value_type alpha,
+              get_value_type<Vector> alpha,
               const Matrix& m,
               const Vector& x,
-              typename VectorTraits<Vector>::value_type beta,
+              get_value_type<Vector> beta,
               Vector& y,
               SelfMadeMatrixTag,
               AnyVectorTag)

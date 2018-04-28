@@ -1,13 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-#include "blas.h"
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/projection.cuh"
-#include "dg/backend/typedefs.cuh"
-#include "functors.h"
 #include "draw/host_window.h"
+#include "dg/backend/typedefs.cuh"
+#include "dg/geometry/interpolation.cuh"
+#include "dg/geometry/xspacelib.cuh"
+#include "dg/geometry/projection.cuh"
+#include "functors.h"
+#include "blas.h"
 
 int main()
 {

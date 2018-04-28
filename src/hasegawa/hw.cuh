@@ -119,7 +119,7 @@ struct HW
     //matrices and solvers
     dg::ArakawaX< dg::CartesianGrid2d, Matrix, container> arakawa; 
     dg::CG<container > pcg;
-    dg::PoloidalAverage<container, thrust::device_vector<int> > average;
+    dg::Average<container> average;
     dg::Elliptic<dg::CartesianGrid2d, Matrix, container> A, laplaceM;
 
     const container w2d, v2d, one;
@@ -141,7 +141,7 @@ HW<Matrix, container>::HW( const dg::CartesianGrid2d& grid, double alpha, double
     A( grid, dg::not_normed, dg::centered), laplaceM( grid, dg::normed, dg::centered),
     arakawa( grid), 
     pcg( omega, omega.size()), 
-    average( grid),
+    average( grid,dg::coo2d::y),
     w2d( dg::create::weights(grid)), v2d( dg::create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)),
     alpha( alpha), g(g), nu( nu), eps_pol(eps_pol), mhw( mhw)
 {

@@ -18,8 +18,6 @@ const double lx = M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
-//const double eps = 1e-3; //# of pcg iterations increases very much if
- // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double initial( double x, double y) {return 0.;}
 double amp = 0.9999;
@@ -58,7 +56,7 @@ int main(int argc, char* argv[] )
     dg::MDVec chi =  dg::evaluate( pol, grid);
 
 
-    
+
     if(rank==0)std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     //dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> pol( grid, dg::not_normed, dg::centered);

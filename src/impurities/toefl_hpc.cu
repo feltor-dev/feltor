@@ -7,8 +7,6 @@
 
 #include "file/nc_utilities.h"
 
-#include "dg/backend/timer.cuh"
-
 /*
    - reads parameters from input.txt or any other given file,
    - integrates the ToeflR - functor and

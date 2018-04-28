@@ -11,12 +11,25 @@
 /*!
  * @defgroup backend Level 1: Vectors, Matrices and basic operations
  * @{
+ *     @defgroup typedefs Typedefs
+ *          Useful type definitions for easy programming
+ *     @defgroup sparsematrix Sparse matrix formats
+ *     @defgroup mpi_structures MPI backend functionality
+ *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X
+ *             is e.g. CPU, GPU, accelerator cards...
+ *             The general idea to achieve this is to separate global communication from local computations and thus
+ *             readily reuse the existing, optimized library for the local part.
  *     @defgroup blas Basic Linear Algebra Subroutines
  *
  *         These routines form the heart of our container free numerical algorithms.
  *         They are called by all our numerical algorithms like conjugate gradient or
  *         time integrators.
  *     @{
+ *         @defgroup dispatch The tag dispatch system
+ *         @{
+ *             @defgroup vec_list List of Vector Traits specializations
+ *             @defgroup mat_list List of Matrix Traits specializations
+ *         @}
  *         @defgroup blas1 BLAS level 1 routines
  *             This group contains Vector-Vector operations.
  *             Successive calls to blas routines are executed sequentially.
@@ -28,14 +41,6 @@
  *             A manual synchronization of threads or devices is never needed in an application
  *             using these functions. All functions returning a value block until the value is ready.
  *     @}
- *     @defgroup sparsematrix Sparse matrix formats
- *     @defgroup mpi_structures MPI backend functionality
- *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X
- *             is e.g. CPU, GPU, accelerator cards...
- *             The general idea to achieve this is to separate global communication from local computations and thus
- *             readily reuse the existing, optimized library for the local part.
- *     @defgroup typedefs Typedefs
- *          Useful type definitions for easy programming
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * These algorithms make use only of blas level 1 and 2 functions
@@ -90,7 +95,7 @@
  * @{
  *     @defgroup arakawa Discretization of Poisson bracket
  *     @defgroup matrixoperators Elliptic and Helmholtz operators
- *     @defgroup multigrid Multigrid matrix inversion
+ *     @defgroup multigrid Advanced matrix inversion
  * @}
  * @defgroup misc Level 00: Miscellaneous additions
  * @{
@@ -117,27 +122,28 @@
 
  /** @class hide_container
   * @tparam container
-  * A data container class for which the \c blas1 functionality is overloaded.
-  * We assume that \c container is copyable/assignable and has a swap member function.
-  * Currently this is one of
+  * Any class for which a specialization of \c VectorTraits exists and which
+  * fulfills the requirements of the there defined data and execution policies derived from \c AnyVectorTag or \c AnyPolicyTag.
+  * For example, this is one of
   *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec
-  *  - \c std::vector<dg::HVec>, \c std::vector<dg::DVec>, \c std::vector<dg::MHVec> or \c std::vector<dg::MDVec> .
-  *
+  *  - \c std::vector<dg::DVec>, \c std::array<dg::MHVec, 3>, \c std::array<double, 4> ...
+  *  \see vec_list
   */
  /** @class hide_matrix
   * @tparam Matrix
-  * A class for which the blas2 functions are callable in connection with the container class.
-  * The \c Matrix type can be one of:
-  *  - container: A container acts as a  diagonal matrix.
+  * Any class for which a specialization of \c MatrixTraits exists and which fullfills
+  * the requirements of the there defined Matrix policy derived from \c AnyMatrixTag or \c SelfMadeMatrixTag.
+  * The \c Matrix type can for example be one of:
+  *  - \c container: A container acts as a  diagonal matrix.
   *  - \c dg::HMatrix and \c dg::IHMatrix with \c dg::HVec or \c std::vector<dg::HVec>
   *  - \c dg::DMatrix and \c dg::IDMatrix with \c dg::DVec or \c std::vector<dg::DVec>
   *  - \c dg::MHMatrix with \c dg::MHVec or \c std::vector<dg::MHVec>
   *  - \c dg::MDMatrix with \c dg::MDVec or \c std::vector<dg::MDVec>
-  *  - Any type that has the \c SelfMadeMatrixTag specified in a corresponding
-  *  \c MatrixTraits class (e.g. \c dg::Elliptic). In this case only those blas2 functions
+  *  -  In case of \c SelfMadeMatrixTag only those \c blas2 functions
   *  that have a corresponding member function in the Matrix class (e.g. \c symv( const container&, container&); ) can be called.
   *  .
-  *  If \c container is a \c std::vector, then the Matrix is applied to each of the elements.
+  *  If a \c container has the \c VectorVectorTag, then the \c Matrix is applied to each of the elements.
+  *  \see mat_list
   */
   /** @class hide_geometry
   * @tparam Geometry
@@ -146,7 +152,7 @@
 
   /** @class hide_container_geometry
   * @tparam container
-  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted.
+  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted using \c dg::blas1::transfer.
   * We assume that \c container is copyable/assignable and has a swap member function.
   * In connection with \c Geometry this is one of
   *  - \c dg::HVec, \c dg::DVec when \c Geometry is a shared memory geometry
@@ -159,14 +165,14 @@
   * @tparam Geometry
   A type that is or derives from one of the abstract geometry base classes ( \c aGeometry2d, \c aGeometry3d, \c aMPIGeometry2d, ...). \c Geometry determines which \c Matrix and \c container types can be used:
   * @tparam Matrix
-  * A class for which the blas2 functions are callable in connection with the \c container class and to which the return type of \c create::dx() can be converted.
+  * A class for which the blas2 functions are callable in connection with the \c container class and to which the return type of \c create::dx() can be converted using \c dg::blas2::transfer.
   * The \c Matrix type can be one of:
   *  - \c dg::HMatrix with \c dg::HVec and one of the shared memory geometries
   *  - \c dg::DMatrix with \c dg::DVec and one of the shared memory geometries
   *  - \c dg::MHMatrix with \c dg::MHVec and one of the MPI geometries
   *  - \c dg::MDMatrix with \c dg::MDVec and one of the MPI geometries
   * @tparam container
-  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted.
+  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted using \c dg::blas1::transfer.
   * We assume that \c container is copyable/assignable and has a swap member function.
   * In connection with \c Geometry this is one of
   *  - \c dg::HVec, \c dg::DVec when \c Geometry is a shared memory geometry

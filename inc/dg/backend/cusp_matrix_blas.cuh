@@ -11,6 +11,7 @@
 #include <cusp/convert.h>
 #include <cusp/array1d.h>
 
+#include "config.h"
 #include "matrix_categories.h"
 #include "vector_categories.h"
 

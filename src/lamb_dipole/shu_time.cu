@@ -1,13 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "dg/backend/timer.cuh"
 #include "dg/algorithm.h"
-#include "dg/functors.h"
-#include "dg/backend/evaluation.cuh"
-#include "dg/runge_kutta.h"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/typedefs.cuh"
 
 #include "shu.cuh"
 #include "parameters.h"

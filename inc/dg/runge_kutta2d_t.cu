@@ -4,10 +4,10 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "backend/evaluation.cuh"
+#include "backend/typedefs.cuh"
+#include "geometry/evaluation.cuh"
 #include "arakawa.h"
 #include "runge_kutta.h"
-#include "backend/typedefs.cuh"
 
 const unsigned n = 3;
 const unsigned Nx = 20;

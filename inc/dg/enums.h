@@ -8,11 +8,10 @@
 
 namespace dg
 {
-/**
- * @brief Switch between boundary conditions
- *
- * @ingroup creation
- */
+///@addtogroup creation
+///@{
+
+///@brief Switch between boundary conditions
 enum bc{
     PER = 0, //!< periodic boundaries
     DIR = 1, //!< homogeneous dirichlet boundaries
@@ -34,7 +33,6 @@ enum bc{
  * - or "Not specified!!"
  * @param bcx the boundary condition
  * @return a string
- * @ingroup creation
  */
 std::string bc2str( bc bcx)
 {
@@ -64,7 +62,6 @@ std::string bc2str( bc bcx)
  * @param s the input string
  * @return a valid boundary condition
  * \throw std::runtime_error if string doesn't match any of the above
- * @ingroup creation
  */
 bc str2bc( std::string s)
 {
@@ -81,23 +78,35 @@ bc str2bc( std::string s)
     throw std::runtime_error( "No matching boundary condition!");
 }
 
-/**
- * @brief Switch between normalisations
- *
- * @ingroup creation
- */
+///@brief Switch between normalisations
 enum norm{
     normed,   //!< indicates that output is properly normalized
     not_normed //!< indicates that normalisation weights (either T or V) are missing from output
 };
-/**
- * @brief Direction of a discrete derivative
- *
- * @ingroup creation
- */
+//
+///@brief Direction of a discrete derivative
 enum direction{
     forward, //!< forward derivative
     backward, //!< backward derivative
     centered //!< centered derivative
 };
+
+///@brief 2d coordinates
+enum class coo2d : char
+{
+    x = 'x', //!< x direction
+    y = 'y', //!< y direction
+};
+///@brief 3d contra- and covariant coordinates
+enum class coo3d : char
+{
+    x = 'x', //!< x direction
+    y = 'y', //!< y direction
+    z = 'z', //!< z direction
+    xy = 'a', //!< xy plane
+    yz = 'b', //!< yz plane
+    xz = 'c', //!< xz plane
+};
+
+///@}
 }//namespace dg

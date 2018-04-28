@@ -219,12 +219,17 @@ struct MatrixTraits< detail::Implicit<M, V> >
 * @brief Struct for Karniadakis semi-implicit multistep time-integration
 * \f[
 * \begin{align}
-    {\bar v}^n &= \frac{1}{\gamma_0}\left(\sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  \hat E( v^{n-q})\right) \\
+    {\bar v}^n &= \sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  \hat E( v^{n-q}) \\
     \left( 1  - \frac{\Delta t}{\gamma_0}  \hat I\right)  v^{n+1} &= {\bar v}^n
     \end{align}
     \f]
 
-    where \f$ \hat E \f$ constains the explicit and \f$ \hat I \f$ the implicit part of the equations. The coefficients are
+    which discretizes
+    \f[
+    \frac{\partial v}{\partial t} = \hat E(v) + \hat I(v)
+    \f]
+    where \f$ \hat E \f$ contains the explicit and \f$ \hat I \f$ the implicit part of the equations.
+    The coefficients are
     \f[
     \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
     \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11} \\
@@ -265,11 +270,12 @@ struct Karniadakis
     }
 
     /**
-     * @brief Initialize with initial value
+     * @brief Initialize by integrating two timesteps backward in time
      *
      * @copydoc hide_explicit_implicit
      * @param u0 The initial value
      * @param dt The timestep saved for later use
+     * @note The last call to exp is two steps backward in time (n-2)
      */
     template< class Explicit, class Implicit>
     void init( Explicit& exp, Implicit& imp, const container& u0, double dt);

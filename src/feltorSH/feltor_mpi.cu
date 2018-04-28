@@ -10,9 +10,6 @@
 #include "netcdf_par.h"
 
 #include "dg/algorithm.h"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/interpolation.cuh"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"

@@ -3,11 +3,6 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif
-
-
 namespace dg
 {
 template<class Geometry, class Matrix, class container>

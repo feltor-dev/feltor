@@ -1,10 +1,10 @@
 #pragma once
 
 #include "cusp/transpose.h"
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/evaluationX.cuh"
-#include "dg/backend/weightsX.cuh"
-#include "dg/backend/gridX.h"
+#include "interpolation.cuh"
+#include "evaluationX.cuh"
+#include "weightsX.cuh"
+#include "gridX.h"
 #include "base_geometryX.h"
 #include "refined_grid.h"
 

@@ -72,15 +72,17 @@ int main()
         //sirk( explicit, diffusion, y0, y1, dt); y0.swap(y1);
     }
     //![doxygen]
+    exblas::udouble res;
     dg::DVec w2d = dg::create::weights( grid);
-    double norm_y0 = dg::blas2::dot( w2d, y0[0]);
-    std::cout << "Normalized y0 after "<< NT <<" steps is "<< norm_y0 << std::endl;
+    res.d = dg::blas2::dot( w2d, y0[0]);
+    std::cout << "Normalized y0 after "<< NT <<" steps is "<< res.d <<"\t"<<res.i << std::endl;
     dg::DVec solution = dg::evaluate( sol, grid), error( solution);
     double norm_sol = dg::blas2::dot( w2d, solution);
-    dg::blas1::axpby( -1., y0[0], 1., error);
     std::cout << "Normalized solution is "<<  norm_sol<< std::endl;
-    double norm_error = dg::blas2::dot( w2d, error);
-    std::cout << "Relative error is      "<< sqrt( norm_error/norm_sol)<<" (0.000149144 Karniadakis) (0.000148647 SIRK)\n";
+    dg::blas1::axpby( -1., y0[0], 1., error);
+    double norm_error = sqrt(dg::blas2::dot( w2d, error)/norm_sol); res.d = norm_error;
+    std::cout << "Relative error is      "<< res.d<<" (0.000149144 Karniadakis) (0.000148647 SIRK)\n";
+    std::cout << "Relative error (binary)"<< res.i<<"\n";
     //n = 1 -> p = 1 (Sprung in laplace macht n=1 eine Ordng schlechter)
     //n = 2 -> p = 2
     //n = 3 -> p = 3

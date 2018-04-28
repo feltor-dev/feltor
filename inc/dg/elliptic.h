@@ -3,11 +3,11 @@
 #include "blas.h"
 #include "enums.h"
 #include "backend/memory.h"
-#include "backend/evaluation.cuh"
-#include "backend/derivatives.h"
+#include "geometry/evaluation.cuh"
+#include "geometry/derivatives.h"
 #ifdef MPI_VERSION
-#include "backend/mpi_derivatives.h"
-#include "backend/mpi_evaluation.h"
+#include "geometry/mpi_derivatives.h"
+#include "geometry/mpi_evaluation.h"
 #endif
 #include "geometry/geometry.h"
 
@@ -173,7 +173,10 @@ class Elliptic
      *
      * @param x left-hand-side
      * @param y result
-     * @note Requires 24 memops if geometry is curvilinear; 20 memops if geometry is orthogonal or chi is set; 16 memops if geometry is Cartesian and chi is not set;
+     * @note memops required:
+            - 23 reads + 9 writes if geometry is curvilinear;
+            - 19 reads + 9 writes if geometry is orthogonal and/or chi is set;
+            - 16 reads + 8 writes if geometry is Cartesian and chi is not set;
      */
     void symv( const container& x, container& y)
     {
@@ -594,7 +597,7 @@ struct TensorElliptic
     template<class ChiRR, class ChiRZ, class ChiZZ>
     void transform_and_set( const ChiRR& chiRR, const ChiRZ& chiRZ, const ChiZZ& chiZZ)
     {
-        typename GeometryTraits<Geometry>::host_vector chiXX, chiXY, chiYY;
+        get_host_vector<Geometry> chiXX, chiXY, chiYY;
         dg::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_.get());
         dg::blas1::transfer( chiXX, chixx_);
         dg::blas1::transfer( chiXY, chixy_);
@@ -706,4 +709,3 @@ struct MatrixTraits< TensorElliptic<G, M, V> >
 ///@endcond
 
 } //namespace dg
-

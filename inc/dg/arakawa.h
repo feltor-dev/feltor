@@ -4,11 +4,11 @@
 #include "blas.h"
 #include "geometry/geometry.h"
 #include "enums.h"
-#include "backend/evaluation.cuh"
-#include "backend/derivatives.h"
+#include "geometry/evaluation.cuh"
+#include "geometry/derivatives.h"
 #ifdef MPI_VERSION
-#include "backend/mpi_derivatives.h"
-#include "backend/mpi_evaluation.h"
+#include "geometry/mpi_derivatives.h"
+#include "geometry/mpi_evaluation.h"
 #endif
 
 /*! @file
@@ -45,13 +45,14 @@ struct ArakawaX
     ArakawaX( const Geometry& g, bc bcx, bc bcy);
 
     /**
-     * @brief Compute poisson's bracket (25+2 memops)
+     * @brief Compute Poisson bracket
      *
      * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
      * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space.
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
+     * @note memops: 25 reads; 9 writes (+ 2 reads and 1 write, if geometry is nontrivial)
      */
     void operator()( const container& lhs, const container& rhs, container& result);
 
@@ -96,7 +97,7 @@ struct ArakawaX
 ///@cond
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
-    dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
+    dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf( dg::create::dx( g, g.bcx())),
     bdyf( dg::create::dy( g, g.bcy()))
 {
@@ -106,7 +107,7 @@ ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
 }
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy):
-    dxlhs( dg::evaluate( one, g) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
+    dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
     bdxf(dg::create::dx( g, bcx)),
     bdyf(dg::create::dy( g, bcy))
 {

@@ -2,10 +2,10 @@
 
 #include "cusp/transpose.h"
 #include "dg/backend/memory.h"
-#include "dg/backend/grid.h"
-#include "dg/backend/weights.cuh"
-#include "dg/backend/interpolation.cuh"
 #include "dg/blas.h"
+#include "grid.h"
+#include "weights.cuh"
+#include "interpolation.cuh"
 
 #include "base_geometry.h"
 

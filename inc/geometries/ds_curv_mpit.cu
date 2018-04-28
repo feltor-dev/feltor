@@ -4,7 +4,7 @@
 
 #include "dg/backend/timer.cuh"
 #include "dg/backend/mpi_init.h"
-#include "dg/backend/functions.h"
+#include "dg/geometry/functions.h"
 #include "dg/blas.h"
 #include "dg/functors.h"
 #include "dg/geometry/geometry.h"

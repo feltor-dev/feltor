@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dg/backend/operator.h"
+#include "operator.h"
 #include "dg/functors.h"
 #include "dg/blas1.h"
 
@@ -85,19 +85,19 @@ template<class T>
 struct SparseTensor
 {
     ///no element is set
-    SparseTensor( ):mat_idx_(3,-1.) {}
+    SparseTensor( ):mat_idx_(3,-1) {}
 
     /**
      * @brief reserve space for value_size Ts in the values array
      * @param value_size reserve space for this number of Ts (default constructor)
      */
-    SparseTensor( unsigned value_size): mat_idx_(3,-1.), values_(value_size){}
+    SparseTensor( unsigned value_size): mat_idx_(3,-1), values_(value_size){}
 
     /**
     * @brief pass array of Ts
     * @param values The contained Ts are stored in the object
     */
-    SparseTensor( const std::vector<T>& values ): mat_idx_(3,-1.), values_(values){}
+    SparseTensor( const std::vector<T>& values ): mat_idx_(3,-1), values_(values){}
 
     /**
      * @brief Type conversion from other value types
@@ -105,7 +105,7 @@ struct SparseTensor
      * @param src the source matrix to convert
      */
     template<class OtherT>
-    SparseTensor( const SparseTensor<OtherT>& src): mat_idx_(3,-1.), values_(src.values().size()){
+    SparseTensor( const SparseTensor<OtherT>& src): mat_idx_(3,-1), values_(src.values().size()){
         for(unsigned i=0; i<3; i++)
             for(unsigned j=0; j<3; j++)
                 mat_idx_(i,j)=src.idx(i,j);

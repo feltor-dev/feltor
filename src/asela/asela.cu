@@ -128,6 +128,7 @@ int main( int argc, char* argv[])
     double E0 = asela.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
+    dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
 
     while ( !glfwWindowShouldClose( w ))
     {
@@ -145,7 +146,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         dg::blas1::transfer( y0[1], hvisual);
@@ -161,7 +162,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw Potential
         dg::blas1::transfer( asela.potential()[0], hvisual);
@@ -181,7 +182,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw U_e
@@ -197,7 +198,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw U_i
         dg::blas1::transfer( asela.uparallel()[1], hvisual);
@@ -212,7 +213,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw a parallel
         dg::blas1::transfer(asela.aparallel(), hvisual);
@@ -227,7 +228,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
  
         

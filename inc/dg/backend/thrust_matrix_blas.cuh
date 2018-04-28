@@ -10,6 +10,7 @@
 #include <thrust/transform.h>
 #include <thrust/inner_product.h>
 
+#include "matrix_categories.h"
 #include "thrust_vector_blas.cuh" //load thrust_vector BLAS1 routines
 #include "vector_categories.h"
 
@@ -25,76 +26,62 @@ void doTransfer( const Vector1& in, Vector2& out, ThrustMatrixTag, ThrustMatrixT
     out.resize(in.size());
     thrust::copy( in.begin(), in.end(), out.begin());
 }
-
-template < class Vector>
-struct ThrustVectorDoDot
-{
-    typedef typename VectorTraits<Vector>::value_type value_type;
-    typedef thrust::tuple< value_type, value_type> Pair;
-    __host__ __device__
-        value_type operator()( const value_type & x, const Pair& p) {
-            return thrust::get<0>(p)*thrust::get<1>(p)*x;
-        }
-    __host__ __device__
-        value_type operator()( const value_type& x, const value_type& p) {
-            return p*x*x;
-        }
-};
+std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]) ;
+    return h_superacc;
+}
+#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr, const double * z_ptr) {
+    static thrust::device_vector<int64_t> d_superacc(exblas::BIN_COUNT);
+    int64_t * d_ptr = thrust::raw_pointer_cast( d_superacc.data());
+    exblas::exdot_gpu( size, x_ptr,y_ptr,z_ptr, d_ptr);
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    cudaMemcpy( &h_superacc[0], d_ptr, exblas::BIN_COUNT*sizeof(int64_t), cudaMemcpyDeviceToHost);
+    return h_superacc;
+}
+#else
+std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    if(size<dg::blas1::detail::MIN_SIZE)
+        exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]);
+    else
+        exblas::exdot_omp( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]);
+    return h_superacc;
+}
+#endif
 
 template< class Matrix, class Vector>
-inline typename MatrixTraits<Matrix>::value_type doDot( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
+std::vector<int64_t> doDot_superacc( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() && x.size() == m.size() );
 #endif //DG_DEBUG
-    typedef typename MatrixTraits<Matrix>::value_type value_type;
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    value_type sum = 0;
-    unsigned size=x.size();
-    #pragma omp parallel for SIMD reduction(+:sum)
-    for( unsigned i=0; i<size; i++)
-        sum += x[i]*m[i]*y[i];
-    return sum;
-#else
-    return thrust::inner_product(  x.begin(), x.end(),
-                            thrust::make_zip_iterator( thrust::make_tuple( y.begin(), m.begin())  ),
-                            value_type(0),
-                            thrust::plus<value_type>(),
-                            detail::ThrustVectorDoDot<Matrix>()
-                            );
-#endif
+    const double* x_ptr = thrust::raw_pointer_cast( x.data());
+    const double* m_ptr = thrust::raw_pointer_cast( m.data());
+    const double* y_ptr = thrust::raw_pointer_cast( y.data());
+    return doDot_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, m_ptr, y_ptr);
 }
 
 template< class Matrix, class Vector>
-inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::ThrustMatrixTag, dg::ThrustVectorTag)
+inline get_value_type<Vector> doDot( const Vector& x, const Matrix& m, const Vector& y, ThrustMatrixTag, ThrustVectorTag)
 {
-#ifdef DG_DEBUG
-    assert( m.size() == x.size());
-#endif //DG_DEBUG
-    typedef typename MatrixTraits<Matrix>::value_type value_type;
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    value_type sum = 0;
-    unsigned size=x.size();
-    #pragma omp parallel for SIMD reduction(+:sum)
-    for( unsigned i=0; i<size; i++)
-        sum += x[i]*x[i]*m[i];
-    return sum;
-#else
-    return thrust::inner_product( x.begin(), x.end(),
-                                  m.begin(),
-                                  value_type(0),
-                                  thrust::plus<value_type>(),
-                                  detail::ThrustVectorDoDot<Matrix>()
-            ); //very fast
-#endif
+    static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
+    std::vector<int64_t> acc = doDot_superacc( x,m,y,ThrustMatrixTag(),ThrustVectorTag());
+    return exblas::cpu::Round(acc.data());
+}
+template< class Matrix, class Vector>
+inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, ThrustMatrixTag, ThrustVectorTag)
+{
+    return doDot( x,m,x,ThrustMatrixTag(), ThrustVectorTag());
 }
 
 template< class Matrix, class Vector>
 inline void doSymv(
-              typename MatrixTraits<Matrix>::value_type alpha,
+              get_value_type<Vector> alpha,
               const Matrix& m,
               const Vector& x,
-              typename MatrixTraits<Matrix>::value_type beta,
+              get_value_type<Vector> beta,
               Vector& y,
               ThrustMatrixTag,
               ThrustVectorTag)
@@ -111,7 +98,7 @@ inline void doSymv(
               ThrustVectorTag,
               ThrustVectorTag)
 {
-    dg::blas1::detail::doPointwiseDot( m,x,y, dg::ThrustVectorTag());
+    dg::blas1::detail::doPointwiseDot( 1., m,x,0., y, ThrustVectorTag());
 }
 
 

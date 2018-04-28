@@ -1,13 +1,8 @@
-#pragma once 
+#pragma once
 #include <exception>
 
 #include "dg/algorithm.h"
 #include "parameters.h"
-
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif
-
 
 namespace toefl
 {

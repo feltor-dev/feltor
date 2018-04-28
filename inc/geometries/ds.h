@@ -2,10 +2,10 @@
 
 #include "dg/blas.h"
 #include "dg/geometry/geometry.h"
-#include "dg/backend/derivatives.h"
+#include "dg/geometry/derivatives.h"
 #include "fieldaligned.h"
 #ifdef MPI_VERSION
-#include "dg/backend/mpi_derivatives.h"
+#include "dg/geometry/mpi_derivatives.h"
 #include "mpi_fieldaligned.h"
 #endif //MPI_VERSION
 #include "magnetic_field.h"

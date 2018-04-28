@@ -35,7 +35,7 @@ class CG
 {
   public:
     typedef typename VectorTraits<container>::value_type value_type;//!< value type of the container class
-    ///@brief Allocate nothing,
+    ///@brief Allocate nothing, Call \c construct method before usage
     CG(){}
     ///@copydoc construct()
     CG( const container& copyable, unsigned max_iterations):r(copyable), p(r), ap(r), max_iter(max_iterations){}
@@ -73,7 +73,9 @@ class CG
      * @attention This version uses the Preconditioner to compute the norm for the error condition (this safes one scalar product)
      *
      * @return Number of iterations used to achieve desired precision
-     * @note Requires (11 + N) memops/iteration, where N is the number of memops for \c A, and \c P is assumed vector
+     * @note Required memops per iteration (\c P is assumed vector):
+             - 11  reads + 3 writes
+             - plus the number of memops for \c A;
      */
     template< class Matrix, class Preconditioner >
     unsigned operator()( Matrix& A, container& x, const container& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
@@ -95,7 +97,9 @@ class CG
      * @param nrmb_correction Correction factor C for norm of b
      *
      * @return Number of iterations used to achieve desired precision
-     * @note Requires (15 + N) memops/iteration, where N is the number of memops for \c A, and \c P and \c S are assumed vectors
+     * @note Required memops per iteration (\c P and \c S are assumed vectors):
+             - 15  reads + 4 writes
+             - plus the number of memops for \c A;
      */
     template< class Matrix, class Preconditioner, class SquareNorm >
     unsigned operator()( Matrix& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
@@ -333,17 +337,14 @@ struct Extrapolation
 
 
 /**
- * @brief Smart conjugate gradient solver.
-
- * Solve a symmetric linear inversion problem using a conjugate gradient method and
- * the last two solutions.
+ * @brief Wrapper around CG and Extrapolation to solve the Equation \f[ Ax = W  b \f]
+ *
+ * where \f$A\f$ was made symmetric
+ * by appropriate weights \f$W\f$ (s. comment below).
+ * Uses solutions from the last calls to
+ * extrapolate a solution for the current call.
  *
  * @ingroup invert
- * Solves the Equation \f[ \hat O \phi = W \cdot \rho \f]
- * for any operator \f$\hat O\f$ that was made symmetric
- * by appropriate weights \f$W\f$ (s. comment below).
- * It uses solutions from the last two calls to
- * extrapolate a solution for the current call.
  * @snippet elliptic2d_b.cu invert
  * @copydoc hide_container
  * @note A note on weights, inverse weights and preconditioning.
@@ -355,7 +356,7 @@ struct Extrapolation
  * Independent from this, a preconditioner should be used to solve the
  * symmetric matrix equation. The inverse of \f$W\f$ is
  * a good general purpose preconditioner.
- * @sa Extrapolation
+ * @sa Extrapolation MultigridCG2d
  */
 template<class container>
 struct Invert
@@ -443,7 +444,7 @@ struct Invert
      * @copydoc hide_symmetric_op
      * @param op selfmade symmetric Matrix operator class
      * @param phi solution (write only)
-     * @param rho right-hand-side
+     * @param rho right-hand-side (will be multiplied by \c weights)
      * @note computes inverse weights from the weights
      * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
      *
@@ -465,7 +466,7 @@ struct Invert
      * @tparam Preconditioner A type for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable.
      * @param op symmetric Matrix operator class
      * @param phi solution (write only)
-     * @param rho right-hand-side
+     * @param rho right-hand-side (will be multiplied by \c weights)
      * @param weights The weights that normalize the symmetric operator
      * @param inv_weights The inverse of the weights that normalize the symmetric operator
      * @param p The preconditioner

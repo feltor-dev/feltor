@@ -16,9 +16,11 @@ MPICFLAGS+=$(CFLAGS)
 endif #device=gpu
 ifeq ($(strip $(device)),omp)
 endif #device=omp
-ifeq ($(strip $(device)),mic)
+ifeq ($(strip $(device)),knl)
 OPT=-O3 -xMIC-AVX512 
+#OPT=-O3 -mavx512er
 endif #device=mic
 ifeq ($(strip $(device)),skl)
 OPT=-xCORE-AVX512 -mtune=skylake -O3 
+#OPT=-O3 -mtune=skylake
 endif #device=mic

@@ -3,10 +3,7 @@
 #include <netcdf.h>
 #include <cmath>
 
-#include "dg/blas.h"
-#include "dg/backend/grid.h"
-#include "dg/backend/evaluation.cuh"
-#include "dg/backend/weights.cuh"
+#include "dg/algorithm.h"
 #include "nc_utilities.h"
 
 double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}

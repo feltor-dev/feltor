@@ -8,21 +8,21 @@ feltor/config/*.mk                  #overwrite variables if machine is recognize
 feltor/config/devices/devices.mk    #recombine variables depending on device
 ```
 
-The machine specific config files (e.g. vsc3.mk) should have an include guard and can overwrite or add to any of the following variables:
+Your machine specific config file (e.g. feltor/config/your-machine.mk) should have an include guard and overwrite or add to any of the following variables:
 
-| variable  | default value                            | description                              |
-| :-------: | :--------------------------------------- | :--------------------------------------- |
-|    CC     | g++                                      | C++ compiler                             |
-|   MPICC   | mpic++                                   | the corresponding mpi wrapper for the c++ compiler     |
-|  CFLAGS   | -std=c++11 -Wall -x c++                  | flags for the C++ compiler               |
-| MPICFLAGS |                  | flags specific to the MPI compilation                |
+| variable  | default value                | description                              |
+| :-------: | :--------------------------- | :--------------------------------------- |
+|    CC     | g++                          | C++ compiler                             |
+|   MPICC   | mpic++                       | the corresponding mpi wrapper for the c++ compiler |
+|  CFLAGS   | -std=c++11 -mavx -mfma -Wall | flags for the C++ compiler, minimum instruction set is sse4.1, avx and fma are recommended               |
+| MPICFLAGS |                              | flags specific to the MPI compilation    |
    OPT    | -O3                                      | optimization flags for the **host** code (can be overwritten on the command line, CUDA kernel code is always compiled with -O3) |
 |  OMPFLAG  | -fopenmp                                 | The compiler flag activating the OpenMP support |
 |   NVCC    | nvcc                                     | CUDA compiler                            |
-| NVCCFLAGS | -std=c++11  -Xcompiler -Wall                             | flags for nvcc                           |
-| NVCCARCH  | -arch sm_20                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (can be overwritten on the command line) |
+| NVCCFLAGS | -std=c++11  -Xcompiler "-Wall -mavx -mfma"                             | flags for nvcc  and underlying host compiler, (minimum instruction set is sse4.1, avx and fma are recommended)                         |
+| NVCCARCH  | -arch sm_35                              | specify the **gpu** compute capability  https://developer.nvidia.com/cuda-gpus (note: can be overwritten on the command line) |
 |                                          |                                          |     |
-|  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, json and the draw libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
+|  INCLUDE  | -I$(HOME)/include                        | cusp, thrust, json, vcl and the draw libraries. The default expects to find (symbolic links to ) these libraries in your home folder |
 |   LIBS    | -lnetcdf -lhdf5 -ldhf5_hl                | netcdf library                           |
 |  JSONLIB  | -L$(HOME)/include/json/../../src/lib_json -ljsoncpp | the JSONCPP library                      |
 |  GLFLAGS  | $$(pkg-config --static --libs glfw3)     | glfw3 installation (if glfw3 was installed correctly the default should work) |
@@ -32,9 +32,9 @@ The main purpose of the file `feltor/config/devices/devices.mk` is to configure 
 
 | value | description                              | flags                                    |
 | ----- | ---------------------------------------- | ---------------------------------------- |
-| gpu   | replaces the CC and CFLAGS variables with the nvcc versions and analogously MPICC and MPICFLAGS  | `CC = $(NVCC) --compiler-bindir $(CC)` `CFLAGS = $(NVCCARCH) $(NVCCFLAGS)` `MPICC = $(NVCC) --compiler-bindir $(MPICC)` `MPICFLAGS+= $(NVCCARCH) $(NVCCFLAGS)` |
+| gpu   | replaces the CC and CFLAGS variables with the nvcc versions and analogously MPICC and MPICFLAGS | `CC = $(NVCC) --compiler-bindir $(CC)` `CFLAGS = $(NVCCARCH) $(NVCCFLAGS)` `MPICC = $(NVCC) --compiler-bindir $(MPICC)` `MPICFLAGS+= $(NVCCARCH) $(NVCCFLAGS)` |
 | !gpu  | if device != gpu all thrust device calls redirect to OpenMP using the THRUST_DEVICE_SYSTEM macro | `-x c++` `-DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP` and `$(OMPFLAG)` added to CFLAGS, `MPICFLAGS+=$(CFLAGS)` |
-| omp  | specify OPT for OpenMP | OPT = -O3                   |
+| omp   | specify OPT for OpenMP                   | OPT = -O3                                |
 | mic   | specify OPT for Intel Xeon Phi architecture | OPT = -O3 -xMIC-AVX512                   |
 | skl   | specify OPT for Intel Skylake processors (icc only) | OPT = -xCORE-AVX512 -mtune=skylake -O3   |
 
@@ -60,6 +60,6 @@ make blas_mpib device=gpu NVCCARCH='-arch sm_60' OPT=-O2
  - If MPI is used in connection with the gpu backend, the mpi installation needs to be **cuda-aware**
  - If `icc` is used as the C++ compiler the `-restrict` option has to be used to enable the recognition of the restrict keyword
  - Support for OpenMP-4 is recommended (at least gcc-4.9 or icc-15), but not mandatory
- - The library headers are compliant with the c++98 standard but we reserve the right to change that in future updates
- 
+ - The library headers are compliant with the c++11 standard but we reserve the right to upgrade that in future updates
+
 

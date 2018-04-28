@@ -6,8 +6,6 @@
 #include <sstream>
 
 #include "dg/algorithm.h"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
 
 #include "file/nc_utilities.h"
 #include "feltorShw/parameters.h"

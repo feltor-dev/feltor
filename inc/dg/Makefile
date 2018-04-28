@@ -20,7 +20,7 @@ all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 	$(CC) $(OPT) $(CFLAGS) -DDG_BENCHMARK $< -o $@ $(INCLUDE) -g
 
 %_mpit: %_mpit.cu
-	$(MPICC) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
+	$(MPICC) $(OPT) $(INCLUDE) -DDG_DEBUG $(MPICFLAGS) $< -o $@ -g
 
 %_mpib: %_mpib.cu
 	$(MPICC) $(OPT) $(MPICFLAGS) -DDG_BENCHMARK $< -o $@ $(INCLUDE) -g

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dg/backend/operator.h"
+#include "operator.h"
 #include "dg/functors.h"
 #include "dg/blas1.h"
 #include "tensor.h"
@@ -155,11 +155,11 @@ void multiply2d_helper( const SparseTensor<container>& t, const container& in0, 
  * @param out0 (output) first component  (restricted)
  * @param out1 (output) second component (may alias in1)
  * @attention aliasing only allowed between out1 and in1
- * @note Currently requires:
-         - 10 memops if all values in t are set;
-         - 6  memops if t is diagonal;
-         - 4  memops if t is empty
-         - (-1 memop if alias is used)
+ * @note Currently required memops:
+         - 10(9) reads + 2 writes if all values in t are set; (-1 read if alias is used)
+         - 6(5)  reads + 2 writes if t is diagonal; (-1 read if alias is used)
+         - 4  reads + 2 writes if t is empty and no alias
+         - 2  reads + 1 writes (= 1 copy) if t is empty and out1 aliases in1
  */
 template<class container>
 void multiply2d( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, container& out1)

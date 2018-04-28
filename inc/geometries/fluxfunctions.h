@@ -305,7 +305,6 @@ struct BinaryVectorLvl0
     ClonePtr<aBinaryFunctor> p_[3];
 };
 
-
 ///@}
 }//namespace geo
 }//namespace dg

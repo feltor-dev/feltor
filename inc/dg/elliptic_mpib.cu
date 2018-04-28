@@ -8,7 +8,7 @@
 
 #include "backend/timer.cuh"
 #include "backend/mpi_init.h"
-#include "backend/split_and_join.h"
+#include "geometry/split_and_join.h"
 
 
 const double R_0 = 1000;
