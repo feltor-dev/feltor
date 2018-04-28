@@ -5,7 +5,7 @@
 
 //![function]
 template<class Vector>
-void zero(const std::vector<Vector>& y, std::vector<Vector>& yp){ dg::blas1::scal(yp,0.);}
+void zero(double t, const std::vector<Vector>& y, std::vector<Vector>& yp){ dg::blas1::scal(yp,0.);}
 
 template< class Matrix, class container>
 struct Diffusion
@@ -16,7 +16,7 @@ struct Diffusion
         m_LaplacianM( g, dg::normed)
         { }
 
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( double t, const std::vector<container>& x, std::vector<container>& y)
     {
         for(unsigned i=0; i<x.size(); i++)
         {
@@ -64,11 +64,12 @@ int main()
     std::vector<dg::DVec> y0(2, dg::evaluate( sine, grid)), y1(y0);
     Diffusion<dg::DMatrix, dg::DVec> diffusion( grid, nu);
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), eps);
-    karniadakis.init( zero<dg::DVec>, diffusion, y0, dt);
+    double time = 0.;
+    karniadakis.init( zero<dg::DVec>, diffusion, y0, time, dt);
     dg::SIRK< std::vector<dg::DVec> > sirk( y0, y0[0].size(), eps);
     for( unsigned i=0; i<NT; i++)
     {
-        karniadakis( zero<dg::DVec>, diffusion, y0);
+        karniadakis.step( zero<dg::DVec>, diffusion, y0, time);
         //sirk( explicit, diffusion, y0, y1, dt); y0.swap(y1);
     }
     //![doxygen]

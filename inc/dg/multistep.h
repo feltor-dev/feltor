@@ -211,8 +211,7 @@ struct MatrixTraits< detail::Implicit<M, V> >
 * @brief Struct for Karniadakis semi-implicit multistep time-integration
 * \f[
 * \begin{align}
-    {\bar v}^{n+1} &= \sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\sum_{q=0}^2\beta_q  \hat E(t^{n-q}, v^{n-q}) \\
-    \left( 1  - \frac{\Delta t}{\gamma_0}  \hat I\right)  v^{n+1} &= {\bar v}^{n+1}
+    v^{n+1} = \sum_{q=0}^2 \alpha_q v^{n-q} + \Delta t\left[\left(\sum_{q=0}^2\beta_q  \hat E(t^{n}-q\Delta t, v^{n-q})\right) + \gamma_0\hat I(t^{n}+\Delta t, v^{n+1})\right]
     \end{align}
     \f]
 
@@ -225,11 +224,11 @@ struct MatrixTraits< detail::Implicit<M, V> >
     \f[
     \alpha_0 = \frac{18}{11}\ \alpha_1 = -\frac{9}{11}\ \alpha_2 = \frac{2}{11} \\
     \beta_0 = \frac{18}{11}\ \beta_1 = -\frac{18}{11}\ \beta_2 = \frac{6}{11} \\
-    \gamma_0 = \frac{11}{6}
+    \gamma_0 = \frac{6}{11}
 \f]
 *
-* Uses only one right-hand-side evaluation per step.
-* Uses a conjugate gradient method for the implicit operator.
+* Uses only one evaluation of the explicit part per step.
+* Uses a conjugate gradient method for the implicit operator (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
 The following code example demonstrates how to integrate the 2d diffusion equation with the dg library:
 @snippet multistep_t.cu function
 In the main function:
@@ -258,7 +257,7 @@ struct Karniadakis
     * @param eps  accuracy parameter for cg
     */
     void construct( const container& copyable, unsigned max_iter, double eps){
-        f_.fill(copyble), u_.fill(copyable);
+        f_.fill(copyable), u_.fill(copyable);
         pcg.construct( copyable, max_iter);
         eps_ = eps;
         //a[0] =  1.908535476882378;  b[0] =  1.502575553858997;
@@ -272,6 +271,7 @@ struct Karniadakis
     /**
      * @brief Initialize by integrating two timesteps backward in time
      *
+     * The backward integration uses the Lie operator splitting method, with explicit Euler substeps for both explicit and implicit part
      * @copydoc hide_explicit_implicit
      * @param u0 The initial value of the integration
      * @param t0 The intital time corresponding to u0
@@ -306,10 +306,9 @@ struct Karniadakis
     std::array<container,3> u_, f_;
     CG< container> pcg;
     double eps_;
-    double dt_;
+    double t_, dt_;
     double a[3];
     double b[3];
-
 };
 
 ///@cond
@@ -317,24 +316,25 @@ template< class container>
 template< class RHS, class Diffusion>
 void Karniadakis<container>::init( RHS& f, Diffusion& diff,  const container& u0,  double t0, double dt)
 {
-    dt_ = dt;
+    //operator splitting using explicit Euler for both explicit and implicit part
+    t_ = t0, dt_ = dt;
     blas1::copy(  u0, u_[0]);
     f( t0, u0, f_[0]);
     blas1::axpby( 1., u_[0], -dt, f_[0], f_[1]); //Euler step
-    detail::Implicit<Diffusion, container> implicit( -dt, t0-dt, diff);
+    detail::Implicit<Diffusion, container> implicit( -dt, t0, diff);
     implicit( f_[1], u_[1]); //explicit Euler step backwards
-    f( u_[1], f_[1]);
+    f( t0-dt, u_[1], f_[1]);
     blas1::axpby( 1.,u_[1], -dt, f_[1], f_[2]);
+    implicit.time() = t0 - dt;
     implicit( f_[2], u_[2]);
-    f( u_[2], f_[2]);
+    f( t0-2*dt, u_[2], f_[2]); //evaluate f at the latest step
 }
 
 template<class container>
 template< class RHS, class Diffusion>
-void Karniadakis<container>::step( RHS& f, Diffusion& diff, container& u)
+void Karniadakis<container>::step( RHS& f, Diffusion& diff, container& u, double & t)
 {
-
-    f( u_[0], f_[0]);
+    f(t_, u_[0], f_[0]);
     blas1::axpbypgz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
     blas1::axpbypgz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
     //permute f_[2], u_[2]  to be the new f_[0], u_[0]
@@ -349,20 +349,21 @@ void Karniadakis<container>::step( RHS& f, Diffusion& diff, container& u)
     //double alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u); //extrapolate previous solutions
     blas2::symv( diff.weights(), u_[0], u_[0]);
-    detail::Implicit<Diffusion, container> implicit( -dt_/11.*6., diff);
+    t = t_ = t_+ dt_;
+    detail::Implicit<Diffusion, container> implicit( -dt_*6./11., t, diff);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif//MPI
-    Timer t;
-    t.tic();
+    Timer ti;
+    ti.tic();
     unsigned number = pcg( implicit, u, u_[0], diff.precond(), diff.inv_weights(), eps_);
-    t.toc();
+    ti.toc();
 #ifdef MPI_VERSION
     if(rank==0)
 #endif//MPI
-    std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<" took "<<t.diff()<<"s\n";
+    std::cout << "# of pcg iterations for timestep: "<<number<<"/"<<pcg.get_max()<<" took "<<ti.diff()<<"s\n";
 #else
     pcg( implicit, u, u_[0], diff.precond(), diff.inv_weights(), eps_);
 #endif //BENCHMARK
