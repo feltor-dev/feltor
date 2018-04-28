@@ -2,7 +2,7 @@
 #define _DG_RK_
 
 #include <cassert>
-#include <vector>
+#include <array>
 
 #include "backend/exceptions.h"
 #include "blas1.h"
@@ -304,13 +304,18 @@ const double rk_classic<17>::b[17] = {
 0.0333333333333333333333333333333333333333333333333333333333333
 };
 ///@endcond
-//RHS contains Information about container type it uses
-//k is the order of the method
-// container f( const container& v)
-// container should probably be rvalue assignable
+
+ /** @class hide_rhs
+  * @tparam RHS The right hand side
+        is a functor type with no return value (subroutine)
+        of signature \c void \c operator()(value_type, const container&, container&)
+        The first argument is the time, the second is the input vector and the third is the output,
+        i.e. y' = f(y, t) translates to f(t, y, y').
+        The two container arguments never alias each other in calls to the functor.
+  */
 
 /**
-* @brief Struct for Runge-Kutta explicit time-integration
+* @brief Struct for Runge-Kutta explicit time-integration optimized for few vector additions
 * \f[
  \begin{align}
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
@@ -338,97 +343,59 @@ const double rk_classic<17>::b[17] = {
 template< size_t k, class container>
 struct RK
 {
-    /**
-    * @brief Reserve memory for the integration
-    *
-    * @param copyable container of size which is used in integration.
-    * A container object must be copy-constructible from copyable.
-    */
-    RK( const container& copyable): u_(k-1, container(copyable)){ }
-    /**
-    * @brief Call the step member
-    *
-    * @copydetails step()
-    */
-    template< class Functor>
-    void operator()( Functor& f, const container& u0, container& u1, double dt){
-        step(f,u0,u1,dt);
+    ///@brief No memory allocation, Call \c construct before using the object
+    RK(){}
+
+    ///@copydoc construct()
+    RK( const container& copyable){
+        construct(copyable);
     }
     /**
-    * @brief Advance one step for time-independent right hand side
+    * @brief Reserve internal workspace for the integration
     *
-    * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type container.
-        The first argument is the actual argument, The second contains
-        the return value, i.e. y' = f(y) translates to f( y, y').
-    * @param f right hand side function
-    * @param u0 initial value
-    * @param u1 contains result on output. u0 and u1 may currently not alias each other.
-    * @param dt The timestep.
+    * @param copyable container of the size that is used in \c step
+    * @note it does not matter what values \c copyable contains, but its size is important
     */
-    template< class Functor>
-    void step( Functor& f, const container& u0, container& u1, double dt);
+    void construct( const container& copyable){
+        u_.fill(copyable);
+    }
 
     /**
-    * @brief Advance one step for time-dependent right hand side
+    * @brief Advance one step
     *
-    * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type container.
-        The first argument is the actual argument, The second contains
-        the return value while time is the last argument, i.e. y' = f(y, t) translates to f( y, y', t).
-    * @param f right hand side function
+    * @copydoc hide_rhs
+    * @param rhs right hand side subroutine
     * @param u0 initial value at \c t0
-    * @param u1 contains result on output. u0 and u1 may currently not alias each other.
-    * @param t0 the current time
-    * @param dt The timestep.
+    * @param u1 contains result on output. u0 and u1 may not alias each other.
+    * @param t0 current time
+    * @param dt timestep
     */
-    template< class Functor>
-    void timestep( Functor& f, const container& u0, container& u1, double t0, double dt);
+    template< class RHS>
+    void step( RHS& rhs, const container& u0, container& u1, double t0, double dt);
   private:
-    std::vector<container> u_; //TODO std::array is more natural here (but unfortunately not available)
+    std::array<container,k-1> u_;
 };
 
-///@cond
-namespace detail{
-template<class Functor>
-struct Wrapper{
-    Wrapper( Functor& f): m_f(f){}
-
-    template<class container>
-    void operator()(double t, const container& u0, container& u1){ m_f(u0,u1);}
-    Functor& m_f;
-};
-}//namespace detail
-///@endcond
-
-//u0 and u1 may not be the same vector
-//TO DO: this might be cured by adding u0 first to u_[0] in the last step
-//f( y, yp) where y is const and yp contains the result
 template< size_t k, class container>
-template< class Functor>
-void RK<k, container>::step( Functor& f, const container& u0, container& u1, double dt)
-{
-    detail::Wrapper<Functor> wrap( f);
-    timestep( wrap, u0, u1, 0, dt);
-}
-template< size_t k, class container>
-template< class Functor>
-void RK<k, container>::timestep( Functor& f, const container& u0, container& u1, double t0, double dt)
+template< class RHS>
+void RK<k, container>::step( RHS& f, const container& u0, container& u1, double t0, double dt)
 {
     assert( &u0 != &u1);
     u1 = u0;
     f(t0, u1, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
-    double tn =  rk_coeff<k>::alpha[0][0]*t0 + dt*rk_coeff<k>::beta[0];
+    double tn =  dt*rk_coeff<k>::beta[0];
+    tn = DG_FMA( rk_coeff<k>::alpha[0][0], t0, tn);
     for( unsigned i=1; i<k-1; i++)
     {
         f(tn, u_[i-1], u_[i] );
         blas1::axpby( rk_coeff<k>::alpha[i][0], u0, dt*rk_coeff<k>::beta[i], u_[i]);
-        tn = rk_coeff<k>::alpha[i][0]*t0 + dt*rk_coeff<k>::beta[i];
+        tn = dt*rk_coeff<k>::beta[i];
+        tn = DG_FMA( rk_coeff<k>::alpha[i][0],t0,tn);
         for( unsigned l=1; l<=i; l++)
         {
             blas1::axpby( rk_coeff<k>::alpha[i][l], u_[l-1],1., u_[i]);
-            tn += rk_coeff<k>::alpha[i][l]*t0;
+            tn = DG_FMA( rk_coeff<k>::alpha[i][l],t0, tn);
         }
     }
     //Now add everything up to u1
@@ -439,9 +406,25 @@ void RK<k, container>::timestep( Functor& f, const container& u0, container& u1,
         blas1::axpby( rk_coeff<k>::alpha[k-1][l], u_[l-1],1., u1);
     }
 }
+///@cond
+//Euler specialisation
+template < class container>
+struct RK<1, container>
+{
+    RK(){}
+    RK( const container& copyable){}
+    void construct( const container& copyable){}
+    template < class RHS>
+    void operator()( RHS& f, const container& u0, container& u1, double t0, double dt)
+    {
+        f( t0, u0, u1);
+        blas1::axpby( 1., u0, dt, u1);
+    }
+};
+///@endcond
 
 /**
-* @brief Struct for Runge-Kutta explicit time-integration
+* @brief Struct for Runge-Kutta explicit time-integration, classic formulation
 * \f[
  \begin{align}
     u^{n+1} = u^{n} + \Delta t\sum_{j=1}^s b_j k_j \\
@@ -452,7 +435,7 @@ void RK<k, container>::timestep( Functor& f, const container& u0, container& u1,
 @snippet runge_kutta2d_t.cu doxygen
 * @ingroup time
 *
-* Uses only dg::blas1::axpby() routines to integrate one step.
+* Uses only \c dg::blas1::axpby() routine to integrate one step.
 * The coefficients are chosen in the classic form given by Runge and Kutta.
 * Needs more calls for axpby than our RK class but we implemented higher orders
 * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
@@ -461,66 +444,28 @@ void RK<k, container>::timestep( Functor& f, const container& u0, container& u1,
 template< size_t s, class container>
 struct RK_classic
 {
-    /**
-    * @brief Reserve memory for the integration
-    *
-    * @param copyable container of size which is used in integration.
-    * A container object must be copy-constructible from copyable.
-    */
-    RK_classic( const container& copyable): k_(s, container(copyable)), u_(copyable){ }
-    /**
-    * @brief Call the step member
-    *
-    * @copydetails step()
-    */
-    template< class Functor>
-    void operator()( Functor& f, const container& u0, container& u1, double dt){
-        step( f, u0, u1, dt);
+    ///@copydoc RK::RK()
+    RK_classic(){}
+    ///@copydoc RK::construct(const container&)
+    RK_classic( const container& copyable){
+        construct( copyable);
     }
-    /**
-    * @brief Advance one step for time-independent right hand side
-    *
-    * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type container.
-        The first argument is the actual argument, The second contains
-        the return value, i.e. y' = f(y) translates to f( y, y').
-    * @param f right hand side function
-    * @param u0 initial value
-    * @param u1 contains result on output. u0 and u1 may currently not alias each other
-    * @param dt The timestep.
-    */
-    template<class Functor>
-    void step( Functor& f, const container& u0, container& u1, double dt);
-    /**
-    * @brief Advance one step for time-independent right hand side
-    *
-    * @tparam Functor models BinaryFunction with no return type (subroutine)
-        Its arguments both have to be of type container.
-        The first argument is the actual argument, The second contains
-        the return value while time is the last argument, i.e. y' = f(y, t) translates to f( y, y', t).
-    * @param f right hand side function
-    * @param u0 initial value
-    * @param u1 contains result on output. u0 and u1 may currently not alias each other
-    * @param dt The timestep.
-    */
-    template<class Functor>
-    void timestep( Functor& f, const container& u0, container& u1, double t, double dt);
+    ///@copydoc RK::construct(const container&)
+    void construct( const container& copyable){
+        k_.fill(copyable);
+        u_ = copyable;
+    }
+    ///@copydoc RK::step(RHS&,const container&,container&,double,double)
+    template<class RHS>
+    void step( RHS& rhs, const container& u0, container& u1, double t0, double dt);
   private:
-    std::vector<container> k_;
+    std::array<container,s> k_;
     container u_;
 };
 
-template< size_t k, class container>
-template< class Functor>
-void RK_classic<k, container>::step( Functor& f, const container& u0, container& u1, double dt)
-{
-    detail::Wrapper<Functor> wrap( f);
-    timestep( wrap, u0, u1, 0, dt);
-}
-
 template< size_t s, class container>
-template< class Functor>
-void RK_classic<s, container>::timestep( Functor& f, const container& u0, container& u1, double t0, double dt)
+template< class RHS>
+void RK_classic<s, container>::step( RHS& f, const container& u0, container& u1, double t0, double dt)
 {
     assert( &u0 != &u1);
     u1 = u0; //to let u0 const and later for summation
@@ -529,11 +474,11 @@ void RK_classic<s, container>::timestep( Functor& f, const container& u0, contai
     for( unsigned i=1; i<s; i++) //compute k_i
     {
         blas1::axpby( 1., u0, dt*rk_classic<s>::a[i][0],k_[0], u_); //l=0
-        tn = t0 + dt*rk_classic<s>::a[i][0]; //l=0
+        tn = DG_FMA( dt,rk_classic<s>::a[i][0],t0); //l=0
         for( unsigned l=1; l<i; l++)
         {
             blas1::axpby( dt*rk_classic<s>::a[i][l], k_[l],1., u_);
-            tn += dt*rk_classic<s>::a[i][l];
+            tn = DG_FMA(dt,rk_classic<s>::a[i][l],tn);
         }
         f( tn, u_, k_[i]);
 
@@ -545,14 +490,22 @@ void RK_classic<s, container>::timestep( Functor& f, const container& u0, contai
 
 ///@addtogroup time
 ///@{
+
 /**
  * @brief Integrate differential equation with a stage s Runge-Kutta scheme and a fixed number of steps
  *
  * @tparam s # of stages (1, 2, 3, 4, 6, 17)
- * @copydetails timestepperRK1()
+ * @copydoc hide_rhs
+ * @copydoc hide_container
+ * @param rhs The right-hand-side
+ * @param begin initial condition
+ * @param end (write-only) contains solution on output
+ * @param T_min initial time
+ * @param T_max final time
+ * @param N number of steps
  */
-template< class RHS, class container, unsigned s>
-void timestepperRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
+template< unsigned s, class RHS, class container>
+void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
 {
     RK_classic<s, container > rk( begin);
     container temp(begin);
@@ -567,97 +520,6 @@ void timestepperRK(RHS& rhs, const container& begin, container& end, double T_mi
         end.swap( temp); //end is one step further
     }
 }
-/**
- * @brief Integrate differential equation with a stage 1 Runge-Kutta scheme and a fixed number of steps
- *
- * @tparam RHS The time dependent right-hand side class.
-        Its arguments both have to be of type container.
-        The first argument is the actual argument, The second contains
-        the return value while time is the last argument, i.e. y' = f(y, t) translates to f( y, y', t).
- * @copydoc hide_container
- * @param rhs The right-hand-side
- * @param begin initial condition
- * @param end (write-only) contains solution on output
- * @param T_min initial time
- * @param T_max final time
- * @param N number of steps
- */
-template< class RHS, class container>
-void timestepperRK1(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
-{
-    timestepperRK<RHS, container, 1>( rhs, begin, end, T_min, T_max, N);
-}
-
-/**
- * @brief Integrate differential equation with a stage s Runge-Kutta scheme and a fixed number of steps
- *
- * @tparam s # of stages (1, 2, 3, 4, 6, 17)
- * @copydetails stepperRK1()
- */
-template< class RHS, class container, unsigned s>
-void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
-{
-    detail::Wrapper<RHS> wrap( rhs);
-    timestepperRK<RHS,container,s>(rhs,begin,end,T_min,T_max,N);
-}
-
-/**
- * @brief Integrate differential equation with a stage 1 Runge-Kutta scheme and a fixed number of steps
- *
- * @tparam RHS The time independent right-hand side class.
-        Its arguments both have to be of type container.
-        The first argument is the actual argument, The second contains
-        the return value, i.e. y' = f(y) translates to f( y, y').
- * @copydoc hide_container
- * @param rhs The right-hand-side
- * @param begin initial condition
- * @param end (write-only) contains solution on output
- * @param T_min initial time
- * @param T_max final time
- * @param N number of steps
- */
-template< class RHS, class container>
-void stepperRK1(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
-{
-    stepperRK<RHS, container, 1>( rhs, begin, end, T_min, T_max, N);
-}
-///@brief Integrate differential equation with a stage 2 Runge-Kutta scheme and a fixed number of steps
-///@copydetails stepperRK1()
-template< class RHS, class container>
-void stepperRK2(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
-{
-    stepperRK<RHS, container, 2>( rhs, begin, end, T_min, T_max, N);
-}
-
-///@brief Integrate differential equation with a stage 3 Runge-Kutta scheme and a fixed number of steps
-///@copydetails stepperRK1()
-template< class RHS, class container>
-void stepperRK3(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
-{
-    stepperRK<RHS, container, 3>( rhs, begin, end, T_min, T_max, N);
-}
-
-///@brief Integrate differential equation with a stage 4 Runge-Kutta scheme and a fixed number of steps
-///@copydetails stepperRK1()
-template< class RHS, class container>
-void stepperRK4(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
-{
-    stepperRK<RHS, container, 4>( rhs, begin, end, T_min, T_max, N);
-}
-///@brief Integrate differential equation with a stage 6 Runge-Kutta scheme and a fixed number of steps
-///@copydetails stepperRK1()
-template< class RHS, class container>
-void stepperRK6(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
-{
-    stepperRK<RHS, container, 6>( rhs, begin, end, T_min, T_max, N);
-}
-///@brief Integrate differential equation with a stage 17 Runge-Kutta scheme and a fixed number of steps
-///@copydetails stepperRK1()
-template< class RHS, class container>
-void stepperRK17(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
-{
-    stepperRK<RHS, container, 17>( rhs, begin, end, T_min, T_max, N);
-}
 
 
 /**
@@ -665,27 +527,34 @@ void stepperRK17(RHS& rhs, const container& begin, container& end, double T_min,
  *
  * Doubles the number of timesteps until the desired accuracy is reached
  *
- * @tparam RHS The right-hand side class. There must be the function bool monitor( const container& end); available which is called after every step. Return true if everything is ok and false if the integrator certainly fails.
- * The other function is the double error( const container& end0, const container& end1); which computes the error norm in which the integrator should converge.
+ * @copydoc hide_rhs
+ * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
+ * @tparam RHS
+ * In addition, there must be the function \c bool \c monitor( const container& end);
+ * available, which is called after every step.
+ * Return \c true if everything is ok and \c false if the integrator certainly fails.
+ * The other function is the \c double \c error( const container& end0, const container& end1); which computes the error norm in which the integrator should converge.
  * @copydoc hide_container
  * @param rhs The right-hand-side
- * @param begin initial condition (size 3)
+ * @param begin initial condition
  * @param end (write-only) contains solution on output
- * @param T_max time difference
- * @param eps_abs desired accuracy in the error function between end and end_old
+ * @param T_min initial time
+ * @param T_max final time
+ * @param eps_abs desired accuracy in the error function between \c end and \c end_old
  * @param NT_init initial number of steps
- * @return number of iterations if converged, -1 and a warning to std::cerr when isnan appears, -2 if failed to reach eps_abs
+ * @return number of iterations if converged, -1 and a warning to \c std::cerr when \c isnan appears, -2 if failed to reach \c eps_abs
  */
-template< class RHS, class container, unsigned s>
-int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs, unsigned NT_init = 2 )
+template<unsigned s, class RHS, class container>
+int integrateRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, double eps_abs, unsigned NT_init = 2 )
 {
     RK_classic<s, container > rk( begin);
     container old_end(begin), temp(begin);
     end = begin;
-    if( T_max == 0) return 0;
+    if( T_max == T_min) return 0;
     int NT = NT_init;
-    double dt = T_max/(double)NT;
+    double dt = (T_max-T_min)/(double)NT;
     double error = 1e10;
+    double t0 = T_min;
 
     while( error > eps_abs && NT < pow( 2, 18) )
     {
@@ -694,7 +563,7 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
         int i=0;
         while (i<NT)
         {
-            rk( rhs, end, temp, dt);
+            rk.step( rhs, end, temp, t0, dt);
             if( !rhs.monitor( temp ) )  //sanity check
             {
                 #ifdef DG_DEBUG
@@ -703,10 +572,12 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
                 break;
             }
             end.swap( temp); //end is one step further
+            t0 += dt;
             i++;
         }
         error = rhs.error( end, old_end);
         old_end = end;
+        t0 = T_min;
         dt /= 2.;
         NT *= 2;
     }
@@ -725,50 +596,7 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_max, 
 
 }
 
-/// @brief Integrates the differential equation using a stage 4 Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
-///@copydetails integrateRK()
-template< class RHS, class container>
-int integrateRK4(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs, unsigned NT_init = 2 )
-{
-    return integrateRK<RHS, container, 4>( rhs, begin, end, T_max, eps_abs, NT_init);
-}
-
-/// @brief Integrates the differential equation using a stage 6 Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
-/// @copydetails integrateRK()
-template< class RHS, class container>
-int integrateRK6(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs, unsigned NT_init = 2 )
-{
-    return integrateRK<RHS, container, 6>( rhs, begin, end, T_max, eps_abs, NT_init);
-}
-/// @brief Integrates the differential equation using a stage 17 Runge-Kutta scheme, a rudimentary stepsize-control and monitoring the sanity of integration
-///@copydetails integrateRK()
-template< class RHS, class container>
-int integrateRK17(RHS& rhs, const container& begin, container& end, double T_max, double eps_abs, unsigned NT_init = 2 )
-{
-    return integrateRK<RHS, container, 17>( rhs, begin, end, T_max, eps_abs, NT_init);
-}
-
 ///@}
-//
-///@cond
-//Euler specialisation
-template < class container>
-struct RK<1, container>
-{
-    RK(){}
-    RK( const container& copyable){}
-    template < class Functor>
-    void operator()( Functor& f, const container& u0, container& u1, double dt)
-    {
-        f( u0, u1);
-        blas1::axpby( 1., u0, dt, u1);
-    }
-};
-///@endcond
-
-
-
-
 
 } //namespace dg
 

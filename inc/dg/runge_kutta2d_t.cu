@@ -53,7 +53,7 @@ int main()
     double t=0;
     for( unsigned i=0; i<NT; i++)
     {
-        rk.timestep( function<dg::DVec>, y0, y1, t, dt);
+        rk.step( function<dg::DVec>, y0, y1, t, dt);
         t+=dt;
         y0.swap( y1);
     }

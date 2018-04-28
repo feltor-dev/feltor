@@ -13,7 +13,7 @@ namespace dg{
  * The vector tag indicates how the data in the vector has to be accessed. For example
  * how do we get the pointer to the first element? Is there a contiguous chunk of memory
  * or is it a Vector of Vectors?
- * @note in any case we assume that the class is copyable/assignable and has a \c size and a \c swap member function
+ * @note in any case we assume that the class has a default constructor, is copyable/assignable and has a \c size and a \c swap member function
  * @note \c dg::VectorTraits<Vector> has member typedefs \c value_type, \c execution_policy, \c vector_category
  */
 struct AnyVectorTag{};

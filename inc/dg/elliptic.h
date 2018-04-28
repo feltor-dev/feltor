@@ -56,7 +56,7 @@ template <class Geometry, class Matrix, class container>
 class Elliptic
 {
     public:
-    ///@brief empty object ( no memory allocation)
+    ///@brief empty object ( no memory allocation, call \c construct before using the object)
     Elliptic(){}
     /**
      * @brief Construct from Grid
