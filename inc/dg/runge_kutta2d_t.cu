@@ -49,7 +49,6 @@ int main()
     const double dt = T/(double)NT;
 
     dg::RK_classic<s, std::vector<dg::DVec> >  rk( y0);
-    //dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     double t=0;
     for( unsigned i=0; i<NT; i++)
     {

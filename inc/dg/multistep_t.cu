@@ -70,7 +70,7 @@ int main()
     for( unsigned i=0; i<NT; i++)
     {
         karniadakis.step( zero<dg::DVec>, diffusion, y0, time);
-        //sirk( explicit, diffusion, y0, y1, dt); y0.swap(y1);
+        //sirk( explicit, diffusion, y0, y1, time, dt); y0.swap(y1); time+=dt;
     }
     //![doxygen]
     exblas::udouble res;

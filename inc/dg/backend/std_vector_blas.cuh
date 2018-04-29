@@ -57,13 +57,13 @@ template<class Vector, class UnaryOp>
 inline void doEvaluate( VectorVectorTag, Vector& y, get_value_type<Vector> alpha, UnaryOp op, const Vector& x)
 {
     for( unsigned i=0; i<x.size(); i++)
-        doEvaluate( get_vector_category<typename Vector::value_type>(), y, alpha, op, x);
+        doEvaluate( get_vector_category<typename Vector::value_type>(), y[i], alpha, op, x[i]);
 }
 template<class Vector, class UnaryOp>
 inline void doEvaluate( VectorVectorTag, Vector& z, get_value_type<Vector> alpha, UnaryOp op, const Vector& x, const Vector& y)
 {
     for( unsigned i=0; i<x.size(); i++)
-        doEvaluate( get_vector_category<typename Vector::value_type>(), z, alpha, op, x, y);
+        doEvaluate( get_vector_category<typename Vector::value_type>(), z[i], alpha, op, x[i], y[i]);
 }
 #ifdef _OPENMP
 template< class Vector>

@@ -23,8 +23,8 @@ std::vector<int64_t> doDot_dispatch( OmpTag, int size, const double* x_ptr, cons
 
 template< class UnaryOp, class T>
 inline void doEvaluate_dispatch( OmpTag, int size, T* y, T alpha, UnaryOp op, const T* x) {
-    if(x.size()<MIN_SIZE) {
-        doEvaluate_dispatch( SerialTag, size, y, alpha, op, x);
+    if(size<MIN_SIZE) {
+        doEvaluate_dispatch( SerialTag(), size, y, alpha, op, x);
         return;
     }
 #pragma omp parallel for
@@ -34,8 +34,8 @@ inline void doEvaluate_dispatch( OmpTag, int size, T* y, T alpha, UnaryOp op, co
 
 template< class UnaryOp, class T>
 inline void doEvaluate_dispatch( OmpTag, int size, T* z, T alpha, UnaryOp op, const T* x, const T* y) {
-    if(x.size()<MIN_SIZE) {
-        doEvaluate_dispatch( SerialTag, size, z, alpha, op, x, y);
+    if(size<MIN_SIZE) {
+        doEvaluate_dispatch( SerialTag(), size, z, alpha, op, x, y);
         return;
     }
 #pragma omp parallel for

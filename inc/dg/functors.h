@@ -28,7 +28,7 @@ namespace dg
  *
  * @tparam T value-type
  */
-template <class T>
+template <class T = double>
 struct AbsMax
 {
     /**
@@ -53,7 +53,7 @@ DG_DEVICE
  *
  * @tparam T value-type
  */
-template <class T>
+template <class T = double>
 struct AbsMin
 {
     /**
@@ -894,6 +894,7 @@ struct Vortex
     }
     private:
     // Returns the modified Bessel function K1(x) for positive real x.
+    DG_DEVICE
     double bessk1(double x)const
     {
         double y,ans;
@@ -914,6 +915,7 @@ struct Vortex
         return ans;
     }
     //Returns the modified Bessel function I1(x) for any real x.
+    DG_DEVICE
     double bessi1(double x) const
     {
         double ax,ans;
@@ -1076,16 +1078,15 @@ struct BathRZ{
     std::vector<double> unif1, unif2, normal1,normal2,normalamp,normalphase;
 };
 /**
- * @brief Exponential
- * \f[ f(x) = \exp(x)\f]
+ * @brief Exponential \f[ f(x) = A \exp(\lambda x)\f]
  *
  * @tparam T value-type
  */
-template< class T>
+template< class T = double >
 struct EXP
 {
     /**
-     * @brief Coefficients of A*exp(lambda*x)
+     * @brief Coefficients of \f$ A*exp(lambda*x) \f$
      *
      * @param amp Amplitude
      * @param lambda coefficient
@@ -1112,7 +1113,7 @@ struct EXP
  *
  * @tparam T value-type
  */
-template < class T>
+template < class T = double>
 struct LN
 {
     /**
@@ -1135,7 +1136,7 @@ struct LN
  *
  * @tparam T value-type
  */
-template < class T>
+template < class T = double>
 struct SQRT
 {
     /**
@@ -1283,7 +1284,7 @@ struct MOD
  *
  * @tparam T value type
  */
-template <class T>
+template <class T = double>
 struct ABS
 {
     /**
@@ -1302,7 +1303,7 @@ struct ABS
  *
  * @tparam T value type
  */
-template <class T>
+template <class T = double>
 struct POSVALUE
 {
     /**

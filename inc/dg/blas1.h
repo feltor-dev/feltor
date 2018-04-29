@@ -193,29 +193,6 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
     return;
 }
 
-/*! @brief \f$ y = op(x)\f$
- *
- * This routine computes \f[ y_i = op(x_i) \f]
- * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
- * @copydoc hide_container
- * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
- * @param x container x may alias y
- * @param y container y contains result, may alias x
- * @param op unary Operator to use on every element
- * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
-
-@code
-    dg::DVec two( 100,2), result(100);
-    dg::blas1::transform( two, result, dg::EXP());
-    //result[i] = 7.389056... (e^2)
-@endcode
- */
-template< class container, class UnaryOp>
-inline void transform( const container& x, container& y, UnaryOp op )
-{
-    evaluate( y, 0., op, x);
-}
-
 /*! @brief \f$ y = \alpha y + op(x)\f$
  *
  * This routine computes \f[ y_i = \alpha y_i + op(x_{i}) \f]
@@ -255,6 +232,29 @@ inline void evaluate( container& z, get_value_type<container> alpha, BinaryOp op
 {
     dg::blas1::detail::doEvaluate( get_vector_category<container>(), z, alpha, op, x, y);
     return;
+}
+
+/*! @brief \f$ y = op(x)\f$
+ *
+ * This routine computes \f[ y_i = op(x_i) \f]
+ * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
+ * @copydoc hide_container
+ * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
+ * @param x container x may alias y
+ * @param y container y contains result, may alias x
+ * @param op unary Operator to use on every element
+ * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+
+@code
+    dg::DVec two( 100,2), result(100);
+    dg::blas1::transform( two, result, dg::EXP());
+    //result[i] = 7.389056... (e^2)
+@endcode
+ */
+template< class container, class UnaryOp>
+inline void transform( const container& x, container& y, UnaryOp op )
+{
+    dg::blas1::evaluate( y, 0., op, x);
 }
 
 /*! @brief \f$ x = \alpha x\f$

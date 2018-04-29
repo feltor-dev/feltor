@@ -6,6 +6,7 @@
 #include "backend/mpi_init.h"
 #include "geometry/mpi_evaluation.h"
 #include "blas1.h"
+#include "functors.h"
 
 
 //test program that calls every blas1 function for every specialization
@@ -89,6 +90,8 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "5 = " << w1[0].data()[0] <<" (5)"<< std::endl;
     dg::blas1::scal( w1, 0.4);
     if(rank==0)std::cout << "5*0.5 = " << w1[0].data()[0] <<" (2)"<< std::endl;
+    dg::blas1::evaluate( w4, 0.,dg::AbsMax<>(), w1, w2);
+    if(rank==0)std::cout << "absMax( 2, 5) = " << w4[0].data()[0] <<" (5)"<< std::endl;
     dg::blas1::transform( w1, w3, EXP());
     if(rank==0)std::cout << "e^2 = " << w3[0].data()[0] <<" (7.389056...)"<< std::endl;
     dg::blas1::scal( w2, 0.6);
