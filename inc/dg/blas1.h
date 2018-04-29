@@ -202,7 +202,7 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
  * @param x container x may alias y
  * @param y container y contains result, may alias x
  * @param op unary Operator to use on every element
- * @note the Functor must be callable on the device. In particular, with CUDA the signature must contain the \__device__ specifier.
+ * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier.
 
 @code
     dg::DVec two( 100,2), result(100);
@@ -211,9 +211,57 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
 @endcode
  */
 template< class container, class UnaryOp>
-inline void transform( const container& x, container& y, UnaryOp op)
+inline void transform( const container& x, container& y, UnaryOp op )
 {
-    dg::blas1::detail::doTransform( x, y, op, get_vector_category<container>() );
+    transform( op, x, 0., y);
+}
+
+template< class container, class UnaryOp>
+inline void transform( UnaryOp op, const container& x, get_value_type<container> alpha, container& y)
+{
+    dg::blas1::detail::doTransform( op, alpha, x, y, get_vector_category<container>() );
+    return;
+}
+
+
+
+/*! @brief \f$ z = op(x,y) + \alpha z\f$
+ *
+ * This routine computes \f[ z_i = op(x_{i}, y_{i}) + \alpha z_i \f]
+ * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
+ * @copydoc hide_container
+ * @tparam BinaryOp Functor with signature: \c value_type \c operator()( value_type)
+ * @param x input 1 may alias y
+ * @param y input 2 may alias y
+ * @param z container y contains result, may alias x1 or x2
+ * @param op binary Operator
+ * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier.
+ * @note all aliases allowed
+ */
+template< class container, class BinaryOp>
+inline void transform( BinaryOp op, const container& x, const container& y, get_value_type<container> alpha, container& z)
+{
+    dg::blas1::detail::doTransform( op, alpha, x, y, z, get_vector_category<container>() );
+    return;
+}
+/*! @brief \f$ w = op(x, y, z) + \alpha w\f$
+ *
+ * This routine computes \f[ w_i = op(x_{i}, y_{i}, z_{i}) + \alpha w_i \f]
+ * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
+ * @copydoc hide_container
+ * @tparam TernaryOp Functor with signature: \c value_type \c operator()( value_type, value_type, value_type)
+ * @param x input 1
+ * @param y input 2
+ * @param z input 3
+ * @param w container w contains result
+ * @param op ternary Operator
+ * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier.
+ * @note all aliases allowed
+ */
+template< class container, class TernaryOp>
+inline void transform( TernaryOp op, const container& x, const container& y, const container& z, get_value_type<container> alpha, container& w, TernaryOp op)
+{
+    dg::blas1::detail::doTransform( op, alpha, x, y, z, w, get_vector_category<container>() );
     return;
 }
 

@@ -20,14 +20,41 @@ std::vector<int64_t> doDot_dispatch( OmpTag, int size, const double* x_ptr, cons
         exblas::exdot_omp( size, x_ptr,y_ptr, &h_superacc[0]);
     return h_superacc;
 }
-template< class Vector, class UnaryOp>
-inline void doTransform_dispatch( OmpTag, const Vector& x, Vector& y, UnaryOp op) {
+
+template< class UnaryOp, class T>
+inline void doTransform_dispatch( OmpTag, int size, UnaryOp op, T alpha, const T* x, T* y) {
     if(x.size()<MIN_SIZE) {
-        thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
+        for( int i=0; i<size; i++)
+            y[i] = op(x[i]) + alpha*y[i];
         return;
     }
-    thrust::transform( thrust::omp::tag(), x.begin(), x.end(), y.begin(), op);
+#pragma omp parallel for
+    for( int i=0; i<size; i++)
+        y[i] = op(x[i]) + alpha*y[i];
 }
+template< class UnaryOp, class T>
+inline void doTransform_dispatch( OmpTag, int size, UnaryOp op, T alpha, const T* x, const T* y, T* z) {
+    if(x.size()<MIN_SIZE) {
+        for( int i=0; i<size; i++)
+            z[i] = op(x[i],y[i]) + alpha*z[i];
+        return;
+    }
+#pragma omp parallel for
+    for( int i=0; i<size; i++)
+        z[i] = op(x[i],y[i]) + alpha*z[i];
+}
+template< class UnaryOp, class T>
+inline void doTransform_dispatch( OmpTag, int size, UnaryOp op, T alpha, const T* x, const T* y, const T* z, T* w) {
+    if(x.size()<MIN_SIZE) {
+        for( int i=0; i<size; i++)
+            w[i] = op(x[i],y[i],z[i]) + alpha*w[i];
+        return;
+    }
+#pragma omp parallel for
+    for( int i=0; i<size; i++)
+        w[i] = op(x[i],y[i],z[i]) + alpha*w[i];
+}
+
 template< class T>
 inline void doScal_omp( int size, T* x, T alpha)
 {

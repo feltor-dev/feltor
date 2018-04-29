@@ -86,8 +86,25 @@ get_value_type<Vector> doDot( const Vector& x, const Vector& y, ThrustVectorTag)
 }
 
 template< class Vector, class UnaryOp>
-inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustVectorTag) {
-    doTransform_dispatch( get_execution_policy<Vector>(), x,y,op);
+inline void doTransform( UnaryOp op, get_value_type<Vector> alpha, const Vector& x, Vector& y, ThrustVectorTag) {
+    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
+    get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
+    doTransform_dispatch( get_execution_policy<Vector>(), x.size(), op, alpha, x_ptr, y_ptr);
+}
+template< class Vector, class UnaryOp>
+inline void doTransform( UnaryOp op, get_value_type<Vector> alpha, const Vector& x, const Vector& y, Vector& z, ThrustVectorTag) {
+    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
+    const get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
+    get_value_type<Vector> * z_ptr = thrust::raw_pointer_cast( z.data());
+    doTransform_dispatch( get_execution_policy<Vector>(),x.size(), op, alpha, x_ptr,y_ptr,z_ptr);
+}
+template< class Vector, class UnaryOp>
+inline void doTransform(  UnaryOp op, get_value_type<Vector> alpha, const Vector& x, const Vector& y, const Vector& z, Vector& w, ThrustVectorTag) {
+    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
+    const get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
+    const get_value_type<Vector> * z_ptr = thrust::raw_pointer_cast( z.data());
+    get_value_type<Vector> * w_ptr = thrust::raw_pointer_cast( w.data());
+    doTransform_dispatch( get_execution_policy<Vector>(),x.size(), op, alpha, x_ptr,y_ptr,z_ptr,w_ptr);
 }
 
 template< class Vector>

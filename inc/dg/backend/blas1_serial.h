@@ -16,10 +16,23 @@ std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_p
     exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]) ;
     return h_superacc;
 }
-template< class Vector, class UnaryOp>
-inline void doTransform_dispatch( SerialTag, const Vector& x, Vector& y, UnaryOp op) {
-    thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
+
+template< class UnaryOp, class T>
+inline void doTransform_dispatch( SerialTag, unsigned size, UnaryOp op, T alpha, const T* x, T* y) {
+    for( unsigned i=0; i<size; i++)
+        y[i] = op(x[i]) + alpha*y[i];
 }
+template< class UnaryOp, class T>
+inline void doTransform_dispatch( SerialTag, unsigned size, UnaryOp op, T alpha, const T* x, const T* y, T* z) {
+    for( unsigned i=0; i<size; i++)
+        z[i] = op(x[i],y[i]) + alpha*z[i];
+}
+template< class UnaryOp, class T>
+inline void doTransform_dispatch( SerialTag, unsigned size, UnaryOp op, T alpha, const T* x, const T* y, const T* z, T* w) {
+    for( unsigned i=0; i<size; i++)
+        w[i] = op(x[i],y[i],z[i]) + alpha*w[i];
+}
+
 template< class T>
 inline void doScal_dispatch( SerialTag, unsigned size, T* x, T alpha)
 {
