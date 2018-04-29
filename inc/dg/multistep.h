@@ -286,6 +286,7 @@ struct Karniadakis
     *
     * @copydoc hide_explicit_implicit
     * @param u (write-only), contains next step of time-integration on output
+    * @param t (write-only), contains timestep corresponding to \c u on output
     */
     template< class Explicit, class Implicit>
     void step( Explicit& exp, Implicit& imp, container& u, double& t);

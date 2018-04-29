@@ -202,7 +202,7 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
  * @param x container x may alias y
  * @param y container y contains result, may alias x
  * @param op unary Operator to use on every element
- * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier.
+ * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
 
 @code
     dg::DVec two( 100,2), result(100);
@@ -226,7 +226,7 @@ inline void transform( const container& x, container& y, UnaryOp op )
  * @param alpha A scalar
  * @param op binary Operator
  * @param x input 1 may alias y
- * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier.
+ * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier (s.a. \ref DG_DEVICE)
  * @note all aliases allowed
  */
 template< class container, class UnaryOp>
@@ -247,7 +247,7 @@ inline void evaluate( container& y, get_value_type<container> alpha, UnaryOp op,
  * @param op binary Operator
  * @param x input 1 may alias y
  * @param y input 2 may alias y
- * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier.
+ * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @note all aliases allowed
  */
 template< class container, class BinaryOp>

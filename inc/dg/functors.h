@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cmath>
-//M_PI is non-standard ... so MSVC complains
+//! M_PI is non-standard ... so MSVC complains
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
@@ -18,11 +18,6 @@
  */
 namespace dg
 {
-#ifdef __CUDACC__
-#define DG_DEVICE __host__ __device__
-#else
-#define DG_DEVICE
-#endif
 
 ///@addtogroup functions
 ///@{
