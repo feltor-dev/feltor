@@ -241,6 +241,7 @@ inline double cooX2d( double x, double y) {return x;}
  *
  * @return
  */
+DG_DEVICE
 inline double cooX3d( double x, double y, double z) {return x;}
 
 /**
@@ -251,6 +252,7 @@ inline double cooY2d( double x, double y) {return y;}
 /**
  * @brief \f[ f(x,y,z) = y\f]
  */
+DG_DEVICE
 inline double cooY3d( double x, double y, double z) {return y;}
 /**
  * @brief \f[ f(x,y,z) = z\f]

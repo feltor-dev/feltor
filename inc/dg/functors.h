@@ -1086,26 +1086,26 @@ template< class T = double >
 struct EXP
 {
     /**
-     * @brief Coefficients of \f$ A*exp(lambda*x) \f$
+     * @brief Coefficients of \f$ A\exp(\lambda x) \f$
      *
      * @param amp Amplitude
      * @param lambda coefficient
      */
-    EXP( double amp = 1., double lambda = 1.): amp_(amp), lambda_(lambda){}
+    EXP( T amp = 1., T lambda = 1.): amp_(amp), lambda_(lambda){}
     /**
      * @brief return exponential
      *
      * @param x x
      *
-     * @return A*exp(lambda*x)
+     * @return \f$ A\exp(\lambda x)\f$
      */
     DG_DEVICE
-    T operator() (const T& x) const
+    T operator() ( T x) const
     {
         return amp_*exp(lambda_*x);
     }
   private:
-    double amp_, lambda_;
+    T amp_, lambda_;
 };
 /**
  * @brief natural logarithm
@@ -1120,8 +1120,7 @@ struct LN
      * @brief The natural logarithm
      *
      * @param x of x
-     *
-     * @return  ln(x)
+     * @return  \f$ \ln(x) \f$
      */
     DG_DEVICE
     T operator() (const T& x) const
@@ -1147,7 +1146,7 @@ struct SQRT
      * @return sqrt(x)
      */
     DG_DEVICE
-    T operator() (const T& x) const
+    T operator() (T x) const
     {
         return sqrt(x);
     }
@@ -1223,7 +1222,7 @@ struct PLUS
      * @return  x + value
      */
         DG_DEVICE
-        T operator()(const T& x)const{ return x + x_;}
+        T operator()( T x)const{ return x + x_;}
     private:
     T x_;
 };
@@ -1243,8 +1242,8 @@ struct INVERT
      * @param x  the input
      * @return  1/x
      */
-        DG_DEVICE
-        T operator()(const T& x)const{ return 1./x;}
+    DG_DEVICE
+    T operator()( T x)const{ return 1./x;}
 };
 
 /**
@@ -1263,17 +1262,17 @@ struct MOD
      */
     MOD( T m): x_(m){}
 
-        /**
-         * @brief Compute mod(x, value), positively defined
-         *
-         * @param x
-         *
-         * @return
-         */
-        DG_DEVICE
-        T operator()(const T& x)const{
-            return (fmod(x,x_) < 0 ) ? (x_ + fmod(x,x_)) : fmod(x,x_);
-        }
+    /**
+     * @brief Compute mod(x, value), positively defined
+     *
+     * @param x
+     *
+     * @return
+     */
+    DG_DEVICE
+    T operator()( T x)const{
+        return (fmod(x,x_) < 0 ) ? (x_ + fmod(x,x_)) : fmod(x,x_);
+    }
     private:
     T x_;
 
@@ -1294,8 +1293,8 @@ struct ABS
      *
      * @return  abs(x)
      */
-        DG_DEVICE
-        T operator()(const T& x)const{ return fabs(x);}
+    DG_DEVICE
+    T operator()(T x)const{ return fabs(x);}
 };
 /**
  * @brief returns positive values
@@ -1313,11 +1312,11 @@ struct POSVALUE
      *
      * @return  x*0.5*(1+sign(x))
      */
-        DG_DEVICE
-        T operator()(const T& x)const{
-            if (x >= 0.0) return x;
-            return 0.0;
-            }
+    DG_DEVICE
+    T operator()( T x)const{
+        if (x >= 0.0) return x;
+        return 0.0;
+    }
 };
 
 /**
