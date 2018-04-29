@@ -54,22 +54,16 @@ inline get_value_type<Vector> doDot( const Vector& x1, const Vector& x2, VectorV
     return exblas::cpu::Round(&(acc[0][0]));
 }
 template<class Vector, class UnaryOp>
-inline void doTransform( UnaryOp op, get_value_type<Vector> alpha, const Vector& x, Vector& y, VectorVectorTag)
+inline void doEvaluate( VectorVectorTag, Vector& y, get_value_type<Vector> alpha, UnaryOp op, const Vector& x)
 {
     for( unsigned i=0; i<x.size(); i++)
-        doTransform( op, alpha, x[i], y[i], get_vector_category<typename Vector::value_type>());
+        doEvaluate( get_vector_category<typename Vector::value_type>(), y, alpha, op, x);
 }
 template<class Vector, class UnaryOp>
-inline void doTransform( UnaryOp op, get_value_type<Vector> alpha, const Vector& x, const Vector& y, Vector& z, VectorVectorTag)
+inline void doEvaluate( VectorVectorTag, Vector& z, get_value_type<Vector> alpha, UnaryOp op, const Vector& x, const Vector& y)
 {
     for( unsigned i=0; i<x.size(); i++)
-        doTransform( op, alpha, x[i], y[i], z[i], get_vector_category<typename Vector::value_type>());
-}
-template<class Vector, class UnaryOp>
-inline void doTransform( UnaryOp op, get_value_type<Vector> alpha, const Vector& x, const Vector& y, const Vector& z, Vector& w, VectorVectorTag)
-{
-    for( unsigned i=0; i<x.size(); i++)
-        doTransform( op, alpha, x[i], y[i], z[i], w[i], get_vector_category<typename Vector::value_type>());
+        doEvaluate( get_vector_category<typename Vector::value_type>(), z, alpha, op, x, y);
 }
 #ifdef _OPENMP
 template< class Vector>

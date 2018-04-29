@@ -1,7 +1,5 @@
 #ifndef _DG_BLAS_SERIAL_
 #define _DG_BLAS_SERIAL_
-#include <thrust/execution_policy.h>
-#include <thrust/transform.h>
 #include "config.h"
 #include "execution_policy.h"
 #include "exblas/exdot_serial.h"
@@ -18,19 +16,14 @@ std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_p
 }
 
 template< class UnaryOp, class T>
-inline void doTransform_dispatch( SerialTag, unsigned size, UnaryOp op, T alpha, const T* x, T* y) {
+inline void doEvaluate_dispatch( SerialTag, unsigned size, T* y, T alpha, UnaryOp op, const T* x) {
     for( unsigned i=0; i<size; i++)
-        y[i] = op(x[i]) + alpha*y[i];
+        y[i] = DG_FMA( alpha, y[i], op(x[i]));
 }
 template< class UnaryOp, class T>
-inline void doTransform_dispatch( SerialTag, unsigned size, UnaryOp op, T alpha, const T* x, const T* y, T* z) {
+inline void doEvaluate_dispatch( SerialTag, unsigned size, T* z, T alpha, UnaryOp op, const T* x, const T* y) {
     for( unsigned i=0; i<size; i++)
-        z[i] = op(x[i],y[i]) + alpha*z[i];
-}
-template< class UnaryOp, class T>
-inline void doTransform_dispatch( SerialTag, unsigned size, UnaryOp op, T alpha, const T* x, const T* y, const T* z, T* w) {
-    for( unsigned i=0; i<size; i++)
-        w[i] = op(x[i],y[i],z[i]) + alpha*w[i];
+        z[i] = DG_FMA( alpha, z[i], op(x[i], y[i]));
 }
 
 template< class T>

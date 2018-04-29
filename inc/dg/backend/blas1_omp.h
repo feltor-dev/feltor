@@ -22,37 +22,25 @@ std::vector<int64_t> doDot_dispatch( OmpTag, int size, const double* x_ptr, cons
 }
 
 template< class UnaryOp, class T>
-inline void doTransform_dispatch( OmpTag, int size, UnaryOp op, T alpha, const T* x, T* y) {
+inline void doEvaluate_dispatch( OmpTag, int size, T* y, T alpha, UnaryOp op, const T* x) {
     if(x.size()<MIN_SIZE) {
-        for( int i=0; i<size; i++)
-            y[i] = op(x[i]) + alpha*y[i];
+        doEvaluate_dispatch( SerialTag, size, y, alpha, op, x);
         return;
     }
 #pragma omp parallel for
     for( int i=0; i<size; i++)
-        y[i] = op(x[i]) + alpha*y[i];
+        y[i] = DG_FMA( alpha, y[i], op(x[i]));
 }
+
 template< class UnaryOp, class T>
-inline void doTransform_dispatch( OmpTag, int size, UnaryOp op, T alpha, const T* x, const T* y, T* z) {
+inline void doEvaluate_dispatch( OmpTag, int size, T* z, T alpha, UnaryOp op, const T* x, const T* y) {
     if(x.size()<MIN_SIZE) {
-        for( int i=0; i<size; i++)
-            z[i] = op(x[i],y[i]) + alpha*z[i];
+        doEvaluate_dispatch( SerialTag, size, z, alpha, op, x, y);
         return;
     }
 #pragma omp parallel for
     for( int i=0; i<size; i++)
-        z[i] = op(x[i],y[i]) + alpha*z[i];
-}
-template< class UnaryOp, class T>
-inline void doTransform_dispatch( OmpTag, int size, UnaryOp op, T alpha, const T* x, const T* y, const T* z, T* w) {
-    if(x.size()<MIN_SIZE) {
-        for( int i=0; i<size; i++)
-            w[i] = op(x[i],y[i],z[i]) + alpha*w[i];
-        return;
-    }
-#pragma omp parallel for
-    for( int i=0; i<size; i++)
-        w[i] = op(x[i],y[i],z[i]) + alpha*w[i];
+        z[i] = DG_FMA( alpha, z[i], op(x[i], y[i]));
 }
 
 template< class T>

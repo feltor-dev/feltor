@@ -1,6 +1,5 @@
 #ifndef _DG_BLAS_CUDA_
 #define _DG_BLAS_CUDA_
-#include <thrust/transform.h>
 #include "exblas/exdot_cuda.cuh"
 namespace dg
 {
@@ -17,55 +16,38 @@ std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const double* x_ptr
     return h_superacc;
 }
 template<class Op, class T>
- __global__ void transform_kernel( int size, Op op, T alpha,
-         const T* x, T* y)
+ __global__ void evaluate_kernel( int size, T* y, T alpha, Op op,
+         const T* x)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_is/grid_size is
     for( int i = thread_id; i<size; i += grid_size)
-        y[i]= op(x[i]) + alpha*y[i];
+        y[i]= fma( alpha, y[i], op(x[i]) );
 }
 
 template< class UnaryOp, class T>
-inline void doTransform_dispatch( CudaTag, unsigned size, UnaryOp op, T alpha, const T* x, const T* y, T * z) {
+inline void doEvaluate_dispatch( CudaTag, unsigned size, T* z, T alpha, UnaryOp op, const T* x) {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    transform_kernel<UnaryOp, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, op, alpha, x,y,z);
+    evaluate_kernel<UnaryOp, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, z, alpha, op,x);
 }
 template<class Op, class T>
- __global__ void transform_kernel( int size, Op op, T alpha,
-         const T* x, const T* y, T* z)
+ __global__ void evaluate_kernel( int size, T* z, T alpha, Op op,
+         const T* x, const T* y)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_is/grid_size is
     for( int i = thread_id; i<size; i += grid_size)
-        z[i]= op(x[i],y[i]) + alpha*z[i];
+        z[i]= fma( alpha, z[i], op(x[i], y[i]) );
 }
 
 template< class UnaryOp, class T>
-inline void doTransform_dispatch( CudaTag, unsigned size, UnaryOp op, T alpha, const T* x, const T* y, T* z) {
+inline void doEvaluate_dispatch( CudaTag, unsigned size, T* z, T alpha, UnaryOp op, const T* x, const T* y) {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    transform_kernel<UnaryOp, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, op, alpha, x,y,z);
-}
-template<class Op, class T>
- __global__ void transform_kernel( int size, Op op, T alpha,
-         const T* x, const T* y, const T* z, T* w)
-{
-    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
-    const int grid_size = gridDim.x*blockDim.x;
-    //every thread takes num_is/grid_size is
-    for( int i = thread_id; i<size; i += grid_size)
-        w[i]= op(x[i],y[i],z[i]) + alpha*w[i];
-}
-
-template< class UnaryOp, class T>
-inline void doTransform_dispatch( CudaTag, unsigned size, UnaryOp op, T alpha, const T* x, const T* y, const T* z, T * w) {
-    const size_t BLOCK_SIZE = 256;
-    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    transform_kernel<UnaryOp, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, op, alpha, x,y,z,w);
+    evaluate_kernel<UnaryOp, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, z, alpha, op, x,y);
 }
 
 template<class value_type>

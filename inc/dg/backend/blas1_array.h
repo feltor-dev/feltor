@@ -62,19 +62,14 @@ T doDot( const std::array<T,N>& x, const std::array<T,N>& y, StdArrayTag)
 }
 
 template< class T,std::size_t N, class UnaryOp>
-inline void doTransform( UnaryOp op, T alpha, const std::array<T,N>& x, std::array<T,N>& y, StdArrayTag) {
+inline void doEvaluate( StdArrayTag, std::array<T,N>& y, T alpha, UnaryOp op, const std::array<T,N>& x) {
     for( size_t i=0; i<N; i++)
         y[i] = op(x[i]) + alpha*y[i];
 }
-template< class T,std::size_t N, class UnaryOp>
-inline void doTransform( UnaryOp op, T alpha, const std::array<T,N>& x, const std::array<T,N>& y, std::array<T,N>& z, StdArrayTag) {
+template< class T,std::size_t N, class Op>
+inline void doEvaluate( StdArrayTag, std::array<T,N>& z, T alpha, Op op, const std::array<T,N>& x, const std::array<T,N>& y) {
     for( size_t i=0; i<N; i++)
         z[i] = op(x[i], y[i]) + alpha*z[i];
-}
-template< class T,std::size_t N, class UnaryOp>
-inline void doTransform( UnaryOp op, T alpha, const std::array<T,N>& x, const std::array<T,N>& y, const std::array<T,N>& z, std::array<T,N>& w, StdArrayTag) {
-    for( size_t i=0; i<N; i++)
-        w[i] = op(x[i], y[i], z[i]) + alpha*w[i];
 }
 
 template< class T, std::size_t N>
