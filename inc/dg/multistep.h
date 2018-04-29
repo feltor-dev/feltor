@@ -403,15 +403,20 @@ far outweighs the increased computational cost of the additional matrix inversio
 template <class container>
 struct SIRK
 {
-    /**
-     * @brief Construct from copyable container
-     *
-     * @param copyable container of right size
-     * @param max_iter maximum iterations for conjugate gradient
-     * @param eps accuracy for conjugate gradient
-     */
-    SIRK(const container& copyable, unsigned max_iter, double eps): k_(3, copyable), f_(copyable), g_(copyable), rhs( f_), pcg( copyable, max_iter), eps_(eps)
+    ///@copydoc RK::RK()
+    SIRK(){}
+    ///@copydoc Karniadakis::construct()
+    SIRK(const container& copyable, unsigned max_iter, double eps){
+        construct( copyable, max_iter, eps);
+    }
+    ///@copydoc Karniadakis::construct()
+    void construct(const container& copyable, unsigned max_iter, double eps)
     {
+        k_.fill( copyable);
+        rhs_ = f_ = g_ = copyable;
+        pcg.construct( copyable, max_iter);
+        eps_ = eps;
+
         w[0] = 1./8., w[1] = 1./8., w[2] = 3./4.;
         b[1][0] = 8./7., b[2][0] = 71./252., b[2][1] = 7./36.;
         d[0] = 3./4., d[1] = 75./233., d[2] = 65./168.;
@@ -421,40 +426,43 @@ struct SIRK
      * @brief integrate one step
      *
      * @copydoc hide_explicit_implicit
-     * @param u0 start point
+     * @param u0 start point at \c t0
      * @param u1 end point (write only)
+     * @param t0 start time
      * @param dt timestep
      */
     template <class Explicit, class Implicit>
-    void step( Explicit& exp, Implicit& imp, const container& u0, container& u1, double dt)
+    void step( Explicit& exp, Implicit& imp, const container& u0, container& u1, double t0, double dt)
     {
-        detail::Implicit<Implicit, container> implicit( -dt*d[0], imp);
-        exp(u0, f_);
-        imp(u0, g_);
-        dg::blas1::axpby( dt, f_, dt, g_, rhs);
-        blas2::symv( imp.weights(), rhs, rhs);
+        detail::Implicit<Implicit, container> implicit( -dt*d[0], t0+d[0]*dt, imp);
+        exp(t0, u0, f_);
+        imp(t0+d[0]*dt, u0, g_);
+        dg::blas1::axpby( dt, f_, dt, g_, rhs_);
+        blas2::symv( imp.weights(), rhs_, rhs_);
         implicit.alpha() = -dt*d[0];
-        pcg( implicit, k_[0], rhs, imp.precond(), imp.inv_weights(), eps_);
+        pcg( implicit, k_[0], rhs_, imp.precond(), imp.inv_weights(), eps_);
 
         dg::blas1::axpby( 1., u0, b[1][0], k_[0], u1);
-        exp(u1, f_);
+        exp(t0+b[1][0]*dt, u1, f_);
         dg::blas1::axpby( 1., u0, c[1][0], k_[0], u1);
-        imp(u1, g_);
-        dg::blas1::axpby( dt, f_, dt, g_, rhs);
-        blas2::symv( imp.weights(), rhs, rhs);
+        imp(t0+(c[1][0]+d[1])*dt, u1, g_);
+        dg::blas1::axpby( dt, f_, dt, g_, rhs_);
+        blas2::symv( imp.weights(), rhs_, rhs_);
         implicit.alpha() = -dt*d[1];
-        pcg( implicit, k_[1], rhs, imp.precond(), imp.inv_weights(), eps_);
+        implicit.time() = t0 + (c[1][0]+d[1])*dt;
+        pcg( implicit, k_[1], rhs_, imp.precond(), imp.inv_weights(), eps_);
 
         dg::blas1::axpby( 1., u0, b[2][0], k_[0], u1);
         dg::blas1::axpby( b[2][1], k_[1], 1., u1);
-        exp(u1, f_);
+        exp(t0 + (b[2][1]+b[2][0])*dt, u1, f_);
         dg::blas1::axpby( 1., u0, c[2][0], k_[0], u1);
         dg::blas1::axpby( c[2][1], k_[1], 1., u1);
-        imp(u1, g_);
-        dg::blas1::axpby( dt, f_, dt, g_, rhs);
-        blas2::symv( imp.weights(), rhs, rhs);
+        imp(t0 + (c[2][1]+c[2][0] + d[2])*dt, u1, g_);
+        dg::blas1::axpby( dt, f_, dt, g_, rhs_);
+        blas2::symv( imp.weights(), rhs_, rhs_);
         implicit.alpha() = -dt*d[2];
-        pcg( implicit, k_[2], rhs, imp.precond(), imp.inv_weights(), eps_);
+        implicit.time() = t0 + (c[2][1]+c[2][0] + d[2])*dt;
+        pcg( implicit, k_[2], rhs_, imp.precond(), imp.inv_weights(), eps_);
         //sum up results
         dg::blas1::axpby( 1., u0, w[0], k_[0], u1);
         dg::blas1::axpby( w[1], k_[1], 1., u1);
@@ -462,23 +470,24 @@ struct SIRK
     }
 
     /**
-     * @brief adapt timestep
+     * @brief adapt timestep (experimental)
      *
      * Make same timestep twice, once with half timestep. The resulting error should be smaller than some given tolerance
      *
      * @copydoc hide_explicit_implicit
      * @param u0 start point
      * @param u1 end point (write only)
+     * @param t0 start time
      * @param dt timestep ( read and write) contains new recommended timestep afterwards
      * @param tolerance tolerable error
      */
     template <class Explicit, class Implicit>
-    void adaptive_step( Explicit& exp, Implicit& imp, const container& u0, container& u1, double& dt, double tolerance)
+    void adaptive_step( Explicit& exp, Implicit& imp, const container& u0, container& u1, double t0, double& dt, double tolerance)
     {
         container temp = u0;
-        this->operator()( exp, imp, u0, u1, dt/2.);
-        this->operator()( exp, imp, u1, temp, dt/2.);
-        this->operator()( exp, imp, u0, u1, dt);
+        step( exp, imp, u0, u1, t0, dt/2.);
+        step( exp, imp, u1, temp, t0+dt/2., dt/2.);
+        step( exp, imp, u0, u1, t0, dt);
         dg::blas1::axpby( 1., u1, -1., temp);
         double error = dg::blas1::dot( temp, temp);
         std::cout << "ERROR " << error<< std::endl;
@@ -488,8 +497,8 @@ struct SIRK
         if( dt < 0.75*dt_old) dt = 0.75*dt_old;
     }
     private:
-    std::vector<container> k_;
-    container f_, g_, rhs;
+    std::array<container,3> k_;
+    container f_, g_, rhs_;
     double w[3];
     double b[3][3];
     double d[3];

@@ -365,9 +365,9 @@ struct RK
     *
     * @copydoc hide_rhs
     * @param rhs right hand side subroutine
-    * @param u0 initial value at \c t0
+    * @param u0 value at \c t0
     * @param u1 contains result on output. u0 and u1 may not alias each other.
-    * @param t0 current time
+    * @param t0 start time
     * @param dt timestep
     */
     template< class RHS>
