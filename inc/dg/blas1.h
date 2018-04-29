@@ -247,7 +247,7 @@ inline void evaluate( container& z, get_value_type<container> alpha, BinaryOp op
 
 @code
     dg::DVec two( 100,2), result(100);
-    dg::blas1::transform( two, result, dg::EXP());
+    dg::blas1::transform( two, result, dg::EXP<double>());
     //result[i] = 7.389056... (e^2)
 @endcode
  */
