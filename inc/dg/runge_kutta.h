@@ -308,9 +308,9 @@ const double rk_classic<17>::b[17] = {
  /** @class hide_rhs
   * @tparam RHS The right hand side
         is a functor type with no return value (subroutine)
-        of signature \c void \c operator()(value_type, const container&, container&)
-        The first argument is the time, the second is the input vector and the third is the output,
-        i.e. y' = f(y, t) translates to f(t, y, y').
+        of signature <tt> void operator()(value_type, const container&, container&)</tt>
+        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
+        i.e. y' = f(t, y) translates to f(t, y, y').
         The two container arguments never alias each other in calls to the functor.
   */
 
@@ -365,24 +365,24 @@ struct RK
     *
     * @copydoc hide_rhs
     * @param rhs right hand side subroutine
-    * @param u0 value at \c t0
-    * @param u1 contains result on output. u0 and u1 may not alias each other.
     * @param t0 start time
+    * @param u0 value at \c t0
+    * @param t1 end time ( \c t0+dt on output, may alias \c t0)
+    * @param u1 contains result on output (may alias u0)
     * @param dt timestep
     */
     template< class RHS>
-    void step( RHS& rhs, const container& u0, container& u1, double t0, double dt);
+    void step( RHS& rhs, double t0, const container& u0, double& t1, container& u1, double dt);
   private:
     std::array<container,k-1> u_;
 };
 
 template< size_t k, class container>
 template< class RHS>
-void RK<k, container>::step( RHS& f, const container& u0, container& u1, double t0, double dt)
+void RK<k, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
 {
-    assert( &u0 != &u1);
-    u1 = u0;
-    f(t0, u1, u_[0]);
+    u_[1] = u0; //this is necessary only if f destroys its input
+    f(t0, u_[1], u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
     double tn =  dt*rk_coeff<k>::beta[0];
     tn = DG_FMA( rk_coeff<k>::alpha[0][0], t0, tn);
@@ -405,6 +405,7 @@ void RK<k, container>::step( RHS& f, const container& u0, container& u1, double 
     {
         blas1::axpby( rk_coeff<k>::alpha[k-1][l], u_[l-1],1., u1);
     }
+    t1 = t0 + dt;
 }
 ///@cond
 //Euler specialisation
@@ -415,10 +416,11 @@ struct RK<1, container>
     RK( const container& copyable){}
     void construct( const container& copyable){}
     template < class RHS>
-    void operator()( RHS& f, const container& u0, container& u1, double t0, double dt)
+    void step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
     {
         f( t0, u0, u1);
         blas1::axpby( 1., u0, dt, u1);
+        t1 = t0 + dt;
     }
 };
 ///@endcond
@@ -457,7 +459,7 @@ struct RK_classic
     }
     ///@copydoc RK::step(RHS&,const container&,container&,double,double)
     template<class RHS>
-    void step( RHS& rhs, const container& u0, container& u1, double t0, double dt);
+    void step( RHS& rhs, double t0, const container& u0, double& t1, container& u1, double dt);
   private:
     std::array<container,s> k_;
     container u_;
@@ -465,7 +467,7 @@ struct RK_classic
 
 template< size_t s, class container>
 template< class RHS>
-void RK_classic<s, container>::step( RHS& f, const container& u0, container& u1, double t0, double dt)
+void RK_classic<s, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
 {
     assert( &u0 != &u1);
     u1 = u0; //to let u0 const and later for summation
@@ -486,6 +488,7 @@ void RK_classic<s, container>::step( RHS& f, const container& u0, container& u1,
     //Now add everything up to u1
     for( unsigned i=0; i<s; i++)
         blas1::axpby( dt*rk_classic<s>::b[i], k_[i],1., u1);
+    t1 = t0 + dt;
 }
 
 ///@addtogroup time
@@ -498,25 +501,24 @@ void RK_classic<s, container>::step( RHS& f, const container& u0, container& u1,
  * @copydoc hide_rhs
  * @copydoc hide_container
  * @param rhs The right-hand-side
+ * @param t_begin initial time
  * @param begin initial condition
- * @param end (write-only) contains solution on output
- * @param T_min initial time
- * @param T_max final time
+ * @param t_end final time
+ * @param end (write-only) contains solution at \c t_end on output
  * @param N number of steps
  */
 template< unsigned s, class RHS, class container>
-void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, unsigned N )
+void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, container& end, unsigned N )
 {
     RK_classic<s, container > rk( begin);
     container temp(begin);
-    if( T_max == T_min){ end = begin; return;}
-    double dt = (T_max-T_min)/(double)N;
+    if( t_end == t_begin){ end = begin; return;}
+    double dt = (t_end-t_begin)/(double)N;
     end = begin;
-    double t0 = T_min;
+    double t0 = t_begin;
     for( unsigned i=0; i<N; i++)
     {
-        rk.timestep( rhs, end, temp, t0, dt);
-        t0+=dt;
+        rk.step( rhs, t0, end, t0, temp, dt);
         end.swap( temp); //end is one step further
     }
 }
@@ -538,23 +540,23 @@ void stepperRK(RHS& rhs, const container& begin, container& end, double T_min, d
  * @param rhs The right-hand-side
  * @param begin initial condition
  * @param end (write-only) contains solution on output
- * @param T_min initial time
- * @param T_max final time
+ * @param t_begin initial time
+ * @param t_end final time
  * @param eps_abs desired accuracy in the error function between \c end and \c end_old
  * @param NT_init initial number of steps
  * @return number of iterations if converged, -1 and a warning to \c std::cerr when \c isnan appears, -2 if failed to reach \c eps_abs
  */
 template<unsigned s, class RHS, class container>
-int integrateRK(RHS& rhs, const container& begin, container& end, double T_min, double T_max, double eps_abs, unsigned NT_init = 2 )
+int integrateRK(RHS& rhs, double t_begin, const container& begin, double t_end, container& end, double eps_abs, unsigned NT_init = 2 )
 {
     RK_classic<s, container > rk( begin);
     container old_end(begin), temp(begin);
     end = begin;
-    if( T_max == T_min) return 0;
+    if( t_end == t_begin) return 0;
     int NT = NT_init;
-    double dt = (T_max-T_min)/(double)NT;
+    double dt = (t_end-t_begin)/(double)NT;
     double error = 1e10;
-    double t0 = T_min;
+    double t0 = t_begin;
 
     while( error > eps_abs && NT < pow( 2, 18) )
     {
@@ -563,7 +565,7 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_min, 
         int i=0;
         while (i<NT)
         {
-            rk.step( rhs, end, temp, t0, dt);
+            rk.step( rhs, t0, end, t0, temp, dt);
             if( !rhs.monitor( temp ) )  //sanity check
             {
                 #ifdef DG_DEBUG
@@ -572,12 +574,11 @@ int integrateRK(RHS& rhs, const container& begin, container& end, double T_min, 
                 break;
             }
             end.swap( temp); //end is one step further
-            t0 += dt;
             i++;
         }
         error = rhs.error( end, old_end);
         old_end = end;
-        t0 = T_min;
+        t0 = t_begin;
         dt /= 2.;
         NT *= 2;
     }

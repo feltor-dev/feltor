@@ -69,8 +69,8 @@ int main()
     dg::SIRK< std::vector<dg::DVec> > sirk( y0, y0[0].size(), eps);
     for( unsigned i=0; i<NT; i++)
     {
-        karniadakis.step( zero<dg::DVec>, diffusion, y0, time);
-        //sirk( explicit, diffusion, y0, y1, time, dt); y0.swap(y1); time+=dt;
+        karniadakis.step( zero<dg::DVec>, diffusion, time, y0);
+        //sirk( explicit, diffusion, time ,y0, t1, y1, dt); y0.swap(y1); time+=dt;
     }
     //![doxygen]
     exblas::udouble res;

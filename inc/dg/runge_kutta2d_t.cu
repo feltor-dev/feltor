@@ -52,7 +52,7 @@ int main()
     double t=0;
     for( unsigned i=0; i<NT; i++)
     {
-        rk.step( function<dg::DVec>, y0, y1, t, dt);
+        rk.step( function<dg::DVec>, t, y0, dt, y1);
         t+=dt;
         y0.swap( y1);
     }

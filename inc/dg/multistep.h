@@ -13,15 +13,15 @@ namespace dg{
 /*! @class hide_explicit_implicit
  * @tparam Explicit The explicit part of the right hand side
         is a functor type with no return value (subroutine)
-        of signature \c void \c operator()(value_type, const container&, container&)
-        The first argument is the time, the second is the input vector and the third is the output,
-        i.e. y' = f(y, t) translates to f(t, y, y').
+        of signature <tt> void operator()(value_type, const container&, container&)</tt>
+        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
+        i.e. y' = f(t, y) translates to f(t, y, y').
         The two container arguments never alias each other in calls to the functor.
  * @tparam Implicit The implicit part of the right hand side
         is a functor type with no return value (subroutine)
-        of signature \c void \c operator()(value_type, const container&, container&)
-        The first argument is the time, the second is the input vector and the third is the output,
-        i.e. y' = f(y, t) translates to f(t, y, y').
+        of signature <tt> void operator()(value_type, const container&, container&)</tt>
+        The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
+        i.e. y' = f(t, y) translates to f(t, y, y').
         The two container arguments never alias each other in calls to the functor.
     Furthermore, the routines %weights(), %inv_weights() and %precond() must be callable
     and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient.
@@ -64,7 +64,7 @@ struct AB
     ///copydoc RK::RK()
     AB(){}
     ///@copydoc RK::construct(const container&)
-    AB( const container& copyable): f_(k, container(copyable)), u_(copyable){ }
+    AB( const container& copyable){ construct(copyable); }
     ///@copydoc RK::construct(const container&)
     void construct(const container& copyable){
         f_.fill( copyable);
@@ -79,23 +79,23 @@ struct AB
      * before the first timestep is made.
      * @copydoc hide_rhs
      * @param rhs The rhs functor
-     * @param u0 The initial value of the integration
      * @param t0 The intital time corresponding to u0
+     * @param u0 The initial value of the integration
      * @param dt The timestep
      * @note The class allows RHS to change its first (input) argument, i.e. the first argument need not be const
      */
     template< class RHS>
-    void init( RHS& rhs, const container& u0, double t0, double dt);
+    void init( RHS& rhs, double t0, const container& u0, double dt);
     /**
     * @brief Advance u0 one timestep
     *
     * @copydoc hide_rhs
     * @param f right hand side function or functor
+    * @param t (write-only) contains timestep corresponding to \c u on output
     * @param u (write-only) contains next step of the integration on output
-    * @param t (write-only) contains timestep corresponding to \c u
     */
     template< class RHS>
-    void step( RHS& f, container& u, double& t);
+    void step( RHS& f, double& t, container& u);
   private:
     double tn_, dt_;
     std::array<container,k> f_;
@@ -104,7 +104,7 @@ struct AB
 
 template< size_t k, class container>
 template< class RHS>
-void AB<k, container>::init( RHS& f, const container& u0, double t0, double dt)
+void AB<k, container>::init( RHS& f, double t0, const container& u0, double dt)
 {
     tn_ = t0, dt_ = dt;
     container u1(u0), u2(u0);
@@ -122,7 +122,7 @@ void AB<k, container>::init( RHS& f, const container& u0, double t0, double dt)
 
 template< size_t k, class container>
 template< class RHS>
-void AB<k, container>::step( RHS& f, container& u, double& t)
+void AB<k, container>::step( RHS& f, double& t, container& u)
 {
     blas1::copy(  u_, u);
     f( tn_, u, f_[0]);
@@ -149,11 +149,11 @@ struct AB<1, container>
        temp_.fill(copyable);
     }
     template < class RHS>
-    void init( RHS& f, const container& u0, double t0, double dt){
+    void init( RHS& f, double t0, const container& u0, double dt){
         t0_ = 0, dt_=dt;
     }
     template < class RHS>
-    void step( RHS& f, container& u, double& t)
+    void step( RHS& f, double& t, container& u)
     {
         blas1::axpby( 1., u, 0, temp_[0]);
         f( t0_, u, temp_[1]);
@@ -273,23 +273,23 @@ struct Karniadakis
      *
      * The backward integration uses the Lie operator splitting method, with explicit Euler substeps for both explicit and implicit part
      * @copydoc hide_explicit_implicit
-     * @param u0 The initial value of the integration
      * @param t0 The intital time corresponding to u0
+     * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
      * @note The last call to exp is two steps backward in time (n-2)
      */
     template< class Explicit, class Implicit>
-    void init( Explicit& exp, Implicit& imp, const container& u0, double t0, double dt);
+    void init( Explicit& exp, Implicit& imp, double t0, const container& u0, double dt);
 
     /**
     * @brief Advance one timestep
     *
     * @copydoc hide_explicit_implicit
-    * @param u (write-only), contains next step of time-integration on output
     * @param t (write-only), contains timestep corresponding to \c u on output
+    * @param u (write-only), contains next step of time-integration on output
     */
     template< class Explicit, class Implicit>
-    void step( Explicit& exp, Implicit& imp, container& u, double& t);
+    void step( Explicit& exp, Implicit& imp, double& t, container& u);
 
 
     /**
@@ -315,12 +315,12 @@ struct Karniadakis
 ///@cond
 template< class container>
 template< class RHS, class Diffusion>
-void Karniadakis<container>::init( RHS& f, Diffusion& diff,  const container& u0,  double t0, double dt)
+void Karniadakis<container>::init( RHS& f, Diffusion& diff, double t0, const container& u0, double dt)
 {
     //operator splitting using explicit Euler for both explicit and implicit part
     t_ = t0, dt_ = dt;
     blas1::copy(  u0, u_[0]);
-    f( t0, u0, f_[0]);
+    f( t0, u0, f_[0]); //f may not destroy u0
     blas1::axpby( 1., u_[0], -dt, f_[0], f_[1]); //Euler step
     detail::Implicit<Diffusion, container> implicit( -dt, t0, diff);
     implicit( f_[1], u_[1]); //explicit Euler step backwards
@@ -333,9 +333,9 @@ void Karniadakis<container>::init( RHS& f, Diffusion& diff,  const container& u0
 
 template<class container>
 template< class RHS, class Diffusion>
-void Karniadakis<container>::step( RHS& f, Diffusion& diff, container& u, double & t)
+void Karniadakis<container>::step( RHS& f, Diffusion& diff, double& t, container& u)
 {
-    f(t_, u_[0], f_[0]);
+    f(t_, u_[0], f_[0]); //f may not destroy u_[0]!!
     blas1::axpbypgz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
     blas1::axpbypgz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
     //permute f_[2], u_[2]  to be the new f_[0], u_[0]
@@ -433,7 +433,7 @@ struct SIRK
      * @param dt timestep
      */
     template <class Explicit, class Implicit>
-    void step( Explicit& exp, Implicit& imp, const container& u0, container& u1, double t0, double dt)
+    void step( Explicit& exp, Implicit& imp, double t0, const container& u0, double& t1, container& u1, double dt)
     {
         detail::Implicit<Implicit, container> implicit( -dt*d[0], t0+d[0]*dt, imp);
         exp(t0, u0, f_);
@@ -483,7 +483,7 @@ struct SIRK
      * @param tolerance tolerable error
      */
     template <class Explicit, class Implicit>
-    void adaptive_step( Explicit& exp, Implicit& imp, const container& u0, container& u1, double t0, double& dt, double tolerance)
+    void adaptive_step( Explicit& exp, Implicit& imp, double t0, const container& u0, double& dt, container& u1, double tolerance)
     {
         container temp = u0;
         step( exp, imp, u0, u1, t0, dt/2.);
