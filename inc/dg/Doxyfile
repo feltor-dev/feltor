@@ -883,7 +883,7 @@ EXCLUDE_SYMBOLS        = hide_*
 
 EXAMPLE_PATH           = cg2d_t.cu \
                          arakawa_t.cu poisson_t.cu \
-                         elliptic2d_b.cu runge_kutta2d_t.cu multistep_t.cu \
+                         elliptic2d_b.cu runge_kutta_t.cu multistep_t.cu \
                          helmholtzg2_b.cu \
                          geometry/interpolation_t.cu \
                          geometry/average_t.cu geometry/average_mpit.cu

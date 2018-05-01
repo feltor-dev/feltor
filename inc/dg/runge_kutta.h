@@ -326,28 +326,29 @@ const double rk_classic<17>::b[17] = {
 * @ingroup time
 *
 * Uses only \c dg::blas1::axpby() routines to integrate one step.
- * The coefficients are in the form Cockburn proposed in his paper.
+ * The coefficients are in the form that is optimized for number of vector additions.
  * It's just a reformulation in that you don't store the sequence of
- * k_j but rather the abscissas u_j with k_j = f(u_j)
- *  Note that if you knew all k_j you can compute this
- *  sequence u_j via u=Bk. To derive these coefficients from the butcher tableau
+ * \f$ k_j\f$ but rather the abscissas \f$ u_j\f$  with \f$ k_j = f(u_j)\f$
+ *  Note that if you knew all \f$ k_j\f$ you can compute this
+ *  sequence \f$ u_j\f$ via \f$ u=Bk\f$. To derive these coefficients from the butcher tableau
  * consider.
  * \f[ u = Bhk = (B-D)hk + Dhk = (B-D)B^{-1}y + Dhk
  *       = ( 1- DB^{-1})u + Dhk = \alpha u + \beta h k\f]
  *  where \f$ B\f$ is the Butcher tableau without the c's and extended
  *  by ones on the left and \f$ D\f$ its
  *  diagonal part.
-* @tparam k Order of the method (1, 2, 3 or 4)
+* @tparam s Order of the method (1, 2, 3 or 4)
 * @copydoc hide_container
+* @sa RK
 */
-template< size_t k, class container>
-struct RK
+template< size_t s, class container>
+struct RK_opt
 {
     ///@brief No memory allocation, Call \c construct before using the object
-    RK(){}
+    RK_opt(){}
 
     ///@copydoc construct()
-    RK( const container& copyable){
+    RK_opt( const container& copyable){
         construct(copyable);
     }
     /**
@@ -367,52 +368,51 @@ struct RK
     * @param rhs right hand side subroutine
     * @param t0 start time
     * @param u0 value at \c t0
-    * @param t1 end time ( \c t0+dt on output, may alias \c t0)
-    * @param u1 contains result on output (may alias u0)
+    * @param t1 (write only) end time ( equals \c t0+dt on output, may alias \c t0)
+    * @param u1 (write only) contains result on output (may alias u0)
     * @param dt timestep
     */
     template< class RHS>
     void step( RHS& rhs, double t0, const container& u0, double& t1, container& u1, double dt);
   private:
-    std::array<container,k-1> u_; //the order determines the amount of memory needed
+    std::array<container,s> u_; //the order determines the amount of memory needed
 };
 
 template< size_t k, class container>
 template< class RHS>
-void RK<k, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
+void RK_opt<k, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
 {
     f(t0, u0, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
-    double tn =  dt*rk_coeff<k>::beta[0];
-    tn = DG_FMA( rk_coeff<k>::alpha[0][0], t0, tn);
+    std::array<double,k-1> tu;
+    tu[0] =  dt*rk_coeff<k>::beta[0];
+    tu[0] = DG_FMA( rk_coeff<k>::alpha[0][0], t0, tu[0]);
     for( unsigned i=1; i<k-1; i++)
     {
-        f(tn, u_[i-1], u_[i] );
+        f(tu[i-1], u_[i-1], u_[i] );
         blas1::axpby( rk_coeff<k>::alpha[i][0], u0, dt*rk_coeff<k>::beta[i], u_[i]);
-        tn = dt*rk_coeff<k>::beta[i];
-        tn = DG_FMA( rk_coeff<k>::alpha[i][0],t0,tn);
+        tu[i] = dt*rk_coeff<k>::beta[i];
+        tu[i] = DG_FMA( rk_coeff<k>::alpha[i][0],t0,tu[i]);
         for( unsigned l=1; l<=i; l++)
         {
-            blas1::axpby( rk_coeff<k>::alpha[i][l], u_[l-1],1., u_[i]);
-            tn = DG_FMA( rk_coeff<k>::alpha[i][l],t0, tn);
+            blas1::axpby(   rk_coeff<k>::alpha[i][l], u_[l-1], 1., u_[i]);
+            tu[i] = DG_FMA( rk_coeff<k>::alpha[i][l], tu[l-1], tu[i]);
         }
     }
     //Now add everything up to u1
-    f(tn, u_[k-2], u1);
-    blas1::axpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u1);
+    f(tu[k-2], u_[k-2], u_[k-1]); //u1 may alias u0, so we need u_[k-1]
+    blas1::axpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u_[k-1], u1);
     for( unsigned l=1; l<=k-1; l++)
-    {
         blas1::axpby( rk_coeff<k>::alpha[k-1][l], u_[l-1],1., u1);
-    }
     t1 = t0 + dt;
 }
 ///@cond
 //Euler specialisation
 template < class container>
-struct RK<1, container>
+struct RK_opt<1, container>
 {
-    RK(){}
-    RK( const container& copyable){
+    RK_opt(){}
+    RK_opt( const container& copyable){
         construct(copyable);
     }
     void construct( const container& copyable){
@@ -438,31 +438,32 @@ struct RK<1, container>
     k_j = f\left( u^n + \Delta t \sum_{l=1}^j a_{jl} k_l\right)
  \end{align}
 \f]
-@snippet runge_kutta2d_t.cu function
-@snippet runge_kutta2d_t.cu doxygen
+
+@snippet runge_kutta_t.cu function
+@snippet runge_kutta_t.cu doxygen
 * @ingroup time
 *
 * Uses only \c dg::blas1::axpby() routine to integrate one step.
 * The coefficients are chosen in the classic form given by Runge and Kutta.
-* Needs more calls for axpby than our RK class but we implemented higher orders
+* Needs more vector additions than our RK_opt class but we implemented higher orders
 * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
 * @copydoc hide_container
 */
 template< size_t s, class container>
-struct RK_classic
+struct RK
 {
-    ///@copydoc RK::RK()
-    RK_classic(){}
-    ///@copydoc RK::construct(const container&)
-    RK_classic( const container& copyable){
+    ///@copydoc RK_opt::RK_opt()
+    RK(){}
+    ///@copydoc RK_opt::construct(const container&)
+    RK( const container& copyable){
         construct( copyable);
     }
-    ///@copydoc RK::construct(const container&)
+    ///@copydoc RK_opt::construct(const container&)
     void construct( const container& copyable){
         k_.fill(copyable);
         u_ = copyable;
     }
-    ///@copydoc RK::step(RHS&,const container&,container&,double,double)
+    ///@copydoc RK_opt::step(RHS&,double,const container&,double&,container&,double)
     template<class RHS>
     void step( RHS& rhs, double t0, const container& u0, double& t1, container& u1, double dt);
   private:
@@ -472,20 +473,20 @@ struct RK_classic
 
 template< size_t s, class container>
 template< class RHS>
-void RK_classic<s, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
+void RK<s, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
 {
     f(t0, u0, k_[0]); //compute k_0
-    double tn = t0;
+    double tu = t0;
     for( unsigned i=1; i<s; i++) //compute k_i
     {
         blas1::axpby( 1., u0, dt*rk_classic<s>::a[i][0],k_[0], u_); //l=0
-        tn = DG_FMA( dt,rk_classic<s>::a[i][0],t0); //l=0
+        tu = DG_FMA( dt,rk_classic<s>::a[i][0],t0); //l=0
         for( unsigned l=1; l<i; l++)
         {
             blas1::axpby( dt*rk_classic<s>::a[i][l], k_[l],1., u_);
-            tn = DG_FMA(dt,rk_classic<s>::a[i][l],tn);
+            tu = DG_FMA(dt,rk_classic<s>::a[i][l],tu);
         }
-        f( tn, u_, k_[i]);
+        f( tu, u_, k_[i]);
 
     }
     //Now add everything up to u1
@@ -507,23 +508,19 @@ void RK_classic<s, container>::step( RHS& f, double t0, const container& u0, dou
  * @param t_begin initial time
  * @param begin initial condition
  * @param t_end final time
- * @param end (write-only) contains solution at \c t_end on output
+ * @param end (write-only) contains solution at \c t_end on output (may alias begin)
  * @param N number of steps
  */
 template< unsigned s, class RHS, class container>
 void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, container& end, unsigned N )
 {
-    RK_classic<s, container > rk( begin);
-    container temp(begin);
+    RK<s, container > rk( begin);
     if( t_end == t_begin){ end = begin; return;}
     double dt = (t_end-t_begin)/(double)N;
     end = begin;
     double t0 = t_begin;
     for( unsigned i=0; i<N; i++)
-    {
-        rk.step( rhs, t0, end, t0, temp, dt);
-        end.swap( temp); //end is one step further
-    }
+        rk.step( rhs, t0, end, t0, end, dt);
 }
 
 
@@ -532,8 +529,8 @@ void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, c
  *
  * Doubles the number of timesteps until the desired accuracy is reached
  *
- * @copydoc hide_rhs
  * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
+ * @copydoc hide_rhs
  * @tparam RHS
  * In addition, there must be the function \c bool \c monitor( const container& end);
  * available, which is called after every step.
@@ -541,10 +538,10 @@ void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, c
  * The other function is the \c double \c error( const container& end0, const container& end1); which computes the error norm in which the integrator should converge.
  * @copydoc hide_container
  * @param rhs The right-hand-side
- * @param begin initial condition
- * @param end (write-only) contains solution on output
  * @param t_begin initial time
+ * @param begin initial condition
  * @param t_end final time
+ * @param end (write-only) contains solution on output
  * @param eps_abs desired accuracy in the error function between \c end and \c end_old
  * @param NT_init initial number of steps
  * @return number of iterations if converged, -1 and a warning to \c std::cerr when \c isnan appears, -2 if failed to reach \c eps_abs
@@ -552,8 +549,8 @@ void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, c
 template<unsigned s, class RHS, class container>
 int integrateRK(RHS& rhs, double t_begin, const container& begin, double t_end, container& end, double eps_abs, unsigned NT_init = 2 )
 {
-    RK_classic<s, container > rk( begin);
-    container old_end(begin), temp(begin);
+    RK<s, container > rk( begin);
+    container old_end(begin);
     end = begin;
     if( t_end == t_begin) return 0;
     int NT = NT_init;
@@ -568,15 +565,14 @@ int integrateRK(RHS& rhs, double t_begin, const container& begin, double t_end, 
         int i=0;
         while (i<NT)
         {
-            rk.step( rhs, t0, end, t0, temp, dt);
-            if( !rhs.monitor( temp ) )  //sanity check
+            rk.step( rhs, t0, end, t0, end, dt);
+            if( !rhs.monitor( end ) )  //sanity check
             {
                 #ifdef DG_DEBUG
                     std::cout << "---------Got sanity error -> choosing smaller step size and redo integration" << " NT "<<NT<<" dt "<<dt<< std::endl;
                 #endif
                 break;
             }
-            end.swap( temp); //end is one step further
             i++;
         }
         error = rhs.error( end, old_end);

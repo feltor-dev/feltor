@@ -61,11 +61,11 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 template< size_t k, class container>
 struct AB
 {
-    ///copydoc RK::RK()
+    ///copydoc RK_opt::RK_opt()
     AB(){}
-    ///@copydoc RK::construct(const container&)
+    ///@copydoc RK_opt::construct(const container&)
     AB( const container& copyable){ construct(copyable); }
-    ///@copydoc RK::construct(const container&)
+    ///@copydoc RK_opt::construct(const container&)
     void construct(const container& copyable){
         f_.fill( copyable);
         u_ = copyable;
@@ -242,7 +242,7 @@ far outweighs the increased computational cost of the additional matrix inversio
 template<class container>
 struct Karniadakis
 {
-    ///@copydoc RK::RK()
+    ///@copydoc RK_opt::RK_opt()
     Karniadakis(){}
 
     ///@copydoc construct()
@@ -404,7 +404,7 @@ far outweighs the increased computational cost of the additional matrix inversio
 template <class container>
 struct SIRK
 {
-    ///@copydoc RK::RK()
+    ///@copydoc RK_opt::RK_opt()
     SIRK(){}
     ///@copydoc Karniadakis::construct()
     SIRK(const container& copyable, unsigned max_iter, double eps){
