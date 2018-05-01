@@ -374,15 +374,14 @@ struct RK
     template< class RHS>
     void step( RHS& rhs, double t0, const container& u0, double& t1, container& u1, double dt);
   private:
-    std::array<container,k-1> u_;
+    std::array<container,k-1> u_; //the order determines the amount of memory needed
 };
 
 template< size_t k, class container>
 template< class RHS>
 void RK<k, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
 {
-    u_[1] = u0; //this is necessary only if f destroys its input
-    f(t0, u_[1], u_[0]);
+    f(t0, u0, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
     double tn =  dt*rk_coeff<k>::beta[0];
     tn = DG_FMA( rk_coeff<k>::alpha[0][0], t0, tn);
@@ -413,15 +412,21 @@ template < class container>
 struct RK<1, container>
 {
     RK(){}
-    RK( const container& copyable){}
-    void construct( const container& copyable){}
+    RK( const container& copyable){
+        construct(copyable);
+    }
+    void construct( const container& copyable){
+        u_ = copyable;
+    }
     template < class RHS>
     void step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
     {
-        f( t0, u0, u1);
-        blas1::axpby( 1., u0, dt, u1);
+        f( t0, u0, u_); //we need u_ if u1 aliases u0
+        blas1::axpby( 1., u0, dt, u_, u1);
         t1 = t0 + dt;
     }
+    private:
+    container u_;
 };
 ///@endcond
 
@@ -469,9 +474,7 @@ template< size_t s, class container>
 template< class RHS>
 void RK_classic<s, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
 {
-    assert( &u0 != &u1);
-    u1 = u0; //to let u0 const and later for summation
-    f(t0, u1, k_[0]); //compute k_0
+    f(t0, u0, k_[0]); //compute k_0
     double tn = t0;
     for( unsigned i=1; i<s; i++) //compute k_i
     {
