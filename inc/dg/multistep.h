@@ -43,7 +43,7 @@ const double ab_coeff<3>::b[3] = {23./12., -4./3., 5./12.};
 template<>
 const double ab_coeff<4>::b[4] = {55./24., -59./24., 37./24., -3./8.};
 template<>
-const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360., 251/720};
+const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360., 251./720.};
 ///@endcond
 
 /**
@@ -75,14 +75,14 @@ struct AB
      * @brief Initialize first step. Call before using the step function.
      *
      * This routine initiates the first steps in the multistep method by integrating
-     * backwards with a Euler method. This routine has to be called
+     * backwards in time with Euler's method. This routine has to be called
      * before the first timestep is made.
      * @copydoc hide_rhs
      * @param rhs The rhs functor
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep
-     * @note The class allows RHS to change its first (input) argument, i.e. the first argument need not be const
+     * @note the implementation is such that on output the last call to the rhs is at (t0,u0). This might be interesting if the call to the rhs changes its state.
      */
     template< class RHS>
     void init( RHS& rhs, double t0, const container& u0, double dt);
@@ -93,11 +93,12 @@ struct AB
     * @param f right hand side function or functor
     * @param t (write-only) contains timestep corresponding to \c u on output
     * @param u (write-only) contains next step of the integration on output
+    * @note the implementation is such that on output the last call to the rhs is at the new (t,u). This might be interesting if the call to the rhs changes its state.
     */
     template< class RHS>
     void step( RHS& f, double& t, container& u);
   private:
-    double tn_, dt_;
+    double tu_, dt_;
     std::array<container,k> f_;
     container u_;
 };
@@ -106,34 +107,34 @@ template< size_t k, class container>
 template< class RHS>
 void AB<k, container>::init( RHS& f, double t0, const container& u0, double dt)
 {
-    tn_ = t0, dt_ = dt;
-    container u1(u0), u2(u0);
-    blas1::axpby( 1., u0, 0, u_);
-    f( t0, u1, f_[0]);
+    tu_ = t0, dt_ = dt;
+    f( t0, u0, f_[0]);
+    //now do k Euler steps
+    container u1(u0);
     for( unsigned i=1; i<k; i++)
     {
-        blas1::axpby( 1., u2, -dt, f_[i-1], u1);
-        blas1::axpby( 1., u1, 0, u2); //f may destroy u1
-        tn_ -= dt;
-        f( tn_, u1, f_[i]);
+        blas1::axpby( 1., u1, -dt, f_[i-1], u1);
+        tu_ -= dt;
+        f( tu_, u1, f_[i]);
     }
-    tn_ = t0;
+    tu_ = t0;
+    blas1::copy(  u0, u_);
+    //finally evaluate f at u0 once more to set state in f
+    f( tu_, u_, f_[0]);
 }
 
 template< size_t k, class container>
 template< class RHS>
 void AB<k, container>::step( RHS& f, double& t, container& u)
 {
-    blas1::copy(  u_, u);
-    f( tn_, u, f_[0]);
     for( unsigned i=0; i<k; i++)
         blas1::axpby( dt_*ab_coeff<k>::b[i], f_[i], 1., u_);
     //permute f_[k-1]  to be the new f_[0]
     for( unsigned i=k-1; i>0; i--)
         f_[i-1].swap( f_[i]);
     blas1::copy( u_, u);
-    tn_ += dt_;
-    t = tn_;
+    t = tu_ = tu_ + dt_;
+    f( tu_, u_, f_[0]); //evaluate f at new point
 }
 
 ///@cond
@@ -146,24 +147,27 @@ struct AB<1, container>
         construct(copyable);
     }
     void construct(const container& copyable){
-       temp_.fill(copyable);
+       f_  = u_ = copyable;
     }
     template < class RHS>
     void init( RHS& f, double t0, const container& u0, double dt){
-        t0_ = 0, dt_=dt;
+        u_ = u0;
+        t_ = t0, dt_=dt;
+        f( t_, u_, f_);
     }
     template < class RHS>
     void step( RHS& f, double& t, container& u)
     {
-        blas1::axpby( 1., u, 0, temp_[0]);
-        f( t0_, u, temp_[1]);
-        blas1::axpby( 1., temp_[0], dt_, temp_[1], u);
-        t0_ += dt_;
-        t = t0_;
+        //this implementation calls rhs at end point
+        blas1::axpby( 1., u_, dt_, f_, u); //compute new u
+
+        u_ = u; //store new u
+        t = t_ = t_ + dt_; //and time
+        f( t_, u_, f_); //and update rhs
     }
     private:
-    double t0_, dt_;
-    std::array<container,2> temp_;
+    double t_, dt_;
+    container u_, f_;
 };
 ///@endcond
 ///@cond
@@ -276,7 +280,7 @@ struct Karniadakis
      * @param t0 The intital time corresponding to u0
      * @param u0 The initial value of the integration
      * @param dt The timestep saved for later use
-     * @note The last call to exp is two steps backward in time (n-2)
+     * @note the implementation is such that on output the last call to the explicit part \c exp is at \c (t0,u0). This might be interesting if the call to \c exp changes its state.
      */
     template< class Explicit, class Implicit>
     void init( Explicit& exp, Implicit& imp, double t0, const container& u0, double dt);
@@ -287,22 +291,11 @@ struct Karniadakis
     * @copydoc hide_explicit_implicit
     * @param t (write-only), contains timestep corresponding to \c u on output
     * @param u (write-only), contains next step of time-integration on output
+     * @note the implementation is such that on output the last call to the explicit part \c exp is at the new \c (t,u). This might be interesting if the call to \c exp changes its state.
     */
     template< class Explicit, class Implicit>
     void step( Explicit& exp, Implicit& imp, double& t, container& u);
 
-
-    /**
-     * @brief return the current head of the computation
-     * @return current head
-     */
-    const container& head()const{return u_[0];}
-    /**
-     * @brief return the last vector for which f was called
-     *
-     * @return current head^
-     */
-    const container& last()const{return u_[1];}
   private:
     std::array<container,3> u_, f_;
     CG< container> pcg;
@@ -329,13 +322,13 @@ void Karniadakis<container>::init( RHS& f, Diffusion& diff, double t0, const con
     implicit.time() = t0 - dt;
     implicit( f_[2], u_[2]);
     f( t0-2*dt, u_[2], f_[2]); //evaluate f at the latest step
+    f( t0, u0, f_[0]); // and set state in f to (t0,u0)
 }
 
 template<class container>
 template< class RHS, class Diffusion>
 void Karniadakis<container>::step( RHS& f, Diffusion& diff, double& t, container& u)
 {
-    f(t_, u_[0], f_[0]); //f may not destroy u_[0]!!
     blas1::axpbypgz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
     blas1::axpbypgz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
     //permute f_[2], u_[2]  to be the new f_[0], u_[0]
@@ -369,6 +362,7 @@ void Karniadakis<container>::step( RHS& f, Diffusion& diff, double& t, container
     pcg( implicit, u, u_[0], diff.precond(), diff.inv_weights(), eps_);
 #endif //BENCHMARK
     blas1::copy( u, u_[0]); //store result
+    f(t_, u_[0], f_[0]); //call f on new point
 }
 ///@endcond
 
@@ -421,53 +415,56 @@ struct SIRK
         w[0] = 1./8., w[1] = 1./8., w[2] = 3./4.;
         b[1][0] = 8./7., b[2][0] = 71./252., b[2][1] = 7./36.;
         d[0] = 3./4., d[1] = 75./233., d[2] = 65./168.;
-        c[1][0] = 5589./6524., c[2][0] = 7691./26096., c[2][1] = -26335/78288;
+        c[1][0] = 5589./6524., c[2][0] = 7691./26096., c[2][1] = -26335./78288.;
     }
     /**
      * @brief integrate one step
      *
      * @copydoc hide_explicit_implicit
-     * @param u0 start point at \c t0
-     * @param u1 end point (write only)
      * @param t0 start time
+     * @param u0 start point at \c t0
+     * @param t1 (write only) end time (equals \c t0+dt on output, may alias t0)
+     * @param u1 (write only) contains result at \c t1 on output (may alias u0)
      * @param dt timestep
      */
     template <class Explicit, class Implicit>
     void step( Explicit& exp, Implicit& imp, double t0, const container& u0, double& t1, container& u1, double dt)
     {
-        detail::Implicit<Implicit, container> implicit( -dt*d[0], t0+d[0]*dt, imp);
         exp(t0, u0, f_);
         imp(t0+d[0]*dt, u0, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs_);
-        blas2::symv( imp.weights(), rhs_, rhs_);
+        detail::Implicit<Implicit, container> implicit( -dt*d[0], t0+d[0]*dt, imp);
         implicit.alpha() = -dt*d[0];
+        implicit.time()  = t0 + (d[0])*dt;
+        blas2::symv( imp.weights(), rhs_, rhs_);
         pcg( implicit, k_[0], rhs_, imp.precond(), imp.inv_weights(), eps_);
 
-        dg::blas1::axpby( 1., u0, b[1][0], k_[0], u1);
-        exp(t0+b[1][0]*dt, u1, f_);
-        dg::blas1::axpby( 1., u0, c[1][0], k_[0], u1);
-        imp(t0+(c[1][0]+d[1])*dt, u1, g_);
+        dg::blas1::axpby( 1., u0, b[1][0], k_[0], rhs_);
+        exp(t0+b[1][0]*dt, rhs_, f_);
+        dg::blas1::axpby( 1., u0, c[1][0], k_[0], rhs_);
+        imp(t0+(c[1][0]+d[1])*dt, rhs_, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs_);
-        blas2::symv( imp.weights(), rhs_, rhs_);
         implicit.alpha() = -dt*d[1];
-        implicit.time() = t0 + (c[1][0]+d[1])*dt;
+        implicit.time()  =  t0 + (c[1][0]+d[1])*dt;
+        blas2::symv( imp.weights(), rhs_, rhs_);
         pcg( implicit, k_[1], rhs_, imp.precond(), imp.inv_weights(), eps_);
 
-        dg::blas1::axpby( 1., u0, b[2][0], k_[0], u1);
-        dg::blas1::axpby( b[2][1], k_[1], 1., u1);
-        exp(t0 + (b[2][1]+b[2][0])*dt, u1, f_);
-        dg::blas1::axpby( 1., u0, c[2][0], k_[0], u1);
-        dg::blas1::axpby( c[2][1], k_[1], 1., u1);
-        imp(t0 + (c[2][1]+c[2][0] + d[2])*dt, u1, g_);
+        dg::blas1::axpby( 1., u0, b[2][0], k_[0], rhs_);
+        dg::blas1::axpby( b[2][1], k_[1], 1., rhs_);
+        exp(t0 + (b[2][1]+b[2][0])*dt, rhs_, f_);
+        dg::blas1::axpby( 1., u0, c[2][0], k_[0], rhs_);
+        dg::blas1::axpby( c[2][1], k_[1], 1., rhs_);
+        imp(t0 + (c[2][1]+c[2][0] + d[2])*dt, rhs_, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs_);
-        blas2::symv( imp.weights(), rhs_, rhs_);
         implicit.alpha() = -dt*d[2];
-        implicit.time() = t0 + (c[2][1]+c[2][0] + d[2])*dt;
+        implicit.time()  =  t0 + (c[2][1]+c[2][0] + d[2])*dt;
+        blas2::symv( imp.weights(), rhs_, rhs_);
         pcg( implicit, k_[2], rhs_, imp.precond(), imp.inv_weights(), eps_);
         //sum up results
-        dg::blas1::axpby( 1., u0, w[0], k_[0], u1);
-        dg::blas1::axpby( w[1], k_[1], 1., u1);
-        dg::blas1::axpby( w[2], k_[2], 1., u1);
+        u1 = u0;
+        dg::blas1::axpby( 1., u1, w[0], k_[0], u1);
+        dg::blas1::axpbypgz( w[1], k_[1], w[2], k_[2], 1., u1);
+        t1 = t0 + dt;
     }
 
     /**
@@ -476,19 +473,21 @@ struct SIRK
      * Make same timestep twice, once with half timestep. The resulting error should be smaller than some given tolerance
      *
      * @copydoc hide_explicit_implicit
-     * @param u0 start point
-     * @param u1 end point (write only)
      * @param t0 start time
-     * @param dt timestep ( read and write) contains new recommended timestep afterwards
+     * @param u0 start point
+     * @param t1 (write only) end time (equals \c t0+dt on output)
+     * @param u1 (write only) contains result at \c t1 on output
+     * @param dt (read and write) contains new recommended timestep on output
      * @param tolerance tolerable error
      */
     template <class Explicit, class Implicit>
-    void adaptive_step( Explicit& exp, Implicit& imp, double t0, const container& u0, double& dt, container& u1, double tolerance)
+    void adaptive_step( Explicit& exp, Implicit& imp, double t0, const container& u0, double& t1, container& u1, double& dt, double tolerance)
     {
         container temp = u0;
-        step( exp, imp, u0, u1, t0, dt/2.);
-        step( exp, imp, u1, temp, t0+dt/2., dt/2.);
-        step( exp, imp, u0, u1, t0, dt);
+        double t;
+        step( exp, imp, t0, u0, t, u1, dt/2.);
+        step( exp, imp, t, u1, t, temp, dt/2.);
+        step( exp, imp, t0, u0, t1, u1, dt); //one full step
         dg::blas1::axpby( 1., u1, -1., temp);
         double error = dg::blas1::dot( temp, temp);
         std::cout << "ERROR " << error<< std::endl;
