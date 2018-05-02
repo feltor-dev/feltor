@@ -65,8 +65,11 @@ int main()
 
     std::cout << "number of iterations:  "<<number<<std::endl;
     std::cout << "ALL METHODS SHOULD DO THE SAME!\n";
-    std::cout << "error1 " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
-    std::cout << "error2 " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
+    exblas::udouble res;
+    res.d = sqrt( dg::blas2::dot( w2d, x));
+    std::cout << "error1 " << res.d<<"\t"<<res.i<<std::endl;
+    res.d = sqrt( dg::blas2::dot( w2d, x_));
+    std::cout << "error2 " << res.d<<"\t"<<res.i<<std::endl;
     //std::cout << "error3 " << sqrt( dg::blas2::dot( w2d, x__))<<std::endl;
     std::cout << "Test 3d cylincdrical norm:\n";
     dg::CylindricalGrid3d g3d( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER);
@@ -91,6 +94,3 @@ int main()
 
     return 0;
 }
-
-
-

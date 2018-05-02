@@ -4,13 +4,6 @@
 #include <sstream>
 #include <cmath>
 // #define DG_DEBUG
-
-
-
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/timer.cuh"
-
-#include "dg/backend/interpolation.cuh"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -248,9 +241,7 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
-#ifdef DG_BENCHMARK
     unsigned step = 0;
-#endif //DG_BENCHMARK
     for( unsigned i=1; i<=p.maxout; i++)
     {
 

@@ -3,13 +3,7 @@
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
-#include "dg/backend/timer.cuh"
-#include "dg/functors.h"
-#include "dg/backend/evaluation.cuh"
-#include "dg/runge_kutta.h"
-#include "dg/multistep.h"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/typedefs.cuh"
+#include "dg/algorithm.h"
 
 #include "shu.cuh"
 

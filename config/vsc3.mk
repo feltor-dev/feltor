@@ -1,18 +1,20 @@
 
 ifeq ($(strip $(HPC_SYSTEM)),vsc3)
-INCLUDE += -I$(HOME)/include
+GLFLAGS  = -lm
+CFLAGS=-Wall -std=c++11 -restrict -fp-model precise -fimf-arch-consistency=true #-mfma  #flags for CC
+CC=icc
+MPICC=mpiicc
+OPT=-O3 -xHost #maybe find better flags here
+MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
+OMPFLAG=-qopenmp
+NVCCARCH=-arch sm_61 -Xcudafe "--diag_suppress=code_is_unreachable --diag_suppress=initialization_not_reachable" #nvcc gpu compute capability, suppress vcl warnings from CUDA
+NVCCFLAGS= -std=c++11 -Xcompiler "-O3 -mfma -mavx -fabi-version=6" #flags for NVCC+GCC (compile with make CC=g++)
+
+INCLUDE = -I$(HOME)/include
 INCLUDE += -I/cm/shared/apps/intel/impi_5.0.3/intel64/include
 INCLUDE += -I/opt/sw/x86_64/glibc-2.12/ivybridge-ep/netcdf/4.3.2/intel-14.0.2/include
 INCLUDE += -I/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/include
-GLFLAGS  = -lm 
-CFLAGS+= -restrict
-CC=icc
-MPICC=mpiicc
-OPT=-O3 -xHost
-MPICFLAGS+= -DMPICH_IGNORE_CXX_SEEK
-OMPFLAG=-openmp
-JSONLIB=-L$(HOME)/include/json/../../src/lib_json -ljsoncpp # json library for input parameters
-LIBS    +=-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/lib -lhdf5 -lhdf5_hl
+LIBS    =-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/hdf5/1.8.12/intel-14.0.2/lib -lhdf5 -lhdf5_hl
 LIBS    +=-L/cm/shared/apps/intel-cluster-studio/composer_xe_2013_sp1.2.144/compiler/lib/intel64 -lirc -lsvml
 LIBS    += -L/cm/shared/apps/intel/impi_5.0.3/intel64/lib -lmpi
 LIBS    +=-L/opt/sw/x86_64/glibc-2.12/ivybridge-ep/netcdf/4.3.2/intel-14.0.2/lib -lnetcdf -lcurl

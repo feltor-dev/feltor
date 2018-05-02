@@ -7,9 +7,6 @@
 #include <mpi.h> //activate mpi
 
 #include "dg/algorithm.h"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/interpolation.cuh"
 
 #include "netcdf_par.h" //exclude if par netcdf=OFF
 #include "file/nc_utilities.h"
@@ -275,9 +272,7 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
-#ifdef DG_BENCHMARK
     unsigned step = 0;
-#endif //DG_BENCHMARK
     for( unsigned i=1; i<=p.maxout; i++)
     {
 

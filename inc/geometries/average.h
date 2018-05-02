@@ -1,6 +1,7 @@
 #pragma once
 
 #include <thrust/host_vector.h>
+#include "dg/geometry/weights.cuh"
 #include "magnetic_field.h"
 
 /*!@file

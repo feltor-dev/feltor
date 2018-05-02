@@ -133,6 +133,7 @@ int main( int argc, char* argv[])
     dg::IDMatrix probeinterp;
     dg::blas2::transfer( dg::create::interpolation( Xprobe, Zprobe, Phiprobe, grid, dg::NEU), probeinterp);
     dg::DVec probevalue(1,0.);   
+    dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
     while ( !glfwWindowShouldClose( w ))
     {
 
@@ -153,7 +154,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
@@ -174,7 +175,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw potential
@@ -196,7 +197,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw U_e
@@ -214,7 +215,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);      
         
         //draw U_i
@@ -232,7 +233,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         title << std::fixed; 

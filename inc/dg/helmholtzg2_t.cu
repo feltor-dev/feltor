@@ -3,7 +3,7 @@
 #include "blas.h"
 
 #include "helmholtz.h"
-#include "backend/xspacelib.cuh"
+#include "geometry/xspacelib.cuh"
 #include "backend/exceptions.h"
 #include "multistep.h"
 #include "cg.h"
@@ -28,9 +28,9 @@ double dx2rhs2( double x,double y){ return (1.+x)*sin(x)-2*alpha*sin(x)+alpha*al
 int main()
 {
 
-    unsigned n, Nx, Ny, Nz;
-    std::cout << "Type n, Nx Ny and Nz\n";
-    std::cin >> n>> Nx >> Ny >> Nz;
+    unsigned n, Nx, Ny;
+    std::cout << "Type n, Nx and Ny\n";
+    std::cin >> n>> Nx >> Ny;
     dg::Grid2d grid2d( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny,dg::DIR,dg::PER);
     const dg::DVec w2d = dg::create::weights( grid2d);
     const dg::DVec v2d = dg::create::inv_weights( grid2d);
@@ -62,9 +62,11 @@ int main()
             throw dg::Fail( eps);
 
     dg::blas1::axpby( 1., sol, -1., x_);
+    exblas::udouble res;
+    res.d = sqrt( dg::blas2::dot( w2d, x_));
 
     std::cout << "number of iterations:  "<<number<<std::endl;
-    std::cout << "abs error " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
+    std::cout << "abs error " << res.d<<"\t"<<res.i<<std::endl;
     std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, x_)/ dg::blas2::dot( w2d, sol))<<std::endl;
 
     number = invert( gamma1inv, x_, rho1);
@@ -72,13 +74,11 @@ int main()
             throw dg::Fail( eps);
     //test gamma 1
     dg::blas1::axpby( 1., sol1, -1., x_);
+    res.d = sqrt( dg::blas2::dot( w2d, x_));
 
     std::cout << "number of iterations:  "<<number<<std::endl;
-    std::cout << "abs error " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
+    std::cout << "abs error " << res.d<<"\t"<<res.i<<std::endl;
     std::cout << "rel error " << sqrt( dg::blas2::dot( w2d, x_)/ dg::blas2::dot( w2d, sol1))<<std::endl;
 
     return 0;
 }
-
-
-

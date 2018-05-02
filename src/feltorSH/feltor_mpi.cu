@@ -10,9 +10,6 @@
 #include "netcdf_par.h"
 
 #include "dg/algorithm.h"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/interpolation.cuh"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -232,8 +229,8 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
     dg::Timer t;
     t.tic();
-    unsigned step = 0;
 #endif //DG_BENCHMARK
+    unsigned step = 0;
     for( unsigned i=1; i<=p.maxout; i++)
     {
 

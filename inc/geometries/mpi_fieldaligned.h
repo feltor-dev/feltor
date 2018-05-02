@@ -1,16 +1,16 @@
 #pragma once
 
-#include "fieldaligned.h"
-#include "dg/backend/grid.h"
-#include "dg/backend/mpi_evaluation.h"
 #include "dg/backend/mpi_matrix.h"
 #include "dg/backend/mpi_matrix_blas.h"
 #include "dg/backend/mpi_collective.h"
-#include "dg/backend/mpi_grid.h"
-#include "dg/backend/mpi_projection.h"
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/functions.h"
+#include "dg/geometry/grid.h"
+#include "dg/geometry/mpi_evaluation.h"
+#include "dg/geometry/mpi_grid.h"
+#include "dg/geometry/mpi_projection.h"
+#include "dg/geometry/interpolation.cuh"
+#include "dg/geometry/functions.h"
 #include "dg/runge_kutta.h"
+#include "fieldaligned.h"
 #ifdef DG_BENCHMARK
 #include "dg/backend/timer.cuh"
 #endif

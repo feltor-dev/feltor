@@ -3,10 +3,6 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 #include "geometries/geometries.h"
-
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif //DG_BENCHMARK
 /*!@file
 
   Contains the solvers 

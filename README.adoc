@@ -19,7 +19,7 @@ MIT]]
 
 toc::[]
 
-== 1. Quick start guide
+== 1. Quick start guide [[sec_quickstart]]
 
 Go ahead and clone our library into any folder you like
 
@@ -30,40 +30,41 @@ git clone https://www.github.com/feltor-dev/feltor
 
 You also need to clone https://github.com/thrust/thrust[thrust] and
 https://github.com/cusplibrary/cusplibrary[cusp] distributed under the
-Apache-2.0 license. So again in a folder of your choice
+Apache-2.0 license. Also, we need Agner Fog's https://github.com/feltor-dev/vcl[vcl] library (GPL-3.0). So again in a folder of your choice
 
 [source,sh]
 ----
 git clone https://www.github.com/thrust/thrust
 git clone https://www.github.com/cusplibrary/cusplibrary
+git clone https://www.github.com/feltor-dev/vcl
 ----
 
 ____
 Our code only depends on external libraries that are themselves openly
-available. We note here that we do not distribute copies of these
-libraries.
+available.
 ____
 
 === Using FELTOR's code projects
 
 In order to compile one of the many codes inside FELTOR you need to tell
 the feltor configuration where the external libraries are located on
-your computer. The default way to do this is to go in your `HOME`
+your computer. The default way to do this is to go into your `HOME`
 directory, make an include directory and link the paths in this
 directory
 
 [source,sh]
 ----
-cd ~ 
-mkdir include 
-cd include 
-ln -s path/to/thrust/thrust thrust 
-ln -s path/to/cusplibrary/cusp cusp
+cd ~
+mkdir include
+cd include
+ln -s path/to/thrust/thrust
+ln -s path/to/cusplibrary/cusp
+ln -s path/to/vcl
 ----
 
 ____
 If you do not like this, you can also create your own config file as
-discribed link:config/README.md[here].
+described link:config/README.md[here].
 ____
 
 Now let us compile the first benchmark program.
@@ -80,13 +81,13 @@ device=gpu #(if you have a gpu and nvcc )
 
 ____
 The minimum requirement
-to compile and run an application is a working C{plus}{plus} compiler (g{plus}{plus} per
-default) and a CPU. To simplify the compilation process we use the GNU
+to compile and run an application is a recent C{plus}{plus} compiler (g{plus}{plus} per
+default) and a CPU that supports the AVX instruction set.
+To simplify the compilation process we use the GNU
 Make utility, a standard build automation tool that automatically builds
-the executable program. We don't use new C{plus}{plus}-11 standard features to
-avoid complications since some clusters are a bit behind on up-to-date
-compilers. The OpenMP standard is natively supported by most recent
-C{plus}{plus} compilers. 
+the executable program. We require the C{plus}{plus}-11 standard.
+The OpenMP standard is natively supported by most recent
+C{plus}{plus} compilers.
 Our GPU backend uses the
 https://developer.nvidia.com/cuda-zone[Nvidia-CUDA] programming
 environment and in order to compile and run a program for a GPU a user
@@ -101,13 +102,13 @@ Run the code with
 
 [source,sh]
 ----
-./blas_b 
+./blas_b
 ----
 
 and when prompted for input vector sizes type for example `3 100 100 10`
 which makes a grid with 3 polynomial coefficients, 100 cells in x, 100
 cells in y and 10 in z. If you compiled for OpenMP, you can set the
-number of threads with e.g. `export OMP_NUM_THREADS=4`. 
+number of threads with e.g. `export OMP_NUM_THREADS=4`.
 ____
 This is a
 benchmark program to benchmark various elemental functions the library
@@ -117,7 +118,7 @@ in `_t.cu` (test programs) or `_b.cu` (benchmark programs) in
 `feltor/inc/dg` in this way.
 ____
 
-Now, let us test the mpi setup 
+Now, let us test the mpi setup
 ____
 You can of course skip this if you
 don't have mpi installed on your computer. If you intend to use the
@@ -128,10 +129,10 @@ ____
 [source,sh]
 ----
 cd path/to/feltor/inc/dg
- 
+
 make blas_mpib device=omp  # (for MPI+OpenMP)
 # or
-make blas_mpib device=gpu # (for MPI+GPU)
+make blas_mpib device=gpu # (for MPI+GPU, requires CUDA-aware MPI installation)
 ----
 
 Run the code with `$ mpirun -n '# of procs' ./blas_mpib` then tell how
@@ -155,7 +156,7 @@ versions of applications you need to build hdf5 and netcdf with the
 --enable-parallel flag. Do NOT use the pnetcdf library, which uses the
 classic netcdf file format. Our JSON input files are parsed by
 https://www.github.com/open-source-parsers/jsoncpp[JsonCpp] distributed
-under the MIT license (use the 0.y.x branch to avoid C{plus}{plus}-11 support). 
+under the MIT license.
 ____
 Some desktop applications in FELTOR use the
 https://github.com/mwiesenberger/draw[draw library] (developed by us
@@ -172,7 +173,7 @@ the paths in your config file. We are ready to compile now
 [source,sh]
 ----
 cd path/to/feltor/src/toefl # or any other project in the src folder
- 
+
 make toeflR device=gpu     # (compile on gpu or omp)
 ./toeflR <inputfile.json>  # (behold a live simulation with glfw output on screen)
 # or
@@ -180,11 +181,11 @@ make toefl_hpc device=gpu  # (compile on gpu or omp)
 ./toefl_hpc <inputfile.json> <outputfile.nc> # (a single node simulation with output stored in a file)
 # or
 make toefl_mpi device=omp  # (compile on gpu or omp)
-export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI) 
+export OMP_NUM_THREADS=2   # (set OpenMP thread number to 1 for pure MPI)
 echo 2 2 | mpirun -n 4 ./toefl_mpi <inputfile.json> <outputfile.nc>
 # (a multi node simulation with now in total 8 threads with output stored in a file)
 # The mpi program will wait for you to type the number of processes in x and y direction before
-# running. That is why the echo is there. 
+# running. That is why the echo is there.
 ----
 
 A default input file is located in `path/to/feltor/src/toefl/input`. All
@@ -212,13 +213,13 @@ function:
 
 double function(double x, double y){return exp(x)*exp(y);}
 int main()
-{ 
+{
     //create a 2d discretization of [0,2]x[0,2] with 3 polynomial coefficients
     dg::CartesianGrid2d g2d( 0, 2, 0, 2, 3, 20, 20);
     //discretize a function on this grid
     const dg::DVec x = dg::evaluate( function, g2d);
     //create the volume element
-    const dg::DVec vol2d = dg::create::volume( g2d); 
+    const dg::DVec vol2d = dg::create::volume( g2d);
     //compute the square L2 norm on the device
     double norm = dg::blas2::dot( x, vol2d, x);
     // norm is now: (exp(4)-exp(0))^2/4
@@ -240,7 +241,7 @@ functions you can also use
 
 [source,sh]
 ----
-g++ -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
+g++ -fopenmp -mavx -mfma -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test.cpp -o test
 export OMP_NUM_THREADS=4
 ./test
 ----
@@ -253,12 +254,12 @@ FELTOR header and use our convenient typedefs like so:
 ----
 #include <iostream>
 //activate MPI in FELTOR
-#include "mpi.h" 
+#include "mpi.h"
 #include "dg/algorithm.h"
 
 double function(double x, double y){return exp(x)*exp(y);}
 int main(int argc, char* argv[])
-{ 
+{
     //init MPI and create a 2d Cartesian Communicator assuming 4 MPI threads
     MPI_Init( &argc, &argv);
     int periods[2] = {true, true}, np[2] = {2,2};
@@ -269,10 +270,10 @@ int main(int argc, char* argv[])
     //discretize a function on this grid
     const dg::MDVec x = dg::evaluate( function, g2d);
     //create the volume element
-    const dg::MDVec vol2d = dg::create::volume( g2d); 
-    //compute the square L2 norm 
+    const dg::MDVec vol2d = dg::create::volume( g2d);
+    //compute the square L2 norm
     double norm = dg::blas2::dot( x, vol2d, x);
-    //on every thread norm is now: (exp(4)-exp(0))^2/4 
+    //on every thread norm is now: (exp(4)-exp(0))^2/4
     //be a good MPI citizen and clean up
     MPI_Finalize();
     return 0;
@@ -283,7 +284,7 @@ Compile e.g. for a hybrid MPI {plus} OpenMP hardware platform with
 
 [source,sh]
 ----
-mpic++ -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test_mpi.cpp -o test_mpi
+mpic++ -mavx -mfma -fopenmp -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_OMP -Ipath/to/feltor/inc -Ipath/to/thrust/thrust -Ipath/to/cusplibrary/cusp test_mpi.cpp -o test_mpi
 export OMP_NUM_THREADS=2
 mpirun -n 4 ./test_mpi
 ----
@@ -293,9 +294,29 @@ line calling the dot function did not change at all. The compiler
 chooses the correct implementation for you! This is a first example of a
 __container free numerical algorithm__.
 
+=== Using FELTOR on Windows
+FELTOR has been developed mostly on Linux machines. Recently, it has
+become possible to develop on Windows using https://www.visualstudio.com/[Microsoft Visual Studio].
+____
+Unfortunately, the msvc compiler only supports an outdated OpenMP version so
+consider a performance penalty of approximately factor 2, when running the OpenMP backend on Windows.
+____
+
+For the download of the library and its dependencies described <<sec_quickstart,previously>> you may want
+to activate Bash in Windows 10 or
+ consider a software solution like https://desktop.github.com
+____
+The include paths need to be set in the project properties.
+Please also enable the use of intrinsic functions, the AVX2 instruction set and
+activate Open MP support.
+It is important to set the Platform to x64!
+____
+
+
+
 == 2. Further reading
 
-Please check out our https://github.com/feltor-dev/feltor/wiki[wiki
+Please check out our https://feltor-dev.github.io/wiki[wiki
 pages] for some general information, user oriented documentation and
 Troubleshooting. Moreover, we maintain tex files in every src folder for
 technical documentation, which can be compiled using pdflatex with
@@ -332,7 +353,14 @@ We gratefully acknowledge fruitful discussions and code contribution from
 - Lukas Einkemmer
 - Jakob Gath
 
-We further acknowledge support on the Knights landing architecture from
+We are grateful to
+
+- Roman Iakymchuk,
+
+who provided the exblas library
+for binary reproducible scalar products and advice on how to use and
+adapt it.
+We further acknowledge support for the Knights landing architecture from
 the High Level Support Team from
 
 - Albert Gutiérrez
@@ -342,13 +370,14 @@ and from Intel Barcelona
 
 - Harald Servat
 
+
 == 4. Terms of use
 
 FELTOR is https://www.force11.org/fairprinciples[fair] software and
 licensed under the very permissive link:LICENSE[MIT license]. The MIT
 License grants you great freedom in what you do with the code as long as
 you name us (Matthias Wiesenberger and Markus Held) as creators, in
-particular in publications that use FELTOR to produce results. In this
+particular in publications that use FELTOR to produce results. In such a
 case we suggest to take a snapshot of the used code and create and cite
 a DOI via e.g. http://www.zenodo.org[Zenodo] or to cite one of the
 existing DOIs if you did not alter the contained code in any way. We are

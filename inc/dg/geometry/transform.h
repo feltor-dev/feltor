@@ -1,29 +1,12 @@
 #pragma once
-#include "../backend/topological_traits.h"
+#include "topological_traits.h"
 #include "multiply.h"
 #include "base_geometry.h"
+#include "weights.cuh"
 
 
 namespace dg
 {
-///@cond
-template<class MemoryTag>
-struct MemoryTraits {
-};
-template<>
-struct MemoryTraits< SharedTag>
-{
-    typedef thrust::host_vector<double> host_vector;
-};
-
-template<class Geometry>
-struct GeometryTraits
-{
-    typedef typename MemoryTraits< typename TopologyTraits<Geometry>::memory_category>::host_vector host_vector;
-
-};
-
-///@endcond
 /**
  * @brief This function pulls back a function defined in some basic coordinates to the curvilinear coordinate system
  *
@@ -61,14 +44,6 @@ thrust::host_vector<double> pullback( const Functor& f, const aGeometry3d& g)
 }
 
 #ifdef MPI_VERSION
-
-///@cond
-template<>
-struct MemoryTraits< MPITag>
-{
-    typedef MPI_Vector<thrust::host_vector<double> > host_vector;
-};
-///@endcond
 
 ///@copydoc pullback(const Functor&,const aGeometry2d&)
 ///@ingroup pullback
@@ -117,7 +92,7 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
         container& vx, container& vy,
         const Geometry& g)
 {
-    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
+    using host_vec = get_host_vector<Geometry>;
     host_vec out1 = pullback( vR, g), temp1(out1);
     host_vec out2 = pullback( vZ, g);
     dg::tensor::multiply2d(g.jacobian(), out1, out2, temp1, out2);
@@ -149,7 +124,7 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
         container& vx, container& vy, container& vz,
         const Geometry& g)
 {
-    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
+    using host_vec = get_host_vector<Geometry>;
     host_vec out1 = pullback( vR, g), temp1(out1);
     host_vec out2 = pullback( vZ, g), temp2(out2);
     host_vec out3 = pullback( vPhi, g);
@@ -186,7 +161,7 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
         container& chixx, container& chixy, container& chiyy,
         const Geometry& g)
 {
-    typedef typename GeometryTraits< Geometry>::host_vector host_vec;
+    using host_vec = get_host_vector<Geometry>;
     host_vec chiRR_ = pullback( chiRR, g);
     host_vec chiRZ_ = pullback( chiRZ, g);
     host_vec chiZZ_ = pullback( chiZZ, g);
@@ -230,9 +205,9 @@ namespace create{
  * @return  The inverse volume form
  */
 template< class Geometry>
-typename GeometryTraits<Geometry>::host_vector inv_volume( const Geometry& g)
+get_host_vector<Geometry> inv_volume( const Geometry& g)
 {
-    typedef typename GeometryTraits< Geometry>::host_vector host_vector;
+    using host_vector = get_host_vector<Geometry>;
     SparseElement<host_vector> inv_vol = dg::tensor::determinant(g.metric());
     dg::tensor::sqrt(inv_vol);
     host_vector temp = dg::create::inv_weights( g);
@@ -250,9 +225,9 @@ typename GeometryTraits<Geometry>::host_vector inv_volume( const Geometry& g)
  * @return  The volume form
  */
 template< class Geometry>
-typename GeometryTraits<Geometry>::host_vector volume( const Geometry& g)
+get_host_vector<Geometry> volume( const Geometry& g)
 {
-    typedef typename GeometryTraits< Geometry>::host_vector host_vector;
+    using host_vector = get_host_vector<Geometry>;
     host_vector temp = inv_volume(g);
     dg::blas1::transform(temp,temp,dg::INVERT<double>());
     return temp;

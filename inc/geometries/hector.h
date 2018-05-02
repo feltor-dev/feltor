@@ -1,8 +1,8 @@
 #pragma once
 
 #include <vector>
-#include "dg/backend/grid.h"
-#include "dg/backend/interpolation.cuh"
+#include "dg/geometry/grid.h"
+#include "dg/geometry/interpolation.cuh"
 #include "dg/geometry/geometry.h"
 #include "dg/elliptic.h"
 #include "dg/cg.h"

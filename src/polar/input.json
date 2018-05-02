@@ -1,11 +1,11 @@
 
-//            * Input-File for "SHU" Code *
+//            * Input-File for "Polar" Code *
 //            -------------------------------------------
 
 {
     //--------------------Space and Time discretization------------
     
-    "n"  : 1,      
+    "n"  : 1,
     "Nx" : 80,     
     "Ny" : 80,     
     "dt" : 0.21e-3,
@@ -17,8 +17,8 @@
      
      //-----------------Boundary conditions----------------------
      
-    "r_min" : 0.2,
-    "r_max" : 2.0,
+    "r_min" : 1.0,
+    "r_max" : 10.0,
      
      //-----------------Physical parameters----------------------
      

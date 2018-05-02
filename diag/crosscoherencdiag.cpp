@@ -6,9 +6,6 @@
 #include <algorithm> 
 
 #include "dg/algorithm.h"
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
 #include "file/nc_utilities.h"
 #include "feltorShw/parameters.h"
 

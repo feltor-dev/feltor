@@ -2,39 +2,29 @@
 #define _DG_TIMER_
 #include "thrust/device_vector.h"
 //the <thrust/device_vector.h> header must be included for the THRUST_DEVICE_SYSTEM macros to work
-namespace dg
-{
 #if (THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA) //if we don't use a GPU
 #ifdef MPI_VERSION //(mpi.h is included)
 ///@cond
-class Timer
+namespace dg
+{
+class Timer //CPU/ OMP + MPI
 {
   public:
-    /**
-    * @brief Start timer using MPI_Wtime
-    *
-    * @param comm the communicator
-    * @note uses MPI_Barrier(comm)
-    */
     void tic( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); start = MPI_Wtime();}
-    /**
-    * @brief Stop timer using MPI_Wtime
-    *
-    * @param comm the communicator
-    * @note uses MPI_Barrier(comm)
-    */
     void toc( MPI_Comm comm = MPI_COMM_WORLD ){ MPI_Barrier(comm); stop = MPI_Wtime(); }
-    double diff(){ return stop - start; }
+    double diff()const{ return stop - start; }
   private:
     double start, stop;
 };
+}//namespace dg
 ///@endcond
-
-#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP //MPI_VERSION
+#elif THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_OMP //MPI_VERSION not defined and THRUST ==  OMP
 #include "omp.h"
-
-/*! @brief Very simple tool for performance measuring
+namespace dg
+{
+/*! @brief Simple tool for performance measuring
  *
+ * The implementation of this class is chosen with compile-time MACROS \c THRUST_DEVICE_SYSTEM and \c MPI_VERSION.
  * @code
    dg::Timer t;
    t.tic();
@@ -43,110 +33,113 @@ class Timer
    std::cout << "Function took "<<t.diff()<<"s\n";
  * @endcode
  * @ingroup timer
- * @note The Timer knows what hardware you are on!
  */
-class Timer
+class Timer //OMP non-MPI
 {
   public:
     /**
     * @brief Start timer
+    *
+    * uses \c omp_get_wtime() if available, else \c gettimeofday.
+    * If compiled with nvcc we place \c cudaEvent_t in the gpu stream.
+    * The mpi version places an \c MPI_Barrier(MPI_COMM_WORLD)
+    * and then uses \c MPI_Wtime.
+    * MPI + Cuda adds an additional \c cudaDeviceSynchronize
     */
     void tic( ){ start = omp_get_wtime();}
     /**
     * @brief Stop timer
+    * @copydetails tic
     */
     void toc( ){ stop = omp_get_wtime(); }
     /*! \brief Return time elapsed between tic and toc
      *
      * \return Time in seconds between calls of tic and toc*/
-    double diff(){ return stop - start; }
+    double diff()const{ return stop - start; }
   private:
     double start, stop;
 };
-#else
+}//namespace dg
+#else // MPI_VERSION not defined and THRUST == CPU
 
 ///@cond
-#include <sys/time.h>
+#if defined _MSC_VER //we are on windows, God help us
+#include <windows.h>
+namespace dg{
 class Timer
+{
+public:
+    Timer()
+    {
+        LARGE_INTEGER timerFreq;
+        QueryPerformanceFrequency(&timerFreq);
+        m_freq = 1.0 / timerFreq.QuadPart;
+    }
+    inline void tic(void) { QueryPerformanceCounter(&m_beginTime); }
+    inline void toc(void) { QueryPerformanceCounter(&m_endTime); }
+    inline double diff(void) {
+        return (m_endTime.QuadPart - m_beginTime.QuadPart) * m_freq;
+    }
+private:
+    double m_freq;
+    LARGE_INTEGER m_beginTime;
+    LARGE_INTEGER m_endTime;
+};
+#else //linux
+#include <sys/time.h>
+namespace dg{
+class Timer //CPU non-MPI
 {
     timeval start;
     timeval stop;
     public:
-    /*! @brief Start timer using gettimeofday */
     void tic(){ gettimeofday( &start, NULL);}
-    /*! @brief Stop timer using gettimeofday */
     void toc(){ gettimeofday( &stop, NULL);}
-    /*! \brief Return time elapsed between tic and toc
-     *
-     * \return Time in seconds between calls of tic and toc*/
-    double diff(){ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
+    double diff()const{ return ((stop.tv_sec - start.tv_sec)*1000000u + (stop.tv_usec - start.tv_usec))/1e6;}
 };
-///@endcond
-#endif //MPI_VERSION
-#else //THRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CUDA
-#ifdef MPI_VERSION
+}//namespace dg
+#endif//windows or not
+#endif//MPI_VERSION
 
-///@cond
-class Timer
+#else //THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
+#ifdef MPI_VERSION
+namespace dg{
+class Timer //GPU MPI
 {
   public:
-    Timer(){
-        cudaEventCreate( &cu_sync);
-    }
-    /**
-    * @brief Start timer using MPI_Wtime
-    *
-    * @param comm the communicator
-    * @note uses MPI_Barrier(comm)
-    */
+    Timer(){ }
     void tic( MPI_Comm comm = MPI_COMM_WORLD ){
-    MPI_Barrier(comm);
-    start = MPI_Wtime();}
-    /**
-    * @brief Stop timer using MPI_Wtime
-    *
-    * @param comm the communicator
-    * @note uses MPI_Barrier(comm)
-    */
+        cudaDeviceSynchronize();
+        MPI_Barrier(comm);
+        start = MPI_Wtime();
+    }
     void toc( MPI_Comm comm = MPI_COMM_WORLD ){
-    cudaEventRecord( cu_sync, 0); //place event in stream
-    cudaEventSynchronize( cu_sync); //sync cpu  on event
-    MPI_Barrier(comm); //sync other cpus on event
-    stop = MPI_Wtime(); }
-    double diff(){ return stop - start; }
+        cudaDeviceSynchronize();
+        MPI_Barrier(comm); //sync other cpus
+        stop = MPI_Wtime();
+    }
+    double diff()const{ return stop - start; }
   private:
     double start, stop;
-    cudaEvent_t cu_sync;
 };
-///@endcond
-
+}//namespace dg
 
 #else //MPI_VERSION
 
-///@cond
-class Timer
+namespace dg{
+class Timer// GPU non-MPI
 {
   public:
     Timer(){
         cudaEventCreate( &start);
         cudaEventCreate( &stop);
     }
-    /**
-    * @brief Start timer using cudaEventRecord
-    *
-    * @param stream the stream in which the Event is placed
-    */
     void tic( cudaStream_t stream = 0){ cudaEventRecord( start, stream);}
-    /**
-    * @brief Stop timer using cudaEventRecord and Synchronize
-    *
-    * @param stream the stream in which the Event is placed
-    */
     void toc( cudaStream_t stream = 0){
         cudaEventRecord( stop, stream);
         cudaEventSynchronize( stop);
     }
-    float diff(){
+    float diff()const{
         float time;
         cudaEventElapsedTime( &time, start, stop);
         return time/1000.;
@@ -154,10 +147,10 @@ class Timer
   private:
     cudaEvent_t start, stop;
 };
+} //namespace dg
 ///@endcond
 #endif //MPI_VERSION
 #endif //THRUST
 
-} //namespace dg
 
 #endif //_DG_TIMER_

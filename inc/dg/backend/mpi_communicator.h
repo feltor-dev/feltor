@@ -73,9 +73,9 @@ struct aCommunicator
     typedef LocalContainer container_type; //!< reveal local container type
 
     /**
-     * @brief Allocate a buffer object of size size()
+     * @brief Allocate a buffer object of size \c size()
      * @return a buffer object on the stack
-     * @note if size()==0 the default constructor of LocalContainer is called
+     * @note if \c size()==0 the default constructor of \c LocalContainer is called
      */
     LocalContainer allocate_buffer( )const{
         if( do_size() == 0 ) return LocalContainer();
@@ -87,8 +87,8 @@ struct aCommunicator
      *
      * This is the transpose operation of global_scatter_reduce()
      * @param values data; other processes collect data from this vector
-     * @param buffer on output holds the gathered data ( must be of size size())
-     * @note if size()==0 nothing happens
+     * @param buffer on output holds the gathered data ( must be of size \c size())
+     * @note if \c size()==0 nothing happens
      */
     void global_gather( const LocalContainer& values, LocalContainer& buffer)const
     {
@@ -102,7 +102,7 @@ struct aCommunicator
      * This is the transpose operation of global_scatter_reduce()
      * @param values data; other processes collect data from this vector
      * @return object that holds the gathered data
-     * @note if size()==0 the default constructor of LocalContainer is called
+     * @note if \c size()==0 the default constructor of \c LocalContainer is called
      */
     LocalContainer global_gather( const LocalContainer& values) const
     {
@@ -117,7 +117,7 @@ struct aCommunicator
      * This is the transpose operation of global_gather()
      * @param toScatter buffer vector; (has to be of size given by size())
      * @param values on output contains values from other processes sent back to the origin
-     * @note if size()==0 nothing happens
+     * @note if \c size()==0 nothing happens
      */
     void global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const{
         if( do_size() == 0 ) return;
@@ -132,7 +132,7 @@ struct aCommunicator
     * of v is the same for all processes. However the buffer size might be different for each process.
     * @return buffer size
     * @note may return 0 to indicate that no MPI communication is needed
-    * @note we assume that, contrary to size(), the vector size is always the local size of a dg::MPI_Vector
+    * @note we assume that, contrary to \c size(), the vector size is always the local size of a \c dg::MPI_Vector
     */
     unsigned size() const{return do_size();}
     /**

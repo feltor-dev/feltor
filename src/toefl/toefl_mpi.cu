@@ -9,10 +9,7 @@
 
 #include "toeflR.cuh"
 #include "dg/algorithm.h"
-#include "dg/backend/xspacelib.cuh"
 #include "parameters.h"
-
-#include "dg/backend/timer.cuh"
 
 
 int main( int argc, char* argv[])

@@ -6,12 +6,9 @@
 #include <cusp/print.h>
 
 #include "backend/timer.cuh"
-#include "backend/evaluation.cuh"
-#include "backend/sparseblockmat.cuh"
-#include "backend/derivatives.h"
-#include "backend/typedefs.cuh"
-#include "backend/cusp_thrust_backend.h"
-#include "backend/split_and_join.h"
+#include "geometry/evaluation.cuh"
+#include "geometry/derivatives.h"
+#include "geometry/split_and_join.h"
 
 #include "cg.h"
 #include "elliptic.h"
@@ -73,7 +70,9 @@ int main()
 
     double normerr = dg::blas2::dot( w3d, error);
     double norm = dg::blas2::dot( w3d, solution);
-    std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
+    exblas::udouble res;
+    norm = normerr/norm; res.d = norm;
+    std::cout << "L2 Norm of relative error is:               " <<norm<<"\t"<<res.i<<std::endl;
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w3d, error);

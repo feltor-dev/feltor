@@ -7,10 +7,7 @@
 //#include "draw/device_window.cuh"
 
 #include "hw.cuh"
-#include "dg/multistep.h"
-#include "dg/backend/timer.cuh"
 #include "../toefl/parameters.h"
-#include "dg/backend/xspacelib.cuh"
 
 /*
    - reads parameters from input.txt or any other given file, 

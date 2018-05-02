@@ -7,8 +7,6 @@
 
 #include "file/nc_utilities.h"
 
-#include "dg/backend/timer.cuh"
-
 /*
    - reads parameters from input.txt or any other given file,
    - integrates the ToeflR - functor and
@@ -171,9 +169,7 @@ int main( int argc, char* argv[])
     t.tic();
     try
     {
-#ifdef DG_BENCHMARK
         unsigned step = 0;
-#endif //DG_BENCHMARK
         for( unsigned i=1; i<=p.maxout; i++)
         {
 
