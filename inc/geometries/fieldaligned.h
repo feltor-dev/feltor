@@ -259,7 +259,7 @@ void boxintegrator( const Field& field, const Topology& grid,
         double deltaS = coords1[2];
         thrust::host_vector<double> temp=coords0;
         //compute the vector value on the boundary point
-        field(coords1, temp); //we are just interested in temp[2]
+        field(0., coords1, temp); //we are just interested in temp[2]
         coords1[2] = deltaS + (deltaPhi-phi1)*temp[2]; // ds + dphi*f[2]
     }
 }

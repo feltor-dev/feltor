@@ -495,14 +495,14 @@ void construct_psi_values( FieldFinv fpsiMinv,
         x0 = x_0, x1 = x_vec[0];
         if( psi_1<psi_0) x1*=-1;
         dg::stepperRK<17>( fpsiMinv, x0, begin, x1, end, N);
-        psi_x[0] = end[0]; fpsiMinv(end,temp); f_x_[0] = temp[0];
+        psi_x[0] = end[0]; fpsiMinv(0.,end,temp); f_x_[0] = temp[0];
         for( unsigned i=1; i<x_vec.size(); i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
             if( psi_1<psi_0) x0*=-1, x1*=-1;
             dg::stepperRK<17>( fpsiMinv, x0, temp, x1, end, N);
-            psi_x[i] = end[0]; fpsiMinv(end,temp); f_x_[i] = temp[0];
+            psi_x[i] = end[0]; fpsiMinv(0.,end,temp); f_x_[i] = temp[0];
         }
         temp = end;
         dg::stepperRK<17>(fpsiMinv, x1, temp, psi_1>psi_0?x_1:-x_1, end,N);
@@ -532,7 +532,7 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size()), xr.resize(y_vec.size()), xz.resize(y_vec.size());
 
     //now compute f and starting values
-    thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
+    std::array<double,4> begin( {0,0,0,0}), end(begin), temp(begin);
     const double f_psi = fpsi.construct_f( psi, begin[0], begin[1]);
     fieldRZYRYZY.set_f(f_psi);
     double fprime = fpsi.f_prime( psi);
