@@ -184,5 +184,17 @@ int main()
     dg::blas1::axpby( -1., sol, 1., y0);
     norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
     std::cout << "Relative error Karniadakis is "<< norm_error<<std::endl;
+    //main time loop
+    std::cout << "\nAdaptive SIRK Timer \n";
+    time = 0., y0 =  init;
+    double adapt = dt;
+    while( time < T-adapt){
+        sirk.adaptive_step( exp, imp, time, y0, time, y0, adapt, 1e-8, true);
+    }
+    adapt = T - time;
+    sirk.adaptive_step( exp, imp, time, y0, time, y0, adapt, 1e-8, true);
+    dg::blas1::axpby( -1., sol, 1., y0);
+    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error adaptive sirk: "<< norm_error<<std::endl;
     return 0;
 }

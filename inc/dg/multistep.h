@@ -408,7 +408,7 @@ struct SIRK
     void construct(const container& copyable, unsigned max_iter, double eps)
     {
         k_.fill( copyable);
-        rhs_ = f_ = g_ = copyable;
+        temp_ = rhs_ = f_ = g_ = copyable;
         pcg.construct( copyable, max_iter);
         eps_ = eps;
 
@@ -475,30 +475,31 @@ struct SIRK
      * @copydoc hide_explicit_implicit
      * @param t0 start time
      * @param u0 start point
-     * @param t1 (write only) end time (equals \c t0+dt on output)
-     * @param u1 (write only) contains result at \c t1 on output
+     * @param t1 (write only) end time (equals \c t0+dt on output, may alias t0)
+     * @param u1 (write only) contains result at \c t1 on output (may alias u0)
      * @param dt (read and write) contains new recommended timestep on output
      * @param tolerance tolerable error
+     * @param verbose if true writes error to \c std::cout
      */
     template <class Explicit, class Implicit>
-    void adaptive_step( Explicit& exp, Implicit& imp, double t0, const container& u0, double& t1, container& u1, double& dt, double tolerance)
+    void adaptive_step( Explicit& exp, Implicit& imp, double t0, const container& u0, double& t1, container& u1, double& dt, double tolerance, bool verbose = false)
     {
-        container temp = u0;
         double t;
-        step( exp, imp, t0, u0, t, u1, dt/2.);
-        step( exp, imp, t, u1, t, temp, dt/2.);
+        step( exp, imp, t0, u0, t, temp_, dt/2.);
+        step( exp, imp, t, temp_, t, temp_, dt/2.);
         step( exp, imp, t0, u0, t1, u1, dt); //one full step
-        dg::blas1::axpby( 1., u1, -1., temp);
-        double error = dg::blas1::dot( temp, temp);
-        std::cout << "ERROR " << error<< std::endl;
+        dg::blas1::axpby( 1., u1, -1., temp_);
+        double error = dg::blas1::dot( temp_, temp_);
+        if(verbose)std::cout << "Error " << error<<"\tTime "<<t1<<"\tdt "<<dt;
         double dt_old = dt;
         dt = 0.9*dt_old*sqrt(tolerance/error);
-        if( dt > 1.5*dt_old) dt = 1.5*dt_old;
+        if( dt > 1.33*dt_old) dt = 1.33*dt_old;
         if( dt < 0.75*dt_old) dt = 0.75*dt_old;
+        if(verbose) std::cout <<"\tnew_dt "<<dt<<"\n";
     }
     private:
     std::array<container,3> k_;
-    container f_, g_, rhs_;
+    container f_, g_, rhs_, temp_;
     double w[3];
     double b[3][3];
     double d[3];
