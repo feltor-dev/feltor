@@ -169,9 +169,7 @@ int main( int argc, char* argv[])
     t.tic();
     try
     {
-#ifdef DG_BENCHMARK
         unsigned step = 0;
-#endif //DG_BENCHMARK
         for( unsigned i=1; i<=p.maxout; i++)
         {
 

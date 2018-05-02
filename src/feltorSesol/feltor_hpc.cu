@@ -241,9 +241,7 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
-#ifdef DG_BENCHMARK
     unsigned step = 0;
-#endif //DG_BENCHMARK
     for( unsigned i=1; i<=p.maxout; i++)
     {
 
