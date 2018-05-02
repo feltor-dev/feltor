@@ -236,8 +236,7 @@ int main(int argc, char* argv[])
             ab( shu, diffusion, y0 );
         }
         time += p.itstp*p.dt;
-        cout << time << endl;
-
+        cout << "t=" << time << endl;
     }
     t.toc();
 
@@ -252,11 +251,13 @@ int main(int argc, char* argv[])
     blas1::pointwiseDot( stencil, ab.last(), ry0);
     double enstrophy_end = 0.5*blas2::dot( ry0, w2d, ab.last());
     double energy_end    = 0.5*blas2::dot( ry0, w2d, shu.potential()) ;
-    cout << "Vorticity error           :  "<<vorticity_end-vorticity<<"\n";
-    cout << "Enstrophy error (relative):  "<<(enstrophy_end-enstrophy)/enstrophy<<"\n";
-    cout << "Energy error    (relative):  "<<(energy_end-energy)/energy<<"\n";
+    cout << "Vorticity error :  "<<vorticity_end-vorticity<<"\n";
+    cout << "Enstrophy error :  "<<(enstrophy_end-enstrophy)<<"\n";
+    cout << "Energy error    :  "<<(energy_end-energy)<<"\n";
+    cout << "Energy: " << energy << endl;
 
     cout << "Runtime: " << t.diff() << endl;
 
     return 0;
 }
+
