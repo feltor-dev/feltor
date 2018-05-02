@@ -211,9 +211,7 @@ int main( int argc, char* argv[])
     try
     {
 
-#ifdef DG_BENCHMARK
         unsigned step = 0;
-#endif //DG_BENCHMARK
 
         for( unsigned i=1; i<=p.maxout; i++)
         {
