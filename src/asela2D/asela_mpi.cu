@@ -107,7 +107,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( asela, rolkar, y0, p.dt);
+    karniadakis.init( asela, rolkar, 0., y0, p.dt);
     //asela.energies(y0); //now energies and potential are at time 0
     /////////////////////////////set up netcdf/////////////////////////////////
     file::NC_Error_Handle err;
@@ -234,7 +234,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( asela, rolkar, y0);}
+            try{ karniadakis.step( asela, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 if(rank==0)std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 if(rank==0)std::cerr << "Does Simulation respect CFL condition?\n";
@@ -243,7 +243,6 @@ int main( int argc, char* argv[])
                 return -1;
             }
             step++;
-            time+=p.dt;
             //asela.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = asela.energy(), mass = asela.mass(), diss = asela.energy_diffusion();

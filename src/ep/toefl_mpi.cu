@@ -88,9 +88,8 @@ int main( int argc, char* argv[])
     }
     //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
-    //dg::AB< k, std::vector<dg::MDVec> > ab( y0);
-    dg::Karniadakis< std::vector<dg::MDVec> > ab( y0, y0[0].size(), 1e-9);
-    ab.init( test, diffusion, y0, p.dt);
+    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), 1e-9);
+    karniadakis.init( test, diffusion, 0., y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -173,7 +172,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            ab( test, diffusion, y0);
+            karniadakis.step( test, diffusion, time, y0);
             y0.swap( y1); //attention on -O3 ?
             //store accuracy details
             {

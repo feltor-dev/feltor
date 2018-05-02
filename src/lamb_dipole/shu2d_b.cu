@@ -77,7 +77,7 @@ int main()
             //make solver and stepper
             Shu<DMatrix, DVec> shu( grid, eps);
             Diffusion<DMatrix, DVec> diffusion( grid, D);
-            Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
+            Karniadakis< DVec > karniadakis( y0, y0.size(), 1e-8);
 
             shu( y0, y1);
             double vorticity = blas2::dot( stencil, w2d, sol);
@@ -85,13 +85,13 @@ int main()
             double energy =    0.5*blas2::dot( sol, w2d, sol_phi) ;
 
             double time = 0;
-            ab.init( shu,diffusion, y0, dt);
+            karniadakis.init( shu,diffusion, time, y0, dt);
             while( time < T)
             {
                 //step 
 
                 t.tic();
-                ab( shu, diffusion, y0);
+                karniadakis.step( shu, diffusion, time, y0);
                 t.toc();
                 time += dt;
                 //std::cout << "Time "<<time<< " "<<t.diff()<<"\n";

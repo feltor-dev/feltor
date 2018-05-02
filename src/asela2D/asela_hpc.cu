@@ -92,7 +92,7 @@ int main( int argc, char* argv[])
     
     std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( asela, rolkar, y0, p.dt);
+    karniadakis.init( asela, rolkar, 0., y0, p.dt);
 //     asela.energies(y0); //now energies and potential are at time 0
     std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
@@ -201,7 +201,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( asela, rolkar, y0);}
+            try{ karniadakis.step( asela, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -209,7 +209,6 @@ int main( int argc, char* argv[])
                 return -1;
             }
             step++;
-            time+=p.dt;
 //             asela.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = asela.energy(), mass = asela.mass(), diss = asela.energy_diffusion();

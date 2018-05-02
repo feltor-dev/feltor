@@ -27,7 +27,7 @@ using namespace dg;
 
 // simple, text based, equidistant output format that makes it easy to compare
 // with output from other equidistant codes, etc.
-void write(string prefix, DVec& y0, double time, const Parameters& p, dg::geo::CurvilinearGrid2d& grid)
+void write(string prefix, const DVec& y0, double time, const Parameters& p, dg::geo::CurvilinearGrid2d& grid)
 {
     // interpolate to an equidistant grid
     int N = 1024;
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
     //make solver and stepper
     polar::Explicit<dg::geo::CurvilinearGrid2d, DMatrix, DVec> shu( grid, p.eps);
     polar::Diffusion<dg::geo::CurvilinearGrid2d, DMatrix, DVec> diffusion( grid, p.nu);
-    Karniadakis< DVec > ab( y0, y0.size(), p.eps_time);
+    Karniadakis< DVec > karniadakis( y0, y0.size(), p.eps_time);
 
 
     // Some simple tests to see if everything is in order
@@ -195,8 +195,7 @@ int main(int argc, char* argv[])
     draw::ColorMapRedBlueExt colors( 1.);
 #endif
 
-    ab.init( shu, diffusion, y0, p.dt);
-    ab( shu, diffusion, y0); //make potential ready
+    karniadakis.init( shu, diffusion, time, y0, p.dt);
 
     t.tic();
     int step = 0;
@@ -206,7 +205,7 @@ int main(int argc, char* argv[])
         if(glfwWindowShouldClose(w))
             break;
 
-        dg::blas2::symv( equidistant, ab.last(), visual);
+        dg::blas2::symv( equidistant, y0, visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
         dg::blas1::transfer( visual, hvisual);
@@ -225,9 +224,8 @@ int main(int argc, char* argv[])
         //step 
         for( unsigned i=0; i<p.itstp; i++)
         {
-            ab( shu, diffusion, y0 );
+            karniadakis.step( shu, diffusion, time, y0 );
         }
-        time += p.itstp*p.dt;
         cout << "t=" << time << endl;
     }
     t.toc();
@@ -236,12 +234,11 @@ int main(int argc, char* argv[])
     glfwTerminate();
 #endif
 
-    y0 = ab.last();
     write("equi", y0, time, p, grid);
 
-    double vorticity_end = blas2::dot( stencil , w2d, ab.last());
-    blas1::pointwiseDot( stencil, ab.last(), ry0);
-    double enstrophy_end = 0.5*blas2::dot( ry0, w2d, ab.last());
+    double vorticity_end = blas2::dot( stencil , w2d, y0);
+    blas1::pointwiseDot( stencil, y0, ry0);
+    double enstrophy_end = 0.5*blas2::dot( ry0, w2d, y0);
     double energy_end    = 0.5*blas2::dot( ry0, w2d, shu.potential()) ;
     cout << "Vorticity error :  "<<vorticity_end-vorticity<<"\n";
     cout << "Enstrophy error :  "<<(enstrophy_end-enstrophy)<<"\n";

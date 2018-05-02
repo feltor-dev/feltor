@@ -72,7 +72,7 @@ int main( int argc, char* argv[])
     //make solver and stepper
     Shu<DMatrix, DVec> shu( grid, p.eps);
     Diffusion<DMatrix, DVec> diffusion( grid, p.D);
-    Karniadakis< DVec > ab( y0, y0.size(), p.eps_time);
+    Karniadakis< DVec > karniadakis( y0, y0.size(), p.eps_time);
 
     Timer t;
     t.tic();
@@ -95,14 +95,13 @@ int main( int argc, char* argv[])
     //transform vector to an equidistant grid
     dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
-    ab.init( shu, diffusion, y0, p.dt);
-    ab( shu, diffusion, y0); //make potential ready
+    karniadakis.init( shu, diffusion, time, y0, p.dt);
     //cout << "Press any key to start!\n";
     //double x; 
     //cin >> x;
     while (!glfwWindowShouldClose(w) && time < p.maxout*p.itstp*p.dt)
     {
-        dg::blas2::symv( equidistant, ab.last(), visual);
+        dg::blas2::symv( equidistant, y0, visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
         dg::blas1::transfer( visual, hvisual);
@@ -116,7 +115,7 @@ int main( int argc, char* argv[])
         t.tic();
         for( unsigned i=0; i<p.itstp; i++)
         {
-            ab( shu, diffusion, y0 );
+            karniadakis.step( shu, diffusion, time, y0 );
         }
         t.toc();
         //cout << "Timer for one step: "<<t.diff()/N<<"s\n";
@@ -127,10 +126,10 @@ int main( int argc, char* argv[])
     ////////////////////////////////////////////////////////////////////
     cout << "Analytic formula enstrophy "<<lamb.enstrophy()<<endl;
     cout << "Analytic formula energy    "<<lamb.energy()<<endl;
-    cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, ab.last()) << "\n";
-    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( w2d, ab.last()) - enstrophy)/enstrophy<<"\n";
+    cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, y0) << "\n";
+    cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
     //shu( y0, y1); //get the potential ready
-    cout << "Relative energy error    is: "<<(0.5*blas2::dot( shu.potential(), w2d, ab.last()) - energy)/energy<<"\n";
+    cout << "Relative energy error    is: "<<(0.5*blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<"\n";
 
     //blas1::axpby( 1., y0, -1, sol);
     //cout << "Distance to solution: "<<sqrt(blas2::dot( w2d, sol ))<<endl;

@@ -78,10 +78,10 @@ int main( int argc, char* argv[])
     if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global" ){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
-    //////////////////initialisation of timestepper and first step///////////////////
+    //////////////////initialisation of timekarniadakis and first step///////////////////
     double time = 0;
-    dg::Karniadakis< std::vector<dg::MDVec> > stepper( y0, y0[0].size(), p.eps_time);
-    stepper.init( test, diffusion, time, y0, p.dt);
+    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    karniadakis.init( test, diffusion, time, y0, p.dt);
     y1 = y0;
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -157,7 +157,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            stepper.step( test, diffusion, time, y1);
+            karniadakis.step( test, diffusion, time, y1);
             //store accuracy details
             {
                 if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";

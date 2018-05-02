@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
     //make solver and stepper
     polar::Explicit<aMPIGeometry2d, MDMatrix, MDVec> shu( grid, p.eps);
     polar::Diffusion<aMPIGeometry2d, MDMatrix, MDVec> diffusion( grid, p.nu);
-    Karniadakis< MDVec > ab( y0, y0.size(), p.eps_time);
+    Karniadakis< MDVec > karniadakis( y0, y0.size(), p.eps_time);
 
     t.tic();
     shu( y0, y1);
@@ -118,8 +118,7 @@ int main(int argc, char* argv[])
     }
 
     double time = 0;
-    ab.init( shu, diffusion, y0, p.dt);
-    ab( shu, diffusion, y0); //make potential ready
+    karniadakis.init( shu, diffusion, y0, p.dt);
 
     t.tic();
     while (time < p.maxout*p.itstp*p.dt)
@@ -127,9 +126,8 @@ int main(int argc, char* argv[])
         //step 
         for( unsigned i=0; i<p.itstp; i++)
         {
-            ab( shu, diffusion, y0 );
+            karniadakis.step( shu, diffusion, time, y0 );
         }
-        time += p.itstp*p.dt;
 
     }
     t.toc();

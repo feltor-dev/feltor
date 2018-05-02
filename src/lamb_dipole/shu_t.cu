@@ -54,7 +54,7 @@ int main()
     DVec y0( omega);
     Shu<dg::DMatrix, dg::DVec> test( grid, eps);
     Diffusion<DMatrix, DVec> diffusion( grid, D);
-    Karniadakis< DVec > ab( y0, y0.size(), 1e-8);
+    Karniadakis< DVec > karniadakis( y0, y0.size(), 1e-8);
 
     ////////////////////////////////glfw//////////////////////////////
     //create visualisation vectors
@@ -63,7 +63,7 @@ int main()
     //transform vector to an equidistant grid
     dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
-    ab.init( test, diffusion, y0, dt);
+    karniadakis.init( test, diffusion, y0, dt);
     while (!glfwWindowShouldClose(w))
     {
         //transform field to an equidistant grid
@@ -77,7 +77,7 @@ int main()
         dg::blas1::transfer(visual, hvisual);
         render.renderQuad( hvisual, n*Nx, n*Ny, colors);
         //step 
-        ab( test,diffusion, y0 );
+        karniadakis.step( test,diffusion, time, y0 );
 
         glfwSwapBuffers(w);
         glfwWaitEvents();

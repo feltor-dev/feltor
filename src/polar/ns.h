@@ -15,7 +15,7 @@ struct Diffusion
         LaplacianM( g, dg::normed)
     { 
     }
-    void operator()( const container& x, container& y)
+    void operator()( double t, const container& x, container& y)
     {
         dg::blas2::gemv( LaplacianM, x, y);
         dg::blas1::scal( y, -nu_);
@@ -45,7 +45,7 @@ struct Explicit
      * @return psi is the potential
      */
     const container& potential( ) {return psi;}
-    void operator()( const Vector& y, Vector& yp);
+    void operator()(double t,  const Vector& y, Vector& yp);
     container psi, w2d, v2d;
     Elliptic<Geometry, Matrix, container> laplaceM;
     ArakawaX<Geometry, Matrix, container> arakawa_; 
@@ -65,7 +65,7 @@ Explicit< Geometry, Matrix, container>::Explicit( const Geometry& g, double eps)
 
 
 template<class Geometry, class Matrix, class container>
-void Explicit<Geometry, Matrix, container>::operator()( const Vector& y, Vector& yp)
+void Explicit<Geometry, Matrix, container>::operator()(double t, const Vector& y, Vector& yp)
 {
     invert(laplaceM, psi, y);
     arakawa_( y, psi, yp); //A(y,psi)-> yp

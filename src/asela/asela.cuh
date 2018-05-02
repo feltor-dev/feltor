@@ -53,7 +53,7 @@ struct Implicit
      * @param x input vector (x[0] := N_e -1, x[1] := N_i-1, x[2] := w_e, x[3] = w_i)
      * @param y output vector
      */
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
            x[1] := N_i - 1
@@ -160,7 +160,7 @@ struct Asela
      * @param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := w_e, y[3] := w_i
      * @param yp Result
      */
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()(double t, const std::vector<container>& y, std::vector<container>& yp);
     
     /**
      * @brief \f[ M := \int_V (n_e-1) dV \f]
@@ -553,7 +553,7 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
 
 // #endif
 template<class Geometry, class IMatrix, class Matrix, class container>
-void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Asela<Geometry, IMatrix, Matrix, container>::operator()(double t, const std::vector<container>& y, std::vector<container>& yp)
 {   
     /*  y[0] := N_e - 1
         y[1] := N_i - 1

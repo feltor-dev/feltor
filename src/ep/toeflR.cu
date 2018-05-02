@@ -50,8 +50,8 @@ int main( int argc, char* argv[])
 
     dg::CartesianGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y);
     //create RHS 
-    ep::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > test( grid, p); 
-    ep::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> diffusion( grid, p.nu);
+    ep::ToeflR<dg::CartesianGrid2d, dg::DMatrix, dg::DVec > exp( grid, p); 
+    ep::Diffusion<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> imp( grid, p.nu);
     //create initial vector
     dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); //gaussian width is in absolute values
     dg::DVec gauss = dg::evaluate( g, grid);
@@ -67,8 +67,7 @@ int main( int argc, char* argv[])
     }
 
 
-    //dg::AB< k, std::vector<dg::DVec> > ab( y0);
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), 1e-9);
+    dg::Karniadakis< std::vector<dg::DVec> > kaniadakis( y0, y0[0].size(), 1e-9);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -77,7 +76,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( test, diffusion, y0, p.dt);
+    karniadakis.init( exp, imp, time, y0, p.dt);
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
     std::cout << "Begin computation \n";
@@ -131,7 +130,7 @@ int main( int argc, char* argv[])
                 std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
 
             }
-            try{ ab( test, diffusion, y0);}
+            try{ karniadakis.step( exp, imp, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -139,7 +138,6 @@ int main( int argc, char* argv[])
                 break;
             }
         }
-        time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;
