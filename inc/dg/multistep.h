@@ -233,10 +233,10 @@ struct MatrixTraits< detail::Implicit<M, V> >
 *
 * Uses only one evaluation of the explicit part per step.
 * Uses a conjugate gradient method for the implicit operator (therefore \f$ \hat I(t,v)\f$ must be linear in \f$ v\f$).
-The following code example demonstrates how to integrate the 2d diffusion equation with the dg library:
+The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
 @snippet multistep_t.cu function
 In the main function:
-@snippet multistep_t.cu doxygen
+@snippet multistep_t.cu karniadakis
 @note In our experience the implicit treatment of diffusive or hyperdiffusive
 terms can significantly reduce the required number of time steps. This
 far outweighs the increased computational cost of the additional matrix inversions.
@@ -385,10 +385,10 @@ with rational coefficients
 We solve the implicit substeps by a conjugate gradient method, which works as long
 as the implicit part remains symmetric and linear.
 
-The following code example demonstrates how to integrate the 2d diffusion equation with the dg library:
+The following code example demonstrates how to implement the method of manufactured solutions on a 2d partial differential equation with the dg library:
 @snippet multistep_t.cu function
 In the main function:
-@snippet multistep_t.cu doxygen
+@snippet multistep_t.cu sirk
 @note To our experience the implicit treatment of diffusive or hyperdiffusive
 terms can significantly reduce the required number of time steps. This
 far outweighs the increased computational cost of the additional matrix inversions.

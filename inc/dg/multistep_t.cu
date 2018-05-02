@@ -7,7 +7,6 @@
 
 //![function]
 //method of manufactured solution
-//
 double solution( double x, double y, double t, double nu) {
     return sin(t)*exp( -2.*nu*t)*sin(x)*sin(y);
 }
@@ -16,6 +15,7 @@ double source( double x, double y, double t, double nu){
     return sin(x)*sin(y)*cos(t)*exp(-2*t*nu)*(1-sin(t));
 }
 
+//the explicit part contains the source Tp = S(x,y,t)
 template<class container>
 struct Explicit
 {
@@ -24,10 +24,10 @@ struct Explicit
         m_x ( dg::evaluate(dg::cooX2d, g)),//x-coordinate
         m_y ( dg::evaluate(dg::cooY2d, g)) //y-coordinate
     {}
-    void operator()( double t, const container& y, container& yp) {
+    void operator()( double t, const container& T, container& Tp) {
         using namespace std::placeholders; //for _1, _2, _3
         auto functor = std::bind( source, _1, _2, t, m_nu);
-        dg::blas1::evaluate( yp, 0., functor, m_x, m_y);
+        dg::blas1::evaluate( Tp, 0., functor, m_x, m_y);
     }
     private:
     const double m_nu;
@@ -35,6 +35,7 @@ struct Explicit
 
 };
 
+//the implicit part contains  Tp = nu Delta T(x,y,t) + cos(t) T(x,y,t)
 template< class Matrix, class container>
 struct Implicit
 {
@@ -45,11 +46,12 @@ struct Implicit
         m_LaplacianM( g, dg::normed)
         { }
 
-    void operator()( double t, const container& y, container& yp)
+    void operator()( double t, const container& T, container& Tp)
     {
-        dg::blas2::gemv( m_LaplacianM, y, yp);
-        dg::blas1::axpby( cos(t), y, -m_nu, yp);
+        dg::blas2::gemv( m_LaplacianM, T, Tp);
+        dg::blas1::axpby( cos(t), T, -m_nu, Tp);
     }
+    //required by inversion in semi-implicit schemes
     const container& inv_weights(){return m_v2d;}
     const container& weights(){return m_w2d;}
     const container& precond(){return m_v2d;}
@@ -90,10 +92,9 @@ int main()
     unsigned n = 3, Nx = 50 , Ny = 50;
     std::cout << "Program tests Multistep and Semi-Implicit methods on a manufactured PDE\n";
     const double T = 0.1;
-    const double NT= 200, eps = 1e-8;
+    const double NT= 40, eps = 1e-8;
     const double dt = (T/NT);
     const double nu = 0.01;
-    //![doxygen]
     //construct the grid and the explicit and implicit parts
     dg::Grid2d grid( 0, lx, 0, ly, n, Nx, Ny, dg::PER, dg::PER);
     Explicit<dg::DVec> exp( grid, nu);
@@ -113,29 +114,17 @@ int main()
     double time = 0., norm_error;
     dg::DVec error( sol);
 
-    dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(), eps);
     dg::AB< 1, dg::DVec > ab1( y0);
     dg::AB< 2, dg::DVec > ab2( y0);
     dg::AB< 3, dg::DVec > ab3( y0);
     dg::AB< 4, dg::DVec > ab4( y0);
     dg::AB< 5, dg::DVec > ab5( y0);
-    dg::SIRK< dg::DVec > sirk( y0, y0.size(), eps);
-    //initialize the timestepper
-    karniadakis.init( exp, imp, time, y0, dt);
     ab1.init( full, time, y0, dt);
     ab2.init( full, time, y0, dt);
     ab3.init( full, time, y0, dt);
     ab4.init( full, time, y0, dt);
     ab5.init( full, time, y0, dt);
-    //![doxygen]
 
-    //main time loop
-    time = 0., y0 = init;
-    for( unsigned i=0; i<NT; i++)
-        karniadakis.step( exp, imp, time, y0);
-    dg::blas1::axpby( -1., sol, 1., y0);
-    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error Karniadakis is "<< norm_error<<std::endl;
     //main time loop
     time = 0., y0 =  init;
     for( unsigned i=0; i<NT; i++)
@@ -171,12 +160,29 @@ int main()
     dg::blas1::axpby( -1., sol, 1., y0);
     norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
     std::cout << "Relative error AB 5        is "<< norm_error<<std::endl;
-    //main time loop
-    time = 0., y0 =  init;
+    //![sirk]
+    //construct time stepper (eps = 1e-8)
+    dg::SIRK< dg::DVec > sirk( y0, y0.size(), eps);
+    time = 0., y0 = init; //y0 and init are of type dg::DVec and contain the initial condition
+    //main time loop (NT = 20, exp and imp are objects of type Explicit and Implicit defined above)
     for( unsigned i=0; i<NT; i++)
-        sirk.step( exp, imp, time, y0, time, y0, dt);
+        sirk.step( exp, imp, time, y0, time, y0, dt); //inplace step
+    //![sirk]
     dg::blas1::axpby( -1., sol, 1., y0);
     norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
     std::cout << "Relative error SIRK        is "<< norm_error<<std::endl;
+    //![karniadakis]
+    //construct time stepper
+    dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(), eps);
+    time = 0., y0 = init; //y0 and init are of type dg::DVec and contain the initial condition
+    //initialize the timestepper (exp and imp are objects of type Explicit and Implicit defined above)
+    karniadakis.init( exp, imp, time, y0, dt);
+    //main time loop (NT = 20)
+    for( unsigned i=0; i<NT; i++)
+        karniadakis.step( exp, imp, time, y0); //inplace step
+    //![karniadakis]
+    dg::blas1::axpby( -1., sol, 1., y0);
+    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error Karniadakis is "<< norm_error<<std::endl;
     return 0;
 }
