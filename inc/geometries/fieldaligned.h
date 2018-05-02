@@ -44,7 +44,7 @@ namespace detail{
 struct DSFieldCylindrical
 {
     DSFieldCylindrical( const dg::geo::BinaryVectorLvl0& v, Grid2d boundary):v_(v), m_b(boundary) { }
-    void operator()( const dg::HVec& y, dg::HVec& yp) const {
+    void operator()( double t, const dg::HVec& y, dg::HVec& yp) const {
         double R = y[0], Z = y[1];
         m_b.shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
         double vz = v_.z()(R, Z);
@@ -92,7 +92,7 @@ struct DSField
     }
     //interpolate the vectors given in the constructor on the given point
     //if point lies outside of grid boundaries zero is returned
-    void operator()(const thrust::host_vector<double>& y, thrust::host_vector<double>& yp) const
+    void operator()(double t, const thrust::host_vector<double>& y, thrust::host_vector<double>& yp) const
     {
         double R = y[0], Z = y[1];
         g_.get().shift_topologic( y[0], y[1], R, Z); //shift R,Z onto domain
@@ -199,7 +199,7 @@ struct BoxIntegrator
     double operator()( double deltaPhi)
     {
         double delta = deltaPhi - m_deltaPhi0;
-        dg::integrateRK4( m_field, m_coords0, m_coords1, delta, m_eps, 2);
+        dg::integrateRK<4>( m_field, 0., m_coords0, delta, m_coords1, m_eps, 2);
         m_deltaPhi0 = deltaPhi;
         m_coords0 = m_coords1;
         if( !m_g.contains( m_coords1[0], m_coords1[1]) ) return -1;
@@ -231,7 +231,7 @@ void boxintegrator( const Field& field, const Topology& grid,
         thrust::host_vector<double>& coords1,
         double& phi1, double eps)
 {
-    dg::integrateRK6( field, coords0, coords1, phi1, eps, 2); //integration
+    dg::integrateRK<6>( field, 0., coords0, phi1, coords1, eps, 2); //integration
     double R = coords1[0], Z=coords1[1];
     //First, catch periodic domain
     grid.shift_topologic( coords0[0], coords0[1], R, Z);
@@ -245,14 +245,14 @@ void boxintegrator( const Field& field, const Topology& grid,
             double dPhiMin = 0, dPhiMax = phi1;
             dg::bisection1d( boxy, dPhiMin, dPhiMax,eps); //suche 0 stelle
             phi1 = (dPhiMin+dPhiMax)/2.;
-            dg::integrateRK4( field, coords0, coords1, dPhiMax, eps); //integriere bis über 0 stelle raus damit unten Wert neu gesetzt wird
+            dg::integrateRK<4>( field, 0., coords0, dPhiMax, coords1, eps); //integriere bis über 0 stelle raus damit unten Wert neu gesetzt wird
         }
         else // phi1 < 0
         {
             double dPhiMin = phi1, dPhiMax = 0;
             dg::bisection1d( boxy, dPhiMin, dPhiMax,eps);
             phi1 = (dPhiMin+dPhiMax)/2.;
-            dg::integrateRK4( field, coords0, coords1, dPhiMin, eps);
+            dg::integrateRK<4>( field, 0., coords0, dPhiMin, coords1, eps);
         }
         detail::clip_to_boundary( coords1, grid);
         //now assume the rest is purely toroidal
