@@ -20,8 +20,10 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -30,7 +32,7 @@ int main( int argc, char* argv[])
     else 
     {
         std::ifstream is(argv[1]);
-        reader.parse( is, js, false);
+        parseFromStream( parser, is, &js, &errs); //read input without comments
     }
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const eule::Parameters p( js);
@@ -92,7 +94,7 @@ int main( int argc, char* argv[])
    
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, rolkar, 0., y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -191,7 +193,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis.step( feltor, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -199,7 +201,6 @@ int main( int argc, char* argv[])
                 return -1;
             }
             step++;
-            time+=p.dt;
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 

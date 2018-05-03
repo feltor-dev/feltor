@@ -23,17 +23,16 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.json");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
@@ -45,7 +44,7 @@ int main( int argc, char* argv[])
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
     std::ifstream is( "window_params.js");
-    reader.parse( is, js, false);
+    is >> js;
     is.close();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt()*p.lx/p.ly, js["rows"].asUInt()*js["height"].asUInt(), "");
     draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
@@ -121,7 +120,7 @@ int main( int argc, char* argv[])
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
-    karniadakis.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, rolkar, 0., y0, p.dt);
     std::cout << "Done!\n";
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -229,7 +228,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis.step( feltor, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -255,7 +254,6 @@ int main( int argc, char* argv[])
         pro.fluxes(time,  dvisual,dvisual2);
         pro.profiles(time,dvisual,dvisual2);
 //         p.profiles
-        time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;
