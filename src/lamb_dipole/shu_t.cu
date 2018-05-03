@@ -63,7 +63,8 @@ int main()
     //transform vector to an equidistant grid
     dg::IDMatrix equidistant = dg::create::backscatter( grid );
     draw::ColorMapRedBlueExt colors( 1.);
-    karniadakis.init( test, diffusion, y0, dt);
+    double time = 0;
+    karniadakis.init( test, diffusion, time, y0, dt);
     while (!glfwWindowShouldClose(w))
     {
         //transform field to an equidistant grid

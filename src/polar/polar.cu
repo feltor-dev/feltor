@@ -96,17 +96,16 @@ int main(int argc, char* argv[])
 {
     Timer t;
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.json");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
@@ -157,7 +156,7 @@ int main(int argc, char* argv[])
 
     DVec u0test = evaluate(u0_test,grid);
     DVec potref = evaluate(u0_ref,grid);
-    shu( u0test, y1);
+    shu( 0., u0test, y1);
     DVec pot = shu.potential();
     double e=0.0;
     for(size_t i=0;i<pot.size();i++) {
@@ -168,7 +167,7 @@ int main(int argc, char* argv[])
 
 
     t.tic();
-    shu( y0, y1);
+    shu(0., y0, y1);
     t.toc();
     cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
 

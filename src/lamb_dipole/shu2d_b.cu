@@ -21,8 +21,8 @@ const double T = 2.;
 
 double D = 0.01;
 
-//const double kx = 2.*M_PI* (double)m/lx; 
-//const double ky = 2.*M_PI* (double)m/ly; 
+//const double kx = 2.*M_PI* (double)m/lx;
+//const double ky = 2.*M_PI* (double)m/ly;
 //const double ksqr = (kx*kx+ky*ky) ;//4.*M_PI*M_PI*(1./lx/lx + 1./ly/ly);
 const double kx = 1., ky = kx, ksqr = 2.;
 
@@ -79,7 +79,7 @@ int main()
             Diffusion<DMatrix, DVec> diffusion( grid, D);
             Karniadakis< DVec > karniadakis( y0, y0.size(), 1e-8);
 
-            shu( y0, y1);
+            shu(0., y0, y1);
             double vorticity = blas2::dot( stencil, w2d, sol);
             double enstrophy = 0.5*blas2::dot( sol, w2d, sol);
             double energy =    0.5*blas2::dot( sol, w2d, sol_phi) ;
@@ -110,7 +110,6 @@ int main()
             cout << " "<<eps;
             cout << " "<<fabs(blas2::dot( stencil, w2d, y0)); 
             cout << " "<<fabs(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy;
-            shu( y0, y1); //get the potential ready
             cout << " "<<fabs(0.5*blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<" ";
 
             blas1::axpby( 1., sol, -1., y0);

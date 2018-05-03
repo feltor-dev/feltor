@@ -17,17 +17,19 @@ int main( int argc, char * argv[])
 {
     dg::Timer t;
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
-    else 
+    else
     {
         std::ifstream is(argv[1]);
-        reader.parse( is, js, false); //read input without comments
+        parseFromStream( parser, is, &js, &errs);
     }
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
@@ -48,12 +50,12 @@ int main( int argc, char * argv[])
     dg::Shu<dg::DMatrix, dg::DVec> shu( grid, p.eps);
     dg::Diffusion< dg::DMatrix, dg::DVec > diff( grid, p.D);
     dg::Karniadakis< dg::DVec> karniadakis( y0, y0.size(), 1e-10);
-    karniadakis.init( shu, diff, y0, p.dt);
+    karniadakis.init( shu, diff, 0., y0, p.dt);
 
     dg::DVec varphi( grid.size()), potential;
-    double vorticity = dg::blas2::dot( one , w2d, ab.last());
-    double enstrophy = 0.5*dg::blas2::dot( ab.last(), w2d, ab.last());
-    double energy =    0.5*dg::blas2::dot( ab.last(), w2d, shu.potential()) ;
+    double vorticity = dg::blas2::dot( one , w2d, y0);
+    double enstrophy = 0.5*dg::blas2::dot( y0, w2d, y0);
+    double energy =    0.5*dg::blas2::dot( y0, w2d, shu.potential()) ;
     potential = shu.potential();
     shu.arakawa().variation( potential, varphi);
     double variation = dg::blas2::dot( varphi, w2d, one );

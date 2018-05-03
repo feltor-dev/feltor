@@ -26,17 +26,16 @@ using namespace dg;
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input/default.json");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
@@ -55,7 +54,7 @@ int main( int argc, char* argv[])
     ////////////////////////////////////////////////////////////
 
     dg::Lamb lamb( p.posX*p.lx, p.posY*p.ly, p.R, p.U);
-    dg::HVec omega; 
+    dg::HVec omega;
     if( p.initial == "lamb")
         omega = dg::evaluate ( lamb, grid);
     else if ( p.initial == "shear")
@@ -76,7 +75,7 @@ int main( int argc, char* argv[])
 
     Timer t;
     t.tic();
-    shu( y0, y1);
+    shu( 0., y0, y1);
     t.toc();
     cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
     double vorticity = blas2::dot( stencil , w2d, y0);
@@ -128,7 +127,6 @@ int main( int argc, char* argv[])
     cout << "Analytic formula energy    "<<lamb.energy()<<endl;
     cout << "Total vorticity          is: "<<blas2::dot( stencil , w2d, y0) << "\n";
     cout << "Relative enstrophy error is: "<<(0.5*blas2::dot( w2d, y0) - enstrophy)/enstrophy<<"\n";
-    //shu( y0, y1); //get the potential ready
     cout << "Relative energy error    is: "<<(0.5*blas2::dot( shu.potential(), w2d, y0) - energy)/energy<<"\n";
 
     //blas1::axpby( 1., y0, -1, sol);
