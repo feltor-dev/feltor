@@ -432,11 +432,7 @@ void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>&
         if (p.hwmode==1) {
             polavg(logn[0],lambda);       //<ln(ne)> 
             polavg(phi[0],phiavg);        //<phi>
-            dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
-	    
-/*	    dg::blas1::pointwiseDivide(nedelta,neavg,lambda); // delta(phi) = phi - <phi>
-	    polavg(lambda,omega);       //<ln(ne)> 
-	    dg::blas1::axpby(1.,lambda,-1.,omega,nedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>   */      
+            dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>   
 	    
             dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
             dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
@@ -566,8 +562,8 @@ void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>&
 	        //transform compute n and logn
         for(unsigned i=0; i<2; i++)
         {
-            dg::blas1::transform( y[i], npe[i], dg::EXP<value_type>()); // 1+ \tilde{N}
-            dg::blas1::pointwiseDot(npe[i],profne,npe[i]); //N
+            dg::blas1::transform( y[i], npe[i], dg::EXP<value_type>()); // = exp(bar delta N) = 1+tilde N
+            dg::blas1::pointwiseDot(npe[i],profne,npe[i]);              // = N
             dg::blas1::transform( npe[i], logn[i], dg::LN<value_type>());
         }  
         
@@ -584,7 +580,7 @@ void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>&
         //transform compute n and logn and energies
         for(unsigned i=0; i<2; i++)
         {
-            S[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w2d, npe[i]); // N LN N
+            S[i]    = z[i]*p.tau[i]*dg::blas2::dot( logn[i], w2d, npe[i]); // N LN(N)
         }
         mass_ = dg::blas2::dot( one, w2d, npe[0] ); //take real ion density which is electron density!!
         double Tperp = 0.5*p.mu[1]*dg::blas2::dot( npe[1], w2d, omega);   //= 0.5 mu_i N_i u_E^2
@@ -600,7 +596,7 @@ void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>&
             //---------- perp dissipation 
             dg::blas2::gemv( lapperp, y[i], lambda);
             dg::blas2::gemv( lapperp, lambda, omega);//nabla_RZ^4 N_e
-	    dg::blas1::pointwiseDot( npe[i], omega, omega);//nabla_RZ^4 N_e
+            dg::blas1::pointwiseDot( npe[i], omega, omega);//nabla_RZ^4 N_e
             Dperp[i] = -z[i]* p.nu_perp*dg::blas2::dot(chi, w2d, omega);  //  tau_z(1+lnN)+phi) nabla_RZ^4 \tilde N
         }                
         //compute the radial electron density  transport
@@ -615,8 +611,8 @@ void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>&
             poisson( y[i], phi[i], yp[i]);  //[ln(1+tilde N),phi]_RZ
             dg::blas1::pointwiseDot( yp[i], binv, yp[i]);                        // dt ln(1+tilde N) =1/B [ln(1+tilde N),phi]_RZ                
 	    
-	    //density gradient term
-            dg::blas2::gemv( poisson.dyrhs(), phi[i], omega); //lambda = dy psi
+            //density gradient term
+            dg::blas2::gemv( poisson.dyrhs(), phi[i], omega);   //lambda = dy psi
             dg::blas1::axpby(-1./p.invkappa,omega,1.0,yp[i]);   // dt ln(1+tilde N) += - kappa dy psi   
         }        
         //Coupling term for the electrons
@@ -632,11 +628,7 @@ void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>&
         if (p.hwmode==1) {
             polavg(logn[0],lambda);       //<ln(ne)> 
             polavg(phi[0],phiavg);        //<phi>
-            dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>
-	    
-/*	    dg::blas1::pointwiseDivide(nedelta,neavg,lambda); // delta(phi) = phi - <phi>
-	    polavg(lambda,omega);       //<ln(ne)> 
-	    dg::blas1::axpby(1.,lambda,-1.,omega,nedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>   */      
+            dg::blas1::axpby(1.,phi[0],-1.,phiavg,phidelta); // delta(phi) = phi - <phi>  
 	    
             dg::blas1::axpby(1.,logn[0],-1.,lambda,lognedelta); // delta(ln(ne)) = ln(ne)- <ln(ne)>         
             dg::blas1::axpby(1.,phidelta,p.tau[0],lognedelta,omega); //omega = phi - lnNe
