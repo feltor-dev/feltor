@@ -15,7 +15,7 @@ struct Diffusion
     Diffusion( const dg::CartesianGrid2d& g, double nu): nu_(nu),
         w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()), LaplacianM( g, dg::normed, dg::centered) {
         }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( double t, const std::vector<container>& x, std::vector<container>& y)
     {
         dg::blas1::axpby( 0., x, 0, y);
         for( unsigned i=0; i<x.size(); i++)
@@ -74,7 +74,7 @@ struct HW
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( double t, const std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief Return the mass of the last field in operator() in a global computation
@@ -138,10 +138,10 @@ template< class Matrix, class container>
 HW<Matrix, container>::HW( const dg::CartesianGrid2d& grid, double alpha, double g, double nu, double eps_pol, bool mhw ): 
     chi( grid.size(), 0.), omega(chi), phi( chi), phi_old( chi), dyphi( chi),
     lapphiM(chi), lapy( 2, chi),  laplapy( lapy),
-    A( grid, dg::not_normed, dg::centered), laplaceM( grid, dg::normed, dg::centered),
     arakawa( grid), 
     pcg( omega, omega.size()), 
     average( grid,dg::coo2d::y),
+    A( grid, dg::not_normed, dg::centered), laplaceM( grid, dg::normed, dg::centered),
     w2d( dg::create::weights(grid)), v2d( dg::create::inv_weights(grid)), one( dg::evaluate(dg::one, grid)),
     alpha( alpha), g(g), nu( nu), eps_pol(eps_pol), mhw( mhw)
 {
@@ -175,7 +175,7 @@ const container& HW<M, container>::polarisation( const std::vector<container>& y
 }
 
 template< class M, class container>
-void HW< M, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void HW< M, container>::operator()( double t, const std::vector<container>& y, std::vector<container>& yp)
 {
     assert( y.size() == 2);
     assert( y.size() == yp.size());

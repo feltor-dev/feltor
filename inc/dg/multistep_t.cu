@@ -7,13 +7,25 @@
 
 //![function]
 //method of manufactured solution
-double solution( double x, double y, double t, double nu) {
-    return sin(t)*exp( -2.*nu*t)*sin(x)*sin(y);
-}
+struct Solution{
+    Solution(double t, double nu):t(t), nu(nu){}
+DG_DEVICE
+    double operator()(double x, double y) const{
+        return sin(t)*exp( -2.*nu*t)*sin(x)*sin(y);
+    }
+    private:
+    double t, nu;
+};
 
-double source( double x, double y, double t, double nu){
-    return sin(x)*sin(y)*cos(t)*exp(-2*t*nu)*(1-sin(t));
-}
+struct Source{
+    Source(double t, double nu):t(t), nu(nu){}
+DG_DEVICE
+    double operator()(double x, double y) const{
+        return sin(x)*sin(y)*cos(t)*exp(-2*t*nu)*(1-sin(t));
+    }
+    private:
+    double t, nu;
+};
 
 //the explicit part contains the source Tp = S(x,y,t)
 template<class container>
@@ -25,9 +37,7 @@ struct Explicit
         m_y ( dg::evaluate(dg::cooY2d, g)) //y-coordinate
     {}
     void operator()( double t, const container& T, container& Tp) {
-        using namespace std::placeholders; //for _1, _2, _3
-        auto functor = std::bind( source, _1, _2, t, m_nu);
-        dg::blas1::evaluate( Tp, 0., functor, m_x, m_y);
+        dg::blas1::evaluate( Tp, 0., Source(t,m_nu), m_x, m_y);
     }
     private:
     const double m_nu;
@@ -102,13 +112,10 @@ int main()
 
     Full<dg::DMatrix, dg::DVec> full( grid, nu);
     //evaluate the initial condition
-    using namespace std::placeholders; //for _1, _2, _3
-    auto initial = std::bind( solution, _1, _2, 0, nu);
-    const dg::DVec init( dg::evaluate(initial, grid));
+    const dg::DVec init( dg::evaluate(Solution(0.,nu), grid));
     dg::DVec y0(init);
 
-    auto solution_f = std::bind( solution, _1, _2, T, nu);
-    const dg::DVec sol = dg::evaluate( solution_f, grid);
+    const dg::DVec sol = dg::evaluate( Solution(T,nu), grid);
     const dg::DVec w2d = dg::create::weights( grid);
     const double norm_sol = dg::blas2::dot( w2d, sol);
     double time = 0., norm_error;

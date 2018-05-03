@@ -24,6 +24,5 @@ with the JSON standard but are allowed only with some specifig JSON parsers. So 
     "ly"  : 64,       //ly in units of rho_s
     "bc_x"  : "DIR",   //boundary condition in x
     "bc_y"  : "PER",   //boundary condition in y
-    "equations": "ordinary", //ordinary or modified
-
+    "equations": "ordinary" //ordinary or modified
 }

@@ -14,7 +14,7 @@ struct Diffusion
         LaplacianM_perp ( g, g.bcx(), g.bcy(), dg::normed, dg::centered)
     {
     }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
            x[1] := N_i - 1
@@ -77,7 +77,7 @@ struct ToeflI
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()(double t, const std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief Return the mass of the last field in operator() in a global computation
@@ -191,7 +191,7 @@ const container& ToeflI<G, Matrix, container>::polarization( const std::vector<c
 }
 
 template< class G, class M, class container>
-void ToeflI< G, M, container>::operator()(const std::vector<container>& y, std::vector<container>& yp)
+void ToeflI< G, M, container>::operator()(double t, const std::vector<container>& y, std::vector<container>& yp)
 {
     //y[0] = N_e - 1
     //y[1] = N_i - 1

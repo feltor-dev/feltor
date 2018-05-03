@@ -36,7 +36,7 @@ struct Implicit
         dg::blas1::transfer( dg::pullback( dg::geo::GaussianDamping(Psip(gp), gp.psipmaxcut, gp.alpha), g), dampgauss_);
     }
 
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( double t, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
            x[1] := N_i - 1
@@ -117,7 +117,7 @@ struct Explicit
     void initializene( const container& y, container& target);
 
     ///@param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := U_e, y[3] := U_i
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( double t, const std::vector<container>& y, std::vector<container>& yp);
 
     /**
      * @brief \f[ M := \int_V (n_e-1) dV \f]
@@ -429,7 +429,7 @@ double Explicit<G, IMatrix, M, V>::add_parallel_dynamics( const std::vector<V>& 
 
 
 template<class Geometry, class IMatrix, class Matrix, class container>
-void Explicit<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double ttt, const std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := N_e - 1
        y[1] := N_i - 1

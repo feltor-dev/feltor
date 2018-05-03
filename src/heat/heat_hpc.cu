@@ -18,9 +18,10 @@
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
-    std::stringstream title;
-    Json::Reader reader;
     Json::Value js, gs;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if(!(( argc == 4) || ( argc == 5)) )
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [output.nc] [input.nc]\n";
@@ -31,8 +32,8 @@ int main( int argc, char* argv[])
     {
         std::ifstream is(argv[1]);
         std::ifstream ks(argv[2]);
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        parseFromStream( parser, is, &js, &errs); //read input without comments
+        parseFromStream( parser, ks, &gs, &errs); //read input without comments
     }
     const heat::Parameters p( js); p.display( std::cout);
     const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
@@ -74,8 +75,11 @@ int main( int argc, char* argv[])
         errin = nc_get_att_text( ncidin, NC_GLOBAL, "geomfile", &geomin[0]);
         std::cout << "input in"<<inputin<<std::endl;
         std::cout << "geome in"<<geomin <<std::endl;
-        reader.parse(inputin,js,false);
-        reader.parse(geomin,gs,false);
+        std::stringstream is;
+        is.str( inputin);
+        parseFromStream( parser, is, &js, &errs);
+        is.str( geomin);
+        parseFromStream( parser, is, &gs, &errs);
         const heat::Parameters pin(js);
         const dg::geo::solovev::Parameters gpin(gs);
         double Rminin = gpin.R_0 - pin.boxscaleRm*gpin.a;
@@ -94,9 +98,9 @@ int main( int argc, char* argv[])
     }
     // /////////////////////create RHS 
     std::cout << "Constructing Feltor...\n";
-    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p,gp); //initialize before rolkar!
+    heat::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> exp( grid, p,gp); //initialize before diffusion!
     std::cout << "initialize implicit" << std::endl;
-    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > rolkar( grid, p,gp);
+    heat::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec > diffusion( grid, p,gp);
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
@@ -113,7 +117,7 @@ int main( int argc, char* argv[])
     //field aligning
 //     dg::CONSTANT gaussianZ( 1.);
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1);
-    y1[0] = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
+    y1[0] = exp.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =2 ->2*2-1
 //     y1[2] = dg::evaluate( gaussianZ, grid);
 //     dg::blas1::pointwiseDot( y1[1], y1[2], y1[1]);
     //no field aligning
@@ -123,16 +127,16 @@ int main( int argc, char* argv[])
     if (p.bc ==dg::DIR)    {
             dg::blas1::transform(y0[0], y0[0], dg::PLUS<>(-1)); //initialize ni-1
     }
-//     dg::blas1::pointwiseDot(rolkar.damping(),y0[0], y0[0]); //damp with gaussprofdamp
+//     dg::blas1::pointwiseDot(diffusion.damping(),y0[0], y0[0]); //damp with gaussprofdamp
     ///////////////////TIME STEPPER   
     //RK solver
 //     dg::RK<4, std::vector<dg::DVec> >  rk( y0);
     //SIRK solver
     dg::SIRK<std::vector<dg::DVec> > sirk(y0, grid.size(),p.eps_time);
 //     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(),1e-13);
-//     karniadakis.init( feltor, rolkar, y0, p.dt);
+//     karniadakis.init( exp, diffusion, y0, p.dt);
 
-    feltor.energies( y0);//now energies and potential are at time 0
+    exp.energies( y0);//now energies and potential are at time 0
     dg::DVec T0 = dg::evaluate( dg::one, grid);  
     dg::DVec T1 = dg::evaluate( dg::one, grid);  
 
@@ -195,10 +199,10 @@ int main( int argc, char* argv[])
 
     size_t Estart[] = {0};
     size_t Ecount[] = {1};
-    double energy0 = feltor.energy(), mass0 = feltor.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
+    double energy0 = exp.energy(), mass0 = exp.mass(), E0 = energy0, mass = mass0, E1 = 0.0, dEdt = 0., diss = 0., accuracy=0.;
     dg::blas1::axpby( 1., y0[0], -1.,T0, T1);
     error = sqrt(dg::blas2::dot( w3d, T1)/normT0);
-    double diss0 =feltor.energy_diffusion(); 
+    double diss0 =exp.energy_diffusion(); 
     
     //Compute error to reference solution
     if (argc==5)
@@ -212,7 +216,7 @@ int main( int argc, char* argv[])
        dg::blas1::axpby( 1., transferD, -1.,Tend,transferD);
         relerror = sqrt(dg::blas2::dot( w3dout, transferD)/dg::blas2::dot( w3dout, Tend));   */           
     }
-    std::vector<double> evec = feltor.energy_vector();
+    std::vector<double> evec = exp.energy_vector();
     double Se0 = evec[0];
     double senorm = evec[0]/Se0;
     double dEdtnorm = dEdt/Se0;
@@ -242,20 +246,19 @@ int main( int argc, char* argv[])
         for( unsigned j=0; j<p.itstp; j++)
         {
             try{
-//                 rk( feltor, y0, y1, p.dt); //RK stepper
-                sirk(feltor,rolkar,y0,y1,p.dt); //SIRK stepper
-//                 karniadakis( feltor, rolkar, y0);  //Karniadakis stepper
-                y0.swap( y1);}
+//                 rk( exp, time,y0, time,y0, p.dt); //RK stepper
+                sirk.step(exp,diffusion,time,y0,time,y0,p.dt); //SIRK stepper
+//                 karniadakis( exp, diffusion, time, y0);  //Karniadakis stepper
+              }
               catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
                 err = nc_close(ncid);
                 return -1;}
             step++;
-            time+=p.dt;
-            feltor.energies(y0);//advance potential and energies
+            exp.energies(y0);//advance potential and energies
             Estart[0] = step;
-            E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
+            E1 = exp.energy(), mass = exp.mass(), diss = exp.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 
             E0 = E1;
             dg::blas1::axpby( 1., y0[0], -1.,T0, T1);
@@ -273,7 +276,7 @@ int main( int argc, char* argv[])
 
             }
             accuracy = 2.*fabs( (dEdt-diss)/(dEdt + diss));
-            evec = feltor.energy_vector();
+            evec = exp.energy_vector();
             senorm = evec[0]/Se0;
             dEdtnorm = dEdt/Se0;
             dissnorm = diss/diss0;
@@ -288,7 +291,7 @@ int main( int argc, char* argv[])
             err = nc_put_vara_double( ncid, errorID, Estart, Ecount,&error);
             err = nc_put_vara_double( ncid, relerrorID, Estart, Ecount,&relerror);
 
-            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
+            std::cout << "(m_tot-m_0)/m_0: "<< (exp.mass()-mass0)/mass0<<"\t";
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout <<" d E/dt = " << dEdt <<" Lambda = " << diss << " -> Accuracy: "<< accuracy << " -> error2t0: "<< error <<" -> error2ref: "<< relerror <<"\n";
             err = nc_close(ncid);

@@ -553,7 +553,7 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
 
 // #endif
 template<class Geometry, class IMatrix, class Matrix, class container>
-void Asela<Geometry, IMatrix, Matrix, container>::operator()(double t, const std::vector<container>& y, std::vector<container>& yp)
+void Asela<Geometry, IMatrix, Matrix, container>::operator()(double ttt, const std::vector<container>& y, std::vector<container>& yp)
 {   
     /*  y[0] := N_e - 1
         y[1] := N_i - 1

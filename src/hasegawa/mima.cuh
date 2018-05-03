@@ -14,7 +14,7 @@ struct Diffusion
     Diffusion( const dg::CartesianGrid2d& g, double nu): nu_(nu),
         w2d(dg::create::weights( g)), v2d( dg::create::inv_weights(g)), temp( g.size()), LaplacianM( g, dg::normed, dg::centered) {
         }
-    void operator()( const container& x, container& y)
+    void operator()( double t, const container& x, container& y)
     {
         dg::blas2::gemv( LaplacianM, x, temp);
         dg::blas2::gemv( LaplacianM, temp, y);
@@ -69,7 +69,7 @@ struct Mima
      * @param y input vector
      * @param yp the rhs yp = f(y)
      */
-    void operator()( const container& y, container& yp);
+    void operator()( double t, const container& y, container& yp);
 
 
   private:
@@ -94,16 +94,16 @@ Mima< M, container>::Mima( const dg::CartesianGrid2d& grid, double kappa, double
     kappa( kappa), global(global),
     phi( grid.size(), 0.), dxphi( phi), dyphi( phi), omega(phi),
     dxxphi( phi), dxyphi(phi),
+    laplaceM( grid, dg::normed, dg::centered),
     arakawa( grid), 
     w2d( dg::create::weights(grid)), v2d( dg::create::inv_weights(grid)),
-    laplaceM( grid, dg::normed, dg::centered),
-    helmholtz( grid, -1),
-    invert( phi, grid.size(), eps)
+    invert( phi, grid.size(), eps),
+    helmholtz( grid, -1)
 {
 }
 
 template<class M, class container>
-void Mima< M, container>::operator()( const container& y, container& yp)
+void Mima< M, container>::operator()( double t, const container& y, container& yp)
 {
     invert( helmholtz, phi, y);
     dg::blas1::axpby( 1., phi, -1., y, omega); //omega = lap \phi

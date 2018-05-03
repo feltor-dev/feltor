@@ -14,7 +14,7 @@ int main( int argc, char* argv[])
     //Parameter initialisation
     Json::Value js;
     Json::CharReaderBuilder parser;
-    parser["collectComments"] = false; //important since we want to write to netcdf
+    parser["collectComments"] = false;
     std::string errs;
     if( argc != 3)
     {
@@ -24,7 +24,7 @@ int main( int argc, char* argv[])
     else
     {
         std::ifstream is(argv[1]);
-        parseFromStream( parser, is, &js, &errs);
+        parseFromStream( parser, is, &js, &errs); //read input without comments
     }
     std::cout << js<<std::endl;
     const Parameters p( js);
