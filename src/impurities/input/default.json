@@ -1,7 +1,7 @@
 {
     "n"  : 3,           // # of polynomial coefficients (3)
-    "Nx" : 100,         // # grid points in x (192)
-    "Ny" : 100,         // # grid points in y (192)
+    "Nx" : 50,         // # grid points in x (192)
+    "Ny" : 50,         // # grid points in y (192)
     "dt" : 1.01,        // # time step in units c_s/L_p (0.01)
     "n_out"  : 3,       // # x-y polynomials in output
     "Nx_out" : 100,     // # grid points in x in output fields
@@ -13,8 +13,8 @@
     "eps_gamma" : 1e-8, // # accuracy of Gamma (1e-6)
     "curvature" : 0.0005, // # magnetic curvature
     "nu_perp"  : 1e-3,  // # pependicular viscosity
-    "lx"  : 400,        // # lx in units of rho_s
-    "ly"  : 400,        // # ly in units of rho_s
+    "lx"  : 200,        // # lx in units of rho_s
+    "ly"  : 200,        // # ly in units of rho_s
     "bc_x"  : "DIR",    // # boundary condition in x (1: Dirichlet, 0: periodic)
     "bc_y"  : "PER",    // # boundary condition in y
     "amplitude" : 2.0,  // # perturbation (blob) amplitude
@@ -22,11 +22,11 @@
     "posX"  : 0.25,     // # blob x-position in units of lx (0.4)
     "posY"  : 0.5,      // # blob y-position in units of ly
     "tau"   : 3.0,      // # Ti/Te
-    "tau_z" : 0.0,      // # tau_z/Z tau_e
-    "a_z"   : 0.00,     // # (Z n_z0/n_e0 < 1, a_i <- 1-a_z) (0.1)
+    "tau_z" : 3.0,      // # tau_z/Z tau_e
+    "a_z"   : 0.001,     // # (Z n_z0/n_e0 < 1, a_i <- 1-a_z) (0.1)
     "mu_z"  : 3.,       // # (m_z/Z m_i) (48)
     "vorticity" : 0.,   // # ( 0 -> phi~0, 1 n_e~n_i)
-    "mode"  : 2,        // # (init mode; 1:const back, 2: impurity wall, 3: impurity blob)
+    "mode"  : 3,        // # (init mode; 1:const back, 2: impurity wall, 3: impurity blob)
     "wall_pos"   : 0.4, //
     "wall_amp"   : 1.,  //
     "wall_sigma" : 10.  //

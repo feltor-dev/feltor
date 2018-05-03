@@ -137,7 +137,7 @@ int main()
     dg::blas1::axpby( 1.,derivati,-1., error);
     double err = dg::blas2::dot( w2d, error);
     const double norm_der = dg::blas2::dot( w2d, derivati);
-    std::cout << "L2 Norm of relative error in derivative is "<<sqrt( err/norm_der)<<std::endl;
+    std::cout << "L2 Norm of relative error in derivative is "<<std::setprecision(16)<< sqrt( err/norm_der)<<std::endl;
     //derivative converges with p-1, for p = 1 with 1/2
 
     return 0;
