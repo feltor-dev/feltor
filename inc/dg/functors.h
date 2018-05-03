@@ -395,6 +395,31 @@ struct GaussianZ
 
 };
 /**
+ * @brief Functor for a sin prof in x- and and cos prof in  y-direction
+ * \f[ f(x,y) = \lambda \ln{(\cosh{(x/\lambda) } +\epsilon \cos(y/\lambda)) } \f]
+ */
+struct IslandXY
+{
+    /**
+     * @brief Construct Island 
+     *
+     * @param lambda amplitude
+     * @param bamp backgroundamp
+     */
+     IslandXY( double lambda, double eps):lambda_(lambda), eps_(eps){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y)const{ return lambda_*log(cosh(x/lambda_)+eps_*cos(y/lambda_));}
+  private:
+    double lambda_,eps_;
+};
+/**
  * @brief Functor for a sin prof in x and y-direction
  * \f[ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f]
  */
@@ -501,7 +526,84 @@ struct SinX
   private:
     double amp_,bamp_,kx_;
 };
-
+/**
+ * @brief Functor for a sin prof in y-direction
+ * \f[ f(x,y) =B+ A \sin(k_y y) \f]
+ */
+struct SinY
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     */
+    SinY( double amp, double bamp, double ky):amp_(amp), bamp_(bamp),ky_(ky){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y)const{ return bamp_+amp_*sin(y*ky_);}
+  private:
+    double amp_,bamp_,ky_;
+};
+/**
+ * @brief Functor for a sin prof in x-direction
+ * \f[ f(x,y) =B+ A \cos(k_y y) \f]
+ */
+struct CosY
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param ky  ky
+     */
+    CosY( double amp, double bamp, double ky):amp_(amp), bamp_(bamp),ky_(ky){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y)const{ return bamp_+amp_*cos(y*ky_);}
+  private:
+    double amp_,bamp_,ky_;
+};
+/**
+ * @brief Functor for a sin prof in x and y-direction
+ * \f[ f(x,y) =B+ A \sin(k_x x) \sin(k_y y) \f]
+ */
+struct InvCoshXsq
+{
+    /**
+     * @brief Construct with two coefficients
+     *
+     * @param amp amplitude
+     * @param bamp backgroundamp
+     * @param kx  kx
+     */
+    InvCoshXsq( double amp, double kx):amp_(amp), kx_(kx){}
+    /**
+     * @brief Return profile
+     *
+     * @param x x - coordinate
+     * @param y y - coordinate
+     
+     * @return \f$ f(x,y)\f$
+     */
+    double operator()( double x, double y)const{ return amp_/cosh(x*kx_)/cosh(x*kx_);}
+  private:
+    double amp_,kx_;
+};
 /**
  * @brief Functor for a sin prof in x-direction
  * \f[ f(x,y) = B + A(1-\sin(k_xx )) \f]
