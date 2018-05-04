@@ -61,15 +61,15 @@ T doDot( const std::array<T,N>& x, const std::array<T,N>& y, StdArrayTag)
     return exblas::cpu::Round(acc.data());
 }
 
-template< class T,std::size_t N, class UnaryOp>
-inline void doEvaluate( StdArrayTag, std::array<T,N>& y, T alpha, UnaryOp op, const std::array<T,N>& x) {
+template< class T,std::size_t N, class Binary, class UnaryOp>
+inline void doEvaluate( StdArrayTag, std::array<T,N>& y, Binary f, UnaryOp op, const std::array<T,N>& x) {
     for( size_t i=0; i<N; i++)
-        y[i] = op(x[i]) + alpha*y[i];
+        f(y[i], op(x[i]));
 }
-template< class T,std::size_t N, class Op>
-inline void doEvaluate( StdArrayTag, std::array<T,N>& z, T alpha, Op op, const std::array<T,N>& x, const std::array<T,N>& y) {
+template< class T,std::size_t N, class Binary, class Op>
+inline void doEvaluate( StdArrayTag, std::array<T,N>& z, Binary f, Op op, const std::array<T,N>& x, const std::array<T,N>& y) {
     for( size_t i=0; i<N; i++)
-        z[i] = op(x[i], y[i]) + alpha*z[i];
+        f(z[i], op(x[i], y[i]));
 }
 
 template< class T, std::size_t N>

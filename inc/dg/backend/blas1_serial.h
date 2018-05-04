@@ -15,15 +15,15 @@ std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_p
     return h_superacc;
 }
 
-template< class UnaryOp, class T>
-inline void doEvaluate_dispatch( SerialTag, unsigned size, T* y, T alpha, UnaryOp op, const T* x) {
+template< class UnaryOp, class Binary, class T>
+inline void doEvaluate_dispatch( SerialTag, unsigned size, T* y, Binary f, UnaryOp op, const T* x) {
     for( unsigned i=0; i<size; i++)
-        y[i] = DG_FMA( alpha, y[i], op(x[i]));
+        f(y[i], op(x[i]));
 }
-template< class UnaryOp, class T>
-inline void doEvaluate_dispatch( SerialTag, unsigned size, T* z, T alpha, UnaryOp op, const T* x, const T* y) {
+template< class UnaryOp, class Binary, class T>
+inline void doEvaluate_dispatch( SerialTag, unsigned size, T* z, Binary f, UnaryOp op, const T* x, const T* y) {
     for( unsigned i=0; i<size; i++)
-        z[i] = DG_FMA( alpha, z[i], op(x[i], y[i]));
+        f(z[i], op(x[i], y[i]));
 }
 
 template< class T>

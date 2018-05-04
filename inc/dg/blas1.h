@@ -11,6 +11,7 @@
 #include "backend/mpi_vector_blas.h"
 #endif
 #include "backend/std_vector_blas.cuh"
+#include "subroutines.h"
 
 /*!@file
  *
@@ -193,44 +194,57 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
     return;
 }
 
-/*! @brief \f$ y = \alpha y + op(x)\f$
+/*! @brief \f$ y = f(y , g(x))\f$
  *
- * This routine computes \f[ y_i = \alpha y_i + op(x_{i}) \f]
- * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
+ * This routine elementwise evaluates \f[ f(y_i, g(x_{i})) \f]
+ * This is strictly speaking not a BLAS routine since f and g can be a nonlinear functions.
  * @copydoc hide_container
+ * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type&, value_type) i.e. it writes into the first and reads from its second argument
  * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
- * @param y contains result, may alias x1 or x2
- * @param alpha A scalar
- * @param op binary Operator
- * @param x input 1 may alias y
- * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier (s.a. \ref DG_DEVICE)
+ * @param y contains result
+ * @param f The subroutine
+ * @param g unary operator
+ * @param x input
+ * @note the Functors must be callable on the device in use. In particular, with CUDA their signatures must contain the \__device__ specifier (s.a. \ref DG_DEVICE)
  * @note all aliases allowed
+@code
+    dg::HVec pi(20, M_PI), result(20, 0);
+    dg::blas1::evaluate( result, dg::equals(), cos, pi);
+    //result[i] =  -1. (cos(M_PI))
+@endcode
  */
-template< class container, class UnaryOp>
-inline void evaluate( container& y, get_value_type<container> alpha, UnaryOp op, const container& x)
+template< class container, class BinarySubroutine class UnaryOp>
+inline void evaluate( container& y, BinarySubroutine f, UnaryOp g, const container& x)
 {
-    dg::blas1::detail::doEvaluate(  get_vector_category<container>(), y, alpha, op, x);
+    dg::blas1::detail::doEvaluate(  get_vector_category<container>(), y, f, g, x);
     return;
 }
 
-/*! @brief \f$ z = \alpha z + op(x,y)\f$
+/*! @brief \f$ z = f(z, g(x,y)\f$
  *
- * This routine computes \f[ z_i = \alpha z_i + op(x_{i}, y_{i}) \f]
+ * This routine elementwise evaluates \f[ f(z_i , g(x_{i}, y_{i})) \f]
  * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
  * @copydoc hide_container
- * @tparam BinaryOp Functor with signature: \c value_type \c operator()( value_type)
- * @param z contains result, may alias x1 or x2
- * @param alpha A scalar
- * @param op binary Operator
- * @param x input 1 may alias y
- * @param y input 2 may alias y
+ * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type&, value_type) i.e. it writes into the first and reads from its second argument
+ * @tparam BinaryOp Functor with signature: \c value_type \c operator()( value_type, value_type)
+ * @param z contains result
+ * @param f The subroutine
+ * @param g unary operator
+ * @param x input 1
+ * @param y input 2
  * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @note all aliases allowed
+@code
+    double function( double x, double y) {return sin(x)*sin(y);}
+    dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
+    dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
+    //result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
+@endcode
  */
-template< class container, class BinaryOp>
-inline void evaluate( container& z, get_value_type<container> alpha, BinaryOp op, const container& x, const container& y)
+template< class container, class BinarySubroutine, class BinaryOp>
+inline void evaluate( container& z, BinarySubroutine f, BinaryOp g, const container& x, const container& y)
 {
-    dg::blas1::detail::doEvaluate( get_vector_category<container>(), z, alpha, op, x, y);
+    dg::blas1::detail::doEvaluate( get_vector_category<container>(), z, f, g, x, y);
     return;
 }
 

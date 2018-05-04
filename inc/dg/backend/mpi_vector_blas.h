@@ -67,8 +67,8 @@ inline void doPlus(  Vector& x,
     doPlus( x.data(), alpha, typename VectorTraits<container>::vector_category());
 }
 
-template< class Vector, class UnaryOp>
-inline void doEvaluate(  MPIVectorTag, Vector& y, get_value_type<Vector> alpha, UnaryOp op, const Vector& x)
+template< class Vector, class Binary, class UnaryOp>
+inline void doEvaluate(  MPIVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x)
 {
 #ifdef DG_DEBUG
     int result;
@@ -76,10 +76,10 @@ inline void doEvaluate(  MPIVectorTag, Vector& y, get_value_type<Vector> alpha, 
     assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 #endif //DG_DEBUG
     using container = typename Vector::container_type;
-    doEvaluate( get_vector_category<container>(), y.data(), alpha, op, x.data());
+    doEvaluate( get_vector_category<container>(), y.data(), f, op, x.data());
 }
-template< class Vector, class UnaryOp>
-inline void doEvaluate(  MPIVectorTag, Vector& y, get_value_type<Vector> alpha, UnaryOp op, const Vector& x, const Vector& x2)
+template< class Vector, class Binary, class UnaryOp>
+inline void doEvaluate(  MPIVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x, const Vector& x2)
 {
 #ifdef DG_DEBUG
     int result;
@@ -87,7 +87,7 @@ inline void doEvaluate(  MPIVectorTag, Vector& y, get_value_type<Vector> alpha, 
     assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 #endif //DG_DEBUG
     using container = typename Vector::container_type;
-    doEvaluate( get_vector_category<container>(), y.data(), alpha, op, x.data(),x2.data());
+    doEvaluate( get_vector_category<container>(), y.data(), f, op, x.data(),x2.data());
 }
 
 template< class Vector>
