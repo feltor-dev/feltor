@@ -1,4 +1,5 @@
 #pragma once
+#include "dg/geometry/functions.h"
 
 namespace dg{
 
