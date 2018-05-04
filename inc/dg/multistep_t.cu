@@ -37,7 +37,7 @@ struct Explicit
         m_y ( dg::evaluate(dg::cooY2d, g)) //y-coordinate
     {}
     void operator()( double t, const container& T, container& Tp) {
-        dg::blas1::evaluate( Tp, 0., Source(t,m_nu), m_x, m_y);
+        dg::blas1::evaluate( Tp, dg::equals(), Source(t,m_nu), m_x, m_y);
     }
     private:
     const double m_nu;

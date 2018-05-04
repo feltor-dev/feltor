@@ -78,7 +78,7 @@ int main()
     std::cout << "5 = " << w1[0][0] <<" (5)"<< std::endl;
     dg::blas1::scal( w1, 0.4);
     std::cout << "5*0.5 = " << w1[0][0] <<" (2)"<< std::endl;
-    dg::blas1::evaluate( w4, 0.,dg::AbsMax<>(), w1, w2);
+    dg::blas1::evaluate( w4, dg::equals(),dg::AbsMax<>(), w1, w2);
     std::cout << "absMax( 2, 5) = " << w4[0][0] <<" (5)"<< std::endl;
     dg::blas1::transform( w1, w3, dg::EXP<>());
     std::cout << "e^2 = " << w3[0][0] <<" (7.389056...)"<< std::endl;

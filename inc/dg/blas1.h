@@ -213,7 +213,7 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
     //result[i] =  -1. (cos(M_PI))
 @endcode
  */
-template< class container, class BinarySubroutine class UnaryOp>
+template< class container, class BinarySubroutine, class UnaryOp>
 inline void evaluate( container& y, BinarySubroutine f, UnaryOp g, const container& x)
 {
     dg::blas1::detail::doEvaluate(  get_vector_category<container>(), y, f, g, x);
@@ -268,7 +268,7 @@ inline void evaluate( container& z, BinarySubroutine f, BinaryOp g, const contai
 template< class container, class UnaryOp>
 inline void transform( const container& x, container& y, UnaryOp op )
 {
-    dg::blas1::evaluate( y, 0., op, x);
+    dg::blas1::evaluate( y, dg::equals(), op, x);
 }
 
 /*! @brief \f$ x = \alpha x\f$
