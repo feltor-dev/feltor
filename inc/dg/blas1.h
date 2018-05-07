@@ -129,6 +129,48 @@ inline void subroutine( Subroutine f, container&& x, Containers&&... xs)
     return;
 }
 
+/*! @brief \f$ x = \alpha x\f$
+ *
+ * This routine computes \f[ \alpha x_i \f]
+ * @copydoc hide_container
+ * @param alpha Scalar
+ * @param x container x
+
+@code
+    dg::DVec two( 100,2);
+    dg::blas1::scal( two,  0.5 )); //result[i] = 1.
+@endcode
+ */
+template< class container>
+inline void scal( container& x, get_value_type<container> alpha)
+{
+    if( alpha == get_value_type<container>(1))
+        return;
+    dg::blas1::subroutine( dg::Scal<get_value_type<container>>(alpha), x );
+    return;
+}
+
+/*! @brief \f$ x = x + \alpha \f$
+ *
+ * This routine computes \f[ x_i + \alpha \f]
+ * @copydoc hide_container
+ * @param alpha Scalar
+ * @param x container x
+
+@code
+    dg::DVec two( 100,2);
+    dg::blas1::plus( two,  2. )); //result[i] = 4.
+@endcode
+ */
+template< class container>
+inline void plus( container& x, get_value_type<container> alpha)
+{
+    if( alpha == get_value_type<container>(0))
+        return;
+    dg::blas1::subroutine( dg::Plus<get_value_type<container>>(alpha), x );
+    return;
+}
+
 /*! @brief \f$ y = \alpha x + \beta y\f$
  *
  * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
@@ -147,6 +189,19 @@ inline void subroutine( Subroutine f, container&& x, Containers&&... xs)
 template< class container>
 inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, container& y)
 {
+    using value_type = get_value_type<container>;
+    if( alpha == value_type(0) ) {
+        scal( y, beta);
+        return;
+    }
+    if( &x == &y) {
+        scal( y, (alpha+beta) );
+        return;
+    }
+    if( alpha==value_type(1) && beta == (value_type(0) ) {
+        copy( x, y);
+        return;
+    }
     dg::blas1::subroutine( dg::Axpby<get_value_type<container>>(alpha, beta),  x, y);
     return;
 }
@@ -197,6 +252,32 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
 template< class container>
 inline void axpbypgz( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, get_value_type<container> gamma, container& z)
 {
+    using value_type = get_value_type<container>;
+    if( alpha == value_type(0) )
+    {
+        axpby( beta, y, gamma, z);
+        return;
+    }
+    else if( beta == value_type(0) )
+    {
+        axpby( alpha, x, gamma, z);
+        return;
+    }
+    if( &x==&y)
+    {
+        axpby( alpha+beta, x, gamma, z);
+        return;
+    }
+    else if( &x==&z)
+    {
+        axpby( beta, y, alpha+gamma, z);
+        return;
+    }
+    else if( &y==&z)
+    {
+        axpby( alpha, x, beta+gamma, z);
+        return;
+    }
     dg::blas1::subroutine( dg::Axpbypgz<get_value_type<container>>(alpha, beta, gamma),  x, y, z);
     return;
 }
@@ -279,43 +360,6 @@ inline void transform( const container& x, container& y, UnaryOp op )
     dg::blas1::evaluate( y, dg::equals(), op, x);
 }
 
-/*! @brief \f$ x = \alpha x\f$
- *
- * This routine computes \f[ \alpha x_i \f]
- * @copydoc hide_container
- * @param alpha Scalar
- * @param x container x
-
-@code
-    dg::DVec two( 100,2);
-    dg::blas1::scal( two,  0.5 )); //result[i] = 1.
-@endcode
- */
-template< class container>
-inline void scal( container& x, get_value_type<container> alpha)
-{
-    dg::blas1::subroutine( dg::Scal<get_value_type<container>>(alpha), x );
-    return;
-}
-
-/*! @brief \f$ x = x + \alpha \f$
- *
- * This routine computes \f[ x_i + \alpha \f]
- * @copydoc hide_container
- * @param alpha Scalar
- * @param x container x
-
-@code
-    dg::DVec two( 100,2);
-    dg::blas1::plus( two,  2. )); //result[i] = 4.
-@endcode
- */
-template< class container>
-inline void plus( container& x, get_value_type<container> alpha)
-{
-    dg::blas1::subroutine( dg::Plus<get_value_type<container>>(alpha), x );
-    return;
-}
 
 /*! @brief \f$ y = x_1 x_2 \f$
 *
@@ -361,6 +405,10 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
 template< class container>
 inline void pointwiseDot( get_value_type<container> alpha, const container& x1, const container& x2, get_value_type<container> beta, container& y)
 {
+    if( alpha == get_value_type<container>(0) ) {
+        dg::blas1::scal(y, beta);
+        return;
+    }
     dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha,beta,0), x1, x2, y );
 }
 
@@ -387,6 +435,10 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
 template< class container>
 inline void pointwiseDot( get_value_type<container> alpha, const container& x1, const container& x2, const container& x3, get_value_type<container> beta, container& y)
 {
+    if( alpha == get_value_type<container>(0) ) {
+        dg::blas1::scal(y, beta);
+        return;
+    }
     dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha,beta,0), x1, x2, x3, y );
 }
 
@@ -435,6 +487,10 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 template< class container>
 inline void pointwiseDivide( get_value_type<container> alpha, const container& x1, const container& x2, get_value_type<container> beta, container& y)
 {
+    if( alpha == get_value_type<container>(0) ) {
+        dg::blas1::scal(y, beta);
+        return;
+    }
     dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<container>>(alpha, beta), x1, x2, y );
 }
 
@@ -465,6 +521,15 @@ void pointwiseDot(  get_value_type<container> alpha, const container& x1, const 
                     get_value_type<container> beta,  const container& x2, const container& y2,
                     get_value_type<container> gamma, container & z)
 {
+    using value_type = get_value_type<container>;
+    if( alpha==value_type(0)){
+        pointwiseDot( beta, x2,y2, gamma, z);
+        return;
+    }
+    else if( beta==value_type(0)){
+        pointwiseDot( alpha, x1,y1, gamma, z);
+        return;
+    }
     dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha, beta, gamma), x1, y1, x2, y2, z );
     return;
 }

@@ -85,208 +85,26 @@ get_value_type<Vector> doDot( const Vector& x, const Vector& y, SharedVectorTag)
     return exblas::cpu::Round(acc.data());
 }
 
-template< class Vector, class Binary, class UnaryOp>
-inline void doEvaluate( ThrustVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x){
-    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
-    get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
-    doEvaluate_dispatch( get_execution_policy<Vector>(), x.size(), y_ptr, f, op, x_ptr);
-}
-template< class Vector, class Binary, class UnaryOp>
-inline void doEvaluate( ThrustVectorTag, Vector& z, Binary f, UnaryOp op, const Vector& x, const Vector& y){
-    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
-    const get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
-    get_value_type<Vector> * z_ptr = thrust::raw_pointer_cast( z.data());
-    doEvaluate_dispatch( get_execution_policy<Vector>(), x.size(), z_ptr, f, op, x_ptr, y_ptr);
-}
-
-template< class Vector>
-inline void doScal( Vector& x, get_value_type<Vector> alpha, ThrustVectorTag)
+template< class Subroutine, class container, class ...Containers>
+inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    if( alpha == 1.)
-        return;
-    get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
-    doScal_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, alpha);
-}
-
-template< class Vector>
-inline void doPlus(  Vector& x, get_value_type<Vector> alpha, ThrustVectorTag)
-{
-    if(alpha==0)
-        return;
-    get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
-    return doPlus_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, alpha);
-}
-
-template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              Vector& y,
-              ThrustVectorTag)
-{
+    //static check that all Containers have SharedVectorTag and the same execution policy
+    //...
 #ifdef DG_DEBUG
-    assert( x.size() == y.size() );
+    //is this possible?
+    //assert( !x.empty());
+    //assert( x.size() == xs.size() );
 #endif //DG_DEBUG
-    if( alpha == 0) {
-        doScal( y, beta, ThrustVectorTag());
-        return;
-    }
-    if( &x == &y) {
-        doScal( y, (alpha+beta), ThrustVectorTag());
-        return;
-    }
-    if( alpha==1. && beta == 0) {
-        thrust::copy( x.begin(), x.end(), y.begin());
-        return;
-    }
-    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
-    get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
-    doAxpby_dispatch( get_execution_policy<Vector>(), x.size(), alpha, x_ptr, beta, y_ptr);
+
+    doSubroutine_dispatch(
+            get_execution_policy<container>,
+            f,
+            get_pointer_type<container>(  thrust::raw_pointer_cast(  x.data()) ),
+            get_pointer_type<Containers>( thrust::raw_pointer_cast( xs.data()) )...
+            );
 }
 
-template< class Vector>
-inline void doAxpbypgz( get_value_type<Vector> alpha,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              const Vector& y,
-              get_value_type<Vector> gamma,
-              Vector& z,
-              ThrustVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-    assert( x.size() == z.size() );
-#endif //DG_DEBUG
-    if( alpha == 0)
-    {
-        doAxpby( beta, y, gamma, z, ThrustVectorTag());
-        return;
-    }
-    else if( beta == 0)
-    {
-        doAxpby( alpha, x, gamma, z, ThrustVectorTag());
-        return;
-    }
-    if( &x==&y)
-    {
-        doAxpby( alpha+beta, x, gamma, z, ThrustVectorTag());
-        return;
-    }
-    else if( &x==&z)
-    {
-        doAxpby( beta, y, alpha+gamma, z, ThrustVectorTag());
-        return;
-    }
-    else if( &y==&z)
-    {
-        doAxpby( alpha, x, beta+gamma, z, ThrustVectorTag());
-        return;
-    }
-    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
-    const get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
-    get_value_type<Vector> * z_ptr = thrust::raw_pointer_cast( z.data());
-    unsigned size = x.size();
-    doAxpbypgz_dispatch( get_execution_policy<Vector>(), size, alpha, x_ptr, beta, y_ptr, gamma, z_ptr);
-}
-
-template<class Vector>
-inline void doPointwiseDot(
-              get_value_type<Vector> alpha,
-              const Vector& x1,
-              const Vector& x2,
-              get_value_type<Vector> beta,
-              Vector& y,
-              ThrustVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x1.size() == y.size() && x2.size() == y.size() );
-#endif //DG_DEBUG
-    if( alpha == 0) {
-        dg::blas1::detail::doScal(y, beta, dg::ThrustVectorTag());
-        return;
-    }
-    const get_value_type<Vector> * x1_ptr = thrust::raw_pointer_cast( x1.data());
-    const get_value_type<Vector> * x2_ptr = thrust::raw_pointer_cast( x2.data());
-    get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
-    unsigned size = x1.size();
-    doPointwiseDot_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, x2_ptr, beta, y_ptr);
-}
-
-template<class Vector>
-inline void doPointwiseDivide(
-              get_value_type<Vector> alpha,
-              const Vector& x1,
-              const Vector& x2,
-              get_value_type<Vector> beta,
-              Vector& y,
-              ThrustVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x1.size() == y.size() && x2.size() == y.size() );
-#endif //DG_DEBUG
-    if( alpha == 0) {
-        dg::blas1::detail::doScal(y, beta, dg::ThrustVectorTag());
-        return;
-    }
-    const get_value_type<Vector> * x1_ptr = thrust::raw_pointer_cast( x1.data());
-    const get_value_type<Vector> * x2_ptr = thrust::raw_pointer_cast( x2.data());
-    get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
-    unsigned size = x1.size();
-    doPointwiseDivide_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, x2_ptr, beta, y_ptr);
-}
-
-template<class Vector>
-inline void doPointwiseDot(
-              get_value_type<Vector> alpha,
-              const Vector& x1,
-              const Vector& y1,
-              get_value_type<Vector> beta,
-              const Vector& x2,
-              const Vector& y2,
-              get_value_type<Vector> gamma,
-              Vector& z,
-              ThrustVectorTag)
-{
-    if( alpha==0){
-        doPointwiseDot( beta, x2,y2, gamma, z, ThrustVectorTag());
-        return;
-    }
-    else if( beta==0){
-        doPointwiseDot( alpha, x1,y1, gamma, z, ThrustVectorTag());
-        return;
-    }
-    const get_value_type<Vector> *x1_ptr = thrust::raw_pointer_cast( x1.data());
-    const get_value_type<Vector> *y1_ptr = thrust::raw_pointer_cast( y1.data());
-    const get_value_type<Vector> *x2_ptr = thrust::raw_pointer_cast( x2.data());
-    const get_value_type<Vector> *y2_ptr = thrust::raw_pointer_cast( y2.data());
-          get_value_type<Vector> * z_ptr = thrust::raw_pointer_cast( z.data());
-    unsigned size = x1.size();
-    doPointwiseDot_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, y1_ptr, beta, x2_ptr, y2_ptr, gamma, z_ptr);
-}
-template<class Vector>
-inline void doPointwiseDot(
-              get_value_type<Vector> alpha,
-              const Vector& x1,
-              const Vector& x2,
-              const Vector& x3,
-              get_value_type<Vector> beta,
-              Vector& y,
-              ThrustVectorTag)
-{
-    if( alpha==0){
-        doScal( y, beta, ThrustVectorTag());
-        return;
-    }
-    const get_value_type<Vector> *x1_ptr = thrust::raw_pointer_cast( x1.data());
-    const get_value_type<Vector> *x2_ptr = thrust::raw_pointer_cast( x2.data());
-    const get_value_type<Vector> *x3_ptr = thrust::raw_pointer_cast( x3.data());
-          get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
-    unsigned size = x1.size();
-    doPointwiseDot_dispatch( get_execution_policy<Vector>(), size, alpha, x1_ptr, x2_ptr, x3_ptr, beta, y_ptr);
-}
-
-}//namespace detail
-
+} //namespace detail
 } //namespace blas1
 ///@endcond
 } //namespace dg
