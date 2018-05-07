@@ -59,7 +59,7 @@ inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&
     //MPI_Comm_compare( x.communicator(), y.communicator(), &result);
     //assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 #endif //DG_DEBUG
-    using inner_container = typename container::container_type;
+    using inner_container = typename std::decay<container>::type::container_type;
     doSubroutine( get_vector_category<inner_container>(), f, x.data(), xs.data()...);
 }
 
