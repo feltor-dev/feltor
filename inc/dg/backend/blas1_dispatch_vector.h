@@ -93,8 +93,12 @@ inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, 
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    //static check that all Containers have VectorVectorTag and the same execution policy
-    //...
+    static_assert( all_true<std::is_base_of<VectorVectorTag,
+        get_vector_category<Containers>>::value...>::value, 
+        "All container types must share the same vector category (VectorVectorTag in this case)!");
+    static_assert( all_true<std::is_same<get_execution_policy<container>,
+        get_execution_policy<Containers> >::value...>::value, 
+        "All container types must share the same execution policy!");
 #ifdef DG_DEBUG
     //is this possible?
     //assert( !x.empty());

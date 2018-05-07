@@ -88,8 +88,12 @@ get_value_type<Vector> doDot( const Vector& x, const Vector& y, SharedVectorTag)
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    //static check that all Containers have SharedVectorTag and the same execution policy
-    //...
+    static_assert( all_true<std::is_base_of<SharedVectorTag,
+        get_vector_category<Containers>>::value...>::value, 
+        "All container types must share the same vector category (SharedVectorTag in this case)!");
+    static_assert( all_true<std::is_same<get_execution_policy<container>,
+        get_execution_policy<Containers> >::value...>::value, 
+        "All container types must share the same execution policy!");
 #ifdef DG_DEBUG
     //is this possible?
     //assert( !x.empty());

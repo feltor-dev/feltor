@@ -34,6 +34,7 @@ namespace blas1
 ///@addtogroup blas1
 ///@{
 
+
 /**
  * @brief y=x; Generic way to copy/construct and/or convert a container type from a different container type (e.g. from CPU to GPU, or double to float, etc.)
  *
@@ -83,19 +84,7 @@ inline void transfer( const other_container& x, container& y)
     y = dg::blas1::transfer<container, other_container>( x);
 }
 
-
-/**
- * @brief y=x; Invoke assignment operator
- *
- * Same as y=x
- * @tparam Assignable any assignable type
- * @param x in
- * @param y out
- */
-template<class Assignable>
-inline void copy( const Assignable& x, Assignable& y){y=x;}
-
-/*! @brief \f$ x^T y\f$; Binary reproducible Euclidean dot product between two containers
+/*! @brief \f$ x^T y\f$; Binary reproducible Euclidean dot product between two vectors
  *
  * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
  * do not match, the result is undefined.
@@ -126,6 +115,18 @@ template< class Subroutine, class container, class ...Containers>
 inline void subroutine( Subroutine f, container&& x, Containers&&... xs)
 {
     dg::blas1::detail::doSubroutine( get_vector_category<container>(), f, std::forward<container>(x), std::forward<Containers>(xs)...);
+    return;
+}
+/**
+ * @brief \f$ y=x \f$
+ *
+ * explicit pointwise assignment \f$ y_i = x_i\f$
+ * @param x in
+ * @param y out
+ */
+template<class container_in, class container_out>
+inline void copy( const container_in& x, container_out& y){
+    dg::blas1::subroutine( dg::equals(), x, y );
     return;
 }
 
@@ -186,20 +187,12 @@ inline void plus( container& x, get_value_type<container> alpha)
     dg::blas1::axpby( 2, two, 3., three); //three[i] = 13 (2*2+3*3)
 @endcode
  */
-template< class container>
-inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, container& y)
+template< class container, class container1>
+inline void axpby( get_value_type<container> alpha, const container1& x, get_value_type<container> beta, container& y)
 {
     using value_type = get_value_type<container>;
     if( alpha == value_type(0) ) {
         scal( y, beta);
-        return;
-    }
-    if( &x == &y) {
-        scal( y, (alpha+beta) );
-        return;
-    }
-    if( alpha==value_type(1) && beta == value_type(0)  ) {
-        copy( x, y);
         return;
     }
     dg::blas1::subroutine( dg::Axpby<get_value_type<container>>(alpha, beta),  x, y);
@@ -225,8 +218,8 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
     //result[i] = -21 (2.5*2+2*5-3*12)
 @endcode
  */
-template< class container>
-inline void axpbypgz( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, get_value_type<container> gamma, container& z)
+template< class container, class container1, class container2>
+inline void axpbypgz( get_value_type<container> alpha, const container1& x, get_value_type<container> beta, const container2& y, get_value_type<container> gamma, container& z)
 {
     using value_type = get_value_type<container>;
     if( alpha == value_type(0) )
@@ -237,21 +230,6 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
     else if( beta == value_type(0) )
     {
         axpby( alpha, x, gamma, z);
-        return;
-    }
-    if( &x==&y)
-    {
-        axpby( alpha+beta, x, gamma, z);
-        return;
-    }
-    else if( &x==&z)
-    {
-        axpby( beta, y, alpha+gamma, z);
-        return;
-    }
-    else if( &y==&z)
-    {
-        axpby( alpha, x, beta+gamma, z);
         return;
     }
     dg::blas1::subroutine( dg::Axpbypgz<get_value_type<container>>(alpha, beta, gamma),  x, y, z);
@@ -275,51 +253,25 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
     dg::blas1::axpby( 2, two, 3., three, result); //result[i] = 13 (2*2+3*3)
 @endcode
  */
-template< class container>
-inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, container& z)
+template< class container, class container1, class container2>
+inline void axpby( get_value_type<container> alpha, const container1& x, get_value_type<container> beta, const container2& y, container& z)
 {
     dg::blas1::axpbypgz( alpha, x,  beta, y, 0., z);
     return;
 }
 
-/*! @brief \f$ y = f(y , g(x))\f$
+/*! @brief \f$ y = f(y, g(x_0,x_1,...)\f$
  *
- * This routine elementwise evaluates \f[ f(y_i, g(x_{i})) \f]
- * This is strictly speaking not a BLAS routine since f and g can be a nonlinear functions.
+ * This routine elementwise evaluates \f[ f(y_i , g(x_{0i}, x_{1i}, ...)) \f]
+ * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
  * @copydoc hide_container
- * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type&, value_type) i.e. it writes into the first and reads from its second argument
- * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
+ * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type_y&, value_type_g) i.e. it writes into the first and reads from its second argument
+ * @tparam Functor signature: \c value_type_g \c operator()( value_type_x0, value_type_x1, ...)
  * @param y contains result
  * @param f The subroutine
  * @param g unary operator
- * @param x input
- * @note the Functors must be callable on the device in use. In particular, with CUDA their signatures must contain the \__device__ specifier (s.a. \ref DG_DEVICE)
- * @note all aliases allowed
-@code
-    dg::HVec pi(20, M_PI), result(20, 0);
-    dg::blas1::evaluate( result, dg::equals(), cos, pi);
-    //result[i] =  -1. (cos(M_PI))
-@endcode
- */
-template< class container, class BinarySubroutine, class UnaryOp>
-inline void evaluate( container& y, BinarySubroutine f, UnaryOp g, const container& x)
-{
-    dg::blas1::subroutine( dg::Evaluate<BinarySubroutine, UnaryOp>(f,g), y, x);
-    return;
-}
-
-/*! @brief \f$ z = f(z, g(x,y)\f$
- *
- * This routine elementwise evaluates \f[ f(z_i , g(x_{i}, y_{i})) \f]
- * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
- * @copydoc hide_container
- * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type&, value_type) i.e. it writes into the first and reads from its second argument
- * @tparam BinaryOp Functor with signature: \c value_type \c operator()( value_type, value_type)
- * @param z contains result
- * @param f The subroutine
- * @param g unary operator
- * @param x input 1
- * @param y input 2
+ * @param x0 first input
+ * @param xs more input
  * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @note all aliases allowed
 @code
@@ -329,13 +281,12 @@ inline void evaluate( container& y, BinarySubroutine f, UnaryOp g, const contain
     //result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
 @endcode
  */
-template< class container, class BinarySubroutine, class BinaryOp>
-inline void evaluate( container& z, BinarySubroutine f, BinaryOp g, const container& x, const container& y)
+template< class container, class BinarySubroutine, class Functor, class container0, class ...Containers>
+inline void evaluate( container& y, BinarySubroutine f, Functor g, const container0& x0, const Containers& ...xs)
 {
-    dg::blas1::subroutine( dg::Evaluate<BinarySubroutine&, BinaryOp&>(f,g), z, x,y );
+    dg::blas1::subroutine( dg::Evaluate<BinarySubroutine, Functor>(f,g), y, x0, xs...);
     return;
 }
-
 
 /*! @brief \f$ y = op(x)\f$
  *
@@ -354,8 +305,8 @@ inline void evaluate( container& z, BinarySubroutine f, BinaryOp g, const contai
     //result[i] = 7.389056... (e^2)
 @endcode
  */
-template< class container, class UnaryOp>
-inline void transform( const container& x, container& y, UnaryOp op )
+template< class container, class container1, class UnaryOp>
+inline void transform( const container1& x, container& y, UnaryOp op )
 {
     dg::blas1::evaluate( y, dg::equals(), op, x);
 }
@@ -376,8 +327,8 @@ inline void transform( const container& x, container& y, UnaryOp op )
     dg::blas1::pointwiseDot( two,  three, result ); //result[i] = 6.
 @endcode
 */
-template< class container>
-inline void pointwiseDot( const container& x1, const container& x2, container& y)
+template< class container, class container1, class container2>
+inline void pointwiseDot( const container1& x1, const container2& x2, container& y)
 {
     dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(1,0), x1, x2, y );
     return;
@@ -402,8 +353,8 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
     //result[i] = -12. (2*2*3-4*6)
 @endcode
 */
-template< class container>
-inline void pointwiseDot( get_value_type<container> alpha, const container& x1, const container& x2, get_value_type<container> beta, container& y)
+template< class container, class container1, class container2>
+inline void pointwiseDot( get_value_type<container> alpha, const container1& x1, const container2& x2, get_value_type<container> beta, container& y)
 {
     if( alpha == get_value_type<container>(0) ) {
         dg::blas1::scal(y, beta);
@@ -432,8 +383,8 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
     //result[i] = 24. (2*2*3*4-4*6)
 @endcode
 */
-template< class container>
-inline void pointwiseDot( get_value_type<container> alpha, const container& x1, const container& x2, const container& x3, get_value_type<container> beta, container& y)
+template< class container, class container1, class container2, class container3>
+inline void pointwiseDot( get_value_type<container> alpha, const container1& x1, const container2& x2, const container3& x3, get_value_type<container> beta, container& y)
 {
     if( alpha == get_value_type<container>(0) ) {
         dg::blas1::scal(y, beta);
@@ -459,8 +410,8 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
     //result[i] = -0.666... (2/3)
 @endcode
 */
-template< class container>
-inline void pointwiseDivide( const container& x1, const container& x2, container& y)
+template< class container, class container1, class container2>
+inline void pointwiseDivide( const container1& x1, const container2& x2, container& y)
 {
     dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<container>>(1,0), x1, x2, y );
     return;
@@ -484,8 +435,8 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
     //result[i] = 7 (3*2/3+5*1)
 @endcode
 */
-template< class container>
-inline void pointwiseDivide( get_value_type<container> alpha, const container& x1, const container& x2, get_value_type<container> beta, container& y)
+template< class container, class container1, class container2>
+inline void pointwiseDivide( get_value_type<container> alpha, const container1& x1, const container2& x2, get_value_type<container> beta, container& y)
 {
     if( alpha == get_value_type<container>(0) ) {
         dg::blas1::scal(y, beta);
@@ -516,9 +467,9 @@ inline void pointwiseDivide( get_value_type<container> alpha, const container& x
     //result[i] = -56.
 @endcode
 */
-template<class container>
-void pointwiseDot(  get_value_type<container> alpha, const container& x1, const container& y1,
-                    get_value_type<container> beta,  const container& x2, const container& y2,
+template<class container, class container1, class container2, class container3, class container4>
+void pointwiseDot(  get_value_type<container> alpha, const container1& x1, const container2& y1,
+                    get_value_type<container> beta,  const container3& x2, const container4& y2,
                     get_value_type<container> gamma, container & z)
 {
     using value_type = get_value_type<container>;

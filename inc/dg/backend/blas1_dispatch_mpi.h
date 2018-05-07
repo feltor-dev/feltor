@@ -51,8 +51,9 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    //static check that all Containers have MPIVectorTag
-    //...
+    static_assert( all_true<std::is_base_of<MPIVectorTag,
+        get_vector_category<Containers>>::value...>::value, 
+        "All container types must share the same vector category (MPIVectorTag in this case)!");
 #ifdef DG_DEBUG
     //is this possible?
     //int result;
