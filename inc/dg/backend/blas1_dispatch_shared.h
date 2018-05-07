@@ -67,7 +67,7 @@ To doTransfer( const From& in, ThrustVectorTag, ThrustVectorTag)
 }
 
 template< class Vector>
-std::vector<int64_t> doDot_superacc( const Vector& x, const Vector& y, ThrustVectorTag)
+std::vector<int64_t> doDot_superacc( const Vector& x, const Vector& y, SharedVectorTag)
 {
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
@@ -78,10 +78,10 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector& y, ThrustVec
 }
 
 template<class Vector>
-get_value_type<Vector> doDot( const Vector& x, const Vector& y, ThrustVectorTag)
+get_value_type<Vector> doDot( const Vector& x, const Vector& y, SharedVectorTag)
 {
     static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
-    std::vector<int64_t> acc = doDot_superacc( x,y,ThrustVectorTag());
+    std::vector<int64_t> acc = doDot_superacc( x,y,SharedVectorTag());
     return exblas::cpu::Round(acc.data());
 }
 

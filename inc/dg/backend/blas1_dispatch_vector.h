@@ -53,332 +53,56 @@ inline get_value_type<Vector> doDot( const Vector& x1, const Vector& x2, VectorV
     }
     return exblas::cpu::Round(&(acc[0][0]));
 }
-template<class Vector, class Binary, class UnaryOp>
-inline void doEvaluate( VectorVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x)
-{
-    for( unsigned i=0; i<x.size(); i++)
-        doEvaluate( get_vector_category<typename Vector::value_type>(), y[i], f, op, x[i]);
-}
-template<class Vector, class Binary, class UnaryOp>
-inline void doEvaluate( VectorVectorTag, Vector& z, Binary f, UnaryOp op, const Vector& x, const Vector& y)
-{
-    for( unsigned i=0; i<x.size(); i++)
-        doEvaluate( get_vector_category<typename Vector::value_type>(), z[i], f, op, x[i], y[i]);
-}
 #ifdef _OPENMP
-template< class Vector>
-inline void doScal( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, OmpTag)
+//omp tag implementation
+template< class Subroutine, class container, class ...Containers>
+inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, container&& x, Containers&&... xs)
 {
+    //static check that all Containers have the omp execution policy
+    //...
+    using inner_container = typename container::value_type;
     if( !omp_in_parallel())//to catch recursive calls
     {
         #pragma omp parallel
         {
-            for( unsigned i=0; i<x.size(); i++)
-                doScal( x[i], alpha, get_vector_category<typename Vector::value_type>());
+            for( unsigned i=0; i<x.size(); i++) {
+                doSubroutine( get_vector_category<inner_container>(), f, x[i], xs[i]...);
+            }
         }
     }
-    else
-        for( unsigned i=0; i<x.size(); i++)
-            doScal( x[i], alpha, get_vector_category<typename Vector::value_type>());
-}
-template< class Vector>
-inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, OmpTag)
-{
-    if( !omp_in_parallel())//to catch recursive calls
-    {
-        #pragma omp parallel
-        {
-            for( unsigned i=0; i<x.size(); i++)
-                doPlus( x[i], alpha, get_vector_category<typename Vector::value_type>());
+    else //we are already in a parallel omp region
+        for( unsigned i=0; i<x.size(); i++) {
+            doSubroutine( get_vector_category<inner_container>(), f, x[i], xs[i]...);
         }
-    }
-    else
-        for( unsigned i=0; i<x.size(); i++)
-            doPlus( x[i], alpha, get_vector_category<typename Vector::value_type>());
-}
-template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              Vector& y,
-              VectorVectorTag, OmpTag)
-{
-    if( !omp_in_parallel())//to catch recursive calls
-    {
-        #pragma omp parallel
-        {
-            for( unsigned i=0; i<x.size(); i++)
-                doAxpby( alpha, x[i], beta, y[i], get_vector_category<typename Vector::value_type>());
-        }
-    }
-    else
-        for( unsigned i=0; i<x.size(); i++)
-            doAxpby( alpha, x[i], beta, y[i], get_vector_category<typename Vector::value_type>());
-}
-template< class Vector>
-inline void doAxpbypgz( get_value_type<Vector> alpha,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              const Vector& y,
-              get_value_type<Vector> gamma,
-              Vector& z,
-              VectorVectorTag, OmpTag)
-{
-    if( !omp_in_parallel())//to catch recursive calls
-    {
-        #pragma omp parallel
-        {
-            for( unsigned i=0; i<x.size(); i++)
-                doAxpbypgz( alpha, x[i], beta, y[i], gamma, z[i], get_vector_category<typename Vector::value_type>());
-        }
-    }
-    else
-        for( unsigned i=0; i<x.size(); i++)
-            doAxpbypgz( alpha, x[i], beta, y[i], gamma, z[i], get_vector_category<typename Vector::value_type>());
-}
-template< class Vector>
-inline void doPointwiseDivide( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& x2,
-    get_value_type<Vector> beta,
-    Vector& y, VectorVectorTag, OmpTag)
-{
-    if( !omp_in_parallel())//to catch recursive calls
-    {
-        #pragma omp parallel
-        {
-            for( unsigned i=0; i<x1.size(); i++)
-                doPointwiseDivide( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
-        }
-    }
-    else
-        for( unsigned i=0; i<x1.size(); i++)
-            doPointwiseDivide( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
-}
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& x2, const Vector& x3,
-    get_value_type<Vector> beta,
-    Vector& y, VectorVectorTag, OmpTag)
-{
-    if( !omp_in_parallel())//to catch recursive calls
-    {
-        #pragma omp parallel
-        {
-            for( unsigned i=0; i<x1.size(); i++)
-                doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], get_vector_category<typename Vector::value_type>());
-        }
-    }
-    else
-        for( unsigned i=0; i<x1.size(); i++)
-            doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], get_vector_category<typename Vector::value_type>());
-
-}
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& y1,
-    get_value_type<Vector> beta,
-    const Vector& x2, const Vector& y2,
-    get_value_type<Vector> gamma,
-    Vector& z, VectorVectorTag, OmpTag)
-{
-    if( !omp_in_parallel())//to catch recursive calls
-    {
-        #pragma omp parallel
-        {
-            for( unsigned i=0; i<x1.size(); i++)
-                doPointwiseDot( alpha, x1[i], y1[i], beta, x2[i], y2[i], gamma,z[i], get_vector_category<typename Vector::value_type>() );
-        }
-    }
-    else
-        for( unsigned i=0; i<x1.size(); i++)
-            doPointwiseDot( alpha, x1[i], y1[i], beta, x2[i], y2[i], gamma,z[i], get_vector_category<typename Vector::value_type>() );
 }
 #endif //_OPENMP
 
-template< class Vector>
-inline void doScal( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, AnyPolicyTag)
+//any tag implementation
+template< class Subroutine, class container, class ...Containers>
+inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    for( unsigned i=0; i<x.size(); i++)
-        doScal( x[i], alpha, get_vector_category<typename Vector::value_type>());
-}
-template< class Vector>
-inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag, AnyPolicyTag)
-{
-    for( unsigned i=0; i<x.size(); i++)
-        doPlus( x[i], alpha, get_vector_category<typename Vector::value_type>());
-}
-template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              Vector& y,
-              VectorVectorTag, AnyPolicyTag)
-{
-    for( unsigned i=0; i<x.size(); i++)
-        doAxpby( alpha, x[i], beta, y[i], get_vector_category<typename Vector::value_type>());
+    //static check that all Containers have the same execution policy
+    //...
+    using inner_container = typename container::value_type;
+    for( unsigned i=0; i<x.size(); i++) {
+        doSubroutine( get_vector_category<inner_container>(), f, x[i], xs[i]...);
+    }
 }
 
-template< class Vector>
-inline void doAxpbypgz( get_value_type<Vector> alpha,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              const Vector& y,
-              get_value_type<Vector> gamma,
-              Vector& z,
-              VectorVectorTag, AnyPolicyTag)
+//dispatch
+template< class Subroutine, class container, class ...Containers>
+inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    for( unsigned i=0; i<x.size(); i++)
-        doAxpbypgz( alpha, x[i], beta, y[i], gamma, z[i], get_vector_category<typename Vector::value_type>());
-}
-
-
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& x2,
-    get_value_type<Vector> beta,
-    Vector& y, VectorVectorTag, AnyPolicyTag)
-{
-    for( unsigned i=0; i<x1.size(); i++)
-        doPointwiseDot( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
-}
-template< class Vector>
-inline void doPointwiseDivide( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& x2,
-    get_value_type<Vector> beta,
-    Vector& y, VectorVectorTag, AnyPolicyTag)
-{
-    for( unsigned i=0; i<x1.size(); i++)
-        doPointwiseDivide( alpha, x1[i], x2[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
-}
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& x2, const Vector& x3,
-    get_value_type<Vector> beta,
-    Vector& y, VectorVectorTag, AnyPolicyTag)
-{
-    for( unsigned i=0; i<x1.size(); i++)
-        doPointwiseDot( alpha, x1[i], x2[i],x3[i], beta, y[i], get_vector_category<typename Vector::value_type>() );
-}
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& y1,
-    get_value_type<Vector> beta,
-    const Vector& x2, const Vector& y2,
-    get_value_type<Vector> gamma,
-    Vector& z, VectorVectorTag, AnyPolicyTag)
-{
-    for( unsigned i=0; i<x1.size(); i++)
-        doPointwiseDot( alpha, x1[i], y1[i], beta, x2[i], y2[i], gamma,z[i], get_vector_category<typename Vector::value_type>() );
-}
-/////////////////////dispatch////////////////////////
-template< class Vector>
-inline void doScal( Vector& x, get_value_type<Vector> alpha, VectorVectorTag)
-{
+    //static check that all Containers have VectorVectorTag and the same execution policy
+    //...
 #ifdef DG_DEBUG
-    assert( !x.empty());
+    //is this possible?
+    //assert( !x.empty());
+    //assert( x.size() == xs.size() );
 #endif //DG_DEBUG
-    doScal( x, alpha, VectorVectorTag(), get_execution_policy<Vector>());
-
+    using inner_container = typename container::value_type;
+    doSubroutine_dispatch( get_vector_category<inner_container>(), get_execution_policy<container>, f, std::forward<container>( x), std::forward<Containers>( xs)...);
 }
-template< class Vector>
-inline void doPlus( Vector& x, get_value_type<Vector> alpha, VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x.empty());
-#endif //DG_DEBUG
-    doPlus( x, alpha, VectorVectorTag(), get_execution_policy<Vector>());
-}
-
-template< class Vector>
-inline void doAxpby( get_value_type<Vector> alpha,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              Vector& y,
-              VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x.empty());
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
-    doAxpby( alpha, x, beta, y, VectorVectorTag(), get_execution_policy<Vector>());
-}
-
-template< class Vector>
-inline void doAxpbypgz( get_value_type<Vector> alpha,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              const Vector& y,
-              get_value_type<Vector> gamma,
-              Vector& z,
-              VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x.empty());
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
-    doAxpbypgz( alpha, x, beta, y, gamma, z, VectorVectorTag(), get_execution_policy<Vector>());
-
-}
-
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& x2,
-    get_value_type<Vector> beta,
-    Vector& y, VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x1.empty());
-    assert( x1.size() == x2.size() );
-    assert( x1.size() == y.size() );
-#endif //DG_DEBUG
-    doPointwiseDot( alpha, x1, x2, beta, y, VectorVectorTag(), get_execution_policy<Vector>() );
-}
-template< class Vector>
-inline void doPointwiseDivide( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& x2,
-    get_value_type<Vector> beta,
-    Vector& y, VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x1.empty());
-    assert( x1.size() == x2.size() );
-    assert( x1.size() == y.size() );
-#endif //DG_DEBUG
-    doPointwiseDivide( alpha, x1, x2, beta, y, VectorVectorTag(), get_execution_policy<Vector>() );
-}
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& x2, const Vector& x3,
-    get_value_type<Vector> beta,
-    Vector& y, VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x1.empty());
-    assert( x1.size() == x2.size() );
-    assert( x1.size() == x3.size() );
-    assert( x1.size() == y.size() );
-#endif //DG_DEBUG
-    doPointwiseDot( alpha, x1, x2,x3, beta, y, VectorVectorTag(), get_execution_policy<Vector>() );
-}
-template< class Vector>
-inline void doPointwiseDot( get_value_type<Vector> alpha,
-    const Vector& x1, const Vector& y1,
-    get_value_type<Vector> beta,
-    const Vector& x2, const Vector& y2,
-    get_value_type<Vector> gamma,
-    Vector& z, VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( !x1.empty());
-    assert( x1.size() == y1.size() );
-    assert( x1.size() == x2.size() );
-    assert( x1.size() == y2.size() );
-    assert( x1.size() == z.size() );
-#endif //DG_DEBUG
-    doPointwiseDot( alpha, x1, y1, beta, x2, y2, gamma,z, VectorVectorTag(), get_execution_policy<Vector>() );
-}
-
-
 
 } //namespace detail
 } //namespace blas1

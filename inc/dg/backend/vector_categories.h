@@ -36,9 +36,11 @@ struct AnyVectorTag{};
  * @brief Indicate a contiguous chunk of shared memory
  *
  * With this tag a class promises that the data it holds lies in a contiguous chunk that
- * can be traversed knowing the pointer to its first element. Sub-Tags specify
- * how this pointer can be accessed by an algorithm, how it can be resized
- * and how information like size can be retrieved.
+ * can be traversed knowing the pointer to its first element. Sub-Tags
+ * indicate addtional functionality like data resize.
+ * @note We assume a class with this Tag has the following methods
+ *  - size() returns the size (in number of elements) of the contiguous data
+ *  - data() returns a pointer (or pointer-like class that has a get() method to access the raw pointer) to the first element of the contiguous data
  */
 struct SharedVectorTag  : public AnyVectorTag {};
 /**

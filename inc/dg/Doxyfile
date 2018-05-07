@@ -802,9 +802,9 @@ INPUT                  = . \
                          ./backend/matrix_categories.h \
                          ./backend/matrix_traits.h \
                          ./backend/execution_policy.h \
-                         ./backend/thrust_vector_blas.cuh \
+                         ./backend/blas1_dispatch_shared.h \
                          ./backend/blas1_array.h \
-                         ./backend/cusp_vector_blas.h \
+                         ./backend/vector_traits_cusp.h \
                          ./backend/cusp_precon_blas.h \
                          ./backend/matrix_traits_thrust.h \
 

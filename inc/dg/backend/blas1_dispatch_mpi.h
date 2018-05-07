@@ -48,118 +48,20 @@ typename VectorTraits<Vector>::value_type doDot( const Vector& x, const Vector& 
     return exblas::cpu::Round(acc.data());
 }
 
-template< class Vector>
-inline void doScal(  Vector& x,
-              typename VectorTraits<Vector>::value_type alpha,
-              MPIVectorTag)
+template< class Subroutine, class container, class ...Containers>
+inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    //local computation
-    typedef typename Vector::container_type container;
-    doScal( x.data(), alpha, typename VectorTraits<container>::vector_category());
-}
-template< class Vector>
-inline void doPlus(  Vector& x,
-              typename VectorTraits<Vector>::value_type alpha,
-              MPIVectorTag)
-{
-    //local computation
-    typedef typename Vector::container_type container;
-    doPlus( x.data(), alpha, typename VectorTraits<container>::vector_category());
-}
-
-template< class Vector, class Binary, class UnaryOp>
-inline void doEvaluate(  MPIVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x)
-{
+    //static check that all Containers have MPIVectorTag
+    //...
 #ifdef DG_DEBUG
-    int result;
-    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+    //is this possible?
+    //int result;
+    //MPI_Comm_compare( x.communicator(), y.communicator(), &result);
+    //assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 #endif //DG_DEBUG
-    using container = typename Vector::container_type;
-    doEvaluate( get_vector_category<container>(), y.data(), f, op, x.data());
+    using inner_container = typename container::container_type;
+    doSubroutine( get_vector_category<inner_container>(), f, x.data(), xs.data()...);
 }
-template< class Vector, class Binary, class UnaryOp>
-inline void doEvaluate(  MPIVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x, const Vector& x2)
-{
-#ifdef DG_DEBUG
-    int result;
-    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-#endif //DG_DEBUG
-    using container = typename Vector::container_type;
-    doEvaluate( get_vector_category<container>(), y.data(), f, op, x.data(),x2.data());
-}
-
-template< class Vector>
-inline void doAxpby( typename VectorTraits<Vector>::value_type alpha,
-              const Vector& x,
-              typename VectorTraits<Vector>::value_type beta,
-              Vector& y,
-              MPIVectorTag)
-{
-    typedef typename Vector::container_type container;
-    doAxpby( alpha, x.data(), beta, y.data(), typename VectorTraits<container>::vector_category());
-}
-
-template< class Vector>
-inline void doAxpbypgz( typename VectorTraits<Vector>::value_type alpha,
-              const Vector& x,
-              typename VectorTraits<Vector>::value_type beta,
-              const Vector& y,
-              typename VectorTraits<Vector>::value_type gamma,
-              Vector& z,
-              MPIVectorTag)
-{
-    typedef typename Vector::container_type container;
-    doAxpbypgz( alpha,x.data(),beta, y.data(), gamma, z.data(), typename VectorTraits<container>::vector_category());
-}
-
-template< class Vector>
-inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
-        const Vector& x1, const Vector& x2,
-        typename VectorTraits<Vector>::value_type beta,
-        Vector& y,
-        MPIVectorTag)
-{
-    typedef typename Vector::container_type container;
-    doPointwiseDot( alpha, x1.data(), x2.data(), beta, y.data(), typename VectorTraits<container>::vector_category());
-}
-template< class Vector>
-inline void doPointwiseDivide( typename VectorTraits<Vector>::value_type alpha,
-        const Vector& x1, const Vector& x2,
-        typename VectorTraits<Vector>::value_type beta,
-        Vector& y,
-        MPIVectorTag)
-{
-    typedef typename Vector::container_type container;
-    doPointwiseDivide( alpha, x1.data(), x2.data(), beta, y.data(), typename VectorTraits<container>::vector_category());
-}
-
-template< class Vector>
-inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
-        const Vector& x1, const Vector& x2, const Vector& x3,
-        typename VectorTraits<Vector>::value_type beta,
-        Vector& y,
-        MPIVectorTag)
-{
-    typedef typename Vector::container_type container;
-    doPointwiseDot( alpha, x1.data(), x2.data(), x3.data(), beta, y.data(), typename VectorTraits<container>::vector_category());
-}
-
-template< class Vector>
-inline void doPointwiseDot( typename VectorTraits<Vector>::value_type alpha,
-        const Vector& x1, const Vector& x2,
-        typename VectorTraits<Vector>::value_type beta,
-        const Vector& y1, const Vector& y2,
-        typename VectorTraits<Vector>::value_type gamma,
-        Vector& z,
-        MPIVectorTag)
-{
-    typedef typename Vector::container_type container;
-    doPointwiseDot( alpha, x1.data(), x2.data(), beta, y1.data(), y2.data(), gamma, z.data(), typename VectorTraits<container>::vector_category());
-
-}
-
 
 }//namespace detail
 
