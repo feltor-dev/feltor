@@ -122,6 +122,13 @@ inline get_value_type<container> dot( const container& x, const container& y)
     return dg::blas1::detail::doDot( x, y, get_vector_category<container>() );
 }
 
+template< class Subroutine, class container, class ...Containers>
+inline void subroutine( Subroutine f, container&& x, Containers&&... xs)
+{
+    dg::blas1::detail::doSubroutine( get_vector_category<container>(), f, std::forward<container>(x), std::forward<Containers>(xs)...);
+    return;
+}
+
 /*! @brief \f$ y = \alpha x + \beta y\f$
  *
  * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
@@ -140,7 +147,7 @@ inline get_value_type<container> dot( const container& x, const container& y)
 template< class container>
 inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, container& y)
 {
-    dg::blas1::detail::doAxpby( alpha, x, beta, y, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::Axpby<get_value_type<container>>(alpha, beta),  x, y);
     return;
 }
 
@@ -164,7 +171,7 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
 template< class container>
 inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, container& z)
 {
-    dg::blas1::detail::doAxpbypgz( alpha, x, beta, y, 0, z, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::Axpbypgz<get_value_type<container>>(alpha, beta, 0),  x, y, z);
     return;
 }
 
@@ -190,7 +197,7 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
 template< class container>
 inline void axpbypgz( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, get_value_type<container> gamma, container& z)
 {
-    dg::blas1::detail::doAxpbypgz( alpha, x, beta, y, gamma, z, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::Axpbypgz<get_value_type<container>>(alpha, beta, gamma),  x, y, z);
     return;
 }
 
@@ -216,7 +223,7 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
 template< class container, class BinarySubroutine, class UnaryOp>
 inline void evaluate( container& y, BinarySubroutine f, UnaryOp g, const container& x)
 {
-    dg::blas1::detail::doEvaluate(  get_vector_category<container>(), y, f, g, x);
+    dg::blas1::subroutine( dg::Evaluate<BinarySubroutine, UnaryOp>(f,g), y, x);
     return;
 }
 
@@ -244,16 +251,10 @@ inline void evaluate( container& y, BinarySubroutine f, UnaryOp g, const contain
 template< class container, class BinarySubroutine, class BinaryOp>
 inline void evaluate( container& z, BinarySubroutine f, BinaryOp g, const container& x, const container& y)
 {
-    dg::blas1::detail::doEvaluate( get_vector_category<container>(), z, f, g, x, y);
+    dg::blas1::subroutine( dg::Evaluate<BinarySubroutine, BinaryOp>(f,g), z, x,y );
     return;
 }
 
-template< class Subroutine, class container, class ...Containers>
-inline void subroutine( Subroutine f, container&& x, Containers&&... xs)
-{
-    dg::blas1::detail::doSubroutine( get_vector_category<container>(), f, std::forward<container>(x), std::forward<Containers>(xs)...);
-    return;
-}
 
 /*! @brief \f$ y = op(x)\f$
  *
@@ -293,7 +294,7 @@ inline void transform( const container& x, container& y, UnaryOp op )
 template< class container>
 inline void scal( container& x, get_value_type<container> alpha)
 {
-    dg::blas1::detail::doScal( x, alpha, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::Scal<get_value_type<container>>(alpha), x );
     return;
 }
 
@@ -312,7 +313,7 @@ inline void scal( container& x, get_value_type<container> alpha)
 template< class container>
 inline void plus( container& x, get_value_type<container> alpha)
 {
-    dg::blas1::detail::doPlus( x, alpha, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::Plus<get_value_type<container>>(alpha), x );
     return;
 }
 
@@ -334,7 +335,7 @@ inline void plus( container& x, get_value_type<container> alpha)
 template< class container>
 inline void pointwiseDot( const container& x1, const container& x2, container& y)
 {
-    dg::blas1::detail::doPointwiseDot( 1, x1, x2, 0, y, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(1,0,0), x1, x2, y );
     return;
 }
 
@@ -360,7 +361,7 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
 template< class container>
 inline void pointwiseDot( get_value_type<container> alpha, const container& x1, const container& x2, get_value_type<container> beta, container& y)
 {
-    dg::blas1::detail::doPointwiseDot( alpha, x1, x2, beta, y, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha,beta,0), x1, x2, y );
 }
 
 /**
@@ -386,7 +387,7 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
 template< class container>
 inline void pointwiseDot( get_value_type<container> alpha, const container& x1, const container& x2, const container& x3, get_value_type<container> beta, container& y)
 {
-    dg::blas1::detail::doPointwiseDot( alpha, x1, x2, x3, beta, y, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha,beta,0), x1, x2, x3, y );
 }
 
 /**
@@ -409,7 +410,7 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
 template< class container>
 inline void pointwiseDivide( const container& x1, const container& x2, container& y)
 {
-    dg::blas1::detail::doPointwiseDivide( 1, x1, x2, 0, y, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<container>>(1,0), x1, x2, y );
     return;
 }
 /**
@@ -434,7 +435,7 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 template< class container>
 inline void pointwiseDivide( get_value_type<container> alpha, const container& x1, const container& x2, get_value_type<container> beta, container& y)
 {
-    dg::blas1::detail::doPointwiseDivide( alpha, x1, x2, beta, y, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<container>>(alpha, beta), x1, x2, y );
 }
 
 /**
@@ -464,7 +465,7 @@ void pointwiseDot(  get_value_type<container> alpha, const container& x1, const 
                     get_value_type<container> beta,  const container& x2, const container& y2,
                     get_value_type<container> gamma, container & z)
 {
-    dg::blas1::detail::doPointwiseDot( alpha, x1, y1, beta, x2, y2, gamma, z, get_vector_category<container>() );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha, beta, gamma), x1, y1, x2, y2, z );
     return;
 }
 ///@}
