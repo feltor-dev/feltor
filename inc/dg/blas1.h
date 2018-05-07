@@ -248,6 +248,13 @@ inline void evaluate( container& z, BinarySubroutine f, BinaryOp g, const contai
     return;
 }
 
+template< class Subroutine, class container, class ...Containers>
+inline void subroutine( Subroutine f, container&& x, Containers&&... xs)
+{
+    dg::blas1::detail::doSubroutine( get_vector_category<container>(), f, std::forward<container>(x), std::forward<Containers>(xs)...);
+    return;
+}
+
 /*! @brief \f$ y = op(x)\f$
  *
  * This routine computes \f[ y_i = op(x_i) \f]
