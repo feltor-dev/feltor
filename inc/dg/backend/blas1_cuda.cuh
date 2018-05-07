@@ -29,7 +29,7 @@ inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, T* x, Ts*...
 {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    subroutine_kernel<Subroutine, T, ...Ts><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, f, x, xs...);
+    subroutine_kernel<Subroutine, T, Ts...><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, f, x, xs...);
 }
 
 
