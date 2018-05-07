@@ -95,9 +95,8 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containe
     //assert( !x.empty());
     //assert( x.size() == xs.size() );
 #endif //DG_DEBUG
-
     doSubroutine_dispatch(
-            get_execution_policy<container>,
+            get_execution_policy<container>(),
             x.size(),
             f,
             get_pointer_type<container>(  thrust::raw_pointer_cast(  x.data()) ),

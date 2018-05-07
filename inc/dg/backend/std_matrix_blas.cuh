@@ -1,6 +1,6 @@
 #pragma once
 
-#include "std_vector_blas.cuh"
+#include "blas1_dispatch_vector.h"
 #include "matrix_categories.h"
 
 ///@cond

@@ -56,14 +56,16 @@ DG_DEVICE void operator()( T1& out, T2 in) const
 template<class BinarySub, class Functor>
 struct Evaluate
 {
-    Evaluate( BinarySub&& sub, Functor&& f):m_f(sub), m_g(f)
+    Evaluate( BinarySub sub, Functor f):
+        m_f( sub),
+        m_g( f) {}
     template< class T, class... Ts>
 DG_DEVICE void operator() ( T& y, Ts... xs){
         m_f(y, m_g(xs...));
     }
     private:
-    BinarySub&& m_f;
-    Functor&& m_g;
+    BinarySub m_f;
+    Functor m_g;
 };
 
 

@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <array>
-#include "thrust_vector_blas.cuh"
+#include "blas1_dispatch_shared.h"
 #include "vector_categories.h"
 #include "vector_traits.h"
 #ifdef _OPENMP
@@ -60,7 +60,7 @@ inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, contai
 {
     //static check that all Containers have the omp execution policy
     //...
-    using inner_container = typename container::value_type;
+    using inner_container = typename std::decay<container>::type::value_type;
     if( !omp_in_parallel())//to catch recursive calls
     {
         #pragma omp parallel
@@ -83,7 +83,7 @@ inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, 
 {
     //static check that all Containers have the same execution policy
     //...
-    using inner_container = typename container::value_type;
+    using inner_container = typename std::decay<container>::type::value_type;
     for( unsigned i=0; i<x.size(); i++) {
         doSubroutine( get_vector_category<inner_container>(), f, x[i], xs[i]...);
     }
@@ -100,8 +100,7 @@ inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containe
     //assert( !x.empty());
     //assert( x.size() == xs.size() );
 #endif //DG_DEBUG
-    using inner_container = typename container::value_type;
-    doSubroutine_dispatch( get_vector_category<inner_container>(), get_execution_policy<container>, f, std::forward<container>( x), std::forward<Containers>( xs)...);
+    doSubroutine_dispatch( VectorVectorTag(), get_execution_policy<container>(), f, std::forward<container>( x), std::forward<Containers>( xs)...);
 }
 
 } //namespace detail

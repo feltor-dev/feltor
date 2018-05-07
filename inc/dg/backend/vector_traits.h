@@ -21,11 +21,11 @@ struct VectorTraits {
     using execution_policy  = OmpTag;  //!< The execution policy (has to derive from \c AnyPolicyTag)
 };
 template<class Vector>
-using get_value_type = typename VectorTraits<Vector>::value_type;
+using get_value_type = typename VectorTraits<typename std::decay<Vector>::type>::value_type;
 template<class Vector>
-using get_vector_category = typename VectorTraits<Vector>::vector_category;
+using get_vector_category = typename VectorTraits< typename std::decay<Vector>::type >::vector_category;
 template<class Vector>
-using get_execution_policy = typename VectorTraits<Vector>::execution_policy;
+using get_execution_policy = typename VectorTraits<typename std::decay<Vector>::type>::execution_policy;
 //using is the new typedef in C++11
 template<class Vector>
 using get_pointer_type = typename std::conditional< std::is_const<Vector>::value, const get_value_type<Vector>*, get_value_type<Vector>* >::type;

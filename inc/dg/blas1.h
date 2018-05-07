@@ -3,14 +3,14 @@
 #include "thrust/host_vector.h"
 #include "thrust/device_vector.h"
 #include "backend/vector_traits.h"
-#include "backend/thrust_vector_blas.cuh"
+#include "backend/blas1_dispatch_shared.h"
 #include "backend/blas1_array.h"
-#include "backend/cusp_vector_blas.h"
+#include "backend/vector_traits_cusp.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
-#include "backend/mpi_vector_blas.h"
+#include "backend/blas1_dispatch_mpi.h"
 #endif
-#include "backend/std_vector_blas.cuh"
+#include "backend/blas1_dispatch_vector.h"
 #include "subroutines.h"
 
 /*!@file
@@ -198,35 +198,11 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
         scal( y, (alpha+beta) );
         return;
     }
-    if( alpha==value_type(1) && beta == (value_type(0) ) {
+    if( alpha==value_type(1) && beta == value_type(0)  ) {
         copy( x, y);
         return;
     }
     dg::blas1::subroutine( dg::Axpby<get_value_type<container>>(alpha, beta),  x, y);
-    return;
-}
-
-/*! @brief \f$ z = \alpha x + \beta y\f$
- *
- * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
-
- * @copydoc hide_container
- * @param alpha Scalar
- * @param x container x may alias z
- * @param beta Scalar
- * @param y container y may alias z
- * @param z container z contains solution on output
-
-@code
-    dg::DVec two( 100,2), three(100,3), result(100);
-    dg::blas1::axpby( 2, two, 3., three, result); //result[i] = 13 (2*2+3*3)
-@endcode
- */
-template< class container>
-inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, container& z)
-{
-    dg::blas1::subroutine( dg::Axpbypgz<get_value_type<container>>(alpha, beta, 0),  x, y, z);
     return;
 }
 
@@ -282,6 +258,30 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
     return;
 }
 
+/*! @brief \f$ z = \alpha x + \beta y\f$
+ *
+ * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
+ * do not match, the result is undefined.
+
+ * @copydoc hide_container
+ * @param alpha Scalar
+ * @param x container x may alias z
+ * @param beta Scalar
+ * @param y container y may alias z
+ * @param z container z contains solution on output
+
+@code
+    dg::DVec two( 100,2), three(100,3), result(100);
+    dg::blas1::axpby( 2, two, 3., three, result); //result[i] = 13 (2*2+3*3)
+@endcode
+ */
+template< class container>
+inline void axpby( get_value_type<container> alpha, const container& x, get_value_type<container> beta, const container& y, container& z)
+{
+    dg::blas1::axpbypgz( alpha, x,  beta, y, 0., z);
+    return;
+}
+
 /*! @brief \f$ y = f(y , g(x))\f$
  *
  * This routine elementwise evaluates \f[ f(y_i, g(x_{i})) \f]
@@ -332,7 +332,7 @@ inline void evaluate( container& y, BinarySubroutine f, UnaryOp g, const contain
 template< class container, class BinarySubroutine, class BinaryOp>
 inline void evaluate( container& z, BinarySubroutine f, BinaryOp g, const container& x, const container& y)
 {
-    dg::blas1::subroutine( dg::Evaluate<BinarySubroutine, BinaryOp>(f,g), z, x,y );
+    dg::blas1::subroutine( dg::Evaluate<BinarySubroutine&, BinaryOp&>(f,g), z, x,y );
     return;
 }
 

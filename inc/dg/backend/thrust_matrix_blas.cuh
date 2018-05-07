@@ -11,7 +11,7 @@
 #include <thrust/inner_product.h>
 
 #include "matrix_categories.h"
-#include "thrust_vector_blas.cuh" //load thrust_vector BLAS1 routines
+#include "blas1_dispatch_shared.h" //load thrust_vector BLAS1 routines
 #include "vector_categories.h"
 
 namespace dg{
@@ -86,7 +86,7 @@ inline void doSymv(
               ThrustMatrixTag,
               ThrustVectorTag)
 {
-    dg::blas1::detail::doPointwiseDot( alpha, m, x, beta, y, ThrustVectorTag());
+    dg::blas1::pointwiseDot( alpha, m, x, beta, y);
 }
 
 template< class Matrix, class Vector>
@@ -98,7 +98,7 @@ inline void doSymv(
               ThrustVectorTag,
               ThrustVectorTag)
 {
-    dg::blas1::detail::doPointwiseDot( 1., m,x,0., y, ThrustVectorTag());
+    dg::blas1::pointwiseDot( 1., m,x,0., y);
 }
 
 

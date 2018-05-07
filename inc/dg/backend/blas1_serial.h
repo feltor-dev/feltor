@@ -17,7 +17,7 @@ std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_p
 }
 
 template< class Subroutine, class T, class ...Ts>
-inline void doSubroutine_omp( SerialTag, int size, Subroutine f, T* x, Ts*... xs)
+inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, T* x, Ts*... xs)
 {
     for( int i=0; i<size; i++)
         f(x[i], xs[i]...);
