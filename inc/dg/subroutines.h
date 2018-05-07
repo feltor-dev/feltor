@@ -126,17 +126,17 @@ struct PointwiseDot
     PointwiseDot( T a, T b, T g = (T)0): m_a(a), m_b(b), m_g(g) {}
 DG_DEVICE
     void operator()( T x, T y, T& z)const{
-        double temp = z*m_b;
+        T temp = z*m_b;
         z = DG_FMA( m_a*x, y, temp);
     }
 DG_DEVICE
     void operator()( T x1, T x2, T x3, T& y)const{
-        double temp = y*m_b;
+        T temp = y*m_b;
         y = DG_FMA( m_a*x1, x2*x3, temp);
     }
 DG_DEVICE
     void operator()( T x1, T y1, T x2, T y2, T& z)const{
-        double temp = z*m_g;
+        T temp = z*m_g;
         temp = DG_FMA( m_a*x1, y1, temp);
         temp = DG_FMA( m_b*x2, y2, temp);
         z = temp;
@@ -150,7 +150,7 @@ struct PointwiseDivide
     PointwiseDivide( T a, T b): m_a(a), m_b(b){}
 DG_DEVICE
     void operator()( T x, T y, T& z)const{
-        double temp = z*m_b;
+        T temp = z*m_b;
         z = DG_FMA( m_a, x/y, temp);
     }
     private:

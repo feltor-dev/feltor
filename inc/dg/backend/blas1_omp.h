@@ -24,7 +24,7 @@ std::vector<int64_t> doDot_dispatch( OmpTag, int size, const double* x_ptr, cons
 template< class Subroutine, class T, class ...Ts>
 inline void doSubroutine_omp( int size, Subroutine f, T* x, Ts*... xs)
 {
-#pragma omp for nowait
+#pragma omp for SIMD nowait
     for( int i=0; i<size; i++)
         f(x[i], xs[i]...);
 }

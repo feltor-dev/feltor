@@ -379,7 +379,7 @@ inline void transform( const container& x, container& y, UnaryOp op )
 template< class container>
 inline void pointwiseDot( const container& x1, const container& x2, container& y)
 {
-    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(1,0,0), x1, x2, y );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(1,0), x1, x2, y );
     return;
 }
 
@@ -409,7 +409,7 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
         dg::blas1::scal(y, beta);
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha,beta,0), x1, x2, y );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha,beta), x1, x2, y );
 }
 
 /**
@@ -439,7 +439,7 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
         dg::blas1::scal(y, beta);
         return;
     }
-    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha,beta,0), x1, x2, x3, y );
+    dg::blas1::subroutine( dg::PointwiseDot<get_value_type<container>>(alpha,beta), x1, x2, x3, y );
 }
 
 /**
