@@ -32,7 +32,7 @@ inline void doEvaluate_dispatch( CudaTag, unsigned size, T* z, Binary f, UnaryOp
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
     evaluate_kernel<UnaryOp, Binary, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, z, f, op,x);
 }
-template<class Op, class Binary class T>
+template<class Op, class Binary, class T>
  __global__ void evaluate_kernel( int size, T* z, Binary f, Op op,
          const T* x, const T* y)
 {
@@ -47,7 +47,7 @@ template< class UnaryOp, class Binary, class T>
 inline void doEvaluate_dispatch( CudaTag, unsigned size, T* z, Binary f, UnaryOp op, const T* x, const T* y) {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    evaluate_kernel<UnaryOp, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, z, f, op, x,y);
+    evaluate_kernel<UnaryOp, Binary, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, z, f, op, x,y);
 }
 
 template<class value_type>
