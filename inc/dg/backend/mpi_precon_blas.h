@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "mpi_vector_blas.h"
+#include "blas1_dispatch_mpi.h"
 #include "thrust_matrix_blas.cuh"
 
 namespace dg

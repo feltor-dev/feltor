@@ -8,7 +8,7 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-#include "thrust_vector_blas.cuh"
+#include "blas1_dispatch_shared.h"
 #include "dg/blas1.h"
 #include "memory.h"
 #include "mpi_communicator.h"
