@@ -98,6 +98,7 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containe
 
     doSubroutine_dispatch(
             get_execution_policy<container>,
+            x.size(),
             f,
             get_pointer_type<container>(  thrust::raw_pointer_cast(  x.data()) ),
             get_pointer_type<Containers>( thrust::raw_pointer_cast( xs.data()) )...
