@@ -32,12 +32,12 @@ To doTransfer( const From& src, ArrayVectorTag, AnyVectorTag)
 }
 
 
-template< class Vector, Vector2>
+template< class Vector, class Vector2>
 inline get_value_type<Vector> doDot( const Vector& x1, const Vector2& x2, VectorVectorTag)
 {
     static_assert( std::is_base_of<VectorVectorTag,
         get_vector_category<Vector2>>::value,
-        "All container types must share the same vector category (VectorVectorTag in this case)!");
+        "All container types must derive from the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( !x1.empty());
     assert( x1.size() == x2.size() );
@@ -94,7 +94,7 @@ inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containe
 {
     static_assert( all_true<std::is_base_of<VectorVectorTag,
         get_vector_category<Containers>>::value...>::value,
-        "All container types must share the same vector category (VectorVectorTag in this case)!");
+        "All container types must derive from the same vector category (VectorVectorTag in this case)!");
     static_assert( all_true<std::is_same<get_execution_policy<container>,
         get_execution_policy<Containers> >::value...>::value,
         "All container types must share the same execution policy!");

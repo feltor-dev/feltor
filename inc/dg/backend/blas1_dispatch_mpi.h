@@ -46,7 +46,7 @@ typename VectorTraits<Vector1>::value_type doDot( const Vector1& x, const Vector
 {
     static_assert( all_true<std::is_base_of<MPIVectorTag,
         get_vector_category<Vector2>>::value>::value,
-        "All container types must share the same vector category (MPIVectorTag in this case)!");
+        "All container types must derive from the same vector category (MPIVectorTag in this case)!");
     std::vector<int64_t> acc = doDot_superacc( x,y,MPIVectorTag());
     return exblas::cpu::Round(acc.data());
 }
@@ -56,7 +56,7 @@ inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&
 {
     static_assert( all_true<std::is_base_of<MPIVectorTag,
         get_vector_category<Containers>>::value...>::value,
-        "All container types must share the same vector category (MPIVectorTag in this case)!");
+        "All container types must derive from the same vector category (MPIVectorTag in this case)!");
 #ifdef DG_DEBUG
     //is this possible?
     //int result;

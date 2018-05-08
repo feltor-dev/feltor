@@ -12,6 +12,7 @@ namespace dg{
 /*! @brief The vector traits
 
 Specialize this struct if you want to enable your own vector/container class for the use in blas1 functions
+\see vec_list
 @ingroup vec_list
 */
 template< class Vector, class Enable=void>

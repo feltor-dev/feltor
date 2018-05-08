@@ -61,7 +61,7 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 template< size_t k, class ContainerType>
 struct AB
 {
-    ///copydoc RK_opt::RK_opt()
+    ///@copydoc RK_opt::RK_opt()
     AB(){}
     ///@copydoc RK_opt::construct(const ContainerType&)
     AB( const ContainerType& copyable){ construct(copyable); }

@@ -204,6 +204,7 @@ struct NearestNeighborComm
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
     *
+    * @param input from which to gather data (it is safe to change values on return since values to communicate are copied into an internal buffer)
     * @param buffer (write only) where received data resides on return (must be of size \c size())
     * @param rqst the same four request variables that were used in global_gather_init
     */

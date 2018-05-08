@@ -129,9 +129,8 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
  * This routine evaluates an arbitrary user-defined subroutine \c f with an arbitrary number of arguments \f$ x_s\f$ elementwise
  * \f[ f(x_{0i}, x_{1i}, ...)  \f]
  * @copydoc hide_iterations
- * @tparam Subroutine
- * @tparam ContainerType
- * @tparam ...ContainerTypes
+ * @tparam Subroutine a function or functor taking a value_type argument for each ContainerType argument in the call.
+ * @copydoc hide_ContainerType
  * @param f the subroutine
  * @param x the first argument
  * @param xs other arguments
@@ -155,14 +154,15 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
     dg::blas1::detail::doSubroutine( get_vector_category<ContainerType>(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
     return;
 }
+
 /**
  * @brief \f$ y=x \f$
  *
  * explicit pointwise assignment \f$ y_i = x_i\f$
  * @copydoc hide_iterations
  * @copydoc hide_ContainerType
- * @param x in
- * @param y out
+ * @param x src
+ * @param y target
  * @note in contrast to the \c blas1::transfer functions the copy function is
  * explicitly parallel and thus works only on types with same execution
  * policy

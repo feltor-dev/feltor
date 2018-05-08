@@ -79,7 +79,7 @@ MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIG
    where \f$ x_R = \frac{\partial x}{\partial R}\f$, ...
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Functor2 Binary or Ternary functor
- * @copydoc hide_ContainerType_geometry
+ * @copydoc hide_container_geometry
  * @param vR input R-component in cylindrical coordinates
  * @param vZ input Z-component in cylindrical coordinates
  * @param vx x-component of vector (gets properly resized)
@@ -87,9 +87,9 @@ MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIG
  * @param g The geometry object
  * @ingroup pullback
  */
-template<class Functor1, class Functor2, class ContainerType, class Geometry>
+template<class Functor1, class Functor2, class container, class Geometry>
 void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
-        ContainerType& vx, ContainerType& vy,
+        container& vx, container& vy,
         const Geometry& g)
 {
     using host_vec = get_host_vector<Geometry>;
@@ -109,7 +109,7 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
  * @tparam Functor1 Binary or Ternary functor
  * @tparam Functor2 Binary or Ternary functor
  * @tparam Functor3 Binary or Ternary functor
- * @copydoc hide_ContainerType_geometry
+ * @copydoc hide_container_geometry
  * @param vR input R-component in cartesian or cylindrical coordinates
  * @param vZ input Z-component in cartesian or cylindrical coordinates
  * @param vPhi input Z-component in cartesian or cylindrical coordinates
@@ -119,9 +119,9 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
  * @param g The geometry object
  * @ingroup pullback
  */
-template<class Functor1, class Functor2, class Functor3, class ContainerType, class Geometry>
+template<class Functor1, class Functor2, class Functor3, class container, class Geometry>
 void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
-        ContainerType& vx, ContainerType& vy, ContainerType& vz,
+        container& vx, container& vy, container& vz,
         const Geometry& g)
 {
     using host_vec = get_host_vector<Geometry>;
@@ -146,7 +146,7 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
  * @tparam FunctorRR Binary or Ternary functor
  * @tparam FunctorRZ Binary or Ternary functor
  * @tparam FunctorZZ Binary or Ternary functor
- * @copydoc hide_ContainerType_geometry
+ * @copydoc hide_container_geometry
  * @param chiRR input RR-component in cylindrical coordinates
  * @param chiRZ input RZ-component in cylindrical coordinates
  * @param chiZZ input ZZ-component in cylindrical coordinates
@@ -156,9 +156,9 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
  * @param g The geometry object
  * @ingroup pullback
  */
-template<class FunctorRR, class FunctorRZ, class FunctorZZ, class ContainerType, class Geometry>
+template<class FunctorRR, class FunctorRZ, class FunctorZZ, class container, class Geometry>
 void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const FunctorZZ& chiZZ,
-        ContainerType& chixx, ContainerType& chixy, ContainerType& chiyy,
+        container& chixx, container& chixy, container& chiyy,
         const Geometry& g)
 {
     using host_vec = get_host_vector<Geometry>;
@@ -173,19 +173,19 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
         chiZZ_.swap(chiyy);
         return;
     }
-    const dg::SparseTensor<ContainerType> jac = g.jacobian();
-    std::vector<ContainerType> values( 3);
+    const dg::SparseTensor<container> jac = g.jacobian();
+    std::vector<container> values( 3);
     values[0] = chiRR_, values[1] = chiRZ_, values[2] = chiZZ_;
-    SparseTensor<ContainerType> chi(values);
+    SparseTensor<container> chi(values);
     chi.idx(0,0)=0, chi.idx(0,1)=chi.idx(1,0)=1, chi.idx(1,1)=2;
 
-    SparseTensor<ContainerType> d = dg::tensor::dense(jac); //now we have a dense tensor
-    ContainerType tmp00(d.value(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
+    SparseTensor<container> d = dg::tensor::dense(jac); //now we have a dense tensor
+    container tmp00(d.value(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
     // multiply Chi*t -> tmp
     dg::tensor::multiply2d( chi, d.value(0,0), d.value(1,0), tmp00, tmp10);
     dg::tensor::multiply2d( chi, d.value(0,1), d.value(1,1), tmp01, tmp11);
     // multiply tT * tmp -> Chi
-    SparseTensor<ContainerType> transpose = jac.transpose();
+    SparseTensor<container> transpose = jac.transpose();
     dg::tensor::multiply2d( transpose, tmp00, tmp01, chixx, chixy);
     dg::tensor::multiply2d( transpose, tmp10, tmp11, chixy, chiyy);
 }
