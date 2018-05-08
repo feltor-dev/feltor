@@ -56,9 +56,9 @@ DG_DEVICE void operator()( T1& out, T2 in) const
 template<class BinarySub, class Functor>
 struct Evaluate
 {
-    Evaluate( BinarySub sub, Functor f):
+    Evaluate( BinarySub sub, Functor g):
         m_f( sub),
-        m_g( f) {}
+        m_g( g) {}
     template< class T, class... Ts>
 DG_DEVICE void operator() ( T& y, Ts... xs){
         m_f(y, m_g(xs...));

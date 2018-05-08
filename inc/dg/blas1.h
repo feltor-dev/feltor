@@ -126,7 +126,7 @@ inline void subroutine( Subroutine f, container&& x, Containers&&... xs)
  */
 template<class container_in, class container_out>
 inline void copy( const container_in& x, container_out& y){
-    dg::blas1::subroutine( dg::equals(), x, y );
+    dg::blas1::subroutine( dg::equals(), y, x );
     return;
 }
 
@@ -269,7 +269,7 @@ inline void axpby( get_value_type<container> alpha, const container1& x, get_val
  * @tparam Functor signature: \c value_type_g \c operator()( value_type_x0, value_type_x1, ...)
  * @param y contains result
  * @param f The subroutine
- * @param g unary operator
+ * @param g The functor to evaluate
  * @param x0 first input
  * @param xs more input
  * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
