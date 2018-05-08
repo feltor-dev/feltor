@@ -34,6 +34,11 @@ namespace blas1
 ///@addtogroup blas1
 ///@{
 
+/**
+ * @class hide_iterations
+ * where \c i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, \c i recursively loops over all entries.
+ * If the container sizes do not match, the result is undefined.
+ */
 
 /**
  * @brief y=x; Generic way to copy/construct and/or convert a container type from a different container type (e.g. from CPU to GPU, or double to float, etc.)
@@ -46,10 +51,10 @@ namespace blas1
  * @note it is possible to transfer a container to a std::array<container, N> (all elements are initialized to container) but not a std::vector<container> (since the desired size of the std::vector cannot be known)
 
  * For example
- * @code
- dg::DVec device = dg::tansfer<dg::DVec>( dg::evaluate(dg::one, grid));
- std::array<dg::DVec, 3> device_arr = dg::transfer<std::array<dg::DVec, 3>>( dg::evaluate( dg::one, grid));
- * @endcode
+@code
+dg::DVec device = dg::tansfer<dg::DVec>( dg::evaluate(dg::one, grid));
+std::array<dg::DVec, 3> device_arr = dg::transfer<std::array<dg::DVec, 3>>( dg::evaluate( dg::one, grid));
+@endcode
  */
 template<class container, class other_container>
 inline container transfer( const other_container& x)
@@ -69,13 +74,13 @@ inline container transfer( const other_container& x)
  * @note it is possible to transfer a container to a std::array<container, N> (all elements are initialized to container) but not a std::vector<container> (since the desired size of the std::vector cannot be known)
  *
  * For example
- * @code
- dg::HVec host = dg::evaluate( dg::one, grid);
- dg::DVec device;
- dg::transfer( host, device); //device now equals host
- std::array<dg::DVec, 3> device_arr;
- dg::transfer( host, device_arr); //every element of device_arr now equals host
- * @endcode
+@code
+dg::HVec host = dg::evaluate( dg::one, grid);
+dg::DVec device;
+dg::transfer( host, device); //device now equals host
+std::array<dg::DVec, 3> device_arr;
+dg::transfer( host, device_arr); //every element of device_arr now equals host
+@endcode
 
  */
 template<class container, class other_container>
@@ -84,10 +89,10 @@ inline void transfer( const other_container& x, container& y)
     y = dg::blas1::transfer<container, other_container>( x);
 }
 
-/*! @brief \f$ x^T y\f$; Binary reproducible Euclidean dot product between two vectors
+/*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors
  *
- * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
+ * This routine computes \f[ x^T y = \sum_{i=0}^{N-1} x_i y_i \f]
+ * @copydoc hide_iterations
  * Our implementation guarantees binary reproducible results.
  * The sum is computed with infinite precision and the result is rounded
  * to the nearest double precision number.
@@ -101,8 +106,8 @@ inline void transfer( const other_container& x, container& y)
 
 For example
 @code
-    dg::DVec two( 100,2), three(100,3);
-    double temp = dg::blas1::dot( two, three); //temp = 30 (5*(2*3))
+dg::DVec two( 100,2), three(100,3);
+double temp = dg::blas1::dot( two, three); //temp = 30 (5*(2*3))
 @endcode
  */
 template< class container>
@@ -111,6 +116,32 @@ inline get_value_type<container> dot( const container& x, const container& y)
     return dg::blas1::detail::doDot( x, y, get_vector_category<container>() );
 }
 
+/**
+ * @brief \f$ f(x_0, x_1, ...)\f$
+ *
+ * This routine evaluates an arbitrary user-defined subroutine \c f with an arbitrary number of arguments \f$ x_s\f$ elementwise
+ * \f[ f(x_{0i}, x_{1i}, ...)  \f]
+ * @copydoc hide_iterations
+ * @tparam Subroutine
+ * @tparam container
+ * @tparam ...Containers
+ * @param f the subroutine
+ * @param x the first argument
+ * @param xs other arguments
+ *
+@code
+void routine( double x, double y, double& z){
+   z = 7*x+y + z ;
+}
+dg::DVec two( 100,2), three(100,3), four(100,4);
+dg::blas1::subroutine( routine, two, three, four);
+//four[i] now has the value 21 (7*2+3+4)
+@endcode
+@note if you do not think that this function is plain magic you haven't looked at it
+long enough. This function can compute @b any trivial parallel expression for @b any
+number of inputs and outputs. In this sense it replaces all other \c blas1 functions
+except the scalar product, which is not trivial parallel.
+ */
 template< class Subroutine, class container, class ...Containers>
 inline void subroutine( Subroutine f, container&& x, Containers&&... xs)
 {
@@ -121,6 +152,8 @@ inline void subroutine( Subroutine f, container&& x, Containers&&... xs)
  * @brief \f$ y=x \f$
  *
  * explicit pointwise assignment \f$ y_i = x_i\f$
+ * @copydoc hide_iterations
+ * @copydoc hide_container
  * @param x in
  * @param y out
  */
@@ -133,13 +166,14 @@ inline void copy( const container_in& x, container_out& y){
 /*! @brief \f$ x = \alpha x\f$
  *
  * This routine computes \f[ \alpha x_i \f]
+ * @copydoc hide_iterations
  * @copydoc hide_container
  * @param alpha Scalar
  * @param x container x
 
 @code
-    dg::DVec two( 100,2);
-    dg::blas1::scal( two,  0.5 )); //result[i] = 1.
+dg::DVec two( 100,2);
+dg::blas1::scal( two,  0.5 )); //result[i] = 1.
 @endcode
  */
 template< class container>
@@ -154,13 +188,14 @@ inline void scal( container& x, get_value_type<container> alpha)
 /*! @brief \f$ x = x + \alpha \f$
  *
  * This routine computes \f[ x_i + \alpha \f]
+ * @copydoc hide_iterations
  * @copydoc hide_container
  * @param alpha Scalar
  * @param x container x
 
 @code
-    dg::DVec two( 100,2);
-    dg::blas1::plus( two,  2. )); //result[i] = 4.
+dg::DVec two( 100,2);
+dg::blas1::plus( two,  2. )); //result[i] = 4.
 @endcode
  */
 template< class container>
@@ -174,8 +209,7 @@ inline void plus( container& x, get_value_type<container> alpha)
 
 /*! @brief \f$ y = \alpha x + \beta y\f$
  *
- * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
+ * This routine computes \f[ y_i =  \alpha x_i + \beta y_i \f]
  * @copydoc hide_container
  * @param alpha Scalar
  * @param x container x may alias y
@@ -183,8 +217,8 @@ inline void plus( container& x, get_value_type<container> alpha)
  * @param y container y contains solution on output
 
 @code
-    dg::DVec two( 100,2), three(100,3);
-    dg::blas1::axpby( 2, two, 3., three); //three[i] = 13 (2*2+3*3)
+dg::DVec two( 100,2), three(100,3);
+dg::blas1::axpby( 2, two, 3., three); //three[i] = 13 (2*2+3*3)
 @endcode
  */
 template< class container, class container1>
@@ -201,9 +235,8 @@ inline void axpby( get_value_type<container> alpha, const container1& x, get_val
 
 /*! @brief \f$ z = \alpha x + \beta y + \gamma z\f$
  *
- * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
-
+ * This routine computes \f[ z_i =  \alpha x_i + \beta y_i + \gamma z_i \f]
+ * @copydoc hide_iterations
  * @copydoc hide_container
  * @param alpha Scalar
  * @param x container x may alias result
@@ -213,9 +246,9 @@ inline void axpby( get_value_type<container> alpha, const container1& x, get_val
  * @param z container contains solution on output
 
 @code
-    dg::DVec two(100,2), five(100,5), result(100, 12);
-    dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
-    //result[i] = -21 (2.5*2+2*5-3*12)
+dg::DVec two(100,2), five(100,5), result(100, 12);
+dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
+//result[i] = -21 (2.5*2+2*5-3*12)
 @endcode
  */
 template< class container, class container1, class container2>
@@ -238,9 +271,8 @@ inline void axpbypgz( get_value_type<container> alpha, const container1& x, get_
 
 /*! @brief \f$ z = \alpha x + \beta y\f$
  *
- * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
-
+ * This routine computes \f[ z_i =  \alpha x_i + \beta y_i \f]
+ * @copydoc hide_iterations
  * @copydoc hide_container
  * @param alpha Scalar
  * @param x container x may alias z
@@ -249,8 +281,8 @@ inline void axpbypgz( get_value_type<container> alpha, const container1& x, get_
  * @param z container z contains solution on output
 
 @code
-    dg::DVec two( 100,2), three(100,3), result(100);
-    dg::blas1::axpby( 2, two, 3., three, result); //result[i] = 13 (2*2+3*3)
+dg::DVec two( 100,2), three(100,3), result(100);
+dg::blas1::axpby( 2, two, 3., three, result); //result[i] = 13 (2*2+3*3)
 @endcode
  */
 template< class container, class container1, class container2>
@@ -263,7 +295,7 @@ inline void axpby( get_value_type<container> alpha, const container1& x, get_val
 /*! @brief \f$ y = f(y, g(x_0,x_1,...)\f$
  *
  * This routine elementwise evaluates \f[ f(y_i , g(x_{0i}, x_{1i}, ...)) \f]
- * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
+ * @copydoc hide_iterations
  * @copydoc hide_container
  * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type_y&, value_type_g) i.e. it writes into the first and reads from its second argument
  * @tparam Functor signature: \c value_type_g \c operator()( value_type_x0, value_type_x1, ...)
@@ -275,10 +307,10 @@ inline void axpby( get_value_type<container> alpha, const container1& x, get_val
  * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @note all aliases allowed
 @code
-    double function( double x, double y) {return sin(x)*sin(y);}
-    dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
-    dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
-    //result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
+double function( double x, double y) {return sin(x)*sin(y);}
+dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
+dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
+//result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
 @endcode
  */
 template< class container, class BinarySubroutine, class Functor, class container0, class ...Containers>
@@ -291,7 +323,7 @@ inline void evaluate( container& y, BinarySubroutine f, Functor g, const contain
 /*! @brief \f$ y = op(x)\f$
  *
  * This routine computes \f[ y_i = op(x_i) \f]
- * This is strictly speaking not a BLAS routine since f can be a nonlinear function.
+ * @copydoc hide_iterations
  * @copydoc hide_container
  * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
  * @param x container x may alias y
@@ -300,9 +332,9 @@ inline void evaluate( container& y, BinarySubroutine f, Functor g, const contain
  * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
 
 @code
-    dg::DVec two( 100,2), result(100);
-    dg::blas1::transform( two, result, dg::EXP<double>());
-    //result[i] = 7.389056... (e^2)
+dg::DVec two( 100,2), result(100);
+dg::blas1::transform( two, result, dg::EXP<double>());
+//result[i] = 7.389056... (e^2)
 @endcode
  */
 template< class container, class container1, class UnaryOp>
@@ -311,20 +343,18 @@ inline void transform( const container1& x, container& y, UnaryOp op )
     dg::blas1::evaluate( y, dg::equals(), op, x);
 }
 
-
 /*! @brief \f$ y = x_1 x_2 \f$
 *
-* Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
-
+* Multiplies two vectors element by element: \f[ y_i = x_{1i}x_{2i}\f]
+* @copydoc hide_iterations
 * @copydoc hide_container
 * @param x1 container x1
 * @param x2 container x2 may alias x1
 * @param y  container y contains result on output ( may alias x1 or x2)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), result(100);
-    dg::blas1::pointwiseDot( two,  three, result ); //result[i] = 6.
+dg::DVec two( 100,2), three( 100,3), result(100);
+dg::blas1::pointwiseDot( two,  three, result ); //result[i] = 6.
 @endcode
 */
 template< class container, class container1, class container2>
@@ -337,9 +367,8 @@ inline void pointwiseDot( const container1& x1, const container2& x2, container&
 /**
 * @brief \f$ y = \alpha x_1 x_2 + \beta y\f$
 *
-* Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
-
+* Multiplies two vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i} + \beta y_i\f]
+* @copydoc hide_iterations
 * @copydoc hide_container
 * @param alpha scalar
 * @param x1 container x1
@@ -348,9 +377,9 @@ inline void pointwiseDot( const container1& x1, const container2& x2, container&
 * @param y  container y contains result on output ( may alias x1 or x2)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), result(100,6);
-    dg::blas1::pointwiseDot(2., two,  three, -4., result );
-    //result[i] = -12. (2*2*3-4*6)
+dg::DVec two( 100,2), three( 100,3), result(100,6);
+dg::blas1::pointwiseDot(2., two,  three, -4., result );
+//result[i] = -12. (2*2*3-4*6)
 @endcode
 */
 template< class container, class container1, class container2>
@@ -366,9 +395,8 @@ inline void pointwiseDot( get_value_type<container> alpha, const container1& x1,
 /**
 * @brief \f$ y = \alpha x_1 x_2 x_3 + \beta y\f$
 *
-* Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
-
+* Multiplies three vectors element by element: \f[ y_i = \alpha x_{1i}x_{2i}x_{3i} + \beta y_i\f]
+* @copydoc hide_iterations
 * @copydoc hide_container
 * @param alpha scalar
 * @param x1 container x1
@@ -378,9 +406,9 @@ inline void pointwiseDot( get_value_type<container> alpha, const container1& x1,
 * @param y  container y contains result on output ( may alias x1,x2 or x3)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
-    dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
-    //result[i] = 24. (2*2*3*4-4*6)
+dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
+dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
+//result[i] = 24. (2*2*3*4-4*6)
 @endcode
 */
 template< class container, class container1, class container2, class container3>
@@ -396,18 +424,17 @@ inline void pointwiseDot( get_value_type<container> alpha, const container1& x1,
 /**
 * @brief \f$ y = x_1/ x_2\f$
 *
-* Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
-
+* Divides two vectors element by element: \f[ y_i = x_{1i}/x_{2i}\f]
+* @copydoc hide_iterations
 * @copydoc hide_container
 * @param x1 container x1
 * @param x2 container x2 may alias x1
 * @param y  container y contains result on output ( may alias x1 and/or x2)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), result(100);
-    dg::blas1::pointwiseDivide( two,  three, result );
-    //result[i] = -0.666... (2/3)
+dg::DVec two( 100,2), three( 100,3), result(100);
+dg::blas1::pointwiseDivide( two,  three, result );
+//result[i] = -0.666... (2/3)
 @endcode
 */
 template< class container, class container1, class container2>
@@ -430,9 +457,9 @@ inline void pointwiseDivide( const container1& x1, const container2& x2, contain
 * @param y  container y contains result on output ( may alias x1 and/or x2)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), result(100,1);
-    dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
-    //result[i] = 7 (3*2/3+5*1)
+dg::DVec two( 100,2), three( 100,3), result(100,1);
+dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
+//result[i] = 7 (3*2/3+5*1)
 @endcode
 */
 template< class container, class container1, class container2>
@@ -448,8 +475,8 @@ inline void pointwiseDivide( get_value_type<container> alpha, const container1& 
 /**
 * @brief \f$ z = \alpha x_1x_2 + \beta x_2y_2 + \gamma z\f$
 *
-* Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]  i iterates over @b all elements inside the container. If \c container has the \c VectorVectorTag, i recursively loops over all entries. If the container sizes
- * do not match, the result is undefined.
+* Multiplies and adds vectors element by element: \f[ z_i = \alpha x_{1i}y_{1i} + \beta x_{2i}y_{2i} + \gamma z_i \f]
+* @copydoc hide_iterations
 * @copydoc hide_container
 * @param alpha scalar
 * @param x1 container x1
@@ -462,9 +489,9 @@ inline void pointwiseDivide( get_value_type<container> alpha, const container1& 
 * @note all aliases are allowed
 
 @code
-    dg::DVec two(100,2), three(100,3), four(100,5), five(100,5), result(100,6);
-    dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
-    //result[i] = -56.
+dg::DVec two(100,2), three(100,3), four(100,5), five(100,5), result(100,6);
+dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
+//result[i] = -56.
 @endcode
 */
 template<class container, class container1, class container2, class container3, class container4>
