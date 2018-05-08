@@ -76,10 +76,11 @@ struct ArrayVectorTag   : public VectorVectorTag{}; //!< \c std::array of contai
  *  - data()
  *  - begin()
  *  - end()
+ *  - can be constructed from iterators (begin, end)
  */
 struct ThrustVectorTag  : public SharedVectorTag {};
 struct CuspVectorTag    : public ThrustVectorTag {}; //!< special tag for cusp arrays
-struct StdArrayTag      : public ThrustVectorTag {}; //!< \c std::array< primitive_type>
+struct StdArrayTag      : public ThrustVectorTag {}; //!< <tt> std::array< primitive_type> </tt>
 
 }//namespace dg
 

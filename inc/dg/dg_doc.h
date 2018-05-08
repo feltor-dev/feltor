@@ -120,8 +120,8 @@
   *  - double operator()(double, double, double) const
   */
 
- /** @class hide_container
-  * @tparam container
+ /** @class hide_ContainerType
+  * @tparam ContainerType
   * Any class for which a specialization of \c VectorTraits exists and which
   * fulfills the requirements of the there defined data and execution policies derived from \c AnyVectorTag or \c AnyPolicyTag.
   * For example, this is one of
