@@ -308,10 +308,10 @@ const double rk_classic<17>::b[17] = {
  /** @class hide_rhs
   * @tparam RHS The right hand side
         is a functor type with no return value (subroutine)
-        of signature <tt> void operator()(value_type, const container&, container&)</tt>
+        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
         The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
         i.e. y' = f(t, y) translates to f(t, y, y').
-        The two container arguments never alias each other in calls to the functor.
+        The two ContainerType arguments never alias each other in calls to the functor.
   */
 
 /**
@@ -338,26 +338,26 @@ const double rk_classic<17>::b[17] = {
  *  by ones on the left and \f$ D\f$ its
  *  diagonal part.
 * @tparam s Order of the method (1, 2, 3 or 4)
-* @copydoc hide_container
+* @copydoc hide_ContainerType
 * @sa RK
 */
-template< size_t s, class container>
+template< size_t s, class ContainerType>
 struct RK_opt
 {
     ///@brief No memory allocation, Call \c construct before using the object
     RK_opt(){}
 
     ///@copydoc construct()
-    RK_opt( const container& copyable){
+    RK_opt( const ContainerType& copyable){
         construct(copyable);
     }
     /**
     * @brief Reserve internal workspace for the integration
     *
-    * @param copyable container of the size that is used in \c step
+    * @param copyable ContainerType of the size that is used in \c step
     * @note it does not matter what values \c copyable contains, but its size is important
     */
-    void construct( const container& copyable){
+    void construct( const ContainerType& copyable){
         u_.fill(copyable);
     }
 
@@ -373,14 +373,14 @@ struct RK_opt
     * @param dt timestep
     */
     template< class RHS>
-    void step( RHS& rhs, double t0, const container& u0, double& t1, container& u1, double dt);
+    void step( RHS& rhs, double t0, const ContainerType& u0, double& t1, ContainerType& u1, double dt);
   private:
-    std::array<container,s> u_; //the order determines the amount of memory needed
+    std::array<ContainerType,s> u_; //the order determines the amount of memory needed
 };
 
-template< size_t k, class container>
+template< size_t k, class ContainerType>
 template< class RHS>
-void RK_opt<k, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
+void RK_opt<k, ContainerType>::step( RHS& f, double t0, const ContainerType& u0, double& t1, ContainerType& u1, double dt)
 {
     f(t0, u0, u_[0]);
     blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
@@ -408,25 +408,25 @@ void RK_opt<k, container>::step( RHS& f, double t0, const container& u0, double&
 }
 ///@cond
 //Euler specialisation
-template < class container>
-struct RK_opt<1, container>
+template < class ContainerType>
+struct RK_opt<1, ContainerType>
 {
     RK_opt(){}
-    RK_opt( const container& copyable){
+    RK_opt( const ContainerType& copyable){
         construct(copyable);
     }
-    void construct( const container& copyable){
+    void construct( const ContainerType& copyable){
         u_ = copyable;
     }
     template < class RHS>
-    void step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
+    void step( RHS& f, double t0, const ContainerType& u0, double& t1, ContainerType& u1, double dt)
     {
         f( t0, u0, u_); //we need u_ if u1 aliases u0
         blas1::axpby( 1., u0, dt, u_, u1);
         t1 = t0 + dt;
     }
     private:
-    container u_;
+    ContainerType u_;
 };
 ///@endcond
 
@@ -447,33 +447,33 @@ struct RK_opt<1, container>
 * The coefficients are chosen in the classic form given by Runge and Kutta.
 * Needs more vector additions than our RK_opt class but we implemented higher orders
 * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
-* @copydoc hide_container
+* @copydoc hide_ContainerType
 */
-template< size_t s, class container>
+template< size_t s, class ContainerType>
 struct RK
 {
     ///@copydoc RK_opt::RK_opt()
     RK(){}
-    ///@copydoc RK_opt::construct(const container&)
-    RK( const container& copyable){
+    ///@copydoc RK_opt::construct(const ContainerType&)
+    RK( const ContainerType& copyable){
         construct( copyable);
     }
-    ///@copydoc RK_opt::construct(const container&)
-    void construct( const container& copyable){
+    ///@copydoc RK_opt::construct(const ContainerType&)
+    void construct( const ContainerType& copyable){
         k_.fill(copyable);
         u_ = copyable;
     }
-    ///@copydoc RK_opt::step(RHS&,double,const container&,double&,container&,double)
+    ///@copydoc RK_opt::step(RHS&,double,const ContainerType&,double&,ContainerType&,double)
     template<class RHS>
-    void step( RHS& rhs, double t0, const container& u0, double& t1, container& u1, double dt);
+    void step( RHS& rhs, double t0, const ContainerType& u0, double& t1, ContainerType& u1, double dt);
   private:
-    std::array<container,s> k_;
-    container u_;
+    std::array<ContainerType,s> k_;
+    ContainerType u_;
 };
 
-template< size_t s, class container>
+template< size_t s, class ContainerType>
 template< class RHS>
-void RK<s, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
+void RK<s, ContainerType>::step( RHS& f, double t0, const ContainerType& u0, double& t1, ContainerType& u1, double dt)
 {
     f(t0, u0, k_[0]); //compute k_0
     double tu = t0;
@@ -503,7 +503,7 @@ void RK<s, container>::step( RHS& f, double t0, const container& u0, double& t1,
  *
  * @tparam s # of stages (1, 2, 3, 4, 6, 17)
  * @copydoc hide_rhs
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param rhs The right-hand-side
  * @param t_begin initial time
  * @param begin initial condition
@@ -511,10 +511,10 @@ void RK<s, container>::step( RHS& f, double t0, const container& u0, double& t1,
  * @param end (write-only) contains solution at \c t_end on output (may alias begin)
  * @param N number of steps
  */
-template< unsigned s, class RHS, class container>
-void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, container& end, unsigned N )
+template< unsigned s, class RHS, class ContainerType>
+void stepperRK(RHS& rhs, double t_begin, const ContainerType& begin, double t_end, ContainerType& end, unsigned N )
 {
-    RK<s, container > rk( begin);
+    RK<s, ContainerType > rk( begin);
     if( t_end == t_begin){ end = begin; return;}
     double dt = (t_end-t_begin)/(double)N;
     end = begin;
@@ -532,11 +532,11 @@ void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, c
  * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
  * @copydoc hide_rhs
  * @tparam RHS
- * In addition, there must be the function \c bool \c monitor( const container& end);
+ * In addition, there must be the function \c bool \c monitor( const ContainerType& end);
  * available, which is called after every step.
  * Return \c true if everything is ok and \c false if the integrator certainly fails.
- * The other function is the \c double \c error( const container& end0, const container& end1); which computes the error norm in which the integrator should converge.
- * @copydoc hide_container
+ * The other function is the \c double \c error( const ContainerType& end0, const ContainerType& end1); which computes the error norm in which the integrator should converge.
+ * @copydoc hide_ContainerType
  * @param rhs The right-hand-side
  * @param t_begin initial time
  * @param begin initial condition
@@ -546,11 +546,11 @@ void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, c
  * @param NT_init initial number of steps
  * @return number of iterations if converged, -1 and a warning to \c std::cerr when \c isnan appears, -2 if failed to reach \c eps_abs
  */
-template<unsigned s, class RHS, class container>
-int integrateRK(RHS& rhs, double t_begin, const container& begin, double t_end, container& end, double eps_abs, unsigned NT_init = 2 )
+template<unsigned s, class RHS, class ContainerType>
+int integrateRK(RHS& rhs, double t_begin, const ContainerType& begin, double t_end, ContainerType& end, double eps_abs, unsigned NT_init = 2 )
 {
-    RK<s, container > rk( begin);
-    container old_end(begin);
+    RK<s, ContainerType > rk( begin);
+    ContainerType old_end(begin);
     end = begin;
     if( t_end == t_begin) return 0;
     int NT = NT_init;

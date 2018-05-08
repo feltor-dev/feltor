@@ -56,45 +56,45 @@ inline void transfer( const Matrix& x, AnotherMatrix& y)
  * to the nearest double precision number. Although the products are not computed with
  * infinite precision, the order of multiplication is guaranteed.
  * This is possible with the help of an adapted version of the \c ::exblas library.
- * @tparam DiagonalMatrix Right now \c DiagonalMatrix has to be the same as \c container, except if \c container is a \p std::vector<container_type>, then the \c DiagonalMatrix has to be the \c container_type.
- * In the latter case the Matrix is applied to all containers in the std::vector and the sum is returned.
- * @copydoc hide_container
- * @param x Left container
+ * @tparam DiagonalMatrix Right now \c DiagonalMatrix has to be the same as \c ContainerType, except if \c ContainerType is a <tt> std::vector<ContainerType_type></tt>, then the \c DiagonalMatrix has to be the \c ContainerType_type.
+ * In the latter case the Matrix is applied to all ContainerTypes in the std::vector and the sum is returned.
+ * @copydoc hide_ContainerType
+ * @param x Left input
  * @param m The diagonal Matrix
- * @param y Right container (may alias \p x)
+ * @param y Right input (may alias \c x)
  * @return Generalized scalar product
  * @note This routine is always executed synchronously due to the
     implicit memcpy of the result.
  * @copydoc hide_code_evaluate2d
  */
-template< class DiagonalMatrix, class container>
-inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const container& x, const DiagonalMatrix& m, const container& y)
+template< class DiagonalMatrix, class ContainerType>
+inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const ContainerType& x, const DiagonalMatrix& m, const ContainerType& y)
 {
     return dg::blas2::detail::doDot( x, m, y,
                        get_matrix_category<DiagonalMatrix>(),
-                       get_vector_category<container>() );
+                       get_vector_category<ContainerType>() );
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
  *
  * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
- * @tparam DiagonalMatrix Right now \c DiagonalMatrix has to be the same as \c container, except if \c container is a \c std::vector<container_type>, then the \c DiagonalMatrix has to be the \c container_type.
- * In the latter case the Matrix is applied to all containers in the std::vector and the sum is returned.
- * @copydoc hide_container
+ * @tparam DiagonalMatrix Right now \c DiagonalMatrix has to be the same as \c ContainerType, except if \c ContainerType is a \c std::vector<ContainerType_type>, then the \c DiagonalMatrix has to be the \c ContainerType_type.
+ * In the latter case the Matrix is applied to all ContainerTypes in the std::vector and the sum is returned.
+ * @copydoc hide_ContainerType
  * @param m The diagonal Matrix
- * @param x Right container
+ * @param x Right input
  * @return Generalized scalar product
  * @note This routine is always executed synchronously due to the
     implicit memcpy of the result.
  * @note This routine is equivalent to the call \c dg::blas2::dot( x, m, x);
      which should be prefered because it looks more explicit
  */
-template< class DiagonalMatrix, class container>
-inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const DiagonalMatrix& m, const container& x)
+template< class DiagonalMatrix, class ContainerType>
+inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const DiagonalMatrix& m, const ContainerType& x)
 {
     return dg::blas2::detail::doDot( m, x,
                        get_matrix_category<DiagonalMatrix>(),
-                       get_vector_category<container>() );
+                       get_vector_category<ContainerType>() );
 }
 
 /*! @brief \f$ y = \alpha M x + \beta y\f$
@@ -102,29 +102,29 @@ inline typename MatrixTraits<DiagonalMatrix>::value_type dot( const DiagonalMatr
  * This routine computes \f[ y = \alpha M x + \beta y \f]
  * where \f$ M\f$ is a matrix.
  * @copydoc hide_matrix
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param alpha A Scalar
  * @param M The Matrix
- * @param x A container different from \p y
+ * @param x A vector different from \p y
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
  * @attention \p y may never alias \p x
  * @copydoc hide_code_blas2_symv
  */
-template< class Matrix, class container>
-inline void symv( get_value_type<container> alpha,
+template< class Matrix, class ContainerType>
+inline void symv( get_value_type<ContainerType> alpha,
                   const Matrix& M,
-                  const container& x,
-                  get_value_type<container> beta,
-                  container& y)
+                  const ContainerType& x,
+                  get_value_type<ContainerType> beta,
+                  ContainerType& y)
 {
-    if(alpha == (get_value_type<container>)0) {
+    if(alpha == (get_value_type<ContainerType>)0) {
         dg::blas1::scal( y, beta);
         return;
     }
     dg::blas2::detail::doSymv( alpha, M, x, beta, y,
                        get_matrix_category<Matrix>(),
-                       get_vector_category<container>() );
+                       get_vector_category<ContainerType>() );
     return;
 }
 
@@ -133,24 +133,24 @@ inline void symv( get_value_type<container> alpha,
  * This routine computes \f[ y = M x \f]
  * where \f$ M\f$ is a matrix.
  * @copydoc hide_matrix
- * @copydoc hide_container
- * @tparam same_or_another_container Currently needs to be the same as \c container.
+ * @copydoc hide_ContainerType
+ * @tparam same_or_another_ContainerType Currently needs to be the same as \c ContainerType.
  * @param M The Matrix
- * @param x A container different from \p y
+ * @param x A ContainerType different from \p y
  * @param y contains the solution on output (may not alias \p x)
  * @attention y may never alias x
  * @note Due to the \c SelfMadeMatrixTag, M cannot be declared const
  * @copydoc hide_code_blas2_symv
  */
-template< class Matrix, class container, class same_or_another_container>
+template< class Matrix, class ContainerType, class same_or_another_ContainerType>
 inline void symv( Matrix& M,
-                  const container& x,
-                  same_or_another_container& y)
+                  const ContainerType& x,
+                  same_or_another_ContainerType& y)
 {
     dg::blas2::detail::doSymv( M, x, y,
                        get_matrix_category<Matrix>(),
-                       get_vector_category<container>(),
-                       typename dg::VectorTraits<same_or_another_container>::vector_category() );
+                       get_vector_category<ContainerType>(),
+                       typename dg::VectorTraits<same_or_another_ContainerType>::vector_category() );
     return;
 }
 
@@ -159,22 +159,22 @@ inline void symv( Matrix& M,
  *
  * Does exactly the same as symv.
  * @copydoc hide_matrix
- * @copydoc hide_container
- * @tparam same_or_another_container Currently needs to be the same as \c container.
+ * @copydoc hide_ContainerType
+ * @tparam same_or_another_ContainerType Currently needs to be the same as \c ContainerType.
  * @param M The Matrix
- * @param x A container different from \p y
+ * @param x A ContainerType different from \p y
  * @param y contains the solution on output (may not alias \p x)
  * @attention y may never alias \p x
  */
-template< class Matrix, class container, class same_or_another_container>
+template< class Matrix, class ContainerType, class same_or_another_ContainerType>
 inline void gemv( Matrix& M,
-                  const container& x,
-                  same_or_another_container& y)
+                  const ContainerType& x,
+                  same_or_another_ContainerType& y)
 {
     dg::blas2::detail::doGemv( M, x, y,
                        get_matrix_category<Matrix>(),
-                       get_vector_category<container>(),
-                       typename dg::VectorTraits<same_or_another_container>::vector_category() );
+                       get_vector_category<ContainerType>(),
+                       typename dg::VectorTraits<same_or_another_ContainerType>::vector_category() );
     return;
 }
 /*! @brief \f$ y = \alpha M x + \beta y \f$;
@@ -182,28 +182,28 @@ inline void gemv( Matrix& M,
  *
  * Does exactly the same as symv.
  * @copydoc hide_matrix
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param alpha A Scalar
  * @param M The Matrix
- * @param x A container different from \p y
+ * @param x A ContainerType different from \p y
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
  * @attention y may never alias \p x
  */
-template< class Matrix, class container>
-inline void gemv( get_value_type<container> alpha,
+template< class Matrix, class ContainerType>
+inline void gemv( get_value_type<ContainerType> alpha,
                   const Matrix& M,
-                  const container& x,
-                  get_value_type<container> beta,
-                  container& y)
+                  const ContainerType& x,
+                  get_value_type<ContainerType> beta,
+                  ContainerType& y)
 {
-    if(alpha == (get_value_type<container>)0) {
+    if(alpha == (get_value_type<ContainerType>)0) {
         dg::blas1::scal( y, beta);
         return;
     }
     dg::blas2::detail::doGemv( alpha, M, x, beta, y,
                        get_matrix_category<Matrix>(),
-                       get_vector_category<container>() );
+                       get_vector_category<ContainerType>() );
     return;
 }
 ///@}

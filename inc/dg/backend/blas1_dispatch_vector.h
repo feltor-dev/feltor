@@ -32,9 +32,12 @@ To doTransfer( const From& src, ArrayVectorTag, AnyVectorTag)
 }
 
 
-template< class Vector>
-inline get_value_type<Vector> doDot( const Vector& x1, const Vector& x2, VectorVectorTag)
+template< class Vector, Vector2>
+inline get_value_type<Vector> doDot( const Vector& x1, const Vector2& x2, VectorVectorTag)
 {
+    static_assert( std::is_base_of<VectorVectorTag,
+        get_vector_category<Vector2>>::value,
+        "All container types must share the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( !x1.empty());
     assert( x1.size() == x2.size() );
@@ -58,8 +61,6 @@ inline get_value_type<Vector> doDot( const Vector& x1, const Vector& x2, VectorV
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    //static check that all Containers have the omp execution policy
-    //...
     using inner_container = typename std::decay<container>::type::value_type;
     if( !omp_in_parallel())//to catch recursive calls
     {
@@ -81,8 +82,6 @@ inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, contai
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    //static check that all Containers have the same execution policy
-    //...
     using inner_container = typename std::decay<container>::type::value_type;
     for( unsigned i=0; i<x.size(); i++) {
         doSubroutine( get_vector_category<inner_container>(), f, x[i], xs[i]...);
@@ -94,10 +93,10 @@ template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
     static_assert( all_true<std::is_base_of<VectorVectorTag,
-        get_vector_category<Containers>>::value...>::value, 
+        get_vector_category<Containers>>::value...>::value,
         "All container types must share the same vector category (VectorVectorTag in this case)!");
     static_assert( all_true<std::is_same<get_execution_policy<container>,
-        get_execution_policy<Containers> >::value...>::value, 
+        get_execution_policy<Containers> >::value...>::value,
         "All container types must share the same execution policy!");
 #ifdef DG_DEBUG
     //is this possible?

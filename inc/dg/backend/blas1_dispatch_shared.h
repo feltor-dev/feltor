@@ -66,9 +66,15 @@ To doTransfer( const From& in, ThrustVectorTag, ThrustVectorTag)
     return t;
 }
 
-template< class Vector>
-std::vector<int64_t> doDot_superacc( const Vector& x, const Vector& y, SharedVectorTag)
+template< class Vector, class Vector2>
+std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, SharedVectorTag)
 {
+    static_assert( std::is_base_of<SharedVectorTag,
+        get_vector_category<Vector2>>::value,
+        "All container types must share the same vector category (SharedVectorTag in this case)!");
+    static_assert( std::is_same<get_execution_policy<Vector>,
+        get_execution_policy<Vector2> >::value,
+        "All container types must share the same execution policy!");
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
@@ -77,7 +83,7 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector& y, SharedVec
     return doDot_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, y_ptr);
 }
 
-template<class Vector>
+template<class Vector, class Vector2>
 get_value_type<Vector> doDot( const Vector& x, const Vector& y, SharedVectorTag)
 {
     static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
@@ -89,10 +95,10 @@ template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
     static_assert( all_true<std::is_base_of<SharedVectorTag,
-        get_vector_category<Containers>>::value...>::value, 
+        get_vector_category<Containers>>::value...>::value,
         "All container types must share the same vector category (SharedVectorTag in this case)!");
     static_assert( all_true<std::is_same<get_execution_policy<container>,
-        get_execution_policy<Containers> >::value...>::value, 
+        get_execution_policy<Containers> >::value...>::value,
         "All container types must share the same execution policy!");
 #ifdef DG_DEBUG
     //is this possible?

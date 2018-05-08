@@ -117,10 +117,10 @@ dg::DVec two( 100,2), three(100,3);
 double temp = dg::blas1::dot( two, three); //temp = 30 (5*(2*3))
 @endcode
  */
-template< class ContainerType>
-inline get_value_type<ContainerType> dot( const ContainerType& x, const ContainerType& y)
+template< class ContainerType1, class ContainerType2>
+inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
 {
-    return dg::blas1::detail::doDot( x, y, get_vector_category<ContainerType>() );
+    return dg::blas1::detail::doDot( x, y, get_vector_category<ContainerType1>() );
 }
 
 /**
