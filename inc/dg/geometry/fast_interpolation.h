@@ -26,15 +26,15 @@ namespace dg
  * \f[ y = M_{N-1}(...M_1(M_0x))\f]
  * where \f$ M_i\f$ is the i-th matrix
  * @copydoc hide_matrix
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @ingroup misc
  */
-template <class Matrix, class container>
+template <class Matrix, class ContainerType>
 struct MultiMatrix
 {
     MultiMatrix(){}
     /**
-    * @brief reserve space for dimension matrices  and dimension-1 containers
+    * @brief reserve space for dimension matrices  and dimension-1 ContainerTypes
     * @param dimension # of matrices to store
     * @attention it is the user's reponsibility to allocate memory for the intermediate "temp" vectors
     */
@@ -53,8 +53,8 @@ struct MultiMatrix
 
     }
 
-    void symv( const container& x, container& y) const{ symv( 1., x,0,y);}
-    void symv(double alpha, const container& x, double beta, container& y) const
+    void symv( const ContainerType& x, ContainerType& y) const{ symv( 1., x,0,y);}
+    void symv(double alpha, const ContainerType& x, double beta, ContainerType& y) const
     {
         int dims = inter_.size();
         if( dims == 1)
@@ -67,13 +67,13 @@ struct MultiMatrix
             dg::blas2::symv( inter_[i], temp_[i-1].data(), temp_[i].data());
         dg::blas2::symv( alpha, inter_[dims-1], temp_[dims-2].data(), beta, y);
     }
-    std::vector<Buffer<container> >& get_temp(){ return temp_;}
-    const std::vector<Buffer<container> >& get_temp()const{ return temp_;}
+    std::vector<Buffer<ContainerType> >& get_temp(){ return temp_;}
+    const std::vector<Buffer<ContainerType> >& get_temp()const{ return temp_;}
     std::vector<Matrix>& get_matrices(){ return inter_;}
     const std::vector<Matrix>& get_matrices()const{ return inter_;}
     private:
     std::vector<Matrix > inter_;
-    std::vector<Buffer<container> > temp_;
+    std::vector<Buffer<ContainerType> > temp_;
 };
 
 ///@cond
