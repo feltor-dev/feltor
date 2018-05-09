@@ -14,7 +14,7 @@ struct Diffusion
         w2d_( dg::create::weights(g)), v2d_( dg::create::inv_weights(g)), 
         temp( g.size()), LaplacianM_perp( g, dg::normed)
 { }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
     {
         for( unsigned i=0; i<x.size(); i++)
         {
@@ -45,7 +45,7 @@ struct Explicit
 
     const std::vector<container>& potential( ) const { return phi;}
     const container& aparallel( ) const { return apar;}
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()(double t, const std::vector<container>& y, std::vector<container>& yp);
 
   private:
     const container w2d, v2d, one;
@@ -81,7 +81,7 @@ Explicit< G, M, container>::Explicit( const G& grid, Parameters p ):
 { }
 
 template<class G, class M, class container>
-void Explicit< G, M, container>::operator()( const std::vector<container>& y, std::vector<container>& yp) 
+void Explicit< G, M, container>::operator()(double t, const std::vector<container>& y, std::vector<container>& yp) 
 {
     assert( y.size() == 4);
     assert( y.size() == yp.size());

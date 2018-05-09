@@ -19,17 +19,16 @@ int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     std::stringstream title;
-    Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.json");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
@@ -40,7 +39,7 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::ifstream is( "window_params.js");
-    reader.parse( is, js, false);
+    is >> js;
     is.close();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
@@ -76,9 +75,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    ab.init( mima, diffusion, y0, p.dt);
-    ab( mima, diffusion, y0);
-    //y0.swap( y1); 
+    ab.init( mima, diffusion, time, y0, p.dt);
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
@@ -132,7 +129,7 @@ int main( int argc, char* argv[])
                 dg::blas1::axpby( -meanMass, one, 1., y0);
             }
 
-            try{ ab( mima, diffusion, y0);}
+            try{ ab.step( mima, diffusion, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -140,7 +137,6 @@ int main( int argc, char* argv[])
                 break;
             }
         }
-        time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;

@@ -33,7 +33,7 @@ struct Implicit
         LaplacianM_perp ( g,g.bcx(),g.bcy(), dg::normed, dg::centered)
     {
     }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( double t, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := n_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
@@ -100,7 +100,7 @@ struct Explicit
      */
     void initializepi( const container& y, const container& helper, container& target);
 
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( double t, const std::vector<container>& y, std::vector<container>& yp);
 
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
@@ -513,7 +513,7 @@ void Explicit<G, Matrix, container>::initializepi( const container& src, const c
 }
 
 template<class G, class Matrix, class container>
-void Explicit<G, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<G, Matrix, container>::operator()( double ttt, const std::vector<container>& y, std::vector<container>& yp)
 {
    /* y[0] := N_e - (p.bgprofamp + p.nprofileamp)
        y[1] := N_i - (p.bgprofamp + p.nprofileamp)

@@ -44,30 +44,31 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false; //important since we want to write to netcdf
+    std::string errs;
     if( argc != 3)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
-    else 
+    else
     {
         std::ifstream is(argv[1]);
-        reader.parse( is, js, false); //read input without comments
+        parseFromStream( parser, is, &js, &errs);
     }
-    std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
     if(rank==0)p.display( std::cout);
 
     ////////////////////////////////set up computations///////////////////////////
     dg::MPIGrid2d grid( 0, p.lx, 0, p.ly, p.n, p.Nx, p.Ny, p.bc_x, p.bc_y, comm);
-    dg::MPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);  
-    //create RHS 
-    toefl::Explicit< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > test( grid, p); 
+    dg::MPIGrid2d grid_out( 0., p.lx, 0.,p.ly, p.n_out, p.Nx_out, p.Ny_out, p.bc_x, p.bc_y, comm);
+    //create RHS
+    toefl::Explicit< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > test( grid, p);
     toefl::Implicit< dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec > diffusion( grid, p.nu);
     //////////////////create initial vector///////////////////////////////////////
-    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp); 
+    dg::Gaussian g( p.posX*p.lx, p.posY*p.ly, p.sigma, p.sigma, p.amp);
     std::vector<dg::MDVec> y0(2, dg::evaluate( g, grid)), y1(y0); // n_e' = gaussian
     dg::blas2::symv( test.gamma(), y0[0], y0[1]); // n_e = \Gamma_i n_i -> n_i = ( 1+alphaDelta) n_e' + 1
     {
@@ -77,21 +78,22 @@ int main( int argc, char* argv[])
     if( p.equations == "gravity_local" || p.equations == "gravity_global" || p.equations == "drift_global" ){
         y0[1] = dg::evaluate( dg::zero, grid);
     }
-    //////////////////initialisation of timestepper and first step///////////////////
+    //////////////////initialisation of timekarniadakis and first step///////////////////
     double time = 0;
-    dg::Karniadakis< std::vector<dg::MDVec> > ab( y0, y0[0].size(), p.eps_time);
-    ab.init( test, diffusion, y0, p.dt);
+    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    karniadakis.init( test, diffusion, time, y0, p.dt);
     y1 = y0;
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid; MPI_Info info = MPI_INFO_NULL;
     err = nc_create_par( argv[2],NC_NETCDF4|NC_MPIIO|NC_CLOBBER,comm,info, &ncid);
+    std::string input = js.toStyledString();
     err = nc_put_att_text( ncid, NC_GLOBAL, "inputfile", input.size(), input.data());
     int dim_ids[3], tvarID;
     err = file::define_dimensions( ncid, dim_ids, &tvarID, grid_out.global());
     //field IDs
-    std::string names[4] = {"electrons", "ions", "potential", "vorticity"}; 
-    int dataIDs[4]; 
+    std::string names[4] = {"electrons", "ions", "potential", "vorticity"};
+    int dataIDs[4];
     for( unsigned i=0; i<4; i++){
         err = nc_def_var( ncid, names[i].data(), NC_DOUBLE, 3, dim_ids, &dataIDs[i]);}
 
@@ -123,7 +125,7 @@ int main( int argc, char* argv[])
     size_t Estart[] = {0};
     std::vector<dg::DVec> transferD(4, dg::evaluate(dg::zero, grid_out.local()));
     dg::HVec transferH(dg::evaluate(dg::zero, grid_out.local()));
-    dg::IDMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local()); 
+    dg::IDMatrix interpolate = dg::create::interpolation( grid_out.local(), grid.local());
     dg::blas2::symv( interpolate, y1[0].data(), transferD[0]);
     dg::blas2::symv( interpolate, y1[1].data(), transferD[1]);
     dg::blas2::symv( interpolate, test.potential()[0].data(), transferD[2]);
@@ -138,7 +140,7 @@ int main( int argc, char* argv[])
     //err = nc_close(ncid);
     ///////////////////////////////////////Timeloop/////////////////////////////////
     const double mass0 = test.mass(), mass_blob0 = mass0 - grid.global().lx()*grid.global().ly();
-    double E0 = test.energy(), energy0 = E0, E1 = 0, diff = 0;
+    double E0 = test.energy(), E1 = 0, diff = 0;
     dg::Timer t;
     t.tic();
     try
@@ -155,7 +157,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            ab( test, diffusion, y1);
+            karniadakis.step( test, diffusion, time, y1);
             //store accuracy details
             {
                 if(rank==0)std::cout << "(m_tot-m_0)/m_0: "<< (test.mass()-mass0)/mass_blob0<<"\t";
@@ -166,7 +168,6 @@ int main( int argc, char* argv[])
                 if(rank==0)std::cout << "diff: "<< diff<<" diss: "<<diss<<"\t";
                 if(rank==0)std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<"\n";
             }
-            time+=p.dt;
             Estart[0] += 1;
             {
                 //err = nc_open(argv[2], NC_WRITE, &ncid);
@@ -203,11 +204,11 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
     }
     }
-    catch( dg::Fail& fail) { 
+    catch( dg::Fail& fail) {
         if(rank==0)std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
         if(rank==0)std::cerr << "Does Simulation respect CFL condition?\n";
     }
-    t.toc(); 
+    t.toc();
     unsigned hour = (unsigned)floor(t.diff()/3600);
     unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
     double second = t.diff() - hour*3600 - minute*60;

@@ -67,18 +67,27 @@ inline void doPlus(  Vector& x,
     doPlus( x.data(), alpha, typename VectorTraits<container>::vector_category());
 }
 
-template< class Vector, class UnaryOp>
-inline void doTransform(  const Vector& x, Vector& y,
-                          UnaryOp op,
-                          MPIVectorTag)
+template< class Vector, class Binary, class UnaryOp>
+inline void doEvaluate(  MPIVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x)
 {
 #ifdef DG_DEBUG
     int result;
     MPI_Comm_compare( x.communicator(), y.communicator(), &result);
     assert( result == MPI_CONGRUENT || result == MPI_IDENT);
 #endif //DG_DEBUG
-    typedef typename Vector::container_type container;
-    doTransform( x.data(), y.data(), op, typename VectorTraits<container>::vector_category());
+    using container = typename Vector::container_type;
+    doEvaluate( get_vector_category<container>(), y.data(), f, op, x.data());
+}
+template< class Vector, class Binary, class UnaryOp>
+inline void doEvaluate(  MPIVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x, const Vector& x2)
+{
+#ifdef DG_DEBUG
+    int result;
+    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
+    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+#endif //DG_DEBUG
+    using container = typename Vector::container_type;
+    doEvaluate( get_vector_category<container>(), y.data(), f, op, x.data(),x2.data());
 }
 
 template< class Vector>

@@ -53,11 +53,17 @@ inline get_value_type<Vector> doDot( const Vector& x1, const Vector& x2, VectorV
     }
     return exblas::cpu::Round(&(acc[0][0]));
 }
-template<class Vector, class UnaryOp>
-inline void doTransform( const Vector& x, Vector& y, UnaryOp op, VectorVectorTag)
+template<class Vector, class Binary, class UnaryOp>
+inline void doEvaluate( VectorVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x)
 {
     for( unsigned i=0; i<x.size(); i++)
-        doTransform( x[i], y[i], op, get_vector_category<typename Vector::value_type>());
+        doEvaluate( get_vector_category<typename Vector::value_type>(), y[i], f, op, x[i]);
+}
+template<class Vector, class Binary, class UnaryOp>
+inline void doEvaluate( VectorVectorTag, Vector& z, Binary f, UnaryOp op, const Vector& x, const Vector& y)
+{
+    for( unsigned i=0; i<x.size(); i++)
+        doEvaluate( get_vector_category<typename Vector::value_type>(), z[i], f, op, x[i], y[i]);
 }
 #ifdef _OPENMP
 template< class Vector>

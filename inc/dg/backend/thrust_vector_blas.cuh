@@ -85,9 +85,18 @@ get_value_type<Vector> doDot( const Vector& x, const Vector& y, ThrustVectorTag)
     return exblas::cpu::Round(acc.data());
 }
 
-template< class Vector, class UnaryOp>
-inline void doTransform(  const Vector& x, Vector& y, UnaryOp op, ThrustVectorTag) {
-    doTransform_dispatch( get_execution_policy<Vector>(), x,y,op);
+template< class Vector, class Binary, class UnaryOp>
+inline void doEvaluate( ThrustVectorTag, Vector& y, Binary f, UnaryOp op, const Vector& x){
+    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
+    get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
+    doEvaluate_dispatch( get_execution_policy<Vector>(), x.size(), y_ptr, f, op, x_ptr);
+}
+template< class Vector, class Binary, class UnaryOp>
+inline void doEvaluate( ThrustVectorTag, Vector& z, Binary f, UnaryOp op, const Vector& x, const Vector& y){
+    const get_value_type<Vector> * x_ptr = thrust::raw_pointer_cast( x.data());
+    const get_value_type<Vector> * y_ptr = thrust::raw_pointer_cast( y.data());
+    get_value_type<Vector> * z_ptr = thrust::raw_pointer_cast( z.data());
+    doEvaluate_dispatch( get_execution_policy<Vector>(), x.size(), z_ptr, f, op, x_ptr, y_ptr);
 }
 
 template< class Vector>

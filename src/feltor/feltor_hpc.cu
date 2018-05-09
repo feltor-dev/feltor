@@ -18,8 +18,10 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js, gs;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if( argc != 4)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
@@ -29,8 +31,8 @@ int main( int argc, char* argv[])
     {
         std::ifstream is(argv[1]);
         std::ifstream ks(argv[2]);
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        parseFromStream( parser, is, &js, &errs); //read input without comments
+        parseFromStream( parser, ks, &gs, &errs); //read input without comments
     }
     const feltor::Parameters p( js);
     const dg::geo::solovev::Parameters gp(gs);
@@ -92,7 +94,7 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 0., y0[3], 0., y0[3]); //set Ui = 0
     
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, rolkar, 0., y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -209,7 +211,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis.step( feltor, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -274,7 +276,7 @@ int main( int argc, char* argv[])
         std::cout << "\n\t Time for output: "<<ti.diff()<<"s\n\n"<<std::flush;
 #endif//DG_BENCHMARK
     }
-    t.toc(); 
+    t.toc();
     unsigned hour = (unsigned)floor(t.diff()/3600);
     unsigned minute = (unsigned)floor( (t.diff() - hour*3600)/60);
     double second = t.diff() - hour*3600 - minute*60;

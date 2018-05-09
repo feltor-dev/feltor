@@ -23,21 +23,20 @@
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Reader reader;
     Json::Value js, gs;
     if( argc == 1)
     {
         std::ifstream is("input.json");
         std::ifstream ks("geometry_params.json");
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        is >> js;
+        ks >> gs;
     }
     else if( argc == 3)
     {
         std::ifstream is(argv[1]);
         std::ifstream ks(argv[2]);
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        is >> js;
+        ks >> gs;
     }
     else
     {
@@ -51,7 +50,7 @@ int main( int argc, char* argv[])
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
     std::ifstream is( "window_params.js");
-    reader.parse( is, js, false);
+    is >> js;
     is.close();
     unsigned red = js.get("reduction", 1).asUInt();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz/red+1)*js["width"].asDouble(), js["rows"].asDouble()*js["height"].asDouble(), "");
@@ -111,7 +110,8 @@ int main( int argc, char* argv[])
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
-    karniadakis.init( asela, rolkar, y0, p.dt);
+    double time = 0;
+    karniadakis.init( asela, rolkar, time, y0, p.dt);
     std::cout << "Done!\n";
 //     asela.energies( y0);//now energies and potential are at time 0
 
@@ -122,7 +122,6 @@ int main( int argc, char* argv[])
 
     //create timer
     dg::Timer t;
-    double time = 0;
     unsigned step = 0;
     const double mass0 = asela.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = asela.energy(), energy0 = E0, E1 = 0, diff = 0;
@@ -247,7 +246,7 @@ int main( int argc, char* argv[])
         //std::cin >> x;
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{ karniadakis( asela, rolkar, y0);}
+            try{ karniadakis.step( asela, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -264,7 +263,6 @@ int main( int argc, char* argv[])
             E0 = E1;
 
         }
-        time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;

@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
     for( unsigned i=0; i<2; i++)
         dg::blas1::transform( y0[i], y0[i], dg::LN<double>());
 
-    dg::Karniadakis< std::vector<dg::DVec> > ab( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual);
@@ -75,10 +75,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
-    //ab.init( reconnection, y0, p.dt);
-    ab.init( reconnection, diffusion, y0, p.dt);
-    //ab( reconnection, y0, y1, p.dt);
-    //y0.swap( y1); 
+    karniadakis.init( reconnection, diffusion, time, y0, p.dt);
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
     unsigned step = 0;
@@ -166,7 +163,7 @@ int main( int argc, char* argv[])
         for( unsigned i=0; i<p.itstp; i++)
         {
             step++;
-            try{ ab( reconnection, diffusion, y0);}
+            try{ karniadakis.step( reconnection, diffusion, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -175,7 +172,6 @@ int main( int argc, char* argv[])
             }
             //y0.swap( y1); //attention on -O3 ?
         }
-        time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;

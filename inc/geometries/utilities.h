@@ -19,7 +19,7 @@ namespace flux{
 struct FieldRZYT
 {
     FieldRZYT( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol, double R0, double Z0): R_0_(R0), Z_0_(Z0), psip_(psip), ipol_(ipol){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double ipol=ipol_.f()(y[0], y[1]);
@@ -40,7 +40,7 @@ struct FieldRZYT
 struct FieldRZYZ
 {
     FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinaryFunctorsLvl1& ipol):psip_(psip), ipol_(ipol) {}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double ipol=ipol_.f()(y[0], y[1]);
@@ -64,7 +64,7 @@ struct FieldRZY
 {
     FieldRZY( const BinaryFunctorsLvl2& psip, const BinaryFunctorsLvl1& ipol): f_(1.), psip_(psip), ipol_(ipol){}
     void set_f(double f){ f_ = f;}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double ipol=ipol_.f()(y[0], y[1]);
@@ -107,7 +107,7 @@ struct FieldRZYRYZY
         xZ = +f_*psip_.dfy()(R0, Z0);
     }
 
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,4>& y, std::array<double,4>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
@@ -134,7 +134,7 @@ namespace ribeiro{
 struct FieldRZYT
 {
     FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -161,7 +161,7 @@ struct FieldRZYT
 struct FieldRZYZ
 {
     FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): psip_(psip), chi_(chi){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -186,7 +186,7 @@ struct FieldRZY
 {
     FieldRZY( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
     void set_f(double f){ f_ = f;}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -224,7 +224,7 @@ struct FieldRZYRYZY
         xZ = +f_*psip_.dfy()(R0, Z0);
     }
 
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,4>& y, std::array<double,4>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
@@ -248,7 +248,7 @@ namespace equalarc{
 struct FieldRZYT
 {
     FieldRZYT( const BinaryFunctorsLvl1& psip, double R0, double Z0, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): R_0_(R0), Z_0_(Z0), psip_(psip), chi_(chi){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -275,7 +275,7 @@ struct FieldRZYT
 struct FieldRZYZ
 {
     FieldRZYZ( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): psip_(psip), chi_(chi){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,3>& y, std::array<double,3>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -300,7 +300,7 @@ struct FieldRZY
 {
     FieldRZY( const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1() ): f_(1.), psip_(psip), chi_(chi){}
     void set_f(double f){ f_ = f;}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psip2 =   chi_.xx()(y[0], y[1])*psipR*psipR
@@ -340,7 +340,7 @@ struct FieldRZYRYZY
         xZ = +f_*psip_.dfy()(R0, Z0);
     }
 
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,4>& y, std::array<double,4>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double psipRR = psip_.dfxx()(y[0], y[1]), psipRZ = psip_.dfxy()(y[0],y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
@@ -363,7 +363,7 @@ struct FieldRZYRYZY
 struct FieldRZtau
 {
     FieldRZtau(const BinaryFunctorsLvl1& psip, const BinarySymmTensorLvl1& chi = BinarySymmTensorLvl1()): psip_(psip), chi_(chi){}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0],y[1]);
         double chiRR = chi_.xx()(y[0], y[1]),
@@ -384,7 +384,7 @@ struct HessianRZtau
     // if true goes into positive Z - direction and X else
     void set_quadrant( int quadrant) {quad_ = quadrant;}
     void set_norm( bool normed) {norm_ = normed;}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,2>& y, std::array<double,2>& yp) const
     {
         double psipRZ = psip_.dfxy()(y[0], y[1]);
         if( psipRZ == 0)
@@ -418,7 +418,7 @@ struct HessianRZtau
         }
 
     }
-    void newton_iteration( const dg::HVec&y, dg::HVec& yp)
+    void newton_iteration( const std::array<double,2>& y, std::array<double,2>& yp)
     {
         double psipRZ = psip_.dfxy()(y[0], y[1]);
         double psipRR = psip_.dfxx()(y[0], y[1]), psipZZ = psip_.dfyy()(y[0],y[1]);
@@ -438,7 +438,7 @@ struct MinimalCurve
     MinimalCurve(const BinaryFunctorsLvl1& psip): norm_(false),
         psip_(psip){}
     void set_norm( bool normed) {norm_ = normed;}
-    void operator()( const dg::HVec& y, dg::HVec& yp) const
+    void operator()(double t, const std::array<double,4>& y, std::array<double,4>& yp) const
     {
         double psipR = psip_.dfx()(y[0], y[1]), psipZ = psip_.dfy()(y[0], y[1]);
         yp[0] = y[2];
@@ -494,18 +494,18 @@ void construct_psi_values( FieldFinv fpsiMinv,
         eps_old = eps;
         x0 = x_0, x1 = x_vec[0];
         if( psi_1<psi_0) x1*=-1;
-        dg::stepperRK17( fpsiMinv, begin, end, x0, x1, N);
-        psi_x[0] = end[0]; fpsiMinv(end,temp); f_x_[0] = temp[0];
+        dg::stepperRK<17>( fpsiMinv, x0, begin, x1, end, N);
+        psi_x[0] = end[0]; fpsiMinv(0.,end,temp); f_x_[0] = temp[0];
         for( unsigned i=1; i<x_vec.size(); i++)
         {
             temp = end;
             x0 = x_vec[i-1], x1 = x_vec[i];
             if( psi_1<psi_0) x0*=-1, x1*=-1;
-            dg::stepperRK17( fpsiMinv, temp, end, x0, x1, N);
-            psi_x[i] = end[0]; fpsiMinv(end,temp); f_x_[i] = temp[0];
+            dg::stepperRK<17>( fpsiMinv, x0, temp, x1, end, N);
+            psi_x[i] = end[0]; fpsiMinv(0.,end,temp); f_x_[i] = temp[0];
         }
         temp = end;
-        dg::stepperRK17(fpsiMinv, temp, end, x1, psi_1>psi_0?x_1:-x_1,N);
+        dg::stepperRK<17>(fpsiMinv, x1, temp, psi_1>psi_0?x_1:-x_1, end,N);
         double psi_1_numerical = end[0];
         eps = fabs( psi_1_numerical-psi_1);
         if(verbose)std::cout << "Effective Psi error is "<<eps<<" with "<<N<<" steps\n";
@@ -532,7 +532,7 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     r.resize( y_vec.size()), z.resize(y_vec.size()), yr.resize(y_vec.size()), yz.resize(y_vec.size()), xr.resize(y_vec.size()), xz.resize(y_vec.size());
 
     //now compute f and starting values
-    thrust::host_vector<double> begin( 4, 0), end(begin), temp(begin);
+    std::array<double,4> begin( {0,0,0,0}), end(begin), temp(begin);
     const double f_psi = fpsi.construct_f( psi, begin[0], begin[1]);
     fieldRZYRYZY.set_f(f_psi);
     double fprime = fpsi.f_prime( psi);
@@ -546,14 +546,14 @@ void compute_rzy(Fpsi fpsi, FieldRZYRYZY fieldRZYRYZY,
     {
         //begin is left const
         eps_old = eps, r_old = r, z_old = z, yr_old = yr, yz_old = yz, xr_old = xr, xz_old = xz;
-        dg::stepperRK17( fieldRZYRYZY, begin, end, 0, y_vec[0], steps);
+        dg::stepperRK<17>( fieldRZYRYZY, 0, begin, y_vec[0], end, steps);
         r[0] = end[0], z[0] = end[1], yr[0] = end[2], yz[0] = end[3];
         fieldRZYRYZY.derive( r[0], z[0], xr[0], xz[0]);
         //std::cout <<end[0]<<" "<< end[1] <<"\n";
         for( unsigned i=1; i<y_vec.size(); i++)
         {
             temp = end;
-            dg::stepperRK17( fieldRZYRYZY, temp, end, y_vec[i-1], y_vec[i], steps);
+            dg::stepperRK<17>( fieldRZYRYZY, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1], yr[i] = end[2], yz[i] = end[3];
             fieldRZYRYZY.derive( r[i], z[i], xr[i], xz[i]);
         }

@@ -41,7 +41,7 @@ struct FpsiX
         //std::cout << "Begin error "<<eps_old<<" with "<<N<<" steps\n";
         //std::cout << "In Stepper function:\n";
         //double y_old=0;
-        thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
+        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
         begin[0] = R_i[0], begin[1] = Z_i[0];
         //std::cout << begin[0]<<" "<<begin[1]<<" "<<begin[2]<<"\n";
         double eps = 1e10, eps_old = 2e10;
@@ -55,17 +55,17 @@ struct FpsiX
             N*=2;
             if( psi < 0)
             {
-                dg::stepperRK17( fieldRZYT_, begin, end, 0., 2.*M_PI, N);
+                dg::stepperRK<17>( fieldRZYT_, 0., begin, 2.*M_PI, end, N);
                 //std::cout << "result is "<<end[0]<<" "<<end[1]<<" "<<end[2]<<"\n";
                 eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
             }
             else
             {
-                dg::stepperRK17( fieldRZYZ_, begin, end, begin[1], 0., N);
-                thrust::host_vector<double> temp(end);
-                dg::stepperRK17( fieldRZYT_, temp, end, 0., M_PI, N);
+                dg::stepperRK<17>( fieldRZYZ_, begin[1], begin, 0., end, N);
+                std::array<double,3> temp(end);
+                dg::stepperRK<17>( fieldRZYT_, 0., begin, M_PI, end, N);
                 temp = end; //temp[1] should be 0 now
-                dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
+                dg::stepperRK<17>( fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
                 eps = sqrt( (end[0]-R_i[1])*(end[0]-R_i[1]) + (end[1]-Z_i[1])*(end[1]-Z_i[1]));
             }
             if( std::isnan(eps)) { eps = eps_old/2.; end = end_old;
@@ -174,9 +174,9 @@ struct XFieldFinv
     XFieldFinv( const BinaryFunctorsLvl1& psi, double xX, double yX, double x0, double y0, unsigned N_steps = 500):
         fpsi_(psi, xX, yX, x0, y0), fieldRZYT_(psi, x0, y0), fieldRZYZ_(psi) , N_steps(N_steps)
             { xAtOne_ = fpsi_.find_x(0.1); }
-    void operator()(const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
+    void operator()(double ttt, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
     {
-        thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
+        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
         double R_i[2], Z_i[2];
         dg::Timer t;
         t.tic();
@@ -189,14 +189,14 @@ struct XFieldFinv
         if( psi[0] < -1. && psi[0] > -2.) N*=2;
         if( psi[0] < 0 && psi[0] > -1.) N*=10;
         if( psi[0] <0  )
-            dg::stepperRK17( fieldRZYT_, begin, end, 0., 2.*M_PI, N);
+            dg::stepperRK<17>( fieldRZYT_, 0., begin, 2.*M_PI, end, N);
         else
         {
-            dg::stepperRK17( fieldRZYZ_, begin, end, begin[1], 0., N);
-            thrust::host_vector<double> temp(end);
-            dg::stepperRK17( fieldRZYT_, temp, end, 0., M_PI, N/2);
+            dg::stepperRK<17>( fieldRZYZ_, begin[1], begin, 0., end, N);
+            std::array<double,3> temp(end);
+            dg::stepperRK<17>( fieldRZYT_, 0., temp,  M_PI, end, N/2);
             temp = end; //temp[1] should be 0 now
-            dg::stepperRK17( fieldRZYZ_, temp, end, temp[1], Z_i[1], N);
+            dg::stepperRK<17>( fieldRZYZ_, temp[1], temp, Z_i[1], end, N);
         }
         //eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         fpsiM[0] = end[2]/2./M_PI;
@@ -216,7 +216,7 @@ struct XFieldFinv
         while( eps < eps_old && N < 1e6 &&  eps > 1e-9)
         {
             eps_old = eps, end_old = end;
-            N*=2; dg::stepperRK17( *this, begin, end, x0, x, N);
+            N*=2; dg::stepperRK<17>( *this, x0, begin, x, end, N);
             eps = fabs( end[0]- end_old[0]);
             //std::cout << "\t error "<<eps<<" with "<<N<<" steps\n";
         }

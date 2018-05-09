@@ -883,7 +883,7 @@ EXCLUDE_SYMBOLS        = hide_*
 
 EXAMPLE_PATH           = cg2d_t.cu \
                          arakawa_t.cu poisson_t.cu \
-                         elliptic2d_b.cu runge_kutta2d_t.cu multistep_t.cu \
+                         elliptic2d_b.cu runge_kutta_t.cu multistep_t.cu \
                          helmholtzg2_b.cu \
                          geometry/interpolation_t.cu \
                          geometry/average_t.cu geometry/average_mpit.cu
@@ -2033,7 +2033,7 @@ PERLMOD_MAKEVAR_PREFIX =
 # C-preprocessor directives found in the sources and include files.
 # The default value is: YES.
 
-ENABLE_PREPROCESSING   = NO
+ENABLE_PREPROCESSING   = YES
 
 # If the MACRO_EXPANSION tag is set to YES, doxygen will expand all macro names
 # in the source code. If set to NO, only conditional compilation will be

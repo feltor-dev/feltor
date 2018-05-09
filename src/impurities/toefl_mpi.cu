@@ -48,8 +48,10 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if( argc != 3)
     {   if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
@@ -57,7 +59,7 @@ int main( int argc, char* argv[])
     else
     {   
         std::ifstream is(argv[1]);
-        reader.parse( is, js, false); //read input without comments
+        parseFromStream( parser, is, &js, &errs); //read input without comments
     }
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const imp::Parameters p( js);
@@ -132,7 +134,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "init timestepper...\n";
     double time = 0;
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( toeflI, diffusion, y0, p.dt);
+    karniadakis.init( toeflI, diffusion, time, y0, p.dt);
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
     int ncid;
@@ -221,10 +223,9 @@ int main( int argc, char* argv[])
             ti.tic();
 #endif//DG_BENCHMARK
             for( unsigned j=0; j<p.itstp; j++)
-            {   karniadakis( toeflI, diffusion, y0);
+            {   karniadakis.step( toeflI, diffusion, time, y0);
                 y0.swap( y1);
                 step++;
-                time += p.dt;
                 Estart[0] = step;
                 E0 = E1;
                 E1 = toeflI.energy();

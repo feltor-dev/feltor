@@ -20,17 +20,16 @@ int main( int argc, char* argv[])
 {
     //Parameter initialisation
     std::stringstream title;
-    Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.json");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
@@ -41,7 +40,7 @@ int main( int argc, char* argv[])
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::ifstream is( "window_params.js");
-    reader.parse( is, js, false);
+    is >> js;
     is.close();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
@@ -123,7 +122,7 @@ int main( int argc, char* argv[])
 
     //////////////////initialisation of timestepper and first step///////////////////
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( toeflI, diffusion, y0, p.dt);
+    karniadakis.init( toeflI, diffusion, 0, y0, p.dt);
 
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -187,7 +186,7 @@ int main( int argc, char* argv[])
             std::cout << diff << " "<<diss<<"\t";
             std::cout << "Accuracy: "<< 2.*fabs((diff-diss)/(diff+diss))<<"\n";
 
-            try{ karniadakis( toeflI, diffusion, y0);}
+            try{ karniadakis.step( toeflI, diffusion, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -195,7 +194,6 @@ int main( int argc, char* argv[])
                 break;
             }
         }
-        time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;

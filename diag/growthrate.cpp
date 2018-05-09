@@ -32,9 +32,12 @@ int main( int argc, char* argv[])
     err = nc_close(ncid); 
 
 //     std::cout << "input "<<input<<std::endl;    
-    Json::Reader reader;
     Json::Value js;
-    reader.parse( input, js, false);
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
+    std::stringstream ss(input);
+    parseFromStream( parser, ss, &js, &errs); //read input without comments
     const eule::Parameters p(js);
 //     p.display(std::cout);
     

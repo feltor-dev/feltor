@@ -16,7 +16,7 @@ struct Diffusion
         LaplacianM( g, dg::normed)
     { 
     }
-    void operator()( const container& x, container& y)
+    void operator()(double t, const container& x, container& y)
     {
         dg::blas2::gemv( LaplacianM, x, y);
         dg::blas1::scal( y, -nu_);
@@ -47,7 +47,7 @@ struct Shu
      * @return psi is the potential
      */
     const container& potential( ) {return psi;}
-    void operator()( const Vector& y, Vector& yp);
+    void operator()(double t, const Vector& y, Vector& yp);
   private:
     //typedef typename VectorTraits< Vector>::value_type value_type;
     container psi, w2d, v2d;
@@ -67,7 +67,7 @@ Shu< Matrix, container>::Shu( const Grid2d& g, double eps):
 }
 
 template< class Matrix, class container>
-void Shu<Matrix, container>::operator()( const Vector& y, Vector& yp)
+void Shu<Matrix, container>::operator()(double t, const Vector& y, Vector& yp)
 {
     invert( laplaceM, psi, y);
     arakawa_( y, psi, yp); //A(y,psi)-> yp

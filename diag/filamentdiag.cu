@@ -35,11 +35,15 @@ int main( int argc, char* argv[])
 
     std::cout << "input "<<input<<std::endl;
     std::cout << "geome "<<geom <<std::endl;
-    Json::Reader reader;
     Json::Value js,gs;
-    reader.parse( input, js, false);
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
+    std::stringstream ss( input);
+    parseFromStream( parser, ss, &js, &errs); //read input without comments
+    ss.str( geom);
+    parseFromStream( parser, ss, &gs, &errs); //read input without comments
     const feltor::Parameters p(js);
-    reader.parse( geom, gs, false);
     const dg::geo::solovev::Parameters gp(gs);
     p.display();
     gp.display();

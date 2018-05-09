@@ -42,14 +42,14 @@ struct Fpsi
     void find_initial( double psi, double& R_0, double& Z_0)
     {
         unsigned N = 50;
-        thrust::host_vector<double> begin2d( 2, 0), end2d( begin2d), end2d_old(begin2d);
+        std::array<double,2> begin2d( {0,0}), end2d( begin2d), end2d_old(begin2d);
         begin2d[0] = end2d[0] = end2d_old[0] = X_init;
         begin2d[1] = end2d[1] = end2d_old[1] = Y_init;
         double eps = 1e10, eps_old = 2e10;
         while( (eps < eps_old || eps > 1e-7) && eps > 1e-14)
         {
             eps_old = eps; end2d_old = end2d;
-            N*=2; dg::stepperRK17( fieldRZtau_, begin2d, end2d, psip_.f()(X_init, Y_init), psi, N);
+            N*=2; dg::stepperRK<17>( fieldRZtau_, psip_.f()(X_init, Y_init), begin2d, psi, end2d, N);
             eps = sqrt( (end2d[0]-end2d_old[0])*(end2d[0]-end2d_old[0]) + (end2d[1]-end2d_old[1])*(end2d[1]-end2d_old[1]));
         }
         X_init = R_0 = end2d_old[0], Y_init = Z_0 = end2d_old[1];
@@ -60,7 +60,7 @@ struct Fpsi
     double construct_f( double psi, double& R_0, double& Z_0)
     {
         find_initial( psi, R_0, Z_0);
-        thrust::host_vector<double> begin( 3, 0), end(begin), end_old(begin);
+        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
         begin[0] = R_0, begin[1] = Z_0;
         double eps = 1e10, eps_old = 2e10;
         unsigned N = 50;
@@ -68,9 +68,9 @@ struct Fpsi
         {
             eps_old = eps, end_old = end; N*=2;
             if( firstline_ == 0)
-                dg::stepperRK17( fieldRZYTconf_, begin, end, 0., 2*M_PI, N);
+                dg::stepperRK<17>( fieldRZYTconf_, 0., begin, 2*M_PI, end, N);
             if( firstline_ == 1)
-                dg::stepperRK17( fieldRZYTequl_, begin, end, 0., 2*M_PI, N);
+                dg::stepperRK<17>( fieldRZYTequl_, 0., begin, 2*M_PI, end, N);
             eps = sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]));
         }
         //std::cout << "\t error "<<eps<<" with "<<N<<" steps\t";
@@ -107,7 +107,7 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
     thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size());
-    thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
+    std::array<double,2> begin( {0,0}), end(begin), temp(begin);
     begin[0] = R_0, begin[1] = Z_0;
     //std::cout <<f_psi<<" "<<" "<< begin[0] << " "<<begin[1]<<"\t";
     dg::geo::ribeiro::FieldRZY fieldRZYconf(psi, chi);
@@ -120,14 +120,14 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
     {
         //begin is left const
         eps_old = eps, r_old = r, z_old = z;
-        if(mode==0)dg::stepperRK17( fieldRZYconf, begin, end, 0, y_vec[0], steps);
-        if(mode==1)dg::stepperRK17( fieldRZYequi, begin, end, 0, y_vec[0], steps);
+        if(mode==0)dg::stepperRK<17>( fieldRZYconf, 0, begin, y_vec[0], end, steps);
+        if(mode==1)dg::stepperRK<17>( fieldRZYequi, 0, begin, y_vec[0], end, steps);
         r[0] = end[0], z[0] = end[1];
         for( unsigned i=1; i<y_vec.size(); i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[i-1], y_vec[i], steps);
-            if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[i-1], y_vec[i], steps);
+            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         //compute error in R,Z only
@@ -138,11 +138,6 @@ void compute_rzy( const BinaryFunctorsLvl1& psi, const BinarySymmTensorLvl1& chi
         double ar = dg::blas1::dot( r, r);
         double az = dg::blas1::dot( z, z);
         eps =  sqrt( er + ez)/sqrt(ar+az);
-        //std::cout << "rel. error is "<<eps<<" with "<<steps<<" steps\n";
-        //temp = end;
-        //if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[y_vec.size()-1], 2.*M_PI, steps);
-        //if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[y_vec.size()-1], 2.*M_PI, steps);
-        //std::cout << "abs. error is "<<sqrt( (end[0]-begin[0])*(end[0]-begin[0]) + (end[1]-begin[1])*(end[1]-begin[1]))<<"\n";
         steps*=2;
     }
     r = r_old, z = z_old;
@@ -186,7 +181,7 @@ struct Nemov
         }
     }
 
-    void operator()(const std::vector<thrust::host_vector<double> >& y, std::vector<thrust::host_vector<double> >& yp)
+    void operator()(double t, const std::array<thrust::host_vector<double>,3 >& y, std::array<thrust::host_vector<double>,3>& yp)
     {
         //y[0] = R, y[1] = Z, y[2] = h, y[3] = hr, y[4] = hz
         unsigned size = y[0].size();
@@ -228,14 +223,12 @@ void construct_rz( Nemov nemov,
 {
     unsigned N = 1;
     double eps = 1e10, eps_old=2e10;
-    std::vector<thrust::host_vector<double> > begin(3); //begin(5);
+    std::array<thrust::host_vector<double>,3> begin;
     thrust::host_vector<double> h_init( r_init.size(), 0.);
-    //thrust::host_vector<double> h_init, hr_init, hz_init;
-    nemov.initialize( r_init, z_init, h_init);//, hr_init, hz_init);
-    begin[0] = r_init, begin[1] = z_init,
-    begin[2] = h_init; //begin[3] = hr_init, begin[4] = hz_init;
+    nemov.initialize( r_init, z_init, h_init);
+    begin[0] = r_init, begin[1] = z_init, begin[2] = h_init;
     //now we have the starting values
-    std::vector<thrust::host_vector<double> > end(begin), temp(begin);
+    std::array<thrust::host_vector<double>,3> end(begin), temp(begin);
     unsigned sizeX = x_vec.size(), sizeY = r_init.size();
     unsigned size2d = x_vec.size()*r_init.size();
     r.resize(size2d), z.resize(size2d), h.resize(size2d); //hr.resize(size2d), hz.resize(size2d);
@@ -250,7 +243,7 @@ void construct_rz( Nemov nemov,
         {
             x0 = i==0?x_0:x_vec[i-1], x1 = x_vec[i];
             //////////////////////////////////////////////////
-            dg::stepperRK17( nemov, temp, end, x0, x1, N);
+            dg::stepperRK<17>( nemov, x0, temp, x1, end, N);
             for( unsigned j=0; j<sizeY; j++)
             {
                 unsigned idx = j*sizeX+i;

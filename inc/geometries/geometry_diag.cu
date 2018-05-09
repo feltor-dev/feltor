@@ -76,16 +76,18 @@ int main( int argc, char* argv[])
         return -1;
     }
     std::string newfilename;
-    Json::Reader reader;
     Json::Value input_js, geom_js;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if( argc == 4)
     {
         newfilename = argv[3];
         std::cout << argv[0]<< " "<<argv[1]<<" & "<<argv[2]<<" -> " <<argv[3]<<std::endl;
         std::ifstream isI( argv[1]);
         std::ifstream isG( argv[2]);
-        reader.parse( isI, input_js, false);
-        reader.parse( isG, geom_js, false);
+        parseFromStream( parser, isI, &input_js, &errs); //read input without comments
+        parseFromStream( parser, isG, &geom_js, &errs); //read input without comments
     }
     else
     {
@@ -105,8 +107,10 @@ int main( int argc, char* argv[])
         geom.resize( length, 'x');
         err = nc_get_att_text( ncid, NC_GLOBAL, "geomfile", &geom[0]);
         nc_close( ncid);
-        reader.parse( input, input_js, false);
-        reader.parse( geom, geom_js, false);
+        std::stringstream ss( input);
+        parseFromStream( parser, ss, &input_js, &errs); //read input without comments
+        ss.str( geom);
+        parseFromStream( parser, ss, &geom_js, &errs); //read input without comments
     }
     const Parameters p(input_js);
     const dg::geo::solovev::Parameters gp(geom_js);

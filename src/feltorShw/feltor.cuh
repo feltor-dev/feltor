@@ -30,7 +30,7 @@ struct Implicit
         LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
     {
     }
-    void operator()(const std::vector<container>& x, std::vector<container>& y)
+    void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
@@ -76,7 +76,7 @@ struct Explicit
     const std::vector<container>& potential( ) const { return phi;}
     void initializene(const container& y, container& target);
 
-    void operator()(const std::vector<container>& y, std::vector<container>& yp);
+    void operator()(double t, const std::vector<container>& y, std::vector<container>& yp);
 
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
@@ -352,7 +352,7 @@ void Explicit<Grid, Matrix, container>::initializene(const container& src, conta
 }
 
 template<class Grid, class Matrix, class container>
-void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<Grid, Matrix, container>::operator()(double ttt, const std::vector<container>& y, std::vector<container>& yp)
 {
 
     dg::Timer t;

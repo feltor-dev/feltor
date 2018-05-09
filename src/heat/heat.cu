@@ -17,21 +17,20 @@ int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
     std::stringstream title;
-    Json::Reader reader;
     Json::Value js, gs;
     if( argc == 1)
     {
         std::ifstream is("input.json");
         std::ifstream ks("geometry_params.js");
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        is >> js;
+        ks >> gs;
     }
     else if( argc == 3)
     {
         std::ifstream is(argv[1]);
         std::ifstream ks(argv[2]);
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        is >> js;
+        ks >> gs;
     }
     else
     {
@@ -42,7 +41,7 @@ int main( int argc, char* argv[])
     const dg::geo::solovev::Parameters gp(gs); gp.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
     std::ifstream is( "window_params.js");
-    reader.parse( is, js, false);
+    is >> js;
     is.close();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
@@ -221,10 +220,10 @@ int main( int argc, char* argv[])
             E0 = E1;
             try{
 //                 rk( feltor, y0, y1, p.dt);
-                 sirk(feltor,rolkar,y0,y1,p.dt);
+                 sirk.step(feltor,rolkar,time,y0,time,y0,p.dt);
 //                 karniadakis( feltor, rolkar, y0);
 
-                y0.swap( y1);}
+              }
               catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";

@@ -41,7 +41,7 @@ double cosineY( double x, double y) {return sin(x)*cos(y);}
 
 int main( int argc, char* argv[])
 {
-    std::cout << "Type n, Nx, Ny, Nz\n";
+    std::cout << "Type n (3), Nx (8), Ny (80), Nz (1)\n";
     unsigned n, Nx, Ny, Nz;
     std::cin >> n>> Nx>>Ny>>Nz;
     Json::Value js;
@@ -58,7 +58,7 @@ int main( int argc, char* argv[])
     dg::geo::solovev::Parameters gp(js);
     dg::geo::BinaryFunctorsLvl2 psip=dg::geo::solovev::createPsip(gp);
     std::cout << "Psi min "<<psip.f()(gp.R_0, 0)<<"\n";
-    std::cout << "Type psi_0 and psi_1\n";
+    std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
     gp.display( std::cout);

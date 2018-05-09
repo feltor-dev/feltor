@@ -17,17 +17,19 @@ int main( int argc, char * argv[])
 {
     dg::Timer t;
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if( argc != 3)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
         return -1;
     }
-    else 
+    else
     {
         std::ifstream is(argv[1]);
-        reader.parse( is, js, false); //read input without comments
+        parseFromStream( parser, is, &js, &errs);
     }
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
@@ -47,14 +49,13 @@ int main( int argc, char * argv[])
     //make solver and stepper
     dg::Shu<dg::DMatrix, dg::DVec> shu( grid, p.eps);
     dg::Diffusion< dg::DMatrix, dg::DVec > diff( grid, p.D);
-    dg::Karniadakis< dg::DVec> ab( y0, y0.size(), 1e-10);
-    ab.init( shu, diff, y0, p.dt);
-    ab( shu, diff, y0); //make potential ready
+    dg::Karniadakis< dg::DVec> karniadakis( y0, y0.size(), 1e-10);
+    karniadakis.init( shu, diff, 0., y0, p.dt);
 
     dg::DVec varphi( grid.size()), potential;
-    double vorticity = dg::blas2::dot( one , w2d, ab.last());
-    double enstrophy = 0.5*dg::blas2::dot( ab.last(), w2d, ab.last());
-    double energy =    0.5*dg::blas2::dot( ab.last(), w2d, shu.potential()) ;
+    double vorticity = dg::blas2::dot( one , w2d, y0);
+    double enstrophy = 0.5*dg::blas2::dot( y0, w2d, y0);
+    double energy =    0.5*dg::blas2::dot( y0, w2d, shu.potential()) ;
     potential = shu.potential();
     shu.arakawa().variation( potential, varphi);
     double variation = dg::blas2::dot( varphi, w2d, one );
@@ -83,7 +84,7 @@ int main( int argc, char * argv[])
     size_t Ecount[] = {1};
     ///////////////////////////////////first output/////////////////////////
     std::vector<dg::HVec> output(2);
-    dg::blas1::transfer( ab.last(), output[0]);
+    dg::blas1::transfer( y0, output[0]);
     dg::blas1::transfer( shu.potential(), output[1]);
     for( int k=0;k<2; k++)
         err = nc_put_vara_double( ncid, dataIDs[k], start, count, output[k].data() );
@@ -102,14 +103,14 @@ int main( int argc, char * argv[])
         ti.tic();
         for( unsigned j=0; j<p.itstp; j++)
         {
-            ab( shu, diff, y0);//one step further
-            output1d[0] = vorticity = dg::blas2::dot( one , w2d, ab.last());
-            output1d[1] = enstrophy = 0.5*dg::blas2::dot( ab.last(), w2d, ab.last());
+            karniadakis.step( shu, diff, time, y0);//one step further
+            output1d[0] = vorticity = dg::blas2::dot( one , w2d, y0);
+            output1d[1] = enstrophy = 0.5*dg::blas2::dot( y0, w2d, y0);
             potential = shu.potential();
-            output1d[2] = energy    = 0.5*dg::blas2::dot( ab.last(), w2d, potential) ;
+            output1d[2] = energy    = 0.5*dg::blas2::dot( y0, w2d, potential) ;
             shu.arakawa().variation(potential, varphi);
             output1d[3] = variation = dg::blas2::dot( varphi, w2d, one );
-            time += p.dt; Estart[0] += 1;
+            Estart[0] += 1;
             for( int k=0;k<4; k++)
                 err = nc_put_vara_double( ncid, variableIDs[k], Estart, Ecount, &output1d[k] );
             err = nc_put_vara_double( ncid, EtimevarID, Estart, Ecount, &time);
@@ -117,7 +118,7 @@ int main( int argc, char * argv[])
         }
         step+=p.itstp;
         //output all fields
-        dg::blas1::transfer( ab.last(), output[0]);
+        dg::blas1::transfer( y0, output[0]);
         dg::blas1::transfer( shu.potential(), output[1]);
         start[0] = i;
         for( int k=0;k<2; k++)

@@ -1,6 +1,5 @@
 #ifndef _DG_BLAS_CUDA_
 #define _DG_BLAS_CUDA_
-#include <thrust/transform.h>
 #include "exblas/exdot_cuda.cuh"
 namespace dg
 {
@@ -16,10 +15,39 @@ std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const double* x_ptr
     cudaMemcpy( &h_superacc[0], d_ptr, exblas::BIN_COUNT*sizeof(int64_t), cudaMemcpyDeviceToHost);
     return h_superacc;
 }
+template<class Op, class B, class T>
+ __global__ void evaluate_kernel( int size, T* y, B f, Op op,
+         const T* x)
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_is/grid_size is
+    for( int i = thread_id; i<size; i += grid_size)
+        f(y[i], op(x[i]) );
+}
 
-template< class Vector, class UnaryOp>
-inline void doTransform_dispatch( CudaTag, const Vector& x, Vector& y, UnaryOp op) {
-    thrust::transform( thrust::cuda::tag(), x.begin(), x.end(), y.begin(), op);
+template< class UnaryOp, class Binary, class T>
+inline void doEvaluate_dispatch( CudaTag, unsigned size, T* z, Binary f, UnaryOp op, const T* x) {
+    const size_t BLOCK_SIZE = 256;
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    evaluate_kernel<UnaryOp, Binary, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, z, f, op,x);
+}
+template<class Op, class Binary, class T>
+ __global__ void evaluate_kernel( int size, T* z, Binary f, Op op,
+         const T* x, const T* y)
+{
+    const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
+    const int grid_size = gridDim.x*blockDim.x;
+    //every thread takes num_is/grid_size is
+    for( int i = thread_id; i<size; i += grid_size)
+        f(z[i], op(x[i], y[i]) );
+}
+
+template< class UnaryOp, class Binary, class T>
+inline void doEvaluate_dispatch( CudaTag, unsigned size, T* z, Binary f, UnaryOp op, const T* x, const T* y) {
+    const size_t BLOCK_SIZE = 256;
+    const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
+    evaluate_kernel<UnaryOp, Binary, T><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, z, f, op, x,y);
 }
 
 template<class value_type>

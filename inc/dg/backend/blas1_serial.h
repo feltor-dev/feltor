@@ -1,7 +1,5 @@
 #ifndef _DG_BLAS_SERIAL_
 #define _DG_BLAS_SERIAL_
-#include <thrust/execution_policy.h>
-#include <thrust/transform.h>
 #include "config.h"
 #include "execution_policy.h"
 #include "exblas/exdot_serial.h"
@@ -16,10 +14,18 @@ std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_p
     exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]) ;
     return h_superacc;
 }
-template< class Vector, class UnaryOp>
-inline void doTransform_dispatch( SerialTag, const Vector& x, Vector& y, UnaryOp op) {
-    thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
+
+template< class UnaryOp, class Binary, class T>
+inline void doEvaluate_dispatch( SerialTag, unsigned size, T* y, Binary f, UnaryOp op, const T* x) {
+    for( unsigned i=0; i<size; i++)
+        f(y[i], op(x[i]));
 }
+template< class UnaryOp, class Binary, class T>
+inline void doEvaluate_dispatch( SerialTag, unsigned size, T* z, Binary f, UnaryOp op, const T* x, const T* y) {
+    for( unsigned i=0; i<size; i++)
+        f(z[i], op(x[i], y[i]));
+}
+
 template< class T>
 inline void doScal_dispatch( SerialTag, unsigned size, T* x, T alpha)
 {

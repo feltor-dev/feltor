@@ -20,14 +20,29 @@ std::vector<int64_t> doDot_dispatch( OmpTag, int size, const double* x_ptr, cons
         exblas::exdot_omp( size, x_ptr,y_ptr, &h_superacc[0]);
     return h_superacc;
 }
-template< class Vector, class UnaryOp>
-inline void doTransform_dispatch( OmpTag, const Vector& x, Vector& y, UnaryOp op) {
-    if(x.size()<MIN_SIZE) {
-        thrust::transform( thrust::cpp::tag(), x.begin(), x.end(), y.begin(), op);
+
+template< class UnaryOp, class Binary, class T>
+inline void doEvaluate_dispatch( OmpTag, int size, T* y, Binary f, UnaryOp op, const T* x) {
+    if(size<MIN_SIZE) {
+        doEvaluate_dispatch( SerialTag(), size, y, f, op, x);
         return;
     }
-    thrust::transform( thrust::omp::tag(), x.begin(), x.end(), y.begin(), op);
+#pragma omp parallel for
+    for( int i=0; i<size; i++)
+        f(y[i], op(x[i]));
 }
+
+template< class UnaryOp, class Binary, class T>
+inline void doEvaluate_dispatch( OmpTag, int size, T* z, Binary f, UnaryOp op, const T* x, const T* y) {
+    if(size<MIN_SIZE) {
+        doEvaluate_dispatch( SerialTag(), size, z, f, op, x, y);
+        return;
+    }
+#pragma omp parallel for
+    for( int i=0; i<size; i++)
+        f(z[i], op(x[i], y[i]));
+}
+
 template< class T>
 inline void doScal_omp( int size, T* x, T alpha)
 {

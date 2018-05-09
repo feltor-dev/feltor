@@ -37,7 +37,7 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
     thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
     thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
     r.resize( y_vec.size()), z.resize(y_vec.size());
-    thrust::host_vector<double> begin( 2, 0), end(begin), temp(begin);
+    std::array<double,2> begin( {0,0}), end(begin), temp(begin);
     begin[0] = R_init[0], begin[1] = Z_init[0];
     dg::geo::ribeiro::FieldRZY fieldRZYconf(psi);
     dg::geo::equalarc::FieldRZY fieldRZYequi(psi);
@@ -51,47 +51,47 @@ void computeX_rzy( const BinaryFunctorsLvl1& psi,
         if( nodeX0 != 0)
         {
             begin[0] = R_init[1], begin[1] = Z_init[1];
-            if(mode==0)dg::stepperRK17( fieldRZYconf, begin, end, 0, y_vec[nodeX0-1], steps);
-            if(mode==1)dg::stepperRK17( fieldRZYequi, begin, end, 0, y_vec[nodeX0-1], steps);
+            if(mode==0)dg::stepperRK<17>( fieldRZYconf, 0, begin, y_vec[nodeX0-1], end, steps);
+            if(mode==1)dg::stepperRK<17>( fieldRZYequi, 0, begin, y_vec[nodeX0-1], end, steps);
             r[nodeX0-1] = end[0], z[nodeX0-1] = end[1];
         }
         for( int i=nodeX0-2; i>=0; i--)
         {
             temp = end;
-            if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[i+1], y_vec[i], steps);
-            if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[i+1], y_vec[i], steps);
+            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i+1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i+1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         ////////////////middle region///////////////////////////
         begin[0] = R_init[0], begin[1] = Z_init[0];
-        if(mode==0)dg::stepperRK17( fieldRZYconf, begin, end, 0, y_vec[nodeX0], steps);
-        if(mode==1)dg::stepperRK17( fieldRZYequi, begin, end, 0, y_vec[nodeX0], steps);
+        if(mode==0)dg::stepperRK<17>( fieldRZYconf, 0, begin, y_vec[nodeX0], end, steps);
+        if(mode==1)dg::stepperRK<17>( fieldRZYequi, 0, begin, y_vec[nodeX0], end, steps);
         r[nodeX0] = end[0], z[nodeX0] = end[1];
         for( unsigned i=nodeX0+1; i<nodeX1; i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[i-1], y_vec[i], steps);
-            if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[i-1], y_vec[i], steps);
+            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         temp = end;
-        if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
-        if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[nodeX1-1], 2.*M_PI, steps);
+        if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
+        if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[nodeX1-1], temp, 2.*M_PI, end, steps);
         eps = sqrt( (end[0]-R_init[0])*(end[0]-R_init[0]) + (end[1]-Z_init[0])*(end[1]-Z_init[0]));
         if(verbose)std::cout << "abs. error is "<<eps<<" with "<<steps<<" steps\n";
         ////////////////////bottom right region
         if( nodeX0!= 0)
         {
             begin[0] = R_init[1], begin[1] = Z_init[1];
-            if(mode==0)dg::stepperRK17( fieldRZYconf, begin, end, 2.*M_PI, y_vec[nodeX1], steps);
-            if(mode==1)dg::stepperRK17( fieldRZYequi, begin, end, 2.*M_PI, y_vec[nodeX1], steps);
+            if(mode==0)dg::stepperRK<17>( fieldRZYconf, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
+            if(mode==1)dg::stepperRK<17>( fieldRZYequi, 2.*M_PI, begin, y_vec[nodeX1], end, steps);
             r[nodeX1] = end[0], z[nodeX1] = end[1];
         }
         for( unsigned i=nodeX1+1; i<y_vec.size(); i++)
         {
             temp = end;
-            if(mode==0)dg::stepperRK17( fieldRZYconf, temp, end, y_vec[i-1], y_vec[i], steps);
-            if(mode==1)dg::stepperRK17( fieldRZYequi, temp, end, y_vec[i-1], y_vec[i], steps);
+            if(mode==0)dg::stepperRK<17>( fieldRZYconf, y_vec[i-1], temp, y_vec[i], end, steps);
+            if(mode==1)dg::stepperRK<17>( fieldRZYequi, y_vec[i-1], temp, y_vec[i], end, steps);
             r[i] = end[0], z[i] = end[1];
         }
         //compute error in R,Z only

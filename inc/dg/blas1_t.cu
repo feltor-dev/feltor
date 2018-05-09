@@ -4,8 +4,7 @@
 #include <array>
 
 #include "blas1.h"
-
-struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
+#include "functors.h"
 
 
 //test program that (should ) call every blas1 function for every specialization
@@ -44,7 +43,7 @@ int main()
     std::cout << "pDot (z=awxy + bz)    "<<ud.i-4550507856334720009<<std::endl;
     dg::blas1::pointwiseDivide( 5.,v1,v2,-1,v3); ud.d = v3[0];
     std::cout << "pDivide (z=ax/y+bz)   "<<ud.i-4820274520177585116<<std::endl;
-    dg::blas1::transform( v1, v3, EXP()); ud.d = v3[0];
+    dg::blas1::transform( v1, v3, dg::EXP<>()); ud.d = v3[0];
     std::cout << "transform y=exp(x)    "<<ud.i-4620007020034741378<<std::endl;
     }
 
@@ -79,12 +78,14 @@ int main()
     std::cout << "5 = " << w1[0][0] <<" (5)"<< std::endl;
     dg::blas1::scal( w1, 0.4);
     std::cout << "5*0.5 = " << w1[0][0] <<" (2)"<< std::endl;
-    dg::blas1::transform( w1, w3, EXP());
+    dg::blas1::evaluate( w4, dg::equals(),dg::AbsMax<>(), w1, w2);
+    std::cout << "absMax( 2, 5) = " << w4[0][0] <<" (5)"<< std::endl;
+    dg::blas1::transform( w1, w3, dg::EXP<>());
     std::cout << "e^2 = " << w3[0][0] <<" (7.389056...)"<< std::endl;
     dg::blas1::scal( w2, 0.6);
     dg::blas1::plus( w3, -7.0);
     std::cout << "e^2-7 = " << w3[0][0] <<" (0.389056...)"<< std::endl;
-    std::cout << "FINISHED\n\n";
+    std::cout << "\nFINISHED\n\n";
 
 
     return 0;
