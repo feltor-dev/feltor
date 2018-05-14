@@ -24,7 +24,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Precon& P, c
     using inner_container1 = typename std::decay<Vector1>::type::container_type;
     using inner_container2 = typename std::decay<Precon>::type::container_type;
     using inner_container3 = typename std::decay<Vector2>::type::container_type;
-    //local compuation
+    //local computation
     std::vector<int64_t> acc = doDot_superacc(x.data(), P.data(), y.data(),
         get_data_layout<inner_container1>(),
         get_data_layout<inner_container2>(),
