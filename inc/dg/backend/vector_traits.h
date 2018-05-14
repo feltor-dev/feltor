@@ -16,11 +16,12 @@ Specialize this struct if you want to enable your own vector/container class for
 @ingroup vec_list
 */
 template< class Vector, class Enable=void>
-struct VectorTraits {
-    using value_type        = double; //!< The underlying data type
-    using vector_category   = ThrustVectorTag; //!< Policy how data has to be accessed (has to derive from \c AnyVectorTag)
-    using execution_policy  = OmpTag;  //!< The execution policy (has to derive from \c AnyPolicyTag)
-};
+struct VectorTraits;
+//{
+//    using value_type        = double; //!< The underlying data type
+//    using vector_category   = ThrustVectorTag; //!< Policy how data has to be accessed (has to derive from \c AnyVectorTag)
+//    using execution_policy  = OmpTag;  //!< The execution policy (has to derive from \c AnyPolicyTag)
+//};
 template<class Vector>
 using get_value_type = typename VectorTraits<typename std::decay<Vector>::type>::value_type;
 template<class Vector>

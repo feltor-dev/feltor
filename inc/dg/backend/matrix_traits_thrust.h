@@ -7,6 +7,7 @@
 #include <thrust/device_vector.h>
 #include "matrix_traits.h"
 #include "matrix_categories.h"
+#include "vector_traits.h"
 
 namespace dg{
 ///@addtogroup mat_list
@@ -14,11 +15,6 @@ namespace dg{
 
 template<class T>
 struct MatrixTraits<std::vector<T> >{
-    using value_type = T;
-    using matrix_category = ThrustMatrixTag;
-};
-template<class T>
-struct MatrixTraits<const std::vector<T> >{
     using value_type = T;
     using matrix_category = ThrustMatrixTag;
 };
@@ -33,16 +29,7 @@ struct MatrixTraits<thrust::device_vector<T> > {
     using value_type = T;
     using matrix_category = ThrustMatrixTag;
 };
-template< class T>
-struct MatrixTraits<const thrust::host_vector<T> > {
-    using value_type = T;
-    using matrix_category = ThrustMatrixTag;
-};
-template< class T>
-struct MatrixTraits<const thrust::device_vector<T> > {
-    using value_type = T;
-    using matrix_category = ThrustMatrixTag;
-};
+
 ///@}
 
 
