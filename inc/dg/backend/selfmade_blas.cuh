@@ -27,33 +27,8 @@ inline void doSymv(
     m.symv( x,y);
 }
 
-template< class Matrix, class Vector1, class Vector2>
-inline void doGemv(
-              Matrix& m,
-              Vector1& x,
-              Vector2& y,
-              SelfMadeMatrixTag,
-              AnyVectorTag,
-              AnyVectorTag)
-{
-    m.symv( x,y);
-}
-
 template< class Matrix, class Vector>
 inline void doSymv(
-              get_value_type<Vector> alpha,
-              const Matrix& m,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              Vector& y,
-              SelfMadeMatrixTag,
-              AnyVectorTag)
-{
-    m.symv( alpha, x, beta, y);
-}
-
-template< class Matrix, class Vector>
-inline void doGemv(
               get_value_type<Vector> alpha,
               const Matrix& m,
               const Vector& x,
