@@ -145,7 +145,7 @@ class RefinedElliptic
 template< class G, class IM, class M, class V>
 struct MatrixTraits< RefinedElliptic<G, IM, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
+    typedef typename TypeTraits<V>::value_type  value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 

@@ -16,18 +16,18 @@ Specialize this struct if you want to enable your own vector/container class for
 @ingroup vec_list
 */
 template< class Vector, class Enable=void>
-struct VectorTraits;
+struct TypeTraits;
 //{
 //    using value_type        = double; //!< The underlying data type
-//    using vector_category   = ThrustVectorTag; //!< Policy how data has to be accessed (has to derive from \c AnyVectorTag)
+//    using data_layout   = ThrustVectorTag; //!< Policy how data has to be accessed (has to derive from \c AnyVectorTag)
 //    using execution_policy  = OmpTag;  //!< The execution policy (has to derive from \c AnyPolicyTag)
 //};
 template<class Vector>
-using get_value_type = typename VectorTraits<typename std::decay<Vector>::type>::value_type;
+using get_value_type = typename TypeTraits<typename std::decay<Vector>::type>::value_type;
 template<class Vector>
-using get_vector_category = typename VectorTraits< typename std::decay<Vector>::type >::vector_category;
+using get_data_layout = typename TypeTraits< typename std::decay<Vector>::type >::data_layout;
 template<class Vector>
-using get_execution_policy = typename VectorTraits<typename std::decay<Vector>::type>::execution_policy;
+using get_execution_policy = typename TypeTraits<typename std::decay<Vector>::type>::execution_policy;
 //using is the new typedef in C++11
 template<class Vector>
 using get_pointer_type = typename std::conditional< std::is_const<Vector>::value, const get_value_type<Vector>*, get_value_type<Vector>* >::type;
@@ -36,19 +36,19 @@ using get_pointer_type = typename std::conditional< std::is_const<Vector>::value
 ///@addtogroup vec_list
 ///@{
 template<class T>
-struct VectorTraits<std::vector<T>,
+struct TypeTraits<std::vector<T>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using vector_category   = ThrustVectorTag;
+    using data_layout   = ThrustVectorTag;
     using execution_policy  = OmpTag;
 };
 template<class T>
-struct VectorTraits<std::vector<T>,
+struct TypeTraits<std::vector<T>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
-    using vector_category   = VectorVectorTag;
+    using data_layout   = VectorVectorTag;
     using execution_policy  = get_execution_policy<T>;
 };
 ///@}

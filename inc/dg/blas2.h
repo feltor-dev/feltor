@@ -73,7 +73,7 @@ inline typename MatrixTraits<DiagonalMatrixType>::value_type dot( const Containe
 {
     return dg::blas2::detail::doDot( x, m, y,
                        get_matrix_category<DiagonalMatrixType>(),
-                       get_vector_category<ContainerType1>() );
+                       get_data_layout<ContainerType1>() );
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
@@ -95,7 +95,7 @@ inline typename MatrixTraits<DiagonalMatrixType>::value_type dot( const Diagonal
 {
     return dg::blas2::detail::doDot( m, x);
                        //get_matrix_category<DiagonalMatrixType>(),
-                       //get_vector_category<ContainerType>() );
+                       //get_data_layout<ContainerType>() );
 }
 
 /*! @brief \f$ y = \alpha M x + \beta y\f$
@@ -125,8 +125,8 @@ inline void symv( get_value_type<ContainerType1> alpha,
     }
     dg::blas2::detail::doSymv( alpha, M, x, beta, y);
                        //get_matrix_category<MatrixType>(),
-                       //get_vector_category<ContainerType1>(), 
-                       //get_vector_category<ContainerType2>() );
+                       //get_data_layout<ContainerType1>(), 
+                       //get_data_layout<ContainerType2>() );
     return;
 }
 
@@ -152,8 +152,8 @@ inline void symv( MatrixType& M,
 {
     dg::blas2::detail::doSymv( M, x, y,
                        get_matrix_category<MatrixType>(),
-                       get_vector_category<ContainerType1>(),
-                       get_vector_category<ContainerType2>() );
+                       get_data_layout<ContainerType1>(),
+                       get_data_layout<ContainerType2>() );
     return;
 }
 

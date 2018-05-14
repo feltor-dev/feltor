@@ -63,7 +63,7 @@ std::array<dg::DVec, 3> device_arr = dg::transfer<std::array<dg::DVec, 3>>( dg::
 template<class to_ContainerType, class from_ContainerType>
 inline to_ContainerType transfer( const from_ContainerType& src)
 {
-    return dg::blas1::detail::doTransfer<to_ContainerType, from_ContainerType>( src, get_vector_category<to_ContainerType>(), get_vector_category<from_ContainerType>());
+    return dg::blas1::detail::doTransfer<to_ContainerType, from_ContainerType>( src, get_data_layout<to_ContainerType>(), get_data_layout<from_ContainerType>());
 }
 
 /**
@@ -120,7 +120,7 @@ double temp = dg::blas1::dot( two, three); //temp = 30 (5*(2*3))
 template< class ContainerType1, class ContainerType2>
 inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
 {
-    return dg::blas1::detail::doDot( x, y, get_vector_category<ContainerType1>() );
+    return dg::blas1::detail::doDot( x, y, get_data_layout<ContainerType1>() );
 }
 
 /**
@@ -151,7 +151,7 @@ except the scalar product, which is not trivial parallel.
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
-    dg::blas1::detail::doSubroutine( get_vector_category<ContainerType>(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+    dg::blas1::detail::doSubroutine( get_data_layout<ContainerType>(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
     return;
 }
 

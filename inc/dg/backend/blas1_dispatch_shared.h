@@ -24,27 +24,27 @@ namespace dg
 ///@addtogroup vec_list
 ///@{
 template<class T>
-struct VectorTraits<thrust::host_vector<T>,
+struct TypeTraits<thrust::host_vector<T>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using vector_category   = ThrustVectorTag;
+    using data_layout   = ThrustVectorTag;
     using execution_policy  = SerialTag;
 };
 template<class T>
-struct VectorTraits<thrust::host_vector<T>,
+struct TypeTraits<thrust::host_vector<T>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
-    using vector_category   = VectorVectorTag;
+    using data_layout   = VectorVectorTag;
     using execution_policy  = get_execution_policy<T>;
 };
 
 template<class T>
-struct VectorTraits<thrust::device_vector<T>, typename std::enable_if<std::is_arithmetic<T>::value>::type>
+struct TypeTraits<thrust::device_vector<T>, typename std::enable_if<std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using vector_category   = ThrustVectorTag;
+    using data_layout   = ThrustVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     using execution_policy  = CudaTag ;  //!< enable if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #else
@@ -70,7 +70,7 @@ template< class Vector, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, SharedVectorTag)
 {
     static_assert( std::is_base_of<SharedVectorTag,
-        get_vector_category<Vector2>>::value,
+        get_data_layout<Vector2>>::value,
         "All container types must share the same vector category (SharedVectorTag in this case)!");
     static_assert( std::is_same<get_execution_policy<Vector>,
         get_execution_policy<Vector2> >::value,
@@ -96,7 +96,7 @@ template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
     static_assert( all_true<std::is_base_of<SharedVectorTag,
-        get_vector_category<Containers>>::value...>::value,
+        get_data_layout<Containers>>::value...>::value,
         "All container types must derive from the same vector category (SharedVectorTag in this case)!");
     static_assert( all_true<std::is_same<get_execution_policy<container>,
         get_execution_policy<Containers> >::value...>::value,

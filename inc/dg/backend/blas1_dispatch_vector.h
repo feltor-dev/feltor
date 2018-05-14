@@ -36,7 +36,7 @@ template< class Vector, class Vector2>
 inline get_value_type<Vector> doDot( const Vector& x1, const Vector2& x2, VectorVectorTag)
 {
     static_assert( std::is_base_of<VectorVectorTag,
-        get_vector_category<Vector2>>::value,
+        get_data_layout<Vector2>>::value,
         "All container types must derive from the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( !x1.empty());
@@ -44,7 +44,7 @@ inline get_value_type<Vector> doDot( const Vector& x1, const Vector2& x2, Vector
 #endif //DG_DEBUG
     std::vector<std::vector<int64_t>> acc( x1.size());
     for( unsigned i=0; i<x1.size(); i++)
-        acc[i] = doDot_superacc( x1[i], x2[i], get_vector_category<typename Vector::value_type>());
+        acc[i] = doDot_superacc( x1[i], x2[i], get_data_layout<typename Vector::value_type>());
     for( unsigned i=1; i<x1.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
@@ -67,13 +67,13 @@ inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, contai
         #pragma omp parallel
         {
             for( unsigned i=0; i<x.size(); i++) {
-                doSubroutine( get_vector_category<inner_container>(), f, x[i], xs[i]...);
+                doSubroutine( get_data_layout<inner_container>(), f, x[i], xs[i]...);
             }
         }
     }
     else //we are already in a parallel omp region
         for( unsigned i=0; i<x.size(); i++) {
-            doSubroutine( get_vector_category<inner_container>(), f, x[i], xs[i]...);
+            doSubroutine( get_data_layout<inner_container>(), f, x[i], xs[i]...);
         }
 }
 #endif //_OPENMP
@@ -84,7 +84,7 @@ inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, 
 {
     using inner_container = typename std::decay<container>::type::value_type;
     for( unsigned i=0; i<x.size(); i++) {
-        doSubroutine( get_vector_category<inner_container>(), f, x[i], xs[i]...);
+        doSubroutine( get_data_layout<inner_container>(), f, x[i], xs[i]...);
     }
 }
 
@@ -93,7 +93,7 @@ template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
     static_assert( all_true<std::is_base_of<VectorVectorTag,
-        get_vector_category<Containers>>::value...>::value,
+        get_data_layout<Containers>>::value...>::value,
         "All container types must derive from the same vector category (VectorVectorTag in this case)!");
     static_assert( all_true<std::is_same<get_execution_policy<container>,
         get_execution_policy<Containers> >::value...>::value,

@@ -43,8 +43,8 @@ template< class Matrix, class Vector>
 inline void doSymv( Matrix& m, Vector& x, Vector& y, CuspMatrixTag, MPIVectorTag, MPIVectorTag )
 {
     typedef typename Vector::container_type container;
-    doSymv(m,x.data(),y.data(),CuspMatrixTag(),typename VectorTraits<container>::vector_category(),
-                                             typename VectorTraits<container>::vector_category());
+    doSymv(m,x.data(),y.data(),CuspMatrixTag(),typename TypeTraits<container>::data_layout(),
+                                             typename TypeTraits<container>::data_layout());
 }
 
 template< class Matrix, class Vector>

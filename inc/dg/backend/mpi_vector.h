@@ -22,7 +22,7 @@ namespace dg
  * We use mpi to communicate (e.g. boundary points in matrix-vector multiplications)
  * and use the existing blas functions for the local computations.
  * (At the blas level 1 communication is needed only for scalar products)
- * @tparam container local container type. Must have a \c size() and a \c swap() member function and a specialization of the \c VectorTraits class.
+ * @tparam container local container type. Must have a \c size() and a \c swap() member function and a specialization of the \c TypeTraits class.
  */
 template<class container>
 struct MPI_Vector
@@ -98,15 +98,15 @@ struct MPI_Vector
 ///@addtogroup vec_list
 ///@{
 template<class container>
-struct VectorTraits<MPI_Vector<container> > {
+struct TypeTraits<MPI_Vector<container> > {
     using value_type = typename container::value_type;
-    using vector_category = MPIVectorTag;
+    using data_layout = MPIVectorTag;
     using execution_policy = get_execution_policy<container>;
 };
 template<class container>
-struct VectorTraits<const MPI_Vector<container> > {
+struct TypeTraits<const MPI_Vector<container> > {
     using value_type = typename container::value_type;
-    using vector_category = MPIVectorTag;
+    using data_layout = MPIVectorTag;
 };
 ///@}
 
@@ -194,7 +194,7 @@ struct NearestNeighborComm
     template<class container>
     void global_gather_init( const container& values, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_vector_category<container>>::value ,
+        static_assert( std::is_base_of<SharedVectorTag, get_data_layout<container>>::value ,
                    "Only Shared vectors allowed");
         static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
         static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
@@ -211,7 +211,7 @@ struct NearestNeighborComm
     template<class container>
     void global_gather_wait(const container& input, container& buffer, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_vector_category<container>>::value ,
+        static_assert( std::is_base_of<SharedVectorTag, get_data_layout<container>>::value ,
                    "Only Shared vectors allowed");
         static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
         static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");

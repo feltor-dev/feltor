@@ -23,19 +23,19 @@ namespace dg
  * @tparam N size of the array
  */
 template<class T, std::size_t N>
-struct VectorTraits<std::array<T, N>,
+struct TypeTraits<std::array<T, N>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using vector_category   = StdArrayTag;
+    using data_layout   = StdArrayTag;
     using execution_policy  = SerialTag;
 };
 template<class T, std::size_t N>
-struct VectorTraits<std::array<T, N>,
+struct TypeTraits<std::array<T, N>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
-    using vector_category   = ArrayVectorTag;
+    using data_layout   = ArrayVectorTag;
     using execution_policy  = get_execution_policy<T>;
 };
 ///@}

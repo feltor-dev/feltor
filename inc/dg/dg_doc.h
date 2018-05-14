@@ -122,14 +122,14 @@
 
  /** @class hide_ContainerType
   * @tparam ContainerType
-  * Any class for which a specialization of \c VectorTraits exists and which
+  * Any class for which a specialization of \c TypeTraits exists and which
   * fulfills the requirements of the there defined data and execution policies derived from \c AnyVectorTag and \c AnyPolicyTag.
   * For example, this is one of
   *  - <tt> dg::HVec (serial), dg::DVec (cuda or omp), dg::MHVec (mpi + serial) or dg::MDVec (mpi + cuda or omp) </tt>
   *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles), ... </tt>
   *  .
-  * If there are several \c ContainerTypes in the argument list, then the \c VectorTraits of these
-  * must have the same \c execution_policy and data layout (\c vector_category must derive from the same base class) as the first \c ContainerType.
+  * If there are several \c ContainerTypes in the argument list, then the \c TypeTraits of these
+  * must have the same \c execution_policy and data layout (\c data_layout must derive from the same base class) as the first \c ContainerType.
   */
  /** @class hide_matrix
   * @tparam Matrix

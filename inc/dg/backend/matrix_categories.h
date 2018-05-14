@@ -18,7 +18,7 @@ struct CuspMatrixTag: public AnyMatrixTag {};
 struct MPIMatrixTag: public AnyMatrixTag {};
 
 
-///Indicate that \c VectorTraits exist for this type and it should act as a diagonal matrix
+///Indicate that \c TypeTraits exist for this type and it should act as a diagonal matrix
 struct AnyVectorMatrixTag: public AnyMatrixTag {};
 
 }//namespace dg

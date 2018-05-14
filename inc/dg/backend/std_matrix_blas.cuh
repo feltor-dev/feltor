@@ -27,8 +27,8 @@ inline void doSymv(
     for( unsigned i=0; i<x.size(); i++)
         doSymv( m, x[i], y[i],
                        get_matrix_category<Matrix>(),
-                       get_vector_category<typename Vector::value_type>(),
-                       get_vector_category<typename Vector::value_type>() );
+                       get_data_layout<typename Vector::value_type>(),
+                       get_data_layout<typename Vector::value_type>() );
 
 }
 
@@ -49,7 +49,7 @@ inline void doSymv(
     for( unsigned i=0; i<x.size(); i++)
         doSymv( alpha, m, x[i], beta, y[i],
                        get_matrix_category<Precon>(),
-                       get_vector_category<typename Vector::value_type >() );
+                       get_data_layout<typename Vector::value_type >() );
 }
 
 template< class Matrix, class Vector>
@@ -67,7 +67,7 @@ inline get_value_type<Vector> doDot(
     for( unsigned i=0; i<x.size(); i++)
         acc[i] = doDot_superacc( x[i], m, y[i],
                        get_matrix_category<Matrix>(),
-                       get_vector_category<typename Vector::value_type>() );
+                       get_data_layout<typename Vector::value_type>() );
     for( unsigned i=1; i<x.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
@@ -80,7 +80,7 @@ inline get_value_type<Vector> doDot(
     return exblas::cpu::Round(&(acc[0][0]));
 }
 template< class Matrix, class Vector>
-inline typename VectorTraits<Vector>::value_type  doDot(
+inline typename TypeTraits<Vector>::value_type  doDot(
               const Matrix& m,
               const Vector& y,
               AnyMatrixTag,

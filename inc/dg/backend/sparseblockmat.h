@@ -83,14 +83,14 @@ struct EllSparseBlockMat
     template<class Vector>
     void symv(value_type alpha, const Vector& x, value_type beta, Vector& y) const
     {
-        symv( get_vector_category<Vector>(), alpha, x,beta,y);
+        symv( get_data_layout<Vector>(), alpha, x,beta,y);
     }
     private:
     template<class Vector>
     void symv(VectorVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
     {
         for(unsigned i=0; i<x.size(); i++)
-            symv( get_vector_category<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
+            symv( get_data_layout<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
     }
     template<class Vector>
     void symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;
@@ -195,14 +195,14 @@ struct CooSparseBlockMat
     template<class Vector>
     void symv(value_type alpha, const Vector& x, value_type beta, Vector& y) const
     {
-        symv( get_vector_category<Vector>(), alpha, x,beta,y);
+        symv( get_data_layout<Vector>(), alpha, x,beta,y);
     }
     private:
     template<class Vector>
     void symv(VectorVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
     {
         for(unsigned i=0; i<x.size(); i++)
-            symv( get_vector_category<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
+            symv( get_data_layout<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
     }
     template<class Vector>
     void symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;

@@ -34,7 +34,7 @@ template< class ContainerType>
 class CG
 {
   public:
-    typedef typename VectorTraits<ContainerType>::value_type value_type;//!< value type of the ContainerType class
+    typedef typename TypeTraits<ContainerType>::value_type value_type;//!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     CG(){}
     ///@copydoc construct()
@@ -361,7 +361,7 @@ struct Extrapolation
 template<class ContainerType>
 struct Invert
 {
-    typedef typename VectorTraits<ContainerType>::value_type value_type;
+    typedef typename TypeTraits<ContainerType>::value_type value_type;
 
     ///@brief Allocate nothing
     Invert() { multiplyWeights_ = true; nrmb_correction_ = 1.; }
