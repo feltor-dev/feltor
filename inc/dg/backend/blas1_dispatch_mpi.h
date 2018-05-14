@@ -43,7 +43,7 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, MPIVecto
     return receive;
 }
 template< class Vector1, class Vector2>
-typename TypeTraits<Vector1>::value_type doDot( const Vector1& x, const Vector2& y, MPIVectorTag)
+get_value_type<Vector1> doDot( const Vector1& x, const Vector2& y, MPIVectorTag)
 {
     static_assert( all_true<std::is_base_of<MPIVectorTag,
         get_data_layout<Vector2>>::value>::value,

@@ -35,7 +35,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Precon& P, c
     return receive;
 }
 template< class Vector1, class Precon, class Vector2 >
-inline typename TypeTraits<Precon>::value_type doDot( const Vector1& x, const Precon& P, const Vector2& y, MPIVectorTag, MPIVectorTag, MPIVectorTag)
+inline get_value_type<Precon> doDot( const Vector1& x, const Precon& P, const Vector2& y, MPIVectorTag, MPIVectorTag, MPIVectorTag)
 {
     std::vector<int64_t> acc = doDot_superacc( x,P,y,
         MPIVectorTag(), MPIVectorTag(), MPIVectorTag());
@@ -43,7 +43,7 @@ inline typename TypeTraits<Precon>::value_type doDot( const Vector1& x, const Pr
 }
 
 template< class Matrix, class Vector>
-inline typename TypeTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::MPIVectorTag, dg::MPIVectorTag)
+inline get_value_type<Matrix> doDot( const Matrix& m, const Vector& x, dg::MPIVectorTag, dg::MPIVectorTag)
 {
     std::vector<int64_t> acc = doDot_superacc( x,m,x,MPIVectorTag(), MPIVectorTag());
     return exblas::cpu::Round(acc.data());
@@ -63,7 +63,7 @@ inline void doSymv( Matrix& m, Vector1& x, Vector2& y, MPIMatrixTag, MPIVectorTa
 }
 
 template< class Matrix, class Vector>
-inline void doSymv( typename TypeTraits<Matrix>::value_type alpha, const Matrix& m, const Vector& x, typename TypeTraits<Matrix>::value_type beta, Vector& y, MPIMatrixTag, MPIVectorTag )
+inline void doSymv( get_value_type<Matrix> alpha, const Matrix& m, const Vector& x, get_value_type<Matrix> beta, Vector& y, MPIMatrixTag, MPIVectorTag )
 {
     m.symv( alpha, x, beta, y);
 }
@@ -72,8 +72,8 @@ template< class Matrix, class Vector>
 inline void doSymv( Matrix& m, Vector& x, Vector& y, CuspMatrixTag, MPIVectorTag, MPIVectorTag )
 {
     typedef typename Vector::container_type container;
-    doSymv(m,x.data(),y.data(),CuspMatrixTag(),typename TypeTraits<container>::data_layout(),
-                                             typename TypeTraits<container>::data_layout());
+    doSymv(m,x.data(),y.data(),CuspMatrixTag(),get_data_layout<container>(),
+                                             get_data_layout<container>());
 }
 
 

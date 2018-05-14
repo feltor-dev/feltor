@@ -98,10 +98,10 @@ void Collective<Index, Device>::scatter( const Device& values, Device& store) co
     MPI_Alltoallv(
             thrust::raw_pointer_cast( values.data()),
             thrust::raw_pointer_cast( sendTo_.data()),
-            thrust::raw_pointer_cast( accS_.data()), getMPIDataType<typename TypeTraits<Device>::value_type>(),
+            thrust::raw_pointer_cast( accS_.data()), getMPIDataType<get_value_type<Device> >(),
             thrust::raw_pointer_cast( store.data()),
             thrust::raw_pointer_cast( recvFrom_.data()),
-            thrust::raw_pointer_cast( accR_.data()), getMPIDataType<typename TypeTraits<Device>::value_type>(), comm_);
+            thrust::raw_pointer_cast( accR_.data()), getMPIDataType<get_value_type<Device> >(), comm_);
 }
 
 template< class Index, class Device>
@@ -116,10 +116,10 @@ void Collective<Index, Device>::gather( const Device& gatherFrom, Device& values
     MPI_Alltoallv(
             thrust::raw_pointer_cast( gatherFrom.data()),
             thrust::raw_pointer_cast( recvFrom_.data()),
-            thrust::raw_pointer_cast( accR_.data()), getMPIDataType<typename TypeTraits<Device>::value_type>(),
+            thrust::raw_pointer_cast( accR_.data()), getMPIDataType<get_value_type<Device> >(),
             thrust::raw_pointer_cast( values.data()),
             thrust::raw_pointer_cast( sendTo_.data()),
-            thrust::raw_pointer_cast( accS_.data()), getMPIDataType<typename TypeTraits<Device>::value_type>(), comm_);
+            thrust::raw_pointer_cast( accS_.data()), getMPIDataType<get_value_type<Device> >(), comm_);
 }
 //BijectiveComm ist der Spezialfall, dass jedes Element nur ein einziges Mal gebraucht wird.
 ///@endcond

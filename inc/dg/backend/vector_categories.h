@@ -1,6 +1,8 @@
 #ifndef _DG_VECTOR_CATEGORIES_
 #define _DG_VECTOR_CATEGORIES_
 
+#include "matrix_categories.h"
+
 namespace dg{
 
 //here we introduce the concept of data access

@@ -325,26 +325,14 @@ struct MPIDistMat
 template<class LI, class LO, class C>
 struct TypeTraits<RowColDistMat<LI,LO, C> >
 {
-    typedef typename TypeTraits<LI>::value_type value_type;//!< value type
-    using matrix_category = MPIMatrixTag;
-};
-template<class LI, class LO, class C>
-struct TypeTraits<const RowColDistMat<LI,LO, C> >
-{
-    typedef typename TypeTraits<LI>::value_type value_type;//!< value type
+    using value_type = get_value_type<LI>;//!< value type
     using matrix_category = MPIMatrixTag;
 };
 
 template<class L, class C>
 struct TypeTraits<MPIDistMat<L, C> >
 {
-    typedef typename TypeTraits<L>::value_type value_type;//!< value type
-    using matrix_category = MPIMatrixTag;
-};
-template<class L, class C>
-struct TypeTraits<const MPIDistMat<L, C> >
-{
-    typedef typename TypeTraits<L>::value_type value_type;//!< value type
+    using value_type = get_value_type<L>;//!< value type
     using matrix_category = MPIMatrixTag;
 };
 ///@}
