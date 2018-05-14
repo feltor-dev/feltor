@@ -16,7 +16,7 @@ struct TypeTraits<cusp::array1d<T,cusp::host_memory>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using data_layout   = ThrustVectorTag;
+    using data_layout   = CuspVectorTag;
     using execution_policy  = SerialTag;
 };
 template<class T>
@@ -24,7 +24,7 @@ struct TypeTraits<cusp::array1d<T,cusp::device_memory>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using data_layout   = ThrustVectorTag;
+    using data_layout   = CuspVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     using execution_policy  = CudaTag ; //!< if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #else
