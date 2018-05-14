@@ -7,7 +7,7 @@ namespace dg{
 ///@{
 struct AnyMatrixTag{};
 /// indicates that the \c Matrix type has the <tt> void symv( const Vector&, Vector& ) </tt> member function.
-struct SelfMadeMatrixTag {};
+struct SelfMadeMatrixTag: public AnyMatrixTag {};
 ///@}
 
 
@@ -16,10 +16,6 @@ struct CuspMatrixTag: public AnyMatrixTag {};
 
 /// indicate one of our mpi matrices
 struct MPIMatrixTag: public AnyMatrixTag {};
-
-
-///Indicate that \c TypeTraits exist for this type and it should act as a diagonal matrix
-struct AnyVectorMatrixTag: public AnyMatrixTag {};
 
 }//namespace dg
 

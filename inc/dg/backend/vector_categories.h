@@ -28,8 +28,9 @@ Tags, e.g. the ThrustVectorTag.
     and type, layout and communicator, is the same, but the access to it may differ)
   - their execution policy tag is exactly the same
 
+@note any vector can serve as a diagonal matrix
  */
-struct AnyVectorTag{};
+struct AnyVectorTag : public AnyMatrixTag{};
 ///@}
 
 /**

@@ -43,7 +43,7 @@ namespace blas2{
 template<class MatrixType, class AnotherMatrixType>
 inline void transfer( const MatrixType& x, AnotherMatrixType& y)
 {
-    dg::blas2::detail::doTransfer( x,y, get_matrix_category<MatrixType>(), get_matrix_category<AnotherMatrixType>());
+    dg::blas2::detail::doTransfer( x,y, get_data_layout<MatrixType>(), get_data_layout<AnotherMatrixType>());
 }
 
 /*! @brief \f$ x^T M y\f$; Binary reproducible general dot product
@@ -69,11 +69,12 @@ inline void transfer( const MatrixType& x, AnotherMatrixType& y)
  * @copydoc hide_code_evaluate2d
  */
 template< class ContainerType1, class DiagonalMatrixType, class ContainerType2>
-inline typename MatrixTraits<DiagonalMatrixType>::value_type dot( const ContainerType1& x, const DiagonalMatrixType& m, const ContainerType2& y)
+inline get_value_type<DiagonalMatrixType> dot( const ContainerType1& x, const DiagonalMatrixType& m, const ContainerType2& y)
 {
     return dg::blas2::detail::doDot( x, m, y,
-                       get_matrix_category<DiagonalMatrixType>(),
-                       get_data_layout<ContainerType1>() );
+                       get_data_layout<ContainerType1>(),
+                       get_data_layout<DiagonalMatrixType>(),
+                       get_data_layout<ContainerType2>() );
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
@@ -91,11 +92,11 @@ inline typename MatrixTraits<DiagonalMatrixType>::value_type dot( const Containe
      which should be prefered because it looks more explicit
  */
 template< class DiagonalMatrixType, class ContainerType>
-inline typename MatrixTraits<DiagonalMatrixType>::value_type dot( const DiagonalMatrixType& m, const ContainerType& x)
+inline get_value_type<DiagonalMatrixType> dot( const DiagonalMatrixType& m, const ContainerType& x)
 {
-    return dg::blas2::detail::doDot( m, x);
-                       //get_matrix_category<DiagonalMatrixType>(),
-                       //get_data_layout<ContainerType>() );
+    return dg::blas2::detail::doDot( m, x,
+                       get_data_layout<DiagonalMatrixType>(),
+                       get_data_layout<ContainerType>() );
 }
 
 /*! @brief \f$ y = \alpha M x + \beta y\f$
@@ -123,10 +124,10 @@ inline void symv( get_value_type<ContainerType1> alpha,
         dg::blas1::scal( y, beta);
         return;
     }
-    dg::blas2::detail::doSymv( alpha, M, x, beta, y);
-                       //get_matrix_category<MatrixType>(),
-                       //get_data_layout<ContainerType1>(), 
-                       //get_data_layout<ContainerType2>() );
+    dg::blas2::detail::doSymv( alpha, M, x, beta, y,
+                       get_data_layout<MatrixType>(),
+                       get_data_layout<ContainerType1>(),
+                       get_data_layout<ContainerType2>() );
     return;
 }
 
@@ -151,7 +152,7 @@ inline void symv( MatrixType& M,
                   ContainerType2& y)
 {
     dg::blas2::detail::doSymv( M, x, y,
-                       get_matrix_category<MatrixType>(),
+                       get_data_layout<MatrixType>(),
                        get_data_layout<ContainerType1>(),
                        get_data_layout<ContainerType2>() );
     return;
