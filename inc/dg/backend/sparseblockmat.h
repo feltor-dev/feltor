@@ -360,25 +360,13 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os, bool show_data) c
 }
 
 template <class T>
-struct MatrixTraits<EllSparseBlockMat<T> >
+struct TypeTraits<EllSparseBlockMat<T> >
 {
     using value_type        = T;
     using matrix_category   = SelfMadeMatrixTag;
 };
 template <class T>
-struct MatrixTraits<const EllSparseBlockMat<T> >
-{
-    using value_type        = T;
-    using matrix_category   = SelfMadeMatrixTag;
-};
-template <class T>
-struct MatrixTraits<CooSparseBlockMat<T> >
-{
-    using value_type        = T;
-    using matrix_category   = SelfMadeMatrixTag;
-};
-template <class T>
-struct MatrixTraits<const CooSparseBlockMat<T> >
+struct TypeTraits<CooSparseBlockMat<T> >
 {
     using value_type        = T;
     using matrix_category   = SelfMadeMatrixTag;

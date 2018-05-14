@@ -54,13 +54,7 @@ struct Composite
 };
 ///@cond
 template <class Matrix>
-struct MatrixTraits<Composite<Matrix> >
-{
-    typedef double value_type;
-    typedef SelfMadeMatrixTag matrix_category;
-};
-template <class Matrix>
-struct MatrixTraits<const Composite<Matrix> >
+struct TypeTraits<Composite<Matrix> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;

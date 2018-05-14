@@ -268,25 +268,13 @@ struct Helmholtz2
 };
 ///@cond
 template< class G, class M, class V>
-struct MatrixTraits< Helmholtz<G, M, V> >
+struct TypeTraits< Helmholtz<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;
 };
 template< class G, class M, class V>
-struct MatrixTraits< const Helmholtz<G, M, V> >
-{
-    typedef double value_type;
-    typedef SelfMadeMatrixTag matrix_category;
-};
-template< class G, class M, class V>
-struct MatrixTraits< Helmholtz2<G, M, V> >
-{
-    typedef double value_type;
-    typedef SelfMadeMatrixTag matrix_category;
-};
-template< class G, class M, class V>
-struct MatrixTraits< const Helmholtz2<G, M, V> >
+struct TypeTraits< Helmholtz2<G, M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;

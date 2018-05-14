@@ -435,7 +435,7 @@ void DS<G,I,M,container>::do_dss( double alpha, const container& f, double beta,
 
 ///@cond
 template< class G, class I, class M, class V>
-struct MatrixTraits< geo::DS<G,I,M, V> >
+struct TypeTraits< geo::DS<G,I,M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;

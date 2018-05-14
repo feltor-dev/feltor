@@ -286,25 +286,13 @@ void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
 ///@addtogroup mat_list
 ///@{
 template <class T>
-struct MatrixTraits<EllSparseBlockMatDevice<T> >
+struct TypeTraits<EllSparseBlockMatDevice<T> >
 {
     using value_type      = T;
     using matrix_category = SelfMadeMatrixTag;
 };
 template <class T>
-struct MatrixTraits<const EllSparseBlockMatDevice<T> >
-{
-    using value_type      = T;
-    using matrix_category = SelfMadeMatrixTag;
-};
-template <class T>
-struct MatrixTraits<CooSparseBlockMatDevice<T> >
-{
-    using value_type      = T;
-    using matrix_category = SelfMadeMatrixTag;
-};
-template <class T>
-struct MatrixTraits<const CooSparseBlockMatDevice<T> >
+struct TypeTraits<CooSparseBlockMatDevice<T> >
 {
     using value_type      = T;
     using matrix_category = SelfMadeMatrixTag;

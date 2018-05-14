@@ -323,28 +323,28 @@ struct MPIDistMat
 ///@addtogroup mat_list
 ///@{
 template<class LI, class LO, class C>
-struct MatrixTraits<RowColDistMat<LI,LO, C> >
+struct TypeTraits<RowColDistMat<LI,LO, C> >
 {
-    typedef typename MatrixTraits<LI>::value_type value_type;//!< value type
+    typedef typename TypeTraits<LI>::value_type value_type;//!< value type
     using matrix_category = MPIMatrixTag;
 };
 template<class LI, class LO, class C>
-struct MatrixTraits<const RowColDistMat<LI,LO, C> >
+struct TypeTraits<const RowColDistMat<LI,LO, C> >
 {
-    typedef typename MatrixTraits<LI>::value_type value_type;//!< value type
+    typedef typename TypeTraits<LI>::value_type value_type;//!< value type
     using matrix_category = MPIMatrixTag;
 };
 
 template<class L, class C>
-struct MatrixTraits<MPIDistMat<L, C> >
+struct TypeTraits<MPIDistMat<L, C> >
 {
-    typedef typename MatrixTraits<L>::value_type value_type;//!< value type
+    typedef typename TypeTraits<L>::value_type value_type;//!< value type
     using matrix_category = MPIMatrixTag;
 };
 template<class L, class C>
-struct MatrixTraits<const MPIDistMat<L, C> >
+struct TypeTraits<const MPIDistMat<L, C> >
 {
-    typedef typename MatrixTraits<L>::value_type value_type;//!< value type
+    typedef typename TypeTraits<L>::value_type value_type;//!< value type
     using matrix_category = MPIMatrixTag;
 };
 ///@}

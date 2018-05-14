@@ -204,7 +204,7 @@ struct Implicit
 
 }//namespace detail
 template< class M, class V>
-struct MatrixTraits< detail::Implicit<M, V> >
+struct TypeTraits< detail::Implicit<M, V> >
 {
     typedef double value_type;
     typedef SelfMadeMatrixTag matrix_category;

@@ -143,7 +143,7 @@ class RefinedElliptic
 
 ///@cond
 template< class G, class IM, class M, class V>
-struct MatrixTraits< RefinedElliptic<G, IM, M, V> >
+struct TypeTraits< RefinedElliptic<G, IM, M, V> >
 {
     typedef typename TypeTraits<V>::value_type  value_type;
     typedef SelfMadeMatrixTag matrix_category;

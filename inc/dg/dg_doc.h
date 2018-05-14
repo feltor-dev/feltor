@@ -133,7 +133,7 @@
   */
  /** @class hide_matrix
   * @tparam Matrix
-  * Any class for which a specialization of \c MatrixTraits exists and which fullfills
+  * Any class for which a specialization of \c TypeTraits exists and which fullfills
   * the requirements of the there defined Matrix policy derived from \c AnyMatrixTag or \c SelfMadeMatrixTag.
   * The \c Matrix type can for example be one of:
   *  - \c container: A container acts as a  diagonal matrix.
@@ -188,7 +188,7 @@
  need to be callable and return inverse weights and the preconditioner for the conjugate
  gradient method. The %Operator is assumed to be linear and symmetric!
  @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const container&, container&);
-  and specializing \c MatrixTraits with the \c SelfMadeMatrixTag as the matrix_category
+  and specializing \c TypeTraits with the \c SelfMadeMatrixTag as the matrix_category
   */
 
 /*!@addtogroup mpi_structures

@@ -78,13 +78,7 @@ struct MultiMatrix
 
 ///@cond
 template <class M, class V>
-struct MatrixTraits<MultiMatrix<M, V> >
-{
-    using value_type = get_value_type<V>;
-    typedef SelfMadeMatrixTag matrix_category;
-};
-template <class M, class V>
-struct MatrixTraits<const MultiMatrix<M, V> >
+struct TypeTraits<MultiMatrix<M, V> >
 {
     using value_type = get_value_type<V>;
     typedef SelfMadeMatrixTag matrix_category;
