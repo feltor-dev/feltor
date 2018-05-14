@@ -551,7 +551,7 @@ int integrateRK(RHS& rhs, double t_begin, const ContainerType& begin, double t_e
 {
     RK<s, ContainerType > rk( begin);
     ContainerType old_end(begin);
-    end = begin;
+    blas1::copy( begin, end );
     if( t_end == t_begin) return 0;
     int NT = NT_init;
     double dt = (t_end-t_begin)/(double)NT;
@@ -560,7 +560,7 @@ int integrateRK(RHS& rhs, double t_begin, const ContainerType& begin, double t_e
 
     while( error > eps_abs && NT < pow( 2, 18) )
     {
-        end = begin;
+        blas1::copy( begin, end );
 
         int i=0;
         while (i<NT)
@@ -576,7 +576,7 @@ int integrateRK(RHS& rhs, double t_begin, const ContainerType& begin, double t_e
             i++;
         }
         error = rhs.error( end, old_end);
-        old_end = end;
+        blas1::copy( end, old_end);
         t0 = t_begin;
         dt /= 2.;
         NT *= 2;

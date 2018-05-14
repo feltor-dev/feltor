@@ -461,7 +461,7 @@ struct SIRK
         blas2::symv( imp.weights(), rhs_, rhs_);
         pcg( implicit, k_[2], rhs_, imp.precond(), imp.inv_weights(), eps_);
         //sum up results
-        u1 = u0;
+        dg::blas1::copy( u0, u1);
         dg::blas1::axpby( 1., u1, w[0], k_[0], u1);
         dg::blas1::axpbypgz( w[1], k_[1], w[2], k_[2], 1., u1);
         t1 = t0 + dt;

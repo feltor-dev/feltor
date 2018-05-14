@@ -161,15 +161,18 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
  * explicit pointwise assignment \f$ y_i = x_i\f$
  * @copydoc hide_iterations
  * @copydoc hide_ContainerType
- * @param x src
- * @param y target
- * @note in contrast to the \c blas1::transfer functions the copy function is
- * explicitly parallel and thus works only on types with same execution
- * policy
+ * @param source vector to copy
+ * @param target destination
+ * @note in contrast to the \c blas1::transfer functions the \c copy function uses
+ * the execution policy to determine the implementation and thus works
+ * only on types with same execution policy
+ * @note catches self-assignment
  */
-template<class ContainerType_in, class ContainerType_out>
-inline void copy( const ContainerType_in& x, ContainerType_out& y){
-    dg::blas1::subroutine( dg::equals(), y, x );
+template<class ContainerTypeIn, class ContainerTypeOut>
+inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
+    if( std::is_same<ContainerTypeIn, ContainerTypeOut>::value && &source==&target)
+        return;
+    dg::blas1::subroutine( dg::equals(), target, source );
     return;
 }
 
