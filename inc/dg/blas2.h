@@ -43,7 +43,9 @@ namespace blas2{
 template<class MatrixType, class AnotherMatrixType>
 inline void transfer( const MatrixType& x, AnotherMatrixType& y)
 {
-    dg::blas2::detail::doTransfer( x,y, get_data_layout<MatrixType>(), get_data_layout<AnotherMatrixType>());
+    dg::blas2::detail::doTransfer( x,y,
+            get_data_layout<MatrixType>(),
+            get_data_layout<AnotherMatrixType>());
 }
 
 /*! @brief \f$ x^T M y\f$; Binary reproducible general dot product
@@ -66,15 +68,15 @@ inline void transfer( const MatrixType& x, AnotherMatrixType& y)
  * @return Generalized scalar product
  * @note This routine is always executed synchronously due to the
     implicit memcpy of the result.
+ * @attention currently we only have an implementation for double precision numbers
  * @copydoc hide_code_evaluate2d
  */
 template< class ContainerType1, class DiagonalMatrixType, class ContainerType2>
 inline get_value_type<DiagonalMatrixType> dot( const ContainerType1& x, const DiagonalMatrixType& m, const ContainerType2& y)
 {
     return dg::blas2::detail::doDot( x, m, y,
-                       get_data_layout<ContainerType1>(),
-                       get_data_layout<DiagonalMatrixType>(),
-                       get_data_layout<ContainerType2>() );
+            get_data_layout<DiagonalMatrixType>(),
+            get_data_layout<ContainerType1>());
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
@@ -90,13 +92,14 @@ inline get_value_type<DiagonalMatrixType> dot( const ContainerType1& x, const Di
     implicit memcpy of the result.
  * @note This routine is equivalent to the call \c dg::blas2::dot( x, m, x);
      which should be prefered because it looks more explicit
+ * @attention currently we only have an implementation for double precision numbers
  */
 template< class DiagonalMatrixType, class ContainerType>
 inline get_value_type<DiagonalMatrixType> dot( const DiagonalMatrixType& m, const ContainerType& x)
 {
     return dg::blas2::detail::doDot( m, x,
-                       get_data_layout<DiagonalMatrixType>(),
-                       get_data_layout<ContainerType>() );
+            get_data_layout<DiagonalMatrixType>(),
+            get_data_layout<ContainerType>());
 }
 
 /*! @brief \f$ y = \alpha M x + \beta y\f$
@@ -125,9 +128,8 @@ inline void symv( get_value_type<ContainerType1> alpha,
         return;
     }
     dg::blas2::detail::doSymv( alpha, M, x, beta, y,
-                       get_data_layout<MatrixType>(),
-                       get_data_layout<ContainerType1>(),
-                       get_data_layout<ContainerType2>() );
+            get_data_layout<MatrixType>(),
+            get_data_layout<ContainerType1>());
     return;
 }
 
@@ -152,10 +154,31 @@ inline void symv( MatrixType& M,
                   ContainerType2& y)
 {
     dg::blas2::detail::doSymv( M, x, y,
-                       get_data_layout<MatrixType>(),
-                       get_data_layout<ContainerType1>(),
-                       get_data_layout<ContainerType2>() );
+            get_data_layout<MatrixType>(),
+            get_data_layout<ContainerType1>());
     return;
+}
+/*! @brief \f$ y = \alpha M x + \beta y \f$;
+ * (alias for symv)
+ *
+ * Does exactly the same as symv.
+ * @copydoc hide_matrix
+ * @copydoc hide_ContainerType
+ * @param alpha A Scalar
+ * @param M The Matrix
+ * @param x input vector
+ * @param beta A Scalar
+ * @param y contains the solution on output (may not alias \p x)
+ * @attention y may never alias \p x
+ */
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void gemv( get_value_type<ContainerType1> alpha,
+                  MatrixType& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y)
+{
+    dg::blas2::symv( alpha, M, x, beta, y);
 }
 
 /*! @brief \f$ y = M x\f$;
@@ -175,28 +198,6 @@ inline void gemv( MatrixType& M,
                   ContainerType2& y)
 {
     dg::blas2::symv( M, x, y);
-}
-/*! @brief \f$ y = \alpha M x + \beta y \f$;
- * (alias for symv)
- *
- * Does exactly the same as symv.
- * @copydoc hide_matrix
- * @copydoc hide_ContainerType
- * @param alpha A Scalar
- * @param M The Matrix
- * @param x input vector
- * @param beta A Scalar
- * @param y contains the solution on output (may not alias \p x)
- * @attention y may never alias \p x
- */
-template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void gemv( get_value_type<ContainerType1> alpha,
-                  const MatrixType& M,
-                  const ContainerType1& x,
-                  get_value_type<ContainerType1> beta,
-                  ContainerType2& y)
-{
-    dg::blas2::symv( alpha, M, x, beta, y);
 }
 ///@}
 

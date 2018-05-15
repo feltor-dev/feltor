@@ -69,6 +69,8 @@ To doTransfer( const From& in, ThrustVectorTag, ThrustVectorTag)
 template< class Vector, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, SharedVectorTag)
 {
+    static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
+    static_assert( std::is_same<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
     static_assert( std::is_base_of<SharedVectorTag,
         get_data_layout<Vector2>>::value,
         "All container types must share the same vector category (SharedVectorTag in this case)!");
@@ -86,8 +88,6 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, SharedVe
 template<class Vector, class Vector2>
 get_value_type<Vector> doDot( const Vector& x, const Vector2& y, SharedVectorTag)
 {
-    static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_same<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
     std::vector<int64_t> acc = doDot_superacc( x,y,SharedVectorTag());
     return exblas::cpu::Round(acc.data());
 }

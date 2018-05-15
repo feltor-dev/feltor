@@ -108,25 +108,11 @@ inline void doSymv( Matrix& m,
 }
 
 template< class Matrix, class Vector>
-inline void doGemv( Matrix& m,
-                    const Vector&x,
-                    Vector& y,
-                    CuspMatrixTag,
-                    ThrustVectorTag,
-                    ThrustVectorTag  )
+inline void doSymv( Matrix& m, Vector& x, Vector& y, CuspMatrixTag, MPIVectorTag, MPIVectorTag )
 {
-    doSymv( m, x, y, CuspMatrixTag(), ThrustVectorTag(), ThrustVectorTag());
-}
-
-template< class Matrix, class Vector>
-inline void doGemv( Matrix& m,
-                    const Vector&x,
-                    Vector& y,
-                    CuspMatrixTag,
-                    CuspVectorTag,
-                    CuspVectorTag  )
-{
-    doGemv( m,x,y,CuspMatrixTag(), CuspVectorTag(), CuspVectorTag());
+    typedef typename Vector::container_type container;
+    doSymv(m,x.data(),y.data(),CuspMatrixTag(),get_data_layout<container>(),
+                                             get_data_layout<container>());
 }
 
 } //namespace detail

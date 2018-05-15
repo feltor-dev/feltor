@@ -20,6 +20,14 @@ std::vector<int64_t> doDot_dispatch( OmpTag, int size, const double* x_ptr, cons
         exblas::exdot_omp( size, x_ptr,y_ptr, &h_superacc[0]);
     return h_superacc;
 }
+std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    if(size<MIN_SIZE)
+        exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]);
+    else
+        exblas::exdot_omp( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]);
+    return h_superacc;
+}
 
 template< class Subroutine, class T, class ...Ts>
 inline void doSubroutine_omp( int size, Subroutine f, T* x, Ts*... xs)

@@ -12,8 +12,13 @@ namespace blas2
 namespace detail
 {
 template< class Vector1, class Precon, class Vector2 >
-inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Precon& P, const Vector2& y, MPIVectorTag, MPIVectorTag, MPIVectorTag)
+inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Precon& P, const Vector2& y, MPIVectorTag)
 {
+    static_assert( all_true<
+            std::is_base_of<MPIVectorTag, get_data_layout<Vector1>>::value,
+            std::is_base_of<MPIVectorTag, get_data_layout<Vector2>>::value
+            >::value,
+        "All data layouts must derive from the same vector category (MPIVectorTag in this case)!");
 #ifdef DG_DEBUG
     int compare;
     MPI_Comm_compare( x.communicator(), y.communicator(), &compare);
@@ -21,59 +26,56 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Precon& P, c
     MPI_Comm_compare( x.communicator(), P.communicator(), &compare);
     assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
 #endif //DG_DEBUG
-    using inner_container1 = typename std::decay<Vector1>::type::container_type;
-    using inner_container2 = typename std::decay<Precon>::type::container_type;
-    using inner_container3 = typename std::decay<Vector2>::type::container_type;
+    using inner_container = typename std::decay<Precon>::type::container_type;
     //local computation
     std::vector<int64_t> acc = doDot_superacc(x.data(), P.data(), y.data(),
-        get_data_layout<inner_container1>(),
-        get_data_layout<inner_container2>(),
-        get_data_layout<inner_container3>());
+        get_data_layout<inner_container>());
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicator(), x.communicator_mod(), x.communicator_mod_reduce());
 
     return receive;
 }
 template< class Vector1, class Precon, class Vector2 >
-inline get_value_type<Precon> doDot( const Vector1& x, const Precon& P, const Vector2& y, MPIVectorTag, MPIVectorTag, MPIVectorTag)
+inline get_value_type<Precon> doDot( const Vector1& x, const Precon& P, const Vector2& y, MPIVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,P,y,
-        MPIVectorTag(), MPIVectorTag(), MPIVectorTag());
+    static_assert( all_true<
+            std::is_base_of<MPIVectorTag, get_data_layout<Vector1>>::value,
+            std::is_base_of<MPIVectorTag, get_data_layout<Vector2>>::value
+            >::value,
+        "All data layouts must derive from the same vector category (MPIVectorTag in this case)!");
+    std::vector<int64_t> acc = doDot_superacc( x,P,y, MPIVectorTag());
     return exblas::cpu::Round(acc.data());
 }
 
 template< class Matrix, class Vector>
-inline get_value_type<Matrix> doDot( const Matrix& m, const Vector& x, dg::MPIVectorTag, dg::MPIVectorTag)
+inline get_value_type<Matrix> doDot( const Matrix& m, const Vector& x, dg::MPIVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,m,x,MPIVectorTag(), MPIVectorTag());
+    std::vector<int64_t> acc = doDot_superacc( x,m,x,MPIVectorTag());
     return exblas::cpu::Round(acc.data());
 }
 
 template< class Matrix1, class Matrix2>
-inline void doTransfer( const Matrix1& m1, Matrix2& m2, MPIMatrixTag, MPIMatrixTag)
+inline void doTransfer( const Matrix1& m1, Matrix2& m2, AnyMatrixTag, MPIMatrixTag)
 {
     Matrix2 m(m1);
     m2 = m;
 }
 
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m, Vector1& x, Vector2& y, MPIMatrixTag, MPIVectorTag, MPIVectorTag )
+inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIMatrixTag )
 {
     m.symv( x, y);
 }
 
-template< class Matrix, class Vector>
-inline void doSymv( get_value_type<Matrix> alpha, const Matrix& m, const Vector& x, get_value_type<Matrix> beta, Vector& y, MPIMatrixTag, MPIVectorTag )
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv( get_value_type<Vector1> alpha,
+                Matrix& m,
+                const Vector1& x,
+                get_value_type<Vector1> beta,
+                Vector2& y,
+                MPIMatrixTag)
 {
     m.symv( alpha, x, beta, y);
-}
-
-template< class Matrix, class Vector>
-inline void doSymv( Matrix& m, Vector& x, Vector& y, CuspMatrixTag, MPIVectorTag, MPIVectorTag )
-{
-    typedef typename Vector::container_type container;
-    doSymv(m,x.data(),y.data(),CuspMatrixTag(),get_data_layout<container>(),
-                                             get_data_layout<container>());
 }
 
 

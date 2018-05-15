@@ -17,21 +17,21 @@ inline get_value_type<Matrix> doDot(
               const Vector1& x,
               const Matrix& m,
               const Vector2& y,
-              VectorVectorTag,
               AnyMatrixTag,
               VectorVectorTag)
 {
+    static_assert( std::is_base_of<VectorVectorTag,
+        get_data_layout<Vector2>>::value,
+        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
     using inner_container1 = typename std::decay<Vector1>::type::value_type;
-    using inner_container2 = typename std::decay<Vector2>::type::value_type;
     std::vector<std::vector<int64_t>> acc( x.size());
     for( unsigned i=0; i<x.size(); i++)
         acc[i] = doDot_superacc( x[i], m, y[i],
-                       get_data_layout<inner_container1>(),
                        get_data_layout<Matrix>(),
-                       get_data_layout<inner_container2>() );
+                       get_data_layout<inner_container1>() );
     for( unsigned i=1; i<x.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
@@ -59,7 +59,6 @@ inline void doSymv(
               const Vector1& x,
               Vector2& y,
               AnyMatrixTag,
-              VectorVectorTag,
               VectorVectorTag)
 {
 #ifdef DG_DEBUG
@@ -67,22 +66,20 @@ inline void doSymv(
     //assert( m.size() == y.size() );
 #endif //DG_DEBUG
     using inner_container1 = typename std::decay<Vector1>::type::value_type;
-    using inner_container2 = typename std::decay<Vector2>::type::value_type;
     for( unsigned i=0; i<x.size(); i++)
         doSymv( m, x[i], y[i],
                        get_data_layout<Matrix>(),
-                       get_data_layout<inner_container1>(),
-                       get_data_layout<inner_container2>());
+                       get_data_layout<inner_container1>());
 
 }
 
 template< class Precon, class Vector1, class Vector2>
 inline void doSymv(
-              get_value_type<Vector> alpha,
-              const Precon& m,
-              const Vector& x,
-              get_value_type<Vector> beta,
-              Vector& y,
+              get_value_type<Vector1> alpha,
+              Precon& m,
+              const Vector1& x,
+              get_value_type<Vector1> beta,
+              Vector2& y,
               AnyMatrixTag,
               VectorVectorTag,
               VectorVectorTag)
@@ -92,12 +89,10 @@ inline void doSymv(
     //assert( m.size() == y.size() );
 #endif //DG_DEBUG
     using inner_container1 = typename std::decay<Vector1>::type::value_type;
-    using inner_container2 = typename std::decay<Vector2>::type::value_type;
     for( unsigned i=0; i<x.size(); i++)
         doSymv( alpha, m, x[i], beta, y[i],
                        get_data_layout<Precon>(),
-                       get_data_layout<inner_container1>(),
-                       get_data_layout<inner_container2>());
+                       get_data_layout<inner_container1>());
 }
 
 

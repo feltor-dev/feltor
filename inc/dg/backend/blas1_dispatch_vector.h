@@ -37,7 +37,7 @@ inline get_value_type<Vector> doDot( const Vector& x1, const Vector2& x2, Vector
 {
     static_assert( std::is_base_of<VectorVectorTag,
         get_data_layout<Vector2>>::value,
-        "All container types must derive from the same vector category (VectorVectorTag in this case)!");
+        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( !x1.empty());
     assert( x1.size() == x2.size() );

@@ -110,6 +110,7 @@ inline void transfer( const from_ContainerType& source, to_ContainerType& target
  * @return Scalar product as defined above
  * @note This routine is always executed synchronously due to the
         implicit memcpy of the result. With mpi the result is broadcasted to all processes
+ * @attention currently we only have an implementation for double precision numbers
 
 For example
 @code
@@ -120,6 +121,10 @@ double temp = dg::blas1::dot( two, three); //temp = 30 (5*(2*3))
 template< class ContainerType1, class ContainerType2>
 inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
 {
+    static_assert( all_true<
+            std::is_base_of<AnyVectorTag, get_data_layout<ContainerType>>::value,
+            std::is_base_of<AnyVectorTag, get_data_layout<ContainerType>>::value >::value,
+        "All container types must have a vector data layout (AnyVectorTag)!");
     return dg::blas1::detail::doDot( x, y, get_data_layout<ContainerType1>() );
 }
 
@@ -151,6 +156,10 @@ except the scalar product, which is not trivial parallel.
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
+    static_assert( all_true<
+            std::is_base_of<AnyVectorTag, get_data_layout<ContainerType>>::value,
+            std::is_base_of<AnyVectorTag, get_data_layout<ContainerTypes>>::value...>::value,
+        "All container types must have a vector data layout (AnyVectorTag)!");
     dg::blas1::detail::doSubroutine( get_data_layout<ContainerType>(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
     return;
 }

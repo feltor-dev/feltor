@@ -16,6 +16,14 @@ std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const double* x_ptr
     cudaMemcpy( &h_superacc[0], d_ptr, exblas::BIN_COUNT*sizeof(int64_t), cudaMemcpyDeviceToHost);
     return h_superacc;
 }
+std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const double* x_ptr, const double * y_ptr, const double * z_ptr) {
+    static thrust::device_vector<int64_t> d_superacc(exblas::BIN_COUNT);
+    int64_t * d_ptr = thrust::raw_pointer_cast( d_superacc.data());
+    exblas::exdot_gpu( size, x_ptr,y_ptr,z_ptr, d_ptr);
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    cudaMemcpy( &h_superacc[0], d_ptr, exblas::BIN_COUNT*sizeof(int64_t), cudaMemcpyDeviceToHost);
+    return h_superacc;
+}
 
 template<class Subroutine, class T, class ...Ts>
  __global__ void subroutine_kernel( int size, Subroutine f, T* x, Ts*... xs)
