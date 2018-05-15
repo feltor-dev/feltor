@@ -75,8 +75,7 @@ template< class ContainerType1, class DiagonalMatrixType, class ContainerType2>
 inline get_value_type<DiagonalMatrixType> dot( const ContainerType1& x, const DiagonalMatrixType& m, const ContainerType2& y)
 {
     return dg::blas2::detail::doDot( x, m, y,
-            get_data_layout<DiagonalMatrixType>(),
-            get_data_layout<ContainerType1>());
+            get_data_layout<DiagonalMatrixType>());
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
@@ -98,8 +97,7 @@ template< class DiagonalMatrixType, class ContainerType>
 inline get_value_type<DiagonalMatrixType> dot( const DiagonalMatrixType& m, const ContainerType& x)
 {
     return dg::blas2::detail::doDot( m, x,
-            get_data_layout<DiagonalMatrixType>(),
-            get_data_layout<ContainerType>());
+            get_data_layout<DiagonalMatrixType>());
 }
 
 /*! @brief \f$ y = \alpha M x + \beta y\f$
@@ -128,8 +126,7 @@ inline void symv( get_value_type<ContainerType1> alpha,
         return;
     }
     dg::blas2::detail::doSymv( alpha, M, x, beta, y,
-            get_data_layout<MatrixType>(),
-            get_data_layout<ContainerType1>());
+            get_data_layout<MatrixType>());
     return;
 }
 
@@ -153,9 +150,7 @@ inline void symv( MatrixType& M,
                   const ContainerType1& x,
                   ContainerType2& y)
 {
-    dg::blas2::detail::doSymv( M, x, y,
-            get_data_layout<MatrixType>(),
-            get_data_layout<ContainerType1>());
+    dg::blas2::detail::doSymv( M, x, y, get_data_layout<MatrixType>());
     return;
 }
 /*! @brief \f$ y = \alpha M x + \beta y \f$;

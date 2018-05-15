@@ -11,7 +11,7 @@
 
 namespace dg{
 namespace blas2{
-    ///@cond
+///@cond
 namespace detail{
 
 //thrust vector preconditioner
@@ -55,6 +55,33 @@ inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, SharedVec
 {
     return doDot( x,m,x,SharedVectorTag());
 }
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv(
+              get_value_type<Vector1> alpha,
+              const Matrix& m,
+              const Vector1& x,
+              get_value_type<Vector1> beta,
+              Vector2& y,
+              AnyMatrixTag)
+{
+    dg::blas2::doSymv( alpha, m, x, beta, y
+            get_data_layout<Matrix>(),
+            get_data_layout<Vector1>()
+            );
+}
+
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv(
+              Matrix& m,
+              const Vector1& x,
+              Vector2& y,
+              AnyMatrixTag)
+{
+    dg::blas2::doSymv( 1., m, x, 0., y
+            get_data_layout<Matrix>(),
+            get_data_layout<Vector1>()
+            );
+}
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
@@ -63,7 +90,7 @@ inline void doSymv(
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
-              AnyVectorTag)
+              VectorVectorTag)
 {
     dg::blas1::pointwiseDot( alpha, m, x, beta, y);
 }
@@ -73,14 +100,13 @@ inline void doSymv(
               Matrix& m,
               const Vector1& x,
               Vector2& y,
-              AnyVectorTag)
+              VectorVectorTag)
 {
     dg::blas1::pointwiseDot( 1., m,x,0., y);
 }
 
-
 }//namespace detail
-    ///@endcond
+///@endcond
 } //namespace blas2
 } //namespace dg
 #endif //_DG_BLAS_PRECONDITIONER_

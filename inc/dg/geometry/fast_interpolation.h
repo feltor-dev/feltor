@@ -80,8 +80,8 @@ struct MultiMatrix
 template <class M, class V>
 struct TypeTraits<MultiMatrix<M, V> >
 {
-    using value_type = get_value_type<V>;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using data_layout = SelfMadeMatrixTag;
 };
 
 

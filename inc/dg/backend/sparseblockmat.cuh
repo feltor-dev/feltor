@@ -289,13 +289,13 @@ template <class T>
 struct TypeTraits<EllSparseBlockMatDevice<T> >
 {
     using value_type      = T;
-    using matrix_category = SelfMadeMatrixTag;
+    using data_layout = SelfMadeMatrixTag;
 };
 template <class T>
 struct TypeTraits<CooSparseBlockMatDevice<T> >
 {
     using value_type      = T;
-    using matrix_category = SelfMadeMatrixTag;
+    using data_layout = SelfMadeMatrixTag;
 };
 ///@}
 } //namespace dg

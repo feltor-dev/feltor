@@ -188,7 +188,7 @@
  need to be callable and return inverse weights and the preconditioner for the conjugate
  gradient method. The %Operator is assumed to be linear and symmetric!
  @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const container&, container&);
-  and specializing \c TypeTraits with the \c SelfMadeMatrixTag as the matrix_category
+  and specializing \c TypeTraits with the \c SelfMadeMatrixTag as the \c data_layout
   */
 
 /*!@addtogroup mpi_structures

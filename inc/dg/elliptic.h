@@ -684,27 +684,27 @@ struct TensorElliptic
 template< class G, class M, class V>
 struct TypeTraits< Elliptic<G, M, V> >
 {
-    typedef typename TypeTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using data_layout = SelfMadeMatrixTag;
 };
 
 template< class G, class M, class V>
 struct TypeTraits< GeneralElliptic<G, M, V> >
 {
-    typedef typename TypeTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using data_layout = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
 struct TypeTraits< GeneralEllipticSym<G, M, V> >
 {
-    typedef typename TypeTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using data_layout = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
 struct TypeTraits< TensorElliptic<G, M, V> >
 {
-    typedef typename TypeTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using data_layout = SelfMadeMatrixTag;
 };
 ///@endcond
 
