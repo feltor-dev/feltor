@@ -1,14 +1,23 @@
 #pragma once
 #include <vector>
 #include "blas1_dispatch_mpi.h"
-#include "thrust_matrix_blas.cuh"
-
-namespace dg
-{
 
 ///@cond
+namespace dg
+{
 namespace blas2
 {
+//forward declare blas2 symv functions
+template< class MatrixType, class ContainerType1, class ContainerType2>
+void symv( MatrixType& M,
+                  const ContainerType1& x,
+                  ContainerType2& y);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+void symv( get_value_type<ContainerType1> alpha,
+                  MatrixType& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y);
 namespace detail
 {
 template< class Vector1, class Matrix, class Vector2 >
@@ -26,10 +35,13 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& P, c
     MPI_Comm_compare( x.communicator(), P.communicator(), &compare);
     assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
 #endif //DG_DEBUG
-    using inner_container = typename std::decay<Matrix>::type::container_type;
+    using inner_container1 = typename std::decay<Matrix>::type::container_type;
+    using inner_container2 = typename std::decay<Vector1>::type::container_type;
     //local computation
     std::vector<int64_t> acc = doDot_superacc(x.data(), P.data(), y.data(),
-        get_data_layout<inner_container>());
+        get_data_layout<inner_container1>(),
+        get_data_layout<inner_container2>()
+    );
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicator(), x.communicator_mod(), x.communicator_mod_reduce());
 
@@ -72,7 +84,7 @@ inline get_value_type<Matrix> doDot( const Vector1& x, const Matrix& P, const Ve
 template< class Matrix, class Vector>
 inline get_value_type<Matrix> doDot( const Matrix& m, const Vector& x, dg::MPIVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,m,x, MPIVectorTag(), get_data_layout<Vector1>());
+    std::vector<int64_t> acc = doDot_superacc( x,m,x, MPIVectorTag(), get_data_layout<Vector>());
     return exblas::cpu::Round(acc.data());
 }
 
@@ -166,5 +178,5 @@ inline void doSymv( get_value_type<Vector1> alpha,
 
 } //namespace detail
 } //namespace blas2
-///@endcond
 } //namespace dg
+///@endcond

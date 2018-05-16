@@ -23,15 +23,15 @@ Vector1 doTransfer( const Vector2& in, MPIVectorTag, MPIVectorTag)
 
 }
 
-template< class Vector, Vector2>
-std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, MPIVectorTag)
+template< class Vector1, class Vector2>
+std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVectorTag)
 {
 #ifdef DG_DEBUG
     int compare;
     MPI_Comm_compare( x.communicator(), y.communicator(), &compare);
     assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
 #endif //DG_DEBUG
-    using inner_container = typename std::decay<Vector>::type::container_type;
+    //using inner_container1 = typename std::decay<Vector1>::type::container_type;
     using inner_container2 = typename std::decay<Vector2>::type::container_type;
     //local compuation
     std::vector<int64_t> acc = doDot_superacc( x.data(), y.data(), get_data_layout<inner_container2>() );
