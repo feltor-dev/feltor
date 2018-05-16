@@ -98,20 +98,20 @@ struct RowColDistMat
     * First the inner elements are computed with a call to doSymv then
     * the global_gather function of the communication object is called.
     * Finally the outer elements are added with a call to doSymv for the outer matrix
-    * @tparam container container class of the vector elements
+    * @tparam ContainerType container class of the vector elements
     * @param alpha scalar
     * @param x input
     * @param beta scalar
     * @param y output
     */
-    template<class container>
-    void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y) const
+    template<class ContainerType1, class ContainerType2>
+    void symv( double alpha, const ContainerType1& x, double beta, ContainerType2& y) const
     {
         if( m_c.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(),
-                       get_data_layout<LocalMatrixInner>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrixInner>()
+                       );
             return;
 
         }
@@ -126,14 +126,14 @@ struct RowColDistMat
         m_c.global_gather_init( x.data(), rqst);
         //1.2 compute inner points
         dg::blas2::detail::doSymv( alpha, m_i, x.data(), beta, y.data(),
-                       get_data_layout<LocalMatrixInner>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrixInner>()
+                       );
         //2. wait for communication to finish
         m_c.global_gather_wait( x.data(), m_buffer.data(), rqst);
         //3. compute and add outer points
         dg::blas2::detail::doSymv(alpha, m_o, m_buffer.data(), 1., y.data(),
-                       get_data_layout<LocalMatrixOuter>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrixOuter>()
+                       );
     }
 
     /**
@@ -142,19 +142,18 @@ struct RowColDistMat
     * First the inner elements are computed with a call to doSymv then
     * the collect function of the communication object is called.
     * Finally the outer elements are added with a call to doSymv for the outer matrix
-    * @tparam container container class of the vector elements
+    * @tparam ContainerType container class of the vector elements
     * @param x input
     * @param y output
     */
-    template<class container>
-    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y) const
+    template<class ContainerType1, class ContainerType2>
+    void symv( const ContainerType1& x, ContainerType2& y) const
     {
         if( m_c.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( m_i, x.data(), y.data(),
-                       get_data_layout<LocalMatrixInner>(),
-                       get_data_layout<container>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrixInner>()
+                       );
             return;
 
         }
@@ -169,15 +168,14 @@ struct RowColDistMat
         m_c.global_gather_init( x.data(), rqst);
         //1.2 compute inner points
         dg::blas2::detail::doSymv( m_i, x.data(), y.data(),
-                       get_data_layout<LocalMatrixInner>(),
-                       get_data_layout<container>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrixInner>()
+                       );
         //2. wait for communication to finish
         m_c.global_gather_wait( x.data(), m_buffer.data(), rqst);
         //3. compute and add outer points
         dg::blas2::detail::doSymv(1, m_o, m_buffer.data(), 1., y.data(),
-                       get_data_layout<LocalMatrixOuter>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrixOuter>()
+                       );
     }
 
     private:
@@ -250,14 +248,14 @@ struct MPIDistMat
     enum dist_type get_dist() const {return m_dist;}
     void set_dist(enum dist_type dist){m_dist=dist;}
 
-    template<class container>
-    void symv( double alpha, const MPI_Vector<container>& x, double beta, MPI_Vector<container>& y)const
+    template<class ContainerType1, class ContainerType2>
+    void symv( double alpha, const ContainerType1& x, double beta, ContainerType2& y) const
     {
         if( m_c.size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( alpha, m_m, x.data(), beta, y.data(),
-                       get_data_layout<LocalMatrix>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrix>()
+                       );
             return;
 
         }
@@ -269,25 +267,24 @@ struct MPIDistMat
         if( m_dist == row_dist){
             m_c.global_gather( x.data(), m_buffer.data());
             dg::blas2::detail::doSymv( alpha, m_m, m_buffer.data(), beta, y.data(),
-                       get_data_layout<LocalMatrix>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrix>()
+                       );
         }
         if( m_dist == col_dist){
             dg::blas2::detail::doSymv( alpha, m_m, x.data(), beta, m_buffer.data(),
-                       get_data_layout<LocalMatrix>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrix>()
+                       );
             m_c.get().global_scatter_reduce( m_buffer.data(), y.data());
         }
     }
-    template<class container>
-    void symv( const MPI_Vector<container>& x, MPI_Vector<container>& y)const
+    template<class ContainerType1, class ContainerType2>
+    void symv( const ContainerType1& x, ContainerType2& y) const
     {
         if( m_c.get().size() == 0) //no communication needed
         {
             dg::blas2::detail::doSymv( m_m, x.data(), y.data(),
-                       get_data_layout<LocalMatrix>(),
-                       get_data_layout<container>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrix>()
+                       );
             return;
 
         }
@@ -299,15 +296,13 @@ struct MPIDistMat
         if( m_dist == row_dist){
             m_c.get().global_gather( x.data(), m_buffer.data());
             dg::blas2::detail::doSymv( m_m, m_buffer.data(), y.data(),
-                       get_data_layout<LocalMatrix>(),
-                       get_data_layout<container>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrix>()
+                       );
         }
         if( m_dist == col_dist){
             dg::blas2::detail::doSymv( m_m, x.data(), m_buffer.data(),
-                       get_data_layout<LocalMatrix>(),
-                       get_data_layout<container>(),
-                       get_data_layout<container>() );
+                       get_data_layout<LocalMatrix>()
+                       );
             m_c.get().global_scatter_reduce( m_buffer.data(), y.data());
         }
     }

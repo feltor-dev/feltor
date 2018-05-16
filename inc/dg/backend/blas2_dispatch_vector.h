@@ -53,46 +53,8 @@ inline get_value_type<Matrix>  doDot(
     return doDot( y,m,y,AnyMatrixTag(),VectorVectorTag());
 }
 
-template< class Matrix, class Vector1, class Vector2>
-inline void doSymv(
-              Matrix& m,
-              const Vector1& x,
-              Vector2& y,
-              AnyMatrixTag,
-              VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-    //assert( m.size() == y.size() );
-#endif //DG_DEBUG
-    using inner_container1 = typename std::decay<Vector1>::type::value_type;
-    for( unsigned i=0; i<x.size(); i++)
-        doSymv( m, x[i], y[i],
-                       get_data_layout<Matrix>(),
-                       get_data_layout<inner_container1>());
-}
 
-template< class Precon, class Vector1, class Vector2>
-inline void doSymv(
-              get_value_type<Vector1> alpha,
-              Precon& m,
-              const Vector1& x,
-              get_value_type<Vector1> beta,
-              Vector2& y,
-              AnyMatrixTag,
-              VectorVectorTag)
-{
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-    //assert( m.size() == y.size() );
-#endif //DG_DEBUG
-    using inner_container1 = typename std::decay<Vector1>::type::value_type;
-    for( unsigned i=0; i<x.size(); i++)
-        doSymv( alpha, m, x[i], beta, y[i],
-                       get_data_layout<Precon>(),
-                       get_data_layout<inner_container1>());
-}
-
+//In case the matrix is a VectorVector just do a recursive call
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
               get_value_type<Vector1> alpha,
@@ -102,7 +64,8 @@ inline void doSymv(
               Vector2& y,
               VectorVectorTag)
 {
-    dg::blas1::pointwiseDot( alpha, m, x, beta, y);
+    for( unsigned i=0; i<x.size(); i++)
+        dg::blas2::symv( alpha, m[i], x[i], beta, y[i]);
 }
 
 template< class Matrix, class Vector1, class Vector2>
@@ -112,7 +75,8 @@ inline void doSymv(
               Vector2& y,
               VectorVectorTag)
 {
-    dg::blas1::pointwiseDot( 1., m,x,0., y);
+    for( unsigned i=0; i<x.size(); i++)
+        dg::blas2::symv( m[i], x[i], y[i]);
 }
 
 

@@ -116,6 +116,17 @@ inline void doSymv( get_value_type<ContainerType1> alpha,
                   ContainerType2& y,
                   AnyMatrixTag)
 {
+    static_assert( std::is_same<get_execution_policy<ContainerType1>,
+                                get_execution_policy<ContainerType2>>::value,
+                                "Vector types must have same execution policy");
+    static_assert( std::is_same<get_value_type<ContainerType1>,
+                                get_value_type<MatrixType>>::value &&
+                   std::is_same<get_value_type<ContainerType2>,
+                                get_value_type<MatrixType>>::value,
+                                "Vector and Matrix types must have same value type");
+    static_assert( std::is_same<get_data_layout<ContainerType1>,
+                                get_data_layout<ContainerType2>::value,
+                                "Vector types must have same data layout");
     dg::blas2::detail::doSymv( alpha, M, x, beta, y,
             get_data_layout<MatrixType>(),
             get_data_layout<ContainerType1>());
@@ -126,6 +137,17 @@ inline void doSymv( MatrixType& M,
                   ContainerType2& y,
                   AnyMatrixTag)
 {
+    static_assert( std::is_same<get_execution_policy<ContainerType1>,
+                                get_execution_policy<ContainerType2>>::value,
+                                "Vector types must have same execution policy");
+    static_assert( std::is_same<get_value_type<ContainerType1>,
+                                get_value_type<MatrixType>>::value &&
+                   std::is_same<get_value_type<ContainerType2>,
+                                get_value_type<MatrixType>>::value,
+                                "Vector and Matrix types must have same value type");
+    static_assert( std::is_same<get_data_layout<ContainerType1>,
+                                get_data_layout<ContainerType2>::value,
+                                "Vector types must have same data layout");
     dg::blas2::detail::doSymv( M, x, y,
             get_data_layout<MatrixType>(),
             get_data_layout<ContainerType1>());
@@ -155,17 +177,6 @@ inline void symv( get_value_type<ContainerType1> alpha,
                   get_value_type<ContainerType1> beta,
                   ContainerType2& y)
 {
-    static_assert( std::is_same<get_execution_policy<ContainerType1>,
-                                get_execution_policy<ContainerType2>>::value,
-                                "Vector types must have same execution policy");
-    static_assert( std::is_same<get_value_type<ContainerType1>,
-                                get_value_type<MatrixType>>::value &&
-                   std::is_same<get_value_type<ContainerType2>,
-                                get_value_type<MatrixType>>::value,
-                                "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_data_layout<ContainerType1>,
-                                get_data_layout<ContainerType2>::value,
-                                "Vector types must have same data layout");
     if(alpha == (get_value_type<ContainerType1>)0) {
         dg::blas1::scal( y, beta);
         return;
@@ -193,17 +204,6 @@ inline void symv( MatrixType& M,
                   const ContainerType1& x,
                   ContainerType2& y)
 {
-    static_assert( std::is_same<get_execution_policy<ContainerType1>,
-                                get_execution_policy<ContainerType2>>::value,
-                                "Vector types must have same execution policy");
-    static_assert( std::is_same<get_value_type<ContainerType1>,
-                                get_value_type<MatrixType>>::value &&
-                   std::is_same<get_value_type<ContainerType2>,
-                                get_value_type<MatrixType>>::value,
-                                "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_data_layout<ContainerType1>,
-                                get_data_layout<ContainerType2>::value,
-                                "Vector types must have same data layout");
     dg::blas2::detail::doSymv( M, x, y, get_data_layout<MatrixType>());
 }
 /*! @brief \f$ y = \alpha M x + \beta y \f$;

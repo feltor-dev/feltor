@@ -61,8 +61,48 @@ inline void doTransfer( const Matrix1& m1, Matrix2& m2, AnyMatrixTag, MPIMatrixT
     m2 = m;
 }
 
+//Matrix = MPI Vector
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIMatrixTag )
+inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIVectorTag, MPIVectorTag )
+{
+    dg::blas2::symv( m.data(), x.data(), y.data());
+}
+
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv( get_value_type<Vector1> alpha,
+                Matrix& m,
+                const Vector1& x,
+                get_value_type<Vector1> beta,
+                Vector2& y,
+                MPIVectorTag,
+                MPIVectorTag
+                )
+{
+    dg::blas2::symv( alpha, m.data(), x.data(), beta, y.data());
+}
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIVectorTag, VectorVectorTag )
+{
+    for( unsigned i=0; i<x.size(); i++)
+        dg::blas2::symv( m, x[i], y[i]);
+}
+
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv( get_value_type<Vector1> alpha,
+                Matrix& m,
+                const Vector1& x,
+                get_value_type<Vector1> beta,
+                Vector2& y,
+                MPIVectorTag,
+                VectorVectorTag
+                )
+{
+    for( unsigned i=0; i<x.size(); i++)
+        dg::blas2::symv( alpha, m, x[i], beta, y[i]);
+}
+//Matrix is an MPI matrix
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIMatrixTag, MPIVectorTag )
 {
     m.symv( x, y);
 }
@@ -73,9 +113,32 @@ inline void doSymv( get_value_type<Vector1> alpha,
                 const Vector1& x,
                 get_value_type<Vector1> beta,
                 Vector2& y,
-                MPIMatrixTag)
+                MPIMatrixTag,
+                MPIVectorTag
+                )
 {
     m.symv( alpha, x, beta, y);
+}
+
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIMatrixTag, VectorVectorTag )
+{
+    for( unsigned i=0; i<x.size(); i++)
+        dg::blas2::symv( m, x[i], y[i]);
+}
+
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv( get_value_type<Vector1> alpha,
+                Matrix& m,
+                const Vector1& x,
+                get_value_type<Vector1> beta,
+                Vector2& y,
+                MPIMatrixTag,
+                VectorVectorTag
+                )
+{
+    for( unsigned i=0; i<x.size(); i++)
+        dg::blas2::symv( alpha, m, x[i], beta, y[i]);
 }
 
 

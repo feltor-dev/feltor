@@ -55,33 +55,6 @@ inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, SharedVec
 {
     return doDot( x,m,x,SharedVectorTag());
 }
-template< class Matrix, class Vector1, class Vector2>
-inline void doSymv(
-              get_value_type<Vector1> alpha,
-              const Matrix& m,
-              const Vector1& x,
-              get_value_type<Vector1> beta,
-              Vector2& y,
-              AnyMatrixTag)
-{
-    dg::blas2::doSymv( alpha, m, x, beta, y
-            get_data_layout<Matrix>(),
-            get_data_layout<Vector1>()
-            );
-}
-
-template< class Matrix, class Vector1, class Vector2>
-inline void doSymv(
-              Matrix& m,
-              const Vector1& x,
-              Vector2& y,
-              AnyMatrixTag)
-{
-    dg::blas2::doSymv( 1., m, x, 0., y
-            get_data_layout<Matrix>(),
-            get_data_layout<Vector1>()
-            );
-}
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
@@ -90,20 +63,43 @@ inline void doSymv(
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
-              VectorVectorTag)
+              SharedVectorTag, SharedVectorTag)
 {
     dg::blas1::pointwiseDot( alpha, m, x, beta, y);
 }
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv(
+              Matrix& m,
+              const Vector1& x,
+              Vector2& y,
+              SharedVectorTag, SharedVectorTag)
+{
+    dg::blas1::pointwiseDot( 1, m, x, 0, y);
+}
+template< class Matrix, class Vector1, class Vector2>
+inline void doSymv(
+              get_value_type<Vector1> alpha,
+              const Matrix& m,
+              const Vector1& x,
+              get_value_type<Vector1> beta,
+              Vector2& y,
+              SharedVectorTag, VectorVectorTag)
+{
+    for(unsigned i=0; i<x.size(); i++)
+        dg::blas1::pointwiseDot( alpha, m, x[i], beta, y[i]);
+}
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
               Matrix& m,
               const Vector1& x,
               Vector2& y,
-              VectorVectorTag)
+              SharedVectorTag, VectorVectorTag)
 {
-    dg::blas1::pointwiseDot( 1., m,x,0., y);
+    for(unsigned i=0; i<x.size(); i++)
+        dg::blas1::pointwiseDot( 1, m, x[i], 0, y[i]);
 }
+
 
 }//namespace detail
 ///@endcond

@@ -99,14 +99,9 @@ struct MPI_Vector
 ///@{
 template<class container>
 struct TypeTraits<MPI_Vector<container> > {
-    using value_type = typename container::value_type;
+    using value_type = get_value_type<container>;
     using data_layout = MPIVectorTag;
     using execution_policy = get_execution_policy<container>;
-};
-template<class container>
-struct TypeTraits<const MPI_Vector<container> > {
-    using value_type = typename container::value_type;
-    using data_layout = MPIVectorTag;
 };
 ///@}
 
