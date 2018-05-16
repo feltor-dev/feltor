@@ -7,10 +7,7 @@
 #endif //DG_DEBUG
 
 ///@cond
-//TODO place more asserts for debugging
-namespace dg
-{
-
+namespace dg {
 namespace blas1{
 namespace detail{
 
@@ -42,6 +39,7 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, MPIVecto
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicator(), x.communicator_mod(), x.communicator_mod_reduce());
     return receive;
 }
+
 template< class Vector1, class Vector2>
 get_value_type<Vector1> doDot( const Vector1& x, const Vector2& y, MPIVectorTag)
 {
@@ -68,9 +66,7 @@ inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&
     doSubroutine( get_data_layout<inner_container>(), f, x.data(), xs.data()...);
 }
 
-}//namespace detail
-
+} //namespace detail
 } //namespace blas1
-
 } //namespace dg
 ///@endcond

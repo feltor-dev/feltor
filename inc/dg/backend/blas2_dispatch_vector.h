@@ -13,12 +13,7 @@ namespace detail
 
 
 template< class Vector1, class Matrix, class Vector2>
-inline get_value_type<Matrix> doDot(
-              const Vector1& x,
-              const Matrix& m,
-              const Vector2& y,
-              AnyMatrixTag,
-              VectorVectorTag)
+inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, VectorVectorTag, VectorVectorTag)
 {
     static_assert( std::is_base_of<VectorVectorTag,
         get_data_layout<Vector2>>::value,
@@ -27,11 +22,12 @@ inline get_value_type<Matrix> doDot(
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
     using inner_container1 = typename std::decay<Vector1>::type::value_type;
+    using inner_container2 = typename std::decay<Matrix>::type::value_type;
     std::vector<std::vector<int64_t>> acc( x.size());
     for( unsigned i=0; i<x.size(); i++)
-        acc[i] = doDot_superacc( x[i], m, y[i],
-                       get_data_layout<Matrix>(),
-                       get_data_layout<inner_container1>() );
+        acc[i] = doDot_superacc( x[i], m[i], y[i],
+                       get_data_layout<inner_container1>(),
+                       get_data_layout<inner_container2>() );
     for( unsigned i=1; i<x.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
@@ -41,16 +37,22 @@ inline get_value_type<Matrix> doDot(
         for( int k=exblas::IMIN; k<exblas::IMAX; k++)
             acc[0][k] += acc[i][k];
     }
-    return exblas::cpu::Round(&(acc[0][0]));
+    return acc[0];
+}
+template< class Vector1, class Matrix, class Vector2>
+inline get_value_type<Vector> doDot( const Vector1& x, const Matrix& m, const Vector2& y, VectorVectorTag)
+{
+    std::vector<int64_t> acc = doDot_superacc( x,m,y,VectorVectorTag(), get_data_layout<Vector1>());
+    return exblas::cpu::Round(acc.data());
 }
 template< class Matrix, class Vector>
 inline get_value_type<Matrix>  doDot(
               const Matrix& m,
               const Vector& y,
-              AnyMatrixTag,
-              VectorVectorTag)
+              VectorVectorTag
+              )
 {
-    return doDot( y,m,y,AnyMatrixTag(),VectorVectorTag());
+    return doDot( y,m,y,VectorVectorTag());
 }
 
 

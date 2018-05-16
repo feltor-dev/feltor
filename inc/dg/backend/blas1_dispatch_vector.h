@@ -31,9 +31,8 @@ To doTransfer( const From& src, ArrayVectorTag, AnyVectorTag)
     return t;
 }
 
-
 template< class Vector, class Vector2>
-inline get_value_type<Vector> doDot( const Vector& x1, const Vector2& x2, VectorVectorTag)
+inline std::vector<int64_t> doDot_superacc( const Vector& x1, const Vector2& x2, VectorVectorTag)
 {
     static_assert( std::is_base_of<VectorVectorTag,
         get_data_layout<Vector2>>::value,
@@ -54,7 +53,13 @@ inline get_value_type<Vector> doDot( const Vector& x1, const Vector2& x2, Vector
         for( int k=exblas::IMIN; k<exblas::IMAX; k++)
             acc[0][k] += acc[i][k];
     }
-    return exblas::cpu::Round(&(acc[0][0]));
+    return acc[0];
+}
+template<class Vector, class Vector2>
+get_value_type<Vector> doDot( const Vector& x, const Vector2& y, VectorVectorTag)
+{
+    std::vector<int64_t> acc = doDot_superacc( x,y,VectorVectorTag());
+    return exblas::cpu::Round(acc.data());
 }
 #ifdef _OPENMP
 //omp tag implementation
