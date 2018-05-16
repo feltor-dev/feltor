@@ -288,14 +288,14 @@ void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
 template <class T>
 struct TypeTraits<EllSparseBlockMatDevice<T> >
 {
-    using value_type      = T;
-    using data_layout = SelfMadeMatrixTag;
+    using value_type  = T;
+    using data_layout = SparseBlockMatrixTag;
 };
 template <class T>
 struct TypeTraits<CooSparseBlockMatDevice<T> >
 {
-    using value_type      = T;
-    using data_layout = SelfMadeMatrixTag;
+    using value_type  = T;
+    using data_layout = SparseBlockMatrixTag;
 };
 ///@}
 } //namespace dg

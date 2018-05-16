@@ -27,8 +27,8 @@
  *     @{
  *         @defgroup dispatch The tag dispatch system
  *         @{
- *             @defgroup vec_list List of Vector Traits specializations
- *             @defgroup mat_list List of Matrix Traits specializations
+ *             @defgroup vec_list List of TypeTraits specializations for vectors
+ *             @defgroup mat_list List of TypeTraits specializations for matrices
  *         @}
  *         @defgroup blas1 BLAS level 1 routines
  *             This group contains Vector-Vector operations.

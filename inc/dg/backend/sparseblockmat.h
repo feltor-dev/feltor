@@ -359,18 +359,21 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os, bool show_data) c
 
 }
 
+///@endcond
+///@addtogroup mat_list
+///@{
 template <class T>
 struct TypeTraits<EllSparseBlockMat<T> >
 {
-    using value_type        = T;
-    using matrix_category   = SelfMadeMatrixTag;
+    using value_type  = T;
+    using data_layout = SparseBlockMatrixTag;
 };
 template <class T>
 struct TypeTraits<CooSparseBlockMat<T> >
 {
-    using value_type        = T;
-    using matrix_category   = SelfMadeMatrixTag;
+    using value_type  = T;
+    using data_layout = SparseBlockMatrixTag;
 };
-///@endcond
+///@}
 
 } //namespace dg
