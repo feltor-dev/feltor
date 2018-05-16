@@ -784,7 +784,6 @@ WARN_LOGFILE           =
 
 INPUT                  = . \
                          ./geometry \
-                         ./backend/transpose.h \
                          ./backend/exceptions.h \
                          ./backend/memory.h \
                          ./backend/mpi_collective.h \
@@ -792,20 +791,17 @@ INPUT                  = . \
                          ./backend/mpi_init.h \
                          ./backend/mpi_matrix.h \
                          ./backend/mpi_vector.h \
-                         ./backend/mpi_precon_blas.h \
                          ./backend/sparseblockmat.h \
                          ./backend/sparseblockmat.cuh \
                          ./backend/timer.cuh \
                          ./backend/typedefs.cuh \
+                         ./backend/transpose.h \
                          ./backend/vector_categories.h \
-                         ./backend/type_traits.h \
                          ./backend/matrix_categories.h \
-                         ./backend/type_traits.h \
                          ./backend/execution_policy.h \
-                         ./backend/blas1_dispatch_shared.h \
-                         ./backend/blas1_array.h \
+                         ./backend/type_traits.h \
                          ./backend/type_traits_cusp.h \
-                         ./backend/cusp_precon_blas.h \
+                         ./backend/type_traits_std.h \
                          ./backend/type_traits_thrust.h \
 
 

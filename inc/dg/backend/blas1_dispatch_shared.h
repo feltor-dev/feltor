@@ -19,9 +19,9 @@
 #endif
 
 
+///@cond
 namespace dg
 {
-///@cond
 namespace blas1
 {
 namespace detail
@@ -85,7 +85,7 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containe
 
 } //namespace detail
 } //namespace blas1
-///@endcond
 } //namespace dg
+///@endcond
 
 #endif //_DG_BLAS_VECTOR_

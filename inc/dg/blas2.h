@@ -4,7 +4,7 @@
 #include "backend/blas2_dispatch_shared.h"
 #include "backend/blas2_cusp.h"
 #include "backend/blas2_sparseblockmat.h"
-#include "backend/blas2_selfmade.cuh"
+#include "backend/blas2_selfmade.h"
 #ifdef MPI_VERSION
 #include "backend/blas2_dispatch_mpi.h"
 #endif //MPI_VERSION
