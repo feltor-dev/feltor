@@ -31,8 +31,7 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Ve
             std::is_base_of<SharedVectorTag, get_data_layout<Vector1>>::value,
             std::is_base_of<SharedVectorTag, get_data_layout<Vector2>>::value>::value,
         "All container types must share the same data layout (SharedVectorTag in this case)!");
-    static_assert( all_true<
-        std::is_same<get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value,
+    static_assert( std::is_same<get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value &&
         std::is_same<get_execution_policy<Vector1>, get_execution_policy<Matrix> >::value,
         "All container types must share the same execution policy!");
 #ifdef DG_DEBUG
@@ -72,7 +71,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 }
 
 template< class Vector1, class Matrix, class Vector2>
-inline get_value_type<Vector> doDot( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag)
+inline get_value_type<Vector1> doDot( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag)
 {
     std::vector<int64_t> acc = doDot_superacc( x,m,y,SharedVectorTag(), get_data_layout<Vector1>());
     return exblas::cpu::Round(acc.data());

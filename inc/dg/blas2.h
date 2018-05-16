@@ -1,6 +1,9 @@
 #pragma once
 
 #include "backend/type_traits.h"
+#include "backend/type_traits_std.h"
+#include "backend/type_traits_thrust.h"
+#include "backend/type_traits_cusp.h"
 #include "backend/blas2_dispatch_shared.h"
 #include "backend/blas2_cusp.h"
 #include "backend/blas2_sparseblockmat.h"
@@ -78,7 +81,7 @@ inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType
                                 get_value_type<MatrixType>>::value,
                                 "Vector and Matrix types must have same value type");
     static_assert( std::is_same<get_data_layout<ContainerType1>,
-                                get_data_layout<ContainerType2>::value,
+                                get_data_layout<ContainerType2>>::value,
                                 "Vector types must have same data layout");
     return dg::blas2::detail::doDot( x, m, y,
             get_data_layout<MatrixType>());
@@ -125,7 +128,7 @@ inline void doSymv( get_value_type<ContainerType1> alpha,
                                 get_value_type<MatrixType>>::value,
                                 "Vector and Matrix types must have same value type");
     static_assert( std::is_same<get_data_layout<ContainerType1>,
-                                get_data_layout<ContainerType2>::value,
+                                get_data_layout<ContainerType2>>::value,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doSymv( alpha, M, x, beta, y,
             get_data_layout<MatrixType>(),
@@ -146,7 +149,7 @@ inline void doSymv( MatrixType& M,
                                 get_value_type<MatrixType>>::value,
                                 "Vector and Matrix types must have same value type");
     static_assert( std::is_same<get_data_layout<ContainerType1>,
-                                get_data_layout<ContainerType2>::value,
+                                get_data_layout<ContainerType2>>::value,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doSymv( M, x, y,
             get_data_layout<MatrixType>(),

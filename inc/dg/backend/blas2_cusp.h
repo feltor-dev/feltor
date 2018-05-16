@@ -17,11 +17,9 @@
 
 ///@cond
 namespace dg{
+namespace blas2{
+namespace detail{
 
-namespace blas2
-{
-namespace detail
-{
 template<class Matrix1, class Matrix2>
 inline void doTransfer( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixTag)
 {
@@ -34,8 +32,8 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixT
 #ifdef _OPENMP
 template< class Matrix, class value_type>
 inline void doSymv_dispatch( const Matrix& m,
-                    const value_type* RESTRICT x,
-                    value_type* RESTRICT y,
+                    const value_type* RESTRICT x_ptr,
+                    value_type* RESTRICT y_ptr,
                     CuspMatrixTag,
                     cusp::csr_format,
                     OmpTag)
@@ -62,8 +60,8 @@ inline void doSymv_dispatch( const Matrix& m,
 
 template< class Matrix, class T>
 inline void doSymv_dispatch( Matrix& m,
-                    const T* x,
-                    T*  y,
+                    const T* x_ptr,
+                    T*  y_ptr,
                     CuspMatrixTag,
                     cusp::sparse_format,
                     AnyPolicyTag)
@@ -80,12 +78,16 @@ inline void doSymv( Matrix& m,
                     CuspMatrixTag,
                     SharedVectorTag  )
 {
-    static_assert( std::is_base_of<SharedVectorTag, get_data_layout<Vector2>>::value>::value,
+    static_assert( std::is_base_of<SharedVectorTag, get_data_layout<Vector2>>::value,
         "All data layouts must derive from the same vector category (SharedVectorTag in this case)!");
-    static_assert( std::is_same< get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value);
+    static_assert( std::is_same< get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value, "Execution policies must be equal!");
     typedef typename Matrix::value_type value_type;
-    static_assert( std::is_same< get_value_type<Vector1>, value_type >::value);
-    static_assert( std::is_same< get_value_type<Vector2>, value_type >::value);
+    static_assert( std::is_same< get_value_type<Vector1>, value_type >::value,
+        "Value types must be equal"
+    );
+    static_assert( std::is_same< get_value_type<Vector2>, value_type >::value,
+        "Value types must be equal"
+    );
 
     const value_type* RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data());
     value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data());
@@ -95,8 +97,8 @@ inline void doSymv( Matrix& m,
 #endif //DG_DEBUG
     doSymv_dispatch( m,x_ptr,y_ptr,
             CuspMatrixTag(),
-            typename Matrix::format()
-            get_execution_policy<Vector1>);
+            typename Matrix::format(),
+            get_execution_policy<Vector1>());
 }
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( Matrix& m,
@@ -105,8 +107,7 @@ inline void doSymv( Matrix& m,
                     CuspMatrixTag,
                     VectorVectorTag  )
 {
-    static_assert( std::is_base_of<VectorVectorTag,
-        get_data_layout<Vector2>>::value>::value,
+    static_assert( std::is_base_of<VectorVectorTag, get_data_layout<Vector2>>::value,
         "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( m.num_rows == y.size() );

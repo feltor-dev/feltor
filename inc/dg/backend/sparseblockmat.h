@@ -61,10 +61,10 @@ struct EllSparseBlockMat
         n = src.n, left_size = src.left_size, right_size = src.right_size;
         right_range = src.right_range;
     }
-    int num_rows()const{
+    int total_num_rows()const{
         return num_rows*n*left_size*right_size;
     }
-    int num_cols()const{
+    int total_num_cols()const{
         return num_cols*n*left_size*right_size;
     }
 
@@ -166,10 +166,10 @@ struct CooSparseBlockMat
 
         num_entries++;
     }
-    int num_rows()const{
+    int total_num_rows()const{
         return num_rows*n*left_size*right_size;
     }
-    int num_cols()const{
+    int total_num_cols()const{
         return num_cols*n*left_size*right_size;
     }
 
@@ -230,7 +230,7 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, SerialTag, value_type 
 }
 
 template<class value_type>
-void CooSparseBlockMat<value_type>::symv( SharedVectorTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
+void CooSparseBlockMat<value_type>::symv( SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
 {
     if( beta!= 1 )
         std::cerr << "Beta != 1 yields wrong results in CooSparseBlockMat!!\n";

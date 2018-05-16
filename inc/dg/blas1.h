@@ -1,8 +1,9 @@
 #pragma once
 
-#include "thrust/host_vector.h"
-#include "thrust/device_vector.h"
 #include "backend/type_traits.h"
+#include "backend/type_traits_thrust.h"
+#include "backend/type_traits_cusp.h"
+#include "backend/type_traits_std.h"
 #include "backend/blas1_dispatch_shared.h"
 #include "backend/blas1_array.h"
 #include "backend/type_traits_cusp.h"

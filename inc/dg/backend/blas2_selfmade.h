@@ -1,13 +1,11 @@
 #ifndef _DG_BLAS_SELFMADE_
 #define _DG_BLAS_SELFMADE_
 #include "type_traits.h"
-#include "type_traits.h"
 //
 ///@cond
 namespace dg{
 namespace blas2{
 namespace detail{
-
 
 template<class Matrix1, class Matrix2>
 inline void doTransfer( const Matrix1& x, Matrix2& y, AnyMatrixTag, SelfMadeMatrixTag)

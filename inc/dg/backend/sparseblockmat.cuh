@@ -41,10 +41,10 @@ struct EllSparseBlockMatDevice
     * @param os the output stream
     */
     void display( std::ostream& os = std::cout) const;
-    int num_rows()const{
+    int total_num_rows()const{
         return num_rows*n*left_size*right_size;
     }
-    int num_cols()const{
+    int total_num_cols()const{
         return num_cols*n*left_size*right_size;
     }
 
@@ -57,9 +57,9 @@ struct EllSparseBlockMatDevice
     * @param beta premultiplies output
     * @param y output may not alias input
     */
-    void symv(SharedVectorTag, CudaTag, int size, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #ifdef _OPENMP
-    void symv(SharedVectorTag, OmpTag, int size, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #endif //_OPENMP
     private:
     using IVec = thrust::device_vector<int>;
@@ -106,10 +106,10 @@ struct CooSparseBlockMatDevice
     * @param os the output stream
     */
     void display(std::ostream& os = std::cout) const;
-    int num_rows()const{
+    int total_num_rows()const{
         return num_rows*n*left_size*right_size;
     }
-    int num_cols()const{
+    int total_num_cols()const{
         return num_cols*n*left_size*right_size;
     }
 
@@ -123,7 +123,7 @@ struct CooSparseBlockMatDevice
     */
     void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #ifdef _OPENMP
-    void symv(SharedVectorTag, OmpTag, int size, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #endif //_OPENMP
     using IVec = thrust::device_vector<int>;
 

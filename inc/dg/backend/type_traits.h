@@ -43,28 +43,6 @@ using get_pointer_type = typename std::conditional< std::is_const<Vector>::value
 ///@}
 
 ///@cond
-template<class Tag>
-struct ThrustTag { };
-template <>
-struct ThrustTag<SerialTag>
-{
-    using thrust_tag = thrust::cpp::tag;
-};
-#if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
-template <>
-struct ThrustTag<CudaTag>
-{
-    using thrust_tag = thrust::cuda::tag;
-};
-#else
-template <>
-struct ThrustTag<OmpTag>
-{
-    using thrust_tag = thrust::omp::tag;
-};
-#endif
-template<class Vector>
-using get_thrust_tag = typename ThrustTag<get_execution_policy<Vector>>::thrust_tag;
 
 //from stackoverflow implement Columbo's bool pack trick to check parameter packs
 template < bool...> struct bool_pack;

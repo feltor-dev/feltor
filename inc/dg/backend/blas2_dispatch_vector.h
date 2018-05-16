@@ -8,6 +8,17 @@ namespace dg
 {
 namespace blas2
 {
+//forward declare blas2 symv functions
+template< class MatrixType, class ContainerType1, class ContainerType2>
+void symv( MatrixType& M,
+                  const ContainerType1& x,
+                  ContainerType2& y);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+void symv( get_value_type<ContainerType1> alpha,
+                  MatrixType& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y);
 namespace detail
 {
 
@@ -40,7 +51,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     return acc[0];
 }
 template< class Vector1, class Matrix, class Vector2>
-inline get_value_type<Vector> doDot( const Vector1& x, const Matrix& m, const Vector2& y, VectorVectorTag)
+inline get_value_type<Vector1> doDot( const Vector1& x, const Matrix& m, const Vector2& y, VectorVectorTag)
 {
     std::vector<int64_t> acc = doDot_superacc( x,m,y,VectorVectorTag(), get_data_layout<Vector1>());
     return exblas::cpu::Round(acc.data());

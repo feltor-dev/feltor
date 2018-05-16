@@ -1,5 +1,5 @@
-#ifndef _DG_BLAS_SELFMADE_
-#define _DG_BLAS_SELFMADE_
+#ifndef _DG_BLAS_SPARSEBLOCKMAT_
+#define _DG_BLAS_SPARSEBLOCKMAT_
 #include "type_traits.h"
 #include "type_traits.h"
 #include "sparseblockmat.h"
@@ -31,11 +31,11 @@ inline void doSymv_dispatch(
 
     int size_x = x.size();
     int size_y = y.size();
-    if( size_x != m.num_cols()) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<m.num_cols());
+    if( size_x != m.total_num_cols()) {
+        throw Error( Message(_ping_)<<"x has the wrong size "<<x.size()<<" and not "<<m.total_num_cols());
     }
-    if( size_y != m.num_rows()) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<m.num_rows());
+    if( size_y != m.total_num_rows()) {
+        throw Error( Message(_ping_)<<"y has the wrong size "<<y.size()<<" and not "<<m.total_num_rows());
     }
     const value_type * x_ptr = thrust::raw_pointer_cast(x.data());
           value_type * y_ptr = thrust::raw_pointer_cast(y.data());
@@ -101,7 +101,7 @@ inline void doSymv(
               Vector2& y,
               SparseBlockMatrixTag)
 {
-    doSymv(alpha, x,beta,y
+    doSymv_dispatch(alpha, m, x, beta, y,
             SparseBlockMatrixTag(),
             get_data_layout<Vector1>(),
             get_execution_policy<Vector1>()
@@ -123,4 +123,4 @@ inline void doSymv(
 } //namespace dg
 ///@endcond
 //
-#endif//_DG_BLAS_SELFMADE_
+#endif//_DG_BLAS_SPARSEBLOCKMAT_
