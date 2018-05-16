@@ -301,7 +301,7 @@ void EllSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alp
 template<class value_type>
 void CooSparseBlockMatDevice<value_type>::launch_multiply_kernel( value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
 {
-#pragma omp parallel for
+#pragma omp for nowait
 	for (int skj = 0; skj < left_size*n*right_size; skj++)
 	{
 		int s = skj / (n*right_size);

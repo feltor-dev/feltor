@@ -27,20 +27,21 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixT
 {
     cusp::convert(x,y);
 }
-template< class Matrix, class Vector>
-inline void doSymv( Matrix& m,
-                    const Vector&x,
-                    Vector& y,
+
+//Dot not implemented for cusp (and not needed)
+
+
+#ifdef _OPENMP
+template< class Matrix, class value_type>
+inline void doSymv_dispatch( const Matrix& m,
+                    const value_type* RESTRICT x,
+                    value_type* RESTRICT y,
                     CuspMatrixTag,
-                    ThrustVectorTag,
-                    ThrustVectorTag, cusp::csr_format  )
+                    cusp::csr_format,
+                    OmpTag)
 {
-#if THRUST_DEVICE_SYSTEM!=THRUST_DEVICE_SYSTEM_CUDA
-    typedef typename Vector::value_type value_type;
     typedef typename Matrix::index_type index_type;
     const value_type* RESTRICT val_ptr = thrust::raw_pointer_cast( &m.values[0]);
-    const value_type* RESTRICT x_ptr = thrust::raw_pointer_cast( &x[0]);
-    value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( &y[0]);
     const index_type* RESTRICT row_ptr = thrust::raw_pointer_cast( &m.row_offsets[0]);
     const index_type* RESTRICT col_ptr = thrust::raw_pointer_cast( &m.column_indices[0]);
     int rows = m.num_rows;
@@ -56,63 +57,64 @@ inline void doSymv( Matrix& m,
 
         y_ptr[i] = temp;
     }
-#else
-    cusp::array1d_view< typename Vector::const_iterator> cx( x.cbegin(), x.cend());
-    cusp::array1d_view< typename Vector::iterator> cy( y.begin(), y.end());
-    cusp::multiply( m, cx, cy);
-#endif
 }
+#endif// _OPENMP
 
-template< class Matrix, class Vector>
-inline void doSymv( Matrix& m,
-                    const Vector&x,
-                    Vector& y,
+template< class Matrix, class T>
+inline void doSymv_dispatch( Matrix& m,
+                    const T* x,
+                    T*  y,
                     CuspMatrixTag,
-                    ThrustVectorTag,
-                    ThrustVectorTag,
-                    cusp::sparse_format  )
+                    cusp::sparse_format,
+                    AnyPolicyTag)
 {
-    cusp::array1d_view< typename Vector::const_iterator> cx( x.cbegin(), x.cend());
-    cusp::array1d_view< typename Vector::iterator> cy( y.begin(), y.end());
+    cusp::array1d_view< const T*> cx( x_ptr, x_ptr + m.num_cols);
+    cusp::array1d_view<       T*> cy( y_ptr, y_ptr + m.num_rows);
     cusp::multiply( m, cx, cy);
 }
 
-template< class Matrix, class Vector>
+template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( Matrix& m,
-                    const Vector&x,
-                    Vector& y,
+                    const Vector1&x,
+                    Vector2& y,
                     CuspMatrixTag,
-                    ThrustVectorTag,
-                    ThrustVectorTag  )
+                    SharedVectorTag  )
 {
+    static_assert( std::is_base_of<SharedVectorTag, get_data_layout<Vector2>>::value>::value,
+        "All data layouts must derive from the same vector category (SharedVectorTag in this case)!");
+    static_assert( std::is_same< get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value);
+    typedef typename Matrix::value_type value_type;
+    static_assert( std::is_same< get_value_type<Vector1>, value_type >::value);
+    static_assert( std::is_same< get_value_type<Vector2>, value_type >::value);
+
+    const value_type* RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data());
+    value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data());
 #ifdef DG_DEBUG
     assert( m.num_rows == y.size() );
     assert( m.num_cols == x.size() );
 #endif //DG_DEBUG
-    doSymv( m,x,y, CuspMatrixTag(), ThrustVectorTag(), ThrustVectorTag(), typename Matrix::format());
+    doSymv_dispatch( m,x_ptr,y_ptr,
+            CuspMatrixTag(),
+            typename Matrix::format()
+            get_execution_policy<Vector1>);
 }
-
-template< class Matrix, class Vector>
+template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( Matrix& m,
-                    const Vector&x,
-                    Vector& y,
+                    const Vector1&x,
+                    Vector2& y,
                     CuspMatrixTag,
-                    CuspVectorTag,
-                    CuspVectorTag  )
+                    VectorVectorTag  )
 {
+    static_assert( std::is_base_of<VectorVectorTag,
+        get_data_layout<Vector2>>::value>::value,
+        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( m.num_rows == y.size() );
     assert( m.num_cols == x.size() );
 #endif //DG_DEBUG
-    cusp::multiply( m, x, y);
-}
-
-template< class Matrix, class Vector>
-inline void doSymv( Matrix& m, Vector& x, Vector& y, CuspMatrixTag, MPIVectorTag, MPIVectorTag )
-{
-    typedef typename Vector::container_type container;
-    doSymv(m,x.data(),y.data(),CuspMatrixTag(),get_data_layout<container>(),
-                                             get_data_layout<container>());
+    using inner_container = typename std::decay<Vector1>::type::value_type;
+    for ( unsigned i=0; i<x.size(); i++)
+        doSymv( m, x[i], y[i], CuspMatrixTag(), get_data_layout<inner_container>());
 }
 
 } //namespace detail

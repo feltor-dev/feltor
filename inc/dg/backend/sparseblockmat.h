@@ -61,16 +61,14 @@ struct EllSparseBlockMat
         n = src.n, left_size = src.left_size, right_size = src.right_size;
         right_range = src.right_range;
     }
+    int num_rows()const{
+        return num_rows*n*left_size*right_size;
+    }
+    int num_cols()const{
+        return num_cols*n*left_size*right_size;
+    }
 
     using IVec = thrust::host_vector<int>;//!< typedef for easy programming
-    /**
-    * @brief Apply the matrix to a vector
-    *
-    * @param x input
-    * @param y output may not alias input
-    */
-    template<class Vector>
-    void symv(const Vector& x, Vector& y) const {symv( 1., x, 0., y);}
     /**
     * @brief Apply the matrix to a vector
     *
@@ -80,20 +78,7 @@ struct EllSparseBlockMat
     * @param beta premultiplies output
     * @param y output may not alias input
     */
-    template<class Vector>
-    void symv(value_type alpha, const Vector& x, value_type beta, Vector& y) const
-    {
-        symv( get_data_layout<Vector>(), alpha, x,beta,y);
-    }
-    private:
-    template<class Vector>
-    void symv(VectorVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
-    {
-        for(unsigned i=0; i<x.size(); i++)
-            symv( get_data_layout<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
-    }
-    template<class Vector>
-    void symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;
+    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
     public:
 
     /**
@@ -181,6 +166,12 @@ struct CooSparseBlockMat
 
         num_entries++;
     }
+    int num_rows()const{
+        return num_rows*n*left_size*right_size;
+    }
+    int num_cols()const{
+        return num_cols*n*left_size*right_size;
+    }
 
     typedef thrust::host_vector<int> IVec;//!< typedef for easy programming
     /**
@@ -192,20 +183,7 @@ struct CooSparseBlockMat
     * @param y output may not alias input
     * @attention beta == 1 (anything else is ignored)
     */
-    template<class Vector>
-    void symv(value_type alpha, const Vector& x, value_type beta, Vector& y) const
-    {
-        symv( get_data_layout<Vector>(), alpha, x,beta,y);
-    }
-    private:
-    template<class Vector>
-    void symv(VectorVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
-    {
-        for(unsigned i=0; i<x.size(); i++)
-            symv( get_data_layout<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
-    }
-    template<class Vector>
-    void symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;
+    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
     public:
     /**
     * @brief Display internal data to a stream
@@ -229,18 +207,8 @@ struct CooSparseBlockMat
 ///@cond
 
 template<class value_type>
-template<class Vector>
-void EllSparseBlockMat<value_type>::symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
+void EllSparseBlockMat<value_type>::symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
 {
-    static_assert( std::is_same<get_execution_policy<Vector>, SerialTag>::value, "SerialTag required");
-    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
-    }
-    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
-    }
-
-
     //simplest implementation (all optimization must respect the order of operations)
     for( int s=0; s<left_size; s++)
     for( int i=0; i<num_rows; i++)
@@ -262,16 +230,8 @@ void EllSparseBlockMat<value_type>::symv(SharedVectorTag, value_type alpha, cons
 }
 
 template<class value_type>
-template<class Vector>
-void CooSparseBlockMat<value_type>::symv( SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
+void CooSparseBlockMat<value_type>::symv( SharedVectorTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const
 {
-    static_assert( std::is_same<get_execution_policy<Vector>, SerialTag>::value, "SerialTag required!");
-    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
-    }
-    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
-    }
     if( beta!= 1 )
         std::cerr << "Beta != 1 yields wrong results in CooSparseBlockMat!!\n";
 

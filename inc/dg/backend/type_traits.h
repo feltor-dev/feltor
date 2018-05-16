@@ -4,6 +4,7 @@
 #include <vector>
 #include <type_traits>
 #include "vector_categories.h"
+#include "matrix_categories.h"
 #include "execution_policy.h"
 
 namespace dg{
@@ -11,7 +12,15 @@ namespace dg{
 ///@{
 /*! @brief The vector traits
 
-Specialize this struct if you want to enable your own vector/container class for the use in blas1 functions
+Specialize this struct if you want to enable your own vector/container class for the use in blas1 functions.
+The contained types are
+- <tt> value_type </tt> the elementary data type of the contained data
+- <tt> data_layout </tt> the layout of the data (derives from \c AnyMatrixTag)
+- <tt> execution_policy </tt> for \c SharedVectorTag the execution policy
+    (derives from \c AnyPolicyTag)
+    indicates the type of hardware memory is physically
+allocated on in a vector class and therefore indicates the
+possible parallelization and optimization strategies.
 \see vec_list
 @ingroup vec_list
 */

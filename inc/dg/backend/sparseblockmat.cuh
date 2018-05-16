@@ -41,17 +41,13 @@ struct EllSparseBlockMatDevice
     * @param os the output stream
     */
     void display( std::ostream& os = std::cout) const;
+    int num_rows()const{
+        return num_rows*n*left_size*right_size;
+    }
+    int num_cols()const{
+        return num_cols*n*left_size*right_size;
+    }
 
-    /**
-    * @brief Apply the matrix to a vector
-    *
-    * same as symv( 1., x,0.,y);
-    * @tparam Vector a valid Vector type
-    * @param x input
-    * @param y output may not equal input
-    */
-    template<class Vector>
-    void symv(const Vector& x, Vector& y) const {symv( 1., x, 0., y);}
     /**
     * @brief Apply the matrix to a vector
     * \f[  y= \alpha M x + \beta y\f]
@@ -61,39 +57,11 @@ struct EllSparseBlockMatDevice
     * @param beta premultiplies output
     * @param y output may not alias input
     */
-    template<class Vector>
-    void symv(value_type alpha, const Vector& x, value_type beta, Vector& y) const
-    {
-        symv( get_data_layout<Vector>(), get_execution_policy<Vector>(), alpha, x,beta,y);
-    }
-    private:
-    template<class Vector>
-    void symv(VectorVectorTag, CudaTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
-    {
-        for(unsigned i=0; i<x.size(); i++)
-            symv( get_data_layout<typename Vector::value_type>(), get_execution_policy<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
-    }
-    template<class Vector>
-    void symv(SharedVectorTag, CudaTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;
+    void symv(SharedVectorTag, CudaTag, int size, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #ifdef _OPENMP
-    template<class Vector>
-    void symv(VectorVectorTag, OmpTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
-    {
-        if( !omp_in_parallel())
-        {
-            #pragma omp parallel
-            {
-                for(unsigned i=0; i<x.size(); i++)
-                    symv( get_data_layout<typename Vector::value_type>(), OmpTag(), alpha, x[i], beta, y[i]);
-            }
-        }
-        else
-            for(unsigned i=0; i<x.size(); i++)
-                symv( get_data_layout<typename Vector::value_type>(), OmpTag(), alpha, x[i], beta, y[i]);
-    }
-    template<class Vector>
-    void symv(SharedVectorTag, OmpTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;
+    void symv(SharedVectorTag, OmpTag, int size, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 #endif //_OPENMP
+    private:
     using IVec = thrust::device_vector<int>;
     void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
 
@@ -138,6 +106,12 @@ struct CooSparseBlockMatDevice
     * @param os the output stream
     */
     void display(std::ostream& os = std::cout) const;
+    int num_rows()const{
+        return num_rows*n*left_size*right_size;
+    }
+    int num_cols()const{
+        return num_cols*n*left_size*right_size;
+    }
 
     /**
     * @brief Apply the matrix to a vector
@@ -147,20 +121,10 @@ struct CooSparseBlockMatDevice
     * @param beta premultiplies output
     * @param y output may not equal input
     */
-    template<class Vector>
-    void symv(value_type alpha, const Vector& x, value_type beta, Vector& y) const
-    {
-        symv( get_data_layout<Vector>(), alpha, x,beta,y);
-    }
-    private:
-    template<class Vector>
-    void symv(VectorVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
-    {
-        for(unsigned i=0; i<x.size(); i++)
-            symv( get_data_layout<typename Vector::value_type>(), get_execution_policy<typename Vector::value_type>(), alpha, x[i], beta, y[i]);
-    }
-    template<class Vector>
-    void symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const;
+    void symv(SharedVectorTag, CudaTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+#ifdef _OPENMP
+    void symv(SharedVectorTag, OmpTag, int size, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+#endif //_OPENMP
     using IVec = thrust::device_vector<int>;
 
     void launch_multiply_kernel(value_type alpha, const value_type* x, value_type beta, value_type* y) const;
@@ -173,62 +137,46 @@ struct CooSparseBlockMatDevice
 
 ///@cond
 template<class value_type>
-template<class Vector>
-inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, CudaTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
+inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, CudaTag,
+        value_type alpha, const value_type* x, value_type beta, value_type* y) const
 {
-    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
-    }
-    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
-    }
-    const value_type * x_ptr = thrust::raw_pointer_cast(x.data());
-          value_type * y_ptr = thrust::raw_pointer_cast(y.data());
-    launch_multiply_kernel( alpha, x_ptr, beta, y_ptr);
+    launch_multiply_kernel( alpha, x, beta, y);
+}
+template<class value_type>
+inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, CudaTag,
+        value_type alpha, const value_type* x, value_type beta, value_type* y) const
+{
+    launch_multiply_kernel( alpha, x, beta, y);
 }
 #ifdef _OPENMP
 template<class value_type>
-template<class Vector>
-inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
+inline void EllSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
 {
     if( !omp_in_parallel())
     {
-        if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
-            throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
-        }
-        if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
-            throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
-        }
         #pragma omp parallel
         {
-            const value_type * x_ptr = thrust::raw_pointer_cast(x.data());
-                  value_type * y_ptr = thrust::raw_pointer_cast(y.data());
-            launch_multiply_kernel(alpha, x_ptr, beta, y_ptr);
+            launch_multiply_kernel(alpha, x, beta, y);
         }
         return;
     }
-    const value_type * x_ptr = thrust::raw_pointer_cast(x.data());
-          value_type * y_ptr = thrust::raw_pointer_cast(y.data());
-    launch_multiply_kernel(alpha, x_ptr, beta, y_ptr);
+    launch_multiply_kernel(alpha, x, beta, y);
 }
-#endif //_OPENMP
 
 template<class value_type>
-template<class Vector>
-inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, value_type alpha, const Vector& x, value_type beta, Vector& y) const
+inline void CooSparseBlockMatDevice<value_type>::symv(SharedVectorTag, OmpTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const
 {
-    static_assert( std::is_same<get_execution_policy<Vector>, OmpTag>::value ||
-                   std::is_same<get_execution_policy<Vector>, CudaTag>::value, "Either OmpTag or CudTag required");
-    if( y.size() != (unsigned)num_rows*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"y has the wrong size "<<(unsigned)y.size()<<" and not "<<(unsigned)num_rows*n*left_size*right_size);
+    if( !omp_in_parallel())
+    {
+        #pragma omp parallel
+        {
+            launch_multiply_kernel(alpha, x, beta, y);
+        }
+        return;
     }
-    if( x.size() != (unsigned)num_cols*n*left_size*right_size) {
-        throw Error( Message(_ping_)<<"x has the wrong size "<<(unsigned)x.size()<<" and not "<<(unsigned)num_cols*n*left_size*right_size);
-    }
-    const value_type * x_ptr = thrust::raw_pointer_cast(x.data());
-          value_type * y_ptr = thrust::raw_pointer_cast(y.data());
-    launch_multiply_kernel( alpha, x_ptr, beta, y_ptr);
+    launch_multiply_kernel(alpha, x, beta, y);
 }
+#endif //_OPENMP
 
 template<class value_type>
 void EllSparseBlockMatDevice<value_type>::display( std::ostream& os) const

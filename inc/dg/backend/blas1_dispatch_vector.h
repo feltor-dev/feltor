@@ -94,10 +94,10 @@ inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containe
 {
     static_assert( all_true<std::is_base_of<VectorVectorTag,
         get_data_layout<Containers>>::value...>::value,
-        "All container types must derive from the same vector category (VectorVectorTag in this case)!");
+        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
     static_assert( all_true<std::is_same<get_execution_policy<container>,
         get_execution_policy<Containers> >::value...>::value,
-        "All container types must share the same execution policy!");
+        "All data layouts must share the same execution policy!");
 #ifdef DG_DEBUG
     //is this possible?
     //assert( !x.empty());

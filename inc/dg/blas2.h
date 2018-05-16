@@ -1,18 +1,14 @@
 #pragma once
 
-#include "backend/vector_traits.h"
-#include "backend/matrix_traits.h"
-#include "backend/cusp_precon_blas.h"
-#include "backend/matrix_traits_thrust.h"
-#include "backend/thrust_matrix_blas.cuh"
-#include "backend/cusp_matrix_blas.cuh"
+#include "backend/type_traits.h"
+#include "backend/blas2_dispatch_shared.cuh"
+#include "backend/blas2_cusp.h"
 #include "backend/sparseblockmat.cuh"
-#include "backend/selfmade_blas.cuh"
+#include "backend/blas2_selfmade.cuh"
 #ifdef MPI_VERSION
-#include "backend/mpi_matrix_blas.h"
-#include "backend/mpi_precon_blas.h"
+#include "backend/blas2_dispatch_mpi.h"
 #endif //MPI_VERSION
-#include "backend/std_matrix_blas.cuh"
+#include "backend/blas2_dispatch_vector.cuh"
 
 
 /*!@file
@@ -52,8 +48,7 @@ inline void transfer( const MatrixType& x, AnotherMatrixType& y)
  *
  * This routine computes the scalar product defined by the symmetric positive definite
  * matrix M \f[ x^T M y = \sum_{i,j=0}^{N-1} x_i M_{ij} y_j \f]
- * ( Note that if M is not diagonal it is generally more efficient to
- * precalculate \f$ My\f$ and then call the \c dg::blas1::dot() routine!
+ *
  * Our implementation guarantees binary reproducible results up to and excluding the last mantissa bit of the result.
  * Furthermore, the sum is computed with infinite precision and the result is then rounded
  * to the nearest double precision number. Although the products are not computed with
@@ -71,11 +66,22 @@ inline void transfer( const MatrixType& x, AnotherMatrixType& y)
  * @attention currently we only have an implementation for double precision numbers
  * @copydoc hide_code_evaluate2d
  */
-template< class ContainerType1, class DiagonalMatrixType, class ContainerType2>
-inline get_value_type<DiagonalMatrixType> dot( const ContainerType1& x, const DiagonalMatrixType& m, const ContainerType2& y)
+template< class ContainerType1, class MatrixType, class ContainerType2>
+inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
 {
+    static_assert( std::is_same<get_execution_policy<ContainerType1>,
+                                get_execution_policy<ContainerType2>>::value,
+                                "Vector types must have same execution policy");
+    static_assert( std::is_same<get_value_type<ContainerType1>,
+                                get_value_type<MatrixType>>::value &&
+                   std::is_same<get_value_type<ContainerType2>,
+                                get_value_type<MatrixType>>::value,
+                                "Vector and Matrix types must have same value type");
+    static_assert( std::is_same<get_data_layout<ContainerType1>,
+                                get_data_layout<ContainerType2>::value,
+                                "Vector types must have same data layout");
     return dg::blas2::detail::doDot( x, m, y,
-            get_data_layout<DiagonalMatrixType>());
+            get_data_layout<MatrixType>());
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
@@ -93,12 +99,40 @@ inline get_value_type<DiagonalMatrixType> dot( const ContainerType1& x, const Di
      which should be prefered because it looks more explicit
  * @attention currently we only have an implementation for double precision numbers
  */
-template< class DiagonalMatrixType, class ContainerType>
-inline get_value_type<DiagonalMatrixType> dot( const DiagonalMatrixType& m, const ContainerType& x)
+template< class MatrixType, class ContainerType>
+inline get_value_type<MatrixType> dot( const MatrixType& m, const ContainerType& x)
 {
     return dg::blas2::detail::doDot( m, x,
-            get_data_layout<DiagonalMatrixType>());
+            get_data_layout<MatrixType>());
 }
+///@cond
+namespace detail{
+//resolve tags in two stages: first the matrix and then the container type
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( get_value_type<ContainerType1> alpha,
+                  MatrixType& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y,
+                  AnyMatrixTag)
+{
+    dg::blas2::detail::doSymv( alpha, M, x, beta, y,
+            get_data_layout<MatrixType>(),
+            get_data_layout<ContainerType1>());
+}
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( MatrixType& M,
+                  const ContainerType1& x,
+                  ContainerType2& y,
+                  AnyMatrixTag)
+{
+    dg::blas2::detail::doSymv( M, x, y,
+            get_data_layout<MatrixType>(),
+            get_data_layout<ContainerType1>());
+}
+
+}//namespace detail
+///@endcond
 
 /*! @brief \f$ y = \alpha M x + \beta y\f$
  *
@@ -121,13 +155,22 @@ inline void symv( get_value_type<ContainerType1> alpha,
                   get_value_type<ContainerType1> beta,
                   ContainerType2& y)
 {
+    static_assert( std::is_same<get_execution_policy<ContainerType1>,
+                                get_execution_policy<ContainerType2>>::value,
+                                "Vector types must have same execution policy");
+    static_assert( std::is_same<get_value_type<ContainerType1>,
+                                get_value_type<MatrixType>>::value &&
+                   std::is_same<get_value_type<ContainerType2>,
+                                get_value_type<MatrixType>>::value,
+                                "Vector and Matrix types must have same value type");
+    static_assert( std::is_same<get_data_layout<ContainerType1>,
+                                get_data_layout<ContainerType2>::value,
+                                "Vector types must have same data layout");
     if(alpha == (get_value_type<ContainerType1>)0) {
         dg::blas1::scal( y, beta);
         return;
     }
-    dg::blas2::detail::doSymv( alpha, M, x, beta, y,
-            get_data_layout<MatrixType>());
-    return;
+    dg::blas2::detail::doSymv( alpha, M, x, beta, y, get_data_layout<MatrixType>());
 }
 
 
@@ -150,8 +193,18 @@ inline void symv( MatrixType& M,
                   const ContainerType1& x,
                   ContainerType2& y)
 {
+    static_assert( std::is_same<get_execution_policy<ContainerType1>,
+                                get_execution_policy<ContainerType2>>::value,
+                                "Vector types must have same execution policy");
+    static_assert( std::is_same<get_value_type<ContainerType1>,
+                                get_value_type<MatrixType>>::value &&
+                   std::is_same<get_value_type<ContainerType2>,
+                                get_value_type<MatrixType>>::value,
+                                "Vector and Matrix types must have same value type");
+    static_assert( std::is_same<get_data_layout<ContainerType1>,
+                                get_data_layout<ContainerType2>::value,
+                                "Vector types must have same data layout");
     dg::blas2::detail::doSymv( M, x, y, get_data_layout<MatrixType>());
-    return;
 }
 /*! @brief \f$ y = \alpha M x + \beta y \f$;
  * (alias for symv)

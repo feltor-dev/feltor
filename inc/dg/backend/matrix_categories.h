@@ -20,7 +20,7 @@ These members are then implemented freely, in particular other \c blas1 and \c b
  */
 struct SelfMadeMatrixTag: public AnyMatrixTag {};
 
-/// One of cusp's matrices
+/// One of cusp's matrices, for these only the \c blas2 transfer and the symv( m,x,y) are implemented
 struct CuspMatrixTag: public AnyMatrixTag {};
 /// indicate one of our mpi matrices
 struct MPIMatrixTag: public AnyMatrixTag {};
