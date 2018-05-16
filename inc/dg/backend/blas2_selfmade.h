@@ -1,7 +1,7 @@
 #ifndef _DG_BLAS_SELFMADE_
 #define _DG_BLAS_SELFMADE_
-#include "vector_traits.h"
-#include "matrix_traits.h"
+#include "type_traits.h"
+#include "type_traits.h"
 //
 ///@cond
 namespace dg{

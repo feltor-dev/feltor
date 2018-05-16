@@ -9,7 +9,7 @@
 #include <array>
 #include "blas1_dispatch_shared.h"
 #include "vector_categories.h"
-#include "vector_traits.h"
+#include "type_traits.h"
 #ifdef _OPENMP
 #include <omp.h>
 #endif //_OPENMP

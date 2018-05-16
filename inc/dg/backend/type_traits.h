@@ -42,26 +42,6 @@ template<class Vector>
 using get_pointer_type = typename std::conditional< std::is_const<Vector>::value, const get_value_type<Vector>*, get_value_type<Vector>* >::type;
 ///@}
 
-///@addtogroup vec_list
-///@{
-template<class T>
-struct TypeTraits<std::vector<T>,
-    typename std::enable_if< std::is_arithmetic<T>::value>::type>
-{
-    using value_type        = T;
-    using data_layout   = ThrustVectorTag;
-    using execution_policy  = OmpTag;
-};
-template<class T>
-struct TypeTraits<std::vector<T>,
-    typename std::enable_if< !std::is_arithmetic<T>::value>::type>
-{
-    using value_type        = get_value_type<T>;
-    using data_layout   = VectorVectorTag;
-    using execution_policy  = get_execution_policy<T>;
-};
-///@}
-
 ///@cond
 template<class Tag>
 struct ThrustTag { };

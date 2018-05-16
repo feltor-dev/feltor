@@ -1,14 +1,14 @@
 #pragma once
 
 #include "backend/type_traits.h"
-#include "backend/blas2_dispatch_shared.cuh"
+#include "backend/blas2_dispatch_shared.h"
 #include "backend/blas2_cusp.h"
-#include "backend/sparseblockmat.cuh"
+#include "backend/blas2_sparseblockmat.h"
 #include "backend/blas2_selfmade.cuh"
 #ifdef MPI_VERSION
 #include "backend/blas2_dispatch_mpi.h"
 #endif //MPI_VERSION
-#include "backend/blas2_dispatch_vector.cuh"
+#include "backend/blas2_dispatch_vector.h"
 
 
 /*!@file

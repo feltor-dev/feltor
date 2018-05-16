@@ -4,8 +4,8 @@
 #include <thrust/host_vector.h>
 #include "exblas/config.h"
 #include "exceptions.h"
-#include "vector_traits.h"
-#include "matrix_traits.h"
+#include "type_traits.h"
+#include "type_traits.h"
 
 namespace dg
 {

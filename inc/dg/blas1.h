@@ -2,10 +2,10 @@
 
 #include "thrust/host_vector.h"
 #include "thrust/device_vector.h"
-#include "backend/vector_traits.h"
+#include "backend/type_traits.h"
 #include "backend/blas1_dispatch_shared.h"
 #include "backend/blas1_array.h"
-#include "backend/vector_traits_cusp.h"
+#include "backend/type_traits_cusp.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
 #include "backend/blas1_dispatch_mpi.h"
@@ -122,8 +122,8 @@ template< class ContainerType1, class ContainerType2>
 inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
 {
     static_assert( all_true<
-            std::is_base_of<AnyVectorTag, get_data_layout<ContainerType>>::value,
-            std::is_base_of<AnyVectorTag, get_data_layout<ContainerType>>::value >::value,
+            std::is_base_of<AnyVectorTag, get_data_layout<ContainerType1>>::value,
+            std::is_base_of<AnyVectorTag, get_data_layout<ContainerType2>>::value >::value,
         "All container types must have a vector data layout (AnyVectorTag)!");
     return dg::blas1::detail::doDot( x, y, get_data_layout<ContainerType1>() );
 }

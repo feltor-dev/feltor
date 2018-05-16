@@ -2,6 +2,11 @@
 
 #include <cassert>
 #include <cusp/array1d.h>
+#include <cusp/coo_matrix.h>
+#include <cusp/csr_matrix.h>
+#include <cusp/dia_matrix.h>
+#include <cusp/ell_matrix.h>
+#include <cusp/hyb_matrix.h>
 
 #include "vector_categories.h"
 #include "matrix_categories.h"
@@ -39,37 +44,31 @@ struct TypeTraits<cusp::array1d<T,cusp::device_memory>,
 template< class I, class V, class M>
 struct TypeTraits< cusp::coo_matrix<I,V,M> >
 {
-    using value_type = T;
+    using value_type = V;
     using data_layout = CuspMatrixTag;
 };
 template< class I, class V, class M>
 struct TypeTraits< cusp::csr_matrix<I,V,M> >
 {
-    using value_type = T;
+    using value_type = V;
     using data_layout = CuspMatrixTag;
 };
 template< class I, class V, class M>
 struct TypeTraits< cusp::dia_matrix<I,V,M> >
 {
-    using value_type = T;
+    using value_type = V;
     using data_layout = CuspMatrixTag;
 };
 template< class I, class V, class M>
 struct TypeTraits< cusp::ell_matrix<I,V,M> >
 {
-    using value_type = T;
+    using value_type = V;
     using data_layout = CuspMatrixTag;
 };
 template< class I, class V, class M>
 struct TypeTraits< cusp::hyb_matrix<I,V,M> >
 {
-    using value_type = T;
-    using data_layout = CuspMatrixTag;
-};
-template< class I, class M>
-struct TypeTraits< cusp::permuatation_matrix<I,M> >
-{
-    using value_type = T;
+    using value_type = V;
     using data_layout = CuspMatrixTag;
 };
 

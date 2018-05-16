@@ -10,37 +10,11 @@
 #include "exblas/exdot_serial.h"
 #include "config.h"
 #include "vector_categories.h"
-#include "vector_traits.h"
-
-namespace dg
-{
-///@addtogroup vec_list
-///@{
-/**
- * @brief There is a special implementation of blas1 functions for a \c std::array different from the one indicated by SerialTag
- *
- * @tparam T arithmetic value type
- * @tparam N size of the array
- */
-template<class T, std::size_t N>
-struct TypeTraits<std::array<T, N>,
-    typename std::enable_if< std::is_arithmetic<T>::value>::type>
-{
-    using value_type        = T;
-    using data_layout   = StdArrayTag;
-    using execution_policy  = SerialTag;
-};
-template<class T, std::size_t N>
-struct TypeTraits<std::array<T, N>,
-    typename std::enable_if< !std::is_arithmetic<T>::value>::type>
-{
-    using value_type        = get_value_type<T>;
-    using data_layout   = ArrayVectorTag;
-    using execution_policy  = get_execution_policy<T>;
-};
-///@}
+#include "type_traits.h"
 
 ///@cond
+namespace dg
+{
 namespace blas1
 {
 namespace detail
@@ -68,9 +42,8 @@ inline void doSubroutine( StdArrayTag, Subroutine f, std::array<T,N>&& x, std::a
 }
 
 } //namespace detail
-
 } //namespace blas1
-///@endcond
 } //namespace dg
+///@endcond
 
 #endif //_DG_BLAS_ARRAY_
