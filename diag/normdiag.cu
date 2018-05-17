@@ -5,7 +5,6 @@
 #include <string>
 #include <cmath>
 #include <complex>
-// #include "spectral/drt_drt.h"
 
 #include "dg/algorithm.h"
 #include "dg/poisson.h"
