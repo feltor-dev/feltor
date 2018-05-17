@@ -10,7 +10,7 @@ namespace toroidal{
 ///@{
 /**
  * @brief constant \f$\psi_p = 1\f$
- * @return 
+ * @return
  */
 BinaryFunctorsLvl2 createPsip( )
 {
@@ -19,7 +19,7 @@ BinaryFunctorsLvl2 createPsip( )
 }
 /**
  * @brief constant \f$ I = 1\f$
- * @return 
+ * @return
  */
 BinaryFunctorsLvl1 createIpol( )
 {
@@ -28,7 +28,7 @@ BinaryFunctorsLvl1 createIpol( )
 }
 
 /**
- * @brief Models a slab toroidal field 
+ * @brief Models a slab toroidal field
  *
  * \f$ B=\frac{R_0}{R}\f$, \f$ \psi_p = 1\f$ and \f$ I = 1\f$.
  @note The solovev field can also be made to model a todoidal slab field
@@ -56,7 +56,7 @@ struct Psip : public aCloneableBinaryFunctor<Psip>
     Psip( double R0): m_R0(R0) { }
   private:
     double do_compute(double R, double Z) const
-    {    
+    {
         return 0.5*((R-m_R0)*(R-m_R0) + Z*Z);
     }
     double m_R0;
@@ -70,24 +70,24 @@ struct PsipR : public aCloneableBinaryFunctor<PsipR>
     PsipR( double R0): m_R0(R0) { }
   private:
     double do_compute(double R, double Z) const
-    {    
+    {
         return R-m_R0;
     }
     double m_R0;
 };
 ///@brief \f[ Z \f]
 struct PsipZ : public aCloneableBinaryFunctor<PsipZ>
-{ 
+{
   private:
     double do_compute(double R, double Z) const
-    {    
+    {
         return Z;
     }
 };
 
 /**
  * @brief circular \f$\psi_p = \frac{1}{2}\left((R-R_0)^2 + Z^2 \right)\f$
- * @return 
+ * @return
  */
 BinaryFunctorsLvl2 createPsip( double R0 )
 {
@@ -96,7 +96,7 @@ BinaryFunctorsLvl2 createPsip( double R0 )
 }
 /**
  * @brief constant \f$ I = I_0\f$
- * @return 
+ * @return
  */
 BinaryFunctorsLvl1 createIpol( double I0 )
 {

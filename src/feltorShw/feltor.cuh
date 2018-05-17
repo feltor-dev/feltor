@@ -1,13 +1,8 @@
 #pragma once
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
 #include "parameters.h"
-#include "dg/average.h"
 
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif //DG_BENCHMARK
 /*!@file
 
   Contains the solvers 
@@ -35,7 +30,7 @@ struct Implicit
         LaplacianM_perp_phi ( g,p.bc_x_phi,g.bcy(), dg::normed, dg::centered)
     {
     }
-    void operator()(const std::vector<container>& x, std::vector<container>& y)
+    void operator()(double t, const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - (bgamp+profamp)
            x[1] := N_i - (bgamp+profamp)
@@ -81,7 +76,7 @@ struct Explicit
     const std::vector<container>& potential( ) const { return phi;}
     void initializene(const container& y, container& target);
 
-    void operator()(const std::vector<container>& y, std::vector<container>& yp);
+    void operator()(double t, const std::vector<container>& y, std::vector<container>& yp);
 
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
@@ -122,7 +117,7 @@ struct Explicit
     dg::Extrapolation<container> old_phi, old_psi, old_gammaN;
 
     
-    dg::PoloidalAverage<container, container > polavg; //device int vectors would be better for cuda
+    dg::Average<container > polavg; //device int vectors would be better for cuda
 
     const eule::Parameters p;
 
@@ -149,7 +144,7 @@ Explicit<Grid, Matrix, container>::Explicit( const Grid& g, eule::Parameters p):
     invert_invgamma(   omega, p.Nx*p.Ny*p.n*p.n, p.eps_gamma),
     multigrid( g, 3),
     old_phi( 2, chi), old_psi( 2, chi), old_gammaN( 2, chi),
-    polavg(g),
+    polavg(g,dg::coo2d::y),
     p(p),
     evec(3)
 {
@@ -357,7 +352,7 @@ void Explicit<Grid, Matrix, container>::initializene(const container& src, conta
 }
 
 template<class Grid, class Matrix, class container>
-void Explicit<Grid, Matrix, container>::operator()(const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<Grid, Matrix, container>::operator()(double ttt, const std::vector<container>& y, std::vector<container>& yp)
 {
 
     dg::Timer t;

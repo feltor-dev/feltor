@@ -38,7 +38,7 @@
     "source_damping_width" : 0.5,  
     "prof_sink_rate" : 0.001 , 
     "sink_b" : 0.9,   
-    "damping_width" : 0.5  
+    "damping_width" : 0.5, 
     "fluxmode" : 0    
 }
 

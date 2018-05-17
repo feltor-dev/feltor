@@ -15,14 +15,14 @@
 
 
 const double eps = 1e-2;
-const double alpha = -0.5; 
+const double alpha = -0.5;
 double lhs( double x, double y){ return sin(x)*sin(y);}
 double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
 //double rhs( double x, double y){ return lhs(x,y);}
 int main()
 {
-    
-    unsigned n, Nx, Ny; 
+
+    unsigned n, Nx, Ny;
     std::cout << "Type n, Nx and Ny\n";
     std::cin >> n>> Nx >> Ny;
     dg::Grid2d grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);

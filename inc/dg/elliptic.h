@@ -3,15 +3,15 @@
 #include "blas.h"
 #include "enums.h"
 #include "backend/memory.h"
-#include "backend/evaluation.cuh"
-#include "backend/derivatives.h"
+#include "geometry/evaluation.cuh"
+#include "geometry/derivatives.h"
 #ifdef MPI_VERSION
-#include "backend/mpi_derivatives.h"
-#include "backend/mpi_evaluation.h"
+#include "geometry/mpi_derivatives.h"
+#include "geometry/mpi_evaluation.h"
 #endif
 #include "geometry/geometry.h"
 
-/*! @file 
+/*! @file
 
   @brief General negative elliptic operators
   */
@@ -24,39 +24,39 @@ namespace dg
  * @ingroup matrixoperators
  *
  * The term discretized is \f[ -\nabla \cdot ( \chi \nabla_\perp ) \f]
- * where \f$ \nabla_\perp \f$ is the perpendicular gradient and \f$\chi\f$ is a spatially dependent function. 
- * In general coordinates that means 
- * \f[ -\frac{1}{\sqrt{g}}\left( 
- * \partial_x\left(\sqrt{g}\chi \left(g^{xx}\partial_x + g^{xy}\partial_y \right)\right) 
+ * where \f$ \nabla_\perp \f$ is the perpendicular gradient and \f$\chi\f$ is a spatially dependent function.
+ * In general coordinates that means
+ * \f[ -\frac{1}{\sqrt{g}}\left(
+ * \partial_x\left(\sqrt{g}\chi \left(g^{xx}\partial_x + g^{xy}\partial_y \right)\right)
  + \partial_y\left(\sqrt{g}\chi \left(g^{yx}\partial_x + g^{yy}\partial_y \right)\right) \right)\f]
  is discretized. Note that the local discontinuous Galerkin discretization adds so-called
- jump terms 
+ jump terms
  \f[ D^\dagger \chi D + \alpha J \f]
- where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix. 
+ where \f$\alpha\f$  is a scale factor ( = jfactor), \f$ D \f$ contains the discretizations of the above derivatives, and \f$ J\f$ is a self-adjoint matrix.
  (The symmetric part of \f$J\f$ is added @b before the volume element is divided). The adjoint of a matrix is defined with respect to the volume element including dG weights.
  Usually the default \f$ \alpha=1 \f$ is a good choice.
  However, in some cases, e.g. when \f$ \chi \f$ exhibits very large variations
- \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values. 
- In a time dependent problem the value of \f$\alpha\f$ determines the 
- numerical diffusion, i.e. for too low values numerical oscillations may appear. 
+ \f$ \alpha=0.1\f$ or \f$ \alpha=0.01\f$ might be better values.
+ In a time dependent problem the value of \f$\alpha\f$ determines the
+ numerical diffusion, i.e. for too low values numerical oscillations may appear.
  Also note that a forward discretization has more diffusion than a centered discretization.
  The following code snippet demonstrates the use of \c Elliptic in a multigrid algorithm:
  * @snippet elliptic2d_b.cu multigrid
  * @copydoc hide_geometry_matrix_container
- * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
- * and thus in a conjugate gradient solver. 
+ * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions
+ * and thus in a conjugate gradient solver.
  * @note The constructors initialize \f$ \chi=1\f$ so that a negative laplacian operator
  * results
  * @note The inverse of \f$ \chi\f$ makes a good general purpose preconditioner
  * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
- * @attention Pay attention to the negative sign 
- * 
+ * @attention Pay attention to the negative sign
+ *
  */
 template <class Geometry, class Matrix, class container>
 class Elliptic
 {
     public:
-    ///@brief empty object ( no memory allocation)
+    ///@brief empty object ( no memory allocation, call \c construct before using the object)
     Elliptic(){}
     /**
      * @brief Construct from Grid
@@ -69,13 +69,13 @@ class Elliptic
      * @note chi is assumed 1 per default
      */
     Elliptic( const Geometry& g, norm no = not_normed, direction dir = forward, double jfactor=1.)
-    { 
+    {
         construct( g, g.bcx(), g.bcy(), no, dir, jfactor);
     }
 
     ///@copydoc Elliptic::construct()
     Elliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.)
-    { 
+    {
         construct( g, bcx, bcy, no, dir, jfactor);
     }
 
@@ -100,7 +100,7 @@ class Elliptic
 
         dg::blas1::transfer( dg::create::inv_volume(g),    inv_weights_);
         dg::blas1::transfer( dg::create::volume(g),        weights_);
-        dg::blas1::transfer( dg::create::inv_weights(g),   precond_); 
+        dg::blas1::transfer( dg::create::inv_weights(g),   precond_);
         tempx = tempy = gradx = inv_weights_;
         chi_=g.metric();
         vol_=dg::tensor::volume(chi_);
@@ -114,13 +114,13 @@ class Elliptic
     }
 
     /**
-     * @brief Change Chi 
+     * @brief Change Chi
      *
      * @param chi The new chi (all elements must be >0)
      */
     void set_chi( const container& chi)
     {
-        if( !chi_old_.isSet()) 
+        if( !chi_old_.isSet())
         {
             dg::tensor::scal( chi_, chi);
             dg::blas1::pointwiseDivide( precond_, chi, precond_);
@@ -134,25 +134,25 @@ class Elliptic
     }
 
     /**
-     * @brief Return the vector missing in the un-normed symmetric matrix 
+     * @brief Return the vector missing in the un-normed symmetric matrix
      *
      * i.e. the inverse of the weights() function
-     * @return inverse volume form including inverse weights 
+     * @return inverse volume form including inverse weights
      */
     const container& inv_weights()const {return inv_weights_;}
     /**
      * @brief Return the vector making the matrix symmetric
      *
-     * i.e. the volume form 
-     * @return volume form including weights 
+     * i.e. the volume form
+     * @return volume form including weights
      */
     const container& weights()const {return weights_;}
     /**
      * @brief Return the default preconditioner to use in conjugate gradient
      *
-     * Currently returns the inverse weights without volume elment divided by the current \f$ \chi\f$. 
+     * Currently returns the inverse weights without volume elment divided by the current \f$ \chi\f$.
      * This is especially good when \f$ \chi\f$ exhibits large amplitudes or variations
-     * @return the inverse of \f$\chi\f$.       
+     * @return the inverse of \f$\chi\f$.
      */
     const container& precond()const {return precond_;}
     /**
@@ -173,20 +173,23 @@ class Elliptic
      *
      * @param x left-hand-side
      * @param y result
-     * @note Requires 24 memops if geometry is curvilinear; 20 memops if geometry is orthogonal or chi is set; 16 memops if geometry is Cartesian and chi is not set;
+     * @note memops required:
+            - 23 reads + 9 writes if geometry is curvilinear;
+            - 19 reads + 9 writes if geometry is orthogonal and/or chi is set;
+            - 16 reads + 8 writes if geometry is Cartesian and chi is not set;
      */
-    void symv( const container& x, container& y) 
+    void symv( const container& x, container& y)
     {
         //compute gradient
-        dg::blas2::gemv( rightx, x, tempx); //R_x*f 
+        dg::blas2::gemv( rightx, x, tempx); //R_x*f
         dg::blas2::gemv( righty, x, tempy); //R_y*f
 
         //multiply with tensor (note the alias)
         dg::tensor::multiply2d(chi_, tempx, tempy, gradx, tempy);
 
         //now take divergence
-        dg::blas2::symv( lefty, tempy, y);  
-        dg::blas2::symv( -1., leftx, gradx, -1., y);  
+        dg::blas2::symv( lefty, tempy, y);
+        dg::blas2::symv( -1., leftx, gradx, -1., y);
 
         //add jump terms
         dg::blas2::symv( jfactor_, jumpX, x, 1., y);
@@ -213,7 +216,7 @@ class Elliptic
         return centered;
     }
     Matrix leftx, lefty, rightx, righty, jumpX, jumpY;
-    container weights_, inv_weights_, precond_, weights_wo_vol; 
+    container weights_, inv_weights_, precond_, weights_wo_vol;
     container tempx, tempy, gradx;
     norm no_;
     SparseTensor<container> chi_;
@@ -227,23 +230,23 @@ class Elliptic
  *
  * @ingroup matrixoperators
  *
- * The term discretized is 
+ * The term discretized is
  * \f[ -\nabla \cdot ( \mathbf b  \mathbf b \cdot \nabla ) \f]
-  In general that means 
- * \f[ 
+  In general that means
+ * \f[
  * \begin{align}
  * v = b^x \partial_x f + b^y\partial_y f + b^z \partial_z f \\
  * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} b^x v ) + \partial_y(\sqrt{g}b^y v) + \partial_z(\sqrt{g} b^z v)\right)
  *  \end{align}
- *  \f] 
- * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
+ *  \f]
+ * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ .
  * @copydoc hide_geometry_matrix_container
- * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
- * and thus in a conjugate gradient solver. 
- * @note The constructors initialize \f$ b^x = b^y = b^z=1\f$ 
- * @attention Pay attention to the negative sign 
+ * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions
+ * and thus in a conjugate gradient solver.
+ * @note The constructors initialize \f$ b^x = b^y = b^z=1\f$
+ * @attention Pay attention to the negative sign
  */
-template< class Geometry, class Matrix, class container> 
+template< class Geometry, class Matrix, class container>
 struct GeneralElliptic
 {
     /**
@@ -253,7 +256,7 @@ struct GeneralElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralElliptic( const Geometry& g, norm no = not_normed, direction dir = forward): 
+    GeneralElliptic( const Geometry& g, norm no = not_normed, direction dir = forward):
         leftx ( dg::create::dx( g, inverse( g.bcx()), inverse(dir))),
         lefty ( dg::create::dy( g, inverse( g.bcy()), inverse(dir))),
         leftz ( dg::create::dz( g, inverse( g.bcz()), inverse(dir))),
@@ -262,17 +265,17 @@ struct GeneralElliptic
         rightz( dg::create::dz( g, g.bcz(), dir)),
         jumpX ( dg::create::jumpX( g, g.bcx())),
         jumpY ( dg::create::jumpY( g, g.bcy())),
-        weights_(dg::create::volume(g)), inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
-        xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
+        weights_(dg::create::volume(g)), inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)),
+        xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi),
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0),
         no_(no)
-    { 
+    {
         vol_=dg::tensor::determinant(g.metric());
         dg::tensor::invert(vol_);
         dg::tensor::sqrt(vol_); //now we have volume element
     }
     /**
-     * @brief Construct from Grid and bc 
+     * @brief Construct from Grid and bc
      *
      * @param g The Grid
      * @param bcx boundary condition in x
@@ -281,7 +284,7 @@ struct GeneralElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralElliptic( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward): 
+    GeneralElliptic( const Geometry& g, bc bcx, bc bcy, bc bcz, norm no = not_normed, direction dir = forward):
         leftx ( dg::create::dx( g, inverse( bcx), inverse(dir))),
         lefty ( dg::create::dy( g, inverse( bcy), inverse(dir))),
         leftz ( dg::create::dz( g, inverse( bcz), inverse(dir))),
@@ -290,11 +293,11 @@ struct GeneralElliptic
         rightz( dg::create::dz( g, bcz, dir)),
         jumpX ( dg::create::jumpX( g, bcx)),
         jumpY ( dg::create::jumpY( g, bcy)),
-        weights_(dg::create::volume(g)), inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)), 
-        xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi), 
+        weights_(dg::create::volume(g)), inv_weights_(dg::create::inv_volume(g)), precond_(dg::create::inv_weights(g)),
+        xchi( dg::evaluate( one, g) ), ychi( xchi), zchi( xchi),
         xx(xchi), yy(xx), zz(xx), temp0( xx), temp1(temp0),
         no_(no)
-    { 
+    {
         vol_=dg::tensor::determinant(g.metric());
         dg::tensor::invert(vol_);
         dg::tensor::sqrt(vol_); //now we have volume element
@@ -352,9 +355,9 @@ struct GeneralElliptic
     const container& precond()const {return precond_;}
 
     ///@copydoc Elliptic::symv()
-    void symv( const container& x, container& y) 
+    void symv( const container& x, container& y)
     {
-        dg::blas2::gemv( rightx, x, temp0); //R_x*x 
+        dg::blas2::gemv( rightx, x, temp0); //R_x*x
         dg::blas1::pointwiseDot( 1., xchi, temp0, 0., xx);//Chi_x*R_x*x
 
         dg::blas2::gemv( righty, x, temp0);//R_y*x
@@ -365,19 +368,19 @@ struct GeneralElliptic
 
         dg::tensor::pointwiseDot( vol_, xx, temp0);
 
-        dg::blas1::pointwiseDot( xchi, temp0, temp1); 
-        dg::blas2::gemv( -1., leftx, temp1, 0., y); 
+        dg::blas1::pointwiseDot( xchi, temp0, temp1);
+        dg::blas2::gemv( -1., leftx, temp1, 0., y);
 
         dg::blas1::pointwiseDot( ychi, temp0, temp1);
         dg::blas2::gemv( -1., lefty, temp1, 1., y);
 
-        dg::blas1::pointwiseDot( zchi, temp0, temp1); 
-        dg::blas2::gemv( -1., leftz, temp1, 1., y); 
+        dg::blas1::pointwiseDot( zchi, temp0, temp1);
+        dg::blas2::gemv( -1., leftz, temp1, 1., y);
 
         dg::blas2::symv( +1., jumpX, x, 1., y);
         dg::blas2::symv( +1., jumpY, x, 1., y);
         dg::tensor::pointwiseDivide( y, vol_, y);
-        if( no_==not_normed)//multiply weights 
+        if( no_==not_normed)//multiply weights
         {
             dg::blas1::pointwiseDot( y, weights_, y);
         }
@@ -405,28 +408,28 @@ struct GeneralElliptic
 };
 
 /**
- * @brief %Operator that acts as a 3d negative elliptic differential operator. Is the symmetric of the GeneralElliptic with 
+ * @brief %Operator that acts as a 3d negative elliptic differential operator. Is the symmetric of the GeneralElliptic with
  * 0.5(D_+ + D_-) or vice versa
  *
  * @ingroup matrixoperators
  *
- * The term discretized is 
+ * The term discretized is
  * \f[ -\nabla \cdot ( \mathbf b  \mathbf b \cdot \nabla ) \f]
-  In general that means 
- * \f[ 
+  In general that means
+ * \f[
  * \begin{align}
  * v = b^x \partial_x f + b^y\partial_y f + b^z \partial_z f \\
  * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} b^x v ) + \partial_y(\sqrt{g}b^y v) + \partial_z(\sqrt{g} b^z v)\right)
  *  \end{align}
- *  \f] 
- * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ . 
+ *  \f]
+ * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ .
  * @copydoc hide_geometry_matrix_container
- * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
- * and thus in a conjugate gradient solver. 
- * @note The constructors initialize \f$ \chi_x = \chi_y = \chi_z=1\f$ 
- * @attention Pay attention to the negative sign 
+ * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions
+ * and thus in a conjugate gradient solver.
+ * @note The constructors initialize \f$ \chi_x = \chi_y = \chi_z=1\f$
+ * @attention Pay attention to the negative sign
  */
-template<class Geometry, class Matrix, class container> 
+template<class Geometry, class Matrix, class container>
 struct GeneralEllipticSym
 {
     /**
@@ -436,7 +439,7 @@ struct GeneralEllipticSym
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralEllipticSym( const Geometry& g, norm no = not_normed, direction dir = forward): 
+    GeneralEllipticSym( const Geometry& g, norm no = not_normed, direction dir = forward):
         ellipticForward_( g, no, dir), ellipticBackward_(g,no,inverse(dir)),
         temp_( dg::evaluate( one, g) )
     { }
@@ -451,10 +454,10 @@ struct GeneralEllipticSym
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralEllipticSym( const Geometry& g, bc bcx, bc bcy,bc bcz, norm no = not_normed, direction dir = forward): 
+    GeneralEllipticSym( const Geometry& g, bc bcx, bc bcy,bc bcz, norm no = not_normed, direction dir = forward):
         ellipticForward_( g, bcx, bcy, no, dir), ellipticBackward_(g,bcx,bcy,no,inverse(dir)),
         temp_( dg::evaluate( one, g) )
-    { 
+    {
     }
     /**
      * @brief Set x-component of \f$ chi\f$
@@ -506,7 +509,7 @@ struct GeneralEllipticSym
     const container& precond()const {return ellipticForward_.precond();}
 
     ///@copydoc Elliptic::symv()
-    void symv( const container& x, container& y) 
+    void symv( const container& x, container& y)
     {
         ellipticForward_.symv( x,y);
         ellipticBackward_.symv( x,temp_);
@@ -528,24 +531,24 @@ struct GeneralEllipticSym
  *
  * @ingroup matrixoperators
  *
- * The term discretized is 
+ * The term discretized is
  * \f[ -\nabla \cdot ( \chi \cdot \nabla_\perp ) \f]
  * where \f$\chi\f$ is a symmetric tensor
-  In general that means 
- * \f[ 
+  In general that means
+ * \f[
  * \begin{align}
  * v^x = \chi^{xx} \partial_x f + \chi^{xy}\partial_y f \\
  * v^y = \chi^{yx} \partial_x f + \chi^{yy}\partial_y f \\
  * -\frac{1}{\sqrt{g}} \left(\partial_x(\sqrt{g} v^x ) + \partial_y(\sqrt{g} v^y) \right)
  *  \end{align}
- *  \f] 
+ *  \f]
  * @copydoc hide_geometry_matrix_container
- * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions 
- * and thus in a conjugate gradient solver. 
- * @note The constructors initialize \f$ \chi = I\f$ 
- * @attention Pay attention to the negative sign 
+ * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions
+ * and thus in a conjugate gradient solver.
+ * @note The constructors initialize \f$ \chi = I\f$
+ * @attention Pay attention to the negative sign
  */
-template< class Geometry, class Matrix, class container> 
+template< class Geometry, class Matrix, class container>
 struct TensorElliptic
 {
     /**
@@ -554,22 +557,22 @@ struct TensorElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    TensorElliptic( const Geometry& g, norm no = not_normed, direction dir = forward): 
+    TensorElliptic( const Geometry& g, norm no = not_normed, direction dir = forward):
         no_(no), g_(g)
-    { 
+    {
         construct( g, g.bcx(), g.bcy(), dir);
     }
     /**
-     * @brief Construct from Grid and bc 
+     * @brief Construct from Grid and bc
      * @param g The Grid
      * @param bcx boundary condition in x
      * @param bcy boundary contition in y
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    TensorElliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
+    TensorElliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward):
         no_(no), g_(g)
-    { 
+    {
         construct( g, bcx, bcy, dir);
     }
 
@@ -594,7 +597,7 @@ struct TensorElliptic
     template<class ChiRR, class ChiRZ, class ChiZZ>
     void transform_and_set( const ChiRR& chiRR, const ChiRZ& chiRZ, const ChiZZ& chiZZ)
     {
-        typename GeometryTraits<Geometry>::host_vector chiXX, chiXY, chiYY;
+        get_host_vector<Geometry> chiXX, chiXY, chiYY;
         dg::pushForwardPerp( chiRR, chiRZ, chiZZ, chiXX, chiXY, chiYY, g_.get());
         dg::blas1::transfer( chiXX, chixx_);
         dg::blas1::transfer( chiXY, chixy_);
@@ -610,19 +613,19 @@ struct TensorElliptic
     const container& precond()const {return precond_;}
 
     ///@copydoc Elliptic::symv()
-    void symv( const container& x, container& y) 
+    void symv( const container& x, container& y)
     {
         //compute gradient
-        dg::blas2::gemv( rightx, x, tempx_); //R_x*f 
+        dg::blas2::gemv( rightx, x, tempx_); //R_x*f
         dg::blas2::gemv( righty, x, tempy_); //R_y*f
 
-        //multiply with chi 
+        //multiply with chi
         dg::blas1::pointwiseDot( 1., chixx_, tempx_, 1., chixy_, tempy_, 0., gradx_);//gxy*v_y
         dg::blas1::pointwiseDot( 1., chixy_, tempx_, 1., chiyy_, tempy_, 1., tempy_); //gyy*v_y
 
         //now take divergence
-        dg::blas2::gemv( -1., leftx, gradx_, 0., y);  
-        dg::blas2::gemv( -1., lefty, tempy_, 1., y);  
+        dg::blas2::gemv( -1., leftx, gradx_, 0., y);
+        dg::blas2::gemv( -1., lefty, tempy_, 1., y);
 
         //add jump terms
         dg::blas2::symv( +1., jumpX, x, 1., y);
@@ -651,9 +654,9 @@ struct TensorElliptic
         dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
 
         vol_=dg::tensor::volume(g.metric());
-        dg::tensor::pointwiseDot( vol_, chixx_, chixx_); 
-        dg::tensor::pointwiseDot( vol_, chixy_, chixy_); 
-        dg::tensor::pointwiseDot( vol_, chiyy_, chiyy_); 
+        dg::tensor::pointwiseDot( vol_, chixx_, chixx_);
+        dg::tensor::pointwiseDot( vol_, chixy_, chixy_);
+        dg::tensor::pointwiseDot( vol_, chiyy_, chiyy_);
     }
     bc inverse( bc bound)
     {
@@ -674,7 +677,7 @@ struct TensorElliptic
     container chixx_, chixy_, chiyy_, tempx_, tempy_, gradx_;
     SparseElement<container> vol_;
     norm no_;
-    Handle<Geometry> g_;
+    ClonePtr<Geometry> g_;
 };
 
 ///@cond
@@ -706,4 +709,3 @@ struct MatrixTraits< TensorElliptic<G, M, V> >
 ///@endcond
 
 } //namespace dg
-

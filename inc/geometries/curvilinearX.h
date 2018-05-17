@@ -1,8 +1,8 @@
 #pragma once
 
-#include "dg/backend/gridX.h"
-#include "dg/backend/evaluationX.cuh"
-#include "dg/backend/functions.h"
+#include "dg/geometry/gridX.h"
+#include "dg/geometry/evaluationX.cuh"
+#include "dg/geometry/functions.h"
 #include "dg/blas1.h"
 #include "dg/geometry/base_geometryX.h"
 #include "generatorX.h"
@@ -17,29 +17,29 @@ namespace geo
 
 /**
  * @brief A three-dimensional grid based on curvilinear coordinates
- * 
+ *
  * The base coordinate system is the cylindrical coordinate system R,Z,phi
  */
 struct CurvilinearProductGridX3d : public dg::aGeometryX3d
 {
     /*!@brief Constructor
-    
+
      * the coordinates of the computational space are called x,y,z
      * @param generator must generate a grid
+     * @param fx a rational number indicating partition of the x - direction
+     * @param fy a rational number indicating partition of the y - direction
      * @param n number of %Gaussian nodes in x and y
-     * @param fx
-     * @param fy
      * @param Nx number of cells in x
-     * @param Ny number of cells in y 
+     * @param Ny number of cells in y
      * @param Nz  number of cells z
      * @param bcx boundary condition in x
      * @param bcy boundary condition in y
      * @param bcz boundary condition in z
      */
-    CurvilinearProductGridX3d( const aGeneratorX2d& generator, 
+    CurvilinearProductGridX3d( const aGeneratorX2d& generator,
         double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
-        dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, fx,fy,n, Nx, Ny, Nz, bcx, bcy, bcz)
-    { 
+        dg::aGeometryX3d( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, fx,fy,n, Nx, Ny, Nz, bcx, bcy, bcz), jac_(4)
+    {
         map_.resize(3);
         handle_ = generator;
         constructPerp( n, Nx, Ny);
@@ -57,7 +57,7 @@ struct CurvilinearProductGridX3d : public dg::aGeometryX3d
         unsigned size2d = this->n()*this->n()*this->Nx()*this->Ny();
         //resize for 3d values
         for( unsigned r=0; r<4;r++)
-            jac_.value(r).resize(size);
+            jac_.values()[r].resize(size);
         map_[0].resize(size);
         map_[1].resize(size);
         //lift to 3D grid
@@ -65,7 +65,7 @@ struct CurvilinearProductGridX3d : public dg::aGeometryX3d
             for( unsigned i=0; i<size2d; i++)
             {
                 for(unsigned r=0; r<4; r++)
-                    jac_.value(r)[k*size2d+i] = jac_.value(r)[(k-1)*size2d+i];
+                    jac_.values()[r][k*size2d+i] = jac_.values()[r][(k-1)*size2d+i];
                 map_[0][k*size2d+i] = map_[0][(k-1)*size2d+i];
                 map_[1][k*size2d+i] = map_[1][(k-1)*size2d+i];
             }
@@ -77,7 +77,7 @@ struct CurvilinearProductGridX3d : public dg::aGeometryX3d
         dg::GridX1d gY1d( y0(), y1(), fy(), n, Ny);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
-        handle_.get().generate( x_vec, y_vec, gY1d.n()*gY1d.outer_N(), gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), map_[0], map_[1], jac_.value(0), jac_.value(1), jac_.value(2), jac_.value(3));
+        handle_.get().generate( x_vec, y_vec, gY1d.n()*gY1d.outer_N(), gY1d.n()*(gY1d.inner_N()+gY1d.outer_N()), map_[0], map_[1], jac_.values()[0], jac_.values()[1], jac_.values()[2], jac_.values()[3]);
         jac_.idx(0,0) = 0, jac_.idx(0,1) = 1, jac_.idx(1,0)=2, jac_.idx(1,1) = 3;
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
@@ -92,7 +92,7 @@ struct CurvilinearProductGridX3d : public dg::aGeometryX3d
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
     std::vector<thrust::host_vector<double> > map_;
     SparseTensor<thrust::host_vector<double> > jac_;
-    dg::Handle<aGeneratorX2d> handle_;
+    dg::ClonePtr<aGeneratorX2d> handle_;
 };
 
 /**
@@ -101,10 +101,10 @@ struct CurvilinearProductGridX3d : public dg::aGeometryX3d
 struct CurvilinearGridX2d : public dg::aGeometryX2d
 {
     /*!@brief Constructor
-    
+
      * @param generator must generate an orthogonal grid (class takes ownership of the pointer)
-     * @param fx
-     * @param fy
+     * @param fx a rational number indicating partition of the x - direction
+     * @param fy a rational number indicating partition of the y - direction
      * @param n number of polynomial coefficients
      * @param Nx number of cells in first coordinate
      * @param Ny number of cells in second coordinate
@@ -137,7 +137,7 @@ struct CurvilinearGridX2d : public dg::aGeometryX2d
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
     dg::SparseTensor<thrust::host_vector<double> > jac_, metric_;
     std::vector<thrust::host_vector<double> > map_;
-    dg::Handle<aGeneratorX2d> handle_;
+    dg::ClonePtr<aGeneratorX2d> handle_;
 };
 
 ///@}

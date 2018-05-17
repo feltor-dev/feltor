@@ -1,23 +1,22 @@
 #pragma once
 
-#include "backend/interpolation.cuh"
-#include "backend/projection.cuh"
+#include "geometry/interpolation.cuh"
+#include "geometry/projection.cuh"
 #include "elliptic.h"
 #include "geometry/refined_grid.h"
 #ifdef MPI_VERSION
-#include "backend/mpi_projection.h"
-#include "backend/mpi_projection.h"
+#include "geometry/mpi_projection.h"
 #endif
 
-/*! @file 
+/*! @file
 
   @brief contains an elliptic method on a refined grid
   */
 namespace dg
 {
 
- /*!@brief The refined version of \c Elliptic 
- 
+ /*!@brief The refined version of \c Elliptic
+
  * Holds an \c Elliptic object on the fine grid and brackets every call to symv with %interpolation and %projection matrices
  * @copydoc hide_geometry_matrix_container
  * @ingroup matrixoperators
@@ -35,9 +34,9 @@ class RefinedElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    RefinedElliptic( const Geometry& g_coarse, const Geometry& g_fine, norm no = not_normed, direction dir = forward): 
+    RefinedElliptic( const Geometry& g_coarse, const Geometry& g_fine, norm no = not_normed, direction dir = forward):
         no_(no), elliptic_( g_fine, no, dir)
-    { 
+    {
         construct( g_coarse, g_fine, g_fine.bcx(), g_fine.bcy(), dir);
     }
 
@@ -51,14 +50,14 @@ class RefinedElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
      */
-    RefinedElliptic( const Geometry& g_coarse, const Geometry& g_fine, bc bcx, bc bcy, norm no = not_normed, direction dir = forward): 
+    RefinedElliptic( const Geometry& g_coarse, const Geometry& g_fine, bc bcx, bc bcy, norm no = not_normed, direction dir = forward):
         no_(no), elliptic_( g_fine, bcx, bcy, no, dir)
-    { 
+    {
         construct( g_coarse, g_fine, bcx, bcy, dir);
     }
 
     /**
-     * @brief Change Chi 
+     * @brief Change Chi
      *
      * @param chi The new chi
      */
@@ -87,16 +86,16 @@ class RefinedElliptic
      * @param x left-hand-side
      * @param y result
      */
-    void symv( const container& x, container& y) 
+    void symv( const container& x, container& y)
     {
-        dg::blas2::gemv( Q_, x, temp1_); 
+        dg::blas2::gemv( Q_, x, temp1_);
         elliptic_.symv( temp1_, temp2_);
-        if( no_ == normed) 
+        if( no_ == normed)
         {
-            dg::blas2::gemv( P_, temp2_, y); 
+            dg::blas2::gemv( P_, temp2_, y);
             return;
         }
-        else 
+        else
         {
             dg::blas2::gemv( QT_, temp2_, y);
             return;

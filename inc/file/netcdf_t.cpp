@@ -3,10 +3,7 @@
 #include <netcdf.h>
 #include <cmath>
 
-#include "dg/blas.h"
-#include "dg/backend/grid.h"
-#include "dg/backend/evaluation.cuh"
-#include "dg/backend/weights.cuh"
+#include "dg/algorithm.h"
 #include "nc_utilities.h"
 
 double function( double x, double y, double z){return sin(x)*sin(y)*cos(z);}
@@ -14,7 +11,7 @@ double gradientX(double x, double y, double z){return cos(x)*sin(y)*cos(z);}
 double gradientY(double x, double y, double z){return sin(x)*cos(y)*cos(z);}
 double gradientZ(double x, double y, double z){return -sin(x)*sin(y)*sin(z);}
 
-typedef thrust::host_vector<double> HVec; 
+typedef thrust::host_vector<double> HVec;
 
 int main()
 {

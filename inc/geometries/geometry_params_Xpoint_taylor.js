@@ -4,7 +4,7 @@
  *(R_0-1.1*triangularity*inverseaspectratio,-1.1*elongation*inverseaspectratio)
  *          ----------------------------------------------------------- */
 {
-    "equilibrium" : "taylor", //taylor state 
+    "equilibrium" : "taylor", //taylor state
     //----------------------Taylor coefficients---------------
     "c" :[-0.730004529864617913443309878090712685057289011596696572774289301646,
     -0.013752279867251353918502943858642437963550235876487492144645446786828705,
@@ -29,7 +29,7 @@
     "psip_min"      : -100,
     "psip_max"      :  0.0, // (> -7.4)
     "psip_max_cut"  :  1e10,
-    "psip_max_lim"  :  1e10, 
+    "psip_max_lim"  :  1e10,
     "qampl"         :  1
 }
 //@ ----------------------------------------------------------

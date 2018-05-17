@@ -1,12 +1,7 @@
 #pragma once
 
 #include <exception>
-#include <cusp/ell_matrix.h>
-
-#include "dg/blas.h"
-#include "dg/arakawa.h"
-#include "dg/elliptic.h"
-#include "dg/cg.h"
+#include "dg/algorithm.h"
 
 namespace polar
 {
@@ -20,7 +15,7 @@ struct Diffusion
         LaplacianM( g, dg::normed)
     { 
     }
-    void operator()( const container& x, container& y)
+    void operator()( double t, const container& x, container& y)
     {
         dg::blas2::gemv( LaplacianM, x, y);
         dg::blas1::scal( y, -nu_);
@@ -50,13 +45,12 @@ struct Explicit
      * @return psi is the potential
      */
     const container& potential( ) {return psi;}
-    void operator()( const Vector& y, Vector& yp);
+    void operator()(double t,  const Vector& y, Vector& yp);
     container psi, w2d, v2d;
     Elliptic<Geometry, Matrix, container> laplaceM;
     ArakawaX<Geometry, Matrix, container> arakawa_; 
     Invert<container> invert;
 
-    Geometry grid;
 };
 
 
@@ -65,14 +59,13 @@ Explicit< Geometry, Matrix, container>::Explicit( const Geometry& g, double eps)
     psi( dg::evaluate(dg::zero, g) ),
     laplaceM( g, dg::not_normed),
     arakawa_( g), 
-    invert( psi, g.size(), eps),
-    grid(g)
+    invert( psi, g.size(), eps)
 {
 }
 
 
 template<class Geometry, class Matrix, class container>
-void Explicit<Geometry, Matrix, container>::operator()( const Vector& y, Vector& yp)
+void Explicit<Geometry, Matrix, container>::operator()(double t, const Vector& y, Vector& yp)
 {
     invert(laplaceM, psi, y);
     arakawa_( y, psi, yp); //A(y,psi)-> yp

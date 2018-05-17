@@ -19,21 +19,20 @@
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Reader reader;
     Json::Value js, gs;
     if( argc == 1)
     {
         std::ifstream is("input.json");
         std::ifstream ks("geometry_params.json");
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        is >> js;
+        ks >> gs;
     }
     else if( argc == 3)
     {
         std::ifstream is(argv[1]);
         std::ifstream ks(argv[2]);
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        is >> js;
+        ks >> gs;
     }
     else
     {
@@ -47,7 +46,7 @@ int main( int argc, char* argv[])
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
     std::ifstream is( "window_params.js");
-    reader.parse( is, js, false);
+    is >> js;
     is.close();
     unsigned red = js.get("reduction", 1).asUInt();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( (p.Nz/red+1)*js["width"].asDouble(), js["rows"].asDouble()*js["height"].asDouble(), "");
@@ -108,7 +107,7 @@ int main( int argc, char* argv[])
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
-    karniadakis.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, rolkar, 0., y0, p.dt);
     std::cout << "Done!\n";
 //     feltor.energies( y0);//now energies and potential are at time 0
 
@@ -133,6 +132,7 @@ int main( int argc, char* argv[])
     dg::IDMatrix probeinterp;
     dg::blas2::transfer( dg::create::interpolation( Xprobe, Zprobe, Phiprobe, grid, dg::NEU), probeinterp);
     dg::DVec probevalue(1,0.);   
+    dg::Average<dg::HVec> toroidal_average( grid, dg::coo3d::z);
     while ( !glfwWindowShouldClose( w ))
     {
 
@@ -153,7 +153,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         //thrust::transform( y1[1].begin(), y1[1].end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
@@ -174,7 +174,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw potential
@@ -196,7 +196,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         //draw U_e
@@ -214,7 +214,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);      
         
         //draw U_i
@@ -232,7 +232,7 @@ int main( int argc, char* argv[])
             render.renderQuad( part, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         }
         dg::blas1::axpby(0.0,avisual,0.0,avisual);
-        dg::toroidal_average(visual,avisual,grid);
+        toroidal_average(visual,avisual);
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         
         title << std::fixed; 
@@ -248,7 +248,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis.step( feltor, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -272,7 +272,6 @@ int main( int argc, char* argv[])
             E0 = E1;
 
         }
-        time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;

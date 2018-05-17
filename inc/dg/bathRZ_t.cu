@@ -1,13 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-#include "blas.h"
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/projection.cuh"
-#include "dg/backend/typedefs.cuh"
-#include "functors.h"
 #include "draw/host_window.h"
+#include "dg/backend/typedefs.cuh"
+#include "dg/geometry/interpolation.cuh"
+#include "dg/geometry/xspacelib.cuh"
+#include "dg/geometry/projection.cuh"
+#include "functors.h"
+#include "blas.h"
 
 int main()
 {
@@ -18,10 +18,10 @@ int main()
     double gamma=30., eddysize=15.;
     double Rmin,Zmin,Rmax,Zmax;
     double Nxh = Nx/2.,Nyh=Ny/2.,R0=150.;
-    double amplitude=0.1; 
+    double amplitude=0.1;
     Rmin=R0-Nxh;
     Zmin=-Nyh;
-    Rmax=R0+Nxh; 
+    Rmax=R0+Nxh;
     Zmax=Nyh;
     std::cout << "test the bath initialisation" <<"\n";
     std::stringstream title;
@@ -51,7 +51,7 @@ int main()
     //Create Window and set window title
     GLFWwindow* w = draw::glfwInitAndCreateWindow( 800, 400, "Random field");
     draw::RenderHostData render( 1, 2);
-    // generate a vector on the grid to visualize 
+    // generate a vector on the grid to visualize
       //create a colormap
     draw::ColorMapRedBlueExtMinMax colors(-1.0, 1.0);
     while (!glfwWindowShouldClose( w ))
@@ -63,7 +63,7 @@ int main()
 
         render.renderQuad( visual_old, grid_old.n()*grid_old.Nx(), grid_old.n()*grid_old.Ny(), colors);
         render.renderQuad( visual_new, grid_new.n()*grid_new.Nx(), grid_new.n()*grid_new.Ny(), colors);
-        title << std::fixed; 
+        title << std::fixed;
         glfwSetWindowTitle(w,title.str().c_str());
         title.str("");
         glfwSwapBuffers(w);

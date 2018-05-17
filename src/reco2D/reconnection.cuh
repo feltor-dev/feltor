@@ -46,7 +46,7 @@ struct Implicit
      * @param x input vector (x[0] := N_e -1, x[1] := N_i-1, x[2] := w_e, x[3] = w_i)
      * @param y output vector
      */
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( double time,  const std::vector<container>& x, std::vector<container>& y)
     {
         /* x[0] := N_e - 1
            x[1] := N_i - 1
@@ -111,6 +111,7 @@ struct Asela
      * @return phi[0] is the electron and phi[1] the generalized ion potential
      */
     const std::vector<container>& potential( ) const { return phi;}
+// <<<<<<< HEAD
     /**
      * @brief Returns Aparallel that belongs to the last solve of the induction equation
      *
@@ -137,7 +138,7 @@ struct Asela
      * @param y y[0] := N_e - 1, y[1] := N_i - 1, y[2] := w_e, y[3] := w_i
      * @param yp Result
      */
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( double time, const std::vector<container>& y, std::vector<container>& yp);
     
     /**
      * @brief \f[ M := \int_V (n_e-1) dV \f]
@@ -159,7 +160,6 @@ struct Asela
  E = \partial_t  \int_V d^3x \left[\frac{1}{2}m_e n_e u_e^2 +\frac{1}{2}m_i N_i U_i^2 + \frac{(\nabla_\perp A_\parallel)^2}{2\mu_0} + \frac{1}{2} m_i N_i\left(\frac{\nabla_\perp\phi}{B}\right)^2 + t_e n_e\ln(n_e)+T_i N_i\ln(N_i)\right] 
 \end{align}
 \f]
-
      * @return Total energy contained in volume
      * @note call energies() before use
      */
@@ -306,7 +306,6 @@ container& Asela<Geometry, IMatrix, Matrix, container>::induct(const std::vector
         {
             multi_maxwell[u].set_chi( multi_chi[u]);
         }
-
         dg::blas1::pointwiseDot( npe[1], y[3], chi);               //chi = N_i w_i
         if (p.tau[1] == 0.) {
             dg::blas1::axpby( 1., chi, 0.,lambda); //lambda = N_i w_i
@@ -399,7 +398,7 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
 
 // #endif
 template<class Geometry, class IMatrix, class Matrix, class container>
-void Asela<Geometry, IMatrix, Matrix, container>::operator()( const std::vector<container>& y, std::vector<container>& yp)
+void Asela<Geometry, IMatrix, Matrix, container>::operator()( double time,  const std::vector<container>& y, std::vector<container>& yp)
 {   
     /*  y[0] := N_e - 1
         y[1] := N_i - 1

@@ -1,46 +1,70 @@
 #pragma once
+#include <vector>
 #include "mpi_vector_blas.h"
-#include "mpi_precon.h"
 #include "thrust_matrix_blas.cuh"
 
-///@cond
 namespace dg
 {
+
+///@addtogroup mat_list
+///@{
+template <class T>
+struct MatrixTraits<MPI_Vector<T> >
+{
+    using value_type        = get_value_type<T>;
+    using matrix_category   = MPIPreconTag;
+};
+template <class T>
+struct MatrixTraits<const MPI_Vector<T> >
+{
+    using value_type        = get_value_type<T>;
+    using matrix_category   = MPIPreconTag;
+};
+///@}
+
+///@cond
 namespace blas2
 {
 namespace detail
 {
 template< class Precon, class Vector>
-inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
+inline std::vector<int64_t> doDot_superacc( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    int result;
-    MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-    MPI_Comm_compare( x.communicator(), P.communicator(), &result);
-    assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+    int compare;
+    MPI_Comm_compare( x.communicator(), y.communicator(), &compare);
+    assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
+    MPI_Comm_compare( x.communicator(), P.communicator(), &compare);
+    assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
 #endif //DG_DEBUG
-    //computation
-    typename MatrixTraits<Precon>::value_type temp= doDot(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());
-    //communication
-    typename MatrixTraits<Precon>::value_type sum=0;
-    MPI_Allreduce( &temp, &sum, 1, MPI_DOUBLE, MPI_SUM, x.communicator());
+    //local compuation
+    std::vector<int64_t> acc = doDot_superacc(x.data(), P.data(), y.data(), ThrustMatrixTag(), ThrustVectorTag());
+    std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
+    exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicator(), x.communicator_mod(), x.communicator_mod_reduce());
 
-    return sum;
+    return receive;
 }
+template< class Precon, class Vector>
+inline typename MatrixTraits<Precon>::value_type doDot( const Vector& x, const Precon& P, const Vector& y, MPIPreconTag, MPIVectorTag)
+{
+    std::vector<int64_t> acc = doDot_superacc( x,P,y,MPIPreconTag(), MPIVectorTag());
+    return exblas::cpu::Round(acc.data());
+}
+
 template< class Matrix, class Vector>
 inline typename MatrixTraits<Matrix>::value_type doDot( const Matrix& m, const Vector& x, dg::MPIPreconTag, dg::MPIVectorTag)
 {
-    return doDot( x, m,x, MPIPreconTag(), MPIVectorTag());
+    std::vector<int64_t> acc = doDot_superacc( x,m,x,MPIPreconTag(), MPIVectorTag());
+    return exblas::cpu::Round(acc.data());
 }
 
 template< class Precon, class Vector>
-inline void doSymv(  
-              typename MatrixTraits<Precon>::value_type alpha, 
+inline void doSymv(
+              typename MatrixTraits<Precon>::value_type alpha,
               const Precon& P,
-              const Vector& x, 
-              typename MatrixTraits<Precon>::value_type beta, 
-              Vector& y, 
+              const Vector& x,
+              typename MatrixTraits<Precon>::value_type beta,
+              Vector& y,
               MPIPreconTag,
               MPIVectorTag)
 {
@@ -56,5 +80,5 @@ inline void doSymv( const Matrix& m, const Vector&x, Vector& y, MPIPreconTag, MP
 
 } //namespace detail
 } //namespace blas2
-} //namespace dg
 ///@endcond
+} //namespace dg

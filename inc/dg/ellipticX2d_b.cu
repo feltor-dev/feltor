@@ -3,24 +3,22 @@
 
 //#include "backend/xspacelib.cuh"
 #include <thrust/device_vector.h>
-#include "blas.h"
-
-
-#include "backend/derivativesX.h"
-#include "backend/gridX.h"
-#include "backend/evaluationX.cuh"
+#include "backend/timer.cuh"
+#include "geometry/derivativesX.h"
+#include "geometry/gridX.h"
+#include "geometry/evaluationX.cuh"
 #include "geometry/base_geometryX.h"
+#include "blas.h"
 #include "elliptic.h"
 #include "cg.h"
-#include "backend/timer.cuh"
 
 const dg::bc bcx = dg::DIR;
 const dg::bc bcy = dg::NEU;
 
 
 double initial( double x, double y) {return 0.;}
-double sol( double x, double y ) { 
-    //if( x < 0)  
+double sol( double x, double y ) {
+    //if( x < 0)
     //{
     //    if( y < 0) return sin(x)*sin(y);
     //    else if( 0 <= y && y < 2*M_PI) return sin(x)*cos(y);
@@ -28,7 +26,7 @@ double sol( double x, double y ) {
     //}
     return sin(x)*sin(y);
 }
-double derX( double x, double y) { 
+double derX( double x, double y) {
     //if( x < 0)
     //{
     //    if( y < 0) return cos(x)*sin(y);
@@ -37,7 +35,7 @@ double derX( double x, double y) {
     //}
     return cos(x)*sin(y);
 }
-double derY( double x, double y) { 
+double derY( double x, double y) {
     //if( x < 0)
     //{
     //    if( y < 0) return sin(x)*cos(y);
@@ -49,11 +47,11 @@ double derY( double x, double y) {
 double lap( double x, double y){ return -2.*sol(x,y); }
 
 double amp = 0.5;
-//double pol( double x, double y) {return 1. + amp*sol(x,y); } 
-//double rhs( double x, double y) { 
+//double pol( double x, double y) {return 1. + amp*sol(x,y); }
+//double rhs( double x, double y) {
 //    return -(1.+amp*sol(x,y))*lap(x,y) - amp*(derX(x,y)*derX(x,y) + derY(x,y)*derY(x,y));}
-double pol( double x, double y) {return 1.; } 
-double rhs( double x, double y) { return -lap(x,y);} 
+double pol( double x, double y) {return 1.; }
+double rhs( double x, double y) { return -lap(x,y);}
 
 typedef dg::DVec Vector;
 typedef dg::Composite<dg::EllSparseBlockMatDevice<double> > Matrix;
@@ -62,7 +60,7 @@ typedef dg::Composite<dg::EllSparseBlockMatDevice<double> > Matrix;
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     double eps;
     std::cout << "Type in n, Nx (1./3.) and Ny (1./6.) and epsilon!\n";
     std::cin >> n >> Nx >> Ny;

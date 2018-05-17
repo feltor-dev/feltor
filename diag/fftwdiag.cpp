@@ -9,12 +9,6 @@
 // #include "spectral/drt_drt.h"
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
-
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/average.cuh"
-#include "dg/functors.h"
 
 #include "file/nc_utilities.h"
 #include "feltorShw/parameters.h"
@@ -40,9 +34,12 @@ int main( int argc, char* argv[])
     err = nc_close(ncid); 
 
 //     std::cout << "input "<<input<<std::endl;    
-    Json::Reader reader;
     Json::Value js;
-    reader.parse( input, js, false);
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
+    std::stringstream ss(input);
+    parseFromStream( parser, ss, &js, &errs); //read input without comments
     const eule::Parameters p(js);
 //     p.display(std::cout);
     

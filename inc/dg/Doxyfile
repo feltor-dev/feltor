@@ -783,8 +783,31 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = . \
-                         ./backend \
-                         ./geometry
+                         ./geometry \
+                         ./backend/transpose.h \
+                         ./backend/exceptions.h \
+                         ./backend/memory.h \
+                         ./backend/mpi_collective.h \
+                         ./backend/mpi_communicator.h \
+                         ./backend/mpi_init.h \
+                         ./backend/mpi_matrix.h \
+                         ./backend/mpi_vector.h \
+                         ./backend/mpi_precon_blas.h \
+                         ./backend/sparseblockmat.h \
+                         ./backend/sparseblockmat.cuh \
+                         ./backend/timer.cuh \
+                         ./backend/typedefs.cuh \
+                         ./backend/vector_categories.h \
+                         ./backend/vector_traits.h \
+                         ./backend/matrix_categories.h \
+                         ./backend/matrix_traits.h \
+                         ./backend/execution_policy.h \
+                         ./backend/thrust_vector_blas.cuh \
+                         ./backend/blas1_array.h \
+                         ./backend/cusp_vector_blas.h \
+                         ./backend/cusp_precon_blas.h \
+                         ./backend/matrix_traits_thrust.h \
+
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -815,7 +838,7 @@ FILE_PATTERNS          = *.h *.cuh *.dox
 # be searched for input files as well.
 # The default value is: NO.
 
-RECURSIVE              = YES
+RECURSIVE              = NO
 
 # The EXCLUDE tag can be used to specify files and/or directories that should be
 # excluded from the INPUT source files. This way you can easily exclude a
@@ -824,14 +847,7 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                = ../dg/backend/creation.cuh \
-                         ../dg/backend/matrix_traits_thrust.h \
-                         ../dg/backend/cusp_thrust_backend.h \
-                         ../dg/backend/sparseblockmat_gpu_kernels.cuh \
-                         ../dg/backend/sparseblockmat_omp_kernels.h \
-                         ../dg/backend/average.h \
-                         ../dg/average.h \
-                         ../dg/backend/ell_interpolation.cuh \
+EXCLUDE                =
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
@@ -867,10 +883,10 @@ EXCLUDE_SYMBOLS        = hide_*
 
 EXAMPLE_PATH           = cg2d_t.cu \
                          arakawa_t.cu poisson_t.cu \
-                         elliptic2d_b.cu runge_kutta2d_t.cu multistep_t.cu \
+                         elliptic2d_b.cu runge_kutta_t.cu multistep_t.cu \
                          helmholtzg2_b.cu \
-                         backend/interpolation_t.cu \
-                         backend/average_t.cu backend/average_mpit.cu
+                         geometry/interpolation_t.cu \
+                         geometry/average_t.cu geometry/average_mpit.cu
 
 
 
@@ -1523,7 +1539,7 @@ MATHJAX_FORMAT         = HTML-CSS
 # The default value is: http://cdn.mathjax.org/mathjax/latest.
 # This tag requires that the tag USE_MATHJAX is set to YES.
 
-MATHJAX_RELPATH        = https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?... 
+MATHJAX_RELPATH        = https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?...
 
 # The MATHJAX_EXTENSIONS tag can be used to specify one or more MathJax
 # extension names that should be enabled during MathJax rendering. For example
@@ -2017,7 +2033,7 @@ PERLMOD_MAKEVAR_PREFIX =
 # C-preprocessor directives found in the sources and include files.
 # The default value is: YES.
 
-ENABLE_PREPROCESSING   = NO
+ENABLE_PREPROCESSING   = YES
 
 # If the MACRO_EXPANSION tag is set to YES, doxygen will expand all macro names
 # in the source code. If set to NO, only conditional compilation will be
@@ -2110,7 +2126,7 @@ TAGFILES               =
 # tag file that is based on the input files it reads. See section "Linking to
 # external documentation" for more information about the usage of tag files.
 
-GENERATE_TAGFILE       = 
+GENERATE_TAGFILE       =
 
 # If the ALLEXTERNALS tag is set to YES, all external class will be listed in
 # the class index. If set to NO, only the inherited external classes will be

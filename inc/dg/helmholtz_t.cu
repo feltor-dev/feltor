@@ -9,7 +9,7 @@
 #include "cg.h"
 
 const double eps = 1e-4;
-const double alpha = -0.5; 
+const double alpha = -0.5;
 double lhs( double x, double y){ return sin(x)*sin(y);}
 double rhs( double x, double y){ return (1.-2.*alpha)*sin(x)*sin(y);}
 const double R_0 = 1000;
@@ -17,17 +17,17 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 const double lz = 2.*M_PI;
 double fct(double x, double y, double z){ return sin(x-R_0)*sin(y);}
-double laplace_fct( double x, double y, double z) { 
+double laplace_fct( double x, double y, double z) {
     return -1./x*cos(x-R_0)*sin(y) + 2.*sin(x-R_0)*sin(y);}
-double helmholtz_fct( double x, double y, double z) { 
+double helmholtz_fct( double x, double y, double z) {
     return fct(x,y,z) - alpha*laplace_fct(x,y,z);}
 
 dg::bc bcx = dg::DIR;
 double initial( double x, double y, double z) {return sin(0);}
 int main()
 {
-    
-    unsigned n, Nx, Ny, Nz; 
+
+    unsigned n, Nx, Ny, Nz;
     std::cout << "Type n, Nx Ny and Nz\n";
     std::cin >> n>> Nx >> Ny >> Nz;
     dg::Grid2d grid( 0, 2.*M_PI, 0, 2.*M_PI, n, Nx, Ny, dg::DIR, dg::PER);
@@ -65,8 +65,11 @@ int main()
 
     std::cout << "number of iterations:  "<<number<<std::endl;
     std::cout << "ALL METHODS SHOULD DO THE SAME!\n";
-    std::cout << "error1 " << sqrt( dg::blas2::dot( w2d, x))<<std::endl;
-    std::cout << "error2 " << sqrt( dg::blas2::dot( w2d, x_))<<std::endl;
+    exblas::udouble res;
+    res.d = sqrt( dg::blas2::dot( w2d, x));
+    std::cout << "error1 " << res.d<<"\t"<<res.i<<std::endl;
+    res.d = sqrt( dg::blas2::dot( w2d, x_));
+    std::cout << "error2 " << res.d<<"\t"<<res.i<<std::endl;
     //std::cout << "error3 " << sqrt( dg::blas2::dot( w2d, x__))<<std::endl;
     std::cout << "Test 3d cylincdrical norm:\n";
     dg::CylindricalGrid3d g3d( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER);
@@ -91,6 +94,3 @@ int main()
 
     return 0;
 }
-
-
-

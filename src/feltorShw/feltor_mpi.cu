@@ -11,9 +11,6 @@
 #include "netcdf_par.h"
 
 #include "dg/algorithm.h"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/interpolation.cuh"
 #include "file/nc_utilities.h"
 
 #include "feltor.cuh"
@@ -63,8 +60,10 @@ int main( int argc, char* argv[])
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     MPI_Comm_size( MPI_COMM_WORLD, &size);
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if( argc != 3 && argc != 4)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n"; 
@@ -74,7 +73,7 @@ int main( int argc, char* argv[])
     else 
     {
         std::ifstream is(argv[1]);
-        reader.parse( is, js, false);
+        parseFromStream( parser, is, &js, &errs); //read input without comments
     }
     std::string input = js.toStyledString(); 
     const eule::Parameters p( js);
@@ -175,7 +174,8 @@ int main( int argc, char* argv[])
         errIN = nc_get_att_text( ncidIN, NC_GLOBAL, "inputfile", &inputIN[0]);    
 
         Json::Value jsIN;
-        reader.parse( inputIN, jsIN, false); 
+        std::stringstream is(inputIN);
+        parseFromStream( parser, is, &jsIN, &errs); //read input without comments
         const eule::Parameters pIN(  jsIN);    
         if(rank==0) std::cout << "[input.nc] file parameters" << std::endl;
         if(rank==0) pIN.display( std::cout);   
@@ -183,7 +183,7 @@ int main( int argc, char* argv[])
         dg::MPIGrid2d grid_IN( 0., pIN.lx, 0., pIN.ly, pIN.n_out, pIN.Nx_out, pIN.Ny_out, pIN.bc_x, pIN.bc_y,comm);  
         int dimsIN[2],  coordsIN[2];
         MPI_Cart_get( comm, 2, dimsIN, periods, coordsIN);
-        size_t count2dIN[3] = {1, grid_IN.n()*grid_IN.Ny(), grid_IN.n()*grid_IN.Nx()};  
+        size_t count2dIN[3] = {1, grid_IN.n()*grid_IN.local().Ny(), grid_IN.n()*grid_IN.local().Nx()};  
         size_t start2dIN[3] = {0, coordsIN[1]*count2dIN[1], coordsIN[0]*count2dIN[2]}; 
         dg::HVec transferIN( dg::evaluate(dg::zero, grid_IN.local()));
         dg::DVec transferIND( dg::evaluate(dg::zero, grid_IN.local()));
@@ -215,7 +215,7 @@ int main( int argc, char* argv[])
    
     dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     if(rank==0) std::cout << "intialize Timestepper" << std::endl;
-    karniadakis.init( feltor, rolkar, y0, p.dt);
+    karniadakis.init( feltor, rolkar, 0., y0, p.dt);
     if(rank==0) std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -333,8 +333,8 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
     dg::Timer t;
     t.tic();
-    unsigned step = 0;
 #endif //DG_BENCHMARK
+    unsigned step = 0;
     for( unsigned i=1; i<=p.maxout; i++)
     {
 
@@ -344,7 +344,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( feltor, rolkar, y0);}
+            try{ karniadakis.step( feltor, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 if(rank==0)std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 if(rank==0)std::cerr << "Does Simulation respect CFL condition?\n";
@@ -353,7 +353,6 @@ int main( int argc, char* argv[])
                 return -1;
             }
             step++;
-            time+=p.dt;
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();
             dEdt = (E1 - E0)/p.dt; 

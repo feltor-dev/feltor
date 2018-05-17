@@ -1,7 +1,7 @@
 /* Input-File for COMPASS axisymmetric solovev equilibrium *
  * I const without X-point, Force free, circular Cross section, Te_50eV,B0_1T,deuterium
  -----------------------------------------------------------*/
-          
+
 {
     //----------------------Solovev coefficients----------------------
     "A" : 1.0,
@@ -28,7 +28,7 @@
     "psip_min"      : -6.,
     "psip_max"      :  0.0, // (> -7.4)
     "psip_max_cut"  :  1e10,
-    "psip_max_lim"  :  1e10, 
+    "psip_max_lim"  :  1e10,
     "qampl"         :  1,
 }
 

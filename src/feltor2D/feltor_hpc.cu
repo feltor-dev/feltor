@@ -22,8 +22,10 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js, gs;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if( argc != 4)
     {
         std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [geomfile] [outputfile]\n";
@@ -33,8 +35,8 @@ int main( int argc, char* argv[])
     {
         std::ifstream is(argv[1]);
         std::ifstream ks(argv[2]);
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        parseFromStream( parser, is, &js, &errs); //read input without comments
+        parseFromStream( parser, ks, &gs, &errs); //read input without comments
     }
     const feltor::Parameters p( js);
     const dg::geo::solovev::Parameters gp(gs);
@@ -91,7 +93,7 @@ int main( int argc, char* argv[])
     
     std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( feltor, implicit, y0, p.dt);
+    karniadakis.init( feltor, implicit, 0., y0, p.dt);
 //     feltor.energies(y0); //now energies and potential are at time 0
     std::cout << "Done!\n";
     /////////////////////////////set up netcdf/////////////////////////////////////
@@ -178,9 +180,7 @@ int main( int argc, char* argv[])
     ///////////////////////////////////////Timeloop/////////////////////////////////
     dg::Timer t;
     t.tic();
-#ifdef DG_BENCHMARK
     unsigned step = 0;
-#endif //DG_BENCHMARK
     for( unsigned i=1; i<=p.maxout; i++)
     {
 
@@ -190,7 +190,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            try{ karniadakis( feltor, implicit, y0);}
+            try{ karniadakis.step( feltor, implicit, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -198,7 +198,6 @@ int main( int argc, char* argv[])
                 return -1;
             }
             step++;
-            time+=p.dt;
 //             feltor.energies(y0);//advance potential and energies
             Estart[0] = step;
             E1 = feltor.energy(), mass = feltor.mass(), diss = feltor.energy_diffusion();

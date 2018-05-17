@@ -16,25 +16,20 @@
    - integrates the ToeflR - functor and 
    - directly visualizes results on the screen using parameters in window_params.txt
 */
-// double aparallel( double x, double y)
-// {
-//     return 0.1/cosh(x)/cosh(x)*fabs(sin(1./2.*y));
-// }
 
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.json");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
@@ -46,7 +41,7 @@ int main( int argc, char* argv[])
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
     std::ifstream is( "window_params.js");
-    reader.parse( is, js, false);
+    is >> js;
     is.close();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["width"].asDouble(), js["height"].asDouble(), "");
     draw::RenderHostData render(js["rows"].asDouble(), js["cols"].asDouble());
@@ -103,9 +98,8 @@ int main( int argc, char* argv[])
 
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
-    karniadakis.init( asela, rolkar, y0, p.dt);
+    karniadakis.init( asela, rolkar,0., y0, p.dt);
     std::cout << "Done!\n";
-//     asela.energies( y0);//now energies and potential are at time 0
 
     dg::DVec dvisual( grid.size(), 0.);
     dg::HVec hvisual( grid.size(), 0.), visual(hvisual),avisual(hvisual);
@@ -115,6 +109,7 @@ int main( int argc, char* argv[])
     //create timer
     dg::Timer t;
     double time = 0;
+
     unsigned step = 0;
     const double mass0 = asela.mass(), mass_blob0 = mass0 - grid.lx()*grid.ly();
     double E0 = asela.energy(), energy0 = E0, E1 = 0, diff = 0;
@@ -213,11 +208,9 @@ int main( int argc, char* argv[])
 #ifdef DG_BENCHMARK
         t.tic();
 #endif//DG_BENCHMARK
-        //double x;
-        //std::cin >> x;
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{ karniadakis( asela, rolkar, y0);}
+            try{ karniadakis.step( asela, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -234,7 +227,6 @@ int main( int argc, char* argv[])
             E0 = E1;
 
         }
-        time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;

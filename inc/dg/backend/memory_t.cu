@@ -27,7 +27,7 @@ struct Mouse: public aAnimal
 
 struct Cat : public aAnimal
 {
-    virtual void speak()const { 
+    virtual void speak()const {
         aAnimal::speak();
         std::cout << " a cat!\n";
     }
@@ -41,13 +41,13 @@ int main()
 {
     {
         std::cout << "Test correct behaviour of handle: cat and mouse\n";
-        dg::Handle<aAnimal> h0, h1(new Mouse()); //default and pointer constructor
-        dg::Handle<aAnimal> h2(h1.get()); //reference constructor
+        dg::ClonePtr<aAnimal> h0, h1(new Mouse()); //default and pointer constructor
+        dg::ClonePtr<aAnimal> h2(h1.get()); //reference constructor
         aAnimal* ptr = new Cat();
         h0.reset(ptr); //pointer reset
         h1.reset( h2.get()); //reference reset
         h1.get()=h2.get();//reference test
-        h1.swap(h0); //swap test
+        std::swap(h1,h0); //swap test
         h0.get().speak();
         h1.get().speak();
         h2.get().speak();
@@ -61,6 +61,7 @@ int main()
         buffer.data().speak();
         dg::Buffer<Mouse> buffer2 = buffer;
         buffer2.data().speak();
+        std::swap( buffer, buffer2);
     }
 
     return 0;

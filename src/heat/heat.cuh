@@ -3,10 +3,6 @@
 #include "dg/algorithm.h"
 #include "parameters.h"
 #include "geometries/geometries.h"
-
-#ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
-#endif //DG_BENCHMARK
 /*!@file
 
   Contains the solvers 
@@ -39,7 +35,7 @@ struct Implicit
 
         dg::blas1::transfer( dg::pullback( dg::geo::GaussianProfDamping(c.psip(), gp.psipmax, gp.alpha), g), dampprof_);
     }
-    void operator()( const std::vector<container>& x, std::vector<container>& y)
+    void operator()( double tt, const std::vector<container>& x, std::vector<container>& y)
     {
         dg::blas1::scal( y, 0.);
         if (p.p_diff ==0)    {
@@ -71,7 +67,7 @@ struct Explicit
 
     const dg::geo::DS<Geometry,IMatrix,Matrix,container>& ds(){return dsNU_;}
 
-    void operator()( const std::vector<container>& y, std::vector<container>& yp);
+    void operator()( double tt, const std::vector<container>& y, std::vector<container>& yp);
 
     double mass( ) {return mass_;}
     double mass_diffusion( ) {return diff_;}
@@ -195,7 +191,7 @@ void Explicit<G,I,M,V>::energies( std::vector<V>& y)
 
 //do not overwrite y
 template<class G, class I, class Matrix, class container>
-void Explicit<G,I,Matrix,container>::operator()(const std::vector<container>& y, std::vector<container>& yp)
+void Explicit<G,I,Matrix,container>::operator()( double tt, const std::vector<container>& y, std::vector<container>& yp)
 {
     /* y[0] := T - 1 or T
     */

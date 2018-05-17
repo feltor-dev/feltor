@@ -8,7 +8,7 @@
 
 #include "backend/timer.cuh"
 #include "backend/mpi_init.h"
-#include "backend/split_and_join.h"
+#include "geometry/split_and_join.h"
 
 
 const double R_0 = 1000;
@@ -26,7 +26,7 @@ double initial( double x, double y, double z) {return sin(0);}
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( bcx, bcy, dg::PER, n, Nx, Ny, Nz, comm);
 
@@ -59,7 +59,7 @@ int main( int argc, char* argv[])
     dg::MDVec b = dg::evaluate ( laplace_fct, grid);
     //compute W b
     dg::blas2::symv( w3d, b, b);
-    
+
     if(rank==0)std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     t.tic();
     unsigned num = pcg( laplace,x,b,v3d,eps);
@@ -74,7 +74,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
-    normerr = dg::blas2::dot( w3d, error); 
+    normerr = dg::blas2::dot( w3d, error);
     norm = dg::blas2::dot( w3d, deriv);
     if(rank==0)std::cout << "L2 Norm of relative error in derivative is: " <<sqrt( normerr/norm)<<std::endl;
 
@@ -82,14 +82,14 @@ int main( int argc, char* argv[])
     x = dg::evaluate( initial, grid);
     b = dg::evaluate ( laplace_fct, grid);
     //create grid and perp and parallel volume
-    dg::Handle<dg::aMPIGeometry2d> grid_perp = grid.perp_grid();
+    dg::ClonePtr<dg::aMPIGeometry2d> grid_perp = grid.perp_grid();
     dg::MDVec v2d = dg::create::inv_volume( grid_perp.get());
     dg::MDVec w2d = dg::create::volume( grid_perp.get());
     dg::SparseElement<dg::MDVec> g_parallel = dg::tensor::volume( grid.metric().parallel());
     dg::MDVec chi = dg::evaluate( dg::one, grid);
     dg::tensor::pointwiseDot( chi, g_parallel, chi);
     //create split Laplacian
-    std::vector< dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > laplace_split( 
+    std::vector< dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > laplace_split(
             grid.local().Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(grid_perp.get(), dg::not_normed, dg::centered));
     // create split  vectors and solve
     std::vector<dg::MDVec> b_split, x_split, chi_split;
@@ -114,7 +114,7 @@ int main( int argc, char* argv[])
     normerr = dg::blas2::dot( w3d, error);
     norm = dg::blas2::dot( w3d, solution);
     if(rank==0)std::cout << "L2 Norm of relative error is:     " <<sqrt( normerr/norm)<<std::endl;
-    //both function and derivative converge with order P 
+    //both function and derivative converge with order P
 
     MPI_Finalize();
     return 0;

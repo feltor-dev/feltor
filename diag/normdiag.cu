@@ -79,7 +79,7 @@ int main( int argc, char* argv[])
 
     
 
-    double phisupnorm, phisupnorm0, phinorm, phinorm0,dnesupnorm, dnesupnorm0, dnenorm, dnenorm0, dNinorm, dNinorm0, Enorm, Enorm0, Eqnorm, Eqnorm0, Edfnorm, Edfnorm0, uE2norm, NiuE2norm, NiuE2norm0, nlnnnorm, nlnnnorm0,NiuE2normq, NiuE2normq0, nlnnnormq, nlnnnormq0, unorm, unorm0, usupnorm, usupnorm0=0.;
+    double phisupnorm=0., phisupnorm0=0., phinorm=0., phinorm0=0., dnesupnorm=0., dnesupnorm0=0., dnenorm=0., dnenorm0=0.,  Enorm=0., Enorm0=0., Eqnorm=0., Eqnorm0=0., Edfnorm=0., Edfnorm0=0., uE2norm=0., NiuE2norm=0., nlnnnorm=0., NiuE2normq=0., nlnnnormq=0.,  unorm=0., unorm0=0., usupnorm=0., usupnorm0=0.;
 
     for( unsigned i=imin; i<=imax; i++)//timestepping
     {
@@ -166,7 +166,7 @@ int main( int argc, char* argv[])
 
         poisson.variationRHS(phi,uE2);
         uE2norm= 0.5*dg::blas2::dot( one, w2d,uE2);   // 0.5   u_E^2    
-        
+        std::cout << uE2norm;
         nlnnnorm = dg::blas2::dot(ne,w2d,logne);
         NiuE2norm = 0.5*dg::blas2::dot(Ni, w2d,uE2);
         dg::blas1::pointwiseDivide(Ni,nG,dNi);

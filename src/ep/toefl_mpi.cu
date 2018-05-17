@@ -9,10 +9,7 @@
 
 #include "toeflR.cuh"
 #include "dg/algorithm.h"
-#include "dg/backend/xspacelib.cuh"
 #include "parameters.h"
-
-#include "dg/backend/timer.cuh"
 
 
 /*
@@ -54,8 +51,10 @@ int main( int argc, char* argv[])
     MPI_Comm comm;
     MPI_Cart_create( MPI_COMM_WORLD, 2, np, periods, true, &comm);
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js;
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
     if( argc != 3)
     {
         if(rank==0)std::cerr << "ERROR: Wrong number of arguments!\nUsage: "<< argv[0]<<" [inputfile] [outputfile]\n";
@@ -64,7 +63,7 @@ int main( int argc, char* argv[])
     else 
     {
         std::ifstream is(argv[1]);
-        reader.parse( is, js, false); //read input without comments
+        parseFromStream( parser, is, &js, &errs); //read input without comments
     }
     std::string input = js.toStyledString(); //save input without comments, which is important if netcdf file is later read by another parser
     const Parameters p( js);
@@ -91,9 +90,8 @@ int main( int argc, char* argv[])
     }
     //////////////////initialisation of timestepper and first step///////////////////
     double time = 0;
-    //dg::AB< k, std::vector<dg::MDVec> > ab( y0);
-    dg::Karniadakis< std::vector<dg::MDVec> > ab( y0, y0[0].size(), 1e-9);
-    ab.init( test, diffusion, y0, p.dt);
+    dg::Karniadakis< std::vector<dg::MDVec> > karniadakis( y0, y0[0].size(), 1e-9);
+    karniadakis.init( test, diffusion, 0., y0, p.dt);
     y0.swap( y1); //y1 now contains value at zero time
     /////////////////////////////set up netcdf/////////////////////////////////////
     file::NC_Error_Handle err;
@@ -176,7 +174,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned j=0; j<p.itstp; j++)
         {
-            ab( test, diffusion, y0);
+            karniadakis.step( test, diffusion, time, y0);
             y0.swap( y1); //attention on -O3 ?
             //store accuracy details
             {

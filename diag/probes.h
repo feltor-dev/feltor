@@ -10,8 +10,7 @@
 
 using namespace std;
 
-#include "dg/backend/grid.h"
-#include "dg/backend/interpolation.cuh"
+#include "dg/algorithm.h"
 #include <fstream>
 #include <sstream>
 
@@ -46,7 +45,7 @@ struct probes
         const size_t num_probes;                            // Number of probes
         IMatrix probe_interp;                                // Interpolates field (nem phi) on the probe positions
         Matrix dy;                                          // Derivative matrix
-        dg::PoloidalAverage<container, container> pol_avg;  // Poloidal Average operator
+        dg::Average<container> pol_avg;  // Poloidal Average operator
         std::vector<std::string> fnames;                    // Vector of file names for probe output
 };
 
@@ -64,7 +63,7 @@ probes<IMatrix, Matrix, container> :: probes (container x_c, container y_c, cons
     y_coords(y_c),
     num_probes(x_coords.size()),
     dy(dg::create::dy(g)),
-    pol_avg(g)
+    pol_avg(g, dg::coo2d::y)
 { 
     thrust::host_vector<double> t1, t2;
     dg::blas1::transfer( x_c, t1);
@@ -114,8 +113,8 @@ void probes<IMatrix, Matrix, container> :: profiles(double time, container& npe,
     ofstream of_ne;
     ofstream of_phi;
 
-    pol_avg(phi, prof_phi);
-    pol_avg(npe, prof_ne);
+    pol_avg(phi, prof_phi,false);
+    pol_avg(npe, prof_ne,false);
 
     of_ne.open("ne_prof.dat", ios::trunc);
     of_phi.open("phi_prof.dat", ios::trunc);

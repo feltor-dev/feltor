@@ -18,8 +18,6 @@ const double lx = M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::PER;
-//const double eps = 1e-3; //# of pcg iterations increases very much if 
- // eps << relativer Abstand der exakten Lösung zur Diskretisierung vom Sinus
 
 double initial( double x, double y) {return 0.;}
 double amp = 0.9999;
@@ -38,7 +36,7 @@ int main(int argc, char* argv[] )
 {
     /////////////////////MPI INIT//////////////////////////
     MPI_Init( &argc, &argv);
-    unsigned n, Nx, Ny; 
+    unsigned n, Nx, Ny;
     MPI_Comm comm;
     dg::mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
     int rank;
@@ -58,7 +56,7 @@ int main(int argc, char* argv[] )
     dg::MDVec chi =  dg::evaluate( pol, grid);
 
 
-    
+
     if(rank==0)std::cout << "Create Polarisation object and set chi!\n";
     t.tic();
     //dg::Elliptic<dg::CartesianMPIGrid2d, dg::MDMatrix, dg::MDVec> pol( grid, dg::not_normed, dg::centered);
@@ -66,13 +64,13 @@ int main(int argc, char* argv[] )
     unsigned stages = 3;
 
     dg::MultigridCG2d<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec > multigrid( grid, stages, 0);
-    
+
     std::vector<dg::MDVec> chi_ = multigrid.project( chi);
     std::vector<dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > multi_pol( stages);
-    
+
     for(unsigned u=0; u<stages; u++)
     {
-        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered); 
+        multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered);
         multi_pol[u].set_chi( chi_[u]);
     }
     t.toc();

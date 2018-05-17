@@ -24,7 +24,7 @@
     guenther_parameters.h
     toroidal.h
 
-    testfunctors.h 
+    testfunctors.h
     init.h
     magnetic_field.h
     adaption.h

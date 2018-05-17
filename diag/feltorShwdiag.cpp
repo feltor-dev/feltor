@@ -6,12 +6,6 @@
 #include <sstream>
 
 #include "dg/algorithm.h"
-#include "dg/poisson.h"
-
-#include "dg/backend/interpolation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/average.cuh"
-#include "dg/functors.h"
 
 #include "file/nc_utilities.h"
 #include "feltorShw/parameters.h"
@@ -39,9 +33,12 @@ int main( int argc, char* argv[])
     
     std::cout << "input "<<input<<std::endl;
     
-    Json::Reader reader;
     Json::Value js;
-    reader.parse( input, js, false);
+    Json::CharReaderBuilder parser;
+    parser["collectComments"] = false;
+    std::string errs;
+    std::stringstream ss(input);
+    parseFromStream( parser, ss, &js, &errs); //read input without comments
     const eule::Parameters p(js);   
     ///////////////////////////////////////////////////////////////////////////
     
@@ -74,7 +71,7 @@ int main( int argc, char* argv[])
     dg::ExpProfX prof(p.nprofileamp, p.bgprofamp,p.invkappa); 
     dg::HVec nprof(dg::evaluate(prof,g2d));
     dg::HVec y0coo(dg::evaluate(dg::CONSTANT(0.0),g1d));
-    dg::PoloidalAverage<dg::HVec,dg::HVec > polavg(g2d);
+    dg::Average<dg::HVec> polavg(g2d, dg::coo2d::y);
     dg::IHMatrix interp(dg::create::interpolation(xcoo,y0coo,g2d));
     dg::IHMatrix interp_in = dg::create::interpolation(g2d,g2d_in);
     dg::Poisson<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> poisson(g2d,  p.bc_x, p.bc_y,  p.bc_x_phi, p.bc_y);
@@ -579,17 +576,13 @@ int main( int argc, char* argv[])
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[31],   start1d, count1d, temp1d.data()); //Su = -[[u_y]]/<n>  omega_s P [lhs*(ne0p - <ne>)]
         
         //Compute avg 2d fields and convert them into 1d field
-        polavg(npe[0],temp);
-        dg::blas2::gemv(interp,temp,temp1d); 
+        polavg(npe[0],temp1d,false);
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[0],   start1d, count1d, temp1d.data()); 
-        polavg(npe[1],temp);
-        dg::blas2::gemv(interp,temp,temp1d); 
+        polavg(npe[1],temp1d,false);
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[1],   start1d, count1d, temp1d.data()); 
-        polavg(logn[0],temp);
-        dg::blas2::gemv(interp,temp,temp1d); 
+        polavg(logn[0],temp1d,false);
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[2],   start1d, count1d, temp1d.data()); 
-        polavg(logn[1],temp);
-        dg::blas2::gemv(interp,temp,temp1d); 
+        polavg(logn[1],temp1d,false);
         err_out = nc_put_vara_double( ncid_out, dataIDs1d[3],   start1d, count1d, temp1d.data()); 
         
         //compute probe values by interpolation and write 2d data fields

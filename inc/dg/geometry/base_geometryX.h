@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../backend/gridX.h"
-#include "../backend/evaluationX.cuh"
+#include "gridX.h"
+#include "evaluationX.cuh"
 #include "tensor.h"
 
 namespace dg
@@ -20,8 +20,8 @@ struct aGeometryX2d : public aTopologyX2d
         return do_compute_jacobian();
     }
     ///@copydoc aGeometry2d::metric()
-    SparseTensor<thrust::host_vector<double> > metric()const { 
-        return do_compute_metric(); 
+    SparseTensor<thrust::host_vector<double> > metric()const {
+        return do_compute_metric();
     }
     ///@copydoc aGeometry2d::map()
     std::vector<thrust::host_vector<double> > map()const{
@@ -34,7 +34,7 @@ struct aGeometryX2d : public aTopologyX2d
     protected:
     /*!
      * @copydoc aTopologyX2d::aTopologyX2d()
-     * @note the default coordinate map will be the identity 
+     * @note the default coordinate map will be the identity
      */
     aGeometryX2d( double x0, double x1, double y0, double y1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aTopologyX2d( x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy){}
     ///@copydoc aTopologyX2d::aTopologyX2d(const aTopologyX2d&)
@@ -71,8 +71,8 @@ struct aGeometryX3d : public aTopologyX3d
         return do_compute_jacobian();
     }
     ///@copydoc aGeometry3d::metric()
-    SparseTensor<thrust::host_vector<double> > metric()const { 
-        return do_compute_metric(); 
+    SparseTensor<thrust::host_vector<double> > metric()const {
+        return do_compute_metric();
     }
     ///@copydoc aGeometry3d::map()
     std::vector<thrust::host_vector<double> > map()const{
@@ -85,7 +85,7 @@ struct aGeometryX3d : public aTopologyX3d
     protected:
     /*!
      * @copydoc aTopologyX3d::aTopologyX3d()
-     * @note the default coordinate map will be the identity 
+     * @note the default coordinate map will be the identity
      */
     aGeometryX3d( double x0, double x1, double y0, double y1, double z0, double z1, double fx, double fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aTopologyX3d(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     ///@copydoc aTopologyX3d::aTopologyX3d(const aTopologyX3d&)

@@ -2,7 +2,7 @@
 
 #include <cusp/print.h>
 
-#include "dg/backend/functions.h"
+#include "dg/geometry/functions.h"
 #include "dg/backend/timer.cuh"
 #include "dg/blas.h"
 #include "dg/functors.h"
@@ -17,21 +17,20 @@
 int main(int argc, char * argv[])
 {
     std::cout << "Start DS test on flux grid!"<<std::endl;
-    Json::Reader reader;
     Json::Value js;
     if( argc==1) {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField mag = dg::geo::createSolovevField( gp);
     std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
     unsigned n,Nx,Ny,Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
+    std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "Type multipleX (1) and multipleY (100)!\n";
     unsigned mx, my;
     std::cin >> mx >> my;
@@ -42,10 +41,10 @@ int main(int argc, char * argv[])
     dg::geo::FluxGenerator flux( mag.get_psip(), mag.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
     std::cout << "Constructing Grid..."<<std::endl;
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
-    //dg::geo::Fieldaligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() ); 
+    //dg::geo::Fieldaligned<dg::aGeometry3d, dg::IHMatrix, dg::HVec> fieldaligned( bhat, g3d, 1, 4, gp.rk4eps, dg::NoLimiter() );
     std::cout << "Constructing Fieldlines..."<<std::endl;
     dg::geo::DS<dg::aProductGeometry3d, dg::IHMatrix, dg::HMatrix, dg::HVec> ds( mag, g3d, dg::NEU, dg::NEU, dg::geo::FullLimiter(), dg::normed, dg::centered, 1e-8, mx, my, false, true, false);
-    
+
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s\n";
     dg::HVec B = dg::pullback( dg::geo::InvB(mag), g3d), divB(B);
@@ -75,6 +74,6 @@ int main(int argc, char * argv[])
     dg::blas1::axpby( 1., gradLnB, -1., gradB);
     double norm2 = sqrt(dg::blas2::dot(gradB, vol3d, gradB));
     std::cout << "rel. error of lnB is    "<<norm2/norm<<"\n";
-    
+
     return 0;
 }

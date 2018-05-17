@@ -5,17 +5,9 @@
 #include <thrust/remove.h>
 #include <thrust/host_vector.h>
 
-#include "dg/backend/timer.cuh"
-#include "dg/backend/evaluation.cuh"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/runge_kutta.h"
-#include "dg/multistep.h"
-#include "dg/helmholtz.h"
-#include "dg/backend/typedefs.cuh"
-#include "dg/functors.h"
 
+#include "dg/algorithm.h"
 #include "geometries/geometries.h"
-#include "dg/backend/projection.cuh"
 
 #ifdef OPENGL_WINDOW
 #include "draw/host_window.h"
@@ -35,7 +27,7 @@ using namespace dg;
 
 // simple, text based, equidistant output format that makes it easy to compare
 // with output from other equidistant codes, etc.
-void write(string prefix, DVec& y0, double time, const Parameters& p, dg::geo::CurvilinearGrid2d& grid)
+void write(string prefix, const DVec& y0, double time, const Parameters& p, dg::geo::CurvilinearGrid2d& grid)
 {
     // interpolate to an equidistant grid
     int N = 1024;
@@ -49,7 +41,7 @@ void write(string prefix, DVec& y0, double time, const Parameters& p, dg::geo::C
 
     DVec eq(N*N);
     thrust::fill(begin(eq), end(eq),1.0);
-    auto interp_matrix = dg::create::interpolation(x, y, grid, dg::DIR);
+    IDMatrix interp_matrix = dg::create::interpolation(x, y, grid, dg::DIR);
     dg::blas2::gemv(interp_matrix, y0, eq);
 
     // filename
@@ -104,17 +96,16 @@ int main(int argc, char* argv[])
 {
     Timer t;
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.json");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
@@ -147,7 +138,7 @@ int main(int argc, char* argv[])
     //make solver and stepper
     polar::Explicit<dg::geo::CurvilinearGrid2d, DMatrix, DVec> shu( grid, p.eps);
     polar::Diffusion<dg::geo::CurvilinearGrid2d, DMatrix, DVec> diffusion( grid, p.nu);
-    Karniadakis< DVec > ab( y0, y0.size(), p.eps_time);
+    Karniadakis< DVec > karniadakis( y0, y0.size(), p.eps_time);
 
 
     // Some simple tests to see if everything is in order
@@ -165,7 +156,7 @@ int main(int argc, char* argv[])
 
     DVec u0test = evaluate(u0_test,grid);
     DVec potref = evaluate(u0_ref,grid);
-    shu( u0test, y1);
+    shu( 0., u0test, y1);
     DVec pot = shu.potential();
     double e=0.0;
     for(size_t i=0;i<pot.size();i++) {
@@ -176,7 +167,7 @@ int main(int argc, char* argv[])
 
 
     t.tic();
-    shu( y0, y1);
+    shu(0., y0, y1);
     t.toc();
     cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
 
@@ -203,8 +194,7 @@ int main(int argc, char* argv[])
     draw::ColorMapRedBlueExt colors( 1.);
 #endif
 
-    ab.init( shu, diffusion, y0, p.dt);
-    ab( shu, diffusion, y0); //make potential ready
+    karniadakis.init( shu, diffusion, time, y0, p.dt);
 
     t.tic();
     int step = 0;
@@ -214,7 +204,7 @@ int main(int argc, char* argv[])
         if(glfwWindowShouldClose(w))
             break;
 
-        dg::blas2::symv( equidistant, ab.last(), visual);
+        dg::blas2::symv( equidistant, y0, visual);
         colors.scale() =  (float)thrust::reduce( visual.begin(), visual.end(), -1., dg::AbsMax<double>() );
         //draw and swap buffers
         dg::blas1::transfer( visual, hvisual);
@@ -233,11 +223,9 @@ int main(int argc, char* argv[])
         //step 
         for( unsigned i=0; i<p.itstp; i++)
         {
-            ab( shu, diffusion, y0 );
+            karniadakis.step( shu, diffusion, time, y0 );
         }
-        time += p.itstp*p.dt;
-        cout << time << endl;
-
+        cout << "t=" << time << endl;
     }
     t.toc();
 
@@ -245,18 +233,19 @@ int main(int argc, char* argv[])
     glfwTerminate();
 #endif
 
-    y0 = ab.last();
     write("equi", y0, time, p, grid);
 
-    double vorticity_end = blas2::dot( stencil , w2d, ab.last());
-    blas1::pointwiseDot( stencil, ab.last(), ry0);
-    double enstrophy_end = 0.5*blas2::dot( ry0, w2d, ab.last());
+    double vorticity_end = blas2::dot( stencil , w2d, y0);
+    blas1::pointwiseDot( stencil, y0, ry0);
+    double enstrophy_end = 0.5*blas2::dot( ry0, w2d, y0);
     double energy_end    = 0.5*blas2::dot( ry0, w2d, shu.potential()) ;
-    cout << "Vorticity error           :  "<<vorticity_end-vorticity<<"\n";
-    cout << "Enstrophy error (relative):  "<<(enstrophy_end-enstrophy)/enstrophy<<"\n";
-    cout << "Energy error    (relative):  "<<(energy_end-energy)/energy<<"\n";
+    cout << "Vorticity error :  "<<vorticity_end-vorticity<<"\n";
+    cout << "Enstrophy error :  "<<(enstrophy_end-enstrophy)<<"\n";
+    cout << "Energy error    :  "<<(energy_end-energy)<<"\n";
+    cout << "Energy: " << energy << endl;
 
     cout << "Runtime: " << t.diff() << endl;
 
     return 0;
 }
+

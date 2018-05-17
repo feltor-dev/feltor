@@ -9,18 +9,18 @@
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 double left( double x, double y) {return sin(x)*sin(y);}
-double right( double x, double y) {return sin(2*x)*sin(2*y);} 
+double right( double x, double y) {return sin(2*x)*sin(2*y);}
 //double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y) 
+double jacobian( double x, double y)
 {
     return cos(x)*sin(y)*2*sin(2*x)*cos(2*y)-sin(x)*cos(y)*2*cos(2*x)*sin(2*y);
 }
 
 const double lz = 1.;
 double left( double x, double y, double z) {return left(x,y)*z;}
-double right( double x, double y, double z) {return right(x,y)*z;} 
+double right( double x, double y, double z) {return right(x,y)*z;}
 //double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y, double z) 
+double jacobian( double x, double y, double z)
 {
     return jacobian(x,y)*z*z;
 }
@@ -44,7 +44,7 @@ int main()
     dg::Timer t;
 
     dg::ArakawaX<dg::CartesianGrid3d, dg::DMatrix, dg::DVec> arakawa( grid);
-    t.tic(); 
+    t.tic();
     for( unsigned i=0; i<20; i++)
         arakawa( lhs, rhs, jac);
     t.toc();
@@ -56,7 +56,7 @@ int main()
     std::cout << "Mean rhs*Jacobian is "<<dg::blas2::dot( rhs, w3d, jac)<<"\n";
     std::cout << "Mean   n*Jacobian is "<<dg::blas2::dot( lhs, w3d, jac)<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
-    std::cout << "Distance to solution "<<sqrt(dg::blas2::dot( w3d, jac))<<std::endl; 
+    std::cout << "Distance to solution "<<sqrt(dg::blas2::dot( w3d, jac))<<std::endl;
     return 0;
 }
 

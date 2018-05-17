@@ -25,13 +25,13 @@ thrust::host_vector<double> periodify( const thrust::host_vector<double>& in, co
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[((i*g.n() + k)*g.Nx() + j)*g.n()+l];
     for( unsigned i=g.Ny()-1; i<g.Ny(); i++)
     for( unsigned k=0; k<g.n(); k++)
     for( unsigned j=0; j<g.Nx(); j++)
     for( unsigned l=0; l<g.n(); l++)
-        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] = 
+        out[((i*g.n() + k)*g.Nx() + j)*g.n()+l] =
             in[((0*g.n() + k)*g.Nx() + j)*g.n()+l];
     return out;
 }
@@ -43,43 +43,41 @@ double cosineY( double x, double y) {return sin(x)*cos(y);}
 
 int main( int argc, char* argv[])
 {
-    std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
-    unsigned n, Nx, Ny, Nz;
-    std::cin >> n>> Nx>>Ny>>Nz;   
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     //write parameters from file into variables
     dg::geo::solovev::Parameters gp(js);
     {dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     std::cout << "Psi min "<<c.psip()(gp.R_0, 0)<<"\n";}
+    std::cout << "Type n(3), Nx(8), Ny(80), Nz(20)\n";
+    unsigned n, Nx, Ny, Nz;
+    std::cin >> n>> Nx>>Ny>>Nz;
     std::cout << "Type psi_0 (-20) and psi_1 (-4)\n";
     double psi_0, psi_1;
     std::cin >> psi_0>> psi_1;
     gp.display( std::cout);
     dg::Timer t;
     //solovev::detail::Fpsi fpsi( gp, -10);
-    std::cout << "Constructing flux grid ... \n";
     t.tic();
     //![doxygen]
     //create the magnetic field
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);
     //create a grid generator
-    dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 1);
-    //create a grid 
+    dg::geo::FluxGenerator flux( c.get_psip(), c.get_ipol(), psi_0, psi_1, gp.R_0, 0., 0, false);
+    //create a grid
     dg::geo::CurvilinearGrid2d g2d(flux, n, Nx,Ny, dg::NEU);
     //![doxygen]
     dg::geo::CurvilinearProductGrid3d g3d(flux, n, Nx, Ny,Nz, dg::DIR);
-    dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1); 
+    dg::Grid2d g2d_periodic(g2d.x0(), g2d.x1(), g2d.y0(), g2d.y1(), g2d.n(), g2d.Nx(), g2d.Ny()+1);
     t.toc();
     std::cout << "Construction took "<<t.diff()<<"s"<<std::endl;
     //////////////////////////////setup netcdf//////////////////

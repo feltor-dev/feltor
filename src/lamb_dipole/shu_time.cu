@@ -1,13 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "dg/backend/timer.cuh"
 #include "dg/algorithm.h"
-#include "dg/functors.h"
-#include "dg/backend/evaluation.cuh"
-#include "dg/runge_kutta.h"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/backend/typedefs.cuh"
 
 #include "shu.cuh"
 #include "parameters.h"
@@ -40,12 +34,12 @@ int main( int argc, char * argv[])
     {
         double dt = dt0/pow(2,i);
         unsigned NT = (unsigned)(Tmax/dt);
+        double time = 0;
         //initiate solver 
         DVec y0( omega ), y1( y0);
         //make solver and stepper
-        AB< 1, DVec > ab( y0);
-        ab.init( shu, y0, dt);
-        ab( shu, y1);
+        AB< 3, DVec > ab( y0);
+        ab.init( shu, time, y0, dt);
 
         double vorticity = blas2::dot( stencil, w2d, y1);
         double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
@@ -54,38 +48,7 @@ int main( int argc, char * argv[])
         try{
         for( unsigned i=0; i<NT; i++)
         {
-            ab( shu, y1);
-        }
-        }
-        catch( dg::Fail& fail) { 
-            std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-            std::cerr << "Does Simulation respect CFL condition?\n";
-        }
-        std::cout << 1 <<" "<<n<<" "<<dt<<" "<<Nx<<" "<<eps<<" ";
-        std::cout << fabs(blas2::dot( stencil , w2d, y1));
-        std::cout << " "<<fabs(0.5*blas2::dot( y1, w2d, y1)-enstrophy)/enstrophy;
-        std::cout << " "<<fabs(0.5*blas2::dot( y1, w2d, shu.potential())-energy)/energy <<"\n";
-    }
-    std::cout << std::endl;
-    for(unsigned i=0; i<6;i++)
-    {
-        double dt = dt0/pow(2,i);
-        unsigned NT = (unsigned)(Tmax/dt);
-        //initiate solver 
-        DVec y0( omega ), y1( y0);
-        //make solver and stepper
-        AB< 2, DVec > ab( y0);
-        ab.init( shu, y0, dt);
-        ab( shu, y1);
-
-        double vorticity = blas2::dot( stencil, w2d, y1);
-        double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
-        double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
-        /////////////////////////////////////////////////////////////////
-        try{
-        for( unsigned i=0; i<NT; i++)
-        {
-            ab( shu, y1);
+            ab.step( shu, time, y1);
         }
         }
         catch( dg::Fail& fail) { 
@@ -93,68 +56,6 @@ int main( int argc, char * argv[])
             std::cerr << "Does Simulation respect CFL condition?\n";
         }
         std::cout << 2 <<" "<<n<<" "<<dt<<" "<<Nx<<" "<<eps<<" ";
-        std::cout << fabs(blas2::dot( stencil , w2d, y1));
-        std::cout << " "<<fabs(0.5*blas2::dot( y1, w2d, y1)-enstrophy)/enstrophy;
-        std::cout << " "<<fabs(0.5*blas2::dot( y1, w2d, shu.potential())-energy)/energy <<"\n";
-    }
-    std::cout << std::endl;
-    for(unsigned i=0; i<6;i++)
-    {
-        double dt = dt0/pow(2,i);
-        unsigned NT = (unsigned)(Tmax/dt);
-        //initiate solver 
-        DVec y0( omega ), y1( y0);
-        //make solver and stepper
-        AB< 3, DVec > ab( y0);
-        ab.init( shu, y0, dt);
-        ab( shu, y1);
-
-        double vorticity = blas2::dot( stencil, w2d, y1);
-        double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
-        double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
-        /////////////////////////////////////////////////////////////////
-        try{
-        for( unsigned i=0; i<NT; i++)
-        {
-            ab( shu,y1);
-        }
-        }
-        catch( dg::Fail& fail) { 
-            std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-            std::cerr << "Does Simulation respect CFL condition?\n";
-        }
-        std::cout << 3 <<" "<<n<<" "<<dt<<" "<<Nx<<" "<<eps<<" ";
-        std::cout << fabs(blas2::dot( stencil , w2d, y1));
-        std::cout << " "<<fabs(0.5*blas2::dot( y1, w2d, y1)-enstrophy)/enstrophy;
-        std::cout << " "<<fabs(0.5*blas2::dot( y1, w2d, shu.potential())-energy)/energy <<"\n";
-    }
-    std::cout << std::endl;
-    for(unsigned i=0; i<6;i++)
-    {
-        double dt = dt0/pow(2,i);
-        unsigned NT = (unsigned)(Tmax/dt);
-        //initiate solver 
-        DVec y0( omega ), y1( y0);
-        //make solver and stepper
-        AB< 4, DVec > ab( y0);
-        ab.init( shu, y0, dt);
-        ab( shu, y1);
-
-        double vorticity = blas2::dot( stencil, w2d, y1);
-        double enstrophy = 0.5*blas2::dot( y1, w2d, y1);
-        double energy =    0.5*blas2::dot( y1, w2d, shu.potential()) ;
-        /////////////////////////////////////////////////////////////////
-        try{
-        for( unsigned i=0; i<NT; i++)
-        {
-            ab( shu, y1);
-        }
-        }
-        catch( dg::Fail& fail) { 
-            std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
-            std::cerr << "Does Simulation respect CFL condition?\n";
-        }
-        std::cout << 4 <<" "<<n<<" "<<dt<<" "<<Nx<<" "<<eps<<" ";
         std::cout << fabs(blas2::dot( stencil , w2d, y1));
         std::cout << " "<<fabs(0.5*blas2::dot( y1, w2d, y1)-enstrophy)/enstrophy;
         std::cout << " "<<fabs(0.5*blas2::dot( y1, w2d, shu.potential())-energy)/energy <<"\n";

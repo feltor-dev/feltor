@@ -29,13 +29,13 @@ struct FuncDirPer2
     double dR( double R, double Z)const
     {
         double psip = psip_.get()(R,Z), psipR = psipR_.get()(R,Z), theta_ = theta(R,Z);
-        return (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos(theta_) 
+        return (2.*psip*psipR - (psi0_+psi1_)*psipR)*cos(theta_)
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*thetaR(R,Z);
     }
     double dZ( double R, double Z)const
     {
         double psip = psip_.get()(R,Z), psipZ = psipZ_.get()(R,Z), theta_=theta(R,Z);
-        return (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos(theta_) 
+        return (2*psip*psipZ - (psi0_+psi1_)*psipZ)*cos(theta_)
             - (psip-psi0_)*(psip-psi1_)*sin(theta_)*thetaZ(R,Z);
     }
     private:
@@ -56,12 +56,12 @@ struct FuncDirPer2
     }
     double R_0_;
     double psi0_, psi1_;
-    dg::Handle<dg::geo::aBinaryFunctor> psip_, psipR_,  psipZ_;
+    dg::ClonePtr<dg::geo::aBinaryFunctor> psip_, psipR_,  psipZ_;
 };
 
 struct ArakawaDirPer
 {
-    ArakawaDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1): 
+    ArakawaDirPer( dg::geo::TokamakMagneticField c, double psi_0, double psi_1):
         f_(c, psi_0, psi_1, 4), g_(c, psi_0, psi_1){ }
     double operator()(double R, double Z, double phi) const {
         return this->operator()(R,Z);
@@ -108,21 +108,20 @@ int main(int argc, char** argv)
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     MPI_Comm comm;
     dg::mpi_init3d( dg::DIR, dg::PER, dg::PER, n, Nx, Ny, Nz, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-    Json::Reader reader;
     Json::Value js;
     if( argc==1)
     {
         std::ifstream is("geometry_params_Xpoint.js");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     dg::geo::solovev::Parameters gp(js);
     dg::geo::TokamakMagneticField c = dg::geo::createSolovevField( gp);

@@ -19,7 +19,7 @@ namespace geo
  *  (1<=n<=20, note that the library is optimized for n=3 )
  * @attention # of polynomial coefficients in z direction is always 1
  * @param Nx number of cells in x
- * @param Ny number of cells in y 
+ * @param Ny number of cells in y
  * @param Nz  number of cells z
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
@@ -34,7 +34,7 @@ namespace geo
  * @param n number of %Gaussian nodes in x and y
  *  (1<=n<=20, note that the library is optimized for n=3 )
  * @param Nx number of cells in x
- * @param Ny number of cells in y 
+ * @param Ny number of cells in y
  * @param bcx boundary condition in x
  * @param bcy boundary condition in y
  */
@@ -57,19 +57,20 @@ void square( const dg::SparseTensor<thrust::host_vector<double> >& jac, const th
         tempyy[i] = (jac.value(1,0)[i]*jac.value(1,0)[i]+jac.value(1,1)[i]*jac.value(1,1)[i]);
         temppp[i] = 1./R[i]/R[i]; //1/R^2
     }
-    metric.idx(0,0) = 0; metric.value(0) = tempxx;
-    metric.idx(1,1) = 1; metric.value(1) = tempyy;
-    metric.idx(2,2) = 2; metric.value(2) = temppp;
+    metric.values().resize(3);
+    metric.idx(0,0) = 0; metric.values()[0] = tempxx;
+    metric.idx(1,1) = 1; metric.values()[1] = tempyy;
+    metric.idx(2,2) = 2; metric.values()[2] = temppp;
     if( !orthogonal)
     {
-        metric.idx(0,1) = metric.idx(1,0) = 3; 
-        metric.value(3) = tempxy;
+        metric.idx(0,1) = metric.idx(1,0) = 3;
+        metric.values().push_back( tempxy);
     }
 }
 }//namespace detail
 ///@endcond
 
-//when we make a 3d grid with eta and phi swapped the metric structure and the transformation changes 
+//when we make a 3d grid with eta and phi swapped the metric structure and the transformation changes
 //In practise it can only be orthogonal due to the projection tensor in the elliptic operator
 
 /**
@@ -92,7 +93,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
      */
     explicit CurvilinearGrid2d( CurvilinearProductGrid3d g);
 
-    ///read access to the generator 
+    ///read access to the generator
     const aGenerator2d& generator() const{return handle_.get();}
     virtual CurvilinearGrid2d* clone()const{return new CurvilinearGrid2d(*this);}
     private:
@@ -111,7 +112,7 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
     dg::SparseTensor<thrust::host_vector<double> > jac_, metric_;
     std::vector<thrust::host_vector<double> > map_;
-    dg::Handle<aGenerator2d> handle_;
+    dg::ClonePtr<aGenerator2d> handle_;
 };
 
 
@@ -127,8 +128,8 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
 
     ///@copydoc hide_grid_parameters3d
     CurvilinearProductGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
-        dg::aProductGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz)
-    { 
+        dg::aProductGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz), jac_(4)
+    {
         map_.resize(3);
         handle_ = generator;
         constructPerp( n, Nx, Ny);
@@ -155,7 +156,7 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
         unsigned size2d = this->n()*this->n()*this->Nx()*this->Ny();
         //resize for 3d values
         for( unsigned r=0; r<4;r++)
-            jac_.value(r).resize(size);
+            jac_.values()[r].resize(size);
         map_[0].resize(size);
         map_[1].resize(size);
         //lift to 3D grid
@@ -163,7 +164,7 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
             for( unsigned i=0; i<size2d; i++)
             {
                 for(unsigned r=0; r<4; r++)
-                    jac_.value(r)[k*size2d+i] = jac_.value(r)[(k-1)*size2d+i];
+                    jac_.values()[r][k*size2d+i] = jac_.values()[r][(k-1)*size2d+i];
                 map_[0][k*size2d+i] = map_[0][(k-1)*size2d+i];
                 map_[1][k*size2d+i] = map_[1][(k-1)*size2d+i];
             }
@@ -175,7 +176,7 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
         dg::Grid1d gY1d( y0(), y1(), n, Ny);
         thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
-        handle_.get().generate( x_vec, y_vec, map_[0], map_[1], jac_.value(0), jac_.value(1), jac_.value(2), jac_.value(3));
+        handle_.get().generate( x_vec, y_vec, map_[0], map_[1], jac_.values()[0], jac_.values()[1], jac_.values()[2], jac_.values()[3]);
         jac_.idx(0,0) = 0, jac_.idx(0,1) = 1, jac_.idx(1,0)=2, jac_.idx(1,1) = 3;
     }
     virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
@@ -190,7 +191,7 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
     virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
     std::vector<thrust::host_vector<double> > map_;
     SparseTensor<thrust::host_vector<double> > jac_;
-    dg::Handle<aGenerator2d> handle_;
+    dg::ClonePtr<aGenerator2d> handle_;
 };
 
 ///@}

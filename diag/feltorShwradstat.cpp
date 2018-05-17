@@ -7,8 +7,6 @@
 #include <numeric>
 #include <iterator>
 #include "dg/algorithm.h"
-#include "dg/backend/xspacelib.cuh"
-#include "dg/functors.h"
 
 #include "file/nc_utilities.h"
 #include "feltorShw/parameters.h"
@@ -36,9 +34,12 @@ int main( int argc, char* argv[])
         std::string input( length, 'x');
         err = nc_get_att_text( ncid, NC_GLOBAL, "inputfile", &input[0]);
         
-        Json::Reader reader;
         Json::Value js;
-        reader.parse( input, js, false);
+        Json::CharReaderBuilder parser;
+        parser["collectComments"] = false;
+        std::string errs;
+        std::stringstream ss(input);
+        parseFromStream( parser, ss, &js, &errs); //read input without comments
         const eule::Parameters p(js);   
         
         dg::Grid1d g1d( 0., p.lx,p.n_out, p.Nx_out, p.bc_x);

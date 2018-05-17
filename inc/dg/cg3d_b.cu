@@ -23,11 +23,11 @@ double laplace_fct( double x, double y, double z) { return 2*sin(y)*sin(x)*sin(2
 int main()
 {
     dg::Timer t;
-    unsigned n, Nx, Ny, Nz; 
+    unsigned n, Nx, Ny, Nz;
     std::cout << "Type n, Nx, Ny and Nz\n";
     std::cin >> n >> Nx >> Ny>> Nz;
     std::cout << "Type in eps\n";
-    double eps = 1e-6; 
+    double eps = 1e-6;
     std::cin >> eps;
 
     std::cout << "TEST 3D VERSION\n";

@@ -22,21 +22,20 @@
 int main( int argc, char* argv[])
 {
     ////////////////////////Parameter initialisation//////////////////////////
-    Json::Reader reader;
     Json::Value js, gs;
     if( argc == 1)
     {
         std::ifstream is("input.json");
         std::ifstream ks("geometry_params.json");
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        is >> js;
+        ks >> gs;
     }
     else if( argc == 3)
     {
         std::ifstream is(argv[1]);
         std::ifstream ks(argv[2]);
-        reader.parse(is,js,false);
-        reader.parse(ks,gs,false);
+        is >> js;
+        ks >> gs;
     }
     else
     {
@@ -50,7 +49,7 @@ int main( int argc, char* argv[])
     /////////glfw initialisation ////////////////////////////////////////////
     std::stringstream title;
     std::ifstream is( "window_params.js");
-    reader.parse( is, js, false);
+    is >> js;
     is.close();
     GLFWwindow* w = draw::glfwInitAndCreateWindow( js["cols"].asUInt()*js["width"].asUInt(), js["rows"].asUInt()*js["height"].asUInt(), "");
     draw::RenderHostData render(js["rows"].asUInt(), js["cols"].asUInt());
@@ -104,7 +103,7 @@ int main( int argc, char* argv[])
 
     std::cout << "initialize karniadakis" << std::endl;
     dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
-    karniadakis.init( asela, rolkar, y0, p.dt);
+    karniadakis.init( asela, rolkar, 0., y0, p.dt);
     std::cout << "Done!\n";
     //std::cout << "first karniadakis" << std::endl;
 
@@ -221,7 +220,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{ karniadakis( asela, rolkar, y0);}
+            try{ karniadakis.step( asela, rolkar, time, y0);}
             catch( dg::Fail& fail) { 
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -237,7 +236,6 @@ int main( int argc, char* argv[])
             std::cout << "Accuracy: "<< 2.*(diff-diss)/(diff+diss)<<" d E/dt = " << diff <<" Lambda =" << diss << "\n";
             E0 = E1;
         }
-        time += (double)p.itstp*p.dt;
 #ifdef DG_BENCHMARK
         t.toc();
         std::cout << "\n\t Step "<<step;
