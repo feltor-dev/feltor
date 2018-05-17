@@ -61,12 +61,12 @@ struct FPExpansionVect
      */
     void Accumulate(T x);
 
-    /**
-     * This function accumulates two values x to the floating-point expansion
-     * \param x1 input value
-     * \param x2 input value
-     */
-    void Accumulate(T x1, T x2);
+    ////**
+    // * This function accumulates two values x to the floating-point expansion
+    // * \param x1 input value
+    // * \param x2 input value
+    // */
+    //void Accumulate(T x1, T x2);
 
     /**
      * This function is used to flush the floating-point expansion to the superaccumulator
@@ -116,7 +116,11 @@ inline static T KnuthTwoSum(T a, T b, T & s)
 template<typename T>
 inline static T TwoProductFMA(T a, T b, T &d) {
     T p = a * b;
+#ifdef WITHOUT_VCL
+    d = a*b-p;
+#else
     d = vcl::mul_sub_x(a, b, p); //extra precision even if FMA is not available
+#endif//WITHOUT_VCL
     return p;
 }
 
@@ -144,17 +148,24 @@ inline static T TwoProductFMA(T a, T b, T &d) {
 template<typename T>
 inline static T FMA2Sum(T a, T b, T & s)
 {
+#ifndef WITHOUT_VCL
     T r = a + b;
     T z = vcl::mul_sub(1., r, a);
     s = vcl::mul_add(1., a - vcl::mul_sub(1., r, z), b - z);
     return r;
+#else
+    T r = a + b;
+    T z = r - a;
+    s = (a - (r - z)) + (b - z);
+    return r;
+#endif//WITHOUT_VCL
 }
 
 template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE
 void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
 {
     // Experimental
-    if(TRAITS::CheckRangeFirst && vcl::horizontal_or(abs(x) < abs(a[N-1]))) {
+    if(TRAITS::CheckRangeFirst && horizontal_or(abs(x) < abs(a[N-1]))) {
         FlushVector(x);
         return;
     }
@@ -167,11 +178,6 @@ void FPExpansionVect<T,N,TRAITS>::Accumulate(T x)
     if(TRAITS::EarlyExit || horizontal_or(x)) {
         FlushVector(x);
     }
-}
-
-static inline bool sign_horizontal_or (vcl::Vec8db const & a) {
-    return vcl::horizontal_or( a);
-    //return !_mm512_testz_pd(a,a);
 }
 
 //MW: did not get it to compile with the new Vec8d vectorclass
@@ -211,14 +217,6 @@ static inline bool sign_horizontal_or (vcl::Vec8db const & a) {
 //    b = b2;
 //}
 //
-//inline static void horizontal_twosum(vcl::Vec8d & r, vcl::Vec8d & s)
-//{
-//    //r = KnuthTwoSum(r, s, s);
-//    transpose1(r, s);
-//    r = KnuthTwoSum(r, s, s);
-//    transpose2(r, s);
-//    r = KnuthTwoSum(r, s, s);
-//}
 
 template<typename T, int N, typename TRAITS>
 T FPExpansionVect<T,N,TRAITS>::twosum(T a, T b, T & s)
@@ -319,78 +317,78 @@ void FPExpansionVect<T,N,TRAITS>::Insert(T & x1, T & x2)
 
 
 
-template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE //INLINE_ATTRIBUTE //MW: is ignored?
-void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
-{
-    if(TRAITS::CheckRangeFirst) {
-        auto p = abs(x1) < abs(a[N-1]);
-        if(sign_horizontal_or(p)) {
-            FlushVector(x1 & T(p));
-            x1 = T(andnot(vcl::Vec8db(x1), p));
-        }
-        p = abs(x2) < abs(a[N-1]);
-        if(sign_horizontal_or(p)) {
-            FlushVector(x2 & T(p));
-            x2 = T(andnot(vcl::Vec8db(x2), p));
-        }
-    }
-
-    T s1, s2;
-    for(unsigned int i = 0; i != N; ++i) {
-        T ai = vcl::Vec8d().load_a((double*)(a+i));
-        //T ai = a[i];
-        ai = twosum(ai, x1, s1);
-        ai = twosum(ai, x2, s2);
-        ai.store_a((double*)(a+i));
-        //a[i] = ai;
-        x1 = s1;
-        x2 = s2;
-        if(TRAITS::EarlyExit && i != 0 && !horizontal_or(x1|x2)) return;
-    }
-
-
-    if(TRAITS::EarlyExit || (TRAITS::Horz2Sum && !TRAITS::Victimcache)) {
-        // 1 check for both numbers
-        if(TRAITS::EarlyExit || unlikely(horizontal_or(x1|x2))) {
-            if(TRAITS::FlushHi) {
-                Insert(x1, x2);
-            }
-            //if(TRAITS::Horz2Sum) {
-            //    horizontal_twosum(x1, x2);
-            //}
-            FlushVector(x1);
-            if(!TRAITS::Horz2Sum || horizontal_or(x2)) {
-                FlushVector(x2);
-            }
-        }
-    }
-    else {
-        // Separate checks
-        if(unlikely(horizontal_or(x1))) {
-            if(TRAITS::FlushHi) {
-                Insert(x1);
-            }
-            // Compact if we can
-            //if(TRAITS::Victimcache && TRAITS::Horz2Sum) {
-            //    horizontal_twosum(victim, x1);
-            //}
-            if(!TRAITS::Horz2Sum || horizontal_or(x1)) {
-                FlushVector(x1);
-            }
-        }
-        if(unlikely(horizontal_or(x2))) {
-            if(false && TRAITS::FlushHi) {  // Alternate flush low/high
-                Insert(x2);
-            }
-            //if(TRAITS::Victimcache && TRAITS::Horz2Sum) {
-            //    horizontal_twosum(victim, x2);
-            //}
-            if(!TRAITS::Horz2Sum || horizontal_or(x2)) {
-                FlushVector(x2);
-            }
-        }
-    }
-}
+//template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE //INLINE_ATTRIBUTE //MW: is ignored?
+//void FPExpansionVect<T,N,TRAITS>::Accumulate(T x1, T x2)
+//{
+//    if(TRAITS::CheckRangeFirst) {
+//        auto p = abs(x1) < abs(a[N-1]);
+//        if(sign_horizontal_or(p)) {
+//            FlushVector(x1 & T(p));
+//            x1 = T(andnot(vcl::Vec8db(x1), p));
+//        }
+//        p = abs(x2) < abs(a[N-1]);
+//        if(sign_horizontal_or(p)) {
+//            FlushVector(x2 & T(p));
+//            x2 = T(andnot(vcl::Vec8db(x2), p));
+//        }
+//    }
+//
+//    T s1, s2;
+//    for(unsigned int i = 0; i != N; ++i) {
+//        T ai = vcl::Vec8d().load_a((double*)(a+i));
+//        //T ai = a[i];
+//        ai = twosum(ai, x1, s1);
+//        ai = twosum(ai, x2, s2);
+//        ai.store_a((double*)(a+i));
+//        //a[i] = ai;
+//        x1 = s1;
+//        x2 = s2;
+//        if(TRAITS::EarlyExit && i != 0 && !horizontal_or(x1|x2)) return;
+//    }
+//
+//
+//    if(TRAITS::EarlyExit || (TRAITS::Horz2Sum && !TRAITS::Victimcache)) {
+//        // 1 check for both numbers
+//        if(TRAITS::EarlyExit || unlikely(horizontal_or(x1|x2))) {
+//            if(TRAITS::FlushHi) {
+//                Insert(x1, x2);
+//            }
+//            //if(TRAITS::Horz2Sum) {
+//            //    horizontal_twosum(x1, x2);
+//            //}
+//            FlushVector(x1);
+//            if(!TRAITS::Horz2Sum || horizontal_or(x2)) {
+//                FlushVector(x2);
+//            }
+//        }
+//    }
+//    else {
+//        // Separate checks
+//        if(unlikely(horizontal_or(x1))) {
+//            if(TRAITS::FlushHi) {
+//                Insert(x1);
+//            }
+//            // Compact if we can
+//            //if(TRAITS::Victimcache && TRAITS::Horz2Sum) {
+//            //    horizontal_twosum(victim, x1);
+//            //}
+//            if(!TRAITS::Horz2Sum || horizontal_or(x1)) {
+//                FlushVector(x1);
+//            }
+//        }
+//        if(unlikely(horizontal_or(x2))) {
+//            if(false && TRAITS::FlushHi) {  // Alternate flush low/high
+//                Insert(x2);
+//            }
+//            //if(TRAITS::Victimcache && TRAITS::Horz2Sum) {
+//            //    horizontal_twosum(victim, x2);
+//            //}
+//            if(!TRAITS::Horz2Sum || horizontal_or(x2)) {
+//                FlushVector(x2);
+//            }
+//        }
+//    }
+//}
 #undef IACA
 #undef IACA_START
 #undef IACA_END
@@ -413,6 +411,7 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
 {
     // TODO: update status, handle Inf/Overflow/NaN cases
     // TODO: make it work for other values of 4
+#ifndef WITHOUT_VCL
     double v[8];
     x.store(v);
 
@@ -422,6 +421,9 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
     for(unsigned int j = 0; j != 8; ++j) {
         exblas::cpu::Accumulate(superacc, v[j]);
     }
+#else
+    exblas::cpu::Accumulate(superacc, x);
+#endif //WITHOUT_VCL
 }
 
 template<typename T, int N, typename TRAITS>
