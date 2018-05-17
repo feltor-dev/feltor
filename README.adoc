@@ -2,6 +2,8 @@
 :source-highlighter: pygments
 :toc: macro
 
+Please visit our project https://feltor-dev.github.io[homepage].
+
 image::3dpic.jpg[3dsimulation]
 
 FELTOR (Full-F ELectromagnetic code in TORoidal geometry) is both a
@@ -312,17 +314,13 @@ activate Open MP support.
 It is important to set the Platform to x64!
 ____
 
+== 2. Documentation
 
-
-== 2. Further reading
-
-Please check out our https://feltor-dev.github.io/wiki[wiki
-pages] for some general information, user oriented documentation and
-Troubleshooting. Moreover, we maintain tex files in every src folder for
+We maintain tex files in every src folder for
 technical documentation, which can be compiled using pdflatex with
 `make doc` in the respective src folder. The
-http://feltor-dev.github.io/doc/dg/html/modules.html[developer
-oriented documentation] of the dG library was generated with
+http://feltor-dev.github.io/doc/dg/html/modules.html[documentation]
+of the dG library was generated with
 http://www.doxygen.org[Doxygen] and LateX. You can generate a local
 version including informative pdf writeups on implemented numerical
 methods directly from source code. This depends on the `doxygen`,
@@ -332,63 +330,16 @@ to `dg/html/modules.html`) with your favorite browser.
 Finally, also note the documentations of https://thrust.github.io/doc/modules.html[thrust]
 and https://cusplibrary.github.io/[cusp].
 
-== 3. Acknowledgements
+== 3. Authors, Acknowledgements, Contributions
 
-FELTOR's main authors are Matthias Wiesenberger and Markus Held.
-We received funding from the Austrian Science Fund (FWF) within
-project W1227 and Y398 under project leader Alexander Kendl at
-Innsbruck University.
-The work has been carried out within
-the framework of the EUROfusion Consortium and has received funding
-from the Euratom research and training programme 2014-2018 under
-grant agreement No 633053.
-MW has received funding from the European Union’s Horizon 2020
-research and innovation programme under the Marie
-Sklodowska-Curie grant agreement no. 713683 (COFUNDfellowsDTU).
+FELTOR has been developed by Matthias Wiesenberger and Markus Held. Please
+see https://feltor-dev.github.io/about[contributors] for a list of contributors
+and funding.
+Please check out our https://feltor-dev.github.io[homepage]
+for general information, wiki pages,
+troubleshooting and guides on how to contribute.
 
-We gratefully acknowledge fruitful discussions and code contribution from
+== License
 
-- Ralph Kube
-- Eduard Reiter
-- Lukas Einkemmer
-- Jakob Gath
+This project is licensed under the MIT license - see link:LICENSE[LICENSE] for details.
 
-We are grateful to
-
-- Roman Iakymchuk,
-
-who provided the exblas library
-for binary reproducible scalar products and advice on how to use and
-adapt it.
-We further acknowledge support for the Knights landing architecture from
-the High Level Support Team from
-
-- Albert Gutiérrez
-- Xavier Saez
-
-and from Intel Barcelona
-
-- Harald Servat
-
-
-== 4. Terms of use
-
-FELTOR is https://www.force11.org/fairprinciples[fair] software and
-licensed under the very permissive link:LICENSE[MIT license]. The MIT
-License grants you great freedom in what you do with the code as long as
-you name us (Matthias Wiesenberger and Markus Held) as creators, in
-particular in publications that use FELTOR to produce results. In such a
-case we suggest to take a snapshot of the used code and create and cite
-a DOI via e.g. http://www.zenodo.org[Zenodo] or to cite one of the
-existing DOIs if you did not alter the contained code in any way. We are
-happy if you cite our papers, but you don't have to just because you
-used our code and we certainly do not demand to be coauthors when we do
-not contribute directly to your results.
-
-== 5. Official releases
-
-Our latest code release has a shiny DOI badge from zenodo
-
-https://zenodo.org/badge/latestdoi/14143578[image:https://zenodo.org/badge/14143578.svg[DOI]]
-
-which makes us officially citable.
