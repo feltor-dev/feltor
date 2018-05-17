@@ -31,7 +31,7 @@ namespace gpu{
 __device__
 double TwoProductFMA(double a, double b, double *d) {
     double p = a * b;
-    *d = fma(a, b, -p);
+    *d = __fma_rn(a, b, -p);
     return p;
 }
 
@@ -151,8 +151,8 @@ __global__ void ExDOT(
         //double r  = 0.0, r2 = 0.0;
         //double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
         //double x2 = TwoProductFMA(x , d_c[pos], &r2);
-        double x1 = fma( d_a[pos], d_b[pos], 0);
-        double x2 = fma( x1      , d_c[pos], 0);
+        double x1 = __fma_rn( d_a[pos], d_b[pos], 0);
+        double x2 = __fma_rn( x1      , d_c[pos], 0);
 
         if( x2 != 0.0) {//accumulate x2
             #pragma unroll
