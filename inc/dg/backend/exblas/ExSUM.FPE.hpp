@@ -116,11 +116,11 @@ inline static T KnuthTwoSum(T a, T b, T & s)
 template<typename T>
 inline static T TwoProductFMA(T a, T b, T &d) {
     T p = a * b;
-#ifdef WITHOUT_VCL
+#ifdef _WITHOUT_VCL
     d = a*b-p;
 #else
     d = vcl::mul_sub_x(a, b, p); //extra precision even if FMA is not available
-#endif//WITHOUT_VCL
+#endif//_WITHOUT_VCL
     return p;
 }
 
@@ -148,7 +148,7 @@ inline static T TwoProductFMA(T a, T b, T &d) {
 template<typename T>
 inline static T FMA2Sum(T a, T b, T & s)
 {
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
     T r = a + b;
     T z = vcl::mul_sub(1., r, a);
     s = vcl::mul_add(1., a - vcl::mul_sub(1., r, z), b - z);
@@ -158,7 +158,7 @@ inline static T FMA2Sum(T a, T b, T & s)
     T z = r - a;
     s = (a - (r - z)) + (b - z);
     return r;
-#endif//WITHOUT_VCL
+#endif//_WITHOUT_VCL
 }
 
 template<typename T, int N, typename TRAITS> UNROLL_ATTRIBUTE
@@ -411,7 +411,7 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
 {
     // TODO: update status, handle Inf/Overflow/NaN cases
     // TODO: make it work for other values of 4
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
     double v[8];
     x.store(v);
 
@@ -423,7 +423,7 @@ void FPExpansionVect<T,N,TRAITS>::FlushVector(T x) const
     }
 #else
     exblas::cpu::Accumulate(superacc, x);
-#endif //WITHOUT_VCL
+#endif //_WITHOUT_VCL
 }
 
 template<typename T, int N, typename TRAITS>

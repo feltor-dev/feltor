@@ -8,6 +8,62 @@
 #pragma once
 
 #include <stdint.h> //definition of int64_t
+#include <cmath>
+#include <cassert>
+////////////////////////////////////////////////////////////////////////
+//nvcc does not compile the avx512 instruction set, so do not include it
+#ifdef __NVCC__
+#define _WITHOUT_VCL
+#endif//__NVCC__
+#ifdef WITHOUT_VCL
+#define _WITHOUT_VCL
+#endif
+
+////////////////////////////////////////////////////////////////////////
+//include vcl if available
+#ifndef _WITHOUT_VCL
+
+#define MAX_VECTOR_SIZE 512 //configuration of vcl
+#define VCL_NAMESPACE vcl
+#include "vcl/vectorclass.h" //vcl by Agner Fog, may also include immintrin.h e.g.
+#include "vcl/instrset_detect.cpp"
+#if INSTRSET <5
+#error "Instruction set SSE4.1 is required! -msse4.1"
+#elif INSTRSET <7
+#pragma message( "It is recommended to activate AVX instruction set (-mavx) or higher")
+#endif//INSTRSET
+
+#endif//_WITHOUT_VCL
+
+#if defined __INTEL_COMPILER
+#define UNROLL_ATTRIBUTE
+#define INLINE_ATTRIBUTE
+#elif defined __GNUC__
+#define UNROLL_ATTRIBUTE __attribute__((optimize("unroll-loops")))
+#define INLINE_ATTRIBUTE __attribute__((always_inline))
+#else
+#define UNROLL_ATTRIBUTE
+#define INLINE_ATTRIBUTE
+#endif
+
+#ifdef ATT_SYNTAX
+#define ASM_BEGIN ".intel_syntax;"
+#define ASM_END ";.att_syntax"
+#else
+#define ASM_BEGIN
+#define ASM_END
+#endif
+
+// Debug mode
+#define paranoid_assert(x) assert(x)
+// Making C code less readable in an attempt to make assembly more readable
+#if not defined _MSC_VER //there is no builtin_expect on msvc:
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)
+#else
+#define likely(x) (x)
+#define unlikely(x) (x)
+#endif
 
 namespace exblas
 {

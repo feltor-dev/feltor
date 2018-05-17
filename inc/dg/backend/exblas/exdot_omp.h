@@ -42,14 +42,14 @@ namespace cpu{
 inline static void ReductionStep(int step, int64_t * acc1, int64_t * acc2,
     int volatile * ready)
 {
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
     _mm_prefetch((char const*)ready, _MM_HINT_T0);
     // Wait for thread 2 to be ready
     while(*ready < step) {
         // wait
         _mm_pause();
     }
-#endif//WITHOUT_VCL
+#endif//_WITHOUT_VCL
     int imin = IMIN, imax = IMAX;
     Normalize( acc1, imin, imax);
     imin = IMIN, imax = IMAX;
@@ -75,7 +75,7 @@ inline static void Reduction(unsigned int tid, unsigned int tnum, std::vector<in
         // 1<<(s-1) = 0001, 0010, 0100, ... = 1,2,4,8,16,...
         int32_t volatile * c = &ready[tid * linesize];
         ++*c; //set: ready for level s
-#ifdef WITHOUT_VCL
+#ifdef _WITHOUT_VCL
 #pragma omp barrier //all threads are ready for level s
 #endif
         if(tid % (1 << s) == 0) { //1<<s = 2,4,8,16,32,...
@@ -105,7 +105,7 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
         CACHE cache(&acc[tid*BIN_COUNT]);
         *(int32_t volatile *)(&ready[tid * linesize]) = 0;  // Race here, who cares?
 
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
         int l = ((tid * int64_t(N)) / tnum) & ~7ul; // & ~7ul == round down to multiple of 8
         int r = ((((tid+1) * int64_t(N)) / tnum) & ~7ul) - 1;
 
@@ -128,7 +128,7 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
             cache.Accumulate(x);
             cache.Accumulate(r1);
         }
-#else// WITHOUT_VCL
+#else// _WITHOUT_VCL
         int l = ((tid * int64_t(N)) / tnum);
         int r = ((((tid+1) * int64_t(N)) / tnum) ) - 1;
         for(int i = l; i <= r; i++) {
@@ -137,7 +137,7 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
             cache.Accumulate(x);
             cache.Accumulate(r1);
         }
-#endif// WITHOUT_VCL
+#endif// _WITHOUT_VCL
         cache.Flush();
         int imin=IMIN, imax=IMAX;
         Normalize(&acc[tid*BIN_COUNT], imin, imax);
@@ -164,7 +164,7 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
         CACHE cache(&acc[tid*BIN_COUNT]);
         *(int32_t volatile *)(&ready[tid * linesize]) = 0;  // Race here, who cares?
 
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
         int l = ((tid * int64_t(N)) / tnum) & ~7ul;// & ~7ul == round down to multiple of 8
         int r = ((((tid+1) * int64_t(N)) / tnum) & ~7ul) - 1;
 
@@ -197,7 +197,7 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
             //cache.Accumulate(x2);
             //cache.Accumulate(r2);
         }
-#else// WITHOUT_VCL
+#else// _WITHOUT_VCL
         int l = ((tid * int64_t(N)) / tnum);
         int r = ((((tid+1) * int64_t(N)) / tnum) ) - 1;
         for(int i = l; i <= r; i++) {
@@ -205,7 +205,7 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
             double x2 = x1*c[i];
             cache.Accumulate(x2);
         }
-#endif// WITHOUT_VCL
+#endif// _WITHOUT_VCL
         cache.Flush();
         int imin=IMIN, imax=IMAX;
         Normalize(&acc[tid*BIN_COUNT], imin, imax);
@@ -229,13 +229,13 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
 */
 void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
     cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 #else
     cpu::ExDOTFPE<cpu::FPExpansionVect<double, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
-#endif//WITHOUT_VCL
+#endif//_WITHOUT_VCL
 }
 /*!@brief OpenMP parallel version of exact triple dot product
  *
@@ -249,13 +249,13 @@ void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
  */
 void exdot_omp(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
     cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 #else
     cpu::ExDOTFPE<cpu::FPExpansionVect<double, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
-#endif//WITHOUT_VCL
+#endif//_WITHOUT_VCL
 }
 
 }//namespace exblas

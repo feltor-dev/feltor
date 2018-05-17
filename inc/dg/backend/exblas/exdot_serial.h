@@ -32,7 +32,7 @@ namespace cpu{
 template<typename CACHE>
 void ExDOTFPE_cpu(int N, const double *a, const double *b, int64_t* acc) {
     CACHE cache(acc);
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
     int r = (( int64_t(N) ) & ~7ul);
     for(int i = 0; i < r; i+=8) {
 #ifndef _MSC_VER
@@ -52,21 +52,21 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, int64_t* acc) {
         cache.Accumulate(x);
         cache.Accumulate(r1);
     }
-#else// WITHOUT_VCL
+#else// _WITHOUT_VCL
     for(int i = 0; i < N; i++) {
         double r1;
         double x = TwoProductFMA(a[i],b[i],r1);
         cache.Accumulate(x);
         cache.Accumulate(r1);
     }
-#endif// WITHOUT_VCL
+#endif// _WITHOUT_VCL
     cache.Flush();
 }
 
 template<typename CACHE>
 void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int64_t* acc) {
     CACHE cache(acc);
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
     int r = (( int64_t(N))  & ~7ul);
     for(int i = 0; i < r; i+=8) {
 #ifndef _MSC_VER
@@ -96,13 +96,13 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int6
         //cache.Accumulate(x2);
         //cache.Accumulate(r2);
     }
-#else// WITHOUT_VCL
+#else// _WITHOUT_VCL
     for(int i = 0; i < N; i++) {
         double x1 = a[i]*b[i];
         double x2 = x1*c[i];
         cache.Accumulate(x2);
     }
-#endif// WITHOUT_VCL
+#endif// _WITHOUT_VCL
     cache.Flush();
 }
 }//namespace cpu
@@ -119,7 +119,7 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int6
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
 */
 void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
     for( int i=0; i<exblas::BIN_COUNT; i++)
@@ -127,7 +127,7 @@ void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 #else
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<double, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
-#endif//WITHOUT_VCL
+#endif//_WITHOUT_VCL
 }
 
 /*!@brief gpu version of exact triple dot product
@@ -142,7 +142,7 @@ void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
  */
 void exdot_cpu(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
-#ifndef WITHOUT_VCL
+#ifndef _WITHOUT_VCL
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
     for( int i=0; i<exblas::BIN_COUNT; i++)
@@ -150,7 +150,7 @@ void exdot_cpu(unsigned size, const double *x1_ptr, const double* x2_ptr, const 
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 #else
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<double, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
-#endif//WITHOUT_VCL
+#endif//_WITHOUT_VCL
 }
 
 
