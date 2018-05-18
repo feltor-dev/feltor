@@ -56,7 +56,7 @@ struct Composite
 template <class Matrix>
 struct TypeTraits<Composite<Matrix> >
 {
-    using value_type = get_value_type<M>;
+    using value_type = get_value_type<Matrix>;
     using data_layout = SelfMadeMatrixTag;
 };
 ///@endcond

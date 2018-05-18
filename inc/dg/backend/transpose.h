@@ -1,9 +1,9 @@
 #pragma once
 #include <cusp/transpose.h>
-#include "cusp_matrix_blas.cuh"
+#include "blas2_cusp.h"
 #include "type_traits.h"
 #ifdef MPI_VERSION
-#include "mpi_matrix_blas.h"
+#include "blas2_dispatch_mpi.h"
 #endif //MPI_VERSION
 
 namespace dg
@@ -23,7 +23,7 @@ Matrix doTranspose( const Matrix& src, CuspMatrixTag)
 template <class LocalMatrix, class Collective>
 MPIDistMat<LocalMatrix, Collective> doTranspose( const MPIDistMat<LocalMatrix, Collective>& src, MPIMatrixTag)
 {
-    LocalMatrix tr = doTranspose( src.matrix(), get_matrix_category<LocalMatrix>());
+    LocalMatrix tr = doTranspose( src.matrix(), get_data_layout<LocalMatrix>());
     MPIDistMat<LocalMatrix, Collective> out( tr, src.collective());
     if( src.get_dist() == dg::row_dist) out.set_dist( dg::col_dist);
     if( src.get_dist() == dg::col_dist) out.set_dist( dg::row_dist);
@@ -48,7 +48,7 @@ template<class Matrix>
 Matrix transpose( const Matrix& src)
 {
     //%Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
-    return detail::doTranspose( src, get_matrix_category<Matrix>());
+    return detail::doTranspose( src, get_data_layout<Matrix>());
 }
 
 } //namespace dg

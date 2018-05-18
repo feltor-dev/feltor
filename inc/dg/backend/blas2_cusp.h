@@ -12,8 +12,7 @@
 #include <cusp/array1d.h>
 
 #include "config.h"
-#include "matrix_categories.h"
-#include "vector_categories.h"
+#include "type_traits.h"
 
 ///@cond
 namespace dg{
@@ -31,10 +30,9 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixT
 
 #ifdef _OPENMP
 template< class Matrix, class value_type>
-inline void doSymv_dispatch( const Matrix& m,
+inline void doSymv_cusp_dispatch( Matrix& m,
                     const value_type* RESTRICT x_ptr,
                     value_type* RESTRICT y_ptr,
-                    CuspMatrixTag,
                     cusp::csr_format,
                     OmpTag)
 {
@@ -58,16 +56,15 @@ inline void doSymv_dispatch( const Matrix& m,
 }
 #endif// _OPENMP
 
-template< class Matrix, class T>
-inline void doSymv_dispatch( Matrix& m,
-                    const T* x_ptr,
-                    T*  y_ptr,
-                    CuspMatrixTag,
+template< class Matrix, class value_type>
+inline void doSymv_cusp_dispatch( Matrix& m,
+                    const value_type* x_ptr,
+                    value_type*  y_ptr,
                     cusp::sparse_format,
                     AnyPolicyTag)
 {
-    cusp::array1d_view< const T*> cx( x_ptr, x_ptr + m.num_cols);
-    cusp::array1d_view<       T*> cy( y_ptr, y_ptr + m.num_rows);
+    cusp::array1d_view< const value_type*> cx( x_ptr, x_ptr + m.num_cols);
+    cusp::array1d_view<       value_type*> cy( y_ptr, y_ptr + m.num_rows);
     cusp::multiply( m, cx, cy);
 }
 
@@ -89,14 +86,13 @@ inline void doSymv( Matrix& m,
         "Value types must be equal"
     );
 
-    const value_type* RESTRICT x_ptr = thrust::raw_pointer_cast( &x.data());
-    value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( &y.data());
+    const value_type* RESTRICT x_ptr = thrust::raw_pointer_cast( x.data());
+    value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( y.data());
 #ifdef DG_DEBUG
     assert( m.num_rows == y.size() );
     assert( m.num_cols == x.size() );
 #endif //DG_DEBUG
-    doSymv_dispatch( m,x_ptr,y_ptr,
-            CuspMatrixTag(),
+    doSymv_cusp_dispatch( m,x_ptr,y_ptr,
             typename Matrix::format(),
             get_execution_policy<Vector1>());
 }
