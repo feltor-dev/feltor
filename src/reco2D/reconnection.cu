@@ -20,6 +20,7 @@
 int main( int argc, char* argv[])
 {
     ////Parameter initialisation ////////////////////////////////////////////
+    std::stringstream title;
     Json::Value js;
     if( argc == 1)
     {
@@ -39,7 +40,6 @@ int main( int argc, char* argv[])
     const asela::Parameters p( js);
     p.display( std::cout);
     /////////glfw initialisation ////////////////////////////////////////////
-    std::stringstream title;
     std::ifstream is( "window_params.js");
     is >> js;
     is.close();

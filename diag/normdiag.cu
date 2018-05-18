@@ -165,7 +165,6 @@ int main( int argc, char* argv[])
 
         poisson.variationRHS(phi,uE2);
         uE2norm= 0.5*dg::blas2::dot( one, w2d,uE2);   // 0.5   u_E^2    
-        std::cout << uE2norm;
         nlnnnorm = dg::blas2::dot(ne,w2d,logne);
         NiuE2norm = 0.5*dg::blas2::dot(Ni, w2d,uE2);
         dg::blas1::pointwiseDivide(Ni,nG,dNi);
