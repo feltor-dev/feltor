@@ -17,73 +17,22 @@
 #ifndef MYLIBM_HPP_INCLUDED
 #define MYLIBM_HPP_INCLUDED
 
-#include <stdint.h> //definition of int64_t
-#include <cmath>
-#include <cassert>
-#define MAX_VECTOR_SIZE 512 //configuration of vcl
-#define VCL_NAMESPACE vcl
-#include "vcl/vectorclass.h" //vcl by Agner Fog, may also include immintrin.h e.g.
-#include "vcl/instrset_detect.cpp"
-#if INSTRSET <5
-#error "Instruction set SSE4.1 is required! -msse4.1"
-#elif INSTRSET <7
-#pragma message( "It is recommended to activate AVX instruction set (-mavx) or higher")
-#endif
-
-#if defined __INTEL_COMPILER
-#define UNROLL_ATTRIBUTE
-#define INLINE_ATTRIBUTE
-#elif defined __GNUC__
-#define UNROLL_ATTRIBUTE __attribute__((optimize("unroll-loops")))
-#define INLINE_ATTRIBUTE __attribute__((always_inline))
-#else
-#define UNROLL_ATTRIBUTE
-#define INLINE_ATTRIBUTE
-#endif
-
-#ifdef ATT_SYNTAX
-#define ASM_BEGIN ".intel_syntax;"
-#define ASM_END ";.att_syntax"
-#else
-#define ASM_BEGIN
-#define ASM_END
-#endif
-
-// Debug mode
-#define paranoid_assert(x) assert(x)
+#include "config.h"
 
 namespace exblas{
 namespace cpu{
 
-// Making C code less readable in an attempt to make assembly more readable
-#if not defined _MSC_VER //there is no builtin_expect on msvc:
-#define likely(x)       __builtin_expect(!!(x), 1)
-#define unlikely(x)     __builtin_expect(!!(x), 0)
-#else
-#define likely(x) (x)
-#define unlikely(x) (x)
-#endif
-
 inline int64_t myllrint(double x) {
+#ifndef _WITHOUT_VCL
     return _mm_cvtsd_si64(_mm_set_sd(x));
+#else
+    return llrint(x);
+#endif
 }
-
-template<typename T>
-inline T mylrint(double x) { assert(false); }
-
-template<>
-inline int64_t mylrint<int64_t>(double x) {
-    return _mm_cvtsd_si64(_mm_set_sd(x));
-}
-
-template<>
-inline int32_t mylrint<int32_t>(double x) {
-    return _mm_cvtsd_si32(_mm_set_sd(x));
-}
-
 
 inline double myrint(double x)
 {
+#ifndef _WITHOUT_VCL
 #if defined __GNUG__ || _MSC_VER
     // Workaround gcc bug 51033
     union {
@@ -102,6 +51,9 @@ inline double myrint(double x)
     asm(ASM_BEGIN "roundsd %0, %1, 0" ASM_END : "=x" (r) : "x" (x));
     return r;
 #endif
+#else
+    return std::rint(x);
+#endif//_WITHOUT_VCL
 }
 
 //inline double uint64_as_double(uint64_t i)
@@ -229,13 +181,34 @@ inline static int64_t xadd(int64_t & memref, int64_t x, unsigned char & of)
 //    vcl::Vec4d m = vcl::max(m1, m2);
 //    return m[0];    // Why is it so hard to convert from vector xmm register to scalar xmm register?
 //}
-
+//
+//inline static void horizontal_twosum(vcl::Vec8d & r, vcl::Vec8d & s)
+//{
+//    //r = KnuthTwoSum(r, s, s);
+//    transpose1(r, s);
+//    r = KnuthTwoSum(r, s, s);
+//    transpose2(r, s);
+//    r = KnuthTwoSum(r, s, s);
+//}
+//
+//static inline bool sign_horizontal_or (vcl::Vec8db const & a) {
+//    //effectively tests if any element in a is non zero
+//    return vcl::horizontal_or( a);
+//    //return !_mm512_testz_pd(a,a);
+//}
+#ifndef _WITHOUT_VCL
 inline static bool horizontal_or(vcl::Vec8d const & a) {
     //return _mm512_movemask_pd(a) != 0;
     vcl::Vec8db p = a != 0;
     return vcl::horizontal_or( p);
     //return !_mm512_testz_pd(p, p);
 }
+#else
+inline static bool horizontal_or( const double & a){
+    return a!= 0;
+}
+#endif//_WITHOUT_VCL
+
 
 }//namespace cpu
 }//namespace exblas
