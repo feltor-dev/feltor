@@ -1,6 +1,5 @@
 #pragma once
 
-#include "blas2_selfmade.h" //declaration of dg::blas2::detail
 #include "mpi_vector.h"
 #include "memory.h"
 
@@ -10,8 +9,49 @@
 
 @note the corresponding blas file for the Local matrix must be included before this file
 */
-namespace dg
-{
+namespace dg {
+///@cond
+namespace blas2{
+namespace detail{
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( get_value_type<ContainerType1> alpha,
+                  MatrixType& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y,
+                  AnyMatrixTag);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( MatrixType& M,
+                  const ContainerType1& x,
+                  ContainerType2& y,
+                  AnyMatrixTag);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( get_value_type<ContainerType1> alpha,
+                  MatrixType& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y,
+                  SparseBlockMatrixTag);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( MatrixType& M,
+                  const ContainerType1& x,
+                  ContainerType2& y,
+                  SparseBlockMatrixTag);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( get_value_type<ContainerType1> alpha,
+                  MatrixType& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y,
+                  SelfMadeMatrixTag);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void doSymv( MatrixType& M,
+                  const ContainerType1& x,
+                  ContainerType2& y,
+                  SelfMadeMatrixTag);
+}//namespace detail
+}//namespace blas2
+///@endcond
 
 
 ///@addtogroup mpi_structures

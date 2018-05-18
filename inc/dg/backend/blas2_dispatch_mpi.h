@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
+#include "mpi_matrix.h"
 #include "blas1_dispatch_mpi.h"
+#include "blas2_dispatch_shared.h"
 
 ///@cond
 namespace dg

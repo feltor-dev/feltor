@@ -2,6 +2,7 @@
 
 #include "gridX.h"
 #include "dxX.h"
+#include "../blas.h"
 
 /*! @file
   @brief Convenience functions to create 2D derivatives on X-point topology
@@ -19,19 +20,19 @@ struct Composite
     template<class Matrix2>
     Composite& operator=( const Composite<Matrix2>& src){ Composite c(src);
         *this = c; return *this;}
-    template< class container>
-    void symv( const  container& v1, container& v2) const
+    template< class ContainerType1, class ContainerType2>
+    void symv( const ContainerType1& v1, ContainerType2& v2) const
     {
-        m1.symv( v1, v2); //computes first part
+        dg::blas2::symv( m1, v1, v2); //computes first part
         if( dual)
-            m2.symv( v1, v2); //computes second part
+            dg::blas2::symv( m2, v1, v2); //computes second part
     }
-    template< class container>
-    void symv( double alpha, const  container& v1, double beta, container& v2) const
+    template< class ContainerType1, class ContainerType2>
+    void symv( double alpha, const  ContainerType1& v1, double beta, ContainerType2& v2) const
     {
-        m1.symv( alpha, v1, beta, v2); //computes first part
+        dg::blas2::symv( alpha, m1, v1, beta, v2); //computes first part
         if( dual)
-            m2.symv( alpha, v1, beta, v2); //computes second part
+            dg::blas2::symv( alpha, m2, v1, beta, v2); //computes second part
     }
     void display( std::ostream& os = std::cout) const
     {

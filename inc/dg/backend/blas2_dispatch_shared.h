@@ -9,9 +9,17 @@
 #include "blas1_dispatch_shared.h" //load thrust_vector BLAS1 routines
 #include "vector_categories.h"
 
-namespace dg{
-namespace blas2{
 ///@cond
+namespace dg{
+namespace blas1{
+//forward declare used blas1 functions
+template<class from_ContainerType, class to_ContainerType>
+inline void transfer( const from_ContainerType& source, to_ContainerType& target);
+
+template< class ContainerType, class ContainerType1, class ContainerType2>
+inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, get_value_type<ContainerType> beta, ContainerType& y);
+}//namespace blas1
+namespace blas2{
 namespace detail{
 
 //thrust vector preconditioner
@@ -128,7 +136,7 @@ inline void doSymv(
 
 
 }//namespace detail
-///@endcond
 } //namespace blas2
 } //namespace dg
+///@endcond
 #endif //_DG_BLAS_PRECONDITIONER_
