@@ -26,7 +26,7 @@ inline int64_t myllrint(double x) {
 #ifndef _WITHOUT_VCL
     return _mm_cvtsd_si64(_mm_set_sd(x));
 #else
-    return llrint(x);
+    return std::llrint(x);
 #endif
 }
 
