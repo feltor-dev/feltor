@@ -28,9 +28,10 @@
 #include "vcl/vectorclass.h" //vcl by Agner Fog, may also include immintrin.h e.g.
 #include "vcl/instrset_detect.cpp"
 #if INSTRSET <5
-#error "Instruction set SSE4.1 is required! -msse4.1"
+#define _WITHOUT_VCL
+#pragma message("WARNING: Instruction set below SSE4.1! Deactivating vectorization!")
 #elif INSTRSET <7
-#pragma message( "It is recommended to activate AVX instruction set (-mavx) or higher")
+#pragma message( "NOTE: If available, it is recommended to activate AVX instruction set (-mavx) or higher")
 #endif//INSTRSET
 
 #endif//_WITHOUT_VCL
