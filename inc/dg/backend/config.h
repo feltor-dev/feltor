@@ -10,14 +10,14 @@
 #elif defined( _MSC_VER)
 # define RESTRICT __restrict
 #else
-#pragma message( "Don't know restrict keyword for this compiler!")
+#pragma message( "WARNING: Don't know restrict keyword for this compiler!")
 # define RESTRICT
 #endif
 
 //%%%%%%%%%%%%%%%%check for fast FMAs %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 #include <cmath>
 #ifndef FP_FAST_FMA
-#pragma message( "Fast std::fma(a,b,c) not activated! Using a*b+c instead!")
+#pragma message( "NOTE: Fast std::fma(a,b,c) not activated! Using a*b+c instead!")
 #define DG_FMA(a,b,c) (a*b+c)
 #else
 #define DG_FMA(a,b,c) (std::fma(a,b,c))
@@ -29,7 +29,7 @@
 #if defined(__INTEL_COMPILER)
 
 #if __INTEL_COMPILER < 1500
-#pragma message( "icc version >= 15.0 recommended to activate OpenMP 4 support")
+#pragma message( "NOTE: icc version >= 15.0 recommended (to activate OpenMP 4 support)")
 #define SIMD
 #else//>1500
 #define SIMD simd
@@ -48,7 +48,7 @@
 #endif //GCC_VERSION
 
 #elif defined(_MSC_VER)
-#pragma message( "No OpenMP 4 support on your compiler")
+#pragma message( "WARNING: No OpenMP 4 support on your compiler")
 #define SIMD
 #endif //compilers
 #endif //THRUST_DEVICE_SYSTEM

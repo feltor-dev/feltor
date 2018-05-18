@@ -167,7 +167,7 @@ double Round( int64_t * accumulator) {
     if (i == 0) {
         return negative ? -hi : hi;  // Correct rounding achieved
     }
-    hiword -= llrint(rounded);
+    hiword -= std::llrint(rounded);
     double mid = ldexp((double) hiword, (i - F_WORDS) * DIGITS);
 
     // Compute sticky
