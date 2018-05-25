@@ -27,19 +27,24 @@ int main()
     const dg::HVec& copyable_vector = x;
 
 //! [doxygen]
-    //create volume and inverse volume on grid
+    // create volume and inverse volume on previously defined grid
     const dg::HVec w2d = dg::create::weights( grid);
     const dg::HVec v2d = dg::create::inv_weights( grid);
-    //Create unnormalized Laplacian
+
+    // Create unnormalized Laplacian
     dg::Elliptic<dg::CartesianGrid2d, dg::HMatrix, dg::HVec> A( grid);
-    //allocate memory in conjugate gradient
+
+    // allocate memory in conjugate gradient
     dg::CG<dg::HVec > pcg( copyable_vector, max_iter);
-    //Evaluate right hand side and solution on the grid
+
+    // Evaluate right hand side and solution on the grid
     dg::HVec b = dg::evaluate ( laplace_fct, grid);
     const dg::HVec solution = dg::evaluate ( fct, grid);
-    //normalize right hand side
+
+    // normalize right hand side
     dg::blas2::symv( w2d, b, b);
-    //use inverse volume as preconditioner in solution method
+
+    // use inverse volume as preconditioner in solution method
     const double eps = 1e-6;
     std::cout << "Number of pcg iterations "<< pcg( A, x, b, v2d, eps)<<std::endl;
 //! [doxygen]

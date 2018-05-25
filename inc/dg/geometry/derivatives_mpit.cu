@@ -87,6 +87,7 @@ int main(int argc, char* argv[])
         double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
         if(rank==0)std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary3[i]<<"\n";
     }
+    if(rank==0)std::cout << "\nFINISHED! Continue with arakawa_mpit.cu !\n\n";
 
 
     MPI_Finalize();

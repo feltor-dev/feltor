@@ -74,6 +74,7 @@ int main()
         double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
         std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary3[i]<<"\n";
     }
+    std::cout << "\nFINISHED! Continue with arakawa_t.cu !\n\n";
 
     return 0;
 }
