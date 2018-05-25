@@ -46,8 +46,9 @@ namespace blas1
 
  * For example
  * @code
- dg::DVec device = dg::tansfer<dg::DVec>( dg::evaluate(dg::one, grid));
- std::array<dg::DVec, 3> device_arr = dg::transfer<std::array<dg::DVec, 3>>( dg::evaluate( dg::one, grid));
+dg::HVec host( 100, 1.);
+dg::DVec device = dg::tansfer<dg::DVec>( host );
+std::array<dg::DVec, 3> device_arr = dg::transfer<std::array<dg::DVec, 3>>( host );
  * @endcode
  */
 template<class container, class other_container>
@@ -69,11 +70,11 @@ inline container transfer( const other_container& x)
  *
  * For example
  * @code
- dg::HVec host = dg::evaluate( dg::one, grid);
- dg::DVec device;
- dg::transfer( host, device); //device now equals host
- std::array<dg::DVec, 3> device_arr;
- dg::transfer( host, device_arr); //every element of device_arr now equals host
+dg::HVec host( 100, 3);
+dg::DVec device;
+dg::transfer( host, device); //device now equals host
+std::array<dg::DVec, 3> device_arr;
+dg::transfer( host, device_arr); //every element of device_arr now equals host
  * @endcode
 
  */
@@ -112,8 +113,8 @@ inline void copy( const Assignable& x, Assignable& y){y=x;}
 
 For example
 @code
-    dg::DVec two( 100,2), three(100,3);
-    double temp = dg::blas1::dot( two, three); //temp = 30 (5*(2*3))
+dg::DVec two( 100,2), three(100,3);
+double temp = dg::blas1::dot( two, three); // temp = 30 (5*(2*3))
 @endcode
  */
 template< class container>
@@ -133,8 +134,8 @@ inline get_value_type<container> dot( const container& x, const container& y)
  * @param y container y contains solution on output
 
 @code
-    dg::DVec two( 100,2), three(100,3);
-    dg::blas1::axpby( 2, two, 3., three); //three[i] = 13 (2*2+3*3)
+dg::DVec two( 100,2), three(100,3);
+dg::blas1::axpby( 2, two, 3., three); // three[i] = 13 (2*2+3*3)
 @endcode
  */
 template< class container>
@@ -157,8 +158,8 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
  * @param z container z contains solution on output
 
 @code
-    dg::DVec two( 100,2), three(100,3), result(100);
-    dg::blas1::axpby( 2, two, 3., three, result); //result[i] = 13 (2*2+3*3)
+dg::DVec two( 100,2), three(100,3), result(100);
+dg::blas1::axpby( 2, two, 3., three, result); // result[i] = 13 (2*2+3*3)
 @endcode
  */
 template< class container>
@@ -182,9 +183,9 @@ inline void axpby( get_value_type<container> alpha, const container& x, get_valu
  * @param z container contains solution on output
 
 @code
-    dg::DVec two(100,2), five(100,5), result(100, 12);
-    dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
-    //result[i] = -21 (2.5*2+2*5-3*12)
+dg::DVec two(100,2), five(100,5), result(100, 12);
+dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
+// result[i] = -21 (2.5*2+2*5-3*12)
 @endcode
  */
 template< class container>
@@ -207,10 +208,11 @@ inline void axpbypgz( get_value_type<container> alpha, const container& x, get_v
  * @param x input
  * @note the Functors must be callable on the device in use. In particular, with CUDA their signatures must contain the \__device__ specifier (s.a. \ref DG_DEVICE)
  * @note all aliases allowed
+
 @code
-    dg::HVec pi(20, M_PI), result(20, 0);
-    dg::blas1::evaluate( result, dg::equals(), cos, pi);
-    //result[i] =  -1. (cos(M_PI))
+dg::HVec pi(20, M_PI), result(20, 0);
+dg::blas1::evaluate( result, dg::equals(), cos, pi);
+// result[i] =  -1. (cos(M_PI))
 @endcode
  */
 template< class container, class BinarySubroutine, class UnaryOp>
@@ -234,11 +236,14 @@ inline void evaluate( container& y, BinarySubroutine f, UnaryOp g, const contain
  * @param y input 2
  * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @note all aliases allowed
+
 @code
-    double function( double x, double y) {return sin(x)*sin(y);}
-    dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
-    dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
-    //result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
+double function( double x, double y) {
+    return sin(x)*sin(y);
+}
+dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
+dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
+// result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
 @endcode
  */
 template< class container, class BinarySubroutine, class BinaryOp>
@@ -260,9 +265,9 @@ inline void evaluate( container& z, BinarySubroutine f, BinaryOp g, const contai
  * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
 
 @code
-    dg::DVec two( 100,2), result(100);
-    dg::blas1::transform( two, result, dg::EXP<double>());
-    //result[i] = 7.389056... (e^2)
+dg::DVec two( 100,2), result(100);
+dg::blas1::transform( two, result, dg::EXP<double>());
+// result[i] = 7.389056... (e^2)
 @endcode
  */
 template< class container, class UnaryOp>
@@ -279,8 +284,8 @@ inline void transform( const container& x, container& y, UnaryOp op )
  * @param x container x
 
 @code
-    dg::DVec two( 100,2);
-    dg::blas1::scal( two,  0.5 )); //result[i] = 1.
+dg::DVec two( 100,2);
+dg::blas1::scal( two,  0.5 )); // result[i] = 1.
 @endcode
  */
 template< class container>
@@ -298,8 +303,8 @@ inline void scal( container& x, get_value_type<container> alpha)
  * @param x container x
 
 @code
-    dg::DVec two( 100,2);
-    dg::blas1::plus( two,  2. )); //result[i] = 4.
+dg::DVec two( 100,2);
+dg::blas1::plus( two,  2. )); // result[i] = 4.
 @endcode
  */
 template< class container>
@@ -320,8 +325,8 @@ inline void plus( container& x, get_value_type<container> alpha)
 * @param y  container y contains result on output ( may alias x1 or x2)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), result(100);
-    dg::blas1::pointwiseDot( two,  three, result ); //result[i] = 6.
+dg::DVec two( 100,2), three( 100,3), result(100);
+dg::blas1::pointwiseDot( two,  three, result ); // result[i] = 6.
 @endcode
 */
 template< class container>
@@ -345,9 +350,9 @@ inline void pointwiseDot( const container& x1, const container& x2, container& y
 * @param y  container y contains result on output ( may alias x1 or x2)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), result(100,6);
-    dg::blas1::pointwiseDot(2., two,  three, -4., result );
-    //result[i] = -12. (2*2*3-4*6)
+dg::DVec two( 100,2), three( 100,3), result(100,6);
+dg::blas1::pointwiseDot(2., two,  three, -4., result );
+// result[i] = -12. (2*2*3-4*6)
 @endcode
 */
 template< class container>
@@ -371,9 +376,9 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
 * @param y  container y contains result on output ( may alias x1,x2 or x3)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
-    dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
-    //result[i] = 24. (2*2*3*4-4*6)
+dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
+dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
+// result[i] = 24. (2*2*3*4-4*6)
 @endcode
 */
 template< class container>
@@ -394,9 +399,9 @@ inline void pointwiseDot( get_value_type<container> alpha, const container& x1, 
 * @param y  container y contains result on output ( may alias x1 and/or x2)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), result(100);
-    dg::blas1::pointwiseDivide( two,  three, result );
-    //result[i] = -0.666... (2/3)
+dg::DVec two( 100,2), three( 100,3), result(100);
+dg::blas1::pointwiseDivide( two,  three, result );
+// result[i] = -0.666... (2/3)
 @endcode
 */
 template< class container>
@@ -419,9 +424,9 @@ inline void pointwiseDivide( const container& x1, const container& x2, container
 * @param y  container y contains result on output ( may alias x1 and/or x2)
 
 @code
-    dg::DVec two( 100,2), three( 100,3), result(100,1);
-    dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
-    //result[i] = 7 (3*2/3+5*1)
+dg::DVec two( 100,2), three( 100,3), result(100,1);
+dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
+// result[i] = 7 (3*2/3+5*1)
 @endcode
 */
 template< class container>
@@ -447,9 +452,9 @@ inline void pointwiseDivide( get_value_type<container> alpha, const container& x
 * @note all aliases are allowed
 
 @code
-    dg::DVec two(100,2), three(100,3), four(100,5), five(100,5), result(100,6);
-    dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
-    //result[i] = -56.
+dg::DVec two(100,2), three(100,3), four(100,5), five(100,5), result(100,6);
+dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
+// result[i] = -56.
 @endcode
 */
 template<class container>
