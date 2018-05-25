@@ -25,18 +25,18 @@ possible parallelization and optimization strategies.
 @ingroup vec_list
 */
 template< class Vector, class Enable=void>
-struct TypeTraits;
+struct TensorTraits;
 //{
 //    using value_type        = double; //!< The underlying data type
 //    using tensor_category   = ThrustVectorTag; //!< Policy how data has to be accessed (has to derive from \c AnyVectorTag)
 //    using execution_policy  = OmpTag;  //!< The execution policy (has to derive from \c AnyPolicyTag)
 //};
 template<class Vector>
-using get_value_type = typename TypeTraits<typename std::decay<Vector>::type>::value_type;
+using get_value_type = typename TensorTraits<typename std::decay<Vector>::type>::value_type;
 template<class Vector>
-using get_tensor_category = typename TypeTraits< typename std::decay<Vector>::type >::tensor_category;
+using get_tensor_category = typename TensorTraits< typename std::decay<Vector>::type >::tensor_category;
 template<class Vector>
-using get_execution_policy = typename TypeTraits<typename std::decay<Vector>::type>::execution_policy;
+using get_execution_policy = typename TensorTraits<typename std::decay<Vector>::type>::execution_policy;
 //using is the new typedef in C++11
 template<class Vector>
 using get_pointer_type = typename std::conditional< std::is_const<Vector>::value, const get_value_type<Vector>*, get_value_type<Vector>* >::type;

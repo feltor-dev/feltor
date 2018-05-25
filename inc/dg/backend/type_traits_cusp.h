@@ -18,7 +18,7 @@ namespace dg
 ///@addtogroup vec_list
 ///@{
 template<class T>
-struct TypeTraits<cusp::array1d<T,cusp::host_memory>,
+struct TensorTraits<cusp::array1d<T,cusp::host_memory>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
@@ -26,7 +26,7 @@ struct TypeTraits<cusp::array1d<T,cusp::host_memory>,
     using execution_policy  = SerialTag;
 };
 template<class T>
-struct TypeTraits<cusp::array1d<T,cusp::device_memory>,
+struct TensorTraits<cusp::array1d<T,cusp::device_memory>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
@@ -42,31 +42,31 @@ struct TypeTraits<cusp::array1d<T,cusp::device_memory>,
 ///@addtogroup mat_list
 
 template< class I, class V, class M>
-struct TypeTraits< cusp::coo_matrix<I,V,M> >
+struct TensorTraits< cusp::coo_matrix<I,V,M> >
 {
     using value_type = V;
     using tensor_category = CuspMatrixTag;
 };
 template< class I, class V, class M>
-struct TypeTraits< cusp::csr_matrix<I,V,M> >
+struct TensorTraits< cusp::csr_matrix<I,V,M> >
 {
     using value_type = V;
     using tensor_category = CuspMatrixTag;
 };
 template< class I, class V, class M>
-struct TypeTraits< cusp::dia_matrix<I,V,M> >
+struct TensorTraits< cusp::dia_matrix<I,V,M> >
 {
     using value_type = V;
     using tensor_category = CuspMatrixTag;
 };
 template< class I, class V, class M>
-struct TypeTraits< cusp::ell_matrix<I,V,M> >
+struct TensorTraits< cusp::ell_matrix<I,V,M> >
 {
     using value_type = V;
     using tensor_category = CuspMatrixTag;
 };
 template< class I, class V, class M>
-struct TypeTraits< cusp::hyb_matrix<I,V,M> >
+struct TensorTraits< cusp::hyb_matrix<I,V,M> >
 {
     using value_type = V;
     using tensor_category = CuspMatrixTag;

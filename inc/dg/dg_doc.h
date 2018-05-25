@@ -27,8 +27,8 @@
  *     @{
  *         @defgroup dispatch The tag dispatch system
  *         @{
- *             @defgroup vec_list List of TypeTraits specializations for vectors
- *             @defgroup mat_list List of TypeTraits specializations for matrices
+ *             @defgroup vec_list List of TensorTraits specializations for vectors
+ *             @defgroup mat_list List of TensorTraits specializations for matrices
  *         @}
  *         @defgroup blas1 BLAS level 1 routines
  *             This group contains Vector-Vector operations.
@@ -122,18 +122,18 @@
 
  /** @class hide_ContainerType
   * @tparam ContainerType
-  * Any class for which a specialization of \c TypeTraits exists and which
+  * Any class for which a specialization of \c TensorTraits exists and which
   * fulfills the requirements of the there defined data and execution policies derived from \c AnyVectorTag and \c AnyPolicyTag.
   * For example, this is one of
   *  - <tt> dg::HVec (serial), dg::DVec (cuda or omp), dg::MHVec (mpi + serial) or dg::MDVec (mpi + cuda or omp) </tt>
   *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles), ... </tt>
   *  .
-  * If there are several \c ContainerTypes in the argument list, then the \c TypeTraits of these
+  * If there are several \c ContainerTypes in the argument list, then the \c TensorTraits of these
   * must have the same \c execution_policy and data layout (\c tensor_category must derive from the same base class) as the first \c ContainerType.
   */
  /** @class hide_matrix
   * @tparam Matrix
-  * Any class for which a specialization of \c TypeTraits exists and which fullfills
+  * Any class for which a specialization of \c TensorTraits exists and which fullfills
   * the requirements of the there defined Matrix policy derived from \c AnyMatrixTag or \c SelfMadeMatrixTag.
   * The \c Matrix type can for example be one of:
   *  - \c container: A container acts as a  diagonal matrix.
@@ -188,7 +188,7 @@
  need to be callable and return inverse weights and the preconditioner for the conjugate
  gradient method. The %Operator is assumed to be linear and symmetric!
  @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const container&, container&);
-  and specializing \c TypeTraits with the \c SelfMadeMatrixTag as the \c tensor_category
+  and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
   */
 
 /*!@addtogroup mpi_structures

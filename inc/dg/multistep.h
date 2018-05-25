@@ -204,7 +204,7 @@ struct Implicit
 
 }//namespace detail
 template< class M, class V>
-struct TypeTraits< detail::Implicit<M, V> >
+struct TensorTraits< detail::Implicit<M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;

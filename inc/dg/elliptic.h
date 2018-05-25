@@ -682,26 +682,26 @@ struct TensorElliptic
 
 ///@cond
 template< class G, class M, class V>
-struct TypeTraits< Elliptic<G, M, V> >
+struct TensorTraits< Elliptic<G, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 
 template< class G, class M, class V>
-struct TypeTraits< GeneralElliptic<G, M, V> >
+struct TensorTraits< GeneralElliptic<G, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
-struct TypeTraits< GeneralEllipticSym<G, M, V> >
+struct TensorTraits< GeneralEllipticSym<G, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
-struct TypeTraits< TensorElliptic<G, M, V> >
+struct TensorTraits< TensorElliptic<G, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;

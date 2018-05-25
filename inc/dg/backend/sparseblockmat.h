@@ -323,13 +323,13 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os, bool show_data) c
 ///@addtogroup mat_list
 ///@{
 template <class T>
-struct TypeTraits<EllSparseBlockMat<T> >
+struct TensorTraits<EllSparseBlockMat<T> >
 {
     using value_type  = T;
     using tensor_category = SparseBlockMatrixTag;
 };
 template <class T>
-struct TypeTraits<CooSparseBlockMat<T> >
+struct TensorTraits<CooSparseBlockMat<T> >
 {
     using value_type  = T;
     using tensor_category = SparseBlockMatrixTag;

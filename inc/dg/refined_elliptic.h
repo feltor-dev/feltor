@@ -143,7 +143,7 @@ class RefinedElliptic
 
 ///@cond
 template< class G, class IM, class M, class V>
-struct TypeTraits< RefinedElliptic<G, IM, M, V> >
+struct TensorTraits< RefinedElliptic<G, IM, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;

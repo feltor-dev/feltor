@@ -55,7 +55,7 @@ struct Composite
 };
 ///@cond
 template <class Matrix>
-struct TypeTraits<Composite<Matrix> >
+struct TensorTraits<Composite<Matrix> >
 {
     using value_type = get_value_type<Matrix>;
     using tensor_category = SelfMadeMatrixTag;

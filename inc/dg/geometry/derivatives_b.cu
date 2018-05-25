@@ -36,7 +36,7 @@ int main()
     Vector w = v;
     const Vector u = dg::evaluate( cosx, g);
 
-    if( thrust::detail::is_same< dg::TypeTraits<Vector>::value_type, float>::value )
+    if( thrust::detail::is_same< dg::TensorTraits<Vector>::value_type, float>::value )
         std::cout << "Value type is float! "<<std::endl;
     else
         std::cout << "Value type is double! "<<std::endl;

@@ -10,7 +10,7 @@ namespace dg
 ///@addtogroup vec_list
 ///@{
 template<class T>
-struct TypeTraits<std::vector<T>,
+struct TensorTraits<std::vector<T>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
@@ -18,7 +18,7 @@ struct TypeTraits<std::vector<T>,
     using execution_policy  = OmpTag;
 };
 template<class T>
-struct TypeTraits<std::vector<T>,
+struct TensorTraits<std::vector<T>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
@@ -33,7 +33,7 @@ struct TypeTraits<std::vector<T>,
  * @tparam N size of the array
  */
 template<class T, std::size_t N>
-struct TypeTraits<std::array<T, N>,
+struct TensorTraits<std::array<T, N>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
@@ -41,7 +41,7 @@ struct TypeTraits<std::array<T, N>,
     using execution_policy  = SerialTag;
 };
 template<class T, std::size_t N>
-struct TypeTraits<std::array<T, N>,
+struct TensorTraits<std::array<T, N>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;

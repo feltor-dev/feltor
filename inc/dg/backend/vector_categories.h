@@ -24,7 +24,7 @@ VectorVector again. The innermost type must always be a shared vector however.
  * how do we get the pointer to the first element, the size, or how to access the MPI communicator? This is described in Derived Tags from the fundamental
 Tags, e.g. the \c ThrustVectorTag.
  * @note in any case we assume that the class has a default constructor, is copyable/assignable and has a \c size and a \c swap member function
- * @note <tt> dg::TypeTraits<Vector> </tt>has member typedefs \c value_type, \c execution_policy, \c tensor_category
+ * @note <tt> dg::TensorTraits<Vector> </tt>has member typedefs \c value_type, \c execution_policy, \c tensor_category
 @attention Two instances of two different Vector types are usable in the same \c blas function if
   - their tags derive from the same VectorTag class except AnyVectorTag ( the data size
     and type, layout and communicator, is the same, but the access to it may differ)
@@ -53,7 +53,7 @@ struct SharedVectorTag  : public AnyVectorTag {};
  * An MPI Vector is assumed to be composed of a data container together with an MPI Communicator.
  * In fact, the currently only class with this tag is the \c MPI_Vector class.
  *
- * @note This is a recursive tag in the sense that classes must provide a typedef \c container_type, for which the \c TypeTraits must be specialized
+ * @note This is a recursive tag in the sense that classes must provide a typedef \c container_type, for which the \c TensorTraits must be specialized
  * @see MPI_Vector, mpi_structures
  */
 struct MPIVectorTag     : public AnyVectorTag {};
@@ -63,7 +63,7 @@ struct MPIVectorTag     : public AnyVectorTag {};
  *
  * This Tag indicates that a class is composed of an array of containers, i.e. a container of containers.
  * We assume that the bracket \c operator[] is defined to access the inner elements and the \c size() function returns the number of elements.
- * @note The class must typedef \c value_type and TypeTraits must be specialized for this type.
+ * @note The class must typedef \c value_type and TensorTraits must be specialized for this type.
  * @note Examples are \c std::vector<T> and \c std::array<T,N> where T is a non-primitive data type and N is the size of the array
  */
 struct VectorVectorTag  : public AnyVectorTag {};

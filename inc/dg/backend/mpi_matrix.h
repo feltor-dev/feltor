@@ -358,14 +358,14 @@ struct MPIDistMat
 ///@addtogroup mat_list
 ///@{
 template<class LI, class LO, class C>
-struct TypeTraits<RowColDistMat<LI,LO, C> >
+struct TensorTraits<RowColDistMat<LI,LO, C> >
 {
     using value_type = get_value_type<LI>;//!< value type
     using tensor_category = MPIMatrixTag;
 };
 
 template<class L, class C>
-struct TypeTraits<MPIDistMat<L, C> >
+struct TensorTraits<MPIDistMat<L, C> >
 {
     using value_type = get_value_type<L>;//!< value type
     using tensor_category = MPIMatrixTag;

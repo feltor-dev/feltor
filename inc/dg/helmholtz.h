@@ -268,13 +268,13 @@ struct Helmholtz2
 };
 ///@cond
 template< class G, class M, class V>
-struct TypeTraits< Helmholtz<G, M, V> >
+struct TensorTraits< Helmholtz<G, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
-struct TypeTraits< Helmholtz2<G, M, V> >
+struct TensorTraits< Helmholtz2<G, M, V> >
 {
     using value_type  = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
