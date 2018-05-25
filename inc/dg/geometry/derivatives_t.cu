@@ -19,9 +19,10 @@ typedef dg::DVec Vector;
 
 int main()
 {
-    unsigned n, Nx, Ny, Nz;
-    std::cout << "Type in n, Nx and Ny and Nz!\n";
-    std::cin >> n >> Nx >> Ny >> Nz;
+    std::cout << "This program tests the creation and application of two-dimensional and three-dimensional derivatives!\n";
+    std::cout << "A TEST is PASSED if the number in the second column shows EXACTLY 0!\n";
+    unsigned n = 3, Nx = 24, Ny = 28, Nz = 100;
+    std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
     dg::bc bcx=dg::DIR, bcy=dg::PER, bcz=dg::NEU_DIR;
     dg::Grid2d g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);
@@ -38,7 +39,6 @@ int main()
     Vector sol2[] = {dx2d, dy2d, null2, null2};
 
     exblas::udouble res;
-    std::cout << "WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!\n";
     std::cout << "TEST 2D: DX, DY, JX, JY\n";
     for( unsigned i=0; i<4; i++)
     {
