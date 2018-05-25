@@ -14,7 +14,7 @@ struct TypeTraits<std::vector<T>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using data_layout   = ThrustVectorTag;
+    using tensor_category   = ThrustVectorTag;
     using execution_policy  = OmpTag;
 };
 template<class T>
@@ -22,7 +22,7 @@ struct TypeTraits<std::vector<T>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
-    using data_layout   = VectorVectorTag;
+    using tensor_category   = VectorVectorTag;
     using execution_policy  = get_execution_policy<T>;
 };
 
@@ -37,7 +37,7 @@ struct TypeTraits<std::array<T, N>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using data_layout   = StdArrayTag;
+    using tensor_category   = StdArrayTag;
     using execution_policy  = SerialTag;
 };
 template<class T, std::size_t N>
@@ -45,7 +45,7 @@ struct TypeTraits<std::array<T, N>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
-    using data_layout   = ArrayVectorTag;
+    using tensor_category   = ArrayVectorTag;
     using execution_policy  = get_execution_policy<T>;
 };
 ///@}

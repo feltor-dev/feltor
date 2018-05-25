@@ -26,8 +26,8 @@ template< class Vector1, class Matrix, class Vector2 >
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& P, const Vector2& y, MPIVectorTag, MPIVectorTag)
 {
     static_assert( all_true<
-            std::is_base_of<MPIVectorTag, get_data_layout<Vector1>>::value,
-            std::is_base_of<MPIVectorTag, get_data_layout<Vector2>>::value
+            std::is_base_of<MPIVectorTag, get_tensor_category<Vector1>>::value,
+            std::is_base_of<MPIVectorTag, get_tensor_category<Vector2>>::value
             >::value,
         "All data layouts must derive from the same vector category (MPIVectorTag in this case)!");
 #ifdef DG_DEBUG
@@ -41,8 +41,8 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& P, c
     using inner_container2 = typename std::decay<Vector1>::type::container_type;
     //local computation
     std::vector<int64_t> acc = doDot_superacc(x.data(), P.data(), y.data(),
-        get_data_layout<inner_container1>(),
-        get_data_layout<inner_container2>()
+        get_tensor_category<inner_container1>(),
+        get_tensor_category<inner_container2>()
     );
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), x.communicator(), x.communicator_mod(), x.communicator_mod_reduce());
@@ -53,7 +53,7 @@ template< class Vector1, class Matrix, class Vector2>
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, MPIVectorTag, VectorVectorTag)
 {
     static_assert( std::is_base_of<VectorVectorTag,
-        get_data_layout<Vector2>>::value,
+        get_tensor_category<Vector2>>::value,
         "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
@@ -62,8 +62,8 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     std::vector<std::vector<int64_t>> acc( x.size());
     for( unsigned i=0; i<x.size(); i++)
         acc[i] = doDot_superacc( x[i], m, y[i],
-                       get_data_layout<Matrix>(),
-                       get_data_layout<inner_container1>() );
+                       get_tensor_category<Matrix>(),
+                       get_tensor_category<inner_container1>() );
     for( unsigned i=1; i<x.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
@@ -79,14 +79,14 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 template< class Vector1, class Matrix, class Vector2 >
 inline get_value_type<Matrix> doDot( const Vector1& x, const Matrix& P, const Vector2& y, MPIVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,P,y, MPIVectorTag(), get_data_layout<Vector1>());
+    std::vector<int64_t> acc = doDot_superacc( x,P,y, MPIVectorTag(), get_tensor_category<Vector1>());
     return exblas::cpu::Round(acc.data());
 }
 
 template< class Matrix, class Vector>
 inline get_value_type<Matrix> doDot( const Matrix& m, const Vector& x, dg::MPIVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,m,x, MPIVectorTag(), get_data_layout<Vector>());
+    std::vector<int64_t> acc = doDot_superacc( x,m,x, MPIVectorTag(), get_tensor_category<Vector>());
     return exblas::cpu::Round(acc.data());
 }
 

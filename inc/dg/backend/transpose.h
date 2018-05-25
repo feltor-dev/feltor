@@ -23,7 +23,7 @@ Matrix doTranspose( const Matrix& src, CuspMatrixTag)
 template <class LocalMatrix, class Collective>
 MPIDistMat<LocalMatrix, Collective> doTranspose( const MPIDistMat<LocalMatrix, Collective>& src, MPIMatrixTag)
 {
-    LocalMatrix tr = doTranspose( src.matrix(), get_data_layout<LocalMatrix>());
+    LocalMatrix tr = doTranspose( src.matrix(), get_tensor_category<LocalMatrix>());
     MPIDistMat<LocalMatrix, Collective> out( tr, src.collective());
     if( src.get_dist() == dg::row_dist) out.set_dist( dg::col_dist);
     if( src.get_dist() == dg::col_dist) out.set_dist( dg::row_dist);
@@ -48,7 +48,7 @@ template<class Matrix>
 Matrix transpose( const Matrix& src)
 {
     //%Transposed matrices work only for csr_matrix due to bad matrix form for ell_matrix!!!
-    return detail::doTranspose( src, get_data_layout<Matrix>());
+    return detail::doTranspose( src, get_tensor_category<Matrix>());
 }
 
 } //namespace dg

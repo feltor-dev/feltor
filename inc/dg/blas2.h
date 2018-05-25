@@ -43,8 +43,8 @@ template<class MatrixType, class AnotherMatrixType>
 inline void transfer( const MatrixType& x, AnotherMatrixType& y)
 {
     dg::blas2::detail::doTransfer( x,y,
-            get_data_layout<MatrixType>(),
-            get_data_layout<AnotherMatrixType>());
+            get_tensor_category<MatrixType>(),
+            get_tensor_category<AnotherMatrixType>());
 }
 
 /*! @brief \f$ x^T M y\f$; Binary reproducible general dot product
@@ -80,11 +80,11 @@ inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType
                    std::is_same<get_value_type<ContainerType2>,
                                 get_value_type<MatrixType>>::value,
                                 "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_data_layout<ContainerType1>,
-                                get_data_layout<ContainerType2>>::value,
+    static_assert( std::is_same<get_tensor_category<ContainerType1>,
+                                get_tensor_category<ContainerType2>>::value,
                                 "Vector types must have same data layout");
     return dg::blas2::detail::doDot( x, m, y,
-            get_data_layout<MatrixType>());
+            get_tensor_category<MatrixType>());
 }
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
@@ -106,7 +106,7 @@ template< class MatrixType, class ContainerType>
 inline get_value_type<MatrixType> dot( const MatrixType& m, const ContainerType& x)
 {
     return dg::blas2::detail::doDot( m, x,
-            get_data_layout<MatrixType>());
+            get_tensor_category<MatrixType>());
 }
 ///@cond
 namespace detail{
@@ -127,12 +127,12 @@ inline void doSymv( get_value_type<ContainerType1> alpha,
                    std::is_same<get_value_type<ContainerType2>,
                                 get_value_type<MatrixType>>::value,
                                 "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_data_layout<ContainerType1>,
-                                get_data_layout<ContainerType2>>::value,
+    static_assert( std::is_same<get_tensor_category<ContainerType1>,
+                                get_tensor_category<ContainerType2>>::value,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doSymv( alpha, M, x, beta, y,
-            get_data_layout<MatrixType>(),
-            get_data_layout<ContainerType1>());
+            get_tensor_category<MatrixType>(),
+            get_tensor_category<ContainerType1>());
 }
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void doSymv( MatrixType& M,
@@ -148,12 +148,12 @@ inline void doSymv( MatrixType& M,
                    std::is_same<get_value_type<ContainerType2>,
                                 get_value_type<MatrixType>>::value,
                                 "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_data_layout<ContainerType1>,
-                                get_data_layout<ContainerType2>>::value,
+    static_assert( std::is_same<get_tensor_category<ContainerType1>,
+                                get_tensor_category<ContainerType2>>::value,
                                 "Vector types must have same data layout");
     dg::blas2::detail::doSymv( M, x, y,
-            get_data_layout<MatrixType>(),
-            get_data_layout<ContainerType1>());
+            get_tensor_category<MatrixType>(),
+            get_tensor_category<ContainerType1>());
 }
 
 }//namespace detail
@@ -184,7 +184,7 @@ inline void symv( get_value_type<ContainerType1> alpha,
         dg::blas1::scal( y, beta);
         return;
     }
-    dg::blas2::detail::doSymv( alpha, M, x, beta, y, get_data_layout<MatrixType>());
+    dg::blas2::detail::doSymv( alpha, M, x, beta, y, get_tensor_category<MatrixType>());
 }
 
 
@@ -207,7 +207,7 @@ inline void symv( MatrixType& M,
                   const ContainerType1& x,
                   ContainerType2& y)
 {
-    dg::blas2::detail::doSymv( M, x, y, get_data_layout<MatrixType>());
+    dg::blas2::detail::doSymv( M, x, y, get_tensor_category<MatrixType>());
 }
 /*! @brief \f$ y = \alpha M x + \beta y \f$;
  * (alias for symv)

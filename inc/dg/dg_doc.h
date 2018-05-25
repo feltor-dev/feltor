@@ -129,7 +129,7 @@
   *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles), ... </tt>
   *  .
   * If there are several \c ContainerTypes in the argument list, then the \c TypeTraits of these
-  * must have the same \c execution_policy and data layout (\c data_layout must derive from the same base class) as the first \c ContainerType.
+  * must have the same \c execution_policy and data layout (\c tensor_category must derive from the same base class) as the first \c ContainerType.
   */
  /** @class hide_matrix
   * @tparam Matrix
@@ -188,7 +188,7 @@
  need to be callable and return inverse weights and the preconditioner for the conjugate
  gradient method. The %Operator is assumed to be linear and symmetric!
  @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const container&, container&);
-  and specializing \c TypeTraits with the \c SelfMadeMatrixTag as the \c data_layout
+  and specializing \c TypeTraits with the \c SelfMadeMatrixTag as the \c tensor_category
   */
 
 /*!@addtogroup mpi_structures

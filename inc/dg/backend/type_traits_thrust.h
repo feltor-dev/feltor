@@ -14,7 +14,7 @@ struct TypeTraits<thrust::host_vector<T>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using data_layout       = ThrustVectorTag;
+    using tensor_category       = ThrustVectorTag;
     using execution_policy  = SerialTag;
 };
 template<class T>
@@ -22,7 +22,7 @@ struct TypeTraits<thrust::host_vector<T>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
-    using data_layout       = VectorVectorTag;
+    using tensor_category       = VectorVectorTag;
     using execution_policy  = get_execution_policy<T>;
 };
 
@@ -30,7 +30,7 @@ template<class T>
 struct TypeTraits<thrust::device_vector<T>, typename std::enable_if<std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using data_layout       = ThrustVectorTag;
+    using tensor_category       = ThrustVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     using execution_policy  = CudaTag ;  //!< enable if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #else

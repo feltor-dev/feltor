@@ -27,7 +27,7 @@ template< class Vector1, class Matrix, class Vector2>
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, VectorVectorTag, VectorVectorTag)
 {
     static_assert( std::is_base_of<VectorVectorTag,
-        get_data_layout<Vector2>>::value,
+        get_tensor_category<Vector2>>::value,
         "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
@@ -37,8 +37,8 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     std::vector<std::vector<int64_t>> acc( x.size());
     for( unsigned i=0; i<x.size(); i++)
         acc[i] = doDot_superacc( x[i], m[i], y[i],
-                       get_data_layout<inner_container1>(),
-                       get_data_layout<inner_container2>() );
+                       get_tensor_category<inner_container1>(),
+                       get_tensor_category<inner_container2>() );
     for( unsigned i=1; i<x.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
@@ -53,7 +53,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 template< class Vector1, class Matrix, class Vector2>
 inline get_value_type<Vector1> doDot( const Vector1& x, const Matrix& m, const Vector2& y, VectorVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,m,y,VectorVectorTag(), get_data_layout<Vector1>());
+    std::vector<int64_t> acc = doDot_superacc( x,m,y,VectorVectorTag(), get_tensor_category<Vector1>());
     return exblas::cpu::Round(acc.data());
 }
 template< class Matrix, class Vector>

@@ -438,7 +438,7 @@ template< class G, class I, class M, class V>
 struct TypeTraits< geo::DS<G,I,M, V> >
 {
     using value_type = double;
-    using data_layout = SelfMadeMatrixTag;
+    using tensor_category = SelfMadeMatrixTag;
 };
 ///@endcond
 }//namespace dg

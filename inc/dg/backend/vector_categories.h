@@ -24,7 +24,7 @@ VectorVector again. The innermost type must always be a shared vector however.
  * how do we get the pointer to the first element, the size, or how to access the MPI communicator? This is described in Derived Tags from the fundamental
 Tags, e.g. the \c ThrustVectorTag.
  * @note in any case we assume that the class has a default constructor, is copyable/assignable and has a \c size and a \c swap member function
- * @note <tt> dg::TypeTraits<Vector> </tt>has member typedefs \c value_type, \c execution_policy, \c data_layout
+ * @note <tt> dg::TypeTraits<Vector> </tt>has member typedefs \c value_type, \c execution_policy, \c tensor_category
 @attention Two instances of two different Vector types are usable in the same \c blas function if
   - their tags derive from the same VectorTag class except AnyVectorTag ( the data size
     and type, layout and communicator, is the same, but the access to it may differ)

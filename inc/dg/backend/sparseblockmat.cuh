@@ -237,13 +237,13 @@ template <class T>
 struct TypeTraits<EllSparseBlockMatDevice<T> >
 {
     using value_type  = T;
-    using data_layout = SparseBlockMatrixTag;
+    using tensor_category = SparseBlockMatrixTag;
 };
 template <class T>
 struct TypeTraits<CooSparseBlockMatDevice<T> >
 {
     using value_type  = T;
-    using data_layout = SparseBlockMatrixTag;
+    using tensor_category = SparseBlockMatrixTag;
 };
 ///@}
 } //namespace dg

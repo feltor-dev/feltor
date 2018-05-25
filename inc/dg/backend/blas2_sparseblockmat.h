@@ -56,7 +56,7 @@ inline void doSymv_dispatch(
     for(unsigned i=0; i<x.size(); i++)
         doSymv_dispatch( alpha, m, x[i], beta, y[i],
                 SparseBlockMatrixTag(),
-                get_data_layout<typename Vector1::value_type>(),
+                get_tensor_category<typename Vector1::value_type>(),
                 get_execution_policy<Vector1>());
 }
 #ifdef _OPENMP
@@ -78,7 +78,7 @@ inline void doSymv_dispatch(
             for(unsigned i=0; i<x.size(); i++)
                 doSymv_dispatch( alpha, m, x[i], beta, y[i],
                         SparseBlockMatrixTag(),
-                        get_data_layout<typename Vector1::value_type>(),
+                        get_tensor_category<typename Vector1::value_type>(),
                         OmpTag());
         }
     }
@@ -86,7 +86,7 @@ inline void doSymv_dispatch(
         for(unsigned i=0; i<x.size(); i++)
             doSymv_dispatch( alpha, m, x[i], beta, y[i],
                     SparseBlockMatrixTag(),
-                    get_data_layout<typename Vector1::value_type>(),
+                    get_tensor_category<typename Vector1::value_type>(),
                     OmpTag());
 }
 #endif//_OPENMP
@@ -103,7 +103,7 @@ inline void doSymv(
 {
     doSymv_dispatch(alpha, m, x, beta, y,
             SparseBlockMatrixTag(),
-            get_data_layout<Vector1>(),
+            get_tensor_category<Vector1>(),
             get_execution_policy<Vector1>()
             );
 }

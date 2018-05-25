@@ -100,7 +100,7 @@ struct MPI_Vector
 template<class container>
 struct TypeTraits<MPI_Vector<container> > {
     using value_type = get_value_type<container>;
-    using data_layout = MPIVectorTag;
+    using tensor_category = MPIVectorTag;
     using execution_policy = get_execution_policy<container>;
 };
 ///@}
@@ -189,7 +189,7 @@ struct NearestNeighborComm
     template<class container>
     void global_gather_init( const container& values, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_data_layout<container>>::value ,
+        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container>>::value ,
                    "Only Shared vectors allowed");
         static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
         static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
@@ -206,7 +206,7 @@ struct NearestNeighborComm
     template<class container>
     void global_gather_wait(const container& input, container& buffer, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_data_layout<container>>::value ,
+        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container>>::value ,
                    "Only Shared vectors allowed");
         static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
         static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");

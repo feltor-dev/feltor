@@ -22,7 +22,7 @@ struct TypeTraits<cusp::array1d<T,cusp::host_memory>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using data_layout   = CuspVectorTag;
+    using tensor_category   = CuspVectorTag;
     using execution_policy  = SerialTag;
 };
 template<class T>
@@ -30,7 +30,7 @@ struct TypeTraits<cusp::array1d<T,cusp::device_memory>,
     typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
     using value_type        = T;
-    using data_layout   = CuspVectorTag;
+    using tensor_category   = CuspVectorTag;
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
     using execution_policy  = CudaTag ; //!< if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
 #else
@@ -45,31 +45,31 @@ template< class I, class V, class M>
 struct TypeTraits< cusp::coo_matrix<I,V,M> >
 {
     using value_type = V;
-    using data_layout = CuspMatrixTag;
+    using tensor_category = CuspMatrixTag;
 };
 template< class I, class V, class M>
 struct TypeTraits< cusp::csr_matrix<I,V,M> >
 {
     using value_type = V;
-    using data_layout = CuspMatrixTag;
+    using tensor_category = CuspMatrixTag;
 };
 template< class I, class V, class M>
 struct TypeTraits< cusp::dia_matrix<I,V,M> >
 {
     using value_type = V;
-    using data_layout = CuspMatrixTag;
+    using tensor_category = CuspMatrixTag;
 };
 template< class I, class V, class M>
 struct TypeTraits< cusp::ell_matrix<I,V,M> >
 {
     using value_type = V;
-    using data_layout = CuspMatrixTag;
+    using tensor_category = CuspMatrixTag;
 };
 template< class I, class V, class M>
 struct TypeTraits< cusp::hyb_matrix<I,V,M> >
 {
     using value_type = V;
-    using data_layout = CuspMatrixTag;
+    using tensor_category = CuspMatrixTag;
 };
 
 ///@}

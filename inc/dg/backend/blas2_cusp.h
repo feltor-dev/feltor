@@ -75,7 +75,7 @@ inline void doSymv( Matrix& m,
                     CuspMatrixTag,
                     SharedVectorTag  )
 {
-    static_assert( std::is_base_of<SharedVectorTag, get_data_layout<Vector2>>::value,
+    static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector2>>::value,
         "All data layouts must derive from the same vector category (SharedVectorTag in this case)!");
     static_assert( std::is_same< get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value, "Execution policies must be equal!");
     typedef typename Matrix::value_type value_type;
@@ -103,7 +103,7 @@ inline void doSymv( Matrix& m,
                     CuspMatrixTag,
                     VectorVectorTag  )
 {
-    static_assert( std::is_base_of<VectorVectorTag, get_data_layout<Vector2>>::value,
+    static_assert( std::is_base_of<VectorVectorTag, get_tensor_category<Vector2>>::value,
         "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( m.num_rows == y.size() );
@@ -111,7 +111,7 @@ inline void doSymv( Matrix& m,
 #endif //DG_DEBUG
     using inner_container = typename std::decay<Vector1>::type::value_type;
     for ( unsigned i=0; i<x.size(); i++)
-        doSymv( m, x[i], y[i], CuspMatrixTag(), get_data_layout<inner_container>());
+        doSymv( m, x[i], y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
 }
 
 } //namespace detail

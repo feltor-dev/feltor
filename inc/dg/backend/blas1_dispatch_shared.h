@@ -40,7 +40,7 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, SharedVe
     static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
     static_assert( std::is_same<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
     static_assert( std::is_base_of<SharedVectorTag,
-        get_data_layout<Vector2>>::value,
+        get_tensor_category<Vector2>>::value,
         "All container types must share the same vector category (SharedVectorTag in this case)!");
     static_assert( std::is_same<get_execution_policy<Vector>,
         get_execution_policy<Vector2> >::value,
@@ -64,7 +64,7 @@ template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
     static_assert( all_true<std::is_base_of<SharedVectorTag,
-        get_data_layout<Containers>>::value...>::value,
+        get_tensor_category<Containers>>::value...>::value,
         "All container types must derive from the same vector category (SharedVectorTag in this case)!");
     static_assert( all_true<std::is_same<get_execution_policy<container>,
         get_execution_policy<Containers> >::value...>::value,
