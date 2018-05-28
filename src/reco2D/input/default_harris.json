@@ -26,7 +26,8 @@
     "nu_perp"     : 1e-8,   //  (perpendicular viscosity, roughly 0)
     //---------------------Initial perturbation parameters and setup ---------------------
     "initmode"      : 0.0, // (initmode (harris 0 / island 1)
-    "amplitude" : 0.1, // (blob amplitude)
+    "amplitude0" : 1e-1, // (eq amplitude)
+    "amplitude1" : 1e-5, // (fluc amplitude)
     "mY"        : 1,  //y-mode number
     //-------------------------------Sim Setup-----------------------------
     "lxhalf"  : 10,   //(in units rho_s)   

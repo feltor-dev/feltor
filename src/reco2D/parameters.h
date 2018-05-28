@@ -34,7 +34,8 @@ struct Parameters
 
     double nu_perp;  //!< perpendicular diffusion
     
-    double amp;  //!< blob amplitude
+    double amp0;
+    double amp1;  
     double mY; //!< perpendicular position relative to box height
     
     unsigned init;
@@ -68,7 +69,8 @@ struct Parameters
         beta        = js["beta"].asDouble();
         nu_perp     = js["nu_perp"].asDouble();
 
-        amp         = js["amplitude"].asDouble();
+        amp0         = js["amplitude0"].asDouble();
+        amp1         = js["amplitude1"].asDouble();
         mY          = js["mY"].asDouble();
         init        = js["initmode"].asUInt();
 
@@ -88,8 +90,9 @@ struct Parameters
             <<"     Ion-temperature:  = "<<tau[1]<<"\n"
             <<"     perp. Viscosity:  = "<<nu_perp<<"\n"
             <<"     initmode   (0/1)  = "<<init<<"\n";
-        os  <<"Blob parameters are: \n"
-            << "    amplitude:    "<<amp<<"\n"
+        os  <<"Init parameters are: \n"
+            << "    amplitude0:    "<<amp0<<"\n"
+            << "    amplitude1:    "<<amp1<<"\n"
             << "    mY:           "<<mY<<"\n";
         os << "Algorithmic parameters are: \n"
             <<"     n  = "<<n<<"\n"

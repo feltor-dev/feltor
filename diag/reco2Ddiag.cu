@@ -52,7 +52,7 @@ int main( int argc, char* argv[])
     dg::DVec one(dg::evaluate(dg::one,g2d));
     dg::DVec w2d = dg::create::weights( g2d);
     dg::DVec apar(dg::evaluate(dg::zero,g2d));
-    dg::InvCoshXsq init0( 1., 2.*M_PI/p.lxhalf);
+    dg::InvCoshXsq init0( p.amp0, 2.*M_PI/p.lxhalf);
     dg::DVec apareq(dg::evaluate( init0, g2d));
 
     //open netcdf files
@@ -87,16 +87,16 @@ int main( int argc, char* argv[])
         dg::blas2::gemv(interp, apar, aparx0y0);
             
         
-        //normalize
-        if (i==0) {
-//             apar0=aparx0y0[0];
-            dg::blas2::gemv(interp, apareq, apareqx0y0);
+//         apar0=aparx0y0[0];
+        dg::blas2::gemv(interp, apareq, apareqx0y0);
             
-        }                
-        psiX=std::abs(aparx0y0[0]-apareqx0y0[0]);
+//            std::cout << time << " " <<  aparx0y0[0]<< " " << apareqx0y0[0] <<"\n";
+
+        psiX=std::fabs(aparx0y0[0]-apareqx0y0[0]);
         
 //         if (i>=1) {
         logpsiX=log(psiX);
+        if (i==imin) logpsiXold=logpsiX;
         gamma=(logpsiX-logpsiXold)/deltaT;
 //         }
         logpsiXold=logpsiX;

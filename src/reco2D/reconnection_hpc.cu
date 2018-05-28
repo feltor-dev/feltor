@@ -73,15 +73,24 @@ int main( int argc, char* argv[])
     }
     
     //Compute initial A_par
-    dg::blas1::axpby(-p.amp,y1[2],1.0,y0[3],y0[3]); // = [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] (harris)
+    dg::blas1::axpby(-p.amp1,y1[2],p.amp0,y0[3],y0[3]); // = [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] (harris)
     dg::blas1::pointwiseDot(y1[3],y0[3],y0[3]);     // A_par = cos(x *kx') * [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] (harris)
 
     //Compute u_e, U_i, w_e, W_i
-    dg::blas2::gemv( rolkar.laplacianM(),y0[3], y0[2]);        //u_e = -nabla_perp A_par
-    dg::blas1::scal(y0[2],-1.0);                               //u_e =  nabla_perp A_par
+    dg::blas2::gemv( rolkar.laplacianM(),y0[3], y0[2]);        //u_e = -nabla_perp^2 A_par
+    dg::blas1::scal(y0[2],-1.0);                               //u_e =  nabla_perp^2  A_par
     dg::blas1::axpby(1., y0[2], p.beta/p.mu[0], y0[3], y0[2]); //w_e =  u_e + beta/mue A_par
     asela.initializene( y0[3], y1[3]);                         //A_G = Gamma_1 A_par
-    dg::blas1::axpby(p.beta/p.mu[1], y1[3], 0.0, y0[3]);       //w_i =  beta/mui A_G
+    //with mass correction (only consistent for cold ions)
+    if (p.tau[1] == 0.) {
+        dg::blas1::axpby(p.beta/p.mu[1], y1[3], 0.0, y0[3]);       //w_i =  beta/mui A_G
+    }
+    else {
+          dg::blas1::scal(y0[3],0.0);                               //w_i = 0
+    }
+    
+ 
+    
     //Compute n_e
     dg::blas1::transform(y0[1], y0[1], dg::PLUS<>(-1.)); // =Ni - bg 
     asela.initializene( y0[1], y0[0]);                         //n_e = Gamma_1 N_i

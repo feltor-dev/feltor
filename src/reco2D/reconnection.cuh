@@ -301,6 +301,10 @@ container& Asela<Geometry, IMatrix, Matrix, container>::induct(const std::vector
 {
 
         dg::blas1::axpby( p.beta/p.mu[0], npe[0], 0., chi); //chi = beta/mu_e N_e
+        //with mass correction (only consistent for cold ions)
+        if (p.tau[1] == 0.) {
+            dg::blas1::axpby( -p.beta/p.mu[1], npe[1], 1., chi); //chi = beta/mu_e N_e - beta/mu_i N_i 
+        } 
         multigrid.project( chi, multi_chi);
         for( unsigned u=0; u<3; u++)
         {

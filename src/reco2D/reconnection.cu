@@ -80,7 +80,7 @@ int main( int argc, char* argv[])
     }
     
     //Compute initial A_par
-    dg::blas1::axpby(-p.amp,y1[2],1.0,y0[3],y0[3]); // = [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] (harris)
+    dg::blas1::axpby(-p.amp1,y1[2],p.amp0,y0[3],y0[3]); // = [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] (harris)
     dg::blas1::pointwiseDot(y1[3],y0[3],y0[3]);     // A_par = cos(x *kx') * [ A*Cos(y*ky) + 1/Cosh2(x*kx) ] (harris)
 
     //Compute u_e, U_i, w_e, W_i
