@@ -38,7 +38,7 @@ int main()
     dg::blas1::axpby( 1., solution, -1., average_y);
     res.d = sqrt( dg::blas2::dot( average_y, w2d, average_y));
     std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i-binary[1]<<std::endl;
-    std::cout << "\n Continue with \n\n";
+    //std::cout << "\n Continue with \n\n";
 
     return 0;
 }

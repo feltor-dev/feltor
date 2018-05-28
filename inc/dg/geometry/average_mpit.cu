@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     dg::blas1::axpby( 1., solution, -1., average_y);
     res.d = sqrt( dg::blas2::dot( average_y, w2d, average_y));
     if(rank==0)std::cout << "Distance to solution is: "<<res.d<<"\t"<<res.i-binary[1]<<std::endl;
-    if(rank==0)std::cout << "\n Continue with \n\n";
+    //if(rank==0)std::cout << "\n Continue with \n\n";
 
     MPI_Finalize();
     return 0;
