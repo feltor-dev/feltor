@@ -1006,7 +1006,6 @@ struct BathRZ{
      * @param Z Z - coordinate
      *
      */
-    DG_DEVICE
     double operator()(double R, double Z)const
     {
         double f, RZphasecos, RR, ZZ;
@@ -1032,7 +1031,6 @@ struct BathRZ{
      * @param phi phi - coordinate
      *
      */
-    DG_DEVICE
     double operator()(double R, double Z, double phi)const {
         double f, RZphasecos;
         double  RR, ZZ;
