@@ -88,5 +88,6 @@ int main()
     std::cout << "TEST result of a sin function to compare platforms/compilers:\n";
     res.d = sin( 6.12610567450009658);
     std::cout << "Result of sin "<<res.d<<"\t"<<res.i<<"\t(GCC: -4628567870976535683)"<<std::endl;
+    std::cout << "\nFINISHED! Continue with geometry/derivatives_t.cu !\n\n";
     return 0;
 }

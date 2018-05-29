@@ -19,9 +19,10 @@ typedef dg::DVec Vector;
 
 int main()
 {
-    unsigned n, Nx, Ny, Nz;
-    std::cout << "Type in n, Nx and Ny and Nz!\n";
-    std::cin >> n >> Nx >> Ny >> Nz;
+    std::cout << "This program tests the creation and application of two-dimensional and three-dimensional derivatives!\n";
+    std::cout << "A TEST is PASSED if the number in the second column shows EXACTLY 0!\n";
+    unsigned n = 3, Nx = 24, Ny = 28, Nz = 100;
+    std::cout << "On Grid "<<n<<" x "<<Nx<<" x "<<Ny<<" x "<<Nz<<"\n";
     dg::bc bcx=dg::DIR, bcy=dg::PER, bcz=dg::NEU_DIR;
     dg::Grid2d g2d( 0, M_PI, 0.1, 2*M_PI+0.1, n, Nx, Ny, bcx, bcy);
     const Vector w2d = dg::create::weights( g2d);
@@ -36,9 +37,9 @@ int main()
     const Vector dy2d = dg::evaluate( cosy, g2d);
     const Vector null2 = dg::evaluate( zero, g2d);
     Vector sol2[] = {dx2d, dy2d, null2, null2};
+    int64_t binary2[] = {4562611930300281864,4553674328256556132,4567083257206218817,4574111364446550002};
 
     exblas::udouble res;
-    std::cout << "WE EXPECT CONVERGENCE IN ALL QUANTITIES!!!\n";
     std::cout << "TEST 2D: DX, DY, JX, JY\n";
     for( unsigned i=0; i<4; i++)
     {
@@ -46,7 +47,7 @@ int main()
         dg::blas2::symv( -1., m2[i], f2d, 1., error);
         dg::blas1::pointwiseDot( error, error, error);
         double norm = sqrt(dg::blas1::dot( w2d, error)); res.d = norm;
-        std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";
+        std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary2[i]<<"\n";
     }
     dg::Grid3d g3d( 0,M_PI, 0.1, 2.*M_PI+0.1, M_PI/2.,M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz);
     const Vector w3d = dg::create::weights( g3d);
@@ -63,6 +64,7 @@ int main()
     const Vector dz3d = dg::evaluate( cosz, g3d);
     const Vector null3 = dg::evaluate( zero, g3d);
     Vector sol3[] = {dx3d, dy3d, dz3d, null3, null3, null3};
+    int64_t binary3[] = {4561946736820639666,4553062895410573431,4594213495911299616,4566393134538626348,4573262464593641240,4594304523193682043};
 
     std::cout << "TEST 3D: DX, DY, DZ, JX, JY, JZ\n";
     for( unsigned i=0; i<6; i++)
@@ -70,14 +72,9 @@ int main()
         Vector error = sol3[i];
         dg::blas2::symv( -1., m3[i], f3d, 1., error);
         double norm = sqrt(dg::blas2::dot( error, w3d, error)); res.d = norm;
-        std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i<<"\n";
+        std::cout << "Distance to true solution: "<<norm<<"\t"<<res.i-binary3[i]<<"\n";
     }
-    //for periodic bc | dirichlet bc
-    //n = 1 -> p = 2      2
-    //n = 2 -> p = 1      1
-    //n = 3 -> p = 3      3
-    //n = 4 -> p = 3      3
-    //n = 5 -> p = 5      5
+    std::cout << "\nFINISHED! Continue with arakawa_t.cu !\n\n";
 
     return 0;
 }

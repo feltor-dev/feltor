@@ -25,15 +25,18 @@ double jacobian( double x, double y)
 }
 */
 
-double left( double x, double y) {return sin(x)*cos(y);}
-double right( double x, double y) {return sin(y)*cos(x);}
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
-//double right2( double x, double y) {return sin(y);}
-double jacobian( double x, double y)
-{
+
+double left( double x, double y) {
+    return sin(x)*cos(y);
+}
+double right( double x, double y) {
+    return sin(y)*cos(x);
+}
+double jacobian( double x, double y) {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y);
 }
 ////These are for comparing to FD arakawa results
@@ -59,31 +62,37 @@ int main(int argc, char* argv[])
 {
     MPI_Init( &argc, &argv);
     int rank;
-    unsigned n, Nx, Ny;
-    MPI_Comm comm;
-    dg::mpi_init2d( bcx, bcy, n, Nx, Ny, comm);
-    dg::CartesianMPIGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm comm;
+    dg::mpi_init2d( bcx, bcy, comm);
+    if(rank==0)std::cout<<"This program tests the execution of the arakawa scheme! A test is passed if the number in the second column shows exactly zero!\n";
+    unsigned n = 3, Nx = 32, Ny = 48;
+    if(rank==0)std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
+    dg::CartesianMPIGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy, comm);
 
-    dg::MHVec w2d = dg::create::weights( grid);
-    dg::MHVec lhs = dg::evaluate( left, grid), jac(lhs);
-    dg::MHVec rhs = dg::evaluate( right, grid);
-    const dg::MHVec sol = dg::evaluate ( jacobian, grid);
-    dg::MHVec eins = dg::evaluate( dg::one, grid);
+    const dg::MHVec lhs = dg::evaluate( left, grid);
+    const dg::MHVec rhs = dg::evaluate( right, grid);
+    dg::MHVec jac(lhs);
 
     dg::ArakawaX<dg::CartesianMPIGrid2d, dg::MHMatrix, dg::MHVec> arakawa( grid);
     arakawa( lhs, rhs, jac);
 
+    int64_t binary[] = {4358628400772939776,4360428067382886400,4362477496701026304,4562674804459845067,4552797036354693398};
     exblas::udouble res;
+    dg::MHVec w2d = dg::create::weights( grid);
+    dg::MHVec eins = dg::evaluate( dg::one, grid);
+    const dg::MHVec sol = dg::evaluate ( jacobian, grid);
+
     res.d = dg::blas2::dot( eins, w2d, jac);
-    if(rank==0)std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    if(rank==0)std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i-binary[0]<<"\n";
     res.d = dg::blas2::dot( rhs,  w2d, jac);
-    if(rank==0)std::cout << "Mean rhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    if(rank==0)std::cout << "Mean rhs*Jacobian is "<<res.d<<"\t"<<res.i-binary[1]<<"\n";
     res.d = dg::blas2::dot( lhs,  w2d, jac);
-    if(rank==0)std::cout << "Mean lhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    if(rank==0)std::cout << "Mean lhs*Jacobian is "<<res.d<<"\t"<<res.i-binary[2]<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
     res.d = sqrt( dg::blas2::dot( w2d, jac));
-    if(rank==0)std::cout << "Distance to solution "<<res.d<<"\t"<<res.i<<std::endl; //don't forget sqrt when comuting errors
+    if(rank==0)std::cout << "Distance to solution "<<res.d<<"\t\t"<<res.i-binary[3]<<std::endl; //don't forget sqrt when comuting errors
+    if(rank==0)std::cout << "\nContinue with geometry/average_mpit.cu !\n\n";
     MPI_Finalize();
     return 0;
 }

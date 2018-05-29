@@ -29,15 +29,18 @@ const double lx = 2*M_PI;
 const double ly = 2*M_PI;
 dg::bc bcx = dg::PER;
 dg::bc bcy = dg::PER;
-double left( double x, double y) { return sin(x)*cos(y); }
-double right( double x, double y) { return sin(y)*cos(x); }
-double jacobian( double x, double y)
-{
+
+double left( double x, double y) {
+    return sin(x)*cos(y);
+}
+double right( double x, double y) {
+    return sin(y)*cos(x); 
+}
+double jacobian( double x, double y) {
     return cos(x)*cos(y)*cos(x)*cos(y) - sin(x)*sin(y)*sin(x)*sin(y);
 }
 //![function]
-double variationRHS( double x, double y)
-{
+double variationRHS( double x, double y) {
     return cos(x)*cos(y)*cos(x)*cos(y) + sin(x)*sin(y)*sin(x)*sin(y);
 }
 /*
@@ -60,34 +63,41 @@ double jacobian( double x, double y)
 
 int main()
 {
-    unsigned n, Nx, Ny;
-    std::cout << "Type n, Nx and Ny! \n";
-    std::cin >> n >> Nx >> Ny;
+    std::cout<<"This program tests the execution of the arakawa scheme! A test is passed if the number in the second column shows exactly zero!\n";
+    unsigned n = 3, Nx = 32, Ny = 48;
     std::cout << "Computing on the Grid " <<n<<" x "<<Nx<<" x "<<Ny <<std::endl;
 
     //![doxygen]
+    // create a Cartesian grid on the domain [0,lx]x[0,ly]
     const dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
-    const dg::DVec lhs = dg::evaluate( left, grid);
-    const dg::DVec rhs = dg::evaluate( right, grid);
+
+    // evaluate left and right hand side on the grid
+    const dg::DVec lhs = dg::transfer<dg::DVec>( dg::evaluate( left, grid));
+    const dg::DVec rhs = dg::transfer<dg::DVec>( dg::evaluate( right, grid));
     dg::DVec jac(lhs);
 
+    // create an Arakawa object
     dg::ArakawaX<dg::aGeometry2d, dg::DMatrix, dg::DVec> arakawa( grid);
+
+    //apply arakawa scheme
     arakawa( lhs, rhs, jac);
     //![doxygen]
 
+    int64_t binary[] = {4358628400772939776,4360428067382886400,4362477496701026304,4562674804459845067,4552797036354693398};
     exblas::udouble res;
     dg::DVec w2d = dg::create::weights( grid);
     dg::DVec eins = dg::evaluate( dg::one, grid);
     const dg::DVec sol = dg::evaluate ( jacobian, grid);
+
     res.d = dg::blas2::dot( eins, w2d, jac);
-    std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i-binary[0]<<"\n";
     res.d = dg::blas2::dot( rhs, w2d, jac);
-    std::cout << "Mean rhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    std::cout << "Mean rhs*Jacobian is "<<res.d<<"\t"<<res.i-binary[1]<<"\n";
     res.d = dg::blas2::dot( lhs, w2d, jac);
-    std::cout << "Mean lhs*Jacobian is "<<res.d<<"\t"<<res.i<<"\n";
+    std::cout << "Mean lhs*Jacobian is "<<res.d<<"\t"<<res.i-binary[2]<<"\n";
     dg::blas1::axpby( 1., sol, -1., jac);
-    res.d = sqrt(dg::blas2::dot( w2d, jac));
-    std::cout << "Distance to solution "<<res.d<<"\t"<<res.i<<std::endl; //don't forget sqrt when comuting errors
+    res.d = sqrt(dg::blas2::dot( w2d, jac)); //don't forget sqrt when computing errors
+    std::cout << "Distance to solution "<<res.d<<"\t\t"<<res.i-binary[3]<<std::endl;
     //periocid bc       |  dirichlet bc
     //n = 1 -> p = 2    |
     //n = 2 -> p = 1    |
@@ -100,6 +110,7 @@ int main()
     arakawa.variation( rhs, jac);
     dg::blas1::axpby( 1., variation, -1., jac);
     res.d = sqrt( dg::blas2::dot( w2d, jac));
-    std::cout << "Variation distance to solution "<<res.d<<"\t"<<res.i<<std::endl; //don't forget sqrt when comuting errors
+    std::cout << "Variation distance   "<<res.d<<"\t"<<res.i-binary[4]<<std::endl; //don't forget sqrt when comuting errors
+    std::cout << "\nContinue with geometry/average_t.cu !\n\n";
     return 0;
 }
