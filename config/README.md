@@ -10,12 +10,12 @@ feltor/config/devices/devices.mk    #recombine variables depending on device
 
 Your machine specific config file (e.g. feltor/config/your-machine.mk) should have an include guard and overwrite or add to any of the following variables:
 
-| variable  | default value                | description                              |
-| :-------: | :--------------------------- | :--------------------------------------- |
-|    CC     | g++                          | C++ compiler                             |
-|   MPICC   | mpic++                       | the corresponding mpi wrapper for the c++ compiler |
-|  CFLAGS   | -std=c++11 -mavx -mfma -Wall | flags for the C++ compiler, minimum instruction set is sse4.1, avx and fma are recommended               |
-| MPICFLAGS |                              | flags specific to the MPI compilation    |
+| variable  | default value                | description                                                  |
+| :-------: | :--------------------------- | :----------------------------------------------------------- |
+|    CC     | g++                          | C++ compiler                                                 |
+|   MPICC   | mpic++                       | the corresponding mpi wrapper for the c++ compiler           |
+|  CFLAGS   | -std=c++11 -mavx -mfma -Wall | flags for the C++ compiler, avx and fma are recommended if the CPU supports it |
+| MPICFLAGS |                              | flags specific to the MPI compilation                        |
    OPT    | -O3                                      | optimization flags for the **host** code (can be overwritten on the command line, CUDA kernel code is always compiled with -O3) |
 |  OMPFLAG  | -fopenmp                                 | The compiler flag activating the OpenMP support |
 |   NVCC    | nvcc                                     | CUDA compiler                            |

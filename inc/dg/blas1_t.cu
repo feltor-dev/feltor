@@ -85,7 +85,7 @@ int main()
     dg::blas1::scal( w2, 0.6);
     dg::blas1::plus( w3, -7.0);
     std::cout << "e^2-7 = " << w3[0][0] <<" (0.389056...)"<< std::endl;
-    std::cout << "\nFINISHED\n\n";
+    std::cout << "\nFINISHED! Continue with geometry/evaluation_t.cu !\n\n";
 
 
     return 0;

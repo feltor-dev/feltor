@@ -95,7 +95,7 @@ int main( int argc, char* argv[])
     dg::blas1::scal( w2, 0.6);
     dg::blas1::plus( w3, -7.0);
     if(rank==0)std::cout << "e^2-7 = " << w3[0].data()[0] <<" (0.389056...)"<< std::endl;
-    if(rank==0)std::cout << "FINISHED\n\n";
+    if(rank==0)std::cout << "\nFINISHED! Continue with geometry/evaluation_mpit.cu !\n\n";
 
 
 

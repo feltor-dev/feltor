@@ -56,10 +56,11 @@ namespace blas1
  * @note it is possible to transfer a ContainerType to a <tt> std::array<ContainerType, N> </tt>(all elements are initialized to ContainerType) but not a <tt> std::vector<ContainerType></tt> (since the desired size of the \c std::vector cannot be known)
 
  * For example
-@code
-dg::DVec device = dg::tansfer<dg::DVec>( dg::evaluate(dg::one, grid));
-std::array<dg::DVec, 3> device_arr = dg::transfer<std::array<dg::DVec, 3>>( dg::evaluate( dg::one, grid));
-@endcode
+ * @code
+dg::HVec host( 100, 1.);
+dg::DVec device = dg::tansfer<dg::DVec>( host );
+std::array<dg::DVec, 3> device_arr = dg::transfer<std::array<dg::DVec, 3>>( host );
+ * @endcode
  */
 template<class to_ContainerType, class from_ContainerType>
 inline to_ContainerType transfer( const from_ContainerType& src)
@@ -82,13 +83,13 @@ inline to_ContainerType transfer( const from_ContainerType& src)
  * @note it is possible to transfer a ContainerType to a <tt> std::array<ContainerType, N> </tt>(all elements are initialized to ContainerType) but not a <tt> std::vector<ContainerType></tt> (since the desired size of the \c std::vector cannot be known)
  *
  * For example
-@code
-dg::HVec host = dg::evaluate( dg::one, grid);
+ * @code
+dg::HVec host( 100, 3);
 dg::DVec device;
 dg::transfer( host, device); //device now equals host
 std::array<dg::DVec, 3> device_arr;
 dg::transfer( host, device_arr); //every element of device_arr now equals host
-@endcode
+ * @endcode
 
  */
 template<class from_ContainerType, class to_ContainerType>
@@ -116,7 +117,7 @@ inline void transfer( const from_ContainerType& source, to_ContainerType& target
 For example
 @code
 dg::DVec two( 100,2), three(100,3);
-double temp = dg::blas1::dot( two, three); //temp = 30 (5*(2*3))
+double temp = dg::blas1::dot( two, three); // temp = 30 (5*(2*3))
 @endcode
  */
 template< class ContainerType1, class ContainerType2>
@@ -147,7 +148,7 @@ void routine( double x, double y, double& z){
 }
 dg::DVec two( 100,2), three(100,3), four(100,4);
 dg::blas1::subroutine( routine, two, three, four);
-//four[i] now has the value 21 (7*2+3+4)
+// four[i] now has the value 21 (7*2+3+4)
 @endcode
 @note if you do not think that this function is plain magic you haven't looked at it
 long enough. This function can compute @b any trivial parallel expression for @b any
@@ -196,7 +197,7 @@ inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
 
 @code
 dg::DVec two( 100,2);
-dg::blas1::scal( two,  0.5 )); //result[i] = 1.
+dg::blas1::scal( two,  0.5 )); // result[i] = 1.
 @endcode
  */
 template< class ContainerType>
@@ -218,7 +219,7 @@ inline void scal( ContainerType& x, get_value_type<ContainerType> alpha)
 
 @code
 dg::DVec two( 100,2);
-dg::blas1::plus( two,  2. )); //result[i] = 4.
+dg::blas1::plus( two,  2. )); // result[i] = 4.
 @endcode
  */
 template< class ContainerType>
@@ -242,7 +243,7 @@ inline void plus( ContainerType& x, get_value_type<ContainerType> alpha)
 
 @code
 dg::DVec two( 100,2), three(100,3);
-dg::blas1::axpby( 2, two, 3., three); //three[i] = 13 (2*2+3*3)
+dg::blas1::axpby( 2, two, 3., three); // three[i] = 13 (2*2+3*3)
 @endcode
  */
 template< class ContainerType, class ContainerType1>
@@ -272,7 +273,7 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
 @code
 dg::DVec two(100,2), five(100,5), result(100, 12);
 dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
-//result[i] = -21 (2.5*2+2*5-3*12)
+// result[i] = -21 (2.5*2+2*5-3*12)
 @endcode
  */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -306,7 +307,7 @@ inline void axpbypgz( get_value_type<ContainerType> alpha, const ContainerType1&
 
 @code
 dg::DVec two( 100,2), three(100,3), result(100);
-dg::blas1::axpby( 2, two, 3., three, result); //result[i] = 13 (2*2+3*3)
+dg::blas1::axpby( 2, two, 3., three, result); // result[i] = 13 (2*2+3*3)
 @endcode
  */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -332,10 +333,12 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
  * @note all aliases allowed
  *
 @code
-double function( double x, double y) {return sin(x)*sin(y);}
+double function( double x, double y) {
+    return sin(x)*sin(y);
+}
 dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
 dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
-//result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
+// result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
 @endcode
  */
 template< class ContainerType, class BinarySubroutine, class Functor, class ContainerType0, class ...ContainerTypes>
@@ -359,7 +362,7 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
 @code
 dg::DVec two( 100,2), result(100);
 dg::blas1::transform( two, result, dg::EXP<double>());
-//result[i] = 7.389056... (e^2)
+// result[i] = 7.389056... (e^2)
 @endcode
  */
 template< class ContainerType, class ContainerType1, class UnaryOp>
@@ -379,7 +382,7 @@ inline void transform( const ContainerType1& x, ContainerType& y, UnaryOp op )
 
 @code
 dg::DVec two( 100,2), three( 100,3), result(100);
-dg::blas1::pointwiseDot( two,  three, result ); //result[i] = 6.
+dg::blas1::pointwiseDot( two,  three, result ); // result[i] = 6.
 @endcode
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -404,7 +407,7 @@ inline void pointwiseDot( const ContainerType1& x1, const ContainerType2& x2, Co
 @code
 dg::DVec two( 100,2), three( 100,3), result(100,6);
 dg::blas1::pointwiseDot(2., two,  three, -4., result );
-//result[i] = -12. (2*2*3-4*6)
+// result[i] = -12. (2*2*3-4*6)
 @endcode
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -433,7 +436,7 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 @code
 dg::DVec two( 100,2), three( 100,3), four(100,4), result(100,6);
 dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
-//result[i] = 24. (2*2*3*4-4*6)
+// result[i] = 24. (2*2*3*4-4*6)
 @endcode
 */
 template< class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3>
@@ -459,7 +462,7 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 @code
 dg::DVec two( 100,2), three( 100,3), result(100);
 dg::blas1::pointwiseDivide( two,  three, result );
-//result[i] = -0.666... (2/3)
+// result[i] = -0.666... (2/3)
 @endcode
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -484,7 +487,7 @@ inline void pointwiseDivide( const ContainerType1& x1, const ContainerType2& x2,
 @code
 dg::DVec two( 100,2), three( 100,3), result(100,1);
 dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
-//result[i] = 7 (3*2/3+5*1)
+// result[i] = 7 (3*2/3+5*1)
 @endcode
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -516,7 +519,7 @@ inline void pointwiseDivide( get_value_type<ContainerType> alpha, const Containe
 @code
 dg::DVec two(100,2), three(100,3), four(100,5), five(100,5), result(100,6);
 dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
-//result[i] = -56.
+// result[i] = -56.
 @endcode
 */
 template<class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4>
