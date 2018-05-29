@@ -45,7 +45,7 @@ struct Diffusion
 template< class Geometry, class Matrix, class container >
 struct ToeflI
 {
-    typedef typename VectorTraits<container>::value_type value_type;
+    using value_type = dg::get_value_type<container>;
 
     /**
      * @brief Construct a ToeflI solver object

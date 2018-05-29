@@ -43,7 +43,7 @@ struct AnyVectorTag : public AnyMatrixTag{};
  * indicate addtional functionality like data resize.
  * @note We assume a class with this Tag has the following methods
  *  - size() returns the size (in number of elements) of the contiguous data
- *  - data() returns a pointer (or pointer-like class that has a get() method to access the raw pointer) to the first element of the contiguous data
+ *  - data() returns a pointer (or pointer-like class (iterator) that has a get() method to access the raw pointer) to the first element of the contiguous data
  */
 struct SharedVectorTag  : public AnyVectorTag {};
 /**
@@ -71,19 +71,26 @@ struct VectorVectorTag  : public AnyVectorTag {};
 struct ArrayVectorTag   : public VectorVectorTag{}; //!< \c std::array of containers
 
 /**
- * @brief Indicate that thrust - like member functions are available
+ * @brief Indicate thrust/std - like behaviour
  *
- * In detail these must be
- *  - resize()
- *  - size()
- *  - data()
- *  - begin()
- *  - end()
- *  - can be constructed from iterators (begin, end)
+ * There must be the typedefs
+ * - \c iterator
+ * - \c const_iterator
+ * An instance can be constructed by
+ *  - iterators \c (begin, end)
+ * The member functions contan at least
+ *  - \c resize()  resize the vector
+ *  - \c size() returns the number of elements
+ *  - \c data() pointer to the underlying array
+ *  - \c begin() returns an iterator to the beginning
+ *  - \c cbegin() returns a const_iterator to the beginning
+ *  - \c end() return an iterator to the end
+ *  - \c cend() returns a const_iterator to the end
+ *  @note \c thrust::host_vector and \c thrust::device_vector as well as container classes in the standard template library meet these requirements
  */
 struct ThrustVectorTag  : public SharedVectorTag {};
 struct CuspVectorTag    : public ThrustVectorTag {}; //!< special tag for cusp arrays
-struct StdArrayTag      : public ThrustVectorTag {}; //!< <tt> std::array< primitive_type> </tt>
+struct StdArrayTag      : public ThrustVectorTag {}; //!< <tt> std::array< primitive_type, N> </tt>
 
 }//namespace dg
 

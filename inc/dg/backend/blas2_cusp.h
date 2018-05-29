@@ -1,5 +1,5 @@
-#ifndef _DG_BLAS_LAPLACE_CUH
-#define _DG_BLAS_LAPLACE_CUH
+#ifndef _DG_BLAS_CUSP_H
+#define _DG_BLAS_CUSP_H
 
 #ifdef DG_DEBUG
 #include <cassert>
@@ -29,17 +29,20 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixT
 
 
 #ifdef _OPENMP
-template< class Matrix, class value_type>
+template< class Matrix, class Container1, class Container2>
 inline void doSymv_cusp_dispatch( Matrix& m,
-                    const value_type* RESTRICT x_ptr,
-                    value_type* RESTRICT y_ptr,
+                    const Container1& x,
+                    Container2& y,
                     cusp::csr_format,
                     OmpTag)
 {
     typedef typename Matrix::index_type index_type;
+    using value_type = get_value_type<Container1>;
     const value_type* RESTRICT val_ptr = thrust::raw_pointer_cast( &m.values[0]);
     const index_type* RESTRICT row_ptr = thrust::raw_pointer_cast( &m.row_offsets[0]);
     const index_type* RESTRICT col_ptr = thrust::raw_pointer_cast( &m.column_indices[0]);
+    const value_type* RESTRICT x_ptr = thrust::raw_pointer_cast( x.data());
+    value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( y.data());
     int rows = m.num_rows;
     #pragma omp parallel for
     for(int i = 0; i < rows; i++)
@@ -56,15 +59,15 @@ inline void doSymv_cusp_dispatch( Matrix& m,
 }
 #endif// _OPENMP
 
-template< class Matrix, class value_type>
+template< class Matrix, class Container1, class Container2>
 inline void doSymv_cusp_dispatch( Matrix& m,
-                    const value_type* x_ptr,
-                    value_type*  y_ptr,
+                    const Container1& x,
+                    Container2& y,
                     cusp::sparse_format,
                     AnyPolicyTag)
 {
-    cusp::array1d_view< const value_type*> cx( x_ptr, x_ptr + m.num_cols);
-    cusp::array1d_view<       value_type*> cy( y_ptr, y_ptr + m.num_rows);
+    cusp::array1d_view< typename Container1::const_iterator> cx( x.cbegin(), x.cend());
+    cusp::array1d_view< typename Container2::iterator> cy( y.begin(), y.end());
     cusp::multiply( m, cx, cy);
 }
 
@@ -73,7 +76,7 @@ inline void doSymv( Matrix& m,
                     const Vector1&x,
                     Vector2& y,
                     CuspMatrixTag,
-                    SharedVectorTag  )
+                    ThrustVectorTag  )
 {
     static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector2>>::value,
         "All data layouts must derive from the same vector category (SharedVectorTag in this case)!");
@@ -86,13 +89,11 @@ inline void doSymv( Matrix& m,
         "Value types must be equal"
     );
 
-    const value_type* RESTRICT x_ptr = thrust::raw_pointer_cast( x.data());
-    value_type* RESTRICT y_ptr = thrust::raw_pointer_cast( y.data());
 #ifdef DG_DEBUG
     assert( m.num_rows == y.size() );
     assert( m.num_cols == x.size() );
 #endif //DG_DEBUG
-    doSymv_cusp_dispatch( m,x_ptr,y_ptr,
+    doSymv_cusp_dispatch( m,x,y,
             typename Matrix::format(),
             get_execution_policy<Vector1>());
 }
@@ -119,4 +120,4 @@ inline void doSymv( Matrix& m,
 } //namespace dg
 ///@endcond
 
-#endif //_DG_BLAS_LAPLACE_CUH
+#endif //_DG_BLAS_CUSP_H
