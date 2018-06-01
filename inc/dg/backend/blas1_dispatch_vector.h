@@ -19,6 +19,10 @@ namespace dg
 {
 namespace blas1
 {
+
+template<class to_ContainerType, class from_ContainerType>
+inline to_ContainerType transfer( const from_ContainerType& src);
+
 namespace detail
 {
 
@@ -26,8 +30,9 @@ template<class To, class From>
 To doTransfer( const From& src, ArrayVectorTag, AnyVectorTag)
 {
     To t;
+    using inner_vector = typename To::value_type;
     for (unsigned i=0; i<t.size(); i++)
-        t[i] = src;
+        t[i] = dg::blas1::transfer<inner_vector>(src);
     return t;
 }
 

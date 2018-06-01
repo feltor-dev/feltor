@@ -136,8 +136,6 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
  * This routine evaluates an arbitrary user-defined subroutine \c f with an arbitrary number of arguments \f$ x_s\f$ elementwise
  * \f[ f(x_{0i}, x_{1i}, ...)  \f]
  * @copydoc hide_iterations
- * @tparam Subroutine a function or functor taking a value_type argument for each ContainerType argument in the call.
- * @copydoc hide_ContainerType
  * @param f the subroutine
  * @param x the first argument
  * @param xs other arguments
@@ -150,9 +148,13 @@ dg::DVec two( 100,2), three(100,3), four(100,4);
 dg::blas1::subroutine( routine, two, three, four);
 // four[i] now has the value 21 (7*2+3+4)
 @endcode
-@note if you do not think that this function is plain magic you haven't looked at it
-long enough. This function can compute @b any trivial parallel expression for @b any
-number of inputs and outputs. In this sense it replaces all other \c blas1 functions
+
+ * @tparam Subroutine a function or functor taking a \c value_type argument for each input argument in the call
+ * and a <tt> value_type&  </tt> argument for each output argument.
+ * \c Subroutine must be callable on the device in use. In particular, with CUDA it must be a functor (@b not a function) and its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @copydoc hide_ContainerType
+@note This function can compute @b any trivial parallel expression for @b any
+number of input and output arguments. In this sense it replaces all other \c blas1 functions
 except the scalar product, which is not trivial parallel.
  */
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
@@ -321,16 +323,11 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
  *
  * This routine elementwise evaluates \f[ f(y_i , g(x_{0i}, x_{1i}, ...)) \f]
  * @copydoc hide_iterations
- * @copydoc hide_ContainerType
- * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type_y&, value_type_g) i.e. it writes into the first and reads from its second argument
- * @tparam Functor signature: \c value_type_g \c operator()( value_type_x0, value_type_x1, ...)
  * @param y contains result
  * @param f The subroutine
  * @param g The functor to evaluate
  * @param x0 first input
  * @param xs more input
- * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
- * @note all aliases allowed
  *
 @code
 double function( double x, double y) {
@@ -340,6 +337,13 @@ dg::HVec pi2(20, M_PI/2.), pi3( 20, 3*M_PI/2.), result(20, 0);
 dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
 // result[i] =  -1. (sin(M_PI/2.)*sin(3*M_PI/2.))
 @endcode
+ *
+ * @copydoc hide_ContainerType
+ * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type_y&, value_type_g) i.e. it writes into the first and reads from its second argument
+ * @tparam Functor signature: \c value_type_g \c operator()( value_type_x0, value_type_x1, ...)
+ * @note Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
+ * @note all aliases allowed
+ *
  */
 template< class ContainerType, class BinarySubroutine, class Functor, class ContainerType0, class ...ContainerTypes>
 inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const ContainerType0& x0, const ContainerTypes& ...xs)
@@ -352,18 +356,19 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
  *
  * This routine computes \f[ y_i = op(x_i) \f]
  * @copydoc hide_iterations
- * @copydoc hide_ContainerType
- * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
  * @param x ContainerType x may alias y
  * @param y ContainerType y contains result, may alias x
  * @param op unary Operator to use on every element
- * @note the Functor must be callable on the device in use. In particular, with CUDA its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
 
 @code
 dg::DVec two( 100,2), result(100);
 dg::blas1::transform( two, result, dg::EXP<double>());
 // result[i] = 7.389056... (e^2)
 @endcode
+ *
+ * @copydoc hide_ContainerType
+ * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
+ * @note \c UnaryOp must be callable on the device in use. In particular, with CUDA it must be of functor tpye (@b not a function) and its signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  */
 template< class ContainerType, class ContainerType1, class UnaryOp>
 inline void transform( const ContainerType1& x, ContainerType& y, UnaryOp op )
