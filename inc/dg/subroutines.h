@@ -53,6 +53,8 @@ DG_DEVICE void operator()( T1& out, T2 in) const
     }
 };
 
+///@}
+///@cond
 template<class BinarySub, class Functor>
 struct Evaluate
 {
@@ -68,7 +70,6 @@ DG_DEVICE void operator() ( T& y, Ts... xs){
     Functor m_g;
 };
 
-
 template<class T>
 struct Scal
 {
@@ -80,6 +81,7 @@ DG_DEVICE
     private:
     T m_a;
 };
+
 template<class T>
 struct Plus
 {
@@ -125,6 +127,11 @@ struct PointwiseDot
 {
     PointwiseDot( T a, T b, T g = (T)0): m_a(a), m_b(b), m_g(g) {}
 DG_DEVICE
+    void operator()( T x, T &y)const{
+        T temp = y*m_b;
+        y = DG_FMA( m_a*x, y, temp);
+    }
+DG_DEVICE
     void operator()( T x, T y, T& z)const{
         T temp = z*m_b;
         z = DG_FMA( m_a*x, y, temp);
@@ -144,10 +151,16 @@ DG_DEVICE
     private:
     T m_a, m_b, m_g;
 };
+
 template<class T>
 struct PointwiseDivide
 {
     PointwiseDivide( T a, T b): m_a(a), m_b(b){}
+DG_DEVICE
+    void operator()( T y, T& z)const{
+        T temp = z*m_b;
+        z = DG_FMA( m_a, z/y, temp);
+    }
 DG_DEVICE
     void operator()( T x, T y, T& z)const{
         T temp = z*m_b;
@@ -156,9 +169,7 @@ DG_DEVICE
     private:
     T m_a, m_b;
 };
+///@endcond
 
-
-
-///@}
 
 }//namespace dg
