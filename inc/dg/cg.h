@@ -463,7 +463,8 @@ struct Invert
      * conjugate gradient method. The initial guess comes from an extrapolation
      * of the last solutions.
      * @copydoc hide_matrix
-     * @tparam Preconditioner A type for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable.
+     * @tparam SquareNorm A type for which the blas2::dot( const Matrix&, const Vector&) function is callable. This can e.g. be one of the container types.
+     * @tparam Preconditioner A type for which the <tt> blas2::symv(Matrix&, Vector1&, Vector2&) </tt> function is callable.
      * @param op symmetric Matrix operator class
      * @param phi solution (write only)
      * @param rho right-hand-side (will be multiplied by \c weights)
@@ -475,8 +476,8 @@ struct Invert
      *
      * @return number of iterations used
      */
-    template< class Matrix, class Preconditioner >
-    unsigned operator()( Matrix& op, container& phi, const container& rho, const container& weights, const container& inv_weights, Preconditioner& p)
+    template< class Matrix, class SquareNorm, class Preconditioner >
+    unsigned operator()( Matrix& op, container& phi, const container& rho, const SquareNorm& weights, const SquareNorm& inv_weights, Preconditioner& p)
     {
         assert( phi.size() != 0);
         assert( &rho != &phi);
@@ -489,7 +490,7 @@ struct Invert
         unsigned number;
         if( multiplyWeights_ )
         {
-            dg::blas2::symv( rho, weights, m_ex.tail());
+            dg::blas2::symv( weights, rho, m_ex.tail());
             number = cg( op, phi, m_ex.tail(), p, inv_weights, eps_, nrmb_correction_);
         }
         else

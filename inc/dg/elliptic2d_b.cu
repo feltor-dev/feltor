@@ -72,14 +72,18 @@ int main()
     dg::Timer t;
     t.tic();
 
+    const dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
+
     const unsigned stages = 3;
 
-    const dg::CartesianGrid2d grid( 0, lx, 0, ly, n, Nx, Ny, bcx, bcy);
     dg::MultigridCG2d<dg::aGeometry2d, dg::DMatrix, dg::DVec > multigrid( grid, stages);
+
     const dg::DVec chi =  dg::evaluate( pol, grid);
+
     const std::vector<dg::DVec> multi_chi = multigrid.project( chi);
 
     std::vector<dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > multi_pol( stages);
+
     for(unsigned u=0; u<stages; u++)
     {
         multi_pol[u].construct( multigrid.grids()[u].get(), dg::not_normed, dg::centered, jfactor);
@@ -108,12 +112,25 @@ int main()
     {
     x = temp;
     //![invert]
+    //create an Elliptic object without volume form (not normed)
     dg::Elliptic<dg::CartesianGrid2d, dg::DMatrix, dg::DVec> pol_forward( grid, dg::not_normed, dg::centered, jfactor);
+
+    //Set the chi function (chi is a dg::DVec of size grid.size())
     pol_forward.set_chi( chi);
+
+    //construct an invert object
     dg::Invert<dg::DVec > invert_fw( x, n*n*Nx*Ny, eps);
+
+    //invert the elliptic equation
     std::cout << " "<< invert_fw( pol_forward, x, b, w2d, v2d, chi_inv);
+
+    //compute the error (solution contains analytic solution
     dg::blas1::axpby( 1.,x,-1., solution, error);
+
+    //compute the L2 norm of the error
     double err = dg::blas2::dot( w2d, error);
+
+    //output the relative error
     std::cout << " "<<sqrt( err/norm) << "\n";
     //![invert]
     }
