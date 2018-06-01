@@ -493,7 +493,7 @@ inline void pointwiseDivide( get_value_type<ContainerType> alpha, const Containe
         return;
     }
     if( std::is_same<ContainerType, ContainerType1>::value && &x1==&y){
-        dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x2, y );
+        dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha,beta), x2, y );
 
         return;
     }
