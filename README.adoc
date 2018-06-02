@@ -96,7 +96,7 @@ ln -s path/to/vcl
 ----
 
 ____
-If you do not like this, you can also create your own config file as
+If you do not like this, you can also set the include paths in your own config file as
 described link:config/README.md[here].
 ____
 
@@ -278,30 +278,43 @@ ____
 
 === Running a FELTOR simulation
 
-Now, we want to compile and run a simulation program. First, we have to
+Now, we want to compile and run a simulation program. To this end, we have to
 download and install some additional libraries for I/O-operations.
 
+First, we need to install jsoncpp (distributed under the MIT License).
+The easiest way to do this on Linux is to install `libjsoncpp-dev` through the package managment system. However, if you have
+a GPU or if you do not have sudo privileges you have to install the library manually. That means you have to clone https://www.github.com/open-source-parsers/jsoncpp[JsonCpp] and follow the instructions in the README. After this, link the
+include path
+[source,sh]
+----
+cd ~/include
+ln -s /usr/include/jsoncpp/json # if installed as a system library
+# or
+ln -s path/to/jsoncpp/include/json # if installed manually
+----
+or append the respective path as well as the path to the object library to the `INCLUDE` and `JSONLIB` variables as
+described under link:config/README.md[config].
+
 For data output we use the
-http://www.unidata.ucar.edu/software/netcdf/[NetCDF] library under an
-MIT - like license. The underlying https://www.hdfgroup.org/HDF5/[HDF5]
-library also uses a very permissive license. Note that for the mpi
+http://www.unidata.ucar.edu/software/netcdf/[NetCDF-C] library under an
+MIT - like license (we use the netcdf-4 file format).
+The underlying https://www.hdfgroup.org/HDF5/[HDF5]
+library also uses a very permissive license.
+Both can be installed easily on Linux through the `libnetcdf-dev` package.
+For a manual build follow the build instructions in the https://www.unidata.ucar.edu/software/netcdf/docs/getting_and_building_netcdf.html[netcdf-documentation].
+Note that for the mpi
 versions of applications you need to build hdf5 and netcdf with the
---enable-parallel flag. Do NOT use the pnetcdf library, which uses the
-classic netcdf file format. Our JSON input files are parsed by
-https://www.github.com/open-source-parsers/jsoncpp[JsonCpp] distributed
-under the MIT license.
-____
+`--enable-parallel` flag. Do NOT use the pnetcdf library, which uses the
+classic netcdf file format.
+
 Some desktop applications in FELTOR use the
 https://github.com/mwiesenberger/draw[draw library] (developed by us
 also under MIT), which depends on OpenGL (s.a.
 http://en.wikibooks.org/wiki/OpenGL_Programming[installation guide]) and
-http://www.glfw.org[glfw], an OpenGL development library under a
-BSD-like license.
-____
+http://www.glfw.org[glfw3], an OpenGL development library under a
+BSD-like license. Again, link `path/to/draw` in the `include` folder.
 
-As in Step 3 you need to create links to the jsoncpp library include
-path (and optionally the draw library) in your include folder or provide
-the paths in your config file. We are ready to compile now
+We are now ready to compile and run a simulation program
 
 [source,sh]
 ----
