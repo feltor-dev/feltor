@@ -10,11 +10,20 @@
 #include "evaluation.cuh"
 #include "weights.cuh"
 
-
-double function( double x)
+struct exp_function{
+DG_DEVICE
+double operator()( double x)
 {
     return exp(x);
 }
+};
+struct sin_function{
+DG_DEVICE
+double operator()( double x)
+{
+    return sin(x);
+}
+};
 
 double function( double x, double y)
 {
@@ -25,7 +34,6 @@ double function( double x, double y, double z)
         return exp(x)*exp(y)*exp(z);
 }
 
-//typedef std::vector< double>   DVec;
 typedef thrust::device_vector< double>   DVec;
 typedef thrust::host_vector< double>     HVec;
 
@@ -83,11 +91,19 @@ int main()
     std::cout << "Square normalized 3D norm "<<std::setw(6)<<norm3d<<"\t" << res.i - 4746764681002108278<<"\n";
     double solution3d = solution2d*(exp(12.) -exp(10.))/2.;
     std::cout << "Correct square norm is    "<<std::setw(6)<<solution3d<<std::endl;
-    std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n";
+    std::cout << "Relative 3d error is      "<<(norm3d-solution3d)/solution3d<<"\n\n";
 
-    std::cout << "TEST result of a sin function to compare platforms/compilers:\n";
-    res.d = sin( 6.12610567450009658);
-    std::cout << "Result of sin "<<res.d<<"\t"<<res.i<<"\t(GCC: -4628567870976535683)"<<std::endl;
+    std::cout << "TEST result of a sin and exp function to compare compiler specific math libraries:\n";
+    DVec x(1, 6.12610567450009658);
+    dg::blas1::transform( x, x, sin_function() );
+    res.d = x[0];
+    std::cout << "Result of sin:    "<<res.i<<"\n"
+              << "          GCC:    -4628567870976535683 (correct)"<<std::endl;
+    DVec y(1, 5.9126151457310376);
+    dg::blas1::transform( y, y, exp_function() );
+    res.d = y[0];
+    std::cout << "Result of exp:     "<<res.i<<"\n"
+              << "          GCC:     4645210948416067678 (correct)"<<std::endl;
     std::cout << "\nFINISHED! Continue with geometry/derivatives_t.cu !\n\n";
     return 0;
 }
