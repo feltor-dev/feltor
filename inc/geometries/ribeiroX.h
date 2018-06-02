@@ -176,7 +176,7 @@ struct XFieldFinv
             { xAtOne_ = fpsi_.find_x(0.1); }
     void operator()(double ttt, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
     {
-        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
+        std::array<double,3> begin( {0,0,0}), end(begin);
         double R_i[2], Z_i[2];
         dg::Timer t;
         t.tic();

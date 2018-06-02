@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <cusp/print.h>
+#include "json/json.h"
 
 #include "dg/geometry/functions.h"
 #include "dg/backend/timer.cuh"

@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <vector>
 #include <string>
+#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "file/nc_utilities.h"

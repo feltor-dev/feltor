@@ -3,6 +3,7 @@
 #include <mpi.h>
 #include <cusp/print.h>
 #include <cusp/csr_matrix.h>
+#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "ds.h"
