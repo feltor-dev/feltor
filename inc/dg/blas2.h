@@ -28,46 +28,28 @@ namespace blas2{
 ///@addtogroup blas2
 ///@{
 
-/**
- * @brief \f$ y = x\f$; Generic way to copy and/or convert a Matrix type to a different Matrix type
- *
- * e.g. from CPU to GPU, or double to float, etc.
- * @copydoc hide_matrix
- * @tparam AnotherMatrix Another Matrix type
- * @param x source
- * @param y sink
- * @note y gets resized properly
- * @copydoc hide_code_blas2_symv
- */
-template<class MatrixType, class AnotherMatrixType>
-inline void transfer( const MatrixType& x, AnotherMatrixType& y)
-{
-    dg::blas2::detail::doTransfer( x,y,
-            get_tensor_category<MatrixType>(),
-            get_tensor_category<AnotherMatrixType>());
-}
 
 /*! @brief \f$ x^T M y\f$; Binary reproducible general dot product
  *
  * This routine computes the scalar product defined by the symmetric positive definite
  * matrix M \f[ x^T M y = \sum_{i,j=0}^{N-1} x_i M_{ij} y_j \f]
  *
- * Our implementation guarantees binary reproducible results up to and excluding the last mantissa bit of the result.
+ * @note Our implementation guarantees binary reproducible results up to and excluding the last mantissa bit of the result.
  * Furthermore, the sum is computed with infinite precision and the result is then rounded
  * to the nearest double precision number. Although the products are not computed with
  * infinite precision, the order of multiplication is guaranteed.
  * This is possible with the help of an adapted version of the \c ::exblas library.
- * @tparam DiagonalMatrixType Right now \c DiagonalMatrixType has to be the same as \c ContainerType, except if \c ContainerType is a <tt> std::vector<InnerContainerType></tt>, then the \c DiagonalMatrixType has to be the \c InnerContainerType.
- * In the latter case the \c MatrixType is applied to all entries in the \c std::vector and the sum is returned.
- * @copydoc hide_ContainerType
+ * @copydoc hide_code_evaluate2d
+ *
  * @param x Left input
- * @param m The diagonal Matrix
+ * @param m The diagonal Matrix.
  * @param y Right input (may alias \c x)
- * @return Generalized scalar product
+ * @return Generalized scalar product. If \c x and \c y are vectors of containers and \c m is not, then we sum the results of \c dg::blas2::dot( x[i], m, y[i])
  * @note This routine is always executed synchronously due to the
     implicit memcpy of the result.
  * @attention currently we only have an implementation for double precision numbers
- * @copydoc hide_code_evaluate2d
+ * @tparam MatrixType Right now \c MatrixType has to either have the \c AnyVectorTag or the \c SelfMadeMatrixTag and must be compatible with the \c ContainerTypes
+ * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class MatrixType, class ContainerType2>
 inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
@@ -90,17 +72,17 @@ inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
  *
  * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
- * @tparam DiagonalMatrixType Right now \c DiagonalMatrixType has to be the same as \c ContainerType, except if \c ContainerType is a \c std::vector<ContainerType_type>, then the \c DiagonalMatrixType has to be the \c ContainerType_type.
- * In the latter case the Matrix is applied to all ContainerTypes in the std::vector and the sum is returned.
- * @copydoc hide_ContainerType
  * @param m The diagonal Matrix
  * @param x Right input
- * @return Generalized scalar product
+ * @return Generalized scalar product. If \c x is a vector of containers and \c m is not, then we sum the results of \c dg::blas2::dot( m, x[i])
  * @note This routine is always executed synchronously due to the
     implicit memcpy of the result.
  * @note This routine is equivalent to the call \c dg::blas2::dot( x, m, x);
      which should be prefered because it looks more explicit
  * @attention currently we only have an implementation for double precision numbers
+ * @tparam DiagonalMatrixType Right now \c DiagonalMatrixType has to be the same as \c ContainerType, except if \c ContainerType is a \c std::vector<ContainerType_type>, then the \c DiagonalMatrixType has to be the \c ContainerType_type.
+ * In the latter case the Matrix is applied to all ContainerTypes in the std::vector and the sum is returned.
+ * @copydoc hide_ContainerType
  */
 template< class MatrixType, class ContainerType>
 inline get_value_type<MatrixType> dot( const MatrixType& m, const ContainerType& x)
@@ -163,15 +145,15 @@ inline void doSymv( MatrixType& M,
  *
  * This routine computes \f[ y = \alpha M x + \beta y \f]
  * where \f$ M\f$ is a matrix.
- * @copydoc hide_matrix
- * @copydoc hide_ContainerType
+ * @copydoc hide_code_blas2_symv
  * @param alpha A Scalar
- * @param M The Matrix
+ * @param M The Matrix. Note that if \c x and \c y have the \c VectorVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
- * @attention \p y may never alias \p x
- * @copydoc hide_code_blas2_symv
+ * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
+ * @copydoc hide_matrix
+ * @copydoc hide_ContainerType
  */
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void symv( get_value_type<ContainerType1> alpha,
@@ -193,14 +175,13 @@ inline void symv( get_value_type<ContainerType1> alpha,
  *
  * This routine computes \f[ y = M x \f]
  * where \f$ M\f$ is a matrix.
- * @copydoc hide_matrix
- * @copydoc hide_ContainerType
- * @param M The Matrix
+ * @copydoc hide_code_blas2_symv
+ * @param M The Matrix. Note that if \c x and \c y have the \c VectorVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
- * @attention y may never alias x
- * @note Due to the \c SelfMadeMatrixTag, M cannot be declared const
- * @copydoc hide_code_blas2_symv
+ * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
+ * @copydoc hide_matrix
+ * @copydoc hide_ContainerType
  */
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void symv( MatrixType& M,
@@ -213,14 +194,14 @@ inline void symv( MatrixType& M,
  * (alias for symv)
  *
  * Does exactly the same as symv.
- * @copydoc hide_matrix
- * @copydoc hide_ContainerType
  * @param alpha A Scalar
- * @param M The Matrix
+ * @param M The Matrix. Note that if \c x and \c y have the \c VectorVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
- * @attention y may never alias \p x
+ * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
+ * @copydoc hide_matrix
+ * @copydoc hide_ContainerType
  */
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void gemv( get_value_type<ContainerType1> alpha,
@@ -236,12 +217,12 @@ inline void gemv( get_value_type<ContainerType1> alpha,
  * (alias for symv)
  *
  * Does exactly the same as symv.
- * @copydoc hide_matrix
- * @copydoc hide_ContainerType
- * @param M The Matrix
+ * @param M The Matrix. Note that if \c x and \c y have the \c VectorVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
- * @attention y may never alias \p x
+ * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
+ * @copydoc hide_matrix
+ * @copydoc hide_ContainerType
  */
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void gemv( MatrixType& M,
@@ -249,6 +230,24 @@ inline void gemv( MatrixType& M,
                   ContainerType2& y)
 {
     dg::blas2::symv( M, x, y);
+}
+/**
+ * @brief \f$ y = x\f$; Generic way to copy and/or convert a Matrix type to a different Matrix type
+ *
+ * e.g. from CPU to GPU, or double to float, etc.
+ * @copydoc hide_matrix
+ * @tparam AnotherMatrix Another Matrix type
+ * @param x source
+ * @param y sink
+ * @note y gets resized properly
+ * @copydoc hide_code_blas2_symv
+ */
+template<class MatrixType, class AnotherMatrixType>
+inline void transfer( const MatrixType& x, AnotherMatrixType& y)
+{
+    dg::blas2::detail::doTransfer( x,y,
+            get_tensor_category<MatrixType>(),
+            get_tensor_category<AnotherMatrixType>());
 }
 ///@}
 

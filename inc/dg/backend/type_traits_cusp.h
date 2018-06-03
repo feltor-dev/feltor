@@ -40,6 +40,7 @@ struct TensorTraits<cusp::array1d<T,cusp::device_memory>,
 };
 ///@}
 ///@addtogroup mat_list
+///@{
 
 template< class I, class V, class M>
 struct TensorTraits< cusp::coo_matrix<I,V,M> >

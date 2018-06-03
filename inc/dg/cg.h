@@ -61,9 +61,6 @@ class CG
      *
      * The iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + C) \f$ where \f$C\f$ is
      * a correction factor to the absolute error
-     * @copydoc hide_matrix
-     * @tparam Preconditioner A class for which the blas2::symv() and
-     blas2::dot( const Matrix&, const Vector&) functions are callable. Currently Preconditioner must be the same as ContainerType (diagonal preconditioner) except when ContainerType is std::vector<ContainerType_type> then Preconditioner can be ContainerType_type
      * @param A A symmetric positive definit matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
@@ -76,18 +73,18 @@ class CG
      * @note Required memops per iteration (\c P is assumed vector):
              - 11  reads + 3 writes
              - plus the number of memops for \c A;
+     * @copydoc hide_matrix
+     * @tparam Preconditioner A class for which the blas2::symv(value_type, const Preconditioner&, const ContainerType&, value_type, ContainerType&) and
+     blas2::dot( const Preconditioner&, const ContainerType&) functions are callable.
      */
-    template< class Matrix, class Preconditioner >
-    unsigned operator()( Matrix& A, ContainerType& x, const ContainerType& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class Preconditioner >
+    unsigned operator()( MatrixType& A, ContainerType& x, const ContainerType& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
     //version of CG where Preconditioner is not trivial
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
      *
      * The iteration stops if \f$ ||Ax||_S < \epsilon( ||b||_S + C) \f$ where \f$C\f$ is
      * a correction factor to the absolute error and \f$ S \f$ defines a square norm
-     * @copydoc hide_matrix
-     * @tparam Preconditioner A type for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable.
-     * @tparam SquareNorm A type for which the blas2::dot( const Matrix&, const Vector&) function is callable. This can e.g. be one of the ContainerType types.
      * @param A A symmetric positive definit matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
@@ -100,9 +97,12 @@ class CG
      * @note Required memops per iteration (\c P and \c S are assumed vectors):
              - 15  reads + 4 writes
              - plus the number of memops for \c A;
+     * @copydoc hide_matrix
+     * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
+     * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
-    template< class Matrix, class Preconditioner, class SquareNorm >
-    unsigned operator()( Matrix& A, ContainerType& x, const ContainerType& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class Preconditioner, class SquareNorm >
+    unsigned operator()( MatrixType& A, ContainerType& x, const ContainerType& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
     ContainerType r, p, ap;
     unsigned max_iter;

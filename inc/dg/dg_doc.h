@@ -11,25 +11,12 @@
 /*!
  * @defgroup backend Level 1: Vectors, Matrices and basic operations
  * @{
- *     @defgroup typedefs Typedefs
- *          Useful type definitions for easy programming
- *     @defgroup sparsematrix Sparse matrix formats
- *     @defgroup mpi_structures MPI backend functionality
- *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X
- *             is e.g. CPU, GPU, accelerator cards...
- *             The general idea to achieve this is to separate global communication from local computations and thus
- *             readily reuse the existing, optimized library for the local part.
  *     @defgroup blas Basic Linear Algebra Subroutines
  *
  *         These routines form the heart of our container free numerical algorithms.
  *         They are called by all our numerical algorithms like conjugate gradient or
  *         time integrators.
  *     @{
- *         @defgroup dispatch The tag dispatch system
- *         @{
- *             @defgroup vec_list List of TensorTraits specializations for vectors
- *             @defgroup mat_list List of TensorTraits specializations for matrices
- *         @}
  *         @defgroup blas1 BLAS level 1 routines
  *             This group contains Vector-Vector operations.
  *             Successive calls to blas routines are executed sequentially.
@@ -40,6 +27,19 @@
  *             Successive calls to blas routines are executed sequentially.
  *             A manual synchronization of threads or devices is never needed in an application
  *             using these functions. All functions returning a value block until the value is ready.
+ *     @}
+ *     @defgroup typedefs Useful Typedefs
+ *          Useful type definitions for easy programming
+ *     @defgroup sparsematrix Sparse matrix formats
+ *     @defgroup mpi_structures MPI backend functionality
+ *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X
+ *             is e.g. CPU, GPU, accelerator cards...
+ *             The general idea to achieve this is to separate global communication from local computations and thus
+ *             readily reuse the existing, optimized library for the local part.
+ *     @defgroup dispatch The tag dispatch system
+ *     @{
+ *         @defgroup vec_list List of vector type TensorTraits specializations
+ *         @defgroup mat_list List of matrix type TensorTraits specializations
  *     @}
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
@@ -124,18 +124,20 @@
   * @tparam ContainerType
   * Any class for which a specialization of \c TensorTraits exists and which
   * fulfills the requirements of the there defined data and execution policies derived from \c AnyVectorTag and \c AnyPolicyTag.
-  * For example, this is one of
-  *  - <tt> dg::HVec (serial), dg::DVec (cuda or omp), dg::MHVec (mpi + serial) or dg::MDVec (mpi + cuda or omp) </tt>
-  *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles), ... </tt>
+  * Among others
+  *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp), dg::MHVec (mpi + serial) or dg::MDVec (mpi + cuda / omp) </tt>
+  *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles)</tt>
+  *  - ...
   *  .
-  * If there are several \c ContainerTypes in the argument list, then the \c TensorTraits of these
-  * must have the same \c execution_policy and data layout (\c tensor_category must derive from the same base class) as the first \c ContainerType.
+  * If there are several \c ContainerTypes in the argument list, then \c TensorTraits must exist for all of them and all
+  * must have the same \c execution_policy and the \c tensor_category must derive from the same base class
+  *  \see vec_list
   */
  /** @class hide_matrix
-  * @tparam Matrix
+  * @tparam MatrixType
   * Any class for which a specialization of \c TensorTraits exists and which fullfills
-  * the requirements of the there defined Matrix policy derived from \c AnyMatrixTag or \c SelfMadeMatrixTag.
-  * The \c Matrix type can for example be one of:
+  * the requirements of the there defined Matrix tags derived from \c AnyMatrixTag.
+  * The \c MatrixType can for example be one of:
   *  - \c container: A container acts as a  diagonal matrix.
   *  - \c dg::HMatrix and \c dg::IHMatrix with \c dg::HVec or \c std::vector<dg::HVec>
   *  - \c dg::DMatrix and \c dg::IDMatrix with \c dg::DVec or \c std::vector<dg::DVec>

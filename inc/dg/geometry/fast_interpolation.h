@@ -29,7 +29,7 @@ namespace dg
  * @copydoc hide_ContainerType
  * @ingroup misc
  */
-template <class Matrix, class ContainerType>
+template <class MatrixType, class ContainerType>
 struct MultiMatrix
 {
     MultiMatrix(){}
@@ -69,10 +69,10 @@ struct MultiMatrix
     }
     std::vector<Buffer<ContainerType> >& get_temp(){ return temp_;}
     const std::vector<Buffer<ContainerType> >& get_temp()const{ return temp_;}
-    std::vector<Matrix>& get_matrices(){ return inter_;}
-    const std::vector<Matrix>& get_matrices()const{ return inter_;}
+    std::vector<MatrixType>& get_matrices(){ return inter_;}
+    const std::vector<MatrixType>& get_matrices()const{ return inter_;}
     private:
-    std::vector<Matrix > inter_;
+    std::vector<MatrixType > inter_;
     std::vector<Buffer<ContainerType> > temp_;
 };
 
