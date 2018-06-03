@@ -222,25 +222,28 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
  *
  * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i y_i \f]
  * @ingroup highlevel
+ * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
  * @param size size N of the arrays to sum
  * @param x1_ptr first array
  * @param x2_ptr second array
  * @param h_superacc pointer to an array of 64 bit integers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
 */
+template<size_t NBFPE=8>
 void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
 #ifndef _WITHOUT_VCL
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
-    cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
+    cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 #else
-    cpu::ExDOTFPE<cpu::FPExpansionVect<double, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
+    cpu::ExDOTFPE<cpu::FPExpansionVect<double, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 #endif//_WITHOUT_VCL
 }
 /*!@brief OpenMP parallel version of exact triple dot product
  *
  * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
  * @ingroup highlevel
+ * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
  * @param size size N of the arrays to sum
  * @param x1_ptr first array
  * @param x2_ptr second array
@@ -248,13 +251,14 @@ void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
  * @param h_superacc pointer to an array of 64 bit integegers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
  */
+template<size_t NBFPE=8>
 void exdot_omp(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
 #ifndef _WITHOUT_VCL
     assert( vcl::instrset_detect() >= 7);
     //assert( vcl::hasFMA3() );
-    cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
+    cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 #else
-    cpu::ExDOTFPE<cpu::FPExpansionVect<double, 8, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
+    cpu::ExDOTFPE<cpu::FPExpansionVect<double, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 #endif//_WITHOUT_VCL
 }
 

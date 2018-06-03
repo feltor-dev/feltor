@@ -69,7 +69,6 @@
 namespace exblas
 {
 ////////////// parameters for superaccumulator operations //////////////////////
-///High radix carray-save bits
 static constexpr int KRX            =  8; //!< High-radix carry-save bits
 static constexpr int DIGITS         =  64 - KRX; //!< number of nonoverlapping digits
 static constexpr int F_WORDS        =  20;  //!< number of uper exponent words (64bits)
