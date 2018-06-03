@@ -122,8 +122,6 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int6
 template<size_t NBFPE=8>
 void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
 #ifndef _WITHOUT_VCL
-    assert( vcl::instrset_detect() >= 7);
-    //assert( vcl::hasFMA3() );
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
@@ -147,8 +145,6 @@ void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
 template<size_t NBFPE=8>
 void exdot_cpu(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
 #ifndef _WITHOUT_VCL
-    assert( vcl::instrset_detect() >= 7);
-    //assert( vcl::hasFMA3() );
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
