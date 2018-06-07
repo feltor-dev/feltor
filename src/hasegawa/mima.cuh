@@ -18,8 +18,6 @@ struct Diffusion
     {
         dg::blas2::gemv( LaplacianM, x, temp);
         dg::blas2::gemv( LaplacianM, temp, y);
-        //dg::blas2::gemv( LaplacianM, y, temp);
-        //dg::blas1::axpby( 0., y, -nu_ , y);
         dg::blas1::scal( y, -nu_);
     }
     const container& weights(){return w2d;}
@@ -52,7 +50,7 @@ struct Mima
      * @param eps_gamma stopping criterion for Gamma operator
      * @param global local or global computation
      */
-    Mima( const dg::CartesianGrid2d& g, double kappa, double eps, bool global);
+    Mima( const dg::CartesianGrid2d& g, double kappa, double alpha, double eps, bool global);
 
     /**
      * @brief Returns phi and psi that belong to the last y in operator()
@@ -73,9 +71,9 @@ struct Mima
 
 
   private:
-    double kappa;
+    double kappa, alpha;
     bool global;
-    container phi, dxphi, dyphi, omega;
+    container phi, dxphi, dyphi, omega, lambda, chi, nGinv;
     container dxxphi, dxyphi;
 
     //matrices and solvers
@@ -90,9 +88,10 @@ struct Mima
 };
 
 template< class M, class container>
-Mima< M, container>::Mima( const dg::CartesianGrid2d& grid, double kappa, double eps, bool global ): 
+Mima< M, container>::Mima( const dg::CartesianGrid2d& grid, double kappa, double alpha, double eps, bool global ): 
     kappa( kappa), global(global),
-    phi( grid.size(), 0.), dxphi( phi), dyphi( phi), omega(phi),
+    phi( grid.size(), 0.), dxphi( phi), dyphi( phi), omega(phi), lambda(phi), chi(phi),
+    nGinv(dg::evaluate(dg::ExpProfX(1.0, 0.0,kappa),grid)),
     dxxphi( phi), dxyphi(phi),
     laplaceM( grid, dg::normed, dg::centered),
     arakawa( grid), 
@@ -106,10 +105,10 @@ template<class M, class container>
 void Mima< M, container>::operator()( double t, const container& y, container& yp)
 {
     invert( helmholtz, phi, y);
-    dg::blas1::axpby( 1., phi, -1., y, omega); //omega = lap \phi
+    dg::blas1::axpby( 1., phi, -1., y, chi); //chi = lap \phi
 
 
-    arakawa( phi, omega, yp);
+    arakawa( phi, chi, yp);
     //compute derivatives
     dg::blas2::gemv( arakawa.dx(), phi, dxphi);
     dg::blas2::gemv( arakawa.dy(), phi, dyphi);
@@ -118,19 +117,25 @@ void Mima< M, container>::operator()( double t, const container& y, container& y
     //gradient terms
     dg::blas1::axpby( -1, dyphi, 1., yp);
 
-    dg::blas1::pointwiseDot( dyphi, omega, omega);
-    dg::blas1::axpby( -2*kappa, omega, 1., yp);
-
-    if( global)
+    
+    //full-F terms correction terms
+    if( global )
     {
-        dg::blas1::pointwiseDot( dxphi, dxyphi, omega);
-        dg::blas1::axpby( -kappa, omega, 1., yp);
-        dg::blas1::pointwiseDot( dyphi, dxxphi, omega);
-        dg::blas1::axpby( +kappa, omega, 1., yp);
+        arakawa.variation(phi,omega); //(nabla phi)^2
+        dg::blas1::scal(omega,0.5);   //0.5*(nabla phi)^2
+        dg::blas2::gemv( arakawa.dy(), omega, dyphi); //d_y 0.5*(nabla phi)^2
+        dg::blas1::axpby( +kappa, dyphi, 1., yp);     //kappa* d_y 0.5*(nabla phi)^2
+        
+        arakawa( omega,phi, lambda);        // [0.5*(nabla phi)^2, phi]
+        dg::blas1::axpby( -kappa, lambda, 1., yp);  // -kappa* [0.5*(nabla phi)^2, phi]
+        
+        arakawa( omega, dxphi, lambda);         // [0.5*(nabla phi)^2, d_x phi]
+        dg::blas1::axpby( +kappa*kappa, lambda, 1., yp); //kappa^2* [0.5*(nabla phi)^2, d_x phi]
+        
+        dg::blas1::pointwiseDot(y,dxphi,omega);   //omega = (phi - lap phi) d_x phi 
+        dg::blas1::pointwiseDivide(omega,nGinv,omega);   //omega = e^(kappa*x)*(phi - lap phi)*d_x phi 
+        dg::blas1::axpby( -kappa*alpha, omega, 1., yp);  // -kappa*alpha*e^(kappa*x)*(phi - lap phi)*d_x phi 
     }
-    //dg::blas1::scal(yp, -1.);
-
-
 }
 
 
