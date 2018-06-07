@@ -118,7 +118,7 @@ void Mima< M, container>::operator()( double t, const container& y, container& y
     dg::blas1::axpby( -1, dyphi, 1., yp);
 
     
-    //full-F terms correction terms
+    //full-F terms (NOB) correction terms
     if( global )
     {
         arakawa.variation(phi,omega); //(nabla phi)^2
