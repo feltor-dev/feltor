@@ -22,7 +22,7 @@
 namespace exblas{
 namespace cpu{
 
-inline int64_t myllrint(double x) {
+static inline int64_t myllrint(double x) {
 #ifndef _WITHOUT_VCL
     return _mm_cvtsd_si64(_mm_set_sd(x));
 #else
@@ -30,7 +30,7 @@ inline int64_t myllrint(double x) {
 #endif
 }
 
-inline double myrint(double x)
+static inline double myrint(double x)
 {
 #ifndef _WITHOUT_VCL
 #if defined __GNUG__ || _MSC_VER
@@ -63,7 +63,7 @@ inline double myrint(double x)
 //    return d;
 //}
 
-inline int exponent(double x)
+static inline int exponent(double x)
 {
     // simpler frexp
     union {
@@ -75,7 +75,7 @@ inline int exponent(double x)
     return e;
 }
 
-inline int biased_exponent(double x)
+static inline int biased_exponent(double x)
 {
     union {
         double d;
@@ -86,7 +86,7 @@ inline int biased_exponent(double x)
     return e;
 }
 
-inline double myldexp(double x, int e)
+static inline double myldexp(double x, int e)
 {
     // Scale x by e
     union {
@@ -99,7 +99,7 @@ inline double myldexp(double x, int e)
     return caster.d;
 }
 
-inline double exp2i(int e)
+static inline double exp2i(int e)
 {
     // simpler ldexp
     union {
@@ -112,7 +112,7 @@ inline double exp2i(int e)
 }
 
 // Assumptions: th>tl>=0, no overlap between th and tl
-inline static double OddRoundSumNonnegative(double th, double tl)
+static inline double OddRoundSumNonnegative(double th, double tl)
 {
     // Adapted from:
     // Sylvie Boldo, and Guillaume Melquiond. "Emulation of a FMA and correctly rounded sums: proved algorithms using rounding to odd." IEEE Transactions on Computers, 57, no. 4 (2008): 462-471.

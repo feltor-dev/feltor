@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include <mpi.h> //activate mpi
+#include "json/json.h"
 
 #include "dg/algorithm.h"
 

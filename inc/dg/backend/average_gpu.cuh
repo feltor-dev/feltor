@@ -65,11 +65,13 @@ void extend_column( CudaTag, unsigned nx, unsigned ny, const value_type* in, val
     extend_column_kernel<<<NUM_BLOCKS, BLOCK_SIZE>>>( nx, ny, in, out);
 }
 
-void average( CudaTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out)
+template<class value_type>
+void average( CudaTag, unsigned nx, unsigned ny, const value_type* in0, const value_type* in1, value_type* out)
 {
+    static_assert( std::is_same<value_type, double>::value, "Value type must be double!");
     static thrust::device_vector<int64_t> d_accumulator;
     static thrust::host_vector<int64_t> h_accumulator;
-    static thrust::host_vector<double> h_round;
+    static thrust::host_vector<value_type> h_round;
     d_accumulator.resize( ny*exblas::BIN_COUNT);
     int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
     for( unsigned i=0; i<ny; i++)
@@ -78,17 +80,19 @@ void average( CudaTag, unsigned nx, unsigned ny, const double* in0, const double
     h_round.resize( ny);
     for( unsigned i=0; i<ny; i++)
         h_round[i] = exblas::cpu::Round( &h_accumulator[i*exblas::BIN_COUNT]);
-    cudaMemcpy( out, &h_round[0], ny*sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy( out, &h_round[0], ny*sizeof(value_type), cudaMemcpyHostToDevice);
 }
 
 #ifdef MPI_VERSION
 //local data plus communication
-void average_mpi( CudaTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
+template<class value_type>
+void average_mpi( CudaTag, unsigned nx, unsigned ny, const value_type* in0, const value_type* in1, value_type* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
 {
+    static_assert( std::is_same<value_type, double>::value, "Value type must be double!");
     static thrust::device_vector<int64_t> d_accumulator;
     static thrust::host_vector<int64_t> h_accumulator;
     static thrust::host_vector<int64_t> h_accumulator2;
-    static thrust::host_vector<double> h_round;
+    static thrust::host_vector<value_type> h_round;
     d_accumulator.resize( ny*exblas::BIN_COUNT);
     int64_t* d_ptr = thrust::raw_pointer_cast( d_accumulator.data());
     for( unsigned i=0; i<ny; i++)
@@ -100,7 +104,7 @@ void average_mpi( CudaTag, unsigned nx, unsigned ny, const double* in0, const do
     h_round.resize( ny);
     for( unsigned i=0; i<ny; i++)
         h_round[i] = exblas::cpu::Round( &h_accumulator[i*exblas::BIN_COUNT]);
-    cudaMemcpy( out, &h_round[0], ny*sizeof(double), cudaMemcpyHostToDevice);
+    cudaMemcpy( out, &h_round[0], ny*sizeof(value_type), cudaMemcpyHostToDevice);
 }
 #endif //MPI_VERSION
 

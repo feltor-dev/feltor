@@ -1153,6 +1153,12 @@ struct SQRT
 
 /**
  * @brief Minmod function
+ \f[ f(x_1, x_2, x_3) = \begin{cases}
+         \min(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 >0 \\
+         \max(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 <0 \\
+         0 \text{ else}
+ \end{cases}
+ \f]
  *
  * might be useful for flux limiter schemes
  * @tparam T value-type
@@ -1296,7 +1302,11 @@ struct ABS
 };
 /**
  * @brief returns positive values
- * \f[ f(x) = |x|\f]
+ \f[ f(x) = \begin{cases}
+         x \text{ for } x>0 \\
+         0 \text{ else}
+ \end{cases}
+ \f]
  *
  * @tparam T value type
  */

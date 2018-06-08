@@ -1,4 +1,5 @@
 #include <iostream>
+#include "json/json.h"
 
 #include "dg/geometry/grid.h"
 #include "dg/elliptic.h"

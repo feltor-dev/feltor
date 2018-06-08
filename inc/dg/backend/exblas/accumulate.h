@@ -27,7 +27,7 @@ namespace cpu {
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
 ///@cond
-inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
+static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
     // With atomic accumulator updates
     // accumulation and carry propagation can happen in any order,
     // as long as addition is atomic
@@ -74,7 +74,7 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @param x the double to add to the superaccumulator
 */
-inline void Accumulate( int64_t* accumulator, double x) {
+static inline void Accumulate( int64_t* accumulator, double x) {
     if (x == 0)
         return;
 
@@ -111,7 +111,7 @@ inline void Accumulate( int64_t* accumulator, double x) {
 *
 * @return  carry in bit (sign)
 */
-bool Normalize( int64_t *accumulator, int& imin, int& imax) {
+static inline bool Normalize( int64_t *accumulator, int& imin, int& imax) {
     int64_t carry_in = accumulator[imin] >> DIGITS;
     accumulator[imin] -= carry_in << DIGITS;
     int i;
@@ -142,7 +142,7 @@ bool Normalize( int64_t *accumulator, int& imin, int& imax) {
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @return the double precision number nearest to the superaccumulator
 */
-double Round( int64_t * accumulator) {
+static inline double Round( int64_t * accumulator) {
     int imin = IMIN;
     int imax = IMAX;
     bool negative = Normalize(accumulator, imin, imax);

@@ -29,14 +29,14 @@ namespace gpu{
 // Auxiliary functions
 ////////////////////////////////////////////////////////////////////////////////
 __device__
-double TwoProductFMA(double a, double b, double *d) {
+static inline double TwoProductFMA(double a, double b, double *d) {
     double p = a * b;
     *d = __fma_rn(a, b, -p);
     return p;
 }
 
 __device__
-double KnuthTwoSum(double a, double b, double *s) {
+static inline double KnuthTwoSum(double a, double b, double *s) {
     double r = a + b;
     double z = r - a;
     *s = (a - (r - z)) + (b - z);
@@ -330,6 +330,7 @@ void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
  *
  * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
  * @ingroup highlevel
+ * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
  * @param size size N of the arrays to sum
  * @param x1_ptr first array
  * @param x2_ptr second array
@@ -337,12 +338,13 @@ void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
  * @param d_superacc pointer to an array of 64 bit integegers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
  */
+template<size_t NBFPE=3>
 __host__
 void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const double* x3_ptr, int64_t* d_superacc)
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<3, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
+    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
     gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 

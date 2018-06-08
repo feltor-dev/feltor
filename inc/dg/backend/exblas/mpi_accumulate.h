@@ -20,7 +20,7 @@ namespace exblas {
  * @param comm_mod_reduce a subgroup of comm, consists of all rank 0 processes in comm_mod
  * @note the creation of new communicators involves communication between all participation processes (comm in this case)
  */
-void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_mod_reduce){
+static void mpi_reduce_communicator(MPI_Comm comm, MPI_Comm* comm_mod, MPI_Comm* comm_mod_reduce){
     int mod = 128;
     int rank, size;
     MPI_Comm_rank( comm, &rank);
@@ -51,7 +51,7 @@ processes.  As usual the resulting superaccumulator is unnormalized.
 @param comm_mod_reduce This is the communicator consisting of all rank 0 processes in comm_mod, may be \c MPI_COMM_NULL
 @sa \c exblas::mpi_reduce_communicator to generate the required communicators
 */
-void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
+static void reduce_mpi_cpu(  unsigned num_superacc, int64_t* in, int64_t* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
 {
     for( unsigned i=0; i<num_superacc; i++)
     {

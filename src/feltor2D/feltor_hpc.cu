@@ -3,6 +3,7 @@
 #include <vector>
 #include <sstream>
 #include <cmath>
+#include "json/json.h"
 // #define DG_DEBUG
 
 #include "dg/algorithm.h"

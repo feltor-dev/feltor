@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include <mpi.h> //activate mpi
+#include "json/json.h"
 #include "netcdf_par.h" //exclude if par netcdf=OFF
 
 #include "dg/algorithm.h"

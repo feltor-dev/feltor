@@ -2,6 +2,7 @@
 #include <iomanip>
 
 #include <mpi.h>
+#include "json/json.h"
 
 #include "dg/arakawa.h"
 #include "dg/poisson.h"

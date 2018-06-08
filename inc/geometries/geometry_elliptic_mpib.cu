@@ -3,6 +3,7 @@
 #include <mpi.h>
 
 #include <netcdf_par.h>
+#include "json/json.h"
 
 #include "file/nc_utilities.h"
 
