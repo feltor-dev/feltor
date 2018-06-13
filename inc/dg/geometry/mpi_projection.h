@@ -14,9 +14,14 @@ namespace dg
 {
 ///@addtogroup typedefs
 ///@{
-//interpolation matrices
-typedef MPIDistMat< dg::IHMatrix, GeneralComm< dg::iHVec, dg::HVec > > MIHMatrix; //!< MPI distributed CSR host Matrix
-typedef MPIDistMat< dg::IDMatrix, GeneralComm< dg::iDVec, dg::DVec > > MIDMatrix; //!< MPI distributed CSR device Matrix
+template<class real_type>
+using tMIHMatrix = MPIDistMat< tIHMatrix<real_type>, GeneralComm< dg::iHVec, thrust::host_vector<real_type>> >;
+template<class real_type>
+using tMIDMatrix = MPIDistMat< tIDMatrix<real_type>, GeneralComm< dg::iDVec, thrust::device_vector<real_type>> >;
+using MIHMatrix = tMIHMatrix<double>;
+using MIDMatrix = tMIDMatrix<double>;
+//typedef MPIDistMat< dg::IHMatrix, GeneralComm< dg::iHVec, dg::HVec > > MIHMatrix; //!< MPI distributed CSR host Matrix
+//typedef MPIDistMat< dg::IDMatrix, GeneralComm< dg::iDVec, dg::DVec > > MIDMatrix; //!< MPI distributed CSR device Matrix
 ///@}
 
 ///@cond
@@ -24,7 +29,7 @@ namespace detail{
 //given global indices -> make a sorted unique indices vector -> make a gather map into the unique vector
 //buffer_idx -> (gather map/ new column indices) same size as global_idx ( can alias global_idx, index into unique_global_idx
 //unique_global_idx -> (list of unique global indices to be used in a Collective Communication object)
-void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, cusp::array1d<int, cusp::host_memory>& buffer_idx, thrust::host_vector<int>& locally_unique_global_idx)
+static void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, cusp::array1d<int, cusp::host_memory>& buffer_idx, thrust::host_vector<int>& locally_unique_global_idx)
 {
     thrust::host_vector<int> index(global_idx.begin(), global_idx.end()), m_global_idx(index);
     thrust::sequence( index.begin(), index.end());
@@ -67,15 +72,15 @@ void global2bufferIdx( const cusp::array1d<int, cusp::host_memory>& global_idx, 
  * @sa basictopology the MPI %grids defined in Level 3 can all be used as a ConversionPolicy
  * @ingroup mpi_structures
  */
-template<class ConversionPolicy>
-dg::MIHMatrix convert( const dg::IHMatrix& global, const ConversionPolicy& policy)
+template<class ConversionPolicy, class real_type>
+dg::tMIHMatrix<real_type> convert( const dg::tIHMatrix<real_type>& global, const ConversionPolicy& policy)
 {
     int rank;
     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
     dg::iHVec unique_global_idx;
     cusp::array1d<int, cusp::host_memory> buffer_idx;
     dg::detail::global2bufferIdx( global.column_indices, buffer_idx, unique_global_idx);
-    dg::GeneralComm<dg::iHVec, dg::HVec> comm( unique_global_idx, policy);
+    dg::GeneralComm<dg::iHVec, thrust::host_vector<real_type>> comm( unique_global_idx, policy);
     if( !comm.isCommunicating() )
     {
         cusp::array1d<int, cusp::host_memory> local_idx(global.column_indices), pids(local_idx);
@@ -83,18 +88,18 @@ dg::MIHMatrix convert( const dg::IHMatrix& global, const ConversionPolicy& polic
         for(unsigned i=0; i<local_idx.size(); i++)
             if( !policy.global2localIdx(global.column_indices[i], local_idx[i], pids[i]) ) success = false;
         assert( success);
-        dg::IHMatrix local( global.num_rows, policy.local_size(), global.values.size());
-        comm = dg::GeneralComm< dg::iHVec, dg::HVec>();
+        dg::tIHMatrix<real_type> local( global.num_rows, policy.local_size(), global.values.size());
+        comm = dg::GeneralComm< dg::iHVec, thrust::host_vector<real_type>>();
         local.row_offsets=global.row_offsets;
         local.column_indices=local_idx;
         local.values=global.values;
-        return dg::MIHMatrix( local, comm, dg::row_dist);
+        return dg::tMIHMatrix<real_type>( local, comm, dg::row_dist);
     }
-    dg::IHMatrix local( global.num_rows, comm.size(), global.values.size());
+    dg::tIHMatrix<real_type> local( global.num_rows, comm.size(), global.values.size());
     local.row_offsets=global.row_offsets;
     local.column_indices=buffer_idx;
     local.values=global.values;
-    dg::MIHMatrix matrix(   local, comm, dg::row_dist);
+    dg::tMIHMatrix<real_type> matrix(   local, comm, dg::row_dist);
     return matrix;
 }
 
@@ -105,36 +110,42 @@ namespace create
 ///@{
 
 ///@copydoc dg::create::interpolation(const Grid1d&,const Grid1d&)
-dg::MIHMatrix interpolation( const aMPITopology2d& g_new, const aMPITopology2d& g_old)
+template<class real_type>
+dg::tMIHMatrix<real_type> interpolation( const aBasicMPITopology2d<real_type>& g_new, const aBasicMPITopology2d<real_type>& g_old)
 {
-    return MIHMatrix( interpolation( g_new.local(), g_old.local()), GeneralComm<iHVec, HVec>());
+    return tMIHMatrix<real_type>( interpolation( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
 ///@copydoc interpolation(const Grid1d&,const Grid1d&)
-dg::MIHMatrix interpolation( const aMPITopology3d& g_new, const aMPITopology3d& g_old)
+template<class real_type>
+dg::tMIHMatrix<real_type> interpolation( const aBasicMPITopology3d<real_type>& g_new, const aBasicMPITopology3d<real_type>& g_old)
 {
-    return MIHMatrix( interpolation( g_new.local(), g_old.local()), GeneralComm<iHVec, HVec>());
+    return tMIHMatrix<real_type>( interpolation( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
 
 ///@copydoc interpolationT(const Grid1d&,const Grid1d&)
-dg::MIHMatrix interpolationT( const aMPITopology2d& g_new, const aMPITopology2d& g_old)
+template<class real_type>
+dg::tMIHMatrix<real_type> interpolationT( const aBasicMPITopology2d<real_type>& g_new, const aBasicMPITopology2d<real_type>& g_old)
 {
-    return MIHMatrix( interpolationT( g_new.local(), g_old.local()), GeneralComm<iHVec, HVec>());
+    return tMIHMatrix<real_type>( interpolationT( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
 ///@copydoc interpolationT(const Grid1d&,const Grid1d&)
-dg::MIHMatrix interpolationT( const aMPITopology3d& g_new, const aMPITopology3d& g_old)
+template<class real_type>
+dg::tMIHMatrix<real_type> interpolationT( const aBasicMPITopology3d<real_type>& g_new, const aBasicMPITopology3d<real_type>& g_old)
 {
-    return MIHMatrix( interpolationT( g_new.local(), g_old.local()), GeneralComm<iHVec, HVec>());
+    return tMIHMatrix<real_type>( interpolationT( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
 
 ///@copydoc projection(const Grid1d&,const Grid1d&)
-dg::MIHMatrix projection( const aMPITopology2d& g_new, const aMPITopology2d& g_old)
+template<class real_type>
+dg::tMIHMatrix<real_type> projection( const aBasicMPITopology2d<real_type>& g_new, const aBasicMPITopology2d<real_type>& g_old)
 {
-    return MIHMatrix( projection( g_new.local(), g_old.local()), GeneralComm<iHVec, HVec>());
+    return tMIHMatrix<real_type>( projection( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
 ///@copydoc projection(const Grid1d&,const Grid1d&)
-dg::MIHMatrix projection( const aMPITopology3d& g_new, const aMPITopology3d& g_old)
+template<class real_type>
+dg::tMIHMatrix<real_type> projection( const aBasicMPITopology3d<real_type>& g_new, const aBasicMPITopology3d<real_type>& g_old)
 {
-    return MIHMatrix( projection( g_new.local(), g_old.local()), GeneralComm<iHVec, HVec>());
+    return tMIHMatrix<real_type>( projection( g_new.local(), g_old.local()), GeneralComm<iHVec, thrust::host_vector<real_type>>());
 }
 
 /**
@@ -142,9 +153,10 @@ dg::MIHMatrix projection( const aMPITopology3d& g_new, const aMPITopology3d& g_o
  *
  * @copydetails interpolation(const thrust::host_vector<double>&,const thrust::host_vector<double>&,const aTopology2d&,dg::bc,dg::bc)
  */
-dg::MIHMatrix interpolation( const dg::HVec& x, const dg::HVec& y, const aMPITopology2d& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
+template<class real_type>
+dg::tMIHMatrix<real_type> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aBasicMPITopology2d<real_type>& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
-    dg::IHMatrix mat = dg::create::interpolation( x,y, g.global(), bcx, bcy);
+    dg::tIHMatrix<real_type> mat = dg::create::interpolation( x,y, g.global(), bcx, bcy);
     return convert(  mat, g);
 }
 

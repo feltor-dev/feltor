@@ -37,18 +37,20 @@ namespace create{
 
 ///@copydoc hide_weights_doc
 ///@copydoc hide_code_evaluate1d
-thrust::host_vector<double> weights( const Grid1d& g)
+template<class real_type>
+thrust::host_vector<real_type> weights( const BasicGrid1d<real_type>& g)
 {
-    thrust::host_vector<double> v( g.size());
+    thrust::host_vector<real_type> v( g.size());
     for( unsigned i=0; i<g.N(); i++)
         for( unsigned j=0; j<g.n(); j++)
             v[i*g.n() + j] = g.h()/2.*g.dlt().weights()[j];
     return v;
 }
 ///@copydoc hide_inv_weights_doc
-thrust::host_vector<double> inv_weights( const Grid1d& g)
+template<class real_type>
+thrust::host_vector<real_type> inv_weights( const BasicGrid1d<real_type>& g)
 {
-    thrust::host_vector<double> v = weights( g);
+    thrust::host_vector<real_type> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;
@@ -57,18 +59,19 @@ thrust::host_vector<double> inv_weights( const Grid1d& g)
 ///@cond
 namespace detail{
 
-int get_i( unsigned n, int idx) { return idx%(n*n)/n;}
-int get_j( unsigned n, int idx) { return idx%(n*n)%n;}
-int get_i( unsigned n, unsigned Nx, int idx) { return (idx/(n*Nx))%n;}
-int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
+static inline int get_i( unsigned n, int idx) { return idx%(n*n)/n;}
+static inline int get_j( unsigned n, int idx) { return idx%(n*n)%n;}
+static inline int get_i( unsigned n, unsigned Nx, int idx) { return (idx/(n*Nx))%n;}
+static inline int get_j( unsigned n, unsigned Nx, int idx) { return idx%n;}
 }//namespace detail
 ///@endcond
 
 ///@copydoc hide_weights_doc
 ///@copydoc hide_code_evaluate2d
-thrust::host_vector<double> weights( const aTopology2d& g)
+template<class real_type>
+thrust::host_vector<real_type> weights( const aBasicTopology2d<real_type>& g)
 {
-    thrust::host_vector<double> v( g.size());
+    thrust::host_vector<real_type> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
         v[i] = g.hx()*g.hy()/4.*
                 g.dlt().weights()[detail::get_i(g.n(),g.Nx(), i)]*
@@ -76,18 +79,20 @@ thrust::host_vector<double> weights( const aTopology2d& g)
     return v;
 }
 ///@copydoc hide_inv_weights_doc
-thrust::host_vector<double> inv_weights( const aTopology2d& g)
+template<class real_type>
+thrust::host_vector<real_type> inv_weights( const aBasicTopology2d<real_type>& g)
 {
-    thrust::host_vector<double> v = weights( g);
+    thrust::host_vector<real_type> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;
 }
 
 ///@copydoc hide_weights_coo_doc
-thrust::host_vector<double> weights( const aTopology2d& g, enum coo2d coo)
+template<class real_type>
+thrust::host_vector<real_type> weights( const aBasicTopology2d<real_type>& g, enum coo2d coo)
 {
-    thrust::host_vector<double> w( g.size());
+    thrust::host_vector<real_type> w( g.size());
     if( coo == coo2d::x) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];
@@ -102,9 +107,10 @@ thrust::host_vector<double> weights( const aTopology2d& g, enum coo2d coo)
 
 ///@copydoc hide_weights_doc
 ///@copydoc hide_code_evaluate3d
-thrust::host_vector<double> weights( const aTopology3d& g)
+template<class real_type>
+thrust::host_vector<real_type> weights( const aBasicTopology3d<real_type>& g)
 {
-    thrust::host_vector<double> v( g.size());
+    thrust::host_vector<real_type> v( g.size());
     for( unsigned i=0; i<g.size(); i++)
         v[i] = g.hx()*g.hy()*g.hz()/4.*
                g.dlt().weights()[detail::get_i(g.n(), g.Nx(), i)]*
@@ -113,18 +119,20 @@ thrust::host_vector<double> weights( const aTopology3d& g)
 }
 
 ///@copydoc hide_inv_weights_doc
-thrust::host_vector<double> inv_weights( const aTopology3d& g)
+template<class real_type>
+thrust::host_vector<real_type> inv_weights( const aBasicTopology3d<real_type>& g)
 {
-    thrust::host_vector<double> v = weights( g);
+    thrust::host_vector<real_type> v = weights( g);
     for( unsigned i=0; i<g.size(); i++)
         v[i] = 1./v[i];
     return v;
 }
 
 ///@copydoc hide_weights_coo_doc
-thrust::host_vector<double> weights( const aTopology3d& g, enum coo3d coo)
+template<class real_type>
+thrust::host_vector<real_type> weights( const aBasicTopology3d<real_type>& g, enum coo3d coo)
 {
-    thrust::host_vector<double> w( g.size());
+    thrust::host_vector<real_type> w( g.size());
     if( coo == coo3d::x) {
         for( unsigned i=0; i<g.size(); i++)
             w[i] = g.hx()/2.* g.dlt().weights()[i%g.n()];

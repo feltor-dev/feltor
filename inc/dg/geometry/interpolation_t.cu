@@ -108,7 +108,7 @@ int main()
 
     //![doxygen3d]
     //create equidistant values
-    std::vector<double> x( g.size()), y(x), z(x);
+    thrust::host_vector<double> x( g.size()), y(x), z(x);
     for( unsigned k=0; k<g.Nz(); k++)
         for( unsigned i=0; i<g.Ny()*g.n(); i++)
             for( unsigned j=0; j<g.Nx()*g.n(); j++)

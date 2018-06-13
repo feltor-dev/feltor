@@ -23,7 +23,8 @@ namespace create{
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const GridX1d& g)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const BasicGridX1d<real_type>& g)
 {
     return interpolation( x, g.grid());
 }
@@ -39,7 +40,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  *
  * @return interpolation matrix
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const aTopologyX2d& g , dg::bc globalbcz = dg::NEU)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aBasicTopologyX2d<real_type>& g , dg::bc globalbcz = dg::NEU)
 {
     return interpolation( x,y, g.grid(), globalbcz);
 }
@@ -59,7 +61,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @return interpolation matrix
  * @note The values of x, y and z must lie within the boundaries of g
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::host_vector<double>& x, const thrust::host_vector<double>& y, const thrust::host_vector<double>& z, const aTopologyX3d& g, dg::bc globalbcz= dg::NEU)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const thrust::host_vector<real_type>& z, const aBasicTopologyX3d<real_type>& g, dg::bc globalbcz= dg::NEU)
 {
     return interpolation( x,y,z, g.grid(), globalbcz);
 }
@@ -76,7 +79,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const thrust::ho
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX1d& g_new, const GridX1d& g_old)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const BasicGridX1d<real_type>& g_new, const BasicGridX1d<real_type>& g_old)
 {
     return interpolation( g_new.grid(), g_old.grid());
 }
@@ -92,7 +96,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const GridX1d& g
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopologyX2d& g_new, const aTopologyX2d& g_old)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aBasicTopologyX2d<real_type>& g_new, const aBasicTopologyX2d<real_type>& g_old)
 {
     return interpolation( g_new.grid(), g_old.grid());
 }
@@ -109,7 +114,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopologyX
  * @return Interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopologyX3d& g_new, const aTopologyX3d& g_old)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aBasicTopologyX3d<real_type>& g_new, const aBasicTopologyX3d<real_type>& g_old)
 {
     return interpolation( g_new.grid(), g_old.grid());
 }
@@ -123,7 +129,8 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolation( const aTopologyX
  *
  * @return the vector in LSPACE
  */
-thrust::host_vector<double> forward_transform( const thrust::host_vector<double>& in, const aTopologyX2d& g)
+template<class real_type>
+thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real_type>& in, const aBasicTopologyX2d<real_type>& g)
 {
     return forward_transform( in, g.grid());
 }
@@ -139,7 +146,8 @@ thrust::host_vector<double> forward_transform( const thrust::host_vector<double>
  *
  * @return interpolated point
  */
-double interpolate( double x, double y,  const thrust::host_vector<double>& v, const aTopologyX2d& g )
+template<class real_type>
+real_type interpolate( real_type x, real_type y,  const thrust::host_vector<real_type>& v, const aBasicTopologyX2d<real_type>& g )
 {
     return interpolate( x,y,v,g.grid());
 }

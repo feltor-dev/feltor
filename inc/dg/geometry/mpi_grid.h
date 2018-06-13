@@ -35,59 +35,61 @@ namespace dg
  * The access functions \c n() \c Nx() ,... all return the global parameters. If you want to have the local ones call the \c local() function.
  * @ingroup basictopology
  */
-struct aMPITopology2d
+template<class real_type>
+struct aBasicMPITopology2d
 {
     typedef MPITag memory_category;
     typedef TwoDimensionalTag dimensionality;
+    typedef real_type value_type;
 
     /**
      * @brief Return global x0
      *
      * @return global left boundary
      */
-    double x0() const { return g.x0();}
+    real_type x0() const { return g.x0();}
     /**
      * @brief Return global x1
      *
      * @return global right boundary
      */
-    double x1() const { return g.x1(); }
+    real_type x1() const { return g.x1(); }
     /**
      * @brief Return global y0
      *
      * @return global left boundary
      */
-    double y0() const { return g.y0();}
+    real_type y0() const { return g.y0();}
     /**
      * @brief Return global y1
      *
      * @return global right boundary
      */
-    double y1() const { return g.y1();}
+    real_type y1() const { return g.y1();}
     /**
      * @brief Return global lx
      *
      * @return global length
      */
-    double lx() const {return g.lx();}
+    real_type lx() const {return g.lx();}
     /**
      * @brief Return global ly
      *
      * @return global length
      */
-    double ly() const {return g.ly();}
+    real_type ly() const {return g.ly();}
     /**
      * @brief Return global hx
      *
      * @return global grid constant
      */
-    double hx() const {return g.hx();}
+    real_type hx() const {return g.hx();}
     /**
      * @brief Return global hy
      *
      * @return global grid constant
      */
-    double hy() const {return g.hy();}
+    real_type hy() const {return g.hy();}
     /**
      * @brief Return n
      *
@@ -136,7 +138,7 @@ struct aMPITopology2d
      *
      * @return DLT corresponding to n given in the constructor
      */
-    const DLT<double>& dlt() const{return g.dlt();}
+    const DLT<real_type>& dlt() const{return g.dlt();}
     /**
      * @brief The total global number of points
      * @return equivalent of \c n()*n()*Nx()*Ny()
@@ -168,7 +170,7 @@ struct aMPITopology2d
      *
      * @return pid of a process, or -1 if non of the grids matches
      */
-    int pidOf( double x, double y) const;
+    int pidOf( real_type x, real_type y) const;
     /**
     * @brief Multiply the number of cells with a given factor
     *
@@ -176,8 +178,8 @@ struct aMPITopology2d
     * @param fx new global number of cells is fx*global().Nx()
     * @param fy new global number of cells is fy*global().Ny()
     */
-    void multiplyCellNumbers( double fx, double fy){
-        set(g.n(), floor(fx*(double)g.Nx()+0.5), floor(fy*(double)g.Ny()+0.5));
+    void multiplyCellNumbers( real_type fx, real_type fy){
+        set(g.n(), floor(fx*(real_type)g.Nx()+0.5), floor(fy*(real_type)g.Ny()+0.5));
     }
     /**
     * @copydoc Grid2d::set(unsigned,unsigned,unsigned)
@@ -242,7 +244,7 @@ struct aMPITopology2d
      * @return Grid object
      * @note the boundary conditions in the local grid are not well defined since there might not actually be any boundaries
      */
-    const Grid2d& local() const {return l;}
+    const BasicGrid2d<real_type>& local() const {return l;}
     /**
      * @brief Return the global non-MPI grid
      *
@@ -252,26 +254,26 @@ struct aMPITopology2d
      * class itself
      * @return non-MPI Grid object
      */
-    const Grid2d& global() const {return g;}
+    const BasicGrid2d<real_type>& global() const {return g;}
     protected:
     ///disallow deletion through base class pointer
-    ~aMPITopology2d(){}
+    ~aBasicMPITopology2d(){}
 
     /**
      * @copydoc hide_grid_parameters2d
      * @copydoc hide_bc_parameters2d
      * @copydoc hide_comm_parameters2d
      */
-    aMPITopology2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
+    aBasicMPITopology2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), l(g), comm( comm)
     {
         update_local();
         check_division( Nx, Ny, bcx, bcy);
     }
     ///copydoc aTopology2d::aTopology2d(const aTopology2d&)
-    aMPITopology2d(const aMPITopology2d& src):g(src.g),l(src.l),comm(src.comm){ }
+    aBasicMPITopology2d(const aBasicMPITopology2d& src):g(src.g),l(src.l),comm(src.comm){ }
     ///copydoc aTopology2d::operator()(const aTopology2d&)
-    aMPITopology2d& operator=(const aMPITopology2d& src){
+    aBasicMPITopology2d& operator=(const aBasicMPITopology2d& src){
         g = src.g; l = src.l; comm = src.comm;
         return *this;
     }
@@ -300,19 +302,19 @@ struct aMPITopology2d
     void update_local(){
         int dims[2], periods[2], coords[2];
         MPI_Cart_get( comm, 2, dims, periods, coords);
-        double x0 = g.x0() + g.lx()/(double)dims[0]*(double)coords[0];
-        double x1 = g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1);
+        real_type x0 = g.x0() + g.lx()/(real_type)dims[0]*(real_type)coords[0];
+        real_type x1 = g.x0() + g.lx()/(real_type)dims[0]*(real_type)(coords[0]+1);
         if( coords[0] == dims[0]-1)
             x1 = g.x1();
-        double y0 = g.y0() + g.ly()/(double)dims[1]*(double)coords[1];
-        double y1 = g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1);
+        real_type y0 = g.y0() + g.ly()/(real_type)dims[1]*(real_type)coords[1];
+        real_type y1 = g.y0() + g.ly()/(real_type)dims[1]*(real_type)(coords[1]+1);
         if( coords[1] == dims[1]-1)
             y1 = g.y1();
         unsigned Nx = g.Nx()/dims[0];
         unsigned Ny = g.Ny()/dims[1];
-        l = Grid2d(x0, x1, y0, y1, g.n(), Nx, Ny, g.bcx(), g.bcy());
+        l = BasicGrid2d<real_type>(x0, x1, y0, y1, g.n(), Nx, Ny, g.bcx(), g.bcy());
     }
-    Grid2d g, l; //global and local grid
+    BasicGrid2d<real_type> g, l; //global and local grid
     MPI_Comm comm; //just an integer...
 };
 
@@ -320,86 +322,88 @@ struct aMPITopology2d
 /**
  * @brief 3D MPI Grid class
  *
- * @copydetails aMPITopology2d
+ * @copydetails aBasicMPITopology2d
  * @ingroup basictopology
  */
-struct aMPITopology3d
+template<class real_type>
+struct aBasicMPITopology3d
 {
     typedef MPITag memory_category;
     typedef ThreeDimensionalTag dimensionality;
+    typedef real_type value_type;
 
     /**
      * @brief Return global x0
      *
      * @return global left boundary
      */
-    double x0() const { return g.x0();}
+    real_type x0() const { return g.x0();}
     /**
      * @brief Return global x1
      *
      * @return global right boundary
      */
-    double x1() const { return g.x1();}
+    real_type x1() const { return g.x1();}
     /**
      * @brief Return global y0
      *
      * @return global left boundary
      */
-    double y0() const { return g.y0();}
+    real_type y0() const { return g.y0();}
     /**
      * @brief Return global y1
      *
      * @return global right boundary
      */
-    double y1() const { return g.y1();}
+    real_type y1() const { return g.y1();}
     /**
      * @brief Return global z0
      *
      * @return global left boundary
      */
-    double z0() const { return g.z0();}
+    real_type z0() const { return g.z0();}
     /**
      * @brief Return global z1
      *
      * @return global right boundary
      */
-    double z1() const { return g.z1();}
+    real_type z1() const { return g.z1();}
     /**
      * @brief Return global lx
      *
      * @return global length
      */
-    double lx() const {return g.lx();}
+    real_type lx() const {return g.lx();}
     /**
      * @brief Return global ly
      *
      * @return global length
      */
-    double ly() const {return g.ly();}
+    real_type ly() const {return g.ly();}
     /**
      * @brief Return global lz
      *
      * @return global length
      */
-    double lz() const {return g.lz();}
+    real_type lz() const {return g.lz();}
     /**
      * @brief Return global hx
      *
      * @return global grid constant
      */
-    double hx() const {return g.hx();}
+    real_type hx() const {return g.hx();}
     /**
      * @brief Return global hy
      *
      * @return global grid constant
      */
-    double hy() const {return g.hy();}
+    real_type hy() const {return g.hy();}
     /**
      * @brief Return global hz
      *
      * @return global grid constant
      */
-    double hz() const {return g.hz();}
+    real_type hz() const {return g.hz();}
     /**
      * @brief Return n
      *
@@ -460,7 +464,7 @@ struct aMPITopology3d
      *
      * @return DLT corresponding to n given in the constructor
      */
-    const DLT<double>& dlt() const{return g.dlt();}
+    const DLT<real_type>& dlt() const{return g.dlt();}
     /**
      * @brief The total global number of points
      * @return equivalent of \c n()*n()*Nx()*Ny()*Nz()
@@ -492,10 +496,10 @@ struct aMPITopology3d
      *
      * @return pid of a process, or -1 if non of the grids matches
      */
-    int pidOf( double x, double y, double z) const;
-    ///@copydoc aMPITopology2d::multiplyCellNumbers()
-    void multiplyCellNumbers( double fx, double fy){
-        set(g.n(), round(fx*(double)g.Nx()), round(fy*(double)g.Ny()), g.Nz());
+    int pidOf( real_type x, real_type y, real_type z) const;
+    ///@copydoc aBasicMPITopology2d::multiplyCellNumbers()
+    void multiplyCellNumbers( real_type fx, real_type fy){
+        set(g.n(), round(fx*(real_type)g.Nx()), round(fy*(real_type)g.Ny()), g.Nz());
     }
     /**
      * @copydoc Grid3d::set(unsigned,unsigned,unsigned,unsigned)
@@ -505,7 +509,7 @@ struct aMPITopology3d
         if( new_n == g.n() && new_Nx == g.Nx() && new_Ny == g.Ny() && new_Nz == g.Nz()) return;
         do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
-    ///@copydoc aMPITopology2d::local2globalIdx(int,int,int&)const
+    ///@copydoc aBasicMPITopology2d::local2globalIdx(int,int,int&)const
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
         if( localIdx < 0 || localIdx >= (int)size()) return false;
@@ -521,7 +525,7 @@ struct aMPITopology3d
         globalIdx = (gIdx2*g.n()*g.Ny() + gIdx1)*g.n()*g.Nx() + gIdx0;
         return true;
     }
-    ///@copydoc aMPITopology2d::global2localIdx(int,int&,int&)const
+    ///@copydoc aBasicMPITopology2d::global2localIdx(int,int&,int&)const
     bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
     {
         if( globalIdx < 0 || globalIdx >= (int)g.size()) return false;
@@ -541,18 +545,18 @@ struct aMPITopology3d
         else
             return false;
     }
-    ///@copydoc aMPITopology2d::local()const
-    const Grid3d& local() const {return l;}
-     ///@copydoc aMPITopology2d::global()const
-    const Grid3d& global() const {return g;}
+    ///@copydoc aBasicMPITopology2d::local()const
+    const BasicGrid3d<real_type>& local() const {return l;}
+     ///@copydoc aBasicMPITopology2d::global()const
+    const BasicGrid3d<real_type>& global() const {return g;}
     protected:
     ///disallow deletion through base class pointer
-    ~aMPITopology3d(){}
+    ~aBasicMPITopology3d(){}
 
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@copydoc hide_comm_parameters3d
-    aMPITopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+    aBasicMPITopology3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), l(g), comm( comm)
     {
         update_local();
@@ -562,10 +566,10 @@ struct aMPITopology3d
     }
     ///explicit copy constructor (default)
     ///@param src source
-    aMPITopology3d(const aMPITopology3d& src):g(src.g),l(src.l),comm(src.comm),planeComm(src.planeComm){ }
+    aBasicMPITopology3d(const aBasicMPITopology3d& src):g(src.g),l(src.l),comm(src.comm),planeComm(src.planeComm){ }
     ///explicit assignment operator (default)
     ///@param src source
-    aMPITopology3d& operator=(const aMPITopology3d& src){
+    aBasicMPITopology3d& operator=(const aBasicMPITopology3d& src){
         g = src.g; l = src.l; comm = src.comm; planeComm = src.planeComm;
         return *this;
     }
@@ -598,18 +602,18 @@ struct aMPITopology3d
     void update_local(){
         int dims[3], periods[3], coords[3];
         MPI_Cart_get( comm, 3, dims, periods, coords);
-        double x0 = g.x0() + g.lx()/(double)dims[0]*(double)coords[0];
-        double x1 = g.x0() + g.lx()/(double)dims[0]*(double)(coords[0]+1);
+        real_type x0 = g.x0() + g.lx()/(real_type)dims[0]*(real_type)coords[0];
+        real_type x1 = g.x0() + g.lx()/(real_type)dims[0]*(real_type)(coords[0]+1);
         if( coords[0] == dims[0]-1)
             x1 = g.x1();
 
-        double y0 = g.y0() + g.ly()/(double)dims[1]*(double)coords[1];
-        double y1 = g.y0() + g.ly()/(double)dims[1]*(double)(coords[1]+1);
+        real_type y0 = g.y0() + g.ly()/(real_type)dims[1]*(real_type)coords[1];
+        real_type y1 = g.y0() + g.ly()/(real_type)dims[1]*(real_type)(coords[1]+1);
         if( coords[1] == dims[1]-1)
             y1 = g.y1();
 
-        double z0 = g.z0() + g.lz()/(double)dims[2]*(double)coords[2];
-        double z1 = g.z0() + g.lz()/(double)dims[2]*(double)(coords[2]+1);
+        real_type z0 = g.z0() + g.lz()/(real_type)dims[2]*(real_type)coords[2];
+        real_type z1 = g.z0() + g.lz()/(real_type)dims[2]*(real_type)(coords[2]+1);
         if( coords[2] == dims[2]-1)
             z1 = g.z1();
         unsigned Nx = g.Nx()/dims[0];
@@ -618,16 +622,17 @@ struct aMPITopology3d
 
         l = Grid3d(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
     }
-    Grid3d g, l; //global grid
+    BasicGrid3d<real_type> g, l; //global grid
     MPI_Comm comm, planeComm; //just an integer...
 };
 ///@cond
-int aMPITopology2d::pidOf( double x, double y) const
+template<class real_type>
+int aBasicMPITopology2d<real_type>::pidOf( real_type x, real_type y) const
 {
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
-    coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
-    coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
+    coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(real_type)dims[0] );
+    coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(real_type)dims[1] );
     //if point lies on or over boundary of last cell shift into current cell (not so good for periodic boundaries)
     coords[0]=(coords[0]==dims[0]) ? coords[0]-1 :coords[0];
     coords[1]=(coords[1]==dims[1]) ? coords[1]-1 :coords[1];
@@ -637,13 +642,14 @@ int aMPITopology2d::pidOf( double x, double y) const
     else
         return -1;
 }
-int aMPITopology3d::pidOf( double x, double y, double z) const
+template<class real_type>
+int aBasicMPITopology3d<real_type>::pidOf( real_type x, real_type y, real_type z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
-    coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(double)dims[0] );
-    coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(double)dims[1] );
-    coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(double)dims[2] );
+    coords[0] = (unsigned)floor( (x-g.x0())/g.lx()*(real_type)dims[0] );
+    coords[1] = (unsigned)floor( (y-g.y0())/g.ly()*(real_type)dims[1] );
+    coords[2] = (unsigned)floor( (z-g.z0())/g.lz()*(real_type)dims[2] );
     //if point lies on or over boundary of last cell shift into current cell (not so good for periodic boundaries)
     coords[0]=(coords[0]==dims[0]) ? coords[0]-1 :coords[0];
     coords[1]=(coords[1]==dims[1]) ? coords[1]-1 :coords[1];
@@ -654,11 +660,13 @@ int aMPITopology3d::pidOf( double x, double y, double z) const
     else
         return -1;
 }
-void aMPITopology2d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+template<class real_type>
+void aBasicMPITopology2d<real_type>::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
     g.set(new_n,new_Nx,new_Ny);
     update_local();
 }
-void aMPITopology3d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+template<class real_type>
+void aBasicMPITopology3d<real_type>::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
     g.set(new_n,new_Nx,new_Ny,new_Nz);
     update_local();
 }
@@ -666,18 +674,19 @@ void aMPITopology3d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, u
 ///@endcond
 
 /**
- * @brief The simplest implementation of aMPITopology2d
+ * @brief The simplest implementation of aBasicMPITopology2d
  * @ingroup grid
  * @copydoc hide_code_mpi_evaluate2d
  */
-struct MPIGrid2d: public aMPITopology2d
+template<class real_type>
+struct BasicMPIGrid2d: public aBasicMPITopology2d<real_type>
 {
     /**
      * @copydoc hide_grid_parameters2d
      * @copydoc hide_comm_parameters2d
      */
-    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
-        aMPITopology2d( x0,x1,y0,y1,n,Nx,Ny,dg::PER,dg::PER,comm)
+    BasicMPIGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
+        aBasicMPITopology2d<real_type>( x0,x1,y0,y1,n,Nx,Ny,dg::PER,dg::PER,comm)
     { }
 
     /**
@@ -685,56 +694,62 @@ struct MPIGrid2d: public aMPITopology2d
      * @copydoc hide_bc_parameters2d
      * @copydoc hide_comm_parameters2d
      */
-    MPIGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
-        aMPITopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy,comm)
+    BasicMPIGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
+        aBasicMPITopology2d<real_type>( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy,comm)
     { }
     ///allow explicit type conversion from any other topology
-    explicit MPIGrid2d( const aMPITopology2d& src): aMPITopology2d(src){}
+    explicit BasicMPIGrid2d( const aBasicMPITopology2d<real_type>& src): aBasicMPITopology2d<real_type>(src){}
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny){
-        aMPITopology2d::do_set(new_n,new_Nx,new_Ny);
+        aBasicMPITopology2d<real_type>::do_set(new_n,new_Nx,new_Ny);
     }
 };
 
 /**
- * @brief The simplest implementation of aMPITopology3d
+ * @brief The simplest implementation of aBasicMPITopology3d
  * @ingroup grid
  * @copydoc hide_code_mpi_evaluate3d
  */
-struct MPIGrid3d : public aMPITopology3d
+template<class real_type>
+struct BasicMPIGrid3d : public aBasicMPITopology3d<real_type>
 {
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_comm_parameters3d
-    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
-        aMPITopology3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER,comm )
+    BasicMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
+        aBasicMPITopology3d<real_type>( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER,comm )
     { }
 
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@copydoc hide_comm_parameters3d
-    MPIGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        aMPITopology3d( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm)
+    BasicMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+        aBasicMPITopology3d<real_type>( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm)
     { }
     ///allow explicit type conversion from any other topology
     ///@param src source
-    explicit MPIGrid3d( const aMPITopology3d& src): aMPITopology3d(src){ }
+    explicit BasicMPIGrid3d( const aBasicMPITopology3d<real_type>& src): aBasicMPITopology3d<real_type>(src){ }
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        aMPITopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
+        aBasicMPITopology3d<real_type>::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 };
 
 ///@cond
-template<>
-struct MemoryTraits< MPITag, TwoDimensionalTag> {
-    using host_vector = MPI_Vector<thrust::host_vector<double>>;
-    using host_grid   = MPIGrid2d;
+template<class real_type>
+struct MemoryTraits< MPITag, TwoDimensionalTag, real_type> {
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid   = BasicMPIGrid2d<real_type>;
 };
-template<>
-struct MemoryTraits< MPITag, ThreeDimensionalTag> {
-    using host_vector = MPI_Vector<thrust::host_vector<double>>;
-    using host_grid   = MPIGrid3d;
+template<class real_type>
+struct MemoryTraits< MPITag, ThreeDimensionalTag, real_type> {
+    using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
+    using host_grid   = BasicMPIGrid3d<real_type>;
 };
 ///@endcond
+
+using MPIGrid2d = BasicMPIGrid2d<double>;
+using MPIGrid3d = BasicMPIGrid3d<double>;
+using aMPITopology2d = aBasicMPITopology2d<double>;
+using aMPITopology3d = aBasicMPITopology3d<double>;
 
 }//namespace dg

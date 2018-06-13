@@ -16,9 +16,9 @@ namespace dg{
 /**
  * @brief Struct holding coefficients for Discrete Legendre Transformation (DLT) related operations
  *
- * @tparam T value type (\c double or \c float)
+ * @tparam real_type value type (\c double or \c float)
  */
-template< class T>
+template< class real_type>
 class DLT
 {
   public:
@@ -36,27 +36,27 @@ class DLT
      *
      * @return \c n weights
      */
-    const std::vector<T>& weights()const {return w_;}
+    const std::vector<real_type>& weights()const {return w_;}
     /**
      * @brief Return Gauss-Legendre nodes on the interval [-1,1]
      *
      * @return \c n nodes
      */
-    const std::vector<T>& abscissas()const {return a_;}
+    const std::vector<real_type>& abscissas()const {return a_;}
     /**
      * @brief Return forward DLT trafo matrix
      *
      * accesss elements in C-fashion: \f$ F_{ij} = \f$ \c forward()[\c i*n+j]
      * @return \c n*n forward transformation coefficients
      */
-    const std::vector<T>& forward()const {return forw_;}
+    const std::vector<real_type>& forward()const {return forw_;}
     /**
      * @brief Return backward DLT trafo matrix
      *
      * accesss elements in C-fashion: \f$ F_{ij} =\f$ \c backward()[\c i*n+j]
      * @return \c n*n backward transformation coefficients
      */
-    const std::vector<T>& backward()const {return back_;}
+    const std::vector<real_type>& backward()const {return back_;}
     /**
      * @brief Return equidistant backward DLT trafo matrix
      *
@@ -65,15 +65,15 @@ class DLT
      * accesss elements in C-fashion: \f$ F_{ij} = \f$ \c backwardEQ()[\c i*n+j]
      * @return \c n*n equidistant backward transformation coefficients
      */
-    const std::vector<T>& backwardEQ()const {return backEQ_;}
+    const std::vector<real_type>& backwardEQ()const {return backEQ_;}
 
   private:
-    std::vector<T> a_, w_, forw_, back_, backEQ_;
+    std::vector<real_type> a_, w_, forw_, back_, backEQ_;
 };
 
 ///@cond
-template<class T>
-DLT<T>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
+template<class real_type>
+DLT<real_type>::DLT( unsigned n):a_(n), w_(n), forw_(n*n), back_(n*n),backEQ_(n*n)
 {
     std::stringstream stream;
 

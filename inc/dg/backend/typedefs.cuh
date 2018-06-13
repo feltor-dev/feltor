@@ -44,21 +44,25 @@ namespace dg{
 typedef MPI_Vector<dg::DVec >  MDVec; //!< MPI Device Vector s.a. dg::DVec
 typedef MPI_Vector<dg::HVec >  MHVec; //!< MPI Host Vector s.a. dg::HVec
 
-typedef NearestNeighborComm<dg::iHVec, dg::HVec > NNCH; //!< host Communicator for the use in an mpi matrix for derivatives
-//typedef NearestNeighborComm<thrust::device_vector<int>, thrust::device_vector<double> > NNCD; //!< device Communicator for the use in an mpi matrix for derivatives
-typedef NearestNeighborComm<dg::iDVec, dg::DVec > NNCD; //!< device Communicator for the use in an mpi matrix for derivatives
+template<class real_type>
+using NNCH = NearestNeighborComm<dg::iHVec, thrust::host_vector<real_type> >; //!< host Communicator for the use in an mpi matrix for derivatives
+template<class real_type>
+using NNCD = NearestNeighborComm<dg::iDVec, thrust::device_vector<real_type> >; //!< host Communicator for the use in an mpi matrix for derivatives
 
-typedef dg::RowColDistMat<dg::HMatrix, dg::CooSparseBlockMat<double>, dg::NNCH> MHMatrix; //!< MPI Host Matrix for derivatives
-typedef dg::RowColDistMat<dg::DMatrix, dg::CooSparseBlockMatDevice<double>, dg::NNCD> MDMatrix; //!< MPI Device Matrix for derivatives
+//typedef NearestNeighborComm<thrust::device_vector<int>, thrust::device_vector<double> > NNCD; //!< device Communicator for the use in an mpi matrix for derivatives
+//typedef NearestNeighborComm<dg::iDVec, dg::DVec > NNCD; //!< device Communicator for the use in an mpi matrix for derivatives
+
+typedef dg::RowColDistMat<dg::HMatrix, dg::CooSparseBlockMat<double>, dg::NNCH<double>> MHMatrix; //!< MPI Host Matrix for derivatives
+typedef dg::RowColDistMat<dg::DMatrix, dg::CooSparseBlockMatDevice<double>, dg::NNCD<double>> MDMatrix; //!< MPI Device Matrix for derivatives
 
 typedef MPI_Vector<dg::fDVec > fMDVec; //!< MPI Device Vector s.a. dg::DVec
 typedef MPI_Vector<dg::fHVec > fMHVec; //!< MPI Host Vector
 
-typedef NearestNeighborComm<dg::iHVec, dg::fHVec > fNNCH; //!< host Communicator for the use in an mpi matrix for derivatives
-typedef NearestNeighborComm<dg::iDVec, dg::fDVec > fNNCD; //!< device Communicator for the use in an mpi matrix for derivatives
+//typedef NearestNeighborComm<dg::iHVec, dg::fHVec > fNNCH; //!< host Communicator for the use in an mpi matrix for derivatives
+//typedef NearestNeighborComm<dg::iDVec, dg::fDVec > fNNCD; //!< device Communicator for the use in an mpi matrix for derivatives
 
-typedef dg::RowColDistMat<dg::fHMatrix, dg::CooSparseBlockMat<float>, dg::fNNCH> fMHMatrix; //!< MPI Host Matrix for derivatives
-typedef dg::RowColDistMat<dg::fDMatrix, dg::CooSparseBlockMatDevice<float>, dg::fNNCD> fMDMatrix; //!< MPI Device Matrix for derivatives
+typedef dg::RowColDistMat<dg::fHMatrix, dg::CooSparseBlockMat<float>, dg::NNCH<float>> fMHMatrix; //!< MPI Host Matrix for derivatives
+typedef dg::RowColDistMat<dg::fDMatrix, dg::CooSparseBlockMatDevice<float>, dg::NNCD<float>> fMDMatrix; //!< MPI Device Matrix for derivatives
 ///@}
 }//namespace dg
 #endif //MPI_VERSION

@@ -22,7 +22,7 @@ namespace dg{
 *
 * @return delta_{ij}
 */
-inline double delta( unsigned i, unsigned j)
+static inline double delta( unsigned i, unsigned j)
 {
     if( i==j )
         return 1.;
@@ -37,7 +37,7 @@ inline double delta( unsigned i, unsigned j)
 *
 * @return L2 scalar product
 */
-inline double pipj( unsigned i, unsigned j)
+static inline double pipj( unsigned i, unsigned j)
 {
     if( i==j)
         return 2./(2.*(double)i+1.);
@@ -53,7 +53,7 @@ inline double pipj( unsigned i, unsigned j)
 *
 * @return Inverse of L2 scalar product
 */
-inline double pipj_inv( unsigned i, unsigned j)
+static inline double pipj_inv( unsigned i, unsigned j)
 {
     if( i==j)
         return (2.*(double)i+1.)/2.;
@@ -69,7 +69,7 @@ inline double pipj_inv( unsigned i, unsigned j)
 *
 * @return Scalar product of p_i(x) and partial_x p_j(x)
 */
-inline double pidxpj( unsigned i, unsigned j)
+static inline double pidxpj( unsigned i, unsigned j)
 {
     if( i < j)
     {
@@ -91,7 +91,7 @@ inline double pidxpj( unsigned i, unsigned j)
 *
 * @return 1
 */
-inline double rirj( unsigned i, unsigned j)
+static inline double rirj( unsigned i, unsigned j)
 {
     return 1.;
 }
@@ -104,7 +104,7 @@ inline double rirj( unsigned i, unsigned j)
 *
 * @return (-1)^j
 */
-inline double rilj( unsigned i, unsigned j)
+static inline double rilj( unsigned i, unsigned j)
 {
     if( j%2==0)
         return 1.;
@@ -119,7 +119,7 @@ inline double rilj( unsigned i, unsigned j)
 *
 * @return (-1)^i
 */
-inline double lirj( unsigned i, unsigned j)
+static inline double lirj( unsigned i, unsigned j)
 {
     return rilj(j,i);
 }
@@ -132,7 +132,7 @@ inline double lirj( unsigned i, unsigned j)
 *
 * @return (-1)^{i+j}
 */
-inline double lilj( unsigned i, unsigned j)
+static inline double lilj( unsigned i, unsigned j)
 {
     if( (i+j)%2 ==0)
         return 1.;
@@ -153,7 +153,7 @@ inline double lilj( unsigned i, unsigned j)
  * @return 1
  */
 DG_DEVICE
-inline double one( double x) {return 1;}
+static inline double one( double x) {return 1;}
 
 /**
  * @brief
@@ -166,7 +166,7 @@ inline double one( double x) {return 1;}
  * @return 1
  */
 DG_DEVICE
-inline double one( double x, double y) {return 1;}
+static inline double one( double x, double y) {return 1;}
 
 /**
  * @brief
@@ -180,7 +180,7 @@ inline double one( double x, double y) {return 1;}
  * @return 1
  */
 DG_DEVICE
-inline double one( double x, double y, double z) {return 1;}
+static inline double one( double x, double y, double z) {return 1;}
 
 /**
  * @brief
@@ -192,7 +192,7 @@ inline double one( double x, double y, double z) {return 1;}
  * @return 0
  */
 DG_DEVICE
-inline double zero( double x) {return 0.;}
+static inline double zero( double x) {return 0.;}
 
 /**
  * @brief
@@ -205,7 +205,7 @@ inline double zero( double x) {return 0.;}
  * @return 0
  */
 DG_DEVICE
-inline double zero( double x, double y) {return 0.;}
+static inline double zero( double x, double y) {return 0.;}
 
 /**
  * @brief
@@ -219,18 +219,18 @@ inline double zero( double x, double y) {return 0.;}
  * @return 0
  */
 DG_DEVICE
-inline double zero( double x, double y, double z) {return 0.;}
+static inline double zero( double x, double y, double z) {return 0.;}
 
 /**
  * @brief \f[ f(x) = x\f]
  */
 DG_DEVICE
-inline double cooX1d( double x) {return x;}
+static inline double cooX1d( double x) {return x;}
 /**
  * @brief \f[ f(x,y) = x\f]
  */
 DG_DEVICE
-inline double cooX2d( double x, double y) {return x;}
+static inline double cooX2d( double x, double y) {return x;}
 /**
  * @brief
  * \f[ f(x,y,z) = x\f]
@@ -242,23 +242,23 @@ inline double cooX2d( double x, double y) {return x;}
  * @return
  */
 DG_DEVICE
-inline double cooX3d( double x, double y, double z) {return x;}
+static inline double cooX3d( double x, double y, double z) {return x;}
 
 /**
  * @brief \f[ f(x,y) = y\f]
  */
 DG_DEVICE
-inline double cooY2d( double x, double y) {return y;}
+static inline double cooY2d( double x, double y) {return y;}
 /**
  * @brief \f[ f(x,y,z) = y\f]
  */
 DG_DEVICE
-inline double cooY3d( double x, double y, double z) {return y;}
+static inline double cooY3d( double x, double y, double z) {return y;}
 /**
  * @brief \f[ f(x,y,z) = z\f]
  */
 DG_DEVICE
-inline double cooZ3d( double x, double y, double z) {return z;}
+static inline double cooZ3d( double x, double y, double z) {return z;}
 } //namespace dg
 
 ///@}
