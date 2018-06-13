@@ -799,9 +799,9 @@ struct MemoryTraits< SharedTag, ThreeDimensionalTag,real_type> {
 };
 
 template<class Topology>
-using get_host_vector = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::real_type>::host_vector;
+using get_host_vector = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::value_type>::host_vector;
 template<class Topology>
-using get_host_grid = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::real_type>::host_grid;
+using get_host_grid = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::value_type>::host_grid;
 
 ///@endcond
 

@@ -10,7 +10,8 @@ namespace dg
 ///@{
 
 ///@brief This is the abstract interface class for a two-dimensional Geometry
-struct aGeometry2d : public aTopology2d
+template<class real_type>
+struct aBasicGeometry2d : public aBasicTopology2d<real_type>
 {
     /**
     * @brief The Jacobian of the coordinate transformation from physical to computational space
@@ -22,7 +23,7 @@ struct aGeometry2d : public aTopology2d
     \f]
     * @return Jacobian
     */
-    SparseTensor<thrust::host_vector<double> > jacobian()const{
+    SparseTensor<thrust::host_vector<real_type> > jacobian()const{
         return do_compute_jacobian();
     }
     /**
@@ -35,7 +36,7 @@ struct aGeometry2d : public aTopology2d
     * @return symmetric tensor
     * @note use the dg::tensor functions to compute the volume element from here
     */
-    SparseTensor<thrust::host_vector<double> > metric()const {
+    SparseTensor<thrust::host_vector<real_type> > metric()const {
         return do_compute_metric();
     }
     /**
@@ -48,35 +49,36 @@ struct aGeometry2d : public aTopology2d
     \f]
     * @return a vector of size 2
     */
-    std::vector<thrust::host_vector<double> > map()const{
+    std::vector<thrust::host_vector<real_type> > map()const{
         return do_compute_map();
     }
     ///Geometries are cloneable
-    virtual aGeometry2d* clone()const=0;
+    virtual aBasicGeometry2d* clone()const=0;
     ///allow deletion through base class pointer
-    virtual ~aGeometry2d(){}
+    virtual ~aBasicGeometry2d(){}
     protected:
-    /*!
-     * @copydoc aTopology2d::aTopology2d()
-     * @note the default coordinate map will be the identity
-     */
-    aGeometry2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aTopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
-    ///@copydoc aTopology2d::aTopology2d(const aTopology2d&)
-    aGeometry2d( const aGeometry2d& src):aTopology2d(src){}
-    ///@copydoc aTopology2d::operator=(const aTopology2d&)
-    aGeometry2d& operator=( const aGeometry2d& src){
-        aTopology2d::operator=(src);
+    using aBasicTopology2d<real_type>::aBasicTopology2d;
+    ////*!
+    // * @copydoc aTopology2d::aTopology2d()
+    // * @note the default coordinate map will be the identity
+    // */
+    //aBasicGeometry2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aTopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
+    ///@copydoc aBasicTopology2d::aBasicTopology2d(const aBasicTopology2d&)
+    aBasicGeometry2d( const aBasicGeometry2d& src):aBasicTopology2d<real_type>(src){}
+    ///@copydoc aBasicTopology2d::operator=(const aBasicTopology2d&)
+    aBasicGeometry2d& operator=( const aBasicGeometry2d& src){
+        aBasicTopology2d<real_type>::operator=(src);
         return *this;
     }
     private:
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const {
-        return SparseTensor<thrust::host_vector<double> >();
+    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
+        return SparseTensor<thrust::host_vector<real_type> >();
     }
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian()const {
-        return SparseTensor<thrust::host_vector<double> >();
+    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian()const {
+        return SparseTensor<thrust::host_vector<real_type> >();
     }
-    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{
-        std::vector<thrust::host_vector<double> > map(2);
+    virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const{
+        std::vector<thrust::host_vector<real_type> > map(2);
         map[0] = dg::evaluate(dg::cooX2d, *this);
         map[1] = dg::evaluate(dg::cooY2d, *this);
         return map;
@@ -86,7 +88,8 @@ struct aGeometry2d : public aTopology2d
 };
 
 ///@brief This is the abstract interface class for a three-dimensional Geometry
-struct aGeometry3d : public aTopology3d
+template<class real_type>
+struct aBasicGeometry3d : public aBasicTopology3d<real_type>
 {
     /**
     * @brief The Jacobian of the coordinate transformation from physical to computational space
@@ -100,7 +103,7 @@ struct aGeometry3d : public aTopology3d
     \f]
     * @return Jacobian
     */
-    SparseTensor<thrust::host_vector<double> > jacobian()const{
+    SparseTensor<thrust::host_vector<real_type> > jacobian()const{
         return do_compute_jacobian();
     }
     /**
@@ -115,7 +118,7 @@ struct aGeometry3d : public aTopology3d
     * @return symmetric tensor
     * @note use the dg::tensor functions to compute the volume element from here
     */
-    SparseTensor<thrust::host_vector<double> > metric()const {
+    SparseTensor<thrust::host_vector<real_type> > metric()const {
         return do_compute_metric();
     }
     /**
@@ -129,35 +132,36 @@ struct aGeometry3d : public aTopology3d
     \f]
     * @return a vector of size 3
     */
-    std::vector<thrust::host_vector<double> > map()const{
+    std::vector<thrust::host_vector<real_type> > map()const{
         return do_compute_map();
     }
     ///Geometries are cloneable
-    virtual aGeometry3d* clone()const=0;
+    virtual aBasicGeometry3d* clone()const=0;
     ///allow deletion through base class pointer
-    virtual ~aGeometry3d(){}
+    virtual ~aBasicGeometry3d(){}
     protected:
-    /*!
-     * @copydoc aTopology3d::aTopology3d()
-     * @note the default coordinate map will be the identity
-     */
-    aGeometry3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
-    ///@copydoc aTopology3d::aTopology3d(const aTopology3d&)
-    aGeometry3d( const aGeometry3d& src):aTopology3d(src){}
-    ///@copydoc aTopology3d::operator=(const aTopology3d&)
-    aGeometry3d& operator=( const aGeometry3d& src){
-        aTopology3d::operator=(src);
+    using aBasicTopology3d<real_type>::aBasicTopology3d;
+    ////*!
+    // * @copydoc aBasicTopology3d::aBasicTopology3d()
+    // * @note the default coordinate map will be the identity
+    // */
+    //aBasicGeometry3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aBasicTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    ///@copydoc aBasicTopology3d::aBasicTopology3d(const aBasicTopology3d&)
+    aBasicGeometry3d( const aBasicGeometry3d& src):aBasicTopology3d<real_type>(src){}
+    ///@copydoc aBasicTopology3d::operator=(const aBasicTopology3d&)
+    aBasicGeometry3d& operator=( const aBasicGeometry3d& src){
+        aBasicTopology3d<real_type>::operator=(src);
         return *this;
     }
     private:
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const {
-        return SparseTensor<thrust::host_vector<double> >();
+    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
+        return SparseTensor<thrust::host_vector<real_type> >();
     }
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian()const {
-        return SparseTensor<thrust::host_vector<double> >();
+    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian()const {
+        return SparseTensor<thrust::host_vector<real_type> >();
     }
-    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{
-        std::vector<thrust::host_vector<double> > map(3);
+    virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const{
+        std::vector<thrust::host_vector<real_type> > map(3);
         map[0] = dg::evaluate(dg::cooX3d, *this);
         map[1] = dg::evaluate(dg::cooY3d, *this);
         map[2] = dg::evaluate(dg::cooZ3d, *this);
@@ -166,7 +170,8 @@ struct aGeometry3d : public aTopology3d
 };
 
 ///@brief a 3d product space Geometry
-struct aProductGeometry3d : public aGeometry3d
+template<class real_type>
+struct aBasicProductGeometry3d : public aBasicGeometry3d<real_type>
 {
     /*!
      * @brief The grid made up by the first two dimensions
@@ -174,30 +179,33 @@ struct aProductGeometry3d : public aGeometry3d
      * This is possible because the 3d grid is a product grid of a 2d perpendicular grid and a 1d parallel grid
      * @return A newly constructed perpendicular grid
      */
-    aGeometry2d* perp_grid()const{
+    aBasicGeometry2d<real_type>* perp_grid()const{
         return do_perp_grid();
     }
     ///allow deletion through base class pointer
-    virtual ~aProductGeometry3d(){}
+    virtual ~aBasicProductGeometry3d(){}
     ///Geometries are cloneable
-    virtual aProductGeometry3d* clone()const=0;
+    virtual aBasicProductGeometry3d* clone()const=0;
     protected:
-    ///@copydoc aTopology3d::aTopology3d(const aTopology3d&)
-    aProductGeometry3d( const aProductGeometry3d& src):aGeometry3d(src){}
-    ///@copydoc aTopology3d::operator=(const aTopology3d&)
-    aProductGeometry3d& operator=( const aProductGeometry3d& src){
-        aGeometry3d::operator=(src);
+    ///@copydoc aBasicTopology3d::aBasicTopology3d(const aBasicTopology3d&)
+    aBasicProductGeometry3d( const aBasicProductGeometry3d& src):aBasicGeometry3d<real_type>(src){}
+    ///@copydoc aBasicTopology3d::operator=(const aBasicTopology3d&)
+    aBasicProductGeometry3d& operator=( const aBasicProductGeometry3d& src){
+        aBasicGeometry3d<real_type>::operator=(src);
         return *this;
     }
     /*!
-     * @copydoc aTopology3d::aTopology3d()
+     * @copydoc aBasicTopology3d::aBasicTopology3d()
      * @note the default coordinate map will be the identity
      */
-    aProductGeometry3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    aBasicProductGeometry3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aBasicGeometry3d<real_type>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     private:
-    virtual aGeometry2d* do_perp_grid()const=0;
+    virtual aBasicGeometry2d<real_type>* do_perp_grid()const=0;
 };
 
+using aGeometry2d = aBasicGeometry2d<double>;
+using aGeometry3d = aBasicGeometry3d<double>;
+using aProductGeometry3d = aBasicProductGeometry3d<double>;
 ///@}
 
 ///@addtogroup geometry
@@ -208,71 +216,87 @@ struct aProductGeometry3d : public aGeometry3d
 
  * @snippet arakawa_t.cu doxygen
  */
-struct CartesianGrid2d: public dg::aGeometry2d
+template<class real_type>
+struct BasicCartesianGrid2d: public dg::aBasicGeometry2d<real_type>
 {
     ///@copydoc Grid2d::Grid2d()
-    CartesianGrid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aGeometry2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
+    BasicCartesianGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aBasicGeometry2d<real_type>(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
     /**
      * @brief Construct from existing topology
      * @param g existing grid class
      */
-    CartesianGrid2d( const dg::Grid2d& g):dg::aGeometry2d(g.x0(),g.x1(),g.y0(),g.y1(),g.n(),g.Nx(),g.Ny(),g.bcx(),g.bcy()){}
-    virtual CartesianGrid2d* clone()const{return new CartesianGrid2d(*this);}
+    BasicCartesianGrid2d( const dg::BasicGrid2d<real_type>& g):dg::aBasicGeometry2d<real_type>(g.x0(),g.x1(),g.y0(),g.y1(),g.n(),g.Nx(),g.Ny(),g.bcx(),g.bcy()){}
+    virtual BasicCartesianGrid2d<real_type>* clone()const override final{
+        return new BasicCartesianGrid2d<real_type>(*this);
+    }
     private:
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny){
-        aTopology2d::do_set(new_n,new_Nx,new_Ny);
+    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny) override final{
+        aBasicTopology2d<real_type>::do_set(new_n,new_Nx,new_Ny);
     }
 };
 
 /**
  * @brief three-dimensional Grid with Cartesian metric
  */
-struct CartesianGrid3d: public dg::aProductGeometry3d
+template<class real_type>
+struct BasicCartesianGrid3d: public dg::aBasicProductGeometry3d<real_type>
 {
-    typedef CartesianGrid2d perpendicular_grid;
+    using perpendicular_grid = BasicCartesianGrid2d<real_type>;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
-    CartesianGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aProductGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    BasicCartesianGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aBasicProductGeometry3d<real_type>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     /**
      * @brief Implicit type conversion from Grid3d
      * @param g existing grid object
      */
-    CartesianGrid3d( const dg::Grid3d& g):dg::aProductGeometry3d(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
-    virtual CartesianGrid3d* clone()const{return new CartesianGrid3d(*this);}
+    BasicCartesianGrid3d( const dg::BasicGrid3d<real_type>& g):dg::aBasicProductGeometry3d<real_type>(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
+    virtual BasicCartesianGrid3d* clone()const override final{
+        return new BasicCartesianGrid3d(*this);
+    }
     private:
-    CartesianGrid2d* do_perp_grid() const{ return new CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        aTopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
+    virtual BasicCartesianGrid2d<real_type>* do_perp_grid() const override final{
+        return new BasicCartesianGrid2d<real_type>(this->x0(),this->x1(),this->y0(),this->y1(),this->n(),this->Nx(),this->Ny(),this->bcx(),this->bcy());
+    }
+    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) override final{
+        aBasicTopology3d<real_type>::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 };
 
 /**
  * @brief three-dimensional Grid with Cylindrical metric
  */
-struct CylindricalGrid3d: public dg::aProductGeometry3d
+template<class real_type>
+struct BasicCylindricalGrid3d: public dg::aBasicProductGeometry3d<real_type>
 {
-    typedef CartesianGrid2d perpendicular_grid;
+    using perpendicular_grid = BasicCartesianGrid2d<real_type>;
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@note x corresponds to R, y to Z and z to phi, the volume element is R
-    CylindricalGrid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aProductGeometry3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
-    virtual CylindricalGrid3d* clone()const{return new CylindricalGrid3d(*this);}
+    BasicCylindricalGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aBasicProductGeometry3d<real_type>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    virtual BasicCylindricalGrid3d* clone()const override final{
+        return new BasicCylindricalGrid3d(*this);
+    }
     private:
-    CartesianGrid2d* do_perp_grid() const{ return new CartesianGrid2d(x0(),x1(),y0(),y1(),n(),Nx(),Ny(),bcx(),bcy());}
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric()const{
-        SparseTensor<thrust::host_vector<double> > metric(1);
-        thrust::host_vector<double> R = dg::evaluate(dg::cooX3d, *this);
-        for( unsigned i = 0; i<size(); i++)
+    virtual BasicCartesianGrid2d<real_type>* do_perp_grid() const override final{
+        return new BasicCartesianGrid2d<real_type>(this->x0(),this->x1(),this->y0(),this->y1(),this->n(),this->Nx(),this->Ny(),this->bcx(),this->bcy());
+    }
+    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final{
+        SparseTensor<thrust::host_vector<real_type> > metric(1);
+        thrust::host_vector<real_type> R = dg::evaluate(dg::cooX3d, *this);
+        for( unsigned i = 0; i<this->size(); i++)
             R[i] = 1./R[i]/R[i];
         metric.idx(2,2)=0;
         metric.values()[0] = R;
         return metric;
     }
-    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        aTopology3d::do_set(new_n,new_Nx,new_Ny,new_Nz);
+    virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) override final {
+        aBasicTopology3d<real_type>::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 };
 
+using CartesianGrid2d = BasicCartesianGrid2d<double>;
+using CartesianGrid3d = BasicCartesianGrid3d<double>;
+using CylindricalGrid3d = BasicCylindricalGrid3d<double>;
 ///@}
 
 } //namespace dg
