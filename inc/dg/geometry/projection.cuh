@@ -23,7 +23,7 @@ namespace dg{
  * @return greatest common divisor
  * @ingroup misc
  */
-unsigned gcd( unsigned a, unsigned b)
+static unsigned gcd( unsigned a, unsigned b)
 {
     unsigned r2 = std::max(a,b);
     unsigned r1 = std::min(a,b);
@@ -44,7 +44,7 @@ unsigned gcd( unsigned a, unsigned b)
  * @return Least common multiple
  * @ingroup misc
  */
-unsigned lcm( unsigned a, unsigned b)
+static unsigned lcm( unsigned a, unsigned b)
 {
     unsigned g = gcd( a,b);
     return a/g*b;
@@ -67,23 +67,26 @@ namespace create{
  * @return transposed interpolation matrix
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const Grid1d& g_new, const Grid1d& g_old)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const BasicGrid1d<real_type>& g_new, const BasicGrid1d<real_type>& g_old)
 {
-    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
     cusp::transpose( temp, A);
     return A;
 }
 ///@copydoc interpolationT(const Grid1d&,const Grid1d&)
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology2d& g_new, const aTopology2d& g_old)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aBasicTopology2d<real_type>& g_new, const aBasicTopology2d<real_type>& g_old)
 {
-    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
     cusp::transpose( temp, A);
     return A;
 }
 ///@copydoc interpolationT(const Grid1d&,const Grid1d&)
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology3d& g_new, const aTopology3d& g_old)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aBasicTopology3d<real_type>& g_new, const aBasicTopology3d<real_type>& g_old)
 {
-    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_old, g_new), A;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
     cusp::transpose( temp, A);
     return A;
 }
@@ -109,14 +112,15 @@ cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopology
  * @attention Projection only works if the number of cells in the
  * fine grid is a multiple of the number of cells in the coarse grid
  */
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g_new, const Grid1d& g_old)
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const BasicGrid1d<real_type>& g_new, const BasicGrid1d<real_type>& g_old)
 {
     if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
     //form the adjoint
-    thrust::host_vector<double> w_f = dg::create::weights( g_old);
-    thrust::host_vector<double> v_c = dg::create::inv_weights( g_new );
-    cusp::coo_matrix<int, double, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
+    thrust::host_vector<real_type> w_f = dg::create::weights( g_old);
+    thrust::host_vector<real_type> v_c = dg::create::inv_weights( g_new );
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
     for( int i =0; i<(int)w_f.size(); i++)
     {
         Wf.row_indices[i] = Wf.column_indices[i] = i;
@@ -127,7 +131,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g_ne
         Vc.row_indices[i] = Vc.column_indices[i] = i;
         Vc.values[i] = v_c[i];
     }
-    cusp::coo_matrix<int, double, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
     A.sort_by_row_and_column();
@@ -136,15 +140,16 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const Grid1d& g_ne
 
 
 ///@copydoc projection(const Grid1d&,const Grid1d&)
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology2d& g_new, const aTopology2d& g_old)
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aBasicTopology2d<real_type>& g_new, const aBasicTopology2d<real_type>& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
     //form the adjoint
-    thrust::host_vector<double> w_f = dg::create::weights( g_old);
-    thrust::host_vector<double> v_c = dg::create::inv_weights( g_new );
-    cusp::coo_matrix<int, double, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
+    thrust::host_vector<real_type> w_f = dg::create::weights( g_old);
+    thrust::host_vector<real_type> v_c = dg::create::inv_weights( g_new );
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
     for( int i =0; i<(int)w_f.size(); i++)
     {
         Wf.row_indices[i] = Wf.column_indices[i] = i;
@@ -155,7 +160,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology2d&
         Vc.row_indices[i] = Vc.column_indices[i] = i;
         Vc.values[i] = v_c[i];
     }
-    cusp::coo_matrix<int, double, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
     A.sort_by_row_and_column();
@@ -163,15 +168,16 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology2d&
 }
 
 ///@copydoc projection(const Grid1d&,const Grid1d&)
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology3d& g_new, const aTopology3d& g_old)
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aBasicTopology3d<real_type>& g_new, const aBasicTopology3d<real_type>& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
     //form the adjoint
-    thrust::host_vector<double> w_f = dg::create::weights( g_old);
-    thrust::host_vector<double> v_c = dg::create::inv_weights( g_new );
-    cusp::coo_matrix<int, double, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
+    thrust::host_vector<real_type> w_f = dg::create::weights( g_old);
+    thrust::host_vector<real_type> v_c = dg::create::inv_weights( g_new );
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
+    cusp::coo_matrix<int, real_type, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
     for( int i =0; i<(int)w_f.size(); i++)
     {
         Wf.row_indices[i] = Wf.column_indices[i] = i;
@@ -182,7 +188,7 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology3d&
         Vc.row_indices[i] = Vc.column_indices[i] = i;
         Vc.values[i] = v_c[i];
     }
-    cusp::coo_matrix<int, double, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
+    cusp::coo_matrix<int, real_type, cusp::host_memory> A = interpolationT( g_new, g_old), temp;
     cusp::multiply( A, Wf, temp);
     cusp::multiply( Vc, temp, A);
     A.sort_by_row_and_column();
@@ -211,101 +217,43 @@ cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopology3d&
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  * @note If the grid are very incompatible the matrix-matrix multiplication can take a while
  */
-cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopology3d& g_new, const aTopology3d& g_old)
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aBasicTopology3d<real_type>& g_new, const aBasicTopology3d<real_type>& g_old)
 {
     Grid3d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), g_new.z0(), g_new.z1(),
                  lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()),
                  lcm(g_new.Nz(), g_old.Nz()));
-    cusp::coo_matrix< int, double, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
-    cusp::coo_matrix< int, double, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
+    cusp::coo_matrix< int, real_type, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
+    cusp::coo_matrix< int, real_type, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
     cusp::multiply( P, Q, Y);
     Y.sort_by_row_and_column();
     return Y;
 }
 
 ///@copydoc transformation(const aTopology3d&,const aTopology3d&)
-cusp::coo_matrix< int, double, cusp::host_memory> transformation( const aTopology2d& g_new, const aTopology2d& g_old)
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aBasicTopology2d<real_type>& g_new, const aBasicTopology2d<real_type>& g_old)
 {
     Grid2d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(),
                  lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()));
-    cusp::coo_matrix< int, double, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
-    cusp::coo_matrix< int, double, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
+    cusp::coo_matrix< int, real_type, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
+    cusp::coo_matrix< int, real_type, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
     cusp::multiply( P, Q, Y);
     Y.sort_by_row_and_column();
     return Y;
 }
 ///@copydoc transformation(const aTopology3d&,const aTopology3d&)
-cusp::coo_matrix< int, double, cusp::host_memory> transformation( const Grid1d& g_new, const Grid1d& g_old)
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const BasicGrid1d<real_type>& g_new, const BasicGrid1d<real_type>& g_old)
 {
-    Grid1d g_lcm(g_new.x0(), g_new.x1(), lcm(g_new.n(), g_old.n()), lcm(g_new.N(), g_old.N()));
-    cusp::coo_matrix< int, double, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
-    cusp::coo_matrix< int, double, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
+    BasicGrid1d<real_type> g_lcm(g_new.x0(), g_new.x1(), lcm(g_new.n(), g_old.n()), lcm(g_new.N(), g_old.N()));
+    cusp::coo_matrix< int, real_type, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
+    cusp::coo_matrix< int, real_type, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
     cusp::multiply( P, Q, Y);
     Y.sort_by_row_and_column();
     return Y;
 }
 ///@}
 
-/*
-///@deprecated
-cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::aRefinedGrid2d& g_fine)
-{
-    //form the adjoint
-    thrust::host_vector<double> w_f = dg::create::weights( g_fine);
-    thrust::host_vector<double> v_c = dg::create::inv_weights( g_fine.associated() );
-    cusp::coo_matrix<int, double, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
-    for( int i =0; i<(int)w_f.size(); i++)
-    {
-        Wf.row_indices[i] = Wf.column_indices[i] = i;
-        Wf.values[i] = w_f[i]/g_fine.weightsX()[i]/g_fine.weightsY()[i];
-    }
-    for( int i =0; i<(int)v_c.size(); i++)
-    {
-        Vc.row_indices[i] = Vc.column_indices[i] = i;
-        Vc.values[i] = v_c[i];
-    }
-    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
-    cusp::transpose( temp, A);
-    cusp::multiply( A, Wf, temp);
-    cusp::multiply( Vc, temp, A);
-    A.sort_by_row_and_column();
-    return A;
-}
-
-
-
-///@deprecated
-cusp::coo_matrix<int, double, cusp::host_memory> projection( const dg::aRefinedGrid3d& g_fine)
-{
-    //form the adjoint
-    thrust::host_vector<double> w_f = dg::create::weights( g_fine);
-    thrust::host_vector<double> v_c = dg::create::inv_weights( g_fine.associated() );
-    cusp::coo_matrix<int, double, cusp::host_memory> Wf( w_f.size(), w_f.size(), w_f.size());
-    cusp::coo_matrix<int, double, cusp::host_memory> Vc( v_c.size(), v_c.size(), v_c.size());
-    for( int i =0; i<(int)w_f.size(); i++)
-    {
-        Wf.row_indices[i] = Wf.column_indices[i] = i;
-        Wf.values[i] = w_f[i]/g_fine.weightsX()[i]/g_fine.weightsY()[i];
-    }
-    for( int i =0; i<(int)v_c.size(); i++)
-    {
-        Vc.row_indices[i] = Vc.column_indices[i] = i;
-        Vc.values[i] = v_c[i];
-    }
-    cusp::coo_matrix<int, double, cusp::host_memory> temp = interpolation( g_fine), A;
-    cusp::transpose( temp, A);
-    cusp::multiply( A, Wf, temp);
-    cusp::multiply( Vc, temp, A);
-    A.sort_by_row_and_column();
-    return A;
-}
-*/
-
-
 }//namespace create
-
-
-
-
 }//namespace dg

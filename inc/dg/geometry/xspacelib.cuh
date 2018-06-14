@@ -64,7 +64,7 @@ dg::IHMatrix backscatter( const aBasicTopology3d<real_type>& g)
 {
     Grid2d g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
     cusp::coo_matrix<int,real_type, cusp::host_memory> back2d = backscatter( g2d);
-    return (dg::IHMatrix)dgtensor<real_type>( 1, tensorproduct<real_type>( g.Nz(), delta(1)), back2d);
+    return (dg::IHMatrix)dgtensor<real_type>( 1, tensorproduct<real_type>( g.Nz(), delta<real_type>(1)), back2d);
 }
 ///@}
 

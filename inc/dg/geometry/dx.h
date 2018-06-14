@@ -36,12 +36,12 @@ template<class real_type>
 EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
 {
 
-    Operator<real_type> l = create::lilj(n);
-    Operator<real_type> r = create::rirj(n);
-    Operator<real_type> lr = create::lirj(n);
-    Operator<real_type> rl = create::rilj(n);
-    Operator<real_type> d = create::pidxpj(n);
-    Operator<real_type> t = create::pipj_inv(n);
+    Operator<real_type> l = create::lilj<real_type>(n);
+    Operator<real_type> r = create::rirj<real_type>(n);
+    Operator<real_type> lr = create::lirj<real_type>(n);
+    Operator<real_type> rl = create::rilj<real_type>(n);
+    Operator<real_type> d = create::pidxpj<real_type>(n);
+    Operator<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
 
     Operator< real_type> a = 1./2.*t*(d-d.transpose());
@@ -138,12 +138,12 @@ template<class real_type>
 EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
 {
 
-    Operator<real_type> l = create::lilj(n);
-    Operator<real_type> r = create::rirj(n);
-    Operator<real_type> lr = create::lirj(n);
-    Operator<real_type> rl = create::rilj(n);
-    Operator<real_type> d = create::pidxpj(n);
-    Operator<real_type> t = create::pipj_inv(n);
+    Operator<real_type> l = create::lilj<real_type>(n);
+    Operator<real_type> r = create::rirj<real_type>(n);
+    Operator<real_type> lr = create::lirj<real_type>(n);
+    Operator<real_type> rl = create::rilj<real_type>(n);
+    Operator<real_type> d = create::pidxpj<real_type>(n);
+    Operator<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
     Operator<real_type>  a = t*(-l-d.transpose());
     //if( dir == backward) a = -a.transpose();
@@ -223,12 +223,12 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
 template<class real_type>
 EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
 {
-    Operator<real_type> l = create::lilj(n);
-    Operator<real_type> r = create::rirj(n);
-    Operator<real_type> lr = create::lirj(n);
-    Operator<real_type> rl = create::rilj(n);
-    Operator<real_type> d = create::pidxpj(n);
-    Operator<real_type> t = create::pipj_inv(n);
+    Operator<real_type> l = create::lilj<real_type>(n);
+    Operator<real_type> r = create::rirj<real_type>(n);
+    Operator<real_type> lr = create::lirj<real_type>(n);
+    Operator<real_type> rl = create::rilj<real_type>(n);
+    Operator<real_type> d = create::pidxpj<real_type>(n);
+    Operator<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
     Operator<real_type>  a = t*(l+d);
     //if( dir == backward) a = -a.transpose();
@@ -309,10 +309,10 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
 template<class real_type>
 EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
 {
-    Operator<real_type> l = create::lilj(n);
-    Operator<real_type> r = create::rirj(n);
-    Operator<real_type> lr = create::lirj(n);
-    Operator<real_type> rl = create::rilj(n);
+    Operator<real_type> l = create::lilj<real_type>(n);
+    Operator<real_type> r = create::rirj<real_type>(n);
+    Operator<real_type> lr = create::lirj<real_type>(n);
+    Operator<real_type> rl = create::rilj<real_type>(n);
     Operator<real_type> a = l+r;
     Operator<real_type> a_bound_left = a;//DIR and PER
     if( bcx == NEU || bcx == NEU_DIR)
@@ -323,7 +323,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
     Operator<real_type> b = -rl;
     Operator<real_type> bp = -lr;
     //transform to XSPACE
-    Operator<real_type> t = create::pipj_inv(n);
+    Operator<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
     BasicGrid1d<real_type> g( 0,1, n, N);
     Operator<real_type> backward=g.dlt().backward();
