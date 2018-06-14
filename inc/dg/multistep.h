@@ -35,25 +35,25 @@ template< size_t k,class real_type>
 struct ab_coeff;
 template<class real_type>
 struct ab_coeff<2,real_type>{
-    static constexpr real_type b[2] = {
+    const real_type b[2] = {
         1.5, -0.5
     };
 };
 template<class real_type>
 struct ab_coeff<3,real_type>{
-    static constexpr real_type b[3] = {
+    const real_type b[3] = {
         23./12., -4./3., 5./12.
     };
 };
 template<class real_type>
 struct ab_coeff<4,real_type>{
-    static constexpr real_type b[4] = {
+    const real_type b[4] = {
         55./24., -59./24., 37./24., -3./8.
     };
 };
 template<class real_type>
 struct ab_coeff<5,real_type>{
-    static constexpr real_type b[5] = {
+    const real_type b[5] = {
         1901./720., -1387./360., 109./30., -637./360., 251./720.
     };
 };
@@ -115,6 +115,7 @@ struct AB
     real_type tu_, dt_;
     std::array<container,k> f_;
     container u_;
+    const ab_coeff<k,real_type> m_ab;
 };
 
 template< size_t k, class container>
@@ -142,7 +143,7 @@ template< class RHS>
 void AB<k, container>::step( RHS& f, real_type& t, container& u)
 {
     for( unsigned i=0; i<k; i++)
-        blas1::axpby( dt_*ab_coeff<k,real_type>::b[i], f_[i], 1., u_);
+        blas1::axpby( dt_*m_ab.b[i], f_[i], 1., u_);
     //permute f_[k-1]  to be the new f_[0]
     for( unsigned i=k-1; i>0; i--)
         f_[i-1].swap( f_[i]);

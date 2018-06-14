@@ -50,84 +50,84 @@ const real_type rk_coeff<1>::beta[1] = {1};
 //from Cockburn paper
 template<class real_type>
 struct rk_coeff<2, real_type>{
-static constexpr real_type alpha[2][2] = {
+const real_type alpha[2][2] = {
     { 1,   0},
     { 0.5, 0.5}
 };
-static constexpr real_type beta[2] = { 1, 0.5 };
+const real_type beta[2] = { 1, 0.5 };
 };
 //from Cockburn paper
 template<class real_type>
 struct rk_coeff<3, real_type>{
-static constexpr real_type alpha[3][3] = {
+const real_type alpha[3][3] = {
     { 1,     0,    0},
     { 0.75,  0.25, 0},
     { 1./3., 0.,   2./3.}
 };
-static constexpr real_type beta[3] = {
+const real_type beta[3] = {
      1, 0.25, 2./3.
 };
 };
 template<class real_type>
 struct rk_coeff<4, real_type>{
 //classic RK4 coefficients (matlab used to compute from normal form)
-static constexpr real_type alpha[4][4] = {
+const real_type alpha[4][4] = {
     { 1,    0., 0, 0 },
     { 1.,   0., 0, 0 },
     { 1.,   0., 0, 0 },
     {-1./3., 1./3., 2./3., 1./3.}
 };
-static constexpr real_type beta[4] = {
+const real_type beta[4] = {
      0.5, 0.5, 1.0, 1./6.
 };
 };
 /////////////////////rk_classic//////////////////
 template<class real_type>
 struct rk_classic<1, real_type>{
-static constexpr real_type a[1][1] = {
+const real_type a[1][1] = {
     {0}
 };
-static constexpr real_type b[1] = {
+const real_type b[1] = {
     1.
 };
 };
 template<class real_type>
 struct rk_classic<2, real_type>{
-static constexpr real_type a[2][2] = {
+const real_type a[2][2] = {
     {0,0},
     {.5,0}
 };
-static constexpr real_type b[2] = {
+const real_type b[2] = {
     0.,1.
 };
 };
 template<class real_type>
 struct rk_classic<3, real_type>{
-static constexpr real_type a[3][3] = {
+const real_type a[3][3] = {
     {0,0,0},
     {.5,0,0},
     {-1,2,0},
 };
-static constexpr real_type b[3] = {
+const real_type b[3] = {
     1./6.,2./3.,1./6.
 };
 };
 template<class real_type>
 struct rk_classic<4, real_type>{
-static constexpr real_type a[4][4] = {
+const real_type a[4][4] = {
     {0,0,0,0},
     {0.5, 0,0,0},
     {0,0.5,0,0},
     {0,0,1,0}
 };
-static constexpr real_type b[4] = {
+const real_type b[4] = {
     1./6., 1./3., 1./3., 1./6.
 };
 };
 template<class real_type>
 struct rk_classic<6, real_type>{
 //Fehlberg
-static constexpr real_type a[6][6] = {
+const real_type a[6][6] = {
     {0,0,0,0,0,0},
     {0.25, 0,0,0,0,0},
     {3./32., 9./32.,0,0,0,0},
@@ -135,7 +135,7 @@ static constexpr real_type a[6][6] = {
     {439./216., -8, 3680./513.,   -845./4104.,0,0},
     {-8./27.,   2.,   -3544./2565.,  1859./4104.,   -11./40., 0}
 };
-static constexpr real_type b[6] = {
+const real_type b[6] = {
     16./135.,  0,   6656./12825.,  28561./56430.,     -9./50.,   2./55.
 };
 
@@ -143,7 +143,7 @@ static constexpr real_type b[6] = {
 template<class real_type>
 struct rk_classic<17, real_type>{
 //RK(10)
-static constexpr real_type a[17][17] = {
+const real_type a[17][17] = {
 {0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0},
 {0.100000000000000000000000000000000000000000000000000000000000, 0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0},
 {-0.915176561375291440520015019275342154318951387664369720564660,
@@ -283,7 +283,7 @@ static constexpr real_type a[17][17] = {
 -0.675000000000000000000000000000000000000000000000000000000000, 0}
 };
 
-static constexpr real_type b[17] = {
+const real_type b[17] = {
 0.0333333333333333333333333333333333333333333333333333333333333,
 0.0250000000000000000000000000000000000000000000000000000000000,
 0.0333333333333333333333333333333333333333333333333333333333333,
@@ -377,6 +377,7 @@ struct RK_opt
     void step( RHS& rhs, real_type t0, const container& u0, real_type& t1, container& u1, real_type dt);
   private:
     std::array<container,s> u_; //the order determines the amount of memory needed
+    const rk_coeff<s,real_type> m_rk;
 };
 
 template< size_t k, class container>
@@ -384,27 +385,27 @@ template< class RHS>
 void RK_opt<k, container>::step( RHS& f, real_type t0, const container& u0, real_type& t1, container& u1, real_type dt)
 {
     f(t0, u0, u_[0]);
-    blas1::axpby( rk_coeff<k,real_type>::alpha[0][0], u0, dt*rk_coeff<k,real_type>::beta[0], u_[0]);
+    blas1::axpby( m_rk.alpha[0][0], u0, dt*m_rk.beta[0], u_[0]);
     std::array<real_type,k-1> tu;
-    tu[0] =  dt*rk_coeff<k,real_type>::beta[0];
-    tu[0] = DG_FMA( (rk_coeff<k,real_type>::alpha[0][0]), t0, tu[0]);
+    tu[0] =  dt*m_rk.beta[0];
+    tu[0] = DG_FMA( (m_rk.alpha[0][0]), t0, tu[0]);
     for( unsigned i=1; i<k-1; i++)
     {
         f(tu[i-1], u_[i-1], u_[i] );
-        blas1::axpby( rk_coeff<k,real_type>::alpha[i][0], u0, dt*rk_coeff<k,real_type>::beta[i], u_[i]);
-        tu[i] = dt*rk_coeff<k,real_type>::beta[i];
-        tu[i] = DG_FMA( (rk_coeff<k,real_type>::alpha[i][0]),t0,tu[i]);
+        blas1::axpby( m_rk.alpha[i][0], u0, dt*m_rk.beta[i], u_[i]);
+        tu[i] = dt*m_rk.beta[i];
+        tu[i] = DG_FMA( m_rk.alpha[i][0],t0,tu[i]);
         for( unsigned l=1; l<=i; l++)
         {
-            blas1::axpby(   rk_coeff<k,real_type>::alpha[i][l], u_[l-1], 1., u_[i]);
-            tu[i] = DG_FMA( (rk_coeff<k,real_type>::alpha[i][l]), tu[l-1], tu[i]);
+            blas1::axpby(   m_rk.alpha[i][l], u_[l-1], 1., u_[i]);
+            tu[i] = DG_FMA( m_rk.alpha[i][l], tu[l-1], tu[i]);
         }
     }
     //Now add everything up to u1
     f(tu[k-2], u_[k-2], u_[k-1]); //u1 may alias u0, so we need u_[k-1]
-    blas1::axpby( rk_coeff<k,real_type>::alpha[k-1][0], u0, dt*rk_coeff<k,real_type>::beta[k-1], u_[k-1], u1);
+    blas1::axpby( m_rk.alpha[k-1][0], u0, dt*m_rk.beta[k-1], u_[k-1], u1);
     for( unsigned l=1; l<=k-1; l++)
-        blas1::axpby( rk_coeff<k,real_type>::alpha[k-1][l], u_[l-1],1., u1);
+        blas1::axpby(m_rk.alpha[k-1][l], u_[l-1],1., u1);
     t1 = t0 + dt;
 }
 ///@cond
@@ -472,6 +473,7 @@ struct RK
   private:
     std::array<container,s> k_;
     container u_;
+    const rk_classic<s, real_type> m_rk;
 };
 
 template< size_t s, class container>
@@ -482,19 +484,19 @@ void RK<s, container>::step( RHS& f, real_type t0, const container& u0, real_typ
     real_type tu = t0;
     for( unsigned i=1; i<s; i++) //compute k_i
     {
-        blas1::axpby( 1., u0, dt*rk_classic<s,real_type>::a[i][0],k_[0], u_); //l=0
-        tu = DG_FMA( dt,(rk_classic<s,real_type>::a[i][0]),t0); //l=0
+        blas1::axpby( 1., u0, dt*m_rk.a[i][0],k_[0], u_); //l=0
+        tu = DG_FMA( dt,m_rk.a[i][0],t0); //l=0
         for( unsigned l=1; l<i; l++)
         {
-            blas1::axpby( dt*rk_classic<s,real_type>::a[i][l], k_[l],1., u_);
-            tu = DG_FMA(dt,(rk_classic<s,real_type>::a[i][l]),tu);
+            blas1::axpby( dt*m_rk.a[i][l], k_[l],1., u_);
+            tu = DG_FMA(dt,m_rk.a[i][l],tu);
         }
         f( tu, u_, k_[i]);
 
     }
     //Now add everything up to u1
     for( unsigned i=0; i<s; i++)
-        blas1::axpby( dt*rk_classic<s,real_type>::b[i], k_[i],1., u1);
+        blas1::axpby( dt*m_rk.b[i], k_[i],1., u1);
     t1 = t0 + dt;
 }
 
