@@ -164,7 +164,7 @@ struct FieldFinv
         fpsi_(psi, x0, y0, mode), fieldRZYTribeiro_(psi, x0, y0), fieldRZYTequalarc_(psi, x0, y0), N_steps(N_steps), mode_(mode) { }
     void operator()(double t, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
     {
-        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
+        std::array<double,3> begin( {0,0,0}), end(begin);
         fpsi_.find_initial( psi[0], begin[0], begin[1]);
         if(mode_==0)dg::stepperRK<17>( fieldRZYTribeiro_,  0., begin, 2*M_PI, end, N_steps);
         if(mode_==1)dg::stepperRK<17>( fieldRZYTequalarc_, 0., begin, 2*M_PI, end, N_steps);

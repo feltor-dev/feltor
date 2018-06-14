@@ -7,6 +7,7 @@
 
 #include <cusp/coo_matrix.h>
 #include <cusp/print.h>
+#include "json/json.h"
 
 #include "file/nc_utilities.h"
 #include "dg/algorithm.h"

@@ -30,7 +30,7 @@ namespace gpu
 ////////////////////////////////////////////////////////////////////////////////
 ///@cond
 __device__
-inline void AccumulateWord( int64_t *accumulator, int i, int64_t x, int stride = 1) {
+static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x, int stride = 1) {
     // With atomic superacc updates
     // accumulation and carry propagation can happen in any order,
     // as long as addition is atomic
@@ -79,7 +79,7 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x, int stride =
 * @param stride stride in which accumulator is to be accessed
 */
 __device__
-inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //transposed accumulation
+static inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //transposed accumulation
     if (x == 0)
         return;
 
@@ -117,7 +117,7 @@ inline void Accumulate( int64_t* accumulator, double x, int stride = 1) { //tran
 * @return  carry in bit (sign)
 */
 __device__
-int Normalize( int64_t *accumulator, int& imin, int& imax, int stride = 1) {
+static int Normalize( int64_t *accumulator, int& imin, int& imax, int stride = 1) {
     int64_t carry_in = accumulator[(imin)*stride] >> DIGITS;
     accumulator[(imin)*stride] -= carry_in << DIGITS;
     int i;
@@ -148,7 +148,7 @@ int Normalize( int64_t *accumulator, int& imin, int& imax, int stride = 1) {
 * @return the double precision number nearest to the superaccumulator
 */
 __device__
-double Round( int64_t * accumulator) {
+static inline double Round( int64_t * accumulator) {
     int imin = IMIN;
     int imax = IMAX;
     int negative = Normalize(accumulator, imin, imax);

@@ -23,12 +23,13 @@ namespace dg{
 * \f[ Ax=b\f]
 *
 * @ingroup invert
-* @copydoc hide_ContainerType
 *
 * @note Conjugate gradients might become unstable for positive semidefinite
 * matrices arising e.g. in the discretization of the periodic laplacian
+* @attention beware the sign: a negative definite matrix does @b not work in Conjugate gradient
 *
 * @snippet cg2d_t.cu doxygen
+* @copydoc hide_ContainerType
 */
 template< class ContainerType>
 class CG
@@ -61,7 +62,7 @@ class CG
      *
      * The iteration stops if \f$ ||b - Ax|| < \epsilon( ||b|| + C) \f$ where \f$C\f$ is
      * a correction factor to the absolute error
-     * @param A A symmetric positive definit matrix
+     * @param A A symmetric, positive definit matrix
      * @param x Contains an initial value on input and the solution on output.
      * @param b The right hand side vector. x and b may be the same vector.
      * @param P The preconditioner to be used
@@ -346,7 +347,6 @@ struct Extrapolation
  *
  * @ingroup invert
  * @snippet elliptic2d_b.cu invert
- * @copydoc hide_ContainerType
  * @note A note on weights, inverse weights and preconditioning.
  * A normalized DG-discretized derivative or operator is normally not symmetric.
  * The diagonal coefficient matrix that is used to make the operator
@@ -356,7 +356,9 @@ struct Extrapolation
  * Independent from this, a preconditioner should be used to solve the
  * symmetric matrix equation. The inverse of \f$W\f$ is
  * a good general purpose preconditioner.
+ * @attention beware the sign: a negative definite matrix does @b not work in Conjugate gradient
  * @sa Extrapolation MultigridCG2d
+ * @copydoc hide_ContainerType
  */
 template<class ContainerType>
 struct Invert
@@ -463,7 +465,8 @@ struct Invert
      * conjugate gradient method. The initial guess comes from an extrapolation
      * of the last solutions.
      * @copydoc hide_matrix
-     * @tparam Preconditioner A type for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable.
+     * @tparam SquareNorm A type for which the blas2::dot( const Matrix&, const Vector&) function is callable. This can e.g. be one of the container types.
+     * @tparam Preconditioner A type for which the <tt> blas2::symv(Matrix&, Vector1&, Vector2&) </tt> function is callable.
      * @param op symmetric Matrix operator class
      * @param phi solution (write only)
      * @param rho right-hand-side (will be multiplied by \c weights)
@@ -475,8 +478,13 @@ struct Invert
      *
      * @return number of iterations used
      */
+<<<<<<< HEAD
     template< class Matrix, class Preconditioner >
     unsigned operator()( Matrix& op, ContainerType& phi, const ContainerType& rho, const ContainerType& weights, const ContainerType& inv_weights, Preconditioner& p)
+=======
+    template< class Matrix, class SquareNorm, class Preconditioner >
+    unsigned operator()( Matrix& op, container& phi, const container& rho, const SquareNorm& weights, const SquareNorm& inv_weights, Preconditioner& p)
+>>>>>>> master
     {
         assert( phi.size() != 0);
         assert( &rho != &phi);
@@ -489,7 +497,7 @@ struct Invert
         unsigned number;
         if( multiplyWeights_ )
         {
-            dg::blas2::symv( rho, weights, m_ex.tail());
+            dg::blas2::symv( weights, rho, m_ex.tail());
             number = cg( op, phi, m_ex.tail(), p, inv_weights, eps_, nrmb_correction_);
         }
         else

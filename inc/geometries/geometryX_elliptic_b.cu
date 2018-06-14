@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "file/nc_utilities.h"
+#include "json/json.h"
 
 #include "dg/algorithm.h"
 

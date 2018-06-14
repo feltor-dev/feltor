@@ -188,7 +188,7 @@
  A class for which the \c blas2::symv(Matrix&, Vector1&, Vector2&) function is callable
  with the \c container type as argument. Also, The functions \c %inv_weights() and \c %precond()
  need to be callable and return inverse weights and the preconditioner for the conjugate
- gradient method. The %Operator is assumed to be linear and symmetric!
+ gradient method. \c SymmetricOp is assumed to be linear, symmetric and positive definite!
  @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const container&, container&);
   and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
   */

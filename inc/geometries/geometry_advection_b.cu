@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 
+#include "json/json.h"
 #include "dg/algorithm.h"
 
 #include "curvilinear.h"

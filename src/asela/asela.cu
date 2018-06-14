@@ -4,6 +4,7 @@
 #include <sstream>
 #include <cmath>
 // #define DG_DEBUG
+#include "json/json.h"
 
 #include "draw/host_window.h"
 //#include "draw/device_window.cuh"

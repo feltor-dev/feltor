@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "json/json.h"
 /*!@file
  *
  * Geometry parameters
@@ -15,6 +14,7 @@ namespace solovev
 /**
  * @brief Constructs and display geometric parameters for the solovev and taylor fields
  * @ingroup geom
+ * @note include \c json/json.h before \c geometries.h in order to activate json functionality
  */
 struct Parameters
 {
@@ -32,6 +32,7 @@ struct Parameters
            qampl; //scales grad-shafranov q factor
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
     std::string equilibrium;
+#ifdef JSONCPP_VERSION_STRING
     Parameters( const Json::Value& js) {
         A  = js.get("A", 0).asDouble();
         c.resize(13);//there are only 12 originially c[12] is to make fieldlines straight
@@ -53,28 +54,6 @@ struct Parameters
         qampl = js.get("qampl", 1.).asDouble();
         equilibrium = js.get( "equilibrium", "solovev").asString();
     }
-    void display( std::ostream& os = std::cout ) const
-    {
-        os << "Geometrical parameters are: \n"
-            <<" A             = "<<A<<"\n";
-        for( unsigned i=0; i<13; i++)
-            os<<" c"<<i+1<<"\t\t = "<<c[i]<<"\n";
-
-        os  <<" R0            = "<<R_0<<"\n"
-            <<" epsilon_a     = "<<a/R_0<<"\n"
-            <<" elongation    = "<<elongation<<"\n"
-            <<" triangularity = "<<triangularity<<"\n"
-            <<" alpha         = "<<alpha<<"\n"
-            <<" rk4 epsilon   = "<<rk4eps<<"\n"
-            <<" psipmin       = "<<psipmin<<"\n"
-            <<" psipmax       = "<<psipmax<<"\n"
-            <<" psipmaxcut    = "<<psipmaxcut<<"\n"
-            <<" psipmaxlim    = "<<psipmaxlim<<"\n"
-            <<" qampl    = "<<qampl<<"\n";
-        os << std::flush;
-
-    }
-
     /**
      * @brief Put values into a json string
      *
@@ -98,6 +77,28 @@ struct Parameters
         js["qampl"] = qampl;
         js[ "equilibrium"] = equilibrium;
         return js;
+    }
+#endif // JSONCPP_VERSION_STRING
+    void display( std::ostream& os = std::cout ) const
+    {
+        os << "Geometrical parameters are: \n"
+            <<" A             = "<<A<<"\n";
+        for( unsigned i=0; i<13; i++)
+            os<<" c"<<i+1<<"\t\t = "<<c[i]<<"\n";
+
+        os  <<" R0            = "<<R_0<<"\n"
+            <<" epsilon_a     = "<<a/R_0<<"\n"
+            <<" elongation    = "<<elongation<<"\n"
+            <<" triangularity = "<<triangularity<<"\n"
+            <<" alpha         = "<<alpha<<"\n"
+            <<" rk4 epsilon   = "<<rk4eps<<"\n"
+            <<" psipmin       = "<<psipmin<<"\n"
+            <<" psipmax       = "<<psipmax<<"\n"
+            <<" psipmaxcut    = "<<psipmaxcut<<"\n"
+            <<" psipmaxlim    = "<<psipmaxlim<<"\n"
+            <<" qampl    = "<<qampl<<"\n";
+        os << std::flush;
+
     }
 };
 } //namespace solovev

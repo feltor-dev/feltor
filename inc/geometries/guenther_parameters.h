@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include "json/json.h"
 /*!@file
  *
  * Geometry parameters for guenther field
@@ -13,6 +12,9 @@ namespace guenther
 {
 /**
  * @brief Constructs and display geometric parameters for the guenther field
+ *
+ * @ingroup geom
+ * @note include \c json/json.h before \c geometries.h in order to activate json functionality
  */
 struct Parameters
 {
@@ -28,6 +30,7 @@ struct Parameters
            psipmaxcut, //!< for cutting
            psipmaxlim; //!< for limiter
     std::vector<double> c;  //!< coefficients for the solovev equilibrium
+#ifdef JSONCPP_VERSION_STRING
     Parameters( const Json::Value& js) {
         I_0  = js["I_0"].asDouble();
         R_0  = js["R_0"].asDouble();
@@ -41,6 +44,7 @@ struct Parameters
         psipmaxcut= js["psip_max_cut"].asDouble();
         psipmaxlim= js["psip_max_lim"].asDouble();
     }
+#endif // JSONCPP_VERSION_STRING
     void display( std::ostream& os = std::cout ) const
     {
         os << "Geometrical parameters are: \n"
