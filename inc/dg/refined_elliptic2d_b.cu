@@ -1,7 +1,6 @@
 #include <iostream>
 #include <iomanip>
 
-//#include "backend/xspacelib.cuh"
 #include <thrust/device_vector.h>
 #include "blas.h"
 

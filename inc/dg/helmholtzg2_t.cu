@@ -3,7 +3,6 @@
 #include "blas.h"
 
 #include "helmholtz.h"
-#include "geometry/xspacelib.cuh"
 #include "backend/exceptions.h"
 #include "multistep.h"
 #include "cg.h"

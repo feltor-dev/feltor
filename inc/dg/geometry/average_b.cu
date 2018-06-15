@@ -1,6 +1,6 @@
 #include <iostream>
 #include "average.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 #include "dg/backend/timer.cuh"
 #include "dg/backend/typedefs.cuh"
 

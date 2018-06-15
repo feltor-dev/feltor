@@ -1,7 +1,7 @@
 #pragma once
 
-#include "geometry/interpolation.cuh"
-#include "geometry/projection.cuh"
+#include "geometry/interpolation.h"
+#include "geometry/projection.h"
 #include "elliptic.h"
 #include "geometry/refined_grid.h"
 #ifdef MPI_VERSION

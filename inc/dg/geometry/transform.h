@@ -2,7 +2,7 @@
 #include "topological_traits.h"
 #include "multiply.h"
 #include "base_geometry.h"
-#include "weights.cuh"
+#include "weights.h"
 
 
 namespace dg
@@ -15,29 +15,29 @@ namespace dg
  * @param f The function defined in cartesian coordinates
  * @param g a two- or three dimensional Geometry
  * @note Template deduction for the Functor will fail if you overload functions with different
- dimensionality (e.g. double sine( double x) and double sine(double x, double y) )
+ dimensionality (e.g. real_type sine( real_type x) and real_type sine(real_type x, real_type y) )
  * You will want to rename those uniquely
  *
  * @return A set of points representing F
  * @ingroup pullback
  */
-template< class Functor>
-thrust::host_vector<double> pullback( const Functor& f, const aGeometry2d& g)
+template< class Functor, class real_type>
+thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry2d<real_type>& g)
 {
-    std::vector<thrust::host_vector<double> > map = g.map();
-    thrust::host_vector<double> vec( g.size());
+    std::vector<thrust::host_vector<real_type> > map = g.map();
+    thrust::host_vector<real_type> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
         vec[i] = f( map[0][i], map[1][i]);
     return vec;
 }
 
-///@copydoc pullback(const Functor&,const aGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry2d&)
 ///@ingroup pullback
-template< class Functor>
-thrust::host_vector<double> pullback( const Functor& f, const aGeometry3d& g)
+template< class Functor, class real_type>
+thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry3d<real_type>& g)
 {
-    std::vector<thrust::host_vector<double> > map = g.map();
-    thrust::host_vector<double> vec( g.size());
+    std::vector<thrust::host_vector<real_type> > map = g.map();
+    thrust::host_vector<real_type> vec( g.size());
     for( unsigned i=0; i<g.size(); i++)
         vec[i] = f( map[0][i], map[1][i], map[2][i]);
     return vec;
@@ -45,28 +45,28 @@ thrust::host_vector<double> pullback( const Functor& f, const aGeometry3d& g)
 
 #ifdef MPI_VERSION
 
-///@copydoc pullback(const Functor&,const aGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry2d&)
 ///@ingroup pullback
-template< class Functor>
-MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIGeometry2d& g)
+template< class Functor, class real_type>
+MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aRealMPIGeometry2d<real_type>& g)
 {
-    std::vector<MPI_Vector<thrust::host_vector<double> > > map = g.map();
-    thrust::host_vector<double> vec( g.local().size());
+    std::vector<MPI_Vector<thrust::host_vector<real_type> > > map = g.map();
+    thrust::host_vector<real_type> vec( g.local().size());
     for( unsigned i=0; i<g.local().size(); i++)
         vec[i] = f( map[0].data()[i], map[1].data()[i]);
-    return MPI_Vector<thrust::host_vector<double> >( vec, g.communicator());
+    return MPI_Vector<thrust::host_vector<real_type> >( vec, g.communicator());
 }
 
-///@copydoc pullback(const Functor&,const aGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry2d&)
 ///@ingroup pullback
-template< class Functor>
-MPI_Vector<thrust::host_vector<double> > pullback( const Functor& f, const aMPIGeometry3d& g)
+template< class Functor, class real_type>
+MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aRealMPIGeometry3d<real_type>& g)
 {
-    std::vector<MPI_Vector<thrust::host_vector<double> > > map = g.map();
-    thrust::host_vector<double> vec( g.local().size());
+    std::vector<MPI_Vector<thrust::host_vector<real_type> > > map = g.map();
+    thrust::host_vector<real_type> vec( g.local().size());
     for( unsigned i=0; i<g.local().size(); i++)
         vec[i] = f( map[0].data()[i], map[1].data()[i], map[2].data()[i]);
-    return MPI_Vector<thrust::host_vector<double> >( vec, g.communicator());
+    return MPI_Vector<thrust::host_vector<real_type> >( vec, g.communicator());
 }
 
 #endif //MPI_VERSION
@@ -228,8 +228,9 @@ template< class Geometry>
 get_host_vector<Geometry> volume( const Geometry& g)
 {
     using host_vector = get_host_vector<Geometry>;
+    using real_type = get_value_type<host_vector>;
     host_vector temp = inv_volume(g);
-    dg::blas1::transform(temp,temp,dg::INVERT<double>());
+    dg::blas1::transform(temp,temp,dg::INVERT<real_type>());
     return temp;
 }
 

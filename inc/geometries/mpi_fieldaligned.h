@@ -7,7 +7,7 @@
 #include "dg/geometry/mpi_evaluation.h"
 #include "dg/geometry/mpi_grid.h"
 #include "dg/geometry/mpi_projection.h"
-#include "dg/geometry/interpolation.cuh"
+#include "dg/geometry/interpolation.h"
 #include "dg/geometry/functions.h"
 #include "dg/runge_kutta.h"
 #include "fieldaligned.h"

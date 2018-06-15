@@ -253,8 +253,6 @@ struct NearestNeighborComm
     int m_source[2], m_dest[2];
 };
 
-typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH; //!< host Communicator for the use in an mpi matrix for derivatives
-
 ///@cond
 
 template<class I, class V>

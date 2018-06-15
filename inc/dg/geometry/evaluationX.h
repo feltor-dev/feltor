@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gridX.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 
 
 /*! @file
@@ -12,7 +12,8 @@ namespace dg
 
 ///@cond
 namespace create{
-thrust::host_vector<double> abscissas( const GridX1d& g)
+template<class real_type>
+thrust::host_vector<real_type> abscissas( const RealGridX1d<real_type>& g)
 {
     return abscissas(g.grid());
 }
@@ -32,13 +33,14 @@ thrust::host_vector<double> abscissas( const GridX1d& g)
  *
  * @return  A DG Host Vector with values
  */
-template< class UnaryOp>
-thrust::host_vector<double> evaluate( UnaryOp f, const GridX1d& g)
+template< class UnaryOp,class real_type>
+thrust::host_vector<real_type> evaluate( UnaryOp f, const RealGridX1d<real_type>& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
-thrust::host_vector<double> evaluate( double (f)(double), const GridX1d& g)
+template<class real_type>
+thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGridX1d<real_type>& g)
 {
     return evaluate( *f, g.grid());
 };
@@ -56,13 +58,14 @@ thrust::host_vector<double> evaluate( double (f)(double), const GridX1d& g)
  * @note Copies the binary Operator. This function is meant for small function objects, that
             may be constructed during function call.
  */
-template< class BinaryOp>
-thrust::host_vector<double> evaluate( const BinaryOp& f, const aTopologyX2d& g)
+template< class BinaryOp, class real_type>
+thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aRealTopologyX2d<real_type>& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double), const aTopologyX2d& g)
+template<class real_type>
+thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), const aRealTopologyX2d<real_type>& g)
 {
     return evaluate( *f, g.grid());
 };
@@ -80,13 +83,14 @@ thrust::host_vector<double> evaluate( double(f)(double, double), const aTopology
  * @note Copies the ternary Operator. This function is meant for small function objects, that
             may be constructed during function call.
  */
-template< class TernaryOp>
-thrust::host_vector<double> evaluate( const TernaryOp& f, const aTopologyX3d& g)
+template< class TernaryOp, class real_type>
+thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aRealTopologyX3d<real_type>& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
-thrust::host_vector<double> evaluate( double(f)(double, double, double), const aTopologyX3d& g)
+template<class real_type>
+thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type, real_type), const aRealTopologyX3d<real_type>& g)
 {
     return evaluate( *f, g.grid());
 };

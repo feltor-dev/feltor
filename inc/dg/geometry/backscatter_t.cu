@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include "draw/host_window.h"
-#include "xspacelib.cuh"
+#include "xspacelib.h"
 #include "../functors.h"
 #include "../blas2.h"
 

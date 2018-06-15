@@ -493,9 +493,10 @@ dg::Operator<T> invert( const dg::Operator<T>& in)
  *
  * @return Operator
  */
-Operator<double> delta( unsigned n)
+template<class real_type>
+Operator<real_type> delta( unsigned n)
 {
-    Operator<double> op(n, 0);
+    Operator<real_type> op(n, 0);
     for( unsigned i=0; i<n; i++)
         op( i,i) = 1.;
     return op;
@@ -507,11 +508,12 @@ Operator<double> delta( unsigned n)
  *
  * @return Operator
  */
-Operator<double> pipj( unsigned n)
+template<class real_type>
+Operator<real_type> pipj( unsigned n)
 {
-    Operator<double> op(n, 0);
+    Operator<real_type> op(n, 0);
     for( unsigned i=0; i<n; i++)
-        op( i,i) = 2./(double)(2*i+1);
+        op( i,i) = 2./(real_type)(2*i+1);
     return op;
 }
 /**
@@ -521,11 +523,12 @@ Operator<double> pipj( unsigned n)
  *
  * @return Operator
  */
-Operator<double> pipj_inv( unsigned n)
+template<class real_type>
+Operator<real_type> pipj_inv( unsigned n)
 {
-    Operator<double> op(n, 0);
+    Operator<real_type> op(n, 0);
     for( unsigned i=0; i<n; i++)
-        op( i,i) = (double)(2*i+1)/2.;
+        op( i,i) = (real_type)(2*i+1)/2.;
     return op;
 }
 /**
@@ -535,9 +538,10 @@ Operator<double> pipj_inv( unsigned n)
  *
  * @return Operator
  */
-Operator<double> pidxpj( unsigned n)
+template<class real_type>
+Operator<real_type> pidxpj( unsigned n)
 {
-    Operator<double> op(n, 0);
+    Operator<real_type> op(n, 0);
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
         {
@@ -556,9 +560,10 @@ Operator<double> pidxpj( unsigned n)
  *
  * @return Operator
  */
-Operator<double> rirj( unsigned n)
+template<class real_type>
+Operator<real_type> rirj( unsigned n)
 {
-    return Operator<double>( n, 1.);
+    return Operator<real_type>( n, 1.);
 }
 /**
  * @brief Create the RL-matrix
@@ -567,9 +572,10 @@ Operator<double> rirj( unsigned n)
  *
  * @return Operator
  */
-Operator<double> rilj( unsigned n)
+template<class real_type>
+Operator<real_type> rilj( unsigned n)
 {
-    Operator<double> op( n, -1.);
+    Operator<real_type> op( n, -1.);
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
             if( j%2 == 0)
@@ -583,7 +589,10 @@ Operator<double> rilj( unsigned n)
  *
  * @return Operator
  */
-Operator<double> lirj( unsigned n) {return rilj( n).transpose();}
+template<class real_type>
+Operator<real_type> lirj( unsigned n) {
+    return rilj<real_type>( n).transpose();
+}
 /**
  * @brief Create the L-matrix
  *
@@ -591,9 +600,10 @@ Operator<double> lirj( unsigned n) {return rilj( n).transpose();}
  *
  * @return Operator
  */
-Operator<double> lilj( unsigned n)
+template<class real_type>
+Operator<real_type> lilj( unsigned n)
 {
-    Operator<double> op( n, -1.);
+    Operator<real_type> op( n, -1.);
     for( unsigned i=0; i<n; i++)
         for( unsigned j=0; j<n; j++)
             if( ((i+j)%2) == 0)
@@ -609,10 +619,11 @@ Operator<double> lilj( unsigned n)
  *
  * @return new operator
  */
-Operator<double> weights( const DLT<double>& dlt)
+template<class real_type>
+Operator<real_type> weights( const DLT<real_type>& dlt)
 {
     unsigned n = dlt.weights().size();
-    Operator<double> op( n, 0);
+    Operator<real_type> op( n, 0);
     for( unsigned i=0; i<n; i++)
         op(i,i) = dlt.weights()[i];
     return op;
@@ -624,10 +635,11 @@ Operator<double> weights( const DLT<double>& dlt)
  *
  * @return new operator
  */
-Operator<double> precond( const DLT<double>& dlt)
+template<class real_type>
+Operator<real_type> precond( const DLT<real_type>& dlt)
 {
     unsigned n = dlt.weights().size();
-    Operator<double> op( n, 0);
+    Operator<real_type> op( n, 0);
     for( unsigned i=0; i<n; i++)
         op(i,i) = 1./dlt.weights()[i];
     return op;

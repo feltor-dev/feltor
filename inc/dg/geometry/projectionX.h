@@ -1,5 +1,5 @@
 #pragma once
-#include "projection.cuh"
+#include "projection.h"
 #include "gridX.h"
 
 /*!@file
@@ -11,31 +11,37 @@ namespace dg{
 ///@{
 namespace create{
 
-///@copydoc interpolationT(const Grid1d&,const Grid1d&)
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const GridX1d& g_new, const GridX1d& g_old) {
+///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const RealGridX1d<real_type>& g_new, const RealGridX1d<real_type>& g_old) {
     return interpolationT( g_new.grid(), g_old.grid());
 }
-///@copydoc interpolationT(const Grid1d&,const Grid1d&)
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopologyX2d& g_new, const aTopologyX2d& g_old) {
+///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopologyX2d<real_type>& g_new, const aRealTopologyX2d<real_type>& g_old) {
     return interpolationT( g_new.grid(), g_old.grid());
 }
-///@copydoc interpolationT(const Grid1d&,const Grid1d&)
-cusp::coo_matrix<int, double, cusp::host_memory> interpolationT( const aTopologyX3d& g_new, const aTopologyX3d& g_old) {
+///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
+template<class real_type>
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopologyX3d<real_type>& g_new, const aRealTopologyX3d<real_type>& g_old) {
     return interpolationT( g_new.grid(), g_old.grid());
 }
 
-///@copydoc projection(const Grid1d&,const Grid1d&)
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const GridX1d& g_new, const GridX1d& g_old) {
+///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGridX1d<real_type>& g_new, const RealGridX1d<real_type>& g_old) {
     return projection(g_new.grid(), g_old.grid());
 }
 
-///@copydoc projection(const Grid1d&,const Grid1d&)
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopologyX2d& g_new, const aTopologyX2d& g_old) {
+///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopologyX2d<real_type>& g_new, const aRealTopologyX2d<real_type>& g_old) {
     return projection(g_new.grid(), g_old.grid());
 }
 
-///@copydoc projection(const Grid1d&,const Grid1d&)
-cusp::coo_matrix< int, double, cusp::host_memory> projection( const aTopologyX3d& g_new, const aTopologyX3d& g_old) {
+///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
+template<class real_type>
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopologyX3d<real_type>& g_new, const aRealTopologyX3d<real_type>& g_old) {
     return projection(g_new.grid(), g_old.grid());
 }
 

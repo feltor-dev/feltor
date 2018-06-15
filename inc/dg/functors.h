@@ -11,7 +11,7 @@
 #include <thrust/random/normal_distribution.h>
 #include "blas1.h"
 #include "geometry/grid.h"
-#include "geometry/evaluation.cuh"
+#include "geometry/evaluation.h"
 #include "geometry/functions.h"
 /*!@file
  * Functors to use in dg::evaluate or dg::blas1::transform functions

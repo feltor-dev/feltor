@@ -1,5 +1,5 @@
 #include <iostream>
-#include "evaluation.cuh"
+#include "evaluation.h"
 #include "average.h"
 #include "dg/blas.h"
 
