@@ -1,7 +1,7 @@
 #pragma once
 //#include <iomanip>
 
-#include "interpolation.cuh"
+#include "interpolation.h"
 #include "gridX.h"
 
 /*! @file

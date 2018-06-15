@@ -2,7 +2,7 @@
 #include "topological_traits.h"
 #include "multiply.h"
 #include "base_geometry.h"
-#include "weights.cuh"
+#include "weights.h"
 
 
 namespace dg

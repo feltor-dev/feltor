@@ -7,10 +7,10 @@ int main(){
 }
 #else
 #include <cusp/print.h>
-#include "dg/backend/timer.cuh"
-#include "xspacelib.cuh"
-#include "ell_interpolation.cuh"
-#include "interpolation.cuh"
+#include "dg/backend/timer.h"
+#include "xspacelib.h"
+#include "ell_interpolation.h"
+#include "interpolation.h"
 
 double sinus( double x, double y) {return sin(x)*sin(y);}
 double sinus( double x, double y, double z) {return sin(x)*sin(y)*sin(z);}

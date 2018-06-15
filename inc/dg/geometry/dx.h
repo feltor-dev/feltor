@@ -6,7 +6,7 @@
 #include "grid.h"
 #include "functions.h"
 #include "operator.h"
-#include "weights.cuh"
+#include "weights.h"
 
 //What happens for N=1?
 /*! @file

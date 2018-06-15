@@ -4,10 +4,10 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/csr_matrix.h>
 #include "grid.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 #include "functions.h"
-#include "creation.cuh"
-#include "operator_tensor.cuh"
+#include "creation.h"
+#include "operator_tensor.h"
 
 /*! @file
 

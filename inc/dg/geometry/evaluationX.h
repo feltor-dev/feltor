@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gridX.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 
 
 /*! @file

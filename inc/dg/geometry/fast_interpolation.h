@@ -5,8 +5,8 @@
 #include "dg/enums.h"
 #include "dg/blas.h"
 #include "grid.h"
-#include "interpolation.cuh"
-#include "projection.cuh"
+#include "interpolation.h"
+#include "projection.h"
 #ifdef MPI_VERSION
 #include "mpi_grid.h"
 #endif //MPI_VERSION

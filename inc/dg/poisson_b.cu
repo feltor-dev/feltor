@@ -6,7 +6,7 @@
 
 #include "backend/typedefs.cuh"
 #include "backend/timer.cuh"
-#include "geometry/evaluation.cuh"
+#include "geometry/evaluation.h"
 #include "poisson.h"
 #include "blas.h"
 

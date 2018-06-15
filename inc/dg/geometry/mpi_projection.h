@@ -4,7 +4,7 @@
 #include "dg/backend/mpi_matrix.h"
 #include "dg/backend/mpi_collective.h"
 #include "mpi_grid.h"
-#include "projection.cuh"
+#include "projection.h"
 
 /*! @file
   @brief Useful MPI typedefs and overloads of interpolation and projection

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gridX.h"
-#include "evaluationX.cuh"
+#include "evaluationX.h"
 #include "tensor.h"
 
 namespace dg

@@ -3,8 +3,8 @@
 #include <cusp/coo_matrix.h>
 #include <cusp/transpose.h>
 #include "grid.h"
-#include "interpolation.cuh"
-#include "weights.cuh"
+#include "interpolation.h"
+#include "weights.h"
 
 /*!@file
 

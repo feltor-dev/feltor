@@ -4,8 +4,8 @@
 #include "dg/backend/memory.h"
 #include "dg/blas.h"
 #include "grid.h"
-#include "weights.cuh"
-#include "interpolation.cuh"
+#include "weights.h"
+#include "interpolation.h"
 
 #include "base_geometry.h"
 

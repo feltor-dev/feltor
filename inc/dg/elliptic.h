@@ -3,7 +3,7 @@
 #include "blas.h"
 #include "enums.h"
 #include "backend/memory.h"
-#include "geometry/evaluation.cuh"
+#include "geometry/evaluation.h"
 #include "geometry/derivatives.h"
 #ifdef MPI_VERSION
 #include "geometry/mpi_derivatives.h"

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "cusp/transpose.h"
-#include "interpolation.cuh"
-#include "evaluationX.cuh"
-#include "weightsX.cuh"
+#include "interpolation.h"
+#include "evaluationX.h"
+#include "weightsX.h"
 #include "gridX.h"
 #include "base_geometryX.h"
 #include "refined_grid.h"

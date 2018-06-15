@@ -4,7 +4,7 @@
 
 #include "gridX.h"
 #include "dx.h"
-#include "weightsX.cuh"
+#include "weightsX.h"
 #include "dg/backend/sparseblockmat.h"
 
 /*! @file

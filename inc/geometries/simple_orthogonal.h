@@ -2,7 +2,7 @@
 
 #include "dg/geometry/grid.h"
 #include "dg/geometry/functions.h"
-#include "dg/geometry/interpolation.cuh"
+#include "dg/geometry/interpolation.h"
 #include "dg/geometry/derivatives.h"
 #include "dg/geometry/geometry.h"
 #include "dg/functors.h"

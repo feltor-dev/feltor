@@ -10,9 +10,9 @@
 #include "grid.h"
 #include "dlt.h"
 #include "operator.h"
-#include "operator_tensor.cuh"
-#include "dgtensor.cuh"
-#include "interpolation.cuh" //makes typedefs available
+#include "operator_tensor.h"
+#include "dgtensor.h"
+#include "interpolation.h" //makes typedefs available
 
 
 /*! @file

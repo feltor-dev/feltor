@@ -3,7 +3,7 @@
 #include "dg/backend/timer.cuh"
 #include "dg/blas.h"
 #include "derivatives.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 
 const double lx = 2*M_PI;
 double sinx(   double x, double y, double z) { return sin(x);}

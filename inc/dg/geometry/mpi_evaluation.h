@@ -2,7 +2,7 @@
 
 #include "dg/backend/mpi_vector.h"
 #include "mpi_grid.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 
 /*! @file
   @brief Function discretization routines for mpi vectors

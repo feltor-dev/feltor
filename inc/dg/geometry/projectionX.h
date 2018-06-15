@@ -1,5 +1,5 @@
 #pragma once
-#include "projection.cuh"
+#include "projection.h"
 #include "gridX.h"
 
 /*!@file

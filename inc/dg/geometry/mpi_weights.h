@@ -1,6 +1,6 @@
 #pragma once
 
-#include "weights.cuh"
+#include "weights.h"
 #include "mpi_grid.h"
 
 

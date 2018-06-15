@@ -2,8 +2,8 @@
 
 #include <cassert>
 #include "thrust/host_vector.h"
-#include "evaluation.cuh"
-#include "weights.cuh"
+#include "evaluation.h"
+#include "weights.h"
 #ifdef MPI_VERSION
 #include "dg/backend/mpi_vector.h"
 #include "mpi_evaluation.h"

@@ -1,10 +1,10 @@
 #include <iostream>
 
 #include <cusp/print.h>
-#include "xspacelib.cuh"
-#include "interpolation.cuh"
+#include "xspacelib.h"
+#include "interpolation.h"
 #include "../blas.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 
 double function( double x, double y){return sin(x)*sin(y);}
 double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}
