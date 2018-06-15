@@ -99,7 +99,7 @@ struct AB
      * @note the implementation is such that on output the last call to the rhs is at (t0,u0). This might be interesting if the call to the rhs changes its state.
      */
     template< class RHS>
-    void init( RHS& rhs, real_type t0, const ContainerType& u0, real_type dt);D
+    void init( RHS& rhs, real_type t0, const ContainerType& u0, real_type dt);
     /**
     * @brief Advance u0 one timestep
     *

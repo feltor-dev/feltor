@@ -478,13 +478,8 @@ struct Invert
      *
      * @return number of iterations used
      */
-<<<<<<< HEAD
-    template< class Matrix, class Preconditioner >
-    unsigned operator()( Matrix& op, ContainerType& phi, const ContainerType& rho, const ContainerType& weights, const ContainerType& inv_weights, Preconditioner& p)
-=======
     template< class Matrix, class SquareNorm, class Preconditioner >
-    unsigned operator()( Matrix& op, container& phi, const container& rho, const SquareNorm& weights, const SquareNorm& inv_weights, Preconditioner& p)
->>>>>>> master
+    unsigned operator()( Matrix& op, ContainerType& phi, const ContainerType& rho, const SquareNorm& weights, const SquareNorm& inv_weights, Preconditioner& p)
     {
         assert( phi.size() != 0);
         assert( &rho != &phi);
