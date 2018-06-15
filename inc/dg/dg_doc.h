@@ -11,7 +11,7 @@
 /*!
  * @defgroup backend Level 1: Vectors, Matrices and basic operations
  * @{
- *     @defgroup typedefs Typedefs
+ *     @defgroup typedefs Useful Typedefs
  *          Useful type definitions for easy programming
  *     @defgroup sparsematrix Sparse matrix formats
  *     @defgroup mpi_structures MPI backend functionality
@@ -79,15 +79,16 @@
  *     @}
  *     @defgroup geometry Geometric grids and operations
  *
- *        These routines form the heart of our geometry free numerical algorithms.
- *        They are called by our geometric operators like the Poisson bracket.
- *    @{
- *        @defgroup basicgeometry Geometry base classes
- *        @defgroup pullback pullback and pushforward
- *        @defgroup metric create volume
- *        @defgroup generators Grid Generator classes
+ *         These routines form the heart of our geometry free numerical algorithms.
+ *         They are called by our geometric operators like the Poisson bracket.
+ *     @{
+ *         @defgroup basicgeometry Geometry base classes
+ *         @defgroup pullback pullback and pushforward
+ *         @defgroup metric create volume
+ *         @defgroup generators Grid Generator classes
  *            The classes to perform field line integration for DS and averaging classes
- *    @}
+ *     @}
+ *     @defgroup gridtypes Useful Typedefs
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes
  *

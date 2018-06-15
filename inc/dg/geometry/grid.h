@@ -412,7 +412,7 @@ struct aRealTopology2d
     }
     protected:
     ///disallow destruction through base class pointer
-    ~aRealTopology2d(){}
+    ~aRealTopology2d() = default;
     /**
      *@copydoc hide_grid_parameters2d
      *@copydoc hide_bc_parameters2d
@@ -433,14 +433,10 @@ struct aRealTopology2d
 
     ///explicit copy constructor (default)
     ///@param src source
-    aRealTopology2d(const aRealTopology2d& src){gx_=src.gx_, gy_=src.gy_;}
+    aRealTopology2d(const aRealTopology2d& src) = default;
     ///explicit assignment operator (default)
     ///@param src source
-    aRealTopology2d& operator=(const aRealTopology2d& src){
-        gx_=src.gx_;
-        gy_=src.gy_;
-        return *this;
-    }
+    aRealTopology2d& operator=(const aRealTopology2d& src) = default;
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)=0;
     private:
     RealGrid1d<real_type> gx_, gy_;
@@ -675,7 +671,7 @@ struct aRealTopology3d
     }
     protected:
     ///disallow deletion through base class pointer
-    ~aRealTopology3d(){}
+    ~aRealTopology3d() = default;
     /**
     @copydoc hide_grid_parameters3d
     @copydoc hide_bc_parameters3d
@@ -698,13 +694,10 @@ struct aRealTopology3d
     }
     ///explicit copy constructor (default)
     ///@param src source
-    aRealTopology3d(const aRealTopology3d& src):gx_(src.gx_),gy_(src.gy_),gz_(src.gz_){}
+    aRealTopology3d(const aRealTopology3d& src) = default;
     ///explicit assignment operator (default)
     ///@param src source
-    aRealTopology3d& operator=(const aRealTopology3d& src){ //use default in C++11
-        gx_=src.gx_; gy_=src.gy_; gz_=src.gz_;
-        return *this;
-    }
+    aRealTopology3d& operator=(const aRealTopology3d& src) = default;
     virtual void do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsigned new_Nz)=0;
   private:
     RealGrid1d<real_type> gx_,gy_,gz_;
@@ -722,14 +715,14 @@ struct RealGrid2d : public aRealTopology2d<real_type>
     ///@copydoc hide_bc_parameters2d
     RealGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
         aRealTopology2d<real_type>(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy) { }
-    ///@copydoc aRealTopology2d::aRealTopology2d(const Grid1d&,const Grid1d&)
+    ///@copydoc aRealTopology2d::aRealTopology2d(const RealGrid1d&,const RealGrid1d&)
     RealGrid2d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy): aRealTopology2d<real_type>(gx,gy){ }
 
     ///allow explicit type conversion from any other topology
     ///@param src source
     explicit RealGrid2d( const aRealTopology2d<real_type>& src): aRealTopology2d<real_type>(src){}
     private:
-    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny){
+    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny) override final{
         aRealTopology2d<real_type>::do_set(n,Nx,Ny);
     }
 
@@ -747,24 +740,18 @@ struct RealGrid3d : public aRealTopology3d<real_type>
     ///@copydoc hide_bc_parameters3d
     RealGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):
         aRealTopology3d<real_type>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
-    ///@copydoc aRealTopology3d::aRealTopology3d(const Grid1d&,const Grid1d&,const Grid1d&)
+    ///@copydoc aRealTopology3d::aRealTopology3d(const RealGrid1d&,const RealGrid1d&,const RealGrid1d&)
     RealGrid3d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy, const RealGrid1d<real_type>& gz): aRealTopology3d<real_type>(gx,gy,gz){ }
 
     ///allow explicit type conversion from any other topology
     ///@param src source
     explicit RealGrid3d( const aRealTopology3d<real_type>& src): aRealTopology3d<real_type>(src){ }
     private:
-    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz){
+    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz) override final{
         aRealTopology3d<real_type>::do_set(n,Nx,Ny,Nz);
     }
 };
 
-using Grid1d = RealGrid1d<double>;
-using Grid2d = RealGrid2d<double>;
-using Grid3d = RealGrid3d<double>;
-using aTopology2d = aRealTopology2d<double>;
-using aTopology3d = aRealTopology3d<double>;
-//
 ///@cond
 template<class real_type>
 void aRealTopology2d<real_type>::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
@@ -804,5 +791,14 @@ template<class Topology>
 using get_host_grid = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::value_type>::host_grid;
 
 ///@endcond
+
+///@addtogroup gridtypes
+///@{
+using Grid1d        = dg::RealGrid1d<double>;
+using Grid2d        = dg::RealGrid2d<double>;
+using Grid3d        = dg::RealGrid3d<double>;
+using aTopology2d   = dg::aRealTopology2d<double>;
+using aTopology3d   = dg::aRealTopology3d<double>;
+///@}
 
 }// namespace dg

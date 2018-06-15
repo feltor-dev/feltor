@@ -257,7 +257,7 @@ struct aRealMPITopology2d
     const RealGrid2d<real_type>& global() const {return g;}
     protected:
     ///disallow deletion through base class pointer
-    ~aRealMPITopology2d(){}
+    ~aRealMPITopology2d() = default;
 
     /**
      * @copydoc hide_grid_parameters2d
@@ -271,12 +271,9 @@ struct aRealMPITopology2d
         check_division( Nx, Ny, bcx, bcy);
     }
     ///copydoc aTopology2d::aTopology2d(const aTopology2d&)
-    aRealMPITopology2d(const aRealMPITopology2d& src):g(src.g),l(src.l),comm(src.comm){ }
+    aRealMPITopology2d(const aRealMPITopology2d& src) = default;
     ///copydoc aTopology2d::operator()(const aTopology2d&)
-    aRealMPITopology2d& operator=(const aRealMPITopology2d& src){
-        g = src.g; l = src.l; comm = src.comm;
-        return *this;
-    }
+    aRealMPITopology2d& operator=(const aRealMPITopology2d& src) = default;
     ///This function has an implementation
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)=0;
     private:
@@ -551,7 +548,7 @@ struct aRealMPITopology3d
     const RealGrid3d<real_type>& global() const {return g;}
     protected:
     ///disallow deletion through base class pointer
-    ~aRealMPITopology3d(){}
+    ~aRealMPITopology3d() = default;
 
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
@@ -566,13 +563,10 @@ struct aRealMPITopology3d
     }
     ///explicit copy constructor (default)
     ///@param src source
-    aRealMPITopology3d(const aRealMPITopology3d& src):g(src.g),l(src.l),comm(src.comm),planeComm(src.planeComm){ }
+    aRealMPITopology3d(const aRealMPITopology3d& src) = default;
     ///explicit assignment operator (default)
     ///@param src source
-    aRealMPITopology3d& operator=(const aRealMPITopology3d& src){
-        g = src.g; l = src.l; comm = src.comm; planeComm = src.planeComm;
-        return *this;
-    }
+    aRealMPITopology3d& operator=(const aRealMPITopology3d& src) = default;
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)=0;
     private:
     void check_division( unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz)
@@ -700,7 +694,7 @@ struct RealMPIGrid2d: public aRealMPITopology2d<real_type>
     ///allow explicit type conversion from any other topology
     explicit RealMPIGrid2d( const aRealMPITopology2d<real_type>& src): aRealMPITopology2d<real_type>(src){}
     private:
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny){
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) override final{
         aRealMPITopology2d<real_type>::do_set(new_n,new_Nx,new_Ny);
     }
 };
@@ -729,7 +723,7 @@ struct RealMPIGrid3d : public aRealMPITopology3d<real_type>
     ///@param src source
     explicit RealMPIGrid3d( const aRealMPITopology3d<real_type>& src): aRealMPITopology3d<real_type>(src){ }
     private:
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) override final{
         aRealMPITopology3d<real_type>::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 };
@@ -746,10 +740,12 @@ struct MemoryTraits< MPITag, ThreeDimensionalTag, real_type> {
     using host_grid   = RealMPIGrid3d<real_type>;
 };
 ///@endcond
-
-using MPIGrid2d = RealMPIGrid2d<double>;
-using MPIGrid3d = RealMPIGrid3d<double>;
-using aMPITopology2d = aRealMPITopology2d<double>;
-using aMPITopology3d = aRealMPITopology3d<double>;
+///@addtogroup gridtypes
+///@{
+using MPIGrid2d         = dg::RealMPIGrid2d<double>;
+using MPIGrid3d         = dg::RealMPIGrid3d<double>;
+using aMPITopology2d    = dg::aRealMPITopology2d<double>;
+using aMPITopology3d    = dg::aRealMPITopology3d<double>;
+///@}
 
 }//namespace dg

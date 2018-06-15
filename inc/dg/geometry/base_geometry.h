@@ -22,6 +22,7 @@ struct aRealGeometry2d : public aRealTopology2d<real_type>
     \end{pmatrix}
     \f]
     * @return Jacobian
+    * @note per default this will be the identity tensor
     */
     SparseTensor<thrust::host_vector<real_type> > jacobian()const{
         return do_compute_jacobian();
@@ -35,6 +36,7 @@ struct aRealGeometry2d : public aRealTopology2d<real_type>
     \f]
     * @return symmetric tensor
     * @note use the dg::tensor functions to compute the volume element from here
+    * @note per default this will be the identity tensor
     */
     SparseTensor<thrust::host_vector<real_type> > metric()const {
         return do_compute_metric();
@@ -48,6 +50,7 @@ struct aRealGeometry2d : public aRealTopology2d<real_type>
     Z(x,y)
     \f]
     * @return a vector of size 2
+    * @note per default this will be the identity map
     */
     std::vector<thrust::host_vector<real_type> > map()const{
         return do_compute_map();
@@ -55,21 +58,13 @@ struct aRealGeometry2d : public aRealTopology2d<real_type>
     ///Geometries are cloneable
     virtual aRealGeometry2d* clone()const=0;
     ///allow deletion through base class pointer
-    virtual ~aRealGeometry2d(){}
+    virtual ~aRealGeometry2d() = default;
     protected:
     using aRealTopology2d<real_type>::aRealTopology2d;
-    ////*!
-    // * @copydoc aTopology2d::aTopology2d()
-    // * @note the default coordinate map will be the identity
-    // */
-    //aRealGeometry2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aTopology2d( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
     ///@copydoc aRealTopology2d::aRealTopology2d(const aRealTopology2d&)
-    aRealGeometry2d( const aRealGeometry2d& src):aRealTopology2d<real_type>(src){}
+    aRealGeometry2d( const aRealGeometry2d& src) = default;
     ///@copydoc aRealTopology2d::operator=(const aRealTopology2d&)
-    aRealGeometry2d& operator=( const aRealGeometry2d& src){
-        aRealTopology2d<real_type>::operator=(src);
-        return *this;
-    }
+    aRealGeometry2d& operator=( const aRealGeometry2d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
         return SparseTensor<thrust::host_vector<real_type> >();
@@ -102,6 +97,7 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
     \end{pmatrix}
     \f]
     * @return Jacobian
+    * @note per default this will be the identity tensor
     */
     SparseTensor<thrust::host_vector<real_type> > jacobian()const{
         return do_compute_jacobian();
@@ -117,6 +113,7 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
     \f]
     * @return symmetric tensor
     * @note use the dg::tensor functions to compute the volume element from here
+    * @note per default this will be the identity tensor
     */
     SparseTensor<thrust::host_vector<real_type> > metric()const {
         return do_compute_metric();
@@ -131,6 +128,7 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
     \varphi(x,y,z)
     \f]
     * @return a vector of size 3
+    * @note per default this will be the identity map
     */
     std::vector<thrust::host_vector<real_type> > map()const{
         return do_compute_map();
@@ -138,21 +136,13 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
     ///Geometries are cloneable
     virtual aRealGeometry3d* clone()const=0;
     ///allow deletion through base class pointer
-    virtual ~aRealGeometry3d(){}
+    virtual ~aRealGeometry3d() = default;
     protected:
     using aRealTopology3d<real_type>::aRealTopology3d;
-    ////*!
-    // * @copydoc aRealTopology3d::aRealTopology3d()
-    // * @note the default coordinate map will be the identity
-    // */
-    //aRealGeometry3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aRealTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     ///@copydoc aRealTopology3d::aRealTopology3d(const aRealTopology3d&)
-    aRealGeometry3d( const aRealGeometry3d& src):aRealTopology3d<real_type>(src){}
+    aRealGeometry3d( const aRealGeometry3d& src) = default;
     ///@copydoc aRealTopology3d::operator=(const aRealTopology3d&)
-    aRealGeometry3d& operator=( const aRealGeometry3d& src){
-        aRealTopology3d<real_type>::operator=(src);
-        return *this;
-    }
+    aRealGeometry3d& operator=( const aRealGeometry3d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
         return SparseTensor<thrust::host_vector<real_type> >();
@@ -183,29 +173,18 @@ struct aRealProductGeometry3d : public aRealGeometry3d<real_type>
         return do_perp_grid();
     }
     ///allow deletion through base class pointer
-    virtual ~aRealProductGeometry3d(){}
+    virtual ~aRealProductGeometry3d() = default;
     ///Geometries are cloneable
     virtual aRealProductGeometry3d* clone()const=0;
     protected:
+    using aRealGeometry3d<real_type>::aRealGeometry3d;
     ///@copydoc aRealTopology3d::aRealTopology3d(const aRealTopology3d&)
-    aRealProductGeometry3d( const aRealProductGeometry3d& src):aRealGeometry3d<real_type>(src){}
+    aRealProductGeometry3d( const aRealProductGeometry3d& src) = default;
     ///@copydoc aRealTopology3d::operator=(const aRealTopology3d&)
-    aRealProductGeometry3d& operator=( const aRealProductGeometry3d& src){
-        aRealGeometry3d<real_type>::operator=(src);
-        return *this;
-    }
-    /*!
-     * @copydoc aRealTopology3d::aRealTopology3d()
-     * @note the default coordinate map will be the identity
-     */
-    aRealProductGeometry3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aRealGeometry3d<real_type>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    aRealProductGeometry3d& operator=( const aRealProductGeometry3d& src) = default;
     private:
     virtual aRealGeometry2d<real_type>* do_perp_grid()const=0;
 };
-
-using aGeometry2d = aRealGeometry2d<double>;
-using aGeometry3d = aRealGeometry3d<double>;
-using aProductGeometry3d = aRealProductGeometry3d<double>;
 ///@}
 
 ///@addtogroup geometry
@@ -219,7 +198,7 @@ using aProductGeometry3d = aRealProductGeometry3d<double>;
 template<class real_type>
 struct RealCartesianGrid2d: public dg::aRealGeometry2d<real_type>
 {
-    ///@copydoc Grid2d::Grid2d()
+    ///@copydoc RealGrid2d::RealGrid2d()
     RealCartesianGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aRealGeometry2d<real_type>(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy){}
     /**
      * @brief Construct from existing topology
@@ -294,9 +273,16 @@ struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>
     }
 };
 
-using CartesianGrid2d = RealCartesianGrid2d<double>;
-using CartesianGrid3d = RealCartesianGrid3d<double>;
-using CylindricalGrid3d = RealCylindricalGrid3d<double>;
+///@}
+
+///@addtogroup gridtypes
+///@{
+using aGeometry2d           = dg::aRealGeometry2d<double>;
+using aGeometry3d           = dg::aRealGeometry3d<double>;
+using aProductGeometry3d    = dg::aRealProductGeometry3d<double>;
+using CartesianGrid2d       = dg::RealCartesianGrid2d<double>;
+using CartesianGrid3d       = dg::RealCartesianGrid3d<double>;
+using CylindricalGrid3d     = dg::RealCylindricalGrid3d<double>;
 ///@}
 
 } //namespace dg

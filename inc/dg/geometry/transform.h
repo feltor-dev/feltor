@@ -31,7 +31,7 @@ thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry2d
     return vec;
 }
 
-///@copydoc pullback(const Functor&,const aGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry2d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
 thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry3d<real_type>& g)
@@ -45,7 +45,7 @@ thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry3d
 
 #ifdef MPI_VERSION
 
-///@copydoc pullback(const Functor&,const aGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry2d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
 MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aRealMPIGeometry2d<real_type>& g)
@@ -57,7 +57,7 @@ MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aR
     return MPI_Vector<thrust::host_vector<real_type> >( vec, g.communicator());
 }
 
-///@copydoc pullback(const Functor&,const aGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry2d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
 MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aRealMPIGeometry3d<real_type>& g)

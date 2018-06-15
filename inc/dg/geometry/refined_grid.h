@@ -80,13 +80,11 @@ struct aRealRefinement1d
         return do_N_new(N_old, bcx);
     }
     virtual aRealRefinement1d* clone()const=0;
-    virtual ~aRealRefinement1d(){}
+    virtual ~aRealRefinement1d() = default;
     protected:
-    aRealRefinement1d(){}
-    aRealRefinement1d(const aRealRefinement1d& src){}
-    aRealRefinement1d& operator=(const aRealRefinement1d& src){
-        return *this;
-    }
+    aRealRefinement1d() = default;
+    aRealRefinement1d(const aRealRefinement1d& src) = default;
+    aRealRefinement1d& operator=(const aRealRefinement1d& src) = default;
     private:
     virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const =0;
     virtual unsigned do_N_new( unsigned N_old, bc bcx) const =0;
@@ -286,11 +284,11 @@ struct RealExponentialRefinement : public aRealRefinement1d<real_type>
     }
 };
 
-using aRefinement1d = aRealRefinement1d<double>;
-using IdentityRefinement = RealIdentityRefinement<double>;
-using LinearRefinement = RealLinearRefinement<double>;
-using EquidistRefinement = RealEquidistRefinement<double>;
-using ExponentialRefinement = RealExponentialRefinement<double>;
+using aRefinement1d         = dg::aRealRefinement1d<double>;
+using IdentityRefinement    = dg::RealIdentityRefinement<double>;
+using LinearRefinement      = dg::RealLinearRefinement<double>;
+using EquidistRefinement    = dg::RealEquidistRefinement<double>;
+using ExponentialRefinement = dg::RealExponentialRefinement<double>;
 
 ///@}
 
@@ -414,7 +412,10 @@ struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
     }
 };
 
-using CartesianRefinedGrid2d = RealCartesianRefinedGrid2d<double>;
-using CartesianRefinedGrid3d = RealCartesianRefinedGrid3d<double>;
+///@addtogroup gridtypes
+///@{
+using CartesianRefinedGrid2d = dg::RealCartesianRefinedGrid2d<double>;
+using CartesianRefinedGrid3d = dg::RealCartesianRefinedGrid3d<double>;
+///@}
 
 }//namespace dg

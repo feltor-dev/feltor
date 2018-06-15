@@ -31,20 +31,13 @@ struct aRealGeometryX2d : public aRealTopologyX2d<real_type>
     ///Geometries are cloneable
     virtual aRealGeometryX2d* clone()const=0;
     ///allow deletion through base class pointer
-    virtual ~aRealGeometryX2d(){}
+    virtual ~aRealGeometryX2d() = default;
     protected:
-    /*!
-     * @copydoc aRealTopologyX2d::aRealTopologyX2d()
-     * @note the default coordinate map will be the identity
-     */
-    aRealGeometryX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aRealTopologyX2d<real_type>( x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy){}
+    using aRealTopologyX2d<real_type>::aRealTopologyX2d;
     ///@copydoc aRealTopologyX2d::aRealTopologyX2d(const aRealTopologyX2d&)
-    aRealGeometryX2d( const aRealGeometryX2d& src):aRealTopologyX2d<real_type>(src){}
+    aRealGeometryX2d( const aRealGeometryX2d& src) = default;
     ///@copydoc aRealTopologyX2d::operator=(const aRealTopologyX2d&)
-    aRealGeometryX2d& operator=( const aRealGeometryX2d& src){
-        aRealTopologyX2d<real_type>::operator=(src);
-        return *this;
-    }
+    aRealGeometryX2d& operator=( const aRealGeometryX2d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
         return SparseTensor<thrust::host_vector<real_type> >();
@@ -83,20 +76,13 @@ struct aRealGeometryX3d : public aRealTopologyX3d<real_type>
     ///Geometries are cloneable
     virtual aRealGeometryX3d* clone()const=0;
     ///allow deletion through base class pointer
-    virtual ~aRealGeometryX3d(){}
+    virtual ~aRealGeometryX3d() = default;
     protected:
-    /*!
-     * @copydoc aRealTopologyX3d::aRealTopologyX3d()
-     * @note the default coordinate map will be the identity
-     */
-    aRealGeometryX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aRealTopologyX3d<real_type>(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    using aRealTopologyX3d<real_type>::aRealTopologyX3d;
     ///@copydoc aRealTopologyX3d::aRealTopologyX3d(const aRealTopologyX3d&)
-    aRealGeometryX3d( const aRealGeometryX3d& src):aRealTopologyX3d<real_type>(src){}
+    aRealGeometryX3d( const aRealGeometryX3d& src) = default;
     ///@copydoc aRealTopologyX3d::operator=(const aRealTopologyX3d&)
-    aRealGeometryX3d& operator=( const aRealGeometryX3d& src){
-        aRealTopologyX3d<real_type>::operator=(src);
-        return *this;
-    }
+    aRealGeometryX3d& operator=( const aRealGeometryX3d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
         return SparseTensor<thrust::host_vector<real_type> >();
@@ -153,12 +139,6 @@ struct RealCartesianGridX3d: public dg::aRealGeometryX3d<real_type>
         return new RealCartesianGridX3d(*this);
     }
 };
-
-using CartesianGridX2d = RealCartesianGridX2d<double>;
-using CartesianGridX3d = RealCartesianGridX3d<double>;
-using aGeometryX2d = aRealGeometryX2d<double>;
-using aGeometryX3d = aRealGeometryX3d<double>;
-
 ///@}
 
 ///@copydoc pullback(const Functor&,const aRealGeometry2d&)
@@ -184,4 +164,12 @@ thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometryX3
         vec[i] = f( map[0][i], map[1][i], map[2][i]);
     return vec;
 }
+
+///@addtogroup gridtypes
+///@{
+using CartesianGridX2d  = dg::RealCartesianGridX2d<double>;
+using CartesianGridX3d  = dg::RealCartesianGridX3d<double>;
+using aGeometryX2d      = dg::aRealGeometryX2d<double>;
+using aGeometryX3d      = dg::aRealGeometryX3d<double>;
+///@}
 } //namespace dg

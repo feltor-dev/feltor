@@ -74,7 +74,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const RealGr
     cusp::transpose( temp, A);
     return A;
 }
-///@copydoc interpolationT(const Grid1d&,const Grid1d&)
+///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {
@@ -82,7 +82,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealT
     cusp::transpose( temp, A);
     return A;
 }
-///@copydoc interpolationT(const Grid1d&,const Grid1d&)
+///@copydoc interpolationT(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
 {
@@ -139,7 +139,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1
 }
 
 
-///@copydoc projection(const Grid1d&,const Grid1d&)
+///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {
@@ -167,7 +167,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopo
     return A;
 }
 
-///@copydoc projection(const Grid1d&,const Grid1d&)
+///@copydoc projection(const RealGrid1d&,const RealGrid1d&)
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
 {
@@ -230,7 +230,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aReal
     return Y;
 }
 
-///@copydoc transformation(const aTopology3d&,const aTopology3d&)
+///@copydoc transformation(const aRealTopology3d&,const aRealTopology3d&)
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {
@@ -242,7 +242,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aReal
     Y.sort_by_row_and_column();
     return Y;
 }
-///@copydoc transformation(const aTopology3d&,const aTopology3d&)
+///@copydoc transformation(const aRealTopology3d&,const aRealTopology3d&)
 template<class real_type>
 cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
 {

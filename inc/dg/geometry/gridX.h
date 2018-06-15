@@ -249,7 +249,7 @@ struct RealGridX1d
 template<class real_type>
 struct aRealTopologyX2d
 {
-    typedef SharedTag memory_category; //!< tag for choosing default host vector type
+    typedef SharedTag memory_category;
     typedef TwoDimensionalTag dimensionality;
     typedef real_type value_type;
 
@@ -471,7 +471,7 @@ struct aRealTopologyX2d
     }
   protected:
     ///disallow destruction through base class pointer
-    ~aRealTopologyX2d(){}
+    ~aRealTopologyX2d() = default;
     ///@copydoc hide_gridX_parameters2d
     ///@copydoc hide_bc_parameters2d
     aRealTopologyX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
@@ -488,22 +488,9 @@ struct aRealTopologyX2d
         assert( bcy != PER);
     }
     ///@copydoc aRealTopology2d::aRealTopology2d(const aRealTopology2d&)
-    aRealTopologyX2d(const aRealTopologyX2d& src){
-        x0_=src.x0_, x1_=src.x1_;
-        y0_=src.y0_, y1_=src.y1_;
-        fx_=src.fx_, fy_=src.fy_;
-        n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, bcx_=src.bcx_, bcy_=src.bcy_;
-        dlt_=src.dlt_;
-    }
+    aRealTopologyX2d(const aRealTopologyX2d& src) = default;
     ///@copydoc aRealTopology2d::operator=(const aRealTopology2d&)
-    aRealTopologyX2d& operator=(const aRealTopologyX2d& src){
-        x0_=src.x0_, x1_=src.x1_;
-        y0_=src.y0_, y1_=src.y1_;
-        fx_=src.fx_, fy_=src.fy_;
-        n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, bcx_=src.bcx_, bcy_=src.bcy_;
-        dlt_=src.dlt_;
-        return *this;
-    }
+    aRealTopologyX2d& operator=(const aRealTopologyX2d& src) = default;
   private:
     real_type x0_, x1_, y0_, y1_;
     real_type fx_, fy_;
@@ -775,7 +762,7 @@ struct aRealTopologyX3d
     }
   protected:
     ///disallow destruction through base class pointer
-    ~aRealTopologyX3d(){}
+    ~aRealTopologyX3d() = default;
     ///@copydoc hide_gridX_parameters3d
     ///@copydoc hide_bc_parameters3d
     aRealTopologyX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
@@ -791,24 +778,9 @@ struct aRealTopologyX3d
         assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
     }
     ///@copydoc aRealTopology3d::aRealTopology3d(const aRealTopology3d&)
-    aRealTopologyX3d(const aRealTopologyX3d& src){
-        x0_=src.x0_, x1_=src.x1_;
-        y0_=src.y0_, y1_=src.y1_;
-        z0_=src.z0_, z1_=src.z1_;
-        fx_=src.fx_, fy_=src.fy_;
-        n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, Nz_=src.Nz_,bcx_=src.bcx_, bcy_=src.bcy_, bcz_=src.bcz_;
-        dlt_=src.dlt_;
-    }
+    aRealTopologyX3d(const aRealTopologyX3d& src) = default;
     ///@copydoc aRealTopology3d::operator=(const aRealTopology3d&)
-    aRealTopologyX3d& operator=(const aRealTopologyX3d& src){
-        x0_=src.x0_, x1_=src.x1_;
-        y0_=src.y0_, y1_=src.y1_;
-        z0_=src.z0_, z1_=src.z1_;
-        fx_=src.fx_, fy_=src.fy_;
-        n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, Nz_=src.Nz_,bcx_=src.bcx_, bcy_=src.bcy_, bcz_=src.bcz_;
-        dlt_=src.dlt_;
-        return *this;
-    }
+    aRealTopologyX3d& operator=(const aRealTopologyX3d& src) = default;
   private:
     real_type x0_, x1_, y0_, y1_, z0_, z1_;
     real_type fx_,fy_;
@@ -832,10 +804,13 @@ struct RealGridX3d : public aRealTopologyX3d<real_type>
     explicit RealGridX3d( const aRealTopologyX3d<real_type>& src): aRealTopologyX3d<real_type>(src){}
 };
 
-using GridX1d = RealGridX1d<double>;
-using GridX2d = RealGridX2d<double>;
-using GridX3d = RealGridX3d<double>;
-using aTopologyX2d = aRealTopologyX2d<double>;
-using aTopologyX3d = aRealTopologyX3d<double>;
+///@addtogroup gridtypes
+///@{
+using GridX1d       = dg::RealGridX1d<double>;
+using GridX2d       = dg::RealGridX2d<double>;
+using GridX3d       = dg::RealGridX3d<double>;
+using aTopologyX2d  = dg::aRealTopologyX2d<double>;
+using aTopologyX3d  = dg::aRealTopologyX3d<double>;
+///@}
 
 }// namespace dg

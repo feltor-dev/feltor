@@ -69,13 +69,11 @@ struct aRealRefinementX2d
         return do_fy_new(Ny_old, fy_old);
     }
     virtual aRealRefinementX2d* clone()const=0;
-    virtual ~aRealRefinementX2d(){}
+    virtual ~aRealRefinementX2d() = default;
     protected:
-    aRealRefinementX2d(){}
-    aRealRefinementX2d(const aRealRefinementX2d& src){}
-    aRealRefinementX2d& operator=(const aRealRefinementX2d& src){
-        return *this;
-    }
+    aRealRefinementX2d() = default;
+    aRealRefinementX2d(const aRealRefinementX2d& src) = default;
+    aRealRefinementX2d& operator=(const aRealRefinementX2d& src) = default;
     private:
     virtual void do_generateX( const RealGrid1d<real_type>& gx, unsigned nodeXX, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const =0;
     virtual void do_generateY( const RealGridX1d<real_type>& gy, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const =0;
@@ -226,10 +224,10 @@ struct RealExponentialXRefinement : public aRealRefinementX2d<real_type>
     }
 };
 
-using aRefinementX2d = aRealRefinementX2d<double>;
-using IdentityXRefinement = RealIdentityXRefinement<double>;
-using EquidistXRefinement = RealEquidistXRefinement<double>;
-using ExponentialXRefinement = RealExponentialXRefinement<double>;
+using aRefinementX2d            = dg::aRealRefinementX2d<double>;
+using IdentityXRefinement       = dg::RealIdentityXRefinement<double>;
+using EquidistXRefinement       = dg::RealEquidistXRefinement<double>;
+using ExponentialXRefinement    = dg::RealExponentialXRefinement<double>;
 ///@}
 
 
@@ -323,8 +321,11 @@ struct RealCartesianRefinedGridX3d : public dg::aRealGeometryX3d<real_type>
     }
 };
 
-using CartesianRefinedGridX2d = RealCartesianRefinedGridX2d<double>;
-using CartesianRefinedGridX3d = RealCartesianRefinedGridX3d<double>;
+///@addtogroup gridtypes
+///@{
+using CartesianRefinedGridX2d = dg::RealCartesianRefinedGridX2d<double>;
+using CartesianRefinedGridX3d = dg::RealCartesianRefinedGridX3d<double>;
+///@}
 
 
 }//namespace dg
