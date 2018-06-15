@@ -22,7 +22,7 @@ namespace dg
  * @ingroup pullback
  */
 template< class Functor, class real_type>
-thrust::host_vector<real_type> pullback( const Functor& f, const aBasicGeometry2d<real_type>& g)
+thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry2d<real_type>& g)
 {
     std::vector<thrust::host_vector<real_type> > map = g.map();
     thrust::host_vector<real_type> vec( g.size());
@@ -34,7 +34,7 @@ thrust::host_vector<real_type> pullback( const Functor& f, const aBasicGeometry2
 ///@copydoc pullback(const Functor&,const aGeometry2d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
-thrust::host_vector<real_type> pullback( const Functor& f, const aBasicGeometry3d<real_type>& g)
+thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometry3d<real_type>& g)
 {
     std::vector<thrust::host_vector<real_type> > map = g.map();
     thrust::host_vector<real_type> vec( g.size());
@@ -48,7 +48,7 @@ thrust::host_vector<real_type> pullback( const Functor& f, const aBasicGeometry3
 ///@copydoc pullback(const Functor&,const aGeometry2d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
-MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aBasicMPIGeometry2d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aRealMPIGeometry2d<real_type>& g)
 {
     std::vector<MPI_Vector<thrust::host_vector<real_type> > > map = g.map();
     thrust::host_vector<real_type> vec( g.local().size());
@@ -60,7 +60,7 @@ MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aB
 ///@copydoc pullback(const Functor&,const aGeometry2d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
-MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aBasicMPIGeometry3d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > pullback( const Functor& f, const aRealMPIGeometry3d<real_type>& g)
 {
     std::vector<MPI_Vector<thrust::host_vector<real_type> > > map = g.map();
     thrust::host_vector<real_type> vec( g.local().size());

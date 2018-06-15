@@ -27,7 +27,7 @@ namespace create
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const BasicGridX1d<real_type>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat<real_type> dx( const RealGridX1d<real_type>& g, bc bcx, direction dir = centered)
 {
     if( g.outer_N() == 0) return dx( g.grid(), dg::PER, dir);
     EllSparseBlockMat<real_type> DX = dx( g.grid(), bcx, dir);
@@ -56,7 +56,7 @@ EllSparseBlockMat<real_type> dx( const BasicGridX1d<real_type>& g, bc bcx, direc
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const BasicGridX1d<real_type>& g, direction dir = centered)
+EllSparseBlockMat<real_type> dx( const RealGridX1d<real_type>& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);
 }
@@ -70,7 +70,7 @@ EllSparseBlockMat<real_type> dx( const BasicGridX1d<real_type>& g, direction dir
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> jump( const BasicGridX1d<real_type>& g, bc bcx)
+EllSparseBlockMat<real_type> jump( const RealGridX1d<real_type>& g, bc bcx)
 {
     if( g.outer_N() == 0) return jump( g.n(), g.N(), g.h(), dg::PER);
     EllSparseBlockMat<real_type> J = jump( g.n(),g.N(),g.h(), bcx);
@@ -97,7 +97,7 @@ EllSparseBlockMat<real_type> jump( const BasicGridX1d<real_type>& g, bc bcx)
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> jump( const BasicGridX1d<real_type>& g)
+EllSparseBlockMat<real_type> jump( const RealGridX1d<real_type>& g)
 {
     return jump( g, g.bcx());
 }

@@ -95,11 +95,11 @@ struct MatrixTraits<const MultiMatrix<M, V> >
 namespace create
 {
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_interpolation( const BasicGrid1d<real_type>& t, unsigned multiply)
+MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_interpolation( const RealGrid1d<real_type>& t, unsigned multiply)
 {
     unsigned n=t.n();
-    dg::BasicGrid1d<real_type> g_old( -1., 1., n, 1);
-    dg::BasicGrid1d<real_type> g_new( -1., 1., n, multiply);
+    dg::RealGrid1d<real_type> g_old( -1., 1., n, 1);
+    dg::RealGrid1d<real_type> g_new( -1., 1., n, multiply);
     dg::IHMatrix interpolX = dg::create::interpolation( g_new, g_old);
     EllSparseBlockMat<real_type> iX( multiply*t.N(), t.N(), 1, multiply, t.n());
     for( unsigned  k=0; k<multiply; k++)
@@ -117,12 +117,12 @@ MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast
 }
 
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_projection( const BasicGrid1d<real_type>& t, unsigned divide, enum dg::norm no = normed)
+MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_projection( const RealGrid1d<real_type>& t, unsigned divide, enum dg::norm no = normed)
 {
     unsigned n=t.n();
     if( t.N()%divide != 0) throw Error( Message(_ping_)<< "Nx and divide don't match: Nx: " << t.N()<< " divide "<< (unsigned)divide);
-    dg::BasicGrid1d<real_type> g_oldX( -1., 1., n, divide);
-    dg::BasicGrid1d<real_type> g_new(  -1., 1., n, 1);
+    dg::RealGrid1d<real_type> g_oldX( -1., 1., n, divide);
+    dg::RealGrid1d<real_type> g_new(  -1., 1., n, 1);
     dg::IHMatrix projectX;
     if(no == normed)
         projectX = dg::create::projection( g_new, g_oldX);
@@ -145,10 +145,10 @@ MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast
 }
 
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_interpolation( const aBasicTopology2d<real_type>& t, unsigned multiplyX, unsigned multiplyY)
+MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_interpolation( const aRealTopology2d<real_type>& t, unsigned multiplyX, unsigned multiplyY)
 {
-    dg::BasicGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::BasicGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
+    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
+    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_interpolation( gx, multiplyX);
     interX.get_matrices()[0].left_size = t.n()*t.Ny();
     interX.get_matrices()[0].set_default_range();
@@ -165,10 +165,10 @@ MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast
 }
 
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_projection( const aBasicTopology2d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
+MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_projection( const aRealTopology2d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
 {
-    dg::BasicGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::BasicGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
+    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
+    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( gx, divideX, no);
     interX.get_matrices()[0].left_size = t.n()*t.Ny();
     interX.get_matrices()[0].set_default_range();
@@ -185,10 +185,10 @@ MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast
 }
 
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_interpolation( const aBasicTopology3d<real_type>& t, unsigned multiplyX, unsigned multiplyY)
+MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_interpolation( const aRealTopology3d<real_type>& t, unsigned multiplyX, unsigned multiplyY)
 {
-    dg::BasicGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::BasicGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
+    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
+    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_interpolation( gx, multiplyX);
     interX.get_matrices()[0].left_size = t.n()*t.Ny()*t.Nz();
     interX.get_matrices()[0].set_default_range();
@@ -206,10 +206,10 @@ MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast
 }
 
 template<class real_type>
-MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_projection( const aBasicTopology3d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
+MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast_projection( const aRealTopology3d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
 {
-    dg::BasicGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
-    dg::BasicGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
+    dg::RealGrid1d<real_type> gx(t.x0(), t.x1(), t.n(), t.Nx());
+    dg::RealGrid1d<real_type> gy(t.y0(), t.y1(), t.n(), t.Ny());
     MultiMatrix < EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > interX = dg::create::fast_projection( gx, divideX, no);
     interX.get_matrices()[0].left_size = t.n()*t.Ny()*t.Nz();
     interX.get_matrices()[0].set_default_range();
@@ -229,7 +229,7 @@ MultiMatrix< EllSparseBlockMat<real_type>, thrust::host_vector<real_type> > fast
 #ifdef MPI_VERSION
 //very elaborate way of telling the compiler to just apply the local matrix to the local vector
 template<class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_interpolation( const aBasicMPITopology2d<real_type>& t, unsigned divideX, unsigned divideY)
+MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_interpolation( const aRealMPITopology2d<real_type>& t, unsigned divideX, unsigned divideY)
 {
     typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
     typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
@@ -241,7 +241,7 @@ MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_
     return inter;
 }
 template<class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_projection( const aBasicMPITopology2d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
+MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_projection( const aRealMPITopology2d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
 {
     typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
     typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
@@ -254,7 +254,7 @@ MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_
 }
 
 template<class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_interpolation( const aBasicMPITopology3d<real_type>& t, unsigned divideX, unsigned divideY)
+MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_interpolation( const aRealMPITopology3d<real_type>& t, unsigned divideX, unsigned divideY)
 {
     typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
     typedef MPI_Vector<thrust::host_vector<real_type> > Vector;
@@ -267,7 +267,7 @@ MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_
 }
 
 template<class real_type>
-MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_projection( const aBasicMPITopology3d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
+MultiMatrix< RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type> >, MPI_Vector<thrust::host_vector<real_type> > > fast_projection( const aRealMPITopology3d<real_type>& t, unsigned divideX, unsigned divideY, enum dg::norm no = normed)
 {
     typedef RowColDistMat<EllSparseBlockMat<real_type>, CooSparseBlockMat<real_type>, NNCH<real_type>> Matrix;
     typedef MPI_Vector<thrust::host_vector<real_type> > Vector;

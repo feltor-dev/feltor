@@ -59,7 +59,7 @@ namespace dg{
 * @ingroup grid
 */
 template<class real_type>
-struct BasicGridX1d
+struct RealGridX1d
 {
     typedef SharedTag memory_category;
     typedef OneDimensionalTag dimensionality;
@@ -74,7 +74,7 @@ struct BasicGridX1d
      * @param N # of cells
      * @param bcx boundary conditions
      */
-    BasicGridX1d( real_type x0, real_type x1, real_type f, unsigned n, unsigned N, bc bcx = NEU):
+    RealGridX1d( real_type x0, real_type x1, real_type f, unsigned n, unsigned N, bc bcx = NEU):
         x0_(x0), x1_(x1), f_(f),
         n_(n), Nx_(N), bcx_(bcx), dlt_(n)
     {
@@ -163,7 +163,7 @@ struct BasicGridX1d
      */
     void display( std::ostream& os = std::cout) const
     {
-        os << "BasicGrid parameters are: \n"
+        os << "RealGrid parameters are: \n"
             <<"    n  = "<<n_<<"\n"
             <<"    N  = "<<Nx_<<"\n"
             <<"    inner N = "<<inner_N()<<"\n"
@@ -176,7 +176,7 @@ struct BasicGridX1d
             <<"    "<<bc2str(bcx_)<<"\n";
     }
     const DLT<real_type>& dlt() const {return dlt_;}
-    BasicGrid1d<real_type> grid() const{return BasicGrid1d<real_type>( x0_, x1_, n_, Nx_, bcx_);}
+    RealGrid1d<real_type> grid() const{return RealGrid1d<real_type>( x0_, x1_, n_, Nx_, bcx_);}
 
     /**
      * @brief Shifts a point coordinate due to topology
@@ -228,7 +228,7 @@ struct BasicGridX1d
 };
 
 //template<class real_type>
-//struct aBasicTopologyX3d; //forward declare 3d version
+//struct aRealTopologyX3d; //forward declare 3d version
 
 /**
  * @brief A 2D grid class with X-point topology
@@ -247,7 +247,7 @@ struct BasicGridX1d
  * @ingroup basictopology
  */
 template<class real_type>
-struct aBasicTopologyX2d
+struct aRealTopologyX2d
 {
     typedef SharedTag memory_category; //!< tag for choosing default host vector type
     typedef TwoDimensionalTag dimensionality;
@@ -372,7 +372,7 @@ struct aBasicTopologyX2d
      *
      * @return
      */
-    BasicGrid2d<real_type> grid() const {return BasicGrid2d<real_type>( x0_,x1_,y0_,y1_,n_,Nx_,Ny_,bcx_,bcy_);}
+    RealGrid2d<real_type> grid() const {return RealGrid2d<real_type>( x0_,x1_,y0_,y1_,n_,Nx_,Ny_,bcx_,bcy_);}
     /**
      * @brief discrete legendre trafo
      *
@@ -471,10 +471,10 @@ struct aBasicTopologyX2d
     }
   protected:
     ///disallow destruction through base class pointer
-    ~aBasicTopologyX2d(){}
+    ~aRealTopologyX2d(){}
     ///@copydoc hide_gridX_parameters2d
     ///@copydoc hide_bc_parameters2d
-    aBasicTopologyX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
+    aRealTopologyX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), fx_(fx), fy_(fy),
         n_(n), Nx_(Nx), Ny_(Ny), bcx_(bcx), bcy_( bcy), dlt_(n)
     {
@@ -487,16 +487,16 @@ struct aBasicTopologyX2d
         assert( Nx_ > 0  && Ny > 0 );
         assert( bcy != PER);
     }
-    ///@copydoc aBasicTopology2d::aBasicTopology2d(const aBasicTopology2d&)
-    aBasicTopologyX2d(const aBasicTopologyX2d& src){
+    ///@copydoc aRealTopology2d::aRealTopology2d(const aRealTopology2d&)
+    aRealTopologyX2d(const aRealTopologyX2d& src){
         x0_=src.x0_, x1_=src.x1_;
         y0_=src.y0_, y1_=src.y1_;
         fx_=src.fx_, fy_=src.fy_;
         n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, bcx_=src.bcx_, bcy_=src.bcy_;
         dlt_=src.dlt_;
     }
-    ///@copydoc aBasicTopology2d::operator=(const aBasicTopology2d&)
-    aBasicTopologyX2d& operator=(const aBasicTopologyX2d& src){
+    ///@copydoc aRealTopology2d::operator=(const aRealTopology2d&)
+    aRealTopologyX2d& operator=(const aRealTopologyX2d& src){
         x0_=src.x0_, x1_=src.x1_;
         y0_=src.y0_, y1_=src.y1_;
         fx_=src.fx_, fy_=src.fy_;
@@ -512,18 +512,18 @@ struct aBasicTopologyX2d
     DLT<real_type> dlt_;
 };
 /**
- * @brief The simplest implementation of aBasicTopologyX2d
+ * @brief The simplest implementation of aRealTopologyX2d
  * @ingroup grid
  */
 template<class real_type>
-struct BasicGridX2d : public aBasicTopologyX2d<real_type>
+struct RealGridX2d : public aRealTopologyX2d<real_type>
 {
     ///@copydoc hide_gridX_parameters2d
     ///@copydoc hide_bc_parameters2d
-    BasicGridX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx=PER, bc bcy=NEU):
-        aBasicTopologyX2d<real_type>(x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy) { }
+    RealGridX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx=PER, bc bcy=NEU):
+        aRealTopologyX2d<real_type>(x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy) { }
     ///allow explicit type conversion from any other topology
-    explicit BasicGridX2d( const aBasicTopologyX2d<real_type>& src): aBasicTopologyX2d<real_type>(src){}
+    explicit RealGridX2d( const aRealTopologyX2d<real_type>& src): aRealTopologyX2d<real_type>(src){}
 };
 
 /**
@@ -543,7 +543,7 @@ struct BasicGridX2d : public aBasicTopologyX2d<real_type>
  * @ingroup basictopology
  */
 template<class real_type>
-struct aBasicTopologyX3d
+struct aRealTopologyX3d
 {
     typedef SharedTag memory_category;
     typedef ThreeDimensionalTag dimensionality;
@@ -707,8 +707,8 @@ struct aBasicTopologyX3d
      *
      * @return
      */
-    BasicGrid3d<real_type> grid() const {
-        return BasicGrid3d<real_type>( x0_,x1_,y0_,y1_,z0_,z1_,n_,Nx_,Ny_,Nz_,bcx_,bcy_,bcz_);
+    RealGrid3d<real_type> grid() const {
+        return RealGrid3d<real_type>( x0_,x1_,y0_,y1_,z0_,z1_,n_,Nx_,Ny_,Nz_,bcx_,bcy_,bcz_);
     }
     /**
      * @brief discrete legendre transformation
@@ -775,10 +775,10 @@ struct aBasicTopologyX3d
     }
   protected:
     ///disallow destruction through base class pointer
-    ~aBasicTopologyX3d(){}
+    ~aRealTopologyX3d(){}
     ///@copydoc hide_gridX_parameters3d
     ///@copydoc hide_bc_parameters3d
-    aBasicTopologyX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
+    aRealTopologyX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
         x0_(x0), x1_(x1), y0_(y0), y1_(y1), z0_(z0), z1_(z1), fx_(fx), fy_(fy),
         n_(n), Nx_(Nx), Ny_(Ny), Nz_(Nz), bcx_(bcx), bcy_( bcy), bcz_( bcz), dlt_(n)
     {
@@ -790,8 +790,8 @@ struct aBasicTopologyX3d
         assert( x1 > x0 && y1 > y0 ); assert( z1 > z0 );
         assert( Nx_ > 0  && Ny > 0); assert( Nz > 0);
     }
-    ///@copydoc aBasicTopology3d::aBasicTopology3d(const aBasicTopology3d&)
-    aBasicTopologyX3d(const aBasicTopologyX3d& src){
+    ///@copydoc aRealTopology3d::aRealTopology3d(const aRealTopology3d&)
+    aRealTopologyX3d(const aRealTopologyX3d& src){
         x0_=src.x0_, x1_=src.x1_;
         y0_=src.y0_, y1_=src.y1_;
         z0_=src.z0_, z1_=src.z1_;
@@ -799,8 +799,8 @@ struct aBasicTopologyX3d
         n_=src.n_, Nx_=src.Nx_, Ny_=src.Ny_, Nz_=src.Nz_,bcx_=src.bcx_, bcy_=src.bcy_, bcz_=src.bcz_;
         dlt_=src.dlt_;
     }
-    ///@copydoc aBasicTopology3d::operator=(const aBasicTopology3d&)
-    aBasicTopologyX3d& operator=(const aBasicTopologyX3d& src){
+    ///@copydoc aRealTopology3d::operator=(const aRealTopology3d&)
+    aRealTopologyX3d& operator=(const aRealTopologyX3d& src){
         x0_=src.x0_, x1_=src.x1_;
         y0_=src.y0_, y1_=src.y1_;
         z0_=src.z0_, z1_=src.z1_;
@@ -818,24 +818,24 @@ struct aBasicTopologyX3d
 };
 
 /**
- * @brief The simplest implementation of aBasicTopologyX3d
+ * @brief The simplest implementation of aRealTopologyX3d
  * @ingroup grid
  */
 template<class real_type>
-struct BasicGridX3d : public aBasicTopologyX3d<real_type>
+struct RealGridX3d : public aRealTopologyX3d<real_type>
 {
     ///@copydoc hide_gridX_parameters3d
     ///@copydoc hide_bc_parameters3d
-    BasicGridX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=PER, bc bcy=NEU, bc bcz=PER):
-        aBasicTopologyX3d<real_type>(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
+    RealGridX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=PER, bc bcy=NEU, bc bcz=PER):
+        aRealTopologyX3d<real_type>(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
     ///allow explicit type conversion from any other topology
-    explicit BasicGridX3d( const aBasicTopologyX3d<real_type>& src): aBasicTopologyX3d<real_type>(src){}
+    explicit RealGridX3d( const aRealTopologyX3d<real_type>& src): aRealTopologyX3d<real_type>(src){}
 };
 
-using GridX1d = BasicGridX1d<double>;
-using GridX2d = BasicGridX2d<double>;
-using GridX3d = BasicGridX3d<double>;
-using aTopologyX2d = aBasicTopologyX2d<double>;
-using aTopologyX3d = aBasicTopologyX3d<double>;
+using GridX1d = RealGridX1d<double>;
+using GridX2d = RealGridX2d<double>;
+using GridX3d = RealGridX3d<double>;
+using aTopologyX2d = aRealTopologyX2d<double>;
+using aTopologyX3d = aRealTopologyX3d<double>;
 
 }// namespace dg

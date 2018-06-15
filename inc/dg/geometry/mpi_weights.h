@@ -19,7 +19,7 @@ namespace create
 ///@copydoc hide_weights_doc
 ///@copydoc hide_code_mpi_evaluate2d
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > weights( const aBasicMPITopology2d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > weights( const aRealMPITopology2d<real_type>& g)
 {
     thrust::host_vector<real_type> w( g.local().size());
     for( unsigned i=0; i<g.local().size(); i++)
@@ -30,7 +30,7 @@ MPI_Vector<thrust::host_vector<real_type> > weights( const aBasicMPITopology2d<r
 }
 ///@copydoc hide_inv_weights_doc
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > inv_weights( const aBasicMPITopology2d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > inv_weights( const aRealMPITopology2d<real_type>& g)
 {
     MPI_Vector<thrust::host_vector<real_type> > v = weights( g);
     for( unsigned i=0; i<g.local().size(); i++)
@@ -40,7 +40,7 @@ MPI_Vector<thrust::host_vector<real_type> > inv_weights( const aBasicMPITopology
 
 ///@copydoc hide_weights_coo_doc
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > weights( const aBasicMPITopology2d<real_type>& g, enum coo2d coo)
+MPI_Vector<thrust::host_vector<real_type> > weights( const aRealMPITopology2d<real_type>& g, enum coo2d coo)
 {
     thrust::host_vector<real_type> w( g.local().size());
     if( coo == coo2d::x) {
@@ -56,7 +56,7 @@ MPI_Vector<thrust::host_vector<real_type> > weights( const aBasicMPITopology2d<r
 ///@copydoc hide_weights_doc
 ///@copydoc hide_code_mpi_evaluate3d
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > weights( const aBasicMPITopology3d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > weights( const aRealMPITopology3d<real_type>& g)
 {
     thrust::host_vector<real_type> w( g.local().size());
     for( unsigned i=0; i<g.local().size(); i++)
@@ -67,7 +67,7 @@ MPI_Vector<thrust::host_vector<real_type> > weights( const aBasicMPITopology3d<r
 }
 ///@copydoc hide_inv_weights_doc
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > inv_weights( const aBasicMPITopology3d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > inv_weights( const aRealMPITopology3d<real_type>& g)
 {
     MPI_Vector<thrust::host_vector<real_type> > v = weights( g);
     for( unsigned i=0; i<g.local().size(); i++)
@@ -77,7 +77,7 @@ MPI_Vector<thrust::host_vector<real_type> > inv_weights( const aBasicMPITopology
 
 ///@copydoc hide_weights_coo_doc
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > weights( const aBasicMPITopology3d<real_type>& g, enum coo3d coo)
+MPI_Vector<thrust::host_vector<real_type> > weights( const aRealMPITopology3d<real_type>& g, enum coo3d coo)
 {
     thrust::host_vector<real_type> w( g.local().size());
     if( coo == coo3d::x) {

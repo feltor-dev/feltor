@@ -85,7 +85,7 @@ std::vector<real_type> coefficients( real_type xn, unsigned n)
  * @return interpolation matrix
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const BasicGrid1d<real_type>& g)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const RealGrid1d<real_type>& g)
 {
     cusp::coo_matrix<int, real_type, cusp::host_memory> A( x.size(), g.size(), x.size()*g.n());
 
@@ -140,7 +140,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @attention all points (x,y) must lie within or on the boundaries of g.
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aBasicTopology2d<real_type>& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const aRealTopology2d<real_type>& g , dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
     assert( x.size() == y.size());
     std::vector<real_type> gauss_nodes = g.dlt().abscissas();
@@ -286,7 +286,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @attention all points (x, y, z) must lie within or on the boundaries of g
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const thrust::host_vector<real_type>& z, const aBasicTopology3d<real_type>& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust::host_vector<real_type>& x, const thrust::host_vector<real_type>& y, const thrust::host_vector<real_type>& z, const aRealTopology3d<real_type>& g, dg::bc bcx = dg::NEU, dg::bc bcy = dg::NEU)
 {
     assert( x.size() == y.size());
     assert( y.size() == z.size());
@@ -430,7 +430,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const thrust:
  * @note also check the transformation matrix, which is the more general solution
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const BasicGrid1d<real_type>& g_new, const BasicGrid1d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -439,9 +439,9 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const BasicGr
     return interpolation( pointsX, g_old);
 
 }
-///@copydoc interpolation(const BasicGrid1d<real_type>&,const BasicGrid1d<real_type>&)
+///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&)
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aBasicTopology2d<real_type>& g_new, const aBasicTopology2d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -455,9 +455,9 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aBasicT
 
 }
 
-///@copydoc interpolation(const BasicGrid1d<real_type>&,const BasicGrid1d<real_type>&)
+///@copydoc interpolation(const RealGrid1d<real_type>&,const RealGrid1d<real_type>&)
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aBasicTopology3d<real_type>& g_new, const aBasicTopology3d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
 {
     //assert both grids are on the same box
     assert( g_new.x0() >= g_old.x0());
@@ -485,7 +485,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolation( const aBasicT
  * @return the vector in LSPACE
  */
 template<class real_type>
-thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real_type>& in, const aBasicTopology2d<real_type>& g)
+thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real_type>& in, const aRealTopology2d<real_type>& g)
 {
     thrust::host_vector<real_type> out(in.size(), 0);
     dg::Operator<real_type> forward( g.dlt().forward());
@@ -514,7 +514,7 @@ thrust::host_vector<real_type> forward_transform( const thrust::host_vector<real
  * @note \c g.contains(x,y) must return true
  */
 template<class real_type>
-real_type interpolate( real_type x, real_type y,  const thrust::host_vector<real_type>& v, const aBasicTopology2d<real_type>& g )
+real_type interpolate( real_type x, real_type y,  const thrust::host_vector<real_type>& v, const aRealTopology2d<real_type>& g )
 {
     assert( v.size() == g.size());
 

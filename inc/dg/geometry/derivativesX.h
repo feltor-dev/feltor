@@ -88,7 +88,7 @@ namespace create{
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dx( const aBasicTopologyX2d<real_type>& g, bc bcx, direction dir = centered)
+Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX2d<real_type>& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<real_type>  dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -106,7 +106,7 @@ Composite<EllSparseBlockMat<real_type> > dx( const aBasicTopologyX2d<real_type>&
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dx( const aBasicTopologyX2d<real_type>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX2d<real_type>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 2d derivative in y-direction
@@ -118,11 +118,11 @@ Composite<EllSparseBlockMat<real_type> > dx( const aBasicTopologyX2d<real_type>&
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dy( const aBasicTopologyX2d<real_type>& g, bc bcy, direction dir = centered)
+Composite<EllSparseBlockMat<real_type> > dy( const aRealTopologyX2d<real_type>& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<real_type>  dy_inner, dy_outer;
-    BasicGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    BasicGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
+    RealGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     dy_inner = dx( g1d_inner, bcy, dir);
     dy_outer = dx( g1d_outer, bcy, dir);
     dy_inner.right_size = g.n()*g.Nx();
@@ -145,7 +145,7 @@ Composite<EllSparseBlockMat<real_type> > dy( const aBasicTopologyX2d<real_type>&
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dy( const aBasicTopologyX2d<real_type>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+Composite<EllSparseBlockMat<real_type> > dy( const aRealTopologyX2d<real_type>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Matrix that contains 2d jump terms in X direction
@@ -156,7 +156,7 @@ Composite<EllSparseBlockMat<real_type> > dy( const aBasicTopologyX2d<real_type>&
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpX( const aBasicTopologyX2d<real_type>& g, bc bcx)
+Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX2d<real_type>& g, bc bcx)
 {
     EllSparseBlockMat<real_type>  jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
@@ -174,11 +174,11 @@ Composite<EllSparseBlockMat<real_type> > jumpX( const aBasicTopologyX2d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpY( const aBasicTopologyX2d<real_type>& g, bc bcy)
+Composite<EllSparseBlockMat<real_type> > jumpY( const aRealTopologyX2d<real_type>& g, bc bcy)
 {
     EllSparseBlockMat<real_type>  jy_inner, jy_outer;
-    BasicGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    BasicGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
+    RealGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     jy_inner = jump( g1d_inner, bcy);
     jy_outer = jump( g1d_outer, bcy);
     jy_inner.right_size = g.n()*g.Nx();
@@ -200,7 +200,7 @@ Composite<EllSparseBlockMat<real_type> > jumpY( const aBasicTopologyX2d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpX( const aBasicTopologyX2d<real_type>& g)
+Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX2d<real_type>& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -213,7 +213,7 @@ Composite<EllSparseBlockMat<real_type> > jumpX( const aBasicTopologyX2d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpY( const aBasicTopologyX2d<real_type>& g)
+Composite<EllSparseBlockMat<real_type> > jumpY( const aRealTopologyX2d<real_type>& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -229,7 +229,7 @@ Composite<EllSparseBlockMat<real_type> > jumpY( const aBasicTopologyX2d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpX( const aBasicTopologyX3d<real_type>& g, bc bcx)
+Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX3d<real_type>& g, bc bcx)
 {
     EllSparseBlockMat<real_type>  jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
@@ -247,11 +247,11 @@ Composite<EllSparseBlockMat<real_type> > jumpX( const aBasicTopologyX3d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpY( const aBasicTopologyX3d<real_type>& g, bc bcy)
+Composite<EllSparseBlockMat<real_type> > jumpY( const aRealTopologyX3d<real_type>& g, bc bcy)
 {
     EllSparseBlockMat<real_type>  jy_inner, jy_outer;
-    BasicGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    BasicGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
+    RealGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     jy_inner = jump( g1d_inner, bcy);
     jy_outer = jump( g1d_outer, bcy);
     jy_inner.right_size = g.n()*g.Nx();
@@ -276,7 +276,7 @@ Composite<EllSparseBlockMat<real_type> > jumpY( const aBasicTopologyX3d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpZ( const aBasicTopologyX3d<real_type>& g, bc bcz)
+Composite<EllSparseBlockMat<real_type> > jumpZ( const aRealTopologyX3d<real_type>& g, bc bcz)
 {
     EllSparseBlockMat<real_type>  jz;
     jz = jump( 1, g.Nz(), g.hz(), bcz);
@@ -293,7 +293,7 @@ Composite<EllSparseBlockMat<real_type> > jumpZ( const aBasicTopologyX3d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpX( const aBasicTopologyX3d<real_type>& g)
+Composite<EllSparseBlockMat<real_type> > jumpX( const aRealTopologyX3d<real_type>& g)
 {
     return jumpX( g, g.bcx());
 }
@@ -306,7 +306,7 @@ Composite<EllSparseBlockMat<real_type> > jumpX( const aBasicTopologyX3d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpY( const aBasicTopologyX3d<real_type>& g)
+Composite<EllSparseBlockMat<real_type> > jumpY( const aRealTopologyX3d<real_type>& g)
 {
     return jumpY( g, g.bcy());
 }
@@ -319,7 +319,7 @@ Composite<EllSparseBlockMat<real_type> > jumpY( const aBasicTopologyX3d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > jumpZ( const aBasicTopologyX3d<real_type>& g)
+Composite<EllSparseBlockMat<real_type> > jumpZ( const aRealTopologyX3d<real_type>& g)
 {
     return jumpZ( g, g.bcz());
 }
@@ -335,7 +335,7 @@ Composite<EllSparseBlockMat<real_type> > jumpZ( const aBasicTopologyX3d<real_typ
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dx( const aBasicTopologyX3d<real_type>& g, bc bcx, direction dir = centered)
+Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX3d<real_type>& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<real_type>  dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -353,7 +353,7 @@ Composite<EllSparseBlockMat<real_type> > dx( const aBasicTopologyX3d<real_type>&
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dx( const aBasicTopologyX3d<real_type>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
+Composite<EllSparseBlockMat<real_type> > dx( const aRealTopologyX3d<real_type>& g, direction dir = centered) { return dx( g, g.bcx(), dir);}
 
 /**
  * @brief Create 3d derivative in y-direction
@@ -365,11 +365,11 @@ Composite<EllSparseBlockMat<real_type> > dx( const aBasicTopologyX3d<real_type>&
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dy( const aBasicTopologyX3d<real_type>& g, bc bcy, direction dir = centered)
+Composite<EllSparseBlockMat<real_type> > dy( const aRealTopologyX3d<real_type>& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<real_type>  dy_inner, dy_outer;
-    BasicGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
-    BasicGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
+    RealGridX1d<real_type> g1d_inner( g.y0(), g.y1(), g.fy(), g.n(), g.Ny(), bcy);
+    RealGrid1d<real_type> g1d_outer( g.y0(), g.y1(), g.n(), g.Ny(), bcy);
     dy_inner = dx( g1d_inner, bcy, dir);
     dy_outer = dx( g1d_outer, bcy, dir);
     dy_inner.right_size = g.n()*g.Nx();
@@ -394,7 +394,7 @@ Composite<EllSparseBlockMat<real_type> > dy( const aBasicTopologyX3d<real_type>&
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dy( const aBasicTopologyX3d<real_type>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
+Composite<EllSparseBlockMat<real_type> > dy( const aRealTopologyX3d<real_type>& g, direction dir = centered){ return dy( g, g.bcy(), dir);}
 
 /**
  * @brief Create 3d derivative in z-direction
@@ -406,7 +406,7 @@ Composite<EllSparseBlockMat<real_type> > dy( const aBasicTopologyX3d<real_type>&
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dz( const aBasicTopologyX3d<real_type>& g, bc bcz, direction dir = centered)
+Composite<EllSparseBlockMat<real_type> > dz( const aRealTopologyX3d<real_type>& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat<real_type>  dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
@@ -425,7 +425,7 @@ Composite<EllSparseBlockMat<real_type> > dz( const aBasicTopologyX3d<real_type>&
  * @return A host matrix
  */
 template<class real_type>
-Composite<EllSparseBlockMat<real_type> > dz( const aBasicTopologyX3d<real_type>& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
+Composite<EllSparseBlockMat<real_type> > dz( const aRealTopologyX3d<real_type>& g, direction dir = centered){ return dz( g, g.bcz(), dir);}
 
 
 

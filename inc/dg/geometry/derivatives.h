@@ -30,7 +30,7 @@ namespace create{
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const aBasicTopology2d<real_type>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat<real_type> dx( const aRealTopology2d<real_type>& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -49,7 +49,7 @@ EllSparseBlockMat<real_type> dx( const aBasicTopology2d<real_type>& g, bc bcx, d
  * @copydoc hide_code_blas2_symv
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const aBasicTopology2d<real_type>& g, direction dir = centered) {
+EllSparseBlockMat<real_type> dx( const aRealTopology2d<real_type>& g, direction dir = centered) {
     return dx( g, g.bcx(), dir);
 }
 
@@ -63,7 +63,7 @@ EllSparseBlockMat<real_type> dx( const aBasicTopology2d<real_type>& g, direction
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dy( const aBasicTopology2d<real_type>& g, bc bcy, direction dir = centered)
+EllSparseBlockMat<real_type> dy( const aRealTopology2d<real_type>& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
@@ -81,7 +81,7 @@ EllSparseBlockMat<real_type> dy( const aBasicTopology2d<real_type>& g, bc bcy, d
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dy( const aBasicTopology2d<real_type>& g, direction dir = centered){
+EllSparseBlockMat<real_type> dy( const aRealTopology2d<real_type>& g, direction dir = centered){
     return dy( g, g.bcy(), dir);
 }
 
@@ -94,7 +94,7 @@ EllSparseBlockMat<real_type> dy( const aBasicTopology2d<real_type>& g, direction
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpX( const aBasicTopology2d<real_type>& g, bc bcx)
+EllSparseBlockMat<real_type> jumpX( const aRealTopology2d<real_type>& g, bc bcx)
 {
     EllSparseBlockMat<real_type> jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
@@ -112,7 +112,7 @@ EllSparseBlockMat<real_type> jumpX( const aBasicTopology2d<real_type>& g, bc bcx
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpY( const aBasicTopology2d<real_type>& g, bc bcy)
+EllSparseBlockMat<real_type> jumpY( const aRealTopology2d<real_type>& g, bc bcy)
 {
     EllSparseBlockMat<real_type> jy;
     jy = jump( g.n(), g.Ny(), g.hy(), bcy);
@@ -129,7 +129,7 @@ EllSparseBlockMat<real_type> jumpY( const aBasicTopology2d<real_type>& g, bc bcy
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpX( const aBasicTopology2d<real_type>& g) {
+EllSparseBlockMat<real_type> jumpX( const aRealTopology2d<real_type>& g) {
     return jumpX( g, g.bcx());
 }
 
@@ -141,7 +141,7 @@ EllSparseBlockMat<real_type> jumpX( const aBasicTopology2d<real_type>& g) {
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpY( const aBasicTopology2d<real_type>& g) {
+EllSparseBlockMat<real_type> jumpY( const aRealTopology2d<real_type>& g) {
     return jumpY( g, g.bcy());
 }
 
@@ -156,7 +156,7 @@ EllSparseBlockMat<real_type> jumpY( const aBasicTopology2d<real_type>& g) {
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpX( const aBasicTopology3d<real_type>& g, bc bcx)
+EllSparseBlockMat<real_type> jumpX( const aRealTopology3d<real_type>& g, bc bcx)
 {
     EllSparseBlockMat<real_type> jx;
     jx = jump( g.n(), g.Nx(), g.hx(), bcx);
@@ -174,7 +174,7 @@ EllSparseBlockMat<real_type> jumpX( const aBasicTopology3d<real_type>& g, bc bcx
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpY( const aBasicTopology3d<real_type>& g, bc bcy)
+EllSparseBlockMat<real_type> jumpY( const aRealTopology3d<real_type>& g, bc bcy)
 {
     EllSparseBlockMat<real_type> jy;
     jy = jump( g.n(), g.Ny(), g.hy(), bcy);
@@ -193,7 +193,7 @@ EllSparseBlockMat<real_type> jumpY( const aBasicTopology3d<real_type>& g, bc bcy
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpZ( const aBasicTopology3d<real_type>& g, bc bcz)
+EllSparseBlockMat<real_type> jumpZ( const aRealTopology3d<real_type>& g, bc bcz)
 {
     EllSparseBlockMat<real_type> jz;
     jz = jump( 1, g.Nz(), g.hz(), bcz);
@@ -210,7 +210,7 @@ EllSparseBlockMat<real_type> jumpZ( const aBasicTopology3d<real_type>& g, bc bcz
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpX( const aBasicTopology3d<real_type>& g) {
+EllSparseBlockMat<real_type> jumpX( const aRealTopology3d<real_type>& g) {
     return jumpX( g, g.bcx());
 }
 
@@ -222,7 +222,7 @@ EllSparseBlockMat<real_type> jumpX( const aBasicTopology3d<real_type>& g) {
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpY( const aBasicTopology3d<real_type>& g) {
+EllSparseBlockMat<real_type> jumpY( const aRealTopology3d<real_type>& g) {
     return jumpY( g, g.bcy());
 }
 
@@ -234,7 +234,7 @@ EllSparseBlockMat<real_type> jumpY( const aBasicTopology3d<real_type>& g) {
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> jumpZ( const aBasicTopology3d<real_type>& g) {
+EllSparseBlockMat<real_type> jumpZ( const aRealTopology3d<real_type>& g) {
     return jumpZ( g, g.bcz());
 }
 
@@ -249,7 +249,7 @@ EllSparseBlockMat<real_type> jumpZ( const aBasicTopology3d<real_type>& g) {
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const aBasicTopology3d<real_type>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat<real_type> dx( const aRealTopology3d<real_type>& g, bc bcx, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dx;
     dx = dx_normed( g.n(), g.Nx(), g.hx(), bcx, dir);
@@ -267,7 +267,7 @@ EllSparseBlockMat<real_type> dx( const aBasicTopology3d<real_type>& g, bc bcx, d
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const aBasicTopology3d<real_type>& g, direction dir = centered) {
+EllSparseBlockMat<real_type> dx( const aRealTopology3d<real_type>& g, direction dir = centered) {
     return dx( g, g.bcx(), dir);
 }
 
@@ -281,7 +281,7 @@ EllSparseBlockMat<real_type> dx( const aBasicTopology3d<real_type>& g, direction
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dy( const aBasicTopology3d<real_type>& g, bc bcy, direction dir = centered)
+EllSparseBlockMat<real_type> dy( const aRealTopology3d<real_type>& g, bc bcy, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dy;
     dy = dx_normed( g.n(), g.Ny(), g.hy(), bcy, dir);
@@ -300,7 +300,7 @@ EllSparseBlockMat<real_type> dy( const aBasicTopology3d<real_type>& g, bc bcy, d
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dy( const aBasicTopology3d<real_type>& g, direction dir = centered){
+EllSparseBlockMat<real_type> dy( const aRealTopology3d<real_type>& g, direction dir = centered){
     return dy( g, g.bcy(), dir);
 }
 
@@ -314,7 +314,7 @@ EllSparseBlockMat<real_type> dy( const aBasicTopology3d<real_type>& g, direction
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dz( const aBasicTopology3d<real_type>& g, bc bcz, direction dir = centered)
+EllSparseBlockMat<real_type> dz( const aRealTopology3d<real_type>& g, bc bcz, direction dir = centered)
 {
     EllSparseBlockMat<real_type> dz;
     dz = dx_normed( 1, g.Nz(), g.hz(), bcz, dir);
@@ -333,7 +333,7 @@ EllSparseBlockMat<real_type> dz( const aBasicTopology3d<real_type>& g, bc bcz, d
  * @return A host matrix
  */
 template<class real_type>
-EllSparseBlockMat<real_type> dz( const aBasicTopology3d<real_type>& g, direction dir = centered){
+EllSparseBlockMat<real_type> dz( const aRealTopology3d<real_type>& g, direction dir = centered){
     return dz( g, g.bcz(), dir);
 }
 

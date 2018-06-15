@@ -36,7 +36,7 @@ namespace create{
  * @note this matrix has ~n^4 N^2 entries
  */
 template<class real_type>
-dg::IHMatrix backscatter( const aBasicTopology2d<real_type>& g)
+dg::IHMatrix backscatter( const aRealTopology2d<real_type>& g)
 {
     typedef cusp::coo_matrix<int, real_type, cusp::host_memory> Matrix;
     //create equidistant backward transformation
@@ -60,7 +60,7 @@ dg::IHMatrix backscatter( const aBasicTopology2d<real_type>& g)
 
 ///@copydoc backscatter(const aTopology2d&)
 template<class real_type>
-dg::IHMatrix backscatter( const aBasicTopology3d<real_type>& g)
+dg::IHMatrix backscatter( const aRealTopology3d<real_type>& g)
 {
     Grid2d g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
     cusp::coo_matrix<int,real_type, cusp::host_memory> back2d = backscatter( g2d);

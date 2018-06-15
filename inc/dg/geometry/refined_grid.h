@@ -26,7 +26,7 @@ namespace detail
  * @return The abscissas of the new grid
  */
 template<class real_type>
-thrust::host_vector<real_type> normalize_weights_and_compute_abscissas( const BasicGrid1d<real_type>& g, thrust::host_vector<real_type>& weights)
+thrust::host_vector<real_type> normalize_weights_and_compute_abscissas( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights)
 {
     //normalize weights
     unsigned Nx_new = weights.size()/g.n();
@@ -57,7 +57,7 @@ thrust::host_vector<real_type> normalize_weights_and_compute_abscissas( const Ba
 * @brief Abstract base class for 1d grid refinement that increases the number of grid cells of a fixed basis grid
 */
 template<class real_type>
-struct aBasicRefinement1d
+struct aRealRefinement1d
 {
     /*! @brief Generate the grid transformation
      *
@@ -65,7 +65,7 @@ struct aBasicRefinement1d
      * @param weights A 1d vector of size N_new. These represent the Jacobian of the transformation \f[\frac{\partial \zeta}{\partial x} \f]. The new metric element has thus to be multiplied by weights^2 and the volume by 1/weights
      * @param abscissas A 1d vector of size N_new. These are the new abscissas \f$ x(\zeta) \f$ of the grid.
     */
-    void generate( const BasicGrid1d<real_type>& g_old, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const
+    void generate( const RealGrid1d<real_type>& g_old, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const
     {
         weights.resize( N_new(g_old.N(), g_old.bcx()));
         abscissas.resize( N_new(g_old.N(), g_old.bcx()));
@@ -79,16 +79,16 @@ struct aBasicRefinement1d
     {
         return do_N_new(N_old, bcx);
     }
-    virtual aBasicRefinement1d* clone()const=0;
-    virtual ~aBasicRefinement1d(){}
+    virtual aRealRefinement1d* clone()const=0;
+    virtual ~aRealRefinement1d(){}
     protected:
-    aBasicRefinement1d(){}
-    aBasicRefinement1d(const aBasicRefinement1d& src){}
-    aBasicRefinement1d& operator=(const aBasicRefinement1d& src){
+    aRealRefinement1d(){}
+    aRealRefinement1d(const aRealRefinement1d& src){}
+    aRealRefinement1d& operator=(const aRealRefinement1d& src){
         return *this;
     }
     private:
-    virtual void do_generate( const BasicGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const =0;
+    virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const =0;
     virtual unsigned do_N_new( unsigned N_old, bc bcx) const =0;
 };
 
@@ -96,11 +96,11 @@ struct aBasicRefinement1d
 * @brief No refinement
 */
 template<class real_type>
-struct BasicIdentityRefinement : public aBasicRefinement1d<real_type>
+struct RealIdentityRefinement : public aRealRefinement1d<real_type>
 {
-    BasicIdentityRefinement* clone()const{return new BasicIdentityRefinement();}
+    RealIdentityRefinement* clone()const{return new RealIdentityRefinement();}
     private:
-    virtual void do_generate( const BasicGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final{
+    virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final{
         weights=dg::create::weights(g);
         abscissas=dg::create::abscissas(g);
     }
@@ -110,22 +110,22 @@ struct BasicIdentityRefinement : public aBasicRefinement1d<real_type>
 };
 
 /**
- * @brief BasicLinear refinement consists of multiplying every cell in the grid by a factor
+ * @brief RealLinear refinement consists of multiplying every cell in the grid by a factor
  */
 template<class real_type>
-struct BasicLinearRefinement : public aBasicRefinement1d<real_type>
+struct RealLinearRefinement : public aRealRefinement1d<real_type>
 {
     /**
      * @brief Refine every cell in the grid by an integer number of new cells
      * @param multiple multiply every cell
      */
-    BasicLinearRefinement( unsigned multiple): m_(multiple){
+    RealLinearRefinement( unsigned multiple): m_(multiple){
         assert( multiple>= 1);
     }
-    BasicLinearRefinement* clone()const{return new BasicLinearRefinement(*this);}
+    RealLinearRefinement* clone()const{return new RealLinearRefinement(*this);}
     private:
     unsigned m_;
-    virtual void do_generate( const BasicGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
+    virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
     {
         thrust::host_vector< real_type> left( g.n()*g.N()*m_, 1);
         for( unsigned k=0; k<left.size(); k++)
@@ -139,10 +139,10 @@ struct BasicLinearRefinement : public aBasicRefinement1d<real_type>
 };
 
 /**
- * @brief BasicEquidistant cell refinement around a given node
+ * @brief RealEquidistant cell refinement around a given node
  */
 template<class real_type>
-struct BasicEquidistRefinement : public aBasicRefinement1d<real_type>
+struct RealEquidistRefinement : public aRealRefinement1d<real_type>
 {
     /**
      * @brief Divide a number of cells left and right of a node into an equidistant number of new cells
@@ -153,11 +153,11 @@ struct BasicEquidistRefinement : public aBasicRefinement1d<real_type>
      * @param node the node around which to refine. We count nodes from 0 (left corner) to N (right corner).
      * @param howmany  number of cells around a node to refine
      */
-    BasicEquidistRefinement( unsigned add_x, unsigned node, unsigned howmany=1): add_x_(add_x), node_(node), howm_(howmany){ }
-    BasicEquidistRefinement* clone()const{return new BasicEquidistRefinement(*this);}
+    RealEquidistRefinement( unsigned add_x, unsigned node, unsigned howmany=1): add_x_(add_x), node_(node), howm_(howmany){ }
+    RealEquidistRefinement* clone()const{return new RealEquidistRefinement(*this);}
     private:
     unsigned add_x_, node_, howm_;
-    virtual void do_generate( const BasicGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
+    virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
     {
         if( add_x_ == 0 || howm_ == 0)
         {
@@ -217,7 +217,7 @@ struct BasicEquidistRefinement : public aBasicRefinement1d<real_type>
  * @brief The exponential refinement around a node
  */
 template<class real_type>
-struct BasicExponentialRefinement : public aBasicRefinement1d<real_type>
+struct RealExponentialRefinement : public aRealRefinement1d<real_type>
 {
     /**
      * @brief Construct exponential refinement
@@ -228,11 +228,11 @@ struct BasicExponentialRefinement : public aBasicRefinement1d<real_type>
      * @param node The cells node-1 and node will be refined. We count nodes from
      * 0 (left corner) to N (right corner).
      */
-    BasicExponentialRefinement( unsigned add_x, unsigned node): add_x_(add_x), node_(node) {}
-    BasicExponentialRefinement* clone()const{return new BasicExponentialRefinement(*this);}
+    RealExponentialRefinement( unsigned add_x, unsigned node): add_x_(add_x), node_(node) {}
+    RealExponentialRefinement* clone()const{return new RealExponentialRefinement(*this);}
     private:
     unsigned add_x_, node_;
-    virtual void do_generate( const BasicGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
+    virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
     {
         if( add_x_ == 0)
         {
@@ -286,35 +286,35 @@ struct BasicExponentialRefinement : public aBasicRefinement1d<real_type>
     }
 };
 
-using aRefinement1d = aBasicRefinement1d<double>;
-using IdentityRefinement = BasicIdentityRefinement<double>;
-using LinearRefinement = BasicLinearRefinement<double>;
-using EquidistRefinement = BasicEquidistRefinement<double>;
-using ExponentialRefinement = BasicExponentialRefinement<double>;
+using aRefinement1d = aRealRefinement1d<double>;
+using IdentityRefinement = RealIdentityRefinement<double>;
+using LinearRefinement = RealLinearRefinement<double>;
+using EquidistRefinement = RealEquidistRefinement<double>;
+using ExponentialRefinement = RealExponentialRefinement<double>;
 
 ///@}
 
 /**
- * @brief Refined BasicCartesian grid
+ * @brief Refined RealCartesian grid
  * @ingroup geometry
  */
 template<class real_type>
-struct BasicCartesianRefinedGrid2d : public dg::aBasicGeometry2d<real_type>
+struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
 {
-    BasicCartesianRefinedGrid2d( const aBasicRefinement1d<real_type>& refX, const aBasicRefinement1d<real_type>& refY, real_type x0, real_type x1, real_type y0, real_type y1,
+    RealCartesianRefinedGrid2d( const aRealRefinement1d<real_type>& refX, const aRealRefinement1d<real_type>& refY, real_type x0, real_type x1, real_type y0, real_type y1,
             unsigned n, unsigned Nx, unsigned Ny, bc bcx = dg::PER, bc bcy = dg::PER) : dg::aGeometry2d( x0, x1, y0, y1, n, refX.N_new(Nx, bcx), refY.N_new(Ny,bcy), bcx, bcy), refX_(refX), refY_(refY), w_(2), a_(2)
     {
         construct_weights_and_abscissas(n,Nx,Ny);
     }
 
-    BasicCartesianRefinedGrid2d* clone()const{return new BasicCartesianRefinedGrid2d(*this);}
+    RealCartesianRefinedGrid2d* clone()const{return new RealCartesianRefinedGrid2d(*this);}
     private:
-    ClonePtr<aBasicRefinement1d<real_type>> refX_, refY_;
+    ClonePtr<aRealRefinement1d<real_type>> refX_, refY_;
     std::vector<thrust::host_vector<real_type> > w_, a_;
     void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny)
     {
-        BasicGrid1d<real_type> gx( this->x0(), this->x1(), n, Nx, this->bcx());
-        BasicGrid1d<real_type> gy( this->y0(), this->y1(), n, Ny, this->bcy());
+        RealGrid1d<real_type> gx( this->x0(), this->x1(), n, Nx, this->bcx());
+        RealGrid1d<real_type> gy( this->y0(), this->y1(), n, Ny, this->bcy());
         thrust::host_vector<real_type> wx, ax, wy, ay;
         refX_.get().generate( gx, wx, ax);
         refY_.get().generate( gy, wy, ay);
@@ -331,7 +331,7 @@ struct BasicCartesianRefinedGrid2d : public dg::aBasicGeometry2d<real_type>
             }
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)override final{
-        aBasicTopology2d<real_type>::do_set(new_n,refX_.get().N_new(new_Nx,this->bcx()),refY_.get().N_new(new_Ny, this->bcy()));
+        aRealTopology2d<real_type>::do_set(new_n,refX_.get().N_new(new_Nx,this->bcx()),refY_.get().N_new(new_Ny, this->bcy()));
         construct_weights_and_abscissas(new_n,new_Nx,new_Ny);
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final{
@@ -352,27 +352,27 @@ struct BasicCartesianRefinedGrid2d : public dg::aBasicGeometry2d<real_type>
 };
 
 /**
- * @brief Refined BasicCartesian grid
+ * @brief Refined RealCartesian grid
  * @ingroup geometry
  */
 template< class real_type>
-struct BasicCartesianRefinedGrid3d : public dg::aBasicGeometry3d<real_type>
+struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
 {
-    BasicCartesianRefinedGrid3d( const aBasicRefinement1d<real_type>& refX, const aBasicRefinement1d<real_type>& refY, aBasicRefinement1d<real_type>& refZ, real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1,
+    RealCartesianRefinedGrid3d( const aRealRefinement1d<real_type>& refX, const aRealRefinement1d<real_type>& refY, aRealRefinement1d<real_type>& refZ, real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1,
             unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = dg::PER, bc bcy = dg::PER, bc bcz=dg::PER) : dg::aGeometry3d( x0, x1, y0, y1,z0,z1, n, refX.N_new(Nx, bcx), refY.N_new(Ny,bcy), refZ.N_new(Nz,bcz), bcx, bcy, bcz), refX_(refX), refY_(refY), refZ_(refZ), w_(3), a_(3)
     {
         construct_weights_and_abscissas(n, Nx, Ny,Nz);
     }
 
-    BasicCartesianRefinedGrid3d* clone()const{return new BasicCartesianRefinedGrid3d(*this);}
+    RealCartesianRefinedGrid3d* clone()const{return new RealCartesianRefinedGrid3d(*this);}
     private:
-    ClonePtr<aBasicRefinement1d<real_type>> refX_, refY_, refZ_;
+    ClonePtr<aRealRefinement1d<real_type>> refX_, refY_, refZ_;
     std::vector<thrust::host_vector<real_type> > w_, a_;
     void construct_weights_and_abscissas(unsigned n, unsigned Nx, unsigned Ny,unsigned Nz)
     {
-        BasicGrid1d<real_type> gx( this->x0(), this->x1(), n, Nx, this->bcx());
-        BasicGrid1d<real_type> gy( this->y0(), this->y1(), n, Ny, this->bcy());
-        BasicGrid1d<real_type> gz( this->y0(), this->y1(), 1, Nz, this->bcz());
+        RealGrid1d<real_type> gx( this->x0(), this->x1(), n, Nx, this->bcx());
+        RealGrid1d<real_type> gy( this->y0(), this->y1(), n, Ny, this->bcy());
+        RealGrid1d<real_type> gz( this->y0(), this->y1(), 1, Nz, this->bcz());
         thrust::host_vector<real_type> w[3], a[3];
         refX_.get().generate( gx, w[0], a[0]);
         refY_.get().generate( gy, w[1], a[1]);
@@ -393,7 +393,7 @@ struct BasicCartesianRefinedGrid3d : public dg::aBasicGeometry3d<real_type>
             }
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) override final{
-        aBasicTopology3d<real_type>::do_set(new_n,refX_.get().N_new(new_Nx, this->bcx()),refY_.get().N_new(new_Ny,this->bcy()), refZ_.get().N_new(new_Nz,this->bcz()));
+        aRealTopology3d<real_type>::do_set(new_n,refX_.get().N_new(new_Nx, this->bcx()),refY_.get().N_new(new_Ny,this->bcy()), refZ_.get().N_new(new_Nz,this->bcz()));
         construct_weights_and_abscissas(new_n, new_Nx, new_Ny, new_Nz);
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final {
@@ -414,7 +414,7 @@ struct BasicCartesianRefinedGrid3d : public dg::aBasicGeometry3d<real_type>
     }
 };
 
-using CartesianRefinedGrid2d = BasicCartesianRefinedGrid2d<double>;
-using CartesianRefinedGrid3d = BasicCartesianRefinedGrid3d<double>;
+using CartesianRefinedGrid2d = RealCartesianRefinedGrid2d<double>;
+using CartesianRefinedGrid3d = RealCartesianRefinedGrid3d<double>;
 
 }//namespace dg

@@ -27,11 +27,11 @@ namespace dg
  * @copydoc hide_code_mpi_evaluate2d
  */
 template< class BinaryOp,class real_type>
-MPI_Vector<thrust::host_vector<real_type> > evaluate( const BinaryOp& f, const aBasicMPITopology2d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > evaluate( const BinaryOp& f, const aRealMPITopology2d<real_type>& g)
 {
     //since the local grid is not binary compatible we have to use this implementation
     unsigned n = g.n();
-    BasicGrid2d<real_type> l = g.local();
+    RealGrid2d<real_type> l = g.local();
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( g.communicator(), 2, dims, periods, coords);
     thrust::host_vector<real_type> absx( l.n()*l.Nx());
@@ -66,7 +66,7 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( const BinaryOp& f, const a
 };
 ///@cond
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > evaluate( real_type(f)(real_type, real_type), const aBasicMPITopology2d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > evaluate( real_type(f)(real_type, real_type), const aRealMPITopology2d<real_type>& g)
 {
     return evaluate<real_type(real_type, real_type)>( *f, g);
 };
@@ -85,12 +85,12 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( real_type(f)(real_type, re
  * @copydoc hide_code_mpi_evaluate3d
  */
 template< class TernaryOp,class real_type>
-MPI_Vector<thrust::host_vector<real_type> > evaluate( const TernaryOp& f, const aBasicMPITopology3d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > evaluate( const TernaryOp& f, const aRealMPITopology3d<real_type>& g)
 {
     //since the local grid is not binary compatible we have to use this implementation
     unsigned n = g.n();
     //abscissas
-    BasicGrid3d<real_type> l = g.local();
+    RealGrid3d<real_type> l = g.local();
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( g.communicator(), 3, dims, periods, coords);
     thrust::host_vector<real_type> absx( l.n()*l.Nx());
@@ -134,7 +134,7 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( const TernaryOp& f, const 
 };
 ///@cond
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > evaluate( real_type(f)(real_type, real_type, real_type), const aBasicMPITopology3d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > evaluate( real_type(f)(real_type, real_type, real_type), const aRealMPITopology3d<real_type>& g)
 {
     return evaluate<real_type(real_type, real_type, real_type)>( *f, g);
 };
@@ -151,10 +151,10 @@ MPI_Vector<thrust::host_vector<real_type> > evaluate( real_type(f)(real_type, re
  * @ingroup scatter
  */
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > global2local( const thrust::host_vector<real_type>& global, const aBasicMPITopology3d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > global2local( const thrust::host_vector<real_type>& global, const aRealMPITopology3d<real_type>& g)
 {
     assert( global.size() == g.global().size());
-    BasicGrid3d<real_type> l = g.local();
+    RealGrid3d<real_type> l = g.local();
     thrust::host_vector<real_type> temp(l.size());
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( g.communicator(), 3, dims, periods, coords);
@@ -175,10 +175,10 @@ MPI_Vector<thrust::host_vector<real_type> > global2local( const thrust::host_vec
  * @ingroup scatter
  */
 template<class real_type>
-MPI_Vector<thrust::host_vector<real_type> > global2local( const thrust::host_vector<real_type>& global, const aBasicMPITopology2d<real_type>& g)
+MPI_Vector<thrust::host_vector<real_type> > global2local( const thrust::host_vector<real_type>& global, const aRealMPITopology2d<real_type>& g)
 {
     assert( global.size() == g.global().size());
-    BasicGrid2d<real_type> l = g.local();
+    RealGrid2d<real_type> l = g.local();
     thrust::host_vector<real_type> temp(l.size());
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( g.communicator(), 2, dims, periods, coords);

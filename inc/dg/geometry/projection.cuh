@@ -68,7 +68,7 @@ namespace create{
  * @note The boundaries of the old grid must lie within the boundaries of the new grid
  */
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const BasicGrid1d<real_type>& g_new, const BasicGrid1d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
 {
     cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
     cusp::transpose( temp, A);
@@ -76,7 +76,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const BasicG
 }
 ///@copydoc interpolationT(const Grid1d&,const Grid1d&)
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aBasicTopology2d<real_type>& g_new, const aBasicTopology2d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {
     cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
     cusp::transpose( temp, A);
@@ -84,7 +84,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aBasic
 }
 ///@copydoc interpolationT(const Grid1d&,const Grid1d&)
 template<class real_type>
-cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aBasicTopology3d<real_type>& g_new, const aBasicTopology3d<real_type>& g_old)
+cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
 {
     cusp::coo_matrix<int, real_type, cusp::host_memory> temp = interpolation( g_old, g_new), A;
     cusp::transpose( temp, A);
@@ -113,7 +113,7 @@ cusp::coo_matrix<int, real_type, cusp::host_memory> interpolationT( const aBasic
  * fine grid is a multiple of the number of cells in the coarse grid
  */
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const BasicGrid1d<real_type>& g_new, const BasicGrid1d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
 {
     if( g_old.N() % g_new.N() != 0) std::cerr << "ATTENTION: you project between incompatible grids!! old N: "<<g_old.N()<<" new N: "<<g_new.N()<<"\n";
     //form the adjoint
@@ -141,7 +141,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const BasicGrid
 
 ///@copydoc projection(const Grid1d&,const Grid1d&)
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aBasicTopology2d<real_type>& g_new, const aBasicTopology2d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
@@ -169,7 +169,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aBasicTop
 
 ///@copydoc projection(const Grid1d&,const Grid1d&)
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aBasicTopology3d<real_type>& g_new, const aBasicTopology3d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
 {
     if( g_old.Nx() % g_new.Nx() != 0) std::cerr << "ATTENTION: you project between incompatible grids in x!! old N: "<<g_old.Nx()<<" new N: "<<g_new.Nx()<<"\n";
     if( g_old.Ny() % g_new.Ny() != 0) std::cerr << "ATTENTION: you project between incompatible grids in y!! old N: "<<g_old.Ny()<<" new N: "<<g_new.Ny()<<"\n";
@@ -218,7 +218,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> projection( const aBasicTop
  * @note If the grid are very incompatible the matrix-matrix multiplication can take a while
  */
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aBasicTopology3d<real_type>& g_new, const aBasicTopology3d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aRealTopology3d<real_type>& g_new, const aRealTopology3d<real_type>& g_old)
 {
     Grid3d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(), g_new.z0(), g_new.z1(),
                  lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()),
@@ -232,7 +232,7 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aBasi
 
 ///@copydoc transformation(const aTopology3d&,const aTopology3d&)
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aBasicTopology2d<real_type>& g_new, const aBasicTopology2d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aRealTopology2d<real_type>& g_new, const aRealTopology2d<real_type>& g_old)
 {
     Grid2d g_lcm(g_new.x0(), g_new.x1(), g_new.y0(), g_new.y1(),
                  lcm(g_new.n(), g_old.n()), lcm(g_new.Nx(), g_old.Nx()), lcm(g_new.Ny(), g_old.Ny()));
@@ -244,9 +244,9 @@ cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const aBasi
 }
 ///@copydoc transformation(const aTopology3d&,const aTopology3d&)
 template<class real_type>
-cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const BasicGrid1d<real_type>& g_new, const BasicGrid1d<real_type>& g_old)
+cusp::coo_matrix< int, real_type, cusp::host_memory> transformation( const RealGrid1d<real_type>& g_new, const RealGrid1d<real_type>& g_old)
 {
-    BasicGrid1d<real_type> g_lcm(g_new.x0(), g_new.x1(), lcm(g_new.n(), g_old.n()), lcm(g_new.N(), g_old.N()));
+    RealGrid1d<real_type> g_lcm(g_new.x0(), g_new.x1(), lcm(g_new.n(), g_old.n()), lcm(g_new.N(), g_old.N()));
     cusp::coo_matrix< int, real_type, cusp::host_memory> Q = create::interpolation( g_lcm, g_old);
     cusp::coo_matrix< int, real_type, cusp::host_memory> P = create::projection( g_new, g_lcm), Y;
     cusp::multiply( P, Q, Y);

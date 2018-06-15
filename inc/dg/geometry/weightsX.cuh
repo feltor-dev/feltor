@@ -23,7 +23,7 @@ namespace create{
 * @return Host Vector
 */
 template<class real_type>
-thrust::host_vector<real_type> weights( const dg::BasicGridX1d<real_type>& g) { return weights( g.grid()); }
+thrust::host_vector<real_type> weights( const dg::RealGridX1d<real_type>& g) { return weights( g.grid()); }
 /**
 * @brief create host_vector containing 1d X-space inverse weight coefficients
 *
@@ -32,7 +32,7 @@ thrust::host_vector<real_type> weights( const dg::BasicGridX1d<real_type>& g) { 
 * @return Host Vector
 */
 template<class real_type>
-thrust::host_vector<real_type> inv_weights( const BasicGridX1d<real_type>& g) { return inv_weights( g.grid()); }
+thrust::host_vector<real_type> inv_weights( const RealGridX1d<real_type>& g) { return inv_weights( g.grid()); }
 
 /**
 * @brief create host_vector containing 2d X-space integration weight coefficients
@@ -42,7 +42,7 @@ thrust::host_vector<real_type> inv_weights( const BasicGridX1d<real_type>& g) { 
 * @return Host Vector
 */
 template<class real_type>
-thrust::host_vector<real_type> weights( const aBasicTopologyX2d<real_type>& g) { return weights( g.grid()); }
+thrust::host_vector<real_type> weights( const aRealTopologyX2d<real_type>& g) { return weights( g.grid()); }
 /**
 * @brief create host_vector containing 2d X-space inverse weight coefficients
 *
@@ -51,7 +51,7 @@ thrust::host_vector<real_type> weights( const aBasicTopologyX2d<real_type>& g) {
 * @return Host Vector
 */
 template<class real_type>
-thrust::host_vector<real_type> inv_weights( const aBasicTopologyX2d<real_type>& g) { return inv_weights( g.grid()); }
+thrust::host_vector<real_type> inv_weights( const aRealTopologyX2d<real_type>& g) { return inv_weights( g.grid()); }
 
 /**
 * @brief create host_vector containing 3d X-space weight coefficients for integration
@@ -61,7 +61,7 @@ thrust::host_vector<real_type> inv_weights( const aBasicTopologyX2d<real_type>& 
 * @return Host Vector
 */
 template<class real_type>
-thrust::host_vector<real_type> weights( const aBasicTopologyX3d<real_type>& g) { return weights(g.grid()); }
+thrust::host_vector<real_type> weights( const aRealTopologyX3d<real_type>& g) { return weights(g.grid()); }
 
 /**
 * @brief create host_vector containing 3d X-space inverse weight coefficients
@@ -72,7 +72,7 @@ thrust::host_vector<real_type> weights( const aBasicTopologyX3d<real_type>& g) {
 * @return Host Vector
 */
 template<class real_type>
-thrust::host_vector<real_type> inv_weights( const aBasicTopologyX3d<real_type>& g) { return inv_weights(g.grid()); }
+thrust::host_vector<real_type> inv_weights( const aRealTopologyX3d<real_type>& g) { return inv_weights(g.grid()); }
 
 ///@}
 }//namespace create

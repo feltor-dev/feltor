@@ -13,7 +13,7 @@ namespace dg
 ///@cond
 namespace create{
 template<class real_type>
-thrust::host_vector<real_type> abscissas( const BasicGridX1d<real_type>& g)
+thrust::host_vector<real_type> abscissas( const RealGridX1d<real_type>& g)
 {
     return abscissas(g.grid());
 }
@@ -34,13 +34,13 @@ thrust::host_vector<real_type> abscissas( const BasicGridX1d<real_type>& g)
  * @return  A DG Host Vector with values
  */
 template< class UnaryOp,class real_type>
-thrust::host_vector<real_type> evaluate( UnaryOp f, const BasicGridX1d<real_type>& g)
+thrust::host_vector<real_type> evaluate( UnaryOp f, const RealGridX1d<real_type>& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
 template<class real_type>
-thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const BasicGridX1d<real_type>& g)
+thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGridX1d<real_type>& g)
 {
     return evaluate( *f, g.grid());
 };
@@ -59,13 +59,13 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const BasicGr
             may be constructed during function call.
  */
 template< class BinaryOp, class real_type>
-thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aBasicTopologyX2d<real_type>& g)
+thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aRealTopologyX2d<real_type>& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
 template<class real_type>
-thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), const aBasicTopologyX2d<real_type>& g)
+thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), const aRealTopologyX2d<real_type>& g)
 {
     return evaluate( *f, g.grid());
 };
@@ -84,13 +84,13 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
             may be constructed during function call.
  */
 template< class TernaryOp, class real_type>
-thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aBasicTopologyX3d<real_type>& g)
+thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aRealTopologyX3d<real_type>& g)
 {
     return evaluate( f, g.grid());
 };
 ///@cond
 template<class real_type>
-thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type, real_type), const aBasicTopologyX3d<real_type>& g)
+thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type, real_type), const aRealTopologyX3d<real_type>& g)
 {
     return evaluate( *f, g.grid());
 };

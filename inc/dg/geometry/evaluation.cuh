@@ -23,7 +23,7 @@ namespace create
 * @return Host Vector
 */
 template<class real_type>
-thrust::host_vector<real_type> abscissas( const BasicGrid1d<real_type>& g)
+thrust::host_vector<real_type> abscissas( const RealGrid1d<real_type>& g)
 {
     thrust::host_vector<real_type> abs(g.size());
     for( unsigned i=0; i<g.N(); i++)
@@ -57,7 +57,7 @@ thrust::host_vector<real_type> abscissas( const BasicGrid1d<real_type>& g)
  * @copydoc hide_code_evaluate1d
  */
 template< class UnaryOp,class real_type>
-thrust::host_vector<real_type> evaluate( UnaryOp f, const BasicGrid1d<real_type>& g)
+thrust::host_vector<real_type> evaluate( UnaryOp f, const RealGrid1d<real_type>& g)
 {
     thrust::host_vector<real_type> abs = create::abscissas( g);
     for( unsigned i=0; i<g.size(); i++)
@@ -66,7 +66,7 @@ thrust::host_vector<real_type> evaluate( UnaryOp f, const BasicGrid1d<real_type>
 };
 ///@cond
 template<class real_type>
-thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const BasicGrid1d<real_type>& g)
+thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const RealGrid1d<real_type>& g)
 {
     thrust::host_vector<real_type> v = evaluate<real_type (real_type)>( *f, g);
     return v;
@@ -87,11 +87,11 @@ thrust::host_vector<real_type> evaluate( real_type (f)(real_type), const BasicGr
  * @copydoc hide_code_evaluate2d
  */
 template< class BinaryOp, class real_type>
-thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aBasicTopology2d<real_type>& g)
+thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aRealTopology2d<real_type>& g)
 {
     unsigned n= g.n();
-    BasicGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
-    BasicGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
+    RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
+    RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
     thrust::host_vector<real_type> absx = create::abscissas( gx);
     thrust::host_vector<real_type> absy = create::abscissas( gy);
 
@@ -105,7 +105,7 @@ thrust::host_vector<real_type> evaluate( const BinaryOp& f, const aBasicTopology
 };
 ///@cond
 template<class real_type>
-thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), const aBasicTopology2d<real_type>& g)
+thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), const aRealTopology2d<real_type>& g)
 {
     return evaluate<real_type(real_type, real_type)>( *f, g);
 };
@@ -124,12 +124,12 @@ thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type), con
  * @copydoc hide_code_evaluate3d
  */
 template< class TernaryOp,class real_type>
-thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aBasicTopology3d<real_type>& g)
+thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aRealTopology3d<real_type>& g)
 {
     unsigned n= g.n();
-    BasicGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
-    BasicGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
-    BasicGrid1d<real_type> gz(g.z0(), g.z1(), 1, g.Nz());
+    RealGrid1d<real_type> gx(g.x0(), g.x1(), g.n(), g.Nx());
+    RealGrid1d<real_type> gy(g.y0(), g.y1(), g.n(), g.Ny());
+    RealGrid1d<real_type> gz(g.z0(), g.z1(), 1, g.Nz());
     thrust::host_vector<real_type> absx = create::abscissas( gx);
     thrust::host_vector<real_type> absy = create::abscissas( gy);
     thrust::host_vector<real_type> absz = create::abscissas( gz);
@@ -145,7 +145,7 @@ thrust::host_vector<real_type> evaluate( const TernaryOp& f, const aBasicTopolog
 };
 ///@cond
 template<class real_type>
-thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type, real_type), const aBasicTopology3d<real_type>& g)
+thrust::host_vector<real_type> evaluate( real_type(f)(real_type, real_type, real_type), const aRealTopology3d<real_type>& g)
 {
     return evaluate<real_type(real_type, real_type, real_type)>( *f, g);
 };

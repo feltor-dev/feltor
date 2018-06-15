@@ -11,38 +11,38 @@ namespace dg
 ///@{
 
 /**
- * @brief This is the abstract interface class for a two-dimensional BasicGeometryX
+ * @brief This is the abstract interface class for a two-dimensional RealGeometryX
  */
 template<class real_type>
-struct aBasicGeometryX2d : public aBasicTopologyX2d<real_type>
+struct aRealGeometryX2d : public aRealTopologyX2d<real_type>
 {
-    ///@copydoc aBasicGeometry2d::jacobian()
+    ///@copydoc aRealGeometry2d::jacobian()
     SparseTensor<thrust::host_vector<real_type> > jacobian()const{
         return do_compute_jacobian();
     }
-    ///@copydoc aBasicGeometry2d::metric()
+    ///@copydoc aRealGeometry2d::metric()
     SparseTensor<thrust::host_vector<real_type> > metric()const {
         return do_compute_metric();
     }
-    ///@copydoc aBasicGeometry2d::map()
+    ///@copydoc aRealGeometry2d::map()
     std::vector<thrust::host_vector<real_type> > map()const{
         return do_compute_map();
     }
     ///Geometries are cloneable
-    virtual aBasicGeometryX2d* clone()const=0;
+    virtual aRealGeometryX2d* clone()const=0;
     ///allow deletion through base class pointer
-    virtual ~aBasicGeometryX2d(){}
+    virtual ~aRealGeometryX2d(){}
     protected:
     /*!
-     * @copydoc aBasicTopologyX2d::aBasicTopologyX2d()
+     * @copydoc aRealTopologyX2d::aRealTopologyX2d()
      * @note the default coordinate map will be the identity
      */
-    aBasicGeometryX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aBasicTopologyX2d<real_type>( x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy){}
-    ///@copydoc aBasicTopologyX2d::aBasicTopologyX2d(const aBasicTopologyX2d&)
-    aBasicGeometryX2d( const aBasicGeometryX2d& src):aBasicTopologyX2d<real_type>(src){}
-    ///@copydoc aBasicTopologyX2d::operator=(const aBasicTopologyX2d&)
-    aBasicGeometryX2d& operator=( const aBasicGeometryX2d& src){
-        aBasicTopologyX2d<real_type>::operator=(src);
+    aRealGeometryX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):aRealTopologyX2d<real_type>( x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy){}
+    ///@copydoc aRealTopologyX2d::aRealTopologyX2d(const aRealTopologyX2d&)
+    aRealGeometryX2d( const aRealGeometryX2d& src):aRealTopologyX2d<real_type>(src){}
+    ///@copydoc aRealTopologyX2d::operator=(const aRealTopologyX2d&)
+    aRealGeometryX2d& operator=( const aRealGeometryX2d& src){
+        aRealTopologyX2d<real_type>::operator=(src);
         return *this;
     }
     private:
@@ -63,38 +63,38 @@ struct aBasicGeometryX2d : public aBasicTopologyX2d<real_type>
 };
 
 /**
- * @brief This is the abstract interface class for a three-dimensional BasicGeometryX
+ * @brief This is the abstract interface class for a three-dimensional RealGeometryX
  */
 template<class real_type>
-struct aBasicGeometryX3d : public aBasicTopologyX3d<real_type>
+struct aRealGeometryX3d : public aRealTopologyX3d<real_type>
 {
-    ///@copydoc aBasicGeometry3d::jacobian()
+    ///@copydoc aRealGeometry3d::jacobian()
     SparseTensor<thrust::host_vector<real_type> > jacobian()const{
         return do_compute_jacobian();
     }
-    ///@copydoc aBasicGeometry3d::metric()
+    ///@copydoc aRealGeometry3d::metric()
     SparseTensor<thrust::host_vector<real_type> > metric()const {
         return do_compute_metric();
     }
-    ///@copydoc aBasicGeometry3d::map()
+    ///@copydoc aRealGeometry3d::map()
     std::vector<thrust::host_vector<real_type> > map()const{
         return do_compute_map();
     }
     ///Geometries are cloneable
-    virtual aBasicGeometryX3d* clone()const=0;
+    virtual aRealGeometryX3d* clone()const=0;
     ///allow deletion through base class pointer
-    virtual ~aBasicGeometryX3d(){}
+    virtual ~aRealGeometryX3d(){}
     protected:
     /*!
-     * @copydoc aBasicTopologyX3d::aBasicTopologyX3d()
+     * @copydoc aRealTopologyX3d::aRealTopologyX3d()
      * @note the default coordinate map will be the identity
      */
-    aBasicGeometryX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aBasicTopologyX3d<real_type>(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz){}
-    ///@copydoc aBasicTopologyX3d::aBasicTopologyX3d(const aBasicTopologyX3d&)
-    aBasicGeometryX3d( const aBasicGeometryX3d& src):aBasicTopologyX3d<real_type>(src){}
-    ///@copydoc aBasicTopologyX3d::operator=(const aBasicTopologyX3d&)
-    aBasicGeometryX3d& operator=( const aBasicGeometryX3d& src){
-        aBasicTopologyX3d<real_type>::operator=(src);
+    aRealGeometryX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz): aRealTopologyX3d<real_type>(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    ///@copydoc aRealTopologyX3d::aRealTopologyX3d(const aRealTopologyX3d&)
+    aRealGeometryX3d( const aRealGeometryX3d& src):aRealTopologyX3d<real_type>(src){}
+    ///@copydoc aRealTopologyX3d::operator=(const aRealTopologyX3d&)
+    aRealGeometryX3d& operator=( const aRealGeometryX3d& src){
+        aRealTopologyX3d<real_type>::operator=(src);
         return *this;
     }
     private:
@@ -119,52 +119,52 @@ struct aBasicGeometryX3d : public aBasicTopologyX3d<real_type>
 ///@{
 
 /**
- * @brief two-dimensional GridX with BasicCartesian metric
+ * @brief two-dimensional GridX with RealCartesian metric
  */
 template<class real_type>
-struct BasicCartesianGridX2d: public dg::aBasicGeometryX2d<real_type>
+struct RealCartesianGridX2d: public dg::aRealGeometryX2d<real_type>
 {
     ///@copydoc GridX2d::GridX2d()
-    BasicCartesianGridX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aBasicGeometryX2d<real_type>(x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy){}
+    RealCartesianGridX2d( real_type x0, real_type x1, real_type y0, real_type y1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER): dg::aRealGeometryX2d<real_type>(x0,x1,y0,y1,fx,fy,n,Nx,Ny,bcx,bcy){}
     /**
      * @brief Construct from existing topology
      * @param g existing grid class
      */
-    BasicCartesianGridX2d( const dg::GridX2d& g):dg::aBasicGeometryX2d<real_type>(g.x0(),g.x1(),g.y0(),g.y1(),g.fx(),g.fy(),g.n(),g.Nx(),g.Ny(),g.bcx(),g.bcy()){}
-    virtual BasicCartesianGridX2d* clone()const override final{
-        return new BasicCartesianGridX2d(*this);
+    RealCartesianGridX2d( const dg::GridX2d& g):dg::aRealGeometryX2d<real_type>(g.x0(),g.x1(),g.y0(),g.y1(),g.fx(),g.fy(),g.n(),g.Nx(),g.Ny(),g.bcx(),g.bcy()){}
+    virtual RealCartesianGridX2d* clone()const override final{
+        return new RealCartesianGridX2d(*this);
     }
 };
 
 /**
- * @brief three-dimensional GridX with BasicCartesian metric
+ * @brief three-dimensional GridX with RealCartesian metric
  */
 template<class real_type>
-struct BasicCartesianGridX3d: public dg::aBasicGeometryX3d<real_type>
+struct RealCartesianGridX3d: public dg::aRealGeometryX3d<real_type>
 {
     ///@copydoc GridX3d::GridX3d()
-    BasicCartesianGridX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aBasicGeometryX3d<real_type>(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz){}
+    RealCartesianGridX3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz = PER): dg::aRealGeometryX3d<real_type>(x0,x1,y0,y1,z0,z1,fx,fy,n,Nx,Ny,Nz,bcx,bcy,bcz){}
     /**
      * @brief Implicit type conversion from GridX3d
      * @param g existing grid class
      */
-    BasicCartesianGridX3d( const dg::GridX3d& g):dg::aBasicGeometryX3d<real_type>(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.fx(),g.fy(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
-    virtual BasicCartesianGridX3d* clone()const override final{
-        return new BasicCartesianGridX3d(*this);
+    RealCartesianGridX3d( const dg::GridX3d& g):dg::aRealGeometryX3d<real_type>(g.x0(), g.x1(), g.y0(), g.y1(), g.z0(), g.z1(),g.fx(),g.fy(),g.n(),g.Nx(),g.Ny(),g.Nz(),g.bcx(),g.bcy(),g.bcz()){}
+    virtual RealCartesianGridX3d* clone()const override final{
+        return new RealCartesianGridX3d(*this);
     }
 };
 
-using CartesianGridX2d = BasicCartesianGridX2d<double>;
-using CartesianGridX3d = BasicCartesianGridX3d<double>;
-using aGeometryX2d = aBasicGeometryX2d<double>;
-using aGeometryX3d = aBasicGeometryX3d<double>;
+using CartesianGridX2d = RealCartesianGridX2d<double>;
+using CartesianGridX3d = RealCartesianGridX3d<double>;
+using aGeometryX2d = aRealGeometryX2d<double>;
+using aGeometryX3d = aRealGeometryX3d<double>;
 
 ///@}
 
-///@copydoc pullback(const Functor&,const aBasicGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry2d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
-thrust::host_vector<real_type> pullback( const Functor& f, const aBasicGeometryX2d<real_type>& g)
+thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometryX2d<real_type>& g)
 {
     std::vector<thrust::host_vector<real_type> > map = g.map();
     thrust::host_vector<real_type> vec( g.size());
@@ -173,10 +173,10 @@ thrust::host_vector<real_type> pullback( const Functor& f, const aBasicGeometryX
     return vec;
 }
 
-///@copydoc pullback(const Functor&,const aBasicGeometry2d&)
+///@copydoc pullback(const Functor&,const aRealGeometry2d&)
 ///@ingroup pullback
 template< class Functor, class real_type>
-thrust::host_vector<real_type> pullback( const Functor& f, const aBasicGeometryX3d<real_type>& g)
+thrust::host_vector<real_type> pullback( const Functor& f, const aRealGeometryX3d<real_type>& g)
 {
     std::vector<thrust::host_vector<real_type> > map = g.map();
     thrust::host_vector<real_type> vec( g.size());

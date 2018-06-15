@@ -36,7 +36,7 @@ namespace dg
  * @ingroup basictopology
  */
 template<class real_type>
-struct aBasicMPITopology2d
+struct aRealMPITopology2d
 {
     typedef MPITag memory_category;
     typedef TwoDimensionalTag dimensionality;
@@ -244,7 +244,7 @@ struct aBasicMPITopology2d
      * @return Grid object
      * @note the boundary conditions in the local grid are not well defined since there might not actually be any boundaries
      */
-    const BasicGrid2d<real_type>& local() const {return l;}
+    const RealGrid2d<real_type>& local() const {return l;}
     /**
      * @brief Return the global non-MPI grid
      *
@@ -254,26 +254,26 @@ struct aBasicMPITopology2d
      * class itself
      * @return non-MPI Grid object
      */
-    const BasicGrid2d<real_type>& global() const {return g;}
+    const RealGrid2d<real_type>& global() const {return g;}
     protected:
     ///disallow deletion through base class pointer
-    ~aBasicMPITopology2d(){}
+    ~aRealMPITopology2d(){}
 
     /**
      * @copydoc hide_grid_parameters2d
      * @copydoc hide_bc_parameters2d
      * @copydoc hide_comm_parameters2d
      */
-    aBasicMPITopology2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
+    aRealMPITopology2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
         g( x0, x1, y0, y1, n, Nx, Ny, bcx, bcy), l(g), comm( comm)
     {
         update_local();
         check_division( Nx, Ny, bcx, bcy);
     }
     ///copydoc aTopology2d::aTopology2d(const aTopology2d&)
-    aBasicMPITopology2d(const aBasicMPITopology2d& src):g(src.g),l(src.l),comm(src.comm){ }
+    aRealMPITopology2d(const aRealMPITopology2d& src):g(src.g),l(src.l),comm(src.comm){ }
     ///copydoc aTopology2d::operator()(const aTopology2d&)
-    aBasicMPITopology2d& operator=(const aBasicMPITopology2d& src){
+    aRealMPITopology2d& operator=(const aRealMPITopology2d& src){
         g = src.g; l = src.l; comm = src.comm;
         return *this;
     }
@@ -312,9 +312,9 @@ struct aBasicMPITopology2d
             y1 = g.y1();
         unsigned Nx = g.Nx()/dims[0];
         unsigned Ny = g.Ny()/dims[1];
-        l = BasicGrid2d<real_type>(x0, x1, y0, y1, g.n(), Nx, Ny, g.bcx(), g.bcy());
+        l = RealGrid2d<real_type>(x0, x1, y0, y1, g.n(), Nx, Ny, g.bcx(), g.bcy());
     }
-    BasicGrid2d<real_type> g, l; //global and local grid
+    RealGrid2d<real_type> g, l; //global and local grid
     MPI_Comm comm; //just an integer...
 };
 
@@ -322,11 +322,11 @@ struct aBasicMPITopology2d
 /**
  * @brief 3D MPI Grid class
  *
- * @copydetails aBasicMPITopology2d
+ * @copydetails aRealMPITopology2d
  * @ingroup basictopology
  */
 template<class real_type>
-struct aBasicMPITopology3d
+struct aRealMPITopology3d
 {
     typedef MPITag memory_category;
     typedef ThreeDimensionalTag dimensionality;
@@ -497,7 +497,7 @@ struct aBasicMPITopology3d
      * @return pid of a process, or -1 if non of the grids matches
      */
     int pidOf( real_type x, real_type y, real_type z) const;
-    ///@copydoc aBasicMPITopology2d::multiplyCellNumbers()
+    ///@copydoc aRealMPITopology2d::multiplyCellNumbers()
     void multiplyCellNumbers( real_type fx, real_type fy){
         set(g.n(), round(fx*(real_type)g.Nx()), round(fy*(real_type)g.Ny()), g.Nz());
     }
@@ -509,7 +509,7 @@ struct aBasicMPITopology3d
         if( new_n == g.n() && new_Nx == g.Nx() && new_Ny == g.Ny() && new_Nz == g.Nz()) return;
         do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
-    ///@copydoc aBasicMPITopology2d::local2globalIdx(int,int,int&)const
+    ///@copydoc aRealMPITopology2d::local2globalIdx(int,int,int&)const
     bool local2globalIdx( int localIdx, int PID, int& globalIdx)const
     {
         if( localIdx < 0 || localIdx >= (int)size()) return false;
@@ -525,7 +525,7 @@ struct aBasicMPITopology3d
         globalIdx = (gIdx2*g.n()*g.Ny() + gIdx1)*g.n()*g.Nx() + gIdx0;
         return true;
     }
-    ///@copydoc aBasicMPITopology2d::global2localIdx(int,int&,int&)const
+    ///@copydoc aRealMPITopology2d::global2localIdx(int,int&,int&)const
     bool global2localIdx( int globalIdx, int& localIdx, int& PID)const
     {
         if( globalIdx < 0 || globalIdx >= (int)g.size()) return false;
@@ -545,18 +545,18 @@ struct aBasicMPITopology3d
         else
             return false;
     }
-    ///@copydoc aBasicMPITopology2d::local()const
-    const BasicGrid3d<real_type>& local() const {return l;}
-     ///@copydoc aBasicMPITopology2d::global()const
-    const BasicGrid3d<real_type>& global() const {return g;}
+    ///@copydoc aRealMPITopology2d::local()const
+    const RealGrid3d<real_type>& local() const {return l;}
+     ///@copydoc aRealMPITopology2d::global()const
+    const RealGrid3d<real_type>& global() const {return g;}
     protected:
     ///disallow deletion through base class pointer
-    ~aBasicMPITopology3d(){}
+    ~aRealMPITopology3d(){}
 
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@copydoc hide_comm_parameters3d
-    aBasicMPITopology3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+    aRealMPITopology3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
         g( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz), l(g), comm( comm)
     {
         update_local();
@@ -566,10 +566,10 @@ struct aBasicMPITopology3d
     }
     ///explicit copy constructor (default)
     ///@param src source
-    aBasicMPITopology3d(const aBasicMPITopology3d& src):g(src.g),l(src.l),comm(src.comm),planeComm(src.planeComm){ }
+    aRealMPITopology3d(const aRealMPITopology3d& src):g(src.g),l(src.l),comm(src.comm),planeComm(src.planeComm){ }
     ///explicit assignment operator (default)
     ///@param src source
-    aBasicMPITopology3d& operator=(const aBasicMPITopology3d& src){
+    aRealMPITopology3d& operator=(const aRealMPITopology3d& src){
         g = src.g; l = src.l; comm = src.comm; planeComm = src.planeComm;
         return *this;
     }
@@ -622,12 +622,12 @@ struct aBasicMPITopology3d
 
         l = Grid3d(x0, x1, y0, y1, z0, z1, g.n(), Nx, Ny, Nz, g.bcx(), g.bcy(), g.bcz());
     }
-    BasicGrid3d<real_type> g, l; //global grid
+    RealGrid3d<real_type> g, l; //global grid
     MPI_Comm comm, planeComm; //just an integer...
 };
 ///@cond
 template<class real_type>
-int aBasicMPITopology2d<real_type>::pidOf( real_type x, real_type y) const
+int aRealMPITopology2d<real_type>::pidOf( real_type x, real_type y) const
 {
     int dims[2], periods[2], coords[2];
     MPI_Cart_get( comm, 2, dims, periods, coords);
@@ -643,7 +643,7 @@ int aBasicMPITopology2d<real_type>::pidOf( real_type x, real_type y) const
         return -1;
 }
 template<class real_type>
-int aBasicMPITopology3d<real_type>::pidOf( real_type x, real_type y, real_type z) const
+int aRealMPITopology3d<real_type>::pidOf( real_type x, real_type y, real_type z) const
 {
     int dims[3], periods[3], coords[3];
     MPI_Cart_get( comm, 3, dims, periods, coords);
@@ -661,12 +661,12 @@ int aBasicMPITopology3d<real_type>::pidOf( real_type x, real_type y, real_type z
         return -1;
 }
 template<class real_type>
-void aBasicMPITopology2d<real_type>::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
+void aRealMPITopology2d<real_type>::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) {
     g.set(new_n,new_Nx,new_Ny);
     update_local();
 }
 template<class real_type>
-void aBasicMPITopology3d<real_type>::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
+void aRealMPITopology3d<real_type>::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) {
     g.set(new_n,new_Nx,new_Ny,new_Nz);
     update_local();
 }
@@ -674,19 +674,19 @@ void aBasicMPITopology3d<real_type>::do_set( unsigned new_n, unsigned new_Nx, un
 ///@endcond
 
 /**
- * @brief The simplest implementation of aBasicMPITopology2d
+ * @brief The simplest implementation of aRealMPITopology2d
  * @ingroup grid
  * @copydoc hide_code_mpi_evaluate2d
  */
 template<class real_type>
-struct BasicMPIGrid2d: public aBasicMPITopology2d<real_type>
+struct RealMPIGrid2d: public aRealMPITopology2d<real_type>
 {
     /**
      * @copydoc hide_grid_parameters2d
      * @copydoc hide_comm_parameters2d
      */
-    BasicMPIGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
-        aBasicMPITopology2d<real_type>( x0,x1,y0,y1,n,Nx,Ny,dg::PER,dg::PER,comm)
+    RealMPIGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, MPI_Comm comm):
+        aRealMPITopology2d<real_type>( x0,x1,y0,y1,n,Nx,Ny,dg::PER,dg::PER,comm)
     { }
 
     /**
@@ -694,43 +694,43 @@ struct BasicMPIGrid2d: public aBasicMPITopology2d<real_type>
      * @copydoc hide_bc_parameters2d
      * @copydoc hide_comm_parameters2d
      */
-    BasicMPIGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
-        aBasicMPITopology2d<real_type>( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy,comm)
+    RealMPIGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy, MPI_Comm comm):
+        aRealMPITopology2d<real_type>( x0,x1,y0,y1,n,Nx,Ny,bcx,bcy,comm)
     { }
     ///allow explicit type conversion from any other topology
-    explicit BasicMPIGrid2d( const aBasicMPITopology2d<real_type>& src): aBasicMPITopology2d<real_type>(src){}
+    explicit RealMPIGrid2d( const aRealMPITopology2d<real_type>& src): aRealMPITopology2d<real_type>(src){}
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny){
-        aBasicMPITopology2d<real_type>::do_set(new_n,new_Nx,new_Ny);
+        aRealMPITopology2d<real_type>::do_set(new_n,new_Nx,new_Ny);
     }
 };
 
 /**
- * @brief The simplest implementation of aBasicMPITopology3d
+ * @brief The simplest implementation of aRealMPITopology3d
  * @ingroup grid
  * @copydoc hide_code_mpi_evaluate3d
  */
 template<class real_type>
-struct BasicMPIGrid3d : public aBasicMPITopology3d<real_type>
+struct RealMPIGrid3d : public aRealMPITopology3d<real_type>
 {
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_comm_parameters3d
-    BasicMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
-        aBasicMPITopology3d<real_type>( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER,comm )
+    RealMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, MPI_Comm comm):
+        aRealMPITopology3d<real_type>( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, dg::PER, dg::PER, dg::PER,comm )
     { }
 
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
     ///@copydoc hide_comm_parameters3d
-    BasicMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        aBasicMPITopology3d<real_type>( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm)
+    RealMPIGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
+        aRealMPITopology3d<real_type>( x0, x1, y0, y1, z0, z1, n, Nx, Ny, Nz, bcx, bcy, bcz, comm)
     { }
     ///allow explicit type conversion from any other topology
     ///@param src source
-    explicit BasicMPIGrid3d( const aBasicMPITopology3d<real_type>& src): aBasicMPITopology3d<real_type>(src){ }
+    explicit RealMPIGrid3d( const aRealMPITopology3d<real_type>& src): aRealMPITopology3d<real_type>(src){ }
     private:
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz){
-        aBasicMPITopology3d<real_type>::do_set(new_n,new_Nx,new_Ny,new_Nz);
+        aRealMPITopology3d<real_type>::do_set(new_n,new_Nx,new_Ny,new_Nz);
     }
 };
 
@@ -738,18 +738,18 @@ struct BasicMPIGrid3d : public aBasicMPITopology3d<real_type>
 template<class real_type>
 struct MemoryTraits< MPITag, TwoDimensionalTag, real_type> {
     using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
-    using host_grid   = BasicMPIGrid2d<real_type>;
+    using host_grid   = RealMPIGrid2d<real_type>;
 };
 template<class real_type>
 struct MemoryTraits< MPITag, ThreeDimensionalTag, real_type> {
     using host_vector = MPI_Vector<thrust::host_vector<real_type>>;
-    using host_grid   = BasicMPIGrid3d<real_type>;
+    using host_grid   = RealMPIGrid3d<real_type>;
 };
 ///@endcond
 
-using MPIGrid2d = BasicMPIGrid2d<double>;
-using MPIGrid3d = BasicMPIGrid3d<double>;
-using aMPITopology2d = aBasicMPITopology2d<double>;
-using aMPITopology3d = aBasicMPITopology3d<double>;
+using MPIGrid2d = RealMPIGrid2d<double>;
+using MPIGrid3d = RealMPIGrid3d<double>;
+using aMPITopology2d = aRealMPITopology2d<double>;
+using aMPITopology3d = aRealMPITopology3d<double>;
 
 }//namespace dg

@@ -62,7 +62,7 @@ EllSparseBlockMat<real_type> dx_symm(int n, int N, real_type h, bc bcx)
     Operator<real_type> b = t*(1./2.*rl);
     Operator<real_type> bp = t*(-1./2.*lr); //pitfall: T*-m^T is NOT -(T*m)^T
     //transform to XSPACE
-    BasicGrid1d<real_type> g( 0,1, n, N);
+    RealGrid1d<real_type> g( 0,1, n, N);
     Operator<real_type> backward=g.dlt().backward();
     Operator<real_type> forward=g.dlt().forward();
     a = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
@@ -155,7 +155,7 @@ EllSparseBlockMat<real_type> dx_plus( int n, int N, real_type h, bc bcx )
         a_bound_right = t*(d);
     Operator<real_type> b = t*rl;
     //transform to XSPACE
-    BasicGrid1d<real_type> g( 0,1, n, N);
+    RealGrid1d<real_type> g( 0,1, n, N);
     Operator<real_type> backward=g.dlt().backward();
     Operator<real_type> forward=g.dlt().forward();
     a = backward*a*forward, a_bound_left = backward*a_bound_left*forward;
@@ -240,7 +240,7 @@ EllSparseBlockMat<real_type> dx_minus( int n, int N, real_type h, bc bcx )
         a_bound_left = t*d;
     Operator<real_type> bp = -t*lr;
     //transform to XSPACE
-    BasicGrid1d<real_type> g( 0,1, n, N);
+    RealGrid1d<real_type> g( 0,1, n, N);
     Operator<real_type> backward=g.dlt().backward();
     Operator<real_type> forward=g.dlt().forward();
     a  = backward*a*forward, a_bound_left  = backward*a_bound_left*forward;
@@ -325,7 +325,7 @@ EllSparseBlockMat<real_type> jump( int n, int N, real_type h, bc bcx)
     //transform to XSPACE
     Operator<real_type> t = create::pipj_inv<real_type>(n);
     t *= 2./h;
-    BasicGrid1d<real_type> g( 0,1, n, N);
+    RealGrid1d<real_type> g( 0,1, n, N);
     Operator<real_type> backward=g.dlt().backward();
     Operator<real_type> forward=g.dlt().forward();
     a = backward*t*a*forward, a_bound_left  = backward*t*a_bound_left*forward;
@@ -424,7 +424,7 @@ EllSparseBlockMat<real_type> dx_normed( int n, int N, real_type h, bc bcx, direc
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const BasicGrid1d<real_type>& g, bc bcx, direction dir = centered)
+EllSparseBlockMat<real_type> dx( const RealGrid1d<real_type>& g, bc bcx, direction dir = centered)
 {
     return dx_normed( g.n(), g.N(), g.h(), bcx, dir);
 }
@@ -440,7 +440,7 @@ EllSparseBlockMat<real_type> dx( const BasicGrid1d<real_type>& g, bc bcx, direct
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> dx( const BasicGrid1d<real_type>& g, direction dir = centered)
+EllSparseBlockMat<real_type> dx( const RealGrid1d<real_type>& g, direction dir = centered)
 {
     return dx( g, g.bcx(), dir);
 }
@@ -455,7 +455,7 @@ EllSparseBlockMat<real_type> dx( const BasicGrid1d<real_type>& g, direction dir 
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> jump( const BasicGrid1d<real_type>& g, bc bcx)
+EllSparseBlockMat<real_type> jump( const RealGrid1d<real_type>& g, bc bcx)
 {
     return jump( g.n(), g.N(), g.h(), bcx);
 }
@@ -469,7 +469,7 @@ EllSparseBlockMat<real_type> jump( const BasicGrid1d<real_type>& g, bc bcx)
 * @return Host Matrix
 */
 template<class real_type>
-EllSparseBlockMat<real_type> jump( const BasicGrid1d<real_type>& g)
+EllSparseBlockMat<real_type> jump( const RealGrid1d<real_type>& g)
 {
     return jump( g, g.bcx());
 }
