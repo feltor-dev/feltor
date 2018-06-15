@@ -26,7 +26,7 @@ namespace dg
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 */
-void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
     int periods[2] = {false,false};
     if( bcx == dg::PER) periods[0] = true;
@@ -69,7 +69,7 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, MPI_Comm& comm, std::istream& is = std:
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 */
-void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
+static inline void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
 {
     int rank;
     MPI_Comm_rank( comm, &rank);
@@ -98,7 +98,7 @@ void mpi_init2d(unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm comm, std::ist
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 */
-void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+static inline void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
     mpi_init2d( bcx, bcy, comm, is, verbose);
     mpi_init2d( n, Nx, Ny, comm, is, verbose);
@@ -117,7 +117,7 @@ void mpi_init2d( dg::bc bcx, dg::bc bcy, unsigned& n, unsigned& Nx, unsigned& Ny
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 */
-void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
     int periods[3] = {false,false, false};
     if( bcx == dg::PER) periods[0] = true;
@@ -161,7 +161,7 @@ void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, MPI_Comm& comm, std::istrea
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 */
-void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
+static inline void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm comm, std::istream& is = std::cin, bool verbose = true  )
 {
     int rank;
     MPI_Comm_rank( comm, &rank);
@@ -193,7 +193,7 @@ void mpi_init3d(unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm 
 * @param verbose If true, rank 0 prints queries and information on \c std::cout
 * @ingroup misc
 */
-void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
+static inline void mpi_init3d( dg::bc bcx, dg::bc bcy, dg::bc bcz, unsigned& n, unsigned& Nx, unsigned& Ny, unsigned& Nz, MPI_Comm& comm, std::istream& is = std::cin, bool verbose = true  )
 {
     mpi_init3d( bcx, bcy, bcz, comm, is, verbose);
     mpi_init3d( n, Nx, Ny, Nz, comm, is, verbose);
