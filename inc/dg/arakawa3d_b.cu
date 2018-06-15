@@ -4,7 +4,7 @@
 #include "arakawa.h"
 #include "blas.h"
 
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;

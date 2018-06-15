@@ -4,7 +4,7 @@
 #include "json/json.h"
 
 #include "dg/geometry/functions.h"
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 #include "dg/blas.h"
 #include "dg/functors.h"
 #include "dg/geometry/geometry.h"

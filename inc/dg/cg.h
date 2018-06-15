@@ -7,7 +7,7 @@
 #include "functors.h"
 
 #ifdef DG_BENCHMARK
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #endif //DG_BENCHMARK
 
 /*!@file

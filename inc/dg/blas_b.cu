@@ -4,7 +4,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "blas.h"
 #include "geometry/derivatives.h"
 #include "geometry/evaluation.h"

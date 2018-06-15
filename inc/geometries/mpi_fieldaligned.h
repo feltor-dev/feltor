@@ -12,7 +12,7 @@
 #include "dg/runge_kutta.h"
 #include "fieldaligned.h"
 #ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 #endif
 
 namespace dg{

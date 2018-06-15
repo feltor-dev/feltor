@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include <thrust/device_vector.h>
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "geometry/projection.h"
 
 #include "blas.h"

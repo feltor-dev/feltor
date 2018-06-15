@@ -4,8 +4,8 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "backend/typedefs.cuh"
-#include "backend/timer.cuh"
+#include "backend/typedefs.h"
+#include "backend/timer.h"
 #include "geometry/evaluation.h"
 #include "poisson.h"
 #include "blas.h"

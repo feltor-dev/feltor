@@ -4,7 +4,7 @@
 #include <mpi.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "backend/mpi_init.h"
 #include "blas.h"
 #include "geometry/mpi_evaluation.h"

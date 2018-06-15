@@ -3,7 +3,7 @@
 #include "blas.h"
 
 #include "helmholtz.h"
-#include "backend/typedefs.cuh"
+#include "backend/typedefs.h"
 #include "multistep.h"
 
 #include "cg.h"

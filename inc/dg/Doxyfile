@@ -793,8 +793,8 @@ INPUT                  = . \
                          ./backend/mpi_vector.h \
                          ./backend/sparseblockmat.h \
                          ./backend/sparseblockmat.cuh \
-                         ./backend/timer.cuh \
-                         ./backend/typedefs.cuh \
+                         ./backend/timer.h \
+                         ./backend/typedefs.h \
                          ./backend/transpose.h \
                          ./backend/vector_categories.h \
                          ./backend/matrix_categories.h \

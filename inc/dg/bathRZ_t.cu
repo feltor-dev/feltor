@@ -2,7 +2,7 @@
 #include <vector>
 #include <sstream>
 #include "draw/host_window.h"
-#include "dg/backend/typedefs.cuh"
+#include "dg/backend/typedefs.h"
 #include "dg/geometry/interpolation.h"
 #include "dg/geometry/xspacelib.h"
 #include "dg/geometry/projection.h"

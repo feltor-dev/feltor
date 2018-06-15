@@ -7,7 +7,7 @@
 #include "cg.h"
 #include "multigrid.h"
 
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "backend/mpi_init.h"
 
 //

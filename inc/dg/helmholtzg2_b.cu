@@ -1,8 +1,8 @@
 #include <iostream>
 
 #include "blas.h"
-#include "backend/timer.cuh"
-#include "backend/typedefs.cuh"
+#include "backend/timer.h"
+#include "backend/typedefs.h"
 #include "backend/exceptions.h"
 
 #include "helmholtz.h"

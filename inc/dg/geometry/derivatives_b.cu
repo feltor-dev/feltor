@@ -1,6 +1,6 @@
 #include <iostream>
 #include <thrust/device_vector.h>
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 #include "dg/blas.h"
 #include "derivatives.h"
 #include "evaluation.h"

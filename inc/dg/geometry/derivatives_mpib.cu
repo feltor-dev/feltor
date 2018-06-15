@@ -6,7 +6,7 @@
 #include <thrust/device_vector.h>
 #include <cusp/array1d.h>
 
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 #include "dg/backend/mpi_init.h"
 #include "dg/blas.h"
 #include "mpi_evaluation.h"

@@ -7,7 +7,7 @@
 #include "blas.h"
 #include "cg.h"
 #ifdef DG_BENCHMARK
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #endif //DG_BENCHMARK
 #ifdef MPI_VERSION
 #include "geometry/mpi_projection.h"

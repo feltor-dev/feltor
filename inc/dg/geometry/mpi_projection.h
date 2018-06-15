@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dg/backend/typedefs.cuh"
+#include "dg/backend/typedefs.h"
 #include "dg/backend/mpi_matrix.h"
 #include "dg/backend/mpi_collective.h"
 #include "mpi_grid.h"

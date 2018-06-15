@@ -8,7 +8,7 @@
 
 #include "dg/functors.h"
 
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 #include "solovev.h"
 //#include "taylor.h"
 //#include "guenther.h"

@@ -5,7 +5,7 @@
 #include "tensor.h"
 #include "weights.h"
 #include "multiply.h"
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 
 typedef thrust::device_vector<double> Vector;
 

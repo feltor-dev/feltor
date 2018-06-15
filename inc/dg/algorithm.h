@@ -5,7 +5,7 @@
  *
  * @note include <mpi.h> before this header to activate mpi support
  */
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "backend/transpose.h"
 #include "geometry/split_and_join.h"
 #include "geometry/xspacelib.h"
