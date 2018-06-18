@@ -116,6 +116,27 @@ ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc b
     dg::tensor::sqrt(perp_vol_inv_);
 }
 
+template<class T>
+struct ArakawaFunctor
+{
+    DG_DEVICE
+    void operator()(T lhs, T rhs, T dxlhs, T& dylhs, T& dxrhs, T& dyrhs) const
+    {
+        T result = T(0);
+        result = DG_FMA(  (1./3.)*dxlhs, dyrhs, result);
+        result = DG_FMA( -(1./3.)*dylhs, dxrhs, result);
+        T temp = T(0);
+        temp = DG_FMA(  (1./3.)*lhs, dyrhs, temp);
+        dyrhs = result;
+        temp = DG_FMA( -(1./3.)*dylhs, rhs, temp);
+        dylhs = temp;
+        temp = T(0);
+        temp = DG_FMA(  (1./3.)*dxlhs, rhs, temp);
+        temp = DG_FMA( -(1./3.)*lhs, dxrhs, temp);
+        dxrhs = temp;
+    }
+};
+
 template< class Geometry, class Matrix, class container>
 void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
 {
@@ -123,11 +144,12 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
     blas2::symv( bdxf, lhs, dxlhs);
     blas2::symv( bdyf, lhs, dylhs);
     blas2::symv( bdxf, rhs, dxrhs);
-    blas2::symv( bdyf, rhs, dyrhs);
+    blas2::symv( bdyf, rhs, result);
+    blas1::subroutine( ArakawaFunctor<get_value_type<container>>(), lhs, rhs, dxlhs, dylhs, dxrhs, result);
 
-    blas1::pointwiseDot( 1./3., dxlhs, dyrhs, -1./3., dylhs, dxrhs, 0., result);
-    blas1::pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., dylhs);
-    blas1::pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dxrhs);
+    //blas1::pointwiseDot( 1./3., dxlhs, dyrhs, -1./3., dylhs, dxrhs, 0., result);
+    //blas1::pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., dylhs);
+    //blas1::pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dxrhs);
 
     blas2::symv( 1., bdxf, dylhs, 1., result);
     blas2::symv( 1., bdyf, dxrhs, 1., result);
