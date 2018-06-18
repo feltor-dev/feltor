@@ -96,7 +96,7 @@ struct aRealRefinement1d
 template<class real_type>
 struct RealIdentityRefinement : public aRealRefinement1d<real_type>
 {
-    RealIdentityRefinement* clone()const{return new RealIdentityRefinement();}
+    virtual RealIdentityRefinement* clone()const{return new RealIdentityRefinement();}
     private:
     virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final{
         weights=dg::create::weights(g);
@@ -120,7 +120,7 @@ struct RealLinearRefinement : public aRealRefinement1d<real_type>
     RealLinearRefinement( unsigned multiple): m_(multiple){
         assert( multiple>= 1);
     }
-    RealLinearRefinement* clone()const{return new RealLinearRefinement(*this);}
+    virtual RealLinearRefinement* clone()const{return new RealLinearRefinement(*this);}
     private:
     unsigned m_;
     virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
@@ -152,7 +152,7 @@ struct RealEquidistRefinement : public aRealRefinement1d<real_type>
      * @param howmany  number of cells around a node to refine
      */
     RealEquidistRefinement( unsigned add_x, unsigned node, unsigned howmany=1): add_x_(add_x), node_(node), howm_(howmany){ }
-    RealEquidistRefinement* clone()const{return new RealEquidistRefinement(*this);}
+    virtual RealEquidistRefinement* clone()const{return new RealEquidistRefinement(*this);}
     private:
     unsigned add_x_, node_, howm_;
     virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
@@ -227,7 +227,7 @@ struct RealExponentialRefinement : public aRealRefinement1d<real_type>
      * 0 (left corner) to N (right corner).
      */
     RealExponentialRefinement( unsigned add_x, unsigned node): add_x_(add_x), node_(node) {}
-    RealExponentialRefinement* clone()const{return new RealExponentialRefinement(*this);}
+    virtual RealExponentialRefinement* clone()const{return new RealExponentialRefinement(*this);}
     private:
     unsigned add_x_, node_;
     virtual void do_generate( const RealGrid1d<real_type>& g, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
@@ -247,7 +247,7 @@ struct RealExponentialRefinement : public aRealRefinement1d<real_type>
         if( bcx == dg::PER) return N_old + 2*add_x_;
         return N_old + add_x_;
     }
-    thrust::host_vector<real_type> exponential_ref( unsigned add_x, unsigned node, unsigned n, unsigned N, dg::bc bcx) const override final
+    thrust::host_vector<real_type> exponential_ref( unsigned add_x, unsigned node, unsigned n, unsigned N, dg::bc bcx) const
     {
         if( add_x_ == 0)
         {
@@ -305,7 +305,7 @@ struct RealCartesianRefinedGrid2d : public dg::aRealGeometry2d<real_type>
         construct_weights_and_abscissas(n,Nx,Ny);
     }
 
-    RealCartesianRefinedGrid2d* clone()const{return new RealCartesianRefinedGrid2d(*this);}
+    virtual RealCartesianRefinedGrid2d* clone()const{return new RealCartesianRefinedGrid2d(*this);}
     private:
     ClonePtr<aRealRefinement1d<real_type>> refX_, refY_;
     std::vector<thrust::host_vector<real_type> > w_, a_;
@@ -362,7 +362,7 @@ struct RealCartesianRefinedGrid3d : public dg::aRealGeometry3d<real_type>
         construct_weights_and_abscissas(n, Nx, Ny,Nz);
     }
 
-    RealCartesianRefinedGrid3d* clone()const{return new RealCartesianRefinedGrid3d(*this);}
+    virtual RealCartesianRefinedGrid3d* clone()const{return new RealCartesianRefinedGrid3d(*this);}
     private:
     ClonePtr<aRealRefinement1d<real_type>> refX_, refY_, refZ_;
     std::vector<thrust::host_vector<real_type> > w_, a_;

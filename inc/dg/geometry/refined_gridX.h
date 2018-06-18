@@ -89,7 +89,9 @@ struct aRealRefinementX2d
 template<class real_type>
 struct RealIdentityXRefinement : public aRealRefinementX2d<real_type>
 {
-    RealIdentityXRefinement* clone()const override final{return new RealIdentityXRefinement(*this);}
+    virtual RealIdentityXRefinement* clone()const override final{
+        return new RealIdentityXRefinement(*this);
+    }
     private:
     virtual void do_generateX( const RealGrid1d<real_type>& g, unsigned nodeXX, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final{
         weights=dg::create::weights(g);
@@ -112,7 +114,7 @@ template<class real_type>
 struct RealEquidistXRefinement : public aRealRefinementX2d<real_type>
 {
     RealEquidistXRefinement( unsigned add_x, unsigned add_y, unsigned howmanyX=1, unsigned howmanyY=1): add_x_(add_x), howm_x_(howmanyX), add_y_(add_y), howm_y_(howmanyY){ }
-    RealEquidistXRefinement* clone()const override final{return new RealEquidistXRefinement(*this);}
+    virtual RealEquidistXRefinement* clone()const override final{return new RealEquidistXRefinement(*this);}
     private:
     unsigned add_x_, howm_x_, add_y_, howm_y_;
     virtual void do_generateX( const RealGrid1d<real_type>& gx, unsigned nodeXX, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
@@ -174,7 +176,7 @@ template<class real_type>
 struct RealExponentialXRefinement : public aRealRefinementX2d<real_type>
 {
     RealExponentialXRefinement( unsigned add_x, unsigned add_y, unsigned howmanyX=1, unsigned howmanyY=1): add_x_(add_x), howm_x_(howmanyX), add_y_(add_y), howm_y_(howmanyY){ }
-    RealExponentialXRefinement* clone()const{return new RealExponentialXRefinement(*this);}
+    virtual RealExponentialXRefinement* clone()const{return new RealExponentialXRefinement(*this);}
     private:
     unsigned add_x_, howm_x_, add_y_, howm_y_;
     virtual void do_generateX( const RealGrid1d<real_type>& gx, unsigned nodeXX, thrust::host_vector<real_type>& weights, thrust::host_vector<real_type>& abscissas) const override final
@@ -249,7 +251,7 @@ struct RealCartesianRefinedGridX2d : public dg::aRealGeometryX2d<real_type>
         ref.generate(g,w_[0],w_[1],abs_[0],abs_[1]);
     }
 
-    RealCartesianRefinedGridX2d* clone()const override final{return new RealCartesianRefinedGridX2d(*this);}
+    virtual RealCartesianRefinedGridX2d* clone()const override final{return new RealCartesianRefinedGridX2d(*this);}
     private:
     std::vector<thrust::host_vector<real_type> > w_,abs_;
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final{
@@ -301,7 +303,7 @@ struct RealCartesianRefinedGridX3d : public dg::aRealGeometryX3d<real_type>
             }
     }
 
-    RealCartesianRefinedGridX3d* clone()const{return new RealCartesianRefinedGridX3d(*this);}
+    virtual RealCartesianRefinedGridX3d* clone()const{return new RealCartesianRefinedGridX3d(*this);}
     private:
     std::vector<thrust::host_vector<real_type> > w_,abs_;
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final {
