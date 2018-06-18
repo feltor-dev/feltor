@@ -22,10 +22,10 @@ static inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, con
 }
 
 template< class Subroutine, class T, class ...Ts>
-inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, T* x, Ts*... xs)
+inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, T x, Ts... xs)
 {
     for( int i=0; i<size; i++)
-        f(x[i], xs[i]...);
+        f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
 }
 
 

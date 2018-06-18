@@ -26,17 +26,18 @@ static inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, const
 }
 
 template<class Subroutine, class T, class ...Ts>
- __global__ void subroutine_kernel( int size, Subroutine f, T* x, Ts*... xs)
+ __global__ void subroutine_kernel( int size, Subroutine f, T x, Ts... xs)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
     //every thread takes num_is/grid_size is
     for( int i = thread_id; i<size; i += grid_size)
-        f(x[i], xs[i]... );
+        //f(x[i], xs[i]...);
+        f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
 }
 
 template< class Subroutine, class T, class ...Ts>
-inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, T* x, Ts*... xs)
+inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, T x, Ts... xs)
 {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);

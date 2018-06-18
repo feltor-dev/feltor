@@ -30,15 +30,16 @@ static inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, const 
 }
 
 template< class Subroutine, class T, class ...Ts>
-inline void doSubroutine_omp( int size, Subroutine f, T* x, Ts*... xs)
+inline void doSubroutine_omp( int size, Subroutine f, T x, Ts... xs)
 {
 #pragma omp for nowait
     for( int i=0; i<size; i++)
-        f(x[i], xs[i]...);
+        //f(x[i], xs[i]...);
+        f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
 }
 
 template< class Subroutine, class T, class ...Ts>
-inline void doSubroutine_dispatch( OmpTag, int size, Subroutine f, T* x, Ts*... xs)
+inline void doSubroutine_dispatch( OmpTag, int size, Subroutine f, T x, Ts... xs)
 {
     if(omp_in_parallel())
     {

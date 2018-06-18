@@ -11,8 +11,44 @@
 
 //using Vector = std::array<double,2>;
 //using Vector = thrust::host_vector<double>;
-using Vector = thrust::device_vector<double>;
+//using Vector = thrust::device_vector<double>;
+using Vector = std::vector<double>;
 //using Vector = cusp::array1d<double, cusp::device_memory>;
+struct ConstPtr
+{
+    DG_DEVICE
+    double operator[](int i) const{return 1.;}
+};
+struct ConstVector
+{
+    ConstVector( size_t size, double value): m_size(size), m_ptr( value){}
+    thrust::constant_iterator<double> data() const {
+        return m_ptr;
+    }
+    thrust::constant_iterator<double> begin() const {
+        return m_ptr;
+    }
+
+    size_t size()const{
+        return m_size;
+    }
+
+    private:
+    size_t m_size;
+    thrust::constant_iterator<double> m_ptr;
+};
+namespace dg{
+template<>
+struct TensorTraits<ConstVector>
+{
+    using value_type = double;
+    using tensor_category = SharedVectorTag;
+    using execution_policy = OmpTag;
+    //using execution_policy = CudaTag;
+};
+}
+
+
 int main()
 {
     {
@@ -20,7 +56,7 @@ int main()
     std::cout << "A TEST IS PASSED IF THE RESULT IS ZERO.\n";
     //Vector v1( 5, 2.0002), v2( 5, 3.00003), v3(5,5.0005), v4(5,4.00004), v5(v4);
     //Vector v1( {2,2.0002}), v2({3,3.00003}), v3({5,5.0005}), v4({4,4.00004}), v5(v4); //std::array
-    thrust::device_vector<double> v1p( 500, 2.0002), v2p( 500, 3.00003), v3p(500,5.0005), v4p(500,4.00004);
+    Vector v1p( 500, 2.0002), v2p( 500, 3.00003), v3p(500,5.0005), v4p(500,4.00004);
     Vector v1(v1p), v2(v2p), v3(v3p), v4(v4p), v5(v4p);
     exblas::udouble ud;
     dg::blas1::scal( v3, 3e-10); ud.d = v3[0];
@@ -51,6 +87,9 @@ int main()
 
     std::cout << "Human readable test VectorVector (passed if ouput equals value in brackets) \n";
     Vector v1( 5, 2.), v2( 5, 3.), v3(5,5.), v4(5,4.), v5(v4);
+    ConstVector cte( 5,0.1);
+    dg::blas1::axpby( 2., cte, 0, v3);
+    std::cout << "Test "<<v3[0]<<std::endl;
     std::array<Vector, 2> w1( dg::transfer<std::array<Vector,2>>(v1)), w2({v2,v2}), w3({v3,v3}), w4({v4,v4});
     dg::blas1::axpby( 2., w1, 3., w2, w3);
     std::cout << "2*2+ 3*3 = " << w3[0][0] <<" (13)\n";

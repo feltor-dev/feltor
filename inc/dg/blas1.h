@@ -61,7 +61,7 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
  */
 template<class ContainerTypeIn, class ContainerTypeOut>
 inline void copy( const ContainerTypeIn& source, ContainerTypeOut& target){
-    if( std::is_same<ContainerTypeIn, ContainerTypeOut>::value && &source==&target)
+    if( std::is_same<ContainerTypeIn, ContainerTypeOut>::value && &source==(const ContainerTypeIn*)&target)
         return;
     dg::blas1::subroutine( dg::equals(), target, source );
 }
@@ -131,7 +131,7 @@ inline void axpby( get_value_type<ContainerType> alpha, const ContainerType1& x,
         scal( y, beta);
         return;
     }
-    if( std::is_same<ContainerType, ContainerType1>::value && &x==&y){
+    if( std::is_same<ContainerType, ContainerType1>::value && &x==(const ContainerType1*)&y){
         dg::blas1::scal( y, (alpha+beta));
         return;
     }
@@ -170,15 +170,15 @@ inline void axpbypgz( get_value_type<ContainerType> alpha, const ContainerType1&
         axpby( alpha, x, gamma, z);
         return;
     }
-    if( std::is_same<ContainerType1, ContainerType2>::value && &x==&y){
+    if( std::is_same<ContainerType1, ContainerType2>::value && &x==(const ContainerType1*)&y){
         dg::blas1::axpby( alpha+beta, x, gamma, z);
         return;
     }
-    else if( std::is_same<ContainerType1, ContainerType>::value && &x==&z){
+    else if( std::is_same<ContainerType1, ContainerType>::value && &x==(const ContainerType1*)&z){
         dg::blas1::axpby( beta, y, alpha+gamma, z);
         return;
     }
-    else if( std::is_same<ContainerType2, ContainerType>::value && &y==&z){
+    else if( std::is_same<ContainerType2, ContainerType>::value && &y==(const ContainerType2*)&z){
         dg::blas1::axpby( alpha, x, beta+gamma, z);
         return;
     }
@@ -232,7 +232,7 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
         dg::blas1::scal(y, beta);
         return;
     }
-    if( std::is_same<ContainerType, ContainerType2>::value && &x2==&y){
+    if( std::is_same<ContainerType, ContainerType2>::value && &x2==(const ContainerType2*)&y){
         dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, y );
 
         return;
@@ -315,7 +315,7 @@ inline void pointwiseDivide( get_value_type<ContainerType> alpha, const Containe
         dg::blas1::scal(y, beta);
         return;
     }
-    if( std::is_same<ContainerType, ContainerType1>::value && &x1==&y){
+    if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
         dg::blas1::subroutine( dg::PointwiseDivide<get_value_type<ContainerType>>(alpha,beta), x2, y );
 
         return;
