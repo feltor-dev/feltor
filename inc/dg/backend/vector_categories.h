@@ -42,8 +42,8 @@ struct AnyVectorTag : public AnyMatrixTag{};
  * can be traversed knowing the pointer to its first element. Sub-Tags
  * indicate addtional functionality like data resize.
  * @note We assume a class with this Tag has the following methods
- *  - size() returns the size (in number of elements) of the contiguous data
- *  - data() returns a pointer (or pointer-like class (iterator) that has a get() method to access the raw pointer) to the first element of the contiguous data
+ *  - \c size() returns the size (in number of elements) of the contiguous data
+ *  - \c begin() returns a pointer (or a \c RandomAccessIterator) to the first element of the contiguous data
  */
 struct SharedVectorTag  : public AnyVectorTag {};
 /**

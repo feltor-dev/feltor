@@ -37,7 +37,6 @@ template<class Vector>
 using get_tensor_category = typename TensorTraits< typename std::decay<Vector>::type >::tensor_category;
 template<class Vector>
 using get_execution_policy = typename TensorTraits<typename std::decay<Vector>::type>::execution_policy;
-//using is the new typedef in C++11
 template<class Vector>
 using get_pointer_type = typename std::conditional< std::is_const<Vector>::value, const get_value_type<Vector>*, get_value_type<Vector>* >::type;
 ///@}
