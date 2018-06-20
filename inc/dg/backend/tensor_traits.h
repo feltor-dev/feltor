@@ -2,7 +2,7 @@
 #define _DG_VECTOR_TRAITS_
 
 #include <vector>
-#include <tensor_traits>
+#include <type_traits>
 #include "vector_categories.h"
 #include "matrix_categories.h"
 #include "execution_policy.h"
