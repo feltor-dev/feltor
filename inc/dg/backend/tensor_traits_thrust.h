@@ -3,7 +3,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 #include "vector_categories.h"
-#include "type_traits.h"
+#include "tensor_traits.h"
 
 namespace dg
 {

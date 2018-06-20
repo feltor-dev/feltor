@@ -1,7 +1,7 @@
 #ifndef _DG_BLAS_SPARSEBLOCKMAT_
 #define _DG_BLAS_SPARSEBLOCKMAT_
-#include "type_traits.h"
-#include "type_traits.h"
+#include "tensor_traits.h"
+#include "tensor_traits.h"
 #include "sparseblockmat.h"
 #include "sparseblockmat.cuh"
 //

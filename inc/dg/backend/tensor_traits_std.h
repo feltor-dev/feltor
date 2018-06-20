@@ -3,7 +3,7 @@
 #include <array>
 #include <vector>
 #include "vector_categories.h"
-#include "type_traits.h"
+#include "tensor_traits.h"
 
 namespace dg
 {

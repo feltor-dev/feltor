@@ -12,7 +12,7 @@
 #include <cusp/array1d.h>
 
 #include "config.h"
-#include "type_traits.h"
+#include "tensor_traits.h"
 
 ///@cond
 namespace dg{

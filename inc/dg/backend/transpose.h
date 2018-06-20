@@ -1,7 +1,7 @@
 #pragma once
 #include <cusp/transpose.h>
 #include "blas2_cusp.h"
-#include "type_traits.h"
+#include "tensor_traits.h"
 #ifdef MPI_VERSION
 #include "blas2_dispatch_mpi.h"
 #endif //MPI_VERSION

@@ -6,11 +6,11 @@
 #endif //DG_DEBUG
 
 #include <array>
-#include <type_traits>
+#include <tensor_traits>
 #include "exblas/exdot_serial.h"
 #include "config.h"
 #include "vector_categories.h"
-#include "type_traits.h"
+#include "tensor_traits.h"
 
 ///@cond
 namespace dg

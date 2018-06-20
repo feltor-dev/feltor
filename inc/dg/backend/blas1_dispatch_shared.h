@@ -9,7 +9,7 @@
 #include <thrust/device_vector.h>
 
 #include "vector_categories.h"
-#include "type_traits.h"
+#include "tensor_traits.h"
 
 #include "blas1_serial.h"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA

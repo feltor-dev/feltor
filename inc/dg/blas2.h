@@ -1,9 +1,9 @@
 #pragma once
 
-#include "backend/type_traits.h"
-#include "backend/type_traits_std.h"
-#include "backend/type_traits_thrust.h"
-#include "backend/type_traits_cusp.h"
+#include "backend/tensor_traits.h"
+#include "backend/tensor_traits_std.h"
+#include "backend/tensor_traits_thrust.h"
+#include "backend/tensor_traits_cusp.h"
 #include "backend/blas2_dispatch_shared.h"
 #include "backend/blas2_cusp.h"
 #include "backend/blas2_sparseblockmat.h"

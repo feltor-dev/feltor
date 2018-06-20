@@ -799,10 +799,10 @@ INPUT                  = . \
                          ./backend/vector_categories.h \
                          ./backend/matrix_categories.h \
                          ./backend/execution_policy.h \
-                         ./backend/type_traits.h \
-                         ./backend/type_traits_cusp.h \
-                         ./backend/type_traits_std.h \
-                         ./backend/type_traits_thrust.h \
+                         ./backend/tensor_traits.h \
+                         ./backend/tensor_traits_cusp.h \
+                         ./backend/tensor_traits_std.h \
+                         ./backend/tensor_traits_thrust.h \
 
 
 # This tag can be used to specify the character encoding of the source files

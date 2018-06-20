@@ -4,7 +4,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/gather.h>
 #include "exblas/mpi_accumulate.h"
-#include "type_traits.h"
+#include "tensor_traits.h"
 #include "blas1_dispatch_shared.h"
 #include "mpi_communicator.h"
 #include "memory.h"

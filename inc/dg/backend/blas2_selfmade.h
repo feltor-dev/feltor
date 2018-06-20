@@ -1,6 +1,6 @@
 #ifndef _DG_BLAS_SELFMADE_
 #define _DG_BLAS_SELFMADE_
-#include "type_traits.h"
+#include "tensor_traits.h"
 //
 ///@cond
 namespace dg{
