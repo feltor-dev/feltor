@@ -24,6 +24,10 @@ namespace dg
 {
 namespace blas1
 {
+///@cond
+template< class Subroutine, class ContainerType, class ...ContainerTypes>
+inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs);
+///@endcond
 namespace detail
 {
 
@@ -58,6 +62,22 @@ get_value_type<Vector> doDot( const Vector& x, const Vector2& y, SharedVectorTag
 {
     std::vector<int64_t> acc = doDot_superacc( x,y,SharedVectorTag());
     return exblas::cpu::Round(acc.data());
+}
+
+//we need to distinguish between Scalars and Vectors
+
+template<class T>
+auto get_iterator( T&& v, AnyVectorTag) -> decltype(v.begin()){
+    return v.begin();
+}
+template<class T>
+thrust::constant_iterator<T> get_iterator( T&& v, AnyScalarTag){
+    return thrust::constant_iterator<T>(v);
+}
+
+template<class T>
+auto get_iterator( T&& v ) -> decltype( get_iterator( std::forward<T>(v), get_tensor_category<T>())) {
+    return get_iterator( std::forward<T>(v), get_tensor_category<T>());
 }
 
 template< class Subroutine, class container, class ...Containers>

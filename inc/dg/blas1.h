@@ -31,10 +31,6 @@ namespace dg{
  */
 namespace blas1
 {
-///@cond
-template< class Subroutine, class ContainerType, class ...ContainerTypes>
-inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs);
-///@endcond
 
 ///@addtogroup blas1
 ///@{

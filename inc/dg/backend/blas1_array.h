@@ -6,7 +6,7 @@
 #endif //DG_DEBUG
 
 #include <array>
-#include <tensor_traits>
+#include <type_traits>
 #include "exblas/exdot_serial.h"
 #include "config.h"
 #include "vector_categories.h"

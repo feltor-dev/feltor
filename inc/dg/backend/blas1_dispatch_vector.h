@@ -66,35 +66,66 @@ get_value_type<Vector> doDot( const Vector& x, const Vector2& y, VectorVectorTag
     std::vector<int64_t> acc = doDot_superacc( x,y,VectorVectorTag());
     return exblas::cpu::Round(acc.data());
 }
+
+////we need to distinguish between Scalars and Vectors
+//template<class T, class Enable = void>
+//struct inner_type_impl;
+//
+//template<class T, typename std::is_base_of< VectorVectorTag, get_tensor_category<T>::value >
+//struct inner_type_impl{
+//    using type = typename std::decay<T>::type::value_type;
+//    using reference = typename std::conditional<std::is_const<T>::value, const type&, type& >::type;
+//};
+//template<class T, typename std::is_base_of< AnyScalarTag, get_tensor_category<T>::value>
+//struct inner_type_impl{
+//    using type = T;
+//    using reference = T&;
+//};
+//template<class T>
+//using inner_ref = typename inner_type_impl<T>::reference;
+
+template<class T>
+auto get_element( T&& v, unsigned i, AnyVectorTag)-> decltype(v[i]){
+    return v[i];
+}
+template<class T>
+T get_element( T&& v, unsigned i, AnyScalarTag){
+    return v;
+}
+template<class T>
+auto get_element( T&& v, unsigned i ) -> decltype( get_element( std::forward<T>(v), i, get_tensor_category<T>()) ) {
+    return get_element( std::forward<T>(v), i, get_tensor_category<T>());
+}
 #ifdef _OPENMP
 //omp tag implementation
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    using inner_container = typename std::decay<container>::type::value_type;
+    //using inner_container = typename std::decay<container>::type::value_type;
     if( !omp_in_parallel())//to catch recursive calls
     {
         #pragma omp parallel
         {
             for( unsigned i=0; i<x.size(); i++) {
-                doSubroutine( get_tensor_category<inner_container>(), f, x[i], xs[i]...);
+                dg::blas1::subroutine( f, get_element(std::forward<container>(x),i), get_element(std::forward<Containers>(xs),i)...);
             }
         }
     }
     else //we are already in a parallel omp region
         for( unsigned i=0; i<x.size(); i++) {
-            doSubroutine( get_tensor_category<inner_container>(), f, x[i], xs[i]...);
+            dg::blas1::subroutine( f, get_element(std::forward<container>(x),i), get_element(std::forward<Containers>(xs),i)...);
         }
 }
 #endif //_OPENMP
+
+
 
 //any tag implementation
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    using inner_container = typename std::decay<container>::type::value_type;
     for( unsigned i=0; i<x.size(); i++) {
-        doSubroutine( get_tensor_category<inner_container>(), f, x[i], xs[i]...);
+        dg::blas1::subroutine( f, get_element(std::forward<container>(x),i), get_element(std::forward<Containers>(xs),i)...);
     }
 }
 
