@@ -467,14 +467,27 @@ except the scalar product, which is not trivial parallel.
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
-    using vector_type = find_first<dg::is_not_scalar, ContainerType, ContainerTypes...>;
+    using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, ContainerType, ContainerTypes...>;
+    using execution_policy = get_execution_policy<vector_type>;
+    using tensor_category = get_tensor_category<vector_type>;
+    //std::cout << find_if_v<dg::is_not_scalar_has_not_any_policy, ContainerType, ContainerTypes...>::value <<std::endl;
     static_assert( !std::is_same<vector_type, std::false_type>::value,
-            "At least one ContainerType must be a non-scalar!");
+            "At least one ContainerType must be a non-scalar with an execution policy!");
     static_assert( all_true<
             dg::is_vector<ContainerType>::value,
             dg::is_vector<ContainerTypes>::value...>::value,
         "All container types must have a vector data layout (AnyVectorTag)!");
-    dg::blas1::detail::doSubroutine( get_tensor_category<vector_type>(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+    static_assert( all_true<
+            dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
+            dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
+            >::value,
+        "All container types must have compatible execution policies (Any or Same)!");
+    static_assert( all_true<
+            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
+            >::value,
+        "All container types must be either Scalar or have compatible Tensor categories (Any or Same)!");
+    dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
 /*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors

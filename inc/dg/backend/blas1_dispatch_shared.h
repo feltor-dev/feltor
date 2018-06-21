@@ -7,10 +7,12 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <thrust/iterator/constant_iterator.h>
 
 #include "vector_categories.h"
 #include "scalar_categories.h"
 #include "tensor_traits.h"
+#include "predicate.h"
 
 #include "blas1_serial.h"
 #if THRUST_DEVICE_SYSTEM==THRUST_DEVICE_SYSTEM_CUDA
@@ -88,39 +90,20 @@ inline int get_vector_size( T&& x, AnyVectorTag) { return x.size();}
 template< class T >
 inline int get_vector_size( T&& x, AnyScalarTag) { return 1;}
 
-template< class T>
-inline int get_size( T&& x)
-{
-    return get_vector_size(std::forward<T>(x), get_tensor_category<T>());
-}
-
-template< class T, class... Ts>
-inline int get_size( T&& x, Ts&&... xs)
-{
-    //bool test = T::nothin;
-    if( is_scalar<T>::value)
-        return get_size( std::forward<Ts>(xs)...);
-    return get_vector_size(std::forward<T>(x), get_tensor_category<T>());
-};
-
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    using vector_type = find_first<dg::is_not_scalar, container, Containers...>;
-    //static_assert( all_true<std::is_base_of<SharedVectorTag,
-    //    get_tensor_category<Containers>>::value...>::value,
-    //    "All container types must derive from the same vector category (SharedVectorTag in this case)!");
-    //static_assert( all_true<std::is_same<get_execution_policy<container>,
-    //    get_execution_policy<Containers> >::value...>::value,
-    //    "All container types must share the same execution policy!");
-#ifdef DG_DEBUG
+    using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, container, Containers...>;
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, container, Containers...>::value;
+
+//#ifdef DG_DEBUG
     //is this possible?
     //assert( !x.empty());
     //assert( x.size() == xs.size() );
-#endif //DG_DEBUG
+//#endif //DG_DEBUG
     doSubroutine_dispatch(
             get_execution_policy<vector_type>(),
-            get_size( x, xs...),
+            std::get<vector_idx>(std::tuple<container, Containers...>(x,xs...)).size(),
             f,
             get_iterator(x) ,
             get_iterator(xs) ...

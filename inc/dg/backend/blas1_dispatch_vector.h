@@ -67,33 +67,16 @@ get_value_type<Vector> doDot( const Vector& x, const Vector2& y, VectorVectorTag
     return exblas::cpu::Round(acc.data());
 }
 
-////we need to distinguish between Scalars and Vectors
-//template<class T, class Enable = void>
-//struct inner_type_impl;
-//
-//template<class T, typename std::is_base_of< VectorVectorTag, get_tensor_category<T>::value >
-//struct inner_type_impl{
-//    using type = typename std::decay<T>::type::value_type;
-//    using reference = typename std::conditional<std::is_const<T>::value, const type&, type& >::type;
-//};
-//template<class T, typename std::is_base_of< AnyScalarTag, get_tensor_category<T>::value>
-//struct inner_type_impl{
-//    using type = T;
-//    using reference = T&;
-//};
-//template<class T>
-//using inner_ref = typename inner_type_impl<T>::reference;
-
 template<class T>
-auto get_element( T&& v, unsigned i, AnyVectorTag)-> decltype(v[i]){
+inline auto get_element( T&& v, unsigned i, AnyVectorTag)-> decltype(v[i]){
     return v[i];
 }
 template<class T>
-T get_element( T&& v, unsigned i, AnyScalarTag){
+inline T get_element( T&& v, unsigned i, AnyScalarTag){
     return v;
 }
 template<class T>
-auto get_element( T&& v, unsigned i ) -> decltype( get_element( std::forward<T>(v), i, get_tensor_category<T>()) ) {
+inline auto get_element( T&& v, unsigned i ) -> decltype( get_element( std::forward<T>(v), i, get_tensor_category<T>()) ) {
     return get_element( std::forward<T>(v), i, get_tensor_category<T>());
 }
 #ifdef _OPENMP
@@ -101,7 +84,8 @@ auto get_element( T&& v, unsigned i ) -> decltype( get_element( std::forward<T>(
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    unsigned size = get_size( x, xs...);
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, container, Containers...>::value;
+    unsigned size = std::get<vector_idx>(std::tuple<container, Containers...>(x,xs...)).size();//get_size( x, xs...),
     //using inner_container = typename std::decay<container>::type::value_type;
     if( !omp_in_parallel())//to catch recursive calls
     {
@@ -135,20 +119,7 @@ inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, 
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    using vector_type = find_first<dg::is_not_scalar, container, Containers...>;
-    //static_assert( all_true<std::is_base_of<VectorVectorTag,
-    //    get_tensor_category<Containers>>::value...>::value,
-    //    "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
-    static_assert( all_true<
-            std::is_base_of<get_execution_policy<container>, get_execution_policy<vector_type>>::value,
-            std::is_base_of<get_execution_policy<Containers>, get_execution_policy<vector_type> >::value...
-        >::value,
-        "All data layouts must share the same execution policy!");
-#ifdef DG_DEBUG
-    //is this possible?
-    //assert( !x.empty());
-    //assert( x.size() == xs.size() );
-#endif //DG_DEBUG
+    using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, container, Containers...>;
     doSubroutine_dispatch( VectorVectorTag(), get_execution_policy<vector_type>(), f, std::forward<container>( x), std::forward<Containers>( xs)...);
 }
 

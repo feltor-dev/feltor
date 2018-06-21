@@ -41,16 +41,6 @@ template<class Vector>
 using get_pointer_type = typename std::conditional< std::is_const<Vector>::value, const get_value_type<Vector>*, get_value_type<Vector>* >::type;
 ///@}
 
-///@cond
-
-//from stackoverflow implement Columbo's bool pack trick to check parameter packs
-template < bool...> struct bool_pack;
-
-template<bool... v>
-using all_true = std::is_same<bool_pack<true,v...>, bool_pack<v..., true>>;
-
-///@endcond
-
 }//namespace dg
 
 #endif //_DG_VECTOR_TRAITS_

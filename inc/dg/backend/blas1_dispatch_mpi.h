@@ -1,6 +1,8 @@
 #pragma once
 
+#include <type_traits>
 #include "mpi_vector.h"
+#include "predicate.h"
 
 #ifdef DG_DEBUG
 #include <cassert>
@@ -49,21 +51,21 @@ get_value_type<Vector1> doDot( const Vector1& x, const Vector2& y, MPIVectorTag)
     std::vector<int64_t> acc = doDot_superacc( x,y,MPIVectorTag());
     return exblas::cpu::Round(acc.data());
 }
+template<class T>
+inline auto get_data( T&& v, AnyVectorTag)-> decltype(v.data()){
+    return v.data();
+}
+template<class T>
+inline T get_data( T&& v, AnyScalarTag){
+    return v;
+}
 
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    static_assert( all_true<std::is_base_of<MPIVectorTag,
-        get_tensor_category<Containers>>::value...>::value,
-        "All data layouts must derive from the same vector category (MPIVectorTag in this case)!");
-#ifdef DG_DEBUG
-    //is this possible?
-    //int result;
-    //MPI_Comm_compare( x.communicator(), y.communicator(), &result);
-    //assert( result == MPI_CONGRUENT || result == MPI_IDENT);
-#endif //DG_DEBUG
-    using inner_container = typename std::decay<container>::type::container_type;
-    doSubroutine( get_tensor_category<inner_container>(), f, x.data(), xs.data()...);
+    dg::blas1::subroutine( f,
+        get_data(std::forward<container>(x), get_tensor_category<container>()),
+        get_data(std::forward<Containers>(xs), get_tensor_category<Containers>())...);
 }
 
 } //namespace detail
