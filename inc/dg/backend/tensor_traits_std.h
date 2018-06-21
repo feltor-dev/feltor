@@ -10,16 +10,7 @@ namespace dg
 ///@addtogroup vec_list
 ///@{
 template<class T>
-struct TensorTraits<std::vector<T>,
-    typename std::enable_if< std::is_arithmetic<T>::value>::type>
-{
-    using value_type        = T;
-    using tensor_category   = ThrustVectorTag;
-    using execution_policy  = OmpTag;
-};
-template<class T>
-struct TensorTraits<std::vector<T>,
-    typename std::enable_if< !std::is_arithmetic<T>::value>::type>
+struct TensorTraits<std::vector<T>>
 {
     using value_type        = get_value_type<T>;
     using tensor_category   = VectorVectorTag;
