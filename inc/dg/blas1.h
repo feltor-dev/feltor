@@ -1,6 +1,8 @@
 #pragma once
 
+#include "backend/predicate.h"
 #include "backend/tensor_traits.h"
+#include "backend/tensor_traits_scalar.h"
 #include "backend/tensor_traits_thrust.h"
 #include "backend/tensor_traits_cusp.h"
 #include "backend/tensor_traits_std.h"
@@ -465,11 +467,14 @@ except the scalar product, which is not trivial parallel.
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
+    using vector_type = find_first<dg::is_not_scalar, ContainerType, ContainerTypes...>;
+    static_assert( !std::is_same<vector_type, std::false_type>::value,
+            "At least one ContainerType must be a non-scalar!");
     static_assert( all_true<
-            std::is_base_of<AnyVectorTag, get_tensor_category<ContainerType>>::value,
-            std::is_base_of<AnyVectorTag, get_tensor_category<ContainerTypes>>::value...>::value,
+            dg::is_vector<ContainerType>::value,
+            dg::is_vector<ContainerTypes>::value...>::value,
         "All container types must have a vector data layout (AnyVectorTag)!");
-    dg::blas1::detail::doSubroutine( get_tensor_category<ContainerType>(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+    dg::blas1::detail::doSubroutine( get_tensor_category<vector_type>(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
 /*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors

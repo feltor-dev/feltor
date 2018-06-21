@@ -101,18 +101,19 @@ auto get_element( T&& v, unsigned i ) -> decltype( get_element( std::forward<T>(
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, container&& x, Containers&&... xs)
 {
+    unsigned size = get_size( x, xs...);
     //using inner_container = typename std::decay<container>::type::value_type;
     if( !omp_in_parallel())//to catch recursive calls
     {
         #pragma omp parallel
         {
-            for( unsigned i=0; i<x.size(); i++) {
+            for( unsigned i=0; i<size; i++) {
                 dg::blas1::subroutine( f, get_element(std::forward<container>(x),i), get_element(std::forward<Containers>(xs),i)...);
             }
         }
     }
     else //we are already in a parallel omp region
-        for( unsigned i=0; i<x.size(); i++) {
+        for( unsigned i=0; i<size; i++) {
             dg::blas1::subroutine( f, get_element(std::forward<container>(x),i), get_element(std::forward<Containers>(xs),i)...);
         }
 }
@@ -124,7 +125,8 @@ inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, contai
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    for( unsigned i=0; i<x.size(); i++) {
+    unsigned size = get_size( x, xs...);
+    for( unsigned i=0; i<size; i++) {
         dg::blas1::subroutine( f, get_element(std::forward<container>(x),i), get_element(std::forward<Containers>(xs),i)...);
     }
 }
@@ -133,18 +135,21 @@ inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, 
 template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
-    static_assert( all_true<std::is_base_of<VectorVectorTag,
-        get_tensor_category<Containers>>::value...>::value,
-        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
-    static_assert( all_true<std::is_same<get_execution_policy<container>,
-        get_execution_policy<Containers> >::value...>::value,
+    using vector_type = find_first<dg::is_not_scalar, container, Containers...>;
+    //static_assert( all_true<std::is_base_of<VectorVectorTag,
+    //    get_tensor_category<Containers>>::value...>::value,
+    //    "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
+    static_assert( all_true<
+            std::is_base_of<get_execution_policy<container>, get_execution_policy<vector_type>>::value,
+            std::is_base_of<get_execution_policy<Containers>, get_execution_policy<vector_type> >::value...
+        >::value,
         "All data layouts must share the same execution policy!");
 #ifdef DG_DEBUG
     //is this possible?
     //assert( !x.empty());
     //assert( x.size() == xs.size() );
 #endif //DG_DEBUG
-    doSubroutine_dispatch( VectorVectorTag(), get_execution_policy<container>(), f, std::forward<container>( x), std::forward<Containers>( xs)...);
+    doSubroutine_dispatch( VectorVectorTag(), get_execution_policy<vector_type>(), f, std::forward<container>( x), std::forward<Containers>( xs)...);
 }
 
 } //namespace detail
