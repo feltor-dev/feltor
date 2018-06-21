@@ -33,7 +33,7 @@ template<class Subroutine, class T, class ...Ts>
     //every thread takes num_is/grid_size is
     for( int i = thread_id; i<size; i += grid_size)
         //f(x[i], xs[i]...);
-        f(static_cast<typename std::iterator_traits<T>::reference>(*(x+i)), static_cast<typename std::iterator_traits<Ts>::reference>(*(xs+i))...);
+        f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
 }
 
 template< class Subroutine, class T, class ...Ts>

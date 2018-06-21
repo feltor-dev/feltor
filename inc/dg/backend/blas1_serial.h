@@ -25,8 +25,10 @@ template< class Subroutine, class T, class ...Ts>
 inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, T x, Ts... xs)
 {
     for( int i=0; i<size; i++)
+    {
         //f(x[i], xs[i]...);
-        f(static_cast<typename std::iterator_traits<T>::reference>(*(x+i)), static_cast<typename std::iterator_traits<Ts>::reference>(*(xs+i))...);
+        f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
+    }
 }
 
 
