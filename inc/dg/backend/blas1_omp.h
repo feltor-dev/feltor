@@ -35,8 +35,7 @@ inline void doSubroutine_omp( int size, Subroutine f, T x, Ts... xs)
 #pragma omp for nowait
     for( int i=0; i<size; i++)
         //f(x[i], xs[i]...);
-        //f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
-        f(static_cast<typename std::iterator_traits<T>::reference>(*(x+i)), static_cast<typename std::iterator_traits<Ts>::reference>(*(xs+i))...);
+        f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
 }
 
 template< class Subroutine, class T, class ...Ts>
