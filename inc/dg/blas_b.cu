@@ -168,5 +168,7 @@ int main()
     t.toc();
     std::cout<<"DOT2(x,w,y) took                 " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them
 
+    //maybe test how fast a recursive dot is compared to serial dot
+    //maybe test how fast a recursive axpby is compared to serial axpby
     return 0;
 }

@@ -457,6 +457,23 @@ inline void doSubroutine( AnyVectorTag, Subroutine f, ContainerType&& x, Contain
         "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
     dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
+
+template< class ContainerType1, class ContainerType2>
+inline get_value_type<ContainerType1> doDot( const ContainerType1& x, const ContainerType2& y, AnyScalarTag, AnyScalarTag)
+{
+    return x*y;
+}
+template< class ContainerType1, class ContainerType2>
+inline get_value_type<ContainerType1> doDot( const ContainerType1& x, const ContainerType2& y, AnyVectorTag, AnyScalarTag)
+{
+    return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>() );
+}
+template< class ContainerType1, class ContainerType2>
+inline get_value_type<ContainerType1> doDot( const ContainerType1& x, const ContainerType2& y, AnyScalarTag, AnyVectorTag)
+{
+    return dg::blas1::detail::doDot( y, x, get_tensor_category<ContainerType2>() );
+}
+
 }//namespace detail
 
 /**
@@ -528,8 +545,8 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
             dg::is_vector<ContainerType1>::value,
             dg::is_vector<ContainerType2>::value>::value,
         "All container types must have a vector data layout (AnyVector)!");
-    //using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType1>::value, is_scalar<ContainerType2>::value>::value, AnyScalarTag , AnyVectorTag >::type;
-    return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>() );
+    using basic_tag_type  = typename std::conditional< is_scalar<ContainerType1>::value && is_scalar<ContainerType2>::value, AnyScalarTag , AnyVectorTag >::type;
+    return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>(), get_tensor_category<ContainerType2>() );
 }
 
 /**

@@ -60,8 +60,8 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, AnyScala
 {
     static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
     static_assert( std::is_same<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
-    const double* x_ptr = &x;
-    const double* y_ptr = &y;
+    const get_value_type<Vector>* x_ptr = &x;
+    const get_value_type<Vector2>* y_ptr = &y;
     return doDot_dispatch( SerialTag(),1, x_ptr, y_ptr);
 }
 
@@ -76,16 +76,16 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, SharedVe
     static_assert( std::is_same<get_execution_policy<Vector>,
         get_execution_policy<Vector2> >::value,
         "All container types must share the same execution policy!");
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
-    return doDot_dispatch( get_execution_policy<Vector>(), x.size(), x.begin(), y.begin());
+//#ifdef DG_DEBUG
+//    assert( x.size() == y.size() );
+//#endif //DG_DEBUG
+    return doDot_dispatch( get_execution_policy<Vector>(), x.size(), x.begin(), get_iterator(y));
 }
 
 template<class Vector, class Vector2>
 get_value_type<Vector> doDot( const Vector& x, const Vector2& y, SharedVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,y,SharedVectorTag());
+    std::vector<int64_t> acc = doDot_superacc( x,y,SharedVectorTag(), get_tensor_category<Vector2>());
     return exblas::cpu::Round(acc.data());
 }
 

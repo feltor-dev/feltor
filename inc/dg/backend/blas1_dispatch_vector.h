@@ -42,13 +42,13 @@ inline std::vector<int64_t> doDot_superacc( const Vector& x1, const Vector2& x2,
     static_assert( std::is_base_of<RecursiveVectorTag,
         get_tensor_category<Vector2>>::value,
         "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
-#ifdef DG_DEBUG
-    assert( !x1.empty());
-    assert( x1.size() == x2.size() );
-#endif //DG_DEBUG
+//#ifdef DG_DEBUG
+//    assert( !x1.empty());
+//    assert( x1.size() == x2.size() );
+//#endif //DG_DEBUG
     std::vector<std::vector<int64_t>> acc( x1.size());
     for( unsigned i=0; i<x1.size(); i++)
-        acc[i] = doDot_superacc( x1[i], x2[i], get_tensor_category<typename Vector::value_type>());
+        acc[i] = doDot_superacc( x1[i], get_element(x2,i), get_tensor_category<typename Vector::value_type>());
     for( unsigned i=1; i<x1.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
