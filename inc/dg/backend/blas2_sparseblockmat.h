@@ -50,7 +50,7 @@ inline void doSymv_dispatch(
               get_value_type<Vector1> beta,
               Vector2& y,
               SparseBlockMatrixTag,
-              VectorVectorTag,
+              RecursiveVectorTag,
               AnyPolicyTag)
 {
     for(unsigned i=0; i<x.size(); i++)
@@ -68,7 +68,7 @@ inline void doSymv_dispatch(
               get_value_type<Vector1> beta,
               Vector2& y,
               SparseBlockMatrixTag,
-              VectorVectorTag,
+              RecursiveVectorTag,
               OmpTag)
 {
     if( !omp_in_parallel())

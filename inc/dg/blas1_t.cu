@@ -49,7 +49,7 @@ int main()
 
     //v1 = 2, v2 = 3
 
-    std::cout << "Human readable test VectorVector (passed if ouput equals value in brackets) \n";
+    std::cout << "Human readable test RecursiveVector (passed if ouput equals value in brackets) \n";
     Vector v1( 5, 2.), v2( 5, 3.), v3(5,5.), v4(5,4.), v5(v4);
     std::array<Vector, 2> w1( dg::transfer<std::array<Vector,2>>(v1)), w2({v2,v2}), w3({v3,v3}), w4({v4,v4});
     dg::blas1::axpby( 2., w1, 3., w2, w3);

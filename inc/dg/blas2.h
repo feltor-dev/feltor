@@ -147,7 +147,7 @@ inline void doSymv( MatrixType& M,
  * where \f$ M\f$ is a matrix.
  * @copydoc hide_code_blas2_symv
  * @param alpha A Scalar
- * @param M The Matrix. Note that if \c x and \c y have the \c VectorVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
+ * @param M The Matrix. Note that if \c x and \c y have the \c RecursiveVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
@@ -176,7 +176,7 @@ inline void symv( get_value_type<ContainerType1> alpha,
  * This routine computes \f[ y = M x \f]
  * where \f$ M\f$ is a matrix.
  * @copydoc hide_code_blas2_symv
- * @param M The Matrix. Note that if \c x and \c y have the \c VectorVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
+ * @param M The Matrix. Note that if \c x and \c y have the \c RecursiveVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
@@ -195,7 +195,7 @@ inline void symv( MatrixType& M,
  *
  * Does exactly the same as symv.
  * @param alpha A Scalar
- * @param M The Matrix. Note that if \c x and \c y have the \c VectorVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
+ * @param M The Matrix. Note that if \c x and \c y have the \c RecursiveVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
@@ -217,7 +217,7 @@ inline void gemv( get_value_type<ContainerType1> alpha,
  * (alias for symv)
  *
  * Does exactly the same as symv.
- * @param M The Matrix. Note that if \c x and \c y have the \c VectorVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
+ * @param M The Matrix. Note that if \c x and \c y have the \c RecursiveVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2

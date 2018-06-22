@@ -102,10 +102,10 @@ inline void doSymv( Matrix& m,
                     const Vector1&x,
                     Vector2& y,
                     CuspMatrixTag,
-                    VectorVectorTag  )
+                    RecursiveVectorTag  )
 {
-    static_assert( std::is_base_of<VectorVectorTag, get_tensor_category<Vector2>>::value,
-        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
+    static_assert( std::is_base_of<RecursiveVectorTag, get_tensor_category<Vector2>>::value,
+        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( m.num_rows == y.size() );
     assert( m.num_cols == x.size() );

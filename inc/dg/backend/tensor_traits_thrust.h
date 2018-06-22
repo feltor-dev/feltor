@@ -22,7 +22,7 @@ struct TensorTraits<thrust::host_vector<T>,
     typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
-    using tensor_category   = VectorVectorTag;
+    using tensor_category   = RecursiveVectorTag;
     using execution_policy  = get_execution_policy<T>;
 };
 

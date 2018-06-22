@@ -50,11 +50,11 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& P, c
     return receive;
 }
 template< class Vector1, class Matrix, class Vector2>
-inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, MPIVectorTag, VectorVectorTag)
+inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, MPIVectorTag, RecursiveVectorTag)
 {
-    static_assert( std::is_base_of<VectorVectorTag,
+    static_assert( std::is_base_of<RecursiveVectorTag,
         get_tensor_category<Vector2>>::value,
-        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
+        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
@@ -117,7 +117,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
     dg::blas2::symv( alpha, m.data(), x.data(), beta, y.data());
 }
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIVectorTag, VectorVectorTag )
+inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIVectorTag, RecursiveVectorTag )
 {
     for( unsigned i=0; i<x.size(); i++)
         dg::blas2::symv( m, x[i], y[i]);
@@ -130,7 +130,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
                 get_value_type<Vector1> beta,
                 Vector2& y,
                 MPIVectorTag,
-                VectorVectorTag
+                RecursiveVectorTag
                 )
 {
     for( unsigned i=0; i<x.size(); i++)
@@ -157,7 +157,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
 }
 
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIMatrixTag, VectorVectorTag )
+inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIMatrixTag, RecursiveVectorTag )
 {
     for( unsigned i=0; i<x.size(); i++)
         dg::blas2::symv( m, x[i], y[i]);
@@ -170,7 +170,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
                 get_value_type<Vector1> beta,
                 Vector2& y,
                 MPIMatrixTag,
-                VectorVectorTag
+                RecursiveVectorTag
                 )
 {
     for( unsigned i=0; i<x.size(); i++)

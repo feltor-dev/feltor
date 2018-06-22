@@ -39,7 +39,7 @@ namespace blas1
 
 /**
  * @class hide_iterations
- * where \c i iterates over @b all elements inside the given vectors. The order of iterations is indetermined. If \c ContainerType has the \c VectorVectorTag, \c i recursively loops over all entries.
+ * where \c i iterates over @b all elements inside the given vectors. The order of iterations is indetermined. If \c ContainerType has the \c RecursiveVectorTag, \c i recursively loops over all entries.
  * If the vector sizes do not match, the result is undefined.
  * The compiler chooses the implementation and parallelization of this function based on the \c execution_policy tag of the \c ContainerTypes.
  */

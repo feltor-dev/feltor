@@ -48,7 +48,7 @@ namespace detail
 template<class Category>
 using find_base_category = typename
     std::conditional< std::is_base_of<SharedVectorTag, Category>::value, SharedVectorTag,
-    typename std::conditional< std::is_base_of<VectorVectorTag, Category>::value, VectorVectorTag, MPIVectorTag>::type>::type;
+    typename std::conditional< std::is_base_of<RecursiveVectorTag, Category>::value, RecursiveVectorTag, MPIVectorTag>::type>::type;
 }//namesapce detail
 //is scalar or same tensor category
 template<class T, class Category>

@@ -66,7 +66,7 @@ int main( int argc, char* argv[])
     MVec v3 = dg::evaluate( five, g);
     MVec v4 = dg::evaluate( four, g);
 
-    if(rank==0)std::cout << "Human readable test VectorVector (passed if ouput equals value in brackets) \n";
+    if(rank==0)std::cout << "Human readable test RecursiveVector (passed if ouput equals value in brackets) \n";
     std::vector<MVec > w1( 2, v1), w2(2, v2), w3( w2), w4( 2, v4);
     dg::blas1::axpby( 2., w1, 3., w2, w3);
     if(rank==0)std::cout << "2*2+ 3*3 = " << w3[0].data()[0] <<" (13)\n";

@@ -37,11 +37,11 @@ To doTransfer( const From& src, ArrayVectorTag, AnyVectorTag)
 }
 
 template< class Vector, class Vector2>
-inline std::vector<int64_t> doDot_superacc( const Vector& x1, const Vector2& x2, VectorVectorTag)
+inline std::vector<int64_t> doDot_superacc( const Vector& x1, const Vector2& x2, RecursiveVectorTag)
 {
-    static_assert( std::is_base_of<VectorVectorTag,
+    static_assert( std::is_base_of<RecursiveVectorTag,
         get_tensor_category<Vector2>>::value,
-        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
+        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( !x1.empty());
     assert( x1.size() == x2.size() );
@@ -61,9 +61,9 @@ inline std::vector<int64_t> doDot_superacc( const Vector& x1, const Vector2& x2,
     return acc[0];
 }
 template<class Vector, class Vector2>
-get_value_type<Vector> doDot( const Vector& x, const Vector2& y, VectorVectorTag)
+get_value_type<Vector> doDot( const Vector& x, const Vector2& y, RecursiveVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,y,VectorVectorTag());
+    std::vector<int64_t> acc = doDot_superacc( x,y,RecursiveVectorTag());
     return exblas::cpu::Round(acc.data());
 }
 
@@ -82,7 +82,7 @@ inline auto get_element( T&& v, unsigned i ) -> decltype( get_element( std::forw
 #ifdef _OPENMP
 //omp tag implementation
 template< class Subroutine, class container, class ...Containers>
-inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, container&& x, Containers&&... xs)
+inline void doSubroutine_dispatch( RecursiveVectorTag, OmpTag, Subroutine f, container&& x, Containers&&... xs)
 {
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, container, Containers...>::value;
     unsigned size = std::get<vector_idx>(std::tuple<container, Containers...>(x,xs...)).size();//get_size( x, xs...),
@@ -107,7 +107,7 @@ inline void doSubroutine_dispatch( VectorVectorTag, OmpTag, Subroutine f, contai
 
 //any tag implementation
 template< class Subroutine, class container, class ...Containers>
-inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, container&& x, Containers&&... xs)
+inline void doSubroutine_dispatch( RecursiveVectorTag, AnyPolicyTag, Subroutine f, container&& x, Containers&&... xs)
 {
     unsigned size = get_size( x, xs...);
     for( unsigned i=0; i<size; i++) {
@@ -117,10 +117,10 @@ inline void doSubroutine_dispatch( VectorVectorTag, AnyPolicyTag, Subroutine f, 
 
 //dispatch
 template< class Subroutine, class container, class ...Containers>
-inline void doSubroutine( VectorVectorTag, Subroutine f, container&& x, Containers&&... xs)
+inline void doSubroutine( RecursiveVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
     using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, container, Containers...>;
-    doSubroutine_dispatch( VectorVectorTag(), get_execution_policy<vector_type>(), f, std::forward<container>( x), std::forward<Containers>( xs)...);
+    doSubroutine_dispatch( RecursiveVectorTag(), get_execution_policy<vector_type>(), f, std::forward<container>( x), std::forward<Containers>( xs)...);
 }
 
 } //namespace detail

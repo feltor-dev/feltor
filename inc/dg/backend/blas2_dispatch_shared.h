@@ -52,11 +52,11 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Ve
 }
 
 template< class Vector1, class Matrix, class Vector2>
-inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag, VectorVectorTag)
+inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag, RecursiveVectorTag)
 {
-    static_assert( std::is_base_of<VectorVectorTag,
+    static_assert( std::is_base_of<RecursiveVectorTag,
         get_tensor_category<Vector2>>::value,
-        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
+        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
@@ -117,7 +117,7 @@ inline void doSymv(
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
-              SharedVectorTag, VectorVectorTag)
+              SharedVectorTag, RecursiveVectorTag)
 {
     for(unsigned i=0; i<x.size(); i++)
         dg::blas1::pointwiseDot( alpha, m, x[i], beta, y[i]);
@@ -128,7 +128,7 @@ inline void doSymv(
               Matrix& m,
               const Vector1& x,
               Vector2& y,
-              SharedVectorTag, VectorVectorTag)
+              SharedVectorTag, RecursiveVectorTag)
 {
     for(unsigned i=0; i<x.size(); i++)
         dg::blas1::pointwiseDot( 1, m, x[i], 0, y[i]);

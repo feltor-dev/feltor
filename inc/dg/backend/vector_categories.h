@@ -16,10 +16,10 @@ namespace dg{
 First, it indicates the fundamental datatype a vector class contains (typically a double).
  Second, it describes how the data in a Vector type is layed out in memory. We distinguish between a simple, contiguous chunk of data in a shared memory system (dg::SharedVectorTag), a dataset that is
 part of a larger dataset on a distributed memory system (dg::MPIVectorTag), and
-a dataset that consists of a number of subsets (dg::VectorVectorTag).
-Both the MPIVectorTag and the VectorVectorTag allow recursion, that is
-for example a VectorVector can consist itself of many shared vectors or of many
-VectorVector again. The innermost type must always be a shared vector however.
+a dataset that consists of a number of subsets (dg::RecursiveVectorTag).
+Both the MPIVectorTag and the RecursiveVectorTag allow recursion, that is
+for example a RecursiveVector can consist itself of many shared vectors or of many
+RecursiveVector again. The innermost type must always be a shared vector however.
   The third function of the Vector tag is to describe how the data in the vector has to be accessed.For example
  * how do we get the pointer to the first element, the size, or how to access the MPI communicator? This is described in Derived Tags from the fundamental
 Tags, e.g. the \c ThrustVectorTag.
@@ -66,9 +66,9 @@ struct MPIVectorTag     : public AnyVectorTag {};
  * @note The class must typedef \c value_type and TensorTraits must be specialized for this type.
  * @note Examples are \c std::vector<T> and \c std::array<T,N> where T is a non-primitive data type and N is the size of the array
  */
-struct VectorVectorTag  : public AnyVectorTag {};
+struct RecursiveVectorTag  : public AnyVectorTag {};
 
-struct ArrayVectorTag   : public VectorVectorTag{}; //!< \c std::array of containers
+struct ArrayVectorTag   : public RecursiveVectorTag{}; //!< \c std::array of containers
 
 /**
  * @brief Indicate thrust/std - like behaviour

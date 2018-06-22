@@ -24,11 +24,11 @@ namespace detail
 
 
 template< class Vector1, class Matrix, class Vector2>
-inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, VectorVectorTag, VectorVectorTag)
+inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, RecursiveVectorTag, RecursiveVectorTag)
 {
-    static_assert( std::is_base_of<VectorVectorTag,
+    static_assert( std::is_base_of<RecursiveVectorTag,
         get_tensor_category<Vector2>>::value,
-        "All data layouts must derive from the same vector category (VectorVectorTag in this case)!");
+        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
@@ -51,23 +51,23 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     return acc[0];
 }
 template< class Vector1, class Matrix, class Vector2>
-inline get_value_type<Vector1> doDot( const Vector1& x, const Matrix& m, const Vector2& y, VectorVectorTag)
+inline get_value_type<Vector1> doDot( const Vector1& x, const Matrix& m, const Vector2& y, RecursiveVectorTag)
 {
-    std::vector<int64_t> acc = doDot_superacc( x,m,y,VectorVectorTag(), get_tensor_category<Vector1>());
+    std::vector<int64_t> acc = doDot_superacc( x,m,y,RecursiveVectorTag(), get_tensor_category<Vector1>());
     return exblas::cpu::Round(acc.data());
 }
 template< class Matrix, class Vector>
 inline get_value_type<Matrix>  doDot(
               const Matrix& m,
               const Vector& y,
-              VectorVectorTag
+              RecursiveVectorTag
               )
 {
-    return doDot( y,m,y,VectorVectorTag());
+    return doDot( y,m,y,RecursiveVectorTag());
 }
 
 
-//In case the matrix is a VectorVector just do a recursive call
+//In case the matrix is a RecursiveVector just do a recursive call
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
               get_value_type<Vector1> alpha,
@@ -75,7 +75,7 @@ inline void doSymv(
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
-              VectorVectorTag)
+              RecursiveVectorTag)
 {
     for( unsigned i=0; i<x.size(); i++)
         dg::blas2::symv( alpha, m[i], x[i], beta, y[i]);
@@ -86,7 +86,7 @@ inline void doSymv(
               Matrix& m,
               const Vector1& x,
               Vector2& y,
-              VectorVectorTag)
+              RecursiveVectorTag)
 {
     for( unsigned i=0; i<x.size(); i++)
         dg::blas2::symv( m[i], x[i], y[i]);

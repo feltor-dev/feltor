@@ -147,7 +147,7 @@
   *  -  In case of \c SelfMadeMatrixTag only those \c blas2 functions
   *  that have a corresponding member function in the Matrix class (e.g. \c symv( const container&, container&); ) can be called.
   *  .
-  *  If a \c container has the \c VectorVectorTag, then the \c Matrix is applied to each of the elements.
+  *  If a \c container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements.
   *  \see mat_list
   */
   /** @class hide_geometry
