@@ -528,6 +528,7 @@ inline get_value_type<ContainerType1> dot( const ContainerType1& x, const Contai
             dg::is_vector<ContainerType1>::value,
             dg::is_vector<ContainerType2>::value>::value,
         "All container types must have a vector data layout (AnyVector)!");
+    //using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType1>::value, is_scalar<ContainerType2>::value>::value, AnyScalarTag , AnyVectorTag >::type;
     return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>() );
 }
 

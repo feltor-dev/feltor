@@ -95,6 +95,9 @@ int main()
     std::array<double, 3>  arr1{2,3,4}, arr2(arr1);
     dg::blas1::axpby( 2., arr1, 3., arr2);
     dg::blas1::axpby( 2., vv3, 3., arr2);
+    dg::blas1::copy( 1., vv3);
+    dg::blas1::dot( vv3, vv3);
+    dg::blas1::dot(arr1, arr1);
 
 
     return 0;

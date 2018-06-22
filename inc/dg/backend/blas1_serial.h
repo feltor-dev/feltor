@@ -10,12 +10,14 @@ namespace blas1
 {
 namespace detail
 {
-static inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr) {
+template<class RA1, class RA2>
+inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, RA1 x_ptr, RA2 y_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
     exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]) ;
     return h_superacc;
 }
-static inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
+template<class RA1, class RA2, class RA3>
+inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, RA1 x_ptr, RA2 y_ptr, RA3 z_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
     exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]) ;
     return h_superacc;

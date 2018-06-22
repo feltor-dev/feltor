@@ -44,11 +44,11 @@ static inline double KnuthTwoSum(double a, double b, double *s) {
 }
 
 
-template<uint NBFPE, uint WARP_COUNT>
+template<uint NBFPE, uint WARP_COUNT, class RandomAccessIterator1, class RandomAccessIterator2>
 __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
-    const double *d_a,
-    const double *d_b,
+    RandomAccessIterator1 d_a,
+    RandomAccessIterator2 d_b,
     const uint NbElements
 ) {
     __shared__ int64_t l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
@@ -129,12 +129,12 @@ __global__ void ExDOT(
     }
 }
 
-template<uint NBFPE, uint WARP_COUNT>
+template<uint NBFPE, uint WARP_COUNT, class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3>
 __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
-    const double *d_a,
-    const double *d_b,
-    const double *d_c,
+    RandomAccessIterator1 d_a,
+    RandomAccessIterator2 d_b,
+    RandomAccessIterator3 d_c,
     const uint NbElements
 ) {
     __shared__ int64_t l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
@@ -317,12 +317,13 @@ void ExDOTComplete(
  * @param d_superacc pointer to an array of 64 bit integers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
 */
+template<class RandomAccessIterator1, class RandomAccessIterator2, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* d_superacc)
+void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, int64_t* d_superacc){
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
-    gpu::ExDOT<3, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
+    gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr,size);
     gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );
 }
 
@@ -338,9 +339,9 @@ void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
  * @param d_superacc pointer to an array of 64 bit integegers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
  */
-template<size_t NBFPE=3>
+template<class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, const double* x1_ptr, const double* x2_ptr, const double* x3_ptr, int64_t* d_superacc)
+void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, RandomAccessIterator3 x3_ptr, int64_t* d_superacc) {
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());

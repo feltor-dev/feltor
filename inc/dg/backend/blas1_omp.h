@@ -12,7 +12,8 @@ namespace detail
 {
 const int MIN_SIZE=100;//don't parallelize if work is too small
 
-static inline std::vector<int64_t> doDot_dispatch( OmpTag, int size, const double* x_ptr, const double * y_ptr) {
+template<class RA1, class RA2>
+inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, RA1 x_ptr, RA2 y_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
     if(size<MIN_SIZE)
         exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]);
@@ -20,7 +21,8 @@ static inline std::vector<int64_t> doDot_dispatch( OmpTag, int size, const doubl
         exblas::exdot_omp( size, x_ptr,y_ptr, &h_superacc[0]);
     return h_superacc;
 }
-static inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, const double* x_ptr, const double * y_ptr, const double* z_ptr) {
+template<class RA1, class RA2, class RA3>
+inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, RA1 x_ptr, RA2 y_ptr, RA3 z_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
     if(size<MIN_SIZE)
         exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]);

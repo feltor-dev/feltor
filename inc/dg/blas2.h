@@ -54,17 +54,22 @@ namespace blas2{
 template< class ContainerType1, class MatrixType, class ContainerType2>
 inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType& m, const ContainerType2& y)
 {
-    static_assert( std::is_same<get_execution_policy<ContainerType1>,
-                                get_execution_policy<ContainerType2>>::value,
-                                "Vector types must have same execution policy");
-    static_assert( std::is_same<get_value_type<ContainerType1>,
-                                get_value_type<MatrixType>>::value &&
-                   std::is_same<get_value_type<ContainerType2>,
-                                get_value_type<MatrixType>>::value,
-                                "Vector and Matrix types must have same value type");
-    static_assert( std::is_same<get_tensor_category<ContainerType1>,
-                                get_tensor_category<ContainerType2>>::value,
-                                "Vector types must have same data layout");
+    //static_assert( std::is_same<get_execution_policy<ContainerType1>,
+    //                            get_execution_policy<ContainerType2>>::value,
+    //                            "Vector types must have same execution policy");
+    //static_assert( std::is_same<get_value_type<ContainerType1>,
+    //                            get_value_type<MatrixType>>::value &&
+    //               std::is_same<get_value_type<ContainerType2>,
+    //                            get_value_type<MatrixType>>::value,
+    //                            "Vector and Matrix types must have same value type");
+    //static_assert( std::is_same<get_tensor_category<ContainerType1>,
+    //                            get_tensor_category<ContainerType2>>::value,
+    //                            "Vector types must have same data layout");
+    static_assert( all_true<
+            dg::is_vector<ContainerType1>::value,
+            dg::is_vector<ContainerType2>::value>::value,
+        "All container types must have a vector data layout (AnyVector)!");
+    using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType1>::value, is_scalar<MatrixType>::value, is_scalar<ContainerType2>::value>::value, AnyScalarTag, AnyMatrixTag >::type;
     return dg::blas2::detail::doDot( x, m, y,
             get_tensor_category<MatrixType>());
 }
@@ -87,8 +92,7 @@ inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType
 template< class MatrixType, class ContainerType>
 inline get_value_type<MatrixType> dot( const MatrixType& m, const ContainerType& x)
 {
-    return dg::blas2::detail::doDot( m, x,
-            get_tensor_category<MatrixType>());
+    return dg::blas2::dot( x, m, x);
 }
 ///@cond
 namespace detail{

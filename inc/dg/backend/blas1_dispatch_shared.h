@@ -33,12 +33,36 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 ///@endcond
 namespace detail
 {
+//we need to distinguish between Scalars and Vectors
 
+template<class T>
+auto get_iterator( T&& v, AnyVectorTag) -> decltype(v.begin()){
+    return v.begin();
+}
+template<class T>
+thrust::constant_iterator<T> get_iterator( T&& v, AnyScalarTag){
+    return thrust::constant_iterator<T>(v);
+}
+
+template<class T>
+auto get_iterator( T&& v ) -> decltype( get_iterator( std::forward<T>(v), get_tensor_category<T>())) {
+    return get_iterator( std::forward<T>(v), get_tensor_category<T>());
+}
+///////////////////////////////////////////////////////////////////////////////////////////
 template< class To, class From>
 To doTransfer( const From& in, ThrustVectorTag, ThrustVectorTag)
 {
     To t( in.begin(), in.end());
     return t;
+}
+template< class Vector, class Vector2>
+std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, AnyScalarTag)
+{
+    static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
+    static_assert( std::is_same<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
+    const double* x_ptr = &x;
+    const double* y_ptr = &y;
+    return doDot_dispatch( SerialTag(),1, x_ptr, y_ptr);
 }
 
 template< class Vector, class Vector2>
@@ -55,9 +79,7 @@ std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, SharedVe
 #ifdef DG_DEBUG
     assert( x.size() == y.size() );
 #endif //DG_DEBUG
-    const double* x_ptr = thrust::raw_pointer_cast( x.data());
-    const double* y_ptr = thrust::raw_pointer_cast( y.data());
-    return doDot_dispatch( get_execution_policy<Vector>(), x.size(), x_ptr, y_ptr);
+    return doDot_dispatch( get_execution_policy<Vector>(), x.size(), x.begin(), y.begin());
 }
 
 template<class Vector, class Vector2>
@@ -67,21 +89,6 @@ get_value_type<Vector> doDot( const Vector& x, const Vector2& y, SharedVectorTag
     return exblas::cpu::Round(acc.data());
 }
 
-//we need to distinguish between Scalars and Vectors
-
-template<class T>
-auto get_iterator( T&& v, AnyVectorTag) -> decltype(v.begin()){
-    return v.begin();
-}
-template<class T>
-thrust::constant_iterator<T> get_iterator( T&& v, AnyScalarTag){
-    return thrust::constant_iterator<T>(v);
-}
-
-template<class T>
-auto get_iterator( T&& v ) -> decltype( get_iterator( std::forward<T>(v), get_tensor_category<T>())) {
-    return get_iterator( std::forward<T>(v), get_tensor_category<T>());
-}
 
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)

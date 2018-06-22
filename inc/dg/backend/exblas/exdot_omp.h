@@ -89,8 +89,8 @@ inline static void Reduction(unsigned int tid, unsigned int tnum, std::vector<in
     }
 }
 
-template<typename CACHE>
-void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
+template<typename CACHE, typename RandomAccessIterator1, typename RandomAccessIterator2>
+void ExDOTFPE(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64_t* h_superacc) {
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t)
     int maxthreads = omp_get_max_threads();
@@ -148,8 +148,8 @@ void ExDOTFPE(int N, const double *a, const double *b, int64_t* h_superacc) {
         h_superacc[i] = acc[i];
 }
 
-template<typename CACHE>
-void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t* h_superacc) {
+template<typename CACHE, typename RandomAccessIterator1, typename RandomAccessIterator2, typename RandomAccessIterator3>
+void ExDOTFPE(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, RandomAccessIterator3 c, int64_t* h_superacc) {
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t) (MW avoid false sharing?)
     int maxthreads = omp_get_max_threads();
@@ -229,8 +229,8 @@ void ExDOTFPE(int N, const double *a, const double *b, const double *c, int64_t*
  * @param h_superacc pointer to an array of 64 bit integers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
 */
-template<size_t NBFPE=8>
-void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
+template<class RandomAccessIterator1, class RandomAccessIterator2, size_t NBFPE=8>
+void exdot_omp(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, int64_t* h_superacc){
 #ifndef _WITHOUT_VCL
     cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 #else
@@ -249,8 +249,8 @@ void exdot_omp(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
  * @param h_superacc pointer to an array of 64 bit integegers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
  */
-template<size_t NBFPE=8>
-void exdot_omp(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
+template<class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3, size_t NBFPE=8>
+void exdot_omp(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, RandomAccessIterator3 x3_ptr, int64_t* h_superacc) {
 #ifndef _WITHOUT_VCL
     cpu::ExDOTFPE<cpu::FPExpansionVect<vcl::Vec8d, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 #else

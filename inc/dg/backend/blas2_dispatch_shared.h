@@ -45,10 +45,10 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Ve
 #ifdef DG_DEBUG
     assert( x.size() == y.size() && x.size() == m.size() );
 #endif //DG_DEBUG
-    const double* x_ptr = thrust::raw_pointer_cast( x.data());
-    const double* m_ptr = thrust::raw_pointer_cast( m.data());
-    const double* y_ptr = thrust::raw_pointer_cast( y.data());
-    return dg::blas1::detail::doDot_dispatch( get_execution_policy<Vector1>(), x.size(), x_ptr, m_ptr, y_ptr);
+    //const double* x_ptr = thrust::raw_pointer_cast( x.data());
+    //const double* m_ptr = thrust::raw_pointer_cast( m.data());
+    //const double* y_ptr = thrust::raw_pointer_cast( y.data());
+    return dg::blas1::detail::doDot_dispatch( get_execution_policy<Vector1>(), x.size(), x.begin(), m.begin(), y.begin());
 }
 
 template< class Vector1, class Matrix, class Vector2>

@@ -29,8 +29,8 @@ namespace exblas{
 ///@cond
 namespace cpu{
 
-template<typename CACHE>
-void ExDOTFPE_cpu(int N, const double *a, const double *b, int64_t* acc) {
+template<typename CACHE, typename RandomAccessIterator1, typename RandomAccessIterator2>
+void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64_t* acc) {
     CACHE cache(acc);
 #ifndef _WITHOUT_VCL
     int r = (( int64_t(N) ) & ~7ul);
@@ -63,8 +63,8 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, int64_t* acc) {
     cache.Flush();
 }
 
-template<typename CACHE>
-void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int64_t* acc) {
+template<typename CACHE, typename RandomAccessIterator1, typename RandomAccessIterator2, typename RandomAccessIterator3>
+void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, RandomAccessIterator3 c, int64_t* acc) {
     CACHE cache(acc);
 #ifndef _WITHOUT_VCL
     int r = (( int64_t(N))  & ~7ul);
@@ -119,8 +119,8 @@ void ExDOTFPE_cpu(int N, const double *a, const double *b, const double *c, int6
  * @param h_superacc pointer to an array of 64 bit integers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
 */
-template<size_t NBFPE=8>
-void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_t* h_superacc){
+template<class RandomAccessIterator1, class RandomAccessIterator2, size_t NBFPE=8>
+void exdot_cpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, int64_t* h_superacc){
 #ifndef _WITHOUT_VCL
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
@@ -142,8 +142,8 @@ void exdot_cpu(unsigned size, const double* x1_ptr, const double* x2_ptr, int64_
  * @param h_superacc pointer to an array of 64 bit integegers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
  */
-template<size_t NBFPE=8>
-void exdot_cpu(unsigned size, const double *x1_ptr, const double* x2_ptr, const double * x3_ptr, int64_t* h_superacc) {
+template<class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3, size_t NBFPE=8>
+void exdot_cpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, RandomAccessIterator3 x3_ptr, int64_t* h_superacc) {
 #ifndef _WITHOUT_VCL
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
