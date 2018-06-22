@@ -20,20 +20,19 @@ struct TensorTraits<std::vector<T>>
 /**
  * @brief There is a special implementation of blas1 functions for a \c std::array different from the one indicated by SerialTag
  *
- * @tparam T arithmetic value type
+ * @tparam T scalar or vector type
  * @tparam N size of the array
  */
+//template<class T, std::size_t N>
+//struct TensorTraits<std::array<T, N>,
+//    typename std::enable_if< std::is_arithmetic<T>::value>::type>
+//{
+//    using value_type        = T;
+//    using tensor_category   = StdArrayTag;
+//    using execution_policy  = SerialTag;
+//};
 template<class T, std::size_t N>
-struct TensorTraits<std::array<T, N>,
-    typename std::enable_if< std::is_arithmetic<T>::value>::type>
-{
-    using value_type        = T;
-    using tensor_category   = StdArrayTag;
-    using execution_policy  = SerialTag;
-};
-template<class T, std::size_t N>
-struct TensorTraits<std::array<T, N>,
-    typename std::enable_if< !std::is_arithmetic<T>::value>::type>
+struct TensorTraits<std::array<T, N>>//, typename std::enable_if< !std::is_arithmetic<T>::value>::type>
 {
     using value_type        = get_value_type<T>;
     using tensor_category   = ArrayVectorTag;

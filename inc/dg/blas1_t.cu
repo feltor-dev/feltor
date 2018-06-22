@@ -87,6 +87,15 @@ int main()
     std::cout << "e^2-7 = " << w3[0][0] <<" (0.389056...)"<< std::endl;
     std::cout << "\nFINISHED! Continue with geometry/evaluation_t.cu !\n\n";
 
+    std::cout << "Human readable test mixed vector classes (passed if ouput equals value in brackets) \n";
+    double x1 = 2., x2 = 3., x3 = 4.;
+    std::vector<double> vv3(3, x3);
+    dg::blas1::axpby( 2., x1, 3., x2);
+    dg::blas1::axpby( 2., vv3, 3., vv3);
+    std::array<double, 3>  arr1{2,3,4}, arr2(arr1);
+    dg::blas1::axpby( 2., arr1, 3., arr2);
+    dg::blas1::axpby( 2., vv3, 3., arr2);
+
 
     return 0;
 

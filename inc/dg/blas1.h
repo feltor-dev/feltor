@@ -7,7 +7,7 @@
 #include "backend/tensor_traits_cusp.h"
 #include "backend/tensor_traits_std.h"
 #include "backend/blas1_dispatch_shared.h"
-#include "backend/blas1_array.h"
+//#include "backend/blas1_array.h"
 #include "backend/tensor_traits_cusp.h"
 #ifdef MPI_VERSION
 #include "backend/mpi_vector.h"
@@ -436,6 +436,29 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
     dg::blas1::subroutine( dg::Evaluate<BinarySubroutine, Functor>(f,g), y, x0, xs...);
 }
 
+
+namespace detail{
+template< class Subroutine, class ContainerType, class ...ContainerTypes>
+inline void doSubroutine( AnyScalarTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
+{
+    f( x, xs...);
+}
+template< class Subroutine, class ContainerType, class ...ContainerTypes>
+inline void doSubroutine( AnyVectorTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
+{
+    using vector_type = find_if_t<dg::is_not_scalar, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
+    static_assert( !is_scalar<vector_type>::value,
+            "At least one ContainerType must be a non-scalar!"); //Actually, we know that this is true at this point
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( all_true<
+            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
+            >::value,
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+}
+}//namespace detail
+
 /**
  * @brief \f$ f(x_0, x_1, ...)\f$; Customizable and generic blas1 function
  *
@@ -467,27 +490,12 @@ except the scalar product, which is not trivial parallel.
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
-    using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, ContainerType, ContainerTypes...>;
-    using execution_policy = get_execution_policy<vector_type>;
-    using tensor_category = get_tensor_category<vector_type>;
-    //std::cout << find_if_v<dg::is_not_scalar_has_not_any_policy, ContainerType, ContainerTypes...>::value <<std::endl;
-    static_assert( !std::is_same<vector_type, std::false_type>::value,
-            "At least one ContainerType must be a non-scalar with an execution policy!");
     static_assert( all_true<
             dg::is_vector<ContainerType>::value,
             dg::is_vector<ContainerTypes>::value...>::value,
-        "All container types must have a vector data layout (AnyVectorTag)!");
-    static_assert( all_true<
-            dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
-            dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
-            >::value,
-        "All container types must have compatible execution policies (Any or Same)!");
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
-            >::value,
-        "All container types must be either Scalar or have compatible Tensor categories (Any or Same)!");
-    dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+        "All container types must have a vector data layout (AnyVector)!");
+    using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >::type;
+    dg::blas1::detail::doSubroutine(basic_tag_type(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
 /*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors
@@ -517,9 +525,9 @@ template< class ContainerType1, class ContainerType2>
 inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
 {
     static_assert( all_true<
-            std::is_base_of<AnyVectorTag, get_tensor_category<ContainerType1>>::value,
-            std::is_base_of<AnyVectorTag, get_tensor_category<ContainerType2>>::value >::value,
-        "All container types must have a vector data layout (AnyVectorTag)!");
+            dg::is_vector<ContainerType1>::value,
+            dg::is_vector<ContainerType2>::value>::value,
+        "All container types must have a vector data layout (AnyVector)!");
     return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>() );
 }
 

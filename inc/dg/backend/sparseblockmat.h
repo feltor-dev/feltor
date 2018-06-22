@@ -3,6 +3,7 @@
 #include <cmath>
 #include <thrust/host_vector.h>
 #include "exblas/config.h"
+#include "config.h"
 #include "exceptions.h"
 #include "tensor_traits.h"
 #include "tensor_traits.h"
@@ -78,7 +79,7 @@ struct EllSparseBlockMat
     * @param beta premultiplies output
     * @param y output may not alias input
     */
-    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const;
     public:
 
     /**
@@ -183,7 +184,7 @@ struct CooSparseBlockMat
     * @param y output may not alias input
     * @attention beta == 1 (anything else is ignored)
     */
-    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* x, value_type beta, value_type* y) const;
+    void symv(SharedVectorTag, SerialTag, value_type alpha, const value_type* RESTRICT x, value_type beta, value_type* RESTRICT y) const;
     public:
     /**
     * @brief Display internal data to a stream

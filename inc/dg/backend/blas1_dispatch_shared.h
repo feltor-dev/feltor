@@ -83,18 +83,20 @@ auto get_iterator( T&& v ) -> decltype( get_iterator( std::forward<T>(v), get_te
     return get_iterator( std::forward<T>(v), get_tensor_category<T>());
 }
 
-
-
-template< class T >
-inline int get_vector_size( T&& x, AnyVectorTag) { return x.size();}
-template< class T >
-inline int get_vector_size( T&& x, AnyScalarTag) { return 1;}
-
-template< class Subroutine, class container, class ...Containers>
-inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containers&&... xs)
+template< class Subroutine, class ContainerType, class ...ContainerTypes>
+inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
-    using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, container, Containers...>;
-    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, container, Containers...>::value;
+    using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
+    static_assert( !is_scalar<vector_type>::value,
+            "At least one ContainerType must have a non-trivial execution policy!"); //Actually, we know that this is true at this point
+    using execution_policy = get_execution_policy<vector_type>;
+    static_assert( all_true<
+            dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
+            dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
+            >::value,
+        "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
+    using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>::value;
 
 //#ifdef DG_DEBUG
     //is this possible?
@@ -103,7 +105,7 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, container&& x, Containe
 //#endif //DG_DEBUG
     doSubroutine_dispatch(
             get_execution_policy<vector_type>(),
-            std::get<vector_idx>(std::tuple<container, Containers...>(x,xs...)).size(),
+            std::get<vector_idx>(std::forward_as_tuple(x,xs...)).size(),
             f,
             get_iterator(x) ,
             get_iterator(xs) ...
