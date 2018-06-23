@@ -41,7 +41,10 @@ int main()
     double result = dg::blas1::dot( 1., arrdvec1 );
     std::cout << "blas1 dot recursive Scalar Vector "<< (result == 414) <<"\n";
     result = dg::blas2::dot( 1., 4., arrdvec1 );
-    std::cout << "blas1 dot recursive Scalar Vector "<< (result == 1656) <<"\n";
+    std::cout << "blas2 dot recursive Scalar Vector "<< (result == 1656) <<"\n";
+    result = dg::blas2::dot( 1., arrdvec1, arrdvec1 );
+    double result1 = dg::blas1::dot( arrdvec1, arrdvec1);
+    std::cout << "blas1/2 dot recursive Scalar Vector "<< (result == result1) <<"\n";
 
     return 0;
 }

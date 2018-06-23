@@ -10,12 +10,12 @@ namespace blas2
 {
 //forward declare blas2 symv functions
 template< class MatrixType, class ContainerType1, class ContainerType2>
-void symv( MatrixType& M,
+void symv( MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y);
 template< class MatrixType, class ContainerType1, class ContainerType2>
 void symv( get_value_type<ContainerType1> alpha,
-                  MatrixType& M,
+                  MatrixType&& M,
                   const ContainerType1& x,
                   get_value_type<ContainerType1> beta,
                   ContainerType2& y);
@@ -28,7 +28,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 {
     std::vector<std::vector<int64_t>> acc( m.size());
     for( unsigned i=0; i<m.size(); i++)
-        acc[i] = doDot_superacc( x[i], m[i], y[i]);
+        acc[i] = doDot_superacc( get_element(x,i), m[i], get_element(y,i));
     for( unsigned i=1; i<m.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
@@ -45,25 +45,25 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
               get_value_type<Vector1> alpha,
-              const Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
               RecursiveVectorTag)
 {
     for( unsigned i=0; i<m.size(); i++)
-        dg::blas2::symv( alpha, m[i], x[i], beta, y[i]);
+        dg::blas2::symv( alpha, m[i], get_element(x,i), beta, get_element(y,i));
 }
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               Vector2& y,
               RecursiveVectorTag)
 {
     for( unsigned i=0; i<m.size(); i++)
-        dg::blas2::symv( m[i], x[i], y[i]);
+        dg::blas2::symv( m[i], get_element(x,i), get_element(y,i));
 }
 
 

@@ -11,12 +11,12 @@ namespace blas2
 {
 //forward declare blas2 symv functions
 template< class MatrixType, class ContainerType1, class ContainerType2>
-void symv( MatrixType& M,
+void symv( MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y);
 template< class MatrixType, class ContainerType1, class ContainerType2>
 void symv( get_value_type<ContainerType1> alpha,
-                  MatrixType& M,
+                  MatrixType&& M,
                   const ContainerType1& x,
                   get_value_type<ContainerType1> beta,
                   ContainerType2& y);
@@ -32,7 +32,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     do_mpi_assert( x,y, get_tensor_category<Vector1>(), get_tensor_category<Vector2>());
 #endif //DG_DEBUG
     //local computation
-    std::vector<int64_t> acc = doDot_superacc( get_data(x, get_tensor_category<Vector1>()), m, get_data(y, get_tensor_category<Vector2>()));
+    std::vector<int64_t> acc = doDot_superacc( get_data(x), m, get_data(y));
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     //get communicator from MPIVector
     auto comm = std::get<vector_idx>(std::forward_as_tuple(x,y)).communicator();
@@ -49,7 +49,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     do_mpi_assert( m,y, MPIVectorTag, get_tensor_category<Vector2>());
 #endif //DG_DEBUG
     //local computation
-    std::vector<int64_t> acc = doDot_superacc( get_data(x, get_tensor_category<Vector1>()), m.data(), get_data(y, get_tensor_category<Vector2>()));
+    std::vector<int64_t> acc = doDot_superacc( get_data(x), m.data(), get_data(y));
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), m.communicator(), m.communicator_mod(), m.communicator_mod_reduce());
 
@@ -85,14 +85,14 @@ inline void doTransfer( const Matrix1& m1, Matrix2& m2, AnyMatrixTag, MPIMatrixT
 
 //Matrix = MPI Vector
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIVectorTag, MPIVectorTag )
+inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIVectorTag, MPIVectorTag )
 {
-    dg::blas2::symv( m.data(), x.data(), y.data());
+    dg::blas2::symv( m.data(), get_data(x), get_data(y));
 }
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( get_value_type<Vector1> alpha,
-                Matrix& m,
+                Matrix&& m,
                 const Vector1& x,
                 get_value_type<Vector1> beta,
                 Vector2& y,
@@ -100,18 +100,18 @@ inline void doSymv( get_value_type<Vector1> alpha,
                 MPIVectorTag
                 )
 {
-    dg::blas2::symv( alpha, m.data(), x.data(), beta, y.data());
+    dg::blas2::symv( alpha, m.data(), get_data(x), beta, get_data(y));
 }
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIVectorTag, RecursiveVectorTag )
+inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIVectorTag, RecursiveVectorTag )
 {
-    for( unsigned i=0; i<x.size(); i++)
-        dg::blas2::symv( m, x[i], y[i]);
+    for( unsigned i=0; i<y.size(); i++)
+        dg::blas2::symv( std::forward<Matrix>(m), get_element(x,i), get_element(y,i));
 }
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( get_value_type<Vector1> alpha,
-                Matrix& m,
+                Matrix&& m,
                 const Vector1& x,
                 get_value_type<Vector1> beta,
                 Vector2& y,
@@ -119,19 +119,19 @@ inline void doSymv( get_value_type<Vector1> alpha,
                 RecursiveVectorTag
                 )
 {
-    for( unsigned i=0; i<x.size(); i++)
-        dg::blas2::symv( alpha, m, x[i], beta, y[i]);
+    for( unsigned i=0; i<y.size(); i++)
+        dg::blas2::symv( alpha, std::forward<Matrix>(m), get_element(x,i), beta, get_element(y,i));
 }
 //Matrix is an MPI matrix
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIMatrixTag, MPIVectorTag )
+inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIMatrixTag, MPIVectorTag )
 {
     m.symv( x, y);
 }
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( get_value_type<Vector1> alpha,
-                Matrix& m,
+                Matrix&& m,
                 const Vector1& x,
                 get_value_type<Vector1> beta,
                 Vector2& y,
@@ -143,15 +143,15 @@ inline void doSymv( get_value_type<Vector1> alpha,
 }
 
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m, const Vector1& x, Vector2& y, MPIMatrixTag, RecursiveVectorTag )
+inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIMatrixTag, RecursiveVectorTag )
 {
-    for( unsigned i=0; i<x.size(); i++)
-        dg::blas2::symv( m, x[i], y[i]);
+    for( unsigned i=0; i<y.size(); i++)
+        dg::blas2::symv( std::forward<Matrix>(m), get_element(x,i), get_element(y,i));
 }
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( get_value_type<Vector1> alpha,
-                Matrix& m,
+                Matrix&& m,
                 const Vector1& x,
                 get_value_type<Vector1> beta,
                 Vector2& y,
@@ -159,8 +159,8 @@ inline void doSymv( get_value_type<Vector1> alpha,
                 RecursiveVectorTag
                 )
 {
-    for( unsigned i=0; i<x.size(); i++)
-        dg::blas2::symv( alpha, m, x[i], beta, y[i]);
+    for( unsigned i=0; i<y.size(); i++)
+        dg::blas2::symv( alpha, std::forward<Matrix>(m), x[i], beta, y[i]);
 }
 
 

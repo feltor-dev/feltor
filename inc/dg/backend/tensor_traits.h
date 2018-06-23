@@ -55,13 +55,18 @@ inline auto get_element( T&& v, unsigned i ) -> decltype( do_get_element( std::f
 }
 
 template<class T>
-inline auto get_data( T&& v, AnyVectorTag)-> decltype(v.data()){
+inline auto do_get_data( T&& v, AnyVectorTag)-> decltype(v.data()){
     return v.data();
 }
 template<class T>
-inline T get_data( T&& v, AnyScalarTag){
+inline T do_get_data( T&& v, AnyScalarTag){
     return v;
 }
+template<class T>
+inline auto get_data( T&& v)-> decltype(do_get_data( std::forward<T>(v), get_tensor_category<T>() )){
+    return do_get_data( std::forward<T>(v), get_tensor_category<T>());
+}
+
 template<class T>
 auto get_iterator( T&& v, AnyVectorTag) -> decltype(v.begin()){
     return v.begin();

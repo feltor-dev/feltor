@@ -75,45 +75,45 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
               get_value_type<Vector1> alpha,
-              const Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
               SharedVectorTag, SharedVectorTag)
 {
-    dg::blas1::pointwiseDot( alpha, m, x, beta, y);
+    dg::blas1::pointwiseDot( alpha, std::forward<Matrix>(m), x, beta, y);
 }
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               Vector2& y,
               SharedVectorTag, SharedVectorTag)
 {
-    dg::blas1::pointwiseDot( 1, m, x, 0, y);
+    dg::blas1::pointwiseDot( std::forward<Matrix>(m), x, y);
 }
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
               get_value_type<Vector1> alpha,
-              const Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
               SharedVectorTag, RecursiveVectorTag)
 {
     for(unsigned i=0; i<x.size(); i++)
-        dg::blas1::pointwiseDot( alpha, m, x[i], beta, y[i]);
+        dg::blas1::pointwiseDot( alpha, std::forward<Matrix>(m), get_element(x,i), beta, get_element(y,i));
 }
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               Vector2& y,
               SharedVectorTag, RecursiveVectorTag)
 {
-    for(unsigned i=0; i<x.size(); i++)
-        dg::blas1::pointwiseDot( 1, m, x[i], 0, y[i]);
+    for(unsigned i=0; i<y.size(); i++)
+        dg::blas1::pointwiseDot( 1, std::forward<Matrix>(m), get_element(x,i), 0, get_element(y,i));
 }
 
 

@@ -30,7 +30,7 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, CuspMatrixTag, CuspMatrixT
 
 #ifdef _OPENMP
 template< class Matrix, class Container1, class Container2>
-inline void doSymv_cusp_dispatch( Matrix& m,
+inline void doSymv_cusp_dispatch( Matrix&& m,
                     const Container1& x,
                     Container2& y,
                     cusp::csr_format,
@@ -60,7 +60,7 @@ inline void doSymv_cusp_dispatch( Matrix& m,
 #endif// _OPENMP
 
 template< class Matrix, class Container1, class Container2>
-inline void doSymv_cusp_dispatch( Matrix& m,
+inline void doSymv_cusp_dispatch( Matrix&& m,
                     const Container1& x,
                     Container2& y,
                     cusp::sparse_format,
@@ -68,11 +68,11 @@ inline void doSymv_cusp_dispatch( Matrix& m,
 {
     cusp::array1d_view< typename Container1::const_iterator> cx( x.cbegin(), x.cend());
     cusp::array1d_view< typename Container2::iterator> cy( y.begin(), y.end());
-    cusp::multiply( m, cx, cy);
+    cusp::multiply( std::forward<Matrix>(m), cx, cy);
 }
 
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m,
+inline void doSymv( Matrix&& m,
                     const Vector1&x,
                     Vector2& y,
                     CuspMatrixTag,
@@ -93,12 +93,12 @@ inline void doSymv( Matrix& m,
     assert( m.num_rows == y.size() );
     assert( m.num_cols == x.size() );
 #endif //DG_DEBUG
-    doSymv_cusp_dispatch( m,x,y,
+    doSymv_cusp_dispatch( std::forward<Matrix>(m),x,y,
             typename Matrix::format(),
             get_execution_policy<Vector1>());
 }
 template< class Matrix, class Vector1, class Vector2>
-inline void doSymv( Matrix& m,
+inline void doSymv( Matrix&& m,
                     const Vector1&x,
                     Vector2& y,
                     CuspMatrixTag,
@@ -112,7 +112,7 @@ inline void doSymv( Matrix& m,
 #endif //DG_DEBUG
     using inner_container = typename std::decay<Vector1>::type::value_type;
     for ( unsigned i=0; i<x.size(); i++)
-        doSymv( m, x[i], y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
+        doSymv( std::forward<Matrix>(m), x[i], y[i], CuspMatrixTag(), get_tensor_category<inner_container>());
 }
 
 } //namespace detail

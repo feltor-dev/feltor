@@ -15,37 +15,37 @@ namespace blas2{
 namespace detail{
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void doSymv( get_value_type<ContainerType1> alpha,
-                  MatrixType& M,
+                  MatrixType&& M,
                   const ContainerType1& x,
                   get_value_type<ContainerType1> beta,
                   ContainerType2& y,
                   AnyMatrixTag);
 template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void doSymv( MatrixType& M,
+inline void doSymv( MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y,
                   AnyMatrixTag);
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void doSymv( get_value_type<ContainerType1> alpha,
-                  MatrixType& M,
+                  MatrixType&& M,
                   const ContainerType1& x,
                   get_value_type<ContainerType1> beta,
                   ContainerType2& y,
                   SparseBlockMatrixTag);
 template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void doSymv( MatrixType& M,
+inline void doSymv( MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y,
                   SparseBlockMatrixTag);
 template< class MatrixType, class ContainerType1, class ContainerType2>
 inline void doSymv( get_value_type<ContainerType1> alpha,
-                  MatrixType& M,
+                  MatrixType&& M,
                   const ContainerType1& x,
                   get_value_type<ContainerType1> beta,
                   ContainerType2& y,
                   SelfMadeMatrixTag);
 template< class MatrixType, class ContainerType1, class ContainerType2>
-inline void doSymv( MatrixType& M,
+inline void doSymv( MatrixType&& M,
                   const ContainerType1& x,
                   ContainerType2& y,
                   SelfMadeMatrixTag);

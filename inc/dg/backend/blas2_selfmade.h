@@ -21,7 +21,7 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, AnyMatrixTag, SelfMadeMatr
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               Vector2& y,
               SelfMadeMatrixTag)
@@ -32,7 +32,7 @@ inline void doSymv(
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
               get_value_type<Vector1> alpha,
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,

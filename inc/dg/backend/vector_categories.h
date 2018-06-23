@@ -43,7 +43,8 @@ struct AnyVectorTag : public AnyMatrixTag{};
  * indicate addtional functionality like data resize.
  * @note We assume a class with this Tag has the following methods
  *  - \c size() returns the size (in number of elements) of the contiguous data
- *  - \c begin() returns a pointer (or a \c RandomAccessIterator) to the first element of the contiguous data
+ *  - \c begin() returns a \c RandomAccessIterator to the first element of the contiguous data
+ *  - \c data() returns a pointer to the first element of the contiguous data
  */
 struct SharedVectorTag  : public AnyVectorTag {};
 /**

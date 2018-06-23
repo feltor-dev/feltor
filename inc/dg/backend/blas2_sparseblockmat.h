@@ -19,7 +19,7 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, AnyMatrixTag, SparseBlockM
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv_dispatch(
               get_value_type<Vector1> alpha,
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
@@ -45,7 +45,7 @@ inline void doSymv_dispatch(
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv_dispatch(
               get_value_type<Vector1> alpha,
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
@@ -54,7 +54,7 @@ inline void doSymv_dispatch(
               AnyPolicyTag)
 {
     for(unsigned i=0; i<x.size(); i++)
-        doSymv_dispatch( alpha, m, x[i], beta, y[i],
+        doSymv_dispatch( alpha, std::forward<Matrix>(m), x[i], beta, y[i],
                 SparseBlockMatrixTag(),
                 get_tensor_category<typename Vector1::value_type>(),
                 get_execution_policy<Vector1>());
@@ -63,7 +63,7 @@ inline void doSymv_dispatch(
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv_dispatch(
               get_value_type<Vector1> alpha,
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
@@ -76,7 +76,7 @@ inline void doSymv_dispatch(
         #pragma omp parallel
         {
             for(unsigned i=0; i<x.size(); i++)
-                doSymv_dispatch( alpha, m, x[i], beta, y[i],
+                doSymv_dispatch( alpha, std::forward<Matrix>(m), x[i], beta, y[i],
                         SparseBlockMatrixTag(),
                         get_tensor_category<typename Vector1::value_type>(),
                         OmpTag());
@@ -84,7 +84,7 @@ inline void doSymv_dispatch(
     }
     else
         for(unsigned i=0; i<x.size(); i++)
-            doSymv_dispatch( alpha, m, x[i], beta, y[i],
+            doSymv_dispatch( alpha, std::forward<Matrix>(m), x[i], beta, y[i],
                     SparseBlockMatrixTag(),
                     get_tensor_category<typename Vector1::value_type>(),
                     OmpTag());
@@ -95,13 +95,13 @@ inline void doSymv_dispatch(
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
               get_value_type<Vector1> alpha,
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               get_value_type<Vector1> beta,
               Vector2& y,
               SparseBlockMatrixTag)
 {
-    doSymv_dispatch(alpha, m, x, beta, y,
+    doSymv_dispatch(alpha, std::forward<Matrix>(m), x, beta, y,
             SparseBlockMatrixTag(),
             get_tensor_category<Vector1>(),
             get_execution_policy<Vector1>()
@@ -110,12 +110,12 @@ inline void doSymv(
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(
-              Matrix& m,
+              Matrix&& m,
               const Vector1& x,
               Vector2& y,
               SparseBlockMatrixTag)
 {
-    doSymv( 1., m, x, 0., y, SparseBlockMatrixTag());
+    doSymv( 1., std::forward<Matrix>(m), x, 0., y, SparseBlockMatrixTag());
 }
 
 } //namespace detail
