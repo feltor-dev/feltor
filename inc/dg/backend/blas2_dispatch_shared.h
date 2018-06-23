@@ -23,6 +23,7 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 }//namespace blas1
 namespace blas2{
 namespace detail{
+
 template< class ContainerType1, class MatrixType, class ContainerType2>
 inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const MatrixType& m, const ContainerType2& y);
 

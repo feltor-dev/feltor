@@ -9,6 +9,10 @@ namespace blas2
 {
 namespace detail
 {
+
+template< class ContainerType1, class MatrixType, class ContainerType2>
+inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const MatrixType& m, const ContainerType2& y);
+
 template< class Vector1, class Matrix, class Vector2 >
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, AnyScalarTag, AnyScalarTag)
 {
@@ -17,7 +21,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     const get_value_type<Vector1>* x_ptr = &x;
     const get_value_type<Matrix>* m_ptr = &m;
     const get_value_type<Vector2>* y_ptr = &y;
-    return doDot_dispatch( SerialTag(), 1, x_ptr, m_ptr, y_ptr);
+    return dg::blas1::detail::doDot_dispatch( SerialTag(), 1, x_ptr, m_ptr, y_ptr);
 }
 template< class Vector1, class Matrix, class Vector2 >
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, AnyScalarTag, SharedVectorTag)
@@ -34,7 +38,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
             >::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
-    return doDot_dispatch( execution_policy(), size, get_iterator(x), get_iterator(m), get_iterator(y));
+    return dg::blas1::detail::doDot_dispatch( execution_policy(), size, get_iterator(x), get_iterator(m), get_iterator(y));
 }
 template< class Vector1, class Matrix, class Vector2>
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, AnyScalarTag, RecursiveVectorTag)
