@@ -94,7 +94,7 @@ void ExDOTFPE(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64_t* 
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t)
     int maxthreads = omp_get_max_threads();
-    std::vector<int64_t> acc(maxthreads*BIN_COUNT);
+    std::vector<int64_t> acc(maxthreads*BIN_COUNT,0);
     std::vector<int32_t> ready(maxthreads * linesize);
 
     #pragma omp parallel
@@ -153,7 +153,7 @@ void ExDOTFPE(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, RandomAcc
     // OpenMP sum+reduction
     int const linesize = 16;    // * sizeof(int32_t) (MW avoid false sharing?)
     int maxthreads = omp_get_max_threads();
-    std::vector<int64_t> acc(maxthreads*BIN_COUNT);
+    std::vector<int64_t> acc(maxthreads*BIN_COUNT,0);
     std::vector<int32_t> ready(maxthreads * linesize);
 
     #pragma omp parallel

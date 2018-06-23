@@ -21,7 +21,10 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     const get_value_type<Vector1>* x_ptr = &x;
     const get_value_type<Matrix>* m_ptr = &m;
     const get_value_type<Vector2>* y_ptr = &y;
-    return dg::blas1::detail::doDot_dispatch( SerialTag(), 1, x_ptr, m_ptr, y_ptr);
+    //since we only accumulate up to three values (multiplication and rest) reduce the size of the FPE
+    std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
+    exblas::exdot_cpu<const get_value_type<Vector1>*, const get_value_type<Matrix>*, const get_value_type<Vector2>*, 3>( 1, x_ptr,m_ptr,y_ptr, &h_superacc[0]) ;
+    return h_superacc;
 }
 template< class Vector1, class Matrix, class Vector2 >
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, AnyScalarTag, SharedVectorTag)

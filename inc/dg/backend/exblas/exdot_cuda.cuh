@@ -343,7 +343,7 @@ template<class RandomAccessIterator1, class RandomAccessIterator2, class RandomA
 __host__
 void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, RandomAccessIterator3 x3_ptr, int64_t* d_superacc)
 {
-    static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
+    static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
     gpu::ExDOT<NBFPE, gpu::WARP_COUNT><<<gpu::PARTIAL_SUPERACCS_COUNT, gpu::WORKGROUP_SIZE>>>( d_PartialSuperaccs, x1_ptr, x2_ptr, x3_ptr,size);
     gpu::ExDOTComplete<gpu::MERGE_SUPERACCS_SIZE><<<gpu::PARTIAL_SUPERACCS_COUNT/gpu::MERGE_SUPERACCS_SIZE, gpu::MERGE_WORKGROUP_SIZE>>>( d_PartialSuperaccs, d_superacc );

@@ -121,9 +121,9 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, Rando
 */
 template<class RandomAccessIterator1, class RandomAccessIterator2, size_t NBFPE=8>
 void exdot_cpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, int64_t* h_superacc){
-#ifndef _WITHOUT_VCL
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
+#ifndef _WITHOUT_VCL
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
 #else
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<double, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, h_superacc);
@@ -144,9 +144,9 @@ void exdot_cpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator
  */
 template<class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3, size_t NBFPE=8>
 void exdot_cpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, RandomAccessIterator3 x3_ptr, int64_t* h_superacc) {
-#ifndef _WITHOUT_VCL
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
+#ifndef _WITHOUT_VCL
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<vcl::Vec8d, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);
 #else
     cpu::ExDOTFPE_cpu<cpu::FPExpansionVect<double, NBFPE, cpu::FPExpansionTraits<true> > >((int)size,x1_ptr,x2_ptr, x3_ptr, h_superacc);

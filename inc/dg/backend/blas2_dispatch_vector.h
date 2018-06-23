@@ -26,19 +26,22 @@ namespace detail
 template< class Vector1, class Matrix, class Vector2>
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, RecursiveVectorTag, RecursiveVectorTag)
 {
-    std::vector<std::vector<int64_t>> acc( m.size());
-    for( unsigned i=0; i<m.size(); i++)
-        acc[i] = doDot_superacc( get_element(x,i), m[i], get_element(y,i));
-    for( unsigned i=1; i<m.size(); i++)
+    auto size = m.size();
+    std::vector<int64_t> acc( exblas::BIN_COUNT, 0);
+    for( unsigned i=0; i<size; i++)
     {
+        std::vector<int64_t> temp = doDot_superacc( get_element(x,i), m[i], get_element(y,i));
         int imin = exblas::IMIN, imax = exblas::IMAX;
-        exblas::cpu::Normalize( &(acc[0][0]), imin, imax);
-        imin = exblas::IMIN, imax = exblas::IMAX;
-        exblas::cpu::Normalize( &(acc[i][0]), imin, imax);
+        exblas::cpu::Normalize( &(temp[0]), imin, imax);
         for( int k=exblas::IMIN; k<exblas::IMAX; k++)
-            acc[0][k] += acc[i][k];
+            acc[k] += temp[k];
+        if( i%128 == 0)
+        {
+            imin = exblas::IMIN, imax = exblas::IMAX;
+            exblas::cpu::Normalize( &(acc[0]), imin, imax);
+        }
     }
-    return acc[0];
+    return acc;
 }
 
 //In case the matrix is a RecursiveVector just do a recursive call

@@ -39,22 +39,24 @@ To doTransfer( const From& src, ArrayVectorTag, AnyVectorTag)
 template< class Vector1, class Vector2>
 inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2, RecursiveVectorTag)
 {
-    //find out which one is the RecursiveVector and determine category
+    //find out which one is the RecursiveVector and determine size
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
     auto size = std::get<vector_idx>(std::forward_as_tuple(x1,x2)).size();
-    std::vector<std::vector<int64_t>> acc( size);
+    std::vector<int64_t> acc( exblas::BIN_COUNT, 0);
     for( unsigned i=0; i<size; i++)
-        acc[i] = doDot_superacc( get_element(x1,i), get_element(x2,i));
-    for( unsigned i=1; i<size; i++)
     {
+        std::vector<int64_t> temp = doDot_superacc( get_element(x1,i), get_element(x2,i));
         int imin = exblas::IMIN, imax = exblas::IMAX;
-        exblas::cpu::Normalize( &(acc[0][0]), imin, imax);
-        imin = exblas::IMIN, imax = exblas::IMAX;
-        exblas::cpu::Normalize( &(acc[i][0]), imin, imax);
+        exblas::cpu::Normalize( &(temp[0]), imin, imax);
         for( int k=exblas::IMIN; k<exblas::IMAX; k++)
-            acc[0][k] += acc[i][k];
+            acc[k] += temp[k];
+        if( i%128 == 0)
+        {
+            imin = exblas::IMIN, imax = exblas::IMAX;
+            exblas::cpu::Normalize( &(acc[0]), imin, imax);
+        }
     }
-    return acc[0];
+    return acc;
 }
 /////////////////////////////////////////////////////////////////////////////////////
 #ifdef _OPENMP

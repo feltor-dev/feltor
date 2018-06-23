@@ -231,6 +231,11 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
         dg::blas1::scal(y, beta);
         return;
     }
+    if( std::is_same<ContainerType, ContainerType1>::value && &x1==(const ContainerType1*)&y){
+        dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x2, y );
+
+        return;
+    }
     if( std::is_same<ContainerType, ContainerType2>::value && &x2==(const ContainerType2*)&y){
         dg::blas1::subroutine( dg::PointwiseDot<get_value_type<ContainerType>>(alpha,beta), x1, y );
 

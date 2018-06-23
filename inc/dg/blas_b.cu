@@ -122,9 +122,9 @@ int main()
     std::cout<<"AXPBY (1*y-1*x=x)                "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas1::axpbypgz( 1., x, -1., y, 2., z);
+        dg::blas1::axpbypgz( 1., x, -1., 1, 2., z);
     t.toc();
-    std::cout<<"AXPBYPGZ (1*x-1*y+2*z=z)         "<<t.diff()/multi<<"s\t"<<4*gbytes*multi/t.diff()<<"GB/s\n";
+    std::cout<<"AXPBYPGZ (1*x-1*1+2*z=z)         "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpbypgz( 1., x, -1., y, 3., x);
@@ -168,7 +168,37 @@ int main()
     t.toc();
     std::cout<<"DOT2(x,w,y) took                 " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them
 
-    //maybe test how fast a recursive dot is compared to serial dot
+    std::cout << "TEST recursive calls\n";
+    unsigned size_rec = 1e4;
+    std::vector<double> test_recursive(size_rec, 0.1);
+    gbytes=(double)size_rec*sizeof(double)/1e9;
+    std::cout << "    with size "<<gbytes<<"GB\n";
+    norm += dg::blas1::dot( 1., test_recursive);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        norm += dg::blas1::dot( 1., test_recursive);//warm up
+    t.toc();
+    std::cout<<"recursive dot took               " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    thrust::host_vector<double> test_serial((int)size_rec, (double)0.1);
+    norm += dg::blas1::dot( 1., test_serial);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        norm += dg::blas1::dot( test_serial, test_serial);//warm up
+    t.toc();
+    std::cout<<"Serial dot took                  " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     //maybe test how fast a recursive axpby is compared to serial axpby
+    dg::blas1::axpby( 1., test_recursive, 2., test_recursive);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::axpby( 1., test_recursive, 2., test_recursive);//warm up
+    t.toc();
+    std::cout<<"recursive axpby took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    //
+    dg::blas1::axpby( 1., test_serial, 2., test_serial);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::axpby( 1., test_serial, 2., test_serial);//warm up
+    t.toc();
+    std::cout<<"serial axpby rook                " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     return 0;
 }
