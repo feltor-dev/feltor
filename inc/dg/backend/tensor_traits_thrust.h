@@ -9,6 +9,7 @@ namespace dg
 {
 ///@addtogroup vec_list
 ///@{
+///@brief prototypical Shared Vector with Serial Tag
 template<class T>
 struct TensorTraits<thrust::host_vector<T> >//, typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
@@ -25,6 +26,7 @@ struct TensorTraits<thrust::host_vector<T> >//, typename std::enable_if< std::is
 //    using execution_policy  = get_execution_policy<T>;
 //};
 
+///@brief prototypical Shared Vector with Cuda or Omp Tag
 template<class T>
 struct TensorTraits<thrust::device_vector<T> >//, typename std::enable_if<std::is_arithmetic<T>::value>::type>
 {

@@ -798,8 +798,10 @@ INPUT                  = . \
                          ./backend/transpose.h \
                          ./backend/vector_categories.h \
                          ./backend/matrix_categories.h \
+                         ./backend/scalar_categories.h \
                          ./backend/execution_policy.h \
                          ./backend/tensor_traits.h \
+                         ./backend/tensor_traits_scalar.h \
                          ./backend/tensor_traits_cusp.h \
                          ./backend/tensor_traits_std.h \
                          ./backend/tensor_traits_thrust.h \
@@ -828,7 +830,7 @@ INPUT_ENCODING         = UTF-8
 # *.m, *.markdown, *.md, *.mm, *.dox, *.py, *.pyw, *.f90, *.f, *.for, *.tcl,
 # *.vhd, *.vhdl, *.ucf, *.qsf, *.as and *.js.
 
-FILE_PATTERNS          = *.h *.cuh *.dox
+FILE_PATTERNS          = *.h *.cuh *.dox *.md
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.

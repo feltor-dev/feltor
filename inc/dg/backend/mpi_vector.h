@@ -97,6 +97,7 @@ struct MPI_Vector
 
 ///@addtogroup vec_list
 ///@{
+///@brief prototypical MPI vector
 template<class container>
 struct TensorTraits<MPI_Vector<container> > {
     using value_type = get_value_type<container>;

@@ -41,6 +41,7 @@ using get_execution_policy = typename TensorTraits<typename std::decay<Vector>::
 template<class Vector>
 using get_pointer_type = typename std::conditional< std::is_const<Vector>::value, const get_value_type<Vector>*, get_value_type<Vector>* >::type;
 ////////////get element, data and iterator
+///@cond
 template<class T>
 inline auto do_get_element( T&& v, unsigned i, AnyVectorTag)-> decltype(v[i]){
     return v[i];
@@ -48,10 +49,6 @@ inline auto do_get_element( T&& v, unsigned i, AnyVectorTag)-> decltype(v[i]){
 template<class T>
 inline T do_get_element( T&& v, unsigned i, AnyScalarTag){
     return v;
-}
-template<class T>
-inline auto get_element( T&& v, unsigned i ) -> decltype( do_get_element( std::forward<T>(v), i, get_tensor_category<T>()) ) {
-    return do_get_element( std::forward<T>(v), i, get_tensor_category<T>());
 }
 
 template<class T>
@@ -62,23 +59,30 @@ template<class T>
 inline T do_get_data( T&& v, AnyScalarTag){
     return v;
 }
+
+template<class T>
+auto do_get_iterator( T&& v, AnyVectorTag) -> decltype(v.begin()){
+    return v.begin();
+}
+template<class T>
+thrust::constant_iterator<T> do_get_iterator( T&& v, AnyScalarTag){
+    return thrust::constant_iterator<T>(v);
+}
+///@endcond
+
+template<class T>
+inline auto get_element( T&& v, unsigned i ) -> decltype( do_get_element( std::forward<T>(v), i, get_tensor_category<T>()) ) {
+    return do_get_element( std::forward<T>(v), i, get_tensor_category<T>());
+}
+
 template<class T>
 inline auto get_data( T&& v)-> decltype(do_get_data( std::forward<T>(v), get_tensor_category<T>() )){
     return do_get_data( std::forward<T>(v), get_tensor_category<T>());
 }
 
 template<class T>
-auto get_iterator( T&& v, AnyVectorTag) -> decltype(v.begin()){
-    return v.begin();
-}
-template<class T>
-thrust::constant_iterator<T> get_iterator( T&& v, AnyScalarTag){
-    return thrust::constant_iterator<T>(v);
-}
-
-template<class T>
-auto get_iterator( T&& v ) -> decltype( get_iterator( std::forward<T>(v), get_tensor_category<T>())) {
-    return get_iterator( std::forward<T>(v), get_tensor_category<T>());
+auto get_iterator( T&& v ) -> decltype( do_get_iterator( std::forward<T>(v), get_tensor_category<T>())) {
+    return do_get_iterator( std::forward<T>(v), get_tensor_category<T>());
 }
 ///@}
 

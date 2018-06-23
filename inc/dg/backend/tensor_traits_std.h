@@ -9,6 +9,7 @@ namespace dg
 {
 ///@addtogroup vec_list
 ///@{
+///@brief Prototypical Recursive Vector
 template<class T>
 struct TensorTraits<std::vector<T>>
 {
@@ -18,7 +19,7 @@ struct TensorTraits<std::vector<T>>
 };
 
 /**
- * @brief There is a special implementation of blas1 functions for a \c std::array different from the one indicated by SerialTag
+ * @brief There is a special implementation of blas1 functions for a \c std::array
  *
  * @tparam T scalar or vector type
  * @tparam N size of the array

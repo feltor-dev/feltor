@@ -1,9 +1,4 @@
 #error Documentation only
-/*! @mainpage
- * @section pdf PDF writeups
- * DON'T PANIC!
- *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- */
 /*! @namespace dg
  * @brief This is the namespace for all functions and
  * classes defined and used by the discontinuous Galerkin solvers.
@@ -128,10 +123,9 @@
   * Among others
   *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp), dg::MHVec (mpi + serial) or dg::MDVec (mpi + cuda / omp) </tt>
   *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles)</tt>
-  *  - ...
+  *  - Scalars ...
   *  .
-  * If there are several \c ContainerTypes in the argument list, then \c TensorTraits must exist for all of them and all
-  * must have the same \c execution_policy and the \c tensor_category must derive from the same base class
+  * If there are several \c ContainerTypes in the argument list, then \c TensorTraits must exist for all of them
   *  \see vec_list
   */
  /** @class hide_matrix
@@ -194,19 +188,93 @@
   and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
   */
 
-/*!@addtogroup mpi_structures
-@{
+/*! @mainpage Introduction
+ *
+ * @tableofcontents
+ *
+ * @section pdf Introduction to discontinuous Galerkin methods
+ * Here is a pdf document explainin the fundamentals of discontinuous Galerkin methods
+ *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ *
+
+ * @section dispatch The Level 1 dispatch system
+ *
+ * Let us first define some nomenclature to ease the following discussion
+ *    - \e Scalar: A template parameter T is a Scalar if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyScalarTag
+ *    - \e Vector: A template parameter T is a Vector if it is not a Scalar and if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyVectorTag
+ *    - \e Matrix: A template parameter T is a Matrix if it is not a Scalar or Vector and if <tt> typename  dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyMatrixTag
+ *    - \e execution \e policy: A template parameter T has an execution policy if <tt>
+ *      typename dg::TensorTraits<T>::execution_policy </tt> exists and derives from \c dg::AnyPolicyTag, The execution policy is \e trivial if it is \c dg::AnyPolicyTag
+ *    - \e value \e type : A template parameter T has a value type if
+ *      typename dg::TensorTraits<T>::value_type </tt> exists
+ *    - \e compatible: Two vectors are compatible if their tensor_categories both derive from the same base class that itself derives from but is not equal to \c dg::AnyVectorTag, Two execution policies are compatible if they are equal or if at least one of them is trivial.
+ *    - \e promote: A Scalar can be promoted to a Vector with all elements equal to the value of the Scalar. A Vector can be promoted to a  Matrix with the Vector being the diagonal and all other elements zero.
+ *
+ * When dispatching level 1 functions we distinguish between three classes of
+ * functions: trivially parallel (\c dg::blas1::subroutine), global communication
+ * (\c dg::blas1::dot and \c dg::blas2::dot) and local communication (\c dg::blas2::symv)
+ *
+ * @subsection dispatch_subroutine The subroutine function
+ *
+ * The execution of \c dg::blas1::subroutine with a Functor called \c routine  and all related \c dg::blas1 functions is equivalent to the following:
+ *  -# Assert the following prerequisites:
+ *
+ *      -# All template parameter types must be either Scalars or Vectors and have an execution policy
+ *      -# All Vectors and all execution policies must be mutually compatible
+ *      -# All Vectors must contain the same number of elements (equal sizes)
+ *      -# In an MPI environment the Vector MPI-communicators must be \c congruent or \c ident
+ *      -# The number of template parameters must be equal to the number of parameters in the \c routine
+ *      -# The value type of every template parameter must be convertible to the respective parameter type of the given \c routine
+ *  -# If all types are Scalars, apply the \c routine and return
+ *  -# If at least one type is a Vector, then all Scalars
+ *     are promoted to this type with the same size, communicator and execution policy
+ *  -# Check the base class of the tensor_category:
+ *      -# If \c dg::SharedVectorTag, check execution policy and dispatch to respective implementation (The implementation just loops over all elements in the vectors and applies the \c routine)
+ *      -# If \c dg::MPIVectorTag, access the underlying data and recursively call \c dg::blas1::subroutine (and start again at 1 with new data)
+ *      -# If \c dg::RecursiveVectorTag, loop over all elements and recursively call \c dg::blas1::subroutine for all elements (and start again at 1)
+ *
+ * @subsection dispatch_dot The dot function
+ * The execution of \c dg::blas1::dot and \c dg::blas2::dot is equivalent to the following:
+ *  -# Assert the following prerequisites:
+ *
+ *      -# All template parameter types must be either Scalars or Vectors and have an execution policy
+ *      -# All Vectors and all execution policies must be mutually compatible
+ *      -# All Vectors must contain the same number of elements (equal sizes)
+ *      -# In an MPI environment the Vector MPI-communicators must be \c congruent or \c ident
+ *  -# If all types are Scalars, multiply and return
+ *  -# If at least one type is a Vector, then all Scalars
+ *     are promoted to this type with the same size, communicator and execution policy
+ *  -# Check the base class of the tensor_category:
+ *      -# If \c dg::SharedVectorTag, check execution policy and dispatch to respective implementation (The implementation multiplies and accumulates all elements in the vectors). Return the result.
+ *      -# If \c dg::MPIVectorTag, access the underlying data and recursively call \c dot (and start again at 1 with new data). Accumulate the result
+ *      among participating processes and return.
+ *      -# If \c dg::RecursiveVectorTag, loop over all elements and recursively call \c dot for all elements (and start again at 1). Accumulate the results
+ *      and return.
+ *
+ * @subsection dispatch_symv The symv function
+ * The execution of the \c dg::blas2::symv (and \c dg::blas2::gemv) functions is hard to discribe in general
+ * since each matrix class has individual prerequisites and execution paths.
+ * Still, we can identify some general rules:
+ *   -# If the Matrix has the \c dg::SelfMadeMatrixTag tensor category, then all parameters are immediately forwarded to the \c symv member function. No asserts are performed.
+ *   -# The Matrix type can be either a Scalar (promotes to Scalar times the Unit Matrix), a Vector (promotes to a diagonal Matrix) or a Matrix
+ *   -# The remaining template parameters must be Vectors or Scalars and must
+ *   have compatible execution policies. Vectors must be compatible
+ *   -# If the tensor category of the Vectors is \c dg::RecursiveVectorTag and
+ *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is recursively called with the Matrix on all elements of the Vectors.
+ *   -# If the Matrix is either a Scalar or a Vector and the remaining types do not have the \c dg::RecursiveVectorTag tensor category, then \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
+ *
+ * @section mpi_backend The MPI interface
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
-@section mpi_vector MPI Vectors and the blas1 functions
+@subsection mpi_vector MPI Vectors and the blas1 functions
 
 In Feltor each mpi process gets an equally sized chunk of a vector.
 The corresponding structure in FELTOR is the \c dg::MPI_Vector, which is
 nothing but a wrapper around any container type object and a \c MPI_Comm.
-With this the \c dg::blas1 functions can readily implemented by just redirecting to the
+With this the \c dg::blas1 functions can readily be implemented by just redirecting to the
 implementation for the container type. The only functions that need
 communication are the \c dg::blas1::dot functions (\c MPI_Allreduce).
 
-@section mpi_matrix Row and column distributed matrices
+@subsection mpi_matrix Row and column distributed matrices
 
 Contrary to a vector
 a matrix can be distributed among processes in two ways:
@@ -223,7 +291,7 @@ of the matrix.
 First, we define the structure \c dg::MPIDistMat as a simple a wrapper around a
 LocalMatrix type object
 and an instance of a \c dg::aCommunicator.
-\subsection row Row distributed
+\subsubsection row Row distributed
 For the row-distributed matrix each process first has to gather
 all elements of the input vector it needs to be able to compute the elements of the output. In general this requires MPI communication.
 (read the documentation of \c dg::aCommunicator for more info of how global scatter/gather operations work).
@@ -239,7 +307,7 @@ and \f$G\f$ is the gather matrix, in which the MPI-communication takes place.
 The \c dg::RowColDistMat goes one step further and separates the matrix \f$ R\f$ into
 a part that can be computed entirely on the local process and a part that needs communication.
 
-\subsection column Column distributed
+\subsubsection column Column distributed
 
 In a column distributed matrix the local matrix-vector multiplication can be executed first because each processor already
 has all vector elements it needs.
@@ -260,5 +328,4 @@ by transposition of the local matrices and the gather matrix (s.a. \c dg::transp
 The result is then a column distributed matrix.
 The transpose of a column distributed matrix is a row-distributed matrix and vice-versa.
 You can create an MPI row-distributed matrix if you know the global column indices by our \c dg::convert function.
-@}
 */
