@@ -6,6 +6,7 @@
 #include "backend/tensor_traits_thrust.h"
 #include "backend/tensor_traits_cusp.h"
 #include "backend/tensor_traits_std.h"
+#include "backend/blas1_dispatch_scalar.h"
 #include "backend/blas1_dispatch_shared.h"
 //#include "backend/blas1_array.h"
 #include "backend/tensor_traits_cusp.h"
@@ -437,44 +438,28 @@ inline void evaluate( ContainerType& y, BinarySubroutine f, Functor g, const Con
 }
 
 
+///@cond
 namespace detail{
-template< class Subroutine, class ContainerType, class ...ContainerTypes>
-inline void doSubroutine( AnyScalarTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
-{
-    f( x, xs...);
-}
-template< class Subroutine, class ContainerType, class ...ContainerTypes>
-inline void doSubroutine( AnyVectorTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
-{
-    using vector_type = find_if_t<dg::is_not_scalar, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
-    static_assert( !is_scalar<vector_type>::value,
-            "At least one ContainerType must be a non-scalar!"); //Actually, we know that this is true at this point
-    using tensor_category  = get_tensor_category<vector_type>;
-    static_assert( all_true<
-            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
-            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
-            >::value,
-        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
-    dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
-}
 
 template< class ContainerType1, class ContainerType2>
-inline get_value_type<ContainerType1> doDot( const ContainerType1& x, const ContainerType2& y, AnyScalarTag, AnyScalarTag)
+inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const ContainerType2& y)
 {
-    return x*y;
-}
-template< class ContainerType1, class ContainerType2>
-inline get_value_type<ContainerType1> doDot( const ContainerType1& x, const ContainerType2& y, AnyVectorTag, AnyScalarTag)
-{
-    return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>() );
-}
-template< class ContainerType1, class ContainerType2>
-inline get_value_type<ContainerType1> doDot( const ContainerType1& x, const ContainerType2& y, AnyScalarTag, AnyVectorTag)
-{
-    return dg::blas1::detail::doDot( y, x, get_tensor_category<ContainerType2>() );
+    static_assert( all_true<
+            dg::is_vector<ContainerType1>::value,
+            dg::is_vector<ContainerType2>::value>::value,
+        "All container types must have a vector data layout (AnyVector)!");
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType1, ContainerType1, ContainerType2>;
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( all_true<
+            dg::is_scalar_or_same_base_category<ContainerType1, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerType2, tensor_category>::value
+            >::value,
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    return doDot_superacc( x, y, tensor_category());
 }
 
 }//namespace detail
+///@endcond
 
 /**
  * @brief \f$ f(x_0, x_1, ...)\f$; Customizable and generic blas1 function
@@ -511,8 +496,15 @@ inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
             dg::is_vector<ContainerType>::value,
             dg::is_vector<ContainerTypes>::value...>::value,
         "All container types must have a vector data layout (AnyVector)!");
-    using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >::type;
-    dg::blas1::detail::doSubroutine(basic_tag_type(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
+    using vector_type = find_if_t<dg::is_not_scalar, ContainerType, ContainerType, ContainerTypes...>;
+    using tensor_category  = get_tensor_category<vector_type>;
+    static_assert( all_true<
+            dg::is_scalar_or_same_base_category<ContainerType, tensor_category>::value,
+            dg::is_scalar_or_same_base_category<ContainerTypes, tensor_category>::value...
+            >::value,
+        "All container types must be either Scalar or have compatible Vector categories (AnyVector or Same base class)!");
+    //using basic_tag_type  = typename std::conditional< all_true< is_scalar<ContainerType>::value, is_scalar<ContainerTypes>::value... >::value, AnyScalarTag , AnyVectorTag >::type;
+    dg::blas1::detail::doSubroutine(tensor_category(), f, std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...);
 }
 
 /*! @brief \f$ x^T y\f$ Binary reproducible Euclidean dot product between two vectors
@@ -535,18 +527,14 @@ double temp = dg::blas1::dot( two, three); // temp = 30 (5*(2*3))
  * @return Scalar product as defined above
  * @note This routine is always executed synchronously due to the
         implicit memcpy of the result. With mpi the result is broadcasted to all processes
- * @attention currently we only have an implementation for double precision numbers
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class ContainerType2>
 inline get_value_type<ContainerType1> dot( const ContainerType1& x, const ContainerType2& y)
 {
-    static_assert( all_true<
-            dg::is_vector<ContainerType1>::value,
-            dg::is_vector<ContainerType2>::value>::value,
-        "All container types must have a vector data layout (AnyVector)!");
-    using basic_tag_type  = typename std::conditional< is_scalar<ContainerType1>::value && is_scalar<ContainerType2>::value, AnyScalarTag , AnyVectorTag >::type;
-    return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>(), get_tensor_category<ContainerType2>() );
+    std::vector<int64_t> acc = dg::blas1::detail::doDot_superacc( x,y);
+    return exblas::cpu::Round(acc.data());
+//    return dg::blas1::detail::doDot( x, y, get_tensor_category<ContainerType1>(), get_tensor_category<ContainerType2>() );
 }
 
 /**

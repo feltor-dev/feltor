@@ -62,7 +62,7 @@ __global__ void ExDOT(
     double a[NBFPE] = {0.0};
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
         double r = 0.0;
-        double x = TwoProductFMA(d_a[pos], d_b[pos], &r);
+        double x = TwoProductFMA((double)d_a[pos], (double)d_b[pos], &r);
         //double x = d_a[pos]*d_b[pos];//ATTENTION: if we write it like this, cpu compiler might generate an fma from this while nvcc does not...
 
         #pragma unroll
@@ -319,7 +319,7 @@ void ExDOTComplete(
 */
 template<class RandomAccessIterator1, class RandomAccessIterator2, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, int64_t* d_superacc){
+void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, int64_t* d_superacc)
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
@@ -341,7 +341,7 @@ void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator
  */
 template<class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, RandomAccessIterator3 x3_ptr, int64_t* d_superacc) {
+void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, RandomAccessIterator3 x3_ptr, int64_t* d_superacc)
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());

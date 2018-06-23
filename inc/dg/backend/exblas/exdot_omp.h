@@ -133,7 +133,7 @@ void ExDOTFPE(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64_t* 
         int r = ((((tid+1) * int64_t(N)) / tnum) ) - 1;
         for(int i = l; i <= r; i++) {
             double r1;
-            double x = TwoProductFMA(a[i],b[i],r1);
+            double x = TwoProductFMA((double)a[i],(double)b[i],r1);
             cache.Accumulate(x);
             cache.Accumulate(r1);
         }

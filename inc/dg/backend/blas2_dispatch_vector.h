@@ -26,20 +26,10 @@ namespace detail
 template< class Vector1, class Matrix, class Vector2>
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, RecursiveVectorTag, RecursiveVectorTag)
 {
-    static_assert( std::is_base_of<RecursiveVectorTag,
-        get_tensor_category<Vector2>>::value,
-        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
-    using inner_container1 = typename std::decay<Vector1>::type::value_type;
-    using inner_container2 = typename std::decay<Matrix>::type::value_type;
-    std::vector<std::vector<int64_t>> acc( x.size());
-    for( unsigned i=0; i<x.size(); i++)
-        acc[i] = doDot_superacc( x[i], m[i], y[i],
-                       get_tensor_category<inner_container1>(),
-                       get_tensor_category<inner_container2>() );
-    for( unsigned i=1; i<x.size(); i++)
+    std::vector<std::vector<int64_t>> acc( m.size());
+    for( unsigned i=0; i<m.size(); i++)
+        acc[i] = doDot_superacc( x[i], m[i], y[i]);
+    for( unsigned i=1; i<m.size(); i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(acc[0][0]), imin, imax);
@@ -50,22 +40,6 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     }
     return acc[0];
 }
-template< class Vector1, class Matrix, class Vector2>
-inline get_value_type<Vector1> doDot( const Vector1& x, const Matrix& m, const Vector2& y, RecursiveVectorTag)
-{
-    std::vector<int64_t> acc = doDot_superacc( x,m,y,RecursiveVectorTag(), get_tensor_category<Vector1>());
-    return exblas::cpu::Round(acc.data());
-}
-template< class Matrix, class Vector>
-inline get_value_type<Matrix>  doDot(
-              const Matrix& m,
-              const Vector& y,
-              RecursiveVectorTag
-              )
-{
-    return doDot( y,m,y,RecursiveVectorTag());
-}
-
 
 //In case the matrix is a RecursiveVector just do a recursive call
 template< class Matrix, class Vector1, class Vector2>
@@ -77,7 +51,7 @@ inline void doSymv(
               Vector2& y,
               RecursiveVectorTag)
 {
-    for( unsigned i=0; i<x.size(); i++)
+    for( unsigned i=0; i<m.size(); i++)
         dg::blas2::symv( alpha, m[i], x[i], beta, y[i]);
 }
 
@@ -88,7 +62,7 @@ inline void doSymv(
               Vector2& y,
               RecursiveVectorTag)
 {
-    for( unsigned i=0; i<x.size(); i++)
+    for( unsigned i=0; i<m.size(); i++)
         dg::blas2::symv( m[i], x[i], y[i]);
 }
 

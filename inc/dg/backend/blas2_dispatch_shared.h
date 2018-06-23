@@ -5,9 +5,11 @@
 #include <cassert>
 #endif //DG_DEBUG
 
+#include "tensor_traits.h"
 #include "matrix_categories.h"
-#include "blas1_dispatch_shared.h" //load thrust_vector BLAS1 routines
 #include "vector_categories.h"
+#include "blas1_dispatch_shared.h"
+#include "blas1_dispatch_vector.h"
 
 ///@cond
 namespace dg{
@@ -21,6 +23,8 @@ inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerTy
 }//namespace blas1
 namespace blas2{
 namespace detail{
+template< class ContainerType1, class MatrixType, class ContainerType2>
+inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const MatrixType& m, const ContainerType2& y);
 
 //thrust vector preconditioner
 template< class Vector1, class Vector2>
@@ -32,41 +36,30 @@ void doTransfer( const Vector1& in, Vector2& out, AnyVectorTag, AnyVectorTag)
 template< class Vector1, class Matrix, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag, SharedVectorTag)
 {
-    static_assert( std::is_same<get_value_type<Vector1>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_same<get_value_type<Matrix>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_same<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible<get_value_type<Vector1>, double>::value, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible<get_value_type<Matrix>, double>::value, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
+    //find out which one is the SharedVector and determine category and policy
+    using execution_policy = get_execution_policy<Matrix>;
     static_assert( all_true<
-            std::is_base_of<SharedVectorTag, get_tensor_category<Vector1>>::value,
-            std::is_base_of<SharedVectorTag, get_tensor_category<Vector2>>::value>::value,
-        "All container types must share the same data layout (SharedVectorTag in this case)!");
-    static_assert( std::is_same<get_execution_policy<Vector1>, get_execution_policy<Vector2> >::value &&
-        std::is_same<get_execution_policy<Vector1>, get_execution_policy<Matrix> >::value,
-        "All container types must share the same execution policy!");
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() && x.size() == m.size() );
-#endif //DG_DEBUG
-    //const double* x_ptr = thrust::raw_pointer_cast( x.data());
-    //const double* m_ptr = thrust::raw_pointer_cast( m.data());
-    //const double* y_ptr = thrust::raw_pointer_cast( y.data());
-    return dg::blas1::detail::doDot_dispatch( get_execution_policy<Vector1>(), x.size(), x.begin(), m.begin(), y.begin());
+            dg::has_any_or_same_policy<Vector1, execution_policy>::value,
+            dg::has_any_or_same_policy<Vector2, execution_policy>::value
+            >::value,
+        "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
+
+    return dg::blas1::detail::doDot_dispatch( execution_policy(), m.size(), get_iterator(x), get_iterator(m), get_iterator(y));
 }
 
 template< class Vector1, class Matrix, class Vector2>
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag, RecursiveVectorTag)
 {
-    static_assert( std::is_base_of<RecursiveVectorTag,
-        get_tensor_category<Vector2>>::value,
-        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
-#ifdef DG_DEBUG
-    assert( x.size() == y.size() );
-#endif //DG_DEBUG
-    using inner_container1 = typename std::decay<Vector1>::type::value_type;
-    std::vector<std::vector<int64_t>> acc( x.size());
-    for( unsigned i=0; i<x.size(); i++)
-        acc[i] = doDot_superacc( x[i], m, y[i],
-                       get_tensor_category<Matrix>(),
-                       get_tensor_category<inner_container1>() );
-    for( unsigned i=1; i<x.size(); i++)
+    //find out which one is the RecursiveVector and determine category
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
+    auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
+    std::vector<std::vector<int64_t>> acc( size);
+    for( unsigned i=0; i<size; i++)
+        acc[i] = doDot_superacc( get_element(x,i), m, get_element(y,i));
+    for( unsigned i=1; i<size; i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(acc[0][0]), imin, imax);
@@ -76,18 +69,6 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
             acc[0][k] += acc[i][k];
     }
     return acc[0];
-}
-
-template< class Vector1, class Matrix, class Vector2>
-inline get_value_type<Vector1> doDot( const Vector1& x, const Matrix& m, const Vector2& y, SharedVectorTag)
-{
-    std::vector<int64_t> acc = doDot_superacc( x,m,y,SharedVectorTag(), get_tensor_category<Vector1>());
-    return exblas::cpu::Round(acc.data());
-}
-template< class Matrix, class Vector>
-inline get_value_type<Vector> doDot( const Matrix& m, const Vector& x, SharedVectorTag)
-{
-    return doDot( x,m,x,SharedVectorTag());
 }
 
 template< class Matrix, class Vector1, class Vector2>

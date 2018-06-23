@@ -8,7 +8,7 @@ namespace blas1
 namespace detail
 {
 
-template<class RA1, class RA2, class RA3>
+template<class RA1, class RA2>
 inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, RA1 x_ptr, RA2 y_ptr) {
     static thrust::device_vector<int64_t> d_superacc(exblas::BIN_COUNT);
     int64_t * d_ptr = thrust::raw_pointer_cast( d_superacc.data());

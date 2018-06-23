@@ -12,17 +12,12 @@ inline void doTransfer( const Matrix1& x, Matrix2& y, AnyMatrixTag, SelfMadeMatr
 {
     y = (Matrix2)x; //try to invoke the explicit conversion construction
 }
-
-template<class Vector1, class Matrix, class Vector2>
-inline get_value_type<Matrix> doDot( const Vector1& x, const Matrix& m, const Vector2& y, SelfMadeMatrixTag)
-{
-    return m.dot(x,y);
-}
-template< class Matrix, class Vector>
-inline get_value_type<Matrix> doDot( const Matrix& m, const Vector& x, SelfMadeMatrixTag)
-{
-    return m.dot(x);
-}
+//currently not enabled
+//template<class Vector1, class Matrix, class Vector2>
+//inline get_value_type<Matrix> doDot( const Vector1& x, const Matrix& m, const Vector2& y, SelfMadeMatrixTag)
+//{
+//    return m.dot(x,y);
+//}
 
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv(

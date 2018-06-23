@@ -7,7 +7,6 @@
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-#include <thrust/iterator/constant_iterator.h>
 
 #include "vector_categories.h"
 #include "scalar_categories.h"
@@ -27,27 +26,14 @@ namespace dg
 {
 namespace blas1
 {
-///@cond
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void subroutine( Subroutine f, ContainerType&& x, ContainerTypes&&... xs);
-///@endcond
 namespace detail
 {
+template< class ContainerType1, class ContainerType2>
+inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const ContainerType2& y);
 //we need to distinguish between Scalars and Vectors
 
-template<class T>
-auto get_iterator( T&& v, AnyVectorTag) -> decltype(v.begin()){
-    return v.begin();
-}
-template<class T>
-thrust::constant_iterator<T> get_iterator( T&& v, AnyScalarTag){
-    return thrust::constant_iterator<T>(v);
-}
-
-template<class T>
-auto get_iterator( T&& v ) -> decltype( get_iterator( std::forward<T>(v), get_tensor_category<T>())) {
-    return get_iterator( std::forward<T>(v), get_tensor_category<T>());
-}
 ///////////////////////////////////////////////////////////////////////////////////////////
 template< class To, class From>
 To doTransfer( const From& in, ThrustVectorTag, ThrustVectorTag)
@@ -55,38 +41,24 @@ To doTransfer( const From& in, ThrustVectorTag, ThrustVectorTag)
     To t( in.begin(), in.end());
     return t;
 }
-template< class Vector, class Vector2>
-std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, AnyScalarTag)
-{
-    static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_same<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
-    const get_value_type<Vector>* x_ptr = &x;
-    const get_value_type<Vector2>* y_ptr = &y;
-    return doDot_dispatch( SerialTag(),1, x_ptr, y_ptr);
-}
 
-template< class Vector, class Vector2>
-std::vector<int64_t> doDot_superacc( const Vector& x, const Vector2& y, SharedVectorTag)
+template< class Vector1, class Vector2>
+std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedVectorTag)
 {
-    static_assert( std::is_same<get_value_type<Vector>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_same<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
-    static_assert( std::is_base_of<SharedVectorTag,
-        get_tensor_category<Vector2>>::value,
-        "All container types must share the same vector category (SharedVectorTag in this case)!");
-    static_assert( std::is_same<get_execution_policy<Vector>,
-        get_execution_policy<Vector2> >::value,
-        "All container types must share the same execution policy!");
-//#ifdef DG_DEBUG
-//    assert( x.size() == y.size() );
-//#endif //DG_DEBUG
-    return doDot_dispatch( get_execution_policy<Vector>(), x.size(), x.begin(), get_iterator(y));
-}
-
-template<class Vector, class Vector2>
-get_value_type<Vector> doDot( const Vector& x, const Vector2& y, SharedVectorTag)
-{
-    std::vector<int64_t> acc = doDot_superacc( x,y,SharedVectorTag(), get_tensor_category<Vector2>());
-    return exblas::cpu::Round(acc.data());
+    static_assert( std::is_convertible<get_value_type<Vector1>, double>::value, "We only support double precision dot products at the moment!");
+    static_assert( std::is_convertible<get_value_type<Vector2>, double>::value, "We only support double precision dot products at the moment!");
+    //find out which one is the SharedVector and determine category and policy
+    using vector_type = find_if_t<dg::is_not_scalar, Vector1, Vector1, Vector2>;
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
+    using execution_policy = get_execution_policy<vector_type>;
+    static_assert( all_true<
+            dg::has_any_or_same_policy<Vector1, execution_policy>::value,
+            dg::has_any_or_same_policy<Vector2, execution_policy>::value
+            >::value,
+        "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
+    //maybe assert size here?
+    auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
+    return doDot_dispatch( execution_policy(), size, get_iterator(x), get_iterator(y));
 }
 
 
@@ -102,7 +74,6 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, Cont
             dg::has_any_or_same_policy<ContainerTypes, execution_policy>::value...
             >::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
-    using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>::value;
 
 //#ifdef DG_DEBUG

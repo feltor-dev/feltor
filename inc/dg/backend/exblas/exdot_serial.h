@@ -55,7 +55,7 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64
 #else// _WITHOUT_VCL
     for(int i = 0; i < N; i++) {
         double r1;
-        double x = TwoProductFMA(a[i],b[i],r1);
+        double x = TwoProductFMA((double)a[i],(double)b[i],r1);
         cache.Accumulate(x);
         cache.Accumulate(r1);
     }

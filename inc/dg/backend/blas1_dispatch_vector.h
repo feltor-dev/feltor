@@ -36,20 +36,16 @@ To doTransfer( const From& src, ArrayVectorTag, AnyVectorTag)
     return t;
 }
 
-template< class Vector, class Vector2>
-inline std::vector<int64_t> doDot_superacc( const Vector& x1, const Vector2& x2, RecursiveVectorTag)
+template< class Vector1, class Vector2>
+inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2, RecursiveVectorTag)
 {
-    static_assert( std::is_base_of<RecursiveVectorTag,
-        get_tensor_category<Vector2>>::value,
-        "All data layouts must derive from the same vector category (RecursiveVectorTag in this case)!");
-//#ifdef DG_DEBUG
-//    assert( !x1.empty());
-//    assert( x1.size() == x2.size() );
-//#endif //DG_DEBUG
-    std::vector<std::vector<int64_t>> acc( x1.size());
-    for( unsigned i=0; i<x1.size(); i++)
-        acc[i] = doDot_superacc( x1[i], get_element(x2,i), get_tensor_category<typename Vector::value_type>());
-    for( unsigned i=1; i<x1.size(); i++)
+    //find out which one is the RecursiveVector and determine category
+    constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
+    auto size = std::get<vector_idx>(std::forward_as_tuple(x1,x2)).size();
+    std::vector<std::vector<int64_t>> acc( size);
+    for( unsigned i=0; i<size; i++)
+        acc[i] = doDot_superacc( get_element(x1,i), get_element(x2,i));
+    for( unsigned i=1; i<size; i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(acc[0][0]), imin, imax);
@@ -60,25 +56,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector& x1, const Vector2& x2,
     }
     return acc[0];
 }
-template<class Vector, class Vector2>
-get_value_type<Vector> doDot( const Vector& x, const Vector2& y, RecursiveVectorTag)
-{
-    std::vector<int64_t> acc = doDot_superacc( x,y,RecursiveVectorTag());
-    return exblas::cpu::Round(acc.data());
-}
 /////////////////////////////////////////////////////////////////////////////////////
-template<class T>
-inline auto get_element( T&& v, unsigned i, AnyVectorTag)-> decltype(v[i]){
-    return v[i];
-}
-template<class T>
-inline T get_element( T&& v, unsigned i, AnyScalarTag){
-    return v;
-}
-template<class T>
-inline auto get_element( T&& v, unsigned i ) -> decltype( get_element( std::forward<T>(v), i, get_tensor_category<T>()) ) {
-    return get_element( std::forward<T>(v), i, get_tensor_category<T>());
-}
 #ifdef _OPENMP
 //omp tag implementation
 template< class size_type, class Subroutine, class container, class ...Containers>
