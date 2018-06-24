@@ -9,6 +9,7 @@ namespace dg
 {
 ///@addtogroup vec_list
 ///@{
+
 ///@brief Prototypical Recursive Vector
 template<class T>
 struct TensorTraits<std::vector<T>>

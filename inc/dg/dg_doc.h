@@ -33,6 +33,7 @@
  *             readily reuse the existing, optimized library for the local part.
  *     @defgroup dispatch The tag dispatch system
  *     @{
+ *         @defgroup sca_list List of scalar type TensorTraits specializations
  *         @defgroup vec_list List of vector type TensorTraits specializations
  *         @defgroup mat_list List of matrix type TensorTraits specializations
  *     @}

@@ -11,8 +11,6 @@ namespace dg{
 ///@{
 /**
  * @brief Scalar Tag base class, indicates the basic Scalar Tensor concept
- *
- * @note any scalar can serve as a vector
  */
 struct AnyScalarTag : public AnyVectorTag{};
 ///@}

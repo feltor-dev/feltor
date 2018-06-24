@@ -9,6 +9,7 @@ namespace dg
 {
 ///@addtogroup vec_list
 ///@{
+
 ///@brief prototypical Shared Vector with Serial Tag
 template<class T>
 struct TensorTraits<thrust::host_vector<T> >//, typename std::enable_if< std::is_arithmetic<T>::value>::type>

@@ -5,8 +5,10 @@
 
 namespace dg
 {
-///@addtogroup vec_list
+///@addtogroup sca_list
 ///@{
+
+///@brief Recognize arithmetic types as scalars
 template<class T>
 struct TensorTraits<T, typename std::enable_if< std::is_arithmetic<T>::value>::type>
 {
