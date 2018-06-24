@@ -90,7 +90,7 @@ void pointwiseDot( const SparseElement<ContainerType>& mu, const ContainerType& 
     if(mu.isSet())
         dg::blas1::pointwiseDot(mu.value(), in,out);
     else
-        out=in;
+        dg::blas1::copy( in, out);
 }
 /**
  * @brief Multiply ContainerType with form
@@ -120,7 +120,7 @@ void pointwiseDivide( const ContainerType& in, const SparseElement<ContainerType
     if(mu.isSet())
         dg::blas1::pointwiseDivide(in, mu.value(),out);
     else
-        out=in;
+        dg::blas1::copy( in, out);
 }
 
 ///@cond

@@ -29,7 +29,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     //find out which one is the MPIVector and determine category
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
 #ifdef DG_DEBUG
-    do_mpi_assert( x,y, get_tensor_category<Vector1>(), get_tensor_category<Vector2>());
+    dg::blas1::detail::mpi_assert( x,y);
 #endif //DG_DEBUG
     //local computation
     std::vector<int64_t> acc = doDot_superacc( get_data(x), m, get_data(y));
@@ -45,8 +45,8 @@ template< class Vector1, class Matrix, class Vector2 >
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, MPIVectorTag, MPIVectorTag)
 {
 #ifdef DG_DEBUG
-    do_mpi_assert( m,x, MPIVectorTag, get_tensor_category<Vector1>());
-    do_mpi_assert( m,y, MPIVectorTag, get_tensor_category<Vector2>());
+    dg::blas1::detail::mpi_assert( m,x);
+    dg::blas1::detail::mpi_assert( m,y);
 #endif //DG_DEBUG
     //local computation
     std::vector<int64_t> acc = doDot_superacc( get_data(x), m.data(), get_data(y));

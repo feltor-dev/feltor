@@ -38,6 +38,11 @@ void do_mpi_assert( const Vector1& x, const Vector2& y, MPIVectorTag, MPIVectorT
     MPI_Comm_compare( x.communicator(), y.communicator(), &compare);
     assert( compare == MPI_CONGRUENT || compare == MPI_IDENT);
 }
+template< class Vector1, class Vector2>
+void mpi_assert( const Vector1& x, const Vector2&y)
+{
+    do_mpi_assert( x,y, get_tensor_category<Vector1>(), get_tensor_category<Vector2>());
+}
 
 template< class Vector1, class Vector2>
 std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVectorTag)
@@ -45,7 +50,7 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVect
     //find out which one is the MPIVector and determine category
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
 #ifdef DG_DEBUG
-    do_mpi_assert( x,y, get_tensor_category<Vector1>(), get_tensor_category<Vector2>());
+    mpi_assert( x,y);
 #endif //DG_DEBUG
     //local compuation
     std::vector<int64_t> acc = doDot_superacc( get_data(x), get_data(y));

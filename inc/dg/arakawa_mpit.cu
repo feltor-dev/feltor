@@ -80,10 +80,10 @@ int main(int argc, char* argv[])
     int64_t binary[] = {4358628400772939776,4360428067382886400,4362477496701026304,4562674804459845067,4552797036354693398};
     exblas::udouble res;
     dg::MHVec w2d = dg::create::weights( grid);
-    dg::MHVec eins = dg::evaluate( dg::one, grid);
+    //dg::MHVec eins = dg::evaluate( dg::one, grid);
     const dg::MHVec sol = dg::evaluate ( jacobian, grid);
 
-    res.d = dg::blas2::dot( eins, w2d, jac);
+    res.d = dg::blas2::dot( 1., w2d, jac);
     if(rank==0)std::cout << "Mean     Jacobian is "<<res.d<<"\t"<<res.i-binary[0]<<"\n";
     res.d = dg::blas2::dot( rhs,  w2d, jac);
     if(rank==0)std::cout << "Mean rhs*Jacobian is "<<res.d<<"\t"<<res.i-binary[1]<<"\n";

@@ -39,12 +39,15 @@ int main()
     std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0][0] == 26 && arrdvec1[1][0]==46.)<<std::endl;
     std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., arrdvec1 );
-    std::cout << "blas1 dot recursive Scalar Vector "<< (result == 414) <<"\n";
+    std::cout << "blas1 dot recursive Scalar Vector   "<< (result == 414) <<"\n";
     result = dg::blas2::dot( 1., 4., arrdvec1 );
-    std::cout << "blas2 dot recursive Scalar Vector "<< (result == 1656) <<"\n";
+    std::cout << "blas2 dot recursive Scalar Vector   "<< (result == 1656) <<"\n";
     result = dg::blas2::dot( 1., arrdvec1, arrdvec1 );
     double result1 = dg::blas1::dot( arrdvec1, arrdvec1);
     std::cout << "blas1/2 dot recursive Scalar Vector "<< (result == result1) <<"\n";
+    std::cout << "Test SYMV functions:\n";
+    dg::blas2::symv( 2., arrdvec1, arrdvec1);
+    std::cout << "symv Scalar times Vector          "<<( arrdvec1[0][0] == 52) << std::endl;
 
     return 0;
 }
