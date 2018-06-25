@@ -25,12 +25,8 @@ RecursiveVector again. The innermost type must always be a shared vector however
 Tags, e.g. the \c ThrustVectorTag.
  * @note in any case we assume that the class has a default constructor, is copyable/assignable and has a \c size and a \c swap member function
  * @note <tt> dg::TensorTraits<Vector> </tt>has member typedefs \c value_type, \c execution_policy, \c tensor_category
-@attention Two instances of two different Vector types are usable in the same \c blas function if
-  - their tags derive from the same VectorTag class except AnyVectorTag ( the data size
-    and type, layout and communicator, is the same, but the access to it may differ)
-  - their execution policy tag is exactly the same
-
-@note any vector can serve as a diagonal matrix
+ * @note any vector can serve as a diagonal matrix
+ * @see \ref dispatch
  */
 struct AnyVectorTag : public AnyMatrixTag{};
 ///@}
@@ -43,8 +39,9 @@ struct AnyVectorTag : public AnyMatrixTag{};
  * indicate addtional functionality like data resize.
  * @note We assume a class with this Tag has the following methods
  *  - \c size() returns the size (in number of elements) of the contiguous data
- *  - \c begin() returns a \c RandomAccessIterator to the first element of the contiguous data
  *  - \c data() returns a pointer to the first element of the contiguous data
+ *  - \c begin() returns a \c RandomAccessIterator to the first element of the contiguous data 
+ *      (can be the same as \c data() )
  */
 struct SharedVectorTag  : public AnyVectorTag {};
 /**

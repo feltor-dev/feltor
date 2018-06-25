@@ -44,11 +44,11 @@ static inline double KnuthTwoSum(double a, double b, double *s) {
 }
 
 
-template<uint NBFPE, uint WARP_COUNT, class RandomAccessIterator1, class RandomAccessIterator2>
+template<uint NBFPE, uint WARP_COUNT, class PointerOrScalar1, class PointerOrScalar2>
 __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
-    RandomAccessIterator1 d_a,
-    RandomAccessIterator2 d_b,
+    PointerOrScalar1 d_a,
+    PointerOrScalar2 d_b,
     const uint NbElements
 ) {
     __shared__ int64_t l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
@@ -62,7 +62,7 @@ __global__ void ExDOT(
     double a[NBFPE] = {0.0};
     for(uint pos = blockIdx.x*blockDim.x+threadIdx.x; pos < NbElements; pos += gridDim.x*blockDim.x) {
         double r = 0.0;
-        double x = TwoProductFMA((double)d_a[pos], (double)d_b[pos], &r);
+        double x = TwoProductFMA(get_element(d_a,pos), get_element(d_b,pos), &r);
         //double x = d_a[pos]*d_b[pos];//ATTENTION: if we write it like this, cpu compiler might generate an fma from this while nvcc does not...
 
         #pragma unroll
@@ -129,12 +129,12 @@ __global__ void ExDOT(
     }
 }
 
-template<uint NBFPE, uint WARP_COUNT, class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3>
+template<uint NBFPE, uint WARP_COUNT, class PointerOrScalar1, class PointerOrScalar2, class PointerOrScalar3>
 __global__ void ExDOT(
     int64_t *d_PartialSuperaccs,
-    RandomAccessIterator1 d_a,
-    RandomAccessIterator2 d_b,
-    RandomAccessIterator3 d_c,
+    PointerOrScalar1 d_a,
+    PointerOrScalar2 d_b,
+    PointerOrScalar3 d_c,
     const uint NbElements
 ) {
     __shared__ int64_t l_sa[WARP_COUNT * BIN_COUNT]; //shared variables live for a thread block (39 rows, 16 columns!)
@@ -151,8 +151,8 @@ __global__ void ExDOT(
         //double r  = 0.0, r2 = 0.0;
         //double x  = TwoProductFMA(d_a[pos], d_b[pos], &r);
         //double x2 = TwoProductFMA(x , d_c[pos], &r2);
-        double x1 = __fma_rn( d_a[pos], d_b[pos], 0);
-        double x2 = __fma_rn( x1      , d_c[pos], 0);
+        double x1 = __fma_rn( get_element(d_a,pos), get_element(d_b,pos), 0);
+        double x2 = __fma_rn( x1                  , get_element(d_c,pos), 0);
 
         if( x2 != 0.0) {//accumulate x2
             #pragma unroll
@@ -317,9 +317,9 @@ void ExDOTComplete(
  * @param d_superacc pointer to an array of 64 bit integers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
 */
-template<class RandomAccessIterator1, class RandomAccessIterator2, size_t NBFPE=3>
+template<class PointerOrScalar1, class PointerOrScalar2, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, int64_t* d_superacc)
+void exdot_gpu(unsigned size, PointerOrScalar1 x1_ptr, PointerOrScalar2 x2_ptr, int64_t* d_superacc)
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0.0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());
@@ -339,9 +339,9 @@ void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator
  * @param d_superacc pointer to an array of 64 bit integegers (the superaccumulator) in device memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::gpu::Round to convert the superaccumulator into a double precision number
  */
-template<class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3, size_t NBFPE=3>
+template<class PointerOrScalar1, class PointerOrScalar2, class PointerOrScalar3, size_t NBFPE=3>
 __host__
-void exdot_gpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, RandomAccessIterator3 x3_ptr, int64_t* d_superacc)
+void exdot_gpu(unsigned size, PointerOrScalar1 x1_ptr, PointerOrScalar2 x2_ptr, PointerOrScalar3 x3_ptr, int64_t* d_superacc)
 {
     static thrust::device_vector<int64_t> d_PartialSuperaccsV( gpu::PARTIAL_SUPERACCS_COUNT*BIN_COUNT, 0); //39 columns and PSC rows
     int64_t *d_PartialSuperaccs = thrust::raw_pointer_cast( d_PartialSuperaccsV.data());

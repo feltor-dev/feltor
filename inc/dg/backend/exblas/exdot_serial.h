@@ -29,8 +29,8 @@ namespace exblas{
 ///@cond
 namespace cpu{
 
-template<typename CACHE, typename RandomAccessIterator1, typename RandomAccessIterator2>
-void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64_t* acc) {
+template<typename CACHE, typename PointerOrScalar1, typename PointerOrScalar2>
+void ExDOTFPE_cpu(int N, PointerOrScalar1 a, PointerOrScalar2 b, int64_t* acc) {
     CACHE cache(acc);
 #ifndef _WITHOUT_VCL
     int r = (( int64_t(N) ) & ~7ul);
@@ -39,7 +39,8 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64
         asm ("# myloop");
 #endif
         vcl::Vec8d r1 ;
-        vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
+        vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,i), make_vcl_vec8d(b,i), r1);
+        //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
         //vcl::Vec8d x  = vcl::Vec8d().load(a+i)*vcl::Vec8d().load(b+i);
         cache.Accumulate(x);
         cache.Accumulate(r1);
@@ -47,7 +48,8 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64
     if( r != N) {
         //accumulate remainder
         vcl::Vec8d r1;
-        vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
+        vcl::Vec8d x  = TwoProductFMA(make_vcl_vec8d(a,r,N-r), make_vcl_vec8d(b,r,N-r), r1);
+        //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
         //vcl::Vec8d x  = vcl::Vec8d().load_partial(N-r, a+r)*vcl::Vec8d().load_partial(N-r,b+r);
         cache.Accumulate(x);
         cache.Accumulate(r1);
@@ -55,7 +57,7 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64
 #else// _WITHOUT_VCL
     for(int i = 0; i < N; i++) {
         double r1;
-        double x = TwoProductFMA((double)a[i],(double)b[i],r1);
+        double x = TwoProductFMA(get_element(a,i),get_element(b,i),r1);
         cache.Accumulate(x);
         cache.Accumulate(r1);
     }
@@ -63,8 +65,8 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, int64
     cache.Flush();
 }
 
-template<typename CACHE, typename RandomAccessIterator1, typename RandomAccessIterator2, typename RandomAccessIterator3>
-void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, RandomAccessIterator3 c, int64_t* acc) {
+template<typename CACHE, typename PointerOrScalar1, typename PointerOrScalar2, typename PointerOrScalar3>
+void ExDOTFPE_cpu(int N, PointerOrScalar1 a, PointerOrScalar2 b, PointerOrScalar3 c, int64_t* acc) {
     CACHE cache(acc);
 #ifndef _WITHOUT_VCL
     int r = (( int64_t(N))  & ~7ul);
@@ -75,8 +77,10 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, Rando
         //vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load(c+i);
         //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load(a+i), vcl::Vec8d().load(b+i), r1);
         //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
-        vcl::Vec8d x1  = vcl::mul_add(vcl::Vec8d().load(a+i),vcl::Vec8d().load(b+i), 0);
-        vcl::Vec8d x2  = vcl::mul_add( x1                   ,vcl::Vec8d().load(c+i), 0);
+        //vcl::Vec8d x1  = vcl::mul_add(vcl::Vec8d().load(a+i),vcl::Vec8d().load(b+i), 0);
+        //vcl::Vec8d x2  = vcl::mul_add( x1                   ,vcl::Vec8d().load(c+i), 0);
+        vcl::Vec8d x1  = vcl::mul_add(make_vcl_vec8d(a,i),make_vcl_vec8d(b,i), 0);
+        vcl::Vec8d x2  = vcl::mul_add( x1                ,make_vcl_vec8d(c,i), 0);
         cache.Accumulate(x2);
         //cache.Accumulate(r2);
         //x2 = TwoProductFMA(r1, cvec, r2);
@@ -88,8 +92,8 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, Rando
         //vcl::Vec8d r1 , r2, cvec = vcl::Vec8d().load_partial(N-r, c+r);
         //vcl::Vec8d x  = TwoProductFMA(vcl::Vec8d().load_partial(N-r, a+r), vcl::Vec8d().load_partial(N-r,b+r), r1);
         //vcl::Vec8d x2 = TwoProductFMA(x , cvec, r2);
-        vcl::Vec8d x1  = vcl::mul_add(vcl::Vec8d().load_partial(N-r, a+r),vcl::Vec8d().load_partial(N-r,b+r), 0);
-        vcl::Vec8d x2  = vcl::mul_add( x1                   ,vcl::Vec8d().load_partial(N-r,c+r), 0);
+        vcl::Vec8d x1  = vcl::mul_add(make_vcl_vec8d(a,r,N-r),make_vcl_vec8d(b,r,N-r), 0);
+        vcl::Vec8d x2  = vcl::mul_add( x1                    ,make_vcl_vec8d(c,r,N-r), 0);
         cache.Accumulate(x2);
         //cache.Accumulate(r2);
         //x2 = TwoProductFMA(r1, cvec, r2);
@@ -98,8 +102,8 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, Rando
     }
 #else// _WITHOUT_VCL
     for(int i = 0; i < N; i++) {
-        double x1 = a[i]*b[i];
-        double x2 = x1*c[i];
+        double x1 = get_element(a,i)*get_element(b,i);
+        double x2 = x1*get_element(c,i);
         cache.Accumulate(x2);
     }
 #endif// _WITHOUT_VCL
@@ -119,8 +123,8 @@ void ExDOTFPE_cpu(int N, RandomAccessIterator1 a, RandomAccessIterator2 b, Rando
  * @param h_superacc pointer to an array of 64 bit integers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
 */
-template<class RandomAccessIterator1, class RandomAccessIterator2, size_t NBFPE=8>
-void exdot_cpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, int64_t* h_superacc){
+template<class PointerOrScalar1, class PointerOrScalar2, size_t NBFPE=8>
+void exdot_cpu(unsigned size, PointerOrScalar1 x1_ptr, PointerOrScalar2 x2_ptr, int64_t* h_superacc){
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
 #ifndef _WITHOUT_VCL
@@ -142,8 +146,8 @@ void exdot_cpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator
  * @param h_superacc pointer to an array of 64 bit integegers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
  */
-template<class RandomAccessIterator1, class RandomAccessIterator2, class RandomAccessIterator3, size_t NBFPE=8>
-void exdot_cpu(unsigned size, RandomAccessIterator1 x1_ptr, RandomAccessIterator2 x2_ptr, RandomAccessIterator3 x3_ptr, int64_t* h_superacc) {
+template<class PointerOrScalar1, class PointerOrScalar2, class PointerOrScalar3, size_t NBFPE=8>
+void exdot_cpu(unsigned size, PointerOrScalar1 x1_ptr, PointerOrScalar2 x2_ptr, PointerOrScalar3 x3_ptr, int64_t* h_superacc) {
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
 #ifndef _WITHOUT_VCL

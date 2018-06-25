@@ -24,6 +24,16 @@ namespace exblas
 {
 namespace gpu
 {
+template<class T>
+__device__
+static inline double get_element( T x, int i){
+	return x;
+}
+template<class T>
+__device__
+static inline double get_element( const T* x, int i){
+	return *(x+i);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs

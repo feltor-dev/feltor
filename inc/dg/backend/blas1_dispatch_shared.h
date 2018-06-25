@@ -58,7 +58,7 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedV
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     //maybe assert size here?
     auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
-    return doDot_dispatch( execution_policy(), size, get_iterator(x), get_iterator(y));
+    return doDot_dispatch( execution_policy(), size, get_pointer_or_scalar(x), get_pointer_or_scalar(y));
 }
 
 
