@@ -191,8 +191,6 @@
 
 /*! @mainpage Introduction
  *
- * @tableofcontents
- *
  * @section pdf Introduction to discontinuous Galerkin methods
  * Here is a pdf document explainin the fundamentals of discontinuous Galerkin methods
  *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
@@ -204,10 +202,10 @@
  *    - \e Scalar: A template parameter T is a Scalar if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyScalarTag
  *    - \e Vector: A template parameter T is a Vector if it is not a Scalar and if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyVectorTag
  *    - \e Matrix: A template parameter T is a Matrix if it is not a Scalar or Vector and if <tt> typename  dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyMatrixTag
- *    - \e execution \e policy: A template parameter T has an execution policy if <tt>
- *      typename dg::TensorTraits<T>::execution_policy </tt> exists and derives from \c dg::AnyPolicyTag, The execution policy is \e trivial if it is \c dg::AnyPolicyTag
+ *    - \e execution \e policy: A template parameter T has an execution policy if
+ *      <tt> typename dg::TensorTraits<T>::execution_policy </tt> exists and derives from \c dg::AnyPolicyTag, The execution policy is \e trivial if it is \c dg::AnyPolicyTag
  *    - \e value \e type : A template parameter T has a value type if
- *      typename dg::TensorTraits<T>::value_type </tt> exists
+ *      <tt> typename dg::TensorTraits<T>::value_type </tt> exists
  *    - \e compatible: Two vectors are compatible if their tensor_categories both derive from the same base class that itself derives from but is not equal to \c dg::AnyVectorTag, Two execution policies are compatible if they are equal or if at least one of them is trivial.
  *    - \e promote: A Scalar can be promoted to a Vector with all elements equal to the value of the Scalar. A Vector can be promoted to a  Matrix with the Vector being the diagonal and all other elements zero.
  *
@@ -264,6 +262,81 @@
  *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is recursively called with the Matrix on all elements of the Vectors.
  *   -# If the Matrix is either a Scalar or a Vector and the remaining types do not have the \c dg::RecursiveVectorTag tensor category, then \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
  *
+ * @subsection dispatch_examples Examples
+ *
+ * Let us assume that we have two vectors \f$ v\f$ and \f$ w\f$. In a shared
+ memory code these will be declared as
+ @code
+ dg::DVec v, w;
+ // initialize v and w with some meaningful values
+ @endcode
+ In an MPI implementation we would simply write \c dg::MDVec instead of \c dg::DVec.
+ Let us now assume that want to compute the expression \f$ v_i  \leftarrow v_i^2 + w_i\f$
+ with the dg::blas1::subroutine. The first step is to write a Functor that
+ implements this expression
+ @code
+ struct Expression{
+    DG_DEVICE
+    void operator() ( double& v, double w){
+       v = v*v + w;
+    }
+ };
+ @endcode
+ Note that we used the Marco \c DG_DEVICE to indicate that we this code also works
+ on GPUs.
+ The next step is just to apply our struct to the vectors we have.
+ @code
+ dg::blas1::subroutine( Expression(), v, w);
+ @endcode
+
+ Now, we want to use an additional parameter in our expresion. Let's assume we have
+ @code
+ double some_parameter = 3.;
+ @endcode
+ and we want to compute \f$ v_i \leftarrow p v_i^2 + w_i\f$. We now have two
+ possibilities. We can add a private variable in \c Expression and use it in the
+ implementation of the bracket operator
+ @code
+ struct Expression{
+    Expression( double param):m_param(param){}
+    DG_DEVICE
+    void operator() ( double& v, double w)const{
+        v = m_param*v*v + w;
+    }
+    private:
+    double m_param;
+ };
+ dg::blas1::subroutine( Expression(some_parameter), v, w);
+ @endcode
+ The other possibility is to extend the bracket operator like
+ @code
+ struct Expression{
+    DG_DEVICE
+    void operator() ( double& v, double w, double param){
+        v = param*v*v + w;
+    }
+ };
+ dg::blas1::subroutine( Expression(), v, w, some_parameter);
+ @endcode
+ The result (and runtime) is the same in both cases. However, the second is more versatile, when we use recursion. Consider that \f$ v\f$ and \f$ w\f$ are arrays of
+ shared vectors, declared as
+ @code
+ std::array<dg::DVec, 3> array_v, array_w;
+ std::array<double,3> some_array_parameter;
+ // initialize array_v, array_w and some_array_parameter meaningfully
+ @endcode
+ We now want to compute the expression \f$ v_{ij} \leftarrow p_i v_{ij}^2 + w_{ij}\f$, where \c i runs from 0 to 2 and \c j runs over all elements in the shared vectors
+ \c array_v[i] and \c array_w[i].
+ In this case we just use
+ @code
+ dg::blas1::subroutine( Expression(), array_v, array_w, some_array_parameter);
+ @endcode
+
+ In order to compute the sum \f$ \sum_{i=0}^2 p_i\f$ we can use
+ @code
+ double sum = dg::blas1::dot( 1, some_array_parameter);
+ @endcode
+
  * @section mpi_backend The MPI interface
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
 @subsection mpi_vector MPI Vectors and the blas1 functions

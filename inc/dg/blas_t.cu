@@ -13,6 +13,13 @@ const double ly = 2.*M_PI;
 double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
 double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
 
+struct Expression{
+   DG_DEVICE
+   void operator() ( double& v, double w, double param){
+       v = param*v*v + w;
+   }
+};
+
 int main()
 {
     std::cout << "This program tests the many different possibilities to call blas1 and blas2 functions.\n";
@@ -37,8 +44,15 @@ int main()
     std::cout << "Recursive DVec Copy Scalar to     "<< (arrdvec1[0][0] == 2 && arrdvec1[1][0]==2)<<std::endl;
     dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
     std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0][0] == 26 && arrdvec1[1][0]==46.)<<std::endl;
+    // test the examples in the documentation
+	std::array<dg::DVec, 3> array_v{ vec1, vec1, vec1}, array_w(array_v);
+    std::array<double, 3> array_p{ 1,2,3};
+	dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
+    std::cout << "Example in documentation 			"<< (array_v[0][0]) <<  " "<<(array_v[1][1])<<std::endl;
     std::cout << "Test DOT functions:\n"<<std::boolalpha;
-    double result = dg::blas1::dot( 1., arrdvec1 );
+    double result = dg::blas1::dot( 1., array_p);
+    std::cout << "blas1 dot recursive Scalar          "<< (result == 6) <<"\n";
+    result = dg::blas1::dot( 1., arrdvec1 );
     std::cout << "blas1 dot recursive Scalar Vector   "<< (result == 414) <<"\n";
     result = dg::blas2::dot( 1., 4., arrdvec1 );
     std::cout << "blas2 dot recursive Scalar Vector   "<< (result == 1656) <<"\n";
