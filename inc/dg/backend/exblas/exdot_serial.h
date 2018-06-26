@@ -29,8 +29,8 @@ namespace exblas{
 ///@cond
 namespace cpu{
 
-template<typename CACHE, typename PointerOrScalar1, typename PointerOrScalar2>
-void ExDOTFPE_cpu(int N, PointerOrScalar1 a, PointerOrScalar2 b, int64_t* acc) {
+template<typename CACHE, typename PointerOrValue1, typename PointerOrValue2>
+void ExDOTFPE_cpu(int N, PointerOrValue1 a, PointerOrValue2 b, int64_t* acc) {
     CACHE cache(acc);
 #ifndef _WITHOUT_VCL
     int r = (( int64_t(N) ) & ~7ul);
@@ -65,8 +65,8 @@ void ExDOTFPE_cpu(int N, PointerOrScalar1 a, PointerOrScalar2 b, int64_t* acc) {
     cache.Flush();
 }
 
-template<typename CACHE, typename PointerOrScalar1, typename PointerOrScalar2, typename PointerOrScalar3>
-void ExDOTFPE_cpu(int N, PointerOrScalar1 a, PointerOrScalar2 b, PointerOrScalar3 c, int64_t* acc) {
+template<typename CACHE, typename PointerOrValue1, typename PointerOrValue2, typename PointerOrValue3>
+void ExDOTFPE_cpu(int N, PointerOrValue1 a, PointerOrValue2 b, PointerOrValue3 c, int64_t* acc) {
     CACHE cache(acc);
 #ifndef _WITHOUT_VCL
     int r = (( int64_t(N))  & ~7ul);
@@ -117,14 +117,17 @@ void ExDOTFPE_cpu(int N, PointerOrScalar1 a, PointerOrScalar2 b, PointerOrScalar
  * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i y_i \f]
  * @ingroup highlevel
  * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
+ * @tparam PointerOrValue must be either <tt> T, T* or const T* </tt>, where \c T is either \c float or \c double
  * @param size size N of the arrays to sum
  * @param x1_ptr first array
  * @param x2_ptr second array
  * @param h_superacc pointer to an array of 64 bit integers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
 */
-template<class PointerOrScalar1, class PointerOrScalar2, size_t NBFPE=8>
-void exdot_cpu(unsigned size, PointerOrScalar1 x1_ptr, PointerOrScalar2 x2_ptr, int64_t* h_superacc){
+template<class PointerOrValue1, class PointerOrValue2, size_t NBFPE=8>
+void exdot_cpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, int64_t* h_superacc){
+    static_assert( has_floating_value<PointerOrValue1>::value, "PointerOrValue1 needs to be T or T* with T one of (const) float or (const) double");
+    static_assert( has_floating_value<PointerOrValue2>::value, "PointerOrValue2 needs to be T or T* with T one of (const) float or (const) double");
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
 #ifndef _WITHOUT_VCL
@@ -139,6 +142,7 @@ void exdot_cpu(unsigned size, PointerOrScalar1 x1_ptr, PointerOrScalar2 x2_ptr, 
  * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
  * @ingroup highlevel
  * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
+ * @tparam PointerOrValue must be either <tt> T, T* or const T* </tt>, where \c T is either \c float or \c double
  * @param size size N of the arrays to sum
  * @param x1_ptr first array
  * @param x2_ptr second array
@@ -146,8 +150,11 @@ void exdot_cpu(unsigned size, PointerOrScalar1 x1_ptr, PointerOrScalar2 x2_ptr, 
  * @param h_superacc pointer to an array of 64 bit integegers (the superaccumulator) in host memory with size at least \c exblas::BIN_COUNT (39) (contents are overwritten)
  * @sa \c exblas::cpu::Round  to convert the superaccumulator into a double precision number
  */
-template<class PointerOrScalar1, class PointerOrScalar2, class PointerOrScalar3, size_t NBFPE=8>
-void exdot_cpu(unsigned size, PointerOrScalar1 x1_ptr, PointerOrScalar2 x2_ptr, PointerOrScalar3 x3_ptr, int64_t* h_superacc) {
+template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3, size_t NBFPE=8>
+void exdot_cpu(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, PointerOrValue3 x3_ptr, int64_t* h_superacc) {
+    static_assert( has_floating_value<PointerOrValue1>::value, "PointerOrValue1 needs to be T or T* with T one of (const) float or (const) double");
+    static_assert( has_floating_value<PointerOrValue2>::value, "PointerOrValue2 needs to be T or T* with T one of (const) float or (const) double");
+    static_assert( has_floating_value<PointerOrValue3>::value, "PointerOrValue3 needs to be T or T* with T one of (const) float or (const) double");
     for( int i=0; i<exblas::BIN_COUNT; i++)
         h_superacc[i] = 0;
 #ifndef _WITHOUT_VCL

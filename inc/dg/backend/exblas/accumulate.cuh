@@ -24,15 +24,18 @@ namespace exblas
 {
 namespace gpu
 {
+///////////////////////////////////////////////////////////////////////////
+//********* Here, the change from float to double happens ***************//
+///////////////////////////////////////////////////////////////////////////
 template<class T>
 __device__
 static inline double get_element( T x, int i){
-	return x;
+	return (double)x;
 }
 template<class T>
 __device__
 static inline double get_element( const T* x, int i){
-	return *(x+i);
+	return (double)(*(x+i));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
