@@ -7,7 +7,7 @@
 
 namespace dg
 {
-///@addtogroup vec_list
+///@addtogroup dispatch
 ///@{
 
 ///@brief prototypical Shared Vector with Serial Tag

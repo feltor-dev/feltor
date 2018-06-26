@@ -26,17 +26,13 @@
  *     @defgroup typedefs Useful Typedefs
  *          Useful type definitions for easy programming
  *     @defgroup sparsematrix Sparse matrix formats
- *     @defgroup mpi_structures MPI backend functionality
+ *     @defgroup mpi_structures MPI backend
  *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X
  *             is e.g. CPU, GPU, accelerator cards...
  *             The general idea to achieve this is to separate global communication from local computations and thus
  *             readily reuse the existing, optimized library for the local part.
  *     @defgroup dispatch The tag dispatch system
- *     @{
- *         @defgroup sca_list List of scalar type TensorTraits specializations
- *         @defgroup vec_list List of vector type TensorTraits specializations
- *         @defgroup mat_list List of matrix type TensorTraits specializations
- *     @}
+ *           Please read the chapter \ref dispatch in the introduction.
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * These algorithms make use only of blas level 1 and 2 functions
@@ -127,7 +123,7 @@
   *  - Scalars ...
   *  .
   * If there are several \c ContainerTypes in the argument list, then \c TensorTraits must exist for all of them
-  *  \see vec_list
+  *  \see \ref dispatch
   */
  /** @class hide_matrix
   * @tparam MatrixType
@@ -295,7 +291,7 @@
  @endcode
  and we want to compute \f$ v_i \leftarrow p v_i^2 + w_i\f$. We now have two
  possibilities. We can add a private variable in \c Expression and use it in the
- implementation of the bracket operator
+ implementation of the paranthesis operator
  @code
  struct Expression{
     Expression( double param):m_param(param){}
@@ -308,7 +304,7 @@
  };
  dg::blas1::subroutine( Expression(some_parameter), v, w);
  @endcode
- The other possibility is to extend the bracket operator like
+ The other possibility is to extend the paranthesis operator like
  @code
  struct Expression{
     DG_DEVICE

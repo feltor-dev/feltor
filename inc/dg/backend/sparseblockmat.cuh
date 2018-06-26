@@ -231,7 +231,7 @@ void CooSparseBlockMatDevice<value_type>::display( std::ostream& os) const
 }
 
 ///@endcond
-///@addtogroup mat_list
+///@addtogroup dispatch
 ///@{
 template <class T>
 struct TensorTraits<EllSparseBlockMatDevice<T> >

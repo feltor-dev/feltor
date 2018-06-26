@@ -95,7 +95,7 @@ struct MPI_Vector
 
 };
 
-///@addtogroup vec_list
+///@addtogroup dispatch
 ///@{
 
 ///@brief prototypical MPI vector

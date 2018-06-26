@@ -321,7 +321,7 @@ void CooSparseBlockMat<value_type>::display( std::ostream& os, bool show_data) c
 }
 
 ///@endcond
-///@addtogroup mat_list
+///@addtogroup dispatch
 ///@{
 template <class T>
 struct TensorTraits<EllSparseBlockMat<T> >

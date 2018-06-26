@@ -782,9 +782,7 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = . \
-                         ./geometry \
-                         ./backend/exceptions.h \
+INPUT                  = ./backend/exceptions.h \
                          ./backend/memory.h \
                          ./backend/mpi_collective.h \
                          ./backend/mpi_communicator.h \
@@ -805,6 +803,8 @@ INPUT                  = . \
                          ./backend/tensor_traits_cusp.h \
                          ./backend/tensor_traits_std.h \
                          ./backend/tensor_traits_thrust.h \
+                         ./geometry \
+                         .  \
 
 
 # This tag can be used to specify the character encoding of the source files

@@ -23,8 +23,7 @@ The contained types are
     indicates the type of hardware memory is physically
 allocated on in a vector class and therefore indicates the
 possible parallelization and optimization strategies.
-\see vec_list
-@ingroup vec_list
+\see \ref dispatch
 */
 template< class Vector, class Enable=void>
 struct TensorTraits;

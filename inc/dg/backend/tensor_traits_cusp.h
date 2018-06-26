@@ -15,7 +15,7 @@
 namespace dg
 {
 
-///@addtogroup vec_list
+///@addtogroup dispatch
 ///@{
 template<class T>
 struct TensorTraits<cusp::array1d<T,cusp::host_memory>,
@@ -39,7 +39,7 @@ struct TensorTraits<cusp::array1d<T,cusp::device_memory>,
 #endif
 };
 ///@}
-///@addtogroup mat_list
+///@addtogroup dispatch
 ///@{
 
 template< class I, class V, class M>

@@ -5,7 +5,7 @@
 
 namespace dg
 {
-///@addtogroup sca_list
+///@addtogroup dispatch
 ///@{
 
 ///@brief Recognize arithmetic types as scalars

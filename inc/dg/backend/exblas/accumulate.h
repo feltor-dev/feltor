@@ -24,18 +24,18 @@ namespace exblas {
 namespace cpu {
 ////////////////////////////////////////////////////////////////////////////
 #ifndef _WITHOUT_VCL
-static inline vcl::Vec8d make_vcl_vec8d( double x, int i){ 
-    return vcl::Vec8d(x); 
-} 
-static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i){ 
-    return vcl::Vec8d().load( x+i); 
-} 
-static inline vcl::Vec8d make_vcl_vec8d( double x, int i, int num){ 
-    return vcl::Vec8d(x); 
-} 
-static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i, int num){ 
-    return vcl::Vec8d().load( num, x+i); 
-} 
+static inline vcl::Vec8d make_vcl_vec8d( double x, int i){
+    return vcl::Vec8d(x);
+}
+static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i){
+    return vcl::Vec8d().load( x+i);
+}
+static inline vcl::Vec8d make_vcl_vec8d( double x, int i, int num){
+    return vcl::Vec8d(x);
+}
+static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i, int num){
+    return vcl::Vec8d().load_partial( num, x+i);
+}
 #endif//_WITHOUT_VCL
 template<class T>
 static inline double get_element( T x, int i){
