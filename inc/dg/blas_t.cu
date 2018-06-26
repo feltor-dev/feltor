@@ -8,11 +8,6 @@
 #include "geometry/derivatives.h"
 #include "geometry/evaluation.h"
 
-const double lx = 2.*M_PI;
-const double ly = 2.*M_PI;
-double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
-double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
-
 struct Expression{
    DG_DEVICE
    void operator() ( double& v, double w, double param){

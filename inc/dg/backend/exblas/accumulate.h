@@ -148,7 +148,7 @@ static inline void Accumulate( int64_t* accumulator, vcl::Vec8d x) {
     _mm256_zeroupper();
 #endif
     for(unsigned int j = 0; j != 8; ++j) {
-        exblas::cpu::Accumulate(superacc, v[j]);
+        exblas::cpu::Accumulate(accumulator, v[j]);
     }
 }
 #endif //_WITHOUT_VCL
