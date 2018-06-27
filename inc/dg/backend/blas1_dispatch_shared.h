@@ -59,7 +59,7 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedV
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     //maybe assert size here?
     auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
-    return doDot_dispatch( execution_policy(), size, get_pointer_or_reference(x), get_pointer_or_reference(y));
+    return dg::blas1::detail::doDot_dispatch( execution_policy(), size, do_get_pointer_or_reference(x,get_tensor_category<Vector1>()), do_get_pointer_or_reference(y,get_tensor_category<Vector2>()));
 }
 
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
@@ -85,8 +85,8 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, Cont
             get_execution_policy<vector_type>(),
             std::get<vector_idx>(std::forward_as_tuple(x,xs...)).size(),
             f,
-            get_pointer_or_reference(std::forward<ContainerType>(x)) ,
-            get_pointer_or_reference(std::forward<ContainerTypes>(xs)) ...
+            do_get_pointer_or_reference(std::forward<ContainerType>(x),get_tensor_category<ContainerType>()) ,
+            do_get_pointer_or_reference(std::forward<ContainerTypes>(xs),get_tensor_category<ContainerTypes>()) ...
             );
 }
 

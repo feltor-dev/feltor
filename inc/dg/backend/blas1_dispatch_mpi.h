@@ -53,7 +53,9 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVect
     mpi_assert( x,y);
 #endif //DG_DEBUG
     //local compuation
-    std::vector<int64_t> acc = doDot_superacc( get_data(x), get_data(y));
+    std::vector<int64_t> acc = doDot_superacc(
+        do_get_data(x,get_tensor_category<Vector1>()),
+        do_get_data(y,get_tensor_category<Vector2>()));
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     //get communicator from MPIVector
     auto comm = std::get<vector_idx>(std::forward_as_tuple(x,y)).communicator();
@@ -68,8 +70,8 @@ template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( MPIVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
     dg::blas1::subroutine( f,
-        get_data(std::forward<container>(x)),
-        get_data(std::forward<Containers>(xs))...);
+        do_get_data(std::forward<container>(x), get_tensor_category<container>()),
+        do_get_data(std::forward<Containers>(xs), get_tensor_category<Containers>())...);
 }
 
 } //namespace detail

@@ -50,8 +50,8 @@ struct SharedVectorTag  : public AnyVectorTag {};
  * An MPI Vector is assumed to be composed of a data container together with an MPI Communicator.
  * In fact, the currently only class with this tag is the \c MPI_Vector class.
  *
- * @note This is a recursive tag in the sense that classes must provide a typedef \c container_type, for which the \c TensorTraits must be specialized
- * @see MPI_Vector, mpi_structures
+ * @note This is a recursive tag in the sense that classes must provide a typedef \c container_type, for which the \c dg::TensorTraits must be specialized
+ * @see dg::MPI_Vector, mpi_structures
  */
 struct MPIVectorTag     : public AnyVectorTag {};
 
@@ -60,8 +60,8 @@ struct MPIVectorTag     : public AnyVectorTag {};
  *
  * This Tag indicates that a class is composed of an array of containers, i.e. a container of containers.
  * We assume that the bracket \c operator[] is defined to access the inner elements and the \c size() function returns the number of elements.
- * @note The class must typedef \c value_type and TensorTraits must be specialized for this type.
- * @note Examples are \c std::vector<T> and \c std::array<T,N> where T is a non-primitive data type and N is the size of the array
+ * @note The class must typedef \c value_type (the "inner" type that is returned by the bracket operator) and \c dg::TensorTraits<value_type> must be specialized for this type.
+ * @note Examples are \c std::vector<T> and \c std::array<T,N> where T is the inner type and N is the size of the array
  */
 struct RecursiveVectorTag  : public AnyVectorTag {};
 
@@ -83,7 +83,7 @@ struct ArrayVectorTag   : public RecursiveVectorTag{}; //!< \c std::array of con
  *  - \c cbegin() returns a const_iterator to the beginning
  *  - \c end() return an iterator to the end
  *  - \c cend() returns a const_iterator to the end
- *  @note \c thrust::host_vector and \c thrust::device_vector as well as container classes in the standard template library meet these requirements
+ *  @note \c thrust::host_vector and \c thrust::device_vector meet these requirements
  */
 struct ThrustVectorTag  : public SharedVectorTag {};
 struct CuspVectorTag    : public ThrustVectorTag {}; //!< special tag for cusp arrays

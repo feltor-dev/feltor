@@ -32,7 +32,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     dg::blas1::detail::mpi_assert( x,y);
 #endif //DG_DEBUG
     //local computation
-    std::vector<int64_t> acc = doDot_superacc( get_data(x), m, get_data(y));
+    std::vector<int64_t> acc = doDot_superacc( do_get_data(x, get_tensor_category<Vector1>()), m, do_get_data(y, get_tensor_category<Vector2>()));
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     //get communicator from MPIVector
     auto comm = std::get<vector_idx>(std::forward_as_tuple(x,y)).communicator();
@@ -49,7 +49,10 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     dg::blas1::detail::mpi_assert( m,y);
 #endif //DG_DEBUG
     //local computation
-    std::vector<int64_t> acc = doDot_superacc( get_data(x), m.data(), get_data(y));
+    std::vector<int64_t> acc = doDot_superacc(
+        do_get_data(x, get_tensor_category<Vector1>()),
+        m.data(),
+        do_get_data(y, get_tensor_category<Vector2>()));
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), m.communicator(), m.communicator_mod(), m.communicator_mod_reduce());
 
@@ -63,7 +66,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
     std::vector<std::vector<int64_t>> acc( size);
     for( unsigned i=0; i<size; i++)
-        acc[i] = doDot_superacc( get_vector_element(x,i), m, get_vector_element(y,i));
+        acc[i] = doDot_superacc( do_get_vector_element(x,i,get_tensor_category<Vector1>()), m, do_get_vector_element(y,i,get_tensor_category<Vector2>()));
     for( unsigned i=1; i<size; i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
@@ -87,7 +90,7 @@ inline void doTransfer( const Matrix1& m1, Matrix2& m2, AnyMatrixTag, MPIMatrixT
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIVectorTag, MPIVectorTag )
 {
-    dg::blas2::symv( m.data(), get_data(x), get_data(y));
+    dg::blas2::symv( m.data(), do_get_data(x, get_tensor_category<Vector1>()), do_get_data(y, get_tensor_category<Vector2>()));
 }
 
 template< class Matrix, class Vector1, class Vector2>
@@ -106,7 +109,7 @@ template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIVectorTag, RecursiveVectorTag )
 {
     for( unsigned i=0; i<y.size(); i++)
-        dg::blas2::symv( std::forward<Matrix>(m), get_vector_element(x,i), get_vector_element(y,i));
+        dg::blas2::symv( std::forward<Matrix>(m), do_get_vector_element(x,i,get_tensor_category<Vector1>()), do_get_vector_element(y,i,get_tensor_category<Vector2>()));
 }
 
 template< class Matrix, class Vector1, class Vector2>
@@ -120,7 +123,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
                 )
 {
     for( unsigned i=0; i<y.size(); i++)
-        dg::blas2::symv( alpha, std::forward<Matrix>(m), get_vector_element(x,i), beta, get_vector_element(y,i));
+        dg::blas2::symv( alpha, std::forward<Matrix>(m), do_get_vector_element(x,i,get_tensor_category<Vector1>()), beta, do_get_vector_element(y,i,get_tensor_category<Vector2>()));
 }
 //Matrix is an MPI matrix
 template< class Matrix, class Vector1, class Vector2>
@@ -146,7 +149,7 @@ template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIMatrixTag, RecursiveVectorTag )
 {
     for( unsigned i=0; i<y.size(); i++)
-        dg::blas2::symv( std::forward<Matrix>(m), get_vector_element(x,i), get_vector_element(y,i));
+        dg::blas2::symv( std::forward<Matrix>(m), do_get_vector_element(x,i,get_tensor_category<Vector1>()), do_get_vector_element(y,i,get_tensor_category<Vector2>()));
 }
 
 template< class Matrix, class Vector1, class Vector2>

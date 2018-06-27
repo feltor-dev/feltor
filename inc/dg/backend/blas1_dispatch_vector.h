@@ -43,10 +43,10 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2
     //find out which one is the RecursiveVector and determine size
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
     auto size = std::get<vector_idx>(std::forward_as_tuple(x1,x2)).size();
-    std::vector<int64_t> acc( exblas::BIN_COUNT, 0);
+    std::vector<int64_t> acc( exblas::BIN_COUNT, (int64_t)0);
     for( unsigned i=0; i<size; i++)
     {
-        std::vector<int64_t> temp = doDot_superacc( get_vector_element(x1,i), get_vector_element(x2,i));
+        std::vector<int64_t> temp = doDot_superacc( do_get_vector_element(x1,i,get_tensor_category<Vector1>()), do_get_vector_element(x2,i,get_tensor_category<Vector2>()));
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(temp[0]), imin, imax);
         for( int k=exblas::IMIN; k<exblas::IMAX; k++)
@@ -71,13 +71,17 @@ inline void doSubroutine_dispatch( RecursiveVectorTag, OmpTag, size_type size, S
         #pragma omp parallel
         {
             for( int i=0; i<(int)size; i++) {//omp sometimes has problems if loop variable is not int
-                dg::blas1::subroutine( f, get_vector_element(std::forward<container>(x),i), get_vector_element(std::forward<Containers>(xs),i)...);
+                dg::blas1::subroutine( f,
+                    do_get_vector_element(std::forward<container>(x),i,get_tensor_category<container>()),
+                    do_get_vector_element(std::forward<Containers>(xs),i,get_tensor_category<Containers>())...);
             }
         }
     }
     else //we are already in a parallel omp region
         for( int i=0; i<(int)size; i++) {
-            dg::blas1::subroutine( f, get_vector_element(std::forward<container>(x),i), get_vector_element(std::forward<Containers>(xs),i)...);
+            dg::blas1::subroutine( f,
+                do_get_vector_element(std::forward<container>(x),i,get_tensor_category<container>()),
+                do_get_vector_element(std::forward<Containers>(xs),i,get_tensor_category<Containers>())...);
         }
 }
 #endif //_OPENMP
@@ -89,7 +93,7 @@ template<class size_type, class Subroutine, class container, class ...Containers
 inline void doSubroutine_dispatch( RecursiveVectorTag, AnyPolicyTag, size_type size, Subroutine f, container&& x, Containers&&... xs)
 {
     for( int i=0; i<(int)size; i++) {
-        dg::blas1::subroutine( f, get_vector_element(std::forward<container>(x),i), get_vector_element(std::forward<Containers>(xs),i)...);
+        dg::blas1::subroutine( f, do_get_vector_element(std::forward<container>(x),i,get_tensor_category<container>()), do_get_vector_element(std::forward<Containers>(xs),i,get_tensor_category<Containers>())...);
     }
 }
 

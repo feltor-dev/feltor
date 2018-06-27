@@ -7,7 +7,7 @@
  */
 #pragma once
 
-#include <stdint.h> //definition of int64_t
+#include <cstdint> //definition of int64_t
 #include <cmath>
 #include <cassert>
 ////////////////////////////////////////////////////////////////////////
