@@ -16,10 +16,17 @@ const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
 double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
+struct Expression{
+   DG_DEVICE
+   void operator() ( double& u, double v, double w, double param){
+       u = param*u*v + w;
+   }
+};
 
-using Vector = dg::MDVec;
-using Matrix = dg::MDMatrix;
-using ArrayVec = std::array<Vector, 3>;
+using value_type= double;
+using Vector    = dg::MDVec;
+using Matrix    = dg::MDMatrix;
+using ArrayVec  = std::array<Vector, 3>;
 
 int main( int argc, char* argv[])
 {
@@ -58,60 +65,8 @@ int main( int argc, char* argv[])
     dg::blas2::transfer(dg::create::fast_projection( grid, 2,2), project);
 
     int multi=100;
+    if(rank==0)std::cout<<"\nNo communication\n";
     ArrayVec y(x), z(x), u(x), v(x);
-    Matrix M;
-    dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
-    dg::blas2::symv( M, x, y);//warm up
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas2::symv( M, x, y);
-    t.toc();
-    if(rank==0)std::cout<<"centered x derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-
-    dg::blas2::transfer(dg::create::dx( grid, dg::forward), M);
-    dg::blas2::symv( M, x, y);//warm up
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas2::symv( M, x, y);
-    t.toc();
-    if(rank==0)std::cout<<"forward x derivative took        "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-
-    dg::blas2::transfer(dg::create::dy( grid, dg::forward), M);
-    dg::blas2::symv( M, x, y);//warm up
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas2::symv( M, x, y);
-    t.toc();
-    if(rank==0)std::cout<<"forward y derivative took        "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-
-    dg::blas2::transfer(dg::create::dy( grid, dg::centered), M);
-    dg::blas2::symv( M, x, y);//warm up
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas2::symv( M, x, y);
-    t.toc();
-    if(rank==0)std::cout<<"centered y derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-
-    dg::blas2::transfer(dg::create::jumpX( grid), M);
-    dg::blas2::symv( M, x, y);//warm up
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas2::symv( M, x, y);
-    t.toc();
-    if(rank==0)std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-    ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
-    dg::blas2::gemv( inter, x_half, x);//warm up
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas2::gemv( inter, x_half, x);
-    t.toc();
-    if(rank==0)std::cout<<"Interpolation quarter to full    "<<t.diff()/multi<<"s\t"<<3.75*gbytes*multi/t.diff()<<"GB/s\n";
-    dg::blas2::gemv( project, x, x_half);//warm up
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas2::gemv( project, x, x_half);
-    t.toc();
-    if(rank==0)std::cout<<"Projection full to quarter       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpby( 1., y, -1., x);
@@ -119,9 +74,9 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout<<"AXPBY (1*y-1*x=x)                "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas1::axpbypgz( 1., x, -1., y, 2., z);
+        dg::blas1::axpbypgz( 1., x, -1., 1, 2., z);
     t.toc();
-    if(rank==0)std::cout<<"AXPBYPGZ (1*x-1*y+2*z=z)         "<<t.diff()/multi<<"s\t"<<4*gbytes*multi/t.diff()<<"GB/s\n";
+    if(rank==0)std::cout<<"AXPBYPGZ (1*x-1*1+2*z=z)         "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
     t.tic();
     for( int i=0; i<multi; i++)
         dg::blas1::axpbypgz( 1., x, -1., y, 3., x);
@@ -142,28 +97,89 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
     t.toc();
     if(rank==0)std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
-    //these functions are more mean to dot
+    //Test new subroutine
+    std::array<double, 3> array_p{ 1,2,3};
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::subroutine( Expression(), u, v, x, array_p);
+    t.toc();
+    if(rank==0)std::cout<<"SUBroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
+    /////////////////////SYMV////////////////////////////////
+    if(rank==0)std::cout<<"\nLocal communication\n";
+    Matrix M;
+    dg::blas2::transfer(dg::create::dx( grid, dg::backward), M);
+    dg::blas2::symv( M, x, y);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::symv( M, x, y);
+    t.toc();
+    if(rank==0)std::cout<<"forward x derivative took        "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+
+    dg::blas2::transfer(dg::create::dy( grid, dg::backward), M);
+    dg::blas2::symv( M, x, y);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::symv( M, x, y);
+    t.toc();
+    if(rank==0)std::cout<<"forward y derivative took        "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+
+    dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
+    dg::blas2::symv( M, x, y);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::symv( M, x, y);
+    t.toc();
+    if(rank==0)std::cout<<"centered x derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+
+    dg::blas2::transfer(dg::create::dy( grid, dg::centered), M);
+    dg::blas2::symv( M, x, y);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::symv( M, x, y);
+    t.toc();
+    if(rank==0)std::cout<<"centered y derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+
+    dg::blas2::transfer(dg::create::jumpX( grid), M);
+    dg::blas2::symv( M, x, y);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::symv( M, x, y);
+    t.toc();
+    if(rank==0)std::cout<<"jump X took                      "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    ArrayVec x_half = dg::transfer<ArrayVec>(dg::evaluate( dg::zero, grid_half));
+    dg::blas2::gemv( inter, x_half, x); //warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::gemv( inter, x_half, x); //internally 2 multiplications: quarter-> half, half -> full
+    t.toc();
+    if(rank==0)std::cout<<"Interpolation quarter to full    "<<t.diff()/multi<<"s\t"<<3.75*gbytes*multi/t.diff()<<"GB/s\n";
+    dg::blas2::gemv( project, x, x_half); //warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::gemv( project, x, x_half); //internally 2 multiplications: full -> half, half -> quarter
+    t.toc();
+    if(rank==0)std::cout<<"Projection full to quarter       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    //////////////////////these functions are more mean to dot
+    if(rank==0)std::cout<<"\nGlobal communication\n";
     dg::blas1::transfer( dg::evaluate( left, grid), x);
     dg::blas1::transfer( dg::evaluate( right, grid), y);
-    double norm=0;
+    value_type norm=0;
     norm += dg::blas1::dot( x,y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         norm += dg::blas1::dot( x,y);
     t.toc();
     if(rank==0)std::cout<<"DOT1(x,y) took                   " <<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
-    norm += dg::blas2::dot( w2d,y);//warm up
+    norm += dg::blas2::dot( w2d, y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
         norm += dg::blas2::dot( w2d, y);
     t.toc();
     if(rank==0)std::cout<<"DOT2(y,w,y) (A) took             " <<t.diff()/multi<<"s\t"<<2*gbytes*multi/t.diff()<<"GB/s\n";
-    norm += dg::blas2::dot( x,w2d,y);//warm up
+    norm += dg::blas2::dot( x, w2d, y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
-    {
         norm += dg::blas2::dot( x, w2d, y);
-    }
     t.toc();
     if(rank==0)std::cout<<"DOT2(x,w,y) took                 " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them
 
