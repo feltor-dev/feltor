@@ -103,8 +103,8 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, Cont
             get_execution_policy<vector_type>(),
             std::get<vector_idx>(std::forward_as_tuple(x,xs...)).size(),
             f,
-            get_iterator(std::forward<ContainerType>(x)) ,
-            get_iterator(std::forward<ContainerTypes>(xs)) ...
+            get_pointer_or_scalar(std::forward<ContainerType>(x)) ,
+            get_pointer_or_scalar(std::forward<ContainerTypes>(xs)) ...
             );
 }
 

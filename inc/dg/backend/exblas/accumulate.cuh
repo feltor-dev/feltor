@@ -34,7 +34,7 @@ static inline double get_element( T x, int i){
 }
 template<class T>
 __device__
-static inline double get_element( const T* x, int i){
+static inline double get_element( T* x, int i){
 	return (double)(*(x+i));
 }
 

@@ -39,7 +39,8 @@ using get_tensor_category = typename TensorTraits< typename std::decay<Vector>::
 template<class Vector>
 using get_execution_policy = typename TensorTraits<typename std::decay<Vector>::type>::execution_policy;
 template<class Vector>
-using get_pointer_type = typename std::conditional< std::is_const<Vector>::value, const get_value_type<Vector>*, get_value_type<Vector>* >::type;
+using get_pointer_type = typename std::conditional< std::is_const< typename std::remove_reference<Vector>::type >::value, 
+const get_value_type<Vector>*, get_value_type<Vector>* >::type;
 ////////////get element, data and iterator
 ///@cond
 template<class T>
@@ -61,7 +62,8 @@ inline T do_get_data( T&& v, AnyScalarTag){
 }
 
 template<class T>
-auto do_get_pointer_or_scalar( T&& v, AnyVectorTag) -> decltype(thrust::raw_pointer_cast(v.data())){
+get_pointer_type<T> do_get_pointer_or_scalar( T&& v, AnyVectorTag)// -> decltype(thrust::raw_pointer_cast(v.data()))
+{
     return thrust::raw_pointer_cast(v.data());
 }
 template<class T>
@@ -74,6 +76,15 @@ inline auto get_element( T&& v, unsigned i ) -> decltype( do_get_element( std::f
     return do_get_element( std::forward<T>(v), i, get_tensor_category<T>());
 }
 
+template<class T>
+inline T get_element( T x, int i){
+	return x;
+}
+template<class T>
+inline T get_element( T* x, int i){
+	return *(x+i);
+}
+
 
 template<class T>
 inline auto get_data( T&& v)-> decltype(do_get_data( std::forward<T>(v), get_tensor_category<T>() )){
@@ -81,9 +92,11 @@ inline auto get_data( T&& v)-> decltype(do_get_data( std::forward<T>(v), get_ten
 }
 
 template<class T>
-auto get_pointer_or_scalar( T&& v ) -> decltype( do_get_pointer_or_scalar( std::forward<T>(v), get_tensor_category<T>())) {
+typename std::conditional<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T, get_pointer_type<T> >::type get_pointer_or_scalar( T&& v )// -> decltype( do_get_pointer_or_scalar( std::forward<T>(v), get_tensor_category<T>())) 
+{
     return do_get_pointer_or_scalar( std::forward<T>(v), get_tensor_category<T>());
 }
+
 ///@endcond
 ///@}
 

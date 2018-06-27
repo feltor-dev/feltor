@@ -28,8 +28,9 @@ inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, T x, Ts...
 {
     for( int i=0; i<size; i++)
     {
+        f(get_element(x,i), get_element(xs,i)...);
         //f(x[i], xs[i]...);
-        f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
+        //f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
     }
 }
 

@@ -35,7 +35,8 @@ template<class Subroutine, class T, class ...Ts>
     //every thread takes num_is/grid_size is
     for( int i = thread_id; i<size; i += grid_size)
         //f(x[i], xs[i]...);
-        f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
+        //f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
+        f(get_element(x,i), get_element(xs,i)...);
 }
 
 template< class Subroutine, class T, class ...Ts>

@@ -58,11 +58,11 @@ static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
 }
 #endif//_WITHOUT_VCL
 template<class T>
-static inline double get_element( T x, int i){
+inline double get_element( T x, int i){
 	return (double)x;
 }
 template<class T>
-static inline double get_element( const T* x, int i){
+inline double get_element( const T* x, int i){
 	return (double)(*(x+i));
 }
 
