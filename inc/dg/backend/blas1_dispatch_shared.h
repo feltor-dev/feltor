@@ -59,25 +59,7 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedV
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     //maybe assert size here?
     auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
-    return doDot_dispatch( execution_policy(), size, get_pointer_or_scalar(x), get_pointer_or_scalar(y));
-}
-
-
-//template<class T>
-//auto do_get_iterator( T v) -> decltype(v.begin()){
-//    return v.begin();
-//}
-template<class T>
-inline auto do_get_iterator( T&& v, AnyVectorTag) -> decltype(v.begin()){
-    return v.begin();
-}
-template<class T>
-inline thrust::constant_iterator<T> do_get_iterator( T&& v, AnyScalarTag){
-    return thrust::constant_iterator<T>(v);
-}
-template<class T>
-inline auto get_iterator( T&& v ) -> decltype( do_get_iterator( std::forward<T>(v), get_tensor_category<T>())) {
-    return do_get_iterator( std::forward<T>(v), get_tensor_category<T>());
+    return doDot_dispatch( execution_policy(), size, get_pointer_or_reference(x), get_pointer_or_reference(y));
 }
 
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
@@ -103,8 +85,8 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, Cont
             get_execution_policy<vector_type>(),
             std::get<vector_idx>(std::forward_as_tuple(x,xs...)).size(),
             f,
-            get_pointer_or_scalar(std::forward<ContainerType>(x)) ,
-            get_pointer_or_scalar(std::forward<ContainerTypes>(xs)) ...
+            get_pointer_or_reference(std::forward<ContainerType>(x)) ,
+            get_pointer_or_reference(std::forward<ContainerTypes>(xs)) ...
             );
 }
 

@@ -30,7 +30,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     std::vector<int64_t> acc( exblas::BIN_COUNT, 0);
     for( unsigned i=0; i<size; i++)
     {
-        std::vector<int64_t> temp = doDot_superacc( get_element(x,i), m[i], get_element(y,i));
+        std::vector<int64_t> temp = doDot_superacc( get_vector_element(x,i), m[i], get_vector_element(y,i));
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(temp[0]), imin, imax);
         for( int k=exblas::IMIN; k<exblas::IMAX; k++)
@@ -55,7 +55,7 @@ inline void doSymv(
               RecursiveVectorTag)
 {
     for( unsigned i=0; i<m.size(); i++)
-        dg::blas2::symv( alpha, m[i], get_element(x,i), beta, get_element(y,i));
+        dg::blas2::symv( alpha, m[i], get_vector_element(x,i), beta, get_vector_element(y,i));
 }
 
 template< class Matrix, class Vector1, class Vector2>
@@ -66,7 +66,7 @@ inline void doSymv(
               RecursiveVectorTag)
 {
     for( unsigned i=0; i<m.size(); i++)
-        dg::blas2::symv( m[i], get_element(x,i), get_element(y,i));
+        dg::blas2::symv( m[i], get_vector_element(x,i), get_vector_element(y,i));
 }
 
 

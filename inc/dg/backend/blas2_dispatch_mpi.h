@@ -63,7 +63,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
     std::vector<std::vector<int64_t>> acc( size);
     for( unsigned i=0; i<size; i++)
-        acc[i] = doDot_superacc( get_element(x,i), m, get_element(y,i));
+        acc[i] = doDot_superacc( get_vector_element(x,i), m, get_vector_element(y,i));
     for( unsigned i=1; i<size; i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
@@ -106,7 +106,7 @@ template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIVectorTag, RecursiveVectorTag )
 {
     for( unsigned i=0; i<y.size(); i++)
-        dg::blas2::symv( std::forward<Matrix>(m), get_element(x,i), get_element(y,i));
+        dg::blas2::symv( std::forward<Matrix>(m), get_vector_element(x,i), get_vector_element(y,i));
 }
 
 template< class Matrix, class Vector1, class Vector2>
@@ -120,7 +120,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
                 )
 {
     for( unsigned i=0; i<y.size(); i++)
-        dg::blas2::symv( alpha, std::forward<Matrix>(m), get_element(x,i), beta, get_element(y,i));
+        dg::blas2::symv( alpha, std::forward<Matrix>(m), get_vector_element(x,i), beta, get_vector_element(y,i));
 }
 //Matrix is an MPI matrix
 template< class Matrix, class Vector1, class Vector2>
@@ -146,7 +146,7 @@ template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIMatrixTag, RecursiveVectorTag )
 {
     for( unsigned i=0; i<y.size(); i++)
-        dg::blas2::symv( std::forward<Matrix>(m), get_element(x,i), get_element(y,i));
+        dg::blas2::symv( std::forward<Matrix>(m), get_vector_element(x,i), get_vector_element(y,i));
 }
 
 template< class Matrix, class Vector1, class Vector2>

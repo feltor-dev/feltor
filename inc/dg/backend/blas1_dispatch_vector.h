@@ -46,7 +46,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2
     std::vector<int64_t> acc( exblas::BIN_COUNT, 0);
     for( unsigned i=0; i<size; i++)
     {
-        std::vector<int64_t> temp = doDot_superacc( get_element(x1,i), get_element(x2,i));
+        std::vector<int64_t> temp = doDot_superacc( get_vector_element(x1,i), get_vector_element(x2,i));
         int imin = exblas::IMIN, imax = exblas::IMAX;
         exblas::cpu::Normalize( &(temp[0]), imin, imax);
         for( int k=exblas::IMIN; k<exblas::IMAX; k++)
@@ -71,13 +71,13 @@ inline void doSubroutine_dispatch( RecursiveVectorTag, OmpTag, size_type size, S
         #pragma omp parallel
         {
             for( int i=0; i<(int)size; i++) {//omp sometimes has problems if loop variable is not int
-                dg::blas1::subroutine( f, get_element(std::forward<container>(x),i), get_element(std::forward<Containers>(xs),i)...);
+                dg::blas1::subroutine( f, get_vector_element(std::forward<container>(x),i), get_vector_element(std::forward<Containers>(xs),i)...);
             }
         }
     }
     else //we are already in a parallel omp region
         for( int i=0; i<(int)size; i++) {
-            dg::blas1::subroutine( f, get_element(std::forward<container>(x),i), get_element(std::forward<Containers>(xs),i)...);
+            dg::blas1::subroutine( f, get_vector_element(std::forward<container>(x),i), get_vector_element(std::forward<Containers>(xs),i)...);
         }
 }
 #endif //_OPENMP
@@ -89,7 +89,7 @@ template<class size_type, class Subroutine, class container, class ...Containers
 inline void doSubroutine_dispatch( RecursiveVectorTag, AnyPolicyTag, size_type size, Subroutine f, container&& x, Containers&&... xs)
 {
     for( int i=0; i<(int)size; i++) {
-        dg::blas1::subroutine( f, get_element(std::forward<container>(x),i), get_element(std::forward<Containers>(xs),i)...);
+        dg::blas1::subroutine( f, get_vector_element(std::forward<container>(x),i), get_vector_element(std::forward<Containers>(xs),i)...);
     }
 }
 

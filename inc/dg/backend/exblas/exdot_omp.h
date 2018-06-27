@@ -231,7 +231,7 @@ void ExDOTFPE(int N, PointerOrValue1 a, PointerOrValue2 b, PointerOrValue3 c, in
  * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i y_i \f]
  * @ingroup highlevel
  * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
- * @tparam PointerOrValue must be either <tt> T, T* or const T* </tt>, where \c T is either \c float or \c double
+ * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
  * @param size size N of the arrays to sum
  * @param x1_ptr first array
  * @param x2_ptr second array
@@ -253,7 +253,7 @@ void exdot_omp(unsigned size, PointerOrValue1 x1_ptr, PointerOrValue2 x2_ptr, in
  * Computes the exact sum \f[ \sum_{i=0}^{N-1} x_i w_i y_i \f]
  * @ingroup highlevel
  * @tparam NBFPE size of the floating point expansion (should be between 3 and 8)
- * @tparam PointerOrValue must be either <tt> T, T* or const T* </tt>, where \c T is either \c float or \c double
+ * @tparam PointerOrValue must be one of <tt> T, T&&, T&, const T&, T* or const T* </tt>, where \c T is either \c float or \c double. If it is a pointer type, then we iterate through the pointed data from 0 to \c size, else we consider the value constant in every iteration.
  * @param size size N of the arrays to sum
  * @param x1_ptr first array
  * @param x2_ptr second array

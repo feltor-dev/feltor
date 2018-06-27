@@ -39,9 +39,8 @@ struct AnyVectorTag : public AnyMatrixTag{};
  * indicate addtional functionality like data resize.
  * @note We assume a class with this Tag has the following methods
  *  - \c size() returns the size (in number of elements) of the contiguous data
- *  - \c data() returns a pointer to the first element of the contiguous data
- *  - \c begin() returns a \c RandomAccessIterator to the first element of the contiguous data 
- *      (can be the same as \c data() )
+ *  - \c data() returns a pointer (or something for which the \c thrust::pointer_traits are specialized) to the first element of the contiguous data.
+ *  The return type must be convertible to <tt> (const) value_type* </tt>
  */
 struct SharedVectorTag  : public AnyVectorTag {};
 /**

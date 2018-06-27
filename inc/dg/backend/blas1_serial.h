@@ -10,21 +10,31 @@ namespace blas1
 {
 namespace detail
 {
-template<class RA1, class RA2>
-inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, RA1 x_ptr, RA2 y_ptr) {
+template<class PointerOrValue1, class PointerOrValue2>
+inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
     exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]) ;
     return h_superacc;
 }
-template<class RA1, class RA2, class RA3>
-inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, RA1 x_ptr, RA2 y_ptr, RA3 z_ptr) {
+template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3>
+inline std::vector<int64_t> doDot_dispatch( SerialTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr, PointerOrValue3 z_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
     exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]) ;
     return h_superacc;
 }
 
-template< class Subroutine, class T, class ...Ts>
-inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, T x, Ts... xs)
+template<class T>
+inline T get_element( T x, int i){
+	return x;
+}
+template<class T>
+inline T& get_element( T* x, int i){
+	return *(x+i);
+}
+
+
+template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
+inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {
     for( int i=0; i<size; i++)
     {

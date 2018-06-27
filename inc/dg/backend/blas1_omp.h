@@ -12,8 +12,8 @@ namespace detail
 {
 const int MIN_SIZE=100;//don't parallelize if work is too small
 
-template<class RA1, class RA2>
-inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, RA1 x_ptr, RA2 y_ptr) {
+template<class PointerOrValue1, class PointerOrValue2>
+inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
     if(size<MIN_SIZE)
         exblas::exdot_cpu( size, x_ptr,y_ptr, &h_superacc[0]);
@@ -21,8 +21,8 @@ inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, RA1 x_ptr, RA
         exblas::exdot_omp( size, x_ptr,y_ptr, &h_superacc[0]);
     return h_superacc;
 }
-template<class RA1, class RA2, class RA3>
-inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, RA1 x_ptr, RA2 y_ptr, RA3 z_ptr) {
+template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3>
+inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr, PointerOrValue3 z_ptr) {
     std::vector<int64_t> h_superacc(exblas::BIN_COUNT);
     if(size<MIN_SIZE)
         exblas::exdot_cpu( size, x_ptr,y_ptr,z_ptr, &h_superacc[0]);
@@ -31,17 +31,18 @@ inline std::vector<int64_t> doDot_dispatch( OmpTag, unsigned size, RA1 x_ptr, RA
     return h_superacc;
 }
 
-template< class Subroutine, class T, class ...Ts>
-inline void doSubroutine_omp( int size, Subroutine f, T x, Ts... xs)
+template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
+inline void doSubroutine_omp( int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {
 #pragma omp for nowait
     for( int i=0; i<size; i++)
         //f(x[i], xs[i]...);
-        f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
+        //f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
+        f(get_element(x,i), get_element(xs,i)...);
 }
 
-template< class Subroutine, class T, class ...Ts>
-inline void doSubroutine_dispatch( OmpTag, int size, Subroutine f, T x, Ts... xs)
+template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
+inline void doSubroutine_dispatch( OmpTag, int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {
     if(omp_in_parallel())
     {

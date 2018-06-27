@@ -38,18 +38,19 @@ template<class Vector>
 using get_tensor_category = typename TensorTraits< typename std::decay<Vector>::type >::tensor_category;
 template<class Vector>
 using get_execution_policy = typename TensorTraits<typename std::decay<Vector>::type>::execution_policy;
-template<class Vector>
-using get_pointer_type = typename std::conditional< std::is_const< typename std::remove_reference<Vector>::type >::value, 
-const get_value_type<Vector>*, get_value_type<Vector>* >::type;
-////////////get element, data and iterator
+///@}
 ///@cond
+////////////get element, pointer and data
+template<class Vector>
+using get_pointer_type = typename std::conditional< std::is_const< typename std::remove_reference<Vector>::type >::value,
+const get_value_type<Vector>*, get_value_type<Vector>* >::type;
 template<class T>
-inline auto do_get_element( T&& v, unsigned i, AnyVectorTag)-> decltype(v[i]){
+inline auto do_get_vector_element( T&& v, unsigned i, AnyVectorTag)-> decltype(v[i]){
     return v[i];
 }
 template<class T>
-inline T do_get_element( T&& v, unsigned i, AnyScalarTag){
-    return v;
+inline T&& do_get_vector_element( T&& v, unsigned i, AnyScalarTag){
+    return std::forward<T>(v);
 }
 
 template<class T>
@@ -57,34 +58,24 @@ inline auto do_get_data( T&& v, AnyVectorTag)-> decltype(v.data()){
     return v.data();
 }
 template<class T>
-inline T do_get_data( T&& v, AnyScalarTag){
-    return v;
+inline T&& do_get_data( T&& v, AnyScalarTag){
+    return std::forward<T>(v);
 }
 
 template<class T>
-get_pointer_type<T> do_get_pointer_or_scalar( T&& v, AnyVectorTag)// -> decltype(thrust::raw_pointer_cast(v.data()))
+inline get_pointer_type<T> do_get_pointer_or_reference( T&& v, AnyVectorTag)// -> decltype(thrust::raw_pointer_cast(v.data())) //nvcc-7.5 does not like decltype in this connection
 {
     return thrust::raw_pointer_cast(v.data());
 }
 template<class T>
-T do_get_pointer_or_scalar( T&& v, AnyScalarTag){
-    return v;
+inline T&& do_get_pointer_or_reference( T&& v, AnyScalarTag){
+    return std::forward<T>(v);
 }
 
 template<class T>
-inline auto get_element( T&& v, unsigned i ) -> decltype( do_get_element( std::forward<T>(v), i, get_tensor_category<T>()) ) {
-    return do_get_element( std::forward<T>(v), i, get_tensor_category<T>());
+inline auto get_vector_element( T&& v, unsigned i ) -> decltype( do_get_vector_element( std::forward<T>(v), i, get_tensor_category<T>()) ) {
+    return do_get_vector_element( std::forward<T>(v), i, get_tensor_category<T>());
 }
-
-template<class T>
-inline T get_element( T x, int i){
-	return x;
-}
-template<class T>
-inline T get_element( T* x, int i){
-	return *(x+i);
-}
-
 
 template<class T>
 inline auto get_data( T&& v)-> decltype(do_get_data( std::forward<T>(v), get_tensor_category<T>() )){
@@ -92,13 +83,12 @@ inline auto get_data( T&& v)-> decltype(do_get_data( std::forward<T>(v), get_ten
 }
 
 template<class T>
-typename std::conditional<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T, get_pointer_type<T> >::type get_pointer_or_scalar( T&& v )// -> decltype( do_get_pointer_or_scalar( std::forward<T>(v), get_tensor_category<T>())) 
+typename std::conditional<std::is_base_of<AnyScalarTag, get_tensor_category<T>>::value, T, get_pointer_type<T> >::type get_pointer_or_reference( T&& v )// -> decltype( do_get_pointer_or_reference( std::forward<T>(v), get_tensor_category<T>()))
 {
-    return do_get_pointer_or_scalar( std::forward<T>(v), get_tensor_category<T>());
+    return do_get_pointer_or_reference( std::forward<T>(v), get_tensor_category<T>());
 }
 
 ///@endcond
-///@}
 
 }//namespace dg
 

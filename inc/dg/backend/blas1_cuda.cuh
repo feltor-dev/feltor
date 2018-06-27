@@ -8,8 +8,8 @@ namespace blas1
 namespace detail
 {
 
-template<class RA1, class RA2>
-inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, RA1 x_ptr, RA2 y_ptr) {
+template<class PointerOrValue1, class PointerOrValue2>
+inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr) {
     static thrust::device_vector<int64_t> d_superacc(exblas::BIN_COUNT);
     int64_t * d_ptr = thrust::raw_pointer_cast( d_superacc.data());
     exblas::exdot_gpu( size, x_ptr,y_ptr, d_ptr);
@@ -17,8 +17,8 @@ inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, RA1 x_ptr, R
     cudaMemcpy( &h_superacc[0], d_ptr, exblas::BIN_COUNT*sizeof(int64_t), cudaMemcpyDeviceToHost);
     return h_superacc;
 }
-template<class RA1, class RA2, class RA3>
-inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, RA1 x_ptr, RA2 y_ptr, RA3 z_ptr) {
+template<class PointerOrValue1, class PointerOrValue2, class PointerOrValue3>
+inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, PointerOrValue1 x_ptr, PointerOrValue2 y_ptr, PointerOrValue3 z_ptr) {
     static thrust::device_vector<int64_t> d_superacc(exblas::BIN_COUNT);
     int64_t * d_ptr = thrust::raw_pointer_cast( d_superacc.data());
     exblas::exdot_gpu( size, x_ptr,y_ptr,z_ptr, d_ptr);
@@ -27,8 +27,19 @@ inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, RA1 x_ptr, R
     return h_superacc;
 }
 
-template<class Subroutine, class T, class ...Ts>
- __global__ void subroutine_kernel( int size, Subroutine f, T x, Ts... xs)
+template<class T>
+__device__
+inline T get_element( T x, int i){
+	return x;
+}
+template<class T>
+__device__
+inline T& get_element( T* x, int i){
+	return *(x+i);
+}
+
+template<class Subroutine, class PointerOrValue, class ...PointerOrValues>
+ __global__ void subroutine_kernel( int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {
     const int thread_id = blockDim.x * blockIdx.x + threadIdx.x;
     const int grid_size = gridDim.x*blockDim.x;
@@ -39,8 +50,8 @@ template<class Subroutine, class T, class ...Ts>
         f(get_element(x,i), get_element(xs,i)...);
 }
 
-template< class Subroutine, class T, class ...Ts>
-inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, T x, Ts... xs)
+template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
+inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);

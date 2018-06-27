@@ -41,7 +41,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
             >::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
-    return dg::blas1::detail::doDot_dispatch( execution_policy(), size, get_pointer_or_scalar(x), get_pointer_or_scalar(m), get_pointer_or_scalar(y));
+    return dg::blas1::detail::doDot_dispatch( execution_policy(), size, get_pointer_or_reference(x), get_pointer_or_reference(m), get_pointer_or_reference(y));
 }
 template< class Vector1, class Matrix, class Vector2>
 inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, const Vector2& y, AnyScalarTag, RecursiveVectorTag)
@@ -51,7 +51,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
     std::vector<std::vector<int64_t>> acc( size);
     for( unsigned i=0; i<size; i++)
-        acc[i] = doDot_superacc( get_element(x,i), m, get_element(y,i));
+        acc[i] = doDot_superacc( get_vector_element(x,i), m, get_vector_element(y,i));
     for( unsigned i=1; i<size; i++)
     {
         int imin = exblas::IMIN, imax = exblas::IMAX;
