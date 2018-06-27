@@ -31,8 +31,6 @@ template<class T>
 inline T& get_element( T* x, int i){
 	return *(x+i);
 }
-
-
 template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
 inline void doSubroutine_dispatch( SerialTag, int size, Subroutine f, PointerOrValue x, PointerOrValues... xs)
 {

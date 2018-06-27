@@ -2,7 +2,6 @@
 #define _DG_VECTOR_TRAITS_
 
 #include <type_traits>
-#include <thrust/iterator/constant_iterator.h>
 #include <thrust/memory.h>
 #include "scalar_categories.h"
 #include "vector_categories.h"

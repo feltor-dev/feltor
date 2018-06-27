@@ -23,8 +23,8 @@ int main()
     vec2 = vec1;
     std::array<float, 3>  arr1{2,3,4}, arr2(arr1);
     dg::HVec  hvec1 ( vec1.begin(), vec1.end());
-    dg::fDVec  dvec1 ( vec1.begin(), vec1.end());
-    std::vector<dg::fDVec  > arrdvec1( 3, dvec1);
+    dg::DVec  dvec1 ( vec1.begin(), vec1.end());
+    std::vector<dg::DVec  > arrdvec1( 3, dvec1);
 
     std::cout << "Test trivial parallel functions:\n"<<std::boolalpha;
     dg::blas1::axpby( 2., x1, 3., x2);
@@ -38,9 +38,9 @@ int main()
     dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
     std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0][0] == 26 && arrdvec1[1][0]==46.)<<std::endl;
     // test the examples in the documentation
-	std::array<dg::DVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
+    std::array<dg::DVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
-	dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
+    dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
     std::cout << "Example in documentation          "<< (array_v[0][0] == 110 && array_v[1][1] == 820)<<std::endl;
     std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);

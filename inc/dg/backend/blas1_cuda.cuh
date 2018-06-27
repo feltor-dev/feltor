@@ -29,12 +29,12 @@ inline std::vector<int64_t> doDot_dispatch( CudaTag, unsigned size, PointerOrVal
 
 template<class T>
 __device__
-inline T get_element( T x, int i){
+inline T get_device_element( T x, int i){
 	return x;
 }
 template<class T>
 __device__
-inline T& get_element( T* x, int i){
+inline T& get_device_element( T* x, int i){
 	return *(x+i);
 }
 
@@ -47,7 +47,7 @@ template<class Subroutine, class PointerOrValue, class ...PointerOrValues>
     for( int i = thread_id; i<size; i += grid_size)
         //f(x[i], xs[i]...);
         //f(thrust::raw_reference_cast(*(x+i)), thrust::raw_reference_cast(*(xs+i))...);
-        f(get_element(x,i), get_element(xs,i)...);
+        f(get_device_element(x,i), get_device_element(xs,i)...);
 }
 
 template< class Subroutine, class PointerOrValue, class ...PointerOrValues>
@@ -55,7 +55,7 @@ inline void doSubroutine_dispatch( CudaTag, int size, Subroutine f, PointerOrVal
 {
     const size_t BLOCK_SIZE = 256;
     const size_t NUM_BLOCKS = std::min<size_t>((size-1)/BLOCK_SIZE+1, 65000);
-    subroutine_kernel<Subroutine, T, Ts...><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, f, x, xs...);
+    subroutine_kernel<Subroutine, PointerOrValue, PointerOrValues...><<<NUM_BLOCKS, BLOCK_SIZE>>>(size, f, x, xs...);
 }
 
 

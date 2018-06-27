@@ -28,10 +28,10 @@ int main( int argc, char* argv[])
     std::vector<double> vec1(3, x3), vec2;
     vec1[0] = 10., vec1[1] = 20., vec1[2] = 30;
     vec2 = vec1;
-    std::array<float, 3>  arr1{2,3,4}, arr2(arr1);
-    dg::MHVec  hvec1 ( dg::HVec(vec1.begin(), vec1.end()), comm);
-    dg::fMDVec dvec1 ( dg::DVec(vec1.begin(), vec1.end()), comm);
-    std::vector<dg::fMDVec  > arrdvec1( 3, dvec1);
+    std::array<double, 3>  arr1{2,3,4}, arr2(arr1);
+    dg::MHVec hvec1 ( dg::HVec(vec1.begin(), vec1.end()), comm);
+    dg::MDVec dvec1 ( dg::DVec(vec1.begin(), vec1.end()), comm);
+    std::vector<dg::MDVec  > arrdvec1( 3, dvec1);
 
     if(rank==0)std::cout << "Test trivial parallel functions:\n"<<std::boolalpha;
     dg::blas1::axpby( 2., x1, 3., x2);
@@ -45,9 +45,9 @@ int main( int argc, char* argv[])
     dg::blas1::axpby( 2., vec1 , 3, arrdvec1);
     if(rank==0)std::cout << "Recursive Scalar/Vetor addition   "<< (arrdvec1[0].data()[0] == 26 && arrdvec1[1].data()[0]==46.)<<std::endl;
     // test the examples in the documentation
-	std::array<dg::MDVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
+    std::array<dg::MDVec, 3> array_v{ dvec1, dvec1, dvec1}, array_w(array_v);
     std::array<double, 3> array_p{ 1,2,3};
-	dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
+    dg::blas1::subroutine( Expression(), array_v, array_w, array_p);
     if(rank==0)std::cout << "Example in documentation      	  "<< (array_v[0].data()[0] == 110 && array_v[1].data()[1] == 820)<<std::endl;
     if(rank==0)std::cout << "Test DOT functions:\n"<<std::boolalpha;
     double result = dg::blas1::dot( 1., array_p);
