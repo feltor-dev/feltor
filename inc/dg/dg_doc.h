@@ -123,7 +123,7 @@
   *  - Scalars ...
   *  .
   * If there are several \c ContainerTypes in the argument list, then \c TensorTraits must exist for all of them
-  *  \see \ref dispatch
+  * \see See \ref dispatch for a detailed explanation of the type dispatch system
   */
  /** @class hide_matrix
   * @tparam MatrixType
@@ -139,7 +139,6 @@
   *  that have a corresponding member function in the Matrix class (e.g. \c symv( const container&, container&); ) can be called.
   *  .
   *  If a \c container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements.
-  *  \see mat_list
   */
   /** @class hide_geometry
   * @tparam Geometry

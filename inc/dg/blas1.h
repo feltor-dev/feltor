@@ -56,7 +56,6 @@ namespace blas1
  * the execution policy to determine the implementation and thus works
  * only on types with same execution policy
  * @note catches self-assignment
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
  * @copydoc hide_ContainerType
  */
 template<class ContainerTypeIn, class ContainerTypeOut>
@@ -77,7 +76,6 @@ dg::blas1::scal( two,  0.5 )); // result[i] = 1.
 @endcode
  * @param alpha Scalar
  * @param x ContainerType x
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
  * @copydoc hide_ContainerType
  */
 template< class ContainerType>
@@ -99,7 +97,6 @@ dg::blas1::plus( two,  2. )); // result[i] = 4.
 @endcode
  * @param alpha Scalar
  * @param x ContainerType x
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
  * @copydoc hide_ContainerType
  */
 template< class ContainerType>
@@ -123,7 +120,6 @@ dg::blas1::axpby( 2, two, 3., three); // three[i] = 13 (2*2+3*3)
  * @param x ContainerType x may alias y
  * @param beta Scalar
  * @param y ContainerType y contains solution on output
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
  * @copydoc hide_ContainerType
  */
 template< class ContainerType, class ContainerType1>
@@ -157,7 +153,6 @@ dg::blas1::axpbypgz( 2.5, two, 2., five, -3.,result);
  * @param y ContainerType y may alias result
  * @param gamma Scalar
  * @param z ContainerType contains solution on output
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
  * @copydoc hide_ContainerType
  */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -203,7 +198,6 @@ dg::blas1::axpby( 2, two, 3., three, result); // result[i] = 13 (2*2+3*3)
  * @param beta Scalar
  * @param y ContainerType y may alias z
  * @param z ContainerType z contains solution on output
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
  * @copydoc hide_ContainerType
  */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -228,7 +222,6 @@ dg::blas1::pointwiseDot(2., two,  three, -4., result );
 * @param x2 ContainerType x2 may alias x1
 * @param beta scalar
 * @param y  ContainerType y contains result on output ( may alias x1 or x2)
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
 * @copydoc hide_ContainerType
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -263,7 +256,6 @@ dg::blas1::pointwiseDot( two,  three, result ); // result[i] = 6.
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
 * @param y  ContainerType y contains result on output ( may alias x1 or x2)
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
 * @copydoc hide_ContainerType
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -289,7 +281,6 @@ dg::blas1::pointwiseDot(2., two,  three, four, -4., result );
 * @param x3 ContainerType x3 may alias x1 and/or x2
 * @param beta scalar
 * @param y  ContainerType y contains result on output ( may alias x1,x2 or x3)
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
 * @copydoc hide_ContainerType
 */
 template< class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3>
@@ -319,7 +310,6 @@ dg::blas1::pointwiseDivide( 3, two,  three, 5, result );
 * @param x2 ContainerType x2 may alias x1
 * @param beta scalar
 * @param y  ContainerType y contains result on output ( may alias x1 and/or x2)
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
 * @copydoc hide_ContainerType
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -351,7 +341,6 @@ dg::blas1::pointwiseDivide( two,  three, result );
 * @param x1 ContainerType x1
 * @param x2 ContainerType x2 may alias x1
 * @param y  ContainerType y contains result on output ( may alias x1 and/or x2)
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
 * @copydoc hide_ContainerType
 */
 template< class ContainerType, class ContainerType1, class ContainerType2>
@@ -380,7 +369,6 @@ dg::blas1::pointwiseDot(2., two,  three, -4., four, five, 2., result );
 * @param gamma scalar
 * @param z  ContainerType z contains result on output
 * @note all aliases are allowed
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
 * @copydoc hide_ContainerType
 */
 template<class ContainerType, class ContainerType1, class ContainerType2, class ContainerType3, class ContainerType4>
@@ -413,7 +401,6 @@ dg::blas1::transform( two, result, dg::EXP<double>());
  * @param x ContainerType x may alias y
  * @param y ContainerType y contains result, may alias x
  * @param op unary Operator to use on every element
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
  * @tparam UnaryOp Functor with signature: \c value_type \c operator()( value_type)
  * @note \c UnaryOp must be callable on the device in use. In particular, with CUDA it must be of functor tpye (@b not a function) and its signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
  * @copydoc hide_ContainerType
@@ -443,7 +430,6 @@ dg::blas1::evaluate( result, dg::equals(), function, pi2, pi3);
  * @param x0 first input
  * @param xs more input
  * @note all aliases allowed
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
  * @tparam BinarySubroutine Functor with signature: \c void \c operator()( value_type_y&, value_type_g) i.e. it writes into the first and reads from its second argument
  * @tparam Functor signature: \c value_type_g \c operator()( value_type_x0, value_type_x1, ...)
  * @note Both \c BinarySubroutine and \c Functor must be callable on the device in use. In particular, with CUDA they must be functor tpyes (@b not functions) and their signatures must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
@@ -488,11 +474,14 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Conta
  * @copydoc hide_iterations
  *
 @code
-void routine( double x, double y, double& z){
+struct Routine{
+DG_DEVICE
+void operator()( double x, double y, double& z){
    z = 7*x+y + z ;
 }
+};
 dg::DVec two( 100,2), three(100,3), four(100,4);
-dg::blas1::subroutine( routine, two, three, four);
+dg::blas1::subroutine( Routine(), two, three, four);
 // four[i] now has the value 21 (7*2+3+4)
 @endcode
 
@@ -503,7 +492,6 @@ dg::blas1::subroutine( routine, two, three, four);
 number of input and output arguments. In this sense it replaces all other \c blas1 functions
 except the scalar product, which is not trivial parallel.
 @attention The user has to decide whether or not it is safe to alias input or output vectors. If in doubt, do not alias output vectors.
- * @note See \ref dispatch_subroutine for a detailed explanation of the type dispatch system
  * @tparam Subroutine a function or functor taking a \c value_type argument for each input argument in the call
  * and a <tt> value_type&  </tt> argument for each output argument.
  * \c Subroutine must be callable on the device in use. In particular, with CUDA it must be a functor (@b not a function) and its signature must contain the \__device__ specifier. (s.a. \ref DG_DEVICE)
@@ -547,7 +535,6 @@ double temp = dg::blas1::dot( two, three); // temp = 30 (5*(2*3))
  * @return Scalar product as defined above
  * @note This routine is always executed synchronously due to the
         implicit memcpy of the result. With mpi the result is broadcasted to all processes
- * @note See \ref dispatch_dot for a detailed explanation of the type dispatch system
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class ContainerType2>

@@ -73,7 +73,6 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
  * @note This routine is always executed synchronously due to the
     implicit memcpy of the result.
  * @tparam MatrixType Right now \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
- * @note See \ref dispatch_dot for a detailed explanation of the type dispatch system
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class MatrixType, class ContainerType2>
@@ -93,7 +92,6 @@ inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType
     implicit memcpy of the result.
  * @note This routine is equivalent to the call \c dg::blas2::dot( x, m, x);
      which should be prefered because it looks more explicit
- * @note See \ref dispatch_dot for a detailed explanation of the type dispatch system
  * @tparam MatrixType Right now \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
  * @copydoc hide_ContainerType
  */
@@ -182,7 +180,6 @@ inline void doSymv( MatrixType&& M,
  * @param x input vector
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
- * @note See \ref dispatch_symv for a detailed explanation of the type dispatch system
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag
  * @copydoc hide_matrix
  * @copydoc hide_ContainerType
@@ -211,7 +208,6 @@ inline void symv( get_value_type<ContainerType1> alpha,
  * @param M The Matrix. Note that if \c x and \c y have the \c RecursiveVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
- * @note See \ref dispatch_symv for a detailed explanation of the type dispatch system
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
  * @copydoc hide_matrix
  * @copydoc hide_ContainerType
@@ -232,7 +228,6 @@ inline void symv( MatrixType&& M,
  * @param x input vector
  * @param beta A Scalar
  * @param y contains the solution on output (may not alias \p x)
- * @note See \ref dispatch_symv for a detailed explanation of the type dispatch system
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
  * @copydoc hide_matrix
  * @copydoc hide_ContainerType
@@ -254,7 +249,6 @@ inline void gemv( get_value_type<ContainerType1> alpha,
  * @param M The Matrix. Note that if \c x and \c y have the \c RecursiveVectorTag while \c M does not, then \c M is recursively applied to all \c x[i], \c y[i]
  * @param x input vector
  * @param y contains the solution on output (may not alias \p x)
- * @note See \ref dispatch_symv for a detailed explanation of the type dispatch system
  * @attention \p y may not alias \p x, the only exception is if \c MatrixType has the \c AnyVectorTag and \c ContainerType1 ==\c ContainerType2
  * @copydoc hide_matrix
  * @copydoc hide_ContainerType
