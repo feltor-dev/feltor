@@ -103,7 +103,7 @@ inline void doSymv( get_value_type<Vector1> alpha,
                 MPIVectorTag
                 )
 {
-    dg::blas2::symv( alpha, m.data(), get_data(x), beta, get_data(y));
+    dg::blas2::symv( alpha, m.data(), do_get_data(x,get_tensor_category<Vector1>()), beta, do_get_data(y, get_tensor_category<Vector2>()));
 }
 template< class Matrix, class Vector1, class Vector2>
 inline void doSymv( Matrix&& m, const Vector1& x, Vector2& y, MPIVectorTag, RecursiveVectorTag )

@@ -59,15 +59,21 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedV
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     //maybe assert size here?
     auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
-    return dg::blas1::detail::doDot_dispatch( execution_policy(), size, do_get_pointer_or_reference(x,get_tensor_category<Vector1>()), do_get_pointer_or_reference(y,get_tensor_category<Vector2>()));
+    return dg::blas1::detail::doDot_dispatch( execution_policy(), size,
+            do_get_pointer_or_reference(x, get_tensor_category<Vector1>()),
+            do_get_pointer_or_reference(y, get_tensor_category<Vector2>()));
 }
 
 template< class Subroutine, class ContainerType, class ...ContainerTypes>
 inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, ContainerTypes&&... xs)
 {
+
+//#ifdef DG_DEBUG
+    //is this possible?
+    //assert( !x.empty());
+    //assert( x.size() == xs.size() );
+//#endif //DG_DEBUG
     using vector_type = find_if_t<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>;
-    static_assert( !is_scalar<vector_type>::value,
-            "At least one ContainerType must have a non-trivial execution policy!"); //Actually, we know that this is true at this point
     using execution_policy = get_execution_policy<vector_type>;
     static_assert( all_true<
             dg::has_any_or_same_policy<ContainerType, execution_policy>::value,
@@ -75,12 +81,6 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, Cont
             >::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>::value;
-
-//#ifdef DG_DEBUG
-    //is this possible?
-    //assert( !x.empty());
-    //assert( x.size() == xs.size() );
-//#endif //DG_DEBUG
     doSubroutine_dispatch(
             get_execution_policy<vector_type>(),
             std::get<vector_idx>(std::forward_as_tuple(x,xs...)).size(),

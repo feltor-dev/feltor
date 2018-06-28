@@ -20,6 +20,8 @@ inline void transfer( const from_ContainerType& source, to_ContainerType& target
 
 template< class ContainerType, class ContainerType1, class ContainerType2>
 inline void pointwiseDot( get_value_type<ContainerType> alpha, const ContainerType1& x1, const ContainerType2& x2, get_value_type<ContainerType> beta, ContainerType& y);
+template< class ContainerType, class ContainerType1, class ContainerType2>
+inline void pointwiseDot( const ContainerType1& x1, const ContainerType2& x2, ContainerType& y);
 }//namespace blas1
 namespace blas2{
 namespace detail{
