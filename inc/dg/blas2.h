@@ -72,7 +72,7 @@ inline std::vector<int64_t> doDot_superacc( const ContainerType1& x, const Matri
  * @return Generalized scalar product. If \c x and \c y are vectors of containers and \c m is not, then we sum the results of \c dg::blas2::dot( x[i], m, y[i])
  * @note This routine is always executed synchronously due to the
     implicit memcpy of the result.
- * @tparam MatrixType Right now \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
+ * @tparam MatrixType \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
  * @copydoc hide_ContainerType
  */
 template< class ContainerType1, class MatrixType, class ContainerType2>
@@ -84,6 +84,7 @@ inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType
 
 /*! @brief \f$ x^T M x\f$; Binary reproducible general dot product
  *
+ * Equivalent to \c dg::blas2::dot( x,m,x)
  * \f[ x^T M x = \sum_{i,j=0}^{N-1} x_i M_{ij} x_j \f]
  * @param m The diagonal Matrix
  * @param x Right input
@@ -92,7 +93,7 @@ inline get_value_type<MatrixType> dot( const ContainerType1& x, const MatrixType
     implicit memcpy of the result.
  * @note This routine is equivalent to the call \c dg::blas2::dot( x, m, x);
      which should be prefered because it looks more explicit
- * @tparam MatrixType Right now \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
+ * @tparam MatrixType \c MatrixType has to have a category derived from \c AnyVectorTag and must be compatible with the \c ContainerTypes
  * @copydoc hide_ContainerType
  */
 template< class MatrixType, class ContainerType>

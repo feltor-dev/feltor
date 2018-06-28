@@ -120,17 +120,17 @@
   * Among others
   *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp), dg::MHVec (mpi + serial) or dg::MDVec (mpi + cuda / omp) </tt>
   *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles)</tt>
-  *  - Scalars ...
+  *  - <tt> double (scalar)</tt> and other primitive types ...
   *  .
   * If there are several \c ContainerTypes in the argument list, then \c TensorTraits must exist for all of them
-  * \see See \ref dispatch for a detailed explanation of the type dispatch system
+  * \see See \ref dispatch for a detailed explanation of our type %dispatch system
   */
  /** @class hide_matrix
   * @tparam MatrixType
   * Any class for which a specialization of \c TensorTraits exists and which fullfills
   * the requirements of the there defined Matrix tags derived from \c AnyMatrixTag.
   * The \c MatrixType can for example be one of:
-  *  - \c container: A container acts as a  diagonal matrix.
+  *  - \c scalar or \c container: Scalars and containers act as diagonal matrices.
   *  - \c dg::HMatrix and \c dg::IHMatrix with \c dg::HVec or \c std::vector<dg::HVec>
   *  - \c dg::DMatrix and \c dg::IDMatrix with \c dg::DVec or \c std::vector<dg::DVec>
   *  - \c dg::MHMatrix with \c dg::MHVec or \c std::vector<dg::MHVec>

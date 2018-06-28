@@ -40,9 +40,9 @@ namespace blas1
 
 /**
  * @class hide_iterations
- * where \c i iterates over @b all elements inside the given vectors. The order of iterations is indetermined. If \c ContainerType has the \c RecursiveVectorTag, \c i recursively loops over all entries.
+ * where \c i iterates over @b all elements inside the given vectors. The order of iterations is indetermined. Scalar arguments to container types are interpreted as vectors with all elements constant. If \c ContainerType has the \c RecursiveVectorTag, \c i recursively loops over all entries.
  * If the vector sizes do not match, the result is undefined.
- * The compiler chooses the implementation and parallelization of this function based on the \c execution_policy tag of the \c ContainerTypes.
+ * The compiler chooses the implementation and parallelization of this function based on given template parameters. For a full set of rules please refer to \ref dispatch.
  */
 
 /**
@@ -480,8 +480,8 @@ void operator()( double x, double y, double& z){
    z = 7*x+y + z ;
 }
 };
-dg::DVec two( 100,2), three(100,3), four(100,4);
-dg::blas1::subroutine( Routine(), two, three, four);
+dg::DVec two( 100,2), four(100,4);
+dg::blas1::subroutine( Routine(), two, 3., four);
 // four[i] now has the value 21 (7*2+3+4)
 @endcode
 
