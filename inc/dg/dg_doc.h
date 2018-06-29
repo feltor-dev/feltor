@@ -90,7 +90,7 @@
  *     @defgroup matrixoperators Elliptic and Helmholtz operators
  *     @defgroup multigrid Advanced matrix inversion
  * @}
- * @defgroup misc Level 00: Miscellaneous additions
+ * @defgroup misc Level 0: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
  *     @defgroup functions Functions and Functors
@@ -205,42 +205,41 @@
  *    - \e promote: A Scalar can be promoted to a Vector with all elements equal to the value of the Scalar. A Vector can be promoted to a  Matrix with the Vector being the diagonal and all other elements zero.
  *
  * When dispatching level 1 functions we distinguish between three classes of
- * functions: trivially parallel (\c dg::blas1::subroutine), global communication
- * (\c dg::blas1::dot and \c dg::blas2::dot) and local communication (\c dg::blas2::symv)
+ * functions: trivially parallel (\c dg::blas1::subroutine and related \c dg::blas1 functions), global communication
+ * (\c dg::blas1::dot and \c dg::blas2::dot) and local communication (\c dg::blas2::symv).
  *
  * @subsection dispatch_subroutine The subroutine function
  *
- * The execution of \c dg::blas1::subroutine with a Functor called \c routine  and all related \c dg::blas1 functions is equivalent to the following:
+ * The execution of \c dg::blas1::subroutine with a Functor called \c routine
+ * (and all related \c dg::blas1 functions) is equivalent to the following:
  *  -# Assert the following prerequisites:
  *
- *      -# All template parameter types must be either Scalars or Vectors and have an execution policy
+ *      -# All template parameter types must be either Scalars or Vectors and have an execution policy and a value type
  *      -# All Vectors and all execution policies must be mutually compatible
  *      -# All Vectors must contain the same number of elements (equal sizes)
- *      -# In an MPI environment the Vector MPI-communicators must be \c congruent or \c ident
  *      -# The number of template parameters must be equal to the number of parameters in the \c routine
- *      -# The value type of every template parameter must be convertible to the respective parameter type of the given \c routine
+ *      -# The value type of every template parameter must be convertible to the respective parameter type in the \c routine
  *  -# If all types are Scalars, apply the \c routine and return
  *  -# If at least one type is a Vector, then all Scalars
  *     are promoted to this type with the same size, communicator and execution policy
  *  -# Check the base class of the tensor_category:
  *      -# If \c dg::SharedVectorTag, check execution policy and dispatch to respective implementation (The implementation just loops over all elements in the vectors and applies the \c routine)
- *      -# If \c dg::MPIVectorTag, access the underlying data and recursively call \c dg::blas1::subroutine (and start again at 1 with new data)
+ *      -# If \c dg::MPIVectorTag, access the underlying data and recursively call \c dg::blas1::subroutine (and start again at 1)
  *      -# If \c dg::RecursiveVectorTag, loop over all elements and recursively call \c dg::blas1::subroutine for all elements (and start again at 1)
  *
  * @subsection dispatch_dot The dot function
  * The execution of \c dg::blas1::dot and \c dg::blas2::dot is equivalent to the following:
  *  -# Assert the following prerequisites:
  *
- *      -# All template parameter types must be either Scalars or Vectors and have an execution policy
+ *      -# All template parameter types must be either Scalars or Vectors and have an execution policy and a value type
  *      -# All Vectors and all execution policies must be mutually compatible
  *      -# All Vectors must contain the same number of elements (equal sizes)
- *      -# In an MPI environment the Vector MPI-communicators must be \c congruent or \c ident
  *  -# If all types are Scalars, multiply and return
  *  -# If at least one type is a Vector, then all Scalars
  *     are promoted to this type with the same size, communicator and execution policy
  *  -# Check the base class of the tensor_category:
  *      -# If \c dg::SharedVectorTag, check execution policy and dispatch to respective implementation (The implementation multiplies and accumulates all elements in the vectors). Return the result.
- *      -# If \c dg::MPIVectorTag, access the underlying data and recursively call \c dot (and start again at 1 with new data). Accumulate the result
+ *      -# If \c dg::MPIVectorTag, assert that the vector MPI-communicators are \c congruent or \c ident. Then, access the underlying data and recursively call \c dot (and start again at 1). Accumulate the result
  *      among participating processes and return.
  *      -# If \c dg::RecursiveVectorTag, loop over all elements and recursively call \c dot for all elements (and start again at 1). Accumulate the results
  *      and return.
@@ -249,13 +248,13 @@
  * The execution of the \c dg::blas2::symv (and \c dg::blas2::gemv) functions is hard to discribe in general
  * since each matrix class has individual prerequisites and execution paths.
  * Still, we can identify some general rules:
- *   -# If the Matrix has the \c dg::SelfMadeMatrixTag tensor category, then all parameters are immediately forwarded to the \c symv member function. No asserts are performed.
  *   -# The Matrix type can be either a Scalar (promotes to Scalar times the Unit Matrix), a Vector (promotes to a diagonal Matrix) or a Matrix
- *   -# The remaining template parameters must be Vectors or Scalars and must
- *   have compatible execution policies. Vectors must be compatible
+ *   -# If the Matrix is either a Scalar or a Vector and the remaining types do not have the \c dg::RecursiveVectorTag tensor category, then \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
+ *   -# If the Matrix has the \c dg::SelfMadeMatrixTag tensor category, then all parameters are immediately forwarded to the \c symv member function. No asserts are performed and none of the following applies.
+ *   -# The container template parameters must be Vectors or Scalars and must
+ *   have compatible execution policies. Vectors must be compatible.
  *   -# If the tensor category of the Vectors is \c dg::RecursiveVectorTag and
  *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is recursively called with the Matrix on all elements of the Vectors.
- *   -# If the Matrix is either a Scalar or a Vector and the remaining types do not have the \c dg::RecursiveVectorTag tensor category, then \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
  *
  * @subsection dispatch_examples Examples
  *
@@ -266,7 +265,7 @@
  // initialize v and w with some meaningful values
  @endcode
  In an MPI implementation we would simply write \c dg::MDVec instead of \c dg::DVec.
- Let us now assume that want to compute the expression \f$ v_i  \leftarrow v_i^2 + w_i\f$
+ Let us now assume that we want to compute the expression \f$ v_i  \leftarrow v_i^2 + w_i\f$
  with the dg::blas1::subroutine. The first step is to write a Functor that
  implements this expression
  @code
@@ -277,8 +276,7 @@
     }
  };
  @endcode
- Note that we used the Marco \c DG_DEVICE to indicate that we this code also works
- on GPUs.
+ Note that we used the Marco \ref DG_DEVICE to enable this code on GPUs.
  The next step is just to apply our struct to the vectors we have.
  @code
  dg::blas1::subroutine( Expression(), v, w);
@@ -286,7 +284,7 @@
 
  Now, we want to use an additional parameter in our expresion. Let's assume we have
  @code
- double some_parameter = 3.;
+ double parameter = 3.;
  @endcode
  and we want to compute \f$ v_i \leftarrow p v_i^2 + w_i\f$. We now have two
  possibilities. We can add a private variable in \c Expression and use it in the
@@ -301,9 +299,9 @@
     private:
     double m_param;
  };
- dg::blas1::subroutine( Expression(some_parameter), v, w);
+ dg::blas1::subroutine( Expression(parameter), v, w);
  @endcode
- The other possibility is to extend the paranthesis operator like
+ The other possibility is to extend the paranthesis operator in \c Expression and call \c dg::blas1::subroutine with a scalar
  @code
  struct Expression{
     DG_DEVICE
@@ -311,25 +309,27 @@
         v = param*v*v + w;
     }
  };
- dg::blas1::subroutine( Expression(), v, w, some_parameter);
+ dg::blas1::subroutine( Expression(), v, w, parameter);
  @endcode
- The result (and runtime) is the same in both cases. However, the second is more versatile, when we use recursion. Consider that \f$ v\f$ and \f$ w\f$ are arrays of
- shared vectors, declared as
+ The result (and runtime) is the same in both cases. However, the second is more versatile,
+ when we use recursion. Consider that \f$ v,\ w\f$ and \f$ p\f$ are now arrays, declared as
  @code
  std::array<dg::DVec, 3> array_v, array_w;
- std::array<double,3> some_array_parameter;
- // initialize array_v, array_w and some_array_parameter meaningfully
+ std::array<double,3> array_parameter;
+ // initialize array_v, array_w and array_parameter meaningfully
  @endcode
- We now want to compute the expression \f$ v_{ij} \leftarrow p_i v_{ij}^2 + w_{ij}\f$, where \c i runs from 0 to 2 and \c j runs over all elements in the shared vectors
- \c array_v[i] and \c array_w[i].
- In this case we just use
+ We now want to compute the expression \f$ v_{ij} \leftarrow p_i v_{ij}^2 + w_{ij}\f$,
+ where \c i runs from 0 to 2 and \c j runs over all elements in the shared vectors
+ <tt> array_v[i] </tt> and <tt> array_w[i] </tt>.
+ In this case we just call
  @code
- dg::blas1::subroutine( Expression(), array_v, array_w, some_array_parameter);
+ dg::blas1::subroutine( Expression(), array_v, array_w, array_parameter);
  @endcode
+ and use the fact that <tt> std::array </tt> has the \c dg::RecursiveVectorTag.
 
  In order to compute the sum \f$ \sum_{i=0}^2 p_i\f$ we can use
  @code
- double sum = dg::blas1::dot( 1, some_array_parameter);
+ double sum = dg::blas1::dot( 1, array_parameter);
  @endcode
 
  * @section mpi_backend The MPI interface
