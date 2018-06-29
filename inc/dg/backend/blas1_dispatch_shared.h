@@ -5,7 +5,6 @@
 #include <cassert>
 #endif //DG_DEBUG
 
-#include <tuple>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
@@ -58,7 +57,7 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, SharedV
             >::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
     //maybe assert size here?
-    auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
+    auto size = get_idx<vector_idx>(x,y).size();
     return dg::blas1::detail::doDot_dispatch( execution_policy(), size,
             do_get_pointer_or_reference(x, get_tensor_category<Vector1>()),
             do_get_pointer_or_reference(y, get_tensor_category<Vector2>()));
@@ -83,7 +82,7 @@ inline void doSubroutine( SharedVectorTag, Subroutine f, ContainerType&& x, Cont
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar_has_not_any_policy, get_value_type<ContainerType>, ContainerType, ContainerTypes...>::value;
     doSubroutine_dispatch(
             get_execution_policy<vector_type>(),
-            std::get<vector_idx>(std::forward_as_tuple(x,xs...)).size(),
+            get_idx<vector_idx>( std::forward<ContainerType>(x), std::forward<ContainerTypes>(xs)...).size(),
             f,
             do_get_pointer_or_reference(std::forward<ContainerType>(x),get_tensor_category<ContainerType>()) ,
             do_get_pointer_or_reference(std::forward<ContainerTypes>(xs),get_tensor_category<ContainerTypes>()) ...

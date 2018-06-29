@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <tuple>
 #include "execution_policy.h"
 #include "scalar_categories.h"
 #include "tensor_traits.h"
@@ -24,6 +25,21 @@ struct find_if_impl<Predicate, n, Default, T, Ts...>
     static constexpr unsigned value = Predicate<T>::value ? n : find_if_impl<Predicate, n+1, Default, Ts...>::value;
 };
 }//namespace detail
+
+//access the element at position index
+//we name it get_idx and not get so we do not get a conflict with std::get
+template<size_t index, typename T, typename... Ts>
+inline typename std::enable_if<index==0, T>::type
+get_idx(T&& t, Ts&&... ts) {
+    return std::forward<T>(t);
+}
+
+template<size_t index, typename T, typename... Ts>
+inline typename std::enable_if<(index > 0) && index <= sizeof...(Ts),
+          typename std::tuple_element<index, std::tuple<T, Ts...>>::type>::type
+get_idx(T&& t, Ts&&... ts) {
+    return get_idx<index-1>(std::forward<Ts>(ts)...);
+}
 
 //find first instance of a type that fulfills a predicate or false_type if non is found
 template<template <typename> class Predicate, class Default, class T, class... Ts>

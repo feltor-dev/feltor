@@ -58,9 +58,9 @@ std::vector<int64_t> doDot_superacc( const Vector1& x, const Vector2& y, MPIVect
         do_get_data(y,get_tensor_category<Vector2>()));
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     //get communicator from MPIVector
-    auto comm = std::get<vector_idx>(std::forward_as_tuple(x,y)).communicator();
-    auto comm_mod = std::get<vector_idx>(std::forward_as_tuple(x,y)).communicator_mod();
-    auto comm_red = std::get<vector_idx>(std::forward_as_tuple(x,y)).communicator_mod_reduce();
+    auto comm = get_idx<vector_idx>(x,y).communicator();
+    auto comm_mod = get_idx<vector_idx>(x,y).communicator_mod();
+    auto comm_red = get_idx<vector_idx>(x,y).communicator_mod_reduce();
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), comm, comm_mod, comm_red);
     return receive;
 }

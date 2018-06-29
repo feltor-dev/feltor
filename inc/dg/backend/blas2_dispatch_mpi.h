@@ -35,9 +35,9 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
     std::vector<int64_t> acc = doDot_superacc( do_get_data(x, get_tensor_category<Vector1>()), m, do_get_data(y, get_tensor_category<Vector2>()));
     std::vector<int64_t> receive(exblas::BIN_COUNT, (int64_t)0);
     //get communicator from MPIVector
-    auto comm = std::get<vector_idx>(std::forward_as_tuple(x,y)).communicator();
-    auto comm_mod = std::get<vector_idx>(std::forward_as_tuple(x,y)).communicator_mod();
-    auto comm_red = std::get<vector_idx>(std::forward_as_tuple(x,y)).communicator_mod_reduce();
+    auto comm = get_idx<vector_idx>(x,y).communicator();
+    auto comm_mod = get_idx<vector_idx>(x,y).communicator_mod();
+    auto comm_red = get_idx<vector_idx>(x,y).communicator_mod_reduce();
     exblas::reduce_mpi_cpu( 1, acc.data(), receive.data(), comm, comm_mod, comm_red);
     return receive;
 }
@@ -63,7 +63,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 {
     //find out which one is the RecursiveVector and determine category
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
-    auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
+    auto size = get_idx<vector_idx>(x,y).size();
     std::vector<std::vector<int64_t>> acc( size);
     for( unsigned i=0; i<size; i++)
         acc[i] = doDot_superacc( do_get_vector_element(x,i,get_tensor_category<Vector1>()), m, do_get_vector_element(y,i,get_tensor_category<Vector2>()));

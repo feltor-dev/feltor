@@ -5,7 +5,6 @@
 #include <cassert>
 #endif //DG_DEBUG
 
-#include <tuple>
 #include <vector>
 #include <array>
 #include "blas1_dispatch_shared.h"
@@ -42,7 +41,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x1, const Vector2& x2
 {
     //find out which one is the RecursiveVector and determine size
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
-    auto size = std::get<vector_idx>(std::forward_as_tuple(x1,x2)).size();
+    auto size = get_idx<vector_idx>(x1,x2).size();
     std::vector<int64_t> acc( exblas::BIN_COUNT, (int64_t)0);
     for( unsigned i=0; i<size; i++)
     {
@@ -102,7 +101,7 @@ template< class Subroutine, class container, class ...Containers>
 inline void doSubroutine( RecursiveVectorTag, Subroutine f, container&& x, Containers&&... xs)
 {
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, get_value_type<container>, container, Containers...>::value;
-    auto size = std::get<vector_idx>(std::forward_as_tuple(x,xs...)).size();
+    auto size = get_idx<vector_idx>( std::forward<container>(x), std::forward<Containers>(xs)...).size();
     using vector_type = find_if_t<dg::has_not_any_policy, get_value_type<container>, container, Containers...>;
     doSubroutine_dispatch( RecursiveVectorTag(), get_execution_policy<vector_type>(), size, f, std::forward<container>( x), std::forward<Containers>( xs)...);
 }

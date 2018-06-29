@@ -40,7 +40,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
             dg::has_any_or_same_policy<Vector2, execution_policy>::value
             >::value,
         "All ContainerType types must have compatible execution policies (AnyPolicy or Same)!");
-    auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
+    auto size = get_idx<vector_idx>(x,y).size();
     return dg::blas1::detail::doDot_dispatch( execution_policy(), size, do_get_pointer_or_reference(x,get_tensor_category<Vector1>()), do_get_pointer_or_reference(m,get_tensor_category<Matrix>()), do_get_pointer_or_reference(y,get_tensor_category<Vector2>()));
 }
 template< class Vector1, class Matrix, class Vector2>
@@ -48,7 +48,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 {
     //find out which one is the RecursiveVector and determine category
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
-    auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
+    auto size = get_idx<vector_idx>(x,y).size();
     std::vector<std::vector<int64_t>> acc( size);
     for( unsigned i=0; i<size; i++)
         acc[i] = doDot_superacc( do_get_vector_element(x,i,get_tensor_category<Vector1>()), m, do_get_vector_element(y,i,get_tensor_category<Vector2>()));

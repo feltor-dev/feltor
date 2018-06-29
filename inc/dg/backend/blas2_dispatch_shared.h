@@ -58,7 +58,7 @@ inline std::vector<int64_t> doDot_superacc( const Vector1& x, const Matrix& m, c
 {
     //find out which one is the RecursiveVector and determine category
     constexpr unsigned vector_idx = find_if_v<dg::is_not_scalar, Vector1, Vector1, Vector2>::value;
-    auto size = std::get<vector_idx>(std::forward_as_tuple(x,y)).size();
+    auto size = get_idx<vector_idx>(x,y).size();
     std::vector<std::vector<int64_t>> acc( size);
     for( unsigned i=0; i<size; i++)
         acc[i] = doDot_superacc( do_get_vector_element(x,i,get_tensor_category<Vector1>()), m, do_get_vector_element(y,i,get_tensor_category<Vector2>()));

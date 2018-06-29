@@ -10,7 +10,7 @@ int main(){
 //#include <cusp/print.h>
 #include "dg/backend/typedefs.h"
 #include "xspacelib.h"
-#include "ell_interpolation.h"
+#include "ell_interpolation.cuh"
 
 const unsigned n = 3;
 const unsigned Nx = 5;
