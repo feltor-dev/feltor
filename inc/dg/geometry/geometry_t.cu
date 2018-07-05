@@ -3,7 +3,7 @@
 #include <cusp/print.h>
 
 #include "geometry.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 
 #include "../blas2.h"
 

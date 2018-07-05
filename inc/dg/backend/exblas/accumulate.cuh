@@ -24,6 +24,19 @@ namespace exblas
 {
 namespace gpu
 {
+///////////////////////////////////////////////////////////////////////////
+//********* Here, the change from float to double happens ***************//
+///////////////////////////////////////////////////////////////////////////
+template<class T>
+__device__
+static inline double get_element( T x, int i){
+	return (double)x;
+}
+template<class T>
+__device__
+static inline double get_element( T* x, int i){
+	return (double)(*(x+i));
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs

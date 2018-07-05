@@ -66,7 +66,7 @@ template< class Geometry, class Matrix, class container>
 struct Explicit
 {
     //typedef std::vector<container> Vector;
-    typedef typename dg::VectorTraits<container>::value_type value_type;
+    using value_type = dg::get_value_type<container>;
     //typedef typename thrust::iterator_system<typename container::iterator>::type MemorySpace;
     //typedef cusp::ell_matrix<int, value_type, MemorySpace> Matrix;
     //typedef dg::DMatrix Matrix; //fastest device Matrix (does this conflict with 

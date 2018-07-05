@@ -22,8 +22,6 @@ double five5( double x, double y){return 5.0005;}
 typedef dg::MPI_Vector<thrust::device_vector<double> > MVec;
 //typedef dg::MPI_Vector<cusp::array1d<double, cusp::device_memory> > MVec;
 
-struct EXP{ __host__ __device__ double operator()(double x){return exp(x);}};
-
 int main( int argc, char* argv[])
 {
     MPI_Init(&argc, &argv);
@@ -60,7 +58,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "pDot (z=awxy + bz)    "<<ud.i-4550507856334720009<<std::endl;
     dg::blas1::pointwiseDivide( 5.,v1,v2,-1,v3); ud.d = v3.data()[0];
     if(rank==0)std::cout << "pDivide (z=ax/y+bz)   "<<ud.i-4820274520177585116<<std::endl;
-    dg::blas1::transform( v1, v3, EXP()); ud.d = v3.data()[0];
+    dg::blas1::transform( v1, v3, dg::EXP<>()); ud.d = v3.data()[0];
     if(rank==0)std::cout << "transform y=exp(x)    "<<ud.i-4620007020034741378<<std::endl;
     }
     MVec v1 = dg::evaluate( two, g);
@@ -68,7 +66,7 @@ int main( int argc, char* argv[])
     MVec v3 = dg::evaluate( five, g);
     MVec v4 = dg::evaluate( four, g);
 
-    if(rank==0)std::cout << "Human readable test VectorVector (passed if ouput equals value in brackets) \n";
+    if(rank==0)std::cout << "Human readable test RecursiveVector (passed if ouput equals value in brackets) \n";
     std::vector<MVec > w1( 2, v1), w2(2, v2), w3( w2), w4( 2, v4);
     dg::blas1::axpby( 2., w1, 3., w2, w3);
     if(rank==0)std::cout << "2*2+ 3*3 = " << w3[0].data()[0] <<" (13)\n";
@@ -92,7 +90,7 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "5*0.5 = " << w1[0].data()[0] <<" (2)"<< std::endl;
     dg::blas1::evaluate( w4, dg::equals(), dg::AbsMax<>(), w1, w2);
     if(rank==0)std::cout << "absMax( 2, 5) = " << w4[0].data()[0] <<" (5)"<< std::endl;
-    dg::blas1::transform( w1, w3, EXP());
+    dg::blas1::transform( w1, w3, dg::EXP<>());
     if(rank==0)std::cout << "e^2 = " << w3[0].data()[0] <<" (7.389056...)"<< std::endl;
     dg::blas1::scal( w2, 0.6);
     dg::blas1::plus( w3, -7.0);

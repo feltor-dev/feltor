@@ -2,7 +2,7 @@
 #include <cmath>
 #include "dg/blas.h"
 #include "derivatives.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 
 double zero( double x, double y) { return 0;}
 double sine( double x, double y) { return sin(x)*sin(y);}

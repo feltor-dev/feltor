@@ -1,8 +1,8 @@
 #include <iostream>
 #include "average.h"
-#include "evaluation.cuh"
-#include "dg/backend/timer.cuh"
-#include "dg/backend/typedefs.cuh"
+#include "evaluation.h"
+#include "dg/backend/timer.h"
+#include "dg/backend/typedefs.h"
 
 const double lx = 2.*M_PI;
 const double ly = M_PI;

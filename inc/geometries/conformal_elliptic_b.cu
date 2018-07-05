@@ -14,7 +14,7 @@
 #include "solovev.h"
 //#include "guenther.h"
 #include "testfunctors.h"
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 
 const unsigned nIter=6;
 template<class Geometry>

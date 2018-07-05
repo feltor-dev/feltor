@@ -1,9 +1,9 @@
 #include <iostream>
 #include <thrust/device_vector.h>
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 #include "dg/blas.h"
 #include "derivatives.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 
 const double lx = 2*M_PI;
 double sinx(   double x, double y, double z) { return sin(x);}
@@ -36,7 +36,7 @@ int main()
     Vector w = v;
     const Vector u = dg::evaluate( cosx, g);
 
-    if( thrust::detail::is_same< dg::VectorTraits<Vector>::value_type, float>::value )
+    if( thrust::detail::is_same< dg::TensorTraits<Vector>::value_type, float>::value )
         std::cout << "Value type is float! "<<std::endl;
     else
         std::cout << "Value type is double! "<<std::endl;

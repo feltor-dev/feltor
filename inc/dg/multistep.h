@@ -13,37 +13,50 @@ namespace dg{
 /*! @class hide_explicit_implicit
  * @tparam Explicit The explicit part of the right hand side
         is a functor type with no return value (subroutine)
-        of signature <tt> void operator()(value_type, const container&, container&)</tt>
+        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
         The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
         i.e. y' = f(t, y) translates to f(t, y, y').
-        The two container arguments never alias each other in calls to the functor.
+        The two ContainerType arguments never alias each other in calls to the functor.
  * @tparam Implicit The implicit part of the right hand side
         is a functor type with no return value (subroutine)
-        of signature <tt> void operator()(value_type, const container&, container&)</tt>
+        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
         The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
         i.e. y' = f(t, y) translates to f(t, y, y').
-        The two container arguments never alias each other in calls to the functor.
+        The two ContainerType arguments never alias each other in calls to the functor.
     Furthermore, the routines %weights(), %inv_weights() and %precond() must be callable
     and return diagonal weights, inverse weights and the preconditioner for the conjugate gradient.
-    The return type of these member functions must be useable in blas2 functions together with the container type.
+    The return type of these member functions must be useable in blas2 functions together with the ContainerType type.
  * @param exp explic part
  * @param imp implicit part ( must be linear in its second argument and symmetric up to weights)
  */
 
 ///@cond
-template< size_t k>
-struct ab_coeff
-{
-    static const double b[k];
+template< size_t k,class real_type>
+struct ab_coeff;
+template<class real_type>
+struct ab_coeff<2,real_type>{
+    const real_type b[2] = {
+        1.5, -0.5
+    };
 };
-template<>
-const double ab_coeff<2>::b[2] = {1.5, -0.5};
-template<>
-const double ab_coeff<3>::b[3] = {23./12., -4./3., 5./12.};
-template<>
-const double ab_coeff<4>::b[4] = {55./24., -59./24., 37./24., -3./8.};
-template<>
-const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360., 251./720.};
+template<class real_type>
+struct ab_coeff<3,real_type>{
+    const real_type b[3] = {
+        23./12., -4./3., 5./12.
+    };
+};
+template<class real_type>
+struct ab_coeff<4,real_type>{
+    const real_type b[4] = {
+        55./24., -59./24., 37./24., -3./8.
+    };
+};
+template<class real_type>
+struct ab_coeff<5,real_type>{
+    const real_type b[5] = {
+        1901./720., -1387./360., 109./30., -637./360., 251./720.
+    };
+};
 ///@endcond
 
 /**
@@ -56,17 +69,18 @@ const double ab_coeff<5>::b[5] = {1901./720., -1387./360., 109./30., -637./360.,
 * Uses only \c blas1::axpby routines to integrate one step
 * and only one right-hand-side evaluation per step.
 * @tparam k Order of the method (Currently one of 1, 2, 3, 4 or 5)
-* @copydoc hide_container
+* @copydoc hide_ContainerType
 */
-template< size_t k, class container>
+template< size_t k, class ContainerType>
 struct AB
 {
+    using real_type = get_value_type<ContainerType>;
     ///copydoc RK_opt::RK_opt()
     AB(){}
-    ///@copydoc RK_opt::construct(const container&)
-    AB( const container& copyable){ construct(copyable); }
-    ///@copydoc RK_opt::construct(const container&)
-    void construct(const container& copyable){
+    ///@copydoc RK_opt::construct(const ContainerType&)
+    AB( const ContainerType& copyable){ construct(copyable); }
+    ///@copydoc RK_opt::construct(const ContainerType&)
+    void construct(const ContainerType& copyable){
         f_.fill( copyable);
         u_ = copyable;
     }
@@ -85,7 +99,7 @@ struct AB
      * @note the implementation is such that on output the last call to the rhs is at (t0,u0). This might be interesting if the call to the rhs changes its state.
      */
     template< class RHS>
-    void init( RHS& rhs, double t0, const container& u0, double dt);
+    void init( RHS& rhs, real_type t0, const ContainerType& u0, real_type dt);
     /**
     * @brief Advance u0 one timestep
     *
@@ -96,21 +110,22 @@ struct AB
     * @note the implementation is such that on output the last call to the rhs is at the new (t,u). This might be interesting if the call to the rhs changes its state.
     */
     template< class RHS>
-    void step( RHS& f, double& t, container& u);
+    void step( RHS& f, real_type& t, ContainerType& u);
   private:
-    double tu_, dt_;
-    std::array<container,k> f_;
-    container u_;
+    real_type tu_, dt_;
+    std::array<ContainerType,k> f_;
+    ContainerType u_;
+    const ab_coeff<k,real_type> m_ab;
 };
 
-template< size_t k, class container>
+template< size_t k, class ContainerType>
 template< class RHS>
-void AB<k, container>::init( RHS& f, double t0, const container& u0, double dt)
+void AB<k, ContainerType>::init( RHS& f, real_type t0, const ContainerType& u0, real_type dt)
 {
     tu_ = t0, dt_ = dt;
     f( t0, u0, f_[0]);
     //now do k Euler steps
-    container u1(u0);
+    ContainerType u1(u0);
     for( unsigned i=1; i<k; i++)
     {
         blas1::axpby( 1., u1, -dt, f_[i-1], u1);
@@ -123,12 +138,12 @@ void AB<k, container>::init( RHS& f, double t0, const container& u0, double dt)
     f( tu_, u_, f_[0]);
 }
 
-template< size_t k, class container>
+template< size_t k, class ContainerType>
 template< class RHS>
-void AB<k, container>::step( RHS& f, double& t, container& u)
+void AB<k, ContainerType>::step( RHS& f, real_type& t, ContainerType& u)
 {
     for( unsigned i=0; i<k; i++)
-        blas1::axpby( dt_*ab_coeff<k>::b[i], f_[i], 1., u_);
+        blas1::axpby( dt_*m_ab.b[i], f_[i], 1., u_);
     //permute f_[k-1]  to be the new f_[0]
     for( unsigned i=k-1; i>0; i--)
         f_[i-1].swap( f_[i]);
@@ -139,24 +154,25 @@ void AB<k, container>::step( RHS& f, double& t, container& u)
 
 ///@cond
 //Euler specialisation
-template < class container>
-struct AB<1, container>
+template < class ContainerType>
+struct AB<1, ContainerType>
 {
+    using real_type = get_value_type<ContainerType>;
     AB(){}
-    AB( const container& copyable){
+    AB( const ContainerType& copyable){
         construct(copyable);
     }
-    void construct(const container& copyable){
+    void construct(const ContainerType& copyable){
        f_  = u_ = copyable;
     }
     template < class RHS>
-    void init( RHS& f, double t0, const container& u0, double dt){
+    void init( RHS& f, real_type t0, const ContainerType& u0, real_type dt){
         u_ = u0;
         t_ = t0, dt_=dt;
         f( t_, u_, f_);
     }
     template < class RHS>
-    void step( RHS& f, double& t, container& u)
+    void step( RHS& f, real_type& t, ContainerType& u)
     {
         //this implementation calls rhs at end point
         blas1::axpby( 1., u_, dt_, f_, u); //compute new u
@@ -166,19 +182,20 @@ struct AB<1, container>
         f( t_, u_, f_); //and update rhs
     }
     private:
-    double t_, dt_;
-    container u_, f_;
+    real_type t_, dt_;
+    ContainerType u_, f_;
 };
 ///@endcond
 ///@cond
 namespace detail{
 
 //compute: y + alpha f(y,t)
-template< class LinearOp, class container>
+template< class LinearOp, class ContainerType>
 struct Implicit
 {
-    Implicit( double alpha, double t, LinearOp& f): f_(f), alpha_(alpha), t_(t){}
-    void symv( const container& x, container& y)
+    using real_type = get_value_type<ContainerType>;
+    Implicit( real_type alpha, real_type t, LinearOp& f): f_(f), alpha_(alpha), t_(t){}
+    void symv( const ContainerType& x, ContainerType& y)
     {
         if( alpha_ != 0)
             f_(t_,x,y);
@@ -186,28 +203,28 @@ struct Implicit
         blas2::symv( f_.weights(), y, y);
     }
     //compute without weights
-    void operator()( const container& x, container& y)
+    void operator()( const ContainerType& x, ContainerType& y)
     {
         if( alpha_ != 0)
             f_(t_,x,y);
         blas1::axpby( 1., x, alpha_, y, y);
     }
-    double& alpha( ){  return alpha_;}
-    double alpha( ) const  {return alpha_;}
-    double& time( ){  return t_;}
-    double time( ) const  {return t_;}
+    real_type& alpha( ){  return alpha_;}
+    real_type alpha( ) const  {return alpha_;}
+    real_type& time( ){  return t_;}
+    real_type time( ) const  {return t_;}
   private:
     LinearOp& f_;
-    double alpha_;
-    double t_;
+    real_type alpha_;
+    real_type t_;
 };
 
 }//namespace detail
 template< class M, class V>
-struct MatrixTraits< detail::Implicit<M, V> >
+struct TensorTraits< detail::Implicit<M, V> >
 {
-    typedef double value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 ///@endcond
 
@@ -241,26 +258,27 @@ In the main function:
 terms can significantly reduce the required number of time steps. This
 far outweighs the increased computational cost of the additional matrix inversions.
 * @ingroup time
-* @copydoc hide_container
+* @copydoc hide_ContainerType
 */
-template<class container>
+template<class ContainerType>
 struct Karniadakis
 {
+    using real_type = get_value_type<ContainerType>;
     ///@copydoc RK_opt::RK_opt()
     Karniadakis(){}
 
     ///@copydoc construct()
-    Karniadakis( const container& copyable, unsigned max_iter, double eps){
+    Karniadakis( const ContainerType& copyable, unsigned max_iter, real_type eps){
         construct( copyable, max_iter, eps);
     }
     /**
     * @brief Reserve memory for the integration
     *
-    * @param copyable container of size which is used in integration (values do not matter, the size is important).
+    * @param copyable ContainerType of size which is used in integration (values do not matter, the size is important).
     * @param max_iter parameter for cg
     * @param eps  accuracy parameter for cg
     */
-    void construct( const container& copyable, unsigned max_iter, double eps){
+    void construct( const ContainerType& copyable, unsigned max_iter, real_type eps){
         f_.fill(copyable), u_.fill(copyable);
         pcg.construct( copyable, max_iter);
         eps_ = eps;
@@ -283,7 +301,7 @@ struct Karniadakis
      * @note the implementation is such that on output the last call to the explicit part \c exp is at \c (t0,u0). This might be interesting if the call to \c exp changes its state.
      */
     template< class Explicit, class Implicit>
-    void init( Explicit& exp, Implicit& imp, double t0, const container& u0, double dt);
+    void init( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type dt);
 
     /**
     * @brief Advance one timestep
@@ -294,28 +312,28 @@ struct Karniadakis
      * @note the implementation is such that on output the last call to the explicit part \c exp is at the new \c (t,u). This might be interesting if the call to \c exp changes its state.
     */
     template< class Explicit, class Implicit>
-    void step( Explicit& exp, Implicit& imp, double& t, container& u);
+    void step( Explicit& exp, Implicit& imp, real_type& t, ContainerType& u);
 
   private:
-    std::array<container,3> u_, f_;
-    CG< container> pcg;
-    double eps_;
-    double t_, dt_;
-    double a[3];
-    double b[3];
+    std::array<ContainerType,3> u_, f_;
+    CG< ContainerType> pcg;
+    real_type eps_;
+    real_type t_, dt_;
+    real_type a[3];
+    real_type b[3];
 };
 
 ///@cond
-template< class container>
+template< class ContainerType>
 template< class RHS, class Diffusion>
-void Karniadakis<container>::init( RHS& f, Diffusion& diff, double t0, const container& u0, double dt)
+void Karniadakis<ContainerType>::init( RHS& f, Diffusion& diff, real_type t0, const ContainerType& u0, real_type dt)
 {
     //operator splitting using explicit Euler for both explicit and implicit part
     t_ = t0, dt_ = dt;
     blas1::copy(  u0, u_[0]);
     f( t0, u0, f_[0]); //f may not destroy u0
     blas1::axpby( 1., u_[0], -dt, f_[0], f_[1]); //Euler step
-    detail::Implicit<Diffusion, container> implicit( -dt, t0, diff);
+    detail::Implicit<Diffusion, ContainerType> implicit( -dt, t0, diff);
     implicit( f_[1], u_[1]); //explicit Euler step backwards
     f( t0-dt, u_[1], f_[1]);
     blas1::axpby( 1.,u_[1], -dt, f_[1], f_[2]);
@@ -325,9 +343,9 @@ void Karniadakis<container>::init( RHS& f, Diffusion& diff, double t0, const con
     f( t0, u0, f_[0]); // and set state in f to (t0,u0)
 }
 
-template<class container>
+template<class ContainerType>
 template< class RHS, class Diffusion>
-void Karniadakis<container>::step( RHS& f, Diffusion& diff, double& t, container& u)
+void Karniadakis<ContainerType>::step( RHS& f, Diffusion& diff, real_type& t, ContainerType& u)
 {
     blas1::axpbypgz( dt_*b[0], f_[0], dt_*b[1], f_[1], dt_*b[2], f_[2]);
     blas1::axpbypgz( a[0], u_[0], a[1], u_[1], a[2], u_[2]);
@@ -339,12 +357,12 @@ void Karniadakis<container>::step( RHS& f, Diffusion& diff, double& t, container
     }
     blas1::axpby( 1., f_[0], 1., u_[0]);
     //compute implicit part
-    double alpha[2] = {2., -1.};
-    //double alpha[2] = {1., 0.};
+    real_type alpha[2] = {2., -1.};
+    //real_type alpha[2] = {1., 0.};
     blas1::axpby( alpha[0], u_[1], alpha[1],  u_[2], u); //extrapolate previous solutions
     blas2::symv( diff.weights(), u_[0], u_[0]);
     t = t_ = t_+ dt_;
-    detail::Implicit<Diffusion, container> implicit( -dt_*6./11., t, diff);
+    detail::Implicit<Diffusion, ContainerType> implicit( -dt_*6./11., t, diff);
 #ifdef DG_BENCHMARK
 #ifdef MPI_VERSION
     int rank;
@@ -393,19 +411,20 @@ In the main function:
 terms can significantly reduce the required number of time steps. This
 far outweighs the increased computational cost of the additional matrix inversions.
  * @ingroup time
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  */
-template <class container>
+template <class ContainerType>
 struct SIRK
 {
+    using real_type = get_value_type<ContainerType>;
     ///@copydoc RK_opt::RK_opt()
     SIRK(){}
     ///@copydoc Karniadakis::construct()
-    SIRK(const container& copyable, unsigned max_iter, double eps){
+    SIRK(const ContainerType& copyable, unsigned max_iter, real_type eps){
         construct( copyable, max_iter, eps);
     }
     ///@copydoc Karniadakis::construct()
-    void construct(const container& copyable, unsigned max_iter, double eps)
+    void construct(const ContainerType& copyable, unsigned max_iter, real_type eps)
     {
         k_.fill( copyable);
         temp_ = rhs_ = f_ = g_ = copyable;
@@ -428,12 +447,12 @@ struct SIRK
      * @param dt timestep
      */
     template <class Explicit, class Implicit>
-    void step( Explicit& exp, Implicit& imp, double t0, const container& u0, double& t1, container& u1, double dt)
+    void step( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt)
     {
         exp(t0, u0, f_);
         imp(t0+d[0]*dt, u0, g_);
         dg::blas1::axpby( dt, f_, dt, g_, rhs_);
-        detail::Implicit<Implicit, container> implicit( -dt*d[0], t0+d[0]*dt, imp);
+        detail::Implicit<Implicit, ContainerType> implicit( -dt*d[0], t0+d[0]*dt, imp);
         implicit.alpha() = -dt*d[0];
         implicit.time()  = t0 + (d[0])*dt;
         blas2::symv( imp.weights(), rhs_, rhs_);
@@ -461,7 +480,7 @@ struct SIRK
         blas2::symv( imp.weights(), rhs_, rhs_);
         pcg( implicit, k_[2], rhs_, imp.precond(), imp.inv_weights(), eps_);
         //sum up results
-        u1 = u0;
+        dg::blas1::copy( u0, u1);
         dg::blas1::axpby( 1., u1, w[0], k_[0], u1);
         dg::blas1::axpbypgz( w[1], k_[1], w[2], k_[2], 1., u1);
         t1 = t0 + dt;
@@ -482,30 +501,30 @@ struct SIRK
      * @param verbose if true writes error to \c std::cout
      */
     template <class Explicit, class Implicit>
-    void adaptive_step( Explicit& exp, Implicit& imp, double t0, const container& u0, double& t1, container& u1, double& dt, double tolerance, bool verbose = false)
+    void adaptive_step( Explicit& exp, Implicit& imp, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type& dt, real_type tolerance, bool verbose = false)
     {
-        double t;
+        real_type t;
         step( exp, imp, t0, u0, t, temp_, dt/2.);
         step( exp, imp, t, temp_, t, temp_, dt/2.);
         step( exp, imp, t0, u0, t1, u1, dt); //one full step
         dg::blas1::axpby( 1., u1, -1., temp_);
-        double error = dg::blas1::dot( temp_, temp_);
+        real_type error = dg::blas1::dot( temp_, temp_);
         if(verbose)std::cout << "Error " << error<<"\tTime "<<t1<<"\tdt "<<dt;
-        double dt_old = dt;
+        real_type dt_old = dt;
         dt = 0.9*dt_old*sqrt(tolerance/error);
         if( dt > 1.33*dt_old) dt = 1.33*dt_old;
         if( dt < 0.75*dt_old) dt = 0.75*dt_old;
         if(verbose) std::cout <<"\tnew_dt "<<dt<<"\n";
     }
     private:
-    std::array<container,3> k_;
-    container f_, g_, rhs_, temp_;
-    double w[3];
-    double b[3][3];
-    double d[3];
-    double c[3][3];
-    CG<container> pcg;
-    double eps_;
+    std::array<ContainerType,3> k_;
+    ContainerType f_, g_, rhs_, temp_;
+    real_type w[3];
+    real_type b[3][3];
+    real_type d[3];
+    real_type c[3][3];
+    CG<ContainerType> pcg;
+    real_type eps_;
 };
 
 } //namespace dg

@@ -1,12 +1,11 @@
 #include <iostream>
 #include <iomanip>
 
-//#include "backend/xspacelib.cuh"
 #include <thrust/device_vector.h>
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "geometry/derivativesX.h"
 #include "geometry/gridX.h"
-#include "geometry/evaluationX.cuh"
+#include "geometry/evaluationX.h"
 #include "geometry/base_geometryX.h"
 #include "blas.h"
 #include "elliptic.h"

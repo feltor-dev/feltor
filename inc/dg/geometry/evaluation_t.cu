@@ -7,8 +7,8 @@
 
 #include "dg/blas.h"
 
-#include "evaluation.cuh"
-#include "weights.cuh"
+#include "evaluation.h"
+#include "weights.h"
 
 struct exp_function{
 DG_DEVICE

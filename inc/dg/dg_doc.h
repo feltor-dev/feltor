@@ -1,9 +1,4 @@
 #error Documentation only
-/*! @mainpage
- * @section pdf PDF writeups
- * DON'T PANIC!
- *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
- */
 /*! @namespace dg
  * @brief This is the namespace for all functions and
  * classes defined and used by the discontinuous Galerkin solvers.
@@ -11,25 +6,12 @@
 /*!
  * @defgroup backend Level 1: Vectors, Matrices and basic operations
  * @{
- *     @defgroup typedefs Typedefs
- *          Useful type definitions for easy programming
- *     @defgroup sparsematrix Sparse matrix formats
- *     @defgroup mpi_structures MPI backend functionality
- *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X
- *             is e.g. CPU, GPU, accelerator cards...
- *             The general idea to achieve this is to separate global communication from local computations and thus
- *             readily reuse the existing, optimized library for the local part.
  *     @defgroup blas Basic Linear Algebra Subroutines
  *
  *         These routines form the heart of our container free numerical algorithms.
  *         They are called by all our numerical algorithms like conjugate gradient or
  *         time integrators.
  *     @{
- *         @defgroup dispatch The tag dispatch system
- *         @{
- *             @defgroup vec_list List of Vector Traits specializations
- *             @defgroup mat_list List of Matrix Traits specializations
- *         @}
  *         @defgroup blas1 BLAS level 1 routines
  *             This group contains Vector-Vector operations.
  *             Successive calls to blas routines are executed sequentially.
@@ -41,6 +23,16 @@
  *             A manual synchronization of threads or devices is never needed in an application
  *             using these functions. All functions returning a value block until the value is ready.
  *     @}
+ *     @defgroup typedefs Useful Typedefs
+ *          Useful type definitions for easy programming
+ *     @defgroup sparsematrix Sparse matrix formats
+ *     @defgroup mpi_structures MPI backend
+ *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X
+ *             is e.g. CPU, GPU, accelerator cards...
+ *             The general idea to achieve this is to separate global communication from local computations and thus
+ *             readily reuse the existing, optimized library for the local part.
+ *     @defgroup dispatch The tag dispatch system
+ *           Please read the chapter \ref dispatch in the introduction.
  * @}
  * @defgroup numerical0 Level 2: Basic numerical algorithms
  * These algorithms make use only of blas level 1 and 2 functions
@@ -79,15 +71,16 @@
  *     @}
  *     @defgroup geometry Geometric grids and operations
  *
- *        These routines form the heart of our geometry free numerical algorithms.
- *        They are called by our geometric operators like the Poisson bracket.
- *    @{
- *        @defgroup basicgeometry Geometry base classes
- *        @defgroup pullback pullback and pushforward
- *        @defgroup metric create volume
- *        @defgroup generators Grid Generator classes
+ *         These routines form the heart of our geometry free numerical algorithms.
+ *         They are called by our geometric operators like the Poisson bracket.
+ *     @{
+ *         @defgroup basicgeometry Geometry base classes
+ *         @defgroup pullback pullback and pushforward
+ *         @defgroup metric create volume
+ *         @defgroup generators Grid Generator classes
  *            The classes to perform field line integration for DS and averaging classes
- *    @}
+ *     @}
+ *     @defgroup gridtypes Useful Typedefs
  * @}
  * @defgroup numerical1 Level 4: Advanced numerical schemes
  *
@@ -97,7 +90,7 @@
  *     @defgroup matrixoperators Elliptic and Helmholtz operators
  *     @defgroup multigrid Advanced matrix inversion
  * @}
- * @defgroup misc Level 00: Miscellaneous additions
+ * @defgroup misc Level 0: Miscellaneous additions
  * @{
  *     @defgroup timer Timer class
  *     @defgroup functions Functions and Functors
@@ -120,21 +113,24 @@
   *  - double operator()(double, double, double) const
   */
 
- /** @class hide_container
-  * @tparam container
-  * Any class for which a specialization of \c VectorTraits exists and which
-  * fulfills the requirements of the there defined data and execution policies derived from \c AnyVectorTag or \c AnyPolicyTag.
-  * For example, this is one of
-  *  - \c dg::HVec, \c dg::DVec, \c dg::MHVec or \c dg::MDVec
-  *  - \c std::vector<dg::DVec>, \c std::array<dg::MHVec, 3>, \c std::array<double, 4> ...
-  *  \see vec_list
+ /** @class hide_ContainerType
+  * @tparam ContainerType
+  * Any class for which a specialization of \c TensorTraits exists and which
+  * fulfills the requirements of the there defined data and execution policies derived from \c AnyVectorTag and \c AnyPolicyTag.
+  * Among others
+  *  - <tt> dg::HVec (serial), dg::DVec (cuda / omp), dg::MHVec (mpi + serial) or dg::MDVec (mpi + cuda / omp) </tt>
+  *  - <tt> std::vector<dg::DVec> (vector of shared device vectors), std::array<double, 4> (array of 4 doubles)</tt>
+  *  - <tt> double (scalar)</tt> and other primitive types ...
+  *  .
+  * If there are several \c ContainerTypes in the argument list, then \c TensorTraits must exist for all of them
+  * \see See \ref dispatch for a detailed explanation of our type %dispatch system
   */
  /** @class hide_matrix
-  * @tparam Matrix
-  * Any class for which a specialization of \c MatrixTraits exists and which fullfills
-  * the requirements of the there defined Matrix policy derived from \c AnyMatrixTag or \c SelfMadeMatrixTag.
-  * The \c Matrix type can for example be one of:
-  *  - \c container: A container acts as a  diagonal matrix.
+  * @tparam MatrixType
+  * Any class for which a specialization of \c TensorTraits exists and which fullfills
+  * the requirements of the there defined Matrix tags derived from \c AnyMatrixTag.
+  * The \c MatrixType can for example be one of:
+  *  - \c scalar or \c container: Scalars and containers act as diagonal matrices.
   *  - \c dg::HMatrix and \c dg::IHMatrix with \c dg::HVec or \c std::vector<dg::HVec>
   *  - \c dg::DMatrix and \c dg::IDMatrix with \c dg::DVec or \c std::vector<dg::DVec>
   *  - \c dg::MHMatrix with \c dg::MHVec or \c std::vector<dg::MHVec>
@@ -142,8 +138,7 @@
   *  -  In case of \c SelfMadeMatrixTag only those \c blas2 functions
   *  that have a corresponding member function in the Matrix class (e.g. \c symv( const container&, container&); ) can be called.
   *  .
-  *  If a \c container has the \c VectorVectorTag, then the \c Matrix is applied to each of the elements.
-  *  \see mat_list
+  *  If a \c container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements.
   */
   /** @class hide_geometry
   * @tparam Geometry
@@ -152,7 +147,7 @@
 
   /** @class hide_container_geometry
   * @tparam container
-  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted using \c dg::blas1::transfer.
+  * A data container class for which the \c blas1 functionality is overloaded and to which the return type of \c blas1::evaluate() can be converted using \c dg::transfer.
   * We assume that \c container is copyable/assignable and has a swap member function.
   * In connection with \c Geometry this is one of
   *  - \c dg::HVec, \c dg::DVec when \c Geometry is a shared memory geometry
@@ -186,22 +181,169 @@
  need to be callable and return inverse weights and the preconditioner for the conjugate
  gradient method. \c SymmetricOp is assumed to be linear, symmetric and positive definite!
  @note you can make your own \c SymmetricOp by providing the member function \c void \c symv(const container&, container&);
-  and specializing \c MatrixTraits with the \c SelfMadeMatrixTag as the matrix_category
+  and specializing \c TensorTraits with the \c SelfMadeMatrixTag as the \c tensor_category
   */
 
-/*!@addtogroup mpi_structures
-@{
+/*! @mainpage Introduction
+ *
+ * @section pdf Introduction to discontinuous Galerkin methods
+ * Here is a pdf document explainin the fundamentals of discontinuous Galerkin methods
+ *  - <a href="./dg_introduction.pdf" target="_blank">Introduction to dg methods</a>
+ *
+
+ * @section dispatch The Level 1 dispatch system
+ *
+ * Let us first define some nomenclature to ease the following discussion
+ *    - \e Scalar: A template parameter T is a Scalar if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyScalarTag
+ *    - \e Vector: A template parameter T is a Vector if it is not a Scalar and if <tt> typename dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyVectorTag
+ *    - \e Matrix: A template parameter T is a Matrix if it is not a Scalar or Vector and if <tt> typename  dg::TensorTraits<T>::tensor_category </tt> exists and derives from \c dg::AnyMatrixTag
+ *    - \e execution \e policy: A template parameter T has an execution policy if
+ *      <tt> typename dg::TensorTraits<T>::execution_policy </tt> exists and derives from \c dg::AnyPolicyTag, The execution policy is \e trivial if it is \c dg::AnyPolicyTag
+ *    - \e value \e type : A template parameter T has a value type if
+ *      <tt> typename dg::TensorTraits<T>::value_type </tt> exists
+ *    - \e compatible: Two vectors are compatible if their tensor_categories both derive from the same base class that itself derives from but is not equal to \c dg::AnyVectorTag, Two execution policies are compatible if they are equal or if at least one of them is trivial.
+ *    - \e promote: A Scalar can be promoted to a Vector with all elements equal to the value of the Scalar. A Vector can be promoted to a  Matrix with the Vector being the diagonal and all other elements zero.
+ *
+ * When dispatching level 1 functions we distinguish between three classes of
+ * functions: trivially parallel (\c dg::blas1::subroutine and related \c dg::blas1 functions), global communication
+ * (\c dg::blas1::dot and \c dg::blas2::dot) and local communication (\c dg::blas2::symv).
+ *
+ * @subsection dispatch_subroutine The subroutine function
+ *
+ * The execution of \c dg::blas1::subroutine with a Functor called \c routine
+ * (and all related \c dg::blas1 functions) is equivalent to the following:
+ *  -# Assert the following prerequisites:
+ *
+ *      -# All template parameter types must be either Scalars or Vectors and have an execution policy and a value type
+ *      -# All Vectors and all execution policies must be mutually compatible
+ *      -# All Vectors must contain the same number of elements (equal sizes)
+ *      -# The number of template parameters must be equal to the number of parameters in the \c routine
+ *      -# The value type of every template parameter must be convertible to the respective parameter type in the \c routine
+ *  -# If all types are Scalars, apply the \c routine and return
+ *  -# If at least one type is a Vector, then all Scalars
+ *     are promoted to this type with the same size, communicator and execution policy
+ *  -# Check the base class of the tensor_category:
+ *      -# If \c dg::SharedVectorTag, check execution policy and dispatch to respective implementation (The implementation just loops over all elements in the vectors and applies the \c routine)
+ *      -# If \c dg::MPIVectorTag, access the underlying data and recursively call \c dg::blas1::subroutine (and start again at 1)
+ *      -# If \c dg::RecursiveVectorTag, loop over all elements and recursively call \c dg::blas1::subroutine for all elements (and start again at 1)
+ *
+ * @subsection dispatch_dot The dot function
+ * The execution of \c dg::blas1::dot and \c dg::blas2::dot is equivalent to the following:
+ *  -# Assert the following prerequisites:
+ *
+ *      -# All template parameter types must be either Scalars or Vectors and have an execution policy and a value type
+ *      -# All Vectors and all execution policies must be mutually compatible
+ *      -# All Vectors must contain the same number of elements (equal sizes)
+ *  -# If all types are Scalars, multiply and return
+ *  -# If at least one type is a Vector, then all Scalars
+ *     are promoted to this type with the same size, communicator and execution policy
+ *  -# Check the base class of the tensor_category:
+ *      -# If \c dg::SharedVectorTag, check execution policy and dispatch to respective implementation (The implementation multiplies and accumulates all elements in the vectors). Return the result.
+ *      -# If \c dg::MPIVectorTag, assert that the vector MPI-communicators are \c congruent or \c ident. Then, access the underlying data and recursively call \c dot (and start again at 1). Accumulate the result
+ *      among participating processes and return.
+ *      -# If \c dg::RecursiveVectorTag, loop over all elements and recursively call \c dot for all elements (and start again at 1). Accumulate the results
+ *      and return.
+ *
+ * @subsection dispatch_symv The symv function
+ * The execution of the \c dg::blas2::symv (and \c dg::blas2::gemv) functions is hard to discribe in general
+ * since each matrix class has individual prerequisites and execution paths.
+ * Still, we can identify some general rules:
+ *   -# The Matrix type can be either a Scalar (promotes to Scalar times the Unit Matrix), a Vector (promotes to a diagonal Matrix) or a Matrix
+ *   -# If the Matrix is either a Scalar or a Vector and the remaining types do not have the \c dg::RecursiveVectorTag tensor category, then \c dg::blas2::symv is equivalent to \c dg::blas1::pointwiseDot
+ *   -# If the Matrix has the \c dg::SelfMadeMatrixTag tensor category, then all parameters are immediately forwarded to the \c symv member function. No asserts are performed and none of the following applies.
+ *   -# The container template parameters must be Vectors or Scalars and must
+ *   have compatible execution policies. Vectors must be compatible.
+ *   -# If the tensor category of the Vectors is \c dg::RecursiveVectorTag and
+ *   the tensor category of the Matrix is not, then the \c dg::blas2::symv is recursively called with the Matrix on all elements of the Vectors.
+ *
+ * @subsection dispatch_examples Examples
+ *
+ * Let us assume that we have two vectors \f$ v\f$ and \f$ w\f$. In a shared
+ memory code these will be declared as
+ @code
+ dg::DVec v, w;
+ // initialize v and w with some meaningful values
+ @endcode
+ In an MPI implementation we would simply write \c dg::MDVec instead of \c dg::DVec.
+ Let us now assume that we want to compute the expression \f$ v_i  \leftarrow v_i^2 + w_i\f$
+ with the dg::blas1::subroutine. The first step is to write a Functor that
+ implements this expression
+ @code
+ struct Expression{
+    DG_DEVICE
+    void operator() ( double& v, double w){
+       v = v*v + w;
+    }
+ };
+ @endcode
+ Note that we used the Marco \ref DG_DEVICE to enable this code on GPUs.
+ The next step is just to apply our struct to the vectors we have.
+ @code
+ dg::blas1::subroutine( Expression(), v, w);
+ @endcode
+
+ Now, we want to use an additional parameter in our expresion. Let's assume we have
+ @code
+ double parameter = 3.;
+ @endcode
+ and we want to compute \f$ v_i \leftarrow p v_i^2 + w_i\f$. We now have two
+ possibilities. We can add a private variable in \c Expression and use it in the
+ implementation of the paranthesis operator
+ @code
+ struct Expression{
+    Expression( double param):m_param(param){}
+    DG_DEVICE
+    void operator() ( double& v, double w)const{
+        v = m_param*v*v + w;
+    }
+    private:
+    double m_param;
+ };
+ dg::blas1::subroutine( Expression(parameter), v, w);
+ @endcode
+ The other possibility is to extend the paranthesis operator in \c Expression and call \c dg::blas1::subroutine with a scalar
+ @code
+ struct Expression{
+    DG_DEVICE
+    void operator() ( double& v, double w, double param){
+        v = param*v*v + w;
+    }
+ };
+ dg::blas1::subroutine( Expression(), v, w, parameter);
+ @endcode
+ The result (and runtime) is the same in both cases. However, the second is more versatile,
+ when we use recursion. Consider that \f$ v,\ w\f$ and \f$ p\f$ are now arrays, declared as
+ @code
+ std::array<dg::DVec, 3> array_v, array_w;
+ std::array<double,3> array_parameter;
+ // initialize array_v, array_w and array_parameter meaningfully
+ @endcode
+ We now want to compute the expression \f$ v_{ij} \leftarrow p_i v_{ij}^2 + w_{ij}\f$,
+ where \c i runs from 0 to 2 and \c j runs over all elements in the shared vectors
+ <tt> array_v[i] </tt> and <tt> array_w[i] </tt>.
+ In this case we just call
+ @code
+ dg::blas1::subroutine( Expression(), array_v, array_w, array_parameter);
+ @endcode
+ and use the fact that <tt> std::array </tt> has the \c dg::RecursiveVectorTag.
+
+ In order to compute the sum \f$ \sum_{i=0}^2 p_i\f$ we can use
+ @code
+ double sum = dg::blas1::dot( 1, array_parameter);
+ @endcode
+
+ * @section mpi_backend The MPI interface
 @note The mpi backend is activated by including \c mpi.h before any other feltor header file
-@section mpi_vector MPI Vectors and the blas1 functions
+@subsection mpi_vector MPI Vectors and the blas1 functions
 
 In Feltor each mpi process gets an equally sized chunk of a vector.
 The corresponding structure in FELTOR is the \c dg::MPI_Vector, which is
 nothing but a wrapper around any container type object and a \c MPI_Comm.
-With this the \c dg::blas1 functions can readily implemented by just redirecting to the
+With this the \c dg::blas1 functions can readily be implemented by just redirecting to the
 implementation for the container type. The only functions that need
 communication are the \c dg::blas1::dot functions (\c MPI_Allreduce).
 
-@section mpi_matrix Row and column distributed matrices
+@subsection mpi_matrix Row and column distributed matrices
 
 Contrary to a vector
 a matrix can be distributed among processes in two ways:
@@ -218,7 +360,7 @@ of the matrix.
 First, we define the structure \c dg::MPIDistMat as a simple a wrapper around a
 LocalMatrix type object
 and an instance of a \c dg::aCommunicator.
-\subsection row Row distributed
+\subsubsection row Row distributed
 For the row-distributed matrix each process first has to gather
 all elements of the input vector it needs to be able to compute the elements of the output. In general this requires MPI communication.
 (read the documentation of \c dg::aCommunicator for more info of how global scatter/gather operations work).
@@ -234,7 +376,7 @@ and \f$G\f$ is the gather matrix, in which the MPI-communication takes place.
 The \c dg::RowColDistMat goes one step further and separates the matrix \f$ R\f$ into
 a part that can be computed entirely on the local process and a part that needs communication.
 
-\subsection column Column distributed
+\subsubsection column Column distributed
 
 In a column distributed matrix the local matrix-vector multiplication can be executed first because each processor already
 has all vector elements it needs.
@@ -255,5 +397,4 @@ by transposition of the local matrices and the gather matrix (s.a. \c dg::transp
 The result is then a column distributed matrix.
 The transpose of a column distributed matrix is a row-distributed matrix and vice-versa.
 You can create an MPI row-distributed matrix if you know the global column indices by our \c dg::convert function.
-@}
 */

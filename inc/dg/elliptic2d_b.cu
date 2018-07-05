@@ -2,8 +2,8 @@
 #include <iomanip>
 
 #include <thrust/device_vector.h>
-#include "backend/timer.cuh"
-#include "geometry/projection.cuh"
+#include "backend/timer.h"
+#include "geometry/projection.h"
 
 #include "blas.h"
 #include "elliptic.h"

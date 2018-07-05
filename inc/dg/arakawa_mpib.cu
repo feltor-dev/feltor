@@ -5,11 +5,11 @@
 #include <thrust/host_vector.h>
 #include <mpi.h>
 
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 
 #include "arakawa.h"
 #include "backend/mpi_init.h"
-#include "backend/typedefs.cuh"
+#include "backend/typedefs.h"
 
 
 

@@ -10,9 +10,9 @@
 #include "grid.h"
 #include "dlt.h"
 #include "operator.h"
-#include "operator_tensor.cuh"
-#include "dgtensor.cuh"
-#include "interpolation.cuh" //makes typedefs available
+#include "operator_tensor.h"
+#include "dgtensor.h"
+#include "interpolation.h" //makes typedefs available
 
 
 /*! @file
@@ -35,13 +35,14 @@ namespace create{
  * @return transformation matrix
  * @note this matrix has ~n^4 N^2 entries
  */
-dg::IHMatrix backscatter( const aTopology2d& g)
+template<class real_type>
+dg::IHMatrix backscatter( const aRealTopology2d<real_type>& g)
 {
-    typedef cusp::coo_matrix<int, double, cusp::host_memory> Matrix;
+    typedef cusp::coo_matrix<int, real_type, cusp::host_memory> Matrix;
     //create equidistant backward transformation
-    dg::Operator<double> backwardeq( g.dlt().backwardEQ());
-    dg::Operator<double> forward( g.dlt().forward());
-    dg::Operator<double> backward1d = backwardeq*forward;
+    dg::Operator<real_type> backwardeq( g.dlt().backwardEQ());
+    dg::Operator<real_type> forward( g.dlt().forward());
+    dg::Operator<real_type> backward1d = backwardeq*forward;
 
     Matrix transformX = dg::tensorproduct( g.Nx(), backward1d);
     Matrix transformY = dg::tensorproduct( g.Ny(), backward1d);
@@ -57,12 +58,13 @@ dg::IHMatrix backscatter( const aTopology2d& g)
 
 }
 
-///@copydoc backscatter(const aTopology2d&)
-dg::IHMatrix backscatter( const aTopology3d& g)
+///@copydoc backscatter(const aRealTopology2d&)
+template<class real_type>
+dg::IHMatrix backscatter( const aRealTopology3d<real_type>& g)
 {
     Grid2d g2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy());
-    cusp::coo_matrix<int,double, cusp::host_memory> back2d = backscatter( g2d);
-    return (dg::IHMatrix)dgtensor<double>( 1, tensorproduct<double>( g.Nz(), delta(1)), back2d);
+    cusp::coo_matrix<int,real_type, cusp::host_memory> back2d = backscatter( g2d);
+    return (dg::IHMatrix)dgtensor<real_type>( 1, tensorproduct<real_type>( g.Nz(), delta<real_type>(1)), back2d);
 }
 ///@}
 
@@ -78,7 +80,7 @@ dg::IHMatrix backscatter( const aTopology3d& g)
  *
  * @return map of indices
  */
-thrust::host_vector<int> scatterMapInvertxy( unsigned n, unsigned Nx, unsigned Ny)
+static inline thrust::host_vector<int> scatterMapInvertxy( unsigned n, unsigned Nx, unsigned Ny)
 {
     unsigned Nx_ = n*Nx, Ny_ = n*Ny;
     //thrust::host_vector<int> reorder = scatterMap( n, Nx, Ny);
@@ -106,7 +108,7 @@ thrust::host_vector<int> scatterMapInvertxy( unsigned n, unsigned Nx, unsigned N
  *
  * @return a vector of size rows*cols containing line numbers
  */
-thrust::host_vector<int> contiguousLineNumbers( unsigned rows, unsigned cols)
+static inline thrust::host_vector<int> contiguousLineNumbers( unsigned rows, unsigned cols)
 {
     thrust::host_vector<int> map( rows*cols);
     for( unsigned i=0; i<map.size(); i++)

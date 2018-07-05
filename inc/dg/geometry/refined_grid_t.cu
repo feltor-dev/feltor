@@ -2,8 +2,8 @@
 
 #include "../blas.h"
 #include "derivatives.h"
-#include "interpolation.cuh"
-#include "projection.cuh"
+#include "interpolation.h"
+#include "projection.h"
 #include "transform.h"
 #include "refined_grid.h"
 

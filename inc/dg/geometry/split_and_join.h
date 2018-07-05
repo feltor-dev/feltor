@@ -1,7 +1,7 @@
 #pragma once
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
-#include "dg/backend/thrust_vector_blas.cuh"
+#include "dg/backend/blas1_dispatch_shared.h"
 #include "grid.h"
 #ifdef MPI_VERSION
 #include "dg/backend/mpi_vector.h"

@@ -15,36 +15,36 @@ namespace tensor
 ///@{
 /**
  * @brief calls sqrt transform function on value
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param mu if empty, stays empty, else contains sqrt of input
  */
-template<class container>
-void sqrt( SparseElement<container>& mu){
+template<class ContainerType>
+void sqrt( SparseElement<ContainerType>& mu){
     if( mu.isSet())
         dg::blas1::transform( mu.value(), mu.value(), dg::SQRT<double>());
 }
 
 /**
  * @brief calls invert transform function on value
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param mu if empty, stays empty, else contains inverse of input
  */
-template<class container>
-void invert(SparseElement<container>& mu){
+template<class ContainerType>
+void invert(SparseElement<ContainerType>& mu){
     if(mu.isSet())
         dg::blas1::transform( mu.value(), mu.value(), dg::INVERT<double>());
 }
 
 /**
- * @brief Scale tensor with a container
+ * @brief Scale tensor with a ContainerType
  *
  * Computes \f$ t^{ij} = \mu t^{ij}\f$
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param t input (contains result on output)
  * @param mu all elements in t are scaled with mu
  */
-template<class container>
-void scal( SparseTensor<container>& t, const container& mu)
+template<class ContainerType>
+void scal( SparseTensor<ContainerType>& t, const ContainerType& mu)
 {
     unsigned size=t.values().size();
     for( unsigned i=0; i<size; i++)
@@ -65,71 +65,71 @@ void scal( SparseTensor<container>& t, const container& mu)
  * @brief Scale tensor with a form
  *
  * Computes \f$ t^{ij} = \mu t^{ij}\f$
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param t input (contains result on output)
  * @param mu if \c mu.isEmpty() then nothing happens, else all elements in t are scaled with its value
  */
-template<class container>
-void scal( SparseTensor<container>& t, const SparseElement<container>& mu)
+template<class ContainerType>
+void scal( SparseTensor<ContainerType>& t, const SparseElement<ContainerType>& mu)
 {
     if(!mu.isSet()) return;
     else scal(t,mu.value());
 }
 
 /**
- * @brief Multiply container with form
+ * @brief Multiply ContainerType with form
  *
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param mu if \c mu.isEmpty() then \c out=in, else the input is pointwise multiplied with the value in \c mu
  * @param in input vector
  * @param out output vector (may alias \c in)
  */
-template<class container>
-void pointwiseDot( const SparseElement<container>& mu, const container& in, container& out)
+template<class ContainerType>
+void pointwiseDot( const SparseElement<ContainerType>& mu, const ContainerType& in, ContainerType& out)
 {
     if(mu.isSet())
         dg::blas1::pointwiseDot(mu.value(), in,out);
     else
-        out=in;
+        dg::blas1::copy( in, out);
 }
 /**
- * @brief Multiply container with form
+ * @brief Multiply ContainerType with form
  *
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param in input vector
  * @param mu if mu.isEmpty() then out=in, else the input is pointwise multiplied with the value in mu
  * @param out output vector (may alias in)
  */
-template<class container>
-void pointwiseDot( const container& in, const SparseElement<container>& mu, container& out)
+template<class ContainerType>
+void pointwiseDot( const ContainerType& in, const SparseElement<ContainerType>& mu, ContainerType& out)
 {
     pointwiseDot( mu, in, out);
 }
 
 /**
- * @brief Divide container with form
+ * @brief Divide ContainerType with form
  *
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param in input vector
  * @param mu if mu.isEmpty() then out=in, else the input is pointwise divided with the value in mu
  * @param out output vector (may alias in)
  */
-template<class container>
-void pointwiseDivide( const container& in, const SparseElement<container>& mu, container& out)
+template<class ContainerType>
+void pointwiseDivide( const ContainerType& in, const SparseElement<ContainerType>& mu, ContainerType& out)
 {
     if(mu.isSet())
         dg::blas1::pointwiseDivide(in, mu.value(),out);
     else
-        out=in;
+        dg::blas1::copy( in, out);
 }
 
 ///@cond
 namespace detail
 {
-//multiply_add given containers with given tensor indices
+//multiply_add given ContainerTypes with given tensor indices
 //i0 must be the diagonal index, out0 may alias in0 but not in1
-template<class container>
-void multiply2d_helper( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, int i0[2], int i1[2])
+template<class ContainerType>
+void multiply2d_helper( const SparseTensor<ContainerType>& t, const ContainerType& in0, const ContainerType& in1, ContainerType& out0, int i0[2], int i1[2])
 {
     if( t.isSet(i0[0],i0[1]) && t.isSet(i1[0],i1[1]) )
         dg::blas1::pointwiseDot( 1. , t.value(i0[0],i0[1]), in0, 1., t.value(i1[0], i1[1]), in1, 0., out0);
@@ -148,7 +148,7 @@ void multiply2d_helper( const SparseTensor<container>& t, const container& in0, 
  * @brief Multiply a tensor with a vector in 2d
  *
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param t input Tensor
  * @param in0 (input) first component    (restricted)
  * @param in1 (input) second component   (may alias out1)
@@ -161,8 +161,8 @@ void multiply2d_helper( const SparseTensor<container>& t, const container& in0, 
          - 4  reads + 2 writes if t is empty and no alias
          - 2  reads + 1 writes (= 1 copy) if t is empty and out1 aliases in1
  */
-template<class container>
-void multiply2d( const SparseTensor<container>& t, const container& in0, const container& in1, container& out0, container& out1)
+template<class ContainerType>
+void multiply2d( const SparseTensor<ContainerType>& t, const ContainerType& in0, const ContainerType& in1, ContainerType& out0, ContainerType& out1)
 {
     int i0[2] = {0,0}, i1[2] = {0,1};
     int i3[2] = {1,1}, i2[2] = {1,0};
@@ -177,7 +177,7 @@ void multiply2d( const SparseTensor<container>& t, const container& in0, const c
  * @brief Multiply a tensor with a vector in 2d
  *
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2,3\}\f$
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param t input Tensor
  * @param in0 (input)  first component  (restricted)
  * @param in1 (input)  second component (restricted)
@@ -187,8 +187,8 @@ void multiply2d( const SparseTensor<container>& t, const container& in0, const c
  * @param out2 (output)  third component (may alias in2)
  * @attention aliasing only allowed between out2 and in2
  */
-template<class container>
-void multiply3d( const SparseTensor<container>& t, const container& in0, const container& in1, const container& in2, container& out0, container& out1, container& out2)
+template<class ContainerType>
+void multiply3d( const SparseTensor<ContainerType>& t, const ContainerType& in0, const ContainerType& in1, const ContainerType& in2, ContainerType& out0, ContainerType& out1, ContainerType& out2)
 {
     int i0[2] = {0,0}, i1[2] = {0,1};
     int i3[2] = {1,1}, i2[2] = {1,0};
@@ -203,17 +203,17 @@ void multiply3d( const SparseTensor<container>& t, const container& in0, const c
 
 /**
 * @brief Compute the determinant of a tensor
-* @copydoc hide_container
+* @copydoc hide_ContainerType
 * @param t the input tensor
 * @return the determinant of t as a SparseElement (unset if t is empty)
 */
-template<class container>
-SparseElement<container> determinant( const SparseTensor<container>& t)
+template<class ContainerType>
+SparseElement<ContainerType> determinant( const SparseTensor<ContainerType>& t)
 {
-    if(t.isEmpty())  return SparseElement<container>();
-    SparseTensor<container> d = dense(t);
-    container det = d.value(0,0);
-    std::vector<container> sub_det(3,det);
+    if(t.isEmpty())  return SparseElement<ContainerType>();
+    SparseTensor<ContainerType> d = dense(t);
+    ContainerType det = d.value(0,0);
+    std::vector<ContainerType> sub_det(3,det);
     dg::blas1::transform( det, det, dg::CONSTANT(0));
     //first compute the det of three submatrices
     dg::blas1::pointwiseDot( d.value(0,0), d.value(1,1), sub_det[2]);
@@ -230,7 +230,7 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
     dg::blas1::pointwiseDot(-1., d.value(1,2), sub_det[1], 1.,  det);
     dg::blas1::pointwiseDot( 1., d.value(2,2), sub_det[2], 1.,  det);
 
-    return SparseElement<container>(det);
+    return SparseElement<ContainerType>(det);
 }
 
 /**
@@ -238,18 +238,18 @@ SparseElement<container> determinant( const SparseTensor<container>& t)
  *
  * This is a convenience function that is the same as
  * @code
-    SparseElement<container> volume=determinant(t);
+    SparseElement<ContainerType> volume=determinant(t);
     invert(volume);
     sqrt(volume);
     @endcode
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param t the input tensor
  * @return the inverse square root of the determinant of t as a SparseElement (unset if t is empty)
  */
-template<class container>
-SparseElement<container> volume( const SparseTensor<container>& t)
+template<class ContainerType>
+SparseElement<ContainerType> volume( const SparseTensor<ContainerType>& t)
 {
-    SparseElement<container> vol=determinant(t);
+    SparseElement<ContainerType> vol=determinant(t);
     invert(vol);
     sqrt(vol);
     return vol;
@@ -259,28 +259,28 @@ SparseElement<container> volume( const SparseTensor<container>& t)
 
 ///@cond
 //alias always allowed
-template<class container>
-void multiply2d( const CholeskyTensor<container>& ch, const container& in0, const container& in1, container& out0, container& out1)
+template<class ContainerType>
+void multiply2d( const CholeskyTensor<ContainerType>& ch, const ContainerType& in0, const ContainerType& in1, ContainerType& out0, ContainerType& out1)
 {
     multiply2d(ch.upper(),     in0,  in1,  out0, out1);
     multiply2d(ch.diagonal(),  out0, out1, out0, out1);
     multiply2d(ch.lower(),     out0, out1, out0, out1);
 }
-template<class container>
-void multiply3d( const CholeskyTensor<container>& ch, const container& in0, const container& in1, const container& in2, container& out0, container& out1, container& out2)
+template<class ContainerType>
+void multiply3d( const CholeskyTensor<ContainerType>& ch, const ContainerType& in0, const ContainerType& in1, const ContainerType& in2, ContainerType& out0, ContainerType& out1, ContainerType& out2)
 {
     multiply3d(ch.upper(),    in0,  in1, in2,  out0, out1, out2);
     multiply3d(ch.diagonal(), out0, out1,out2, out0, out1, out2);
-    container temp(out1);
+    ContainerType temp(out1);
     multiply3d(ch.lower(),    out0, out1,out2, out0, temp, out2);
     temp.swap(out1);
 }
 
-template<class container>
-SparseElement<container> determinant( const CholeskyTensor<container>& ch)
+template<class ContainerType>
+SparseElement<ContainerType> determinant( const CholeskyTensor<ContainerType>& ch)
 {
-    SparseTensor<container> diag = dense(ch.diag() );
-    SparseElement<container> det;
+    SparseTensor<ContainerType> diag = dense(ch.diag() );
+    SparseElement<ContainerType> det;
     if(diag.isEmpty()) return det;
     else det.value()=diag.value(0,0);
     dg::blas1::pointwiseDot( det.value(), diag.value(1,1), det.value());
@@ -288,10 +288,10 @@ SparseElement<container> determinant( const CholeskyTensor<container>& ch)
     return det;
 }
 
-template<class container>
-void scal(const CholeskyTensor<container>& ch, const SparseElement<container>& e)
+template<class ContainerType>
+void scal(const CholeskyTensor<ContainerType>& ch, const SparseElement<ContainerType>& e)
 {
-    const SparseTensor<container>& diag = ch.diag();
+    const SparseTensor<ContainerType>& diag = ch.diag();
     if(!e.isSet()) return;
     unsigned size=diag.values().size();
     for( unsigned i=0; i<size; i++)

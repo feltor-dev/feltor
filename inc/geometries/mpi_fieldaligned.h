@@ -1,18 +1,18 @@
 #pragma once
 
 #include "dg/backend/mpi_matrix.h"
-#include "dg/backend/mpi_matrix_blas.h"
+#include "dg/backend/blas2_dispatch_mpi.h"
 #include "dg/backend/mpi_collective.h"
 #include "dg/geometry/grid.h"
 #include "dg/geometry/mpi_evaluation.h"
 #include "dg/geometry/mpi_grid.h"
 #include "dg/geometry/mpi_projection.h"
-#include "dg/geometry/interpolation.cuh"
+#include "dg/geometry/interpolation.h"
 #include "dg/geometry/functions.h"
 #include "dg/runge_kutta.h"
 #include "fieldaligned.h"
 #ifdef DG_BENCHMARK
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 #endif
 
 namespace dg{

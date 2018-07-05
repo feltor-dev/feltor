@@ -4,27 +4,27 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "blas.h"
 #include "geometry/derivatives.h"
-#include "geometry/evaluation.cuh"
+#include "geometry/evaluation.h"
 #include "geometry/fast_interpolation.h"
 
 const double lx = 2.*M_PI;
 const double ly = 2.*M_PI;
 double left( double x, double y, double z) {return sin(x)*cos(y)*z;}
 double right( double x, double y, double z) {return cos(x)*sin(y)*z;}
+struct Expression{
+   DG_DEVICE
+   void operator() ( double& u, double v, double w, double param){
+       u = param*u*v + w;
+   }
+};
 
-//typedef float value_type;
-//typedef dg::fDVec Vector;
-//typedef dg::fDMatrix Matrix;
-//typedef cusp::array1d<float, cusp::device_memory> Vector;
-typedef double value_type;
-using Vector = thrust::device_vector<double>;
-using ArrayVec = std::array<Vector, 3>;
-typedef dg::DMatrix Matrix;
-//typedef cusp::array1d<double, cusp::device_memory> Vector;
-typedef dg::IDMatrix IMatrix;
+using value_type= double;
+using Vector    = thrust::device_vector<double>;
+using Matrix    = dg::DMatrix;
+using ArrayVec  = std::array<Vector, 3>;
 
 int main()
 {
@@ -61,16 +61,48 @@ int main()
     //dg::IDMatrix project = dg::create::projection( grid_half, grid);
     int multi=100;
     //t.tic();
+    std::cout<<"\nNo communication\n";
     ArrayVec y(x), z(x), u(x), v(x);
-    Matrix M;
-    dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
-    dg::blas2::symv( M, x, y);//warm up
     t.tic();
     for( int i=0; i<multi; i++)
-        dg::blas2::symv( M, x, y);
+        dg::blas1::axpby( 1., y, -1., x);
     t.toc();
-    std::cout<<"centered x derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-
+    std::cout<<"AXPBY (1*y-1*x=x)                "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::axpbypgz( 1., x, -1., 1, 2., z);
+    t.toc();
+    std::cout<<"AXPBYPGZ (1*x-1*1+2*z=z)         "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::axpbypgz( 1., x, -1., y, 3., x);
+    t.toc();
+    std::cout<<"AXPBYPGZ (1*x-1.*y+3*x=x) (A)    "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::pointwiseDot(  y, x, x);
+    t.toc();
+    std::cout<<"pointwiseDot (yx=x) (A)          "<<t.diff()/multi<<"s\t" <<3*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  z);
+    t.toc();
+    std::cout<<"pointwiseDot (1*yx+2*uv=z)       "<<t.diff()/multi<<"s\t" <<6*gbytes*multi/t.diff()<<"GB/s\n";
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
+    t.toc();
+    std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
+    //Test new subroutine
+    std::array<double, 3> array_p{ 1,2,3};
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::subroutine( Expression(), u, v, x, array_p);
+    t.toc();
+    std::cout<<"SUBroutine (p*yx+w)              "<<t.diff()/multi<<"s\t" <<4*gbytes*multi/t.diff()<<"GB/s\n";
+    /////////////////////SYMV////////////////////////////////
+    std::cout<<"\nLocal communication\n";
+    Matrix M;
     dg::blas2::transfer(dg::create::dx( grid, dg::backward), M);
     dg::blas2::symv( M, x, y);//warm up
     t.tic();
@@ -86,6 +118,14 @@ int main()
         dg::blas2::symv( M, x, y);
     t.toc();
     std::cout<<"forward y derivative took        "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
+
+    dg::blas2::transfer(dg::create::dx( grid, dg::centered), M);
+    dg::blas2::symv( M, x, y);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas2::symv( M, x, y);
+    t.toc();
+    std::cout<<"centered x derivative took       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
 
     dg::blas2::transfer(dg::create::dy( grid, dg::centered), M);
     dg::blas2::symv( M, x, y);//warm up
@@ -115,37 +155,8 @@ int main()
         dg::blas2::gemv( project, x, x_half); //internally 2 multiplications: full -> half, half -> quarter
     t.toc();
     std::cout<<"Projection full to quarter       "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas1::axpby( 1., y, -1., x);
-    t.toc();
-    std::cout<<"AXPBY (1*y-1*x=x)                "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas1::axpbypgz( 1., x, -1., y, 2., z);
-    t.toc();
-    std::cout<<"AXPBYPGZ (1*x-1*y+2*z=z)         "<<t.diff()/multi<<"s\t"<<4*gbytes*multi/t.diff()<<"GB/s\n";
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas1::axpbypgz( 1., x, -1., y, 3., x);
-    t.toc();
-    std::cout<<"AXPBYPGZ (1*x-1.*y+3*x=x) (A)    "<<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n";
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas1::pointwiseDot(  y, x, x);
-    t.toc();
-    std::cout<<"pointwiseDot (yx=x) (A)          "<<t.diff()/multi<<"s\t" <<3*gbytes*multi/t.diff()<<"GB/s\n";
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  z);
-    t.toc();
-    std::cout<<"pointwiseDot (1*yx+2*uv=z)       "<<t.diff()/multi<<"s\t" <<6*gbytes*multi/t.diff()<<"GB/s\n";
-    t.tic();
-    for( int i=0; i<multi; i++)
-        dg::blas1::pointwiseDot( 1., y, x, 2.,u,v,0.,  v);
-    t.toc();
-    std::cout<<"pointwiseDot (1*yx+2*uv=v) (A)   "<<t.diff()/multi<<"s\t" <<5*gbytes*multi/t.diff()<<"GB/s\n";
-    //these functions are more mean to dot
+    //////////////////////these functions are more mean to dot
+    std::cout<<"\nGlobal communication\n";
     dg::blas1::transfer( dg::evaluate( left, grid), x);
     dg::blas1::transfer( dg::evaluate( right, grid), y);
     value_type norm=0;
@@ -168,5 +179,37 @@ int main()
     t.toc();
     std::cout<<"DOT2(x,w,y) took                 " <<t.diff()/multi<<"s\t"<<3*gbytes*multi/t.diff()<<"GB/s\n"; //DOT should be faster than axpby since it is only loading vectors and not writing them
 
+    std::cout << "\nSequential recursive calls";
+    unsigned size_rec = 1e4;
+    std::vector<double> test_recursive(size_rec, 0.1);
+    gbytes=(double)size_rec*sizeof(double)/1e9;
+    std::cout << " with size "<<gbytes<<"GB\n";
+    norm += dg::blas1::dot( 1., test_recursive);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        norm += dg::blas1::dot( 1., test_recursive);//warm up
+    t.toc();
+    std::cout<<"recursive dot took               " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    thrust::host_vector<double> test_serial((int)size_rec, (double)0.1);
+    norm += dg::blas1::dot( 1., test_serial);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        norm += dg::blas1::dot( test_serial, test_serial);//warm up
+    t.toc();
+    std::cout<<"Serial dot took                  " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    //maybe test how fast a recursive axpby is compared to serial axpby
+    dg::blas1::axpby( 1., test_recursive, 2., test_recursive);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::axpby( 1., test_recursive, 2., test_recursive);//warm up
+    t.toc();
+    std::cout<<"recursive axpby took             " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
+    //
+    dg::blas1::axpby( 1., test_serial, 2., test_serial);//warm up
+    t.tic();
+    for( int i=0; i<multi; i++)
+        dg::blas1::axpby( 1., test_serial, 2., test_serial);//warm up
+    t.toc();
+    std::cout<<"serial axpby took                " <<t.diff()/multi<<"s\t"<<gbytes*multi/t.diff()<<"GB/s\n";
     return 0;
 }

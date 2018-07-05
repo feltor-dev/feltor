@@ -7,7 +7,7 @@
  */
 #pragma once
 
-#include <stdint.h> //definition of int64_t
+#include <cstdint> //definition of int64_t
 #include <cmath>
 #include <cassert>
 ////////////////////////////////////////////////////////////////////////
@@ -102,5 +102,19 @@ union udouble{
     int64_t i; //!< a 64 bit integer
 };
 
+///@cond
+template<class T>
+struct ValueTraits
+{
+    using value_type = T;
+};
+template<class T>
+struct ValueTraits<T*>
+{
+    using value_type = T;
+};
+template<class U>
+using has_floating_value = typename std::conditional< std::is_floating_point<typename ValueTraits<U>::value_type>::value, std::true_type, std::false_type>::type;
+///@endcond
 
 }//namespace exblas

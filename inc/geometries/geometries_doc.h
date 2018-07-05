@@ -61,7 +61,7 @@
   *  - dg::MHMatrix with dg::MHVec or std::vector<dg::MHVec>
   *  - dg::MDMatrix with dg::MDVec or std::vector<dg::MDVec>
   *  - Any type that has the SelfMadeMatrixTag specified in a corresponding
-  *  MatrixTraits class (e.g. Elliptic). In this case only those blas2 functions
+  *  TensorTraits class (e.g. Elliptic). In this case only those blas2 functions
   *  that have a corresponding member function in the Matrix class (e.g. symv( const container&, container&); ) can be called.
   *  If the container is a std::vector, then the Matrix is applied to each of the elements.
   */

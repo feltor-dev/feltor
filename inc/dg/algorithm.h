@@ -5,14 +5,14 @@
  *
  * @note include <mpi.h> before this header to activate mpi support
  */
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "backend/transpose.h"
 #include "geometry/split_and_join.h"
-#include "geometry/xspacelib.cuh"
-#include "geometry/evaluationX.cuh"
+#include "geometry/xspacelib.h"
+#include "geometry/evaluationX.h"
 #include "geometry/derivativesX.h"
-#include "geometry/weightsX.cuh"
-#include "geometry/interpolationX.cuh"
+#include "geometry/weightsX.h"
+#include "geometry/interpolationX.h"
 #include "geometry/projectionX.h"
 #include "geometry/geometry.h"
 #include "blas.h"

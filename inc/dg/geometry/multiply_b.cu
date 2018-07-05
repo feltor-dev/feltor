@@ -3,9 +3,9 @@
 #include <cmath>
 
 #include "tensor.h"
-#include "weights.cuh"
+#include "weights.h"
 #include "multiply.h"
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 
 typedef thrust::device_vector<double> Vector;
 

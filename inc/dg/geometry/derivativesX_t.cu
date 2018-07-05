@@ -1,7 +1,7 @@
 #include <iostream>
 #include "dg/blas.h"
 #include "derivativesX.h"
-#include "evaluationX.cuh"
+#include "evaluationX.h"
 
 double zero( double x, double y) { return 0;}
 double zero( double x, double y, double z) { return 0;}

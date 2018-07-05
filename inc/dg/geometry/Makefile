@@ -12,7 +12,7 @@ CUFILES=$(wildcard *.cu)
 
 all: $(CPPFILES:%.cpp=%) $(CUFILES:%.cu=%)
 
-backscatter_t: backscatter_t.cu xspacelib.cuh
+backscatter_t: backscatter_t.cu xspacelib.h
 	$(CC) $(CFLAGS) $< -o $@ $(GLFLAGS) $(INCLUDE) -g
 
 %_mpit: %_mpit.cu

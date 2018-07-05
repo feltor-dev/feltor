@@ -1,7 +1,7 @@
 #pragma once
 
 #include "grid.h"
-#include "weights.cuh"
+#include "weights.h"
 #include "dg/blas1.h"
 #include "dg/backend/average_dispatch.h"
 

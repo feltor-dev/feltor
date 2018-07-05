@@ -3,7 +3,7 @@
 #include "blas.h"
 #include "enums.h"
 #include "backend/memory.h"
-#include "geometry/evaluation.cuh"
+#include "geometry/evaluation.h"
 #include "geometry/derivatives.h"
 #ifdef MPI_VERSION
 #include "geometry/mpi_derivatives.h"
@@ -683,29 +683,29 @@ struct TensorElliptic
 
 ///@cond
 template< class G, class M, class V>
-struct MatrixTraits< Elliptic<G, M, V> >
+struct TensorTraits< Elliptic<G, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 
 template< class G, class M, class V>
-struct MatrixTraits< GeneralElliptic<G, M, V> >
+struct TensorTraits< GeneralElliptic<G, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
-struct MatrixTraits< GeneralEllipticSym<G, M, V> >
+struct TensorTraits< GeneralEllipticSym<G, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
-struct MatrixTraits< TensorElliptic<G, M, V> >
+struct TensorTraits< TensorElliptic<G, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 ///@endcond
 

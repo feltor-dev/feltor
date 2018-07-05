@@ -6,7 +6,7 @@
 #include <thrust/device_vector.h>
 #include <cusp/array1d.h>
 
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 #include "dg/backend/mpi_init.h"
 #include "dg/blas.h"
 #include "mpi_evaluation.h"
@@ -26,7 +26,7 @@ dg::bc bcx = dg::DIR;
 dg::bc bcy = dg::DIR;
 dg::bc bcz = dg::DIR;
 
-typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice<double>, dg::CooSparseBlockMatDevice<double>, dg::NNCD> Matrix;
+typedef dg::RowColDistMat<dg::EllSparseBlockMatDevice<double>, dg::CooSparseBlockMatDevice<double>, dg::NNCD<double>> Matrix;
 typedef dg::MPI_Vector<dg::DVec > Vector;
 
 int main(int argc, char* argv[])

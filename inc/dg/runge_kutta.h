@@ -30,105 +30,104 @@ namespace dg{
  *  diagonal part.
  * @tparam k Order of the method. Currently 2,3 and 4 are available
  */
-template< size_t k>
-struct rk_coeff
-{
-    static const double alpha[k][k];  //!< alpha
-    static const double beta[k]; //!< beta
-};
+template< size_t k, class real_type>
+struct rk_coeff;
 /*! @brief coefficients for explicit RK methods
  *
  * The coefficients are in the classical form
  * * @tparam s # of stages of the method. Currently 1,2,3,4 and 6 are available
  */
-template< size_t s>
-struct rk_classic
-{
-    static const double a[s][s];  //!< a
-    static const double b[s]; //!< b
-};
+template< size_t s, class real_type>
+struct rk_classic;
 ///@cond
 /*
 template<>
-const double rk_coeff<1>::alpha[1][1] = { {1}};
+const real_type rk_coeff<1>::alpha[1][1] = { {1}};
 template<>
-const double rk_coeff<1>::beta[1] = {1};
+const real_type rk_coeff<1>::beta[1] = {1};
 */
 
 //from Cockburn paper
-template<>
-const double rk_coeff<2>::alpha[2][2] = {
+template<class real_type>
+struct rk_coeff<2, real_type>{
+const real_type alpha[2][2] = {
     { 1,   0},
     { 0.5, 0.5}
 };
-template<>
-const double rk_coeff<2>::beta[2] = {
-     1, 0.5
+const real_type beta[2] = { 1, 0.5 };
 };
 //from Cockburn paper
-template<>
-const double rk_coeff<3>::alpha[3][3] = {
+template<class real_type>
+struct rk_coeff<3, real_type>{
+const real_type alpha[3][3] = {
     { 1,     0,    0},
     { 0.75,  0.25, 0},
     { 1./3., 0.,   2./3.}
 };
-template<>
-const double rk_coeff<3>::beta[3] = {
+const real_type beta[3] = {
      1, 0.25, 2./3.
 };
+};
+template<class real_type>
+struct rk_coeff<4, real_type>{
 //classic RK4 coefficients (matlab used to compute from normal form)
-template<>
-const double rk_coeff<4>::alpha[4][4] = {
+const real_type alpha[4][4] = {
     { 1,    0., 0, 0 },
     { 1.,   0., 0, 0 },
     { 1.,   0., 0, 0 },
     {-1./3., 1./3., 2./3., 1./3.}
 };
-template<>
-const double rk_coeff<4>::beta[4] = {
+const real_type beta[4] = {
      0.5, 0.5, 1.0, 1./6.
 };
-template<>
-const double rk_classic<1>::a[1][1] = {
+};
+/////////////////////rk_classic//////////////////
+template<class real_type>
+struct rk_classic<1, real_type>{
+const real_type a[1][1] = {
     {0}
 };
-template<>
-const double rk_classic<1>::b[1] = {
+const real_type b[1] = {
     1.
 };
-template<>
-const double rk_classic<2>::a[2][2] = {
+};
+template<class real_type>
+struct rk_classic<2, real_type>{
+const real_type a[2][2] = {
     {0,0},
     {.5,0}
 };
-template<>
-const double rk_classic<2>::b[2] = {
+const real_type b[2] = {
     0.,1.
 };
-template<>
-const double rk_classic<3>::a[3][3] = {
+};
+template<class real_type>
+struct rk_classic<3, real_type>{
+const real_type a[3][3] = {
     {0,0,0},
     {.5,0,0},
     {-1,2,0},
 };
-template<>
-const double rk_classic<3>::b[3] = {
+const real_type b[3] = {
     1./6.,2./3.,1./6.
 };
-template<>
-const double rk_classic<4>::a[4][4] = {
+};
+template<class real_type>
+struct rk_classic<4, real_type>{
+const real_type a[4][4] = {
     {0,0,0,0},
     {0.5, 0,0,0},
     {0,0.5,0,0},
     {0,0,1,0}
 };
-template<>
-const double rk_classic<4>::b[4] = {
+const real_type b[4] = {
     1./6., 1./3., 1./3., 1./6.
 };
+};
+template<class real_type>
+struct rk_classic<6, real_type>{
 //Fehlberg
-template<>
-const double rk_classic<6>::a[6][6] = {
+const real_type a[6][6] = {
     {0,0,0,0,0,0},
     {0.25, 0,0,0,0,0},
     {3./32., 9./32.,0,0,0,0},
@@ -136,14 +135,15 @@ const double rk_classic<6>::a[6][6] = {
     {439./216., -8, 3680./513.,   -845./4104.,0,0},
     {-8./27.,   2.,   -3544./2565.,  1859./4104.,   -11./40., 0}
 };
-template<>
-const double rk_classic<6>::b[6] = {
+const real_type b[6] = {
     16./135.,  0,   6656./12825.,  28561./56430.,     -9./50.,   2./55.
 };
 
+};
+template<class real_type>
+struct rk_classic<17, real_type>{
 //RK(10)
-template<>
-const double rk_classic<17>::a[17][17] = {
+const real_type a[17][17] = {
 {0,0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0},
 {0.100000000000000000000000000000000000000000000000000000000000, 0,0,0,0, 0,0,0,0,0, 0,0,0,0,0, 0,0},
 {-0.915176561375291440520015019275342154318951387664369720564660,
@@ -283,8 +283,7 @@ const double rk_classic<17>::a[17][17] = {
 -0.675000000000000000000000000000000000000000000000000000000000, 0}
 };
 
-template<>
-const double rk_classic<17>::b[17] = {
+const real_type b[17] = {
 0.0333333333333333333333333333333333333333333333333333333333333,
 0.0250000000000000000000000000000000000000000000000000000000000,
 0.0333333333333333333333333333333333333333333333333333333333333,
@@ -303,15 +302,16 @@ const double rk_classic<17>::b[17] = {
 -0.0250000000000000000000000000000000000000000000000000000000000,
 0.0333333333333333333333333333333333333333333333333333333333333
 };
+};
 ///@endcond
 
  /** @class hide_rhs
   * @tparam RHS The right hand side
         is a functor type with no return value (subroutine)
-        of signature <tt> void operator()(value_type, const container&, container&)</tt>
+        of signature <tt> void operator()(value_type, const ContainerType&, ContainerType&)</tt>
         The first argument is the time, the second is the input vector, which the functor may \b not override, and the third is the output,
         i.e. y' = f(t, y) translates to f(t, y, y').
-        The two container arguments never alias each other in calls to the functor.
+        The two ContainerType arguments never alias each other in calls to the functor.
   */
 
 /**
@@ -338,26 +338,27 @@ const double rk_classic<17>::b[17] = {
  *  by ones on the left and \f$ D\f$ its
  *  diagonal part.
 * @tparam s Order of the method (1, 2, 3 or 4)
-* @copydoc hide_container
+* @copydoc hide_ContainerType
 * @sa RK
 */
-template< size_t s, class container>
+template< size_t s, class ContainerType>
 struct RK_opt
 {
+    using real_type = get_value_type<ContainerType>;
     ///@brief No memory allocation, Call \c construct before using the object
     RK_opt(){}
 
     ///@copydoc construct()
-    RK_opt( const container& copyable){
+    RK_opt( const ContainerType& copyable){
         construct(copyable);
     }
     /**
     * @brief Reserve internal workspace for the integration
     *
-    * @param copyable container of the size that is used in \c step
+    * @param copyable ContainerType of the size that is used in \c step
     * @note it does not matter what values \c copyable contains, but its size is important
     */
-    void construct( const container& copyable){
+    void construct( const ContainerType& copyable){
         u_.fill(copyable);
     }
 
@@ -373,60 +374,62 @@ struct RK_opt
     * @param dt timestep
     */
     template< class RHS>
-    void step( RHS& rhs, double t0, const container& u0, double& t1, container& u1, double dt);
+    void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt);
   private:
-    std::array<container,s> u_; //the order determines the amount of memory needed
+    std::array<ContainerType,s> u_; //the order determines the amount of memory needed
+    const rk_coeff<s,real_type> m_rk;
 };
 
-template< size_t k, class container>
+template< size_t k, class ContainerType>
 template< class RHS>
-void RK_opt<k, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
+void RK_opt<k, ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt)
 {
     f(t0, u0, u_[0]);
-    blas1::axpby( rk_coeff<k>::alpha[0][0], u0, dt*rk_coeff<k>::beta[0], u_[0]);
-    std::array<double,k-1> tu;
-    tu[0] =  dt*rk_coeff<k>::beta[0];
-    tu[0] = DG_FMA( rk_coeff<k>::alpha[0][0], t0, tu[0]);
+    blas1::axpby( m_rk.alpha[0][0], u0, dt*m_rk.beta[0], u_[0]);
+    std::array<real_type,k-1> tu;
+    tu[0] =  dt*m_rk.beta[0];
+    tu[0] = DG_FMA( (m_rk.alpha[0][0]), t0, tu[0]);
     for( unsigned i=1; i<k-1; i++)
     {
         f(tu[i-1], u_[i-1], u_[i] );
-        blas1::axpby( rk_coeff<k>::alpha[i][0], u0, dt*rk_coeff<k>::beta[i], u_[i]);
-        tu[i] = dt*rk_coeff<k>::beta[i];
-        tu[i] = DG_FMA( rk_coeff<k>::alpha[i][0],t0,tu[i]);
+        blas1::axpby( m_rk.alpha[i][0], u0, dt*m_rk.beta[i], u_[i]);
+        tu[i] = dt*m_rk.beta[i];
+        tu[i] = DG_FMA( m_rk.alpha[i][0],t0,tu[i]);
         for( unsigned l=1; l<=i; l++)
         {
-            blas1::axpby(   rk_coeff<k>::alpha[i][l], u_[l-1], 1., u_[i]);
-            tu[i] = DG_FMA( rk_coeff<k>::alpha[i][l], tu[l-1], tu[i]);
+            blas1::axpby(   m_rk.alpha[i][l], u_[l-1], 1., u_[i]);
+            tu[i] = DG_FMA( m_rk.alpha[i][l], tu[l-1], tu[i]);
         }
     }
     //Now add everything up to u1
     f(tu[k-2], u_[k-2], u_[k-1]); //u1 may alias u0, so we need u_[k-1]
-    blas1::axpby( rk_coeff<k>::alpha[k-1][0], u0, dt*rk_coeff<k>::beta[k-1], u_[k-1], u1);
+    blas1::axpby( m_rk.alpha[k-1][0], u0, dt*m_rk.beta[k-1], u_[k-1], u1);
     for( unsigned l=1; l<=k-1; l++)
-        blas1::axpby( rk_coeff<k>::alpha[k-1][l], u_[l-1],1., u1);
+        blas1::axpby(m_rk.alpha[k-1][l], u_[l-1],1., u1);
     t1 = t0 + dt;
 }
 ///@cond
 //Euler specialisation
-template < class container>
-struct RK_opt<1, container>
+template < class ContainerType>
+struct RK_opt<1, ContainerType>
 {
+    using real_type = get_value_type<ContainerType>;
     RK_opt(){}
-    RK_opt( const container& copyable){
+    RK_opt( const ContainerType& copyable){
         construct(copyable);
     }
-    void construct( const container& copyable){
+    void construct( const ContainerType& copyable){
         u_ = copyable;
     }
     template < class RHS>
-    void step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
+    void step( RHS& f, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt)
     {
         f( t0, u0, u_); //we need u_ if u1 aliases u0
         blas1::axpby( 1., u0, dt, u_, u1);
         t1 = t0 + dt;
     }
     private:
-    container u_;
+    ContainerType u_;
 };
 ///@endcond
 
@@ -447,51 +450,53 @@ struct RK_opt<1, container>
 * The coefficients are chosen in the classic form given by Runge and Kutta.
 * Needs more vector additions than our RK_opt class but we implemented higher orders
 * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
-* @copydoc hide_container
+* @copydoc hide_ContainerType
 */
-template< size_t s, class container>
+template< size_t s, class ContainerType>
 struct RK
 {
+    using real_type = get_value_type<ContainerType>;
     ///@copydoc RK_opt::RK_opt()
     RK(){}
-    ///@copydoc RK_opt::construct(const container&)
-    RK( const container& copyable){
+    ///@copydoc RK_opt::construct(const ContainerType&)
+    RK( const ContainerType& copyable){
         construct( copyable);
     }
-    ///@copydoc RK_opt::construct(const container&)
-    void construct( const container& copyable){
+    ///@copydoc RK_opt::construct(const ContainerType&)
+    void construct( const ContainerType& copyable){
         k_.fill(copyable);
         u_ = copyable;
     }
-    ///@copydoc RK_opt::step(RHS&,double,const container&,double&,container&,double)
+    ///@copydoc RK_opt::step(RHS&,real_type,const ContainerType&,real_type&,ContainerType&,real_type)
     template<class RHS>
-    void step( RHS& rhs, double t0, const container& u0, double& t1, container& u1, double dt);
+    void step( RHS& rhs, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt);
   private:
-    std::array<container,s> k_;
-    container u_;
+    std::array<ContainerType,s> k_;
+    ContainerType u_;
+    const rk_classic<s, real_type> m_rk;
 };
 
-template< size_t s, class container>
+template< size_t s, class ContainerType>
 template< class RHS>
-void RK<s, container>::step( RHS& f, double t0, const container& u0, double& t1, container& u1, double dt)
+void RK<s, ContainerType>::step( RHS& f, real_type t0, const ContainerType& u0, real_type& t1, ContainerType& u1, real_type dt)
 {
     f(t0, u0, k_[0]); //compute k_0
-    double tu = t0;
+    real_type tu = t0;
     for( unsigned i=1; i<s; i++) //compute k_i
     {
-        blas1::axpby( 1., u0, dt*rk_classic<s>::a[i][0],k_[0], u_); //l=0
-        tu = DG_FMA( dt,rk_classic<s>::a[i][0],t0); //l=0
+        blas1::axpby( 1., u0, dt*m_rk.a[i][0],k_[0], u_); //l=0
+        tu = DG_FMA( dt,m_rk.a[i][0],t0); //l=0
         for( unsigned l=1; l<i; l++)
         {
-            blas1::axpby( dt*rk_classic<s>::a[i][l], k_[l],1., u_);
-            tu = DG_FMA(dt,rk_classic<s>::a[i][l],tu);
+            blas1::axpby( dt*m_rk.a[i][l], k_[l],1., u_);
+            tu = DG_FMA(dt,m_rk.a[i][l],tu);
         }
         f( tu, u_, k_[i]);
 
     }
     //Now add everything up to u1
     for( unsigned i=0; i<s; i++)
-        blas1::axpby( dt*rk_classic<s>::b[i], k_[i],1., u1);
+        blas1::axpby( dt*m_rk.b[i], k_[i],1., u1);
     t1 = t0 + dt;
 }
 
@@ -503,7 +508,7 @@ void RK<s, container>::step( RHS& f, double t0, const container& u0, double& t1,
  *
  * @tparam s # of stages (1, 2, 3, 4, 6, 17)
  * @copydoc hide_rhs
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @param rhs The right-hand-side
  * @param t_begin initial time
  * @param begin initial condition
@@ -511,14 +516,15 @@ void RK<s, container>::step( RHS& f, double t0, const container& u0, double& t1,
  * @param end (write-only) contains solution at \c t_end on output (may alias begin)
  * @param N number of steps
  */
-template< unsigned s, class RHS, class container>
-void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, container& end, unsigned N )
+template< unsigned s, class RHS, class ContainerType>
+void stepperRK(RHS& rhs, get_value_type<ContainerType>  t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, unsigned N )
 {
-    RK<s, container > rk( begin);
+    using real_type = get_value_type<ContainerType>;
+    RK<s, ContainerType > rk( begin);
     if( t_end == t_begin){ end = begin; return;}
-    double dt = (t_end-t_begin)/(double)N;
+    real_type dt = (t_end-t_begin)/(real_type)N;
     end = begin;
-    double t0 = t_begin;
+    real_type t0 = t_begin;
     for( unsigned i=0; i<N; i++)
         rk.step( rhs, t0, end, t0, end, dt);
 }
@@ -532,11 +538,11 @@ void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, c
  * @tparam s Order of the method (1, 2, 3, 4, 6, 17)
  * @copydoc hide_rhs
  * @tparam RHS
- * In addition, there must be the function \c bool \c monitor( const container& end);
+ * In addition, there must be the function \c bool \c monitor( const ContainerType& end);
  * available, which is called after every step.
  * Return \c true if everything is ok and \c false if the integrator certainly fails.
- * The other function is the \c double \c error( const container& end0, const container& end1); which computes the error norm in which the integrator should converge.
- * @copydoc hide_container
+ * The other function is the \c real_type \c error( const ContainerType& end0, const ContainerType& end1); which computes the error norm in which the integrator should converge.
+ * @copydoc hide_ContainerType
  * @param rhs The right-hand-side
  * @param t_begin initial time
  * @param begin initial condition
@@ -546,21 +552,22 @@ void stepperRK(RHS& rhs, double t_begin, const container& begin, double t_end, c
  * @param NT_init initial number of steps
  * @return number of iterations if converged, -1 and a warning to \c std::cerr when \c isnan appears, -2 if failed to reach \c eps_abs
  */
-template<unsigned s, class RHS, class container>
-int integrateRK(RHS& rhs, double t_begin, const container& begin, double t_end, container& end, double eps_abs, unsigned NT_init = 2 )
+template<unsigned s, class RHS, class ContainerType>
+int integrateRK(RHS& rhs, get_value_type<ContainerType> t_begin, const ContainerType& begin, get_value_type<ContainerType> t_end, ContainerType& end, get_value_type<ContainerType> eps_abs, unsigned NT_init = 2 )
 {
-    RK<s, container > rk( begin);
-    container old_end(begin);
-    end = begin;
+    using real_type = get_value_type<ContainerType>;
+    RK<s, ContainerType > rk( begin);
+    ContainerType old_end(begin);
+    blas1::copy( begin, end );
     if( t_end == t_begin) return 0;
     int NT = NT_init;
-    double dt = (t_end-t_begin)/(double)NT;
-    double error = 1e10;
-    double t0 = t_begin;
+    real_type dt = (t_end-t_begin)/(real_type)NT;
+    real_type error = 1e10;
+    real_type t0 = t_begin;
 
     while( error > eps_abs && NT < pow( 2, 18) )
     {
-        end = begin;
+        blas1::copy( begin, end );
 
         int i=0;
         while (i<NT)
@@ -576,7 +583,7 @@ int integrateRK(RHS& rhs, double t_begin, const container& begin, double t_end, 
             i++;
         }
         error = rhs.error( end, old_end);
-        old_end = end;
+        blas1::copy( end, old_end);
         t0 = t_begin;
         dt /= 2.;
         NT *= 2;

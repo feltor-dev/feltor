@@ -8,6 +8,10 @@ namespace dg
 
 /**
  * @brief Execution Policy base class
+ *
+ * The Execution Policy Tag indicates the type of hardware memory is physically
+allocated on in a vector class and therefore indicates the
+possible parallelization and optimization strategies.
  * @note actually "policy" is a misleading name since we do not inject a policy into a type (in the sense Alexandrescu might use) but rather treat the execution as a trait of a type.
  * It is therefore unfortunately not possible to easily change the execution policy of a type in a program other than brute force MACROS.
  */

@@ -7,7 +7,7 @@
 #include "functors.h"
 
 #ifdef DG_BENCHMARK
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #endif //DG_BENCHMARK
 
 /*!@file
@@ -23,23 +23,23 @@ namespace dg{
 * \f[ Ax=b\f]
 *
 * @ingroup invert
-* @copydoc hide_container
 *
 * @note Conjugate gradients might become unstable for positive semidefinite
 * matrices arising e.g. in the discretization of the periodic laplacian
 * @attention beware the sign: a negative definite matrix does @b not work in Conjugate gradient
 *
 * @snippet cg2d_t.cu doxygen
+* @copydoc hide_ContainerType
 */
-template< class container>
+template< class ContainerType>
 class CG
 {
   public:
-    typedef typename VectorTraits<container>::value_type value_type;//!< value type of the container class
+    typedef typename TensorTraits<ContainerType>::value_type value_type;//!< value type of the ContainerType class
     ///@brief Allocate nothing, Call \c construct method before usage
     CG(){}
     ///@copydoc construct()
-    CG( const container& copyable, unsigned max_iterations):r(copyable), p(r), ap(r), max_iter(max_iterations){}
+    CG( const ContainerType& copyable, unsigned max_iterations):r(copyable), p(r), ap(r), max_iter(max_iterations){}
     ///@brief Set the maximum number of iterations
     ///@param new_max New maximum number
     void set_max( unsigned new_max) {max_iter = new_max;}
@@ -50,10 +50,10 @@ class CG
     /**
      * @brief Allocate memory for the pcg method
      *
-     * @param copyable A container must be copy-constructible from this
+     * @param copyable A ContainerType must be copy-constructible from this
      * @param max_iterations Maximum number of iterations to be used
      */
-    void construct( const container& copyable, unsigned max_iterations) {
+    void construct( const ContainerType& copyable, unsigned max_iterations) {
         ap = p = r = copyable;
         max_iter = max_iterations;
     }
@@ -75,11 +75,11 @@ class CG
              - 11  reads + 3 writes
              - plus the number of memops for \c A;
      * @copydoc hide_matrix
-     * @tparam Preconditioner A class for which the blas2::symv() and
-     blas2::dot( const Matrix&, const Vector&) functions are callable. Currently Preconditioner must be the same as container (diagonal preconditioner) except when container is std::vector<container_type> then Preconditioner can be container_type
+     * @tparam Preconditioner A class for which the blas2::symv(value_type, const Preconditioner&, const ContainerType&, value_type, ContainerType&) and
+     blas2::dot( const Preconditioner&, const ContainerType&) functions are callable.
      */
-    template< class Matrix, class Preconditioner >
-    unsigned operator()( Matrix& A, container& x, const container& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class Preconditioner >
+    unsigned operator()( MatrixType& A, ContainerType& x, const ContainerType& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
     //version of CG where Preconditioner is not trivial
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
@@ -99,13 +99,13 @@ class CG
              - 15  reads + 4 writes
              - plus the number of memops for \c A;
      * @copydoc hide_matrix
-     * @tparam Preconditioner A type for which the blas2::symv(Matrix&, Vector1&, Vector2&) function is callable.
-     * @tparam SquareNorm A type for which the blas2::dot( const Matrix&, const Vector&) function is callable. This can e.g. be one of the container types.
+     * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
+     * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
-    template< class Matrix, class Preconditioner, class SquareNorm >
-    unsigned operator()( Matrix& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class Preconditioner, class SquareNorm >
+    unsigned operator()( MatrixType& A, ContainerType& x, const ContainerType& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
-    container r, p, ap;
+    ContainerType r, p, ap;
     unsigned max_iter;
 };
 
@@ -126,9 +126,9 @@ class CG
     significantly more elements than z whence ddot(r,A,r) is far slower than ddot(r,z)
 */
 ///@cond
-template< class container>
+template< class ContainerType>
 template< class Matrix, class Preconditioner>
-unsigned CG< container>::operator()( Matrix& A, container& x, const container& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
+unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const ContainerType& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
@@ -189,9 +189,9 @@ unsigned CG< container>::operator()( Matrix& A, container& x, const container& b
     return max_iter;
 }
 
-template< class container>
+template< class ContainerType>
 template< class Matrix, class Preconditioner, class SquareNorm>
-unsigned CG< container>::operator()( Matrix& A, container& x, const container& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
+unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const ContainerType& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( S, b));
 #ifdef DG_DEBUG
@@ -253,10 +253,10 @@ can be used to get initial guesses based on past solutions
  \f[ x_{init} = \alpha_0 x_0 + \alpha_{-1}x_{-1} + \alpha_{-2} x_{-2}\f]
  where the indices indicate the current (0) and past (negative) solutions.
 *
-* @copydoc hide_container
+* @copydoc hide_ContainerType
 * @ingroup invert
 */
-template<class container>
+template<class ContainerType>
 struct Extrapolation
 {
     /*! @brief Set extrapolation number without initializing values
@@ -268,7 +268,7 @@ struct Extrapolation
      * @param number number of vectors to use for extrapolation ( 0<=number<=3)
      * @param init the vectors are initialized with this value
      */
-    Extrapolation( unsigned number, const container& init) {
+    Extrapolation( unsigned number, const ContainerType& init) {
         set_number(number, init);
     }
     ///@copydoc Extrapolation(unsigned)
@@ -278,8 +278,8 @@ struct Extrapolation
         m_x.resize( number);
         assert( m_number <= 3 );
     }
-    ///@copydoc Extrapolation(unsigned,const container&)
-    void set_number( unsigned number, const container& init)
+    ///@copydoc Extrapolation(unsigned,const ContainerType&)
+    void set_number( unsigned number, const ContainerType& init)
     {
         m_x.assign( number, init);
         m_number = number;
@@ -292,7 +292,7 @@ struct Extrapolation
     * @brief Extrapolate values (\c number +1 memops)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
     */
-    void extrapolate( container& new_x) const{
+    void extrapolate( ContainerType& new_x) const{
         switch(m_number)
         {
             case(0):
@@ -313,7 +313,7 @@ struct Extrapolation
     * @brief move the all values one step back and copy the given vector as current head
     * @param new_head the new head ( may alias the tail)
     */
-    void update( const container& new_head){
+    void update( const ContainerType& new_head){
         if( m_number == 0) return;
         //push out last value
         for (unsigned u=m_number-1; u>0; u--)
@@ -325,15 +325,15 @@ struct Extrapolation
      * @brief return the current head
      * @return current head (undefined if number==0)
      */
-    const container& head()const{return m_x[0];}
+    const ContainerType& head()const{return m_x[0];}
     ///write access to tail value ( the one that will be deleted in the next update
-    container& tail(){return m_x[m_number-1];}
+    ContainerType& tail(){return m_x[m_number-1];}
     ///read access to tail value ( the one that will be deleted in the next update
-    const container& tail()const{return m_x[m_number-1];}
+    const ContainerType& tail()const{return m_x[m_number-1];}
 
     private:
     unsigned m_number;
-    std::vector<container> m_x;
+    std::vector<ContainerType> m_x;
 };
 
 
@@ -358,18 +358,18 @@ struct Extrapolation
  * a good general purpose preconditioner.
  * @attention beware the sign: a negative definite matrix does @b not work in Conjugate gradient
  * @sa Extrapolation MultigridCG2d
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  */
-template<class container>
+template<class ContainerType>
 struct Invert
 {
-    typedef typename VectorTraits<container>::value_type value_type;
+    typedef typename TensorTraits<ContainerType>::value_type value_type;
 
     ///@brief Allocate nothing
     Invert() { multiplyWeights_ = true; nrmb_correction_ = 1.; }
 
     ///@copydoc construct()
-    Invert(const container& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1)
+    Invert(const ContainerType& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1)
     {
         construct( copyable, max_iter, eps, extrapolationType, multiplyWeights, nrmb_correction);
     }
@@ -384,7 +384,7 @@ struct Invert
      * @param multiplyWeights if true the rhs shall be multiplied by the weights before cg is applied
      * @param nrmb_correction Correction factor for norm of b (cf. CG)
      */
-    void construct( const container& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1.)
+    void construct( const ContainerType& copyable, unsigned max_iter, value_type eps, int extrapolationType = 2, bool multiplyWeights = true, value_type nrmb_correction = 1.)
     {
         m_ex.set_number( extrapolationType);
         set_size( copyable, max_iter);
@@ -399,7 +399,7 @@ struct Invert
      * @param assignable
      * @param max_iterations
      */
-    void set_size( const container& assignable, unsigned max_iterations) {
+    void set_size( const ContainerType& assignable, unsigned max_iterations) {
         cg.construct(assignable, max_iterations);
         m_ex.set_number( m_ex.get_number(), assignable);
     }
@@ -435,7 +435,7 @@ struct Invert
     unsigned get_max() const {return cg.get_max();}
 
     /// @brief Return last solution
-    const container& get_last() const { return m_ex.head();}
+    const ContainerType& get_last() const { return m_ex.head();}
 
     /**
      * @brief Solve linear problem
@@ -453,7 +453,7 @@ struct Invert
      * @return number of iterations used
      */
     template< class SymmetricOp >
-    unsigned operator()( SymmetricOp& op, container& phi, const container& rho)
+    unsigned operator()( SymmetricOp& op, ContainerType& phi, const ContainerType& rho)
     {
         return this->operator()(op, phi, rho, op.weights(), op.inv_weights(), op.precond());
     }
@@ -479,7 +479,7 @@ struct Invert
      * @return number of iterations used
      */
     template< class Matrix, class SquareNorm, class Preconditioner >
-    unsigned operator()( Matrix& op, container& phi, const container& rho, const SquareNorm& weights, const SquareNorm& inv_weights, Preconditioner& p)
+    unsigned operator()( Matrix& op, ContainerType& phi, const ContainerType& rho, const SquareNorm& weights, const SquareNorm& inv_weights, Preconditioner& p)
     {
         assert( phi.size() != 0);
         assert( &rho != &phi);
@@ -516,8 +516,8 @@ struct Invert
 
   private:
     value_type eps_, nrmb_correction_;
-    dg::CG< container > cg;
-    Extrapolation<container> m_ex;
+    dg::CG< ContainerType > cg;
+    Extrapolation<ContainerType> m_ex;
     bool multiplyWeights_;
 };
 
