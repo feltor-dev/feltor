@@ -22,8 +22,7 @@ struct Implicit
             //dg::blas2::gemv( LaplacianM_perp, x[i], temp);
             //dg::blas2::gemv( LaplacianM_perp, temp, y[i]);
             //dg::blas1::axpby( -nu_, y[i], 0., y[i]);
-            dg::blas2::gemv( LaplacianM_perp, x[i], y[i]);
-            dg::blas1::scal( y[i], -nu_);
+            dg::blas2::gemv( -nu_, LaplacianM_perp, x[i], 0., y[i]);
         }
     }
     dg::Elliptic<Geometry, Matrix, container>& laplacianM() {return LaplacianM_perp;}

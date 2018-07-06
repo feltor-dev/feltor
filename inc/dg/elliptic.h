@@ -57,6 +57,7 @@ template <class Geometry, class Matrix, class container>
 class Elliptic
 {
     public:
+    using value_type = get_value_type<container>;
     ///@brief empty object ( no memory allocation, call \c construct before using the object)
     Elliptic(){}
     /**
@@ -69,13 +70,13 @@ class Elliptic
      * @param jfactor (\f$ = \alpha \f$ ) scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      * @note chi is assumed 1 per default
      */
-    Elliptic( const Geometry& g, norm no = not_normed, direction dir = forward, double jfactor=1.)
+    Elliptic( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor=1.)
     {
         construct( g, g.bcx(), g.bcy(), no, dir, jfactor);
     }
 
     ///@copydoc Elliptic::construct()
-    Elliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor=1.)
+    Elliptic( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, value_type jfactor=1.)
     {
         construct( g, bcx, bcy, no, dir, jfactor);
     }
@@ -89,7 +90,7 @@ class Elliptic
      * @param dir Direction of the right first derivative (i.e. forward, backward or centered)
      * @param jfactor scale jump terms (1 is a good value but in some cases 0.1 or 0.01 might be better)
      */
-    void construct( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, double jfactor = 1.)
+    void construct( const Geometry& g, bc bcx, bc bcy, norm no = not_normed, direction dir = forward, value_type jfactor = 1.)
     {
         no_=no, jfactor_=jfactor;
         dg::blas2::transfer( dg::create::dx( g, inverse( bcx), inverse(dir)), leftx);
@@ -109,8 +110,8 @@ class Elliptic
         dg::blas1::transfer( dg::create::weights(g), weights_wo_vol);
     }
 
-    ///@copydoc  Elliptic::Elliptic(const Geometry&,norm,direction,double)
-    void construct( const Geometry& g, norm no = not_normed, direction dir = forward, double jfactor = 1.){
+    ///@copydoc  Elliptic::Elliptic(const Geometry&,norm,direction,value_type)
+    void construct( const Geometry& g, norm no = not_normed, direction dir = forward, value_type jfactor = 1.){
         construct( g, g.bcx(), g.bcy(), no, dir, jfactor);
     }
 
@@ -161,13 +162,13 @@ class Elliptic
      *
      * @param new_jfactor The new scale factor for jump terms
      */
-    void set_jfactor( double new_jfactor) {jfactor_ = new_jfactor;}
+    void set_jfactor( value_type new_jfactor) {jfactor_ = new_jfactor;}
     /**
      * @brief Get the currently used jfactor
      *
      * @return  The current scale factor for jump terms
      */
-    double get_jfactor() const {return jfactor_;}
+    value_type get_jfactor() const {return jfactor_;}
 
     /**
      * @brief Computes the polarisation term
@@ -200,6 +201,40 @@ class Elliptic
         if( no_ == not_normed)//multiply weights without volume
             dg::blas2::symv( weights_wo_vol, y, y);
     }
+    /**
+     * @brief Computes the polarisation term
+     *
+     * @param alpha a scalar
+     * @param x left-hand-side
+     * @param beta a scalar
+     * @param y result
+     */
+    void symv( value_type alpha, const container& x, value_type beta, container& y)
+    {
+        //compute gradient
+        dg::blas2::gemv( rightx, x, tempx); //R_x*f
+        dg::blas2::gemv( righty, x, tempy); //R_y*f
+
+        //multiply with tensor (note the alias)
+        dg::tensor::multiply2d(chi_, tempx, tempy, gradx, tempy);
+
+        if( no_ == normed && !vol_.isSet())
+        {
+            dg::blas2::symv( alpha, lefty, tempy, beta, y);
+            dg::blas2::symv( -alpha, leftx, gradx, -1., y);
+            dg::blas2::symv( alpha*jfactor_, jumpX, x, 1., y);
+            dg::blas2::symv( alpha*jfactor_, jumpY, x, 1., y);
+            return;
+        }
+        dg::blas2::symv( lefty, tempy, tempx);
+        dg::blas2::symv( -1., leftx, gradx, -1., tempx);
+        dg::blas2::symv( jfactor_, jumpX, x, 1., tempx);
+        dg::blas2::symv( jfactor_, jumpY, x, 1., tempx);
+        if( no_ == normed)
+            dg::blas1::pointwiseDivide(alpha, tempx, vol_.value(), beta, y);
+        if( no_ == not_normed)//multiply weights without volume
+            dg::blas1::pointwiseDot( alpha, weights_wo_vol, tempx, beta, y);
+    }
 
     private:
     bc inverse( bc bound)
@@ -222,7 +257,7 @@ class Elliptic
     norm no_;
     SparseTensor<container> chi_;
     SparseElement<container> chi_old_, vol_;
-    double jfactor_;
+    value_type jfactor_;
 };
 
 
