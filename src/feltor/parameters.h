@@ -26,9 +26,10 @@ struct Parameters
     double eps_gamma; //!< accuracy of gamma operator
     double eps_time;//!< accuracy of implicit timestep
     double eps_hat;//!< 1
+    unsigned stages; //!< # of stages in multigrid
 
-    double mu[2]; //!< mu[0] = mu_e, m[1] = mu_i
-    double tau[2]; //!< tau[0] = -1, tau[1] = tau_i
+    std::array<double,2> mu; //!< mu[0] = mu_e, m[1] = mu_i
+    std::array<double,2> tau; //!< tau[0] = -1, tau[1] = tau_i
 
     double nu_perp;  //!< perpendicular diffusion
     double nu_parallel;  //!< parallel diffusion
@@ -72,6 +73,7 @@ struct Parameters
         eps_gamma   = js["eps_gamma"].asDouble();
         eps_time    = js["eps_time"].asDouble();
         eps_hat     = 1.;
+        stages      = js.get( "stages", 3).asUInt();
 
         mu[0]       = js["mu"].asDouble();
         mu[1]       = +1.;

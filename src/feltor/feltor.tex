@@ -115,7 +115,7 @@ The continuity equations for the electron density \(n_e\) and  ion gyro-centre d
 %  + \frac{m_e }{2 e } u_e^2 \mathcal{K} \left(n_e \right) +
    +  \frac{m_e }{ e } \mathcal{K}_{\kappa} \left( n_e u_e^2 \right) 
    + \frac{m_e }{ e } \left( n_e u_e^2 \right) \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
-   + \Lambda_{n_e} ,\\
+   + \Lambda_{n_e} + S_{n_e},\\
 \frac{\partial}{\partial t}N_i =&
  - \frac{1}{B}\left[\psi_i,  N_i \right]_{\perp}
  - {\nabla}_{\parallel}(N_i U_i)
@@ -127,7 +127,7 @@ The continuity equations for the electron density \(n_e\) and  ion gyro-centre d
 %  - \frac{m_i }{2 e } U_i^2 \mathcal{K} \left(N_i \right) +
 - \frac{m_i }{ e }\mathcal{K}_{\kappa}  \left( N_i U_i^2 \right)
 - \frac{m_i }{ e } \left( N_i U_i^2 \right)\vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
-+ \Lambda_{N_i} .
++ \Lambda_{N_i} + S_{N_i}.
 \end{align}
 The evolution equation for the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are 
 \begin{align}
@@ -148,7 +148,7 @@ The evolution equation for the parallel electron velocity \(u_e\) and the parall
 %      +\frac{  t_e u_e }{e }  \mathcal{K}\left( \ln n_e \right)       
 %       +\left(\frac{2  t_e  }{e} + \frac{m_e  u_e^2}{2 e} \right) \mathcal{K} \left(u_e\right)      
 %       +\frac{e}{m_e}   \eta_{\parallel} J_\parallel
-      +\Lambda_{u_e},  \\
+    +\Lambda_{u_e} + R_{e, \eta_\parallel},  \\
 \frac{\partial}{\partial t}    U_i 
       =&
       - \frac{1 }{ B} \left[ \psi_i, U_i  \right]_{\perp} 
@@ -163,10 +163,10 @@ The evolution equation for the parallel electron velocity \(u_e\) and the parall
            - \frac{1}{e}\left(m_i  U_i^2 + 2  T_i \right) \mathcal{K}_{\kappa} \left(U_i\right)      
            - \frac{2  T_i U_i }{ e} \mathcal{K}_{\kappa} \left(\ln N_i \right)   
            - \frac{T_i  U_i }{e} \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
-%      -\frac{  T_i U_i }{e }  \mathcal{K}\left( \ln N_i \right)       
+%      -\frac{  T_i U_i }{e }  \mathcal{K}\left( \ln N_i \right)
 %       -\left(\frac{2  T_i  }{e} + \frac{m_i  U_i^2}{2 e} \right) \mathcal{K} \left(U_i\right)      
 %       -\frac{e}{m_i}   \eta_{\parallel} J_\parallel
-+\Lambda_{U_i}  .
+           +\Lambda_{U_i} + R_{i,\eta_\parallel} .
 \end{align}
 The electric potential \(\phi\) is computed by the polarisation equation
 \begin{align}
@@ -187,25 +187,26 @@ and the curvature operator \(\mathcal{K}(f)\)
 \mathcal{K}(f)&:=\vec{\nabla} \cdot \left(\frac{1}{B} \vec{\hat{b}} \times \vec{\nabla} f \right).
 \end{align}
 Moreover explicit expressions of the perpendicular Poisson bracket \( \frac{1}{B}\left[f,g\right]_\perp\), the perpendicular elliptic operator \( \vec{\nabla}\cdot\left(g \vec{\nabla}_\perp f\right)\), 
-the parallel derivative \(\nabla_\parallel\) and the parallel Laplacian \(\Delta_\parallel\) and  the curvature operators \(\mathcal{K}(f)\), 
+the parallel derivative \(\nabla_\parallel\) and the parallel Laplacian \(\Delta_\parallel\) and  the curvature operators \(\mathcal{K}(f)\),
 \(\mathcal{K}_\kappa(f)\) and \(\vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} \)
 depend on the choice of the magnetic field geometry, curvature approximation and the underlying coordinate system.
-\subsection{Dissipation and parallel resistivity}\label{sec:dissres}
-The dissipative terms can be decomposed into a perpendicular and parallel components and a term which accounts for resistive friction (subscript \(\eta_\parallel\)) 
-\begin{align}
- \Lambda_{n_e} &= \Lambda_{n_e,\perp}+\Lambda_{n_e,\parallel}, &
- \Lambda_{N_i} &= \Lambda_{N_i,\perp}+\Lambda_{N_i,\parallel},\\
- \Lambda_{u_e} &= \Lambda_{u_e,\perp}+\Lambda_{u_e,\parallel}+\Lambda_{e,\eta_\parallel},&
- \Lambda_{U_i} &= \Lambda_{U_i,\perp}+\Lambda_{U_i,\parallel}+\Lambda_{i,\eta_\parallel}.
-\end{align}
+\subsection{Dissipation, sources and parallel resistivity}\label{sec:dissres}
+The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
 The parallel Spitzer resistivity
 \begin{align}
 \eta_\parallel := \frac{0.51 m_e \nu_e}{n_e e^2} 
 \end{align}
 and the approximate Spitzer current \(J_{\parallel,s}:= e n_e \left(U_i - u_e\right)\) determine the parallel resistive terms to:
 \begin{align}
- \Lambda_{e,\eta_\parallel} &=  \eta_\parallel e J_{\parallel,s} /m_e  &
- \Lambda_{i,\eta_\parallel} &=- \frac{m_e n_e }{m_i N_i  }\Lambda_{e,\eta_\parallel}
+  R_{e,\eta_\parallel} &=  en_e\eta_\parallel J_{\parallel,s}/(m_en_e)  &
+  R_{i,\eta_\parallel} &=- en_e\eta_\parallel J_{\parallel,s}/(m_iN_i)
+\end{align}
+The dissipative terms can be decomposed into perpendicular and parallel components
+\begin{align}
+ \Lambda_{n_e} &= \Lambda_{n_e,\perp}+\Lambda_{n_e,\parallel}, &
+ \Lambda_{N_i} &= \Lambda_{N_i,\perp}+\Lambda_{N_i,\parallel},\\
+ \Lambda_{u_e} &= \Lambda_{u_e,\perp}+\Lambda_{u_e,\parallel},&
+ \Lambda_{U_i} &= \Lambda_{U_i,\perp}+\Lambda_{U_i,\parallel}.
 \end{align}
 For numerical stabilisation we choose:
 \begin{align}
@@ -222,26 +223,78 @@ Similarly for the perpendicular dissipation we apply hyperviscous terms of secon
  \Lambda_{U_i,\perp} &=  -\nu_\perp \vec{\nabla}_\perp^4 U_i
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
-\subsection{Coonservation laws}
+
+The particle source term is given by
+\begin{align}
+  S_{n_e} = S_{N_i} = \frac{1}{2}\left( 1 + \tanh\left( - \frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha} \right) \right)
+  \label{}
+\end{align}
+\subsection{Conservation laws}
 \subsubsection{Mass conservation}
 \begin{align}
-\frac{\partial}{\partial t} \int d\vec{x} n_e :=  - \int d\vec{x} \Lambda_{n_e}
+  \frac{\partial}{\partial t} \int d\vec{x} n_e :=  - \int d\vec{x} (\Lambda_{n_e}+S_{n_e})
 \end{align}
 \subsubsection{Charge conservation}
 \begin{align}
-\frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) :=  - \int d\vec{x} (\Lambda_{n_e} - \Lambda_{N_i})
+  \frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) :=  - \int d\vec{x} (\Lambda_{n_e} - \Lambda_{N_i} + S_{n_e} - S_{N_i})
 \end{align}
 \subsubsection{Energy theorem}
 The terms of the energy theorem are derived to
 \begin{align}
-  \mathcal{E}=&  \int  d\vec{x}  \left(t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+  \frac{1}{2} m_i N_i u_E^2 +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
-\Lambda =&  \int d\vec{x} \bigg\{\left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right]\Lambda_{n_e}
-+\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right]\Lambda_{N_i}
+  \mathcal{E}= \int  d\vec{x} & \left( t_e n_e \ln{(n_e)} +T_i N_i\ln{(N_i)}+  \frac{1}{2} m_i N_i u_E^2 +\frac{1}{2} m_e  n_e u_e^2 +\frac{1}{2} m_i  N_i U_i^2  \right),\\
+  \Lambda =  \int d\vec{x} & \bigg\{  \left[t_e\left( 1+\ln{(n_e)}\right) -e \phi + \frac{1}{2} m_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
+  \nonumber\\ &
++\left[T_i\left( 1+\ln{(N_i)}\right) +e \psi_i + \frac{1}{2} m_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
 \nonumber \\ &
-+ u_e n_e \Lambda_{u_e}+U_i N_i \Lambda_{U_i}\bigg\}.
++ m_e u_e n_e \Lambda_{u_e}+m_iU_i N_i \Lambda_{U_i} - \eta_\parallel J_{\parallel,s}^2\bigg\}.
 \end{align}
 The energy consists of the Helmholtz free energy density for electrons and ions, the \(\vec{E} \times \vec{B}\) energy density, the parallel energy densities for electrons and ions and the perturbed magnetic field energy density.
-In \(\Lambda\) we insert the dissipative and resistive terms of Section~\ref{sec:dissres}. \\
+In \(\Lambda\) we insert the dissipative terms of Section~\ref{sec:dissres}. \\
+\subsection{Dimensionless form}
+We scale all spatial lengths by $\rho_s = \sqrt{T_e m_i}/(eB_0)$ and time by the ion gyrofrequency $\Omega_0 = eB_0/m_i$.
+The magnetic field is scaled with $B_0$, densities with $n_0$ and the parallel velocity is scaled with $c_s = \sqrt{T_e/m_i}$.
+Furthermore, we introduce the dimensionless parameters
+\begin{align}
+  \tau_z = \frac{T_z}{ZT_e} \text{ and } \mu_z = \frac{m_z}{Zm_i}
+  \label{}
+\end{align}
+where $z\in\{e,i\}$ is the species label. Finally, we define
+\begin{align}
+  C:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1}.
+    \label{}
+\end{align}
+Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $m\Omega_0 c_s$)
+\begin{subequations}
+    \begin{align}
+    \frac{\partial}{\partial t} N =&
+        - \frac{1}{B}[\psi, N]_{\perp}%\nonumber\\
+        - \nabla_\parallel \left( NU\right)
+        + NU\nabla_\parallel\ln(B)
+        - \tau \mathcal K(N) \nonumber \\&
+        - N \mathcal K(\psi)
+        -\mu \mathcal K_\kappa(NU^2)
+        -\mu NU^2\nabla\cdot \vec{ \mathcal K_\kappa}
+        - \nu_\perp\Delta_\perp^2 N + \nu_\parallel \Delta_\parallel N + S_N, \\
+    \frac{\partial}{\partial t} U =&
+        - \frac{1}{B}\left[\psi, U\right]_{\perp}%& \nonumber\\
+        - \frac{1}{\mu} \nabla_\parallel \psi% \nonumber\\
+        - \frac{1}{2}\nabla_\parallel U^2
+        -\frac{\tau}{\mu} \nabla_\parallel \ln N
+        - U\mathcal K_\kappa(\psi)
+        - \tau \mathcal K(U)
+        -\tau U\nabla\cdot\vec{ \mathcal K_\kappa}\nonumber\\&
+        - \left(2\tau + \frac{\mu}{2}U^2\right) \mathcal K_\kappa (U)
+        -2\tau U\mathcal K_\kappa(\ln N)
+        - \frac{C}{\mu} \frac{n_e}{N}n_e(U_i - u_e)
+        - \nu_\perp\Delta_\perp^2 U + \nu_\parallel \Delta_\parallel U ,
+        \label{eq:EgyrofluidU}
+    \end{align}
+    \label{eq:Egyrofluid}
+\end{subequations}
+together with
+  \begin{align}
+    -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \label{eq:Egfmaxwell}
+  \end{align}
 \subsection{Cylindrical coordinates (\(R,Z,\varphi\))}\label{sec:cylmetric}
 We start with cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle to
 obtain a right handed system. The parametric representation in Cartesian \((x,y,z)\) coordinates is therefore simply:
