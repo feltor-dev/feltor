@@ -34,7 +34,7 @@ struct Parameters
     double nu_perp;  //!< perpendicular diffusion
     double nu_parallel;  //!< parallel diffusion
     double c; //!< parallel resistivity
-    
+
     double amp;  //!< blob amplitude
     double sigma; //!< perpendicular blob width
     double posX;  //!< perpendicular position relative to box width
@@ -162,7 +162,3 @@ struct Parameters
 };
 
 }//namespace feltor
-
-
-    
-

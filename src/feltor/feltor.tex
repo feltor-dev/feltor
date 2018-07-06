@@ -93,13 +93,13 @@ This is a program for global 3d isothermal electrostatic full-F gyro-fluid simul
 \end{abstract}
 
 \section{Equations}
-% \(n_e\) is the electron density, \(N_i\) is the ion gyro-centre density, \(\phi\) is the electric potential, 
+% \(n_e\) is the electron density, \(N_i\) is the ion gyro-centre density, \(\phi\) is the electric potential,
 % \\
-% This model is an isothermal 3D gyro-fluid model, which exploits the toroidal field line approximation in the curvature operator terms (cf.~\ref{sec:torfieldlineapprox}). 
+% This model is an isothermal 3D gyro-fluid model, which exploits the toroidal field line approximation in the curvature operator terms (cf.~\ref{sec:torfieldlineapprox}).
 % It incorporates a Solov'ev equilibrium (cf.~\ref{sec:solovev}) for the magnetic field, which allows a
-% realistically shaped axisymmetric magnetic field. The coordinate system of choice is a non-aligned  cylindrical coordinate system (cf.~\ref{sec:cylmetric} and~\ref{sec:nonparallelalignedmetric}), which allows 
+% realistically shaped axisymmetric magnetic field. The coordinate system of choice is a non-aligned  cylindrical coordinate system (cf.~\ref{sec:cylmetric} and~\ref{sec:nonparallelalignedmetric}), which allows
 % the correct numerical treatment of singular points (e.g. X- and O- Points). These points occur naturally in realistic magnetic field configurations.
-% Since it is based on a global geometry, treating the complete poloidal flux surface, it is suited for coupled simulations of core, edge and SOL. 
+% Since it is based on a global geometry, treating the complete poloidal flux surface, it is suited for coupled simulations of core, edge and SOL.
 % However, our isothermal model misses important core physics ingredients, such as the ion temperature gradient (ITG) and trapped electron mode (TEM)~\cite{Wesson07}. Thus the validity the global model is limited to certain
 % parameter regimes.\\
 The continuity equations for the electron density \(n_e\) and  ion gyro-centre density electrons  \(N_i\) read
@@ -107,64 +107,64 @@ The continuity equations for the electron density \(n_e\) and  ion gyro-centre d
  \frac{\partial}{\partial t}n_e =&
  - \frac{1}{B}\left[\phi,  n_e \right]_{\perp}
  -  {\nabla}_{\parallel}( n_e u_e)
- + n_e u_e   {\nabla}_{\parallel} \ln{(B)} 
+ + n_e u_e   {\nabla}_{\parallel} \ln{(B)}
 + \frac{t_e }{e }  \mathcal{K} \left( n_e\right)
 \nonumber  \\ &
--   n_e \mathcal{K}(\phi) 
-%  + \frac{m_e }{ e } n_e u_e \mathcal{K} \left(  u_e \right) 
+-   n_e \mathcal{K}(\phi)
+%  + \frac{m_e }{ e } n_e u_e \mathcal{K} \left(  u_e \right)
 %  + \frac{m_e }{2 e } u_e^2 \mathcal{K} \left(n_e \right) +
-   +  \frac{m_e }{ e } \mathcal{K}_{\kappa} \left( n_e u_e^2 \right) 
-   + \frac{m_e }{ e } \left( n_e u_e^2 \right) \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
+   +  \frac{m_e }{ e } \mathcal{K}_{\kappa} \left( n_e u_e^2 \right)
+   + \frac{m_e }{ e } \left( n_e u_e^2 \right) \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa}
    + \Lambda_{n_e} + S_{n_e},\\
 \frac{\partial}{\partial t}N_i =&
  - \frac{1}{B}\left[\psi_i,  N_i \right]_{\perp}
  - {\nabla}_{\parallel}(N_i U_i)
- + N_i U_i   {\nabla}_{\parallel} \ln{(B)} 
+ + N_i U_i   {\nabla}_{\parallel} \ln{(B)}
 - \frac{T_i }{e }  \mathcal{K} \left( N_i\right)
 \nonumber  \\ &
--   N_i \mathcal{K}(\psi) 
-%  - \frac{m_i }{ e } N_i U_i \mathcal{K} \left(  U_i \right) 
+-   N_i \mathcal{K}(\psi)
+%  - \frac{m_i }{ e } N_i U_i \mathcal{K} \left(  U_i \right)
 %  - \frac{m_i }{2 e } U_i^2 \mathcal{K} \left(N_i \right) +
 - \frac{m_i }{ e }\mathcal{K}_{\kappa}  \left( N_i U_i^2 \right)
-- \frac{m_i }{ e } \left( N_i U_i^2 \right)\vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
+- \frac{m_i }{ e } \left( N_i U_i^2 \right)\vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa}
 + \Lambda_{N_i} + S_{N_i}.
 \end{align}
-The evolution equation for the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are 
+The evolution equation for the parallel electron velocity \(u_e\) and the parallel ion gyro-centre velocity \(U_i\) are
 \begin{align}
-\frac{\partial}{\partial t}  u_e 
+\frac{\partial}{\partial t}  u_e
       =&
-      - \frac{1 }{ B} \left[ \phi, u_e  \right]_{\perp} 
-      +  \frac{e}{m_e}   \nabla_\parallel \phi  
+      - \frac{1 }{ B} \left[ \phi, u_e  \right]_{\perp}
+      +  \frac{e}{m_e}   \nabla_\parallel \phi
       -   \frac{1}{2}   \nabla_\parallel u_e^2
-      - \frac{t_e}{m_e } \nabla_\parallel \ln  n_e     
-     - u_e   \mathcal{K}_{\kappa} \left( \phi  \right)   
-     + \frac{t_e}{e} \mathcal{K}\left(  u_e \right)     
+      - \frac{t_e}{m_e } \nabla_\parallel \ln  n_e
+     - u_e   \mathcal{K}_{\kappa} \left( \phi  \right)
+     + \frac{t_e}{e} \mathcal{K}\left(  u_e \right)
      \nonumber  \\    &
-%      + \frac{m_e  u_e^2}{ e} \mathcal{K}_{\kappa} \left(u_e\right)      
+%      + \frac{m_e  u_e^2}{ e} \mathcal{K}_{\kappa} \left(u_e\right)
 %     + \frac{2  t_e}{ e} \mathcal{K}_{\kappa} \left(u_e\right)
-     + \frac{1}{e} \left(m_e  u_e^2 +  2  t_e\right)\mathcal{K}_{\kappa} \left(u_e\right)      
-    + \frac{2  t_e u_e }{ e} \mathcal{K}_{\kappa} \left(\ln n_e \right)  
-    + \frac{t_e  u_e }{e} \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
-%      +\frac{  t_e u_e }{e }  \mathcal{K}\left( \ln n_e \right)       
-%       +\left(\frac{2  t_e  }{e} + \frac{m_e  u_e^2}{2 e} \right) \mathcal{K} \left(u_e\right)      
+     + \frac{1}{e} \left(m_e  u_e^2 +  2  t_e\right)\mathcal{K}_{\kappa} \left(u_e\right)
+    + \frac{2  t_e u_e }{ e} \mathcal{K}_{\kappa} \left(\ln n_e \right)
+    + \frac{t_e  u_e }{e} \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa}
+%      +\frac{  t_e u_e }{e }  \mathcal{K}\left( \ln n_e \right)
+%       +\left(\frac{2  t_e  }{e} + \frac{m_e  u_e^2}{2 e} \right) \mathcal{K} \left(u_e\right)
 %       +\frac{e}{m_e}   \eta_{\parallel} J_\parallel
     +\Lambda_{u_e} + R_{e, \eta_\parallel},  \\
-\frac{\partial}{\partial t}    U_i 
+\frac{\partial}{\partial t}    U_i
       =&
-      - \frac{1 }{ B} \left[ \psi_i, U_i  \right]_{\perp} 
-      -  \frac{e}{m_i}   \nabla_\parallel \psi_i  
+      - \frac{1 }{ B} \left[ \psi_i, U_i  \right]_{\perp}
+      -  \frac{e}{m_i}   \nabla_\parallel \psi_i
       -     \frac{1}{2}  \nabla_\parallel U_i^2
-      - \frac{T_i}{m_i } \nabla_\parallel \ln  N_i     
-     -  U_i  \mathcal{K}_{\kappa} \left( \psi_i  \right)   
-     - \frac{T_i}{e} \mathcal{K}\left(  U_i \right)     
+      - \frac{T_i}{m_i } \nabla_\parallel \ln  N_i
+     -  U_i  \mathcal{K}_{\kappa} \left( \psi_i  \right)
+     - \frac{T_i}{e} \mathcal{K}\left(  U_i \right)
      \nonumber  \\    &
-%            - \frac{m_i  U_i^2}{ e} \mathcal{K}_{\kappa} \left(U_i\right)      
+%            - \frac{m_i  U_i^2}{ e} \mathcal{K}_{\kappa} \left(U_i\right)
 %            - \frac{2  T_i}{ e} \mathcal{K}_{\kappa} \left(U_i\right)
-           - \frac{1}{e}\left(m_i  U_i^2 + 2  T_i \right) \mathcal{K}_{\kappa} \left(U_i\right)      
-           - \frac{2  T_i U_i }{ e} \mathcal{K}_{\kappa} \left(\ln N_i \right)   
-           - \frac{T_i  U_i }{e} \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} 
+           - \frac{1}{e}\left(m_i  U_i^2 + 2  T_i \right) \mathcal{K}_{\kappa} \left(U_i\right)
+           - \frac{2  T_i U_i }{ e} \mathcal{K}_{\kappa} \left(\ln N_i \right)
+           - \frac{T_i  U_i }{e} \vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa}
 %      -\frac{  T_i U_i }{e }  \mathcal{K}\left( \ln N_i \right)
-%       -\left(\frac{2  T_i  }{e} + \frac{m_i  U_i^2}{2 e} \right) \mathcal{K} \left(U_i\right)      
+%       -\left(\frac{2  T_i  }{e} + \frac{m_i  U_i^2}{2 e} \right) \mathcal{K} \left(U_i\right)
 %       -\frac{e}{m_i}   \eta_{\parallel} J_\parallel
            +\Lambda_{U_i} + R_{i,\eta_\parallel} .
 \end{align}
@@ -180,13 +180,13 @@ The perpendicular Poisson bracket, the parallel derivative \(\nabla_\parallel\),
 \begin{align}\label{eq:perppoiss}
  \frac{1}{B}\left[f,g\right]_\perp &:= \frac{1}{B}\left(\vec{\hat{b}} \times \vec{\nabla}_\perp f \right)\cdot \vec{\nabla} g, \\
  \nabla_\parallel f&:= \vec{\hat{b}}\cdot\vec{\nabla} f,  \\
- \Delta_\parallel &:= \vec{\nabla} \cdot ( \vec{\hat{b}} \vec{\hat{b}}\cdot\vec{\nabla} f ), 
+ \Delta_\parallel &:= \vec{\nabla} \cdot ( \vec{\hat{b}} \vec{\hat{b}}\cdot\vec{\nabla} f ),
 \end{align}
 and the curvature operator \(\mathcal{K}(f)\)
 \begin{align}\label{eq:curvopgen}
 \mathcal{K}(f)&:=\vec{\nabla} \cdot \left(\frac{1}{B} \vec{\hat{b}} \times \vec{\nabla} f \right).
 \end{align}
-Moreover explicit expressions of the perpendicular Poisson bracket \( \frac{1}{B}\left[f,g\right]_\perp\), the perpendicular elliptic operator \( \vec{\nabla}\cdot\left(g \vec{\nabla}_\perp f\right)\), 
+Moreover explicit expressions of the perpendicular Poisson bracket \( \frac{1}{B}\left[f,g\right]_\perp\), the perpendicular elliptic operator \( \vec{\nabla}\cdot\left(g \vec{\nabla}_\perp f\right)\),
 the parallel derivative \(\nabla_\parallel\) and the parallel Laplacian \(\Delta_\parallel\) and  the curvature operators \(\mathcal{K}(f)\),
 \(\mathcal{K}_\kappa(f)\) and \(\vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} \)
 depend on the choice of the magnetic field geometry, curvature approximation and the underlying coordinate system.
@@ -194,7 +194,7 @@ depend on the choice of the magnetic field geometry, curvature approximation and
 The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
 The parallel Spitzer resistivity
 \begin{align}
-\eta_\parallel := \frac{0.51 m_e \nu_e}{n_e e^2} 
+\eta_\parallel := \frac{0.51 m_e \nu_{ei}}{n_e e^2}
 \end{align}
 and the approximate Spitzer current \(J_{\parallel,s}:= e n_e \left(U_i - u_e\right)\) determine the parallel resistive terms to:
 \begin{align}
@@ -228,6 +228,15 @@ The particle source term is given by
 \begin{align}
   S_{n_e} = S_{N_i} = \frac{1}{2}\left( 1 + \tanh\left( - \frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha} \right) \right)
   \label{}
+\end{align}
+\subsection{Boundary conditions}
+We apply Dirichlet boundary conditions to the parallel velocity and potential
+\begin{align}
+u_e = U_i = \phi = \psi = 0
+\end{align}
+For the densities we can choose between Neumann and Dirichlet boundaries
+\begin{align}
+n_e = N_i = 1, \text{ or } \hat n \cdot \nabla n_e = \hat n \cdot \nabla N_i = 0
 \end{align}
 \subsection{Conservation laws}
 \subsubsection{Mass conservation}
@@ -263,7 +272,7 @@ where $z\in\{e,i\}$ is the species label. Finally, we define
   C:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1}.
     \label{}
 \end{align}
-Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $m\Omega_0 c_s$)
+Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
 \begin{subequations}
     \begin{align}
     \frac{\partial}{\partial t} N =&
@@ -283,7 +292,7 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
         - U\mathcal K_\kappa(\psi)
         - \tau \mathcal K(U)
         -\tau U\nabla\cdot\vec{ \mathcal K_\kappa}\nonumber\\&
-        - \left(2\tau + \frac{\mu}{2}U^2\right) \mathcal K_\kappa (U)
+        - \left(2\tau + {\mu}U^2\right) \mathcal K_\kappa (U)
         -2\tau U\mathcal K_\kappa(\ln N)
         - \frac{C}{\mu} \frac{n_e}{N}n_e(U_i - u_e)
         - \nu_\perp\Delta_\perp^2 U + \nu_\parallel \Delta_\parallel U ,
