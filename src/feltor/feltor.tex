@@ -190,7 +190,7 @@ Moreover explicit expressions of the perpendicular Poisson bracket \( \frac{1}{B
 the parallel derivative \(\nabla_\parallel\) and the parallel Laplacian \(\Delta_\parallel\) and  the curvature operators \(\mathcal{K}(f)\),
 \(\mathcal{K}_\kappa(f)\) and \(\vec{\nabla} \cdot  \vec{\mathcal{K}}_{\kappa} \)
 depend on the choice of the magnetic field geometry, curvature approximation and the underlying coordinate system.
-\subsection{Dissipation, sources and parallel resistivity}\label{sec:dissres}
+\subsection{Parallel Resistivity, diffusion, profiles and particle sources}\label{sec:dissres}
 The terms $R_{e/i,\eta_\parallel}$ account for resistive friction.
 The parallel Spitzer resistivity
 \begin{align}
@@ -224,11 +224,31 @@ Similarly for the perpendicular dissipation we apply hyperviscous terms of secon
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 
-The particle source term is given by
+Let us define
 \begin{align}
-  S_{n_e} = S_{N_i} = \frac{1}{2}\left( 1 + \tanh\left( - \frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha} \right) \right)
+  S(R,Z) := \frac{s}{2}\left( 1 + \tanh\left( - \frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha} \right) \right)
   \label{}
 \end{align}
+where $s$ is the source strength parameter
+and a density profile as
+\begin{align}
+  N_{prof}(R,Z)=\begin{cases}
+    N_{bg} + N_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
+    N_{bg} \text{ else }
+  \end{cases}
+  \label{}
+\end{align}
+We then define the particle source for electrons as
+\begin{align}
+  S_{n_e}(R,Z) = \max \left( S(R,Z)(N_{prof}(R,Z) - n_e(R,Z)) , 0\right)
+  \label{}
+\end{align}
+and for ions as
+\begin{align}
+  S_{N_i} = \Gamma_i^{-1} S_{n_e}
+  \label{}
+\end{align}
+
 \subsection{Boundary conditions}
 We apply Dirichlet boundary conditions to the parallel velocity and potential
 \begin{align}
@@ -245,7 +265,7 @@ n_e = N_i = 1, \text{ or } \hat n \cdot \nabla n_e = \hat n \cdot \nabla N_i = 0
 \end{align}
 \subsubsection{Charge conservation}
 \begin{align}
-  \frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) :=  - \int d\vec{x} (\Lambda_{n_e} - \Lambda_{N_i} + S_{n_e} - S_{N_i})
+  \frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) :=  - \int d\vec{x} (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i} + S_{n_e} - \Gamma_{1,i}S_{N_i})
 \end{align}
 \subsubsection{Energy theorem}
 The terms of the energy theorem are derived to
@@ -303,6 +323,10 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
 together with
   \begin{align}
     -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \label{eq:Egfmaxwell}
+  \end{align}
+  and
+  \begin{align}
+    \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta
   \end{align}
 \subsection{Cylindrical coordinates (\(R,Z,\varphi\))}\label{sec:cylmetric}
 We start with cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle to
