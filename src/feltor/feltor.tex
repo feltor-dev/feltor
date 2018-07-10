@@ -224,10 +224,10 @@ Similarly for the perpendicular dissipation we apply hyperviscous terms of secon
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 
-Let us define
+Let us define a source profile
 \begin{align}
   S(R,Z) := \frac{s}{2}\left( 1 + \tanh\left( - \frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha} \right) \right)
-  \label{}
+  \label{eq:source_profile}
 \end{align}
 where $s$ is the source strength parameter
 and a density profile as
@@ -236,7 +236,7 @@ and a density profile as
     N_{bg} + N_{peak}\frac{\psi_p(R,Z)} {\psi_p(R_0, 0)} \text{ if }\psi_p < \psi_{p,max} \\
     N_{bg} \text{ else }
   \end{cases}
-  \label{}
+  \label{eq:density_profile}
 \end{align}
 We then define the particle source for electrons as
 \begin{align}
@@ -245,7 +245,7 @@ We then define the particle source for electrons as
 \end{align}
 and for ions as
 \begin{align}
-  S_{N_i} = \Gamma_i^{-1} S_{n_e}
+    S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e}
   \label{}
 \end{align}
 
@@ -463,8 +463,8 @@ discontinuous Galerkin on structured grid
 \begin{longtable}{ll>{\RaggedRight}p{7cm}}
 \toprule
 \rowcolor{gray!50}\textbf{Term} &  \textbf{Method} & \textbf{Description}  \\ \midrule
-coordinate system & Cylindrical 3D & equidistant discretization of $[0,l_R] \times [0,l_Z]$, equal number of Gaussian nodes in R and Z \\
-matrix inversions & conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
+    coordinate system & Cylindrical 3D & equidistant discretization of $[0,l_R] \times [0,l_Z] \times [0,2\pi]$, equal number of Gaussian nodes in R and Z \\
+matrix inversions & multigrid/ conjugate gradient & Use previous two solutions to extrapolate initial guess and $1/\chi$ as preconditioner \\
 \ExB advection & Poisson & \\
 Parallel derivative & refined  FCI & cf.~\cite{held16,stegmeir17} \\
 Parallel diffusion & refined FCI & cf.~\cite{held16,stegmeir17} \\
@@ -492,9 +492,12 @@ Nz\_out & integer &16& - &\# grid points in $\varphi$ \\
 itstp  & integer &2  & - &   steps between outputs \\
 maxout & integer &10& - &      \# outputs excluding first \\
 eps\_pol   & float &1e-5    & - &  accuracy of polarisation solver \\
-jumpfactor & float &1& - &     jumpfactor $\in \left[0.01,1\right]$\\
+jumpfactor & float &1& - &     jumpfactor $\in \left[0.01,1\right]$ in Elliptic\\
 eps\_gamma & float &1e-6    & - & accuracy of $\Gamma_1$  \\
 eps\_time  & float &1e-9   & - & accuracy of implicit time-stepper \\
+stages     & integer & 3 & 3 & \# stages in multigrid  \\
+multiplyX     & integer & 10 & 10 & Grid refinement in DS in X-direction\\
+multiplyY     & integer & 10 & 10 & Grid refinement in DS in Y-direction\\
 mu         & float & -0.00272121& - & $\mu_e :=-m_e/m_i \in \left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
 tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
@@ -506,10 +509,10 @@ posX       & float &0.3    & - & blob x-position in units of $a$\\
 posY       & float &0.0    & - & blob y-position in units of $a$ \\
 sigma\_z    & float &0.25   & - & variance in units of $R_0$  \\
 k\_psi     & float &0    & - & zonal mode wave number  \\
-nprofileamp& float &4   & - & Profile peak amplitude \\
-bgprofamp  & float &1   & - & Background Prof amplitude (density on the boundary) \\
+    nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
+bgprofamp  & float &1   & - & Background Prof amplitude $N_{bg}$ in Eq.~\eqref{eq:density_profile} (density on the boundary) \\
 bc  & char & "DIR"      & - & GLOBAL perp BC for parallel derivative (one of  DIR, NEU) \\
-source  & float & 0     & - & profile source rate \\
+    source  & float & 0     & - & profile source rate $s$ in Eq.~\eqref{eq:source_profile} \\
 boxscaleRp  & float & 1.1     & 1.05 & $R_+$ a little larger than 1\\
 boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\
 boxscaleZp  & float & 1.1     & 1.05 & $Z_+$ a little larger than 1 \\
@@ -518,6 +521,30 @@ pollim    & integer & 0     & 0 & poloidal limiter (0/1) \\
 mode      & integer & 2     & 0 & initial condition blob(0), straight blob(1), turbulence(2) \\
 initial   & integer & 0     & 0 & init. phi cond. (stand(0), Force Balance(1))\\
 curvmode  & integer & 1     & 0 & curvature (low beta (0), toroidal field line (1)) \\
+\bottomrule
+\end{longtable}
+The default value is taken if the value name is not found in the input file. If there is no default and
+the value is not found,
+the program exits with an error message.
+\subsection{Geometry file structure}
+File format: json
+
+%%This is a booktabs table
+\begin{longtable}{llll>{\RaggedRight}p{7cm}}
+\toprule
+\rowcolor{gray!50}\textbf{Name} &  \textbf{Type} & \textbf{Example} & \textbf{Default} & \textbf{Description}  \\ \midrule
+    A      & float & 1 &  - & Solovev parameter \\
+    R\_0   & float & - & -  & Major radius in $\rho_s$ \\
+    C      & float[12] &  - & - & Solovev coefficients \\
+    elongation & float & 1 & - & Elongation \\
+    triangularity & float & 0 & - & Triangularity \\
+    alpha  & float & 0.02 & - & Damping width \\
+    inverseaspectratio & float & 0.16667 & - & $a/R_0$ \\
+    psip\_min & float & -6 & - & $\psi_{p,min}$ in source profile Eq.~\eqref{eq:source_profile} \\
+    psip\_max & float & 0 & - & $\psi_{p,max}$ in density profile Eq.~\eqref{eq:density_profile}\\ 
+    psip\_max\_lim & float & 1e10 & - & $\psi_p$ for limiter in DS \\
+    qampl & float & 1 & - & \\
+    rk4eps & float & 0.01 & - & Accuracy of fieldline integration in DS \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and
