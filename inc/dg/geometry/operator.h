@@ -116,8 +116,12 @@ class Operator
      * @brief Resize
      *
      * @param m new size
+     * @param val if m is greater than the current size new elements are initialized with val
      */
-    void resize( unsigned m) { data_.resize( m*m);}
+    void resize( unsigned m, T val = T()) {
+        n_ = m;
+        data_.resize( m*m, val);
+    }
 
     /**
      * @brief access underlying data

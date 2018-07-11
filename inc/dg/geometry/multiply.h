@@ -13,27 +13,6 @@ namespace tensor
 
 ///@addtogroup geometry
 ///@{
-/**
- * @brief calls sqrt transform function on value
- * @copydoc hide_ContainerType
- * @param mu if empty, stays empty, else contains sqrt of input
- */
-template<class ContainerType>
-void sqrt( SparseElement<ContainerType>& mu){
-    if( mu.isSet())
-        dg::blas1::transform( mu.value(), mu.value(), dg::SQRT<double>());
-}
-
-/**
- * @brief calls invert transform function on value
- * @copydoc hide_ContainerType
- * @param mu if empty, stays empty, else contains inverse of input
- */
-template<class ContainerType>
-void invert(SparseElement<ContainerType>& mu){
-    if(mu.isSet())
-        dg::blas1::transform( mu.value(), mu.value(), dg::INVERT<double>());
-}
 
 /**
  * @brief Scale tensor with a ContainerType
@@ -43,105 +22,68 @@ void invert(SparseElement<ContainerType>& mu){
  * @param t input (contains result on output)
  * @param mu all elements in t are scaled with mu
  */
-template<class ContainerType>
-void scal( SparseTensor<ContainerType>& t, const ContainerType& mu)
+template<class ContainerType0, class ContainerType1>
+void scal( SparseTensor<ContainerType0>& t, const ContainerType1& mu)
 {
     unsigned size=t.values().size();
     for( unsigned i=0; i<size; i++)
         dg::blas1::pointwiseDot( mu, t.values()[i], t.values()[i]);
-    if(!t.isSet(0,0)|| !t.isSet(1,1) || !t.isSet(2,2))
-    {
-        t.values().resize(size+1);
-        t.values()[size] = mu;
-    }
-    for( unsigned i=0; i<3; i++)
-    {
-        if(!t.isSet(i,i) )
-            t.idx(i,i)=size;
-    }
-}
-
-/**
- * @brief Scale tensor with a form
- *
- * Computes \f$ t^{ij} = \mu t^{ij}\f$
- * @copydoc hide_ContainerType
- * @param t input (contains result on output)
- * @param mu if \c mu.isEmpty() then nothing happens, else all elements in t are scaled with its value
- */
-template<class ContainerType>
-void scal( SparseTensor<ContainerType>& t, const SparseElement<ContainerType>& mu)
-{
-    if(!mu.isSet()) return;
-    else scal(t,mu.value());
-}
-
-/**
- * @brief Multiply ContainerType with form
- *
- * @copydoc hide_ContainerType
- * @param mu if \c mu.isEmpty() then \c out=in, else the input is pointwise multiplied with the value in \c mu
- * @param in input vector
- * @param out output vector (may alias \c in)
- */
-template<class ContainerType>
-void pointwiseDot( const SparseElement<ContainerType>& mu, const ContainerType& in, ContainerType& out)
-{
-    if(mu.isSet())
-        dg::blas1::pointwiseDot(mu.value(), in,out);
-    else
-        dg::blas1::copy( in, out);
-}
-/**
- * @brief Multiply ContainerType with form
- *
- * @copydoc hide_ContainerType
- * @param in input vector
- * @param mu if mu.isEmpty() then out=in, else the input is pointwise multiplied with the value in mu
- * @param out output vector (may alias in)
- */
-template<class ContainerType>
-void pointwiseDot( const ContainerType& in, const SparseElement<ContainerType>& mu, ContainerType& out)
-{
-    pointwiseDot( mu, in, out);
-}
-
-/**
- * @brief Divide ContainerType with form
- *
- * @copydoc hide_ContainerType
- * @param in input vector
- * @param mu if mu.isEmpty() then out=in, else the input is pointwise divided with the value in mu
- * @param out output vector (may alias in)
- */
-template<class ContainerType>
-void pointwiseDivide( const ContainerType& in, const SparseElement<ContainerType>& mu, ContainerType& out)
-{
-    if(mu.isSet())
-        dg::blas1::pointwiseDivide(in, mu.value(),out);
-    else
-        dg::blas1::copy( in, out);
 }
 
 ///@cond
 namespace detail
 {
-//multiply_add given ContainerTypes with given tensor indices
-//i0 must be the diagonal index, out0 may alias in0 but not in1
-template<class ContainerType>
-void multiply2d_helper( const SparseTensor<ContainerType>& t, const ContainerType& in0, const ContainerType& in1, ContainerType& out0, int i0[2], int i1[2])
-{
-    if( t.isSet(i0[0],i0[1]) && t.isSet(i1[0],i1[1]) )
-        dg::blas1::pointwiseDot( 1. , t.value(i0[0],i0[1]), in0, 1., t.value(i1[0], i1[1]), in1, 0., out0);
-    else if( t.isSet(i0[0],i0[1]) && !t.isSet(i1[0],i1[1]) )
-        dg::blas1::pointwiseDot( t.value(i0[0], i0[1]), in0, out0);
-    else
+template<class value_type>
+struct Multiply{
+    DG_DEVICE
+    void operator() ( value_type t00, value_type t01,
+                      value_type t10, value_type t11,
+                      value_type in0, value_type in1,
+                      value_type& out0, value_type& out1) const
     {
-        out0=in0;
-        if( t.isSet(i1[0], i1[1]))
-            dg::blas1::pointwiseDot( 1.,  t.value(i1[0], i1[1]), in1, 1., out0);
+        value_type tmp0 = t00*in0 + t01*in1;
+        value_type tmp1 = t10*in0 + t11*in1;
+        out1 = tmp1;
+        out0 = tmp0;
     }
-}
+    DG_DEVICE
+    void operator() ( value_type t00, value_type t01, value_type t02,
+                      value_type t10, value_type t11, value_type t12,
+                      value_type t20, value_type t21, value_type t22,
+                      value_type in0, value_type in1, value_type in2,
+                      value_type& out0, value_type& out1, value_type& out2) const
+    {
+        value_type tmp0 = t00*in0 + t01*in1 + t02*in2;
+        value_type tmp1 = t10*in0 + t11*in1 + t12*in2;
+        value_type tmp2 = t20*in0 + t21*in1 + t22*in2;
+        out2 = tmp2;
+        out1 = tmp1;
+        out0 = tmp0;
+    }
+};
+template<class value_type>
+struct Determinant
+{
+    DG_DEVICE
+    value_type operator()( value_type in) const{
+        return 1./sqrt(in);
+    }
+    DG_DEVICE
+    value_type operator() ( value_type t00, value_type t01,
+                            value_type t10, value_type t11) const
+    {
+        return t00*t11 - t10*t01;
+    }
+    DG_DEVICE
+    value_type operator() ( value_type t00, value_type t01, value_type t02,
+                            value_type t10, value_type t11, value_type t12,
+                            value_type t20, value_type t21, value_type t22) const
+    {
+        return t00*this->operator()(t11, t12, t21, t22)
+              -t01*this->operator()(t10, t12, t20, t22)
+              +t02*this->operator()(t10, t11, t20, t21);
+    }
+};
 }//namespace detail
 ///@endcond
 /**
@@ -150,27 +92,22 @@ void multiply2d_helper( const SparseTensor<ContainerType>& t, const ContainerTyp
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2\}\f$ in the first two dimensions (ignores the 3rd dimension in t)
  * @copydoc hide_ContainerType
  * @param t input Tensor
- * @param in0 (input) first component    (restricted)
+ * @param in0 (input) first component    (may alias out0)
  * @param in1 (input) second component   (may alias out1)
- * @param out0 (output) first component  (restricted)
+ * @param out0 (output) first component  (may alias in0)
  * @param out1 (output) second component (may alias in1)
- * @attention aliasing only allowed between out1 and in1
  * @note Currently required memops:
-         - 10(9) reads + 2 writes if all values in t are set; (-1 read if alias is used)
-         - 6(5)  reads + 2 writes if t is diagonal; (-1 read if alias is used)
-         - 4  reads + 2 writes if t is empty and no alias
-         - 2  reads + 1 writes (= 1 copy) if t is empty and out1 aliases in1
+         - 6 reads + 2 writes; (-2 read if aliases are used)
+ * @note This function is just a shortcut for a call to \c dg::blas1::subroutine with the appropriate functor
  */
 template<class ContainerType>
 void multiply2d( const SparseTensor<ContainerType>& t, const ContainerType& in0, const ContainerType& in1, ContainerType& out0, ContainerType& out1)
 {
-    int i0[2] = {0,0}, i1[2] = {0,1};
-    int i3[2] = {1,1}, i2[2] = {1,0};
-    //order is important because out1 may alias in1
-    detail::multiply2d_helper( t, in0, in1, out0, i0, i1);
-    detail::multiply2d_helper( t, in1, in0, out1, i3, i2);
-    //needs to load a vector         10 times if every element is set (7 is the optimal algorithm for symmetric t)
-    //(the ideal algorithm also only needs 70% of the time (tested on marconi))
+    dg::blas1::subroutine( detail::Multiply<get_value_type<ContainerType>>(),
+                           t.value(0,0), t.value(0,1),
+                           t.value(1,0), t.value(1,1),
+                           in0,  in1,
+                           out0, out1);
 }
 
 /**
@@ -179,135 +116,90 @@ void multiply2d( const SparseTensor<ContainerType>& t, const ContainerType& in0,
  * Compute \f$ w^i = t^{ij}v_j\f$ for \f$ i,j\in \{1,2,3\}\f$
  * @copydoc hide_ContainerType
  * @param t input Tensor
- * @param in0 (input)  first component  (restricted)
- * @param in1 (input)  second component (restricted)
+ * @param in0 (input)  first component  (may alias out0)
+ * @param in1 (input)  second component (may alias out1)
  * @param in2 (input)  third component  (may alias out2)
- * @param out0 (output)  first component  (restricted)
- * @param out1 (output)  second component  (restricted)
- * @param out2 (output)  third component (may alias in2)
- * @attention aliasing only allowed between out2 and in2
+ * @param out0 (output)  first component  (may alias in0)
+ * @param out1 (output)  second component (may alias in1)
+ * @param out2 (output)  third component  (may alias in2)
  */
 template<class ContainerType>
 void multiply3d( const SparseTensor<ContainerType>& t, const ContainerType& in0, const ContainerType& in1, const ContainerType& in2, ContainerType& out0, ContainerType& out1, ContainerType& out2)
 {
-    int i0[2] = {0,0}, i1[2] = {0,1};
-    int i3[2] = {1,1}, i2[2] = {1,0};
-    int i5[2] = {2,2}, i4[2] = {2,0};
-    detail::multiply2d_helper( t, in0, in1, out0, i0, i1);
-    if( t.isSet(0,2)) dg::blas1::pointwiseDot( 1., t.value(0,2), in2, 1., out0);
-    detail::multiply2d_helper( t, in1, in0, out1, i3, i2);
-    if( t.isSet(1,2)) dg::blas1::pointwiseDot( 1., t.value(1,2), in2, 1., out1);
-    detail::multiply2d_helper( t, in2, in0, out2, i5, i4);
-    if( t.isSet(2,1)) dg::blas1::pointwiseDot( 1., t.value(2,1), in1, 1., out2);
+    dg::blas1::subroutine( detail::Multiply<get_value_type<ContainerType>>(),
+                           t.value(0,0), t.value(0,1), t.value(0,2),
+                           t.value(1,0), t.value(1,1), t.value(1,2),
+                           t.value(2,0), t.value(2,1), t.value(2,2),
+                           in0, in1, in2,
+                           out0, out1, out2);
 }
 
 /**
-* @brief Compute the determinant of a tensor
+* @brief Compute the determinant of a 3d tensor
 * @copydoc hide_ContainerType
 * @param t the input tensor
 * @return the determinant of t as a SparseElement (unset if t is empty)
 */
 template<class ContainerType>
-SparseElement<ContainerType> determinant( const SparseTensor<ContainerType>& t)
+ContainerType determinant3d( const SparseTensor<ContainerType>& t)
 {
-    if(t.isEmpty())  return SparseElement<ContainerType>();
-    SparseTensor<ContainerType> d = dense(t);
-    ContainerType det = d.value(0,0);
-    std::vector<ContainerType> sub_det(3,det);
-    dg::blas1::transform( det, det, dg::CONSTANT(0));
-    //first compute the det of three submatrices
-    dg::blas1::pointwiseDot( d.value(0,0), d.value(1,1), sub_det[2]);
-    dg::blas1::pointwiseDot( -1., d.value(1,0), d.value(0,1), 1. ,sub_det[2]);
-
-    dg::blas1::pointwiseDot( d.value(0,0), d.value(2,1), sub_det[1]);
-    dg::blas1::pointwiseDot( -1., d.value(2,0), d.value(0,1), 1. ,sub_det[1]);
-
-    dg::blas1::pointwiseDot( d.value(1,0), d.value(2,1), sub_det[0]);
-    dg::blas1::pointwiseDot( -1., d.value(2,0), d.value(1,1), 1. ,sub_det[0]);
-
-    //now multiply according to Laplace expansion
-    dg::blas1::pointwiseDot( 1., d.value(0,2), sub_det[0], 1.,  det);
-    dg::blas1::pointwiseDot(-1., d.value(1,2), sub_det[1], 1.,  det);
-    dg::blas1::pointwiseDot( 1., d.value(2,2), sub_det[2], 1.,  det);
-
-    return SparseElement<ContainerType>(det);
-}
-
-/**
- * @brief Compute the sqrt of the inverse determinant of a tensor
- *
- * This is a convenience function that is the same as
- * @code
-    SparseElement<ContainerType> volume=determinant(t);
-    invert(volume);
-    sqrt(volume);
-    @endcode
- * @copydoc hide_ContainerType
- * @param t the input tensor
- * @return the inverse square root of the determinant of t as a SparseElement (unset if t is empty)
- */
-template<class ContainerType>
-SparseElement<ContainerType> volume( const SparseTensor<ContainerType>& t)
-{
-    SparseElement<ContainerType> vol=determinant(t);
-    invert(vol);
-    sqrt(vol);
-    return vol;
-
-}
-
-
-///@cond
-//alias always allowed
-template<class ContainerType>
-void multiply2d( const CholeskyTensor<ContainerType>& ch, const ContainerType& in0, const ContainerType& in1, ContainerType& out0, ContainerType& out1)
-{
-    multiply2d(ch.upper(),     in0,  in1,  out0, out1);
-    multiply2d(ch.diagonal(),  out0, out1, out0, out1);
-    multiply2d(ch.lower(),     out0, out1, out0, out1);
+    ContainerType det = t.value(0,0);
+    dg::blas1::evaluate( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
+                           t.value(0,0), t.value(0,1), t.value(0,2),
+                           t.value(1,0), t.value(1,1), t.value(1,2),
+                           t.value(2,0), t.value(2,1), t.value(2,2));
+    return det;
 }
 template<class ContainerType>
-void multiply3d( const CholeskyTensor<ContainerType>& ch, const ContainerType& in0, const ContainerType& in1, const ContainerType& in2, ContainerType& out0, ContainerType& out1, ContainerType& out2)
+ContainerType determinant2d( const SparseTensor<ContainerType>& t)
 {
-    multiply3d(ch.upper(),    in0,  in1, in2,  out0, out1, out2);
-    multiply3d(ch.diagonal(), out0, out1,out2, out0, out1, out2);
-    ContainerType temp(out1);
-    multiply3d(ch.lower(),    out0, out1,out2, out0, temp, out2);
-    temp.swap(out1);
-}
-
-template<class ContainerType>
-SparseElement<ContainerType> determinant( const CholeskyTensor<ContainerType>& ch)
-{
-    SparseTensor<ContainerType> diag = dense(ch.diag() );
-    SparseElement<ContainerType> det;
-    if(diag.isEmpty()) return det;
-    else det.value()=diag.value(0,0);
-    dg::blas1::pointwiseDot( det.value(), diag.value(1,1), det.value());
-    dg::blas1::pointwiseDot( det.value(), diag.value(2,2), det.value());
+    ContainerType det = t.value(0,0);
+    dg::blas1::evaluate( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
+                           t.value(0,0), t.value(0,1),
+                           t.value(1,0), t.value(1,1));
     return det;
 }
 
+/**
+ * @brief Compute the sqrt of the inverse determinant of a 2d tensor
+ *
+ * This is a convenience function that is equivalent to
+ * @code
+    ContainerType vol=determinant2d(t);
+    dg::blas1::transform(vol, vol, dg::INVERT<>());
+    dg::blas1::transform(vol, vol, dg::SQRT<>());
+    @endcode
+ * @copydoc hide_ContainerType
+ * @param t the input tensor
+ * @return the inverse square root of the determinant of \c t
+ */
 template<class ContainerType>
-void scal(const CholeskyTensor<ContainerType>& ch, const SparseElement<ContainerType>& e)
+ContainerType volume2d( const SparseTensor<ContainerType>& t)
 {
-    const SparseTensor<ContainerType>& diag = ch.diag();
-    if(!e.isSet()) return;
-    unsigned size=diag.values().size();
-    for( unsigned i=0; i<size; i++)
-        dg::blas1::pointwiseDot( e.value(), diag.values()[i], diag.values()[i]);
-    if(!diag.isSet(0,0)|| !diag.isSet(1,1) || !diag.isSet(2,2))
-    {
-        diag.values().resize(size+1);
-        diag.values()[size] = e.value();
-    }
-    for( unsigned i=0; i<3; i++)
-    {
-        if(!diag.isSet(i,i) )
-            diag.idx(i,i)=size;
-    }
+    ContainerType vol=determinant2d(t);
+    dg::blas1::transform(vol, vol, detail::Determinant<get_value_type<ContainerType>>());
+    return vol;
 }
-///@endcond
+/**
+ * @brief Compute the sqrt of the inverse determinant of a 3d tensor
+ *
+ * This is a convenience function that is equivalent to
+ * @code
+    ContainerType vol=determinant3d(t);
+    dg::blas1::transform(vol, vol, dg::INVERT<>());
+    dg::blas1::transform(vol, vol, dg::SQRT<>());
+    @endcode
+ * @copydoc hide_ContainerType
+ * @param t the input tensor
+ * @return the inverse square root of the determinant of \c t
+ */
+template<class ContainerType>
+ContainerType volume3d( const SparseTensor<ContainerType>& t)
+{
+    ContainerType vol=determinant3d(t);
+    dg::blas1::transform(vol, vol, detail::Determinant<get_value_type<ContainerType>>());
+    return vol;
+}
 
 ///@}
 

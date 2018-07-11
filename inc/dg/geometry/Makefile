@@ -25,7 +25,7 @@ backscatter_t: backscatter_t.cu xspacelib.h
 	$(CC) $(OPT) $(INCLUDE) -DDG_DEBUG $(CFLAGS) $< -o $@ -g
 
 %_b: %_b.cu
-	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE)
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) -g
 
 .PHONY: clean
 
