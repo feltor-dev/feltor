@@ -32,8 +32,8 @@ int main()
     std::cout << "Type epsilon! \n";
     std::cin >> eps;
     dg::CylindricalGrid3d grid( R_0, R_0+lx, 0, ly, 0,lz, n, Nx, Ny,Nz, bcx, dg::PER, dg::PER);
-    dg::DVec w3d = dg::create::weights( grid);
-    dg::DVec v3d = dg::create::inv_weights( grid);
+    dg::DVec w3d = dg::create::volume( grid);
+    dg::DVec v3d = dg::create::inv_volume( grid);
     dg::DVec x = dg::evaluate( initial, grid);
 
     std::cout << "Create Laplacian\n";

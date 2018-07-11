@@ -44,27 +44,32 @@ namespace geo
 ///@{
 
 ///@cond
+template<class real_type>
 struct CurvilinearProductGrid3d;
 namespace detail
 {
-void square( const dg::SparseTensor<thrust::host_vector<double> >& jac, const thrust::host_vector<double>& R, dg::SparseTensor<thrust::host_vector<double> >& metric, bool orthogonal)
+template<class host_vector>
+dg::SparseTensor<host_vector> square( const dg::SparseTensor<host_vector >& jac, const host_vector& R, bool orthogonal)
 {
-    thrust::host_vector<double> tempxx( R.size()), tempxy(R.size()), tempyy(R.size()), temppp(R.size());
-    for( unsigned i=0; i<R.size(); i++)
+    std::vector<host_vector> values( 5, R);
     {
-        tempxx[i] = (jac.value(0,0)[i]*jac.value(0,0)[i]+jac.value(0,1)[i]*jac.value(0,1)[i]);
-        tempxy[i] = (jac.value(0,0)[i]*jac.value(1,0)[i]+jac.value(0,1)[i]*jac.value(1,1)[i]);
-        tempyy[i] = (jac.value(1,0)[i]*jac.value(1,0)[i]+jac.value(1,1)[i]*jac.value(1,1)[i]);
-        temppp[i] = 1./R[i]/R[i]; //1/R^2
+        dg::blas1::scal( values[0], 0); //0
+        dg::blas1::pointwiseDot( 1., jac.value(0,0), jac.value(0,0), 1., jac.value(0,1), jac.value(0,1), 0., values[1]); //xx
+        dg::blas1::pointwiseDot( 1., jac.value(1,0), jac.value(1,0), 1., jac.value(1,1), jac.value(1,1), 0., values[2]); //yy
+        dg::blas1::pointwiseDot( values[3], values[3], values[3]);
+        dg::blas1::pointwiseDivide( 1., values[3], values[3]); //pp == 1/R^2
+
+        dg::blas1::pointwiseDot( 1., jac.value(0,0), jac.value(1,0), 1., jac.value(0,1), jac.value(1,1), 0., values[4]); //xy
     }
-    metric.values().resize(3);
-    metric.idx(0,0) = 0; metric.values()[0] = tempxx;
-    metric.idx(1,1) = 1; metric.values()[1] = tempyy;
-    metric.idx(2,2) = 2; metric.values()[2] = temppp;
+    SparseTensor<thrust::host_vector<real_type>> metric(values[0]); //unit tensor
+    metric.values().pop_back(); //remove the one
+    metric.idx(0,0) = 1; metric.values().push_back( values[1]);
+    metric.idx(1,1) = 2; metric.values().push_back( values[2]);
+    metric.idx(2,2) = 3; metric.values().push_back( values[3]);
     if( !orthogonal)
     {
-        metric.idx(0,1) = metric.idx(1,0) = 3;
-        metric.values().push_back( tempxy);
+        metric.idx(1,0) = metric.idx(0,1) = 4;
+        metric.values().push_back( values[4]);
     }
 }
 }//namespace detail
@@ -78,11 +83,12 @@ void square( const dg::SparseTensor<thrust::host_vector<double> >& jac, const th
  *
  * @snippet flux_t.cu doxygen
  */
-struct CurvilinearGrid2d : public dg::aGeometry2d
+template<class real_type>
+struct RealCurvilinearGrid2d : public dg::aRealGeometry2d<real_type>
 {
     ///@copydoc hide_grid_parameters2d
-    CurvilinearGrid2d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
-        dg::aGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER), handle_(generator)
+    RealCurvilinearGrid2d( const aGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
+        dg::aRealGeometry2d( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, dg::PER), handle_(generator)
     {
         construct( n,Nx,Ny);
     }
@@ -91,28 +97,28 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
      * @brief Explicitly convert 3d product grid to the perpendicular grid
      * @param g 3d product grid
      */
-    explicit CurvilinearGrid2d( CurvilinearProductGrid3d g);
+    explicit RealCurvilinearGrid2d( RealCurvilinearProductGrid3d<real_type> g);
 
     ///read access to the generator
-    const aGenerator2d& generator() const{return handle_.get();}
-    virtual CurvilinearGrid2d* clone()const{return new CurvilinearGrid2d(*this);}
+    const aGenerator2d<real_type>& generator() const{return handle_.get();}
+    virtual RealCurvilinearGrid2d* clone()const{return new RealCurvilinearGrid2d(*this);}
     private:
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny)
     {
-        dg::aTopology2d::do_set( new_n, new_Nx, new_Ny);
+        dg::aRealTopology2d<real_type>::do_set( new_n, new_Nx, new_Ny);
         construct( new_n, new_Nx, new_Ny);
     }
     void construct( unsigned n, unsigned Nx, unsigned Ny);
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
+    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian( ) const {
         return jac_;
     }
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const {
+    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric( ) const {
         return metric_;
     }
-    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
-    dg::SparseTensor<thrust::host_vector<double> > jac_, metric_;
-    std::vector<thrust::host_vector<double> > map_;
-    dg::ClonePtr<aGenerator2d> handle_;
+    virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const{return map_;}
+    dg::SparseTensor<thrust::host_vector<real_type> > jac_, metric_;
+    std::vector<thrust::host_vector<real_type> > map_;
+    dg::ClonePtr<aGenerator2d<real_type>> handle_;
 };
 
 
@@ -122,13 +128,14 @@ struct CurvilinearGrid2d : public dg::aGeometry2d
  * The base coordinate system is the cylindrical coordinate system R,Z,phi
  * @snippet hector_t.cu doxygen
  */
-struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
+template<class real_type>
+struct RealCurvilinearProductGrid3d : public dg::aRealProductGeometry3d<real_type>
 {
-    typedef CurvilinearGrid2d perpendicular_grid;
+    typedef RealCurvilinearGrid2d<real_type> perpendicular_grid;
 
     ///@copydoc hide_grid_parameters3d
-    CurvilinearProductGrid3d( const aGenerator2d& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
-        dg::aProductGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz), jac_(4)
+    RealCurvilinearProductGrid3d( const aGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
+        dg::aRealProductGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz)
     {
         map_.resize(3);
         handle_ = generator;
@@ -138,7 +145,7 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
 
 
     ///@copydoc CurvilinearGrid2d::generator()const
-    const aGenerator2d & generator() const{return handle_.get();}
+    const aGenerator2d<real_type> & generator() const{return handle_.get();}
     virtual CurvilinearProductGrid3d* clone()const{return new CurvilinearProductGrid3d(*this);}
     private:
     virtual CurvilinearGrid2d* do_perp_grid() const;
@@ -174,30 +181,29 @@ struct CurvilinearProductGrid3d : public dg::aProductGeometry3d
     {
         dg::Grid1d gX1d( x0(), x1(), n, Nx);
         dg::Grid1d gY1d( y0(), y1(), n, Ny);
-        thrust::host_vector<double> x_vec = dg::evaluate( dg::cooX1d, gX1d);
-        thrust::host_vector<double> y_vec = dg::evaluate( dg::cooX1d, gY1d);
+        thrust::host_vector<real_type> x_vec = dg::evaluate( dg::cooX1d, gX1d);
+        thrust::host_vector<real_type> y_vec = dg::evaluate( dg::cooX1d, gY1d);
         handle_.get().generate( x_vec, y_vec, map_[0], map_[1], jac_.values()[0], jac_.values()[1], jac_.values()[2], jac_.values()[3]);
         jac_.idx(0,0) = 0, jac_.idx(0,1) = 1, jac_.idx(1,0)=2, jac_.idx(1,1) = 3;
     }
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_jacobian( ) const {
+    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian( ) const {
         return jac_;
     }
-    virtual SparseTensor<thrust::host_vector<double> > do_compute_metric( ) const
+    virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric( ) const
     {
-        SparseTensor<thrust::host_vector<double> > metric;
-        detail::square( jac_, map_[0], metric, handle_.get().isOrthogonal());
-        return metric;
+        return detail::square( jac_, map_[0], handle_.get().isOrthogonal());
     }
-    virtual std::vector<thrust::host_vector<double> > do_compute_map()const{return map_;}
-    std::vector<thrust::host_vector<double> > map_;
-    SparseTensor<thrust::host_vector<double> > jac_;
-    dg::ClonePtr<aGenerator2d> handle_;
+    virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const{return map_;}
+    std::vector<thrust::host_vector<real_type> > map_;
+    SparseTensor<thrust::host_vector<real_type> > jac_;
+    dg::ClonePtr<aGenerator2d<real_type>> handle_;
 };
 
 ///@}
 ///@cond
-CurvilinearGrid2d::CurvilinearGrid2d( CurvilinearProductGrid3d g):
-    dg::aGeometry2d( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy() ), handle_(g.generator())
+template<class real_type>
+RealCurvilinearGrid2d<real_type>::RealCurvilinearGrid2d( RealCurvilinearProductGrid3d<real_type> g):
+    dg::aRealGeometry2d<real_type>( g.x0(), g.x1(), g.y0(), g.y1(), g.n(), g.Nx(), g.Ny(), g.bcx(), g.bcy() ), handle_(g.generator())
 {
     g.set( n(), Nx(), Ny(), 1); //shouldn't trigger 2d grid generator
     map_=g.map();
@@ -205,12 +211,14 @@ CurvilinearGrid2d::CurvilinearGrid2d( CurvilinearProductGrid3d g):
     metric_=g.metric().perp();
     map_.pop_back();
 }
-void CurvilinearGrid2d::construct( unsigned n, unsigned Nx, unsigned Ny)
+template<class real_type>
+void CurvilinearGrid2d<real_type>::construct( unsigned n, unsigned Nx, unsigned Ny)
 {
-    CurvilinearProductGrid3d g( handle_.get(), n,Nx,Ny,1,bcx());
-    *this = CurvilinearGrid2d(g);
+    RealCurvilinearProductGrid3d<real_type> g( handle_.get(), n,Nx,Ny,1,bcx());
+    *this = RealCurvilinearGrid2d<real_type>(g);
 }
-CurvilinearProductGrid3d::perpendicular_grid* CurvilinearProductGrid3d::do_perp_grid() const { return new CurvilinearProductGrid3d::perpendicular_grid(*this);}
+template<class real_type>
+RealCurvilinearProductGrid3d<real_type>::perpendicular_grid* RealCurvilinearProductGrid3d::do_perp_grid() const { return new RealCurvilinearProductGrid3d<real_type>::perpendicular_grid(*this);}
 ///@endcond
 
 }//namespace geo

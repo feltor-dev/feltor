@@ -40,17 +40,25 @@ struct SparseTensor
     }
 
     /**
-    * @brief pass array of containers, Indices default to -1
-    * @param values The contained containers are copied
+    * @brief Construct the unit tensor
+    * @param copyable used to create explicit zeroes (Index 0) and ones (Index 1)
     */
-    SparseTensor( std::vector<container> values ): m_mat_idx(3, -1), m_values(values){}
+    SparseTensor( const container& copyable ){
+        construct(copyable);
+    }
     /**
-    * @brief pass array of containers, Indices default to 0
-    * @param values The contained Ts are stored in the object
+    * @brief Construct the unit tensor
+    * @param copyable used to create explicit zeroes (Index 0) and ones (Index 1)
     */
-    void construct( const std::vector<container>& values ){
-        m_mat_idx = dg::Operator<int>(3,-1);
-	    m_values=values;
+    void construct( const container& copyable ){
+		m_mat_idx.resize(3,0);
+        for( int i=0; i<3; i++)
+            m_mat_idx( i,i) = 1;
+   		m_values.assign(2,copyable);
+        dg::blas1::copy( 0., m_values[0]);
+        dg::blas1::copy( 1., m_values[1]);
+
+
     }
     /**
      * @brief Construct the unit tensor
@@ -59,11 +67,11 @@ struct SparseTensor
     template<class Topology>
     void construct( const Topology& grid){
 		m_mat_idx.resize(3,0);
+        for( int i=0; i<3; i++)
+            m_mat_idx( i,i) = 1;
    		m_values.resize(2);
         dg::transfer( dg::evaluate( dg::zero, grid), m_values[0]);
         dg::transfer( dg::evaluate( dg::one, grid), m_values[1]);
-        for( int i=0; i<3; i++)
-            m_mat_idx( i,i) = 1;
     }
 
     /**
