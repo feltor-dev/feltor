@@ -7,7 +7,7 @@
 
 namespace dg
 {
-///@brief functions used in connection with the SparseElement and SparseTensor classes
+///@brief Utility functions used in connection with the SparseTensor class
 namespace tensor
 {
 
@@ -138,10 +138,10 @@ void multiply3d( const SparseTensor<ContainerType>& t, const ContainerType& in0,
 * @brief Compute the determinant of a 3d tensor
 * @copydoc hide_ContainerType
 * @param t the input tensor
-* @return the determinant of t as a SparseElement (unset if t is empty)
+* @return the determinant of t
 */
 template<class ContainerType>
-ContainerType determinant3d( const SparseTensor<ContainerType>& t)
+ContainerType determinant( const SparseTensor<ContainerType>& t)
 {
     ContainerType det = t.value(0,0);
     dg::blas1::evaluate( det, dg::equals(), detail::Determinant<get_value_type<ContainerType>>(),
@@ -150,6 +150,12 @@ ContainerType determinant3d( const SparseTensor<ContainerType>& t)
                            t.value(2,0), t.value(2,1), t.value(2,2));
     return det;
 }
+/**
+* @brief Compute the minor determinant of a tensor
+* @copydoc hide_ContainerType
+* @param t the input tensor
+* @return the upper left minor determinant of t
+*/
 template<class ContainerType>
 ContainerType determinant2d( const SparseTensor<ContainerType>& t)
 {
@@ -161,7 +167,7 @@ ContainerType determinant2d( const SparseTensor<ContainerType>& t)
 }
 
 /**
- * @brief Compute the sqrt of the inverse determinant of a 2d tensor
+ * @brief Compute the sqrt of the inverse minor determinant of a tensor
  *
  * This is a convenience function that is equivalent to
  * @code
@@ -185,7 +191,7 @@ ContainerType volume2d( const SparseTensor<ContainerType>& t)
  *
  * This is a convenience function that is equivalent to
  * @code
-    ContainerType vol=determinant3d(t);
+    ContainerType vol=determinant(t);
     dg::blas1::transform(vol, vol, dg::INVERT<>());
     dg::blas1::transform(vol, vol, dg::SQRT<>());
     @endcode
@@ -194,9 +200,9 @@ ContainerType volume2d( const SparseTensor<ContainerType>& t)
  * @return the inverse square root of the determinant of \c t
  */
 template<class ContainerType>
-ContainerType volume3d( const SparseTensor<ContainerType>& t)
+ContainerType volume( const SparseTensor<ContainerType>& t)
 {
-    ContainerType vol=determinant3d(t);
+    ContainerType vol=determinant(t);
     dg::blas1::transform(vol, vol, detail::Determinant<get_value_type<ContainerType>>());
     return vol;
 }

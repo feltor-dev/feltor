@@ -27,12 +27,12 @@ if negative the value of the T is assumed to be 1, except for the off-diagonal e
 template<class container>
 struct SparseTensor
 {
-    ///no value is set, Indices default to 0
-    SparseTensor( ):m_mat_idx(3,0) {}
+    ///no value is set, Indices default to -1
+    SparseTensor( ):m_mat_idx(3,-1) {}
 
     /**
      * @brief Construct the unit tensor
-     * @param grid used to create explicit zeroes and ones
+     * @param grid used to create explicit zeroes (Index 0) and ones (Index 1)
      */
     template<class Topology>
     SparseTensor( const Topology& grid){
@@ -40,21 +40,21 @@ struct SparseTensor
     }
 
     /**
-    * @brief pass array of containers, Indices default to 0
-    * @param values The contained containers are
+    * @brief pass array of containers, Indices default to -1
+    * @param values The contained containers are copied
     */
-    SparseTensor( std::vector<container> values ): m_mat_idx(3, 0), m_values(values){}
+    SparseTensor( std::vector<container> values ): m_mat_idx(3, -1), m_values(values){}
     /**
     * @brief pass array of containers, Indices default to 0
     * @param values The contained Ts are stored in the object
     */
     void construct( const std::vector<container>& values ){
-        m_mat_idx = dg::Operator<int>(3,0);
+        m_mat_idx = dg::Operator<int>(3,-1);
 	    m_values=values;
     }
     /**
      * @brief Construct the unit tensor
-     * @param grid used to create explicit zeroes and ones
+     * @param grid used to create explicit zeroes (Index 0) and ones (Index 1)
      */
     template<class Topology>
     void construct( const Topology& grid){
@@ -72,7 +72,7 @@ struct SparseTensor
      * @param src the source matrix to convert
      */
     template<class OtherContainer>
-    SparseTensor( const SparseTensor<OtherContainer>& src): m_mat_idx(3,0), m_values(src.values().size()){
+    SparseTensor( const SparseTensor<OtherContainer>& src): m_mat_idx(3,-1), m_values(src.values().size()){
         for(unsigned i=0; i<3; i++)
             for(unsigned j=0; j<3; j++)
                 m_mat_idx(i,j)=src.idx(i,j);
@@ -85,7 +85,7 @@ struct SparseTensor
     * @brief read index into the values array at the given position
     * @param i row index 0<=i<3
     * @param j col index 0<=j<3
-    * @return -1 if \c !isSet(i,j), index into values array else
+    * @return index into values array
     */
     int idx(unsigned i, unsigned j)const{
         return m_mat_idx(i,j);
@@ -103,7 +103,7 @@ struct SparseTensor
     }
 
     /*!@brief Read access the underlying container
-     * @return if !isSet(i,j) the result is undefined, otherwise values[idx(i,j)] is returned.
+     * @return \c values[idx(i,j)] is returned.
      * @param i row index 0<=i<3
      * @param j col index 0<=j<3
      * @note If the indices fall out of range of index the result is undefined

@@ -473,9 +473,7 @@ struct Hector : public aGenerator2d
         //now compute etaV and its inverse
         container etaVinv(u_zeta), etaV(etaVinv);
         dg::blas1::pointwiseDot( etaVinv, chiZZ, etaVinv);
-        dg::SparseElement<container> perp_vol = dg::tensor::determinant(g2d_.metric());
-        dg::tensor::sqrt(perp_vol);
-        dg::tensor::invert(perp_vol);
+        container perp_vol = dg::tensor::volume(g2d_.metric());
         dg::tensor::pointwiseDot( etaVinv, perp_vol, etaVinv);
         dg::blas1::transform( etaVinv, etaV, dg::INVERT<double>());
         thrust::host_vector<double> etaVinv_h;

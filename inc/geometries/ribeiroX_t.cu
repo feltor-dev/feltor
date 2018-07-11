@@ -152,8 +152,7 @@ int main( int argc, char* argv[])
 
     dg::SparseTensor<dg::DVec> metric = g2d.metric();
     dg::DVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
-    dg::SparseElement<dg::DVec> vol_ = dg::tensor::volume(metric);
-    dg::DVec vol = vol_.value();
+    dg::DVec vol = dg::tensor::volume(metric);
 
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     dg::blas1::axpby( 1., ones, -1., temp0, temp0);

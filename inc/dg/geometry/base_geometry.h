@@ -67,10 +67,10 @@ struct aRealGeometry2d : public aRealTopology2d<real_type>
     aRealGeometry2d& operator=( const aRealGeometry2d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
-        return SparseTensor<thrust::host_vector<real_type> >();
+        return SparseTensor<thrust::host_vector<real_type> >(*this);
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian()const {
-        return SparseTensor<thrust::host_vector<real_type> >();
+        return SparseTensor<thrust::host_vector<real_type> >(*this);
     }
     virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const{
         std::vector<thrust::host_vector<real_type> > map(2);
@@ -145,10 +145,10 @@ struct aRealGeometry3d : public aRealTopology3d<real_type>
     aRealGeometry3d& operator=( const aRealGeometry3d& src) = default;
     private:
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const {
-        return SparseTensor<thrust::host_vector<real_type> >();
+        return SparseTensor<thrust::host_vector<real_type> >(*this);
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian()const {
-        return SparseTensor<thrust::host_vector<real_type> >();
+        return SparseTensor<thrust::host_vector<real_type> >(*this);
     }
     virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const{
         std::vector<thrust::host_vector<real_type> > map(3);
@@ -260,12 +260,12 @@ struct RealCylindricalGrid3d: public dg::aRealProductGeometry3d<real_type>
         return new RealCartesianGrid2d<real_type>(this->x0(),this->x1(),this->y0(),this->y1(),this->n(),this->Nx(),this->Ny(),this->bcx(),this->bcy());
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final{
-        SparseTensor<thrust::host_vector<real_type> > metric(1);
+        SparseTensor<thrust::host_vector<real_type> > metric(*this);
         thrust::host_vector<real_type> R = dg::evaluate(dg::cooX3d, *this);
         for( unsigned i = 0; i<this->size(); i++)
             R[i] = 1./R[i]/R[i];
-        metric.idx(2,2)=0;
-        metric.values()[0] = R;
+        metric.idx(2,2)=2;
+        metric.values().push_back( R);
         return metric;
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) override final {

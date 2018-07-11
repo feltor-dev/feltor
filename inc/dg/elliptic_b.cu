@@ -86,9 +86,10 @@ int main()
     dg::ClonePtr<dg::aGeometry2d> grid_perp = grid.perp_grid();
     dg::DVec v2d = dg::create::inv_volume( grid_perp.get());
     dg::DVec w2d = dg::create::volume( grid_perp.get());
-    dg::SparseElement<dg::DVec> g_parallel = dg::tensor::volume( grid.metric().parallel());
+    dg::DVec g_parallel = grid.metric().value(2,2);
+    dg::blas1::transform( g_parallel, g_parallel, dg::SQRT<>());
     dg::DVec chi = dg::evaluate( dg::one, grid);
-    dg::tensor::pointwiseDot( chi, g_parallel, chi);
+    dg::blas1::pointwiseDivide( chi, g_parallel, chi);
     //create split Laplacian
     std::vector< dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > laplace_split(
             grid.Nz(), dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec>(grid_perp.get(), dg::not_normed, dg::centered));
@@ -97,7 +98,7 @@ int main()
     pcg.construct( w2d, w2d.size());
     std::vector<unsigned>  number(grid.Nz());
     t.tic();
-    dg::tensor::pointwiseDot( b, g_parallel, b);
+    dg::blas1::pointwiseDivide( b, g_parallel, b);
     dg::split( b, b_split, grid);
     dg::split( chi, chi_split, grid);
     dg::split( x, x_split, grid);

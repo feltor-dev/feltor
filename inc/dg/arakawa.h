@@ -91,7 +91,7 @@ struct ArakawaX
   private:
     container dxlhs, dxrhs, dylhs, dyrhs, helper_;
     Matrix bdxf, bdyf;
-    SparseElement<container> perp_vol_inv_;
+    container perp_vol_inv_;
     SparseTensor<container> metric_;
 };
 ///@cond
@@ -103,7 +103,7 @@ ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
 {
     metric_=g.metric().perp();
     perp_vol_inv_ = dg::tensor::determinant(metric_);
-    dg::tensor::sqrt(perp_vol_inv_);
+    dg::blas1::transform(perp_vol_inv_, perp_vol_inv_, dg::SQRT<get_value_type<container>>());
 }
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy):
@@ -113,7 +113,7 @@ ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc b
 {
     metric_=g.metric().perp();
     perp_vol_inv_ = dg::tensor::determinant(metric_);
-    dg::tensor::sqrt(perp_vol_inv_);
+    dg::blas1::transform(perp_vol_inv_, perp_vol_inv_, dg::SQRT<get_value_type<container>>());
 }
 
 template<class T>
@@ -153,7 +153,7 @@ void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, c
 
     blas2::symv( 1., bdxf, dylhs, 1., result);
     blas2::symv( 1., bdyf, dxrhs, 1., result);
-    tensor::pointwiseDot( perp_vol_inv_, result, result);
+    blas1::pointwiseDot( perp_vol_inv_, result, result);
 }
 ///@endcond
 

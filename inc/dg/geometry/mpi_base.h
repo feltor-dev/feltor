@@ -43,10 +43,10 @@ struct aRealMPIGeometry2d : public aRealMPITopology2d<real_type>
     aRealMPIGeometry2d& operator=( const aRealMPIGeometry2d& src) = default;
     private:
     virtual SparseTensor<host_vector > do_compute_metric()const {
-        return SparseTensor<host_vector >();
+        return SparseTensor<host_vector >(*this);
     }
     virtual SparseTensor<host_vector > do_compute_jacobian()const {
-        return SparseTensor<host_vector >();
+        return SparseTensor<host_vector >(*this);
     }
     virtual std::vector<host_vector > do_compute_map()const{
         std::vector<host_vector> map(2);
@@ -89,10 +89,10 @@ struct aRealMPIGeometry3d : public aRealMPITopology3d<real_type>
     aRealMPIGeometry3d& operator=( const aRealMPIGeometry3d& src) = default;
     private:
     virtual SparseTensor<host_vector > do_compute_metric()const {
-        return SparseTensor<host_vector >();
+        return SparseTensor<host_vector >(*this);
     }
     virtual SparseTensor<host_vector > do_compute_jacobian()const {
-        return SparseTensor<host_vector >();
+        return SparseTensor<host_vector >(*this);
     }
     virtual std::vector<host_vector > do_compute_map()const{
         std::vector<host_vector> map(3);
@@ -243,12 +243,12 @@ struct RealCylindricalMPIGrid3d: public aRealProductMPIGeometry3d<real_type>
         return new RealCartesianMPIGrid2d<real_type>( this->global().x0(), this->global().x1(), this->global().y0(), this->global().y1(), this->global().n(), this->global().Nx(), this->global().Ny(), this->global().bcx(), this->global().bcy(), this->get_perp_comm( ));
     }
     virtual SparseTensor<host_vector > do_compute_metric()const override final{
-        SparseTensor<host_vector> metric(1);
+        SparseTensor<host_vector> metric(*this);
         host_vector R = dg::evaluate(dg::cooX3d, *this);
         for( unsigned i = 0; i<this->local().size(); i++)
             R.data()[i] = 1./R.data()[i]/R.data()[i];
-        metric.idx(2,2)=0;
-        metric.values()[0] = R;
+        metric.idx(2,2)=2;
+        metric.values().push_back(R);
         return metric;
     }
     virtual void do_set(unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) override final{

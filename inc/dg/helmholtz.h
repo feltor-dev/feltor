@@ -117,7 +117,7 @@ struct Helmholtz
      *
      * @param chi new container
      */
-    void set_chi( const container& chi) {chi_.value()=chi;}
+    void set_chi( const container& chi) {chi_=chi;}
     /**
      * @brief Sets chi back to one
      */
@@ -127,11 +127,11 @@ struct Helmholtz
      *
      * @return chi
      */
-    const SparseElement<container>& chi() const{return chi_;}
+    const container& chi() const{return chi_;}
   private:
     Elliptic<Geometry, Matrix, container> laplaceM_;
     container temp_;
-    SparseElement<container> chi_;
+    container chi_;
     double alpha_;
 };
 
@@ -213,10 +213,10 @@ struct Helmholtz2
         if( alpha_ != 0)
         {
             blas2::symv( laplaceM_, x, temp1_); // temp1_ = -nabla_perp^2 x
-            tensor::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*W*nabla_perp^2 x
+            blas1::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*W*nabla_perp^2 x
             blas2::symv( laplaceM_, y, temp2_);//temp2_ = nabla_perp^2 *(chi^-1)*nabla_perp^2 x
         }
-        tensor::pointwiseDot( chi_, x, y); //y = chi*x
+        blas1::pointwiseDot( chi_, x, y); //y = chi*x
         blas1::axpby( 1., y, -2.*alpha_, temp1_, y);
         blas1::axpby( alpha_*alpha_, temp2_, 1., y, y);
         blas2::symv( laplaceM_.weights(), y, y);//Helmholtz is never normed
@@ -249,7 +249,7 @@ struct Helmholtz2
      *
      * @param chi new container
      */
-    void set_chi( const container& chi) {chi_.value()=chi; }
+    void set_chi( const container& chi) {chi_=chi; }
     /**
      * @brief Sets chi back to one
      */
@@ -259,11 +259,11 @@ struct Helmholtz2
      *
      * @return chi
      */
-    const SparseElement<container>& chi()const {return chi_;}
+    const container& chi()const {return chi_;}
   private:
     Elliptic<Geometry, Matrix, container> laplaceM_;
     container temp1_, temp2_;
-    SparseElement<container> chi_;
+    container chi_;
     double alpha_;
 };
 ///@cond

@@ -22,7 +22,7 @@ int main()
     //std::cin >> n>> Nx>>Ny>>Nz;
     //dg::CylindricalGrid3d<dg::DVec> grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  n, Nx, Ny, Nz, dg::DIR, dg::DIR, dg::PER);
     dg::CylindricalGrid3d grid( R_0 , R_0+ 2.*M_PI, 0.,2.*M_PI, 0., 2.*M_PI,  3,32,24,16, dg::DIR, dg::DIR, dg::PER);
-    dg::SparseElement<dg::DVec> vol = dg::tensor::volume(grid.metric());
+    dg::DVec vol = dg::tensor::volume(grid.metric());
 
     dg::DVec b = dg::evaluate( sine, grid);
     dg::DVec vol3d = dg::create::volume( grid);
@@ -31,7 +31,7 @@ int main()
     std::cout << "Test of volume:         "<<test<< " sol = " << sol<< "\t";
     std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
     dg::DVec temp = dg::create::weights( grid);
-    dg::tensor::pointwiseDot( vol, temp, temp);
+    dg::blas1::pointwiseDot( vol, temp, temp);
     test = dg::blas2::dot( b, temp, b);
     std::cout << "Test of multiplyVolume: "<<test<< " sol = " << sol<< "\t";
     std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
@@ -42,7 +42,7 @@ int main()
     std::cout << "Test of inv_volume:     "<<test<< " sol = " << sol<< "\t";
     std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";
     temp = dg::create::inv_weights( grid);
-    dg::tensor::pointwiseDivide(temp, vol, temp );
+    dg::blas1::pointwiseDivide(temp, vol, temp );
     test = dg::blas2::dot( b, temp, b);
     std::cout << "Test of divideVolume:   "<<test<< " sol = " << sol<< "\t";
     std::cout << "rel diff = " <<( test -  sol)/ sol<<"\n";

@@ -109,7 +109,7 @@ struct Poisson
   private:
     container dxlhslhs_, dxrhsrhs_, dylhslhs_, dyrhsrhs_, helper_;
     Matrix dxlhs_, dylhs_, dxrhs_, dyrhs_;
-    SparseElement<container> perp_vol_inv_;
+    container perp_vol_inv_;
     SparseTensor<container> metric_;
 };
 
@@ -126,7 +126,7 @@ Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g ):
 {
     metric_=g.metric().perp();
     perp_vol_inv_ = dg::tensor::determinant(metric_);
-    dg::tensor::sqrt(perp_vol_inv_);
+    dg::blas1::transform(perp_vol_inv_, perp_vol_inv_, dg::SQRT<get_value_type<container>>());
 }
 
 template< class Geometry, class Matrix, class container>
@@ -139,7 +139,7 @@ Poisson<Geometry, Matrix, container>::Poisson( const Geometry& g, bc bcx, bc bcy
 {
     metric_=g.metric().perp();
     perp_vol_inv_ = dg::tensor::determinant(metric_);
-    dg::tensor::sqrt(perp_vol_inv_);
+    dg::blas1::transform(perp_vol_inv_, perp_vol_inv_, dg::SQRT<get_value_type<container>>());
 }
 
 template< class Geometry, class Matrix, class container>
@@ -152,7 +152,7 @@ Poisson<Geometry, Matrix, container>::Poisson(  const Geometry& g, bc bcxlhs, bc
 {
     metric_=g.metric().perp();
     perp_vol_inv_ = dg::tensor::determinant(metric_);
-    dg::tensor::sqrt(perp_vol_inv_);
+    dg::blas1::transform(perp_vol_inv_, perp_vol_inv_, dg::SQRT<get_value_type<container>>());
 }
 
 template< class Geometry, class Matrix, class container>
@@ -164,7 +164,7 @@ void Poisson< Geometry, Matrix, container>::operator()( const container& lhs, co
     blas2::symv(  dyrhs_, rhs,  dyrhsrhs_); //dy_rhs rhs
 
     blas1::pointwiseDot( 1., dxlhslhs_, dyrhsrhs_, -1., dylhslhs_, dxrhsrhs_, 0., result);
-    tensor::pointwiseDot( perp_vol_inv_, result, result);
+    blas1::pointwiseDot( perp_vol_inv_, result, result);
 }
 ///@endcond
 
