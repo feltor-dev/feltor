@@ -129,7 +129,8 @@ struct DSField
 
 };
 
-void clip_to_boundary( double& x, double& y, const dg::aTopology2d& grid)
+template<class real_type>
+void clip_to_boundary( real_type& x, real_type& y, const dg::aRealTopology2d<real_type>& grid)
 {
     //there is no shift_topologic because if interpolating the results
     if (!(x > grid.x0())) { x=grid.x0();}
@@ -137,19 +138,21 @@ void clip_to_boundary( double& x, double& y, const dg::aTopology2d& grid)
     if (!(y > grid.y0())) { y=grid.y0();}
     if (!(y < grid.y1())) { y=grid.y1();}
 }
-void clip_to_boundary( thrust::host_vector<double>& x, const dg::aTopology2d& grid)
+template<class real_type>
+void clip_to_boundary( thrust::host_vector<real_type>& x, const dg::aRealTopology2d<real_type>& grid)
 {
     clip_to_boundary(x[0], x[1], grid);
 }
 
-void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aTopology2d& g2dFine, const dg::aTopology2d& boundary, //2 different grid on account of the MPI implementation
-        const std::vector<thrust::host_vector<double> >& yp_coarse,
-        const std::vector<thrust::host_vector<double> >& ym_coarse,
-        std::vector<thrust::host_vector<double> >& yp_fine,
-        std::vector<thrust::host_vector<double> >& ym_fine
+template<class real_type>
+void interpolate_and_clip( const dg::IHMatrix& interpolate, const dg::aRealTopology2d<real_type>& g2dFine, const dg::aRealTopology2d<real_type>& boundary, //2 different grid on account of the MPI implementation
+        const std::vector<thrust::host_vector<real_type> >& yp_coarse,
+        const std::vector<thrust::host_vector<real_type> >& ym_coarse,
+        std::vector<thrust::host_vector<real_type> >& yp_fine,
+        std::vector<thrust::host_vector<real_type> >& ym_fine
         )
 {
-    std::vector<thrust::host_vector<double> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp);
+    std::vector<thrust::host_vector<real_type> > yp( 3, dg::evaluate(dg::zero, g2dFine)), ym(yp);
     for( unsigned i=0; i<3; i++)
     {
         dg::blas2::symv( interpolate, yp_coarse[i], yp[i]);
@@ -265,14 +268,20 @@ void boxintegrator( const Field& field, const Topology& grid,
 }
 
 //used in constructor of Fieldaligned
-void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg::aGeometry2d& grid_field, const dg::aTopology2d& grid_evaluate, std::vector<thrust::host_vector<double> >& yp_result, std::vector<thrust::host_vector<double> >& ym_result , double deltaPhi, double eps)
+template<class real_type>
+void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec,
+    const dg::aRealGeometry2d<real_type>& grid_field,
+    const dg::aRealTopology2d<real_type>& grid_evaluate,
+    std::vector<thrust::host_vector<real_type> >& yp_result,
+    std::vector<thrust::host_vector<real_type> >& ym_result,
+    real_type deltaPhi, real_type eps)
 {
     //grid_field contains the global geometry for the field and the boundaries
     //grid_evaluate contains the points to actually integrate
-    std::vector<thrust::host_vector<double> > y( 3, dg::evaluate( dg::cooX2d, grid_evaluate)); //x
+    std::vector<thrust::host_vector<real_type> > y( 3, dg::evaluate( dg::cooX2d, grid_evaluate)); //x
     y[1] = dg::evaluate( dg::cooY2d, grid_evaluate); //y
     y[2] = dg::evaluate( dg::zero,   grid_evaluate); //s
-    std::vector<thrust::host_vector<double> > yp( 3, y[0]), ym(yp);
+    std::vector<thrust::host_vector<real_type> > yp( 3, y[0]), ym(yp);
     //construct field on high polynomial grid, then integrate it
     dg::geo::detail::DSField field( vec, grid_field);
     //field in case of cartesian grid
@@ -280,9 +289,9 @@ void integrate_all_fieldlines2d( const dg::geo::BinaryVectorLvl0& vec, const dg:
     unsigned size = grid_evaluate.size();
     for( unsigned i=0; i<size; i++)
     {
-        thrust::host_vector<double> coords(3), coordsP(3), coordsM(3);
+        thrust::host_vector<real_type> coords(3), coordsP(3), coordsM(3);
         coords[0] = y[0][i], coords[1] = y[1][i], coords[2] = y[2][i]; //x,y,s
-        double phi1 = deltaPhi;
+        real_type phi1 = deltaPhi;
         if( dynamic_cast<const dg::CartesianGrid2d*>( &grid_field))
         {
             boxintegrator( cyl_field, grid_field, coords, coordsP, phi1, eps);

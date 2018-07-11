@@ -30,10 +30,10 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
     /// @param comm a two-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters
     RealCurvilinearMPIGrid2d( const aGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx, dg::bc bcy, MPI_Comm comm):
-        dg::aRealMPIGeometry2d<real_type>( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, bcy, comm), jac_(4), handle_(generator)
+        dg::aRealMPIGeometry2d<real_type>( 0, generator.width(), 0., generator.height(), n, Nx, Ny, bcx, bcy, comm), handle_(generator)
     {
         //generate global 2d grid and then reduce to local
-        CurvilinearGrid2d g(generator, n, Nx, Ny);
+        RealCurvilinearGrid2d g(generator, n, Nx, Ny);
         divide_and_conquer(g);
     }
     ///explicit conversion of 3d product grid to the perpendicular grid
@@ -49,7 +49,7 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
                 global().bcx(), global().bcy());
     }
     private:
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny) override final
     {
         dg::aRealMPITopology2d<real_type>::do_set(new_n, new_Nx, new_Ny);
         RealCurvilinearGrid2d<real_type> g( handle_.get(), new_n, new_Nx, new_Ny);
@@ -75,13 +75,13 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
             map_[i] = global2local( map[i], *this);
     }
 
-    virtual SparseTensor<host_vector> do_compute_jacobian( ) const {
+    virtual SparseTensor<host_vector> do_compute_jacobian( ) const override final{
         return jac_;
     }
-    virtual SparseTensor<host_vector> do_compute_metric( ) const {
+    virtual SparseTensor<host_vector> do_compute_metric( ) const override final{
         return metric_;
     }
-    virtual std::vector<host_vector > do_compute_map()const{return map_;}
+    virtual std::vector<host_vector > do_compute_map()const override final{return map_;}
     dg::SparseTensor<host_vector > jac_, metric_;
     std::vector<host_vector > map_;
     dg::ClonePtr<aGenerator2d<real_type>> handle_;
@@ -93,18 +93,18 @@ struct RealCurvilinearMPIGrid2d : public dg::aRealMPIGeometry2d<real_type>
  * The base coordinate system is the cylindrical coordinate system R,Z,phi
  */
 template<class real_type>
-struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d
+struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d<real_type>
 {
     typedef dg::geo::RealCurvilinearMPIGrid2d<real_type> perpendicular_grid; //!< the two-dimensional grid
     /// @copydoc hide_grid_parameters3d
     /// @param comm a three-dimensional Cartesian communicator
     /// @note the paramateres given in the constructor are global parameters
     RealCurvilinearProductMPIGrid3d( const aGenerator2d<real_type>& generator, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz, MPI_Comm comm):
-        dg::aProductMPIGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
+        dg::aRealProductMPIGeometry3d( 0, generator.width(), 0., generator.height(), 0., 2.*M_PI, n, Nx, Ny, Nz, bcx, bcy, bcz, comm),
         handle_( generator)
     {
         map_.resize(3);
-        CurvilinearMPIGrid2d g(generator,n,Nx,Ny, bcx, bcy, get_perp_comm());
+        RealCurvilinearMPIGrid2d<real_type> g(generator,n,Nx,Ny, bcx, bcy, get_perp_comm());
         constructPerp( g);
         constructParallel(this->local().Nz());
     }
@@ -112,26 +112,26 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d
 
     ///read access to the generator
     const aGenerator2d<real_type>& generator() const{return handle_.get();}
-    virtual CurvilinearProductMPIGrid3d* clone()const{return new CurvilinearProductMPIGrid3d(*this);}
-    virtual CurvilinearProductGrid3d* global_geometry()const{
-        return new CurvilinearProductGrid3d(
+    virtual RealCurvilinearProductMPIGrid3d* clone()const{return new RealCurvilinearProductMPIGrid3d(*this);}
+    virtual RealCurvilinearProductGrid3d<real_type>* global_geometry()const{
+        return new RealCurvilinearProductGrid3d<real_type>(
                 handle_.get(),
                 global().n(), global().Nx(), global().Ny(), global().Nz(),
                 global().bcx(), global().bcy(), global().bcz());
     }
     private:
-    virtual perpendicular_grid* do_perp_grid() const { return new perpendicular_grid(*this);}
-    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz)
+    virtual perpendicular_grid* do_perp_grid() const override final{ return new perpendicular_grid(*this);}
+    virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny, unsigned new_Nz) override final
     {
-        dg::aMPITopology3d::do_set(new_n, new_Nx, new_Ny, new_Nz);
+        dg::aRealMPITopology3d::do_set(new_n, new_Nx, new_Ny, new_Nz);
         if( !( new_n == n() && new_Nx == global().Nx() && new_Ny == global().Ny() ) )
         {
-            CurvilinearMPIGrid2d g(handle_.get(),new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), get_perp_comm());
+            RealCurvilinearMPIGrid2d<real_type> g(handle_.get(),new_n,new_Nx,new_Ny, this->bcx(), this->bcy(), get_perp_comm());
             constructPerp( g);
         }
         constructParallel(this->local().Nz());
     }
-    void constructPerp( CurvilinearMPIGrid2d& g2d)
+    void constructPerp( RealCurvilinearMPIGrid2d<real_type>& g2d)
     {
         jac_=g2d.jacobian();
         map_=g2d.map();
@@ -143,7 +143,7 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d
         unsigned size = this->local().size();
         unsigned size2d = this->n()*this->n()*this->local().Nx()*this->local().Ny();
         //resize for 3d values
-        for( unsigned r=0; r<4;r++)
+        for( unsigned r=0; r<6;r++)
         {
             jac_.values()[r].data().resize(size);
             jac_.values()[r].set_communicator( communicator());
@@ -156,27 +156,27 @@ struct RealCurvilinearProductMPIGrid3d : public dg::aRealProductMPIGeometry3d
         for( unsigned k=1; k<localNz; k++)
             for( unsigned i=0; i<size2d; i++)
             {
-                for(unsigned r=0; r<4; r++)
+                for(unsigned r=0; r<6; r++)
                     jac_.values()[r].data()[k*size2d+i] = jac_.values()[r].data()[(k-1)*size2d+i];
                 map_[0].data()[k*size2d+i] = map_[0].data()[(k-1)*size2d+i];
                 map_[1].data()[k*size2d+i] = map_[1].data()[(k-1)*size2d+i];
             }
     }
-    virtual SparseTensor<host_vector> do_compute_jacobian( ) const {
+    virtual SparseTensor<host_vector> do_compute_jacobian( ) const override final{
         return jac_;
     }
-    virtual SparseTensor<host_vector> do_compute_metric( ) const {
+    virtual SparseTensor<host_vector> do_compute_metric( ) const override final{
         return detail::square( jac_, map_[0], handle_.get().isOrthogonal());
     }
-    virtual std::vector<host_vector > do_compute_map()const{return map_;}
+    virtual std::vector<host_vector > do_compute_map()const override final{return map_;}
     dg::SparseTensor<host_vector > jac_;
     std::vector<host_vector > map_;
     ClonePtr<dg::geo::aGenerator2d<real_type>> handle_;
 };
 ///@cond
 template<class real_type>
-CurvilinearMPIGrid2d<real_type>::CurvilinearMPIGrid2d( const CurvilinearProductMPIGrid3d& g):
-    dg::aMPIGeometry2d( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), g.get_perp_comm() ),
+RealCurvilinearMPIGrid2d<real_type>::RealCurvilinearMPIGrid2d( const RealCurvilinearProductMPIGrid3d& g):
+    dg::aRealMPIGeometry2d<real_type>( g.global().x0(), g.global().x1(), g.global().y0(), g.global().y1(), g.global().n(), g.global().Nx(), g.global().Ny(), g.global().bcx(), g.global().bcy(), g.get_perp_comm() ),
     handle_(g.generator())
 {
     map_=g.map();
@@ -193,6 +193,9 @@ CurvilinearMPIGrid2d<real_type>::CurvilinearMPIGrid2d( const CurvilinearProductM
         map_[i].data().resize(s);
 }
 ///@endcond
+//
+using CurvilinearMPIGrid2d         = dg::RealCurvilinearMPIGrid2d<double>;
+using CurvilinearProductMPIGrid3d  = dg::RealCurvilinearProductMPIGrid3d<double>;
 
 ///@}
 }//namespace geo

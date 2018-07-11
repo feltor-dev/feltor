@@ -34,11 +34,7 @@ class RefinedElliptic
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    RefinedElliptic( const Geometry& g_coarse, const Geometry& g_fine, norm no = not_normed, direction dir = forward):
-        no_(no), elliptic_( g_fine, no, dir)
-    {
-        construct( g_coarse, g_fine, g_fine.bcx(), g_fine.bcy(), dir);
-    }
+    RefinedElliptic( const Geometry& g_coarse, const Geometry& g_fine, norm no = not_normed, direction dir = forward): RefinedElliptic( g_coarse, g_fine, g_fine.bcx(), g_fine.bcy(), no, dir){}
 
     /**
      * @brief Construct from grid and boundary conditions
@@ -113,7 +109,7 @@ class RefinedElliptic
     {
         //dg::blas2::gemv( Q_, rhs, temp1_);
         //dg::blas1::pointwiseDot( vol_, temp1_, temp1_);
-        dg::tensor::pointwiseDot( vol_, rhs, temp1_);
+        dg::blas1::pointwiseDot( vol_, rhs, temp1_);
         dg::blas2::gemv( QT_, temp1_, rhs_mod);
         dg::blas2::symv( inv_weights_, rhs_mod, rhs_mod);
     }
@@ -128,8 +124,7 @@ class RefinedElliptic
         dg::blas1::transfer( dg::evaluate( dg::one, g_fine), temp2_);
         dg::blas1::transfer( dg::create::weights( g_coarse), weights_);
         dg::blas1::transfer( dg::create::inv_weights( g_coarse), inv_weights_);
-        inv_vol_ = vol_ = dg::tensor::volume( g_fine.metric());
-        dg::tensor::invert( inv_vol_);
+        vol_ = dg::tensor::volume( g_fine.metric());
 
     }
     norm no_;
@@ -137,7 +132,7 @@ class RefinedElliptic
     Elliptic<Geometry, Matrix, container> elliptic_;
     container temp1_, temp2_;
     container weights_, inv_weights_;
-    dg::SparseElement<container> vol_, inv_vol_;
+    container vol_;
 };
 
 
