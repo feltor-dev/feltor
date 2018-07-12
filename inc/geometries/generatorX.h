@@ -15,7 +15,7 @@ is a product space.
  @ingroup generators_geo
 */
 template<class real_type>
-struct aGeneratorX2d
+struct aRealGeneratorX2d
 {
     real_type zeta0(real_type fx) const{return do_zeta0(fx);}
     real_type zeta1(real_type fx) const{return do_zeta1(fx);}
@@ -62,13 +62,13 @@ struct aGeneratorX2d
     *
     * @return a copy of *this on the heap
     */
-    virtual aGeneratorX2d* clone() const=0;
-    virtual ~aGeneratorX2d(){}
+    virtual aRealGeneratorX2d* clone() const=0;
+    virtual ~aRealGeneratorX2d(){}
 
     protected:
-    aGeneratorX2d(){}
-    aGeneratorX2d(const aGeneratorX2d& src){}
-    aGeneratorX2d& operator=(const aGeneratorX2d& src){
+    aRealGeneratorX2d(){}
+    aRealGeneratorX2d(const aRealGeneratorX2d& src){}
+    aRealGeneratorX2d& operator=(const aRealGeneratorX2d& src){
         return *this;
     }
     private:
@@ -90,6 +90,7 @@ struct aGeneratorX2d
 
 
 };
+using aGeneratorX2d = dg::geo::aRealGeneratorX2d<double>;
 
 }//namespace geo
 }//namespace dg

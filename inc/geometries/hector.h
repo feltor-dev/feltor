@@ -460,13 +460,10 @@ struct Hector : public aGenerator2d
 
         //now compute ZetaU and EtaU
         container temp_zeta(u), temp_eta(u);
-        dg::blas1::pointwiseDot( chiZZ, u_zeta, temp_zeta);
-        dg::blas1::pointwiseDot( 1. ,chiZE, u_eta, 1., temp_zeta);
-        dg::blas1::pointwiseDot( chiZE, u_zeta, temp_eta);
-        dg::blas1::pointwiseDot( 1. ,chiEE, u_eta, 1., temp_eta);
+        dg::blas1::pointwiseDot( 1. ,chiZE, u_eta, 1., chiZZ, u_zeta, 0., temp_zeta);
+        dg::blas1::pointwiseDot( 1. ,chiEE, u_eta, 1., chiZE, u_zeta, 0., temp_eta);
         container temp_scalar(u);
-        dg::blas1::pointwiseDot( u_zeta, temp_zeta, temp_scalar);
-        dg::blas1::pointwiseDot( 1., u_eta, temp_eta, 1., temp_scalar);
+        dg::blas1::pointwiseDot( 1., u_eta, temp_eta, 1., u_zeta, temp_zeta, 0., temp_scalar);
         container zetaU=temp_zeta, etaU=temp_eta;
         dg::blas1::pointwiseDivide( zetaU, temp_scalar, zetaU);
         dg::blas1::pointwiseDivide(  etaU, temp_scalar,  etaU);
@@ -474,7 +471,7 @@ struct Hector : public aGenerator2d
         container etaVinv(u_zeta), etaV(etaVinv);
         dg::blas1::pointwiseDot( etaVinv, chiZZ, etaVinv);
         container perp_vol = dg::tensor::volume(g2d_.metric());
-        dg::tensor::pointwiseDot( etaVinv, perp_vol, etaVinv);
+        dg::blas1::pointwiseDot( etaVinv, perp_vol, etaVinv);
         dg::blas1::transform( etaVinv, etaV, dg::INVERT<double>());
         thrust::host_vector<double> etaVinv_h;
         dg::blas1::transfer( etaVinv, etaVinv_h);
@@ -482,8 +479,8 @@ struct Hector : public aGenerator2d
         container v_zeta(u), v_eta(u);
         dg::blas1::axpby( -1., temp_eta, 0.,v_zeta);
         dg::blas1::axpby( +1., temp_zeta, 0.,v_eta);
-        dg::tensor::pointwiseDot( v_zeta, perp_vol, v_zeta);
-        dg::tensor::pointwiseDot( v_eta, perp_vol, v_eta);
+        dg::blas1::pointwiseDot( v_zeta, perp_vol, v_zeta);
+        dg::blas1::pointwiseDot( v_eta, perp_vol, v_eta);
 
         //construct c0 and scale all vector components with it
         c0_ = fabs( detail::construct_c0( etaVinv_h, g2d_));

@@ -171,10 +171,13 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
     dg::transfer( chiRR_, values[0]);
     dg::transfer( chiRZ_, values[1]);
     dg::transfer( chiZZ_, values[2]);
-    SparseTensor<container> chi(values);
+    SparseTensor<container> chi;
     chi.idx(0,0)=0, chi.idx(0,1)=chi.idx(1,0)=1, chi.idx(1,1)=2;
+    chi.values() = values;
+    //we do not need 3rd dimension here
 
     container tmp00(jac.value(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
+    chixx = chixy = chiyy = tmp00; //allocate space
     // multiply Chi*t -> tmp
     dg::tensor::multiply2d( chi, jac.value(0,0), jac.value(1,0), tmp00, tmp10);
     dg::tensor::multiply2d( chi, jac.value(0,1), jac.value(1,1), tmp01, tmp11);

@@ -58,16 +58,16 @@ template<class Geometry>
 void compute_cellsize( const Geometry& g2d)
 {
     ///////////////////////////////////metric//////////////////////
-    dg::SparseTensor<dg::DVec> metric = g2d.metric();
-    dg::DVec gyy = metric.value(1,1), gxx = metric.value(0,0), vol = dg::tensor::volume(metric).value();
+    dg::SparseTensor<dg::HVec> metric = g2d.metric();
+    dg::HVec gyy = metric.value(1,1), gxx = metric.value(0,0), vol = dg::tensor::volume(metric);
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);
     dg::blas1::pointwiseDot( gyy, vol, gyy);
     dg::blas1::scal( gxx, g2d.hx());
     dg::blas1::scal( gyy, g2d.hy());
-    double hxX = dg::interpolate( 0, 0, gxx, g2d);
-    double hyX = dg::interpolate( 0, 0, gyy, g2d);
+    double hxX = dg::interpolate( 0., 0., gxx, g2d);
+    double hyX = dg::interpolate( 0., 0., gyy, g2d);
     std::cout << *thrust::max_element( gxx.begin(), gxx.end()) << "\t";
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout << hxX << "\t";

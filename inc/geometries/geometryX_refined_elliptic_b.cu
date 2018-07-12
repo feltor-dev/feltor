@@ -198,7 +198,7 @@ int main(int argc, char**argv)
     std::cout << sqrt( err/norm) << "\t";//<<sqrt( errFINE/normFINE)<<"\t";
     ///////////////////////////////////metric//////////////////////
     dg::SparseTensor<dg::DVec> metric = g2d_fine.metric();
-    dg::DVec gyy = metric.value(1,1), gxx = metric.value(0,0), vol = dg::tensor::volume(metric).value();
+    dg::DVec gyy = metric.value(1,1), gxx = metric.value(0,0), vol = dg::tensor::volume(metric);
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);

@@ -37,7 +37,7 @@ struct RealCurvilinearProductGridX3d : public dg::aRealGeometryX3d<real_type>
      * @param bcy boundary condition in y
      * @param bcz boundary condition in z
      */
-    RealCurvilinearProductGridX3d( const aGeneratorX2d& generator,
+    RealCurvilinearProductGridX3d( const aRealGeneratorX2d<real_type>& generator,
         real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx=dg::DIR, bc bcy=dg::PER, bc bcz=dg::PER):
         dg::aRealGeometryX3d<real_type>( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy), 0., 2.*M_PI, fx,fy,n, Nx, Ny, Nz, bcx, bcy, bcz)
     {
@@ -47,7 +47,7 @@ struct RealCurvilinearProductGridX3d : public dg::aRealGeometryX3d<real_type>
         constructParallel(Nz);
     }
 
-    const aGeneratorX2d & generator() const{return handle_.get();}
+    const aRealGeneratorX2d<real_type> & generator() const{return handle_.get();}
     virtual RealCurvilinearProductGridX3d* clone()const{return new RealCurvilinearProductGridX3d(*this);}
     private:
     //construct phi and lift rest to 3d
@@ -74,8 +74,8 @@ struct RealCurvilinearProductGridX3d : public dg::aRealGeometryX3d<real_type>
     //construct 2d plane
     void constructPerp( unsigned n, unsigned Nx, unsigned Ny)
     {
-        dg::Grid1d gX1d( x0(), x1(), n, Nx);
-        dg::GridX1d gY1d( y0(), y1(), fy(), n, Ny);
+        dg::Grid1d gX1d( this->x0(), this->x1(), n, Nx);
+        dg::GridX1d gY1d( this->y0(), this->y1(), this->fy(), n, Ny);
         thrust::host_vector<real_type> x_vec = dg::evaluate( dg::cooX1d, gX1d);
         thrust::host_vector<real_type> y_vec = dg::evaluate( dg::cooX1d, gY1d);
         jac_ = SparseTensor< thrust::host_vector<real_type>>( x_vec);//unit tensor
@@ -93,12 +93,13 @@ struct RealCurvilinearProductGridX3d : public dg::aRealGeometryX3d<real_type>
     virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const override final{return map_;}
     std::vector<thrust::host_vector<real_type> > map_;
     SparseTensor<thrust::host_vector<real_type> > jac_;
-    dg::ClonePtr<aGeneratorX2d> handle_;
+    dg::ClonePtr<aRealGeneratorX2d<real_type>> handle_;
 };
 
 /**
  * @brief A two-dimensional grid based on curvilinear coordinates
  */
+template<class real_type>
 struct RealCurvilinearGridX2d : public dg::aRealGeometryX2d<real_type>
 {
     /*!@brief Constructor
@@ -112,21 +113,22 @@ struct RealCurvilinearGridX2d : public dg::aRealGeometryX2d<real_type>
      * @param bcx boundary condition in first coordinate
      * @param bcy boundary condition in second coordinate
      */
-    RealCurvilinearGridX2d( const aGeneratorX2d& generator, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
+    RealCurvilinearGridX2d( const aRealGeneratorX2d<real_type>& generator, real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny, dg::bc bcx=dg::DIR, bc bcy=dg::PER):
         dg::aRealGeometryX2d<real_type>( generator.zeta0(fx), generator.zeta1(fx), generator.eta0(fy), generator.eta1(fy),fx,fy, n, Nx, Ny, bcx, bcy), handle_(generator)
     {
         construct(fx,fy, n,Nx,Ny);
     }
 
-    const aGeneratorX2d& generator() const{return handle_.get();}
+    const aRealGeneratorX2d<real_type>& generator() const{return handle_.get();}
     virtual RealCurvilinearGridX2d* clone()const{return new RealCurvilinearGridX2d(*this);}
     private:
     void construct( real_type fx, real_type fy, unsigned n, unsigned Nx, unsigned Ny)
     {
-        RealCurvilinearProductGridX3d<real_type> g( handle_.get(),fx,fy,n,Nx,Ny,1,bcx());
+        RealCurvilinearProductGridX3d<real_type> g( handle_.get(),fx,fy,n,Nx,Ny,1,this->bcx());
         map_=g.map();
-        jac_=g.jacobian().perp();
-        metric_=g.metric().perp();
+        jac_=g.jacobian();
+        metric_=g.metric();
+        dg::blas1::copy( 1., metric_.values()[3]); //set pp to 1
         map_.pop_back();
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian( ) const override final{
@@ -138,12 +140,12 @@ struct RealCurvilinearGridX2d : public dg::aRealGeometryX2d<real_type>
     virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const override final{return map_;}
     dg::SparseTensor<thrust::host_vector<real_type> > jac_, metric_;
     std::vector<thrust::host_vector<real_type> > map_;
-    dg::ClonePtr<aGeneratorX2d> handle_;
+    dg::ClonePtr<aRealGeneratorX2d<real_type>> handle_;
 };
 
 
-using CurvilinearGridX2d        = RealCurvilinearGridX2d<double>;
-using CurvilinearProductGridX3d = RealCurvilinearProductGridX3d<double>;
+using CurvilinearGridX2d        = dg::geo::RealCurvilinearGridX2d<double>;
+using CurvilinearProductGridX3d = dg::geo::RealCurvilinearProductGridX3d<double>;
 
 ///@}
 

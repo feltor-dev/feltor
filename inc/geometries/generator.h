@@ -16,7 +16,7 @@ is a product space. It can be used to construct curvilinear grids like the follo
  @ingroup generators_geo
 */
 template<class real_type>
-struct aGenerator2d
+struct aRealGenerator2d
 {
     ///@brief length in \f$ \zeta\f$ of the computational space
     real_type width()  const{return do_width();}
@@ -60,16 +60,16 @@ struct aGenerator2d
     *
     * @return a copy of *this on the heap
     */
-    virtual aGenerator2d* clone() const=0;
-    virtual ~aGenerator2d(){}
+    virtual aRealGenerator2d* clone() const=0;
+    virtual ~aRealGenerator2d(){}
 
     protected:
     ///empty
-    aGenerator2d(){}
+    aRealGenerator2d(){}
     ///empty
-    aGenerator2d(const aGenerator2d& ){}
+    aRealGenerator2d(const aRealGenerator2d& ){}
     ///return *this
-    aGenerator2d& operator=(const aGenerator2d& ){ return *this; }
+    aRealGenerator2d& operator=(const aRealGenerator2d& ){ return *this; }
     private:
     virtual void do_generate(
          const thrust::host_vector<real_type>& zeta1d,
@@ -86,6 +86,7 @@ struct aGenerator2d
 
 
 };
+using aGenerator2d = dg::geo::aRealGenerator2d<double>;
 
 }//namespace geo
 }//namespace dg

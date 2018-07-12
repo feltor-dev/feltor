@@ -109,7 +109,7 @@ int main(int argc, char**argv)
     if(rank==0)std::cout << sqrt( err/norm) << "\t";
 
     dg::SparseTensor<dg::MDVec> metric = g2d->metric();
-    dg::MDVec gyy = metric.value(1,1), gxx=metric.value(0,0), vol = dg::tensor::volume(metric).value();
+    dg::MDVec gyy = metric.value(1,1), gxx=metric.value(0,0), vol = dg::tensor::volume(metric);
     dg::blas1::transform( gxx, gxx, dg::SQRT<double>());
     dg::blas1::transform( gyy, gyy, dg::SQRT<double>());
     dg::blas1::pointwiseDot( gxx, vol, gxx);
