@@ -61,57 +61,58 @@ int main( int argc, char* argv[])
 
     //create RHS
     std::cout << "Constructing Explicit...\n";
-    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> feltor( grid, p, gp); //initialize before rolkar!
+    feltor::Explicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> explicitPart( grid, p, gp); //initialize before imp!
     std::cout << "Constructing Implicit...\n";
-    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> rolkar( grid, p, gp, feltor.ds(), feltor.dsDIR());
+    feltor::Implicit<dg::CylindricalGrid3d, dg::IDMatrix, dg::DMatrix, dg::DVec> implicitPart( grid, p, gp, explicitPart.ds(), explicitPart.dsDIR());
     std::cout << "Done!\n";
 
     /////////////////////The initial field///////////////////////////////////////////
-    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
-    std::vector<dg::DVec> y0(4, dg::evaluate( prof, grid));
-    dg::DVec helper(y0[0]);
+    std::array<std::array<dg::DVec,2>,2> y0;
+    dg::DVec helper(dg::evaluate(dg::zero,grid));
     //perturbation
     dg::GaussianZ gaussianZ( 0., p.sigma_z*M_PI, 1); //modulation along fieldline
     if( p.initni == "blob" || p.initni == "straight blob")
     {
         dg::Gaussian init0( gp.R_0+p.posX*gp.a, p.posY*gp.a, p.sigma, p.sigma, p.amp);
         if( p.initni == "blob")
-            helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
+            helper = explicitPart.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 3); //rounds =3 ->2*3-1
         if( p.initni == "straight blob")
-            helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
+            helper = explicitPart.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1); //rounds =1 ->2*1-1
     }
     else if( p.initni == "turbulence")
     {
         dg::BathRZ init0(16,16,p.Nz,Rmin,Zmin, 30.,5.,p.amp);
-        helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+        helper = explicitPart.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
     }
     else if( p.initni == "zonal")
     {
         dg::geo::ZonalFlow init0(p.amp, p.k_psi, gp, dg::geo::solovev::Psip(gp));
-        helper = feltor.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
+        helper = explicitPart.ds().fieldaligned().evaluate( init0, gaussianZ, (unsigned)p.Nz/2, 1);
     }
     else
         std::cerr <<"WARNING: Unknown initial condition for Ni!\n";
-    dg::blas1::axpby( 1., helper, 1., y0[1]); //sum up background and perturbation
-    dg::blas1::plus(y0[1], -1); //initialize ni-1
+    dg::geo::Nprofile prof(p.bgprofamp, p.nprofileamp, gp, dg::geo::solovev::Psip(gp)); //initial background profile
+    y0[0][0] = y0[0][1] = y0[1][0] = y0[1][1] = dg::evaluate( prof, grid);
+    dg::blas1::axpby( 1., helper, 1., y0[0][1]); //sum up background and perturbation
+    dg::blas1::plus(y0[0][1], -1); //initialize ni-1
     if( p.initni == "turbulence" || p.initni == "zonal") //Cut initialization outside separatrix
     {
         dg::DVec damping = dg::evaluate( dg::geo::GaussianProfXDamping(dg::geo::solovev::Psip(gp), gp), grid);
-        dg::blas1::pointwiseDot(damping,y0[1], y0[1]);
+        dg::blas1::pointwiseDot(damping,y0[0][1], y0[0][1]);
     }
     std::cout << "intiialize ne" << std::endl;
-    if( p.initphi == "zero")  feltor.initializene( y0[1], y0[0]);
-    else if( p.initphi == "balance") dg::blas1::copy( y0[1], y0[0]); //set n_e = N_i
+    if( p.initphi == "zero")  explicitPart.initializene( y0[0][1], y0[0][0]);
+    else if( p.initphi == "balance") dg::blas1::copy( y0[0][1], y0[0][0]); //set n_e = N_i
     else
         std::cerr <<"WARNING: Unknown initial condition for phi!\n";
     std::cout << "Done!\n";
 
-    dg::blas1::copy( 0., y0[2]); //set Ue = 0
-    dg::blas1::copy( 0., y0[3]); //set Ui = 0
+    dg::blas1::copy( 0., y0[1][0]); //set Ue = 0
+    dg::blas1::copy( 0., y0[1][0]); //set Ui = 0
 
-    dg::Karniadakis< std::vector<dg::DVec> > karniadakis( y0, y0[0].size(), p.eps_time);
+    dg::Karniadakis< std::array<std::array<dg::DVec,2>,2> > karniadakis( y0, y0[0][0].size(), p.eps_time);
     std::cout << "intiialize karniadakis" << std::endl;
-    karniadakis.init( feltor, rolkar, 0., y0, p.dt);
+    karniadakis.init( explicitPart, implicitPart, 0., y0, p.dt);
     std::cout << "Done!\n";
 
     dg::DVec dvisual( grid.size(), 0.);
@@ -123,8 +124,8 @@ int main( int argc, char* argv[])
     double time = 0;
     unsigned step = 0;
 
-    const double mass0 = feltor.mass();
-    double E0 = feltor.energy(), energy0 = E0, E1 = 0., dEdt = 0.;
+    const double mass0 = explicitPart.mass();
+    double E0 = explicitPart.energy(), energy0 = E0, E1 = 0., dEdt = 0.;
 
     std::cout << "Begin computation \n";
     std::cout << std::scientific << std::setprecision( 2);
@@ -139,7 +140,7 @@ int main( int argc, char* argv[])
     while ( !glfwWindowShouldClose( w ))
     {
 
-        dg::blas1::transfer( y0[0], hvisual);
+        dg::blas1::transfer( y0[0][0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         colors.scalemin() = -colors.scalemax();
@@ -160,7 +161,7 @@ int main( int argc, char* argv[])
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
         //draw ions
         //thrust::transform( helper.begin(), helper.end(), dvisual.begin(), dg::PLUS<double>(-0.));//ne-1
-        dg::blas1::transfer( y0[1], hvisual);
+        dg::blas1::transfer( y0[0][1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>() );
         //colors.scalemin() = 1.0;
@@ -182,10 +183,10 @@ int main( int argc, char* argv[])
 
         //draw potential
         //transform to Vor
-        dvisual=feltor.potential()[0];
-        dg::blas2::gemv( rolkar.laplacianM(), dvisual, helper);
+        dvisual=explicitPart.potential()[0];
+        dg::blas2::gemv( implicitPart.laplacianM(), dvisual, helper);
         dg::blas1::transfer( helper, hvisual);
-//         hvisual = feltor.potential()[0];
+//         hvisual = explicitPart.potential()[0];
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(),visual.end(), 0.,thrust::maximum<double>()  );
 //         colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -203,7 +204,7 @@ int main( int argc, char* argv[])
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw U_e
-        dg::blas1::transfer( y0[2], hvisual);
+        dg::blas1::transfer( y0[1][0], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0.,thrust::maximum<double>()  );
         //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -221,7 +222,7 @@ int main( int argc, char* argv[])
         render.renderQuad( avisual, grid.n()*grid.Nx(), grid.n()*grid.Ny(), colors);
 
         //draw U_i
-        dg::blas1::transfer( y0[3], hvisual);
+        dg::blas1::transfer( y0[1][1], hvisual);
         dg::blas2::gemv( equi, hvisual, visual);
         colors.scalemax() = (double)thrust::reduce( visual.begin(), visual.end(), 0., thrust::maximum<double>()  );
         //colors.scalemin() =  (double)thrust::reduce( visual.begin(), visual.end(), colors.scalemax()  ,thrust::minimum<double>() );
@@ -251,7 +252,7 @@ int main( int argc, char* argv[])
 #endif//DG_BENCHMARK
         for( unsigned i=0; i<p.itstp; i++)
         {
-            try{ karniadakis.step( feltor, rolkar, time, y0);}
+            try{ karniadakis.step( explicitPart, implicitPart, time, y0);}
             catch( dg::Fail& fail) {
                 std::cerr << "CG failed to converge to "<<fail.epsilon()<<"\n";
                 std::cerr << "Does Simulation respect CFL condition?\n";
@@ -259,16 +260,16 @@ int main( int argc, char* argv[])
                 break;
             }
             step++;
-//             feltor.energies( y0); //update energetics
+//             explicitPart.energies( y0); //update energetics
             //Compute probe values
-            dg::blas2::gemv(probeinterp,y0[0],probevalue);
+            dg::blas2::gemv(probeinterp,y0[0][0],probevalue);
             std::cout << " Ne_p - 1  = " << probevalue[0] <<"\t";
-            dg::blas2::gemv(probeinterp,feltor.potential()[0],probevalue);
+            dg::blas2::gemv(probeinterp,explicitPart.potential()[0],probevalue);
             std::cout << " Phi_p = " << probevalue[0] <<"\t";
-            std::cout << "(m_tot-m_0)/m_0: "<< (feltor.mass()-mass0)/mass0<<"\t";
-            E1 = feltor.energy();
+            std::cout << "(m_tot-m_0)/m_0: "<< (explicitPart.mass()-mass0)/mass0<<"\t";
+            E1 = explicitPart.energy();
             dEdt = (E1 - E0)/p.dt; //
-            double diss = feltor.energy_diffusion( );
+            double diss = explicitPart.energy_diffusion( );
             std::cout << "(E_tot-E_0)/E_0: "<< (E1-energy0)/energy0<<"\t";
             std::cout << "Accuracy: "<< 2.*fabs((dEdt-diss)/(dEdt+diss))<<" d E/dt = " << dEdt <<" Lambda =" << diss << "\n";
 
