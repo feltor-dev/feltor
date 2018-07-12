@@ -57,6 +57,9 @@ int main()
     std::cout << "Test SYMV functions:\n";
     dg::blas2::symv( 2., arrdvec1, arrdvec1);
     std::cout << "symv Scalar times Vector          "<<( arrdvec1[0][0] == 52) << std::endl;
+    std::array<std::vector<dg::DVec>,1> recursive{ arrdvec1};
+    dg::blas2::symv( arrdvec1[0], recursive, recursive);
+    std::cout << "symv deep Recursion               "<<( recursive[0][0][0] == 52*52) << std::endl;
 
     return 0;
 }
