@@ -181,8 +181,7 @@ int main( int argc, char* argv[])
 
     dg::SparseTensor<dg::HVec> metric = g2d.metric();
     dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
-    dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
-    dg::HVec vol = vol_.value();
+    dg::HVec vol = dg::tensor::volume(metric);
     dg::blas1::transfer( vol, X);
     err = nc_put_var_double( ncid, volID, periodify(X, g3d_periodic).data());
     dg::blas1::transfer( g_xx, X);

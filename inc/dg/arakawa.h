@@ -21,8 +21,9 @@ namespace dg
 /**
  * @brief X-space generalized version of Arakawa's scheme
  *
- * Computes \f[ [f,g] := 1/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
- * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space.
+ * Computes \f[ [f,g] := \chi/\sqrt{g_{2d}}\left(\partial_x f\partial_y g - \partial_y f\partial_x g\right) \f]
+ * where \f$ g_{2d} = g/g_{zz}\f$ is the two-dimensional volume element of the plane in 2x1 product space and \f$ \chi\f$ is an optional factor.
+ * If \f$ \chi=1\f$, then the discretization conserves, mass, energy and enstrophy.
  * @snippet arakawa_t.cu function
  * @snippet arakawa_t.cu doxygen
  * @copydoc hide_geometry_matrix_container
@@ -34,6 +35,7 @@ struct ArakawaX
     /**
      * @brief Create Arakawa on a grid
      * @param g The grid
+     * @note chi defaults to 1
      */
     ArakawaX( const Geometry& g);
     /**
@@ -41,6 +43,7 @@ struct ArakawaX
      * @param g The grid
      * @param bcx The boundary condition in x
      * @param bcy The boundary condition in y
+     * @note chi defaults to 1
      */
     ArakawaX( const Geometry& g, bc bcx, bc bcy);
 
@@ -55,6 +58,14 @@ struct ArakawaX
      * @note memops: 25 reads; 9 writes (+ 2 reads and 1 write, if geometry is nontrivial)
      */
     void operator()( const container& lhs, const container& rhs, container& result);
+    /**
+     * @brief Change Chi
+     *
+     * @param new_chi The new chi
+     */
+    void set_chi( const container& new_chi) {
+        dg::blas1::pointwiseDot( new_chi, m_inv_perp_vol, m_chi);
+    }
 
     /**
      * @brief Return internally used x - derivative
@@ -62,14 +73,18 @@ struct ArakawaX
      * The same as a call to dg::create::dx( g, bcx)
      * @return derivative
      */
-    const Matrix& dx() {return bdxf;}
+    const Matrix& dx() const {
+        return m_bdxf;
+    }
     /**
      * @brief Return internally used y - derivative
      *
      * The same as a call to dg::create::dy( g, bcy)
      * @return derivative
      */
-    const Matrix& dy() {return bdyf;}
+    const Matrix& dy() const {
+        return m_bdyf;
+    }
 
     /**
      * @brief Compute the total variation integrand
@@ -81,39 +96,33 @@ struct ArakawaX
      */
     void variation( const container& phi, container& varphi)
     {
-        blas2::symv( bdxf, phi, dxrhs);
-        blas2::symv( bdyf, phi, dyrhs);
-        tensor::multiply2d( metric_, dxrhs, dyrhs, varphi, helper_);
-        blas1::pointwiseDot( varphi, dxrhs, varphi);
-        blas1::pointwiseDot( 1., helper_, dyrhs,1., varphi );
+        blas2::symv( m_bdxf, phi, m_dxrhs);
+        blas2::symv( m_bdyf, phi, m_dyrhs);
+        tensor::multiply2d( m_metric, m_dxrhs, m_dyrhs, varphi, m_helper);
+        blas1::pointwiseDot( 1., varphi, m_dxrhs, 1., m_helper, m_dyrhs, 0., varphi);
     }
 
   private:
-    container dxlhs, dxrhs, dylhs, dyrhs, helper_;
-    Matrix bdxf, bdyf;
-    SparseElement<container> perp_vol_inv_;
-    SparseTensor<container> metric_;
+    container m_dxlhs, m_dxrhs, m_dylhs, m_dyrhs, m_helper;
+    Matrix m_bdxf, m_bdyf;
+    SparseTensor<container> m_metric;
+    container m_chi, m_inv_perp_vol;
 };
 ///@cond
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g ):
-    dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
-    bdxf( dg::create::dx( g, g.bcx())),
-    bdyf( dg::create::dy( g, g.bcy()))
-{
-    metric_=g.metric().perp();
-    perp_vol_inv_ = dg::tensor::determinant(metric_);
-    dg::tensor::sqrt(perp_vol_inv_);
-}
+    ArakawaX( g, g.bcx(), g.bcy()) { }
+
 template<class Geometry, class Matrix, class container>
 ArakawaX<Geometry, Matrix, container>::ArakawaX( const Geometry& g, bc bcx, bc bcy):
-    dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), dxrhs(dxlhs), dylhs(dxlhs), dyrhs( dxlhs), helper_( dxlhs),
-    bdxf(dg::create::dx( g, bcx)),
-    bdyf(dg::create::dy( g, bcy))
+    m_dxlhs( dg::transfer<container>(dg::evaluate( one, g)) ), m_dxrhs(m_dxlhs), m_dylhs(m_dxlhs), m_dyrhs( m_dxlhs), m_helper( m_dxlhs),
+    m_bdxf(dg::create::dx( g, bcx, dg::centered)),
+    m_bdyf(dg::create::dy( g, bcy, dg::centered))
 {
-    metric_=g.metric().perp();
-    perp_vol_inv_ = dg::tensor::determinant(metric_);
-    dg::tensor::sqrt(perp_vol_inv_);
+    m_metric=g.metric();
+    m_chi = dg::tensor::determinant2d(m_metric);
+    dg::blas1::transform(m_chi, m_chi, dg::SQRT<get_value_type<container>>());
+    m_inv_perp_vol = m_chi;
 }
 
 template<class T>
@@ -141,19 +150,15 @@ template< class Geometry, class Matrix, class container>
 void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
 {
     //compute derivatives in x-space
-    blas2::symv( bdxf, lhs, dxlhs);
-    blas2::symv( bdyf, lhs, dylhs);
-    blas2::symv( bdxf, rhs, dxrhs);
-    blas2::symv( bdyf, rhs, result);
-    blas1::subroutine( ArakawaFunctor<get_value_type<container>>(), lhs, rhs, dxlhs, dylhs, dxrhs, result);
+    blas2::symv( m_bdxf, lhs, m_dxlhs);
+    blas2::symv( m_bdyf, lhs, m_dylhs);
+    blas2::symv( m_bdxf, rhs, m_dxrhs);
+    blas2::symv( m_bdyf, rhs, result);
+    blas1::subroutine( ArakawaFunctor<get_value_type<container>>(), lhs, rhs, m_dxlhs, m_dylhs, m_dxrhs, result);
 
-    //blas1::pointwiseDot( 1./3., dxlhs, dyrhs, -1./3., dylhs, dxrhs, 0., result);
-    //blas1::pointwiseDot( 1./3.,   lhs, dyrhs, -1./3., dylhs,   rhs, 0., dylhs);
-    //blas1::pointwiseDot( 1./3., dxlhs,   rhs, -1./3.,   lhs, dxrhs, 0., dxrhs);
-
-    blas2::symv( 1., bdxf, dylhs, 1., result);
-    blas2::symv( 1., bdyf, dxrhs, 1., result);
-    tensor::pointwiseDot( perp_vol_inv_, result, result);
+    blas2::symv( 1., m_bdxf, m_dylhs, 1., result);
+    blas2::symv( 1., m_bdyf, m_dxrhs, 1., result);
+    blas1::pointwiseDot( m_chi, result, result);
 }
 ///@endcond
 

@@ -255,15 +255,19 @@ struct RealCartesianRefinedGridX2d : public dg::aRealGeometryX2d<real_type>
     private:
     std::vector<thrust::host_vector<real_type> > w_,abs_;
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final{
-        SparseTensor<thrust::host_vector<real_type> > t(w_);
-        dg::blas1::pointwiseDot( w_[0], w_[0], t.values()[0]);
-        dg::blas1::pointwiseDot( w_[1], w_[1], t.values()[1]);
-        t.idx(0,0)=0, t.idx(1,1)=1;
+        SparseTensor<thrust::host_vector<real_type> > t(*this);
+        t.values().push_back( w_[0]);
+        t.values().push_back( w_[1]);
+        dg::blas1::pointwiseDot( w_[0], w_[0], t.values()[2]);
+        dg::blas1::pointwiseDot( w_[1], w_[1], t.values()[3]);
+        t.idx(0,0)=2, t.idx(1,1)=3;
         return t;
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian()const override final{
-        SparseTensor<thrust::host_vector<real_type> > t(w_);
-        t.idx(0,0)=0, t.idx(1,1)=1;
+        SparseTensor<thrust::host_vector<real_type> > t(*this);
+        t.values().push_back( w_[0]);
+        t.values().push_back( w_[1]);
+        t.idx(0,0)=2, t.idx(1,1)=3;
         return t;
     }
     virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const override final{
@@ -307,15 +311,19 @@ struct RealCartesianRefinedGridX3d : public dg::aRealGeometryX3d<real_type>
     private:
     std::vector<thrust::host_vector<real_type> > w_,abs_;
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_metric()const override final {
-        SparseTensor<thrust::host_vector<real_type> > t(w_);
-        dg::blas1::pointwiseDot( w_[0], w_[0], t.values()[0]);
-        dg::blas1::pointwiseDot( w_[1], w_[1], t.values()[1]);
-        t.idx(0,0)=0, t.idx(1,1)=1;
+        SparseTensor<thrust::host_vector<real_type> > t(*this);
+        t.values().push_back( w_[0]);
+        t.values().push_back( w_[1]);
+        dg::blas1::pointwiseDot( w_[0], w_[0], t.values()[2]);
+        dg::blas1::pointwiseDot( w_[1], w_[1], t.values()[3]);
+        t.idx(0,0)=2, t.idx(1,1)=3;
         return t;
     }
     virtual SparseTensor<thrust::host_vector<real_type> > do_compute_jacobian()const override final {
-        SparseTensor<thrust::host_vector<real_type> > t(w_);
-        t.idx(0,0)=0, t.idx(1,1)=1;
+        SparseTensor<thrust::host_vector<real_type> > t(*this);
+        t.values().push_back( w_[0]);
+        t.values().push_back( w_[1]);
+        t.idx(0,0)=2, t.idx(1,1)=3;
         return t;
     }
     virtual std::vector<thrust::host_vector<real_type> > do_compute_map()const override final {

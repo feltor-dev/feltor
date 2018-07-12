@@ -107,8 +107,7 @@ int main( int argc, char* argv[])
 
     dg::SparseTensor<dg::MHVec> metric = g2d.get().metric();
     dg::MHVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
-    dg::SparseElement<dg::MHVec> vol_ = dg::tensor::volume(metric);
-    dg::MHVec vol = vol_.value();
+    dg::MHVec vol = dg::tensor::volume(metric);
     //err = nc_put_vara_double( ncid, coordsID[2], g.z().data());
     //dg::blas1::pointwiseDivide( g2d.get().g_xy(), g2d.get().g_xx(), temp0);
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);

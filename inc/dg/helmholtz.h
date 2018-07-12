@@ -50,7 +50,7 @@ struct Helmholtz
      * @param alpha Scalar in the above formula
      * @param dir Direction of the Laplace operator
      * @param jfactor The jfactor used in the Laplace operator (probably 1 is always the best factor but one never knows...)
-     * @note The default value of \f$\chi\f$ is one
+     * @note The default value of \f$\chi\f$ is one. \c Helmholtz is never normed
      */
     Helmholtz( const Geometry& g, bc bcx, bc bcy, double alpha = 1., direction dir = dg::forward, double jfactor=1.)
     {
@@ -59,80 +59,70 @@ struct Helmholtz
     ///@copydoc Helmholtz::Helmholtz(const Geometry&,bc,bc,double,direction,double)
     void construct( const Geometry& g, bc bcx, bc bcy, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
-        laplaceM_.construct( g, bcx, bcy, dg::normed, dir, jfactor);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp_);
-        alpha_ = alpha;
+        m_laplaceM.construct( g, bcx, bcy, dg::not_normed, dir, jfactor);
+        m_alpha = alpha;
+        m_chi = m_laplaceM.weights();
     }
     ///@copydoc Helmholtz::Helmholtz(const Geometry&,double,direction,double)
     void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
-        laplaceM_.construct( g, dg::normed, dir, jfactor);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp_);
-        alpha_ = alpha;
+        construct( g, g.bcx(), g.bcy(), alpha, dir, jfactor);
     }
     /**
      * @brief apply operator
      *
      * Computes
-     * \f[ y = W( 1 + \alpha\Delta) x \f] to make the matrix symmetric
+     * \f[ y = W( \chi + \alpha\Delta) x \f] to make the matrix symmetric
      * @param x lhs (is constant up to changes in ghost cells)
      * @param y rhs contains solution
-     * @note Takes care of sign in laplaceM and thus multiplies by -alpha
      */
     void symv( const container& x, container& y)
     {
-        if( alpha_ != 0)
-            blas2::symv( laplaceM_, x, y);
-        if( chi_.isSet())
-            dg::blas1::pointwiseDot( 1., chi_.value(), x, -alpha_, y);
-        else
-            blas1::axpby( 1., x, -alpha_, y);
-        blas2::symv(laplaceM_.weights(), y, y);
+        if( m_alpha != 0)
+            blas2::symv( m_laplaceM, x, y);
+        dg::blas1::pointwiseDot( 1., m_chi, x, -m_alpha, y);
 
     }
     ///@copydoc Elliptic::weights()const
-    const container& weights()const {return laplaceM_.weights();}
+    const container& weights()const {return m_laplaceM.weights();}
     ///@copydoc Elliptic::inv_weights()const
-    const container& inv_weights()const {return laplaceM_.inv_weights();}
+    const container& inv_weights()const {return m_laplaceM.inv_weights();}
     /**
      * @brief Preconditioner to use in conjugate gradient solvers
      *
      * @return inverse weights without volume
      */
-    const container& precond()const {return laplaceM_.precond();}
+    const container& precond()const {return m_laplaceM.precond();}
     /**
      * @brief Change alpha
      *
      * @return reference to alpha
      */
-    double& alpha( ){  return alpha_;}
+    double& alpha( ){  return m_alpha;}
     /**
      * @brief Access alpha
      *
      * @return alpha
      */
-    double alpha( ) const  {return alpha_;}
+    double alpha( ) const  {return m_alpha;}
     /**
      * @brief Set Chi in the above formula
      *
      * @param chi new container
      */
-    void set_chi( const container& chi) {chi_.value()=chi;}
-    /**
-     * @brief Sets chi back to one
-     */
-    void reset_chi(){chi_.clear();}
+    void set_chi( const container& chi) {
+        dg::blas1::pointwiseDot( m_laplaceM.weights(), chi, m_chi);
+    }
     /**
      * @brief Access chi
      *
      * @return chi
      */
-    const SparseElement<container>& chi() const{return chi_;}
+    const container& chi() const{return m_chi;}
   private:
-    Elliptic<Geometry, Matrix, container> laplaceM_;
-    container temp_;
-    SparseElement<container> chi_;
-    double alpha_;
+    Elliptic<Geometry, Matrix, container> m_laplaceM;
+    container m_chi;
+    double m_alpha;
 };
 
 /**
@@ -194,10 +184,7 @@ struct Helmholtz2
     ///@copydoc Helmholtz2::Helmholtz2(const Geometry&,double,direction,double)
     void construct( const Geometry& g, double alpha = 1, direction dir = dg::forward, double jfactor = 1.)
     {
-        laplaceM_.construct( g, dg::normed, dir, jfactor);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp1_);
-        dg::blas1::transfer( dg::evaluate( dg::one, g), temp2_);
-        alpha_ = alpha;
+        construct( g, g.bcx(), g.bcy(), alpha, dir, jfactor);
     }
     /**
      * @brief apply operator
@@ -213,10 +200,10 @@ struct Helmholtz2
         if( alpha_ != 0)
         {
             blas2::symv( laplaceM_, x, temp1_); // temp1_ = -nabla_perp^2 x
-            tensor::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*W*nabla_perp^2 x
+            blas1::pointwiseDivide(temp1_, chi_, y); //temp2_ = (chi^-1)*W*nabla_perp^2 x
             blas2::symv( laplaceM_, y, temp2_);//temp2_ = nabla_perp^2 *(chi^-1)*nabla_perp^2 x
         }
-        tensor::pointwiseDot( chi_, x, y); //y = chi*x
+        blas1::pointwiseDot( chi_, x, y); //y = chi*x
         blas1::axpby( 1., y, -2.*alpha_, temp1_, y);
         blas1::axpby( alpha_*alpha_, temp2_, 1., y, y);
         blas2::symv( laplaceM_.weights(), y, y);//Helmholtz is never normed
@@ -249,21 +236,17 @@ struct Helmholtz2
      *
      * @param chi new container
      */
-    void set_chi( const container& chi) {chi_.value()=chi; }
-    /**
-     * @brief Sets chi back to one
-     */
-    void reset_chi(){chi_.clear();}
+    void set_chi( const container& chi) {chi_=chi; }
     /**
      * @brief Access chi
      *
      * @return chi
      */
-    const SparseElement<container>& chi()const {return chi_;}
+    const container& chi()const {return chi_;}
   private:
     Elliptic<Geometry, Matrix, container> laplaceM_;
     container temp1_, temp2_;
-    SparseElement<container> chi_;
+    container chi_;
     double alpha_;
 };
 ///@cond

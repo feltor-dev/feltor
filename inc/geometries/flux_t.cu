@@ -111,7 +111,7 @@ int main( int argc, char* argv[])
     //compute and write deformation into netcdf
     dg::SparseTensor<dg::HVec> metric = g2d.metric();
     dg::HVec g_xx = metric.value(0,0), g_xy = metric.value(0,1), g_yy=metric.value(1,1);
-    dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
+    dg::HVec vol_ = dg::tensor::volume(metric);
     dg::blas1::pointwiseDivide( g_xy, g_xx, temp0);
     const dg::HVec ones = dg::evaluate( dg::one, g2d);
     X=g_yy;
@@ -130,8 +130,8 @@ int main( int argc, char* argv[])
     dg::blas1::pointwiseDivide( ones, temp0, temp0); //temp0=sqrt(g)
     X=temp0;
     err = nc_put_var_double( ncid, varID[3], periodify(X, g2d_periodic).data());
-    dg::blas1::axpby( 1., temp0, -1., vol_.value(), temp0); //temp0 = sqrt(g)-vol
-    double error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot(vol_.value(), w3d, vol_.value()));
+    dg::blas1::axpby( 1., temp0, -1., vol_, temp0); //temp0 = sqrt(g)-vol
+    double error = sqrt(dg::blas2::dot( temp0, w3d, temp0)/dg::blas2::dot(vol_, w3d, vol_));
     std::cout << "Rel Consistency  of volume is "<<error<<"\n";
 
     const dg::HVec vol3d = dg::create::volume( g3d);

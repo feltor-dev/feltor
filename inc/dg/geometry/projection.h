@@ -23,10 +23,11 @@ namespace dg{
  * @return greatest common divisor
  * @ingroup misc
  */
-static unsigned gcd( unsigned a, unsigned b)
+template<class T>
+T gcd( T a, T b)
 {
-    unsigned r2 = std::max(a,b);
-    unsigned r1 = std::min(a,b);
+    T r2 = std::max(a,b);
+    T r1 = std::min(a,b);
     while( r1!=0)
     {
         r2 = r2%r1;
@@ -44,9 +45,10 @@ static unsigned gcd( unsigned a, unsigned b)
  * @return Least common multiple
  * @ingroup misc
  */
-static unsigned lcm( unsigned a, unsigned b)
+template<class T>
+T lcm( T a, T b)
 {
-    unsigned g = gcd( a,b);
+    T g = gcd( a,b);
     return a/g*b;
 }
 

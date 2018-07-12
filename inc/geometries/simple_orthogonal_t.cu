@@ -109,8 +109,7 @@ int main( int argc, char* argv[])
     //compute and write deformation into netcdf
     dg::SparseTensor<dg::HVec> metric = g2d->metric();
     dg::HVec g_xx = metric.value(0,0), g_yy=metric.value(1,1);
-    dg::SparseElement<dg::HVec> vol_ = dg::tensor::volume(metric);
-    dg::HVec vol = vol_.value();
+    dg::HVec vol = dg::tensor::volume(metric);
     dg::blas1::pointwiseDivide( g_yy, g_xx, temp0);
     const dg::HVec ones = dg::evaluate( dg::one, *g2d);
     X=temp0;

@@ -93,10 +93,10 @@ void pushForwardPerp( const Functor1& vR, const Functor2& vZ,
         const Geometry& g)
 {
     using host_vec = get_host_vector<Geometry>;
-    host_vec out1 = pullback( vR, g), temp1(out1);
+    host_vec out1 = pullback( vR, g);
     host_vec out2 = pullback( vZ, g);
-    dg::tensor::multiply2d(g.jacobian(), out1, out2, temp1, out2);
-    dg::blas1::transfer( temp1, vx);
+    dg::tensor::multiply2d(g.jacobian(), out1, out2, out1, out2);
+    dg::blas1::transfer( out1, vx);
     dg::blas1::transfer( out2, vy);
 }
 
@@ -125,12 +125,12 @@ void pushForward( const Functor1& vR, const Functor2& vZ, const Functor3& vPhi,
         const Geometry& g)
 {
     using host_vec = get_host_vector<Geometry>;
-    host_vec out1 = pullback( vR, g), temp1(out1);
-    host_vec out2 = pullback( vZ, g), temp2(out2);
+    host_vec out1 = pullback( vR, g);
+    host_vec out2 = pullback( vZ, g);
     host_vec out3 = pullback( vPhi, g);
-    dg::tensor::multiply3d(g.jacobian(), out1, out2, out3, temp1, temp2, out3);
-    dg::blas1::transfer( temp1, vx);
-    dg::blas1::transfer( temp2, vy);
+    dg::tensor::multiply3d(g.jacobian(), out1, out2, out3, out1, out2, out3);
+    dg::blas1::transfer( out1, vx);
+    dg::blas1::transfer( out2, vy);
     dg::blas1::transfer( out3, vz);
 }
 
@@ -165,25 +165,22 @@ void pushForwardPerp( const FunctorRR& chiRR, const FunctorRZ& chiRZ, const Func
     host_vec chiRR_ = pullback( chiRR, g);
     host_vec chiRZ_ = pullback( chiRZ, g);
     host_vec chiZZ_ = pullback( chiZZ, g);
-    //transfer to device
-    if(g.jacobian().isEmpty())
-    {
-        chiRR_.swap(chixx);
-        chiRZ_.swap(chixy);
-        chiZZ_.swap(chiyy);
-        return;
-    }
+
     const dg::SparseTensor<container> jac = g.jacobian();
     std::vector<container> values( 3);
-    values[0] = chiRR_, values[1] = chiRZ_, values[2] = chiZZ_;
-    SparseTensor<container> chi(values);
+    dg::transfer( chiRR_, values[0]);
+    dg::transfer( chiRZ_, values[1]);
+    dg::transfer( chiZZ_, values[2]);
+    SparseTensor<container> chi;
     chi.idx(0,0)=0, chi.idx(0,1)=chi.idx(1,0)=1, chi.idx(1,1)=2;
+    chi.values() = values;
+    //we do not need 3rd dimension here
 
-    SparseTensor<container> d = dg::tensor::dense(jac); //now we have a dense tensor
-    container tmp00(d.value(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
+    container tmp00(jac.value(0,0)), tmp01(tmp00), tmp10(tmp00), tmp11(tmp00);
+    chixx = chixy = chiyy = tmp00; //allocate space
     // multiply Chi*t -> tmp
-    dg::tensor::multiply2d( chi, d.value(0,0), d.value(1,0), tmp00, tmp10);
-    dg::tensor::multiply2d( chi, d.value(0,1), d.value(1,1), tmp01, tmp11);
+    dg::tensor::multiply2d( chi, jac.value(0,0), jac.value(1,0), tmp00, tmp10);
+    dg::tensor::multiply2d( chi, jac.value(0,1), jac.value(1,1), tmp01, tmp11);
     // multiply tT * tmp -> Chi
     SparseTensor<container> transpose = jac.transpose();
     dg::tensor::multiply2d( transpose, tmp00, tmp01, chixx, chixy);
@@ -195,25 +192,6 @@ namespace create{
 ///@{
 
 
-/**
- * @brief Create the inverse volume element on the grid (including weights!!)
- *
- * This is the same as the inv_weights divided by the volume form \f$ \sqrt{g}\f$
- * @copydoc hide_geometry
- * @param g Geometry object
- *
- * @return  The inverse volume form
- */
-template< class Geometry>
-get_host_vector<Geometry> inv_volume( const Geometry& g)
-{
-    using host_vector = get_host_vector<Geometry>;
-    SparseElement<host_vector> inv_vol = dg::tensor::determinant(g.metric());
-    dg::tensor::sqrt(inv_vol);
-    host_vector temp = dg::create::inv_weights( g);
-    dg::tensor::pointwiseDot( inv_vol,temp, temp);
-    return temp;
-}
 
 /**
  * @brief Create the volume element on the grid (including weights!!)
@@ -228,10 +206,29 @@ template< class Geometry>
 get_host_vector<Geometry> volume( const Geometry& g)
 {
     using host_vector = get_host_vector<Geometry>;
+    host_vector vol = dg::tensor::volume(g.metric());
+    host_vector weights = dg::create::weights( g);
+    dg::blas1::pointwiseDot( weights, vol, vol);
+    return vol;
+}
+
+/**
+ * @brief Create the inverse volume element on the grid (including weights!!)
+ *
+ * This is the same as the inv_weights divided by the volume form \f$ \sqrt{g}\f$
+ * @copydoc hide_geometry
+ * @param g Geometry object
+ *
+ * @return  The inverse volume form
+ */
+template< class Geometry>
+get_host_vector<Geometry> inv_volume( const Geometry& g)
+{
+    using host_vector = get_host_vector<Geometry>;
     using real_type = get_value_type<host_vector>;
-    host_vector temp = inv_volume(g);
-    dg::blas1::transform(temp,temp,dg::INVERT<real_type>());
-    return temp;
+    host_vector vol = volume(g);
+    dg::blas1::transform( vol, vol, dg::INVERT<real_type>());
+    return vol;
 }
 
 ///@}

@@ -85,9 +85,10 @@ int main( int argc, char* argv[])
     dg::ClonePtr<dg::aMPIGeometry2d> grid_perp = grid.perp_grid();
     dg::MDVec v2d = dg::create::inv_volume( grid_perp.get());
     dg::MDVec w2d = dg::create::volume( grid_perp.get());
-    dg::SparseElement<dg::MDVec> g_parallel = dg::tensor::volume( grid.metric().parallel());
+    dg::MDVec g_parallel = grid.metric().value(2,2);
+    dg::blas1::transform( g_parallel, g_parallel, dg::SQRT<>());
     dg::MDVec chi = dg::evaluate( dg::one, grid);
-    dg::tensor::pointwiseDot( chi, g_parallel, chi);
+    dg::blas1::pointwiseDivide( chi, g_parallel, chi);
     //create split Laplacian
     std::vector< dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > laplace_split(
             grid.local().Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(grid_perp.get(), dg::not_normed, dg::centered));
@@ -96,7 +97,7 @@ int main( int argc, char* argv[])
     pcg.construct( w2d, w2d.size());
     std::vector<unsigned>  number(grid.local().Nz());
     t.tic();
-    dg::tensor::pointwiseDot( b, g_parallel, b);
+    dg::blas1::pointwiseDivide( b, g_parallel, b);
     dg::split( b, b_split, grid);
     dg::split( chi, chi_split, grid);
     dg::split( x, x_split, grid);

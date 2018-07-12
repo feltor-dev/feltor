@@ -133,7 +133,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
         dg::geo::orthogonal::detail::InitialX initX(psi_, xX, yX);
         initX.find_initial(psi_0, R0_, Z0_);
     }
-    SimpleOrthogonalX* clone()const{return new SimpleOrthogonalX(*this);}
+    virtual SimpleOrthogonalX* clone()const override final{return new SimpleOrthogonalX(*this);}
     private:
     bool isConformal()const{return false;}
     bool do_isOrthogonal()const{return true;}
@@ -147,7 +147,7 @@ struct SimpleOrthogonalX : public aGeneratorX2d
          thrust::host_vector<double>& zetaX,
          thrust::host_vector<double>& zetaY,
          thrust::host_vector<double>& etaX,
-         thrust::host_vector<double>& etaY) const
+         thrust::host_vector<double>& etaY) const override final
     {
 
         thrust::host_vector<double> r_init, z_init;
@@ -168,10 +168,10 @@ struct SimpleOrthogonalX : public aGeneratorX2d
             etaY[idx] = +h[idx]*psipR;
         }
     }
-    double do_zeta0(double fx) const { return zeta0_; }
-    double do_zeta1(double fx) const { return -fx/(1.-fx)*zeta0_;}
-    double do_eta0(double fy) const { return -2.*M_PI*fy/(1.-2.*fy); }
-    double do_eta1(double fy) const { return 2.*M_PI*(1.+fy/(1.-2.*fy));}
+    double do_zeta0(double fx) const override final{ return zeta0_; }
+    double do_zeta1(double fx) const override final{ return -fx/(1.-fx)*zeta0_;}
+    double do_eta0(double fy) const override final{ return -2.*M_PI*fy/(1.-2.*fy); }
+    double do_eta1(double fy) const override final{ return 2.*M_PI*(1.+fy/(1.-2.*fy));}
     BinaryFunctorsLvl2 psi_;
     double R0_[2], Z0_[2];
     double zeta0_, f0_;
