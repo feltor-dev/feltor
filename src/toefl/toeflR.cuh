@@ -315,7 +315,7 @@ void Explicit<G, M, container>::operator()( double t, const std::vector<containe
     else if ( equations == "drift_global") 
     {
         double Se = dg::blas2::dot( lny[0], w2d, ype[0]);
-        double Ephi = 0.5*dg::blas2::dot( ype[0], w2d, omega); 
+        double Ephi = dg::blas2::dot( ype[0], w2d, phi[1]); //phi[1] equals 0.5*u_E^2
         energy_ = Se + Ephi;
 
         double Ge = - dg::blas2::dot( one, w2d, lapy[0]) - dg::blas2::dot( lapy[0], w2d, lny[0]); // minus 

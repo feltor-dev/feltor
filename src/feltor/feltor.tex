@@ -249,7 +249,7 @@ and for ions as
   \label{}
 \end{align}
 
-\subsection{Boundary conditions}
+\subsection{Boundary and Initial conditions}
 We apply Dirichlet boundary conditions to the parallel velocity and potential
 \begin{align}
 u_e = U_i = \phi = \psi = 0
@@ -258,6 +258,41 @@ For the densities we can choose between Neumann and Dirichlet boundaries
 \begin{align}
 n_e = N_i = 1, \text{ or } \hat n \cdot \nabla n_e = \hat n \cdot \nabla N_i = 0
 \end{align}
+
+We initialize the parallel velocitiy to zero
+\begin{align}
+  u_e = U_i = 0
+  \label{}
+\end{align}
+We have two possibilities to initialize the densities
+\begin{align}
+  n_e = \Gamma_{1,i} N_i \text{ or } n_e = N_i
+  \label{}
+\end{align}
+In the first case the potential $\phi= 0$ while in the second case
+the $E\times B$ and ion diamagnetic vorticity coincide $\Delta N_i ~ \Delta \phi$.
+We start with initializing in an $R$-$Z$ plane
+\begin{align}
+  N_i(R,Z,\varphi)= N_{prof}(R,Z)
+  \label{}
+\end{align}
+We then add one of the following initial perturbations to the ion gyrocenter density
+\subsubsection{Blob}
+We initialize a blob in the R-Z plane
+\begin{align}
+  N_{blob}(R,Z) = \triangle n \exp\left( \frac{(R - R_0 - p_x a)^2 + (Z-p_ya)^2}{\sigma^2} \right)
+  \label{}
+\end{align}
+Then, we use fieldline integration to transform this blob to all other poloidal planes. In this way the parallel derivative $\nabla_\parallel N$ is zero in the beginning.
+We either follow fieldlines around the torus several times (``blob'') or only once
+(``straight blob'').
+\subsubsection{Turbulent bath}
+We can initialize the R-Z plane with a turbulent bath with a certain amplitude.
+Again, we transform this to all poloidal planes along the magnetic field lines.
+\subsubsection{Zonal flows}
+We can initialize the R-Z plane with zonal flows of amplitude $A$ and wavelength $k_\psi$.
+Again, we transform this to all poloidal planes along the magnetic field lines.
+
 \subsection{Conservation laws}
 \subsubsection{Mass conservation}
 \begin{align}
@@ -322,12 +357,19 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
 \end{subequations}
 together with
   \begin{align}
-    -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \label{eq:Egfmaxwell}
-  \end{align}
-  and
-  \begin{align}
+    -\nabla\cdot\left( \frac{N_i}{B^2}\nabla_\perp \phi \right) &= \Gamma_{1,i} N_i - n_e, \quad\quad
     \Gamma_{1,i}^{-1} = 1-\frac{1}{2}\tau_i\mu_i \Delta
   \end{align}
+The energy theorem reads
+\begin{align}
+  \mathcal{E}= \int  d\vec{x} & \left( z_e\tau_e n_e \ln{(n_e)} +z_i\tau_i N_i\ln{(N_i)}+  \frac{1}{2} \mu_i N_i u_E^2 +\frac{1}{2} z_e\mu_e  n_e u_e^2 +\frac{1}{2} z_i\mu_i  N_i U_i^2  \right),\\
+  \Lambda =  \int d\vec{x} & \bigg\{  z_e\left[\tau_e\left( 1+\ln{(n_e)}\right) + \phi + \frac{1}{2} \mu_e u_e^2 \right](\Lambda_{n_e} + S_{n_e})
+  \nonumber\\ &
++z_i\left[\tau_i\left( 1+\ln{(N_i)}\right) + \psi_i + \frac{1}{2} \mu_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
+\nonumber \\ &
++ z_e\mu_e u_e n_e \Lambda_{u_e}+z_i\mu_iU_i N_i \Lambda_{U_i} - C J_{\parallel,s}^2\bigg\}.
+\end{align}
+
 \subsection{Cylindrical coordinates (\(R,Z,\varphi\))}\label{sec:cylmetric}
 We start with cylindrical coordinates \( (R,Z,\varphi) \), with \(\varphi\) anti directed to the geometric toroidal angle to
 obtain a right handed system. The parametric representation in Cartesian \((x,y,z)\) coordinates is therefore simply:
@@ -496,7 +538,7 @@ jumpfactor & float &1& - &     jumpfactor $\in \left[0.01,1\right]$\\
 eps\_gamma & float &1e-6    & - & accuracy of $\Gamma_1$  \\
 eps\_time  & float &1e-9   & - & accuracy of implicit time-stepper \\
 mu         & float & -0.00272121& - & $\mu_e :=-m_e/m_i \in \left\{ -0.000544617, -0.000272121, -0.000181372 \right\}$\\
-tau        & float &1      & - & $\tau = T_i/T_e$ (only in gyrofluid models) \\
+tau        & float &1      & - & $\tau = T_i/T_e$  \\
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
 resistivity & float &1e-4  & - & parallel resistivity parameter $C:= \eta_\parallel n_{e0} e/B $ \\
@@ -514,10 +556,10 @@ boxscaleRp  & float & 1.1     & 1.05 & $R_+$ a little larger than 1\\
 boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\
 boxscaleZp  & float & 1.1     & 1.05 & $Z_+$ a little larger than 1 \\
 boxscaleZm  & float & 1.2     & 1.05 & $Z_-$ a little larger than 1 \\
-pollim    & integer & 0     & 0 & poloidal limiter (0/1) \\
-mode      & integer & 2     & 0 & initial condition blob(0), straight blob(1), turbulence(2) \\
-initial   & integer & 0     & 0 & init. phi cond. (stand(0), Force Balance(1))\\
-curvmode  & integer & 1     & 0 & curvature (low beta (0), toroidal field line (1)) \\
+pollim    & bool & false     & false & poloidal limiter (true/false) \\
+initni    & string & ``turbulence''     & ``blob''  & initial condition for ion gyro-centre density (``blob'', ``straight blob'',  ``turbulence'', ``zonal'' \\
+initphi   & string & ``zero''  & ``zero'' & init. phi cond. (``zero'', ``balance'')\\
+curvmode  & string & ``low beta''  & ``toroidal''& curvature approximation (``low beta'',  ``toroidal'') \\
 \bottomrule
 \end{longtable}
 The default value is taken if the value name is not found in the input file. If there is no default and

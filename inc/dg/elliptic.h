@@ -162,7 +162,7 @@ class Elliptic
      *
      * @param new_jfactor The new scale factor for jump terms
      */
-    void set_jfactor( value_type new_jfactor) {m_jfactor_ = new_jfactor;}
+    void set_jfactor( value_type new_jfactor) {m_jfactor = new_jfactor;}
     /**
      * @brief Get the currently used jfactor
      *

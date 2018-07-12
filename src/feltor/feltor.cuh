@@ -224,7 +224,7 @@ struct Explicit
         DG_DEVICE
         void operator()( double& GammaPhi, double dxPhi, double dyPhi, double& GdxPhi, double GdyPhi, double binv) const{
             //u_E^2
-            GdxPhi   = (dxPhi*GdxPhi + dyPhi*GdyPhi)*binv*binv
+            GdxPhi   = (dxPhi*GdxPhi + dyPhi*GdyPhi)*binv*binv;
             //Psi
             GammaPhi = GammaPhi - 0.5*GdxPhi;
         }
@@ -244,12 +244,12 @@ struct Explicit
     };
     struct ComputeSource{
         DG_DEVICE
-        void operator()( double& source, double tilde_n, double profne, double source, double omega_source) const{
+        void operator()( double& result, double tilde_n, double profne, double source, double omega_source) const{
             double temp = omega_source*source*(profne - (tilde_n+1.));
             if ( temp > 0 )
-                source = temp;
+                result = temp;
             else
-                source = 0.;
+                result = 0.;
 
         }
     };
@@ -278,7 +278,7 @@ struct Explicit
     dg::Invert<container> m_invert_pol, m_invert_invgamma;
     dg::MultigridCG2d<Geometry, Matrix, container> m_multigrid;
     dg::Extrapolation<container> m_old_phi, m_old_psi, m_old_gammaN;
-    dg::SparseTensor<container> m_perp_metric;
+    dg::SparseTensor<container> m_metric;
     container m_perp_vol_inv;
 
     const feltor::Parameters m_p;
@@ -310,10 +310,9 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     dg::transfer( dg::evaluate( dg::zero, g), m_chi );
     dg::transfer( dg::evaluate( dg::zero, g), m_omega );
     dg::transfer( dg::evaluate( dg::zero, g), m_lambda );
-    phi.resize(2); phi[0] = phi[1] = m_chi;
-    curvphi = curvkappaphi = npe = logn =  phi;
-    dsy.resize(4); dsy[0] = dsy[1] = dsy[2] = dsy[3] = chi;
-    curvy = curvkappay =dsy;
+    m_phi[0] = m_phi[1] = m_chi;
+    m_curvphi = m_curvkappaphi = m_npe = m_logn = m_phi;
+    m_curvy = m_curvkappay =m_chi;
     //////////////////////////init invert objects///////////////////
     invert_pol.construct(        omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_pol  );
     invert_invgamma.construct(   omega, p.Nx*p.Ny*p.Nz*p.n*p.n, p.eps_gamma);
@@ -356,18 +355,13 @@ Explicit<Grid, IMatrix, Matrix, container>::Explicit( const Grid& g, feltor::Par
     dg::transfer( dg::create::volume(g),     w3d);
     dg::transfer( dg::create::inv_volume(g), v3d);
     /////////////////////init limiter in parallel derivatives/////////
-    if (p.pollim==1){
+    if (p.pollim==true){
         m_dsN.set_boundaries( p.bc, 0, 0);  //ds N  on limiter
         m_dsDIR.set_boundaries( dg::DIR, 0, 0); //ds psi on limiter
     }
     //////////////////////////////Metric///////////////////////////////
-    m_perp_metric=g.metric().perp();
-    dg::SparseElement<container> perp_vol_inv = dg::tensor::determinant(m_perp_metric);
-    dg::tensor::sqrt(perp_vol_inv);
-    if( perp_vol_inv.isSet())
-        m_perp_vol_inv = perp_vol_inv;
-    else
-        m_perp_vol_inv = dg::transfer<container>( dg::evaluate(dg::one, g));
+    m_metric=g.metric();
+    m_perp_vol_inv = dg::tensor::determinant2d(m_metric);
 }
 
 template<class Geometry, class IMatrix, class Matrix, class container>
@@ -411,7 +405,7 @@ double Explicit<Geometry, IMatrix, Matrix, container>::compute_phi( const std::a
     //Compute Psi
     blas2::symv( m_dxDIR, m_phi[0], m_dxPhi[0]);
     blas2::symv( m_dyDIR, m_phi[0], m_dyPhi[0]);
-    tensor::multiply2d( m_perp_metric, m_dxPhi[0], m_dyPhi[0], m_omega, m_chi);
+    tensor::multiply2d( m_metric, m_dxPhi[0], m_dyPhi[0], m_omega, m_chi);
     dg::blas1::subroutine( ComputePsi(), m_phi[1], m_dxPhi[0], m_dyPhi[0], m_omega, m_chi, m_binv);
     //m_omega now contains u_E^2; also update derivatives
     blas2::symv( m_dxDIR, m_phi[1], m_dxPhi[1]);
@@ -493,7 +487,7 @@ void Explicit<Geometry, IMatrix, Matrix, container>::operator()( double t, const
         dg::blas1::pointwiseDot( m_npe[i], y[1][i], m_omega); // omega = N U
         //Compute parallel dissipation for U
         dg::blas2::symv( m_p.nu_parallel, m_dsDIR, y[1][i], 0., m_lambda);//lambda = nu_parallel Delta_s U
-        Dpar[i+2] = z[i]*p.mu[i]*dg::blas2::dot(omega, w3d, lambda);      //Z*N*U nu_parallel *( Delta_s U)
+        Dpar[i+2] = z[i]*p.mu[i]*dg::blas2::dot(omega, w3d, lambda);      //Z*mu*N*U nu_parallel *( Delta_s U)
         //Compute perp dissipation  for U
         dg::blas2::gemv( m_lapperpDIR, y[1][i], m_lambda);
         dg::blas2::gemv( m_lapperpDIR, m_lambda,m_chi);//Delta^2 U

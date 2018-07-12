@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include "dg/enums.h"
 #include "json/json.h"
 
@@ -51,10 +52,10 @@ struct Parameters
     double boxscaleZm;//!< box can be larger
 
     enum dg::bc bc; //!< global perpendicular boundary condition
-    unsigned pollim; //!< 0= no poloidal limiter, 1 = poloidal limiter
-    unsigned mode; //!< 0 = blob simulations (several rounds fieldaligned), 1 = straight blob simulation( 1 round fieldaligned), 2 = turbulence simulations ( 1 round fieldaligned), 
-    unsigned initcond; //!< 0 = zero electric potential, 1 = ExB vorticity equals ion diamagnetic vorticity
-    unsigned curvmode; //!< 0 = low beta, 1 = toroidal field line 
+    bool pollim; //!< 0= no poloidal limiter, 1 = poloidal limiter
+    std::string initni; //!< "blob" = blob simulations (several rounds fieldaligned), "straight blob" = straight blob simulation( 1 round fieldaligned), "turbulence" = turbulence simulations ( 1 round fieldaligned),
+    std::string initphi; //!< "zero" = 0 electric potential, "balance" = ExB vorticity equals ion diamagnetic vorticity
+    std::string curvmode; //!< "low beta", "toroidal" toroidal field line approximation
     Parameters( const Json::Value& js) {
         n       = js["n"].asUInt();
         Nx      = js["Nx"].asUInt();
@@ -100,10 +101,10 @@ struct Parameters
         boxscaleZp  = js.get("boxscaleZp",1.05).asDouble();
         boxscaleZm  = js.get("boxscaleZm",1.05).asDouble();
 
-        pollim      = js.get( "pollim", 0).asUInt();
-        mode        = js.get( "mode", 0).asUInt();
-        initcond    = js.get( "initial", 0).asUInt();
-        curvmode    = js.get( "curvmode", 0).asUInt();
+        pollim      = js.get( "pollim", "false").asBool();
+        initni      = js.get( "initni", "blob").asString();
+        initphi     = js.get( "initphi", "zero").asString();
+        curvmode    = js.get( "curvmode", "toroidal").asString();
     }
     /**
      * @brief Display parameters
@@ -153,9 +154,9 @@ struct Parameters
             <<"     Number of outputs:    "<<maxout<<"\n";
         os << "Boundary condition is: \n"
             <<"     global BC             =              "<<dg::bc2str(bc)<<"\n"
-            <<"     Poloidal limiter      =              "<<pollim<<"\n"
-            <<"     Computation mode      =              "<<mode<<"\n"
-            <<"     init cond             =              "<<initcond<<"\n"
+            <<"     Poloidal limiter      =              "<<std::boolalpha<<pollim<<"\n"
+            <<"     init N_i              =              "<<initni<<"\n"
+            <<"     init Phi              =              "<<initphi<<"\n"
             <<"     curvature mode        =              "<<curvmode<<"\n";
         os << std::flush;
     }
