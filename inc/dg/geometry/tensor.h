@@ -11,16 +11,13 @@ namespace dg
     //separate algorithms from interface!!
 
 /**
-* @brief Class for 2x2 and 3x3 matrices sharing or implicitly assuming elements
+* @brief Class for 2x2 and 3x3 matrices sharing elements
 *
-* This class enables shared access to stored Ts
-* or not store them at all since the storage of (and computation with) a T is expensive.
-
-* This class contains a (dense) 3x3 matrix of integers.
-* If positive or zero, the integer represents a gather index into the stored array of Ts,
-if negative the value of the T is assumed to be 1, except for the off-diagonal entries
-    in the matrix where it is assumed to be 0.
-* We then only need to store non-trivial and non-repetitive Ts.
+* This class enables shared access to stored containers.
+* It contains a (dense) 3x3 matrix of integers.
+* The integers represent a gather index into a stored array of containers.
+* In this way duplicate entries are stored only once, which helps to
+* avoid unnecessary memory accesses.
 * @tparam container must be default constructible and copyable.
 * @ingroup misc
 */
@@ -47,20 +44,6 @@ struct SparseTensor
         construct(copyable);
     }
     /**
-    * @brief Construct the unit tensor
-    * @param copyable used to create explicit zeroes (Index 0) and ones (Index 1)
-    */
-    void construct( const container& copyable ){
-		m_mat_idx.resize(3,0);
-        for( int i=0; i<3; i++)
-            m_mat_idx( i,i) = 1;
-   		m_values.assign(2,copyable);
-        dg::blas1::copy( 0., m_values[0]);
-        dg::blas1::copy( 1., m_values[1]);
-
-
-    }
-    /**
      * @brief Construct the unit tensor
      * @param grid used to create explicit zeroes (Index 0) and ones (Index 1)
      */
@@ -72,6 +55,18 @@ struct SparseTensor
    		m_values.resize(2);
         dg::transfer( dg::evaluate( dg::zero, grid), m_values[0]);
         dg::transfer( dg::evaluate( dg::one, grid), m_values[1]);
+    }
+    /**
+    * @brief Construct the unit tensor
+    * @param copyable used to create explicit zeroes (Index 0) and ones (Index 1)
+    */
+    void construct( const container& copyable ){
+		m_mat_idx.resize(3,0);
+        for( int i=0; i<3; i++)
+            m_mat_idx( i,i) = 1;
+        m_values.assign(2,copyable);
+        dg::blas1::copy( 0., m_values[0]);
+        dg::blas1::copy( 1., m_values[1]);
     }
 
     /**
@@ -114,13 +109,14 @@ struct SparseTensor
      * @return \c values[idx(i,j)] is returned.
      * @param i row index 0<=i<3
      * @param j col index 0<=j<3
-     * @note If the indices fall out of range of index the result is undefined
+     * @note If the indices \c (i,j) fall out of range
+     * or if the corresponding value index \c idx(i,j) falls out of range of the values array, the result is undefined
      */
     const container& value(size_t i, size_t j)const{
         int k = m_mat_idx(i,j);
         return m_values[k];
     }
-    //if you're looking for this function: YOU DON'T NEED IT!!ALIASING
+    //if you're looking for this function: YOU DON'T NEED IT!! (ALIASING)
     //T& value(size_t i, size_t j);
     /**
      * @brief Return write access to the values array
