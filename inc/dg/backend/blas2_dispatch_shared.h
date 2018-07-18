@@ -14,7 +14,7 @@
 ///@cond
 namespace dg{
 namespace blas1{
-//forward declare used blas1 functions
+//forward declare blas1 functions
 template<class from_ContainerType, class to_ContainerType>
 inline void transfer( const from_ContainerType& source, to_ContainerType& target);
 
@@ -24,6 +24,17 @@ template< class ContainerType, class ContainerType1, class ContainerType2>
 inline void pointwiseDot( const ContainerType1& x1, const ContainerType2& x2, ContainerType& y);
 }//namespace blas1
 namespace blas2{
+//forward declare blas2 functions
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void symv( get_value_type<ContainerType1> alpha,
+                  MatrixType&& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+inline void symv( MatrixType&& M,
+                  const ContainerType1& x,
+                  ContainerType2& y);
 namespace detail{
 
 template< class ContainerType1, class MatrixType, class ContainerType2>
@@ -104,7 +115,7 @@ inline void doSymv(
               SharedVectorTag, RecursiveVectorTag)
 {
     for(unsigned i=0; i<x.size(); i++)
-        dg::blas1::pointwiseDot( alpha, std::forward<Matrix>(m), do_get_vector_element(x,i,get_tensor_category<Vector1>()), beta, do_get_vector_element(y,i,get_tensor_category<Vector2>()));
+        dg::blas2::symv( alpha, std::forward<Matrix>(m), do_get_vector_element(x,i,get_tensor_category<Vector1>()), beta, do_get_vector_element(y,i,get_tensor_category<Vector2>()));
 }
 
 template< class Matrix, class Vector1, class Vector2>
@@ -115,7 +126,7 @@ inline void doSymv(
               SharedVectorTag, RecursiveVectorTag)
 {
     for(unsigned i=0; i<y.size(); i++)
-        dg::blas1::pointwiseDot( 1, std::forward<Matrix>(m), do_get_vector_element(x,i,get_tensor_category<Vector1>()), 0, do_get_vector_element(y,i,get_tensor_category<Vector2>()));
+        dg::blas2::symv( std::forward<Matrix>(m), do_get_vector_element(x,i,get_tensor_category<Vector1>()), do_get_vector_element(y,i,get_tensor_category<Vector2>()));
 }
 
 

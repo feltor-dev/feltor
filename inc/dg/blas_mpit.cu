@@ -62,6 +62,9 @@ int main( int argc, char* argv[])
     if(rank==0)std::cout << "Test SYMV functions:\n";
     dg::blas2::symv( 2., arrdvec1, arrdvec1);
     if(rank==0)std::cout << "symv Scalar times Vector          "<<( arrdvec1[0].data()[0] == 52) << std::endl;
+    std::array<std::vector<dg::MDVec>,1> recursive{ arrdvec1};
+    dg::blas2::symv( arrdvec1[0], recursive, recursive);
+    if(rank==0)std::cout << "symv deep Recursion               "<<( recursive[0][0].data()[0] == 52*52) << std::endl;
     MPI_Finalize();
 
     return 0;
