@@ -26,6 +26,7 @@
  *     @defgroup typedefs Useful Typedefs
  *          Useful type definitions for easy programming
  *     @defgroup sparsematrix Sparse matrix formats
+ *     @defgroup view Vector view
  *     @defgroup mpi_structures MPI backend
  *             In this section the blas functions are implemented for the MPI+X hardware architectures, where X
  *             is e.g. CPU, GPU, accelerator cards...

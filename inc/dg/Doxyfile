@@ -784,6 +784,7 @@ WARN_LOGFILE           =
 
 INPUT                  = ./backend/exceptions.h \
                          ./backend/memory.h \
+                         ./backend/view.h \
                          ./backend/mpi_collective.h \
                          ./backend/mpi_communicator.h \
                          ./backend/mpi_init.h \
