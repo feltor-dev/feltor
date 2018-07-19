@@ -22,8 +22,8 @@ namespace geo{
 namespace detail{
 
 ///basically a copy across processes
-template<class thrust_vector>
-void sendForward( const thrust_vector& in, thrust_vector& out, MPI_Comm comm) //send to next plane
+template<class thrust_vector0, class thrust_vector1>
+void sendForward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm) //send to next plane
 {
     int source, dest;
     MPI_Status status;
@@ -39,8 +39,8 @@ void sendForward( const thrust_vector& in, thrust_vector& out, MPI_Comm comm) //
                     comm, &status);
 }
 ///basically a copy across processes
-template<class thrust_vector>
-void sendBackward( const thrust_vector& in, thrust_vector& out, MPI_Comm comm) //send to next plane
+template<class thrust_vector0, class thrust_vector1>
+void sendBackward( const thrust_vector0& in, thrust_vector1& out, MPI_Comm comm) //send to next plane
 {
     int source, dest;
     MPI_Status status;
@@ -145,13 +145,14 @@ struct Fieldaligned< ProductMPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY
     void eMinus(enum whichMatrix which, const MPI_Vector<LocalContainer>& in, MPI_Vector<LocalContainer>& out);
     MPIDistMat<LocalIMatrix, CommunicatorXY> m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
     MPI_Vector<LocalContainer> m_hz_inv, m_hp_inv, m_hm_inv; //3d size
-    MPI_Vector<LocalContainer> m_hp, m_hm;      //2d size
+    MPI_Vector<LocalContainer> m_hp, m_hm, m_hz;      //2d size
     MPI_Vector<LocalContainer> m_left, m_right; //2d size
     MPI_Vector<LocalContainer> m_limiter; //2d size
     MPI_Vector<LocalContainer> m_ghostM, m_ghostP; //2d size
     unsigned m_Nz, m_perp_size;
     dg::bc m_bcz;
-    std::vector<MPI_Vector<LocalContainer> > m_f, m_temp;  //split 3d vectors
+    std::vector<MPI_Vector<dg::View<const LocalContainer>> > m_f;
+    std::vector<MPI_Vector<dg::View<LocalContainer>> > m_temp;
     dg::ClonePtr<ProductMPIGeometry> m_g;
     bool m_dependsOnX, m_dependsOnY;
     unsigned m_coords2, m_sizeZ; //number of processes in z
@@ -168,8 +169,6 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     m_Nz=grid.local().Nz(), m_bcz=grid.bcz();
     m_g.reset(grid);
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
-    dg::split( m_hz_inv, m_temp, grid);
-    dg::split( m_hz_inv, m_f, grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     int dims[3], periods[3], coords[3];
@@ -247,12 +246,17 @@ void Fieldaligned<MPIGeometry, MPIDistMat<LocalIMatrix, CommunicatorXY>, MPI_Vec
     dg::blas1::axpby(  1., hp, +1., hm, hz);
     dg::blas1::transfer( hp, m_hp);
     dg::blas1::transfer( hm, m_hm);
-    dg::blas1::transform( hp, hp, dg::INVERT<double>());
-    dg::blas1::transform( hm, hm, dg::INVERT<double>());
-    dg::blas1::transform( hz, hz, dg::INVERT<double>());
-    dg::join( std::vector<dg::MHVec >( m_Nz, hp), m_hp_inv, grid);
-    dg::join( std::vector<dg::MHVec >( m_Nz, hm), m_hm_inv, grid);
-    dg::join( std::vector<dg::MHVec >( m_Nz, hz), m_hz_inv, grid);
+    dg::blas1::transfer( hz, m_hz);
+
+    dg::split( m_hp_inv, m_temp, grid);
+    for( unsigned i=0; i<m_Nz; i++)
+        dg::blas1::pointwiseDivide( 1., m_hp, m_temp[i]);
+    dg::split( m_hm_inv, m_temp, grid);
+    for( unsigned i=0; i<m_Nz; i++)
+        dg::blas1::pointwiseDivide( 1., m_hm, m_temp[i]);
+    dg::split( m_hz_inv, m_temp, grid);
+    for( unsigned i=0; i<m_Nz; i++)
+        dg::blas1::pointwiseDivide( 1., m_hz, m_temp[i]);
 }
 
 template<class G, class M, class C, class container>
@@ -333,6 +337,7 @@ template<class G, class M, class C, class container>
 void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichMatrix which, const MPI_Vector<container>& f, MPI_Vector<container>& fpe )
 {
     dg::split( f, m_f, m_g.get());
+    dg::split( fpe, m_temp, m_g.get());
     //1. compute 2d interpolation in every plane and store in m_temp
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
@@ -346,7 +351,7 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
     {
         unsigned i0 = m_Nz-1;
         detail::sendBackward( m_temp[i0].data(), m_ghostM.data(), m_g.get().communicator());
-        m_temp[i0].swap( m_ghostM);
+        dg::blas1::copy( m_ghostM, m_temp[i0]);
     }
 
     //3. apply right boundary conditions in last plane
@@ -364,7 +369,6 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::ePlus( enum whichM
         dg::blas1::axpby( 1., m_ghostP, -1., m_temp[i0], m_ghostP);
         dg::blas1::pointwiseDot( 1., m_limiter, m_ghostP, 1., m_temp[i0]);
     }
-    dg::join( m_temp, fpe, m_g.get());
 }
 
 template<class G, class M, class C, class container>
@@ -373,6 +377,7 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
     int rank;
     MPI_Comm_rank(m_g.get().communicator(), &rank);
     dg::split( f, m_f, m_g.get());
+    dg::split( fme, m_temp, m_g.get());
     //1. compute 2d interpolation in every plane and store in m_temp
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
@@ -386,7 +391,7 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
     {
         unsigned i0 = 0;
         detail::sendForward( m_temp[i0].data(), m_ghostP.data(), m_g.get().communicator());
-        m_temp[i0].swap( m_ghostP);
+        dg::blas1::copy( m_ghostP, m_temp[i0]);
     }
 
     //3. apply left boundary conditions in first plane
@@ -404,7 +409,6 @@ void Fieldaligned<G,MPIDistMat<M,C>, MPI_Vector<container> >::eMinus( enum which
         dg::blas1::axpby( 1., m_ghostM, -1., m_temp[i0], m_ghostM);
         dg::blas1::pointwiseDot( 1., m_limiter, m_ghostM, 1., m_temp[i0]);
     }
-    dg::join( m_temp, fme, m_g.get());
 }
 
 

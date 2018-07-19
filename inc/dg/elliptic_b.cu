@@ -71,8 +71,8 @@ int main()
     double normerr = dg::blas2::dot( w3d, error);
     double norm = dg::blas2::dot( w3d, solution);
     exblas::udouble res;
-    norm = normerr/norm; res.d = norm;
-    std::cout << "L2 Norm of relative error is:               " <<norm<<"\t"<<res.i<<std::endl;
+    norm = sqrt(normerr/norm); res.d = norm;
+    std::cout << "L2 Norm of relative error is:               " <<res.d<<"\t"<<res.i<<std::endl;
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w3d, error);
@@ -94,7 +94,7 @@ int main()
     std::vector< dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec> > laplace_split(
             grid.Nz(), dg::Elliptic<dg::aGeometry2d, dg::DMatrix, dg::DVec>(grid_perp.get(), dg::not_normed, dg::centered));
     // create split  vectors and solve
-    std::vector<dg::DVec> b_split, x_split, chi_split;
+    std::vector<dg::View<dg::DVec>> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());
     std::vector<unsigned>  number(grid.Nz());
     t.tic();
@@ -108,7 +108,6 @@ int main()
         dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
         number[i] = pcg( laplace_split[i], x_split[i], b_split[i], v2d, eps);
     }
-    dg::join( x_split, x, grid);
     t.toc();
     std::cout << "Number of iterations in split     "<< number[0]<<"\n";
     std::cout << "Split solution on the device took "<< t.diff()<<"s\n";

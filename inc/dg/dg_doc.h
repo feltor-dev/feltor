@@ -137,7 +137,7 @@
   *  - \c dg::MHMatrix with \c dg::MHVec or \c std::vector<dg::MHVec>
   *  - \c dg::MDMatrix with \c dg::MDVec or \c std::vector<dg::MDVec>
   *  -  In case of \c SelfMadeMatrixTag only those \c blas2 functions
-  *  that have a corresponding member function in the Matrix class (e.g. \c symv( const container&, container&); ) can be called.
+  *  that have a corresponding member function in the Matrix class (e.g. \c symv( const ContainerType0&, ContainerType1&); ) can be called.
   *  .
   *  If a \c container has the \c RecursiveVectorTag, then the \c Matrix is applied to each of the elements.
   */

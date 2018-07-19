@@ -88,8 +88,8 @@ struct MultigridCG2d
         set_scheme(scheme_type);
     }
 
-	template<class SymmetricOp>
-	std::vector<unsigned> solve(/*const*/ std::vector<SymmetricOp>& op, container& x, const container& b, const double eps)
+	template<class SymmetricOp, class ContainerType0, class ContainerType1>
+	std::vector<unsigned> solve(/*const*/ std::vector<SymmetricOp>& op, ContainerType0& x, const ContainerType1& b, const double eps)
 	{
         //project initial guess down to coarse grid
         project(x, x_);
@@ -154,6 +154,7 @@ struct MultigridCG2d
      * - interpolate solution up to next finer grid and repeat until the original grid is reached.
      * @note The preconditioner for the CG solver is taken from the \c precond() method in the \c SymmetricOp class
      * @copydoc hide_symmetric_op
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      * @param op Index 0 is the \c SymmetricOp on the original grid, 1 on the half grid, 2 on the quarter grid, ...
      * @param x (read/write) contains initial guess on input and the solution on output
      * @param b The right hand side (will be multiplied by \c weights)
@@ -161,8 +162,8 @@ struct MultigridCG2d
      * @return the number of iterations in each of the stages beginning with the finest grid
      * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
     */
-    template<class SymmetricOp>
-    std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, container&  x, const container& b, double eps)
+	template<class SymmetricOp, class ContainerType0, class ContainerType1>
+    std::vector<unsigned> direct_solve( std::vector<SymmetricOp>& op, ContainerType0&  x, const ContainerType1& b, double eps)
     {
         dg::blas2::symv(op[0].weights(), b, b_[0]);
         // compute residual r = Wb - A x
@@ -222,8 +223,10 @@ struct MultigridCG2d
     * @brief Project vector to all involved grids
     * @param src the input vector (may alias first element of out)
     * @param out the input vector projected to all grids ( index 0 contains a copy of src, 1 is the projetion to the first coarse grid, 2 is the next coarser grid, ...)
+    * @note \c out is not resized
     */
-    void project( const container& src, std::vector<container>& out)
+    template<class ContainerType0>
+    void project( const ContainerType0& src, std::vector<ContainerType0>& out)
     {
         dg::blas1::copy( src, out[0]);
         for( unsigned u=0; u<grids_.size()-1; u++)
@@ -235,9 +238,10 @@ struct MultigridCG2d
     * @param src the input vector
     * @return the input vector projected to all grids ( index 0 contains a copy of src, 1 is the projetion to the first coarse grid, 2 is the next coarser grid, ...)
     */
-    std::vector<container> project( const container& src)
+    template<class ContainerType0>
+    std::vector<ContainerType0> project( const ContainerType0& src)
     {
-        std::vector<container> out( grids_.size());
+        std::vector<ContainerType0> out( grids_.size());
         for( unsigned u=0; u<grids_.size(); u++)
             dg::blas1::transfer( dg::evaluate( dg::zero, grids_[u].get()), out[u]);
         project( src, out);

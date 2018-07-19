@@ -75,11 +75,12 @@ class CG
              - 11  reads + 3 writes
              - plus the number of memops for \c A;
      * @copydoc hide_matrix
-     * @tparam Preconditioner A class for which the blas2::symv(value_type, const Preconditioner&, const ContainerType&, value_type, ContainerType&) and
-     blas2::dot( const Preconditioner&, const ContainerType&) functions are callable.
+     * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
+     * @tparam Preconditioner A class for which the <tt> blas2::symv(value_type, const Preconditioner&, const ContainerType&, value_type, ContainerType&) and
+     blas2::dot( const Preconditioner&, const ContainerType&) </tt> functions are callable.
      */
-    template< class MatrixType, class Preconditioner >
-    unsigned operator()( MatrixType& A, ContainerType& x, const ContainerType& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner >
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P , value_type eps = 1e-12, value_type nrmb_correction = 1);
     //version of CG where Preconditioner is not trivial
     /**
      * @brief Solve \f$ Ax = b\f$ using a preconditioned conjugate gradient method
@@ -99,11 +100,12 @@ class CG
              - 15  reads + 4 writes
              - plus the number of memops for \c A;
      * @copydoc hide_matrix
+     * @tparam ContainerTypes must be usable with \c MatrixType and \c ContainerType in \ref dispatch
      * @tparam Preconditioner A type for which the blas2::symv(Preconditioner&, ContainerType&, ContainerType&) function is callable.
      * @tparam SquareNorm A type for which the blas2::dot( const SquareNorm&, const ContainerType&) function is callable. This can e.g. be one of the ContainerType types.
      */
-    template< class MatrixType, class Preconditioner, class SquareNorm >
-    unsigned operator()( MatrixType& A, ContainerType& x, const ContainerType& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
+    template< class MatrixType, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm >
+    unsigned operator()( MatrixType& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps = 1e-12, value_type nrmb_correction = 1);
   private:
     ContainerType r, p, ap;
     unsigned max_iter;
@@ -127,8 +129,8 @@ class CG
 */
 ///@cond
 template< class ContainerType>
-template< class Matrix, class Preconditioner>
-unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const ContainerType& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
+template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner>
+unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( P, b));
 #ifdef DG_DEBUG
@@ -190,8 +192,8 @@ unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const Cont
 }
 
 template< class ContainerType>
-template< class Matrix, class Preconditioner, class SquareNorm>
-unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType& x, const ContainerType& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
+template< class Matrix, class ContainerType0, class ContainerType1, class Preconditioner, class SquareNorm>
+unsigned CG< ContainerType>::operator()( Matrix& A, ContainerType0& x, const ContainerType1& b, Preconditioner& P, SquareNorm& S, value_type eps, value_type nrmb_correction)
 {
     value_type nrmb = sqrt( blas2::dot( S, b));
 #ifdef DG_DEBUG
@@ -291,8 +293,10 @@ struct Extrapolation
     /**
     * @brief Extrapolate values (\c number +1 memops)
     * @param new_x (write only) contains extrapolated value on output ( may alias the tail)
+    * @tparam ContainerTypes must be usable with \c ContainerType in \ref dispatch
     */
-    void extrapolate( ContainerType& new_x) const{
+    template<class ContainerType0>
+    void extrapolate( ContainerType0& new_x) const{
         switch(m_number)
         {
             case(0):
@@ -312,8 +316,10 @@ struct Extrapolation
     /**
     * @brief move the all values one step back and copy the given vector as current head
     * @param new_head the new head ( may alias the tail)
+    * @tparam ContainerTypes must be usable with \c ContainerType in \ref dispatch
     */
-    void update( const ContainerType& new_head){
+    template<class ContainerType0>
+    void update( const ContainerType0& new_head){
         if( m_number == 0) return;
         //push out last value
         for (unsigned u=m_number-1; u>0; u--)
@@ -400,7 +406,7 @@ struct Invert
      * @param max_iterations
      */
     void set_size( const ContainerType& assignable, unsigned max_iterations) {
-        cg.construct(assignable, max_iterations);
+        cg.construct( assignable, max_iterations);
         m_ex.set_number( m_ex.get_number(), assignable);
     }
 
@@ -448,12 +454,12 @@ struct Invert
      * @param phi solution (write only)
      * @param rho right-hand-side (will be multiplied by \c weights)
      * @note computes inverse weights from the weights
-     * @note If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
+     * @note If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
      *
      * @return number of iterations used
      */
-    template< class SymmetricOp >
-    unsigned operator()( SymmetricOp& op, ContainerType& phi, const ContainerType& rho)
+    template< class SymmetricOp, class ContainerType0, class ContainerType1 >
+    unsigned operator()( SymmetricOp& op, ContainerType0& phi, const ContainerType1& rho)
     {
         return this->operator()(op, phi, rho, op.weights(), op.inv_weights(), op.precond());
     }
@@ -465,6 +471,7 @@ struct Invert
      * conjugate gradient method. The initial guess comes from an extrapolation
      * of the last solutions.
      * @copydoc hide_matrix
+     * @tparam ContainerTypes must be usable with \c ContainerType in \ref dispatch
      * @tparam SquareNorm A type for which the blas2::dot( const Matrix&, const Vector&) function is callable. This can e.g. be one of the container types.
      * @tparam Preconditioner A type for which the <tt> blas2::symv(Matrix&, Vector1&, Vector2&) </tt> function is callable.
      * @param op symmetric Matrix operator class
@@ -474,12 +481,12 @@ struct Invert
      * @param inv_weights The inverse of the weights that normalize the symmetric operator
      * @param p The preconditioner
      * @note (15+N)memops per iteration where N is the memops contained in \c op.
-     *   If the Macro DG_BENCHMARK is defined this function will write timings to std::cout
+     *   If the Macro \c DG_BENCHMARK is defined this function will write timings to \c std::cout
      *
      * @return number of iterations used
      */
-    template< class Matrix, class SquareNorm, class Preconditioner >
-    unsigned operator()( Matrix& op, ContainerType& phi, const ContainerType& rho, const SquareNorm& weights, const SquareNorm& inv_weights, Preconditioner& p)
+    template< class MatrixType, class ContainerType0, class ContainerType1, class SquareNorm0, class SquareNorm1, class Preconditioner >
+    unsigned operator()( MatrixType& op, ContainerType0& phi, const ContainerType1& rho, const SquareNorm0& weights, const SquareNorm1& inv_weights, Preconditioner& p)
     {
         assert( phi.size() != 0);
         assert( &rho != &phi);

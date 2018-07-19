@@ -75,8 +75,10 @@ struct Helmholtz
      * \f[ y = W( \chi + \alpha\Delta) x \f] to make the matrix symmetric
      * @param x lhs (is constant up to changes in ghost cells)
      * @param y rhs contains solution
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void symv( const container& x, container& y)
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y)
     {
         if( m_alpha != 0)
             blas2::symv( m_laplaceM, x, y);
@@ -109,8 +111,10 @@ struct Helmholtz
      * @brief Set Chi in the above formula
      *
      * @param chi new container
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_chi( const container& chi) {
+    template<class ContainerType0>
+    void set_chi( const ContainerType0& chi) {
         dg::blas1::pointwiseDot( m_laplaceM.weights(), chi, m_chi);
     }
     /**
@@ -125,6 +129,7 @@ struct Helmholtz
     double m_alpha;
 };
 
+//Consider Deprecated!!
 /**
  * @brief Matrix class that represents a more general Helmholtz-type operator
  *

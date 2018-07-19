@@ -120,8 +120,10 @@ class Elliptic
      * @brief Change Chi
      *
      * @param chi The new chi (all elements must be >0)
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_chi( const container& chi)
+    template<class ContainerType0>
+    void set_chi( const ContainerType0& chi)
     {
         dg::blas1::pointwiseDivide( chi, m_chi_old, m_tempx);
         dg::blas1::pointwiseDivide( m_precond, m_tempx, m_precond);
@@ -177,8 +179,10 @@ class Elliptic
      * @param y result
      * @note memops required:
             - 19 reads + 9 writes
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void symv( const container& x, container& y){
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y){
         symv( 1, x, 0, y);
     }
     /**
@@ -188,8 +192,10 @@ class Elliptic
      * @param x left-hand-side
      * @param beta a scalar
      * @param y result
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void symv( value_type alpha, const container& x, value_type beta, container& y)
+    template<class ContainerType0, class ContainerType1>
+    void symv( value_type alpha, const ContainerType0& x, value_type beta, ContainerType1& y)
     {
         //compute gradient
         dg::blas2::gemv( m_rightx, x, m_tempx); //R_x*f
@@ -298,40 +304,48 @@ struct GeneralElliptic
      * @brief Set x-component of \f$ \chi\f$
      *
      * @param chi new x-component
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_x( const container& chi)
+    template<class ContainerType0>
+    void set_x( const ContainerType0& chi)
     {
-        xchi = chi;
+        dg::blas1::copy( chi, xchi);
     }
     /**
      * @brief Set y-component of \f$ \chi\f$
      *
      * @param chi new y-component
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_y( const container& chi)
+    template<class ContainerType0>
+    void set_y( const ContainerType0& chi)
     {
-        ychi = chi;
+        dg::blas1::copy( chi, ychi);
     }
     /**
      * @brief Set z-component of \f$ \chi\f$
      *
      * @param chi new z-component
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_z( const container& chi)
+    template<class ContainerType0>
+    void set_z( const ContainerType0& chi)
     {
-        zchi = chi;
+        dg::blas1::copy( chi, zchi);
     }
 
     /**
      * @brief Set new components for \f$ \chi\f$
      *
      * @param chi chi[0] is new x-component, chi[1] the new y-component, chi[2] z-component
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set( const std::vector<container>& chi)
+    template<class ContainerType0>
+    void set( const std::vector<ContainerType0>& chi)
     {
-        xchi = chi[0];
-        ychi = chi[1];
-        zchi = chi[2];
+        dg::blas1::copy( chi[0], xchi);
+        dg::blas1::copy( chi[1], ychi);
+        dg::blas1::copy( chi[2], zchi);
     }
 
     ///@copydoc Elliptic::weights()
@@ -347,7 +361,8 @@ struct GeneralElliptic
     const container& precond()const {return precond_;}
 
     ///@copydoc Elliptic::symv()
-    void symv( const container& x, container& y)
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y)
     {
         //can be faster with blas1::subroutine
         dg::blas2::gemv( rightx, x, temp0); //R_x*x
@@ -432,9 +447,7 @@ struct GeneralEllipticSym
      * @param no Not normed for elliptic equations, normed else
      * @param dir Direction of the right first derivative
      */
-    GeneralEllipticSym( const Geometry& g, norm no = not_normed, direction dir = forward):
-        ellipticForward_( g, no, dir), ellipticBackward_(g,no,inverse(dir)),
-        temp_( dg::evaluate( one, g) )
+    GeneralEllipticSym( const Geometry& g, norm no = not_normed, direction dir = forward): GeneralEllipticSym( g, g.bcx(), g.bcy(), g.bcz(), no, dir)
     { }
 
         /**
@@ -456,8 +469,10 @@ struct GeneralEllipticSym
      * @brief Set x-component of \f$ chi\f$
      *
      * @param chi new x-component
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_x( const container& chi)
+    template<class ContainerType0>
+    void set_x( const ContainerType0& chi)
     {
         ellipticForward_.set_x( chi);
         ellipticBackward_.set_x( chi);
@@ -466,8 +481,10 @@ struct GeneralEllipticSym
      * @brief Set y-component of \f$ chi\f$
      *
      * @param chi new y-component
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_y( const container& chi)
+    template<class ContainerType0>
+    void set_y( const ContainerType0& chi)
     {
         ellipticForward_.set_y( chi);
         ellipticBackward_.set_y( chi);
@@ -476,8 +493,10 @@ struct GeneralEllipticSym
      * @brief Set z-component of \f$ chi\f$
      *
      * @param chi new z-component
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_z( const container& chi)
+    template<class ContainerType0>
+    void set_z( const ContainerType0& chi)
     {
         ellipticForward_.set_z( chi);
         ellipticBackward_.set_z( chi);
@@ -487,8 +506,10 @@ struct GeneralEllipticSym
      * @brief Set new components for \f$ chi\f$
      *
      * @param chi chi[0] is new x-component, chi[1] the new y-component, chi[2] z-component
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set( const std::vector<container>& chi)
+    template<class ContainerType0>
+    void set( const std::vector<ContainerType0>& chi)
     {
         ellipticForward_.set( chi);
         ellipticBackward_.set( chi);
@@ -502,7 +523,8 @@ struct GeneralEllipticSym
     const container& precond()const {return ellipticForward_.precond();}
 
     ///@copydoc Elliptic::symv()
-    void symv( const container& x, container& y)
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y)
     {
         ellipticForward_.symv( x,y);
         ellipticBackward_.symv( x,temp_);
@@ -519,6 +541,7 @@ struct GeneralEllipticSym
     container temp_;
 };
 
+//This class should be reviewed ( better use SparseTensor and maybe merge with Elliptic)
 /**
  * @brief %Operator that acts as a 2d negative elliptic differential operator
  *
@@ -551,9 +574,8 @@ struct TensorElliptic
      * @param dir Direction of the right first derivative
      */
     TensorElliptic( const Geometry& g, norm no = not_normed, direction dir = forward):
-        no_(no), g_(g)
+        TensorElliptic( g, g.bcx(), g.bcy(), no, dir)
     {
-        construct( g, g.bcx(), g.bcy(), dir);
     }
     /**
      * @brief Construct from Grid and bc
@@ -576,8 +598,10 @@ struct TensorElliptic
      * @param chiXY The new xy component
      * @param chiYY The new yy component
      * @note Components need to be already transformed into the current coordinate system
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set( const container& chiXX, const container& chiXY, const container& chiYY)
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void set( const ContainerType0& chiXX, const ContainerType1& chiXY, const ContainerType2& chiYY)
     {
         dg::blas1::pointwiseDot( vol_, chiXX, chixx_);
         dg::blas1::pointwiseDot( vol_, chiXY, chixy_);
@@ -586,6 +610,7 @@ struct TensorElliptic
 
     /**
      * @brief Transform components to the current coordinate system
+     * @tparam ChiRR Functor class in Cartesian coordinates R, Z that will be transformed to the curvilinear coordinates given by \c Geometry
      */
     template<class ChiRR, class ChiRZ, class ChiZZ>
     void transform_and_set( const ChiRR& chiRR, const ChiRZ& chiRZ, const ChiZZ& chiZZ)
@@ -606,7 +631,8 @@ struct TensorElliptic
     const container& precond()const {return precond_;}
 
     ///@copydoc Elliptic::symv()
-    void symv( const container& x, container& y)
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y)
     {
         //compute gradient
         dg::blas2::gemv( rightx, x, tempx_); //R_x*f
@@ -677,26 +703,26 @@ struct TensorElliptic
 template< class G, class M, class V>
 struct TensorTraits< Elliptic<G, M, V> >
 {
-    using value_type  = get_value_type<V>;
+    using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 
 template< class G, class M, class V>
 struct TensorTraits< GeneralElliptic<G, M, V> >
 {
-    using value_type  = get_value_type<V>;
+    using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
 struct TensorTraits< GeneralEllipticSym<G, M, V> >
 {
-    using value_type  = get_value_type<V>;
+    using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
 struct TensorTraits< TensorElliptic<G, M, V> >
 {
-    using value_type  = get_value_type<V>;
+    using value_type      = get_value_type<V>;
     using tensor_category = SelfMadeMatrixTag;
 };
 ///@endcond

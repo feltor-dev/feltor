@@ -55,15 +55,19 @@ struct ArakawaX
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
-     * @note memops: 25 reads; 9 writes (+ 2 reads and 1 write, if geometry is nontrivial)
+     * @note memops: 30
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void operator()( const container& lhs, const container& rhs, container& result);
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result);
     /**
      * @brief Change Chi
      *
      * @param new_chi The new chi
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_chi( const container& new_chi) {
+    template<class ContainerType0>
+    void set_chi( const ContainerType0& new_chi) {
         dg::blas1::pointwiseDot( new_chi, m_inv_perp_vol, m_chi);
     }
 
@@ -93,8 +97,10 @@ struct ArakawaX
      * in the plane of a 2x1 product space
      * @param phi function
      * @param varphi may equal phi, contains result on output
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void variation( const container& phi, container& varphi)
+    template<class ContainerType0, class ContainerType1>
+    void variation( const ContainerType0& phi, ContainerType1& varphi)
     {
         blas2::symv( m_bdxf, phi, m_dxrhs);
         blas2::symv( m_bdyf, phi, m_dyrhs);
@@ -147,7 +153,8 @@ struct ArakawaFunctor
 };
 
 template< class Geometry, class Matrix, class container>
-void ArakawaX< Geometry, Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
+template<class ContainerType0, class ContainerType1, class ContainerType2>
+void ArakawaX< Geometry, Matrix, container>::operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result)
 {
     //compute derivatives in x-space
     blas2::symv( m_bdxf, lhs, m_dxlhs);

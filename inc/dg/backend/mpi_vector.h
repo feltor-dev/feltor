@@ -205,16 +205,18 @@ struct NearestNeighborComm
     * @param buffer (write only) where received data resides on return (must be of size \c size())
     * @param rqst the same four request variables that were used in global_gather_init
     */
-    template<class container>
-    void global_gather_wait(const container& input, container& buffer, MPI_Request rqst[4])const
+    template<class container0, class container1>
+    void global_gather_wait(const container0& input, container1& buffer, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container>>::value ,
+        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container0>>::value && std::is_base_of<SharedVectorTag, get_tensor_category<container1>>::value,
                    "Only Shared vectors allowed");
-        static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
-        static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
-        get_value_type<container>* ptr = thrust::raw_pointer_cast( buffer.data());
-        const get_value_type<container>* i_ptr = thrust::raw_pointer_cast( input.data());
-        do_global_gather_wait( get_execution_policy<container>(), i_ptr, ptr, rqst);
+        static_assert( std::is_same<get_execution_policy<container0>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
+        static_assert( std::is_same<get_execution_policy<container1>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
+        static_assert( std::is_same<get_value_type<container0>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
+        static_assert( std::is_same<get_value_type<container1>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
+        get_value_type<Vector>* ptr = thrust::raw_pointer_cast( buffer.data());
+        const get_value_type<Vector>* i_ptr = thrust::raw_pointer_cast( input.data());
+        do_global_gather_wait( get_execution_policy<Vector>(), i_ptr, ptr, rqst);
 
     }
     ///@copydoc aCommunicator::size()

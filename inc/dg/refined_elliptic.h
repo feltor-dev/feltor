@@ -56,8 +56,10 @@ class RefinedElliptic
      * @brief Change Chi
      *
      * @param chi The new chi
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_chi( const container& chi)
+    template<class ContainerType0>
+    void set_chi( const ContainerType0& chi)
     {
         //dg::blas2::gemv( Q_, chi, temp1_);
         //elliptic_.set_chi( temp1_);
@@ -81,8 +83,10 @@ class RefinedElliptic
      *
      * @param x left-hand-side
      * @param y result
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void symv( const container& x, container& y)
+    template<class ContainerType0, class ContainerType1>
+    void symv( const ContainerType0& x, ContainerType1& y)
     {
         dg::blas2::gemv( Q_, x, temp1_);
         elliptic_.symv( temp1_, temp2_);
@@ -104,8 +108,10 @@ class RefinedElliptic
      * \f[P\sqrt{g} Q \rho\f]
      * @param rhs the original right hand side
      * @param rhs_mod the modified right hand side of the same size (may equal rhs)
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void compute_rhs( const container& rhs, container& rhs_mod )
+    template<class ContainerType0, class ContainerType1>
+    void compute_rhs( const ContainerType0& rhs, ContainerType1& rhs_mod )
     {
         //dg::blas2::gemv( Q_, rhs, temp1_);
         //dg::blas1::pointwiseDot( vol_, temp1_, temp1_);

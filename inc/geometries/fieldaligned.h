@@ -522,13 +522,14 @@ struct Fieldaligned
     void eMinus(enum whichMatrix which, const container& in, container& out);
     IMatrix m_plus, m_minus, m_plusT, m_minusT; //2d interpolation matrices
     container m_hz_inv, m_hp_inv, m_hm_inv; //3d size
-    container m_hp, m_hm; //2d size
+    container m_hp, m_hm, m_hz; //2d size
     container m_left, m_right;      //perp_size
     container m_limiter;            //perp_size
     container m_ghostM, m_ghostP;   //perp_size
     unsigned m_Nz, m_perp_size;
     dg::bc m_bcz;
-    std::vector<container> m_f, m_temp; //split 3d vectors
+    std::vector<dg::View<const container>> m_f;
+    std::vector<dg::View< container>> m_temp;
     dg::ClonePtr<ProductGeometry> m_g;
     bool m_dependsOnX, m_dependsOnY;
 };
@@ -549,8 +550,6 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     m_Nz=grid.Nz(), m_bcz=grid.bcz();
     m_g.reset(grid);
     dg::blas1::transfer( dg::evaluate( dg::zero, grid), m_hz_inv), m_hp_inv= m_hz_inv, m_hm_inv= m_hz_inv;
-    dg::split( m_hz_inv, m_temp, grid);
-    dg::split( m_hz_inv, m_f, grid);
     if( deltaPhi <=0) deltaPhi = grid.hz();
     else assert( grid.Nz() == 1 || grid.hz()==deltaPhi);
     //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -615,12 +614,16 @@ void Fieldaligned<Geometry, IMatrix, container>::construct(
     dg::blas1::axpby(  1., hp, +1., hm, hz);
     dg::blas1::transfer( hp, m_hp);
     dg::blas1::transfer( hm, m_hm);
-    dg::blas1::transform( hp, hp, dg::INVERT<double>());
-    dg::blas1::transform( hm, hm, dg::INVERT<double>());
-    dg::blas1::transform( hz, hz, dg::INVERT<double>());
-    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hp), m_hp_inv, grid);
-    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hm), m_hm_inv, grid);
-    dg::join( std::vector<thrust::host_vector<double> >( m_Nz, hz), m_hz_inv, grid);
+    dg::blas1::transfer( hz, m_hz);
+    dg::split( m_hp_inv, m_temp, grid);
+    for( unsigned i=0; i<m_Nz; i++)
+        dg::blas1::pointwiseDivide( 1., m_hp, m_temp[i]);
+    dg::split( m_hm_inv, m_temp, grid);
+    for( unsigned i=0; i<m_Nz; i++)
+        dg::blas1::pointwiseDivide( 1., m_hm, m_temp[i]);
+    dg::split( m_hz_inv, m_temp, grid);
+    for( unsigned i=0; i<m_Nz; i++)
+        dg::blas1::pointwiseDivide( 1., m_hz, m_temp[i]);
 }
 
 template<class G, class I, class container>
@@ -701,6 +704,7 @@ template< class G, class I, class container>
 void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const container& f, container& fpe)
 {
     dg::split( f, m_f, m_g.get());
+    dg::split( fpe, m_temp, m_g.get());
     //1. compute 2d interpolation in every plane and store in m_temp
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
@@ -723,13 +727,13 @@ void Fieldaligned<G, I, container>::ePlus( enum whichMatrix which, const contain
         dg::blas1::axpby( 1., m_ghostP, -1., m_temp[i0], m_ghostP);
         dg::blas1::pointwiseDot( 1., m_limiter, m_ghostP, 1., m_temp[i0]);
     }
-    dg::join( m_temp, fpe, m_g.get());
 }
 
 template< class G, class I, class container>
 void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which, const container& f, container& fme)
 {
     dg::split( f, m_f, m_g.get());
+    dg::split( fme, m_temp, m_g.get());
     //1. compute 2d interpolation in every plane and store in m_temp
     for( unsigned i0=0; i0<m_Nz; i0++)
     {
@@ -752,7 +756,6 @@ void Fieldaligned<G, I, container>::eMinus( enum whichMatrix which, const contai
         dg::blas1::axpby( 1., m_ghostM, -1., m_temp[i0], m_ghostM);
         dg::blas1::pointwiseDot( 1., m_limiter, m_ghostM, 1., m_temp[i0]);
     }
-    dg::join( m_temp, fme, m_g.get());
 }
 
 

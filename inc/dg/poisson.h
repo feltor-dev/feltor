@@ -63,14 +63,18 @@ struct Poisson
      * @param lhs left hand side in x-space
      * @param rhs rights hand side in x-space
      * @param result Poisson's bracket in x-space
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void operator()( const container& lhs, const container& rhs, container& result);
+    template<class ContainerType0, class ContainerType1, class ContainerType2>
+    void operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result);
     /**
      * @brief Change Chi
      *
      * @param new_chi The new chi
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void set_chi( const container& new_chi) {
+    template<class ContainerType0>
+    void set_chi( const ContainerType0& new_chi) {
         dg::blas1::pointwiseDot( new_chi, m_inv_perp_vol, m_chi);
     }
 
@@ -116,8 +120,10 @@ struct Poisson
      * in the plane of a 2x1 product space
      * @param phi function
      * @param varphi may equal phi, contains result on output
+     * @tparam ContainerTypes must be usable with \c container in \ref dispatch
      */
-    void variationRHS( const container& phi, container& varphi)
+    template<class ContainerType0, class ContainerType1>
+    void variationRHS( const ContainerType0& phi, ContainerType1& varphi)
     {
         blas2::symv( m_dxrhs, phi, m_dxrhsrhs);
         blas2::symv( m_dyrhs, phi, m_dyrhsrhs);
@@ -158,7 +164,8 @@ Poisson<Geometry, Matrix, container>::Poisson(  const Geometry& g, bc bcxlhs, bc
 }
 
 template< class Geometry, class Matrix, class container>
-void Poisson< Geometry, Matrix, container>::operator()( const container& lhs, const container& rhs, container& result)
+template<class ContainerType0, class ContainerType1, class ContainerType2>
+void Poisson< Geometry, Matrix, container>::operator()( const ContainerType0& lhs, const ContainerType1& rhs, ContainerType2& result)
 {
     blas2::symv(  m_dxlhs, lhs,  m_dxlhslhs); //dx_lhs lhs
     blas2::symv(  m_dylhs, lhs,  m_dylhslhs); //dy_lhs lhs

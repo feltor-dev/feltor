@@ -46,7 +46,7 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout << "Create Laplacian\n";
     t.tic();
-    dg::Elliptic<dg::CylindricalMPIGrid3d, dg::MDMatrix, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
+    dg::Elliptic<dg::aMPIGeometry3d, dg::MDMatrix, dg::MDVec> laplace(grid, dg::not_normed, dg::centered);
     dg::MDMatrix DX = dg::create::dx( grid);
     t.toc();
     if(rank==0)std::cout<< "Creation took "<<t.diff()<<"s\n";
@@ -62,16 +62,18 @@ int main( int argc, char* argv[])
 
     if(rank==0)std::cout << "For a precision of "<< eps<<" ..."<<std::endl;
     t.tic();
-    unsigned num = pcg( laplace,x,b,v3d,eps);
-    if(rank==0)std::cout << "Number of pcg iterations "<< num<<std::endl;
+    unsigned num = pcg( laplace, x, b, v3d, eps);
     t.toc();
+    if(rank==0)std::cout << "Number of pcg iterations "<< num<<std::endl;
     if(rank==0)std::cout << "... took                 "<< t.diff()<<"s\n";
     dg::MDVec  error(  solution);
     dg::blas1::axpby( 1., x,-1., error);
 
     double normerr = dg::blas2::dot( w3d, error);
     double norm = dg::blas2::dot( w3d, solution);
-    if(rank==0)std::cout << "L2 Norm of relative error is:               " <<sqrt( normerr/norm)<<std::endl;
+    exblas::udouble res;
+    norm = sqrt(normerr/norm); res.d = norm;
+    if(rank==0)std::cout << "L2 Norm of relative error is:               " <<res.d<<"\t"<<res.i<<std::endl;
     dg::blas2::gemv( DX, x, error);
     dg::blas1::axpby( 1., deriv, -1., error);
     normerr = dg::blas2::dot( w3d, error);
@@ -93,7 +95,7 @@ int main( int argc, char* argv[])
     std::vector< dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec> > laplace_split(
             grid.local().Nz(), dg::Elliptic<dg::aMPIGeometry2d, dg::MDMatrix, dg::MDVec>(grid_perp.get(), dg::not_normed, dg::centered));
     // create split  vectors and solve
-    std::vector<dg::MDVec> b_split, x_split, chi_split;
+    std::vector<dg::MPI_Vector<dg::View<dg::DVec>>> b_split, x_split, chi_split;
     pcg.construct( w2d, w2d.size());
     std::vector<unsigned>  number(grid.local().Nz());
     t.tic();
@@ -107,7 +109,6 @@ int main( int argc, char* argv[])
         dg::blas1::pointwiseDot( b_split[i], w2d, b_split[i]);
         number[i] = pcg( laplace_split[i], x_split[i], b_split[i], v2d, eps);
     }
-    dg::join( x_split, x, grid);
     t.toc();
     if(rank==0)std::cout << "Number of iterations in split     "<< number[0]<<"\n";
     if(rank==0)std::cout << "Split solution on the device took "<< t.diff()<<"s\n";
