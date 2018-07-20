@@ -175,9 +175,9 @@ struct BijectiveComm : public aCommunicator<Vector>
     * @return the vector given in the constructor
     */
     const thrust::host_vector<int>& get_pids()const{return pids_;}
-    virtual BijectiveComm* clone() const {return new BijectiveComm(*this);}
+    virtual BijectiveComm* clone() const override final {return new BijectiveComm(*this);}
     private:
-    bool do_isCommunicating() const{
+    virtual bool do_isCommunicating() const override final{
         int rank;
         MPI_Comm_rank( do_communicator(), &rank);
         bool communicating = false;
@@ -186,9 +186,9 @@ struct BijectiveComm : public aCommunicator<Vector>
                 communicating = true;
         return communicating;
     }
-    MPI_Comm do_communicator() const {return p_.communicator();}
-    unsigned do_size() const { return p_.store_size();}
-    Vector do_make_buffer()const{
+    virtual MPI_Comm do_communicator() const override final {return p_.communicator();}
+    virtual unsigned do_size() const override final { return p_.store_size();}
+    virtual Vector do_make_buffer()const override final{
         Vector tmp( do_size() );
         return tmp;
     }
@@ -222,23 +222,25 @@ struct BijectiveComm : public aCommunicator<Vector>
         p_.construct( sendTo, comm);
         values_.data().resize( idx_.size());
     }
-    void do_global_gather( const Vector& values, Vector& store)const
+    virtual void do_global_gather( const get_value_type<Vector>* values, Vector& store)const override final
     {
         //actually this is a scatter but we constructed it invertedly
         //we could maybe transpose the Collective object!?
-        assert( values.size() == idx_.size());
+        //assert( values.size() == idx_.size());
         //nach PID ordnen
-        thrust::gather( idx_.begin(), idx_.end(), values.begin(), values_.data().begin());
+        typename Vector::const_pointer values_ptr(values);
+        thrust::gather( idx_.begin(), idx_.end(), values_ptr, values_.data().begin());
         //senden
         p_.scatter( values_.data(), store);
     }
 
-    void do_global_scatter_reduce( const Vector& toScatter, Vector& values) const
+    virtual void do_global_scatter_reduce( const Vector& toScatter, get_value_type<Vector>* values) const override final
     {
         //actually this is a gather but we constructed it invertedly
         p_.gather( toScatter, values_.data());
+        typename Vector::pointer values_ptr(values);
         //nach PID geordnete Werte wieder umsortieren
-        thrust::scatter( values_.data().begin(), values_.data().end(), idx_.begin(), values.begin());
+        thrust::scatter( values_.data().begin(), values_.data().end(), idx_.begin(), values_ptr);
     }
     Buffer<Vector> values_;
     Index idx_;
@@ -299,29 +301,31 @@ struct SurjectiveComm : public aCommunicator<Vector>
     ///@copydoc GeneralComm::getPidGatherMap
     const thrust::host_vector<int>& getPidGatherMap() const {return pidGatherMap_;}
     const Index& getSortedGatherMap() const {return sortedGatherMap_;}
-    virtual SurjectiveComm* clone() const {return new SurjectiveComm(*this);}
+    virtual SurjectiveComm* clone() const override final {return new SurjectiveComm(*this);}
     private:
-    bool do_isCommunicating() const{ return bijectiveComm_.isCommunicating();}
-    Vector do_make_buffer()const{
+    virtual bool do_isCommunicating() const override final{ return bijectiveComm_.isCommunicating();}
+    virtual Vector do_make_buffer()const override final{
         Vector tmp(do_size());
         return tmp;
     }
-    void do_global_gather( const Vector& values, Vector& buffer)const
+    virtual void do_global_gather( const get_value_type<Vector>* values, Vector& buffer)const override final
     {
         //gather values to store
-        thrust::gather( gatherMap_.begin(), gatherMap_.end(), values.begin(), store_.data().begin());
-        bijectiveComm_.global_scatter_reduce( store_.data(), buffer);
+        typename Vector::const_pointer values_ptr(values);
+        thrust::gather( gatherMap_.begin(), gatherMap_.end(), values_ptr, store_.data().begin());
+        bijectiveComm_.global_scatter_reduce( store_.data(), thrust::raw_pointer_cast(buffer.data()));
     }
-    void do_global_scatter_reduce( const Vector& toScatter, Vector& values)const
+    virtual void do_global_scatter_reduce( const Vector& toScatter, get_value_type<Vector>* values)const override final
     {
         //first gather values into store
-        Vector store_t = bijectiveComm_.global_gather( toScatter);
+        Vector store_t = bijectiveComm_.global_gather( thrust::raw_pointer_cast(toScatter.data()));
         //now perform a local sort, reduce and scatter operation
         thrust::gather( sortMap_.begin(), sortMap_.end(), store_t.begin(), store_.data().begin());
-        thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), store_.data().begin(), keys_.data().begin(), values.begin());
+        typename Vector::const_pointer values_ptr(values);
+        thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), store_.data().begin(), keys_.data().begin(), values_ptr);
     }
-    MPI_Comm do_communicator()const{return bijectiveComm_.communicator();}
-    unsigned do_size() const {return buffer_size_;}
+    virtual MPI_Comm do_communicator()const override final{return bijectiveComm_.communicator();}
+    virtual unsigned do_size() const override final {return buffer_size_;}
     void construct( thrust::host_vector<int> localGatherMap, thrust::host_vector<int> pidGatherMap, MPI_Comm comm)
     {
         bijectiveComm_ = BijectiveComm<Index, Vector>( pidGatherMap, comm);
@@ -332,7 +336,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
         //now gather the localGatherMap from the buffer to the store to get the final gather map
         Vector localGatherMap_d;
         dg::blas1::transfer( localGatherMap, localGatherMap_d);
-        Vector gatherMap_V = bijectiveComm_.global_gather( localGatherMap_d);
+        Vector gatherMap_V = bijectiveComm_.global_gather( thrust::raw_pointer_cast(localGatherMap_d));
         Index gatherMap_I;
         dg::blas1::transfer(gatherMap_V, gatherMap_I);
         gatherMap_ = gatherMap_I;
@@ -419,23 +423,24 @@ struct GeneralComm : public aCommunicator<Vector>
     const thrust::host_vector<int>& getLocalGatherMap() const {return surjectiveComm_.getLocalGatherMap();}
     ///@brief read access to the pid gather map
     const thrust::host_vector<int>& getPidGatherMap() const {return surjectiveComm_.getPidGatherMap();}
-    virtual GeneralComm* clone() const {return new GeneralComm(*this);}
+    virtual GeneralComm* clone() const override final {return new GeneralComm(*this);}
     private:
-    bool do_isCommunicating() const{ return surjectiveComm_.isCommunicating();}
-    Vector do_make_buffer() const{
+    virtual bool do_isCommunicating() const override final{ return surjectiveComm_.isCommunicating();}
+    virtual Vector do_make_buffer() const override final{
         Vector tmp(do_size());
         return tmp;
     }
-    MPI_Comm do_communicator()const{return surjectiveComm_.communicator();}
-    void do_global_gather( const Vector& values, Vector& sink)const {
+    virtual MPI_Comm do_communicator()const override final{return surjectiveComm_.communicator();}
+    virtual void do_global_gather( const get_value_type<Vector>* values, Vector& sink)const override final {
         surjectiveComm_.global_gather( values, sink);
     }
-    void do_global_scatter_reduce( const Vector& toScatter, Vector& values)const {
-        surjectiveComm_.global_scatter_reduce( toScatter, store_.data());
-        thrust::scatter( store_.data().begin(), store_.data().end(), scatterMap_.begin(), values.begin());
+    virtual void do_global_scatter_reduce( const Vector& toScatter, get_value_type<Vector>* values)const override final {
+        surjectiveComm_.global_scatter_reduce( toScatter, thrust::raw_pointer_cast(store_.data().data()));
+        typename Vector::pointer values_ptr(values);
+        thrust::scatter( store_.data().begin(), store_.data().end(), scatterMap_.begin(), values_ptr);
     }
 
-    unsigned do_size() const{return surjectiveComm_.size();}
+    virtual unsigned do_size() const override final{return surjectiveComm_.size();}
     void construct( const thrust::host_vector<int>& localGatherMap, const thrust::host_vector<int>& pidGatherMap, MPI_Comm comm)
     {
         surjectiveComm_ = SurjectiveComm<Index,Vector>(localGatherMap, pidGatherMap, comm);

@@ -188,15 +188,12 @@ struct NearestNeighborComm
     * @param values from which to gather data (it is safe to change values on return since values to communicate are copied into an internal buffer)
     * @param rqst four request variables that can be used to call MPI_Waitall
     */
-    template<class container>
-    void global_gather_init( const container& values, MPI_Request rqst[4])const
+    void global_gather_init( const get_value_type<Vector>* values, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container>>::value ,
+        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector>>::value ,
                    "Only Shared vectors allowed");
-        static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
-        static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
-        const get_value_type<container>* ptr = thrust::raw_pointer_cast( values.data());
-        do_global_gather_init( get_execution_policy<container>(),  ptr, rqst);
+        const get_value_type<Vector>* ptr = thrust::raw_pointer_cast( values.data());
+        do_global_gather_init( get_execution_policy<Vector>(),  ptr, rqst);
     }
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
@@ -205,17 +202,11 @@ struct NearestNeighborComm
     * @param buffer (write only) where received data resides on return (must be of size \c size())
     * @param rqst the same four request variables that were used in global_gather_init
     */
-    template<class container0, class container1>
-    void global_gather_wait(const container0& input, container1& buffer, MPI_Request rqst[4])const
+    void global_gather_wait(const get_value_type<Vector>* input, Vector& buffer, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container0>>::value && std::is_base_of<SharedVectorTag, get_tensor_category<container1>>::value,
+        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector>>::value,
                    "Only Shared vectors allowed");
-        static_assert( std::is_same<get_execution_policy<container0>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
-        static_assert( std::is_same<get_execution_policy<container1>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
-        static_assert( std::is_same<get_value_type<container0>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
-        static_assert( std::is_same<get_value_type<container1>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
-        get_value_type<Vector>* ptr = thrust::raw_pointer_cast( buffer.data());
-        const get_value_type<Vector>* i_ptr = thrust::raw_pointer_cast( input.data());
+        const get_value_type<Vector>* i_ptr = input;
         do_global_gather_wait( get_execution_policy<Vector>(), i_ptr, ptr, rqst);
 
     }

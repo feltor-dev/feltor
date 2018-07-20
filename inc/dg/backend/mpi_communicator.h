@@ -70,6 +70,7 @@ the gather operation will reproduce the index map in the buffer w \f$ w[i] = \te
 template< class LocalContainer>
 struct aCommunicator
 {
+    typedef get_value_type<LocalContainer> value_type;
     typedef LocalContainer container_type; //!< reveal local container type
 
     /**
@@ -90,7 +91,7 @@ struct aCommunicator
      * @param buffer on output holds the gathered data ( must be of size \c size())
      * @note if \c size()==0 nothing happens
      */
-    void global_gather( const LocalContainer& values, LocalContainer& buffer)const
+    void global_gather( const value_type* values, LocalContainer& buffer)const
     {
         if( do_size() == 0 ) return;
         do_global_gather( values, buffer);
@@ -104,10 +105,10 @@ struct aCommunicator
      * @return object that holds the gathered data
      * @note if \c size()==0 the default constructor of \c LocalContainer is called
      */
-    LocalContainer global_gather( const LocalContainer& values) const
+    LocalContainer global_gather( const value_type* values) const
     {
         LocalContainer tmp = do_make_buffer();
-        do_global_gather( values, tmp);
+        do_global_gather( values, thrust::raw_pointer_cast(tmp.data()));
         return tmp;
     }
 
@@ -119,7 +120,7 @@ struct aCommunicator
      * @param values on output contains values from other processes sent back to the origin
      * @note if \c size()==0 nothing happens
      */
-    void global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const{
+    void global_scatter_reduce( const LocalContainer& toScatter, value_type* values) const{
         if( do_size() == 0 ) return;
         do_global_scatter_reduce(toScatter, values);
     }
@@ -171,8 +172,8 @@ struct aCommunicator
     virtual MPI_Comm do_communicator() const=0;
     virtual unsigned do_size() const=0;
     virtual LocalContainer do_make_buffer( )const=0;
-    virtual void do_global_gather( const LocalContainer& values, LocalContainer& gathered)const=0;
-    virtual void do_global_scatter_reduce( const LocalContainer& toScatter, LocalContainer& values) const=0;
+    virtual void do_global_gather( const value_type* values, LocalContainer& gathered)const=0;
+    virtual void do_global_scatter_reduce( const LocalContainer& toScatter, value_type* values) const=0;
     virtual bool do_isCommunicating( ) const {
         return true;
     }
