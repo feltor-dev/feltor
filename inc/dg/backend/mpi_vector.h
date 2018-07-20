@@ -192,8 +192,7 @@ struct NearestNeighborComm
     {
         static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector>>::value ,
                    "Only Shared vectors allowed");
-        const get_value_type<Vector>* ptr = thrust::raw_pointer_cast( values.data());
-        do_global_gather_init( get_execution_policy<Vector>(),  ptr, rqst);
+        do_global_gather_init( get_execution_policy<Vector>(), values, rqst);
     }
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
@@ -206,8 +205,8 @@ struct NearestNeighborComm
     {
         static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<Vector>>::value,
                    "Only Shared vectors allowed");
-        const get_value_type<Vector>* i_ptr = input;
-        do_global_gather_wait( get_execution_policy<Vector>(), i_ptr, ptr, rqst);
+        get_value_type<Vector>* ptr = thrust::raw_pointer_cast( buffer.data());
+        do_global_gather_wait( get_execution_policy<Vector>(), input, ptr, rqst);
 
     }
     ///@copydoc aCommunicator::size()

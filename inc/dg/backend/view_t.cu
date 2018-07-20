@@ -13,8 +13,7 @@ int main()
     dg::View<dg::DVec> view( test.data(), test.size());
     dg::blas1::copy( 7., view);
     std::cout << "The original now has "<<test[0]<<" (7)\n";
-    view.data() = &test[50];
-    view.size() = 50;
+    view.construct( &test[50], 50);
     dg::blas1::copy( 3., view);
     std::cout << "The original now has "<<test[0]<<" (7) and "<<test[50]<<" (3)\n";
     const std::vector<double> const_test( 100, 42);

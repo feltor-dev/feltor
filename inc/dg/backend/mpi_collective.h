@@ -321,7 +321,7 @@ struct SurjectiveComm : public aCommunicator<Vector>
         Vector store_t = bijectiveComm_.global_gather( thrust::raw_pointer_cast(toScatter.data()));
         //now perform a local sort, reduce and scatter operation
         thrust::gather( sortMap_.begin(), sortMap_.end(), store_t.begin(), store_.data().begin());
-        typename Vector::const_pointer values_ptr(values);
+        typename Vector::pointer values_ptr(values);
         thrust::reduce_by_key( sortedGatherMap_.begin(), sortedGatherMap_.end(), store_.data().begin(), keys_.data().begin(), values_ptr);
     }
     virtual MPI_Comm do_communicator()const override final{return bijectiveComm_.communicator();}
@@ -334,9 +334,8 @@ struct SurjectiveComm : public aCommunicator<Vector>
         assert( buffer_size_ == pidGatherMap.size());
         //the bijectiveComm behaves as if we had given the gather map for the store
         //now gather the localGatherMap from the buffer to the store to get the final gather map
-        Vector localGatherMap_d;
-        dg::blas1::transfer( localGatherMap, localGatherMap_d);
-        Vector gatherMap_V = bijectiveComm_.global_gather( thrust::raw_pointer_cast(localGatherMap_d));
+        Vector localGatherMap_d = dg::transfer<Vector>(localGatherMap);
+        Vector gatherMap_V = bijectiveComm_.global_gather( thrust::raw_pointer_cast(localGatherMap_d.data()));
         Index gatherMap_I;
         dg::blas1::transfer(gatherMap_V, gatherMap_I);
         gatherMap_ = gatherMap_I;

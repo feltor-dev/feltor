@@ -9,17 +9,6 @@ namespace dg
 {
 namespace blas2
 {
-//forward declare blas2 symv functions
-template< class MatrixType, class ContainerType1, class ContainerType2>
-void symv( MatrixType&& M,
-                  const ContainerType1& x,
-                  ContainerType2& y);
-template< class MatrixType, class ContainerType1, class ContainerType2>
-void symv( get_value_type<ContainerType1> alpha,
-                  MatrixType&& M,
-                  const ContainerType1& x,
-                  get_value_type<ContainerType1> beta,
-                  ContainerType2& y);
 namespace detail
 {
 

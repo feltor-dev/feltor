@@ -108,7 +108,7 @@ struct aCommunicator
     LocalContainer global_gather( const value_type* values) const
     {
         LocalContainer tmp = do_make_buffer();
-        do_global_gather( values, thrust::raw_pointer_cast(tmp.data()));
+        do_global_gather( values, tmp);
         return tmp;
     }
 

@@ -10,6 +10,19 @@
 @note the corresponding blas file for the Local matrix must be included before this file
 */
 namespace dg {
+namespace blas2 {
+//forward declare blas2 symv functions
+template< class MatrixType, class ContainerType1, class ContainerType2>
+void symv( MatrixType&& M,
+                  const ContainerType1& x,
+                  ContainerType2& y);
+template< class MatrixType, class ContainerType1, class ContainerType2>
+void symv( get_value_type<ContainerType1> alpha,
+                  MatrixType&& M,
+                  const ContainerType1& x,
+                  get_value_type<ContainerType1> beta,
+                  ContainerType2& y);
+}//namespace blas2
 
 ///@addtogroup mpi_structures
 ///@{
@@ -119,6 +132,7 @@ struct RowColDistMat
 
         //1.1 initiate communication
         MPI_Request rqst[4];
+        using value_type = get_value_type<typename Collective::container_type>;
         const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
         m_c.global_gather_init( x_ptr, rqst);
         //1.2 compute inner points
@@ -157,6 +171,7 @@ struct RowColDistMat
 
         //1.1 initiate communication
         MPI_Request rqst[4];
+        using value_type = get_value_type<typename Collective::container_type>;
         const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
         m_c.global_gather_init( x_ptr, rqst);
         //1.2 compute inner points
@@ -252,6 +267,7 @@ struct MPIDistMat
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+        using value_type = get_value_type<typename Collective::container_type>;
         if( m_dist == row_dist){
             const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
             m_c.global_gather( x_ptr, m_buffer.data());
@@ -278,6 +294,7 @@ struct MPIDistMat
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
         MPI_Comm_compare( x.communicator(), m_c.get().communicator(), &result);
         assert( result == MPI_CONGRUENT || result == MPI_IDENT);
+        using value_type = get_value_type<typename Collective::container_type>;
         if( m_dist == row_dist){
             const value_type * x_ptr = thrust::raw_pointer_cast(x.data().data());
             m_c.get().global_gather( x_ptr, m_buffer.data());

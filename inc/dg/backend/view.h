@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cusp/array1d.h>
 #include "tensor_traits.h"
 
 namespace dg
@@ -10,14 +11,14 @@ namespace dg
  * @brief A vector view class, usable in \c dg::blas1 functions
  *
  * @ingroup view
- * The view class holds a pointer and a size. It does not own the pointer, that
- * is the user is responsible for allocating and deallocating memory.
+ * The view class holds a pointer and a size. It does not own the pointer.
+ * The user is responsible for allocating and deallocating memory.
  * The intention is to use Views in \c dg::blas1 functions.
  *
  * The class can be used as
  * a traditional "view" in the sense that it can view part of a larger contiguous
  * chunk of data and thus apply operations to only part of that data.
- * The second use would be to imitate for example a \c dg::DVec without
+ * The second use would be to imitate for example a full \c dg::DVec without
  * allocating or copying memory for it. This might be useful if
  * you want to use the \c dg::blas1 functions without specializing \c TensorTraits
  * for your own vector class or deep copying data, like the following example demonstrates:
@@ -29,25 +30,41 @@ dg::View<dg::DVec> view( vector.data(), vector.size());
 
 dg::blas1::copy( 7., view); //elements of vector now equal 7 instead of 20
  * @endcode
- * @tparam SharedContainer \c TensorTraits exists for this class and the \c tensor_category derives from \c SharedVectorTag
+ * @attention when constructing a View from a pointer the user also promises
+ * that the pointer can be dereferenced on the device the View acts on.
+ * @tparam ThrustVector \c TensorTraits exists for this class and the \c tensor_category derives from \c ThrustVectorTag
  */
-template<class SharedContainer >
+template<class ThrustVector >
 struct View
 {
+    using iterator = typename std::conditional<std::is_const<ThrustVector>::value,
+          typename ThrustVector::const_iterator,
+          typename ThrustVector::iterator>::type;
+    using const_iterator = typename ThrustVector::const_iterator;
+    using pointer = typename std::conditional<std::is_const<ThrustVector>::value,
+          typename ThrustVector::const_pointer,
+          typename ThrustVector::pointer>::type;
+    using const_pointer = typename ThrustVector::const_pointer;
     ///@brief Initialize empty view
-    View(): m_data(nullptr), m_size(0){}
+    View( void): m_ptr(), m_size(0){}
 
     ///@copydoc construct()
-    View( get_pointer_type<SharedContainer> data, unsigned size): m_data(data), m_size(size){ }
+    template<class InputIterator>
+    View( InputIterator data, unsigned size): m_ptr(pointer(data)),m_size(size){ }
+
     /**
      * @brief Construct view from pointer and size
      *
      * @param data the beginning of the contiguous chunk of data
      * @param size the number of elements in the contiguous chunk of data
+     * @tparam InputIterator pointer must be constructible from this type
+     * @attention when constructing a View from a pointer the user also promises
+     * that the pointer can be dereferenced on the device the View acts on.
      */
-    void construct( get_pointer_type<SharedContainer> data, unsigned size)
+    template<class InputIterator>
+    void construct( InputIterator data, unsigned size)
     {
-        m_data = data;
+        m_ptr = pointer(data);
         m_size = size;
     }
 
@@ -55,16 +72,22 @@ struct View
      * @brief Constant Reference of the pointer
      * @return pointer to first element
      */
-    const get_pointer_type<SharedContainer>& data() const {
-        return m_data;
+    pointer data() const {
+        return m_ptr;
     }
     /**
-     * @brief Write access to the pointer
-     * With this function the view can change the data range it views.
-     * @return pointer to first element
+     * @brief Iterator to the beginning
+     * @return iterator to the first element
      */
-    get_pointer_type<SharedContainer>& data() {
-        return m_data;
+    iterator begin() const{
+        return iterator(m_ptr);
+    }
+    /**
+     * @brief Iterator to the end
+     * @return iterator to the end
+     */
+    iterator end() const{
+        return iterator(m_ptr + m_size);
     }
     /**
      * @brief Get the size
@@ -73,24 +96,17 @@ struct View
     unsigned size() const{
         return m_size;
     }
-    /**
-     * @brief Set the size
-     * @return number elements in the data view
-     */
-    unsigned& size(){
-        return m_size;
-    }
 
     /**
      * @brief Swap pointer and size with another View
      * @param src the source view
      */
     void swap( View& src){
-        std::swap( src.m_data, m_data);
-        std::swap( src.m_size, m_size);
+        std::swap( m_ptr, src.m_ptr);
+        std::swap( m_size, src.m_size);
     }
     private:
-    get_pointer_type<SharedContainer> m_data;
+    pointer m_ptr;
     unsigned m_size;
 };
 
@@ -98,12 +114,12 @@ struct View
  * @brief A View has identical value_type and execution_policy as the underlying container
  * @ingroup dispatch
  */
-template<class SharedContainer>
-struct TensorTraits< View<SharedContainer>>
+template<class ThrustVector>
+struct TensorTraits< View<ThrustVector>>
 {
-    using value_type = get_value_type<SharedContainer>;
-    using tensor_category = SharedVectorTag;
-    using execution_policy = get_execution_policy<SharedContainer>;
+    using value_type = get_value_type<ThrustVector>;
+    using tensor_category = ThrustVectorTag;
+    using execution_policy = get_execution_policy<ThrustVector>;
 };
 
 }//namespace dg

@@ -73,16 +73,18 @@ struct ArrayVectorTag   : public RecursiveVectorTag{}; //!< \c std::array of con
  * There must be the typedefs
  * - \c iterator
  * - \c const_iterator
+ * - \c pointer
+ * - \c const_pointer
  * An instance can be constructed by
  *  - iterators \c (begin, end)
  * The member functions contan at least
  *  - \c resize()  resize the vector
  *  - \c size() returns the number of elements
- *  - \c data() pointer to the underlying array
- *  - \c begin() returns an iterator to the beginning
- *  - \c cbegin() returns a const_iterator to the beginning
- *  - \c end() return an iterator to the end
- *  - \c cend() returns a const_iterator to the end
+ *  - \c data() returns \c pointer to the underlying array
+ *  - \c begin() returns \c iterator to the beginning
+ *  - \c cbegin() returns \c const_iterator to the beginning
+ *  - \c end() return an \c iterator to the end
+ *  - \c cend() returns a \c const_iterator to the end
  *  @note \c thrust::host_vector and \c thrust::device_vector meet these requirements
  */
 struct ThrustVectorTag  : public SharedVectorTag {};

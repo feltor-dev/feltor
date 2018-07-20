@@ -34,13 +34,12 @@ using get_tensor_category = typename TensorTraits< typename std::decay<Vector>::
 template<class Vector>
 using get_execution_policy = typename TensorTraits<typename std::decay<Vector>::type>::execution_policy;
 
+///@}
+///@cond
 ////////////get element, pointer and data
-
 template<class T> //T = SharedVector
 using get_pointer_type = typename std::conditional< std::is_const< typename std::remove_reference<T>::type >::value,
     const get_value_type<T>*, get_value_type<T>* >::type;
-///@}
-///@cond
 
 template<class T> //T = RecursiveVector
 using get_element_type = typename std::conditional< std::is_const< typename std::remove_reference<T>::type >::value,
