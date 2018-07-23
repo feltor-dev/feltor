@@ -22,8 +22,21 @@
 \usepackage{booktabs}
 \usepackage{ragged2e} % maybe use \RaggedRight for tables and literature?
 \usepackage[table]{xcolor} % for alternating colors
-%\rowcolors{2}{gray!25}{white}
+%\rowcolors{2}{gray!25}{white} %%% Use this line in front of longtable
 \renewcommand\arraystretch{1.3}
 \usepackage{doi}
 \usepackage[sort,square,numbers]{natbib}
 \bibliographystyle{abbrvnat}
+%%% reset bibliography distances %%%
+\let\oldthebibliography\thebibliography
+\let\endoldthebibliography\endthebibliography
+\renewenvironment{thebibliography}[1]{
+  \begin{oldthebibliography}{#1}
+    \RaggedRight % remove if justification is desired
+    \setlength{\itemsep}{0em}
+    \setlength{\parskip}{0em}
+}
+{
+  \end{oldthebibliography}
+}
+%%% --- %%%
