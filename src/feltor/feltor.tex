@@ -94,6 +94,7 @@ The evolution equation for the parallel electron velocity \(u_e\) and the parall
 The electric potential \(\phi\) is computed by the polarisation equation
 \begin{align}
   n_e -\Gamma_{1,i} N_i &= \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right),
+  \label{eq:polarisation_dimensional}
 \end{align}
 and with the generalised electric potential
 \begin{align}
@@ -103,7 +104,7 @@ The perpendicular Poisson bracket, the perpendicular \(\nabla_\perp\) and parall
 and the perpendicular \(\Delta_\perp\) and parallel Laplacian \(\Delta_\parallel\) are
 \begin{align}\label{eq:perppoiss}
  \left[f,g\right]_\perp &:= \bhat \cdot \left(\vec{\nabla} f \times \vec\nabla g\right), \\
- \vec \nabla_\perp f &:= -\bhat\times\bhat \times \vec \nabla f \\
+ \vec \nabla_\perp f &:= -\bhat\times(\bhat \times \vec \nabla f) \\
  \nabla_\parallel f&:= \vec{\hat{b}}\cdot\vec{\nabla} f,  \\
  \Delta_\perp f&:= \nabla_\perp^2 f:= \vec \nabla\cdot (\vec \nabla_\perp f)\\
  \Delta_\parallel f&:= \vec{\nabla} \cdot ( \vec{\hat{b}} \vec{\hat{b}}\cdot\vec{\nabla} f ),
@@ -152,12 +153,14 @@ Similarly for the perpendicular dissipation we apply hyperviscous terms of secon
 \end{align}
 Here the mass diffusion coefficient coincides with the viscous coefficient, hence we fixed the Schmidt number \(\mathit{Sc}_\parallel:= \frac{\nu_U}{\nu_N}\) to unity.
 
-Let us define a source profile
+The idea for the source terms $S$ is to fix a profile in the core of our domain
+where our model does not apply.
+Let us define an approximate Heaviside function with the help of the flux function $\psi_p$ (defined later in Section~\ref{sec:magnetic})
 \begin{align}
-  S(R,Z) := \frac{s}{2}\left( 1 + \tanh\left( - \frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha} \right) \right)
+  \Theta(R,Z) := \frac{1}{2}\left( 1 + \tanh\left( - \frac{\psi_p(R,Z) - \psi_{p,min} + 3\alpha}{\alpha} \right) \right)
   \label{eq:source_profile}
 \end{align}
-where $s$ is the source strength parameter
+with a (small) width parameter $\alpha$
 and a density profile as
 \begin{align}
   N_{prof}(R,Z)=\begin{cases}
@@ -168,14 +171,20 @@ and a density profile as
 \end{align}
 We then define the particle source for electrons as
 \begin{align}
-  S_{n_e}(R,Z) = \max \left( S(R,Z)(N_{prof}(R,Z) - n_e(R,Z)) , 0\right)
-  \label{}
+  S_{n_e}(R,Z) = s\begin{cases}
+    \Theta(R,Z)(N_{prof}(R,Z) - n_e(R,Z)) &\text{ if } n_e(R,Z)<N_{prof}(R,Z)\\
+    0 &\text{ else}
+  \end{cases}
+  \label{eq:electron_source}
 \end{align}
-and for ions as
+where $s$ is the source strength parameter.
+For ions we use
 \begin{align}
     S_{N_i} = \Gamma_{1,i}^{-1} S_{n_e}
-  \label{}
+  \label{eq:ion_source}
 \end{align}
+Note that Eq.~\eqref{eq:ion_source} is explicitly chosen as to avoid vorticity generation
+by the particle source (cf.~Section~\ref{sec:conservation}).
 
 \subsection{Boundary and Initial conditions}
 We apply Dirichlet boundary conditions to the parallel velocity and potential
@@ -221,15 +230,27 @@ Again, we transform this to all poloidal planes along the magnetic field lines.
 We can initialize the R-Z plane with zonal flows of amplitude $A$ and wavelength $k_\psi$ aligned with the magnetic flux surfaces.
 Again, we transform this to all poloidal planes along the magnetic field lines.
 
-\subsection{Conservation laws}
+\subsection{Conservation laws} \label{sec:conservation}
 \subsubsection{Mass conservation}
+Integrating the density equation we directly get
 \begin{align}
-  \frac{\partial}{\partial t} \int d\vec{x} n_e :=  - \int d\vec{x} (\Lambda_{n_e}+S_{n_e})
+  \frac{\partial}{\partial t} \int d\vec{x} n_e =  - \int d\vec{x} (\Lambda_{n_e}+S_{n_e})
 \end{align}
-\subsubsection{Charge conservation}
+\subsubsection{Charge/vorticity conservation}
+Integrating the polarisation equation~\eqref{eq:polarisation_dimensional}
 \begin{align}
-  \frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) :=  - \int d\vec{x} (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i} + S_{n_e} - \Gamma_{1,i}S_{N_i})
+  \frac{\partial}{\partial t} \int d\vec{x} \vec{\nabla} \cdot\left(\frac{N_i}{\Omega_i B} \vec{\nabla}_\perp \phi\right) =  - \int d\vec{x} (\Lambda_{n_e} - \Gamma_{1,i}\Lambda_{N_i} + S_{n_e} - \Gamma_{1,i}S_{N_i})
 \end{align}
+Note that if the integrand on the left hand side is interpreted as the \ExB vorticity
+density
+$\zeta := \nabla\cdot( N_i\nabla_\perp/\Omega_i B)$
+and if we further assume that $\Gamma_{1,i} \Lambda_{N_i} \equiv \Lambda_{\Gamma_{1,i}N_i}$, and insert the ion source term~\eqref{eq:ion_source}
+we get the vorticity conservation
+\begin{align}
+  \frac{\partial}{\partial t} \int d\vec{x} \zeta =  - \int d\vec{x}\Lambda_{\zeta}
+  \label{}
+\end{align}
+
 \subsubsection{Energy theorem}
 The terms of the energy theorem are derived to
 \begin{align}
@@ -252,8 +273,8 @@ Furthermore, we introduce the dimensionless parameters
 \end{align}
 where $a\in\{e,i\}$ is the species label and $z$ is the charge number. Finally, we define
 \begin{align}
-  C:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1}.
-    \label{}
+  \eta:=\frac{en_0\eta_\parallel}{B_0} = 8.45\cdot 10^{-5}\ln \lambda \left(\frac{n_0}{10^{19}\text{m}^3}\right) \left(\frac{T_e}{\text{eV}}\right)^{-3/2} \left(\frac{B_0}{\text{T}}\right)^{-1}.
+    \label{eq:resistivity}
 \end{align}
 Omitting the species label we arrive at (dividing the density equation by $\Omega_0n_0$ and the velocity equation by $\Omega_0 c_s$)
 \begin{subequations}
@@ -277,7 +298,7 @@ Omitting the species label we arrive at (dividing the density equation by $\Omeg
         -\tau U\nabla\cdot\vec{ \mathcal K_\kappa}\nonumber\\&
         - \left(2\tau + {\mu}U^2\right) \mathcal K_\kappa (U)
         -2\tau U\mathcal K_\kappa(\ln N)
-        - \frac{C}{\mu} \frac{n_e}{N}n_e(U_i - u_e)
+        - \frac{\eta}{\mu} \frac{n_e}{N}n_e(U_i - u_e)
         - \nu_\perp\Delta_\perp^2 U + \nu_\parallel \Delta_\parallel U ,
         \label{eq:EgyrofluidU}
     \end{align}
@@ -295,7 +316,7 @@ The energy theorem reads
   \nonumber\\ &
 +z_i\left[\tau_i\left( 1+\ln{(N_i)}\right) + \psi_i + \frac{1}{2} \mu_i U_i^2 \right](\Lambda_{N_i}+S_{N_i})
 \nonumber \\ &
-+ z_e\mu_e u_e n_e \Lambda_{u_e}+z_i\mu_iU_i N_i \Lambda_{U_i} - C J_{\parallel,s}^2\bigg\}.
++ z_e\mu_e u_e n_e \Lambda_{u_e}+z_i\mu_iU_i N_i \Lambda_{U_i} - \eta J_{\parallel,s}^2\bigg\}.
 \end{align}
 
 \subsection{Coordinate system}\label{sec:cylmetric}
@@ -325,7 +346,7 @@ basis vectors and metric tensor:
 With the help of the metric elements we get a well behaved volume element \(\sqrt{g} = R\). However, we have a coordinate singularity at \(R=0\).
 The cylindrical coordinate basis vectors are mutually orthogonal to each other.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{The magnetic field}
+\section{The magnetic field}\label{sec:magnetic}
 In cylindrical coordinates the general axisymmetric magnetic field can be rewritten to
 \begin{align}
  \vec{B} &= \frac{I(\psi)}{R} \vec{\hat{e}}_{\varphi} + \frac{1}{R}\left[\frac{\partial \psi}{\partial Z} \vec{\hat{e}}_R 
@@ -426,7 +447,7 @@ $\bar{\psi}_{p11}=3 \bar{Z}\bar{R}^4 - 4\bar{Z}^3\bar{R}^2$\\
   $\bar{\psi}_{p12}= 8 \bar{Z}^5 -45 \bar{Z} \bar{R}^4 - \
                        80 \bar{Z}^3 \bar{R}^2\ln{\bar{R}} \
                        +60 \bar{Z} \bar{R}^4\ln{\bar{R}}$ \\
-     & \\
+   & \\
 \bottomrule
 \end{longtable}
 The choice of the coefficients \(c_{i}\) and \(A\) determines the actual form of the magnetic field. It allows axisymmetric equilibria with e.g. single and asymmetric double X-point configurations, force-free states,
@@ -448,7 +469,8 @@ Hence the curvature reduces in cylindrical coordinates \((R,Z,\varphi)\) to
 This simplifies the curvature operators to:
 \begin{align}
 \vec{\mathcal{K}}_{\kappa}  &\approx  -  \frac{1}{B R} \vec{\hat{e}}_Z , &
-\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx \frac{1}{B}\vec{\hat{e}}_\varphi \times \vec{\nabla} \ln B, &
+\vec{ \mathcal{K} }_{\vec{\nabla}  B}  &\approx  -\frac{1}{B^2}\frac{\partial B}{\partial Z}\vec{\hat e_R} +\frac{1}{B^2} \frac{\partial B}{\partial R}\vec{\hat e_Z} &
+%\vec{\hat e }_\varphi \times \vec{\nabla} B, &
 \vec{ \mathcal{K} } &\approx \vec{ \mathcal{K} }_{\vec{\nabla}  B}  +\vec{ \mathcal{K} }_{\kappa} ,
 %\\
 %\mathcal{K}_{\kappa}(f)   &\approx  -  \frac{1}{B R} \frac{\partial f}{\partial Z},&
@@ -457,7 +479,7 @@ This simplifies the curvature operators to:
 \end{align}
 and
 \begin{align}
- \vec{\nabla} \cdot \vec{\mathcal{K}}_{\kappa} &\approx \frac{1}{B R} \frac{\partial \ln B}{\partial Z}.
+ \vec{\nabla} \cdot \vec{\mathcal{K}}_{\kappa} &\approx \frac{1}{R B^2} \frac{\partial B}{\partial Z}.
 \end{align}
 This results in a vanishing divergence of the curvature operators \( \vec{\nabla} \cdot \vec{ \mathcal{K} } = 0\), which is an important property for energetic consistency.
 
@@ -526,7 +548,7 @@ mu         & float & -0.00272121& - & $\mu_e :=-m_e/m_i \in \left\{ -0.000544617
 tau        & float &1      & - & $\tau = T_i/T_e$  \\
 nu\_perp   & float &1e-3   & - & pependicular viscosity $\nu_\perp$ \\
 nu\_parallel & float &1e-1 & - & parallel viscosity $\nu_\parallel$ \\
-resistivity & float &1e-4  & - & parallel resistivity parameter $C:= \eta_\parallel n_{e0} e/B $ \\
+resistivity & float &1e-4  & - & parallel resistivity parameter~\eqref{eq:resistivity}\\
 amplitude  & float &0.01   & - & amplitude $A$ of initial perturbation \\
 sigma      & float &2      & - & blob variance in units of $\rho_s$ \\
 posX       & float &0.3    & - & blob x-position in units of $a$\\
@@ -536,7 +558,7 @@ k\_psi     & float &0    & - & zonal mode wave number  \\
     nprofileamp& float &4   & - & Profile peak amplitude $N_{peak}$ in Eq.~\eqref{eq:density_profile} \\
 bgprofamp  & float &1   & - & Background Prof amplitude $N_{bg}$ in Eq.~\eqref{eq:density_profile} (density on the boundary) \\
 bc  & char & "DIR"      & - & GLOBAL perp BC for parallel derivative (one of  DIR, NEU) \\
-    source  & float & 0     & - & profile source rate $s$ in Eq.~\eqref{eq:source_profile} \\
+    source  & float & 0     & - & profile source rate $s$ in Eq.~\eqref{eq:electron_source} \\
 boxscaleRp  & float & 1.1     & 1.05 & $R_+$ a little larger than 1\\
 boxscaleRm  & float & 1.1     & 1.05 & $R_-$ a little larger than 1 \\
 boxscaleZp  & float & 1.1     & 1.05 & $Z_+$ a little larger than 1 \\
@@ -562,12 +584,11 @@ File format: json
     C      & float[12] &  - & - & Solovev coefficients \\
     elongation & float & 1 & - & Elongation \\
     triangularity & float & 0 & - & Triangularity \\
-    alpha  & float & 0.02 & - & Damping width \\
     inverseaspectratio & float & 0.16667 & - & $a/R_0$ \\
-    psip\_min & float & -6 & - & $\psi_{p,min}$ in source profile Eq.~\eqref{eq:source_profile} \\
-    psip\_max & float & 0 & - & $\psi_{p,max}$ in density profile Eq.~\eqref{eq:density_profile}\\ 
+    alpha  & float & 0.02 & - & Width of Heaviside profile in Eq.~\eqref{eq:source_profile} \\
+    psip\_min & float & -6 & - & $\psi_{p,min}$ in Heaviside profile Eq.~\eqref{eq:source_profile} \\
+    psip\_max & float & 0 & - & $\psi_{p,max}$ in density profile Eq.~\eqref{eq:density_profile} \\
     psip\_max\_lim & float & 1e10 & - & $\psi_p$ for limiter in DS \\
-    qampl & float & 1 & - & \\
     rk4eps & float & 0.01 & - & Accuracy of fieldline integration in DS \\
 \bottomrule
 \end{longtable}
