@@ -545,7 +545,7 @@ double Asela<G, IMatrix, M, V>::add_parallel_dynamics(const  std::vector<V>& y, 
         //Compute perp dissipation  for U
         dg::blas2::gemv( lapperpDIR, y[i+2], lambda);
         dg::blas2::gemv( lapperpDIR, lambda, chi);//nabla_RZ^4 U
-        Dperp[i+2] = -z[i]*p.mu[i]*p.nu_perp* dg::blas2::dot(omega, w3d, chi);
+        Dperp[i+2] = -z[i]*p.mu[i]*p.nu_perp* dg::blas2::dot(un[i], w3d, chi);
 
     }
     return Dpar[0]+Dperp[0]+Dpar[1]+Dperp[1]+Dpar[2]+Dperp[2]+Dpar[3]+Dperp[3];

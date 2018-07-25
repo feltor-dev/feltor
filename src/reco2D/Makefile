@@ -13,6 +13,11 @@ all: reconnection
 reconnection: reconnection.cu reconnection.cuh 
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(GLFLAGS) $(JSONLIB) -DDG_BENCHMARK 
 
+reconnection_hpc: reconnection_hpc.cu reconnection.cuh 
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
+
+reconnection_mpi: reconnection_mpi.cu reconnection.cuh 
+	$(MPICC) $(OPT) $(MPICFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_BENCHMARK
 .PHONY: clean
 
 doc: 

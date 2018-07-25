@@ -8,7 +8,7 @@ include ../config/devices/devices.mk
 INCLUDE+= -I../inc/# include files libs
 INCLUDE+= -I../src/# include files from source code
 
-TARGETS =  compare histdiag ncdiag filamentdiag fftwdiag crosscoherencdiag feltorSesoldiag feltorShwdiag feltorSHdiag feltordiag vmaxnc feltorSHvmaxdiag toeflRdiag impRdiag feltorShwmerger feltorShwradstat feltorShwstat growthrate toeflEPdiag
+TARGETS =  compare histdiag ncdiag filamentdiag fftwdiag crosscoherencdiag feltorSesoldiag feltorShwdiag feltorSHdiag feltordiag vmaxnc feltorSHvmaxdiag toeflRdiag impRdiag feltorShwmerger feltorShwradstat feltorShwstat growthrate toeflEPdiag normdiag reco2Ddiag
 
 all: $(TARGETS)
 
@@ -50,8 +50,11 @@ feltorShwmerger: feltorShwmerger.cpp
 feltorShwstat: feltorShwstat.cpp
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
 feltorShwradstat: feltorShwradstat.cpp
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g	
+normdiag: normdiag.cu
 	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
-
+reco2Ddiag: reco2Ddiag.cu
+	$(CC) $(OPT) $(CFLAGS) $< -o $@ $(INCLUDE) $(LIBS) $(JSONLIB) -DDG_DEBUG -g
 .PHONY: clean
 
 clean:

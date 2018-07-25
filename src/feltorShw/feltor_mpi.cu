@@ -153,7 +153,7 @@ int main( int argc, char* argv[])
         if(rank==0) std::cout << "intiialize ne" << std::endl;
         feltor.initializene( y0[1], y0[0]); //n_e-1
         
-        dg::blas1::transform( y1[1], y0[1], dg::PLUS<>(+1.0)); // (1+Nitilde)
+        dg::blas1::transform( y1[1], y0[1], dg::PLUS<>(+1.0)); //(1+Nitilde)
         dg::blas1::transform( y0[1], y0[1], dg::LN<double>()); //ln (1+Nitilde)
         
         dg::blas1::transform(y0[0], y0[0], dg::PLUS<>((p.bgprofamp + p.nprofileamp))); //ne
