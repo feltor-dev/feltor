@@ -1141,7 +1141,6 @@ struct BathRZ{
      *
      * @return the above function value
      */
-    DG_DEVICE
     double operator()(double R, double Z)const
     {
         double f, kappa, RR, ZZ;
@@ -1185,7 +1184,6 @@ struct BathRZ{
      *
      * @return the above function value
      */
-    DG_DEVICE
     double operator()(double R, double Z, double phi)const {
         double f, kappa;
         double  RR, ZZ;
