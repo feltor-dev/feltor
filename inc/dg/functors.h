@@ -404,7 +404,7 @@ struct GaussianZ
 
 };
 /**
- * @brief Functor for a sin prof in x- and and cos prof in  y-direction
+ * @brief Functor for Island 
  * \f[ f(x,y) = \lambda \ln{(\cosh{(x/\lambda) } +\epsilon \cos(y/\lambda)) } \f]
  */
 struct IslandXY
