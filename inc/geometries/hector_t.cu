@@ -5,11 +5,11 @@
 #include <sstream>
 #include <cmath>
 #include <memory>
+#include "json/json.h"
 
 #include "file/nc_utilities.h"
 
-#include "dg/backend/timer.cuh"
-#include "dg/geometry/xspacelib.cuh"
+#include "dg/backend/timer.h"
 #include "dg/functors.h"
 
 #include "curvilinear.h"

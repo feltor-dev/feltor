@@ -11,7 +11,7 @@
 #include <thrust/random/normal_distribution.h>
 #include "blas1.h"
 #include "geometry/grid.h"
-#include "geometry/evaluation.cuh"
+#include "geometry/evaluation.h"
 #include "geometry/functions.h"
 /*!@file
  * Functors to use in dg::evaluate or dg::blas1::transform functions
@@ -1138,7 +1138,6 @@ struct BathRZ{
      * @param Z Z - coordinate
      *
      */
-    DG_DEVICE
     double operator()(double R, double Z)const
     {
         double f, kappa, RR, ZZ;
@@ -1181,7 +1180,6 @@ struct BathRZ{
      * @param phi phi - coordinate
      *
      */
-    DG_DEVICE
     double operator()(double R, double Z, double phi)const {
         double f, kappa;
         double  RR, ZZ;
@@ -1293,6 +1291,12 @@ struct SQRT
 
 /**
  * @brief Minmod function
+ \f[ f(x_1, x_2, x_3) = \begin{cases}
+         \min(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 >0 \\
+         \max(x_1, x_2, x_3) \text{ for } x_1, x_2, x_3 <0 \\
+         0 \text{ else}
+ \end{cases}
+ \f]
  *
  * might be useful for flux limiter schemes
  * @tparam T value-type
@@ -1436,7 +1440,11 @@ struct ABS
 };
 /**
  * @brief returns positive values
- * \f[ f(x) = |x|\f]
+ \f[ f(x) = \begin{cases}
+         x \text{ for } x>0 \\
+         0 \text{ else}
+ \end{cases}
+ \f]
  *
  * @tparam T value type
  */

@@ -34,7 +34,7 @@ enum bc{
  * @param bcx the boundary condition
  * @return a string
  */
-std::string bc2str( bc bcx)
+static inline std::string bc2str( bc bcx)
 {
     std::string s;
     switch(bcx)
@@ -63,7 +63,7 @@ std::string bc2str( bc bcx)
  * @return a valid boundary condition
  * \throw std::runtime_error if string doesn't match any of the above
  */
-bc str2bc( std::string s)
+static inline bc str2bc( std::string s)
 {
     if( s=="PER"||s=="per"||s=="periodic"||s=="Periodic" || s == "PERIODIC")
         return PER;

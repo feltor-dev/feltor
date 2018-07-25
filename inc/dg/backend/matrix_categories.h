@@ -5,24 +5,27 @@ namespace dg{
 
 ///@addtogroup dispatch
 ///@{
-struct AnyMatrixTag{};//!<default
-/// indicates that the \c Matrix type has the \c void \c symv( const Vector&, Vector& ) member function.
-struct SelfMadeMatrixTag {};
+struct AnyMatrixTag{};
 ///@}
 
-//normal matrices
+
+//
+/**
+ * @brief Indicates that the type has a member function with the same name and interface (up to the matrix itself of course)
+as the
+corresponding \c blas2 member function, for example
+<tt> void symv( const ContainerType1&, ContainerType2& ); </tt>
+
+These members are then implemented freely, in particular other \c blas1 and \c blas2 functions can be used
+ */
+struct SelfMadeMatrixTag: public AnyMatrixTag {};
+
+/// One of cusp's matrices, for these only the \c blas2 transfer and the symv( m,x,y) are implemented
 struct CuspMatrixTag: public AnyMatrixTag {};
-
-
+/// indicate one of our mpi matrices
 struct MPIMatrixTag: public AnyMatrixTag {};
-
-
-///Indicate that a thrust vector should act as a diagonal matrix
-struct ThrustMatrixTag: public AnyMatrixTag {};
-///Indicate that a cusp array should act as a diagonal matrix
-struct CuspPreconTag: public ThrustMatrixTag {};
-///Indicate that a MPI_Vector should act as a diagonal matrix
-struct MPIPreconTag: public AnyMatrixTag {};
+/// indicate one of our mpi matrices
+struct SparseBlockMatrixTag: public AnyMatrixTag {};
 
 }//namespace dg
 

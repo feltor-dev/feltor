@@ -1,11 +1,12 @@
 #include <iostream>
+#include "json/json.h"
 
 #include "file/nc_utilities.h"
 
 #include "dg/algorithm.h"
 
 #include "geometries.h"
-#include "taylor.h"
+//#include "taylor.h"
 #include "testfunctors.h"
 
 //const char* parameters = "geometry_params_Xpoint_taylor.js";
@@ -204,8 +205,8 @@ int main(int argc, char**argv)
     dg::blas1::pointwiseDot( gyy, vol, gyy);
     dg::blas1::scal( gxx, g2d_fine.hx());
     dg::blas1::scal( gyy, g2d_fine.hy());
-    double hxX = dg::interpolate( 0, 0, gxx, g2d_fine);
-    double hyX = dg::interpolate( 0, 0, gyy, g2d_fine);
+    double hxX = dg::interpolate( 0., 0., (dg::HVec)gxx, g2d_fine);
+    double hyX = dg::interpolate( 0., 0., (dg::HVec)gyy, g2d_fine);
     std::cout << *thrust::max_element( gxx.begin(), gxx.end()) << "\t";
     std::cout << *thrust::max_element( gyy.begin(), gyy.end()) << "\t";
     std::cout << hxX << "\t";

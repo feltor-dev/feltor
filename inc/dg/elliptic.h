@@ -3,7 +3,7 @@
 #include "blas.h"
 #include "enums.h"
 #include "backend/memory.h"
-#include "geometry/evaluation.cuh"
+#include "geometry/evaluation.h"
 #include "geometry/derivatives.h"
 #ifdef MPI_VERSION
 #include "geometry/mpi_derivatives.h"
@@ -40,16 +40,17 @@ namespace dg
  In a time dependent problem the value of \f$\alpha\f$ determines the
  numerical diffusion, i.e. for too low values numerical oscillations may appear.
  Also note that a forward discretization has more diffusion than a centered discretization.
- The following code snippet demonstrates the use of \c Elliptic in a multigrid algorithm:
- * @snippet elliptic2d_b.cu multigrid
+
+ The following code snippet demonstrates the use of \c Elliptic in an inversion problem
+ * @snippet elliptic2d_b.cu invert
  * @copydoc hide_geometry_matrix_container
- * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions
+ * This class has the \c SelfMadeMatrixTag so it can be used in blas2::symv functions
  * and thus in a conjugate gradient solver.
  * @note The constructors initialize \f$ \chi=1\f$ so that a negative laplacian operator
  * results
  * @note The inverse of \f$ \chi\f$ makes a good general purpose preconditioner
  * @note the jump term \f$ \alpha J\f$  adds artificial numerical diffusion as discussed above
- * @attention Pay attention to the negative sign
+ * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  *
  */
 template <class Geometry, class Matrix, class container>
@@ -241,10 +242,10 @@ class Elliptic
  *  \f]
  * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ .
  * @copydoc hide_geometry_matrix_container
- * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions
+ * This class has the \c SelfMadeMatrixTag so it can be used in blas2::symv functions
  * and thus in a conjugate gradient solver.
  * @note The constructors initialize \f$ b^x = b^y = b^z=1\f$
- * @attention Pay attention to the negative sign
+ * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  */
 template< class Geometry, class Matrix, class container>
 struct GeneralElliptic
@@ -424,10 +425,10 @@ struct GeneralElliptic
  *  \f]
  * is discretized, with \f$ b^i\f$ being the contravariant components of \f$\mathbf b\f$ .
  * @copydoc hide_geometry_matrix_container
- * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions
+ * This class has the \c SelfMadeMatrixTag so it can be used in blas2::symv functions
  * and thus in a conjugate gradient solver.
  * @note The constructors initialize \f$ \chi_x = \chi_y = \chi_z=1\f$
- * @attention Pay attention to the negative sign
+ * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  */
 template<class Geometry, class Matrix, class container>
 struct GeneralEllipticSym
@@ -543,10 +544,10 @@ struct GeneralEllipticSym
  *  \end{align}
  *  \f]
  * @copydoc hide_geometry_matrix_container
- * This class has the SelfMadeMatrixTag so it can be used in blas2::symv functions
+ * This class has the \c SelfMadeMatrixTag so it can be used in blas2::symv functions
  * and thus in a conjugate gradient solver.
  * @note The constructors initialize \f$ \chi = I\f$
- * @attention Pay attention to the negative sign
+ * @attention Pay attention to the negative sign which is necessary to make the matrix @b positive @b definite
  */
 template< class Geometry, class Matrix, class container>
 struct TensorElliptic
@@ -682,29 +683,29 @@ struct TensorElliptic
 
 ///@cond
 template< class G, class M, class V>
-struct MatrixTraits< Elliptic<G, M, V> >
+struct TensorTraits< Elliptic<G, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 
 template< class G, class M, class V>
-struct MatrixTraits< GeneralElliptic<G, M, V> >
+struct TensorTraits< GeneralElliptic<G, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
-struct MatrixTraits< GeneralEllipticSym<G, M, V> >
+struct TensorTraits< GeneralEllipticSym<G, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 template< class G, class M, class V>
-struct MatrixTraits< TensorElliptic<G, M, V> >
+struct TensorTraits< TensorElliptic<G, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 ///@endcond
 

@@ -5,8 +5,8 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 
-#include "backend/typedefs.cuh"
-#include "geometry/evaluation.cuh"
+#include "backend/typedefs.h"
+#include "geometry/evaluation.h"
 #include "arakawa.h"
 #include "runge_kutta.h"
 

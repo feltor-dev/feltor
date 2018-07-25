@@ -456,7 +456,7 @@ struct SeparatriX
             thrust::host_vector<double>& z ) const
     {
         ///////////////////////////find y coordinate line//////////////
-        std::array<double,2> begin( {0,0}), end(begin), temp(begin), end_old(end);
+        std::array<double,2> begin( {0,0}), end(begin), temp(begin);
         thrust::host_vector<double> r_old(y_vec.size(), 0), r_diff( r_old);
         thrust::host_vector<double> z_old(y_vec.size(), 0), z_diff( z_old);
         r.resize( y_vec.size()), z.resize(y_vec.size());
@@ -593,7 +593,6 @@ struct InitialX
     {
         //constructor finds four points around X-point and integrates them a bit away from it
         dg::geo::FieldRZtau fieldRZtau_(psi);
-        std::array<double,2> begin( {0,0}), end(begin), temp(begin), end_old(end);
         double eps[] = {1e-11, 1e-12, 1e-11, 1e-12};
         for( unsigned i=0; i<4; i++)
         {

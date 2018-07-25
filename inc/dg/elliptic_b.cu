@@ -5,8 +5,8 @@
 #include <thrust/device_vector.h>
 #include <cusp/print.h>
 
-#include "backend/timer.cuh"
-#include "geometry/evaluation.cuh"
+#include "backend/timer.h"
+#include "geometry/evaluation.h"
 #include "geometry/derivatives.h"
 #include "geometry/split_and_join.h"
 

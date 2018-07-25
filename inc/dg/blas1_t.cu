@@ -49,7 +49,7 @@ int main()
 
     //v1 = 2, v2 = 3
 
-    std::cout << "Human readable test VectorVector (passed if ouput equals value in brackets) \n";
+    std::cout << "Human readable test RecursiveVector (passed if ouput equals value in brackets) \n";
     Vector v1( 5, 2.), v2( 5, 3.), v3(5,5.), v4(5,4.), v5(v4);
     std::array<Vector, 2> w1( dg::transfer<std::array<Vector,2>>(v1)), w2({v2,v2}), w3({v3,v3}), w4({v4,v4});
     dg::blas1::axpby( 2., w1, 3., w2, w3);
@@ -72,7 +72,7 @@ int main()
     std::cout << "2.5*2+ 0 = " << w2[0][0] <<" (5)\n";
     dg::blas1::axpbypgz( 2.5, w1, 2., w2, -0.125, w3);
     std::cout << "2.5*2+ 2.*5-0.125*96 = " << w3[0][0] <<" (3)\n";
-    dg::blas1::pointwiseDivide( 5.,w1,w2,-1,w3);
+    dg::blas1::pointwiseDivide( 5.,w1,5.,-1,w3);
     std::cout << "5*2/5-1*3 = " << w3[0][0] <<" (-1)\n";
     dg::blas1::copy( w2, w1);
     std::cout << "5 = " << w1[0][0] <<" (5)"<< std::endl;
@@ -85,8 +85,7 @@ int main()
     dg::blas1::scal( w2, 0.6);
     dg::blas1::plus( w3, -7.0);
     std::cout << "e^2-7 = " << w3[0][0] <<" (0.389056...)"<< std::endl;
-    std::cout << "\nFINISHED\n\n";
-
+    std::cout << "\nFINISHED! Continue with geometry/evaluation_t.cu !\n\n";
 
     return 0;
 

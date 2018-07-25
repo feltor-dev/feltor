@@ -273,16 +273,16 @@ namespace tensor
  /**
  * @brief Construct a tensor with all unset values filled with explicit 0 or 1 using \c dg::blas1::transform
  *
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @return a dense tensor
  * @note undefined if \c t.isEmpty() returns true
  */
-template<class container>
-SparseTensor<container> dense(const SparseTensor<container>& tensor)
+template<class ContainerType>
+SparseTensor<ContainerType> dense(const SparseTensor<ContainerType>& tensor)
 {
-    SparseTensor<container> t(tensor);
+    SparseTensor<ContainerType> t(tensor);
     if( t.isEmpty()) throw Error(Message(_ping_)<< "Can't make an empty tensor dense! ") ;
-    container tmp = t.values()[0];
+    ContainerType tmp = t.values()[0];
     //1. diagonal
     size_t size= t.values().size();
     bool diagonalIsSet=true;
@@ -317,12 +317,12 @@ SparseTensor<container> dense(const SparseTensor<container>& tensor)
  * @brief data structure to hold the LDL^T decomposition of a symmetric positive definite matrix
  *
  * LDL^T stands for a lower triangular matrix L,  a diagonal matrix D and the transpose L^T
- * @copydoc hide_container
+ * @copydoc hide_ContainerType
  * @attention the tensor in the Elliptic classes actually only need to be positive **semi-definite**
  * and unfortunately the decomposition is unstable for semi-definite matrices.
 * @ingroup misc
  */
-template<class container>
+template<class ContainerType>
 struct CholeskyTensor
 {
     /**
@@ -330,12 +330,12 @@ struct CholeskyTensor
      *
      * @param in must be symmetric and positive definite
      */
-    CholeskyTensor( const SparseTensor<container>& in) {
+    CholeskyTensor( const SparseTensor<ContainerType>& in) {
         decompose(in);
     }
     /**
      * @brief Type conversion from other value types
-     * @tparam OtherContainer dg::blas1::transfer must be callable for container and OtherContainer
+     * @tparam OtherContainer dg::blas1::transfer must be callable for ContainerType and OtherContainer
      * @param in the source matrix to convert
      */
     template<class OtherContainer>
@@ -347,9 +347,9 @@ struct CholeskyTensor
      * overwrites the existing decomposition
      * @param in must be symmetric and positive definite
      */
-    void decompose( const SparseTensor<container>& in)
+    void decompose( const SparseTensor<ContainerType>& in)
     {
-        SparseTensor<container> denseIn=dg::tensor::dense(in);
+        SparseTensor<ContainerType> denseIn=dg::tensor::dense(in);
         /*
          * One nice property of positive definite is that the diagonal elements are
          * greater than zero.
@@ -364,7 +364,7 @@ struct CholeskyTensor
         }
         if(in.isSet(1,0))
         {
-            container tmp=in.value(1,0);
+            ContainerType tmp=in.value(1,0);
             if(diag_.isSet(0,0)) dg::blas1::pointwiseDivide(tmp,diag_.value(0,0),tmp);
             q_.idx(1,0)=0;
             if(q_.values().size() == 0)
@@ -373,7 +373,7 @@ struct CholeskyTensor
         }
         if(in.isSet(2,0))
         {
-            container tmp=in.value(2,0);
+            ContainerType tmp=in.value(2,0);
             if(diag_.isSet(0,0))dg::blas1::pointwiseDivide(tmp,diag_.value(0,0),tmp);
             q_.idx(2,0)=1;
             if(q_.values().size() < 2)
@@ -383,8 +383,8 @@ struct CholeskyTensor
 
         if( q_.isSet(1,0) || in.isSet(1,1))
         {
-            SparseTensor<container> denseL=dg::tensor::dense(q_);
-            container tmp=denseL.value(1,0);
+            SparseTensor<ContainerType> denseL=dg::tensor::dense(q_);
+            ContainerType tmp=denseL.value(1,0);
             dg::blas1::pointwiseDot(tmp,tmp,tmp);
             if(diag_.isSet(0,0)) dg::blas1::pointwiseDot(tmp,diag_.value(0,0),tmp);
             dg::blas1::axpby( 1., denseIn.value(1,1), -1., tmp, tmp);
@@ -396,8 +396,8 @@ struct CholeskyTensor
 
         if( in.isSet(2,1) || (q_.isSet(2,0)&&q_.isSet(1,0)))
         {
-            SparseTensor<container> denseL=dg::tensor::dense(q_);
-            container tmp=denseIn.value(2,1);
+            SparseTensor<ContainerType> denseL=dg::tensor::dense(q_);
+            ContainerType tmp=denseIn.value(2,1);
             dg::blas1::pointwiseDot(denseL.value(2,0), denseL.value(1,0), tmp);
             if(diag_.isSet(0,0))dg::blas1::pointwiseDot(tmp, diag_.value(0,0), tmp);
             dg::blas1::axpby(1., denseIn.value(2,1),-1.,tmp, tmp);
@@ -409,8 +409,8 @@ struct CholeskyTensor
         }
         if( in.isSet(2,2) || q_.isSet(2,0) || q_.isSet(2,1))
         {
-            SparseTensor<container> denseL=dg::tensor::dense(q_);
-            container tmp=denseL.value(2,0), tmp1=denseL.value(2,1);
+            SparseTensor<ContainerType> denseL=dg::tensor::dense(q_);
+            ContainerType tmp=denseL.value(2,0), tmp1=denseL.value(2,1);
             dg::blas1::pointwiseDot(tmp,tmp,tmp);
             if(diag_.isSet(0,0))dg::blas1::pointwiseDot(diag_.value(0,0),tmp,tmp);
             dg::blas1::pointwiseDot(tmp1,tmp1,tmp1);
@@ -431,7 +431,7 @@ struct CholeskyTensor
      * @brief Returns L
      * @return a lower triangular matrix with 1 on diagonal
      */
-    const SparseTensor<container>& lower()const{
+    const SparseTensor<ContainerType>& lower()const{
         return q_;
 
     }
@@ -439,7 +439,7 @@ struct CholeskyTensor
      * @brief Returns L^T
      * @return a upper triangular matrix with 1 on diagonal
      */
-    const SparseTensor<container>& upper()const{
+    const SparseTensor<ContainerType>& upper()const{
         return upper_;
 
     }
@@ -448,17 +448,17 @@ struct CholeskyTensor
      * @brief Returns D
      * @return only diagonal elements are set if any
      */
-    const SparseTensor<container>& diagonal()const{return diag_;}
+    const SparseTensor<ContainerType>& diagonal()const{return diag_;}
 
     private:
-    SparseTensor<container> q_, diag_, upper_;
+    SparseTensor<ContainerType> q_, diag_, upper_;
     bool lower_;
 };
 
 ///@cond
 
-template<class container>
-void SparseTensor<container>::unique_insert(std::vector<int>& indices, int& idx)
+template<class ContainerType>
+void SparseTensor<ContainerType>::unique_insert(std::vector<int>& indices, int& idx)
 {
     bool unique=true;
     unsigned size=indices.size();
@@ -474,10 +474,10 @@ void SparseTensor<container>::unique_insert(std::vector<int>& indices, int& idx)
     }
 }
 
-template<class container>
-SparseTensor<container> SparseTensor<container>::perp() const
+template<class ContainerType>
+SparseTensor<ContainerType> SparseTensor<ContainerType>::perp() const
 {
-    SparseTensor<container> t(*this);
+    SparseTensor<ContainerType> t(*this);
     if( isEmpty()) return t;
     for(unsigned i=0; i<3; i++)
     {
@@ -487,10 +487,10 @@ SparseTensor<container> SparseTensor<container>::perp() const
     t.clear_unused_values();
     return t;
 }
-template<class container>
-SparseTensor<container> SparseTensor<container>::parallel() const
+template<class ContainerType>
+SparseTensor<ContainerType> SparseTensor<ContainerType>::parallel() const
 {
-    SparseTensor<container> t;
+    SparseTensor<ContainerType> t;
     if( isEmpty()) return t;
     if( isSet( 2,2) )
     {
@@ -500,8 +500,8 @@ SparseTensor<container> SparseTensor<container>::parallel() const
     return t;
 }
 
-template<class container>
-void SparseTensor<container>::clear_unused_values()
+template<class ContainerType>
+void SparseTensor<ContainerType>::clear_unused_values()
 {
     //now erase unused elements and redefine indices
     std::vector<int> unique_idx;
@@ -510,7 +510,7 @@ void SparseTensor<container>::clear_unused_values()
             if(isSet(i,j))
                 unique_insert( unique_idx, mat_idx_(i,j));
 
-    std::vector<container> tmp(unique_idx.size());
+    std::vector<ContainerType> tmp(unique_idx.size());
     for(unsigned i=0; i<unique_idx.size(); i++)
         tmp[i] = values_[unique_idx[i]];
     values_.swap(tmp);

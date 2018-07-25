@@ -1,10 +1,10 @@
 #include <iostream>
 
 #include <cusp/print.h>
-#include "xspacelib.cuh"
-#include "interpolation.cuh"
+#include "xspacelib.h"
+#include "interpolation.h"
 #include "../blas.h"
-#include "evaluation.cuh"
+#include "evaluation.h"
 
 double function( double x, double y){return sin(x)*sin(y);}
 double function( double x, double y, double z){return sin(x)*sin(y)*sin(z);}
@@ -108,7 +108,7 @@ int main()
 
     //![doxygen3d]
     //create equidistant values
-    std::vector<double> x( g.size()), y(x), z(x);
+    thrust::host_vector<double> x( g.size()), y(x), z(x);
     for( unsigned k=0; k<g.Nz(); k++)
         for( unsigned i=0; i<g.Ny()*g.n(); i++)
             for( unsigned j=0; j<g.Nx()*g.n(); j++)

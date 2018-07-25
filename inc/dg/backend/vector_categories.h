@@ -1,6 +1,8 @@
 #ifndef _DG_VECTOR_CATEGORIES_
 #define _DG_VECTOR_CATEGORIES_
 
+#include "matrix_categories.h"
+
 namespace dg{
 
 //here we introduce the concept of data access
@@ -10,22 +12,35 @@ namespace dg{
 /**
  * @brief Vector Tag base class, indicates the basic Vector/container concept
  *
- * The vector tag indicates how the data in the vector has to be accessed. For example
- * how do we get the pointer to the first element? Is there a contiguous chunk of memory
- * or is it a Vector of Vectors?
+ * The vector tag has three functions.
+First, it indicates the fundamental datatype a vector class contains (typically a double).
+ Second, it describes how the data in a Vector type is layed out in memory. We distinguish between a simple, contiguous chunk of data in a shared memory system (dg::SharedVectorTag), a dataset that is
+part of a larger dataset on a distributed memory system (dg::MPIVectorTag), and
+a dataset that consists of a number of subsets (dg::RecursiveVectorTag).
+Both the MPIVectorTag and the RecursiveVectorTag allow recursion, that is
+for example a RecursiveVector can consist itself of many shared vectors or of many
+RecursiveVector again. The innermost type must always be a shared vector however.
+  The third function of the Vector tag is to describe how the data in the vector has to be accessed.For example
+ * how do we get the pointer to the first element, the size, or how to access the MPI communicator? This is described in Derived Tags from the fundamental
+Tags, e.g. the \c ThrustVectorTag.
  * @note in any case we assume that the class has a default constructor, is copyable/assignable and has a \c size and a \c swap member function
- * @note \c dg::VectorTraits<Vector> has member typedefs \c value_type, \c execution_policy, \c vector_category
+ * @note <tt> dg::TensorTraits<Vector> </tt>has member typedefs \c value_type, \c execution_policy, \c tensor_category
+ * @note any vector can serve as a diagonal matrix
+ * @see \ref dispatch
  */
-struct AnyVectorTag{};
+struct AnyVectorTag : public AnyMatrixTag{};
 ///@}
 
 /**
  * @brief Indicate a contiguous chunk of shared memory
  *
  * With this tag a class promises that the data it holds lies in a contiguous chunk that
- * can be traversed knowing the pointer to its first element. Sub-Tags specify
- * how this pointer can be accessed by an algorithm, how it can be resized
- * and how information like size can be retrieved.
+ * can be traversed knowing the pointer to its first element. Sub-Tags
+ * indicate addtional functionality like data resize.
+ * @note We assume a class with this Tag has the following methods
+ *  - \c size() returns the size (in number of elements) of the contiguous data
+ *  - \c data() returns a pointer (or something for which the \c thrust::pointer_traits are specialized) to the first element of the contiguous data.
+ *  The return type must be convertible to <tt> (const) value_type* </tt>
  */
 struct SharedVectorTag  : public AnyVectorTag {};
 /**
@@ -35,8 +50,8 @@ struct SharedVectorTag  : public AnyVectorTag {};
  * An MPI Vector is assumed to be composed of a data container together with an MPI Communicator.
  * In fact, the currently only class with this tag is the \c MPI_Vector class.
  *
- * @note This is a recursive tag in the sense that classes must provide a typedef \c container_type, for which the \c VectorTraits must be specialized
- * @see MPI_Vector, mpi_structures
+ * @note This is a recursive tag in the sense that classes must provide a typedef \c container_type, for which the \c dg::TensorTraits must be specialized
+ * @see dg::MPI_Vector, mpi_structures
  */
 struct MPIVectorTag     : public AnyVectorTag {};
 
@@ -44,27 +59,35 @@ struct MPIVectorTag     : public AnyVectorTag {};
  * @brief This tag indicates composition/recursion.
  *
  * This Tag indicates that a class is composed of an array of containers, i.e. a container of containers.
- * We assume that the bracket operator [] is defined to access the inner elements.
- * @note The class must typedef \c value_type and VectorTraits must be specialized for this type.
- * @note Examples are \c std::vector<T> and \c std::array<T,N> where T is a non-primitive data type and N is the size of the array
+ * We assume that the bracket \c operator[] is defined to access the inner elements and the \c size() function returns the number of elements.
+ * @note The class must typedef \c value_type (the "inner" type that is returned by the bracket operator) and \c dg::TensorTraits<value_type> must be specialized for this type.
+ * @note Examples are \c std::vector<T> and \c std::array<T,N> where T is the inner type and N is the size of the array
  */
-struct VectorVectorTag  : public AnyVectorTag {};
+struct RecursiveVectorTag  : public AnyVectorTag {};
 
-struct ArrayVectorTag   : public VectorVectorTag{}; //!< \c std::array of containers
+struct ArrayVectorTag   : public RecursiveVectorTag{}; //!< \c std::array of containers
 
 /**
- * @brief Indicate that thrust - like members are available
+ * @brief Indicate thrust/std - like behaviour
  *
- * In detail these must be
- *  - resize()
- *  - size()
- *  - data()
- *  - begin()
- *  - end()
+ * There must be the typedefs
+ * - \c iterator
+ * - \c const_iterator
+ * An instance can be constructed by
+ *  - iterators \c (begin, end)
+ * The member functions contan at least
+ *  - \c resize()  resize the vector
+ *  - \c size() returns the number of elements
+ *  - \c data() pointer to the underlying array
+ *  - \c begin() returns an iterator to the beginning
+ *  - \c cbegin() returns a const_iterator to the beginning
+ *  - \c end() return an iterator to the end
+ *  - \c cend() returns a const_iterator to the end
+ *  @note \c thrust::host_vector and \c thrust::device_vector meet these requirements
  */
 struct ThrustVectorTag  : public SharedVectorTag {};
 struct CuspVectorTag    : public ThrustVectorTag {}; //!< special tag for cusp arrays
-struct StdArrayTag      : public ThrustVectorTag {}; //!< \c std::array< primitive_type>
+struct StdArrayTag      : public ThrustVectorTag {}; //!< <tt> std::array< primitive_type, N> </tt>
 
 }//namespace dg
 

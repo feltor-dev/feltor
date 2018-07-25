@@ -5,7 +5,7 @@
 #include "arakawa.h"
 
 #include "backend/mpi_init.h"
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 
 
 

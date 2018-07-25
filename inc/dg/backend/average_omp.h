@@ -34,8 +34,10 @@ void extend_column( OmpTag, unsigned nx, unsigned ny, const value_type* RESTRICT
             out[i*nx+j] = in[i];
 }
 
-void average( OmpTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out)
+template<class value_type>
+void average( OmpTag, unsigned nx, unsigned ny, const value_type* in0, const value_type* in1, value_type* out)
 {
+    static_assert( std::is_same<value_type, double>::value, "Value type must be double!");
     static thrust::host_vector<int64_t> h_accumulator;
     h_accumulator.resize( ny*exblas::BIN_COUNT);
     for( unsigned i=0; i<ny; i++)
@@ -46,8 +48,10 @@ void average( OmpTag, unsigned nx, unsigned ny, const double* in0, const double*
 
 #ifdef MPI_VERSION
 //local data plus communication
-void average_mpi( OmpTag, unsigned nx, unsigned ny, const double* in0, const double* in1, double* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
+template<class value_type>
+void average_mpi( OmpTag, unsigned nx, unsigned ny, const value_type* in0, const value_type* in1, value_type* out, MPI_Comm comm, MPI_Comm comm_mod, MPI_Comm comm_mod_reduce )
 {
+    static_assert( std::is_same<value_type, double>::value, "Value type must be double!");
     static thrust::host_vector<int64_t> h_accumulator;
     static thrust::host_vector<int64_t> h_accumulator2;
     h_accumulator2.resize( ny*exblas::BIN_COUNT);

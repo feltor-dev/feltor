@@ -7,6 +7,7 @@
 #include <fstream>
 
 #include <cusp/print.h>
+#include "json/json.h"
 
 #include "file/nc_utilities.h"
 #include "draw/host_window.h"

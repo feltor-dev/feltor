@@ -57,15 +57,17 @@ namespace dg{
 * @ingroup grid
 * @copydoc hide_code_evaluate1d
 */
-struct Grid1d
+template<class real_type>
+struct RealGrid1d
 {
     typedef SharedTag memory_category;
     typedef OneDimensionalTag dimensionality;
+    typedef real_type value_type;
     /**
      * @brief construct an empty grid
      * this leaves the access functions undefined
      */
-    Grid1d(){}
+    RealGrid1d(){}
     /**
      * @brief 1D grid
      *
@@ -76,7 +78,7 @@ struct Grid1d
      * @param N # of cells
      * @param bcx boundary conditions
      */
-    Grid1d( double x0, double x1, unsigned n, unsigned N, bc bcx = PER)
+    RealGrid1d( real_type x0, real_type x1, unsigned n, unsigned N, bc bcx = PER)
     {
         set(x0,x1,bcx);
         set(n,N);
@@ -87,25 +89,25 @@ struct Grid1d
      *
      * @return
      */
-    double x0() const {return x0_;}
+    real_type x0() const {return x0_;}
     /**
      * @brief right boundary
      *
      * @return
      */
-    double x1() const {return x1_;}
+    real_type x1() const {return x1_;}
     /**
      * @brief total length of interval
      *
      * @return
      */
-    double lx() const {return x1_-x0_;}
+    real_type lx() const {return x1_-x0_;}
     /**
      * @brief cell size
      *
      * @return
      */
-    double h() const {return lx()/(double)Nx_;}
+    real_type h() const {return lx()/(real_type)Nx_;}
     /**
      * @brief number of cells
      *
@@ -137,7 +139,7 @@ struct Grid1d
      * @param x1 new right boundary ( > x0)
      * @param bcx new boundary condition
      */
-    void set(double x0, double x1, bc bcx)
+    void set(real_type x0, real_type x1, bc bcx)
     {
         assert( x1 > x0 );
         x0_=x0, x1_=x1;
@@ -153,7 +155,7 @@ struct Grid1d
     {
         assert( N > 0  );
         Nx_=N; n_=n;
-        dlt_=DLT<double>(n);
+        dlt_=DLT<real_type>(n);
     }
     /**
      * @brief Reset all values of the grid
@@ -164,7 +166,7 @@ struct Grid1d
      * @param N new # of cells
      * @param bcx new boundary condition
      */
-    void set( double x0, double x1, unsigned n, unsigned N, bc bcx)
+    void set( real_type x0, real_type x1, unsigned n, unsigned N, bc bcx)
     {
         set(x0,x1,bcx);
         set(n,N);
@@ -176,7 +178,7 @@ struct Grid1d
      *
      * @return
      */
-    const DLT<double>& dlt() const {return dlt_;}
+    const DLT<real_type>& dlt() const {return dlt_;}
     void display( std::ostream& os = std::cout) const
     {
         os << "Topology parameters are: \n"
@@ -197,9 +199,9 @@ struct Grid1d
      * @param x0 arbitrary point (irrelevant for the function, it's there to be consistent with GridX1d)
      * @param x1 end point (inout)
      */
-    void shift_topologic( double x0, double& x1)const
+    void shift_topologic( real_type x0, real_type& x1)const
     {
-        double deltaX;
+        real_type deltaX;
         if( x1 > x0_) deltaX = x1 -x0_;
         else deltaX = x1_ - x1;
         unsigned N = floor(deltaX/lx());
@@ -215,17 +217,17 @@ struct Grid1d
      *
      * @return true if x0()<=x<=x1(), false else
      */
-    bool contains( double x)const
+    bool contains( real_type x)const
     {
         if( (x>=x0_ && x <= x1_)) return true;
         return false;
     }
 
   private:
-    double x0_, x1_;
+    real_type x0_, x1_;
     unsigned n_, Nx_;
     bc bcx_;
-    DLT<double> dlt_;
+    DLT<real_type> dlt_;
 };
 
 /**
@@ -233,59 +235,61 @@ struct Grid1d
  * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @ingroup basictopology
  */
-struct aTopology2d
+template<class real_type>
+struct aRealTopology2d
 {
     typedef SharedTag memory_category; //!< tag for choosing default host vector type
     typedef TwoDimensionalTag dimensionality;
+    typedef real_type value_type;
 
     /**
      * @brief Left boundary in x
      *
      * @return
      */
-    double x0() const {return gx_.x0();}
+    real_type x0() const {return gx_.x0();}
     /**
      * @brief Right boundary in x
      *
      * @return
      */
-    double x1() const {return gx_.x1();}
+    real_type x1() const {return gx_.x1();}
     /**
      * @brief left boundary in y
      *
      * @return
      */
-    double y0() const {return gy_.x0();}
+    real_type y0() const {return gy_.x0();}
     /**
      * @brief Right boundary in y
      *
      * @return
      */
-    double y1() const {return gy_.x1();}
+    real_type y1() const {return gy_.x1();}
     /**
      * @brief length of x
      *
      * @return
      */
-    double lx() const {return gx_.lx();}
+    real_type lx() const {return gx_.lx();}
     /**
      * @brief length of y
      *
      * @return
      */
-    double ly() const {return gy_.lx();}
+    real_type ly() const {return gy_.lx();}
     /**
      * @brief cell size in x
      *
      * @return
      */
-    double hx() const {return gx_.h();}
+    real_type hx() const {return gx_.h();}
     /**
      * @brief cell size in y
      *
      * @return
      */
-    double hy() const {return gy_.h();}
+    real_type hy() const {return gy_.h();}
     /**
      * @brief number of polynomial coefficients in x and y
      *
@@ -321,7 +325,7 @@ struct aTopology2d
      *
      * @return
      */
-    const DLT<double>& dlt() const{return gx_.dlt();}
+    const DLT<real_type>& dlt() const{return gx_.dlt();}
 
     /**
     * @brief Multiply the number of cells with a given factor
@@ -331,8 +335,8 @@ struct aTopology2d
     * @param fx new number of cells is the nearest integer to fx*Nx()
     * @param fy new number of cells is the nearest integer to fy*Ny()
     */
-    void multiplyCellNumbers( double fx, double fy){
-        do_set(n(), round(fx*(double)Nx()), round(fy*(double)Ny()));
+    void multiplyCellNumbers( real_type fx, real_type fy){
+        do_set(n(), round(fx*(real_type)Nx()), round(fy*(real_type)Ny()));
     }
     /**
     * @brief Set the number of polynomials and cells
@@ -382,12 +386,12 @@ struct aTopology2d
      *
      * This function shifts point coordinates to its values inside
      the domain if the respective boundary condition is periodic
-     * @param x0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aTopologyX2d)
-     * @param y0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aTopologyX2d)
+     * @param x0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX2d)
+     * @param y0 arbitrary coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX2d)
      * @param x1 x-coordinate to shift (inout)
      * @param y1 y-coordinate to shift (inout)
      */
-    void shift_topologic( double x0, double y0, double& x1, double& y1)const
+    void shift_topologic( real_type x0, real_type y0, real_type& x1, real_type& y1)const
     {
         gx_.shift_topologic( x0,x1);
         gy_.shift_topologic( y0,y1);
@@ -401,19 +405,19 @@ struct aTopology2d
      *
      * @return true if x0()<=x<=x1() and y0()<=y<=y1(), false else
      */
-    bool contains( double x, double y)const
+    bool contains( real_type x, real_type y)const
     {
         if( gx_.contains(x) && gy_.contains(y)) return true;
         return false;
     }
     protected:
     ///disallow destruction through base class pointer
-    ~aTopology2d(){}
+    ~aRealTopology2d() = default;
     /**
      *@copydoc hide_grid_parameters2d
      *@copydoc hide_bc_parameters2d
      */
-    aTopology2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
+    aRealTopology2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx, bc bcy):
         gx_(x0,x1,n,Nx,bcx), gy_(y0,y1,n,Ny,bcy) { }
     /**
      * @brief Construct a 2d grid as the product of two 1d grids
@@ -422,24 +426,20 @@ struct aTopology2d
      * @param gy a Grid in y - direction
      * @note gx and gy must have the same n
      */
-    aTopology2d( const Grid1d& gx, const Grid1d& gy): gx_(gx),gy_(gy)
+    aRealTopology2d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy): gx_(gx),gy_(gy)
     {
         assert( gx.n() == gy.n() );
     }
 
     ///explicit copy constructor (default)
     ///@param src source
-    aTopology2d(const aTopology2d& src){gx_=src.gx_, gy_=src.gy_;}
+    aRealTopology2d(const aRealTopology2d& src) = default;
     ///explicit assignment operator (default)
     ///@param src source
-    aTopology2d& operator=(const aTopology2d& src){
-        gx_=src.gx_;
-        gy_=src.gy_;
-        return *this;
-    }
+    aRealTopology2d& operator=(const aRealTopology2d& src) = default;
     virtual void do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)=0;
     private:
-    Grid1d gx_, gy_;
+    RealGrid1d<real_type> gx_, gy_;
 };
 
 
@@ -449,87 +449,89 @@ struct aTopology2d
  * @note although it is abstract objects are not meant to be hold on the heap via a base class pointer ( we protected the destructor)
  * @ingroup basictopology
  */
-struct aTopology3d
+template<class real_type>
+struct aRealTopology3d
 {
     typedef SharedTag memory_category;
     typedef ThreeDimensionalTag dimensionality;
+    typedef real_type value_type;
 
     /**
      * @brief left boundary in x
      *
      * @return
      */
-    double x0() const {return gx_.x0();}
+    real_type x0() const {return gx_.x0();}
     /**
      * @brief right boundary in x
      *
      * @return
      */
-    double x1() const {return gx_.x1();}
+    real_type x1() const {return gx_.x1();}
 
     /**
      * @brief left boundary in y
      *
      * @return
      */
-    double y0() const {return gy_.x0();}
+    real_type y0() const {return gy_.x0();}
     /**
      * @brief right boundary in y
      *
      * @return
      */
-    double y1() const {return gy_.x1();}
+    real_type y1() const {return gy_.x1();}
 
     /**
      * @brief left boundary in z
      *
      * @return
      */
-    double z0() const {return gz_.x0();}
+    real_type z0() const {return gz_.x0();}
     /**
      * @brief right boundary in z
      *
      * @return
      */
-    double z1() const {return gz_.x1();}
+    real_type z1() const {return gz_.x1();}
 
     /**
      * @brief length in x
      *
      * @return
      */
-    double lx() const {return gx_.lx();}
+    real_type lx() const {return gx_.lx();}
     /**
      * @brief length in y
      *
      * @return
      */
-    double ly() const {return gy_.lx();}
+    real_type ly() const {return gy_.lx();}
     /**
      * @brief length in z
      *
      * @return
      */
-    double lz() const {return gz_.lx();}
+    real_type lz() const {return gz_.lx();}
 
     /**
      * @brief cell size in x
      *
      * @return
      */
-    double hx() const {return gx_.h();}
+    real_type hx() const {return gx_.h();}
     /**
      * @brief cell size in y
      *
      * @return
      */
-    double hy() const {return gy_.h();}
+    real_type hy() const {return gy_.h();}
     /**
      * @brief cell size in z
      *
      * @return
      */
-    double hz() const {return gz_.h();}
+    real_type hz() const {return gz_.h();}
     /**
      * @brief number of polynomial coefficients in x and y
      *
@@ -577,7 +579,7 @@ struct aTopology3d
      *
      * @return
      */
-    const DLT<double>& dlt() const{return gx_.dlt();}
+    const DLT<real_type>& dlt() const{return gx_.dlt();}
     /**
      * @brief The total number of points
      *
@@ -621,14 +623,14 @@ struct aTopology3d
      *
      * This function shifts point coordinates to its values inside
      the domain if the respective boundary condition is periodic
-     * @param x0 arbitrary x-coordinate (irrelevant for the function, it's there to be consistent with aTopologyX3d)
-     * @param y0 arbitrary y-coordinate (irrelevant for the function, it's there to be consistent with aTopologyX3d)
-     * @param z0 arbitrary z-coordinate (irrelevant for the function, it's there to be consistent with aTopologyX3d)
+     * @param x0 arbitrary x-coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX3d)
+     * @param y0 arbitrary y-coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX3d)
+     * @param z0 arbitrary z-coordinate (irrelevant for the function, it's there to be consistent with aRealTopologyX3d)
      * @param x1 x-coordinate to shift (inout)
      * @param y1 y-coordinate to shift (inout)
      * @param z1 z-coordinate to shift (inout)
      */
-    void shift_topologic( double x0, double y0, double z0, double& x1, double& y1, double& z1)const
+    void shift_topologic( real_type x0, real_type y0, real_type z0, real_type& x1, real_type& y1, real_type& z1)const
     {
         gx_.shift_topologic( x0,x1);
         gy_.shift_topologic( y0,y1);
@@ -645,15 +647,15 @@ struct aTopology3d
      *
      * @return true if x0()<=x<=x1() and y0()<=y<=y1() and z0()<=z<=z1() , false else
      */
-    bool contains( double x, double y, double z)const
+    bool contains( real_type x, real_type y, real_type z)const
     {
         if( gx_.contains(x) && gy_.contains(y) && gz_.contains(z))
             return true;
         return false;
     }
-    ///@copydoc aTopology2d::multiplyCellNumbers()
-    void multiplyCellNumbers( double fx, double fy){
-        set(n(), round(fx*(double)Nx()), round(fy*(double)Ny()), Nz());
+    ///@copydoc aRealTopology2d::multiplyCellNumbers()
+    void multiplyCellNumbers( real_type fx, real_type fy){
+        set(n(), round(fx*(real_type)Nx()), round(fy*(real_type)Ny()), Nz());
     }
     /**
     * @brief Set the number of polynomials and cells
@@ -669,12 +671,12 @@ struct aTopology3d
     }
     protected:
     ///disallow deletion through base class pointer
-    ~aTopology3d(){}
+    ~aRealTopology3d() = default;
     /**
     @copydoc hide_grid_parameters3d
     @copydoc hide_bc_parameters3d
      */
-    aTopology3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
+    aRealTopology3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx, bc bcy, bc bcz):
         gx_(x0,x1,n,Nx,bcx),
         gy_(y0,y1,n,Ny,bcy),
         gz_(z0,z1,1,Nz,bcz){}
@@ -686,105 +688,117 @@ struct aTopology3d
      * @param gz a Grid1d in z - direction
      * @note gx and gy must have the same n and gz.n() must return 1
      */
-    aTopology3d( const Grid1d& gx, const Grid1d& gy, const Grid1d& gz): gx_(gx),gy_(gy),gz_(gz){
+    aRealTopology3d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy, const RealGrid1d<real_type>& gz): gx_(gx),gy_(gy),gz_(gz){
         assert( gx.n() == gy.n());
         assert( gz.n() == 1);
     }
     ///explicit copy constructor (default)
     ///@param src source
-    aTopology3d(const aTopology3d& src):gx_(src.gx_),gy_(src.gy_),gz_(src.gz_){}
+    aRealTopology3d(const aRealTopology3d& src) = default;
     ///explicit assignment operator (default)
     ///@param src source
-    aTopology3d& operator=(const aTopology3d& src){ //use default in C++11
-        gx_=src.gx_; gy_=src.gy_; gz_=src.gz_;
-        return *this;
-    }
+    aRealTopology3d& operator=(const aRealTopology3d& src) = default;
     virtual void do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsigned new_Nz)=0;
   private:
-    Grid1d gx_,gy_,gz_;
+    RealGrid1d<real_type> gx_,gy_,gz_;
 };
 
 /**
- * @brief The simplest implementation of aTopology2d
+ * @brief The simplest implementation of aRealTopology2d
  * @ingroup grid
  * @copydoc hide_code_evaluate2d
  */
-struct Grid2d : public aTopology2d
+template<class real_type>
+struct RealGrid2d : public aRealTopology2d<real_type>
 {
-
     ///@copydoc hide_grid_parameters2d
     ///@copydoc hide_bc_parameters2d
-    Grid2d( double x0, double x1, double y0, double y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
-        aTopology2d(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy) { }
-    ///@copydoc aTopology2d::aTopology2d(const Grid1d&,const Grid1d&)
-    Grid2d( const Grid1d& gx, const Grid1d& gy): aTopology2d(gx,gy){ }
+    RealGrid2d( real_type x0, real_type x1, real_type y0, real_type y1, unsigned n, unsigned Nx, unsigned Ny, bc bcx = PER, bc bcy = PER):
+        aRealTopology2d<real_type>(x0,x1,y0,y1,n,Nx,Ny,bcx,bcy) { }
+    ///@copydoc aRealTopology2d::aRealTopology2d(const RealGrid1d&,const RealGrid1d&)
+    RealGrid2d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy): aRealTopology2d<real_type>(gx,gy){ }
+
     ///allow explicit type conversion from any other topology
-    explicit Grid2d( const aTopology2d& src): aTopology2d(src){}
+    ///@param src source
+    explicit RealGrid2d( const aRealTopology2d<real_type>& src): aRealTopology2d<real_type>(src){}
     private:
-    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny){
-        aTopology2d::do_set(n,Nx,Ny);
+    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny) override final{
+        aRealTopology2d<real_type>::do_set(n,Nx,Ny);
     }
 
 };
 
 /**
- * @brief The simplest implementation of aTopology3d
+ * @brief The simplest implementation of aRealTopology3d
  * @ingroup grid
  * @copydoc hide_code_evaluate3d
  */
-struct Grid3d : public aTopology3d
+template<class real_type>
+struct RealGrid3d : public aRealTopology3d<real_type>
 {
     ///@copydoc hide_grid_parameters3d
     ///@copydoc hide_bc_parameters3d
-    Grid3d( double x0, double x1, double y0, double y1, double z0, double z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):
-        aTopology3d(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
-    ///@copydoc aTopology3d::aTopology3d(const Grid1d&,const Grid1d&,const Grid1d&)
-    Grid3d( const Grid1d& gx, const Grid1d& gy, const Grid1d& gz): aTopology3d(gx,gy,gz){ }
+    RealGrid3d( real_type x0, real_type x1, real_type y0, real_type y1, real_type z0, real_type z1, unsigned n, unsigned Nx, unsigned Ny, unsigned Nz, bc bcx = PER, bc bcy = PER, bc bcz=PER):
+        aRealTopology3d<real_type>(x0,x1,y0,y1,z0,z1,n,Nx,Ny,Nz,bcx,bcy,bcz) { }
+    ///@copydoc aRealTopology3d::aRealTopology3d(const RealGrid1d&,const RealGrid1d&,const RealGrid1d&)
+    RealGrid3d( const RealGrid1d<real_type>& gx, const RealGrid1d<real_type>& gy, const RealGrid1d<real_type>& gz): aRealTopology3d<real_type>(gx,gy,gz){ }
+
     ///allow explicit type conversion from any other topology
     ///@param src source
-    explicit Grid3d( const aTopology3d& src): aTopology3d(src){ }
+    explicit RealGrid3d( const aRealTopology3d<real_type>& src): aRealTopology3d<real_type>(src){ }
     private:
-    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz){
-        aTopology3d::do_set(n,Nx,Ny,Nz);
+    virtual void do_set( unsigned n, unsigned Nx, unsigned Ny, unsigned Nz) override final{
+        aRealTopology3d<real_type>::do_set(n,Nx,Ny,Nz);
     }
 };
-//
+
 ///@cond
-void aTopology2d::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
+template<class real_type>
+void aRealTopology2d<real_type>::do_set( unsigned new_n, unsigned new_Nx, unsigned new_Ny)
 {
     gx_.set(new_n, new_Nx);
     gy_.set(new_n, new_Ny);
 }
-void aTopology3d::do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsigned new_Nz)
+template<class real_type>
+void aRealTopology3d<real_type>::do_set(unsigned new_n, unsigned new_Nx,unsigned new_Ny, unsigned new_Nz)
 {
     gx_.set(new_n, new_Nx);
     gy_.set(new_n, new_Ny);
     gz_.set(1,new_Nz);
 }
-template<class MemoryTag, class DimensionalityTag>
+template<class MemoryTag, class DimensionalityTag, class real_type>
 struct MemoryTraits { };
 
-template<>
-struct MemoryTraits< SharedTag, OneDimensionalTag> {
-    using host_vector = thrust::host_vector<double>;
-    using host_grid   = Grid1d;
+template<class real_type>
+struct MemoryTraits< SharedTag, OneDimensionalTag, real_type> {
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid   = RealGrid1d<real_type>;
 };
-template<>
-struct MemoryTraits< SharedTag, TwoDimensionalTag> {
-    using host_vector = thrust::host_vector<double>;
-    using host_grid   = Grid2d;
+template<class real_type>
+struct MemoryTraits< SharedTag, TwoDimensionalTag, real_type> {
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid   = RealGrid2d<real_type>;
 };
-template<>
-struct MemoryTraits< SharedTag, ThreeDimensionalTag> {
-    using host_vector = thrust::host_vector<double>;
-    using host_grid   = Grid3d;
+template<class real_type>
+struct MemoryTraits< SharedTag, ThreeDimensionalTag,real_type> {
+    using host_vector = thrust::host_vector<real_type>;
+    using host_grid   = RealGrid3d<real_type>;
 };
 
 template<class Topology>
-using get_host_vector = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality>::host_vector;
+using get_host_vector = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::value_type>::host_vector;
 template<class Topology>
-using get_host_grid = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality>::host_grid;
+using get_host_grid = typename MemoryTraits< typename TopologyTraits<Topology>::memory_category, typename TopologyTraits<Topology>::dimensionality, typename TopologyTraits<Topology>::value_type>::host_grid;
 
 ///@endcond
+
+///@addtogroup gridtypes
+///@{
+using Grid1d        = dg::RealGrid1d<double>;
+using Grid2d        = dg::RealGrid2d<double>;
+using Grid3d        = dg::RealGrid3d<double>;
+using aTopology2d   = dg::aRealTopology2d<double>;
+using aTopology3d   = dg::aRealTopology3d<double>;
+///@}
 
 }// namespace dg

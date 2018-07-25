@@ -118,7 +118,7 @@ int main()
     const dg::DVec sol = dg::evaluate( Solution(T,nu), grid);
     const dg::DVec w2d = dg::create::weights( grid);
     const double norm_sol = dg::blas2::dot( w2d, sol);
-    double time = 0., norm_error;
+    double time = 0.;
     dg::DVec error( sol);
 
     dg::AB< 1, dg::DVec > ab1( y0);
@@ -132,41 +132,43 @@ int main()
     ab4.init( full, time, y0, dt);
     ab5.init( full, time, y0, dt);
 
+    exblas::udouble res;
+
     //main time loop
     time = 0., y0 =  init;
     for( unsigned i=0; i<NT; i++)
         ab1.step( full, time, y0);
     dg::blas1::axpby( -1., sol, 1., y0);
-    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 1        is "<< norm_error<<std::endl;
+    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error AB 1        is "<< res.d<<"\t"<<res.i<<std::endl;
     //main time loop
     time = 0., y0 =  init;
     for( unsigned i=0; i<NT; i++)
         ab2.step( full, time, y0);
     dg::blas1::axpby( -1., sol, 1., y0);
-    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 2        is "<< norm_error<<std::endl;
+    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error AB 2        is "<< res.d<<"\t"<<res.i<<std::endl;
     //main time loop
     time = 0., y0 =  init;
     for( unsigned i=0; i<NT; i++)
         ab3.step( full, time, y0);
     dg::blas1::axpby( -1., sol, 1., y0);
-    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 3        is "<< norm_error<<std::endl;
+    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error AB 3        is "<< res.d<<"\t"<<res.i<<std::endl;
     //main time loop
     time = 0., y0 =  init;
     for( unsigned i=0; i<NT; i++)
         ab4.step( full, time, y0);
     dg::blas1::axpby( -1., sol, 1., y0);
-    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 4        is "<< norm_error<<std::endl;
+    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error AB 4        is "<< res.d<<"\t"<<res.i<<std::endl;
     //main time loop
     time = 0., y0 =  init;
     for( unsigned i=0; i<NT; i++)
         ab5.step( full, time, y0);
     dg::blas1::axpby( -1., sol, 1., y0);
-    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error AB 5        is "<< norm_error<<std::endl;
+    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error AB 5        is "<< res.d<<"\t"<<res.i<<std::endl;
     //![sirk]
     //construct time stepper (eps = 1e-8)
     dg::SIRK< dg::DVec > sirk( y0, y0.size(), eps);
@@ -176,8 +178,8 @@ int main()
         sirk.step( exp, imp, time, y0, time, y0, dt); //inplace step
     //![sirk]
     dg::blas1::axpby( -1., sol, 1., y0);
-    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error SIRK        is "<< norm_error<<std::endl;
+    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error SIRK        is "<< res.d<<"\t"<<res.i<<std::endl;
     //![karniadakis]
     //construct time stepper
     dg::Karniadakis< dg::DVec > karniadakis( y0, y0.size(), eps);
@@ -189,8 +191,8 @@ int main()
         karniadakis.step( exp, imp, time, y0); //inplace step
     //![karniadakis]
     dg::blas1::axpby( -1., sol, 1., y0);
-    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error Karniadakis is "<< norm_error<<std::endl;
+    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error Karniadakis is "<< res.d<<"\t"<<res.i<<std::endl;
     //main time loop
     std::cout << "\nAdaptive SIRK Timer \n";
     time = 0., y0 =  init;
@@ -201,7 +203,7 @@ int main()
     adapt = T - time;
     sirk.adaptive_step( exp, imp, time, y0, time, y0, adapt, 1e-8, true);
     dg::blas1::axpby( -1., sol, 1., y0);
-    norm_error = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
-    std::cout << "Relative error adaptive sirk: "<< norm_error<<std::endl;
+    res.d = sqrt(dg::blas2::dot( w2d, y0)/norm_sol);
+    std::cout << "Relative error adaptive sirk: "<< res.d<<"\t"<<res.i<<std::endl;
     return 0;
 }

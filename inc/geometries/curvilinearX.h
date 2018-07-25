@@ -1,7 +1,7 @@
 #pragma once
 
 #include "dg/geometry/gridX.h"
-#include "dg/geometry/evaluationX.cuh"
+#include "dg/geometry/evaluationX.h"
 #include "dg/geometry/functions.h"
 #include "dg/blas1.h"
 #include "dg/geometry/base_geometryX.h"

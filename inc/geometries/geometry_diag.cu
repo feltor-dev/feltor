@@ -7,12 +7,11 @@
 
 #include "json/json.h"
 
-#include "dg/geometry/xspacelib.cuh"
 #include "dg/functors.h"
 #include "file/nc_utilities.h"
 
 #include "solovev.h"
-#include "taylor.h"
+//#include "taylor.h"
 #include "init.h"
 #include "magnetic_field.h"
 #include "average.h"

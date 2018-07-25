@@ -6,7 +6,7 @@
 
 #include "elliptic.h"
 #include "cg.h"
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "backend/mpi_init.h"
 
 

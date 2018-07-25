@@ -1,8 +1,9 @@
 #include <iostream>
+#include "json/json.h"
 
 #include "mpi.h"
 
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 #include "dg/backend/mpi_init.h"
 #include "dg/geometry/functions.h"
 #include "dg/blas.h"

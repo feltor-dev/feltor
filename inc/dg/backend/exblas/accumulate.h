@@ -22,12 +22,56 @@
 
 namespace exblas {
 namespace cpu {
+///////////////////////////////////////////////////////////////////////////
+//********* Here, the change from float to double happens ***************//
+///////////////////////////////////////////////////////////////////////////
+#ifndef _WITHOUT_VCL
+static inline vcl::Vec8d make_vcl_vec8d( double x, int i){
+    return vcl::Vec8d(x);
+}
+static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i){
+    return vcl::Vec8d().load( x+i);
+}
+static inline vcl::Vec8d make_vcl_vec8d( double x, int i, int num){
+    return vcl::Vec8d(x);
+}
+static inline vcl::Vec8d make_vcl_vec8d( const double* x, int i, int num){
+    return vcl::Vec8d().load_partial( num, x+i);
+}
+static inline vcl::Vec8d make_vcl_vec8d( float x, int i){
+    return vcl::Vec8d((double)x);
+}
+static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i){
+    double tmp[8];
+    for(int i=0; i<8; i++)
+        tmp[i] = (double)x[i];
+    return vcl::Vec8d().load( tmp);
+}
+static inline vcl::Vec8d make_vcl_vec8d( float x, int i, int num){
+    return vcl::Vec8d((double)x);
+}
+static inline vcl::Vec8d make_vcl_vec8d( const float* x, int i, int num){
+    double tmp[8];
+    for(int i=0; i<num; i++)
+        tmp[i] = (double)x[i];
+    return vcl::Vec8d().load_partial( num, tmp);
+}
+#endif//_WITHOUT_VCL
+template<class T>
+inline double get_element( T x, int i){
+	return (double)x;
+}
+template<class T>
+inline double get_element( const T* x, int i){
+	return (double)(*(x+i));
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main computation pass: compute partial superaccs
 ////////////////////////////////////////////////////////////////////////////////
 ///@cond
-inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
+static inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
     // With atomic accumulator updates
     // accumulation and carry propagation can happen in any order,
     // as long as addition is atomic
@@ -74,7 +118,7 @@ inline void AccumulateWord( int64_t *accumulator, int i, int64_t x) {
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @param x the double to add to the superaccumulator
 */
-inline void Accumulate( int64_t* accumulator, double x) {
+static inline void Accumulate( int64_t* accumulator, double x) {
     if (x == 0)
         return;
 
@@ -95,6 +139,19 @@ inline void Accumulate( int64_t* accumulator, double x) {
         xscaled *= DELTASCALE;
     }
 }
+#ifndef _WITHOUT_VCL
+static inline void Accumulate( int64_t* accumulator, vcl::Vec8d x) {
+    double v[8];
+    x.store(v);
+
+#if INSTRSET >= 7
+    _mm256_zeroupper();
+#endif
+    for(unsigned int j = 0; j != 8; ++j) {
+        exblas::cpu::Accumulate(accumulator, v[j]);
+    }
+}
+#endif //_WITHOUT_VCL
 ////////////////////////////////////////////////////////////////////////////////
 // Normalize functions
 ////////////////////////////////////////////////////////////////////////////////
@@ -111,7 +168,7 @@ inline void Accumulate( int64_t* accumulator, double x) {
 *
 * @return  carry in bit (sign)
 */
-bool Normalize( int64_t *accumulator, int& imin, int& imax) {
+static inline bool Normalize( int64_t *accumulator, int& imin, int& imax) {
     int64_t carry_in = accumulator[imin] >> DIGITS;
     accumulator[imin] -= carry_in << DIGITS;
     int i;
@@ -142,7 +199,7 @@ bool Normalize( int64_t *accumulator, int& imin, int& imax) {
 * @param accumulator a pointer to at least \c BIN_COUNT 64 bit integers on the CPU (representing the superaccumulator)
 * @return the double precision number nearest to the superaccumulator
 */
-double Round( int64_t * accumulator) {
+static inline double Round( int64_t * accumulator) {
     int imin = IMIN;
     int imax = IMAX;
     bool negative = Normalize(accumulator, imin, imax);
@@ -167,7 +224,7 @@ double Round( int64_t * accumulator) {
     if (i == 0) {
         return negative ? -hi : hi;  // Correct rounding achieved
     }
-    hiword -= llrint(rounded);
+    hiword -= std::llrint(rounded);
     double mid = ldexp((double) hiword, (i - F_WORDS) * DIGITS);
 
     // Compute sticky

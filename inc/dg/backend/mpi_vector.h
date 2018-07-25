@@ -4,8 +4,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/gather.h>
 #include "exblas/mpi_accumulate.h"
-#include "vector_traits.h"
-#include "thrust_vector_blas.cuh"
+#include "tensor_traits.h"
+#include "blas1_dispatch_shared.h"
 #include "mpi_communicator.h"
 #include "memory.h"
 
@@ -22,7 +22,7 @@ namespace dg
  * We use mpi to communicate (e.g. boundary points in matrix-vector multiplications)
  * and use the existing blas functions for the local computations.
  * (At the blas level 1 communication is needed only for scalar products)
- * @tparam container local container type. Must have a \c size() and a \c swap() member function and a specialization of the \c VectorTraits class.
+ * @tparam container local container type. Must have a \c size() and a \c swap() member function and a specialization of the \c TensorTraits class.
  */
 template<class container>
 struct MPI_Vector
@@ -95,18 +95,15 @@ struct MPI_Vector
 
 };
 
-///@addtogroup vec_list
+///@addtogroup dispatch
 ///@{
+
+///@brief prototypical MPI vector
 template<class container>
-struct VectorTraits<MPI_Vector<container> > {
-    using value_type = typename container::value_type;
-    using vector_category = MPIVectorTag;
+struct TensorTraits<MPI_Vector<container> > {
+    using value_type = get_value_type<container>;
+    using tensor_category = MPIVectorTag;
     using execution_policy = get_execution_policy<container>;
-};
-template<class container>
-struct VectorTraits<const MPI_Vector<container> > {
-    using value_type = typename container::value_type;
-    using vector_category = MPIVectorTag;
 };
 ///@}
 
@@ -194,7 +191,7 @@ struct NearestNeighborComm
     template<class container>
     void global_gather_init( const container& values, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_vector_category<container>>::value ,
+        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container>>::value ,
                    "Only Shared vectors allowed");
         static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
         static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
@@ -204,13 +201,14 @@ struct NearestNeighborComm
     /**
     * @brief Wait for asynchronous communication to finish and gather received data into buffer
     *
+    * @param input from which to gather data (it is safe to change values on return since values to communicate are copied into an internal buffer)
     * @param buffer (write only) where received data resides on return (must be of size \c size())
     * @param rqst the same four request variables that were used in global_gather_init
     */
     template<class container>
     void global_gather_wait(const container& input, container& buffer, MPI_Request rqst[4])const
     {
-        static_assert( std::is_base_of<SharedVectorTag, get_vector_category<container>>::value ,
+        static_assert( std::is_base_of<SharedVectorTag, get_tensor_category<container>>::value ,
                    "Only Shared vectors allowed");
         static_assert( std::is_same<get_execution_policy<container>, get_execution_policy<Vector>>::value, "Vector and container must have same execution policy!");
         static_assert( std::is_same<get_value_type<container>, get_value_type<Vector>>::value, "Vector and container must have same value type!");
@@ -256,8 +254,6 @@ struct NearestNeighborComm
     unsigned buffer_size() const;
     int m_source[2], m_dest[2];
 };
-
-typedef NearestNeighborComm<thrust::host_vector<int>, thrust::host_vector<double> > NNCH; //!< host Communicator for the use in an mpi matrix for derivatives
 
 ///@cond
 

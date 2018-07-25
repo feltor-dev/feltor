@@ -7,7 +7,7 @@
 
 #include "blas.h"
 
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #include "helmholtz.h"
 
 #include "cg.h"

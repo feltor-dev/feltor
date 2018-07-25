@@ -10,37 +10,11 @@
 #include "exblas/exdot_serial.h"
 #include "config.h"
 #include "vector_categories.h"
-#include "vector_traits.h"
-
-namespace dg
-{
-///@addtogroup vec_list
-///@{
-/**
- * @brief There is a special implementation of blas1 functions for a \c std::array different from the one indicated by SerialTag
- *
- * @tparam T arithmetic value type
- * @tparam N size of the array
- */
-template<class T, std::size_t N>
-struct VectorTraits<std::array<T, N>,
-    typename std::enable_if< std::is_arithmetic<T>::value>::type>
-{
-    using value_type        = T;
-    using vector_category   = StdArrayTag;
-    using execution_policy  = SerialTag;
-};
-template<class T, std::size_t N>
-struct VectorTraits<std::array<T, N>,
-    typename std::enable_if< !std::is_arithmetic<T>::value>::type>
-{
-    using value_type        = get_value_type<T>;
-    using vector_category   = ArrayVectorTag;
-    using execution_policy  = get_execution_policy<T>;
-};
-///@}
+#include "tensor_traits.h"
 
 ///@cond
+namespace dg
+{
 namespace blas1
 {
 namespace detail
@@ -61,130 +35,15 @@ T doDot( const std::array<T,N>& x, const std::array<T,N>& y, StdArrayTag)
     return exblas::cpu::Round(acc.data());
 }
 
-template< class T,std::size_t N, class Binary, class UnaryOp>
-inline void doEvaluate( StdArrayTag, std::array<T,N>& y, Binary f, UnaryOp op, const std::array<T,N>& x) {
+template< class Subroutine, std::size_t N, class T, class ...Ts>
+inline void doSubroutine( StdArrayTag, Subroutine f, std::array<T,N>&& x, std::array<Ts,N>&&... xs) {
     for( size_t i=0; i<N; i++)
-        f(y[i], op(x[i]));
-}
-template< class T,std::size_t N, class Binary, class Op>
-inline void doEvaluate( StdArrayTag, std::array<T,N>& z, Binary f, Op op, const std::array<T,N>& x, const std::array<T,N>& y) {
-    for( size_t i=0; i<N; i++)
-        f(z[i], op(x[i], y[i]));
+        f( x[i], xs[i]...);
 }
 
-template< class T, std::size_t N>
-inline void doScal( std::array<T,N>& x, T alpha, StdArrayTag) {
-    for( size_t i=0; i<N; i++)
-        x[i] *= alpha;
-}
-
-template< class T, std::size_t N>
-inline void doPlus(  std::array<T,N>& x, T alpha, StdArrayTag) {
-    for( size_t i=0; i<N; i++)
-        x[i] += alpha;
-}
-
-template< class T, std::size_t N>
-inline void doAxpby( T alpha,
-              const std::array<T,N>& x,
-              T beta,
-              std::array<T,N>& y,
-              StdArrayTag) {
-    for( size_t i=0; i<N; i++)
-    {
-        double temp = y[i]*beta;
-        y[i] = DG_FMA( alpha,x[i], temp);
-    }
-}
-
-template< class T, std::size_t N>
-inline void doAxpbypgz( T alpha,
-              const std::array<T,N>& x,
-              T beta,
-              const std::array<T,N>& y,
-              T gamma,
-              std::array<T,N>& z,
-              StdArrayTag) {
-    for( size_t i=0; i<N; i++)
-    {
-        double temp = z[i]*gamma;
-        temp = DG_FMA( alpha,x[i], temp);
-        temp = DG_FMA( beta, y[i], temp);
-        z[i] = temp;
-    }
-}
-
-template< class T, std::size_t N>
-inline void doPointwiseDot(
-              T alpha,
-              const std::array<T,N>& x,
-              const std::array<T,N>& y,
-              T gamma,
-              std::array<T,N>& z,
-              StdArrayTag) {
-    for( size_t i=0; i<N; i++)
-    {
-        double temp = z[i]*gamma;
-        z[i] = DG_FMA( alpha*x[i], y[i], temp);
-    }
-}
-
-template< class T, std::size_t N>
-inline void doPointwiseDivide(
-              T alpha,
-              const std::array<T,N>& x,
-              const std::array<T,N>& y,
-              T gamma,
-              std::array<T,N>& z,
-              StdArrayTag) {
-    for( size_t i=0; i<N; i++)
-    {
-        double temp = z[i]*gamma;
-        z[i] = DG_FMA( alpha, x[i]/y[i], temp);
-    }
-}
-
-template< class T, std::size_t N>
-inline void doPointwiseDot(
-              T alpha,
-              const std::array<T,N>& x1,
-              const std::array<T,N>& y1,
-              T beta,
-              const std::array<T,N>& x2,
-              const std::array<T,N>& y2,
-              T gamma,
-              std::array<T,N>& z,
-              StdArrayTag)
-{
-    for( size_t i=0; i<N; i++)
-    {
-        double temp = z[i]*gamma;
-        temp = DG_FMA( alpha*x1[i], y1[i], temp);
-        temp = DG_FMA(  beta*x2[i], y2[i], temp);
-        z[i] = temp;
-    }
-}
-template< class T, std::size_t N>
-inline void doPointwiseDot(
-              T alpha,
-              const std::array<T,N>& x1,
-              const std::array<T,N>& x2,
-              const std::array<T,N>& x3,
-              T beta,
-              std::array<T,N>& y,
-              StdArrayTag)
-{
-    for( size_t i=0; i<N; i++)
-    {
-        double temp = y[i]*beta;
-        y[i] = DG_FMA( alpha*x1[i], x2[i]*x3[i], temp);
-    }
-}
-
-}//namespace detail
-
+} //namespace detail
 } //namespace blas1
-///@endcond
 } //namespace dg
+///@endcond
 
 #endif //_DG_BLAS_ARRAY_

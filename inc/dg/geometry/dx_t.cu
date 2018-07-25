@@ -2,8 +2,8 @@
 
 #include "dg/blas.h"
 #include "dx.h"
-#include "evaluation.cuh"
-#include "weights.cuh"
+#include "evaluation.h"
+#include "weights.h"
 
 
 double function( double x) { return sin(x);}

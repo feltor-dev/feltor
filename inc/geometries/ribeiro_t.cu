@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <cmath>
+#include "json/json.h"
 
 #include "dg/algorithm.h"
 

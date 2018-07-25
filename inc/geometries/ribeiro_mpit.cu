@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include <mpi.h>
+#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "mpi_curvilinear.h"

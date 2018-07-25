@@ -1,7 +1,7 @@
 #pragma once
 
-#include "geometry/interpolation.cuh"
-#include "geometry/projection.cuh"
+#include "geometry/interpolation.h"
+#include "geometry/projection.h"
 #include "elliptic.h"
 #include "geometry/refined_grid.h"
 #ifdef MPI_VERSION
@@ -143,10 +143,10 @@ class RefinedElliptic
 
 ///@cond
 template< class G, class IM, class M, class V>
-struct MatrixTraits< RefinedElliptic<G, IM, M, V> >
+struct TensorTraits< RefinedElliptic<G, IM, M, V> >
 {
-    typedef typename VectorTraits<V>::value_type  value_type;
-    typedef SelfMadeMatrixTag matrix_category;
+    using value_type  = get_value_type<V>;
+    using tensor_category = SelfMadeMatrixTag;
 };
 
 ///@endcond

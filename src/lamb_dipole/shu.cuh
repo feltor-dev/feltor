@@ -33,7 +33,7 @@ struct Diffusion
 template< class Matrix, class container >
 struct Shu 
 {
-    typedef typename container::value_type value_type;
+    using value_type = dg::get_value_type<container>;
     typedef container Vector;
 
     Shu( const Grid2d& grid, double eps);
@@ -49,7 +49,6 @@ struct Shu
     const container& potential( ) {return psi;}
     void operator()(double t, const Vector& y, Vector& yp);
   private:
-    //typedef typename VectorTraits< Vector>::value_type value_type;
     container psi, w2d, v2d;
     Elliptic<CartesianGrid2d, Matrix, container> laplaceM;
     ArakawaX<CartesianGrid2d, Matrix, container> arakawa_; 

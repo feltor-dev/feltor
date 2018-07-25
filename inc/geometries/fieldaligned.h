@@ -5,8 +5,8 @@
 #include "dg/backend/transpose.h"
 #include "dg/blas.h"
 #include "dg/geometry/grid.h"
-#include "dg/geometry/interpolation.cuh"
-#include "dg/geometry/projection.cuh"
+#include "dg/geometry/interpolation.h"
+#include "dg/geometry/projection.h"
 #include "dg/geometry/functions.h"
 #include "dg/geometry/split_and_join.h"
 

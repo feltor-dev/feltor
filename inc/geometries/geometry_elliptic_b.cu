@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include "json/json.h"
 
 #include "file/nc_utilities.h"
 

@@ -7,7 +7,7 @@
  */
 #pragma once
 
-#include <stdint.h> //definition of int64_t
+#include <cstdint> //definition of int64_t
 #include <cmath>
 #include <cassert>
 ////////////////////////////////////////////////////////////////////////
@@ -26,7 +26,6 @@
 #define MAX_VECTOR_SIZE 512 //configuration of vcl
 #define VCL_NAMESPACE vcl
 #include "vcl/vectorclass.h" //vcl by Agner Fog, may also include immintrin.h e.g.
-#include "vcl/instrset_detect.cpp"
 #if INSTRSET <5
 #define _WITHOUT_VCL
 #pragma message("WARNING: Instruction set below SSE4.1! Deactivating vectorization!")
@@ -69,7 +68,6 @@
 namespace exblas
 {
 ////////////// parameters for superaccumulator operations //////////////////////
-///High radix carray-save bits
 static constexpr int KRX            =  8; //!< High-radix carry-save bits
 static constexpr int DIGITS         =  64 - KRX; //!< number of nonoverlapping digits
 static constexpr int F_WORDS        =  20;  //!< number of uper exponent words (64bits)
@@ -104,5 +102,19 @@ union udouble{
     int64_t i; //!< a 64 bit integer
 };
 
+///@cond
+template<class T>
+struct ValueTraits
+{
+    using value_type = T;
+};
+template<class T>
+struct ValueTraits<T*>
+{
+    using value_type = T;
+};
+template<class U>
+using has_floating_value = typename std::conditional< std::is_floating_point<typename ValueTraits<U>::value_type>::value, std::true_type, std::false_type>::type;
+///@endcond
 
 }//namespace exblas

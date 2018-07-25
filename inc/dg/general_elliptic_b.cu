@@ -4,7 +4,7 @@
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
 
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 
 #include "cg.h"
 #include "elliptic.h"

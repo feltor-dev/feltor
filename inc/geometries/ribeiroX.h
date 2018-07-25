@@ -2,8 +2,8 @@
 
 #include "dg/geometry/grid.h"
 #include "dg/geometry/gridX.h"
-#include "dg/geometry/evaluationX.cuh"
-#include "dg/geometry/weightsX.cuh"
+#include "dg/geometry/evaluationX.h"
+#include "dg/geometry/weightsX.h"
 #include "dg/runge_kutta.h"
 #include "generatorX.h"
 #include "utilitiesX.h"
@@ -176,7 +176,7 @@ struct XFieldFinv
             { xAtOne_ = fpsi_.find_x(0.1); }
     void operator()(double ttt, const thrust::host_vector<double>& psi, thrust::host_vector<double>& fpsiM)
     {
-        std::array<double,3> begin( {0,0,0}), end(begin), end_old(begin);
+        std::array<double,3> begin( {0,0,0}), end(begin);
         double R_i[2], Z_i[2];
         dg::Timer t;
         t.tic();

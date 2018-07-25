@@ -3,11 +3,11 @@
 #include "backend/exceptions.h"
 #include "backend/memory.h"
 #include "geometry/fast_interpolation.h"
-#include "geometry/interpolation.cuh"
+#include "geometry/interpolation.h"
 #include "blas.h"
 #include "cg.h"
 #ifdef DG_BENCHMARK
-#include "backend/timer.cuh"
+#include "backend/timer.h"
 #endif //DG_BENCHMARK
 #ifdef MPI_VERSION
 #include "geometry/mpi_projection.h"

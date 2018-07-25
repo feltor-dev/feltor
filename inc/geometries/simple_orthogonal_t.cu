@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cmath>
 #include <memory>
+#include "json/json.h"
 
 #include "dg/algorithm.h"
 #include "guenther.h"

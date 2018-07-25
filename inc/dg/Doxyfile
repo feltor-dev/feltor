@@ -782,31 +782,29 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = . \
-                         ./geometry \
-                         ./backend/transpose.h \
-                         ./backend/exceptions.h \
+INPUT                  = ./backend/exceptions.h \
                          ./backend/memory.h \
                          ./backend/mpi_collective.h \
                          ./backend/mpi_communicator.h \
                          ./backend/mpi_init.h \
                          ./backend/mpi_matrix.h \
                          ./backend/mpi_vector.h \
-                         ./backend/mpi_precon_blas.h \
                          ./backend/sparseblockmat.h \
                          ./backend/sparseblockmat.cuh \
-                         ./backend/timer.cuh \
-                         ./backend/typedefs.cuh \
+                         ./backend/timer.h \
+                         ./backend/typedefs.h \
+                         ./backend/transpose.h \
                          ./backend/vector_categories.h \
-                         ./backend/vector_traits.h \
                          ./backend/matrix_categories.h \
-                         ./backend/matrix_traits.h \
+                         ./backend/scalar_categories.h \
                          ./backend/execution_policy.h \
-                         ./backend/thrust_vector_blas.cuh \
-                         ./backend/blas1_array.h \
-                         ./backend/cusp_vector_blas.h \
-                         ./backend/cusp_precon_blas.h \
-                         ./backend/matrix_traits_thrust.h \
+                         ./backend/tensor_traits.h \
+                         ./backend/tensor_traits_scalar.h \
+                         ./backend/tensor_traits_cusp.h \
+                         ./backend/tensor_traits_std.h \
+                         ./backend/tensor_traits_thrust.h \
+                         ./geometry \
+                         .  \
 
 
 # This tag can be used to specify the character encoding of the source files
@@ -832,7 +830,7 @@ INPUT_ENCODING         = UTF-8
 # *.m, *.markdown, *.md, *.mm, *.dox, *.py, *.pyw, *.f90, *.f, *.for, *.tcl,
 # *.vhd, *.vhdl, *.ucf, *.qsf, *.as and *.js.
 
-FILE_PATTERNS          = *.h *.cuh *.dox
+FILE_PATTERNS          = *.h *.cuh *.dox *.md
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -847,7 +845,7 @@ RECURSIVE              = NO
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE                =
+EXCLUDE                = geometry/ell_interpolation.cuh
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
@@ -2082,7 +2080,7 @@ INCLUDE_FILE_PATTERNS  =
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-PREDEFINED             =
+PREDEFINED             = MPI_VERSION
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The

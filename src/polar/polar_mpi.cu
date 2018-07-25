@@ -36,17 +36,16 @@ int main(int argc, char* argv[])
     MPI_Comm_size( MPI_COMM_WORLD, &size);
 
     ////Parameter initialisation ////////////////////////////////////////////
-    Json::Reader reader;
     Json::Value js;
     if( argc == 1)
     {
         std::ifstream is("input.json");
-        reader.parse(is,js,false);
+        is >> js;
     }
     else if( argc == 2)
     {
         std::ifstream is(argv[1]);
-        reader.parse(is,js,false);
+        is >> js;
     }
     else
     {
@@ -101,7 +100,7 @@ int main(int argc, char* argv[])
     Karniadakis< MDVec > karniadakis( y0, y0.size(), p.eps_time);
 
     t.tic();
-    shu( y0, y1);
+    shu( 0, y0, y1);
     t.toc();
     if(rank == 0)
         cout << "Time for one rhs evaluation: "<<t.diff()<<"s\n";
@@ -118,7 +117,7 @@ int main(int argc, char* argv[])
     }
 
     double time = 0;
-    karniadakis.init( shu, diffusion, y0, p.dt);
+    karniadakis.init( shu, diffusion, time, y0, p.dt);
 
     t.tic();
     while (time < p.maxout*p.itstp*p.dt)
@@ -132,9 +131,9 @@ int main(int argc, char* argv[])
     }
     t.toc();
 
-    double vorticity_end = blas2::dot( stencil , w2d, ab.last());
-    blas1::pointwiseDot( stencil, ab.last(), ry0);
-    double enstrophy_end = 0.5*blas2::dot( ry0, w2d, ab.last());
+    double vorticity_end = blas2::dot( stencil , w2d, y0);
+    blas1::pointwiseDot( stencil, y0, ry0);
+    double enstrophy_end = 0.5*blas2::dot( ry0, w2d, y0);
     double energy_end    = 0.5*blas2::dot( ry0, w2d, shu.potential()) ;
     if(rank == 0) {
         cout << "Vorticity error           :  "<<vorticity_end-vorticity<<"\n";

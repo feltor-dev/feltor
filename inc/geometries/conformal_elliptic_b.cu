@@ -1,4 +1,5 @@
 #include <iostream>
+#include "json/json.h"
 
 #include "dg/geometry/grid.h"
 #include "dg/elliptic.h"
@@ -13,7 +14,7 @@
 #include "solovev.h"
 //#include "guenther.h"
 #include "testfunctors.h"
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 
 const unsigned nIter=6;
 template<class Geometry>

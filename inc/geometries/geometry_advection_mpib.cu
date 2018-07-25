@@ -2,12 +2,13 @@
 #include <iomanip>
 
 #include <mpi.h>
+#include "json/json.h"
 
 #include "dg/arakawa.h"
 #include "dg/poisson.h"
 #include "dg/geometry/geometry.h"
 #include "dg/backend/mpi_init.h"
-#include "dg/backend/timer.cuh"
+#include "dg/backend/timer.h"
 
 #include "solovev.h"
 #include "testfunctors.h"

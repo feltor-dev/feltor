@@ -4,9 +4,9 @@
 int main()
 {
 
-    dg::Operator<double> lilj = dg::create::lilj(3);
-    dg::Operator<double> pidxpj = dg::create::pidxpj(3);
-    dg::Operator<double> rilj = dg::create::rilj(3);
+    dg::Operator<double> lilj = dg::create::lilj<double>(3);
+    dg::Operator<double> pidxpj = dg::create::pidxpj<double>(3);
+    dg::Operator<double> rilj = dg::create::rilj<double>(3);
 
     dg::Operator<double> op = lilj + pidxpj;
     //dg::Operator<double> op = pidxpj - pidxpj.transpose();
