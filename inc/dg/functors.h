@@ -1047,48 +1047,63 @@ struct Vortex
 };
 
 /**
- * @brief Makes a random bath in the RZ plane
- */
+* @brief Makes a random bath in the RZ plane
+*
+\f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)} 
+\f]
+* with \f[ B := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\ 
+        k:=\sqrt{k_R^2 + k_Z^2} \\ 
+        k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
+        k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
+        k_0:=2 \pi L_E / N_k\\ 
+        N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
+        E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\ 
+        \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
+        \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
+        \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
+        \f]
+* where \f$\mathcal{N}_{1,2}\f$ are random normal distributed real numbers with a mean of \f$\mu = 0\f$ and a standard deviation of \f$\sigma=1 \f$,  \f$\mathcal{U}_{1,2}\f$ are random uniformly distributed real numbers  \f$\in \left[0, 2 \pi \right) \f$ and \f$ A \f$ is the amplitude.
+*/
 struct BathRZ{
       /**
      * @brief Functor returning a random field in the RZ-plane or in the first RZ-plane
      *
-     * @param Rm Number of Fourier modes in R direction
-     * @param Zm Number of Fourier modes in Z direction
+     * @param N_kR Number of Fourier modes in R direction
+     * @param N_kZ Number of Fourier modes in Z direction
      * @param Nz Number of planes in phi direction
      * @param R_min Minimal R (in units of rho_s)
      * @param Z_min Minimal Z (in units of rho_s)
-     * @param gamma exponent of the energy function \f$E_k=(k/(k+k_0)^2)^\gamma\f$(typical around 30)
-     * @param eddysize \f$k_0=2\pi eddysize/\sqrt{R_m^2+Z_m^2} \f$
+     * @param gamma exponent in the energy function \f$E_k\f$ (typically around 30)
+     * @param L_E is the typical eddysize (typically around 5)
      * @param amp Amplitude
      */
-    BathRZ( unsigned Rm, unsigned Zm, unsigned Nz, double R_min, double Z_min, double gamma, double eddysize, double amp) :
-        Rm_(Rm), Zm_(Zm), Nz_(Nz),
+    BathRZ( unsigned N_kR, unsigned N_kZ, unsigned Nz, double R_min, double Z_min, double gamma, double L_E, double amp) :
+        N_kR_(N_kR), N_kZ_(N_kZ), Nz_(Nz),
         R_min_(R_min), Z_min_(Z_min),
-        gamma_(gamma), eddysize_(eddysize) , amp_(amp),
-        kvec( Rm_*Zm_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
+        gamma_(gamma), L_E_(L_E) , amp_(amp),
+        kvec( N_kR_*N_kZ_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
         normal1(kvec), normal2(kvec), normalamp(kvec), normalphase(kvec)
     {
-        double Rm2=(double)(Rm_*Rm_);
-        double Zm2=(double)(Zm_*Zm_);
-        double RZm= sqrt(Rm2+Zm2);
+        double N_kR2=(double)(N_kR_*N_kR_);
+        double N_kZ2=(double)(N_kZ_*N_kZ_);
+        double N_k= sqrt(N_kR2+N_kZ2);
 
-        norm_=sqrt(2./(double)Rm_/(double)Zm_);
+        norm_=sqrt(2./(double)N_kR_/(double)N_kZ_);
         double tpi=2.*M_PI, tpi2=tpi*tpi;
-        double k0= tpi*eddysize_/RZm;
-        double Rmh = Rm_/2.;
-        double Zmh = Zm_/2.;
+        double k0= tpi*L_E_/N_k;
+        double N_kRh = N_kR_/2.;
+        double N_kZh = N_kZ_/2.;
 
         thrust::random::minstd_rand generator;
         thrust::random::normal_distribution<double> ndistribution;
         thrust::random::uniform_real_distribution<double> udistribution(0.0,tpi);
-        for (unsigned j=1;j<=Zm_;j++)
+        for (unsigned j=1;j<=N_kZ_;j++)
         {
-            double kZ2=tpi2*(j-Zmh)*(j-Zmh)/(Zm2);
-            for (unsigned i=1;i<=Rm_;i++)
+            double kZ2=tpi2*(j-N_kZh)*(j-N_kZh)/(N_kZ2);
+            for (unsigned i=1;i<=N_kR_;i++)
             {
-                double kR2=tpi2*(i-Rmh)*(i-Rmh)/(Rm2);
-                int z=(j-1)*(Rm_)+(i-1);
+                double kR2=tpi2*(i-N_kRh)*(i-N_kRh)/(N_kR2);
+                int z=(j-1)*(N_kR_)+(i-1);
                 kvec[z]= sqrt(kR2 + kZ2);  //radial k number
                 sqEkvec[z]=pow(kvec[z]*4.*k0/(kvec[z]+k0)/(kvec[z]+k0),gamma_/2.); //Energie in k space with max at 1.
                 unif1[z]=cos(udistribution(generator));
@@ -1102,8 +1117,23 @@ struct BathRZ{
 
     }
       /**
-     * @brief Return the value of the Bath
+     * @brief Return the value of the Bath 
      *
+       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)} 
+       \f]
+     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\ 
+                k:=\sqrt{k_R^2 + k_Z^2} \\ 
+                k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
+                k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
+                k_0:=2 \pi L_E / N_k\\ 
+                N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
+                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\ 
+                \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
+                \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
+                \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
+                \f]
+     * where \f$\mathcal{N}_{1,2}\f$ are random normal distributed real numbers with a mean of \f$\mu = 0\f$ and a standard deviation of \f$\sigma=1 \f$,
+     * \f$\mathcal{U}_{1,2}\f$ are random uniformly distributed real numbers  \f$\in \left[0, 2 \pi \right) \f$ and \f$ A \f$ is the amplitude
      * @param R R - coordinate
      * @param Z Z - coordinate
      *
@@ -1115,19 +1145,36 @@ struct BathRZ{
         RR=R-R_min_;
         ZZ=Z-Z_min_;
         f=0.;
-        for (unsigned j=0;j<Zm_;j++)
+        for (unsigned j=0;j<N_kZ_;j++)
         {
-            for (unsigned i=0;i<Rm_;i++)
+            for (unsigned i=0;i<N_kR_;i++)
             {
-                int z=j*Rm_+i;
+                int z=j*N_kR_+i;
                 RZphasecos= RR*unif1[z]+ZZ*unif2[z];
                 f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]);
             }
         }
-        return amp_*norm_*abs(f);
+        return amp_*norm_*f;
     }
     /**
-     * @brief Return the value of the Bath for first phi plane
+      /**
+     * @brief Return the value of the Bath 
+     *
+       \f[f(R,Z) = A B \sum_\vec{k} \sqrt{E_k} \alpha_k \cos{\left(k \kappa_k + \theta_k \right)} 
+       \f]
+     * with \f[ \mathcal{N} := \sqrt{\frac{2}{N_{k_R} N_{k_Z}}} \\ 
+                k:=\sqrt{k_R^2 + k_Z^2} \\ 
+                k_R:=2 \pi \left( i -N_{k_R}/2\right)/N_{k_R} \\
+                k_Z:=2 \pi \left( j -N_{k_Z}/2\right)/N_{k_Z} \\
+                k_0:=2 \pi L_E / N_k\\ 
+                N_k := \sqrt{N_{k_R}^2 + N_{k_Z}^2} \\
+                E_k:=\left(4 k k_0/(k+k_0)^2\right)^{\gamma} \\ 
+                \alpha_k := \sqrt{\mathcal{N}_1^2 + \mathcal{N}_2^2} \\
+                \theta_k := \arctan{\left(\mathcal{N}_2/\mathcal{N}_1\right)} \\
+                \kappa_k(R,Z) := (R-R_{min}) \mathcal{U}_1 + (Z-Z_{min}) \mathcal{U}_2  \\
+                \f]
+     * where \f$\mathcal{N}_{1,2}\f$ are random normal distributed real numbers with a mean of \f$\mu = 0\f$ and a standard deviation of \f$\sigma=1 \f$,
+     * \f$\mathcal{U}_{1,2}\f$ are random uniformly distributed real numbers  \f$\in \left[0, 2 \pi \right) \f$ and \f$ A \f$ is the amplitude
      *
      * @param R R - coordinate
      * @param Z Z - coordinate
@@ -1143,36 +1190,25 @@ struct BathRZ{
         f=0;
 //         if (phi== M_PI/Nz_)
 //         {
-            for (unsigned j=0;j<Zm_;j++)
+            for (unsigned j=0;j<N_kZ_;j++)
             {
-                for (unsigned i=0;i<Rm_;i++)
+                for (unsigned i=0;i<N_kR_;i++)
                 {
-                    int z=(j)*(Rm_)+(i);
+                    int z=(j)*(N_kR_)+(i);
                     RZphasecos= RR*unif1[z]+ZZ*unif2[z];
                     f+= sqEkvec[z]*normalamp[z]*cos(kvec[z]*RZphasecos+normalphase[z]);
                 }
             }
-        return amp_*norm_*abs(f);
+        return amp_*norm_*f;
 //         }
 //         else {
 //         return 0.;
 //         }
     }
   private:
-    /**
-    * @param norm normalisation factor \f[norm= (2/(Rm* Zm))^{1/2}\f]
-    * @param k \f[k=(k_R^2+k_Z^2)^{1/2}\f]
-    * @param sqEkvec  \f[ E_k^{1/2}\f]
-    * @param unif1 uniform real random variable between [0,2 pi]
-    * @param unif2 uniform real random variable between [0,2 pi]
-    * @param normal1 normal random variable with mean=0 and standarddeviation=1
-    * @param normal2 normal random variable with mean=0 and standarddeviation=1
-    * @param normalamp \f[normalamp= (normal1^2+normal2^2)^{1/2}\f]
-    * @param normalphase \f[normalphase= arctan(normal2/normal1)\f]
-    */
-    unsigned Rm_,Zm_,Nz_;
+    unsigned N_kR_,N_kZ_,Nz_;
     double R_min_, Z_min_;
-    double gamma_, eddysize_;
+    double gamma_, L_E_;
     double amp_;
     double norm_;
     std::vector<double> kvec;
