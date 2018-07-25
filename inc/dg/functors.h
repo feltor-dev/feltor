@@ -413,7 +413,7 @@ struct IslandXY
      * @brief Construct Island 
      *
      * @param lambda amplitude
-     * @param bamp backgroundamp
+     * @param epsilon background amplitude
      */
      IslandXY( double lambda, double eps):lambda_(lambda), eps_(eps){}
     /**
@@ -424,6 +424,7 @@ struct IslandXY
      
      * @return \f$ f(x,y)\f$
      */
+    DG_DEVICE
     double operator()( double x, double y)const{ return lambda_*log(cosh(x/lambda_)+eps_*cos(y/lambda_));}
   private:
     double lambda_,eps_;
@@ -550,7 +551,7 @@ struct SinY
      *
      * @param amp amplitude
      * @param bamp backgroundamp
-     * @param kx  kx
+     * @param ky  ky
      */
     SinY( double amp, double bamp, double ky):amp_(amp), bamp_(bamp),ky_(ky){}
     /**
@@ -561,6 +562,7 @@ struct SinY
      
      * @return \f$ f(x,y)\f$
      */
+    DG_DEVICE
     double operator()( double x, double y)const{ return bamp_+amp_*sin(y*ky_);}
   private:
     double amp_,bamp_,ky_;
@@ -587,6 +589,7 @@ struct CosY
      
      * @return \f$ f(x,y)\f$
      */
+    DG_DEVICE
     double operator()( double x, double y)const{ return bamp_+amp_*cos(y*ky_);}
   private:
     double amp_,bamp_,ky_;
@@ -601,7 +604,6 @@ struct InvCoshXsq
      * @brief Construct with two coefficients
      *
      * @param amp amplitude
-     * @param bamp backgroundamp
      * @param kx  kx
      */
     InvCoshXsq( double amp, double kx):amp_(amp), kx_(kx){}
@@ -613,6 +615,7 @@ struct InvCoshXsq
      
      * @return \f$ f(x,y)\f$
      */
+    DG_DEVICE
     double operator()( double x, double y)const{ return amp_/cosh(x*kx_)/cosh(x*kx_);}
   private:
     double amp_,kx_;
@@ -1070,15 +1073,14 @@ struct BathRZ{
      *
      * @param N_kR Number of Fourier modes in R direction
      * @param N_kZ Number of Fourier modes in Z direction
-     * @param Nz Number of planes in phi direction
      * @param R_min Minimal R (in units of rho_s)
      * @param Z_min Minimal Z (in units of rho_s)
      * @param gamma exponent in the energy function \f$E_k\f$ (typically around 30)
      * @param L_E is the typical eddysize (typically around 5)
      * @param amp Amplitude
      */
-    BathRZ( unsigned N_kR, unsigned N_kZ, unsigned Nz, double R_min, double Z_min, double gamma, double L_E, double amp) :
-        N_kR_(N_kR), N_kZ_(N_kZ), Nz_(Nz),
+    BathRZ( unsigned N_kR, unsigned N_kZ, double R_min, double Z_min, double gamma, double L_E, double amp) :
+        N_kR_(N_kR), N_kZ_(N_kZ), 
         R_min_(R_min), Z_min_(Z_min),
         gamma_(gamma), L_E_(L_E) , amp_(amp),
         kvec( N_kR_*N_kZ_, 0), sqEkvec(kvec), unif1(kvec), unif2(kvec),
@@ -1137,7 +1139,9 @@ struct BathRZ{
      * @param R R - coordinate
      * @param Z Z - coordinate
      *
+     * @return the above function value
      */
+    DG_DEVICE
     double operator()(double R, double Z)const
     {
         double f, kappa, RR, ZZ;
@@ -1179,32 +1183,28 @@ struct BathRZ{
      * @param Z Z - coordinate
      * @param phi phi - coordinate
      *
+     * @return the above function value
      */
+    DG_DEVICE
     double operator()(double R, double Z, double phi)const {
         double f, kappa;
         double  RR, ZZ;
         RR=R-R_min_;
         ZZ=Z-Z_min_;
         f=0;
-//         if (phi== M_PI/Nz_)
-//         {
-            for (unsigned j=0;j<N_kZ_;j++)
+        for (unsigned j=0;j<N_kZ_;j++)
+        {
+            for (unsigned i=0;i<N_kR_;i++)
             {
-                for (unsigned i=0;i<N_kR_;i++)
-                {
-                    int z=(j)*(N_kR_)+(i);
-                    kappa= RR*unif1[z]+ZZ*unif2[z];
-                    f+= sqEkvec[z]*alpha[z]*cos(kvec[z]*kappa+theta[z]);
-                }
+                int z=(j)*(N_kR_)+(i);
+                kappa= RR*unif1[z]+ZZ*unif2[z];
+                f+= sqEkvec[z]*alpha[z]*cos(kvec[z]*kappa+theta[z]);
             }
+        }
         return amp_*norm_*f;
-//         }
-//         else {
-//         return 0.;
-//         }
     }
   private:
-    unsigned N_kR_,N_kZ_,Nz_;
+    unsigned N_kR_,N_kZ_;
     double R_min_, Z_min_;
     double gamma_, L_E_;
     double amp_;
