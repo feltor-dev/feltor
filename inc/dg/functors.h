@@ -413,7 +413,7 @@ struct IslandXY
      * @brief Construct Island 
      *
      * @param lambda amplitude
-     * @param epsilon background amplitude
+     * @param eps 2nd amplitude
      */
      IslandXY( double lambda, double eps):lambda_(lambda), eps_(eps){}
     /**
